@@ -147,6 +147,7 @@ const FILTER_ONLY_FIELD_LABELS = new Map<string, MessageKey>([
   ["domain", "history.field.domain"],
   ["hosting_provider", "filters.field.hosting_provider"],
   ["last_activity_at", "filters.field.last_activity_at"],
+  ["location", "filters.field.location"],
   ["mail_provider", "filters.field.mail_provider"],
   ["operated_service", "filters.field.operated_service"],
   ["owner_team_id", "filters.field.owner_team_id"],

@@ -185,6 +185,25 @@ describe("a saved draft", () => {
     expect(query.get("anchor_id")).toBe("act-1");
   });
 
+  // A 200 that is not a draft keeps nothing, so the window stays open and says
+  // the save failed instead of restoring an empty shape.
+  it("stays open when the save answers something that is not a draft", async () => {
+    const onClose = vi.fn();
+    stubRoutes({
+      "GET /mail-drafts": () => jsonResponse(SAVED),
+      "PUT /mail-drafts": () => jsonResponse({ data: [], page: {} }),
+    });
+    render(composer(onClose));
+    await screen.findByText("Saved draft restored");
+    writeMessage("Body", "Finished after lunch");
+
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+
+    expect(await screen.findByText(/The draft was not saved/)).toBeTruthy();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(messageText("Body")).toBe("Finished after lunch");
+  });
+
   it("saves over the version it restored and closes", async () => {
     const onClose = vi.fn();
     const sent = stubRoutes({
@@ -195,9 +214,7 @@ describe("a saved draft", () => {
     await screen.findByText("Saved draft restored");
     writeMessage("Body", "Finished after lunch");
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Save as draft" }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     const put = calls(sent, "PUT /mail-drafts")[0];
@@ -226,7 +243,7 @@ describe("a saved draft", () => {
     );
     writeMessage("Body", "Half written before lunch");
 
-    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
 
     // The close waits for the save, so a refused one cannot drop the text.
     await waitFor(() => expect(onClose).toHaveBeenCalled());
@@ -267,9 +284,7 @@ describe("a saved draft", () => {
       expect(calls(sent, "GET /mail-drafts")).toHaveLength(1),
     );
     writeMessage("Body", "Half written before lunch");
-    await userEvent.click(
-      screen.getByRole("button", { name: "Save as draft" }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
     await userEvent.click(screen.getByRole("button", { name: "Write again" }));
@@ -282,8 +297,11 @@ describe("a saved draft", () => {
       expect(messageText("Body")).toBe("Half written before lunch"),
     );
     // The save's toast stands down, so the delete's confirmation is not
-    // queued behind a Delete that has already been offered here.
-    expect(screen.queryByText("Draft saved")).toBeNull();
+    // queued behind a Delete that has already been offered here. The foot
+    // still says the draft is kept; that line is not the toast.
+    expect(
+      screen.queryByText("Draft saved", { selector: ".toast-said" }),
+    ).toBeNull();
     await userEvent.click(
       screen.getByRole("button", { name: "Delete saved draft" }),
     );
@@ -330,7 +348,7 @@ describe("a saved draft", () => {
       expect(calls(sent, "GET /mail-drafts")).toHaveLength(1),
     );
     writeMessage("Body", "Half written before lunch");
-    await user.click(screen.getByRole("button", { name: "Save as draft" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
     expect(await screen.findByText("Draft saved")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Complete a task" }));
     expect(screen.queryByText("Draft saved")).toBeNull();
@@ -347,7 +365,7 @@ describe("a saved draft", () => {
     render(composer(onClose));
     await screen.findByText("Saved draft restored");
 
-    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
 
     expect(onClose).toHaveBeenCalled();
     expect(calls(sent, "PUT /mail-drafts")).toHaveLength(0);
@@ -361,7 +379,7 @@ describe("a saved draft", () => {
       expect(calls(sent, "GET /mail-drafts")).toHaveLength(1),
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
 
     expect(onClose).toHaveBeenCalled();
     expect(calls(sent, "PUT /mail-drafts")).toHaveLength(0);
@@ -377,7 +395,7 @@ describe("a saved draft", () => {
       expect(calls(sent, "GET /mail-drafts")).toHaveLength(1),
     );
     writeMessage("Body", "Half written before lunch");
-    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
 
     await userEvent.click(
       await screen.findByRole("button", { name: "Delete" }),
@@ -429,7 +447,7 @@ describe("a saved draft", () => {
     await screen.findByText("Saved draft restored");
     writeMessage("Body", "Written here");
 
-    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
 
     expect(
       await screen.findByText("Draft changed in another window"),
@@ -458,7 +476,7 @@ describe("a saved draft", () => {
     render(composer(onClose));
     writeMessage("Body", "Half written before lunch");
 
-    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
 
     expect(await screen.findByRole("alert")).toHaveProperty(
       "textContent",
@@ -467,7 +485,7 @@ describe("a saved draft", () => {
     expect(onClose).not.toHaveBeenCalled();
     expect(messageText("Body")).toBe("Half written before lunch");
 
-    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(calls(sent, "PUT /mail-drafts")).toHaveLength(1);
@@ -489,8 +507,10 @@ describe("a saved draft", () => {
     );
     writeMessage("Body", "Half written before lunch");
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Save as draft" }),
+    // The quiet save starts a moment after the typing stops.
+    await waitFor(
+      () => expect(calls(sent, "PUT /mail-drafts")).toHaveLength(1),
+      { timeout: 3000 },
     );
     const send = screen.getByRole("button", { name: "Send" });
     expect(send).toHaveProperty("disabled", true);

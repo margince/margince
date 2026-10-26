@@ -4,6 +4,25 @@ import { useMemo, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { EntityRef } from "../../components/entityref";
 import {
+  type Access,
+  accessLabel,
+  type CreateRecordGrantRequest,
+  type DraftFields,
+  EXPIRY_OPTIONS,
+  expiresAtFor,
+  fetchGrants,
+  type GrantDraft,
+  type ReassertDraft,
+  type RecordGrant,
+  type RecordType,
+  RosterPicker,
+  type RosterSubject,
+  reassertKind,
+  SubjectKindIcon,
+  subjectKey,
+  useShareRoster,
+} from "../../components/share.parts";
+import {
   Badge,
   Button,
   Field,
@@ -25,25 +44,6 @@ import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
 import { isAccessKind, WhoCanSeePanel } from "./recordaccesspanel";
-import {
-  type Access,
-  accessLabel,
-  type CreateRecordGrantRequest,
-  type DraftFields,
-  EXPIRY_OPTIONS,
-  expiresAtFor,
-  fetchGrants,
-  type GrantDraft,
-  type ReassertDraft,
-  type RecordGrant,
-  type RecordType,
-  RosterPicker,
-  type RosterSubject,
-  reassertKind,
-  SubjectKindIcon,
-  subjectKey,
-  useShareRoster,
-} from "./share.parts";
 import {
   ApprovalRequiredError,
   RevokeGrantDialog,

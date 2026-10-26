@@ -39,6 +39,7 @@ func (e *loadEnv) threadless(t *testing.T, subject, address string, contact ids.
 		VALUES ($1, $2, 'from', $3)`, ids.NewV7(), activity, address)
 	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
 		VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), activity, contact)
+	e.directlyTo(t, activity, e.rep)
 	return activity
 }
 

@@ -1,64 +1,41 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { api } from "../../api/client";
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
 import type { components } from "../../api/schema";
-import { useUnsavedGuard } from "../../components/unsaved";
-import { Button, EmptyState, PendingBody } from "../../design-system/atoms";
+import { OAuthOutcomeNote } from "../../components/connectors.notices";
+import { PendingBody } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
-import { ErrorLine } from "../../design-system/errorline";
-import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { SaveBar } from "../../design-system/savebar";
-import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { throwProblem, unwrap } from "../../lib/problem";
+import { useConnectAccount } from "../../lib/connect-account";
+import { useConnectors } from "../../lib/connectors";
+import { problemMessageOf } from "../../lib/problem";
+import { useRoute } from "../../lib/router";
 import { useSchedulingProfile } from "../../lib/scheduling-profile-query";
 import { useMe } from "../../lib/session";
-import { useConnectors } from "../capture/connectors";
-import { useBookingCalendar } from "./booking-calendar-state";
-import { BookingProfileScreen } from "./booking-profile";
-import {
-  CalendarSection,
-  DefaultFields,
-  LimitFields,
-  limitIncomplete,
-  limitTextsOf,
-  SetupChecklist,
-} from "./meeting-settings-sections";
-import {
-  narrowing,
-  useWorkingHours,
-  WorkingHoursCard,
-  WorkingHoursFields,
-  WorkingHoursOutcome,
-} from "./working-hours";
-import "./book.css";
+import { needsAttention, useCalendarStanding } from "./booking-calendar-state";
+import { AvailabilityCard } from "./meeting-availability";
+import { MeetingCalendarCard } from "./meeting-calendar";
+import { GuestViewCard } from "./meeting-guest-view";
+import { BookingLinksCard } from "./meeting-links";
+import { MeetingSetupCard } from "./meeting-setup";
+import { useWorkingHours } from "./working-hours";
 
 type Profile = components["schemas"]["SchedulingProfile"];
-type WorkingHours = components["schemas"]["WorkingHours"];
-type Draft = Readonly<{
-  original: Profile;
-  next: Profile;
-  hours: WorkingHours | null;
-}>;
 
 export function MeetingSettings() {
   const t = useT();
   const me = useMe();
   const canBook = useCanWrite("activity", "create");
-  // Until the grant is known, neither form: the hours-only card would flash
+  // Until the grant is known, neither page: the hours-only card would flash
   // and take a first edit with it when the full page replaced it.
   if (me.isPending) return <PendingBody label={t("scheduling.settings")} />;
   if (!canBook)
     return (
       <>
-        <WorkingHoursCard />
-        <Callout
-          tone="danger"
-          kind="standing"
-          title={t("scheduling.bookRefused")}
-        />
+        <Callout kind="standing" title={t("scheduling.bookNeedsGrant")} />
+        <AvailabilityCard hoursOnly />
       </>
     );
   return <MeetingPreferences />;
@@ -67,330 +44,59 @@ export function MeetingSettings() {
 function MeetingPreferences() {
   const t = useT();
   const profile = useSchedulingProfile();
+  return (
+    <>
+      <MeetingsLanding />
+      <QueryGate pendingLabel={t("common.loading")} query={profile}>
+        {(saved) => <MeetingCards profile={saved} />}
+      </QueryGate>
+    </>
+  );
+}
+
+// The consent callback for a calendar connected from this page lands on
+// #/settings/meetings/{outcome}/{provider}.
+function MeetingsLanding() {
+  const t = useT();
+  const route = useRoute();
+  const connections = useConnectors();
+  const connect = useConnectAccount();
+  return (
+    <OAuthOutcomeNote
+      outcome={route.id2}
+      provider={route.id3}
+      connections={connections.data?.data}
+      connectCalendar={{
+        onConnect: (calendar) =>
+          connect.mutate({ provider: calendar, returnTo: "meetings" }),
+        pending: connect.isPending,
+        error: connect.isError ? problemMessageOf(connect.error, t) : null,
+      }}
+    />
+  );
+}
+
+// In board order. The setup card leads only while no calendar is connected;
+// until the roster answers, nobody is told to connect what they may have.
+function MeetingCards({ profile }: Readonly<{ profile: Profile }>) {
+  const { standing } = useCalendarStanding(profile);
   const hours = useWorkingHours();
+  const setup = standing === "none";
   return (
-    <QueryGate pendingLabel={t("common.loading")} query={profile}>
-      {(saved) => (
-        <QueryGate pendingLabel={t("workingHours.title")} query={hours}>
-          {(answer) => (
-            <MeetingSettingsForm
-              profile={saved}
-              hours={answer.working_hours}
-              chosen={answer.chosen}
-            />
-          )}
-        </QueryGate>
+    <>
+      {setup && (
+        <MeetingSetupCard
+          hoursChosen={hours.data?.chosen ?? false}
+          hasLink={!!profile.slug}
+        />
       )}
-    </QueryGate>
-  );
-}
-
-function MeetingSettingsForm({
-  profile,
-  hours,
-  chosen,
-}: Readonly<{ profile: Profile; hours?: WorkingHours; chosen: boolean }>) {
-  const t = useT();
-  const [baseline, setBaseline] = useState(profile);
-  const [form, setForm] = useState(profile);
-  const [limitTexts, setLimitTexts] = useState(limitTextsOf(profile));
-  const [savedHours, setSavedHours] = useState(hours);
-  const [hoursDraft, setHoursDraft] = useState(hours);
-  const [narrowed, setNarrowed] = useState(false);
-  const calendar = useMeetingCalendar(
-    { ...form, enabled: profile.enabled },
-    baseline,
-  );
-  const { provider, ready, selected, calendars, connections } = calendar;
-  const profileDirty =
-    JSON.stringify(form) !== JSON.stringify(baseline) ||
-    JSON.stringify(limitTexts) !== JSON.stringify(limitTextsOf(baseline)) ||
-    (provider !== "" && provider !== baseline.provider);
-  const hoursDirty =
-    JSON.stringify(hoursDraft && savedForm(hoursDraft)) !==
-    JSON.stringify(savedHours);
-  useUnsavedGuard(profileDirty || hoursDirty);
-  const save = useSaveMeetingSettings(setSavedHours, (value) => {
-    setBaseline(value);
-    setForm(value);
-    setLimitTexts(limitTextsOf(value));
-  });
-  const discard = () => {
-    setForm(baseline);
-    setLimitTexts(limitTextsOf(baseline));
-    setHoursDraft(savedHours);
-  };
-  const blocked =
-    limitIncomplete(limitTexts) ||
-    (profileDirty &&
-      (connections.isPending ||
-        calendars.isFetching ||
-        (calendar.needsCalendar && (!ready || !selected?.writable))));
-  return (
-    <div className="book-form">
-      <SetupChecklist
-        calendar={ready && !!selected?.writable}
-        hours={chosen}
-        link={profile.enabled}
+      <BookingLinksCard profile={profile} />
+      <MeetingCalendarCard profile={profile} />
+      <AvailabilityCard
+        profile={profile}
+        attention={needsAttention(profile, standing)}
       />
-      <form
-        className="book-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const draft = settingsDraft(
-            form,
-            baseline,
-            calendar,
-            hoursDirty ? hoursDraft : undefined,
-          );
-          if (draft.hours && savedHours)
-            setNarrowed(narrowing(savedHours, draft.hours));
-          save.mutate(draft);
-        }}
-      >
-        <Panel title={t("scheduling.calendarTitle")}>
-          <PanelBody className="form-stack">
-            <PanelIntro>{t("scheduling.calendarIntro")}</PanelIntro>
-            <CalendarSection
-              providers={calendar.providers}
-              provider={provider}
-              calendarID={calendar.calendarID}
-              blocking={calendar.blocking}
-              connectionsPending={connections.isPending}
-              connectionsError={connections.error}
-              missingSaved={ready && !!calendars.data && !selected}
-              providerChanged={!!form.provider && provider !== form.provider}
-              onProvider={(value) =>
-                setForm({
-                  ...form,
-                  provider: value,
-                  calendar_id: "primary",
-                  blocking_calendars: [],
-                })
-              }
-              onCalendar={(value) =>
-                setForm({
-                  ...form,
-                  provider,
-                  calendar_id: value,
-                  blocking_calendars: calendar.blocking.filter(
-                    (id) => id !== value,
-                  ),
-                })
-              }
-              onBlocking={(value) =>
-                setForm({
-                  ...form,
-                  provider,
-                  calendar_id: calendar.calendarID,
-                  blocking_calendars: value,
-                })
-              }
-            />
-          </PanelBody>
-        </Panel>
-        <Panel title={t("scheduling.availabilityTitle")}>
-          <PanelBody className="form-stack">
-            {hoursDraft ? (
-              <WorkingHoursFields
-                chosen={chosen}
-                value={hoursDraft}
-                onChange={setHoursDraft}
-              />
-            ) : (
-              <EmptyState>{t("state.unavailable")}</EmptyState>
-            )}
-            <LimitFields
-              texts={limitTexts}
-              onText={(field, text) => {
-                setLimitTexts({ ...limitTexts, [field]: text });
-                if (text.trim() === "") return;
-                const number = Number(text);
-                setForm({
-                  ...form,
-                  ...(field === "notice"
-                    ? { notice_minutes: Math.round(number * 60) }
-                    : field === "buffer"
-                      ? { buffer_minutes: number }
-                      : { horizon_days: number }),
-                });
-              }}
-            />
-            <WorkingHoursOutcome
-              narrowed={narrowed}
-              save={{ isSuccess: save.isSuccess, isError: false, error: null }}
-            />
-          </PanelBody>
-        </Panel>
-        <Panel title={t("scheduling.defaultsTitle")}>
-          <PanelBody className="form-stack">
-            <PanelIntro>{t("scheduling.defaultsIntro")}</PanelIntro>
-            <DefaultFields form={form} provider={provider} onChange={setForm} />
-          </PanelBody>
-        </Panel>
-        {(profileDirty || hoursDirty) && (
-          <SaveBar label={t("scheduling.unsaved")}>
-            <div className="book-actions">
-              <span className="t-name">{t("scheduling.unsaved")}</span>
-              <Button disabled={save.isPending} onClick={discard}>
-                {t("scheduling.discard")}
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={blocked}
-                pending={save.isPending}
-              >
-                {t("scheduling.save")}
-              </Button>
-            </div>
-            <ErrorLine error={save.error} />
-          </SaveBar>
-        )}
-      </form>
-      <BookingProfileScreen embedded />
-    </div>
+      <GuestViewCard profile={profile} />
+    </>
   );
-}
-
-// Hours and the scheduling profile are two resources with two endpoints, saved
-// here as one draft: hours first, because a profile saved without them would
-// publish a link against the old window.
-function useSaveMeetingSettings(
-  onHoursSaved: (hours: WorkingHours) => void,
-  onSaved: (profile: Profile) => void,
-) {
-  const t = useT();
-  const client = useQueryClient();
-  const toast = useToast();
-  return useMutation({
-    mutationFn: async ({ original, next, hours }: Draft) => {
-      if (hours) {
-        const saved = await api.PUT("/me/working-hours", { body: hours });
-        if (saved.error) throwProblem(saved.error);
-        // Settled the moment the server has them, so a profile write that
-        // fails after this does not leave saved hours showing as unsaved.
-        client.setQueryData(["working-hours"], saved.data);
-        onHoursSaved(hours);
-        await client.invalidateQueries({ queryKey: ["reliable-availability"] });
-      }
-      const latest = await api.GET("/scheduling/profile");
-      if (latest.error) throwProblem(latest.error);
-      const changes = changedMeetingPreferences(original, next);
-      if (Object.keys(changes).length === 0) return latest.data;
-      return unwrap(
-        await api.PUT("/scheduling/profile", {
-          body: { ...latest.data, ...changes },
-        }),
-      );
-    },
-    onSuccess: async (profile) => {
-      onSaved(profile);
-      client.setQueryData(["scheduling-profile"], profile);
-      await client.invalidateQueries({ queryKey: ["reliable-availability"] });
-      toast.show(t("settings.saved"));
-    },
-  });
-}
-
-// What a save sends: the calendar the page resolved (a sole provider is chosen
-// for the host) only once it is known to accept invitations.
-function settingsDraft(
-  form: Profile,
-  baseline: Profile,
-  calendar: ReturnType<typeof useMeetingCalendar>,
-  hours: WorkingHours | undefined,
-): Draft {
-  const { ready, selected, calendars, provider, blocking } = calendar;
-  const choose = ready && selected?.writable && !calendars.isFetching;
-  return {
-    original: baseline,
-    hours: hours ? savedForm(hours) : null,
-    next: {
-      ...form,
-      provider: choose ? provider : form.provider,
-      calendar_id: choose ? selected.id : form.calendar_id,
-      blocking_calendars: choose ? blocking : form.blocking_calendars,
-    },
-  };
-}
-
-// Hours as the server keeps them, days in order: the picker appends a day
-// re-ticked, and a draft compared unsorted would stay unsaved after its save.
-function savedForm(hours: WorkingHours): WorkingHours {
-  return { ...hours, days: [...hours.days].sort((a, b) => a - b) };
-}
-
-function changedMeetingPreferences(
-  original: Profile,
-  next: Profile,
-): Partial<Profile> {
-  let changes: Partial<Profile> = {};
-  const fields = [
-    "provider",
-    "calendar_id",
-    "blocking_calendars",
-    "title",
-    "location",
-    "email_reminder",
-    "video_call",
-    "duration_minutes",
-    "notice_minutes",
-    "buffer_minutes",
-    "horizon_days",
-  ] as const;
-  // An unset calendar list and an empty one are the same answer; treating them
-  // as a change would write the profile on a save that only touched hours.
-  const comparable = (profile: Profile, field: (typeof fields)[number]) =>
-    JSON.stringify(
-      field === "blocking_calendars"
-        ? (profile.blocking_calendars ?? [])
-        : profile[field],
-    );
-  for (const field of fields) {
-    if (comparable(original, field) !== comparable(next, field))
-      changes = { ...changes, [field]: next[field] };
-  }
-  return changes;
-}
-
-function useMeetingCalendar(form: Profile, baseline: Profile) {
-  const connections = useConnectors({ refetchOnWindowFocus: "always" });
-  const providers =
-    connections.data?.data.filter(
-      (item) =>
-        (item.provider === "gcal" || item.provider === "graphcal") &&
-        item.status !== "disconnected",
-    ) ?? [];
-  const sole = providers.length === 1 ? (providers[0]?.provider ?? "") : "";
-  const provider = providers.some((item) => item.provider === form.provider)
-    ? form.provider
-    : sole === "gcal" || sole === "graphcal"
-      ? sole
-      : form.provider;
-  const calendarID = provider === form.provider ? form.calendar_id : "primary";
-  const blocking =
-    provider === form.provider ? (form.blocking_calendars ?? []) : [];
-  const { ready, calendars } = useBookingCalendar(provider);
-  const selected = calendars.data?.find(
-    (item) =>
-      item.id === calendarID || (calendarID === "primary" && item.primary),
-  );
-  const calendarEdited =
-    form.provider !== baseline.provider ||
-    form.calendar_id !== baseline.calendar_id ||
-    JSON.stringify(form.blocking_calendars) !==
-      JSON.stringify(baseline.blocking_calendars);
-  const needsCalendar = form.enabled || calendarEdited;
-  return {
-    connections,
-    providers,
-    provider,
-    calendarID,
-    blocking,
-    ready,
-    calendars,
-    selected,
-    needsCalendar,
-  };
 }

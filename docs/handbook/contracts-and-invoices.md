@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/projects/contractform.tsx frontend/src/features/projects/contractlifecycle.tsx frontend/src/features/companies/companycontracts.tsx frontend/src/features/companies/companyfinance.tsx frontend/src/features/settings/financesource.tsx backend/internal/modules/contracts backend/internal/modules/finance backend/internal/modules/deals/win_evidence.go -->
 # Contracts and invoices
 
 Contracts and invoices both live on a company's own page in Margince. The
@@ -184,6 +185,10 @@ do not know.
 
 The same goes for totals. If one invoice has no rate to change its currency,
 the whole total is left blank instead of leaving that invoice out.
+
+An invoice in another currency changes into the base currency at the rate on the
+day it was issued. If that day has no rate yet, an admin can add older history in
+**Settings → Company profile → Currency rates**. The next sync then uses it.
 
 ### Connection states
 

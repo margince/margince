@@ -1,5 +1,6 @@
 import type { components } from "../../api/schema";
 import { StatCard } from "../../design-system/atoms";
+import type { STAT_CARD_TONES } from "../../design-system/statcard";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import type { Locale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -16,6 +17,7 @@ export function LastTouchStat({
   locale,
   recordZone,
   onOpen,
+  tone,
   t,
 }: Readonly<{
   view?: Company360;
@@ -24,9 +26,12 @@ export function LastTouchStat({
   locale: Locale;
   recordZone: string;
   onOpen?: () => void;
+  // The relationship rating's tone, so the date is never louder or calmer
+  // than the rating read from the same exchanges.
+  tone?: (typeof STAT_CARD_TONES)[number];
   t: ReturnType<typeof useT>;
 }>) {
-  const slot = { label: t("co.strip.lastTouch"), narrow: "row" } as const;
+  const slot = { label: t("co.strip.lastTouch") } as const;
   if (!view || withheld) {
     return <StatCard onOpen={onOpen} {...slot} value={t(WITHHELD_READING)} />;
   }
@@ -40,11 +45,12 @@ export function LastTouchStat({
       />
     );
   }
-  const days = daysAgo(last.at, view.as_of);
+  const days = daysAgo(last.at, view.as_of, recordZone);
   return (
     <StatCard
       onOpen={onOpen}
       {...slot}
+      tone={tone}
       value={
         days === undefined
           ? t("co.strip.lastTouch.today")

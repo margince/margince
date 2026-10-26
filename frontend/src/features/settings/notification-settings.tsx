@@ -5,15 +5,22 @@
 // colleague's approvals, so there is no role gating: both endpoints read and
 // write the calling seat's own rows. The classes are coarser than notice kinds.
 
-import { useId } from "react";
+import { useId, useState } from "react";
+import { Button } from "../../design-system/button";
 import { describedByIds } from "../../design-system/describedby";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { PanelNotices } from "../../design-system/panelnotices";
 import { QueryGate } from "../../design-system/querystates";
+import { useSaveDraft } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import {
+  type BrowserNotificationPermission,
+  requestNotificationPermission,
+  useNotificationPermission,
+} from "../../lib/notificationpermission";
 import {
   type NotificationClass,
   type NotificationDelivery,
@@ -113,6 +120,12 @@ export function NotificationSettingsCard() {
       <PanelBody>
         <PanelIntro>{t("notifications.sub")}</PanelIntro>
       </PanelBody>
+      <SettingList bleed="settings">
+        <BrowserNotificationsRow
+          permission={useNotificationPermission()}
+          onAllow={() => void requestNotificationPermission()}
+        />
+      </SettingList>
       <QueryGate pendingLabel={t("notifications.title")} query={preferences}>
         {(list) => <DeliveryChoices rows={list.items} />}
       </QueryGate>
@@ -120,12 +133,96 @@ export function NotificationSettingsCard() {
   );
 }
 
+const BROWSER_STATE: Readonly<
+  Record<BrowserNotificationPermission, MessageKey>
+> = {
+  default: "notifications.browser.default",
+  granted: "notifications.browser.granted",
+  denied: "notifications.browser.denied",
+  unsupported: "notifications.browser.unsupported",
+};
+
+/**
+ * Whether this browser shows a due task reminder as a notification. The
+ * browser holds the answer and is its off switch, so nothing is saved here.
+ * The ask happens on the click alone: a browser refuses one made on load.
+ */
+export function BrowserNotificationsRow({
+  permission,
+  onAllow,
+}: Readonly<{
+  permission: BrowserNotificationPermission;
+  onAllow: () => void;
+}>) {
+  const t = useT();
+  return (
+    <SettingRow
+      label={t("notifications.browser.label")}
+      description={t(BROWSER_STATE[permission])}
+      testId="notification-browser"
+      control={(control) =>
+        permission === "default" ? (
+          // Named by its own word, so the row's label stays the row's.
+          <Button
+            id={control.id}
+            aria-describedby={control["aria-describedby"]}
+            onClick={onAllow}
+          >
+            {t("notifications.browser.allow")}
+          </Button>
+        ) : null
+      }
+    />
+  );
+}
+
+type Picks = Partial<Record<NotificationClass, NotificationDelivery>>;
+
 function DeliveryChoices({
   rows,
 }: Readonly<{ rows: readonly NotificationPreference[] }>) {
   const t = useT();
   const save = useSaveNotificationPreference();
+  const [picks, setPicks] = useState<Picks>({});
+  // The class the server refused: its row names the notice, and the bar still
+  // carries the one summary error.
+  const [refused, setRefused] = useState<{
+    class: NotificationClass;
+    error: unknown;
+  } | null>(null);
   const refusalId = useId();
+  const changed = rows.filter(
+    (row) =>
+      picks[row.class] !== undefined && picks[row.class] !== row.delivery,
+  );
+  useSaveDraft({
+    dirty: changed.length > 0,
+    // One class per write, in turn, because the endpoint takes one. A refusal
+    // stops the rest, so the bar's error belongs to the row still drafted.
+    save: async () => {
+      setRefused(null);
+      for (const row of changed) {
+        const delivery = picks[row.class];
+        if (delivery === undefined) continue;
+        try {
+          await save.mutateAsync({ class: row.class, delivery });
+        } catch (error) {
+          setRefused({ class: row.class, error });
+          throw error;
+        }
+        setPicks((held) => {
+          const rest = { ...held };
+          delete rest[row.class];
+          return rest;
+        });
+      }
+    },
+    discard: () => {
+      save.reset();
+      setRefused(null);
+      setPicks({});
+    },
+  });
   return (
     <>
       <SettingList bleed="settings">
@@ -133,18 +230,12 @@ function DeliveryChoices({
           <DeliveryRow
             key={row.class}
             row={row}
-            onPick={(delivery) => save.mutate({ class: row.class, delivery })}
-            // THIS row's write, not any row's. The mutation is shared so one
-            // error surface can name the class that failed, and a bare
-            // `isPending` spread that wait across all six — freezing five
-            // dropdowns nobody touched, and hiding the queued second change the
-            // hook's own scope exists to serialise.
-            saving={save.isPending && save.variables?.class === row.class}
-            refusedBy={
-              save.isError && save.variables?.class === row.class
-                ? refusalId
-                : undefined
-            }
+            delivery={picks[row.class] ?? row.delivery}
+            onPick={(delivery) => {
+              setRefused(null);
+              setPicks((held) => ({ ...held, [row.class]: delivery }));
+            }}
+            refusedBy={refused?.class === row.class ? refusalId : undefined}
           />
         ))}
       </SettingList>
@@ -152,18 +243,15 @@ function DeliveryChoices({
           notice under them. */}
       <PanelNotices
         refused={
-          save.isError
-            ? {
-                title:
-                  save.variables === undefined
-                    ? t("notifications.saveFailed")
-                    : t("notifications.saveFailedFor", {
-                        setting: t(CLASS_COPY[save.variables.class].label),
-                      }),
-                error: save.error,
+          refused === undefined || refused === null
+            ? undefined
+            : {
+                title: t("notifications.saveFailedFor", {
+                  setting: t(CLASS_COPY[refused.class].label),
+                }),
+                error: refused.error,
                 id: refusalId,
               }
-            : undefined
         }
       />
     </>
@@ -172,13 +260,14 @@ function DeliveryChoices({
 
 function DeliveryRow({
   row,
+  delivery,
   onPick,
-  saving,
   refusedBy,
 }: Readonly<{
   row: NotificationPreference;
+  /** The drafted choice, or the stored one while the row is untouched. */
+  delivery: NotificationDelivery;
   onPick: (delivery: NotificationDelivery) => void;
-  saving: boolean;
   refusedBy?: string;
 }>) {
   const t = useT();
@@ -196,16 +285,14 @@ function DeliveryRow({
             refusedBy,
           )}
           className="settingrow-measure"
-          // A row the seat has never decided sits on the STANDING DEFAULT the
-          // server reports, not on a blank or an invented "Default" option:
-          // what the control shows is what happens today, and touching it is
-          // what turns a default into a decision.
-          value={row.delivery}
-          disabled={saving}
+          // A row the seat has never decided sits on the standing default the server
+          // reports, not on a blank or an invented "Default" option. The control shows
+          // what happens today, and saving a pick turns a default into a decision.
+          value={delivery}
           onChange={(next) => {
-            // Narrowed through the same list the options are built from, so
-            // nothing is sent that the control was never offering — the coach
-            // row can no more send `off` than it can show it.
+            // Narrowed through the same list the options are built from, so nothing is
+            // drafted that the control was never offering. The coach row can no more send
+            // `off` than it can show it.
             const picked = offered.find((choice) => choice === next);
             if (picked) {
               onPick(picked);

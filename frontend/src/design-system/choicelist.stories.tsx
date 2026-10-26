@@ -2,10 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Calendar, Mail } from "lucide-react";
 import { useState } from "react";
+import { Card } from "./atoms";
 import { ChoiceList } from "./choicelist";
+import { ProviderMark } from "./provider-mark";
 
-// One question, every answer readable at rest — the control a binary decision
+// One question, every answer readable at rest , the control a binary decision
 // needs and a dropdown cannot be. The cases on this canvas are the three a
 // caller actually meets: a live either/or, a question nobody has answered yet,
 // and a group a reader may look at but not change.
@@ -21,7 +24,7 @@ type Story = StoryObj<typeof ChoiceList>;
 
 const EVERYONE_EXCEPT = {
   value: "everyone_except" as const,
-  label: "Everyone I talk to — except the contacts I leave out",
+  label: "Everyone I talk to , except the contacts I leave out",
   description:
     "Every conversation goes into the CRM until you name somebody to leave out.",
 };
@@ -61,9 +64,8 @@ export const Unanswered: Story = {
   render: () => <Live initial="" />,
 };
 
-// A reader who may not change it. The words stay legible — the point of the
-// control is that both answers can be read, and that is as true for somebody
-// who cannot pick one.
+// A reader who may not change it. The words stay legible: both answers can be
+// read, as true for somebody who cannot pick one.
 export const Disabled: Story = {
   args: {
     legend: "Which conversations go into the CRM?",
@@ -117,3 +119,157 @@ export const LabelsOnly: Story = {
     onChange: () => {},
   },
 };
+
+const SERVICES = [
+  {
+    value: "mail" as const,
+    label: "Mail",
+    description: "Conversations with your contacts go into the CRM.",
+    mark: <Mail aria-hidden="true" />,
+  },
+  {
+    value: "calendar" as const,
+    label: "Calendar",
+    description: "Not available for an IMAP mailbox.",
+    mark: <Calendar aria-hidden="true" />,
+    disabled: true,
+  },
+];
+
+function ManyLive() {
+  const [value, setValue] = useState<("mail" | "calendar")[]>(["mail"]);
+  return (
+    <ChoiceList
+      legend="What should Margince read?"
+      multiple
+      layout="cards"
+      value={value}
+      choices={SERVICES}
+      onChange={setValue}
+    />
+  );
+}
+
+// Several answers at once: checkbox plates in one group, one refused with its
+// reason. The picks come back in the order the choices are listed.
+export const ManyAsCards: Story = { render: () => <ManyLive /> };
+export const ManyAsCardsDark: Story = {
+  ...ManyAsCards,
+  globals: { theme: "dark" },
+};
+
+const DAYS = [
+  { value: "mon", label: "Mon" },
+  { value: "tue", label: "Tue" },
+  { value: "wed", label: "Wed" },
+  { value: "thu", label: "Thu" },
+  { value: "fri", label: "Fri" },
+  { value: "sat", label: "Sat" },
+  { value: "sun", label: "Sun" },
+];
+
+function DaysLive() {
+  const [value, setValue] = useState<string[]>(["mon", "tue", "wed"]);
+  return (
+    <ChoiceList
+      legend="Bookable days"
+      multiple
+      layout="row"
+      value={value}
+      choices={DAYS}
+      onChange={setValue}
+    />
+  );
+}
+
+// Pick-several in one line: short labels read as a range, so a column would
+// spend seven rows on one question.
+export const MultipleRow: Story = { render: () => <DaysLive /> };
+
+const VENDORS = [
+  {
+    value: "google" as const,
+    label: "Google",
+    description: "Gmail and Google Calendar.",
+    mark: <ProviderMark providerKey="google" />,
+  },
+  {
+    value: "microsoft" as const,
+    label: "Microsoft",
+    description: "Outlook and Microsoft 365 calendar.",
+    mark: <ProviderMark providerKey="microsoft" />,
+  },
+  {
+    value: "imap" as const,
+    label: "Other mailbox (IMAP)",
+    description: "Mail only, no calendar.",
+    mark: <ProviderMark providerKey="imap" />,
+  },
+];
+
+function VendorsLive() {
+  const [value, setValue] = useState<"" | "google" | "microsoft" | "imap">(
+    "google",
+  );
+  return (
+    <ChoiceList
+      legend="Where is the account?"
+      layout="cards"
+      value={value}
+      choices={VENDORS}
+      onChange={setValue}
+    />
+  );
+}
+
+// One answer as plates with the vendor's own mark, on an elevated card as in a
+// drawer. Every live plate stays light and the chosen one is drawn selected.
+export const SingleCardsWithMark: Story = {
+  render: () => (
+    <Card as="div">
+      <VendorsLive />
+    </Card>
+  ),
+};
+export const SingleCardsWithMarkDark: Story = {
+  ...SingleCardsWithMark,
+  globals: { theme: "dark" },
+};
+
+function LinkLive() {
+  const [value, setValue] = useState<"classified" | "held" | "shared">(
+    "classified",
+  );
+  return (
+    <ChoiceList
+      legend="How is mail kept?"
+      value={value}
+      onChange={setValue}
+      choices={[
+        {
+          value: "classified",
+          label: "Sorted by Margince",
+          description: "Mail about your contacts goes in, the rest stays out.",
+        },
+        { value: "held", label: "Held for review" },
+        {
+          value: "shared",
+          label: "Shared with the team",
+          disabled: true,
+          description: (
+            <>
+              Needs a workspace opt-in.{" "}
+              <a className="link-button" href="#opt-in">
+                Ask an admin
+              </a>
+            </>
+          ),
+        },
+      ]}
+    />
+  );
+}
+
+// A refused answer whose description links to what unlocks it. Keep it to one
+// short link: its words join the answer's accessible name.
+export const DescriptionWithLink: Story = { render: () => <LinkLive /> };

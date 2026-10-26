@@ -27,7 +27,11 @@ import {
   INSTALLATION_SETTINGS_KEY,
   useInstallationSettings,
 } from "../../lib/uploadlimit";
-import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "./aicaches";
+import {
+  LANGUAGE_DEPENDENT_QUERY_PREFIXES,
+  SETTINGS_IN_SERVER_TEXT,
+} from "./aicaches";
+import { CallingSettingsRows } from "./installation-settings.calling";
 import {
   fiscalYearStartSummary,
   InstallationProfileDialog,
@@ -66,7 +70,7 @@ export type EditedFact = (typeof EDITABLE_FACTS)[number];
 // Exported for the onboarding's preferences act, which writes the same sparse
 // patch from the same fields: a second mutation would be a second answer to
 // what a saved language invalidates.
-export function useUpdateInstallationSettings(onSaved: () => void) {
+export function useUpdateInstallationSettings(onSaved?: () => void) {
   const t = useT();
   const queryClient = useQueryClient();
   return useMutation({
@@ -81,23 +85,16 @@ export function useUpdateInstallationSettings(onSaved: () => void) {
       );
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, patch) => {
       queryClient.setQueryData(INSTALLATION_SETTINGS_KEY, data);
-      // The model-written surfaces are keyed on a record id and nothing else,
-      // and the server rewrites them in the new language the next time it is
-      // asked. Without this nobody asks: `refetchOnWindowFocus` is off, so a
-      // company page left open keeps rendering its old-language brief until
-      // some unrelated fact moves it. The setting would look like it did
-      // nothing, which is the complaint base language exists to answer.
-      //
-      // Invalidated unconditionally rather than only when base_language moved.
-      // Deciding that means diffing against the pre-patch value, and the cost
-      // of being wrong is asymmetric: an extra refetch of one open page is
-      // cheap, and a missed one is a reader quietly served the wrong language.
-      for (const prefix of LANGUAGE_DEPENDENT_QUERY_PREFIXES) {
-        void queryClient.invalidateQueries({ queryKey: prefix });
+      // These texts are cached by record id alone, and focus does not refetch.
+      // An open page would keep text written in the old language or zone.
+      if (SETTINGS_IN_SERVER_TEXT.some((key) => patch[key] !== undefined)) {
+        for (const prefix of LANGUAGE_DEPENDENT_QUERY_PREFIXES) {
+          void queryClient.invalidateQueries({ queryKey: prefix });
+        }
       }
-      onSaved();
+      onSaved?.();
     },
     // A refused patch can still have committed nothing OR something: the
     // server applies the fields in one transaction, but a validation refusal
@@ -163,6 +160,7 @@ function InstallationSettingsForm({
     toast.show(t("settings.saved"));
     setEditing(null);
   });
+  const calling = useUpdateInstallationSettings();
   const [draft, setDraft] = useState(settings);
   const seeded = useRef(serverSignature(settings));
 
@@ -317,6 +315,12 @@ function InstallationSettingsForm({
           )}
         />
       </SettingList>
+      <CallingSettingsRows
+        settings={settings}
+        canManage={canManage}
+        denialId={denialId}
+        update={calling}
+      />
       {editing !== null && (
         <InstallationProfileDialog
           settings={settings}

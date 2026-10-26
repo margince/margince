@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
-import { Badge } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { RowOpen } from "../../design-system/rowopen";
+import { StatusBadge, type StatusKind } from "../../design-system/statusbadge";
 import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
@@ -56,15 +56,14 @@ function knownResolution(status: string | undefined): KnownResolution | null {
   return RESOLUTIONS.find((known) => known === status) ?? null;
 }
 
-const OUTCOME_TONE: Record<
-  TraceEntry["outcome"],
-  "info" | "danger" | undefined
-> = {
-  captured: undefined,
-  internal: undefined,
-  suppressed: undefined,
-  deferred: "info",
-  fault: "danger",
+// Waiting on a verdict is neutral like every other settled outcome; only a
+// fault means something broke.
+const OUTCOME_KIND: Record<TraceEntry["outcome"], StatusKind> = {
+  captured: "done",
+  internal: "neutral",
+  suppressed: "neutral",
+  deferred: "neutral",
+  fault: "failure",
 };
 
 export function CaptureMessages({
@@ -196,7 +195,7 @@ function EntryOutcome({ entry }: Readonly<{ entry: TraceEntry }>) {
       {entry.outcome_now === "captured" ? (
         <span>{words}</span>
       ) : (
-        <Badge tone={OUTCOME_TONE[entry.outcome]}>{words}</Badge>
+        <StatusBadge kind={OUTCOME_KIND[entry.outcome]} label={words} />
       )}
       {caption && <span className="t-caption">{caption}</span>}
     </CellStack>

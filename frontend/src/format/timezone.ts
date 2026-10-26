@@ -49,6 +49,8 @@
 // reader one second east of the minting zone already sees tomorrow; nothing
 // about that was a preference to respect.
 
+import { isRealCalendarDay } from "./calendarday";
+
 // The zone a record's dates are read in when the installation's own answer is
 // missing. It is only the last resort. `useRecordZone` in
 // lib/recordzone.tsx serves `installation.timezone`. The authenticated shell
@@ -66,20 +68,37 @@ export const UTC_ZONE = "UTC";
 
 export const FALLBACK_RECORD_ZONE = "Europe/Berlin";
 
+// IANA zone names only (AC-DS-TZ4). Fixed offsets ("+01:00", "Etc/GMT-1")
+// freeze DST rules without a sign, so they throw at the edge.
+export function assertIanaZone(zone: string): void {
+  if (/^[+-]\d{2}:?\d{2}$/.test(zone) || /^(Etc\/)?GMT[+-]?\d*$/i.test(zone)) {
+    throw new Error(
+      `timezone must be an IANA name, got fixed offset "${zone}"`,
+    );
+  }
+  // Intl rejects unknown names: constructing with the zone throws a RangeError
+  // that propagates. format() forces the value to be consumed.
+  new Intl.DateTimeFormat("en-US", { timeZone: zone }).format();
+}
+
 /**
- * The zone the reader's own browser is in, or `UTC` when it will not say.
+ * Whether the formatters will accept this zone, asked without throwing.
  *
- * A function, not a constant, on purpose. A module-level constant is evaluated
- * once at import time, which is before the app has rendered anything — so it
- * would freeze the answer for the whole session, outlive a reader who changed
- * their machine's zone or crossed one, and be captured before a test that
- * pretends to be elsewhere had installed its own answer. Constructing an
- * `Intl.DateTimeFormat` per call is cheap next to the render it feeds.
- *
- * A runtime with no zone to report leaves `timeZone` empty, and an empty string
- * is not a zone Intl accepts — it throws. `UTC` is the honest fallback: it
- * names a real zone, and it is the one every wire instant is already stored in.
+ * A page rendering a list of moments cannot let one row's zone take it down,
+ * so it asks before it formats. A probe with Intl alone learns only that the
+ * name resolves. `Etc/GMT-1`, `GMT` and `+01:00` resolve, then throw inside
+ * `formatDate`. So this derives from the assertion, the one reading of
+ * "a zone this renders".
  */
+export function isRenderableZone(zone: string): boolean {
+  try {
+    assertIanaZone(zone);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * The reader's own zone, named and offset — "Indochina Time · UTC+7".
  *
@@ -88,13 +107,21 @@ export const FALLBACK_RECORD_ZONE = "Europe/Berlin";
  * of those places, and "Tuesday, 08:00" with no zone is the sentence that gets
  * that wrong.
  *
+ * A named `zone` reads that zone instead of the reader's own.
+ *
  * Both halves come from Intl's own names, so the zone reads in the reader's
  * language; the offset is spelled UTC rather than Intl's GMT, because that is
  * what the rest of the product says.
  */
-export function zoneNameAndOffset(locale: string, at: Date): string {
+export function zoneNameAndOffset(
+  locale: string,
+  at: Date,
+  zone?: string,
+): string {
+  // A zone the formatters refuse is shown as stored, not dropped.
+  if (zone !== undefined && !isRenderableZone(zone)) return zone;
   const named = (style: "long" | "shortOffset") =>
-    new Intl.DateTimeFormat(locale, { timeZoneName: style })
+    new Intl.DateTimeFormat(locale, { timeZone: zone, timeZoneName: style })
       .formatToParts(at)
       .find((piece) => piece.type === "timeZoneName")?.value ?? "";
   return [named("long"), named("shortOffset").replace("GMT", "UTC")]
@@ -102,16 +129,16 @@ export function zoneNameAndOffset(locale: string, at: Date): string {
     .join(" · ");
 }
 
+// A function, so a change of zone is read on the next call. A runtime that
+// reports no zone gets UTC, since Intl throws on an empty one.
 export function viewerZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || UTC_ZONE;
 }
 
-// The offset (ms) `zone` sits at relative to UTC at the instant `utcMs`
-// names — positive east of UTC, negative west. Derived by re-reading the
-// instant's wall clock through the zone and comparing it back against UTC,
-// the standard technique for converting a zoned wall clock to an instant
-// without a timezone-database library.
-export function zoneOffsetMs(utcMs: number, zone: string): number {
+// The wall clock `zone` reads at the instant `utcMs` names, spelled as if it
+// were a UTC instant, so two readings compare and subtract as plain numbers.
+// Read to the second: Intl never reports a fraction.
+function wallClockMs(utcMs: number, zone: string): number {
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat("en-US", {
       timeZone: zone,
@@ -126,7 +153,7 @@ export function zoneOffsetMs(utcMs: number, zone: string): number {
       .formatToParts(new Date(utcMs))
       .map((part) => [part.type, part.value]),
   );
-  const asIfUtc = Date.UTC(
+  return Date.UTC(
     Number(parts.year),
     Number(parts.month) - 1,
     Number(parts.day),
@@ -134,9 +161,15 @@ export function zoneOffsetMs(utcMs: number, zone: string): number {
     Number(parts.minute),
     Number(parts.second),
   );
+}
+
+// The offset (ms) `zone` sits at relative to UTC at the instant `utcMs`
+// names: positive east of UTC, negative west. It is the zone's wall clock
+// read back against UTC, which needs no timezone-database library.
+export function zoneOffsetMs(utcMs: number, zone: string): number {
   // The wall clock is read to the second, so the instant is too: compared
   // with its milliseconds, an instant 1ms past a second read 1ms off UTC.
-  return asIfUtc - Math.floor(utcMs / 1000) * 1000;
+  return wallClockMs(utcMs, zone) - Math.floor(utcMs / 1000) * 1000;
 }
 
 // instantInZone resolves the UTC instant at which `zone`'s wall clock reads
@@ -206,20 +239,114 @@ function startOfDayInstant(dateOnly: string, zone: string): number {
   if (dayInZone(resolved, zone) === dateOnly) {
     return resolved;
   }
-  const minute = 60_000;
-  // Two hours covers every transition tzdata records; the loop exits at the
-  // first minute that reads as the wanted day.
-  for (let step = 1; step <= 120; step += 1) {
-    const candidate = resolved + step * minute;
-    if (dayInZone(candidate, zone) === dateOnly) {
-      return candidate;
-    }
-  }
   // No minute in two hours reads as the wanted day. That is not a zone rule
   // this code knows how to interpret, and guessing would silently file records
   // under a day nobody picked — so the honest answer is the unadjusted one,
   // which is what every caller got before this correction existed.
-  return resolved;
+  return (
+    firstMinuteReadingAtLeast(wallClockOfDay(dateOnly, 0), zone, resolved) ??
+    resolved
+  );
+}
+
+const MINUTE_MS = 60_000;
+export const DAY_MS = 86_400_000;
+
+// The first whole minute after `from` at which `zone`'s wall clock reads
+// `wall` or later: the end of a removed span. Two hours covers every
+// transition tzdata records, so the walk gives up after 120 steps.
+function firstMinuteReadingAtLeast(
+  wall: number,
+  zone: string,
+  from: number,
+): number | undefined {
+  const start = Math.floor(from / MINUTE_MS) * MINUTE_MS;
+  for (let step = 1; step <= 120; step += 1) {
+    const candidate = start + step * MINUTE_MS;
+    if (wallClockMs(candidate, zone) >= wall) {
+      return candidate;
+    }
+  }
+  return undefined;
+}
+
+// A `yyyy-mm-dd` day plus a time of day, in the wallClockMs spelling.
+function wallClockOfDay(dateOnly: string, timeOfDayMs: number): number {
+  const [year = Number.NaN, month = Number.NaN, day = Number.NaN] = dateOnly
+    .split("-")
+    .map(Number);
+  return Date.UTC(year, month - 1, day) + timeOfDayMs;
+}
+
+/**
+ * The instant on `day` at which `zone`'s wall clock reads `timeOfDayMs` past
+ * midnight, in whole seconds. On a DST switch day a wall time can be missing
+ * or happen twice:
+ * - missing (02:30 in Berlin on 29 March 2026): the first instant after the
+ *   gap, 03:00;
+ * - twice (02:30 in Berlin on 25 October 2026): the earlier one, on summer time.
+ *
+ * A day the zone skipped whole (30 December 2011 in Apia) has no such instant,
+ * so it is refused rather than filed on a neighbouring day.
+ */
+export function instantAtWallClock(
+  day: string,
+  timeOfDayMs: number,
+  zone: string,
+): number {
+  if (!isRealCalendarDay(day)) {
+    throw new RangeError(`not a calendar day: ${day}`);
+  }
+  // Date.UTC maps years 0-99 onto 1900-1999, so such a day would resolve to
+  // another century without a sign.
+  if (Number(day.slice(0, 4)) < 100) {
+    throw new RangeError(`year out of range: ${day}`);
+  }
+  const wanted = wallClockOfDay(day, timeOfDayMs);
+  // The offsets a day either side of the wanted time. On a switch day they
+  // are the two in force; on any other day they agree.
+  const offsets = [
+    zoneOffsetMs(wanted - DAY_MS, zone),
+    zoneOffsetMs(wanted + DAY_MS, zone),
+  ];
+  const readings = offsets
+    .map((offset) => wanted - offset)
+    .filter((candidate) => wallClockMs(candidate, zone) === wanted);
+  if (readings.length > 0) {
+    return Math.min(...readings);
+  }
+  const afterGap = firstMinuteReadingAtLeast(
+    wanted,
+    zone,
+    wanted - Math.max(...offsets),
+  );
+  if (afterGap === undefined || dayInZone(afterGap, zone) !== day) {
+    throw new RangeError(`${day} has no such time in ${zone}`);
+  }
+  return afterGap;
+}
+
+/**
+ * The instant on `day` at which `zone`'s wall clock reads what it read at
+ * `instant`. A meeting moved to another day keeps its time of day there, by
+ * the DST rule of `instantAtWallClock`. The source's milliseconds are kept,
+ * because the wall clock is read to the second.
+ */
+export function sameWallClockOnDay(
+  instant: string,
+  day: string,
+  zone: string,
+): string {
+  const sourceMs = Date.parse(instant);
+  if (Number.isNaN(sourceMs)) {
+    throw new RangeError(`not an instant: ${instant}`);
+  }
+  const fraction = sourceMs - Math.floor(sourceMs / 1000) * 1000;
+  const sourceWall = wallClockMs(sourceMs, zone);
+  const timeOfDay = ((sourceWall % DAY_MS) + DAY_MS) % DAY_MS;
+  return new Date(
+    instantAtWallClock(day, timeOfDay, zone) + fraction,
+  ).toISOString();
 }
 
 /**

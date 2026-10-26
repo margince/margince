@@ -15,11 +15,11 @@ import (
 	"errors"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/commissions"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -68,7 +68,19 @@ func TestTwoConcurrentVoidsOfOnePaymentWriteOneReversal(t *testing.T) {
 				commissions.DecideInput{Decision: commissions.DecisionVoid, Reason: &reason})
 		})
 	}
-	awaitLockWaiters(t, holder, 2)
+	decided := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(decided)
+	}()
+	// The voids wait on the hold, so a failing probe rolls it back before waiting.
+	t.Cleanup(func() {
+		if err := hold.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Logf("rolling back the held entry: %v", err)
+		}
+		<-decided
+	})
+	testdb.AwaitQueuedBehind(t, OwnerConn(t), holder, 2, decided, "the two voids")
 	if err := hold.Commit(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -99,39 +111,5 @@ func TestTwoConcurrentVoidsOfOnePaymentWriteOneReversal(t *testing.T) {
 	}
 	if reversals != 1 {
 		t.Errorf("the ledger holds %d reversals of one payment, want exactly one", reversals)
-	}
-}
-
-// awaitLockWaiters returns once n sessions are queued behind the holder's lock —
-// THAT backend's, so no unrelated session can stand in for a void. The queue is
-// followed rather than read one level deep: a row lock queues its waiters, so
-// the second void waits behind the first rather than on the holder directly.
-// The bound only turns a void that never reached the lock into a failure that
-// says so, instead of a test that hangs.
-func awaitLockWaiters(t *testing.T, holder int32, n int) {
-	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	watcher := OwnerConn(t)
-	for {
-		// pg_stat_activity is materialized once per transaction and cached, so
-		// each poll clears it first on this same connection, or a void that
-		// reached the lock after the first read would never be seen.
-		if _, err := watcher.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-			t.Fatalf("clearing the stats snapshot before probing the lock queue: %v", err)
-		}
-		var waiting int
-		if err := watcher.QueryRow(ctx, `
-			WITH RECURSIVE queued AS (
-				SELECT pid FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))
-				UNION
-				SELECT a.pid FROM pg_stat_activity a
-				  JOIN queued q ON q.pid = ANY(pg_blocking_pids(a.pid)))
-			SELECT count(*) FROM queued`, holder).Scan(&waiting); err != nil {
-			t.Fatalf("waiting for %d sessions to block on the entry's lock: %v", n, err)
-		}
-		if waiting >= n {
-			return
-		}
 	}
 }

@@ -51,18 +51,10 @@ const inlineImageCeiling = 65536
 // fieldDealID names the deal in a hide's audit image.
 const fieldDealID = "deal_id"
 
-// dealDocumentMembership says which attachments a deal's Files area holds,
-// before any caller-bound visibility: the deal's own uploads, and the files of
-// an activity linked to the deal, minus inline mail images. `$deal` is the
-// placeholder the caller bound the deal id to.
+// dealDocumentMembership is the deal's Files area before caller-bound
+// visibility. `deal` is the placeholder the caller bound the deal id to.
 func dealDocumentMembership(deal int) string {
-	return fmt.Sprintf(`at.archived_at IS NULL AND NOT at.bytes_withheld AND (
-		(at.entity_type = '%s' AND at.entity_id = $%d)
-		OR (at.entity_type = '%s' AND EXISTS (
-			SELECT 1 FROM activity_link l
-			 WHERE l.activity_id = at.entity_id AND l.entity_type = '%s' AND l.deal_id = $%d)
-			AND NOT (at.content_type LIKE 'image/%%' AND COALESCE(at.byte_size, 0) < %d)))`,
-		linkEntityDeal, deal, linkEntityActivity, linkEntityDeal, deal, inlineImageCeiling)
+	return documentMembership(holderDeal, deal)
 }
 
 // ListDealDocuments returns the deal's Files area, newest first. The caller
@@ -139,7 +131,7 @@ func (s *Store) ListDealDocuments(
 			}
 			page = storekit.Page{HasMore: true, NextCursor: next}
 		}
-		return nil
+		return withDealMailOrigins(ctx, tx, out)
 	})
 	if out == nil {
 		out = []crmcontracts.DealDocument{}
@@ -180,6 +172,22 @@ func scanDealDocument(rows pgx.Rows) (crmcontracts.DealDocument, error) {
 		}
 	}
 	return doc, nil
+}
+
+// withDealMailOrigins names the mail on each deal file's own row, as the
+// contact and company lists do.
+func withDealMailOrigins(ctx context.Context, tx pgx.Tx, docs []crmcontracts.DealDocument) error {
+	files := make([]crmcontracts.Attachment, len(docs))
+	for i, doc := range docs {
+		files[i] = doc.Attachment
+	}
+	if err := withMailOrigins(ctx, tx, files); err != nil {
+		return err
+	}
+	for i := range docs {
+		docs[i].Attachment = files[i]
+	}
+	return nil
 }
 
 // HideDealDocument takes a file off this deal's Files area. The caller needs

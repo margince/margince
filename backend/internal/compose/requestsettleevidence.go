@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 	"time"
 
@@ -52,7 +53,7 @@ func settleEvidence(ctx context.Context, tx pgx.Tx, request activities.RepliedRe
 		seen[answer.ID] = true
 		message := threadMessage{
 			ID: answer.ID, Direction: string(crmcontracts.ActivityDirectionOutbound), Subject: answer.Subject,
-			Body: answer.Body, At: answer.At, OffThread: answer.Kind,
+			Body: answer.Body, At: answer.At, OffThread: answer.Kind, Incomplete: answer.Incomplete,
 		}
 		if answer.SameThread {
 			message.OffThread = ""
@@ -66,6 +67,11 @@ func settleEvidence(ctx context.Context, tx pgx.Tx, request activities.RepliedRe
 			return nil, err
 		}
 		messages = append(messages, newest...)
+	}
+	// A message read only in part may be the re-ask or the withdrawal the
+	// verdict turns on, so a conversation holding one is not judged.
+	if slices.ContainsFunc(messages, func(message threadMessage) bool { return message.Incomplete }) {
+		return nil, nil
 	}
 	inTimeOrder(messages)
 	return windowKeeping(messages, request.NewestAnswerID, settleThreadMessages), nil

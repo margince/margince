@@ -36,17 +36,17 @@ const meta: Meta<typeof PageAsideToggle> = {
 export default meta;
 type Story = StoryObj<typeof PageAsideToggle>;
 
-// Two of the company rail's own cards, in their empty state: real details-pane
-// copy from the catalog rather than invented filler, so the pane is judged
-// against the width and rhythm it actually carries.
+// Two of the company overview's own cards, in their empty state. The copy is
+// real, from the catalog, so the pane is judged against the width and rhythm it
+// actually carries.
 function contextCards() {
   return (
     <>
-      <Panel title={en["co.rail.deals.title"]}>
-        <PanelBody>{en["co.rail.deals.empty"]}</PanelBody>
+      <Panel title={en["co.overview.allDeals"]}>
+        <PanelBody>{en["co.overview.noWork"]}</PanelBody>
       </Panel>
-      <Panel title={en["co.rail.contacts.title"]}>
-        <PanelBody>{en["co.rail.contacts.empty"]}</PanelBody>
+      <Panel title={en["co.overview.alsoOnList"]}>
+        <PanelBody>{en["co.overview.nothingOpen"]}</PanelBody>
       </Panel>
     </>
   );
@@ -71,8 +71,7 @@ function Record() {
           trailing={<PageAsideToggle />}
         />
       }
-      aside={contextCards()}
-      asideOpen={details.open}
+      aside={details.open ? contextCards() : undefined}
     >
       <Panel title={en["co.commercial.title"]}>
         <PanelBody>{en["co.deals.empty"]}</PanelBody>

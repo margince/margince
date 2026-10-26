@@ -5,7 +5,7 @@ package customfields
 
 // The engine-module service (Handlers→Service shape):
 // this file owns the Service seam, the typed refusals, and the one
-// catalog-row scan every operation shares. Tables owned: custom_field.
+// catalog-row scan every operation shares.
 
 import (
 	"context"

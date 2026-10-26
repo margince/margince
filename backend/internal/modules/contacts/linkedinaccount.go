@@ -57,6 +57,9 @@ type LinkedInAccount struct {
 // truthfully reports zero new matches while twenty-six matches sit in the
 // database. A card labelled "Matched to a contact" showing 0 in that state is
 // simply wrong.
+// profileURLRequestField is the request field a LinkedIn profile URL arrives in.
+const profileURLRequestField = "profile_url"
+
 func (s *Store) MyLinkedInMatchTotals(ctx context.Context) (confirmed, suggested int, err error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {
@@ -206,7 +209,7 @@ func validateLinkedInProfileURL(s string) error {
 	if err != nil || parsed.Host == "" ||
 		(parsed.Scheme != "http" && parsed.Scheme != "https") {
 		return &DedupeInputError{
-			Field: "profile_url",
+			Field: profileURLRequestField,
 			Msg:   "a LinkedIn profile URL looks like https://www.linkedin.com/in/your-name",
 		}
 	}
@@ -231,8 +234,8 @@ func readLinkedInAccountTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (Linke
 // history of their own account, while the event fans out to subscribers.
 func auditLinkedInAccount(a LinkedInAccount) map[string]any {
 	return map[string]any{
-		"profile_url":  a.ProfileURL,
-		"connected_at": a.ConnectedAt,
+		profileURLRequestField: a.ProfileURL,
+		"connected_at":         a.ConnectedAt,
 		// Withholding a reach is a privacy choice, so the images have to show
 		// it. Left out, a save that only switched it writes an audit row whose
 		// before and after read alike, and the record says nothing happened.

@@ -319,6 +319,34 @@ describe("UsersAdminCard", () => {
     });
   });
 
+  it("removes a locked-out member's second factor after a confirm", async () => {
+    const user = userEvent.setup();
+    const calls: { method: string; url: string; body?: unknown }[] = [];
+    vi.stubGlobal("fetch", backend(calls));
+    render(<UsersAdminCard />);
+    await waitFor(() => expect(screen.getByText("Nora None")).toBeTruthy());
+    expect(
+      (await rowMenu(user, "Ada Active")).queryByText(en["users.removeMfa"]),
+    ).toBeNull();
+
+    await user.click(
+      (await rowMenu(user, "Nora None")).getByText(en["users.removeMfa"]),
+    );
+    const dialog = await screen.findByRole("dialog");
+    expect(calls.some((c) => c.url.includes("/mfa"))).toBe(false);
+    await user.click(
+      within(dialog).getByRole("button", { name: en["users.removeMfa"] }),
+    );
+
+    await waitFor(() =>
+      expect(
+        calls.some(
+          (c) => c.method === "DELETE" && c.url.includes("/users/u-none/mfa"),
+        ),
+      ).toBe(true),
+    );
+  });
+
   it("deactivates an active member through the deactivate seam", async () => {
     const user = userEvent.setup();
     const calls: { method: string; url: string; body?: unknown }[] = [];

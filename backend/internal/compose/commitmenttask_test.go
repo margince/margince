@@ -91,14 +91,23 @@ func TestAcceptingACommitmentRefusesWhatItCannotWrite(t *testing.T) {
 	if err := effect(context.Background(), ids.From[ids.ApprovalKind](ids.NewV7()), payload, "h"); err == nil {
 		t.Error("a proposal was accepted with nobody deciding it")
 	}
-	// A promise in private mail lands on its owner or nobody.
 	owner, other := ids.NewV7(), ids.NewV7()
-	private := mustJSON(t, CommitmentTaskProposal{Summary: "Send pricing", Locator: "abc", PrivateTo: &owner})
 	decider := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + other.String(), UserID: other,
 	})
-	if err := effect(decider, ids.From[ids.ApprovalKind](ids.NewV7()), private, "h"); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("a colleague accepting a promise from another member's private mail: err = %v, want permission denied", err)
+	// A promise is accepted by the colleague who made it, and by nobody else.
+	cases := map[string]CommitmentTaskProposal{
+		"a promise nobody was named for":       {Summary: "Send pricing", Locator: "abc"},
+		"a colleague's promise":                {Summary: "Send pricing", Locator: "abc", SeatID: &owner, PromiserSeatID: &owner},
+		"a colleague's promise staged for you": {Summary: "Send pricing", Locator: "abc", SeatID: &other, PromiserSeatID: &owner},
+	}
+	for name, proposal := range cases {
+		if err := effect(decider, ids.From[ids.ApprovalKind](ids.NewV7()), mustJSON(t, proposal), "h"); !errors.Is(err, apperrors.ErrConflict) {
+			t.Errorf("%s: accepting as another colleague: err = %v, want conflict", name, err)
+		}
+		if err := commitmentTaskPrecheck(nil, nil)(decider, mustJSON(t, proposal), nil); !errors.Is(err, apperrors.ErrConflict) {
+			t.Errorf("%s: the precheck let another colleague accept: err = %v, want conflict", name, err)
+		}
 	}
 }
 

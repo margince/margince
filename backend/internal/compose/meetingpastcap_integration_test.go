@@ -101,9 +101,10 @@ func TestACrowdedMeetingBindsItsSeatsAndNoStrangerOnEitherPath(t *testing.T) {
 			t.Errorf("%s meeting binds seats %v, want %v — a colleague on a crowded meeting "+
 				"must still be able to read it", name, seats, want)
 		}
-		if rows := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id = $1 AND user_id = $2`,
+		if rows := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id = $1 AND user_id = $2
+			AND role IN ('organizer', 'attendee')`,
 			id, e.AdminUser); rows > 1 {
-			t.Errorf("%s meeting holds %d rows for its owner, want at most 1 — one colleague in the room is one row", name, rows)
+			t.Errorf("%s meeting holds %d attendance rows for its owner, want at most 1 — one colleague in the room is one row", name, rows)
 		}
 		if strangers != 0 {
 			t.Errorf("%s meeting records %d strangers past the cap, want 0 — a distribution "+

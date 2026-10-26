@@ -68,6 +68,7 @@ export function Modal({
   open,
   onClose,
   labelledBy,
+  describedBy,
   intent,
   span = "intent",
   onSpanChange,
@@ -81,6 +82,8 @@ export function Modal({
   open: boolean;
   onClose: () => void;
   labelledBy: string;
+  /** A line under the title that says what the dialog is about. */
+  describedBy?: string;
   // Resolve at close time when a mutation replaces the opener (for example,
   // Deactivate becoming Reactivate). A callback can find the newly mounted control.
   returnFocusTo?: () => HTMLElement | null;
@@ -190,6 +193,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
+        aria-describedby={describedBy}
         className={box}
         ref={dialog}
         // Focusable so a dialog whose body is pure text still receives focus
@@ -234,20 +238,15 @@ export function Modal({
         </div>
       </div>
       {/* Portalled to the body on its own; it sits here only for React. */}
-      <ConfirmModal
+      <DiscardDraftQuestion
         open={open && asking}
-        title={t("unsaved.title")}
-        confirmLabel={t("unsaved.discard")}
-        confirmVariant="danger"
-        // Closing the question keeps the draft, as `UnsavedGuard`'s does.
-        onClose={() => setAsking(false)}
-        onConfirm={() => {
+        body={t("unsaved.dialogBody")}
+        onKeep={() => setAsking(false)}
+        onDiscard={() => {
           setAsking(false);
           onClose();
         }}
-      >
-        <p>{t("unsaved.dialogBody")}</p>
-      </ConfirmModal>
+      />
     </div>,
     document.body,
   );
@@ -268,4 +267,33 @@ function modalClass(intent: ModalIntent, span: DrawerSpan) {
       : "modal modal-drawer modal-drawer-wide";
   }
   if (intent === "full") return "modal modal-full";
+}
+
+/** The question a dirty close asks, for a dialog and for a form open inside one. */
+export function DiscardDraftQuestion({
+  open,
+  body,
+  onKeep,
+  onDiscard,
+}: Readonly<{
+  open: boolean;
+  // What closing loses, in the caller's words; the title alone asks it.
+  body?: string;
+  onKeep: () => void;
+  onDiscard: () => void;
+}>) {
+  const t = useT();
+  return (
+    <ConfirmModal
+      open={open}
+      title={t("unsaved.title")}
+      confirmLabel={t("unsaved.discard")}
+      confirmVariant="danger"
+      // Closing the question keeps the draft, as `UnsavedGuard`'s does.
+      onClose={onKeep}
+      onConfirm={onDiscard}
+    >
+      {body && <p>{body}</p>}
+    </ConfirmModal>
+  );
 }

@@ -59,6 +59,17 @@ const CLEAN = {
       },
     ],
   },
+  "GET /admin/automatic-work-health": {
+    generated_at: READ_AT,
+    days: 7,
+    first_day: "2026-10-08",
+    last_day: "2026-10-14",
+    share_threshold: 0.1,
+    small_sample_below: 10,
+    kinds: [],
+    colleagues: [],
+    unattributed: 0,
+  },
   "GET /admin/recovery-health": {
     generated_at: READ_AT,
     recovery_target_seconds: 14_400,

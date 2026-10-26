@@ -14,6 +14,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -22,7 +23,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -133,6 +133,24 @@ func collectBreaches(rows pgx.Rows) ([]SLABreach, error) {
 	return out, rows.Err()
 }
 
+// SeatAnswersBreach says whether a seat can be handed a lead's escalation: an
+// active human colleague whose seat can write. It asks auth.EnsureAssignee,
+// which also vets the intake seat. The scan and the delivery of its event share it.
+func SeatAnswersBreach(ctx context.Context, tx pgx.Tx, seat ids.UUID) (bool, error) {
+	err := auth.EnsureAssignee(ctx, tx, seat)
+	if errors.As(err, new(*auth.AssigneeNotAllowedError)) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+func (b SLABreach) ownerAnswers(ctx context.Context, tx pgx.Tx) (bool, error) {
+	if b.OwnerID == nil {
+		return false, nil
+	}
+	return SeatAnswersBreach(ctx, tx, b.OwnerID.UUID)
+}
+
 func markBreach(ctx context.Context, tx pgx.Tx, b SLABreach, now time.Time) error {
 	// The SLA sweep runs as an unbounded system principal, for whom this probe
 	// returns nil without a query. It is here so that the day a human-facing
@@ -165,23 +183,28 @@ func markBreach(ctx context.Context, tx pgx.Tx, b SLABreach, now time.Time) erro
 		return fmt.Errorf("audit sla breach: %w", err)
 	}
 	payload := crmcontracts.PublicEventLeadSlaBreached{Deadline: b.Deadline}
-	switch {
-	case b.OwnerID != nil:
+	ownerAnswers, err := b.ownerAnswers(ctx, tx)
+	if err != nil {
+		return err
+	}
+	if b.OwnerID != nil {
 		owner := openapi_types.UUID(b.OwnerID.UUID)
 		payload.OwnerId = &owner
+	}
+	switch {
+	case ownerAnswers:
 		// An owned lead escalates to its OWNER: the desk that owes the answer
 		// is the desk that hears about the miss.
-		payload.EscalationTarget = &owner
+		payload.EscalationTarget = payload.OwnerId
 	default:
-		// A lead NOBODY owns is the queue's worst case — past its response
-		// target with no one who has picked it up — and it was the one case
-		// that reached nobody at all: an unassigned task and no notice.
+		// A lead nobody answers for is the queue's worst case. An owner who has
+		// left is that case too: their task would be refused and their notice
+		// read by nobody. The configured intake seat answers for it.
 		//
-		// The configured intake seat answers for it. Unset means the
-		// installation has not said who runs the queue, and the breach stays
-		// where it was rather than being addressed to somebody who did not
-		// agree to it; the unassigned view is what surfaces those.
-		target, configured, err := unassignedEscalationTarget(ctx, tx, config.Bound())
+		// Unset means nobody has said who runs the queue, so the breach stays
+		// unaddressed rather than going to someone who never agreed to it.
+		// The unassigned view surfaces those.
+		target, configured, err := IntakeSeat(ctx, tx)
 		if err != nil {
 			return err
 		}

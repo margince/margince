@@ -358,9 +358,9 @@ const (
 	// THE FIRST RISE, and why it is not a widening anybody should copy.
 	// contacts.RetractMisattributedSignatureFields takes back the profile fields
 	// an earlier build wrote off a message the contact never sent. It is a
-	// repair pass, chosen by DATA — the same SenderPredicate that decides what
-	// may be written decides what may still stand — and run by the enrichment
-	// job's own system principal, which has no seat for a scope to narrow to.
+	// repair pass, chosen by data. The same relstrength.SenderSQL that decides what
+	// may be written decides what may still stand. The enrichment job's own system
+	// principal runs it, and that principal has no seat for a scope to narrow to.
 	// Narrowing it to one caller's rows would leave every other contact wearing
 	// another sender's title while the pass reported success, which is the
 	// storage-limitation shape the privacy sweeps are exempted for.
@@ -541,5 +541,45 @@ const (
 	//
 	// 124: privacy.leadTwinOf follows the same subject through merged contacts
 	// to the leads they were, for the same rights case.
-	modulesTierUnscopedCeiling = 124
+	//
+	// 125-127: activities.PassedActivitiesTx reads the contact, deal and company
+	// an activity whose time has come is filed under. System-only, and the ids
+	// go straight into the clock refold; nothing returns one to a reader.
+	// 128-131: contacts' nightly duplicate re-check (deduperecheck.go) reads the
+	// two ends of every open pair, and a contact's current employer, under the
+	// system principal. It walks the whole queue by design, and the ids decide
+	// only whether a pair stays open; none leaves the server.
+	//
+	// 132-133: capture.mailContacts and capture.threadDeals read the contacts
+	// on a mail and the company of a deal its thread is filed under, for the
+	// deal rule. A seat that sees only part of them would file on a guess. So
+	// they are read whole; the ids stay in the rule, and its link passes
+	// EnsureLinkTarget.
+	//
+	// 134: contacts.subdomainClaimants is the sibling of nameDomainClaimant for
+	// a company on a subdomain of a held domain, unscoped for the same reason.
+	// The ladder scores every company, and the id becomes a review row.
+	//
+	// 135: contacts.addressVariantContact finds the contact holding the same
+	// address under another plus tag. The ladder searches the whole workspace
+	// by design. The id becomes a review row, or a possible-duplicate answer
+	// that asks the caller's visibility before it names the contact.
+	//
+	// 136: activities.DeliveryReportsTx names the leads a delivery report is
+	// linked to, so the repair can re-derive each. It runs as the system actor
+	// over the whole workspace, and the id is only handed to
+	// contacts.ReDeriveLeadFromRemainingTouchesTx, which probes writability.
+	//
+	// 137: projects.LinkPhaseHistoryTx pages over phase-history rows under the
+	// system principal and matches each to its audit row. It returns the
+	// history row ids only to advance the cursor; none leaves the server.
+	//
+	// 138: contacts.SignatureFieldSourcesTx pages the signature fields for the
+	// repair data task, as the system actor over the whole workspace. The ids
+	// go only to RetractSignatureFieldsByIDTx, ratified in writesWithoutARowProbe.
+	//
+	// 139: contacts.primaryEmployersOf lists every current employee of the
+	// company a merge retires, past the reader's scope, because the merge moves
+	// every edge. The ids go only to the merge's twin re-check; none is returned.
+	modulesTierUnscopedCeiling = 139
 )

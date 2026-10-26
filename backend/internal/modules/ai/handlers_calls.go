@@ -28,10 +28,12 @@ func (h Handlers) ListAiCalls(
 	r *http.Request,
 	params crmcontracts.ListAiCallsParams,
 ) {
-	page, err := h.calls.ListCalls(r.Context(), params.Cursor, params.Limit, CallListFilter{
-		Task: deref(params.Task), Provider: deref(params.Provider), Model: deref(params.Model),
-		ServedModel: deref(params.ServedModel), ServedProvider: deref(params.ServedProvider), Tier: deref(params.Tier),
-	})
+	read, err := callListOf(params)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	page, err := h.calls.ListCalls(r.Context(), read.cursor, read.limit, read.filter)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -46,11 +48,40 @@ func (h Handlers) ListAiCalls(
 		PayloadCaptureEnabled: h.capturePayloads,
 		Tasks:                 page.Tasks,
 		TaskOptions:           wireAiCallTaskOptions(page.Tasks),
+		Models:                page.Models,
 	}
 	if page.NextCursor != "" {
 		response.Page.NextCursor = &page.NextCursor
 	}
 	httperr.WriteJSON(w, http.StatusOK, response)
+}
+
+// callListRead is one /ai/calls read: the page asked for and what narrows it.
+type callListRead struct {
+	cursor *string
+	limit  *int
+	filter CallListFilter
+}
+
+// callListOf checks what the generated binding cannot: an outcome off the
+// enum and a window that ends before it starts, which would match nothing.
+func callListOf(params crmcontracts.ListAiCallsParams) (callListRead, error) {
+	filter := CallListFilter{
+		Task: deref(params.Task), Provider: deref(params.Provider), Model: deref(params.Model),
+		ServedModel: deref(params.ServedModel), ServedProvider: deref(params.ServedProvider), Tier: deref(params.Tier),
+		Query: deref(params.Q), From: params.From, To: params.To,
+	}
+	if params.Outcome != nil {
+		if !params.Outcome.Valid() {
+			return callListRead{}, httperr.Validation("outcome", "invalid_parameter",
+				"outcome must be one of answered, fallback, declined, failed")
+		}
+		filter.Outcome = string(*params.Outcome)
+	}
+	if filter.From != nil && filter.To != nil && !filter.To.After(*filter.From) {
+		return callListRead{}, httperr.Validation("to", "invalid_parameter", "to must be after from")
+	}
+	return callListRead{cursor: params.Cursor, limit: params.Limit, filter: filter}, nil
 }
 
 // GetAiCall implements (GET /ai/calls/{id}).
@@ -73,8 +104,10 @@ func wireAiCallSummary(summary CallSummary) crmcontracts.AiCallSummary {
 		CachedTokens: int(summary.CachedTokens), LatencyMs: int(summary.LatencyMS),
 		CacheHit: summary.CacheHit, Degraded: summary.Degraded,
 		ErrorSentinel: summary.ErrorSentinel, HasPayload: summary.HasPayload,
-		DecisionAttempted: summary.DecisionAttempted,
-		TaskDisplayName:   taskDisplayName(Task(summary.Task)),
+		DecisionAttempted:     summary.DecisionAttempted,
+		TaskDisplayName:       taskDisplayName(Task(summary.Task)),
+		Outcome:               crmcontracts.AiCallOutcome(summary.Outcome),
+		EstimatedCostMicrousd: summary.CostMicroUSD,
 	}
 }
 
@@ -98,12 +131,14 @@ func wireAiCall(detail CallDetail) crmcontracts.AiCall {
 		Degraded: summary.Degraded, ErrorSentinel: summary.ErrorSentinel,
 		HasPayload: summary.HasPayload, ServedIdentitySource: detail.ServedIdentitySource,
 		ConfigHash: detail.ConfigHash, Config: detail.Config,
-		ContextScopes:      detail.ContextScopes,
-		ContextFingerprint: detail.ContextFingerprint,
-		LogicalCallId:      openapi_types.UUID(detail.LogicalCallID),
-		Attempts:           make([]crmcontracts.AiCallAttempt, 0, len(detail.Attempts)),
-		PayloadCaptured:    detail.Payload != nil,
-		DecisionAttempted:  summary.DecisionAttempted,
+		ContextScopes:         detail.ContextScopes,
+		ContextFingerprint:    detail.ContextFingerprint,
+		LogicalCallId:         openapi_types.UUID(detail.LogicalCallID),
+		Attempts:              make([]crmcontracts.AiCallAttempt, 0, len(detail.Attempts)),
+		PayloadCaptured:       detail.Payload != nil,
+		DecisionAttempted:     summary.DecisionAttempted,
+		Outcome:               summary.Outcome,
+		EstimatedCostMicrousd: summary.EstimatedCostMicrousd,
 	}
 	if detail.CorrelationID != nil {
 		value := openapi_types.UUID(*detail.CorrelationID)

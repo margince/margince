@@ -28,6 +28,7 @@ package storekit
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -75,6 +76,9 @@ const (
 	OpIn       = "in"
 	OpContains = "contains"
 	OpExists   = "exists"
+	// OpWithinRadius is the one operator of a FieldDistance field. Its operand
+	// is decoded and checked by radiusOperand.
+	OpWithinRadius = "within_radius"
 )
 
 // operatorsByType is the typed-operator matrix: ordering only for
@@ -94,6 +98,7 @@ var operatorsByType = map[FieldType]map[string]bool{
 	FieldCurrency: {OpEq: true, OpNeq: true, OpGt: true, OpGte: true, OpLt: true, OpLte: true, OpIn: true, OpExists: true},
 	FieldDate:     {OpEq: true, OpNeq: true, OpGt: true, OpGte: true, OpLt: true, OpLte: true, OpExists: true},
 	FieldBoolean:  {OpEq: true, OpNeq: true, OpExists: true},
+	FieldDistance: {OpWithinRadius: true},
 }
 
 // operatorOrder is the one reading order for an operator list: equality,
@@ -101,7 +106,7 @@ var operatorsByType = map[FieldType]map[string]bool{
 // so iterating it directly would answer a different order on every call and
 // make a vocabulary response unstable between two identical requests.
 var operatorOrder = []string{
-	OpEq, OpNeq, OpGt, OpGte, OpLt, OpLte, OpIn, OpContains, OpExists,
+	OpEq, OpNeq, OpGt, OpGte, OpLt, OpLte, OpIn, OpContains, OpExists, OpWithinRadius,
 }
 
 // linkOperators are the operators a correlated-link leaf can express, and the
@@ -118,6 +123,9 @@ var operatorOrder = []string{
 var linkOperators = map[string]bool{
 	OpEq: true, OpNeq: true, OpIn: true, OpExists: true,
 }
+
+// Operators lists every operator a filter leaf may name, in the reading order.
+func Operators() []string { return slices.Clone(operatorOrder) }
 
 // OperatorsFor answers the operators this field admits, in operatorOrder.
 //
@@ -342,6 +350,9 @@ func compileShapedLeaf(p Predicate, field Field, arg func(any) int) (sql string,
 	case field.Link != "":
 		sql, err = compileLinkLeaf(p, field, arg)
 		return sql, true, err
+	case field.Type == FieldDistance:
+		sql, err = compileDistanceLeaf(p, field, arg)
+		return sql, true, err
 	case field.Instant && p.Op != OpExists:
 		sql, err = compileInstantLeaf(p, field, arg)
 		return sql, true, err
@@ -434,18 +445,30 @@ func compileLinkLeaf(p Predicate, field Field, arg func(any) int) (string, error
 		// every other one first; this is the switch's own guard.
 		return "", linkOperatorRefusal(p)
 	}
-	if field.LinkScope != nil {
-		bound, err := field.LinkScope(arg)
-		if err != nil {
-			return "", err
-		}
-		if bound != "" {
-			inner = "(" + inner + ") AND " + bound
-		}
+	inner, err := scopedLinkInner(field, inner, arg)
+	if err != nil {
+		return "", err
 	}
 	sql := fmt.Sprintf(field.Link, inner)
 	if negate {
 		return "NOT " + sql, nil
 	}
 	return sql, nil
+}
+
+// scopedLinkInner narrows a link comparison to the linked rows the field's
+// LinkScope admits. The leaf verdict and the linked-value reading both call it,
+// so what a clause finds and what an explanation lists are the same rows.
+func scopedLinkInner(field Field, inner string, arg func(any) int) (string, error) {
+	if field.LinkScope == nil {
+		return inner, nil
+	}
+	bound, err := field.LinkScope(arg)
+	if err != nil {
+		return "", err
+	}
+	if bound == "" {
+		return inner, nil
+	}
+	return "(" + inner + ") AND " + bound, nil
 }

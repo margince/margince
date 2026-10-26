@@ -576,6 +576,7 @@
  * surface when the columns do not need that much. */
 .lt-table {
   --lt-grip-w: 10px;
+  --lt-row-h: 44px;
   width: 100%;
   min-width: var(--lt-floor, 0);
   /* The colgroup decides the widths, and fixed layout is what makes it
@@ -670,7 +671,7 @@
  * test the language sets for every list. The dense table keeps its own rhythm
  * (below); a cell's height is a floor in a table, so a tall cell still grows. */
 .lt-table:not(.dense) td {
-  block-size: 44px;
+  block-size: var(--lt-row-h);
 }
 .lt-table td {
   padding: var(--space-3);
@@ -853,13 +854,20 @@
   height: 20px;
 }
 
-/* The value beside such a chip ends in an ellipsis, as a bare value does: the
- * cell's own `text-overflow` never reaches the text of a flex item. */
-.lt-table td:not(.lt-identity) .avatar-row > :not(.avatar) {
+/* The value beside a chip ends in an ellipsis, as a bare value does: the cell's
+ * own `text-overflow` never reaches the text of a flex item. */
+.lt-table td .avatar-row > :not(.avatar, .badge) {
   min-inline-size: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Grown from zero, the name takes only what the badge leaves, so the badge is cut only once the
+ * name is gone. Not `.lt-strip`'s shrink weights: those split one row among several badges. */
+.lt-table td .avatar-row:has(> .badge) > :not(.avatar, .badge) {
+  flex: 1 1 0;
+  max-inline-size: max-content;
 }
 
 /* Compact: the rows tighten, the type does not. Shrinking the text too would
@@ -1132,6 +1140,12 @@
     white-space: normal;
     overflow: visible;
   }
+  /* A block takes `block-size` as a height, not as a table cell's floor, and a
+   * value that wraps past it runs over the field below. */
+  .lt-table:not(.dense) td {
+    block-size: auto;
+    min-block-size: var(--lt-row-h);
+  }
 
   /* A field with no value has nothing to label: on a desktop row the empty cell
    * holds the grid together, but in a card it would read as a missing answer to
@@ -1162,6 +1176,14 @@
   }
   .lt-table td.lt-identity::before {
     content: none;
+  }
+
+  /* The heading wraps like the card's other values; a run with no break stays
+   * inside the card. */
+  .lt-table td.lt-identity .avatar-row > :not(.avatar, .badge) {
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
   }
 
   /* A number in a stack belongs beside its label, not against the far edge. */

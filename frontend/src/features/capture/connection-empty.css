@@ -1,0 +1,43 @@
+/* The empty Mail and calendar card (Settings, Connections): the steps once on
+   top, two vendor tiles of one height, and the other-host row under them. */
+
+.connection-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-block-end: var(--space-4);
+}
+
+/* Side by side and stretched to one height, so both Connect buttons sit on
+   the same line whatever each tile says above them. */
+.connection-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.connection-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.connection-tile-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.connection-tile-note {
+  margin: auto 0 0;
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+.connection-tile-action {
+  width: 100%;
+  margin-block-start: auto;
+}
+
+.connection-imap {
+  margin-block-start: var(--space-4);
+}

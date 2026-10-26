@@ -3,13 +3,19 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
+import { SettingList } from "../../design-system/settingrow";
+import type { BrowserNotificationPermission } from "../../lib/notificationpermission";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { NotificationSettingsCard } from "./notification-settings";
+import {
+  BrowserNotificationsRow,
+  NotificationSettingsCard,
+} from "./notification-settings";
 
 // Where each class of notice reaches this seat. There is no permission story
 // here: both endpoints read and write the reader's own rows, so no seat can be
@@ -58,7 +64,11 @@ function story(items: Preference[], refuseWrites = false) {
     });
     return (
       <StoryProviders>
-        <NotificationSettingsCard />
+        {/* A pick waits on the page's one save bar, as on Settings. */}
+        <SavePageProvider>
+          <NotificationSettingsCard />
+          <PageSaveBar />
+        </SavePageProvider>
       </StoryProviders>
     );
   };
@@ -141,4 +151,33 @@ export const SaveRefused: Story = {
         .getAttribute("aria-describedby"),
     ).not.toContain(alert.id);
   },
+};
+
+// The browser notifications row in each answer a browser gives. Only the
+// undecided browser offers Allow; the others say where the switch is.
+function browserRow(permission: BrowserNotificationPermission) {
+  return () => (
+    <StoryProviders>
+      <SettingList bleed="settings">
+        <BrowserNotificationsRow permission={permission} onAllow={() => {}} />
+      </SettingList>
+    </StoryProviders>
+  );
+}
+
+export const BrowserNotificationsUndecided: Story = {
+  render: browserRow("default"),
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole("button", { name: "Allow" }),
+    ).toBeVisible();
+  },
+};
+
+export const BrowserNotificationsAllowed: Story = {
+  render: browserRow("granted"),
+};
+
+export const BrowserNotificationsBlocked: Story = {
+  render: browserRow("denied"),
 };

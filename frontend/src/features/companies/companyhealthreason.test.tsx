@@ -5,9 +5,9 @@
 import { renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
+import { useHealthReason } from "../../components/companylookups";
 import { LocaleProvider } from "../../i18n";
 import { RecordZoneProvider } from "../../lib/recordzone";
-import { useHealthReason } from "./companylookups";
 
 // The server rates relationship and commercial health and names a reason code
 // beside its English sentence. The reader sees the code in their language, and

@@ -38,7 +38,7 @@ var modelHandlersThatDegrade = gatekit.Waive(map[string]string{
 	"(*compose.OwedClassifier).predictBatch":               "a declined batch retries the same messages individually through the ordinary classifier; declined or uncertain outcomes stay review-only, while other errors propagate to modelfailure.Write",
 
 	"(compose.Server).RegenerateOffer":               "the mechanical revision is minted first and served; a drafting failure is logged and the caller keeps that revision",
-	"compose.AnswerCorpus":                           "a failed lane serves the retrieved passages with their citations as unreviewed, never as answered, and logs which lane failed",
+	"compose.writeCorpusAnswer":                      "a failed lane serves the retrieved passages with their citations as unreviewed, never as answered, and logs which lane failed",
 	"(*compose.onboardingCompanyAssistant).converse": "a clicked option was proved against the read before any model was asked, so it is recorded and confirmed in a server-written sentence; with no option clicked the error is returned",
 	"(compose/briefs.briefL2Ranker).reorder":         "the model re-rank is advisory over the deterministic composite order, which the brief keeps when the lane fails, with a warning logged",
 	"compose/company360.writeIntroRequest":           "the template floor states every fact of the ask honestly, so the reader gets a sendable message and generated_by says the floor wrote it",
@@ -48,6 +48,7 @@ var modelHandlersThatDegrade = gatekit.Waive(map[string]string{
 	"compose/companydossier.WriteGrowthFit":          "the floor's abstention is the declared degrade, labelled as the floor's, and the lane-failed flag stops it overwriting a real assessment",
 	"compose/contactbrief.Write":                     "the deterministic card is the declared on_budget_exhausted degrade; generated_by tells the reader the floor wrote it",
 	"(*compose/dealstatus.Service).write":            "the deterministic card is the declared degrade, and a warning names the lane that failed so the fallback is not silent",
+	"compose/roombrief.Write":                        "the deterministic brief is the declared on_budget_exhausted degrade; generated_by tells the reader the floor wrote it",
 	"compose/meetingbrief.Write":                     "the floor brief is the declared on_budget_exhausted degrade; generated_by tells the reader the floor wrote it",
 	"compose/meetingbrief.WritePlan":                 "the floor plan is the declared on_budget_exhausted degrade; generated_by tells the reader the floor wrote it",
 	"compose/network.writeIntroNote":                 "the template floor states every fact of the introduction honestly, and generated_by says the floor wrote it",

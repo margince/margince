@@ -5,7 +5,6 @@ package meetingmap
 
 import (
 	"context"
-	"errors"
 
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -20,21 +19,22 @@ import (
 // it no longer has. A parse failure, or a sink that cannot move, is a no-op,
 // the same rule CaptureOne follows.
 func MoveOne(ctx context.Context, raw []byte, sink connector.Sink, owner, connectorName string, decode Decode) error {
-	mover, ok := sink.(connector.MeetingMover)
-	if !ok {
-		return nil
-	}
 	ev, err := decode(raw, owner)
 	if err != nil {
+		countEvent(ctx, connectorName, "", OutcomeUnreadable)
 		return nil //nolint:nilerr // a single unparseable event is a skip, not a fatal pull error (mirrors CaptureOne)
 	}
 	m := Classify(ev, owner)
 	key := connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id}
 	if key.SourceID == "" {
+		countEvent(ctx, connectorName, "", "dropped_"+ReasonNoEventID.Label())
 		return nil
 	}
-	if err := mover.MoveMeeting(ctx, key, m.occurredAt, m.durationSeconds); err != nil && !errors.Is(err, connector.ErrSkip) {
-		return err
+	mover, ok := sink.(connector.MeetingMover)
+	if !ok {
+		countEvent(ctx, connectorName, m.id, OutcomeMoveUnsupported)
+		return nil
 	}
-	return nil
+	return settleWrite(ctx, connectorName, m.id, OutcomeBeyondHorizon,
+		mover.MoveMeeting(ctx, key, m.occurredAt, m.durationSeconds))
 }

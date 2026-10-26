@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Blocks, ChevronRight } from "lucide-react";
 import {
   Panel,
   PanelBody,
   PanelIntro,
   PanelRow,
 } from "../../design-system/panel";
+import { RowOpen } from "../../design-system/rowopen";
 import { useLocale, useT } from "../../i18n";
 import {
   EXTENSION_SCREEN,
@@ -16,32 +16,21 @@ import {
   unitsForSecretScope,
   unitTitle,
 } from "../../lib/extensions";
+import { navigate } from "../../lib/router";
 import "./extension-units.css";
 
 // Where an installation's own units are offered: on the settings page that
 // already holds the kind of credential each one is configured with.
 //
-// A unit used to have a row in the navigation rail, which put an
-// installation's surface beside Pipeline and Reports as though the product had
-// grown a destination. It has not — enabling a unit adds a thing to CONFIGURE,
-// and this is the page that configures things.
+// The manifest decides which page. A unit declaring a `user` secret is offered
+// on the member's Connections page. A `workspace` secret puts it under
+// Integrations. See lib/extensions.ts's unitsForSecretScope.
 //
-// WHICH page is the manifest's decision and not this component's. A unit
-// declaring a `user` secret holds one member's own credential at a provider,
-// so it is offered on their personal Connections page; a `workspace` secret is
-// the installation's, so its unit is offered under Integrations. Both pages
-// already mean exactly that, which is why the declared scope is enough and no
-// unit names a destination. See lib/extensions.ts's unitsForSecretScope.
+// The rows add no permission gate of their own. A unit's screen refuses
+// independently on the object it declares.
 //
-// The permission story is the page, and it was already written: Connections is
-// per-contact and ungated, Integrations is the company's and opens on the
-// grants its cards ask for OR on a workspace-scoped unit being composed at all,
-// because this page is the only place such a unit is offered. The rows here add
-// no gate of their own — the rail rows they replace had none either, and a
-// unit's screen refuses independently on the object it declares.
-//
-// A unit is one row whose only verb is to go there, so the whole row is the
-// link. Its own screen configures it.
+// A unit is one row whose only verb is to go there. A press on the row opens
+// it, and the row's chevron is the keyboard path.
 
 /**
  * The units whose credential lives in `scope`, or nothing at all.
@@ -54,15 +43,25 @@ import "./extension-units.css";
 export function ExtensionUnitsCard({
   scope,
 }: Readonly<{ scope: UnitSecretScope }>) {
-  const t = useT();
   const units = unitsForSecretScope(scope);
   if (units.length === 0) {
     return null;
   }
+  return <ExtensionUnitsPanel scope={scope} units={units} />;
+}
+
+/** The card itself, for the units the registry offered; stories pass their own. */
+export function ExtensionUnitsPanel({
+  scope,
+  units,
+}: Readonly<{
+  scope: UnitSecretScope;
+  units: readonly ExtensionDescriptor[];
+}>) {
+  const t = useT();
   return (
-    // Panel, not Card: every other card on the two pages this lands on is one,
-    // and two card primitives on one settings tab is how the page grows two
-    // header bands that disagree about their own height.
+    // Panel, not Card: every other card on the two pages is one, and two card
+    // primitives on one tab grow header bands that disagree.
     <Panel title={t(`extUnits.${scope}.title`)}>
       <PanelBody>
         <PanelIntro>{t(`extUnits.${scope}.sub`)}</PanelIntro>
@@ -80,18 +79,13 @@ function UnitRow({ unit }: Readonly<{ unit: ExtensionDescriptor }>) {
   const { locale } = useLocale();
   const { name } = unit;
   const title = unitTitle(unit, locale);
+  const open = () => navigate({ screen: EXTENSION_SCREEN, id: name });
   return (
-    <PanelRow interactive record className="extunits-row">
-      <a
-        className="extunits-row-press"
-        data-testid={`ext-unit-${name}`}
-        href={`#/${EXTENSION_SCREEN}/${name}`}
-        aria-label={t("extUnits.openNamed", { name: title })}
-      >
-        <Blocks className="extunits-mark" aria-hidden />
-        <span>{title}</span>
-        <ChevronRight className="extunits-go" aria-hidden />
-      </a>
+    <PanelRow record onOpen={open} className="extunits-row">
+      <span className="extunits-name" data-testid={`ext-unit-${name}`}>
+        {title}
+      </span>
+      <RowOpen label={t("extUnits.openNamed", { name: title })} onOpen={open} />
     </PanelRow>
   );
 }

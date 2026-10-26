@@ -59,9 +59,11 @@ const (
 	filterIndustry         = "industry"
 	filterSizeBand         = "size_band"
 	filterSource           = "source"
+	filterOrigin           = "origin"
 	filterSLAState         = "sla_state"
 	filterListID           = "list_id"
 	filterIncludeAnchor    = "include_anchor"
+	filterRelationshipMark = "relationship_mark"
 )
 
 var contactListFilters = storekit.FilterSet[ListContactsInput]{
@@ -69,15 +71,16 @@ var contactListFilters = storekit.FilterSet[ListContactsInput]{
 		member := id.UUID
 		in.MemberOf = &member
 	}),
-	filterOwnerID:         storekit.FilterID(func(in *ListContactsInput, id *ids.UserID) { in.OwnerID = id }),
-	filterOwnerTeamID:     storekit.FilterID(func(in *ListContactsInput, id *ids.TeamID) { in.OwnerTeamID = id }),
-	filterUnassigned:      storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.Unassigned = v }),
-	filterCompanyID:       storekit.FilterID(func(in *ListContactsInput, id *ids.CompanyID) { in.CompanyID = id }),
-	filterIncludeArchived: storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.IncludeArchived = *v }),
-	filterSort:            storekit.FilterWord(func(in *ListContactsInput, v *string) { in.Sort = v }),
-	filterCapturedByKind:  storekit.FilterWord(func(in *ListContactsInput, v *string) { in.CapturedByKind = v }),
-	filterAiWritten:       storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.AiWritten = v }),
-	filterTag:             storekit.FilterIDList[ids.TagKind](func(in *ListContactsInput, v []ids.UUID) { in.TagIDs = v }),
+	filterOwnerID:          storekit.FilterID(func(in *ListContactsInput, id *ids.UserID) { in.OwnerID = id }),
+	filterOwnerTeamID:      storekit.FilterID(func(in *ListContactsInput, id *ids.TeamID) { in.OwnerTeamID = id }),
+	filterUnassigned:       storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.Unassigned = v }),
+	filterCompanyID:        storekit.FilterID(func(in *ListContactsInput, id *ids.CompanyID) { in.CompanyID = id }),
+	filterIncludeArchived:  storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.IncludeArchived = *v }),
+	filterSort:             storekit.FilterWord(func(in *ListContactsInput, v *string) { in.Sort = v }),
+	filterCapturedByKind:   storekit.FilterWord(func(in *ListContactsInput, v *string) { in.CapturedByKind = v }),
+	filterAiWritten:        storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.AiWritten = v }),
+	filterRelationshipMark: storekit.FilterWord(func(in *ListContactsInput, v *string) { in.RelationshipMark = v }),
+	filterTag:              storekit.FilterIDList[ids.TagKind](func(in *ListContactsInput, v []ids.UUID) { in.TagIDs = v }),
 	filterTagMode: storekit.FilterWord(func(in *ListContactsInput, v *string) {
 		in.TagMode = tagModeOrDefault(v)
 	}),
@@ -129,6 +132,7 @@ var leadListFilters = storekit.FilterSet[ListLeadsInput]{
 	filterCapturedByKind:  storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CapturedByKind = v }),
 	filterAiWritten:       storekit.FilterFlag(func(in *ListLeadsInput, v *bool) { in.AiWritten = v }),
 	filterSource:          storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.Source = v }),
+	filterOrigin:          storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.Origin = v }),
 	filterSLAState: storekit.FilterWord(func(in *ListLeadsInput, v *string) {
 		state := crmcontracts.ListLeadsParamsSlaState(*v)
 		in.SLAState = &state

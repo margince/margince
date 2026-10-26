@@ -1,0 +1,62 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../../testing/story-utils";
+import { AssistantPanel } from "./companyassistant";
+
+// "Ask about this company" as it stands in the company overview's column: the
+// same header band as the readings above and below it, with the disclosure
+// badge IN that band rather than as a line of prose inside the body.
+//
+// The answer arrives only from a press, so the story routes the question and
+// leaves the pressing to the reviewer — a story that rendered a sentence the
+// component never produced would review a fixture rather than the panel.
+
+const meta: Meta = {
+  title: "Records/Company 360/Ask about this account",
+  parameters: { layout: "padded" },
+};
+export default meta;
+
+type Story = StoryObj;
+
+const answer = {
+  company_id: "o-1",
+  question: "whats_open",
+  generated_at: "2026-06-01T09:00:00Z",
+  generated_by: "model",
+  sentences: [
+    {
+      text: "Two open deals, worth about €57,000 together, both waiting on us.",
+      evidence: [{ entity_type: "deal", entity_id: "d-1" }],
+    },
+  ],
+};
+
+// The panel and every question in it are the agent's, so the head is indigo
+// and the chips are its quiet variant rather than the neutral outline they
+// used to wear. Both themes: the tint stays put on dark and its ink lifts.
+export const Default: Story = {
+  render: () => {
+    installFetchStub({
+      "POST /companies/o-1/ask": () => jsonResponse(answer),
+    });
+    return (
+      <StoryProviders>
+        <div style={{ maxWidth: 640 }}>
+          <AssistantPanel companyId="o-1" onOpenRecord={() => {}} />
+        </div>
+      </StoryProviders>
+    );
+  },
+};
+
+export const DefaultDark: Story = {
+  ...Default,
+  globals: { theme: "dark" },
+};

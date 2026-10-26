@@ -214,30 +214,21 @@ export const NoProvider: Story = {
   render: cardStory(OPERATOR, []),
 };
 
-// The connected card in dark, which is where this file's colour actually lives:
-// a `connected` Badge composites its tint over --bgElevated whatever it sits on,
-// and here it sits on the recessed --bgInset plate; the credit Meter's track and
-// fill are two greens a step apart; and the spend table separates five columns
-// with nothing but --borderSubtle hairlines. The one to check hardest is
-// .provider-held — a held figure is deliberately quieter than the charge beside
-// it so nobody adds the two together, and "quieter" is a --textMeta /
-// --textContent pair that has to stay distinguishable after both re-resolve.
+// The connected card in dark: the ProviderRow badge, the credit Meter's two
+// greens a step apart, and the DataTable spend hairlines all re-resolve here.
 export const OperatorConnectedDark: Story = {
   globals: { theme: "dark" },
   render: cardStory(OPERATOR, [connected]),
 };
 
-// The connected card at 390px. Three claims integrations-provider.css makes
-// about this width, none of them visible at desktop: the identity row wraps
-// rather than letting a registry key and a status pill overflow it, the
-// five-column spend table scrolls inside its own .table-scroll box rather than
-// pushing the page sideways, and the submit + the OverflowMenu holding the two
-// irreversible verbs wrap as a pair instead of squeezing.
+// The connected card at 390px. The ProviderRow head wraps its name and badge.
+// The five-column spend DataTable scrolls inside its own box. The connect verb
+// and its OverflowMenu wrap as a pair instead of squeezing.
 //
-// Storybook applies the viewport from the MANAGER, by resizing the preview
-// iframe — so the fe-uat capture, which loads a bare iframe.html, renders this
-// at the harness's own width and its PNG is NOT a picture of a phone. Review it
-// in Storybook, or by narrowing the browser.
+// Storybook applies the viewport from the manager, by resizing the preview
+// iframe. The fe-uat capture loads a bare iframe.html, so it renders this at
+// the harness's own width. Its PNG is not a picture of a phone. Review it in
+// Storybook, or narrow the browser.
 export const OperatorConnectedPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
@@ -283,4 +274,30 @@ export const OperatorTwoProviders: Story = {
     connected,
     { ...unconnected, provider: "second_provider" },
   ]),
+};
+
+// A key still being checked: the badge stays neutral and carries the live dot,
+// the way every running state is drawn.
+export const OperatorValidating: Story = {
+  render: cardStory(OPERATOR, [{ ...connected, status: "validating" }]),
+};
+
+/**
+ * The typed confirm behind "Delete provider data": the danger plate says what
+ * goes and what stays, and the field asks for the provider's name.
+ */
+export const DeleteDataDialog: Story = {
+  render: cardStory(OPERATOR, [connected]),
+  play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
+    await user.click(
+      await within(canvasElement).findByRole("button", {
+        name: "More actions",
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Delete provider data" }),
+    );
+    await screen.findByRole("dialog");
+  },
 };

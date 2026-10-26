@@ -22,6 +22,7 @@ import {
   throwProblem,
 } from "../../lib/problem";
 import { stripEveryKeyTag } from "../projects/projectrecord";
+import { useAutosave } from "./composeautosave";
 import type { RelinkKind } from "./composerelink";
 import { replySubject } from "./replysubject";
 
@@ -146,12 +147,14 @@ export function wroteSomething(
   );
 }
 
-type SaveAsk = Readonly<{
+export type SaveAsk = Readonly<{
   anchor: SavedDraftAnchor;
   fields: SavedDraftFields;
   version: number | undefined;
   /** Which send this save was asked under; a later send retires it. */
   sends: number;
+  /** Kept as the reader writes: no toast, and the window stays open. */
+  quiet?: boolean;
 }>;
 
 async function writeDraft(ask: SaveAsk): Promise<MailDraft> {
@@ -170,7 +173,7 @@ async function writeDraft(ask: SaveAsk): Promise<MailDraft> {
       html_body: ask.fields.html.trim() === "" ? null : ask.fields.html,
     },
   });
-  if (!response.ok || !data) {
+  if (!response.ok || !isMailDraft(data)) {
     throwProblem(error || {});
   }
   return data;
@@ -308,6 +311,7 @@ export function useSavedDraft(input: {
       if (ask.sends !== sends.current) return;
       queryClient.setQueryData(draftKey(ask.anchor), saved);
       setChangedElsewhere(false);
+      if (ask.quiet) return;
       savedToast.show(t("compose.savedDraftSaved"), {
         action: {
           kind: "undo",
@@ -369,6 +373,30 @@ export function useSavedDraft(input: {
   };
   const saveFailed =
     save.isError && problemCodeOf(save.error) !== "version_skew";
+  // The draft keeps itself. Once the reader has paused, what is on screen is
+  // written without a toast, so closing or leaving the page loses nothing.
+  // Never over a draft another window changed, and never before the saved
+  // one has been read, which the restore below would otherwise race.
+  const autosave =
+    open &&
+    anchor !== null &&
+    dirty &&
+    read.isSuccess &&
+    !read.isFetching &&
+    !changedElsewhere &&
+    !save.isPending &&
+    !saveFailed;
+  useAutosave(autosave, JSON.stringify(fields), save.mutate, () =>
+    anchor
+      ? {
+          anchor,
+          fields,
+          version: held?.version,
+          sends: sends.current,
+          quiet: true,
+        }
+      : null,
+  );
   return {
     enabled: anchor !== null,
     held,
@@ -399,6 +427,18 @@ export function useSavedDraft(input: {
       if (anchor && held) remove.mutate({ anchor, id: held.id });
     },
     removing: remove.isPending,
+    /** What is on screen is what the saved draft holds. */
+    kept: held !== null && !dirty,
+    /** Throws the draft away and shuts the window: the saved one goes too. */
+    discard: () => {
+      if (save.isPending || remove.isPending) return;
+      if (anchor && held) {
+        remove.mutate({ anchor, id: held.id }, { onSuccess: onClose });
+        return;
+      }
+      onCleared();
+      onClose();
+    },
     loadSaved: () => {
       if (!held) return;
       onRestore(fieldsOfDraft(held));
@@ -443,17 +483,18 @@ export function SavedDraftNotices({ draft }: Readonly<{ draft: SavedDraft }>) {
   // them, so they are read before they are sent.
   const byAgent = draft.held?.agent_drafted === true;
   return (
-    <Callout
-      kind="standing"
-      tone={byAgent ? "ai" : "info"}
-      title={t(
-        byAgent ? "compose.savedDraftByAgent" : "compose.savedDraftRestored",
-      )}
-      actions={
-        <Button onClick={draft.remove} pending={draft.removing}>
-          {t("compose.savedDraftRemove")}
-        </Button>
-      }
-    />
+    <div
+      className={byAgent ? "compose-strip compose-strip-ai" : "compose-strip"}
+      role="status"
+    >
+      <p className="compose-strip-text">
+        {t(
+          byAgent ? "compose.savedDraftByAgent" : "compose.savedDraftRestored",
+        )}
+      </p>
+      <Button variant="link" onClick={draft.remove} pending={draft.removing}>
+        {t("compose.savedDraftRemove")}
+      </Button>
+    </div>
   );
 }

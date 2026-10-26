@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { UTC_ZONE } from "../../format/timezone";
 import type { CompanyNaming } from "./dealcompanymarks";
 import {
   buildColumns,
@@ -23,130 +24,83 @@ const noCompany: CompanyNaming = { marks: new Map(), unreadable: new Set() };
 
 // Column totals are the server's per-stage Σround(amount×p/100), never a sum of
 // the cards that loaded: the card cap is unrelated to the totals' correctness.
-describe("buildStageTotals", () => {
-  it("carries one currency's totals straight through", () => {
-    const totals = buildStageTotals([
-      {
-        stage_id: "s1",
-        currency: "EUR",
-        deals: 3,
-        raw_minor: 300_000,
-        weighted_minor: 60_000,
-      },
-    ]);
+describe("server-valued stage totals", () => {
+  it("keeps the server base value and rate date across mixed-currency cards", () => {
+    const totals = buildStageTotals(
+      [
+        {
+          stage_id: "s1",
+          deals: 3,
+          priced_deals: 2,
+          base_minor: 24_686,
+          weighted_base_minor: 4_938,
+        },
+      ],
+      "EUR",
+      "2026-10-01",
+      UTC_ZONE,
+    );
     expect(totals.get("s1")).toEqual({
       count: 3,
-      rawMinor: 300_000,
-      weightedMinor: 60_000,
+      baseMinor: 24_686,
+      weightedBaseMinor: 4_938,
       currency: "EUR",
+      asOf: "2026-10-01",
+      timezone: UTC_ZONE,
+      unpricedCount: 1,
+    });
+    const columns = buildColumns(
+      stages,
+      [deal({ stage_id: "s1", amount_minor: 1, currency: "USD" })],
+      totals,
+      noCompany,
+    );
+    expect(columns[0]).toMatchObject({
+      rawMinor: 24_686,
+      weightedMinor: 4_938,
+      currency: "EUR",
+      count: 3,
+      asOf: "2026-10-01",
+      timezone: UTC_ZONE,
+      unpricedCount: 1,
       sumHidden: false,
     });
   });
-
-  it("hides the sum when a stage has more than one currency row", () => {
-    const totals = buildStageTotals([
-      {
-        stage_id: "s2",
-        currency: "EUR",
-        deals: 1,
-        raw_minor: 100_000,
-        weighted_minor: 20_000,
-      },
-      {
-        stage_id: "s2",
-        currency: "USD",
-        deals: 1,
-        raw_minor: 100_000,
-        weighted_minor: 20_000,
-      },
-    ]);
-    const s2 = totals.get("s2");
-    expect(s2?.sumHidden).toBe(true);
-    expect(s2?.count).toBe(2);
+  it("keeps a missing price absent and states how many deals were excluded", () => {
+    const totals = buildStageTotals(
+      [
+        {
+          stage_id: "s1",
+          deals: 2,
+          priced_deals: 0,
+          base_minor: null,
+          weighted_base_minor: null,
+        },
+      ],
+      "EUR",
+      "2026-10-01",
+    );
+    expect(totals.get("s1")).toMatchObject({
+      baseMinor: null,
+      weightedBaseMinor: null,
+      unpricedCount: 2,
+    });
   });
-
-  it("a stage absent from the rows gets zeroed, not undefined", () => {
-    const totals = buildStageTotals([]);
-    expect(totals.get("s1")).toBeUndefined();
-  });
-});
-
-describe("buildColumns", () => {
-  it("reads sums from the totals map, not from the loaded cards", () => {
-    const totals = buildStageTotals([
-      // The server's per-deal-rounded figure (12343 × 20% rounded per deal,
-      // twice, then summed = 4938) — deliberately NOT what round(Σ) gives
-      // (4937), so a regression back to client-side summing would fail this.
-      {
-        stage_id: "s1",
-        currency: "EUR",
-        deals: 2,
-        raw_minor: 24_686,
-        weighted_minor: 4_938,
-      },
-    ]);
+  it("keeps unavailable totals distinct from zero and preserves withholding", () => {
+    expect(buildStageTotals([]).get("s1")).toBeUndefined();
     const columns = buildColumns(
       stages,
-      [
-        deal({
-          id: "a",
-          stage_id: "s1",
-          amount_minor: 12_343,
-          currency: "EUR",
-        }),
-        deal({
-          id: "b",
-          stage_id: "s1",
-          amount_minor: 12_343,
-          currency: "EUR",
-        }),
-      ],
-      totals,
+      [],
+      new Map(),
       noCompany,
+      "Totals withheld",
     );
-    expect(columns[0].rawMinor).toBe(24_686);
-    expect(columns[0].weightedMinor).toBe(4_938);
-    expect(columns[0].deals).toHaveLength(2);
-  });
-
-  it("hides the sum for a mixed-currency stage per the totals map, regardless of which cards loaded", () => {
-    const totals = buildStageTotals([
-      {
-        stage_id: "s2",
-        currency: "EUR",
-        deals: 1,
-        raw_minor: 100_000,
-        weighted_minor: 20_000,
-      },
-      {
-        stage_id: "s2",
-        currency: "USD",
-        deals: 1,
-        raw_minor: 100_000,
-        weighted_minor: 20_000,
-      },
-    ]);
-    const columns = buildColumns(
-      stages,
-      [
-        deal({
-          id: "c",
-          stage_id: "s2",
-          amount_minor: 100_000,
-          currency: "EUR",
-        }),
-      ],
-      totals,
-      noCompany,
-    );
-    expect(columns[1].sumHidden).toBe(true);
-  });
-
-  it("a stage with no totals row states no figure and no currency", () => {
-    const columns = buildColumns(stages, [], new Map(), noCompany);
-    expect(columns[0].rawMinor).toBeNull();
-    expect(columns[0].currency).toBeNull();
-    expect(columns[0].sumHidden).toBeFalsy();
+    expect(columns[0]).toMatchObject({
+      rawMinor: null,
+      currency: null,
+      sumHidden: true,
+      sumHiddenReason: "Totals withheld",
+    });
   });
 });
 
@@ -320,6 +274,7 @@ describe("mapDealCreate", () => {
         partner_attribution: "influenced",
       },
       "p-1",
+      "EUR",
     );
     expect(body.partner_company_id).toBe("partner-1");
     expect(body.partner_attribution).toBe("influenced");
@@ -335,13 +290,14 @@ describe("mapDealCreate", () => {
     const body = mapDealCreate(
       { name: "x", stage_id: "s-1", partner_company_id: "partner-1" },
       "p-1",
+      "EUR",
     );
     expect(body.partner_company_id).toBe("partner-1");
     expect(body.partner_attribution).toBeNull();
   });
 
   it("names no partner when none was picked", () => {
-    const body = mapDealCreate({ name: "x", stage_id: "s-1" }, "p-1");
+    const body = mapDealCreate({ name: "x", stage_id: "s-1" }, "p-1", "EUR");
     expect(body.partner_company_id).toBeNull();
     expect(body.partner_attribution).toBeNull();
   });

@@ -1,0 +1,169 @@
+/* DockedWindow — work beside the page, docked to the bottom end corner.
+ *
+ * Fixed rather than portalled into the overlay layer: nothing behind it is
+ * dimmed, and it sits under every overlay (the modal scrim at 50, popovers at
+ * 70), so a dialog or a menu it opens still lands on top of it. It sits over
+ * the phone layout's bottom rail (30) and the overflow menus (35) of the
+ * page it shares. */
+
+.docked {
+  position: fixed;
+  inset-block-end: 0;
+  inset-inline-end: var(--space-5);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  inline-size: min(var(--dockWidth), calc(100vw - var(--space-5) * 2));
+  block-size: min(var(--dockHeight), calc(100dvh - var(--space-6)));
+  border-start-start-radius: var(--r-sm);
+  border-start-end-radius: var(--r-sm);
+  background: var(--bgElevated);
+  box-shadow: var(--shadow-pop);
+  overflow: clip;
+}
+.docked[hidden] {
+  display: none;
+}
+.docked:focus-visible {
+  outline: var(--focus-ring);
+}
+/* Grown: wider and as tall as the glass allows, still in its corner. */
+.docked.is-grown {
+  inline-size: min(var(--dockGrownWidth), calc(100vw - var(--space-5) * 2));
+  block-size: calc(100dvh - var(--space-6));
+}
+
+/* The title bar: the rail's own dark field, in both themes, so the window
+   reads as one object whatever the page behind it is. */
+.docked-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-block-size: var(--controlHeight);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-4) var(--space-1);
+  background: var(--bgRail);
+  color: var(--railIconActive);
+  /* The bar is the handle that slides the window along the bottom edge. */
+  cursor: grab;
+  touch-action: none;
+}
+.docked-head.is-sliding {
+  cursor: grabbing;
+}
+.docked-head .docked-title {
+  flex: 1;
+  min-inline-size: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: inherit;
+  /* The bar names the window; the page's headings carry the weight. */
+  font-weight: var(--fontWeightMedium);
+}
+/* Bare glyphs on the dark bar: a ghost button's own fill and edge are drawn
+   for a light page and read as grey boxes here. */
+.docked-head .icon-action > .btn {
+  border-color: transparent;
+  background: transparent;
+  color: inherit;
+  opacity: 0.8;
+}
+.docked-head .icon-action > .btn:hover,
+.docked-head .icon-action > .btn:focus-visible {
+  background: color-mix(in srgb, currentcolor 14%, transparent);
+  opacity: 1;
+}
+
+.docked-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+}
+
+/* The edges a pointer drags to size the window. Over the title bar's edge,
+   so the band a hand finds is the window's own border. */
+.docked-grip {
+  position: absolute;
+  z-index: 1;
+  touch-action: none;
+}
+.docked-grip-top {
+  inset-block-start: 0;
+  inset-inline: var(--space-3) 0;
+  block-size: var(--space-1);
+  cursor: ns-resize;
+}
+.docked-grip-start {
+  inset-block: var(--space-3) 0;
+  inset-inline-start: 0;
+  inline-size: var(--space-2);
+  cursor: ew-resize;
+}
+.docked-grip-corner {
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inline-size: var(--space-3);
+  block-size: var(--space-3);
+  cursor: nwse-resize;
+}
+.docked.is-grown > .docked-grip {
+  display: none;
+}
+
+/* Folded: only the title bar, as one control that opens it again. */
+.docked-bar {
+  position: fixed;
+  inset-block-end: 0;
+  inset-inline-end: var(--space-5);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  inline-size: min(20rem, calc(100vw - var(--space-5) * 2));
+  min-block-size: var(--controlHeight);
+  padding-inline: var(--space-4) var(--space-3);
+  border: 0;
+  border-start-start-radius: var(--r-sm);
+  border-start-end-radius: var(--r-sm);
+  background: var(--bgRail);
+  color: var(--railIconActive);
+  box-shadow: var(--shadow-pop);
+  font: inherit;
+  font-weight: var(--fontWeightMedium);
+  cursor: pointer;
+  text-align: start;
+}
+.docked-bar:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+.docked-bar-title {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A phone has no page beside the window to keep in view: it is the sheet. */
+@media (max-width: 720px) {
+  .docked,
+  .docked.is-grown {
+    inset: 0;
+    inline-size: 100vw;
+    block-size: 100dvh;
+    border-radius: 0;
+  }
+  .docked > .docked-grip {
+    display: none;
+  }
+  .docked-bar {
+    inset-inline: 0;
+    inline-size: 100vw;
+    border-radius: 0;
+  }
+}

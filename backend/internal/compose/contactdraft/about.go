@@ -11,12 +11,12 @@ import (
 	"errors"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // AboutActivities reads the activity a draft follows up, under the caller's
@@ -63,7 +63,7 @@ func foldAbout(activity crmcontracts.Activity, now time.Time) *ActIn {
 		folded.Subject = *activity.Subject
 	}
 	if activity.Body != nil && !activity.OccurredAt.After(now) {
-		folded.Record = textlang.MessageOpening(*activity.Body, draftInputRecordRunes)
+		folded.Record = draftcore.TurnText(*activity.Body)
 	}
 	if activity.Links != nil {
 		for _, link := range *activity.Links {

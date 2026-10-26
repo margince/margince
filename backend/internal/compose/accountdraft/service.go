@@ -147,7 +147,7 @@ func (s *Service) envelopeFor(ctx context.Context, view crmcontracts.Company360,
 	// No stored language: an account history is many messages, and the language
 	// of whichever one sorted first is not the language of the exchange.
 	return s.envelope.Resolve(ctx,
-		draftfloor.Written{Body: CorrespondenceText(view), Rewrite: req.RewriteOf, Purpose: req.Intent},
+		draftfloor.Written{Thread: languageEvidence(view, s.envelope.Now()), Rewrite: req.RewriteOf, Purpose: req.Intent},
 		ConversationState(view, s.envelope.Now()))
 }
 
@@ -172,7 +172,7 @@ func (s *Service) Draft(
 	// account they cannot read refuses before a word is written, a contact
 	// or deal they cannot see is not in the view to be found, and a project
 	// they cannot see refuses the scoped read itself (activities.RequireProjectScope).
-	view, err := s.view.AssembleScoped(ctx, companyID, company360.AssembleOptions{ProjectID: req.ProjectID})
+	view, err := s.view.AssembleScoped(ctx, companyID, company360.AssembleOptions{ProjectID: req.ProjectID, WrittenByHumanOnly: true})
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}

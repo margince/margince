@@ -101,6 +101,9 @@ func applyHomeRepairItem(ctx context.Context, tx pgx.Tx, store *activities.Store
 	if expected.Source == repairSourceApproval {
 		return applyHomeRepairProposal(ctx, tx, expected, activation, runID)
 	}
+	if expected.Source == repairSourceSettlement {
+		return applyHomeRepairSettlement(ctx, tx, expected, activation, runID)
+	}
 	if expected.Source != "" && expected.Source != repairSourceTask {
 		return false, apperrors.ErrInvalidArgument
 	}

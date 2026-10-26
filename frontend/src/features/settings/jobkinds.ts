@@ -7,6 +7,7 @@ import type { MessageKey } from "../../i18n/en";
 // A kind run as its namesake principal reuses its systemJob label; a principal is not a kind.
 const JOB_KIND_NAME: Readonly<Record<string, MessageKey>> = {
   account_scan: "jobs.kind.account_scan",
+  address_country_check: "systemJob.address_country_check",
   agent_scheduler: "systemJob.agent_scheduler",
   agent_task_retention: "jobs.kind.agent_task_retention",
   ai_activity_reconcile: "systemJob.ai_activity_reconcile",
@@ -42,6 +43,7 @@ const JOB_KIND_NAME: Readonly<Record<string, MessageKey>> = {
   data_task_reconcile: "jobs.kind.data_task_reconcile",
   deal_scout: "jobs.kind.deal_scout",
   document_extract: "jobs.kind.document_extract",
+  dedupe_recheck: "jobs.kind.dedupe_recheck",
   embed_drift_sweep: "jobs.kind.embed_drift_sweep",
   embed_reindex: "jobs.kind.embed_reindex",
   employment_import_sweep: "jobs.kind.employment_import_sweep",
@@ -74,6 +76,8 @@ const JOB_KIND_NAME: Readonly<Record<string, MessageKey>> = {
   notification_email: "jobs.kind.notification_email",
   owed_verdict: "systemJob.owed_verdict",
   participant_backfill: "systemJob.participant_backfill",
+  past_activity_clock_refold: "systemJob.past_activity_clock_refold",
+  privacy_request_proof_expiry: "systemJob.privacy_request_proof_expiry",
   privacy_retention: "jobs.kind.privacy_retention",
   provider_lookup_sweep: "jobs.kind.provider_lookup_sweep",
   provider_run_poll_sweep: "jobs.kind.provider_run_poll_sweep",

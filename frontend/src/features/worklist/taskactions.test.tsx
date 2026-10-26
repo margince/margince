@@ -2,13 +2,29 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
+import { CallLogHost } from "../../components/calllog.host";
+import { useTaskUpdate } from "../../components/taskactions";
+import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
+import { taskWriteKeys } from "../../lib/activitykeys";
+import { useMe } from "../../lib/session";
+import { type WriteTo, WriteToProvider } from "../../lib/writeto";
+import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
+  type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
 import { TaskDetailModal } from "./taskdetailmodal";
@@ -25,11 +41,12 @@ afterEach(cleanup);
 
 function stubTask(sourceActivityId: string | null, capturedBy = "human:u-1") {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
         kind: "task",
+        writable: true,
         subject: "Create a comparison sheet with two products",
         body: "Lena Fischer committed to this in the meeting transcript (line 6).",
         due_at: "2026-09-11T21:59:59Z",
@@ -106,11 +123,12 @@ test("a transcript refused on reopen is not painted from the cache", async () =>
   // sitting in `data`. Rendering that beside the error is what this holds.
   let refused = false;
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
         kind: "task",
+        writable: true,
         subject: "Create a comparison sheet with two products",
         occurred_at: "2026-09-08T09:00:00Z",
         is_done: false,
@@ -152,11 +170,12 @@ test("a transcript refused on reopen is not painted from the cache", async () =>
 
 test("a source that cannot be read says so instead of disappearing", async () => {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
         kind: "task",
+        writable: true,
         subject: "Create a comparison sheet with two products",
         occurred_at: "2026-09-08T09:00:00Z",
         is_done: false,
@@ -177,11 +196,12 @@ test("a source that cannot be read says so instead of disappearing", async () =>
 // the same presentation endpoint the panel asks.
 function stubEmailRequest(parties: Record<string, unknown> = {}) {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
         kind: "task",
+        writable: true,
         subject: "Report requested",
         source_activity_id: "email-1",
         occurred_at: "2026-09-01T09:00:00Z",
@@ -319,11 +339,12 @@ test("a task a colleague typed carries no AI mark", async () => {
 
 function stubFiledTask(links: { entity_type: string; entity_id: string }[]) {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
         kind: "task",
+        writable: true,
         subject: "Send the renewal paperwork",
         occurred_at: "2026-09-08T09:00:00Z",
         is_done: false,
@@ -359,4 +380,447 @@ test("a task filed under nothing names no record", async () => {
 
   await screen.findByText(/^Logged/);
   expect(screen.queryByRole("link")).toBeNull();
+});
+
+// What the rep does next about the contact a task is owed to.
+
+const ALICE = {
+  id: "c-1",
+  full_name: "Alice Brandt",
+  primary_email: "alice@example.com",
+  phones: [{ id: "ph-1", phone: "+49 30 1234567", is_primary: true }],
+  archived_at: null,
+};
+
+type NextStepsCase = Readonly<{
+  source?: Record<string, unknown> | null;
+  contact?: Record<string, unknown>;
+  links?: { entity_type: string; entity_id: string }[];
+  isDone?: boolean;
+  contactRefused?: () => boolean;
+  routes?: RouteMap;
+}>;
+
+function stubNextSteps({
+  source = { kind: "call", content_state: "available" },
+  contact = ALICE,
+  links = [{ entity_type: "contact", entity_id: "c-1" }],
+  isDone = false,
+  contactRefused = () => false,
+  routes = {},
+}: NextStepsCase = {}) {
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
+    "GET /activities/task-1": () =>
+      jsonResponse({
+        id: "task-1",
+        kind: "task",
+        writable: true,
+        subject: "Call back Alice about the renewal",
+        occurred_at: "2026-09-08T09:00:00Z",
+        is_done: isDone,
+        source_activity_id: source ? "src-1" : null,
+        links,
+      }),
+    "GET /activities/src-1": () =>
+      jsonResponse({
+        id: "src-1",
+        subject: "Voicemail",
+        occurred_at: "2026-09-08T08:00:00Z",
+        version: 1,
+        ...source,
+      }),
+    "GET /contacts/c-1": () =>
+      contactRefused()
+        ? jsonResponse({ title: "Forbidden", status: 403 }, 403)
+        : jsonResponse(contact),
+    "GET /contacts/c-2": () =>
+      jsonResponse({ ...ALICE, id: "c-2", full_name: "Bob Brandt" }),
+    ...routes,
+  });
+}
+
+function openTaskWith(
+  options: Readonly<{ readOnly?: boolean; writeTo?: WriteTo }> = {},
+) {
+  const modal = (
+    <TaskDetailModal
+      activityId="task-1"
+      readOnly={options.readOnly ?? false}
+      onClose={() => {}}
+      update={
+        {
+          mutate: () => {},
+          isPending: false,
+        } as unknown as Parameters<typeof TaskDetailModal>[0]["update"]
+      }
+    />
+  );
+  return render(
+    <StoryProviders>
+      {options.writeTo ? (
+        <WriteToProvider writeTo={options.writeTo}>{modal}</WriteToProvider>
+      ) : (
+        modal
+      )}
+    </StoryProviders>,
+  );
+}
+
+const call = () => screen.queryByRole("link", { name: en["record.verb.call"] });
+const describedBy = (control: HTMLElement) =>
+  (control.getAttribute("aria-describedby") ?? "")
+    .split(" ")
+    .map((id) => document.getElementById(id)?.textContent)
+    .join(" ");
+const openContact = () =>
+  screen.queryByRole("link", { name: en["task.next.openContact"] });
+
+test("a task from a call offers Call, Email and Open contact", async () => {
+  const user = userEvent.setup();
+  const writeTo = vi.fn();
+  stubNextSteps();
+  openTaskWith({ writeTo });
+
+  const dial = await screen.findByRole("link", {
+    name: en["record.verb.call"],
+  });
+  expect(dial.getAttribute("href")).toBe("tel:+49301234567");
+  expect(openContact()?.getAttribute("href")).toBe("#/contacts/c-1");
+  await user.click(
+    screen.getByRole("button", { name: en["record.verb.email"] }),
+  );
+  expect(writeTo).toHaveBeenCalledWith({
+    entityType: "contact",
+    entityId: "c-1",
+    address: "alice@example.com",
+  });
+});
+
+test("with no composer to open, Email hands the address to the mail client", async () => {
+  stubNextSteps();
+  openTaskWith();
+
+  const email = await screen.findByRole("link", {
+    name: en["record.verb.email"],
+  });
+  expect(email.getAttribute("href")).toBe("mailto:alice@example.com");
+});
+
+test("Call dials the primary number, not the first one listed", async () => {
+  stubNextSteps({
+    contact: {
+      ...ALICE,
+      phones: [
+        { id: "ph-1", phone: "+49301234567", is_primary: false },
+        { id: "ph-2", phone: "+491517654321", is_primary: true },
+      ],
+    },
+  });
+  openTaskWith();
+
+  const dial = await screen.findByRole("link", {
+    name: en["record.verb.call"],
+  });
+  expect(dial.getAttribute("href")).toBe("tel:+491517654321");
+});
+
+test.each([
+  ["typed by hand", null],
+  ["read out of a note", { kind: "note", content_state: "available" }],
+  ["read out of a withheld call", { kind: "call", content_state: "withheld" }],
+])(
+  "a task %s offers Email and Open contact, and no Call",
+  async (_, source) => {
+    stubNextSteps({ source });
+    openTaskWith();
+
+    await waitFor(() => expect(openContact()).not.toBeNull());
+    // The source has answered, so a missing Call is the decision and not a wait.
+    if (source?.content_state === "withheld") {
+      await screen.findByText(en["email.detail.withheldReason"]);
+    } else if (source) {
+      await screen.findByRole("button", { name: "Open original" });
+    }
+    expect(
+      screen.getByRole("link", { name: en["record.verb.email"] }),
+    ).toBeTruthy();
+    expect(call()).toBeNull();
+  },
+);
+
+test("a contact with no phone gets no Call", async () => {
+  stubNextSteps({ contact: { ...ALICE, phones: [] } });
+  openTaskWith();
+
+  await waitFor(() => expect(openContact()).not.toBeNull());
+  expect(call()).toBeNull();
+});
+
+test("a contact with no address gets Email refused with the reason", async () => {
+  stubNextSteps({ contact: { ...ALICE, primary_email: null } });
+  openTaskWith();
+
+  const email = await screen.findByRole("button", {
+    name: en["record.verb.email"],
+  });
+  expect(email.hasAttribute("disabled")).toBe(true);
+  expect(describedBy(email)).toBe(en["task.next.noAddress"]);
+  expect(call()).not.toBeNull();
+});
+
+test("an archived contact gets no Call and a refused Email, and can still be opened", async () => {
+  stubNextSteps({
+    contact: { ...ALICE, archived_at: "2026-09-01T00:00:00Z" },
+  });
+  openTaskWith();
+
+  const email = await screen.findByRole("button", {
+    name: en["record.verb.email"],
+  });
+  expect(email.hasAttribute("disabled")).toBe(true);
+  expect(describedBy(email)).toBe(en["contact.rail.archivedReadOnly"]);
+  expect(openContact()).not.toBeNull();
+  expect(call()).toBeNull();
+});
+
+test("a refused Email is said once, after every verb in the row", async () => {
+  stubNextSteps({ contact: { ...ALICE, primary_email: null } });
+  openTaskWith();
+
+  const email = await screen.findByRole("button", {
+    name: en["record.verb.email"],
+  });
+  const reasons = screen.getAllByText(en["task.next.noAddress"]);
+  expect(reasons).toHaveLength(1);
+  const row = email.closest(".form-actions");
+  expect(reasons[0]?.parentElement).toBe(row);
+  expect(row?.lastElementChild).toBe(reasons[0]);
+});
+
+test.each([
+  ["no contact", [{ entity_type: "company", entity_id: "co-1" }]],
+  [
+    "two contacts",
+    [
+      { entity_type: "contact", entity_id: "c-1" },
+      { entity_type: "contact", entity_id: "c-2" },
+    ],
+  ],
+])("a task linking %s offers no next steps", async (_, links) => {
+  stubNextSteps({ links });
+  openTaskWith();
+
+  await screen.findByText(/^Logged/);
+  // The source read answers before the verbs would be drawn.
+  await screen.findByRole("button", { name: "Open original" });
+  expect(openContact()).toBeNull();
+  expect(screen.queryByText(en["record.verb.email"])).toBeNull();
+  expect(call()).toBeNull();
+});
+
+test("a contact that stops being readable takes its verbs with it", async () => {
+  let refused = false;
+  stubNextSteps({ contactRefused: () => refused });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <TaskDetailModal
+          activityId="task-1"
+          readOnly={false}
+          onClose={() => {}}
+          update={
+            {
+              mutate: () => {},
+              isPending: false,
+            } as unknown as Parameters<typeof TaskDetailModal>[0]["update"]
+          }
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  await screen.findByRole("link", { name: en["record.verb.call"] });
+
+  refused = true;
+  await client.refetchQueries({ queryKey: ["contact", "c-1"] });
+
+  await waitFor(() => expect(openContact()).toBeNull());
+  expect(call()).toBeNull();
+});
+
+test.each([
+  ["a done task", { isDone: true }, {}],
+  ["a read-only dialog", {}, { readOnly: true }],
+])("%s still offers the next steps", async (_, task, dialog) => {
+  stubNextSteps(task);
+  openTaskWith(dialog);
+
+  expect(
+    await screen.findByRole("link", { name: en["record.verb.call"] }),
+  ).toBeTruthy();
+  expect(openContact()).not.toBeNull();
+  expect(screen.queryByRole("button", { name: en["tasks.snooze"] })).toBeNull();
+});
+
+// The task, its call source and its contact already cached when the dialog opens.
+function openWarm({ isDone = false, readOnly = false } = {}) {
+  stubNextSteps({ isDone });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  client.setQueryData(["activity", "task-1"], {
+    id: "task-1",
+    kind: "task",
+    subject: "Call back Alice about the renewal",
+    body: "Agenda: https://example.com/agenda",
+    occurred_at: "2026-09-08T09:00:00Z",
+    is_done: isDone,
+    source_activity_id: "src-1",
+    writable: true,
+    links: [{ entity_type: "contact", entity_id: "c-1" }],
+  });
+  client.setQueryData(
+    ["me"],
+    meFixture({ allow: { activity: ["read", "update"] }, seat: "full" }),
+  );
+  client.setQueryData(["activity", "src-1"], {
+    id: "src-1",
+    kind: "call",
+    content_state: "available",
+    occurred_at: "2026-09-08T08:00:00Z",
+  });
+  client.setQueryData(["contact", "c-1"], ALICE);
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <TaskDetailModal
+          activityId="task-1"
+          readOnly={readOnly}
+          onClose={() => {}}
+          update={
+            {
+              mutate: () => {},
+              isPending: false,
+            } as unknown as Parameters<typeof TaskDetailModal>[0]["update"]
+          }
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  return client;
+}
+
+test("a dialog opened on warm reads puts first focus on Done, not on a link or Call", async () => {
+  const client = openWarm();
+
+  const done = screen.getByRole("button", { name: en["tasks.complete"] });
+  expect(
+    screen.getByRole("link", { name: "https://example.com/agenda" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("link", { name: en["record.verb.call"] }),
+  ).toBeTruthy();
+  expect(document.activeElement).toBe(done);
+  // Reads answering after the open move nothing.
+  await waitFor(() => expect(client.isFetching()).toBe(0));
+  expect(document.activeElement).toBe(done);
+});
+
+test.each([
+  ["a done task", { isDone: true }],
+  ["a read-only dialog", { readOnly: true }],
+])(
+  "%s opened on warm reads puts first focus on the dialog box",
+  async (_, options) => {
+    const client = openWarm(options);
+
+    const box = screen.getByRole("dialog");
+    expect(
+      screen.getByRole("link", { name: en["record.verb.call"] }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "https://example.com/agenda" }),
+    ).toBeTruthy();
+    expect(document.activeElement).toBe(box);
+    await waitFor(() => expect(client.isFetching()).toBe(0));
+    expect(document.activeElement).toBe(box);
+  },
+);
+
+// The real task write, so a call that completed the task would be seen.
+function TaskDialogWithItsWrites() {
+  const update = useTaskUpdate(taskWriteKeys("contact", "c-1"));
+  return (
+    <TaskDetailModal
+      activityId="task-1"
+      readOnly={false}
+      onClose={() => {}}
+      update={update}
+    />
+  );
+}
+
+function SessionAnswered() {
+  return useMe().data ? <p>session answered</p> : null;
+}
+
+test("Call logs the call inside the dialog, on the task's contact, and leaves the task open", async () => {
+  const user = userEvent.setup();
+  const posted: unknown[] = [];
+  const patched: unknown[] = [];
+  stubNextSteps({
+    routes: {
+      "GET /me": meRoute({ activity: ["read", "create"] }, { seat: "full" }),
+      "POST /activities": (body) => {
+        posted.push(body);
+        return jsonResponse({ id: "a-9", kind: "call" }, 201);
+      },
+      "PATCH /activities/task-1": (body) => {
+        patched.push(body);
+        return jsonResponse({}, 200);
+      },
+    },
+  });
+  render(
+    <StoryProviders>
+      <CallLogHost>
+        <SessionAnswered />
+        <TaskDialogWithItsWrites />
+      </CallLogHost>
+    </StoryProviders>,
+  );
+  await screen.findByText("session answered");
+
+  const dial = await screen.findByRole("link", {
+    name: en["record.verb.call"],
+  });
+  dial.focus();
+  await user.keyboard("{Enter}");
+  const log = await screen.findByRole("region", { name: en["log.title"] });
+  expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  expect(screen.getByRole("dialog").contains(log)).toBe(true);
+  expect(log.contains(document.activeElement)).toBe(true);
+  expect(
+    within(log).getByRole("combobox", { name: "Type" }).textContent,
+  ).toContain("Call");
+  await user.type(
+    within(log).getByRole("textbox", { name: "Subject" }),
+    "Left a voicemail",
+  );
+  await user.click(within(log).getByRole("button", { name: "Log" }));
+
+  await waitFor(() => expect(posted).toHaveLength(1));
+  expect(posted[0]).toMatchObject({
+    kind: "call",
+    links: [{ entity_type: "contact", entity_id: "c-1" }],
+  });
+  await waitFor(() =>
+    expect(screen.queryByRole("region", { name: en["log.title"] })).toBeNull(),
+  );
+  expect(screen.getByRole("dialog")).toBeTruthy();
+  expect(document.activeElement).toBe(dial);
+  expect(patched).toHaveLength(0);
 });

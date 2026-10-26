@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect } from "react";
 import { CaptureSettingsCard } from "../../components/capture-settings";
+import { MailSharingCard } from "../../components/mail-sharing";
 import { Callout } from "../../design-system/callout";
 import { useT } from "../../i18n";
 import {
@@ -21,15 +22,14 @@ import { AgentUsageByUserCard } from "../automations/agentusage";
 import { AutomationsAdmin } from "../automations/automations";
 import { ExtensionAccessCard } from "../automations/extension-access";
 import { ExtensionUnitsCard } from "../automations/extension-units";
-import { OAuthAppCards } from "../automations/oauth-app";
+import { UnitOAuthAppCards } from "../automations/oauth-app";
 import { OvernightGrantCard } from "../automations/overnight-grant";
 import { MeetingSettings } from "../booking/meeting-settings";
 import { BriefDeliveryPanel } from "../brief/briefdelivery";
 import { BlockedDomainsCard } from "../capture/blocked-domains";
 import { CaptureActivityTab } from "../capture/capture-activity";
 import { OwnerIdentitiesCard } from "../capture/capture-owner-identities";
-import { ConnectionOutcomesCard } from "../capture/connection-outcomes";
-import { ConnectorsCard } from "../capture/connectors";
+import { ConnectorsCard, TelegramConnectorsPanel } from "../capture/connectors";
 import { ConsumerMailDomainsCard } from "../capture/consumer-mail-domains";
 import { ProviderCard } from "../capture/integrations-provider";
 import { OwnDomainsCard } from "../capture/own-domains";
@@ -38,11 +38,11 @@ import { OfferTemplatesAdmin } from "../deals/offertemplates";
 import { ProductsAdmin } from "../deals/products";
 import { ReviewTemplatesCard } from "../deals/reviewtemplates";
 import { ImportCard } from "../import/import";
-import { LinkedInImportCard } from "../import/linkedin-import";
+import { LinkedInNetworkPanel } from "../import/linkedin-import";
 import {
   LeadDisqualifyReasonsCard,
   LeadHandlingCard,
-  LeadSourcesCard,
+  LeadOriginsCard,
 } from "../leads/leadvocab";
 import { TagVocabularyCard } from "../lists/tagadmin";
 import { SignatureTemplateCard } from "../mail/signaturetemplatecard";
@@ -59,8 +59,9 @@ import { FollowUpSettingsCard } from "./followupsettings";
 import { InstallationConfigurationPage } from "./installation-configuration";
 import { LegalEntitiesCard } from "./legalentities";
 import { LicenseCard } from "./license";
-import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
 import { NotificationSettingsCard } from "./notification-settings";
+import { OAuthAppsCard } from "./oauth-apps-card";
+import { PublicOriginCard } from "./public-origin";
 import { FxRatesCard } from "./rates";
 import { RolesSettings } from "./roles-settings";
 import { AiAccessTab } from "./settings.aiaccess";
@@ -75,8 +76,9 @@ import { UsersAdminCard } from "./users-admin";
 import { WebhooksCard } from "./webhooks";
 import "./settings.css";
 
+import { readsOnly, type SettingsPageId } from "../../lib/settingscatalog";
+import { settingsHref, settingsRouteTarget } from "../../lib/settingsrouting";
 import { ResetDataCard } from "./settings.reset";
-import { readsOnly, type SettingsPageId } from "./settingscatalog";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
 import {
   ADMIN_SEGMENT,
@@ -88,7 +90,7 @@ import {
   useSettingsSection,
   useVisibleSettingsPages,
 } from "./settingsnav";
-import { settingsHref, settingsRouteTarget } from "./settingsrouting";
+import { SettingsSavePage } from "./settingssavepage";
 
 // Re-exported so this module's own consumers — the tests, the stories, the
 // testkit — keep asking one module for both halves. Splitting their imports
@@ -154,10 +156,13 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
       );
     case "authentication":
       // Who may sign in, and how: one vendor OAuth app serves sign-in and mail.
+      // The apps come first, since no provider reaches the sign-in screen
+      // before its app exists. Apps an extension unit declares follow.
       return (
         <>
+          <OAuthAppsCard />
           <SignInMethodsCard />
-          <OAuthAppCards />
+          <UnitOAuthAppCards />
         </>
       );
 
@@ -183,7 +188,7 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
     case "leads":
       return (
         <>
-          <LeadSourcesCard />
+          <LeadOriginsCard />
           <LeadDisqualifyReasonsCard />
           <LeadHandlingCard />
         </>
@@ -266,7 +271,12 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
       // to consent and retention, and one reader can hold one without the other.
       return <AuditLogCard />;
     case "system-health":
-      return <SystemHealthPage />;
+      return (
+        <>
+          <SystemHealthPage />
+          <PublicOriginCard />
+        </>
+      );
     case "configuration":
       return <InstallationConfigurationPage />;
     case "extensions":
@@ -278,27 +288,19 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
   }
 }
 
-// What YOU are connected to. Most surfaces here read a per-user seam: the
-// server scopes mail connectors to the caller, and LinkedIn reads `/me`. So it
-// sits in the personal group and needs no grant. The catalog marks it `mixed`:
-// ConnectorsCard's second panel is the workspace's Telegram bot. The
-// mail-sharing row states a rule that is changed on Capture rules.
+// What you are connected to. The mail connector list is scoped to the calling
+// human server-side and the LinkedIn surface reads `/me`. So this is personal
+// and needs no grant. What those mailboxes brought in and what is held back
+// is on Capture activity.
 function ConnectionsTab() {
   return (
     <>
-      {/* The rule first, then the mailboxes that live under it: sharing is a
-          posture every user works under, not a property of any one connection
-          below. It is STATED here and CHANGED on Capture rules — this page is
-          the reader's own mailboxes, and the switch that decides whether
-          everybody's captured mail is shared does not belong among them. */}
-      <MailSharingPostureRow />
       <ConnectorsCard />
       {/* Per seat, not per connection: an address declared here is the same
           contact, so mail among them never becomes a conversation. */}
       <OwnerIdentitiesCard />
       <OvernightGrantCard />
-      <LinkedInImportCard />
-      <ConnectionOutcomesCard />
+      <LinkedInNetworkPanel />
       {/* Last, and only when the installation composed a unit whose credential
           is the member's OWN — that is what a `user`-scoped secret is, and it
           is the same thing every card above it holds. A unit is offered here
@@ -309,16 +311,17 @@ function ConnectionsTab() {
   );
 }
 
-// What the INSTALLATION is wired to: one shared contact-data credential and the
-// outbound subscriptions. Both are workspace-wide — a key everybody spends from
-// and a webhook everybody's writes fire — which is why they sit under the
-// company heading and the personal connections do not.
+// What the INSTALLATION is wired to: one shared contact-data credential, the
+// outbound subscriptions and the workspace's Telegram bot. Each is shared by
+// everybody, which is why they sit under the company heading and the personal
+// connections do not.
 function IntegrationsTab() {
   return (
     <>
       <ProviderCard />
       <FinanceSourceCard />
       <WebhooksCard />
+      <TelegramConnectorsPanel />
       {/* A unit whose secret is `workspace`-scoped holds the installation's
           credential, like the cards above, so it is offered here. Which page a
           unit lands on is its manifest's decision, never this file's. */}
@@ -431,23 +434,24 @@ export function SettingsScreen({
           (App.tsx), not by this screen. A guard installed HERE could only see
           moves between settings entries: it unmounts with the screen, so a draft
           was safe from one tab to the next and still discarded without a word the
-          moment the reader clicked Contacts. The cards below claim through
-          `useUnsavedGuard` and need to know nothing about where the answer is
-          asked. */}
-      <div className="settings-stack arrive-stack">
-        {/* Said ONCE, at the top, and only for a page with NO open control —
-            the `looksUp` half of the partition: a reader who can change nothing
-            would otherwise infer it from a screenful of disabled cards, and a
-            banner over a control that works is worse than silence. */}
-        {readOnlyPage && (
-          <Callout kind="standing" title={t("settings.readOnlyPageTitle")}>
-            {t("settings.readOnlyPage")}
-          </Callout>
-        )}
-        <ReviewActionsContext value={reviewActions ?? inheritedReviewActions}>
-          {tabContent(active.id, route)}
-        </ReviewActionsContext>
-      </div>
+          moment the reader clicked Contacts. The cards below hand their drafts
+          to the page's one save bar, which claims for them. */}
+      <SettingsSavePage>
+        <div className="settings-stack arrive-stack">
+          {/* Said once, at the top, and only for a page with no open control: the
+              `looksUp` half of the partition. A reader who can change nothing would
+              otherwise infer it from a screenful of disabled cards, and a banner over
+              a control that works is worse than silence. */}
+          {readOnlyPage && (
+            <Callout kind="standing" title={t("settings.readOnlyPageTitle")}>
+              {t("settings.readOnlyPage")}
+            </Callout>
+          )}
+          <ReviewActionsContext value={reviewActions ?? inheritedReviewActions}>
+            {tabContent(active.id, route)}
+          </ReviewActionsContext>
+        </div>
+      </SettingsSavePage>
     </div>
   );
 }

@@ -3,8 +3,8 @@ import { useT } from "../../i18n";
 import { navigate } from "../../lib/router";
 import "./share.css";
 
+import type { RecordType } from "../../components/share.parts";
 import { ShareScreenBody } from "./share.body";
-import type { RecordType } from "./share.parts";
 
 // The record-share screen: grant a user or team read/write on this one record,
 // list and revoke the manual grants. For a contact or company, the panel above

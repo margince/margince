@@ -460,7 +460,7 @@ func TestErasingASubjectClearsThemFromARefusedSendReview(t *testing.T) {
 		t.Fatalf("opening the erasure case → %d", status)
 	}
 	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+opened.ID, AnyMap{
-		"status": "fulfilled", "resolution": "erased on request",
+		"status": "fulfilled", "resolution": "erased on request", "identity_check": "id_document",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("fulfilling the erasure → %d", status)
 	}
@@ -520,7 +520,7 @@ func TestErasingASubjectEmptiesAndCancelsTheirHeldMessage(t *testing.T) {
 		t.Fatalf("opening the erasure case → %d", status)
 	}
 	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+opened.ID, AnyMap{
-		"status": "fulfilled", "resolution": "erased on request",
+		"status": "fulfilled", "resolution": "erased on request", "identity_check": "id_document",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("fulfilling the erasure → %d — an erasure that cannot complete because of a "+
 			"held message is this slice breaking Art. 17", status)
@@ -588,7 +588,7 @@ func TestErasingASubjectReachesAMessageAddressedInAnotherCase(t *testing.T) {
 		t.Fatalf("opening the erasure case → %d", status)
 	}
 	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+opened.ID, AnyMap{
-		"status": "fulfilled", "resolution": "erased on request",
+		"status": "fulfilled", "resolution": "erased on request", "identity_check": "id_document",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("fulfilling the erasure → %d", status)
 	}
@@ -803,13 +803,11 @@ func TestARefusedSendNamesItsReviewWhereAMachineCanReadIt(t *testing.T) {
 	}
 }
 
-// A REP WHO CANNOT OVERRULE THE ENGINE IS OFFERED THE ASK INSTEAD.
+// A rep who cannot direct a send is offered the overrule.
 //
-// The two are answers to one question — "this was refused, now what" — and
-// which a human sees is decided by what they may actually do. Offering a
-// holder the ask would tell them to go around themselves; offering somebody
-// without the grant the send would be a button that fails when pressed.
-func TestARepWhoCannotOverruleTheEngineIsOfferedTheAsk(t *testing.T) {
+// A machine refusal is the rep's to overrule with a reason, so the refusal names
+// each contact and category the rep's vouch must cover.
+func TestARepWhoCannotDirectASendIsOfferedTheOverrule(t *testing.T) {
 	c := setupConsent(t)
 
 	// The seat loses the grant that makes somebody a director.
@@ -823,6 +821,10 @@ func TestARepWhoCannotOverruleTheEngineIsOfferedTheAsk(t *testing.T) {
 	var problem struct {
 		Details struct {
 			AvailableActions []string `json:"available_actions"`
+			Overrulable      []struct {
+				ContactID string `json:"contact_id"`
+				Category  string `json:"category"`
+			} `json:"overrulable"`
 		} `json:"details"`
 	}
 	if status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
@@ -832,9 +834,43 @@ func TestARepWhoCannotOverruleTheEngineIsOfferedTheAsk(t *testing.T) {
 		t.Fatalf("marketing send with no grant → %d, want 409", status)
 	}
 	if len(problem.Details.AvailableActions) != 1 ||
-		problem.Details.AvailableActions[0] != "request_decision" {
-		t.Errorf("the refusal offers %v, want exactly [request_decision] — a rep who cannot "+
-			"direct a send would press a button that fails", problem.Details.AvailableActions)
+		problem.Details.AvailableActions[0] != "overrule" {
+		t.Errorf("the refusal offers %v, want exactly [overrule] — a rep who cannot direct a "+
+			"send overrules a machine refusal with a reason", problem.Details.AvailableActions)
+	}
+	if len(problem.Details.Overrulable) != 1 || problem.Details.Overrulable[0].ContactID != c.contactID ||
+		problem.Details.Overrulable[0].Category != "marketing" {
+		t.Errorf("the refusal names %+v to overrule, want the one refused contact %s under marketing",
+			problem.Details.Overrulable, c.contactID)
+	}
+}
+
+// A rep who may not edit the contact is offered no overrule. The vouch is a
+// write on the contact, and the door would refuse it.
+func TestARepWhoMayNotEditTheContactIsOfferedNoOverrule(t *testing.T) {
+	c := setupConsent(t)
+	if _, err := c.Owner.Exec(context.Background(), `
+		UPDATE role SET permissions = jsonb_set(jsonb_set(
+			permissions, '{objects,communication_exception}',
+			'{"create":false,"read":false,"update":false,"delete":false}'::jsonb, true),
+			'{objects,contact,update}', 'false'::jsonb, true)`); err != nil {
+		t.Fatalf("removing the grants: %v", err)
+	}
+	var problem struct {
+		Details struct {
+			AvailableActions []string `json:"available_actions"`
+			Overrulable      []any    `json:"overrulable"`
+		} `json:"details"`
+	}
+	if status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
+		"subject": "Re: Inbound question", "body": "answer",
+		"to": []string{"subject@consent.test"}, "consent_purpose": "marketing_email",
+	}, nil, &problem); status != http.StatusConflict {
+		t.Fatalf("marketing send with no grant → %d, want 409", status)
+	}
+	if len(problem.Details.AvailableActions) != 0 || len(problem.Details.Overrulable) != 0 {
+		t.Errorf("the refusal offers %v over %v to a rep the allow door would refuse",
+			problem.Details.AvailableActions, problem.Details.Overrulable)
 	}
 }
 

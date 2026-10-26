@@ -18,6 +18,7 @@ var domainEvidence = struct {
 	LegalName         langcopy.Phrase
 	StatedName        langcopy.Phrase
 	NotCompany        langcopy.Phrase
+	VendorQuestion    langcopy.Phrase
 	NothingRead       langcopy.Phrase
 	NoCompany         langcopy.Phrase
 	NotAllowed        langcopy.Phrase
@@ -37,6 +38,7 @@ var domainEvidence = struct {
 	LegalName:         langcopy.Phrase{En: "The site's legal notice names %q.", De: "Die Rechtshinweise der Website nennen %q.", Vi: "Thông tin pháp lý trên trang web nêu tên %q."},
 	StatedName:        langcopy.Phrase{En: "The site states the company name %q.", De: "Die Website nennt den Firmennamen %q.", Vi: "Trang web nêu tên công ty là %q."},
 	NotCompany:        langcopy.Phrase{En: "This site says the domain does not belong to a company, so the read stopped after its landing page.", De: "Laut Website gehört die Domain zu keinem Unternehmen. Die Prüfung endete daher nach der Startseite.", Vi: "Trang web cho biết tên miền không thuộc một công ty, nên việc đọc dừng lại sau trang đầu."},
+	VendorQuestion:    langcopy.Phrase{En: "This site reads as a mail or hosting vendor, so the read stopped after its landing page. A colleague decides whether its staff get a company.", De: "Die Website wirkt wie ein Mail- oder Hosting-Anbieter. Die Prüfung endete daher nach der Startseite. Ein Kollege entscheidet, ob seine Mitarbeitenden ein Unternehmen bekommen.", Vi: "Trang web có vẻ là nhà cung cấp email hoặc hosting, nên việc đọc dừng lại sau trang đầu. Một đồng nghiệp quyết định có tạo công ty cho nhân viên của nó hay không."},
 	NothingRead:       langcopy.Phrase{En: "No site could be read for this domain, so the company question was answered from what the workspace already knew.", De: "Für diese Domain konnte keine Website gelesen werden. Die Unternehmensfrage wurde anhand der bereits bekannten Informationen beantwortet.", Vi: "Không đọc được trang web nào cho tên miền này. Câu hỏi về công ty được giải quyết dựa trên thông tin đã biết."},
 	NoCompany:         langcopy.Phrase{En: "The site was read and named no company, so the question was answered from what the workspace already knew.", De: "Die Website wurde gelesen, nannte aber kein Unternehmen. Die Frage wurde anhand der bereits bekannten Informationen beantwortet.", Vi: "Trang web đã được đọc nhưng không nêu tên công ty. Câu hỏi được giải quyết dựa trên thông tin đã biết."},
 	NotAllowed:        langcopy.Phrase{En: "Automatic enrichment is off, so the company question was answered without reading the site.", De: "Die automatische Anreicherung ist deaktiviert. Die Unternehmensfrage wurde ohne Lesen der Website beantwortet.", Vi: "Tự động bổ sung thông tin đang tắt. Câu hỏi về công ty được giải quyết mà không đọc trang web."},

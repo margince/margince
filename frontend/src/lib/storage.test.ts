@@ -115,6 +115,8 @@ describe("a stored value", () => {
       "ob.connect.overnightChoice",
       "margince.signin.returnRoute",
       "margince.room.session",
+      "margince.setup.reminderHidden",
+      "margince.taskReminders.shown",
     ]);
   });
 });

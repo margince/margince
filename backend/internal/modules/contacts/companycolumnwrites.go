@@ -7,8 +7,14 @@ package contacts
 // to the entry point that must enforce authorization and concurrency.
 
 import (
+	"context"
+	"fmt"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
@@ -42,12 +48,19 @@ var companyColumnWrites = map[string]companyColumnWrite{
 		fillUnclaimed:   `UPDATE company SET industry = $2 WHERE id = $1 AND archived_at IS NULL AND industry IS NULL`,
 		replaceStanding: `UPDATE company SET industry = $2 WHERE id = $1 AND archived_at IS NULL AND industry IS DISTINCT FROM $2`,
 	},
-	// A scraped address cannot replace an existing structured address on the fill path.
+	// Address parts move together. Filling requires every part to be empty;
+	// replacement clears old parts that the new address does not contain.
 	columnAddress: {
-		fillUnclaimed: `UPDATE company SET address_line1 = $2 WHERE id = $1 AND archived_at IS NULL
-		       AND address_line1 IS NULL AND address_city IS NULL AND address_postal_code IS NULL`,
-		replaceStanding: `UPDATE company SET address_line1 = $2 WHERE id = $1 AND archived_at IS NULL
-		          AND address_line1 IS DISTINCT FROM $2`,
+		fillUnclaimed: `UPDATE company SET address_line1 = $2, address_line2 = $3, address_region = $4,
+		       address_postal_code = $5, address_city = $6, address_country = $7
+		 WHERE id = $1 AND archived_at IS NULL
+		   AND address_line1 IS NULL AND address_line2 IS NULL AND address_region IS NULL
+		   AND address_postal_code IS NULL AND address_city IS NULL AND address_country IS NULL`,
+		replaceStanding: `UPDATE company SET address_line1 = $2, address_line2 = $3, address_region = $4,
+		       address_postal_code = $5, address_city = $6, address_country = $7
+		 WHERE id = $1 AND archived_at IS NULL
+		   AND (address_line1, address_line2, address_region, address_postal_code, address_city, address_country)
+		       IS DISTINCT FROM ($2::text, $3::text, $4::text, $5::text, $6::text, $7::text)`,
 	},
 	// Clearing is permitted only by replacement; filling with NULL would leave no answer.
 	columnDescription: {
@@ -56,6 +69,25 @@ var companyColumnWrites = map[string]companyColumnWrite{
 		replaceStanding: `UPDATE company SET description = $2 WHERE id = $1 AND archived_at IS NULL
 		          AND description IS DISTINCT FROM $2`,
 	},
+}
+
+// A refused split leaves existing structured fields untouched during automatic fill.
+// An explicit replacement preserves the whole text in the profile field.
+func writeCompanyAddress(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, raw string, authority companyWriteAuthority) (bool, error) {
+	address, split := SplitAddressText(raw)
+	if !split && authority == fillUnclaimed {
+		return false, nil
+	}
+	tag, err := tx.Exec(ctx, companyColumnWrites[columnAddress].statementFor(authority), addressWriteArguments(companyID, address)...)
+	if err != nil {
+		return false, fmt.Errorf("write company address: %w", err)
+	}
+	return tag.RowsAffected() == 1, nil
+}
+
+// addressWriteArguments binds the address statements, in their placeholder order.
+func addressWriteArguments(companyID ids.CompanyID, a crmcontracts.Address) []any {
+	return []any{companyID, a.Line1, a.Line2, a.Region, a.PostalCode, a.City, a.Country}
 }
 
 // CompanyDescriptionMax is what company_description_length admits, in
@@ -74,4 +106,16 @@ func headerLine(value string) string {
 		return strings.TrimRight(cut[:at], " \t\n")
 	}
 	return cut
+}
+
+// companyColumnArgument is the value a company column write binds. An empty
+// value binds NULL, so an unfilled field never reads as the empty answer.
+// The industry column binds the code the text names. Unmapped reports text that
+// names no code: the human form clears the column, read-back paths write nothing.
+func companyColumnArgument(column, value string) (stored *string, unmapped bool) {
+	if column == columnIndustry && value != "" {
+		write := resolveIndustryWrite(&value)
+		return write.code, write.code == nil
+	}
+	return emptyToNil(value), false
 }

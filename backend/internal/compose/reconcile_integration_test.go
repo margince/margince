@@ -164,8 +164,20 @@ func (e *reconcileEnv) seedInteraction(t *testing.T, dealID ids.UUID, kind, subj
 // status is written as given, and "" writes NULL — which is what a captured
 // calendar entry nobody has marked actually carries, and the case a NOT IN
 // predicate silently drops.
+//
+// The meeting is a colleague's (Rep2 hosts it, the deals are Rep1's). A
+// meeting anyone here hosts is the account's next step.
 func (e *reconcileEnv) seedMeeting(
 	t *testing.T, dealID ids.UUID, subject string, occurredHoursAgo, durationSeconds int, status string,
+) {
+	t.Helper()
+	e.seedMeetingHostedBy(t, dealID, subject, occurredHoursAgo, durationSeconds, status, &e.Rep2)
+}
+
+// seedMeetingHostedBy is seedMeeting with the host named; nil is an imported
+// row no seat here hosts or attends.
+func (e *reconcileEnv) seedMeetingHostedBy(
+	t *testing.T, dealID ids.UUID, subject string, occurredHoursAgo, durationSeconds int, status string, host *ids.UUID,
 ) {
 	t.Helper()
 	id := ids.NewV7()
@@ -174,9 +186,9 @@ func (e *reconcileEnv) seedMeeting(
 		meetingStatus = &status
 	}
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO activity (id, kind, subject, occurred_at, duration_seconds, meeting_status, source, captured_by)
-		 VALUES ($1, 'meeting', $2, now() - make_interval(hours => $3), $4, $5, 'manual', 'human:x')`,
-		id, subject, occurredHoursAgo, durationSeconds, meetingStatus); err != nil {
+		`INSERT INTO activity (id, kind, subject, occurred_at, duration_seconds, meeting_status, source, captured_by, host_user_id)
+		 VALUES ($1, 'meeting', $2, now() - make_interval(hours => $3), $4, $5, 'manual', 'human:x', $6)`,
+		id, subject, occurredHoursAgo, durationSeconds, meetingStatus, host); err != nil {
 		t.Fatalf("seed meeting: %v", err)
 	}
 	e.linkActivity(t, id, dealID)
@@ -366,6 +378,22 @@ func TestAMeetingBookedForTomorrowIsNotEvidenceOfAMissedNextStep(t *testing.T) {
 	}
 }
 
+// An imported meeting nobody here hosts or attends is history, not a plan: it
+// does not stand in for the account's next step.
+func TestAnImportedMeetingNobodyTakesPartInIsNotANextStep(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Call then an imported meeting", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, deal, "call", "Discovery call", 3)
+	e.seedMeetingHostedBy(t, deal, "Imported session", -48, 1800, "booked", nil)
+
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.pendingFollowUps(t, deal); got != 1 {
+		t.Errorf("a deal whose only meeting nobody here takes part in staged %d proposals, want 1", got)
+	}
+}
+
 // The other half of the same fact: a meeting on the calendar IS the next step.
 // A past call with nothing queued would normally earn a proposal; a booked
 // meeting answers it, because the rep already has the thing the proposal would
@@ -501,9 +529,8 @@ func TestATaskProposalRecordsTheDealOwnerItIsFor(t *testing.T) {
 	}
 }
 
-// A deal nobody owns records nobody, and that is the honest answer rather than a
-// gap: with no seat to name, withholding it would leave a proposal nobody at all
-// could act on.
+// A deal nobody owns gets no follow-up proposal. A request always names the
+// member it is for, and an unowned deal has nobody to follow it up.
 func TestAProposalOnAnUnownedDealRecordsNobody(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Nobody owns this", e.pipeline, e.open, nil)
@@ -520,15 +547,14 @@ func TestAProposalOnAnUnownedDealRecordsNobody(t *testing.T) {
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
-	var onBehalfOf *ids.UUID
+	var staged int
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT on_behalf_of FROM approval
-		  WHERE kind = 'deal_follow_up' AND target_entity_id = $1 AND status = 'pending'`,
-		deal).Scan(&onBehalfOf); err != nil {
-		t.Fatalf("reading the staged proposal: %v", err)
+		`SELECT count(*) FROM approval WHERE kind = 'deal_follow_up' AND target_entity_id = $1`,
+		deal).Scan(&staged); err != nil {
+		t.Fatalf("counting staged proposals: %v", err)
 	}
-	if onBehalfOf != nil {
-		t.Errorf("an unowned deal's proposal was filed for %s", *onBehalfOf)
+	if staged != 0 {
+		t.Errorf("an unowned deal got %d follow-up proposal(s), want none", staged)
 	}
 }
 

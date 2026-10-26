@@ -11,7 +11,8 @@ var searchRecordsCopy = toolCopy{
 	Purpose: "Find records by the words they carry, best match first: contacts, companies, deals, " +
 		"leads and projects, and products, offer templates or activity when you name them.",
 	Limits: "It needs words in q. It searches the timeline (message bodies, call notes, meetings) " +
-		"only when you name activity.",
+		"only when you name activity. When nothing matches, near_matches may list up to five " +
+		"records whose names are spelt close to q; they are suggestions, not matches.",
 	Instead: "Use list_records to list records without words or by a condition, read_record when " +
 		"you already hold the record's id, and run_report when the question is a count, a total " +
 		"or a breakdown rather than a set of records.",
@@ -70,12 +71,16 @@ var createRecordCopy = toolCopy{
 		"what yields them for a deal that does not exist yet. Only the fields the chosen record_type " +
 		"actually stores are accepted, and a field belonging to a neighbouring type is refused " +
 		"rather than dropped. A CONTACT created here is visible to everyone in the workspace, " +
-		"the same as one a human types in.",
+		"the same as one a human types in." + pastDayNeedsATime,
 	Instead: "Search first when the record might already exist — a second copy of a contact or " +
 		"company is a problem that then needs resolve_duplicates to undo. A record that shares only " +
-		"a name, with a different email, phone or employer, is not proof of a duplicate: create " +
-		"it — the create files the pair for review, and you report the pair as filed, unresolved " +
-		"until the reviewer decides. Several contacts, companies or leads at once — a pasted list, " +
+		"a name, with a different email, phone or employer, is not proof of a duplicate. When the " +
+		"search finds a contact with the same name at the same employer, ask the human whether " +
+		"it is the same contact before you link anything to it; two colleagues can share a name. " +
+		"Giving a contact its employer by creating an employment relationship files " +
+		"any same-name contact at that employer for review: the result carries it as " +
+		"duplicate_candidates, and you report the pair as filed, unresolved until the " +
+		"reviewer decides. Several contacts, companies or leads at once — a pasted list, " +
 		"a CSV — go through preview_import, which checks " +
 		"every row and writes nothing; creating them one by one skips that check.",
 	Retain: "The new record's id comes back in the result; keep it for anything that links to it. " +
@@ -91,7 +96,8 @@ var updateRecordCopy = toolCopy{
 		"overwritten: that part is staged for a human and named in the result, and that part " +
 		"of the write has not happened. It names the record by id; when a name matches " +
 		"two records, a human picks. owner_id is NOT neutral — ownership decides visibility, so " +
-		"reassigning moves the record onto someone else's book and can take it off the owner's.",
+		"reassigning moves the record onto someone else's book and can take it off the owner's. " +
+		"An activity moved to another day keeps its time of day unless the user names one.",
 	Instead: "Use progress_deal to move a deal between stages, and relink_activity " +
 		"to change what an activity is about; neither is a field edit.",
 	Retain: "Send if_version with the version you read, and keep the staged approval id from the " +
@@ -112,15 +118,14 @@ var updateRecordCopy = toolCopy{
 var logActivityCopy = toolCopy{
 	Purpose: "Record something that happened — a call, a meeting, a note, a message — on the " +
 		"records it was about: name every one of them in this call. A meeting is with a contact, " +
-		"and also concerns their company and the deal it is for.",
-	Limits: "It writes history and can add a follow_up_task to a meeting, call or note in the same " +
-		"transaction. That task inherits source links and audience; its assignee must be able to " +
-		"read the source. Source-identity replay returns the original activity without adding a task. " +
-		"No deal moves, no field updates, nobody " +
-		"is notified. Unlinked, it appears on no timeline, and adding a link afterwards is a " +
-		"second call — relink_activity — which waits for the user's yes when it files under a " +
-		"project.",
-	Instead: "Use progress_deal when the same event also moves a deal, so move and note are one " +
+		"and also concerns their company and its deal.",
+	Limits: "It writes history and can add a follow_up_task to a meeting, call or note in one " +
+		"transaction; the task inherits source links and audience, and its assignee must be able to " +
+		"read the source. A source-identity replay returns the original and adds no task. " +
+		"No deal or field changes; nobody is notified. Unlinked, it is on no timeline; " +
+		"relink_activity links it later (onto a project, after the user's yes)." +
+		pastDayNeedsATime,
+	Instead: "Use progress_deal when the event also moves a deal, so move and note are one " +
 		"act; create_task for something still owed; attach_document for a file, whose text never " +
 		"goes into a note.",
 	Retain: "Keep the activity id — draft_outbound and send_outbound identify a conversation " +

@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -118,6 +119,24 @@ func TestCapturedMailFromALeadPromotesTheLead(t *testing.T) {
 	}
 	if trigger != string(TriggerInboundReply) {
 		t.Errorf("promotion trigger = %q, want %q: they wrote to us", trigger, TriggerInboundReply)
+	}
+}
+
+// A human who may not promote a lead accepts its sender. The lead stays where
+// it is, although the mail alone would have promoted it.
+func TestAnEnsureToldToSkipLeadPromotionLeavesTheLeadAlone(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	const email = "accepted@held.test"
+	lead := e.seedHeldLead(ctx, t, email)
+	in := e.datedEnsureInput(ctx, t, email, "held.test", clocktest.Now(t).Add(-time.Hour).UTC())
+	in.SkipLeadPromotion = true
+
+	if _, err := e.store.EnsureCounterparty(ctx, in); err != nil {
+		t.Fatalf("ensure: %v", err)
+	}
+	if status, promotedTo, archived, _ := e.leadOutcome(ctx, t, lead); status == "promoted" || archived || promotedTo != nil {
+		t.Fatalf("lead is status=%q archived=%t promoted_to=%v, want it untouched", status, archived, promotedTo)
 	}
 }
 
@@ -222,7 +241,7 @@ func TestPublishingAContactOnReplyPromotesTheLead(t *testing.T) {
 		t.Fatal("an owner-scoped contact took the lead")
 	}
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		moved, err := e.store.PromoteOnReplyTx(ctx, tx, res.ContactID, e.rep)
+		moved, err := e.store.PromoteOnReplyTx(ctx, tx, res.ContactID)
 		if err != nil || !moved {
 			t.Fatalf("publish on reply: moved=%t err=%v", moved, err)
 		}

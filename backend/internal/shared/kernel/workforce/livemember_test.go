@@ -27,3 +27,11 @@ func TestActivatableMemberSQLAdmitsAnInvitedSeatAndKeepsTheArchivedHalf(t *testi
 		t.Errorf("ActivatableMemberSQL(\"u\") = %q, want %q", got, want)
 	}
 }
+
+func TestAskableMemberSQLRefusesAnAgent(t *testing.T) {
+	t.Parallel()
+	want := "u.is_agent = false AND u.status IN ('invited', 'active') AND u.archived_at IS NULL"
+	if got := AskableMemberSQL("u"); got != want {
+		t.Errorf("AskableMemberSQL(\"u\") = %q, want %q", got, want)
+	}
+}

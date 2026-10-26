@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -76,12 +77,12 @@ func (f *connectorTagFiler) fileUnderConnectorTag(
 // connectorContextTag answers the LIVE word the connector that captured this
 // activity files under, and the zero id for none.
 //
-// The connection is found from the activity's own provenance rather than from a
-// column on the ledger: `captured_by` carries `connector:<name>` in the
-// contract's declared grammar, and a connection is one seat's mailbox for one
-// provider — so the pair names exactly one row. Resolving it here rather than
-// freezing it at capture time is what lets an operator's choice reach the
-// records a still-open question is about to create.
+// The connection is found from the activity's own provenance, not from a ledger
+// column. `captured_by` carries `connector:<name>:<seat>`, and a connection is
+// one seat's mailbox for one provider, so the pair names one row. A bare
+// `connector:<name>` names no mailbox and files nothing. Resolving it here, not
+// at capture time, lets an operator's choice reach the records a still-open
+// question is about to create.
 //
 // The join to `tag` is what makes an ARCHIVED word file nothing: a retired word
 // is one the workspace took out of its vocabulary, and applying it anyway would
@@ -98,7 +99,8 @@ func connectorContextTag(ctx context.Context, tx pgx.Tx, activityID, ownerID ids
 		  JOIN activity a ON a.id = $1
 		 WHERE c.user_id = $2
 		   AND c.archived_at IS NULL
-		   AND a.captured_by = 'connector:' || c.provider`,
+		   AND c.provider = split_part(a.captured_by, ':', 2)
+		   AND c.user_id::text = `+auth.ConnectorSeatSQL("a"),
 		activityID, ownerID).Scan(&tagID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// No connection, no word, or a word since archived — all three mean this

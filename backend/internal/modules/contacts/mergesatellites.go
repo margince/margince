@@ -109,8 +109,8 @@ func relinkWorkInFlight(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.C
 	}
 	if _, err := tx.Exec(ctx, `
 		WITH carried AS (
-		  INSERT INTO contact_signature_enrich_state (contact_id, activity_id, last_activity_at, attempted_at)
-		  SELECT $2, activity_id, last_activity_at, attempted_at
+		  INSERT INTO contact_signature_enrich_state (contact_id, activity_id, last_activity_at, attempted_at, history_depth)
+		  SELECT $2, activity_id, last_activity_at, attempted_at, history_depth
 		    FROM contact_signature_enrich_state WHERE contact_id = $1
 		  ON CONFLICT (contact_id) DO NOTHING
 		)

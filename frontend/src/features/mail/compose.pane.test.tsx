@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -8,6 +8,7 @@ import { ComposeModal } from "./compose";
 import {
   type Activity,
   activity202,
+  findThreadChoice,
   jsonResponse,
   pickWhy,
   render,
@@ -47,13 +48,9 @@ describe("what the composer says this message is", () => {
       />,
     );
 
-    // The sentence that replaces the question. A reader who is shown a dropdown
-    // here is being asked to restate what the thread in front of them says.
-    expect(
-      await screen.findByText(
-        "This replies to the recipient’s own message, so no reason is needed.",
-      ),
-    ).toBeTruthy();
+    // A reader who is shown a dropdown here is being asked to restate what
+    // the thread in front of them says. The warning bar stays empty.
+    await screen.findByText(/Replying to “Re: Q3”/);
     expect(screen.queryByLabelText("Reason for contact")).toBeNull();
   });
 
@@ -72,9 +69,7 @@ describe("what the composer says this message is", () => {
       />,
     );
 
-    await screen.findByText(
-      "This replies to the recipient’s own message, so no reason is needed.",
-    );
+    await screen.findByText(/Replying to “Re: Q3”/);
     await userEvent.type(screen.getByLabelText("To"), "a@x.com");
     await userEvent.tab();
     await userEvent.type(screen.getByLabelText("Subject"), "Re: quote");
@@ -135,9 +130,7 @@ describe("what the composer says this message is", () => {
     await pickWhy(WHY_LABEL.marketing);
 
     await userEvent.click(screen.getByRole("button", { name: "anchor it" }));
-    await screen.findByText(
-      "This replies to the recipient’s own message, so no reason is needed.",
-    );
+    await screen.findByText(/Replying to “Re: Q3”/);
 
     await userEvent.type(screen.getByLabelText("To"), "a@x.com");
     await userEvent.tab();
@@ -216,11 +209,14 @@ describe("what the composer says this message is", () => {
   });
 });
 
-// The conversation a reply is answering, in the drawer beside it.
-//
-// A reply does not use the centred box, because the box covers the message it
-// answers. These pin the shape it takes and what it draws in the second column.
+// The conversation a reply is answering: the thread menu above the fields, and
+// the earlier messages quoted under the words.
 describe("the composer's conversation pane", () => {
+  const threadMenu = () => {
+    const menu = document.querySelector<HTMLElement>(".compose-threadmenu");
+    if (!menu) throw new Error("the thread menu is shut");
+    return menu;
+  };
   const threaded: Activity = {
     ...activity202,
     thread_key: "<t-1@mail>",
@@ -236,7 +232,7 @@ describe("the composer's conversation pane", () => {
     occurred_at: "2026-06-28T00:00:00Z",
   };
 
-  it("takes the drawer on an account whose mail it is answering", async () => {
+  it("marks the thread it is answering in the menu above the fields", async () => {
     stubRoutes({
       "GET /activities/act-1": () => jsonResponse(threaded),
       "GET /activities": () =>
@@ -252,15 +248,14 @@ describe("the composer's conversation pane", () => {
       />,
     );
 
-    // The sibling message arrives in the pane, which widens the drawer. So
-    // wait for the conversation, then read the shape.
+    // The thread the draft answers is marked in the menu the bar opens.
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Change$/ }),
+    );
     expect(
-      await screen.findByText("Sending the order over today."),
+      await within(threadMenu()).findByRole("button", { pressed: true }),
     ).toBeTruthy();
-    // The reading drawer, whether the mail opens a conversation or answers one.
-    expect(
-      document.querySelector(".modal-drawer.modal-drawer-wide .compose-split"),
-    ).not.toBeNull();
+    expect(document.querySelector(".docked .compose-threadbar")).not.toBeNull();
   });
 
   it("draws a message it may not read as a held place, not a gap", async () => {
@@ -289,24 +284,31 @@ describe("the composer's conversation pane", () => {
       />,
     );
 
-    // Waited for by its rows. The pane holds its place with a pending body
-    // while the thread read is out. So the region existing does not yet mean
-    // the messages are drawn.
-    const pane = await screen.findByRole("region", {
-      name: /This thread/i,
-    });
-    await waitFor(() => expect(pane.querySelectorAll("li")).toHaveLength(2));
+    // The words the draft answers are quoted under it; the withheld one is
+    // not, since nobody here may read it.
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Show 1 earlier message" }),
+    );
+    expect(
+      await screen.findByText("The signed order is attached."),
+    ).toBeTruthy();
+    // The menu still holds the withheld message's place in the thread.
+    await userEvent.click(screen.getByRole("button", { name: /Change$/ }));
+    await waitFor(() =>
+      expect(
+        threadMenu().querySelectorAll(".compose-threadlist-others > li"),
+      ).toHaveLength(1),
+    );
   });
 
-  it("anchors nothing until the reader picks a conversation", async () => {
-    // The heading need not apologise for a thread chosen on the reader's
-    // behalf. Nothing is chosen, so there is nothing to explain: the
-    // conversations are offered and the reader takes one.
+  it("anchors nothing until the reader picks a thread", async () => {
+    // Nothing is chosen on the reader's behalf: the threads are offered and
+    // the reader takes one.
     stubRoutes({
       "GET /activities": () =>
         jsonResponse({ data: [threaded, sibling], page: { has_more: false } }),
-      // Choosing a conversation reads its newest message, the way a Reply on
-      // the History tab does.
+      // Choosing a thread reads its newest message, the way a Reply on the
+      // History tab does.
       "GET /activities/act-1": () => jsonResponse(threaded),
     });
     render(
@@ -318,32 +320,33 @@ describe("the composer's conversation pane", () => {
       />,
     );
 
-    // Waited for by its rows, not the region. The offer column holds its
-    // place with a pending body while the lookup is out. So the region
-    // existing does not yet mean there is anything to pick.
-    const choice = await screen.findByRole("button", { name: /Re: Q3/ });
-    expect(
-      screen.getByRole("region", { name: /Continue thread/i }),
-    ).toBeTruthy();
-    expect(screen.queryByRole("region", { name: /^this thread$/i })).toBeNull();
+    expect(await screen.findByText("New thread")).toBeTruthy();
+    const choice = await findThreadChoice(/Re: Q3/);
+    expect(choice.getAttribute("aria-pressed")).toBe("false");
+    expect(screen.queryByRole("button", { name: "New email" })).toBeNull();
 
-    // Taking one turns the column into that conversation, with a way back.
+    // Taking one marks it as the thread the draft answers, with a way back.
     await userEvent.click(choice);
-    expect(
-      await screen.findByRole("region", { name: /This thread/i }),
-    ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "New email" })).toBeTruthy();
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Change$/ }),
+    );
+    const menu = within(threadMenu());
+    await waitFor(() =>
+      expect(
+        menu
+          .getByRole("button", { name: /Re: Q3/ })
+          .getAttribute("aria-pressed"),
+      ).toBe("true"),
+    );
+    expect(menu.getByRole("button", { name: "New email" })).toBeTruthy();
   });
 
-  it("draws no conversation beside a reply to a note", async () => {
-    // A timeline row offers Reply on a note as readily as on a mail. One filed
-    // note under the heading "This thread" claims to be an exchange.
+  it("draws no thread for a reply to a note", async () => {
+    // A timeline row offers Write email on a note as readily as Reply on a
+    // mail. A note offered as a thread would claim to be an exchange.
     const note: Activity = { ...threaded, kind: "note" };
-    const second: Activity = { ...sibling, kind: "note" };
     const sent = stubRoutes({
       "GET /activities/act-1": () => jsonResponse(note),
-      "GET /activities": () =>
-        jsonResponse({ data: [note, second], page: { has_more: false } }),
     });
     render(
       <ComposeModal
@@ -355,15 +358,16 @@ describe("the composer's conversation pane", () => {
       />,
     );
 
-    // The composer has read the anchor and its siblings. So the pane's
-    // absence is a decision, not a list that had not arrived yet.
+    // The composer has read the anchor and the record's threads. So the
+    // menu's empty list is a decision, not one that had not arrived yet.
     await waitFor(() =>
       expect(
-        sent.filter((call) => call.key === "GET /activities"),
+        sent.filter((call) => call.key === "GET /activities/act-1"),
       ).not.toHaveLength(0),
     );
-    await screen.findByRole("combobox", { name: WHY_ASK });
-    expect(screen.queryByRole("region", { name: /This thread/i })).toBeNull();
+    await screen.findByText(/^About: /);
+    await userEvent.click(screen.getByRole("button", { name: /Change$/ }));
+    expect(threadMenu().querySelectorAll(".compose-threadrow")).toHaveLength(0);
   });
 
   it("shows a mail with no thread as the one message it is", async () => {
@@ -385,11 +389,93 @@ describe("the composer's conversation pane", () => {
       />,
     );
 
-    expect(
-      await screen.findByText("The signed order is attached."),
-    ).toBeTruthy();
-    expect(sent.filter((call) => call.key === "GET /activities")).toHaveLength(
-      0,
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Show 1 earlier message" }),
     );
+    await waitFor(() =>
+      expect(document.querySelector(".compose-earlier")?.textContent).toContain(
+        "The signed order is attached.",
+      ),
+    );
+    expect(
+      sent.filter(
+        (call) =>
+          call.key === "GET /activities" && call.query.has("thread_key"),
+      ),
+    ).toHaveLength(0);
+  });
+
+  it("searches a long record's threads and reads older ones a page at a time", async () => {
+    const user = userEvent.setup();
+    const older: Activity = {
+      ...sibling,
+      id: "act-9",
+      subject: "Invoice 1040",
+    };
+    const lastYear: Activity = {
+      ...sibling,
+      id: "act-8",
+      subject: "Q2 renewal",
+      thread_key: "<t-renewal@mail>",
+    };
+    // The first read has more behind it; the next is the record's last page.
+    let reads = 0;
+    const sent = stubRoutes({
+      "GET /activities": () => {
+        reads += 1;
+        return jsonResponse(
+          reads === 1
+            ? { data: [threaded], page: { has_more: true, next_cursor: "c-2" } }
+            : { data: [lastYear], page: { has_more: false } },
+        );
+      },
+    });
+    render(
+      <ComposeModal
+        entityType="company"
+        entityId="o-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /Continue a thread$/ }),
+    );
+
+    // Older mail is a page away, read on asking.
+    await user.click(
+      await within(threadMenu()).findByRole("button", { name: "Show more" }),
+    );
+    await waitFor(() =>
+      expect(
+        sent.some(
+          (call) =>
+            call.key === "GET /activities" &&
+            call.query.get("cursor") === "c-2",
+        ),
+      ).toBe(true),
+    );
+    expect(
+      await within(threadMenu()).findByRole("button", { name: /Q2 renewal/ }),
+    ).toBeTruthy();
+    expect(
+      within(threadMenu()).queryByRole("button", { name: "Show more" }),
+    ).toBeNull();
+
+    // Words typed are asked of the server, not filtered from one page.
+    const searched = stubRoutes({
+      "GET /activities": () =>
+        jsonResponse({ data: [older], page: { has_more: false } }),
+    });
+    await user.type(within(threadMenu()).getByRole("searchbox"), "invoice");
+    expect(
+      await within(threadMenu()).findByRole("button", { name: /Invoice 1040/ }),
+    ).toBeTruthy();
+    expect(
+      searched.some(
+        (call) =>
+          call.key === "GET /activities" && call.query.get("q") === "invoice",
+      ),
+    ).toBe(true);
   });
 });

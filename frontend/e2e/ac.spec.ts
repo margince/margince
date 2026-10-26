@@ -1,10 +1,18 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, type Page, test } from "@playwright/test";
-import { SETTINGS_PAGES } from "../src/features/settings/settingscatalog";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 import { de } from "../src/i18n/de";
 import { en, type MessageKey } from "../src/i18n/en";
+import { SETTINGS_PAGES } from "../src/lib/settingscatalog";
 import { meFixture } from "../src/testing/mefixture";
 import { copy } from "./copy";
+import {
+  CALLED_CONTACT,
+  loggedCall,
+  loggedNote,
+  PRIMARY_PHONE,
+  taskFromCall,
+  typedTask,
+} from "./mockapi/calls";
 import { anna, mockApi } from "./seed";
 import { openedAt, pageOverflow, textsOf } from "./waits";
 
@@ -159,7 +167,7 @@ const CORE_SCREENS = [
   "analytics",
   "settings",
   // Settings is many pages behind one route (SETTINGS_PAGES in
-  // features/settings/settingscatalog.ts), and a bare `settings` resolves to Account,
+  // lib/settingscatalog.ts), and a bare `settings` resolves to Account,
   // the shortest of them. Sweeping that alone and calling settings covered is
   // how the widest page in the product went unmeasured: `fields` carries two
   // full list surfaces with their own toolbars, `integrations` four
@@ -344,7 +352,7 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
   const heading = page.getByRole("heading", { level: 1 });
   await expect(heading).toHaveCount(1);
   await expect(heading).toHaveText("Anna Weber");
-  await expect(page.locator(".record-head h1")).toHaveText("Anna Weber");
+  await expect(page.locator(".record-split-head h1")).toHaveText("Anna Weber");
   // The trail that leads back to the list stands in the top bar, where it is
   // true of the page rather than part of the document the reader is reading.
   await expect(page.locator(".topbar .crumbs a").last()).toHaveText("Kontakte");
@@ -462,16 +470,22 @@ test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
   // locales ship, so the control is a list rather than a toggle — a toggle
   // cannot say where the next click lands.
   await page.goto("/#/settings/account");
-  // The panel the language row sits in.
+  // A card title on the page, so the check below reads chrome the language
+  // control does not draw itself.
   await expect(
-    page.getByRole("heading", { name: de["settings.preferencesTitle"] }),
+    page.getByRole("heading", { name: de["account.signInCard"] }),
   ).toBeVisible();
   await page.getByRole("combobox", { name: "Sprache" }).click();
   await page.getByRole("option", { name: "English" }).click();
+  // The pick waits in the page's save bar; the language turns once it is saved.
+  await page
+    .getByRole("region", { name: de["saveBar.unsaved"] })
+    .getByRole("button", { name: de["saveBar.save"], exact: true })
+    .click();
   // The surface around the control follows the choice, not just the control's
   // own face: every word on it is rendered from the catalog that just changed.
   await expect(
-    page.getByRole("heading", { name: en["settings.preferencesTitle"] }),
+    page.getByRole("heading", { name: en["account.signInCard"] }),
   ).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Language" })).toBeVisible();
 });
@@ -487,12 +501,10 @@ test("features/10 §7: Settings → Account offers language and appearance", asy
 }) => {
   await page.goto("/#/settings/account");
   await expect(
-    page.getByRole("heading", { name: de["settings.preferencesTitle"] }),
+    page.getByRole("heading", { name: de["account.browserCard"] }),
   ).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Sprache" })).toBeVisible();
-  await expect(
-    page.getByRole("combobox", { name: "Darstellung" }),
-  ).toBeVisible();
+  await expect(page.getByRole("group", { name: "Darstellung" })).toBeVisible();
 });
 
 /**
@@ -981,13 +993,9 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   await card.dragTo(won);
   await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
 
-  // The first Confirm is REFUSED, and that is the criterion rather than a
-  // detour: this deal carries no signed contract, and a win without paper has
-  // to say how it was won (deals/deal_advance.go's ensureWinEvidence). The
-  // reason panel is deliberately not shown before the refusal — a win the
-  // paperwork already explains stays one click, because a field every rep must
-  // fill is a field every rep fills with the same lie.
-  await page.getByRole("button", { name: "Bestätigen" }).click();
+  // This deal has no signed contract, and a win without one has to say how it
+  // was won. So the dialog asks before Confirm and not after a refusal. A deal
+  // with its contract is never asked.
   await expect(page.getByText("Wie wurde der Deal gewonnen?")).toBeVisible();
   // Still nothing has run: the drop is not applied while the dialog is open.
   await expect(page.getByText("Nach Won verschoben")).toHaveCount(0);
@@ -2977,9 +2985,18 @@ test.describe("filters and views", () => {
     await expect(
       page.getByRole("cell", { name: "Kessler Fahrzeugbau", exact: true }),
     ).toBeVisible();
+    // The LABEL the screen renders, not the code the filter was authored with.
+    // The industry cell reads through `industryWords`. Naming the code here
+    // passes only while that column is untranslated.
     await expect(
-      page.getByRole("cell", { name: "automotive", exact: true }),
+      page.getByRole("cell", { name: "Automobilindustrie", exact: true }),
     ).toHaveCount(2);
+    // Counting the rows is what holds "every row satisfies the predicate".
+    // Naming an absent industry does not hold it on its own. `logistics` is not
+    // one of INDUSTRY_CODES, so it renders as the raw code and the name
+    // matches. A row carrying a real code renders as its wording, and the name
+    // would miss it.
+    await expect(page.getByRole("row")).toHaveCount(3);
     await expect(page.getByRole("cell", { name: "logistics" })).toHaveCount(0);
     // The caption that keeps the page honest: 812 match and two are shown, so
     // the reader is told this is a sample rather than the selection.
@@ -3372,4 +3389,147 @@ test.describe("an archived contact opens read-only", () => {
       );
     });
   }
+});
+
+test.describe("calling a contact", () => {
+  const tel = `tel:${PRIMARY_PHONE}`;
+  const callVerb = (scope: Page | Locator) =>
+    scope.getByRole("link", { name: de["record.verb.call"], exact: true });
+
+  test("the header Call dials the primary of two numbers", async ({ page }) => {
+    await page.goto(`/#/contacts/${CALLED_CONTACT}`);
+    await expectShellRendered(page);
+    await expect(
+      page.getByRole("link", { name: de["contact.action.call"], exact: true }),
+    ).toHaveAttribute("href", tel);
+  });
+
+  test("the header Call on a contact with no number is refused and says why", async ({
+    page,
+  }) => {
+    await page.goto("/#/contacts/p-anna");
+    await expectShellRendered(page);
+    const call = page.getByRole("button", {
+      name: de["contact.action.call"],
+      exact: true,
+    });
+    await expect(call).toBeDisabled();
+    await expect(call).toHaveAccessibleDescription(
+      de["contact.action.noPhone"],
+    );
+    await expect(
+      page.getByRole("link", { name: de["contact.action.call"] }),
+    ).toHaveCount(0);
+  });
+
+  test("on the Overview a logged call offers Call back and a note does not", async ({
+    page,
+  }) => {
+    await page.goto(`/#/contacts/${CALLED_CONTACT}`);
+    await expectShellRendered(page);
+    const call = page
+      .getByRole("listitem")
+      .filter({ hasText: loggedCall.subject });
+    const note = page
+      .getByRole("listitem")
+      .filter({ hasText: loggedNote.subject });
+    await expect(callVerb(call)).toHaveAttribute("href", tel);
+    await expect(note).toBeVisible();
+    await expect(callVerb(note)).toHaveCount(0);
+    await settleAnimations(page);
+    await expectNoAaViolations(page, `contacts/${CALLED_CONTACT}`);
+  });
+
+  test("on History a logged call offers Call back and a note does not", async ({
+    page,
+  }) => {
+    await page.goto(`/#/contacts/${CALLED_CONTACT}/timeline`);
+    await expectShellRendered(page);
+    const call = page
+      .getByRole("listitem")
+      .filter({ hasText: loggedCall.subject });
+    const note = page
+      .getByRole("listitem")
+      .filter({ hasText: loggedNote.subject });
+    await expect(callVerb(call)).toHaveAttribute("href", tel);
+    await expect(note).toBeVisible();
+    await expect(callVerb(note)).toHaveCount(0);
+    await settleAnimations(page);
+    await expectNoAaViolations(page, `contacts/${CALLED_CONTACT}/timeline`);
+  });
+
+  test.describe("a task on the contact, opened from Home", () => {
+    test.beforeEach(async ({ page }) => {
+      await mockApi(page, { callTasks: true });
+    });
+
+    async function openTask(page: Page, subject: string) {
+      await page.goto("/#/home");
+      await expectShellRendered(page);
+      await page
+        .getByRole("button", { name: new RegExp(`^${de["brief.queue.show"]}`) })
+        .click();
+      const opener = page.getByRole("button", { name: subject, exact: true });
+      await opener.click();
+      const dialog = page.getByRole("dialog", { name: subject });
+      await expect(dialog).toBeVisible();
+      return { opener, dialog };
+    }
+
+    test("a task from a call offers Call, Email and Open contact, in tab order", async ({
+      page,
+    }) => {
+      const { opener, dialog } = await openTask(page, taskFromCall.subject);
+      const call = callVerb(dialog);
+      const email = dialog.getByRole("button", {
+        name: de["record.verb.email"],
+        exact: true,
+      });
+      const open = dialog.getByRole("link", {
+        name: de["task.next.openContact"],
+        exact: true,
+      });
+      await expect(call).toHaveAttribute("href", tel);
+      await expect(email).toBeVisible();
+      await expect(open).toHaveAttribute(
+        "href",
+        `#/contacts/${CALLED_CONTACT}`,
+      );
+      await settleAnimations(page);
+      await expectNoAaViolations(page, "home (task from a call open)");
+
+      await dialog.locator("a[href], button:not([disabled])").first().focus();
+      for (let press = 0; press < 12; press += 1) {
+        if (await call.evaluate((node) => node === document.activeElement)) {
+          break;
+        }
+        await page.keyboard.press("Tab");
+      }
+      await expect(call).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(email).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(open).toBeFocused();
+
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+      await expect(opener).toBeFocused();
+    });
+
+    test("a task typed by hand offers Email and Open contact but no Call", async ({
+      page,
+    }) => {
+      const { dialog } = await openTask(page, typedTask.subject);
+      await expect(
+        dialog.getByRole("link", { name: de["task.next.openContact"] }),
+      ).toBeVisible();
+      await expect(
+        dialog.getByRole("button", {
+          name: de["record.verb.email"],
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(callVerb(dialog)).toHaveCount(0);
+    });
+  });
 });

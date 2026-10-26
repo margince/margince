@@ -168,12 +168,8 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 		WithScheduleTimer(send.ScheduleTimer).
 		WithHeldNotifier(send.HeldNotifier).
 		// Wired unconditionally, so a deployment cannot forget it and leave a
-		// settled message's review standing in front of a decider.
-		//
-		// IT CARRIES THE ROUTER, for consentGateFor's reason: closing a review
-		// has to retract the card it was handed to, or somebody is still being
-		// asked to send a message that is cancelled, moved or already gone.
-		WithReviewCloser(reviewCloser{router: retractionRouter(pool)}).
+		// settled message's review open.
+		WithReviewCloser(reviewCloser{}).
 		// The other half of the same seam: closing a review is what a settled
 		// message does, and FINDING one is what a held message needs so a rep
 		// can reach the work that would unstop it.
@@ -189,7 +185,7 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 		// Unconditional for the same reason, and a sharper one: addressing a
 		// reply must skip a co-worker who has no seat, and a deployment that
 		// forgot to wire this would compose replies to its own staff.
-		WithColleagues(colleagueDomains{store: capture.NewOwnDomainStore(InstallationDB(pool))}).
+		WithColleagues(ColleagueDomainsFor(pool)).
 		WithSendAuthority(send.SendAuthority).
 		WithDraftOutcome(send.DraftOutcome)
 	decisions := s.approvalsHandlers
@@ -209,13 +205,7 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 // this is composition naming a dependency, every caller assigns it into the
 // seam itself, and widening here would only hide which gate was built.
 func consentGateFor(pool *pgxpool.Pool) *consent.Gate {
-	return consent.NewGate(consent.NewStore(InstallationDB(pool)).
-		// THE SAME SEAM THE HANDLERS HOLD, wired here too because this is the
-		// store that CLOSES a review when its message goes — and closing one
-		// has to retract the card somebody was asked to decide. A gate without
-		// it would resolve the review and leave a live card asking about a
-		// message that has already been sent.
-		WithReviewRouter(reviewRouter{approvals: approvalsServiceWithEffects(pool)})).
+	return consent.NewGate(consent.NewStore(InstallationDB(pool))).
 		// Where the installation is established, which selects the messaging
 		// rules a decision is taken under. Injected rather than read directly
 		// because the setting belongs to identity and consent may not import a
@@ -269,23 +259,6 @@ func registerLateApprovalEffects(svc *approvals.Service, pool *pgxpool.Pool, sen
 		svc.WithEffect(kind, late.effect(svc, store, gate, send.Delivery))
 		svc.WithPrecheck(kind, late.precheck(store, gate, send.Delivery))
 	}
-	// APPROVING A ROUTED REFUSAL SENDS THE MESSAGE, so it is registered here
-	// with the others that send rather than beside the ordinary kinds: an
-	// executor registered there would put out mail with no signature and no
-	// unsubscribe linker.
-	//
-	// It is wired separately from the table above because it needs the whole
-	// directed-send service — the consent store, the gate and the delivery
-	// machinery together — rather than the three the table's shape carries.
-	if send.Delivery != nil {
-		svc.WithEffect(approvals.KindCommunicationReview,
-			reviewDecisionEffect(svc, newDirectedSendService(pool, send.Delivery, send)))
-		// SAYING NO AND SAYING NOTHING both end the asking, and both have to
-		// move the review — a rep left reading "waiting for a decision" would
-		// be waiting on an answer that is never coming.
-		svc.WithDeclinedEffect(approvals.KindCommunicationReview, reviewDecisionDeclined())
-		svc.WithExpiredEffect(approvals.KindCommunicationReview, reviewDecisionExpired())
-	}
 }
 
 var lateApprovalEffects = map[string]lateApprovalEffect{
@@ -330,12 +303,8 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 		WithSenderName(identity.NewServiceFor(InstallationDB(pool))).
 		WithHeldNotifier(send.HeldNotifier).
 		// Wired unconditionally, so a deployment cannot forget it and leave a
-		// settled message's review standing in front of a decider.
-		//
-		// IT CARRIES THE ROUTER, for consentGateFor's reason: closing a review
-		// has to retract the card it was handed to, or somebody is still being
-		// asked to send a message that is cancelled, moved or already gone.
-		WithReviewCloser(reviewCloser{router: retractionRouter(pool)}).
+		// settled message's review open.
+		WithReviewCloser(reviewCloser{}).
 		// The other half of the same seam: closing a review is what a settled
 		// message does, and FINDING one is what a held message needs so a rep
 		// can reach the work that would unstop it.
@@ -366,13 +335,20 @@ func newCommsAdapter(
 	}
 }
 
-// colleagueDomains adapts the own-domain store to the seam the activities
+// ColleagueDomains adapts the own-domain store to the seam the activities
 // handlers take. The module may not import capture, and the reply-address
 // question needs to know who is ours by DOMAIN rather than by seat — a
 // co-worker with no login is still not somebody to compose a reply to.
-type colleagueDomains struct{ store *capture.OwnDomainStore }
+type ColleagueDomains struct{ store *capture.OwnDomainStore }
 
-func (c colleagueDomains) Covers(ctx context.Context) (func(address string) bool, error) {
+// ColleagueDomainsFor is the own-domain reader the activities handlers address
+// a reply past.
+func ColleagueDomainsFor(pool *pgxpool.Pool) ColleagueDomains {
+	return ColleagueDomains{store: capture.NewOwnDomainStore(InstallationDB(pool))}
+}
+
+// Covers answers whether an address is at one of our vouched-for own domains.
+func (c ColleagueDomains) Covers(ctx context.Context) (func(address string) bool, error) {
 	own, err := c.store.Colleagues(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading who counts as a colleague: %w", err)

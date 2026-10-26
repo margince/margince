@@ -8,7 +8,7 @@ import { useSettledValue } from "../../design-system/debouncedsearch";
 import { postMultipart } from "../../lib/multipart";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
-import { settingsHref } from "../settings/settingsrouting";
+import { settingsHref } from "../../lib/settingsrouting";
 import { useAddressedRun, usePresetContact } from "./importaddress";
 import {
   choicesOf,

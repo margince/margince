@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"maps"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func contactCreationRequest(approval crmcontracts.Approval) (contacts.CreateContactInput, error) {
@@ -45,6 +47,11 @@ func (r approvalPreviewReader) contactCreationPreview(ctx context.Context, appro
 	consents := consent.NewStore(r.db)
 	store := contacts.NewStore(r.db).WithFieldCatalog(customfields.NewService(r.db.Pool(), nil)).WithStopCarrier(consents).WithSatelliteCarriers(consents, nil)
 	plan, err := store.PreviewContactCreationForActor(ctx, in, creator)
+	if refused, ok := errors.AsType[*values.ParseError](err); ok && refused.Code == contacts.MachineAddressCode {
+		out.State = previewIncompleteState
+		out.Conflicts = &[]crmcontracts.ApprovalPreviewConflict{{Kind: refused.Code, Summary: refused.Message, BlocksApproval: true}}
+		return out, nil
+	}
 	if previewUnavailable(err) {
 		return out, nil
 	}

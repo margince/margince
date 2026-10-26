@@ -14,11 +14,8 @@ export type ProjectOwnerPicker = Readonly<{
   hint?: string;
 }>;
 
-// On create the reader is the blank first value: the server makes a create
-// that names nobody its creator's. So the default survives a hidden field.
-//
-// On edit a blank sends owner_id null, which the update reads as "not
-// supplied". So the field is required once the project has an owner.
+// On create a blank means the creator.
+// On edit a blank is sent as null, which clears the owner.
 export function projectOwnerField(
   t: (key: MessageKey) => string,
   picker: ProjectOwnerPicker,
@@ -26,7 +23,6 @@ export function projectOwnerField(
     key: string;
     // A form that already has an Owner of its own names this one apart.
     label?: MessageKey;
-    currentOwner: string | null;
     mode: "create" | "edit";
   }>,
 ): CreateField[] {
@@ -35,13 +31,16 @@ export function projectOwnerField(
   const options =
     opts.mode === "create"
       ? [{ value: "", label: mine?.label ?? t("project.ownerMe") }, ...others]
-      : [...(mine ? [mine] : []), ...others];
+      : [
+          ...(mine ? [mine] : []),
+          ...others,
+          { value: "", label: t("list.unowned") },
+        ];
   return [
     {
       key: opts.key,
       label: opts.label ?? "project.owner",
       type: "select",
-      required: opts.mode === "edit" && opts.currentOwner !== null,
       options,
       hint: picker.hint,
     },

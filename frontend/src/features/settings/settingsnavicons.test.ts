@@ -6,8 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, renderHook } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
+import { SETTINGS_PAGES } from "../../lib/settingscatalog";
 import { meFixture } from "../../testing/mefixture";
-import { SETTINGS_PAGES } from "./settingscatalog";
 import {
   SETTINGS_HOME_ID,
   SETTINGS_SCREEN,

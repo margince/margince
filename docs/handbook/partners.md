@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/projects/partners.tsx frontend/src/features/projects/partners.form.tsx frontend/src/features/projects/partnercommissions.tsx frontend/src/features/projects/partnerdeals.tsx frontend/src/features/projects/commissiondecide.tsx backend/internal/modules/contacts/partner.go backend/internal/modules/contacts/partnerwrite.go backend/internal/modules/commissions -->
 # Partners and commission
 
 A **partner** in Margince is a company that brings you business or helps you win it. It may be a hosting company, a consulting company or a large business partner. A partner is a company that is already in Margince, with partner terms added. So the same company page shows both its own business and its partner work. The terms are a role, a certification status, a margin tier and a relationship stage.
@@ -15,6 +16,12 @@ To make a company a partner in Margince, open the company, choose **More actions
 4. Choose **Create**.
 The company now shows on the **Partners** list and in every deal's **via partner** picker.
 Also called: add a partner, onboard a reseller, start a partner programme.
+
+### Can an AI assistant set up a partner?
+Yes, in Margince an AI assistant can ask to make a company a partner, with a **Partner role**, a **Relationship stage** and a **Next step**. The request waits in the approvals inbox, and the program starts once someone who may change both partners and companies approves it.
+The assistant cannot choose the **Margin tier**, because it decides commission on every later deal. It stays **Not set** until someone sets it on the company's **Partner** tab.
+A partner program ends only when the company is archived, so an assistant cannot set one up on a company that already is a partner.
+Also called: let the assistant add a partner, AI partner onboarding.
 
 ### How do I change a partner's terms?
 To change a partner's terms in Margince, open the company's **Partner** tab and choose **Edit**, change the fields and choose **Save**.

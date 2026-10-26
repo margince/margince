@@ -1,5 +1,6 @@
-import { useId } from "react";
+import { type ReactNode, useId } from "react";
 import type { components } from "../../api/schema";
+import type { ReadingTone } from "../../design-system/readingtone";
 import { StageLadder, type StageStep } from "../../design-system/stageladder";
 import { useT } from "../../i18n";
 
@@ -32,6 +33,9 @@ export function DealStageLadder({
   advanceRefused,
   refusedReasonId,
   onAdvance,
+  variant,
+  tone,
+  subs,
 }: Readonly<{
   deal: Deal;
   stages: readonly Stage[];
@@ -41,6 +45,10 @@ export function DealStageLadder({
    * undefined while it does. */
   refusedReasonId?: string;
   onAdvance: (toStage: Stage) => void;
+  variant?: "chevrons" | "bars";
+  tone?: ReadingTone;
+  // The line under each stage in the bars shape, by stage id.
+  subs?: ReadonlyMap<string, ReactNode>;
 }>) {
   const t = useT();
   // WHY THE LADDER REFUSES, said once and pointed at.
@@ -64,6 +72,8 @@ export function DealStageLadder({
   return (
     <StageLadder
       label={t("deals.stage")}
+      variant={variant}
+      tone={tone}
       hint={ownReason ? <span id={ownReasonId}>{ownReason}</span> : undefined}
       steps={dealStageSteps({
         deal,
@@ -71,7 +81,9 @@ export function DealStageLadder({
         refused: advancing || advanceRefused,
         reasonId: advanceRefused ? (refusedReasonId ?? ownReasonId) : undefined,
         onAdvance,
-      })}
+      }).map((step) =>
+        subs?.has(step.key) ? { ...step, sub: subs.get(step.key) } : step,
+      )}
     />
   );
 }

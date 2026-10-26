@@ -25,6 +25,10 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "webhooks.field.targetUrlPlaceholder",
   "webhooks.headers.namePlaceholder",
   // Markup with placeholders, which is the same in every language.
+  // Only placeholders and punctuation, with no word to translate.
+  "compose.aboutWhen",
+  "deal.committee.seatSub",
+  "lead.card.askedQuote",
   "signatureTemplate.placeholder",
   // The promiser and stored summary are values separated by punctuation.
   "magic.action.approval_commitment_task_named",
@@ -110,16 +114,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // two rendered clauses and contributes no word of its own, so a locale has
   // nothing here to change.
   "brief.week.andCarry",
-  // The record's own name beside the numeral that names its reading. There is
-  // no word in it to translate — a locale that changed it would be changing
-  // the account's name.
-  "co.360.subject",
   // An acronym, not a word: DNS is DNS in every language this product speaks,
   // and a "translation" of it would be a different protocol.
   "co.tech.lane.dns",
   // Vietnamese uses "Email" for the noun; German has its own spelling and
   // carries it. Only the vi value matches English, and it is the right word.
-  "dealmail.title",
   // Same word, same reason, on the generic record mail box every other page
   // shares.
   "recordmail.title",
@@ -144,6 +143,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "oauthApp.microsoft.clientIdPlaceholder",
   "oauthApp.tenant",
   "oauthApp.tenantPlaceholder",
+  // A product name, the same word in every language.
+  "oauthApp.unlock.gmail",
   // A URL, which is the same string in every language.
   "scheduling.locationExample",
   "aiRouting.baseUrl.placeholder",
@@ -168,6 +169,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // These slots receive category counts and action names already translated by their owners.
   "brief.agenda.summary",
   "magic.action.approval_pending",
+  "magic.action.decided_summary",
   // Pure punctuation layouts: every word in them is a placeholder, so there is
   // nothing to translate and a "translation" could only reorder the slots.
   "dealSuggestion.name",
@@ -192,13 +194,14 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // .withheld), so this value is the placeholder and a full stop.
   "worklist.partial",
   // Brand and provider names: proper nouns, not translated in any locale.
-  "connectors.provGmail",
   "connectors.provGcal",
+  "connectors.provGmail",
   "connectors.provGraph",
   "connectors.provTelegram",
+  "connectors.vendorGoogle",
+  "connectors.vendorMicrosoft",
   "ob.s4.provGoogle",
   "ob.s4.provMicrosoft",
-  "ob.conv.connect.linkedinName",
   "magic.by.system",
   // A number and a plus sign, written alike in every locale.
   "lead.signal.employees.201+",
@@ -234,6 +237,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "filters.library.records.lead_one",
   "leadSources.leads_one",
   "acqSources.deals_one",
+  "users.handover.leads_one",
+  "users.handover.deals_one",
   "contracts.renew.deal",
   "contracts.deal",
 
@@ -255,9 +260,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "timeline.filters.kind.email",
   "auth.email",
   "contact.action.email",
-  "contact.memory.email",
   "contact.memory.channelEmail",
-  "contact.rail.email",
   "history.field.email",
   "settings.voice.register.email",
   "settings.voice.kind.email",
@@ -292,7 +295,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // ENTRY for the voice surface is no longer one of them — it was renamed off
   // the feature name to "Voice", which vi translates.
   "settings.voice.title",
-  "co.decisions.group",
 
   // "Lead" is the loanword in both de and vi — every other lead key in this
   // catalog leaves it untranslated, and the marker on the record page names
@@ -304,9 +306,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "search.kind.lead",
   // The same loanword, naming the record an approval's evidence came from.
   "decision.evidenceSource.deal",
-  // The lead rail's own deal card title, the same singular loanword as
-  // search.kind.deal above it.
-  "lead.rail.deal.title",
 
   // "Cc" is the mail header itself, which vi writes as the Latin abbreviation
   // exactly as en does. Translating it would name a field no mail client
@@ -315,7 +314,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
 
   // Other cases verified individually against the source.
   "shell.logoAria",
-  "ob.conv.connect.scopeMicrosoft",
 
   // Worked examples of a German commercial register entry, the shape the
   // legal-notice read actually parses regardless of which locale a reader

@@ -93,7 +93,7 @@ func (t enrichCompany) Spec() mcp.ToolSpec {
 		// chose, reachable by persuading the model rather than by holding the
 		// credential. TestUrlTakingOperationsAreNeverAutoExecuteForAgents is
 		// the gate that says so, and it is about egress, not about authority.
-		RequiredScope: principal.ScopeEnrich, Tier: mcp.TierConfirmationRequired, Egress: true,
+		RequiredScope: principal.ScopeEnrich, Tier: mcp.TierConfirmationRequired, Egress: true, WaitsEvenForItsUser: true,
 		OpenAPIOp: "scrapeCompany/deepReadCompany/technicalEnrichCompany",
 		InputSchema: schema(`{"type":"object","required":["company_id"],"properties":{
 			"company_id":{"type":"string","format":"uuid","description":"The company to enrich"},

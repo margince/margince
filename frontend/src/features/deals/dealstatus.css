@@ -8,11 +8,6 @@
   margin: 0 0 var(--space-3);
 }
 
-.deal360-evidence {
-  margin: var(--space-3) 0 0;
-  padding-left: var(--space-4);
-}
-
 .deal360-foot {
   display: flex;
   align-items: center;

@@ -159,6 +159,27 @@ describe("a filter read as one sentence", () => {
     ).toBe("1.500, 20.000");
   });
 
+  it("words an industry code the way the record page does", () => {
+    const industry: VocabularyField = {
+      name: "industry",
+      type: "picklist",
+      operators: ["eq", "in"],
+      custom: false,
+    };
+    const eq = { field: "industry", op: "eq", operand: "healthcare" } as const;
+    expect(clauseWords(eq, [industry], en).operand).toBe("Healthcare");
+    expect(clauseWords(eq, [industry], wordsIn("de")).operand).toBe(
+      "Gesundheitswesen",
+    );
+    expect(
+      clauseWords(
+        { field: "industry", op: "in", operand: ["healthcare", "software"] },
+        [industry],
+        en,
+      ).operand,
+    ).toBe("Healthcare, Software");
+  });
+
   it("marks a value not given yet as a gap rather than ending the clause", () => {
     for (const operand of ["", []]) {
       expect(read(newGroup("and", [newLeaf("country", "in", operand)]))).toBe(
@@ -230,6 +251,23 @@ describe("a filter read as one sentence", () => {
     // One counted id is still a count, never the stage itself.
     expect(read(newGroup("and", [newLeaf("stage_id", "in", ["s1"])]))).toBe(
       "Stage is any of 1 stage",
+    );
+  });
+
+  it("names the tags of a tag clause when every one has a name, and counts them otherwise", () => {
+    const named = {
+      ...en,
+      tagNames: new Map([
+        ["t-a", "Wanted"],
+        ["t-b", "Other"],
+      ]),
+    };
+    const tagged = (value: string | string[]) =>
+      read(newGroup("and", [newLeaf("tag", "in", value)]), named);
+    expect(tagged(["t-a", "t-b"])).toBe('Tag is any of "Wanted", "Other"');
+    expect(tagged(["t-a", "t-unknown"])).toBe("Tag is any of 2 tags");
+    expect(read(newGroup("and", [newLeaf("tag", "eq", "t-a")]), named)).toBe(
+      'Tag is "Wanted"',
     );
   });
 

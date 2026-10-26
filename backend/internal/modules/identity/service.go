@@ -256,6 +256,10 @@ func SeedSystemRoles(ctx context.Context, tx pgx.Tx) (adminRoleID ids.UUID, err 
 			adminRoleID = roleID
 		}
 	}
+	// A new installation gets the composed units' starting grants with its roles.
+	if err := fillRegisteredDefaults(ctx, tx); err != nil {
+		return ids.Nil, err
+	}
 	return adminRoleID, nil
 }
 

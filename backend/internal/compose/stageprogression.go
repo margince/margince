@@ -211,6 +211,9 @@ func (p *StageProgressionProposer) stageCard(
 		Identity:    identity,
 		Evidence:    progressionEvidence(facts),
 	})
+	if errors.Is(err, approvals.ErrNoDecider) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}

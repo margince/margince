@@ -55,6 +55,12 @@ import {
 import { approvalAcceptable, useApprovalNames } from "./approvalresponsibility";
 import { stagedSendOf } from "./approvalsend";
 import { ApprovalDecider, ApprovalTarget } from "./approvaltarget";
+import {
+  heldRejectionBar,
+  refusalToast,
+  useHeldRejection,
+} from "./heldrejection";
+import { LinkedInMatchChoice, useLinkedInChoice } from "./linkedinmatchchoice";
 import "./approvalrow.css";
 
 // One staged proposal as a decidable row, and the screen-level sink that
@@ -251,6 +257,8 @@ export function ApprovalRow({
       return unwrap(
         await api.POST(path, {
           params: { path: { id: approval.id } },
+          // A held rejection released on pagehide has to outlive the page.
+          keepalive: input.verdict === "reject",
           ...(input.verdict === "approve" && input.editedPayload
             ? { body: { edited_payload: input.editedPayload } }
             : {}),
@@ -274,7 +282,16 @@ export function ApprovalRow({
     },
   });
 
+  // A deadline that lapses inside the window still sends: the server judges
+  // expiry. A refusal shows on the card, or as a toast once the card is gone.
+  const held = useHeldRejection({
+    send: () => decide.mutateAsync({ verdict: "reject" }),
+    decided: !!decided,
+    onRefusedAfterLeaving: refusalToast(toast, t),
+  });
+
   const change = approval.proposed_change ?? {};
+  const linkedIn = useLinkedInChoice(approval);
   const approvalNames = useApprovalNames([approval]);
   const strings = editableStrings(approval.kind, change);
   const display = resolveDisplay(
@@ -314,6 +331,7 @@ export function ApprovalRow({
 
   const approveEdited = () => {
     if (!approvalAcceptable(approval)) return;
+    held.announce();
     decide.mutate({
       verdict: "approve",
       editedPayload: { ...change, ...draft },
@@ -410,7 +428,13 @@ export function ApprovalRow({
       }
       onAccept={
         approvalAcceptable(approval)
-          ? () => decide.mutate({ verdict: "approve" })
+          ? () => {
+              held.announce();
+              decide.mutate({
+                verdict: "approve",
+                editedPayload: linkedIn?.edited,
+              });
+            }
           : undefined
       }
       // Offered only where the kind has something a reader may change. Disabled
@@ -419,15 +443,20 @@ export function ApprovalRow({
       // write is in flight, so a press here during it left the reader inside a
       // form they could not leave until the request came back.
       onEdit={strings.length > 0 ? startEdit : undefined}
-      // One press, no reason form: a rejection discards a proposal and changes
-      // no record, so it carries the same weight as Accept and asks nothing
-      // extra. The contract's reason field stays for callers that have one.
-      onReject={() => decide.mutate({ verdict: "reject" })}
+      // No reason form: a rejection discards a proposal and changes no record.
+      // The undo window is the only step between the press and the send.
+      onReject={held.hold}
+      heldRejection={heldRejectionBar(t, held)}
       notice={
         <>
           {/* Read-only: the approver may release or refuse the message, and an
               override of the engine belongs to whoever is writing to the
               contact, recorded against their own name. */}
+          <LinkedInMatchChoice
+            offer={linkedIn}
+            decided={decided}
+            disabled={decide.isPending}
+          />
           {!decided && staged !== undefined && (
             <SendPermission
               preview={permission.preview}

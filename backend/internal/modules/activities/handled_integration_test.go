@@ -95,6 +95,7 @@ func TestADoneMessageComesBackWhenTheCustomerWritesAgain(t *testing.T) {
 		VALUES ($1, $2, 'from', 'buyer@customer.test')`, ids.NewV7(), next)
 	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
 		VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), next, contact)
+	e.directlyTo(t, next, e.rep)
 
 	if !onListNow(rep, t, e, next) {
 		t.Error("the customer wrote again on a thread the rep marked done, and the new message is not on their list")

@@ -1,6 +1,5 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
@@ -72,15 +71,6 @@ function dealBackend(archivedAt: string | null) {
   return { fetchStub, asked };
 }
 
-// The details column mounts its cards only while it is open, and the lists
-// card is one of them.
-async function openDetails() {
-  const toggle = await screen.findByRole("button", { name: /details$/ });
-  if (toggle.getAttribute("aria-pressed") !== "true") {
-    await userEvent.click(toggle);
-  }
-}
-
 describe("DealScreen — an archived deal does not ask for what the server refuses", () => {
   beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
 
@@ -88,7 +78,6 @@ describe("DealScreen — an archived deal does not ask for what the server refus
     const { fetchStub, asked } = dealBackend("2026-07-13T00:00:00Z");
     vi.stubGlobal("fetch", fetchStub);
     render(<DealScreen id="x" />);
-    await openDetails();
 
     expect(await screen.findByText(en["deal.archivedReadOnly"])).toBeTruthy();
     // The offers are the read an archived deal keeps, and the panel they feed
@@ -110,7 +99,10 @@ describe("DealScreen — an archived deal does not ask for what the server refus
     expect(await screen.findByText(en["deal.offersEmpty"])).toBeTruthy();
     const newOffer = screen.getByRole("button", { name: en["deal.newOffer"] });
     expect(newOffer.hasAttribute("disabled")).toBe(true);
-    expect(screen.queryByText(en["deal.committee.title"])).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["rel.addStakeholder"] }),
+    ).toBeNull();
+    expect(document.querySelector(".dc-graph")).toBeNull();
   });
 
   it("offers no Legal review tab", async () => {
@@ -136,7 +128,6 @@ describe("DealScreen — an archived deal does not ask for what the server refus
     const { fetchStub, asked } = dealBackend(null);
     vi.stubGlobal("fetch", fetchStub);
     render(<DealScreen id="x" />);
-    await openDetails();
 
     expect(
       await screen.findByRole("button", { name: en["legalReview.tab"] }),

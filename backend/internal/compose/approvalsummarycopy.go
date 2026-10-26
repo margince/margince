@@ -35,6 +35,8 @@ type approvalSummaryCopy struct {
 	draftedReplyWaiting string
 	// counterpartyWorthKeeping asks about an unresolved sender. %s is the address.
 	counterpartyWorthKeeping string
+	// contactShareAsked: %s is the colleague asking for the contact.
+	contactShareAsked string
 	// companyRename: %s is the current name, then the proposed one.
 	companyRename string
 	// siteLeadFound: %s is the site's host, then the contact's name, then role.
@@ -49,6 +51,8 @@ type approvalSummaryCopy struct {
 	linkedInLooksLike string
 	// vcardResemblesContact: %s is the card's name, after the qualifier.
 	vcardResemblesContact string
+	// vcardReadFromPhoto: %s is the card's name, after the qualifier.
+	vcardReadFromPhoto string
 	// unnamedEmployer stands in for an employer the export left blank, inside
 	// linkedInLooksLike's second hole.
 	unnamedEmployer string
@@ -99,14 +103,16 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		draftedReplyWaiting: "A reply to %q is drafted and waiting to be sent — " +
 			"the conversation left no next step planned",
 		counterpartyWorthKeeping: "Is %s a contact worth keeping?",
+		contactShareAsked:        "%s asks you to share this contact.",
 		companyRename:            "Rename %s to %s?",
 		siteLeadFound:            "Found on %s: %s — %s",
 		enrichmentOf:             "Enrichment of %s",
 		contractEndedMove:        "Their mail says the contract ended. Move this account from %s to %s?",
-		overwriteHumanEdited:     "overwrite human-edited %s — %s",
+		overwriteHumanEdited:     "overwrite %s, edited by hand — %s",
 		linkedInLooksLike:        "%s at %s looks like %s",
 		unnamedEmployer:          "an unnamed employer",
 		vcardResemblesContact:    "This card resembles an existing contact. Create %s anyway?",
+		vcardReadFromPhoto:       "A model read this card from a photo. Create %s?",
 
 		heldNotSent:          "%q was not sent: %s",
 		heldConsentWithdrawn: "a recipient withdrew consent for this purpose after it was scheduled",
@@ -138,6 +144,7 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		draftedReplyWaiting: "Eine Antwort auf %q ist entworfen und wartet auf den Versand: " +
 			"Das Gespräch endete ohne geplanten nächsten Schritt",
 		counterpartyWorthKeeping: "Lohnt es sich, %s als Kontakt zu behalten?",
+		contactShareAsked:        "%s bittet dich, diesen Kontakt zu teilen.",
 		companyRename:            "%s in %s umbenennen?",
 		siteLeadFound:            "Gefunden auf %s: %s (%s)",
 		enrichmentOf:             "Anreicherung aus %s",
@@ -146,6 +153,7 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		linkedInLooksLike:        "%s bei %s scheint %s zu sein",
 		unnamedEmployer:          "einem nicht genannten Arbeitgeber",
 		vcardResemblesContact:    "Diese Visitenkarte ähnelt einem bestehenden Kontakt. %s trotzdem erstellen?",
+		vcardReadFromPhoto:       "Ein Modell hat diese Visitenkarte aus einem Foto gelesen. %s erstellen?",
 
 		heldNotSent:          "%q wurde nicht gesendet: %s",
 		heldConsentWithdrawn: "jemand unter den Empfangenden hat die Einwilligung für diesen Zweck nach der Planung widerrufen",
@@ -178,6 +186,7 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		draftedReplyWaiting: "Một thư trả lời cho %q đã được soạn và đang chờ gửi: " +
 			"cuộc trò chuyện không để lại bước tiếp theo nào được lên kế hoạch",
 		counterpartyWorthKeeping: "%s có phải là một liên hệ đáng giữ lại không?",
+		contactShareAsked:        "%s đề nghị bạn chia sẻ liên hệ này.",
 		companyRename:            "Đổi tên %s thành %s?",
 		siteLeadFound:            "Tìm thấy trên %s: %s (%s)",
 		enrichmentOf:             "Bổ sung thông tin từ %s",
@@ -186,6 +195,7 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		linkedInLooksLike:        "%s tại %s có vẻ là %s",
 		unnamedEmployer:          "một nơi làm việc không rõ tên",
 		vcardResemblesContact:    "Danh thiếp này giống một liên hệ đã có. Vẫn tạo %s chứ?",
+		vcardReadFromPhoto:       "Một mô hình đã đọc danh thiếp này từ ảnh. Tạo %s chứ?",
 
 		heldNotSent:          "%q chưa được gửi: %s",
 		heldConsentWithdrawn: "một người nhận đã rút lại sự đồng ý cho mục đích này sau khi tin nhắn được lên lịch",

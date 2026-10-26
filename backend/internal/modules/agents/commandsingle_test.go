@@ -38,10 +38,15 @@ type tallyingProvider struct {
 	archivesWhatNativeDoes
 	records map[datasource.EntityRef]datasource.Record
 	reads   int
+	readsOf map[datasource.EntityRef]int
 }
 
 func (p *tallyingProvider) Read(_ context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	p.reads++
+	if p.readsOf == nil {
+		p.readsOf = map[datasource.EntityRef]int{}
+	}
+	p.readsOf[ref]++
 	rec, ok := p.records[ref]
 	if !ok {
 		return datasource.Record{}, apperrors.ErrNotFound
@@ -164,9 +169,14 @@ func TestEachAnchoredCommandReadsItsRecordOnce(t *testing.T) {
 			if err != nil {
 				t.Fatalf("staging a readable, authoritative record answered %v", err)
 			}
-			if c.provider.reads != 1 {
-				t.Errorf("read the record %d times, want 1 — Guards and Subject must rest on one moment, "+
-					"or the approval pins a version the refusal never judged", c.provider.reads)
+			for ref, n := range c.provider.readsOf {
+				if n != 1 {
+					t.Errorf("read %s %d times, want 1 — Guards and Subject must rest on one moment, "+
+						"or the approval pins a version the refusal never judged", ref.Type, n)
+				}
+			}
+			if len(c.provider.readsOf) == 0 {
+				t.Error("read no record at all, so the approval pins a version nobody read")
 			}
 			if info.TargetVersion == nil || *info.TargetVersion != 3 {
 				t.Errorf("TargetVersion = %v, want the version the read returned", info.TargetVersion)

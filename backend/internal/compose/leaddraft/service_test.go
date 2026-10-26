@@ -46,7 +46,7 @@ type correspondence struct {
 	asked bool
 }
 
-func (c *correspondence) ForLead(context.Context, ids.LeadID) ([]crmcontracts.Activity, error) {
+func (c *correspondence) ForLead(context.Context, ids.LeadID, time.Time) ([]crmcontracts.Activity, error) {
 	c.asked = true
 	return c.rows, nil
 }

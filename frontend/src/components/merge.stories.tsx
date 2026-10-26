@@ -36,6 +36,7 @@ const SOURCE = {
   label: "Merge into…",
   sourceId: "p-1",
   sourceName: "Anna Weber",
+  requires: { object: "contact", action: "update" } as const,
   searchTargets: () =>
     Promise.resolve([
       {

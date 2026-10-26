@@ -1,0 +1,100 @@
+/* OverviewCard's body: every row opens with a hairline inside the card's
+   padding. The head is the panel's flat head. */
+
+.overviewcard-body {
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--space-5) var(--space-5);
+}
+
+.overviewlist {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.overviewrow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  border-block-start: 1px solid var(--borderSubtle);
+  min-inline-size: 0;
+}
+.overviewrow:last-child {
+  padding-block-end: 0;
+}
+.overviewrow-lead {
+  display: flex;
+  flex: none;
+}
+.overviewrow-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 0;
+}
+.overviewrow-title {
+  font: var(--fontBody);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+  overflow-wrap: anywhere;
+}
+.overviewrow-sub {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+  overflow-wrap: anywhere;
+}
+/* A pill and a verb may share the slot; they wrap onto a second line before
+   they push the title narrower than its share. */
+.overviewrow-right {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--gapActions);
+  max-inline-size: 45%;
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+  text-align: end;
+}
+.overviewrow-figure {
+  font: var(--fontBody);
+  color: var(--textPrimary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.overviewtext {
+  margin: 0;
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--borderSubtle);
+  color: var(--textPrimary);
+  text-wrap: pretty;
+}
+
+.overviewcard-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--borderSubtle);
+}
+.overviewcard-empty-words {
+  margin: 0;
+  color: var(--textSecondary);
+}
+.overviewcard-foot {
+  margin: var(--space-3) 0 0;
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--borderSubtle);
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+.overviewcard-foot-warn {
+  color: var(--warningText);
+}

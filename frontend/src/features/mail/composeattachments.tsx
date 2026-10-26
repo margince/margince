@@ -16,23 +16,25 @@
 // the history that snapshot exists to keep.
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Paperclip } from "lucide-react";
+import { Check, Paperclip, X } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, PendingBody } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ErrorLine } from "../../design-system/errorline";
+import { FileChip } from "../../design-system/filechip";
 import { FileDropzone } from "../../design-system/filedropzone";
 import { Heading } from "../../design-system/heading";
+import { IconAction } from "../../design-system/iconaction";
 import { Popover } from "../../design-system/popover";
-import { TokenList } from "../../design-system/tokeninput";
 import { formatBytes, formatNumber } from "../../format/format";
 import {
   type Locale,
   type Translator,
   translatePlural,
   useLocale,
+  usePlural,
   useT,
 } from "../../i18n";
 import {
@@ -125,13 +127,10 @@ type ShelfProps = Readonly<{
 }>;
 
 /**
- * The paperclip, as one of the message's own quiet verbs.
+ * The paperclip, as one of the message's own small verbs.
  *
- * It sits in the editor's footer beside bold and italic rather than in a
- * labelled row of its own, because that is what it IS: something you do to the
- * message you are writing. A row cost a line of the drawer on every mail to say
- * "Files" over an empty space, and drew a full bordered button next to a message
- * it is not more important than.
+ * It sits in the composer's foot beside the send. Attaching is something you
+ * do to the message you are writing, so it needs no labelled row of its own.
  */
 export function AttachAction({
   entityType,
@@ -144,9 +143,8 @@ export function AttachAction({
   return (
     <Popover
       // NO `variant`: a variant draws the trigger as a full control, and this
-      // one stands in a row of flat marks. Bare, it inherits the row and takes
-      // the same box the formatting buttons do (richtext.css), so five glyphs
-      // read as five glyphs rather than four and a button.
+      // one stands in the composer's foot among flat glyphs. Bare, it takes the
+      // glyph button's own box, so it reads as one more glyph and not a button.
       className="richtext-btn"
       label={
         <>
@@ -177,28 +175,43 @@ export function AttachAction({
  */
 export function AttachedFiles({ chosen, onChange, disabled }: ShelfProps) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   if (chosen.length === 0) {
     return null;
   }
+  const bytes = chosen.reduce((sum, file) => sum + (file.byteSize ?? 0), 0);
   return (
     <div className="compose-files">
-      <TokenList
-        items={chosen.map((file) => ({
-          id: file.id,
-          label:
-            file.byteSize == null
-              ? file.filename
-              : `${file.filename} · ${formatBytes(file.byteSize, locale)}`,
-        }))}
-        removeLabel={(item) =>
-          t("compose.fileRemove", { filename: item.label })
-        }
-        disabled={disabled}
-        onRemove={(id) =>
-          onChange((current) => current.filter((file) => file.id !== id))
-        }
-      />
+      {chosen.map((file) => (
+        <span key={file.id} className="compose-file">
+          <FileChip
+            href={`/v1/attachments/${file.id}`}
+            filename={file.filename}
+            size={
+              file.byteSize == null
+                ? undefined
+                : formatBytes(file.byteSize, locale)
+            }
+          />
+          <IconAction
+            label={t("compose.fileRemove", { filename: file.filename })}
+            icon={<X aria-hidden="true" />}
+            disabled={disabled}
+            onClick={() =>
+              onChange((current) =>
+                current.filter((held) => held.id !== file.id),
+              )
+            }
+          />
+        </span>
+      ))}
+      <span className="t-caption compose-files-total">
+        {plural("compose.filesTotal", chosen.length, {
+          count: formatNumber(chosen.length, locale),
+          size: formatBytes(bytes, locale),
+        })}
+      </span>
       {/* The cap said where it bites, rather than at the send. Ten is the
           contract's, and a message about more records than that is a message
           about none of them — the same reasoning the link list is bounded by. */}
@@ -260,6 +273,10 @@ function AttachPicker({
     });
   };
 
+  const drop = (id: string) => {
+    onChange((current) => current.filter((held) => held.id !== id));
+  };
+
   // An upload files the bytes on the record and then attaches what came back.
   // The two are one act to the reader and two writes underneath, which is why
   // the record's own file list is re-asked: the Documents tab behind this drawer
@@ -301,22 +318,28 @@ function AttachPicker({
         <p>{t("compose.filesNone")}</p>
       ) : (
         <ul className="compose-files-list">
-          {files.map((file) => (
-            <li key={file.id}>
-              <Button
-                className="compose-files-row"
-                disabled={disabled || taken.has(file.id) || full}
-                onClick={() => add(file)}
-              >
-                <span className="compose-files-name">{file.filename}</span>
-                {file.byte_size != null && (
-                  <span className="t-caption">
-                    {formatBytes(file.byte_size, locale)}
-                  </span>
-                )}
-              </Button>
-            </li>
-          ))}
+          {files.map((file) => {
+            const held = taken.has(file.id);
+            return (
+              <li key={file.id}>
+                {/* One press each way: a file on the message comes off it. */}
+                <Button
+                  className="compose-files-row"
+                  aria-pressed={held}
+                  disabled={disabled || (full && !held)}
+                  onClick={() => (held ? drop(file.id) : add(file))}
+                >
+                  <span className="compose-files-name">{file.filename}</span>
+                  {file.byte_size != null && (
+                    <span className="t-caption">
+                      {formatBytes(file.byte_size, locale)}
+                    </span>
+                  )}
+                  {held && <Check aria-hidden="true" />}
+                </Button>
+              </li>
+            );
+          })}
         </ul>
       )}
       <FileDropzone
@@ -326,6 +349,9 @@ function AttachPicker({
         onPick={(picked) => upload.mutate(picked)}
         accept={ACCEPTED_ATTACHMENT_ATTR}
       />
+      <p className="t-caption">
+        {t("compose.filesLimit", { most: formatNumber(MOST_FILES, locale) })}
+      </p>
       {upload.isPending && (
         <p aria-live="polite">{t("compose.fileUploading")}</p>
       )}

@@ -49,6 +49,17 @@ const CLEAN: Record<string, unknown> = {
     held_meetings: { count: 0 },
     sweeps: [],
   },
+  "/admin/automatic-work-health": {
+    generated_at: "2026-10-14T09:33:00Z",
+    days: 7,
+    first_day: "2026-10-08",
+    last_day: "2026-10-14",
+    share_threshold: 0.1,
+    small_sample_below: 10,
+    kinds: [],
+    colleagues: [],
+    unattributed: 0,
+  },
   "/admin/recovery-health": {
     generated_at: "2026-10-14T09:33:00Z",
     recovery_target_seconds: 14_400,

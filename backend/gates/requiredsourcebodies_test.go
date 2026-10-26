@@ -38,7 +38,7 @@ var unguardedSourceBodies = gatekit.Waive(map[string]string{
 
 // minSourceBodies is the count of such bodies today. A contract that drops one
 // lowers it in the same change, so a walk that loses bodies cannot pass.
-const minSourceBodies = 16
+const minSourceBodies = 15
 
 func TestEveryContractBodyWithARequiredSourceIsRefusedWhenItNamesNone(t *testing.T) {
 	t.Parallel()

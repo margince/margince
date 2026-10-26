@@ -11,6 +11,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { pickOption } from "../../design-system/select-testing";
 import { type Locale, LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
@@ -84,7 +85,12 @@ const render = (ui: ReactNode, locale: Locale = "en") => {
   });
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial={locale}>{ui}</LocaleProvider>
+      <LocaleProvider initial={locale}>
+        <SavePageProvider>
+          {ui}
+          <PageSaveBar />
+        </SavePageProvider>
+      </LocaleProvider>
     </QueryClientProvider>,
   );
 };
@@ -211,7 +217,7 @@ describe("NotificationSettingsCard", () => {
     ).not.toBeNull();
   });
 
-  it("sends the class it was set on, and shows the server's answer", async () => {
+  it("sends the class it was set on once Save is pressed, and shows the server's answer", async () => {
     const backend = backendFor(everyClass());
     vi.stubGlobal("fetch", backend.fetchMock);
     const user = userEvent.setup();
@@ -222,8 +228,10 @@ describe("NotificationSettingsCard", () => {
       await screen.findByRole("combobox", { name: /Automations that ran/i }),
       "Daily digest",
     );
+    expect(backend.puts()).toEqual([]);
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
-    // The class on the wire is the row's, not the first row's — the bug a
+    // The class on the wire is the row's, not the first row's: the bug a
     // shared handler closing over the list would produce.
     await waitFor(() =>
       expect(backend.puts()).toEqual([
@@ -231,11 +239,12 @@ describe("NotificationSettingsCard", () => {
       ]),
     );
     await waitFor(() =>
-      expect(
-        screen.getByRole("combobox", { name: /Automations that ran/i })
-          .textContent,
-      ).toContain("Daily digest"),
+      expect(screen.queryByRole("button", { name: "Save" })).toBeNull(),
     );
+    expect(
+      screen.getByRole("combobox", { name: /Automations that ran/i })
+        .textContent,
+    ).toContain("Daily digest");
     // The set came back whole and the untouched rows came back with it.
     expect(
       screen.getByRole("combobox", { name: /Approvals waiting on you/i })
@@ -243,7 +252,52 @@ describe("NotificationSettingsCard", () => {
     ).toContain("Email");
   });
 
-  it("says why when the server refuses the choice", async () => {
+  it("writes two changed classes one after the other on one Save", async () => {
+    const backend = backendFor(everyClass());
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const user = userEvent.setup();
+    render(<NotificationSettingsCard />);
+
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: /Automations that ran/i }),
+      "Off",
+    );
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: /Approvals waiting on you/i }),
+      "In the app",
+    );
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(backend.puts()).toEqual([
+        { class: "approval_pending", delivery: "in_app" },
+        { class: "automation", delivery: "off" },
+      ]),
+    );
+  });
+
+  it("puts the stored delivery back on Discard and sends nothing", async () => {
+    const backend = backendFor(everyClass());
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const user = userEvent.setup();
+    render(<NotificationSettingsCard />);
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: /Automations that ran/i }),
+      "Daily digest",
+    );
+    await user.click(screen.getByRole("button", { name: "Discard" }));
+
+    expect(
+      screen.getByRole("combobox", { name: /Automations that ran/i })
+        .textContent,
+    ).toContain("In the app");
+    expect(backend.puts()).toEqual([]);
+  });
+
+  it("says why when the server refuses the choice, and keeps it drafted", async () => {
     // A reader who sets a delivery and is refused must be told. A page that
     // swallowed the problem would leave them believing a class is muted when
     // the server still sends it.
@@ -272,89 +326,41 @@ describe("NotificationSettingsCard", () => {
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
     render(<NotificationSettingsCard />);
-    const refused = await screen.findByRole("combobox", {
-      name: /Automations that ran/i,
-    });
-    const untouched = screen.getByRole("combobox", {
-      name: /Approvals waiting on you/i,
-    });
-    const before = refused.getAttribute("aria-describedby");
-
-    await pickOption(user, refused, "Daily digest");
-
-    const alert = await screen.findByRole("alert");
-    expect(refused.getAttribute("aria-describedby")).toBe(
-      `${before} ${alert.id}`,
-    );
-    expect(refused).toHaveAccessibleDescription(
-      expect.stringContaining("coaching cannot be switched off"),
-    );
-    expect(untouched.getAttribute("aria-describedby")).not.toContain(alert.id);
-    expect(alert.textContent).toContain("coaching cannot be switched off");
-    // AND IT NAMES THE ROW. Six dropdowns share this one surface and it sits
-    // under all of them, so a failure that named none would leave the reader
-    // checking each in turn to find which did not take.
-    expect(alert.textContent).toContain("Automations that ran");
-    // And the control does not pretend the choice landed.
-    expect(
-      screen.getByRole("combobox", { name: /Automations that ran/i })
-        .textContent,
-    ).toContain("In the app");
-  });
-
-  // ONE WRITE FREEZES ONE ROW. The mutation is shared so a single error surface
-  // can name the class that failed, and a wait spread across all six would stop
-  // a reader changing a second class while the first is still in the air —
-  // which is exactly what the hook's scope is there to serialise.
-  it("freezes only the class being written", async () => {
-    let answer = () => {};
-    const inFlight = new Promise<void>((resolve) => {
-      answer = resolve;
-    });
-    const fetchMock = vi.fn(
-      async (input: RequestInfo | URL, init?: RequestInit) => {
-        const req =
-          input instanceof Request ? input : new Request(String(input), init);
-        if (req.url.endsWith("/v1/me")) {
-          return jsonResponse(meFixture({}));
-        }
-        if (req.method === "PUT") {
-          await inFlight;
-        }
-        return jsonResponse({ items: everyClass() });
-      },
-    );
-    vi.stubGlobal("fetch", fetchMock);
-    const user = userEvent.setup();
-    render(<NotificationSettingsCard />);
 
     await pickOption(
       user,
       await screen.findByRole("combobox", { name: /Automations that ran/i }),
       "Daily digest",
     );
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
-    await waitFor(() =>
-      expect(
-        screen
-          .getByRole("combobox", { name: /Automations that ran/i })
-          .hasAttribute("disabled"),
-      ).toBe(true),
+    const alerts = await screen.findAllByRole("alert");
+    // The bar carries the summary; the refused row also names itself, and its
+    // control points at that notice.
+    expect(alerts).toHaveLength(2);
+    const select = screen.getByRole("combobox", {
+      name: /Automations that ran/i,
+    });
+    const notice = alerts.find((alert) =>
+      (select.getAttribute("aria-describedby") ?? "")
+        .split(" ")
+        .includes(alert.id),
     );
+    expect(notice?.textContent).toContain(
+      "“Automations that ran” was not saved",
+    );
+    expect(notice?.textContent).toContain("coaching cannot be switched off");
     expect(
-      screen
-        .getByRole("combobox", { name: /Approvals waiting on you/i })
-        .hasAttribute("disabled"),
-    ).toBe(false);
-
-    answer();
-    await waitFor(() =>
-      expect(
-        screen
-          .getByRole("combobox", { name: /Automations that ran/i })
-          .hasAttribute("disabled"),
-      ).toBe(false),
-    );
+      alerts.some((alert) =>
+        alert.textContent?.includes("coaching cannot be switched off"),
+      ),
+    ).toBe(true);
+    // The refused pick stays on the control and the bar stays open to retry.
+    expect(
+      screen.getByRole("combobox", { name: /Automations that ran/i })
+        .textContent,
+    ).toContain("Daily digest");
+    expect(screen.getByRole("button", { name: "Save" })).not.toBeNull();
   });
 
   it("reads the rows in the reader's own language", async () => {
@@ -364,5 +370,38 @@ describe("NotificationSettingsCard", () => {
     expect(
       await screen.findByRole("combobox", { name: /Freigaben/i }),
     ).not.toBeNull();
+  });
+});
+
+describe("Browser notifications", () => {
+  function browserAnswering(permission: NotificationPermission) {
+    const requestPermission = vi.fn(async () => "granted" as const);
+    vi.stubGlobal("Notification", { permission, requestPermission });
+    vi.stubGlobal("fetch", backendFor(everyClass()).fetchMock);
+    return requestPermission;
+  }
+
+  it("asks the browser only when the reader presses Allow", async () => {
+    const requestPermission = browserAnswering("default");
+    render(<NotificationSettingsCard />);
+    const row = await screen.findByTestId("notification-browser");
+    expect(requestPermission).not.toHaveBeenCalled();
+
+    await userEvent.click(
+      within(row).getByRole("button", {
+        name: en["notifications.browser.allow"],
+      }),
+    );
+
+    expect(requestPermission).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers no Allow where the browser blocks notifications, and says how to change it", async () => {
+    browserAnswering("denied");
+    render(<NotificationSettingsCard />);
+    const row = await screen.findByTestId("notification-browser");
+
+    expect(within(row).queryByRole("button")).toBeNull();
+    expect(row).toHaveTextContent(en["notifications.browser.denied"]);
   });
 });

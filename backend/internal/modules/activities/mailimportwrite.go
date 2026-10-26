@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -94,4 +95,14 @@ func actingHumanAddresses(ctx context.Context, tx pgx.Tx) (map[string]bool, erro
 		return nil, fmt.Errorf("activities: acting user address: %w", err)
 	}
 	return map[string]bool{email: true}, nil
+}
+
+// loggedSenderIsMachine stamps sender_is_machine from the From the caller
+// stated, by the rule capture stamps with. A log with no From is a human's
+// own account, never classified from the record it is filed on.
+func loggedSenderIsMachine(in LogActivityInput) bool {
+	if in.Direction == nil {
+		return false
+	}
+	return mailidentity.InboundFromSendingSystem(in.Kind, *in.Direction, in.EmailFrom)
 }

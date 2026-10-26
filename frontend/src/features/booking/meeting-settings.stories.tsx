@@ -63,13 +63,49 @@ export const ReadOnlyCalendar: Story = {
       }),
   }),
 };
+// No calendar yet: the setup card leads and Accept bookings waits for one.
 export const NoCalendar: Story = {
   render: bookingFrame(() => <MeetingSettings />, {
     ...identity,
     "GET /scheduling/profile": () =>
       jsonResponse({ ...bookingProfile, provider: "", enabled: false }),
-    "GET /connectors": () => jsonResponse({ data: [] }),
+    "GET /connectors": () =>
+      jsonResponse({
+        data: [],
+        providers: [{ provider: "gmail", reason: "ready" }],
+      }),
   }),
+};
+export const NoCalendarDark: Story = {
+  ...NoCalendar,
+  globals: { theme: "dark" },
+};
+
+// Bookings are live and the calendar behind them has expired, so nothing
+// lands in it: the links card warns and offers Reconnect beside Pause.
+export const NeedsAttention: Story = {
+  render: bookingFrame(() => <MeetingSettings />, {
+    ...identity,
+    "GET /connectors": () =>
+      jsonResponse({
+        data: [{ ...bookingConnection, status: "reauth_required" }],
+      }),
+  }),
+};
+export const NeedsAttentionDark: Story = {
+  ...NeedsAttention,
+  globals: { theme: "dark" },
+};
+
+// A member without the booking grant keeps their working hours and nothing else.
+export const LowerGrant: Story = {
+  render: bookingFrame(() => <MeetingSettings />, {
+    "GET /me": meRoute({}),
+  }),
+};
+export const LowerGrantDark: Story = {
+  ...LowerGrant,
+  globals: { theme: "dark" },
 };
 
 // An Outlook calendar names Microsoft Teams for the default video link, and a

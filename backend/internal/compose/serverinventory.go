@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/network"
+	"github.com/margince/margince/backend/internal/compose/roombrief"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -59,6 +60,7 @@ type Server struct {
 	activitiesHandlers
 	approvalsHandlers
 	bulkHandlers
+	handoverHandlers
 	searchHandlers
 	consentHandlers
 	directedSendHandlers
@@ -120,6 +122,7 @@ type Server struct {
 	captureCounterpartyHoldHandlers
 	claimHandlers
 	dealCommitmentHandlers
+	promiseTakeOverHandlers
 	importHandlers
 	channelHandlers
 	traceHandlers
@@ -144,6 +147,7 @@ type Server struct {
 	captureHealthHandlers
 	extensionIngestHealthHandlers
 	recoveryHealthHandlers
+	automaticWorkHandlers
 	// The composed-extension inventory (handlers_extensions.go): boot-written
 	// accessors plus the install ledger, which it reads through the pool.
 	extensionsHandlers
@@ -155,6 +159,7 @@ type Server struct {
 	contactBriefHandlers
 	meetingBriefHandlers
 	dealStatusHandlers
+	roomBriefHandlers
 	contactResearchHandlers
 	contactDraftHandlers
 	leadDraftHandlers
@@ -455,6 +460,8 @@ type Server struct {
 	// dealStatusSvc is held for the same reason: WithDealStatusWriter binds the
 	// deal_health lane onto the service the handler set already wraps.
 	dealStatusSvc *dealstatus.Service
+	// roomBriefSvc is held so WithDealRoomBriefWriter binds its lane.
+	roomBriefSvc *roombrief.Service
 
 	// companyDossierSvc and companyGrowthFitSvc are the company view's other two
 	// generated surfaces. They are held for WithGrowthFit's sake: rebinding one

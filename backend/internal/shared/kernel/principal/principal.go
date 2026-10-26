@@ -110,6 +110,10 @@ type Principal struct {
 	OnBehalfOf   ids.UUID // the human authority behind an agent/connector action; zero otherwise
 	Scopes       ScopeSet // effective = Passport scopes ∩ granting human's RBAC ("agent ≤ human")
 
+	// Locale is the display language a human chose, empty when they never did.
+	// It rides the principal so wording written for the caller needs no query.
+	Locale string
+
 	// SeatType is the licensing ceiling of the human behind the call — for
 	// an agent it is the granting human's seat, since "agent ≤ human"
 	// (A62/ADR-0047). Empty for the system principal (unbounded by seat).
@@ -119,6 +123,15 @@ type Principal struct {
 	// roles (B-EP03.1). Zero value = no grants: an actor whose loader
 	// forgot to resolve permissions can read and write nothing.
 	Permissions Permissions
+}
+
+// ActsAsItsUser reports whether p is an agent working on a colleague's passport.
+// Such an agent may do without a human's approval whatever that colleague could
+// do unaided in the product. Their live grants bound it at the store, as they
+// bound the colleague. A passportless agent is automatic work with nobody behind
+// it, and keeps the confirm-first tier and the human-edit precedence split.
+func (p Principal) ActsAsItsUser() bool {
+	return p.Type == PrincipalAgent && !p.PassportID.IsZero() && !p.OnBehalfOf.IsZero()
 }
 
 // Action is one CRUD verb of the object-level RBAC matrix

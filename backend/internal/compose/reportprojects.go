@@ -10,6 +10,8 @@ package compose
 // length cap.
 
 import (
+	"fmt"
+
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -17,10 +19,12 @@ import (
 
 const (
 	// The project measures, as a caller names them.
-	measureOpenDealValue   = "open_deal_value_minor"
-	measureWonDealValue    = "won_deal_value_minor"
-	measureOpenCommitments = "open_commitments"
-	measureOverdue         = "overdue_commitments"
+	measureOpenDealValue    = "open_deal_value_minor"
+	measureWonDealValue     = "won_deal_value_minor"
+	measureOpenDealUnpriced = "open_deal_unpriced"
+	measureWonDealUnpriced  = "won_deal_unpriced"
+	measureOpenCommitments  = "open_commitments"
+	measureOverdue          = "overdue_commitments"
 
 	fieldPhase          = "phase"
 	fieldName           = "name"
@@ -35,16 +39,6 @@ const (
 	colPhase        = "t.phase"
 	colLastActivity = "t.last_activity_at"
 
-	// The money a project's WON deals fold to, in the installation's base
-	// currency (the frozen base amount), read through the caller's deal row
-	// scope AND their field masks: a per-project total that counted a deal the
-	// caller's deal list would withhold discloses that deal through arithmetic
-	// (the rule ProjectDealTotalsTx keeps), and one that counted a FIGURE the
-	// list withholds discloses the figure the same way.
-	wonDealValueBaseExpr = "(SELECT coalesce(sum(d.amount_minor_base) FILTER (WHERE " + reportDealMaskToken +
-		"), 0)::bigint FROM deal d" +
-		" WHERE d.project_id = t.id AND d.status = 'won' AND d.archived_at IS NULL AND " + reportDealScopeToken + ")"
-
 	// A project's commitments are the open tasks filed under it. Overdue is
 	// a due date already past; a task with no due date is open but never
 	// overdue. Both read through the caller's activity content clause.
@@ -57,18 +51,24 @@ const (
 		reportActivityScopeToken + ")"
 )
 
-// openDealValueBaseExpr is wonDealValueBaseExpr's open-side twin: each open
-// deal folded by deals.OpenDealBaseValueSQL over the token the engine binds
-// the installation's base currency to. A variable because the fold is built
-// by a function the deals module owns.
-//
-// It takes the same mask filter as the won side. The two have to move
-// together: a mask that withheld a deal from the closed total and let it
-// through the open one would put the same figure back on the same page.
-var openDealValueBaseExpr = "(SELECT coalesce(sum(" + deals.OpenDealBaseValueSQL("d", reportBaseCurrencyToken) +
-	") FILTER (WHERE " + reportDealMaskToken + "), 0)::bigint" +
-	" FROM deal d WHERE d.project_id = t.id AND d.status = 'open' AND d.archived_at IS NULL AND " +
-	reportDealScopeToken + ")"
+// Project totals and coverage compose the deal module's valuation under the
+// same field-mask and row-scope predicates as the project header.
+var (
+	openDealValueBaseExpr = projectDealMoneySQL("open", false)
+	wonDealValueBaseExpr  = projectDealMoneySQL("won", false)
+	openDealUnpricedExpr  = projectDealMoneySQL("open", true)
+	wonDealUnpricedExpr   = projectDealMoneySQL("won", true)
+)
+
+func projectDealMoneySQL(status string, unpriced bool) string {
+	expression := deals.BaseValueSumSQL(reportAsOfToken, reportBaseCurrencyToken, "d", reportDealMaskToken)
+	if unpriced {
+		expression = deals.UnpricedCountSQL(reportAsOfToken, reportBaseCurrencyToken, "d", reportDealMaskToken)
+	}
+	return "(SELECT " + expression +
+		" FROM deal d WHERE d.project_id = t.id AND d.status = '" + status +
+		"' AND d.archived_at IS NULL AND " + reportDealScopeToken + ")"
+}
 
 // projectRowDimensions is the vocabulary the two listing-shaped project keys
 // share: grouping by the row's own id makes each row one project, with the
@@ -128,9 +128,12 @@ func projectsByPhaseSpec() reportSpec {
 			fieldOwnerID:   colOwnerID,
 		},
 		measures: map[string]string{
-			measureOpenDealValue: openDealValueBaseExpr,
-			measureWonDealValue:  wonDealValueBaseExpr,
+			measureOpenDealValue:    openDealValueBaseExpr,
+			measureWonDealValue:     wonDealValueBaseExpr,
+			measureOpenDealUnpriced: openDealUnpricedExpr,
+			measureWonDealUnpriced:  wonDealUnpricedExpr,
 		},
+		sumCoverage: map[string]string{measureOpenDealValue: openDealUnpricedExpr, measureWonDealValue: wonDealUnpricedExpr},
 		filters: map[string]string{
 			fieldCompanyID: colProjectAnyCompany,
 			fieldOwnerID:   colOwnerID,
@@ -139,15 +142,16 @@ func projectsByPhaseSpec() reportSpec {
 		referenceScopes: map[string]string{colProjectCustomer: tableCompany, colProjectAnyCompany: tableCompany},
 		// The money measures fold DEALS, which the project grant says nothing
 		// about: the deal grant is owed before either is served.
-		grants:    map[string]string{measureOpenDealValue: tableDeal, measureWonDealValue: tableDeal},
+		grants:    map[string]string{measureOpenDealValue: tableDeal, measureWonDealValue: tableDeal, measureOpenDealUnpriced: tableDeal, measureWonDealUnpriced: tableDeal},
 		defaultBy: []string{fieldPhase},
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: "projects"},
 			{Fn: aggFnSum, Field: measureOpenDealValue, As: measureOpenDealValue},
 			{Fn: aggFnSum, Field: measureWonDealValue, As: measureWonDealValue},
+			{Fn: aggFnSum, Field: measureOpenDealUnpriced, As: measureOpenDealUnpriced},
+			{Fn: aggFnSum, Field: measureWonDealUnpriced, As: measureWonDealUnpriced},
 		},
-		notes: "deal values are in the installation's base currency; an open deal in another currency counts " +
-			"nothing until it closes",
+		notes: "open and won deal values use the same base-currency valuation; unpriced counts identify amounts omitted for missing prices",
 	}
 }
 
@@ -227,4 +231,12 @@ func projectsGoneQuietSpec() reportSpec {
 		orderBy: "min(" + projects.ProjectQuietAnchorSQL("t") + ")",
 		notes:   "`days` is a whole number of days of silence, default 30; quiet_since is when the silence began",
 	}
+}
+
+func reportMoneyAggregateSQL(spec reportSpec, aggregate reportAggregate, expression string) string {
+	sum := fmt.Sprintf("%s(%s)", aggregate.Fn, expression)
+	if coverage, ok := spec.sumCoverage[aggregate.Field]; ok && aggregate.Fn == aggFnSum {
+		return deals.FinalizeBaseTotalSQL(sum, "sum("+coverage+")")
+	}
+	return sum
 }

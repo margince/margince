@@ -6,14 +6,16 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider, translate } from "../i18n";
 import { NumberSetting, NumberSettingRow } from "./numbersetting";
+import { PageSaveBar, SavePageProvider } from "./savepage";
 import { SettingList, SettingRow } from "./settingrow";
 
 afterEach(cleanup);
 
 const REFUSAL = "Enter a whole number of pages from 1 to 200.";
 
-function pages(value: number, onCommit: (next: number) => void) {
+function pages(value: number, onCommit: (next: number) => unknown) {
   return (
     <SettingList>
       <SettingRow
@@ -283,5 +285,47 @@ describe("NumberSetting", () => {
     expect(box).toHaveValue("90");
     await user.tab();
     expect(onCommit).not.toHaveBeenCalled();
+  });
+});
+
+describe("NumberSetting on a page with a save bar", () => {
+  function onPage(onCommit: (next: number) => Promise<void>) {
+    render(
+      <LocaleProvider initial="en">
+        <SavePageProvider>
+          {pages(60, onCommit)}
+          <PageSaveBar />
+        </SavePageProvider>
+      </LocaleProvider>,
+    );
+    return screen.getByRole("textbox", { name: "Pages per read" });
+  }
+  const save = () =>
+    screen.getByRole("button", { name: translate("en", "saveBar.save") });
+
+  it("holds the typed number as a draft until the bar saves it", async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn(async () => undefined);
+    const box = onPage(onCommit);
+    await user.clear(box);
+    await user.type(box, "120{Enter}");
+    await user.tab();
+    expect(onCommit).not.toHaveBeenCalled();
+
+    await user.click(save());
+    expect(onCommit).toHaveBeenCalledExactlyOnceWith(120);
+  });
+
+  it("keeps a number out of range away from the bar's save", async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn(async () => undefined);
+    const box = onPage(onCommit);
+    await user.clear(box);
+    await user.type(box, "500");
+    await user.tab();
+    await user.click(save());
+
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(screen.getByText(REFUSAL)).toBeInTheDocument();
   });
 });

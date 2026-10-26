@@ -1,4 +1,3 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   useCallback,
   useEffect,
@@ -7,8 +6,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { api } from "../../api/client";
-import type { components } from "../../api/schema";
 import {
   Badge,
   Button,
@@ -24,8 +21,9 @@ import { useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { CitedDocument } from "./citeddocument";
 import { AnswerView } from "./corpusanswer";
+import { type Corpus, useAsk, useAskableSets } from "./corpusaskqueries";
 import "./corpusask.css";
-import { problemMessageOf, throwProblem } from "../../lib/problem";
+import { problemMessageOf } from "../../lib/problem";
 
 // Asking a document set a question, in the reader's own words.
 //
@@ -55,44 +53,6 @@ import { problemMessageOf, throwProblem } from "../../lib/problem";
 // the nearest passages are on screen, but no writer read them — so the reader
 // is told that in a callout above them, because a passage presented like an
 // answer is read as one.
-
-type Answer = components["schemas"]["KnowledgeAnswer"];
-type Corpus = components["schemas"]["KnowledgeCorpus"];
-
-function useAskableSets(enabled: boolean) {
-  return useQuery({
-    enabled,
-    queryKey: ["knowledge-corpora"],
-    queryFn: async () => {
-      const { data, error, response } = await api.GET("/knowledge/corpora");
-      if (error || !response.ok) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-}
-
-function useAsk() {
-  return useMutation({
-    mutationFn: async ({
-      corpusId,
-      question,
-    }: {
-      corpusId: string;
-      question: string;
-    }): Promise<Answer> => {
-      const { data, error } = await api.POST("/knowledge/corpora/{id}/ask", {
-        params: { path: { id: corpusId } },
-        body: { question },
-      });
-      if (error || !data) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-}
 
 // preferredSet is the set the box starts on: the one the workspace marked as
 // the palette's target, else the first. Never an empty selection — a reader who

@@ -62,5 +62,6 @@ func (s *Service) PendingForTarget(ctx context.Context, tx pgx.Tx, targetType st
 	if err := s.assignmentStates(ctx, tx, out, commitmentAssignees(out)); err != nil {
 		return nil, err
 	}
+	withoutOwnersRecords(ctx, out)
 	return out, nil
 }

@@ -43,7 +43,7 @@ import (
 // of them.
 //
 // It covers ONLY the floor. The model prompt versions itself below.
-const floorVersion = "contact-brief-floor-v3"
+const floorVersion = "contact-brief-floor-v4"
 
 // promptVersion is DERIVED from the prompt as it is SENT — boundary rule
 // included — so editing that wording bumps it whether or not anybody remembers
@@ -106,6 +106,10 @@ type Input struct {
 	Strength     int    `json:"strength"`
 	LastInbound  string `json:"last_inbound,omitempty"`
 	LastOutbound string `json:"last_outbound,omitempty"`
+	// Relationship is the contact's relationship mark, empty for an ordinary
+	// contact. It rides the fingerprint, so a brief cached before the mark was
+	// set is rewritten.
+	Relationship string `json:"relationship,omitempty"`
 
 	OpenDeal *DealIn    `json:"open_deal,omitempty"`
 	Moment   *MomentIn  `json:"moment,omitempty"`
@@ -224,25 +228,11 @@ type ActIn struct {
 	Kind    string `json:"kind"`
 	Subject string `json:"subject,omitempty"`
 	Preview string `json:"preview,omitempty"`
-	// Speaker says WHO wrote this message, in the voice the brief is written
-	// in: "them" for a message from the contact, "you" for one from the
-	// reader. Empty on a row that records no direction, which the contract
-	// allows and the prompt is told to expect.
-	//
-	// It is a SPEAKER and not a direction, and that is the whole of the fix it
-	// carries. `direction: outbound` states a fact about a message and leaves the
-	// model to join it to "so these are the reader's own words" — a join it got
-	// wrong in production, attributing a founder's own assessment of a competitor
-	// to the contact who had merely asked about them, and labelling the sentence
-	// a FACT. The prompt had a rule telling it to make that join. A rule is not a
-	// substitute for saying the thing plainly in the data.
-	//
-	// Preview is the SPEAKER's own line, so the two fields belong together: this
-	// one names whose words those are. The deterministic floor never had this
-	// defect — lastTouchLine writes "You wrote last" straight from LastOutbound —
-	// which is why the fix lands in the shape the model reads rather than in the
-	// prose either path produces.
-	Speaker string `json:"speaker,omitempty"`
+	// Speaker says who wrote this message (SpeakerFor). Absent on a row that
+	// records no author, which the prompt is told to expect. It is a speaker,
+	// not a direction: a model left to read authorship off direction credited
+	// the reader's own view to the contact.
+	Speaker *Speaker `json:"speaker,omitempty"`
 	// Move is the server's reading of whose turn it is on this message:
 	// `needs_reply`, `waiting_for_them`, or `none` when the question cannot be
 	// answered honestly. Empty on a row that is not mail.
@@ -274,7 +264,25 @@ func FromView(view crmcontracts.Contact360) Input {
 	foldChanges(&in, view)
 	foldClaims(&in, view)
 	foldRecent(&in, view)
+	if view.Contact.RelationshipMark != nil {
+		in.Relationship = string(*view.Contact.RelationshipMark)
+		withholdWhatTheySeekFrom(&in)
+	}
 	return in
+}
+
+// withholdWhatTheySeekFrom removes everything that would phrase a marked
+// contact's own ask as the reader's next step. A vendor's request for a demo is
+// stored as an open claim, a moment and a message waiting for a reply. Each of
+// those reaches the brief as something due. Dropping them leaves the floor
+// nothing to say it from, and the model nothing to quote.
+func withholdWhatTheySeekFrom(in *Input) {
+	in.Moment = nil
+	in.Changes = nil
+	in.Claims = nil
+	for i := range in.Recent {
+		in.Recent[i].Move = ""
+	}
 }
 
 // omittedNames renders the withheld sections as the plain strings the
@@ -317,55 +325,6 @@ func foldCommercial(in *Input, view crmcontracts.Contact360) {
 	in.OpenDeal = &folded
 }
 
-func foldClaims(in *Input, view crmcontracts.Contact360) {
-	if view.Claims == nil {
-		return
-	}
-	for _, claim := range *view.Claims {
-		if len(in.Claims) == briefInputClaims {
-			break
-		}
-		if claim.Status == crmcontracts.ConversationClaimStatusDismissed {
-			// A dismissed claim is one a human said was never true. Writing a
-			// brief from it would resurrect it in prose.
-			continue
-		}
-		folded := ClaimIn{
-			Kind:     string(claim.Kind),
-			Body:     claim.Body,
-			Status:   string(claim.Status),
-			Quote:    claim.SourceQuote,
-			SourceID: claim.SourceActivityId.String(),
-		}
-		if claim.DueAt != nil {
-			folded.DueAt = stampAt(*claim.DueAt)
-		}
-		in.Claims = append(in.Claims, folded)
-	}
-}
-
-func foldChanges(in *Input, view crmcontracts.Contact360) {
-	if view.RelationshipChanges == nil {
-		return
-	}
-	for _, change := range *view.RelationshipChanges {
-		if len(in.Changes) == briefInputChanges {
-			break
-		}
-		folded := ChangeIn{Kind: string(change.Kind), At: stampAt(change.At)}
-		if change.Days != nil {
-			folded.Days = *change.Days
-		}
-		if change.FromBucket != nil {
-			folded.From = string(*change.FromBucket)
-		}
-		if change.ToBucket != nil {
-			folded.To = string(*change.ToBucket)
-		}
-		in.Changes = append(in.Changes, folded)
-	}
-}
-
 // foldMoment carries the ladder's selected moment and the activities behind it.
 // Evidence of kind relationship_change names no row, so only the activity and
 // task rows — both of which ARE activities in this system — become citations.
@@ -404,9 +363,7 @@ func foldRecent(in *Input, view crmcontracts.Contact360) {
 		if activity.Subject != nil {
 			folded.Subject = *activity.Subject
 		}
-		if activity.Direction != nil {
-			folded.Speaker = SpeakerFor(*activity.Direction)
-		}
+		folded.Speaker = SpeakerFor(activity.Voice)
 		foldMailSummary(&folded, activity.EmailSummary)
 		in.Recent = append(in.Recent, folded)
 	}
@@ -429,35 +386,6 @@ func foldMailSummary(into *ActIn, summary *crmcontracts.EmailSummary) {
 	if summary.Move != crmcontracts.EmailSummaryMoveNone {
 		into.Move = string(summary.Move)
 	}
-}
-
-// The two speakers a captured message can have, in the voice the brief is
-// written in. Derived from the contract's own direction enum rather than
-// compared against string literals, so a rename upstream fails to compile here
-// instead of silently folding every message to the same one.
-const (
-	speakerThem = "them"
-	speakerYou  = "you"
-)
-
-// SpeakerFor names who wrote a message, from the direction the 360 recorded.
-//
-// Inbound is the contact; everything else is the reader. The default is
-// deliberate rather than lazy: a direction this function does not recognise is
-// one the product has just added, and attributing an unknown message to the
-// READER is the safe way to be wrong — a brief that credits the reader with a
-// contact's words understates what the contact said, where the reverse puts
-// words in their mouth, which is the defect this field exists to prevent.
-//
-// Exported because the certification case folds its fixture through THIS
-// function rather than mapping directions to speakers a second time: a copy
-// would agree until somebody edited one side, and the side that drifted would be
-// the one certifying the prompt.
-func SpeakerFor(direction crmcontracts.ActivityDirection) string {
-	if direction == crmcontracts.ActivityDirectionInbound {
-		return speakerThem
-	}
-	return speakerYou
 }
 
 // withheldContent reports a row whose words are not this reader's. The 360 has

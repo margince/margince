@@ -83,7 +83,7 @@ func UnambiguousMailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][
 	}
 	for _, record := range records {
 		switch record.source {
-		case "login", provedMailboxSource:
+		case loginSource, provedMailboxSource:
 			claim(record.seat, record.label, 2)
 		case "user":
 			claim(record.seat, record.label, 1)
@@ -98,7 +98,9 @@ func UnambiguousMailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][
 	return out, nil
 }
 
-// MailSeatIdentities reads live mailbox identities for restoring factual recipient evidence.
+// MailSeatIdentities reads live mailbox identities for restoring factual
+// recipient evidence. It keeps a withdrawn mailbox's label, because stored
+// mail that mailbox received was the seat's when it arrived.
 func MailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][]string, error) {
 	records, err := readMailSeatIdentities(ctx, tx)
 	if err != nil {
@@ -113,15 +115,26 @@ func MailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][]string, er
 	return out, nil
 }
 
-const provedMailboxSource = "proved_mailbox"
+const (
+	loginSource            = "login"
+	provedMailboxSource    = "proved_mailbox"
+	withdrawnMailboxSource = "withdrawn_mailbox"
+)
 
 type mailSeatIdentity struct{ seat, label, source string }
+
+// decidesNew is the lifecycle of a withdrawn mailbox: its label is no evidence
+// for a decision made now. Only a disconnect withdraws; a mailbox in error or
+// awaiting reauth keeps its label as the seat's own. UnambiguousMailSeatIdentities claims no such source,
+// and MailSeatIdentities reads it for stored history.
+func (r mailSeatIdentity) decidesNew() bool { return r.source != withdrawnMailboxSource }
 
 func readMailSeatIdentities(ctx context.Context, tx pgx.Tx) ([]mailSeatIdentity, error) {
 	rows, err := tx.Query(ctx, `SELECT u.id::text, u.email, 'login' FROM app_user u WHERE `+workforce.LiveMemberSQL("u")+`
  UNION SELECT i.user_id::text, i.value, i.source FROM capture_owner_identity i
  JOIN app_user u ON u.id = i.user_id WHERE i.kind = 'address' AND `+workforce.LiveMemberSQL("u")+`
- UNION SELECT c.user_id::text, c.account_label, CASE WHEN `+provedMailboxClause("c")+` THEN '`+provedMailboxSource+`' ELSE '' END FROM capture_connection c
+ UNION SELECT c.user_id::text, c.account_label, CASE WHEN `+provedMailboxClause("c")+` THEN '`+provedMailboxSource+`'
+   WHEN c.status = 'disconnected' THEN '`+withdrawnMailboxSource+`' ELSE '' END FROM capture_connection c
  JOIN app_user u ON u.id = c.user_id WHERE c.archived_at IS NULL AND `+workforce.LiveMemberSQL("u")+` AND coalesce(c.account_label, '') <> ''`)
 	if err != nil {
 		return nil, fmt.Errorf("reading mail identities: %w", err)
@@ -139,6 +152,20 @@ func DirectMailRecipientSQL(activity, addresses string) string {
  WHERE recipient.activity_id = a.id AND recipient.role = 'to'
  AND lower(recipient.address) = ANY(ADDRESS_LIST))`
 	return strings.ReplaceAll(strings.ReplaceAll(clause, "a.", activity+"."), "ADDRESS_LIST", addresses)
+}
+
+// DirectMailSeatsSQL lists every seat the mail's parsed To line names.
+func DirectMailSeatsSQL(activity, identities string) string {
+	return "ARRAY(SELECT mail_seat.key::uuid FROM jsonb_each(" + identities + ") mail_seat WHERE " +
+		DirectMailRecipientSQL(activity, "ARRAY(SELECT jsonb_array_elements_text(mail_seat.value))") + ")"
+}
+
+// SoleDirectMailSeatSQL decides who answers an inbound mail: the seat in its
+// To line when it is the only seat there, else NULL. Two addressed seats make
+// no automatic duty for either, and no shared one.
+func SoleDirectMailSeatSQL(activity, identities string) string {
+	seats := DirectMailSeatsSQL(activity, identities)
+	return "(CASE WHEN cardinality(" + seats + ") = 1 THEN (" + seats + ")[1] END)"
 }
 
 // MailSeatAddressesSQL selects one seat's unambiguous addresses from a bound identity map.

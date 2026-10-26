@@ -44,6 +44,8 @@ type Sink struct {
 	// a ladder that files without classifying is the one outcome this must
 	// never reach.
 	stampProject StampProjectCorrespondence
+	// deals files captured mail under its one deal. A zero value files none.
+	deals DealAttribution
 	// purgeRemoved acts on a message the provider says the owner deleted. Nil
 	// captures mail and acts on no deletions.
 	purgeRemoved MessagePurger
@@ -58,6 +60,8 @@ type Sink struct {
 	// nameParticipants completes a resolved attendee's name from the name the
 	// invitation gave them. Nil names nobody.
 	nameParticipants ParticipantNamer
+	// scoreLead scores a lead the sink created. Nil keeps the column default.
+	scoreLead LeadScorer
 	// cancelMeeting closes a captured meeting the calendar says is off — called
 	// off by its organizer, or declined by the seat whose calendar it is. Nil
 	// captures meetings and cancels none.
@@ -191,6 +195,7 @@ var (
 // key. Replays return the existing row and write NOTHING new — an
 // at-least-once sync loop costs no duplicate audit entries.
 func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (datasource.EntityRef, error) {
+	rec = maskCapturedCredentials(rec)
 	actor, err := admitRecord(ctx, rec)
 	if err != nil {
 		return datasource.EntityRef{}, err
@@ -303,6 +308,9 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 	// Independent of the counterparty decision: a message from a sender no
 	// record was created for still belongs to the project its subject names.
 	s.attributeProject(ctx, rec, ref)
+	// The deal step reads the project link the ladder just wrote, so it runs
+	// after it, on the same terms.
+	s.attributeDeal(ctx, rec, ref)
 	if dedupeHit != nil && s.stager != nil {
 		// Staged OUTSIDE the capture transaction on purpose: the capture
 		// itself wrote nothing (the collision blocked it), and the

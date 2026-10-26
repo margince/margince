@@ -68,12 +68,15 @@ func (e PublicEventActivityChangedFieldsCalendarMethod) Valid() bool {
 
 // Defines values for PublicEventActivityChangedFieldsDirection.
 const (
+	DirectionBecameInbound  PublicEventActivityChangedFieldsDirection = "inbound"
 	DirectionBecameOutbound PublicEventActivityChangedFieldsDirection = "outbound"
 )
 
 // Valid indicates whether the value is a known member of the PublicEventActivityChangedFieldsDirection enum.
 func (e PublicEventActivityChangedFieldsDirection) Valid() bool {
 	switch e {
+	case DirectionBecameInbound:
+		return true
 	case DirectionBecameOutbound:
 		return true
 	default:
@@ -555,6 +558,7 @@ const (
 	IntroRequestCompleted                 SubscribableEventType = "intro_request.completed"
 	IntroRequestCreated                   SubscribableEventType = "intro_request.created"
 	IntroRequestDecided                   SubscribableEventType = "intro_request.decided"
+	IntroRequestRecorded                  SubscribableEventType = "intro_request.recorded"
 	IntroRequestReplied                   SubscribableEventType = "intro_request.replied"
 	LeadCreated                           SubscribableEventType = "lead.created"
 	LeadDemoted                           SubscribableEventType = "lead.demoted"
@@ -609,6 +613,7 @@ const (
 	UserGreetingNameChanged               SubscribableEventType = "user_greeting_name.changed"
 	UserInvited                           SubscribableEventType = "user.invited"
 	UserLocaleChanged                     SubscribableEventType = "user_locale.changed"
+	UserMfaRemoved                        SubscribableEventType = "user.mfa_removed"
 	UserPasswordLinkIssued                SubscribableEventType = "user.password_link_issued"
 	UserReactivated                       SubscribableEventType = "user.reactivated"
 	VoiceBuildChanged                     SubscribableEventType = "voice.build_changed"
@@ -765,6 +770,8 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case IntroRequestDecided:
 		return true
+	case IntroRequestRecorded:
+		return true
 	case IntroRequestReplied:
 		return true
 	case LeadCreated:
@@ -873,6 +880,8 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case UserLocaleChanged:
 		return true
+	case UserMfaRemoved:
+		return true
 	case UserPasswordLinkIssued:
 		return true
 	case UserReactivated:
@@ -962,7 +971,7 @@ type PublicEventActivityChangedFields struct {
 	// CommitmentAdmissionsChanged The source's recorded commitment decisions changed; fetch the source through its normal content access gate.
 	CommitmentAdmissionsChanged *bool `json:"commitment_admissions_changed,omitempty"`
 
-	// Direction Set when capture learned that a message stored as received was the seat's own sent mail (absent otherwise). The counterparty changes with it; a subscriber that must know re-reads the row.
+	// Direction `outbound` when capture learned that a message stored as received was the seat's own sent mail. `inbound` when a copy read as a colleague's sent mail is received mail again, because that colleague's address is not at an own domain. Absent otherwise. The counterparty changes with it; a subscriber that must know re-reads the row.
 	Direction *PublicEventActivityChangedFieldsDirection `json:"direction,omitempty"`
 
 	// DueAt The activity's new due_at (absent when this update did not touch it).
@@ -1002,7 +1011,7 @@ type PublicEventActivityChangedFieldsAudience string
 // PublicEventActivityChangedFieldsCalendarMethod The RFC 5546 method of the message's calendar part. Set when it was read back from the message's stored original (absent otherwise).
 type PublicEventActivityChangedFieldsCalendarMethod string
 
-// PublicEventActivityChangedFieldsDirection Set when capture learned that a message stored as received was the seat's own sent mail (absent otherwise). The counterparty changes with it; a subscriber that must know re-reads the row.
+// PublicEventActivityChangedFieldsDirection `outbound` when capture learned that a message stored as received was the seat's own sent mail. `inbound` when a copy read as a colleague's sent mail is received mail again, because that colleague's address is not at an own domain. Absent otherwise. The counterparty changes with it; a subscriber that must know re-reads the row.
 type PublicEventActivityChangedFieldsDirection string
 
 // PublicEventActivityChangedFieldsMeetingStatus How the meeting went, once somebody recorded it (absent when this update did not touch it). Meeting rows only; the update refuses the field on any other kind.
@@ -1441,7 +1450,7 @@ type PublicEventConversationClaimCaptured struct {
 	Kind string `json:"kind"`
 }
 
-// PublicEventConversationClaimChanged Payload for conversation_claim.changed. A claim was corrected, renewed, dismissed or erased. A downstream reader holding the old claim needs to refresh it, or remove it when the status is erased.
+// PublicEventConversationClaimChanged Payload for conversation_claim.changed. A claim was corrected, renewed, taken over, dismissed or erased. A downstream reader holding the old claim needs to refresh it, or remove it when the status is erased.
 type PublicEventConversationClaimChanged struct {
 	ClaimId openapi_types.UUID `json:"claim_id"`
 
@@ -1874,6 +1883,14 @@ type PublicEventIntroRequestDecided struct {
 // PublicEventIntroRequestDecidedDecision defines model for PublicEventIntroRequestDecided.Decision.
 type PublicEventIntroRequestDecidedDecision string
 
+// PublicEventIntroRequestRecorded Payload for intro_request.recorded, a colleague recorded an introduction that already happened outside Margince. It is not intro_request.completed. That event means an ask was marked done, and its consumers must not see a row that never had an ask. `introducer_user_id` made the introduction and `introduced_user_id` was introduced.
+type PublicEventIntroRequestRecorded struct {
+	ContactId        openapi_types.UUID `json:"contact_id"`
+	IntroRequestId   openapi_types.UUID `json:"intro_request_id"`
+	IntroducedUserId openapi_types.UUID `json:"introduced_user_id"`
+	IntroducerUserId openapi_types.UUID `json:"introducer_user_id"`
+}
+
 // PublicEventIntroRequestReplied Payload for intro_request.replied — the contact answered, observed from captured activity rather than asserted by a contact. `source_activity_id` is the evidence, so a reader can open the message the claim rests on.
 type PublicEventIntroRequestReplied struct {
 	ContactId        openapi_types.UUID  `json:"contact_id"`
@@ -1943,14 +1960,14 @@ type PublicEventLeadSlaBreached struct {
 	// Deadline The first-response deadline that passed.
 	Deadline time.Time `json:"deadline"`
 
-	// EscalationTarget The user the escalation task is assigned to (absent when nobody owns the lead).
+	// EscalationTarget The seat the scan chose for the escalation: the lead's owner while that owner can be handed work, else the intake seat. Delivery asks again, so the task and notice can go to the intake seat instead, or to nobody. Absent when no seat was chosen, so it can differ from `owner_id`.
 	EscalationTarget *openapi_types.UUID `json:"escalation_target,omitempty"`
 
 	// OwnerId The lead's owner at breach time (absent when unrouted).
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 }
 
-// PublicEventLeadSourceChanged Payload for lead_source.changed. A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because every lead carries a source value. A subscriber that renders or groups by source re-reads the catalog on this event. The payload carries `key` and not `label`. The key is what leads carry and what a subscriber keys its own cache by. It is also the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists. Publishing it here would invite a subscriber to trust a copy that can go stale.
+// PublicEventLeadSourceChanged Deprecated: the lead source list no longer feeds the score, and a separate breaking change retires it. Payload for lead_source.changed. A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because every lead carries a source value. A subscriber that renders or groups by source re-reads the catalog on this event. The payload carries `key` and not `label`. The key is what leads carry and what a subscriber keys its own cache by. It is also the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists. Publishing it here would invite a subscriber to trust a copy that can go stale.
 type PublicEventLeadSourceChanged struct {
 	Change PublicEventLeadSourceChangedChange `json:"change"`
 
@@ -1979,8 +1996,14 @@ type PublicEventLinkedinAccountChanged struct {
 
 // PublicEventLinkedinMatchDecided Payload for linkedin_match.decided. A connection was linked to a contact on file, by an exact-name match or by a member approving the proposal. It carries no verdict. A refusal is an approval row that stays rejected and never becomes a link, so there is no "no" to publish. The payload does not name the connection, a third party who never consented to being in this CRM. The imported rows are kept invisible, and their names travelling through the outbox would defeat that. The verdict and whether a profile URL reached the contact are the auditable facts. The records themselves are reachable through the audit row this event is linked to.
 type PublicEventLinkedinMatchDecided struct {
+	// EmployerWritten Whether the decision made the company the import placed the connection at the contact's current employer. True only when the member ticked "Use as employer". False on every automatic confirmation.
+	EmployerWritten *bool `json:"employer_written,omitempty"`
+
 	// ProfileUrlWritten Whether the decision put a LinkedIn handle on the contact. False on every rejection, and false on a confirmation whose contact already carried one — a value on a record is somebody's statement and is never overwritten.
 	ProfileUrlWritten bool `json:"profile_url_written"`
+
+	// TitleWritten Whether the decision put the export's position on the contact as its title. True only when the member ticked "Use as title" and the title changed. False on every automatic confirmation.
+	TitleWritten *bool `json:"title_written,omitempty"`
 }
 
 // PublicEventLinkedinNetworkImported Payload for linkedin_network.imported. A member uploaded their own LinkedIn connections export. The import act emits a single event, never one per row. An export is thousands of rows, and a per-row event would bury every other event in the stream. The auditable fact is that a member imported their network at all. No connection is named in the payload. The imported rows are third parties who never consented to being in this CRM. Publishing their names would defeat the point of keeping them invisible everywhere else.
@@ -2262,8 +2285,11 @@ type PublicEventRelationshipNudgeDecided struct {
 	Action    PublicEventRelationshipNudgeDecidedAction `json:"action"`
 	ContactId openapi_types.UUID                        `json:"contact_id"`
 
-	// DismissedUntil When the contact comes back to the lane. Present on `dismissed` and absent on `restored`, which carries no moment because a restore takes effect now. It is never absent on a dismissal: a dismissal with no end is the shape this feature refuses to have.
+	// DismissedUntil When the contact comes back to the lane. Present on a dated `dismissed` and absent on `restored`, which carries no moment because a restore takes effect now. Absent on a permanent stop, which `permanent` says.
 	DismissedUntil *time.Time `json:"dismissed_until,omitempty"`
+
+	// Permanent True when the reader stopped following the contact with no end date. Only on `dismissed`; the reader resumes it with `restored`.
+	Permanent *bool `json:"permanent,omitempty"`
 }
 
 // PublicEventRelationshipNudgeDecidedAction What was decided. The undo, `restored`, is carried rather than inferred from a row going quiet. A decision withdrawn is itself a decision. A consumer counting how often reps put relationships down has to see it happen.
@@ -2473,6 +2499,18 @@ type PublicEventUserInvited struct {
 type PublicEventUserLocaleChanged struct {
 	// Locale The language now chosen — one of the catalogs the product ships. Never empty: this event fires on a choice, and a member who has never chosen has no row and produces no event.
 	Locale string `json:"locale"`
+}
+
+// PublicEventUserMfaRemoved Payload for user.mfa_removed. An admin removed a member's confirmed second factor. Every session the member held ended with it. The password alone opens the account until the member sets a factor up again. So `by` and `user_id` are both required: this event records who weakened which sign-in.
+type PublicEventUserMfaRemoved struct {
+	// By The admin who removed it.
+	By openapi_types.UUID `json:"by"`
+
+	// SessionsEnded How many live sessions of the member the removal ended.
+	SessionsEnded int `json:"sessions_ended"`
+
+	// UserId The member whose second factor was removed.
+	UserId openapi_types.UUID `json:"user_id"`
 }
 
 // PublicEventUserPasswordLinkIssued Payload for user.password_link_issued. On an installation with no outbound-email channel, an admin minted a single-use set-password link for a member (ADR-0061). The admin delivers it out-of-band. Issuing supersedes the target's outstanding unused tokens. The link may be minted for a member who already has a password. That is an account takeover an admin is trusted to perform. This event is the detective control that records it, so `by` and `user_id` are both required and are the point of the event. The token itself is never a property here, and must never be added. The raw value is returned to the issuing admin once, over the response body, and reaches no ledger, log or bus.
@@ -2956,6 +2994,10 @@ func (PublicEventIntroRequestDecided) EventType() string { return "intro_request
 
 func (PublicEventIntroRequestDecided) EntityType() string { return "contact" }
 
+func (PublicEventIntroRequestRecorded) EventType() string { return "intro_request.recorded" }
+
+func (PublicEventIntroRequestRecorded) EntityType() string { return "contact" }
+
 func (PublicEventIntroRequestReplied) EventType() string { return "intro_request.replied" }
 
 func (PublicEventIntroRequestReplied) EntityType() string { return "contact" }
@@ -3176,6 +3218,10 @@ func (PublicEventUserLocaleChanged) EventType() string { return "user_locale.cha
 
 func (PublicEventUserLocaleChanged) EntityType() string { return "user" }
 
+func (PublicEventUserMfaRemoved) EventType() string { return "user.mfa_removed" }
+
+func (PublicEventUserMfaRemoved) EntityType() string { return "user" }
+
 func (PublicEventUserPasswordLinkIssued) EventType() string { return "user.password_link_issued" }
 
 func (PublicEventUserPasswordLinkIssued) EntityType() string { return "user" }
@@ -3296,6 +3342,7 @@ var PublicEventVersions = map[string]int{
 	"intro_request.completed":                   1,
 	"intro_request.created":                     1,
 	"intro_request.decided":                     1,
+	"intro_request.recorded":                    1,
 	"intro_request.replied":                     1,
 	"lead.created":                              1,
 	"lead.demoted":                              1,
@@ -3346,6 +3393,7 @@ var PublicEventVersions = map[string]int{
 	"user.activated":                            1,
 	"user.deactivated":                          1,
 	"user.invited":                              1,
+	"user.mfa_removed":                          1,
 	"user.password_link_issued":                 1,
 	"user.reactivated":                          1,
 	"user_delivery.changed":                     1,
@@ -3436,6 +3484,7 @@ var PublicEventSamples = map[string]string{
 	"intro_request.completed":                   "{\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"intro_request_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"outcome\":\"introduced\"}",
 	"intro_request.created":                     "{\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"intro_request_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"introducer_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"requester_user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"intro_request.decided":                     "{\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"decision\":\"accepted\",\"intro_request_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"introducer_user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"intro_request.recorded":                    "{\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"intro_request_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"introduced_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"introducer_user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"intro_request.replied":                     "{\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"intro_request_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"source_activity_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"lead.created":                              "{\"source_system\":\"Sample source system\"}",
 	"lead.demoted":                              "{\"from_contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"unwind\":\"Sample unwind\"}",
@@ -3447,7 +3496,7 @@ var PublicEventSamples = map[string]string{
 	"lead_disqualify_reason.changed":            "{\"change\":\"created\",\"label\":\"Sample label\",\"reason_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"lead_source.changed":                       "{\"change\":\"created\",\"key\":\"Sample key\",\"source_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"linkedin_account.changed":                  "{\"connected\":true,\"has_profile_url\":true}",
-	"linkedin_match.decided":                    "{\"profile_url_written\":true}",
+	"linkedin_match.decided":                    "{\"employer_written\":true,\"profile_url_written\":true,\"title_written\":true}",
 	"linkedin_network.imported":                 "{\"imported\":1,\"rows\":1,\"skipped\":1}",
 	"list.archived":                             "{}",
 	"list.created":                              "{\"list_type\":\"Sample list type\",\"record_type\":\"Sample record type\",\"sharing\":\"Sample sharing\"}",
@@ -3473,7 +3522,7 @@ var PublicEventSamples = map[string]string{
 	"project.created":                           "{\"company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"key\":\"Sample key\",\"name\":\"Sample name\",\"owner_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"phase\":\"Sample phase\"}",
 	"project.phase_changed":                     "{\"from_phase\":\"Sample from phase\",\"reason\":\"Sample reason\",\"to_phase\":\"Sample to phase\"}",
 	"project.updated":                           "{\"changed_fields\":{}}",
-	"relationship_nudge.decided":                "{\"action\":\"dismissed\",\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"dismissed_until\":\"2026-10-14T09:12:00Z\"}",
+	"relationship_nudge.decided":                "{\"action\":\"dismissed\",\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"dismissed_until\":\"2026-10-14T09:12:00Z\",\"permanent\":true}",
 	"retention.applied":                         "{\"action\":\"archive\",\"policy\":\"0190a7f2-0000-7000-8000-000000000010\",\"reason\":\"Sample reason\"}",
 	"retention.restricted":                      "{\"action\":\"restrict\",\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"restricted_until\":\"2026-10-14T09:12:00Z\",\"retention_class\":\"Sample retention class\"}",
 	"role.changed":                              "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"from_role\":\"Sample from role\",\"to_role\":\"Sample to role\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
@@ -3486,6 +3535,7 @@ var PublicEventSamples = map[string]string{
 	"user.activated":                            "{\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user.deactivated":                          "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"reason\":\"Sample reason\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user.invited":                              "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"role\":\"Sample role\",\"team_ids\":[\"0190a7f2-0000-7000-8000-000000000010\"],\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"user.mfa_removed":                          "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"sessions_ended\":1,\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user.password_link_issued":                 "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"expires_at\":\"2026-10-14T09:12:00Z\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user.reactivated":                          "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"status\":\"invited\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user_delivery.changed":                     "{\"changed_fields\":[\"Sample changed fields\"]}",

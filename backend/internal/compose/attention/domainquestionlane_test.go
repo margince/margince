@@ -6,10 +6,12 @@ package attention
 import (
 	"context"
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -88,6 +90,51 @@ func TestADomainQuestionOffersAnswersAndRetry(t *testing.T) {
 		if row.Actions[i] != action {
 			t.Errorf("action %d = %q, want %q", i, row.Actions[i], action)
 		}
+	}
+}
+
+func TestAVendorQuestionOffersCreateOrKeepAsVendorAndCarriesTheTriageSentence(t *testing.T) {
+	t.Parallel()
+	const sentence = "Classified as a mail or hosting vendor: the page sells managed hosting."
+	svc := domainQuestionLaneService(&stubDomainQuestions{rows: []DomainQuestion{{
+		Domain: "hosting.example", Reason: "The site reads as a mail or hosting vendor.",
+		ReasonCode: contacts.PendingVendorVerdict, Note: sentence, AskedAt: readInstant,
+	}, {
+		Domain: "botsync.co", Reason: "Nothing on the site named a company.",
+		ReasonCode: contacts.PendingUnevidenced, Note: "ignored", AskedAt: readInstant,
+	}}})
+	out, err := svc.Assemble(pageReader())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	rows := map[string]crmcontracts.AttentionItem{}
+	for _, row := range *out.DomainQuestions {
+		rows[row.Id] = row
+	}
+	vendor := rows["hosting.example"]
+	want := []crmcontracts.AttentionItemActions{"keep", "keep_as_vendor", "discard"}
+	if !slices.Equal(vendor.Actions, want) {
+		t.Errorf("vendor actions = %v, want %v: a re-read would ask the same front page again", vendor.Actions, want)
+	}
+	if vendor.DomainNote == nil || *vendor.DomainNote != sentence {
+		t.Errorf("vendor note = %v, want the triage's sentence", vendor.DomainNote)
+	}
+	other := rows["botsync.co"]
+	if slices.Contains(other.Actions, "keep_as_vendor") || other.DomainNote != nil {
+		t.Errorf("an unevidenced question offers %v with note %v; only a vendor question keeps a vendor verdict", other.Actions, other.DomainNote)
+	}
+	found := false
+	for _, item := range queueOf(t, out, nil) {
+		if item.Id != "hosting.example" {
+			continue
+		}
+		found = true
+		if item.DomainNote == nil || *item.DomainNote != sentence {
+			t.Errorf("the worklist row lost the triage sentence: %v", item.DomainNote)
+		}
+	}
+	if !found {
+		t.Fatal("the vendor question never reached the worklist")
 	}
 }
 

@@ -42,12 +42,16 @@ const EMPTY: ChangeFields = { current: "", next: "", confirm: "" };
  */
 export function PasswordSettingRow({
   onChanged,
+  description,
 }: Readonly<{
   // Called after a successful change. The settings page needs nothing — the
   // confirmation on the row is the whole outcome there. A caller that sent the
   // reader here BECAUSE of a refused credential uses it to re-probe, since the
   // change is what resolves the refusal.
   onChanged?: () => void;
+  // What the row says the password is for; the account page names the address
+  // it signs in.
+  description?: string;
 }> = {}) {
   const t = useT();
   const titleId = useId();
@@ -131,7 +135,7 @@ export function PasswordSettingRow({
     <>
       <SettingRow
         label={t("password.title")}
-        description={t("password.body")}
+        description={description ?? t("password.body")}
         control={
           <Button variant="ghost" onClick={() => setOpen(true)}>
             {t("password.open")}
@@ -145,11 +149,11 @@ export function PasswordSettingRow({
           sentence. */}
       {done && (
         <Callout kind="outcome" tone="success" title={t("password.doneTitle")}>
-          {t("password.done")}
+          {t("account.passwordDone")}
         </Callout>
       )}
       <Modal open={open} onClose={close} labelledBy={titleId} intent="form">
-        <Heading size="large" className="t-h3 modal-title" id={titleId}>
+        <Heading size="large" className="t-h2 modal-title" id={titleId}>
           {t("password.title")}
         </Heading>
         {/* A real form, so Enter in any of the three fields submits it. */}
@@ -161,6 +165,16 @@ export function PasswordSettingRow({
             if (ready && !change.isPending) change.mutate(fields);
           }}
         >
+          {/* Said before the fields, because the change ends more than the
+              reader's other sessions: the server revokes every grant and
+              passport issued for them too. */}
+          <Callout
+            kind="standing"
+            tone="warning"
+            title={t("account.passwordWarnTitle")}
+          >
+            {t("account.passwordWarnBody")}
+          </Callout>
           {change.isError && (
             <Callout
               kind="outcome"

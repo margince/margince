@@ -3,11 +3,10 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { meFixture } from "../../testing/mefixture";
-import { ContactBriefCard } from "./contactbrief";
 import {
-  ContactCommercialCard,
   ContactCommitmentsCard,
-  ContactMattersCard,
+  ContactDealCard,
+  ContactUnderstandingCard,
 } from "./contactcards";
 import { ContactMemory } from "./contactmemory";
 import "./contact360.css";
@@ -36,54 +35,9 @@ export default meta;
 
 type Story = StoryObj;
 
-// --- Brief states: the band's populated and empty readings side by side ----
+// --- Overview cards: the four the design draws, stacked ----------------------
 
-// No open deal, loop or priority: the reading the band exists for.
-// `commercial` is PRESENT and empty; absent would claim a permission boundary.
-const emptyBand: View = {
-  ...populated,
-  commercial: { role: null, committee: [] },
-  claims: [],
-};
-
-export const BriefStates: Story = {
-  render: () => {
-    stubWithSession({}, {});
-    return (
-      <StoryProviders>
-        <div className="record-stack" style={{ maxWidth: 720 }}>
-          <ContactBriefCard
-            brief={{
-              contact_id: "p-1",
-              generated_at: "2026-08-13T09:00:00Z",
-              generated_by: "deterministic",
-              sentences: [
-                {
-                  text: "Dana Buyer leads fleet operations at Brandt Automotive and is the champion on the retrofit work.",
-                  evidence: [{ entity_type: "contact", entity_id: "p-1" }],
-                },
-              ],
-            }}
-            loading={false}
-            view={populated}
-          />
-          <ContactBriefCard
-            brief={{
-              contact_id: "p-1",
-              generated_at: "2026-08-13T09:00:00Z",
-              generated_by: "deterministic",
-              sentences: [],
-            }}
-            loading={false}
-            view={emptyBand}
-          />
-        </div>
-      </StoryProviders>
-    );
-  },
-};
-
-// --- Overview panels: the four cards plus ContactMemory, stacked -------------
+const none = () => undefined;
 
 export const OverviewPanels: Story = {
   render: () => {
@@ -91,29 +45,26 @@ export const OverviewPanels: Story = {
     return (
       <StoryProviders>
         <div className="record-stack" style={{ maxWidth: 720 }}>
-          <ContactBriefCard
-            brief={{
-              contact_id: "p-1",
-              generated_at: "2026-08-13T09:00:00Z",
-              generated_by: "deterministic",
-              sentences: [
-                {
-                  text: "Dana Buyer leads fleet operations at Brandt Automotive and is the champion on the retrofit work.",
-                  evidence: [{ entity_type: "contact", entity_id: "p-1" }],
-                },
-                {
-                  text: "She asked to push the retrofit review back a week and has not replied since.",
-                  evidence: [{ entity_type: "activity", entity_id: "a-1" }],
-                },
-              ],
-            }}
-            loading={false}
+          <ContactCommitmentsCard
             view={populated}
+            firstName="Dana"
+            onAllTasks={none}
           />
-          <ContactCommercialCard view={populated} />
-          <ContactCommitmentsCard view={populated} firstName="Dana" />
-          <ContactMattersCard view={populated} firstName="Dana" />
-          <ContactMemory view={populated} />
+          <ContactDealCard
+            view={populated}
+            firstName="Dana"
+            onOpenDeals={none}
+          />
+          <ContactMemory
+            view={populated}
+            onOpenEmail={none}
+            onFullHistory={none}
+          />
+          <ContactUnderstandingCard
+            view={populated}
+            firstName="Dana"
+            onCorrect={none}
+          />
         </div>
       </StoryProviders>
     );
@@ -139,22 +90,11 @@ export const OverviewChannelConversation: Story = {
     return (
       <StoryProviders>
         <div className="record-stack" style={{ maxWidth: 720 }}>
-          <ContactBriefCard
-            brief={{
-              contact_id: "p-1",
-              generated_at: "2026-08-13T09:00:00Z",
-              generated_by: "deterministic",
-              sentences: [
-                {
-                  text: "She asked for a quote on forty vehicles and has not been answered.",
-                  evidence: [{ entity_type: "activity", entity_id: "a-9" }],
-                },
-              ],
-            }}
-            loading={false}
+          <ContactMemory
             view={chatConversation}
+            onOpenEmail={none}
+            onFullHistory={none}
           />
-          <ContactMemory view={chatConversation} />
         </div>
       </StoryProviders>
     );
@@ -162,7 +102,7 @@ export const OverviewChannelConversation: Story = {
 };
 
 // A deal with money, stage and a close date, and more than one stakeholder in
-// the room. This is the populated end of ContactCommercialCard, which
+// the room. This is the populated end of ContactDealCard, which
 // `populated` never reaches (its own commercial section carries no deal).
 const dealWithCommittee: View = {
   ...populated,
@@ -299,6 +239,7 @@ const foldedActivities: View = {
   activities: {
     data: [
       {
+        offers_email: false,
         id: "a-40",
         kind: "email",
         occurred_at: "2026-08-29T09:15:00Z",
@@ -326,6 +267,7 @@ const foldedActivities: View = {
         },
       },
       {
+        offers_email: false,
         id: "a-41",
         kind: "email",
         occurred_at: "2026-08-27T16:40:00Z",
@@ -346,6 +288,7 @@ const foldedActivities: View = {
         },
       },
       {
+        offers_email: false,
         id: "a-42",
         kind: "note",
         occurred_at: "2026-08-26T11:00:00Z",
@@ -364,28 +307,45 @@ const foldedActivities: View = {
   },
 };
 
-// The gaps `OverviewPanels` above leaves. The withheld commercial card, the
-// populated one with a deal and a committee, and every commitments loop kind
-// including a done row. The brief's loading and undefined-brief readings,
-// and the memory panel's full channel set plus its empty state.
+// The gaps `OverviewPanels` above leaves. The withheld deal card, and the one
+// with a deal and a committee. Every commitments loop kind, including a done
+// row. The What was said card's full channel set and its empty state.
 export const OverviewGaps: Story = {
   render: () => {
     stubWithSession({}, {});
     return (
       <StoryProviders>
         <div className="record-stack" style={{ maxWidth: 720 }}>
-          <ContactBriefCard brief={undefined} loading view={populated} />
-          <ContactBriefCard
-            brief={undefined}
-            loading={false}
-            view={populated}
+          <ContactDealCard
+            view={withheld}
+            firstName="Dana"
+            onOpenDeals={none}
           />
-          <ContactCommercialCard view={withheld} />
-          <ContactCommercialCard view={dealWithCommittee} />
-          <ContactCommitmentsCard view={richLoops} firstName="Dana" />
-          <ContactMemory view={richMemory} />
-          <ContactMemory view={foldedActivities} onOpenEmail={() => {}} />
-          <ContactMemory view={emptyMemory} />
+          <ContactDealCard
+            view={dealWithCommittee}
+            firstName="Dana"
+            onOpenDeals={none}
+          />
+          <ContactCommitmentsCard
+            view={richLoops}
+            firstName="Dana"
+            onAllTasks={none}
+          />
+          <ContactMemory
+            view={richMemory}
+            onOpenEmail={none}
+            onFullHistory={none}
+          />
+          <ContactMemory
+            view={foldedActivities}
+            onOpenEmail={none}
+            onFullHistory={none}
+          />
+          <ContactMemory
+            view={emptyMemory}
+            onOpenEmail={none}
+            onFullHistory={none}
+          />
         </div>
       </StoryProviders>
     );

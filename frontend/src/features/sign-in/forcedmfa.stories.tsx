@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, screen, userEvent } from "storybook/test";
+import { expect, screen, userEvent, waitFor } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -79,8 +79,9 @@ export const RecoveryCodes: Story = {
       screen.getByRole("textbox", { name: /code from the app/i }),
       "123456{Enter}",
     );
-    await expect(
-      await screen.findByRole("textbox", { name: "Recovery codes" }),
-    ).toBeVisible();
+    const codes = await screen.findByRole("textbox", {
+      name: "Recovery codes",
+    });
+    await waitFor(() => expect(codes).toBeVisible());
   },
 };

@@ -7,15 +7,10 @@
 // store + contract mapping + transport handlers + the contacts slice of
 // the datasource provider, flat per ADR-0054 §3.
 //
-// Tables owned: contact, contact_email, contact_phone, contact_consent,
-// contact_profile_field, company, company_domain, relationship, provider_employment_resolution,
-// partner, lead, lead_score_history, lead_manual_signal, lead_source,
-// lead_disqualify_reason, contact_signature_enrich_state,
-// contact_provider_claim, provider_applied_field, company_vat_check,
-// relationship_nudge_dismissal, sdr_handoff, sdr_handoff_event,
-// sdr_handoff_reason.
-// Also owned: company_domain_disposition, company_domain_question_reader.
-// It also owns legal_entity and legal_entity_member. A legal entity is a company
+// Tables owned: docs/reference/entity-model/contacts.md.
+//
+// dedupe_scan_state is where the nightly duplicate scan stopped (dedupescan.go).
+// legal_entity is a company
 // the installation trades as. It lives beside the anchor company, because the
 // default entity reads its identity from it. legal_entity_member is which entity
 // a user works for.
@@ -30,15 +25,14 @@
 // company_vat_check is what the EU register answered about a company's
 // VAT ID and the consultation number proving we asked: the profile field
 // holds the number a page stated, this holds whether it is real.
-// lead_source and lead_disqualify_reason are the two administered lead
-// vocabularies: the pick lists behind "where did this come from" and "why
-// was it dropped", and the weighting the scorer reads.
-// relationship_nudge_dismissal is a lapsed contact ONE reader has set aside,
-// and it is its own table rather than a disposition because a nudge is not an
-// activity: the decay lane's row carries the contact's id, so there is no
-// activity to hang the judgement on. Never permanent — the moment it lifts is
-// NOT NULL, so a dismissal that silently deleted somebody from a rep's
-// attention has no value to store.
+// lead_origin and lead_disqualify_reason are the two administered lead
+// vocabularies. The first says where a lead came from and carries the intent the
+// scorer weighs. The second says why a lead was dropped. lead_source is the
+// deprecated list of how a row reached Margince, and nothing scores by it.
+// relationship_nudge_dismissal is a lapsed contact one reader has set aside.
+// It is its own table, not a disposition, because the decay lane's row
+// carries a contact's id and no activity. A NULL moment is a permanent stop,
+// which the reader resumes by deleting the row.
 // lead_score_history is the retained series behind "Explain This Score"
 // (ADR-0105): the breakdown is written with the score and read back
 // verbatim, because a decomposition recomputed at read time explains a
@@ -66,6 +60,9 @@
 // The provider_run relink is the merge's alone: it decides which of two
 // colliding LIVE runs keeps the one-live-run index, which is knowable
 // only where both records' run states are visible at once.
+// The contact read also READS integrations' provider_run and
+// provider_run_reservation (providerboughtfields.go). They say which run wrote a
+// provider value, what started it, and whether it spent credits.
 // The contact list READS two of collections' — tag and taggable — for the
 // contract's `tag` filter: a tagged contact is a link row whichever module
 // writes it, and the alternative is a declared filter answered by nobody.

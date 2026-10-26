@@ -34,6 +34,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/contactbrief"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -62,7 +63,10 @@ func (contactBriefCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pre
 	if err := refuseUnpreparableBrief(f, want); err != nil {
 		return nil, err
 	}
-	in, byLabel := contactBriefInput(f)
+	in, byLabel, err := contactBriefInput(f)
+	if err != nil {
+		return nil, fmt.Errorf("summarize/contact_brief: %w", err)
+	}
 	return &contactBriefCase{
 		// From the Input, not beside it — see certcase_companybrief.go.
 		in: in, contactID: in.ID,
@@ -138,7 +142,7 @@ func (c *contactBriefCase) faults(sentences []contactbrief.Sentence) []string {
 	// is the model's, so both comparisons are on the reader's terms rather than
 	// on either side's capitalisation. Prepare folds the same way, so a token it
 	// cleared as beyond the floor is the token measured here.
-	folded := strings.ToLower(contactbrief.Prose(sentences))
+	folded := strings.ToLower(claims.Prose(sentences))
 	if !strings.Contains(folded, strings.ToLower(c.mustName)) {
 		wrong = append(wrong, fmt.Sprintf(
 			"the brief never names %q, so it would read the same about any contact", c.mustName))

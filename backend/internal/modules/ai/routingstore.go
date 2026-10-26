@@ -264,7 +264,7 @@ func (s *RoutingStore) SetProviderSettings(ctx context.Context, provider string,
 // served binding carries the product default, which a client writing the
 // answer back would freeze into every tier.
 func (s *RoutingStore) write(ctx context.Context, settle func(current RoutingConfig) (stored, served RoutingConfig, err error)) (RoutingConfig, error) {
-	var written RoutingConfig
+	var written, served RoutingConfig
 	err := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
 		if err := settings.LockForWrite(ctx, tx, RoutingKey); err != nil {
 			return err
@@ -275,14 +275,14 @@ func (s *RoutingStore) write(ctx context.Context, settle func(current RoutingCon
 		}
 		// A stale If-Match is answered as stale before the lock, as the budget
 		// and the overrides answer it; any other refusal waits on the lock.
-		stored, _, err := settle(current)
+		stored, serving, err := settle(current)
 		if errors.Is(err, apperrors.ErrVersionSkew) {
 			return err
 		}
 		if err != nil {
 			return s.cfg.LockFirst(RoutingKey, err)
 		}
-		written = stored
+		written, served = stored, serving
 		// Compared by revision, as If-Match is: a resent boot binding settles to
 		// its canonical form, which need not be the decoded value field for field.
 		sameBinding := func(boot RoutingConfig) bool { return boot.Revision() == stored.Revision() }
@@ -294,6 +294,7 @@ func (s *RoutingStore) write(ctx context.Context, settle func(current RoutingCon
 	if err != nil {
 		return RoutingConfig{}, err
 	}
+	LogSingleRungLadders(s.logger(), served)
 	return written, nil
 }
 

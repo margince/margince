@@ -12,6 +12,7 @@ import { Badge, Button, Modal } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
+import { StatusBadge, type StatusKind } from "../../design-system/statusbadge";
 import { today } from "../../format/calendarday";
 import { stable } from "../../format/collate";
 import { formatDate } from "../../format/format";
@@ -57,15 +58,13 @@ export const STATE_LABEL = {
   inactive: "aiProviders.state.inactive",
 } as const satisfies Record<ProviderState, MessageKey>;
 
-export const STATE_TONE = {
-  active: "success",
-  ready: "info",
-  needs_key: "warning",
-  inactive: "default",
-} as const satisfies Record<
-  ProviderState,
-  "success" | "info" | "warning" | "default"
->;
+// Ready waits to be used, so it is neutral grey like inactive; blue is never a status.
+export const STATE_KIND: Readonly<Record<ProviderState, StatusKind>> = {
+  active: "done",
+  ready: "neutral",
+  needs_key: "attention",
+  inactive: "neutral",
+};
 
 /**
  * Everything about one vendor in one right-hand sheet: its credential (the
@@ -99,7 +98,7 @@ export function ProviderSheet({
           {providerName(status.provider, t)}
         </Heading>
         <p className="t-caption ai-sheet-status">
-          <Badge tone={STATE_TONE[state]}>{t(STATE_LABEL[state])}</Badge>
+          <StatusBadge kind={STATE_KIND[state]} label={t(STATE_LABEL[state])} />
           {usage && (
             <>
               <span>{t("aiProviders.colUsedBy")}</span>
@@ -322,7 +321,7 @@ function PriceTable({
               <span className="ai-sheet-model">
                 {r.model_id}
                 {r.effective_date > today() ? (
-                  <Badge tone="info">
+                  <Badge>
                     {t("aiRates.manual.from", {
                       date: formatDate(r.effective_date, locale, viewerZone()),
                     })}

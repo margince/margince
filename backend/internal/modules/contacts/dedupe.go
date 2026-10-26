@@ -27,6 +27,16 @@ const (
 	dedupeCompanyDomainWeight = 0.45
 )
 
+// The bounds on one record's check. Without them a name many records share
+// files a pair against each of them, under the company-name lock. A scan of N
+// such records would also read N² rows. dedupeRivalLimit is how many rivals the
+// ladder names, best first. dedupeCandidateRows is how many rows one candidate
+// query reads for scoring, most similar name first.
+const (
+	dedupeRivalLimit    = 5
+	dedupeCandidateRows = 50
+)
+
 // DedupeDecision is the closed outcome set of PO-F-1/PO-F-2. Fuzzy never
 // resolves itself: DEDUPE_FUZZY_AUTOMERGE is pinned *(never)*, so the
 // only automatic resolutions are exact-key ones.
@@ -52,9 +62,26 @@ const (
 	// carries none. One contact's second business card therefore landed as a new
 	// record in silence — the case this lane was added for.
 	DecisionNameCollisionReview DedupeDecision = "name_collision_review"
+	// DecisionAddressVariantReview is two records whose addresses differ only
+	// by a plus tag (dedupeaddressvariant.go). Like the name-collision lane it
+	// creates anyway and files a pair; it never routes, because a tag can be
+	// shared.
+	DecisionAddressVariantReview DedupeDecision = "address_variant_review"
 	// DecisionNoMatch means create.
 	DecisionNoMatch DedupeDecision = "no_match"
 )
+
+// queuesReview reports whether a decision means "a second record, and a human
+// compares the two". Every writer that files or names a review pair asks this,
+// so a new review lane cannot be dropped by one writer's switch.
+func (d DedupeDecision) queuesReview() bool {
+	switch d {
+	case DecisionFuzzyReview, DecisionNameCollisionReview, DecisionAddressVariantReview:
+		return true
+	default:
+		return false
+	}
+}
 
 // ContactCandidate is the input to PO-F-1 — the fields the formula reads,
 // not a whole contact: a resolver that took CreateContactInput could not
@@ -130,6 +157,10 @@ type ContactResolution struct {
 	// on the rival — preferring a lane for routing merges nobody, writing
 	// keys across records is what merges contacts.
 	Conflict *LaneConflict
+	// Reviews holds the records the review lanes paired the candidate with, the
+	// one named above first. Writers file each of them, and a reader that
+	// shows one picks the first the caller may see (firstVisibleReview).
+	Reviews []ReviewMatch
 }
 
 // DedupeContact is PO-F-1, the single contact-matching implementation —
@@ -143,13 +174,7 @@ func DedupeContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactR
 	if res, routed := routeExact(lanes); routed {
 		return res, nil
 	}
-	// A nameless captured contact never fuzzy-matches: with no name there
-	// is nothing to score, and company_match alone would collide every
-	// colleague onto one record.
-	if NormalizeContactName(c.FullName) == "" {
-		return ContactResolution{Decision: DecisionNoMatch}, nil
-	}
-	return fuzzyContact(ctx, tx, c)
+	return reviewContact(ctx, tx, c)
 }
 
 // contactCandidateRow is one row of the restricted candidate set.
@@ -217,83 +242,53 @@ func fuzzyContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactRe
 		   AND ($3::uuid IS NULL OR p.id <> $3)
 		   AND (f_fold_apostrophes(lower(p.full_name)) % f_fold_apostrophes(lower($1))
 		        OR ($2::uuid IS NOT NULL AND r.company_id = $2)
-		        OR `+exactNameKeySQL("p.full_name")+` = `+exactNameKeySQL("$1")+`)`,
-		c.FullName, c.CurrentPrimaryCompanyID, c.ExcludeID)
+		        OR `+exactNameKeySQL("p.full_name")+` = `+exactNameKeySQL("$1")+`
+		        OR `+exactDigraphNameKeySQL("p.full_name")+` = `+exactDigraphNameKeySQL("$1")+`)
+		 ORDER BY similarity(f_fold_apostrophes(lower(p.full_name)), f_fold_apostrophes(lower($1))) DESC, p.id
+		 LIMIT $4`,
+		c.FullName, c.CurrentPrimaryCompanyID, c.ExcludeID, dedupeCandidateRows)
 	if err != nil {
 		return ContactResolution{}, fmt.Errorf("dedupe contact candidate set: %w", err)
 	}
 	defer rows.Close()
 
-	best := ContactResolution{Decision: DecisionNoMatch}
-	// The best name-IDENTICAL row, tracked apart from the best-scoring one
-	// because they are not the same question and the winner of one is often not
-	// the winner of the other: a near-name at a matching employer outscores an
-	// exact name with no employer known, so reading the name lane off `best`
-	// would lose exactly the pair it exists to catch.
-	sameName := ContactResolution{Decision: DecisionNoMatch}
-	candidateKey := NormalizeContactName(c.FullName)
+	// One contact can come back once per employer domain, so each keeps its
+	// best score before it is judged.
+	scored := map[ids.ContactID]ReviewMatch{}
 	for rows.Next() {
 		var row contactCandidateRow
 		if err := rows.Scan(&row.id, &row.fullName, &row.companyID, &row.companyDomain, &row.mailDomains); err != nil {
 			return ContactResolution{}, fmt.Errorf("scan contact candidate: %w", err)
 		}
-		confidence := contactConfidence(c, row)
-		// Equal confidence resolves to the lowest contact id — a total
-		// order, so the queue does not shuffle between runs.
-		if confidence > best.Confidence ||
-			(confidence == best.Confidence && best.ContactID != (ids.ContactID{}) && row.id.String() < best.ContactID.String()) {
-			best.Confidence, best.ContactID = confidence, row.id
+		match := ReviewMatch{ContactID: row.id, Confidence: contactConfidence(c, row)}
+		switch {
+		case match.Confidence >= dedupeReviewThreshold:
+			match.Decision = DecisionFuzzyReview
+		case c.QueueNameCollisions && contactNamesCollide(c.FullName, row.fullName):
+			// The name-collision lane: two contacts written the same way are
+			// worth a human's glance even when nothing else agrees. A perfect
+			// name scores 0.55 of a 0.72 bar, and a create carries no employer,
+			// so the fuzzy tier cannot reach this pair. It flags and never
+			// merges: a father and son at one firm are two real records.
+			match.Decision = DecisionNameCollisionReview
+		default:
+			continue
 		}
-		if NormalizeContactName(row.fullName) == candidateKey {
-			// Same tie-break as above, and for the same reason: two incumbents
-			// spelled identically must not shuffle the queue between runs.
-			if confidence > sameName.Confidence ||
-				(sameName.ContactID == (ids.ContactID{})) ||
-				(confidence == sameName.Confidence && row.id.String() < sameName.ContactID.String()) {
-				sameName.Confidence, sameName.ContactID = confidence, row.id
-			}
+		if held, seen := scored[row.id]; !seen || match.Confidence > held.Confidence ||
+			(held.Decision != DecisionFuzzyReview && match.Decision == DecisionFuzzyReview) {
+			scored[row.id] = match
 		}
 	}
 	if err := rows.Err(); err != nil {
 		return ContactResolution{}, fmt.Errorf("drain contact candidates: %w", err)
 	}
-	if best.Confidence >= dedupeReviewThreshold {
-		best.Decision = DecisionFuzzyReview
-		return best, nil
-	}
-	// THE NAME-COLLISION LANE. Two contacts in one workspace written exactly the
-	// same way are worth a human's glance even when nothing else agrees.
-	//
-	// It is a lane of its own rather than a lower threshold, and the difference
-	// is not cosmetic: the weights are shared with company matching, so
-	// moving the bar to admit this pair would drag every company comparison down
-	// with it. An exact name is also not a probability — it either is the same
-	// string or it is not — so scoring it and comparing against a fuzzy bar was
-	// always the wrong instrument.
-	//
-	// WHY IT WAS UNREACHABLE. A perfect name scores 0.55·1.0 and the bar is
-	// 0.72, so the pair could only clear it on employer agreement. But
-	// CreateContactInput carries no employer at all — the employment edge is a
-	// separate call made after the contact exists — so at create time the company
-	// term is structurally 0, and a second business card for someone already in
-	// the workspace was created in silence every time.
-	//
-	// IT FLAGS, IT NEVER MERGES AND NEVER REFUSES. A father and son at one firm
-	// are a real pair of records that share a name and an employer, and an
-	// automatic rule that merged them would destroy data no undo restores. So
-	// this is a question put to a human, which is the same shape the phone lane
-	// already takes for a shared switchboard.
-	if c.QueueNameCollisions && sameName.ContactID != (ids.ContactID{}) {
-		sameName.Decision = DecisionNameCollisionReview
-		return sameName, nil
-	}
-	return ContactResolution{Decision: DecisionNoMatch}, nil
+	return resolutionOf(rankedReviews(scored)), nil
 }
 
 // contactConfidence is the PO-F-1 score: weights sum to 1.0, so the
 // result is in [0,1] and comparable against the threshold directly.
 func contactConfidence(c ContactCandidate, row contactCandidateRow) float64 {
-	name := dedupeNameWeight * nameSimilarity(c.FullName, row.fullName)
+	name := dedupeNameWeight * contactNameSimilarity(c.FullName, row.fullName)
 	if !namesCorroborate(c.FullName, row.fullName) {
 		return name
 	}
@@ -348,11 +343,19 @@ func sharedEmployerDomain(c ContactCandidate, domain string) bool {
 // answer for a caller that built no matcher.
 var consumerMailBaseline = freemail.New(nil, nil)
 
-// candidateSharesDomain reports whether any candidate email sits on an
-// company domain the incumbent is mapped to.
+// candidateSharesDomain reports whether any candidate email sits under the
+// same registrable domain as the incumbent's: `cloud.example.com` and
+// `example.com` are one employer's. freemail.Registrable keeps hosting
+// suffixes such as github.io distinct per tenant. The consumer-mail check in
+// sharedEmployerDomain walks a subdomain up to its registrable domain, so a
+// subdomain of gmail.com still says nothing about an employer.
 func candidateSharesDomain(c ContactCandidate, domain string) bool {
+	want := freemail.Registrable(normalizeDomain(domain))
+	if want == "" {
+		return false
+	}
 	for _, e := range c.Emails {
-		if emailDomain(e) == normalizeDomain(domain) {
+		if freemail.Registrable(emailDomain(e)) == want {
 			return true
 		}
 	}

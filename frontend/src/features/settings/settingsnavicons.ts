@@ -42,7 +42,7 @@ import {
   Workflow,
   Zap,
 } from "lucide-react";
-import type { SettingsPageId } from "./settingscatalog";
+import type { SettingsPageId } from "../../lib/settingscatalog";
 
 /**
  * A lucide glyph per catalog page.

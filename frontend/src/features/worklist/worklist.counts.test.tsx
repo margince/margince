@@ -175,7 +175,7 @@ describe("what the page says about what it is not showing", () => {
     // Waited on the caveat, so the absence below is asserted over a drawn line.
     await waitFor(() => {
       expect(
-        screen.getByText(/Read limit reached for Approvals \(200\+\)/),
+        screen.getByText(/Approvals \(200\+\) may have more items/),
       ).toBeTruthy();
     });
     // "200 of 200 shown - 1 source has more" contradicts itself in one
@@ -183,7 +183,7 @@ describe("what the page says about what it is not showing", () => {
     expect(screen.queryByText(/200 of 200/)).toBeNull();
   });
 
-  it("names the cut whose read hit its limit, and the remedy", async () => {
+  it("names the cut whose read hit its limit", async () => {
     stub(
       day([
         {
@@ -199,7 +199,7 @@ describe("what the page says about what it is not showing", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "1 item shown · Read limit reached for Approvals (200+). See the source limits.",
+          "1 item shown · Approvals (200+) may have more items than this list shows.",
         ),
       ).toBeTruthy();
     });
@@ -226,8 +226,34 @@ describe("what the page says about what it is not showing", () => {
 
     await waitFor(() => {
       expect(
+        screen.getByText(/Approvals \(200\+\), Tasks \(40\+\) may have more/),
+      ).toBeTruthy();
+    });
+  });
+
+  it("names a bounded cut that read nothing without a zero beside it", async () => {
+    stub(
+      day([
+        {
+          category: "decisions",
+          considered: 200,
+          shown: 1,
+          more_available: true,
+        },
+        {
+          category: "deals_at_risk",
+          considered: 0,
+          shown: 0,
+          more_available: true,
+        },
+      ]),
+    );
+    renderWorklist();
+
+    await waitFor(() => {
+      expect(
         screen.getByText(
-          /limit reached for Approvals \(200\+\), Tasks \(40\+\)/,
+          "1 item shown · Approvals (200+), Deals at risk may have more items than this list shows.",
         ),
       ).toBeTruthy();
     });
@@ -264,32 +290,37 @@ describe("what the page says about what it is not showing", () => {
     expect(unfiltered).toContain("5/35");
   });
 
-  // The two link-only narrowings say NOTHING, and for one reason each.
-  //
-  // `changed_since_brief` cuts across every category on a per-row freshness the
-  // counts do not carry. `except_decisions` excludes by SOURCE — the approvals a
-  // brief draws as cards — and these figures are keyed by category, so the
-  // near-miss complement of the `decisions` category would undercount: it drops
-  // an introduction request, which is a decision and is not an approval, that
-  // the server keeps.
-  //
-  // Silence is the honest answer. The danger is silence arrived at by accident,
-  // which is what the per-category lookup produced before — it found nothing,
-  // summed zero considered, and reported a truncated page as complete.
-  it("says nothing where the counts cannot describe the narrowing", () => {
+  // `changed_since_brief` cuts across categories on a per-row freshness the
+  // counts do not carry. `except_decisions` excludes by source, not category.
+  // Its category complement would drop an introduction request the server keeps.
+  // So neither gets a figure; a bounded day still says it may hold more.
+  it("gives no figure where the counts cannot describe the narrowing", () => {
     const page = day([
       { category: "tasks", considered: 30, shown: 5, more_available: true },
       { category: "decisions", considered: 4, shown: 4, more_available: false },
     ]);
     const t = ((key: string, vars?: Record<string, string>) =>
-      `${key}:${vars?.shown}/${vars?.considered}`) as never;
+      vars ? `${key}:${vars.shown}/${vars.considered}` : key) as never;
 
-    expect(completenessText(page, "changed_since_brief", t, "en")).toBeNull();
+    expect(completenessText(page, "changed_since_brief", t, "en")).toBe(
+      "worklist.completeness.boundedSome",
+    );
     // Not "5/30" either: that is the category complement, which is a DIFFERENT
     // population from the one the server returns.
-    expect(completenessText(page, "except_decisions", t, "en")).toBeNull();
+    expect(completenessText(page, "except_decisions", t, "en")).toBe(
+      "worklist.completeness.boundedSome",
+    );
     // The control: the same day, asked a question the counts DO answer, speaks.
-    expect(completenessText(page, "tasks", t, "en")).not.toBeNull();
+    expect(completenessText(page, "tasks", t, "en")).toContain("bounded");
+  });
+
+  it("says nothing under such a narrowing when no category was bounded", () => {
+    const page = day([
+      { category: "tasks", considered: 30, shown: 5, more_available: false },
+    ]);
+    const t = ((key: string) => key) as never;
+
+    expect(completenessText(page, "urgent", t, "en")).toBeNull();
   });
 });
 
@@ -336,7 +367,9 @@ describe("the line compares items with items", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/^200\+ shown\. A source read limit/),
+        screen.getByText(
+          /^200\+ shown\. There may be more items than this list shows\.$/,
+        ),
       ).toBeTruthy();
     });
     expect(screen.queryByText(/200 of 230/)).toBeNull();

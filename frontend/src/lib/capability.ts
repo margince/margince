@@ -97,6 +97,23 @@ export function useCanMutate(): boolean {
   return useMe().data?.authorization?.seat_type === "full";
 }
 
+/** The grant a shared record action needs; its caller states it, never the action. */
+export type RequiredGrant = {
+  readonly object: RbacObject;
+  readonly action: RbacAction;
+};
+
+/**
+ * Whether a shared record action (archive, merge) is refused to this seat by
+ * its grant. False until /me has answered, so no refusal is claimed before the
+ * server has decided what the seat holds.
+ */
+export function useGrantRefused({ object, action }: RequiredGrant): boolean {
+  const allowed = useCanWrite(object, action);
+  const answered = useMe().data?.authorization !== undefined;
+  return answered && !allowed;
+}
+
 /**
  * Both axes, for a control that issues a MUTATING request — the common case.
  *
@@ -301,4 +318,14 @@ export function holdsAdminRole(roles: readonly string[] | undefined): boolean {
 export function useHoldsOperatorSeat(): boolean {
   const roles = useMe().data?.roles ?? [];
   return roles.includes("admin") || roles.includes("ops");
+}
+
+/**
+ * Whether a directory-group grant hands out the `admin` role, which asks for a
+ * typed confirmation before it is saved. It names the role being GRANTED, not
+ * the reader's authority: the server's assignable-roles ceiling still decides
+ * who may grant it. Retired when AssignableRole says what a role may do.
+ */
+export function grantsAdminRole(roleKey: string): boolean {
+  return roleKey === "admin";
 }

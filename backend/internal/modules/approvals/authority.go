@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -27,6 +28,9 @@ import (
 // once: three staged kinds and the target-visibility switch below all name it,
 // and a typo in any of them would silently ask for a grant nobody holds.
 const objectActivity = "activity"
+
+// objectPartner is the RBAC object a partner program write is governed by.
+const objectPartner = "partner"
 
 // objectDeal is the RBAC object a stage move is governed by. Spelled here
 // rather than imported, for targetImportRun's reason: approvals may not import
@@ -78,7 +82,7 @@ const kindHeldDraft = "held_draft"
 // across them would leave the kind half-governed with nothing saying so.
 const (
 	kindDealFollowUp   = "deal_follow_up"
-	kindCommitmentTask = "commitment_task"
+	kindCommitmentTask = approvalsubject.KindCommitmentTask
 	// kindTranscriptProposal is retired: nothing stages it and no effect
 	// applies it. It stays governed so the cards already decided under it stay
 	// readable to whoever decided them.
@@ -87,7 +91,7 @@ const (
 
 // retiredKinds are governed for reading and refused for approving: see
 // kindTranscriptProposal.
-var retiredKinds = map[string]bool{kindTranscriptProposal: true}
+var retiredKinds = map[string]bool{kindTranscriptProposal: true, kindCommunicationReview: true}
 
 // KindScheduledSendHeld is the card a stopped scheduled message raises for the
 // rep who scheduled it (ADR-0104 §5). Exported because compose stages it and
@@ -95,20 +99,13 @@ var retiredKinds = map[string]bool{kindTranscriptProposal: true}
 // lives here, so the edge is injected there and both halves name one kind.
 const KindScheduledSendHeld = "scheduled_send_held"
 
-// KindCommunicationReview is a send the engine refused, put in front of
-// somebody who may decide it goes anyway.
-//
-// NOT SELF-ONLY, unlike the held-message kind above, and that is the whole
-// point of routing one. A rep refused at the keyboard may not hold the
-// authority to override the engine; this card exists so they can ask somebody
-// who does. A kind only its initiator could decide would put the question back
-// in front of the colleague who could not answer it.
-const KindCommunicationReview = "communication_review"
+// kindCommunicationReview is retired: it asked a colleague to decide a refused
+// send, and nothing stages or applies it now. It stays governed so the cards
+// already decided under it stay readable.
+const kindCommunicationReview = "communication_review"
 
 // objectCommunicationException is the RBAC object directing a send answers to,
-// spelled here as identity's policy spells it. Deciding one of these cards IS
-// directing a send, so it takes the same grant the direct-send door takes —
-// anything less would make the card a way around that door.
+// spelled here as identity's policy spells it.
 const objectCommunicationException = "communication_exception"
 
 // decisionGrants maps each stageable kind onto the RBAC its effect needs given
@@ -144,12 +141,9 @@ var decisionGrants = map[string][]grantRequirement{
 	// the two entries are one decision and TestAStepUpIsDecidedByTheLenderAlone
 	// holds them together.
 	KindVolumeRelease: {},
-	// Deciding a refused send is directing it, so it takes the grant the
-	// direct-send door takes. The card is a route to that act, not a second
-	// authority for it — a reviewer who could approve here but not direct
-	// would be releasing work they could not perform, and the effect would
-	// refuse after the decision had already committed.
-	KindCommunicationReview: {{objectCommunicationException, principal.ActionCreate}},
+	// Retired; read only, see kindCommunicationReview. Reading one takes the
+	// grant directing a send takes, as deciding one did.
+	kindCommunicationReview: {{objectCommunicationException, principal.ActionCreate}},
 
 	"advance_deal": {{tableDeal, principal.ActionUpdate}},
 	// progress_deal is advance_deal plus a timeline note; the gated effect
@@ -171,6 +165,10 @@ var decisionGrants = map[string][]grantRequirement{
 	// such pointer. The store gates it on `tag.update` (collections/tagvocab.go
 	// MergeTags), so deciding takes that grant, for disqualify_lead's reason.
 	"merge_tags": {{targetTag, principal.ActionUpdate}},
+	// A set-up writes the partner row and adds `partner` to the company's
+	// relationship types (contacts/partner.go UpsertPartner), which takes both
+	// update grants. Deciding takes the grants the write takes.
+	"set_up_partner": {{tableCompany, principal.ActionUpdate}, {objectPartner, principal.ActionUpdate}},
 	// Retiring a word is gated on `tag.delete` (collections/tags.go ArchiveTag),
 	// so a floored archive is decided on that grant.
 	"archive_tag": {{targetTag, principal.ActionDelete}},
@@ -250,6 +248,9 @@ var decisionGrants = map[string][]grantRequirement{
 	// the domain is free-mail, the company behind them — so deciding it
 	// needs both create grants, exactly as if the approver had typed them in.
 	approvalsubject.KindCounterparty: {{tableContact, principal.ActionCreate}, {tableCompany, principal.ActionCreate}},
+	// Accepting a contact_share request shares the contact with the colleague
+	// who asked, which is the grant the Share button itself requires.
+	approvalsubject.KindContactShare: {{tableContact, principal.ActionUpdate}},
 	// Accepting a vcard_create proposal (an imported card the dedupe pass
 	// refused to create beside its near-match) creates the contact; when the
 	// card names an employer, also the employment edge (relationship create
@@ -400,6 +401,10 @@ func (s *Service) pendingDecidable(ctx context.Context, tx pgx.Tx, id ids.Approv
 }
 
 func (s *Service) pendingDecidableInScope(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, scope ListInput) (bool, error) {
+	return pendingDecidableInScopeAt(ctx, tx, id, scope, s.now())
+}
+
+func pendingDecidableInScopeAt(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, scope ListInput, now time.Time) (bool, error) {
 	if err := actingForAHuman(ctx); err != nil {
 		return false, err
 	}
@@ -411,7 +416,7 @@ func (s *Service) pendingDecidableInScope(ctx context.Context, tx pgx.Tx, id ids
 	if err != nil {
 		return false, err
 	}
-	if !a.PendingAt(s.now()) || !requestedInScope(a, p.UserID, scope) {
+	if !a.PendingAt(now) || !requestedInScope(a, p.UserID, scope) {
 		return false, nil
 	}
 	return decidable(ctx, tx, p, a)

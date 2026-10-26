@@ -94,6 +94,7 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	if withheld {
 		return withheldPresentation(out, activity), nil
 	}
+	out.BodyCompleteness = activity.BodyCompleteness
 
 	parties, err := readEmailParties(ctx, tx, id)
 	if err != nil {
@@ -238,6 +239,7 @@ func readEmailAttachments(ctx context.Context, tx pgx.Tx, id ids.ActivityID) ([]
 		SELECT at.id, at.filename, at.byte_size, at.content_type, at.bytes_withheld
 		  FROM attachment at
 		 WHERE at.entity_type = 'activity' AND at.entity_id = $1 AND at.archived_at IS NULL
+		   AND `+arrivedWithMessage("at")+`
 		 ORDER BY at.created_at, at.id`, id.UUID)
 	if err != nil {
 		return nil, err

@@ -38,13 +38,22 @@ func (s *Store) CommitmentTaskWritten(ctx context.Context, tx pgx.Tx, locators .
 	return written, nil
 }
 
-// VisibleOnlyTo narrows a new activity's audience to one member. A task read
-// out of mail only one member may read must not be readable by anybody else
-// through the records it is filed against.
-func (in *LogActivityInput) VisibleOnlyTo(user ids.UUID) {
-	in.audienceMembers = []AudienceMember{{
-		SubjectType: string(crmcontracts.AudienceMemberSubjectTypeUser), SubjectID: user,
-	}}
+// VisibleOnlyTo narrows a new activity's audience to the named members. A task
+// read out of private mail must not be readable by anybody else through the
+// records it is filed against.
+func (in *LogActivityInput) VisibleOnlyTo(users ...ids.UUID) {
+	in.audienceMembers = make([]AudienceMember, 0, len(users))
+	for _, user := range users {
+		in.audienceMembers = append(in.audienceMembers, AudienceMember{
+			SubjectType: string(crmcontracts.AudienceMemberSubjectTypeUser), SubjectID: user,
+		})
+	}
+}
+
+// AdmitInvitedAssignee lets the task go to an invited colleague, as creating a
+// task by hand does. The commitment writer calls it for the promiser's own task.
+func (in *LogActivityInput) AdmitInvitedAssignee() {
+	in.invitedAssignee = true
 }
 
 // MessageParties is who wrote one message and who it went to, as capture

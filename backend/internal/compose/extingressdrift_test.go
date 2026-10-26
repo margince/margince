@@ -55,6 +55,10 @@ var waivedEnvelopeFields = gatekit.Waive(map[string]string{
 	"CrossDoorIdentity": "what a record is called to EVERY door, which is a CLAIM rather than a description: a record stating one asks to be bound to whatever row already holds it, and binding is what makes two rows' content reachable through each other. " +
 		"Deliberately unpublishable, for the reason participantsAreProviderAttested is. The values are provider-stated — an RFC Message-ID, an iCal UID — and a unit able to assert one could name an identity it never observed and reach the activity holding it. That is the same forgery the inbound-mail rule refuses for a Cc line, reached through a different field. " +
 		"The core fills it only from what a connector read out of the provider's own payload. A unit's record carries none, binds to nothing, and lands under its own natural key — which is what every record did before cross-door identity existed, so the absence costs a unit nothing it had",
+	"OwnerDomainOnly": "a calendar connector's statement that every party of a meeting is on the calendar owner's domain, which the sink may read as internal and drop. " +
+		"A unit imports no calendar meetings, and a unit able to state it could ask the sink to drop a record. The zero value claims nothing, so the record is judged on its addresses alone",
+	"PartiesIncomplete": "a calendar connector's statement that the provider withheld parties, which stops the sink from ever judging the record internal. " +
+		"A unit able to state it could have internal correspondence captured. The zero value claims nothing",
 	"SenderAuthentication": "a receiving server's verdict read from the raw message, which a unit does not hand over. " +
 		"A unit able to state it could vouch for a From it never saw authenticated, and capture would read a forged colleague's mail as ours. " +
 		"The zero value authenticates nobody, which is the safe answer",
@@ -126,12 +130,21 @@ var waivedActivityFields = gatekit.Waive(map[string]string{
 		"Publishing it would let a unit assert a parse it never performed",
 	"CalendarMethod": "empty is the right answer for a unit, for the reason HasCalendarPart's is: the method " +
 		"is read from a calendar part of a raw RFC822 message, and a unit hands over no parts to read it from",
+	"BodyCompleteness": "zero, stored as complete, is the right answer for a unit, for the reason HasCalendarPart's is: the " +
+		"fact comes from the core's MIME walk over a raw RFC822 message, and a unit hands over text it " +
+		"already read",
 	"SentByColleague": "zero is the right answer for a unit. The sink sets it itself, from a From address " +
 		"that exactly matches a seat; a unit stating it would name a colleague as the author of a message " +
 		"the core never checked against its seats",
+	"InvitationFromSeat": "zero is the right answer for a unit, for the reason SentByColleague's is: the sink " +
+		"sets it from a From address it authenticated against a seat; a unit stating it would credit a " +
+		"colleague with an invitation the core never checked",
 	"Envelope": "nil is the right answer for a unit, for the reason HasCalendarPart's is: the To and Cc " +
 		"lists and the link hosts are read from a raw RFC822 message, and a unit hands over none. Nil " +
 		"leaves the Bcc and foreign-link facts unjudged, so the unit's message ranks as it did",
+	"CredentialsMasked": "false is the right answer for a unit. The sink masks every record it is handed " +
+		"and sets the flag itself when that changed the text; a unit stating it would claim a mask the " +
+		"core never performed, and the flag decides which replay proof applies",
 	"judged": "unexported, and the sink sets it from Envelope. A unit stating it would state the " +
 		"conclusion the sink exists to draw",
 })

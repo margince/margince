@@ -1,43 +1,26 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { api } from "../../api/client";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
 import { activityTimeline } from "../../design-system/activitytimeline";
-import { Button, PendingBody } from "../../design-system/atoms";
-import { EmailDetail } from "../../design-system/emaildetail";
-import { EmailEntry } from "../../design-system/emailentry";
-import { EmailText } from "../../design-system/emailtext";
-import { Heading } from "../../design-system/heading";
 import type { NameOf } from "../../design-system/participants";
-import { Popover } from "../../design-system/popover";
-import { SurfaceState } from "../../design-system/surfacestate";
-import { TimelineRow } from "../../design-system/timeline";
 import { groupChronology } from "../../design-system/timelinegroups";
-import { formatDate, formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
-import { type Locale, translatePlural, useLocale, useT } from "../../i18n";
+import type { Locale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import type { RelinkKind } from "./compose";
-import "./composethread.css";
 
 type Activity = components["schemas"]["Activity"];
+type EmailSummary = components["schemas"]["EmailSummary"];
 
 // How much of a long conversation to carry. A reply is written against the
 // recent turns; a thread that has run for a year does not need its first
 // message in the drawer, and fetching all of it costs the composer's open.
 const SHOWN = 12;
 
-// How many conversations to offer as a way in. A reader picking up an account
-// is continuing something recent or starting fresh; a list long enough to
-// scroll is a list they read instead of writing.
-const OFFERED = 5;
-
-// How much of the record's mail to read to find those conversations. Enough
-// that five threads are actually five, on an account whose recent traffic is
-// one busy exchange.
+// How much of the record's mail one page reads to find conversations. A record
+// with a hundred threads is paged and searched rather than read whole.
 const SCANNED = 40;
 
 /**
@@ -102,161 +85,6 @@ export type ThreadRead = {
 };
 
 /**
- * The pane. Newest first, matching the chronology it is drawn from — a reply
- * is written against the last thing said, and that belongs at the top where
- * the reader starts.
- */
-export function ThreadPane({
-  messages,
-  pending,
-  failed,
-  onRetry,
-  named,
-  viewerUserId,
-  nameOf,
-  onLeave,
-  selectedId,
-  onSelect,
-  disabled,
-}: Readonly<{
-  messages: readonly Activity[];
-  pending: boolean;
-  // The read came back refused. Drawn as the failure it is, with the retry,
-  // rather than as an empty conversation — which would be a settled answer
-  // the pane does not have.
-  failed: boolean;
-  onRetry: () => void;
-  viewerUserId?: string;
-  nameOf: NameOf;
-  /**
-   * Whether the reader OPENED this conversation, or the composer found it.
-   *
-   * A reply names its activity: the reader pressed Reply on a message and the
-   * pane is that message's thread. A mail started from the record names none,
-   * and the composer anchors it to the account's latest exchange — so the pane
-   * is a conversation the reader never asked for, and calling it "this
-   * conversation" claimed they had. It is still worth showing, because the
-   * send really will continue it; the heading is what has to say so.
-   */
-  named: boolean;
-  /**
-   * The way back to the list, when the reader chose this conversation.
-   *
-   * A choice with no way out is not one: having picked the wrong thread they
-   * would otherwise have to close the composer and lose whatever they had
-   * typed to reach the other four.
-   */
-  onLeave?: () => void;
-  selectedId?: string;
-  onSelect?: (id: string) => void;
-  disabled?: boolean;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = viewerZone();
-  const [reading, setReading] = useState<string | null>(null);
-  return (
-    <section className="compose-thread" aria-labelledby="compose-thread-head">
-      <div className="compose-thread-head">
-        <Heading size="medium" id="compose-thread-head" className="t-eyebrow">
-          {t(named ? "compose.threadHeading" : "compose.threadContinuing")}
-        </Heading>
-        {onLeave && (
-          <Button
-            className="compose-thread-leave"
-            onClick={onLeave}
-            disabled={disabled}
-          >
-            {t("compose.threadLeave")}
-          </Button>
-        )}
-      </div>
-      <div className="compose-thread-scroll">
-        {pending ? (
-          <PendingBody label={t("compose.threadPending")} lines={3} />
-        ) : (
-          <SurfaceState
-            loadingLabel={t("compose.threadPending")}
-            state={failed ? "failed" : "ready"}
-            emptyLabel={t("compose.threadPending")}
-            detail={{ onRetry }}
-          >
-            <ul className="timeline compose-thread-list">
-              {messages.map((message) => {
-                if (!message.email_summary) {
-                  return activityTimeline([message], viewerUserId, undefined, {
-                    nameOf,
-                    t,
-                    locale,
-                  }).map((entry) => (
-                    <TimelineRow key={entry.id} entry={entry} zone={zone} />
-                  ));
-                }
-                return (
-                  <li
-                    key={message.id}
-                    className="compose-message"
-                    aria-label={`${message.subject || t("email.noSubject")} · ${formatDateTime(message.occurred_at, locale, zone)}`}
-                  >
-                    {message.content_state === "withheld" ||
-                    message.email_summary.display_status === "withheld" ? (
-                      <EmailEntry
-                        summary={message.email_summary}
-                        timestamp={formatDateTime(
-                          message.occurred_at,
-                          locale,
-                          zone,
-                        )}
-                        whyNotOpenable="withheld"
-                      />
-                    ) : (
-                      <EmailEntry
-                        summary={message.email_summary}
-                        timestamp={formatDateTime(
-                          message.occurred_at,
-                          locale,
-                          zone,
-                        )}
-                        onSelect={() => onSelect?.(message.id)}
-                        selected={message.id === selectedId}
-                        disabled={disabled || !onSelect}
-                      />
-                    )}
-                    {message.content_state !== "withheld" &&
-                      message.email_summary?.display_status !== "withheld" && (
-                        <div className="compose-message-actions">
-                          <Popover label={t("compose.previewEmail")} onHover>
-                            <EmailText body={message.body ?? ""} />
-                          </Popover>
-                          <Button
-                            variant="link"
-                            onClick={() => setReading(message.id)}
-                          >
-                            {t("compose.readEmail")}
-                          </Button>
-                        </div>
-                      )}
-                  </li>
-                );
-              })}
-            </ul>
-          </SurfaceState>
-        )}
-      </div>
-      {/* This reading-only view omits record editing and Reply actions so
-          opening evidence cannot retarget or replace the draft underneath. */}
-      {reading && (
-        <EmailDetail
-          activityId={reading}
-          onClose={() => setReading(null)}
-          formatWhen={(iso) => formatDateTime(iso, locale, zone)}
-        />
-      )}
-    </section>
-  );
-}
-
-/**
  * The record's recent conversations, newest first, as ways INTO this message.
  *
  * A composer opened from the record used to anchor itself to the account's
@@ -278,16 +106,24 @@ export function useRecentConversations(
     t: ReturnType<typeof useT>;
     locale: Locale;
   }>,
+  /** Words the threads must hold; empty lists them all, newest first. */
+  search = "",
 ): {
   conversations: readonly Conversation[];
   pending: boolean;
   failed: boolean;
   retry: () => void;
+  /** Older mail is still unread; `loadMore` reads its next page. */
+  more: boolean;
+  loadMore: () => void;
+  loadingMore: boolean;
+  moreFailed: boolean;
 } {
-  const query = useQuery({
-    queryKey: ["compose-recent-threads", entityType, entityId],
-    queryFn: async () => {
-      return unwrap(
+  const term = search.trim();
+  const query = useInfiniteQuery({
+    queryKey: ["compose-recent-threads", entityType, entityId, term],
+    queryFn: async ({ pageParam }) =>
+      unwrap(
         await api.GET("/activities", {
           params: {
             query: {
@@ -295,18 +131,26 @@ export function useRecentConversations(
               entity_id: entityId,
               kind: "email",
               limit: SCANNED,
+              ...(pageParam ? { cursor: pageParam } : {}),
+              ...(term ? { q: term } : {}),
             },
           },
         }),
-      );
-    },
+      ),
+    initialPageParam: FIRST_PAGE,
+    // A response without its page block is read as the last page.
+    getNextPageParam: (last) =>
+      last.page?.has_more && last.page.next_cursor
+        ? last.page.next_cursor
+        : undefined,
     enabled,
   });
   // A message this reader is not in the audience for cannot be a way in: its
   // subject and body come back null, and the draft endpoint — which gates on
   // content, not discovery — answers 404 for it. Offered, it would be a blank
   // row that dead-ends the composer.
-  const readable = (query.data?.data ?? []).filter(
+  const loaded = (query.data?.pages ?? []).flatMap((page) => page.data ?? []);
+  const readable = loaded.filter(
     (activity) => activity.content_state !== "withheld",
   );
   const entries = activityTimeline(readable, undefined, undefined, who);
@@ -317,7 +161,6 @@ export function useRecentConversations(
   // draws them.
   const conversations = groupChronology(entries)
     .filter((group) => group.kind !== "bulk")
-    .slice(0, OFFERED)
     .map((group) => ({
       // The newest member: continuing a conversation means answering its last
       // message, which is the same activity a Reply on the History tab names.
@@ -327,6 +170,10 @@ export function useRecentConversations(
       atIso: group.entries[0]?.atIso ?? "",
       count: group.entries.length,
       partial: group.partial,
+      summary: group.entries[0]?.emailSummary,
+      // Every message the run holds, so a reply to an older one still finds
+      // the conversation it belongs to.
+      memberIds: group.entries.map((entry) => entry.id),
     }));
   // A failed read is reported as one rather than as a record with no history:
   // folded into an empty list it would send the reader to a fresh mail with
@@ -334,10 +181,18 @@ export function useRecentConversations(
   return {
     conversations,
     pending: query.isPending,
-    failed: query.isError,
+    // A failed older page keeps the threads already read on screen; only a
+    // failed first read is a failed list.
+    failed: query.isLoadingError,
     retry: () => {
       void query.refetch();
     },
+    more: query.hasNextPage,
+    loadMore: () => {
+      void query.fetchNextPage();
+    },
+    loadingMore: query.isFetchingNextPage,
+    moreFailed: query.isFetchNextPageError,
   };
 }
 
@@ -348,84 +203,6 @@ export type Conversation = {
   atIso: string;
   count: number;
   partial: boolean;
+  summary?: EmailSummary;
+  memberIds: readonly string[];
 };
-
-/**
- * The ways in, offered rather than chosen for the reader.
- *
- * Nothing is preselected: the reader pressed a button that says "write an
- * email", and a thread picked for them is the surprise this replaces.
- */
-export function ConversationChoices({
-  conversations,
-  pending,
-  failed,
-  onRetry,
-  onChoose,
-}: Readonly<{
-  conversations: readonly Conversation[];
-  pending: boolean;
-  failed: boolean;
-  onRetry: () => void;
-  onChoose: (anchorId: string) => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = viewerZone();
-  return (
-    <section className="compose-thread" aria-labelledby="compose-choices-head">
-      <Heading
-        size="medium"
-        id="compose-choices-head"
-        className="compose-thread-head t-eyebrow"
-      >
-        {t("compose.continueHeading")}
-      </Heading>
-      <div className="compose-thread-scroll">
-        {pending ? (
-          <PendingBody label={t("compose.threadPending")} lines={3} />
-        ) : (
-          <SurfaceState
-            loadingLabel={t("compose.threadPending")}
-            state={failed ? "failed" : "ready"}
-            emptyLabel={t("compose.threadPending")}
-            detail={{ onRetry }}
-          >
-            <ul className="compose-choices">
-              {conversations.map((conversation) => (
-                <li key={conversation.anchorId}>
-                  <Button
-                    className="compose-choice"
-                    onClick={() => onChoose(conversation.anchorId)}
-                  >
-                    <span className="compose-choice-subject">
-                      {conversation.subject}
-                    </span>
-                    <span className="t-caption">
-                      {[
-                        conversation.counterparts,
-                        formatDate(conversation.atIso, locale, zone),
-                        conversation.count > 1
-                          ? translatePlural(
-                              locale,
-                              "compose.messageCount",
-                              conversation.count,
-                              {
-                                count: formatNumber(conversation.count, locale),
-                              },
-                            )
-                          : undefined,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </SurfaceState>
-        )}
-      </div>
-    </section>
-  );
-}

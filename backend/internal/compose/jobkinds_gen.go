@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "299ce67b6a9b6376b279b8522a295deda69cfe3f0089b740a32b36f632f5c92f"
+const jobContractHash = "ef4d84c19d6c415cd7405407815c7453baf8a32cba7173e5aa032904d878975b"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -24,6 +24,7 @@ type declaredJobArgs interface {
 	river.JobArgs
 
 	AccountScanArgs |
+		AddressCountryCheckArgs |
 		AgentSchedulerArgs |
 		AgentTaskRetentionArgs |
 		AIActivityReconcileArgs |
@@ -58,6 +59,7 @@ type declaredJobArgs interface {
 		DataTaskReconcileArgs |
 		DataTaskRunArgs |
 		DealScoutArgs |
+		DedupeRecheckArgs |
 		DocumentExtractArgs |
 		EmbedDriftSweepArgs |
 		EmbedReindexArgs |
@@ -91,6 +93,8 @@ type declaredJobArgs interface {
 		SendNotificationEmailArgs |
 		OwedVerdictArgs |
 		ParticipantBackfillArgs |
+		PastActivityClockRefoldArgs |
+		RequestProofExpiryArgs |
 		PrivacyRetentionArgs |
 		ProviderLookupSweepArgs |
 		ProviderRunPollSweepArgs |
@@ -151,6 +155,7 @@ var (
 	_ jobs.FleetWide = DataTaskReconcileArgs{}
 	_ jobs.FleetWide = DataTaskRunArgs{}
 	_ jobs.FleetWide = DealScoutArgs{}
+	_ jobs.FleetWide = DedupeRecheckArgs{}
 	_ jobs.FleetWide = EmbedDriftSweepArgs{}
 	_ jobs.FleetWide = EmbedReindexArgs{}
 	_ jobs.FleetWide = EmploymentImportSweepArgs{}

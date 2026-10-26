@@ -13,6 +13,7 @@ package attention
 
 import (
 	"context"
+	"slices"
 	"sort"
 	"time"
 
@@ -168,7 +169,7 @@ func (s *Service) worklistIn(
 	// gives about the findings.
 	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
 	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
-	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf)
+	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf, beside.zone)
 	horizon := reader.meetingHorizon(ctx, day, beside.until)
 	failed := append(append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr}, awaitingErrs...), beside.failed...)
 	out := withPins.worklistFrom(
@@ -221,10 +222,10 @@ func (s *Service) worklistFrom(
 	if limit > worklistMaxPage {
 		limit = worklistMaxPage
 	}
-	rows := classifyDay(day, day.AsOf, s.money)
-	rows = append(append(rows, s.planRows...), s.followUps.rows...)
 	waits, waitNote := s.rankedWaits(ctx, waiting, day.AsOf, scope)
-	rows = append(rows, waits...)
+	// One admission rule for every row the page, Focus and counts will read.
+	rows, refused := admitBySource(ctx, slices.Concat(
+		classifyDay(day, day.AsOf, s.money), s.planRows, s.followUps.rows, waits))
 	// What the night thought of each deal, onto whichever row is about it — the
 	// brief's own row, and the at-risk row the fold below keeps. Stamped BEFORE
 	// the fold so the surviving row can inherit a score even where the night's
@@ -348,7 +349,7 @@ func (s *Service) worklistFrom(
 	// `buyer_replies` and `prospecting` count, so leaving them out let a refused
 	// lane print a confident zero — the one direction these figures must never
 	// fail in.
-	missing := unavailable(ctx, day)
+	missing := append(unavailable(ctx, day), refused...)
 	for _, refusal := range besideTheDay {
 		if refusal != nil {
 			missing = append(missing, *refusal)

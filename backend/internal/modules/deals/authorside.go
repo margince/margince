@@ -14,7 +14,12 @@ package deals
 // context and no transaction, so every case it must answer can be written as a
 // table — which is what makes the seller-authored case testable at all.
 
-import "strings"
+import (
+	"slices"
+	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/owndomain"
+)
 
 // AuthorSide is the Go spelling of deal_stage_evidence.author_side.
 type AuthorSide string
@@ -80,8 +85,14 @@ func AuthorSideOf(direction string, participants []Participant, ownDomains []str
 		// author. It is not attributable to a contact, so it settles nothing.
 		return AuthorUnknown
 	}
-	if author.UserID != "" || addressIsOurs(author.Address, ownDomains) {
+	if author.UserID != "" {
 		return AuthorSeller
+	}
+	switch domainSideOf(author.Address, ownDomains) {
+	case ownDomain:
+		return AuthorSeller
+	case ownSubdomain:
+		return AuthorUnknown
 	}
 	// An identified author who is neither a seat nor on one of our domains is
 	// the counterparty, direction or no direction.
@@ -121,24 +132,35 @@ func authorOf(participants []Participant) (Participant, bool) {
 	return Participant{}, false
 }
 
-// addressIsOurs reports whether an address sits on a domain this installation
-// writes from.
+// domainSide is which side an address's domain puts its writer on.
+type domainSide int
+
+const (
+	outsideDomain domainSide = iota
+	ownDomain
+	ownSubdomain
+)
+
+// domainSideOf places an address by its domain, with both sides folded by
+// owndomain.Fold. Only an own domain itself proves the writer is ours.
 //
-// Compared on the domain alone, case-folded. A sub-domain is NOT ours unless
-// it is listed: treating mail.example.com as example.com would let anybody who
-// can register a look-alike host author seller-side evidence.
-func addressIsOurs(address string, ownDomains []string) bool {
-	at := strings.LastIndex(address, "@")
-	if at < 0 || at == len(address)-1 {
-		return false
+// Capture covers subdomains, but authorship settles a contract milestone. A
+// workspace may own example.com and delegate customer.example.com to a
+// customer, and a subsidiary may write from an own subdomain. Neither side is
+// proven, so a subdomain that owndomain.Set.Covers accepts but nobody listed
+// is ownSubdomain: it settles nothing as seller and nothing as buyer.
+func domainSideOf(address string, ownDomains []string) domainSide {
+	domain := owndomain.OfAddress(address)
+	own := owndomain.New(ownDomains)
+	switch {
+	case domain == "":
+		return outsideDomain
+	case slices.Contains(own.Domains(), domain):
+		return ownDomain
+	case own.CoversDomain(domain):
+		return ownSubdomain
 	}
-	domain := strings.ToLower(address[at+1:])
-	for _, own := range ownDomains {
-		if domain == strings.ToLower(strings.TrimSpace(own)) {
-			return true
-		}
-	}
-	return false
+	return outsideDomain
 }
 
 // TranscriptSourceSystem is the activity.source_system value that marks a body
@@ -181,7 +203,7 @@ func CountsAsBuyerParticipant(p Participant, ownDomains []string) bool {
 		// nobody at all is not an attendee either way.
 		return false
 	}
-	return !addressIsOurs(p.Address, ownDomains)
+	return domainSideOf(p.Address, ownDomains) == outsideDomain
 }
 
 // MeetingProof is what a meeting offers as evidence that it happened.

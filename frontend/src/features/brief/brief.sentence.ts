@@ -79,5 +79,6 @@ const AGENDA_CATEGORY = {
   meetings: "brief.agenda.meetings",
   tasks: "brief.agenda.tasks",
   decisions: "brief.agenda.decisions",
+  relationships: "brief.agenda.relationships",
   system: "brief.agenda.system",
 } as const;

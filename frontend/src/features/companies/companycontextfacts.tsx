@@ -157,9 +157,7 @@ export function CompanyFactsCard({
                   refusal stays in the dialog beside the fields it refused. */}
               {saved && (
                 <PanelBody>
-                  <div className="settings-panel-commit">
-                    <SavedNotice />
-                  </div>
+                  <SavedNotice />
                 </PanelBody>
               )}
             </>

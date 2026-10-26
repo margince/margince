@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/pipelinetrace"
 	"github.com/margince/margince/backend/internal/compose/project360"
+	"github.com/margince/margince/backend/internal/compose/roombrief"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
@@ -135,6 +136,8 @@ func (s *Server) wireContact360(pool *pgxpool.Pool) {
 	// newDealStatusService for why there is only one.
 	s.dealStatusSvc = newDealStatusService(pool)
 	s.dealStatusHandlers = dealstatus.NewHandlers(s.dealStatusSvc)
+	s.roomBriefSvc = newRoomBriefService(pool)
+	s.roomBriefHandlers = roombrief.NewHandlers(s.roomBriefSvc)
 	// No provider is registered, which is the supported configuration rather
 	// than a gap: the surface answers "not connected" and writes nothing
 	// (ADR-0096 D4). Connecting one later is a provider implementation.

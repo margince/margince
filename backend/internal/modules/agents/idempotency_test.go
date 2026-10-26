@@ -692,6 +692,9 @@ func TestARefusedRedemptionGivesTheKeyBack(t *testing.T) {
 // under the same key.
 func TestAStagedCallHoldsNoKey(t *testing.T) {
 	f, _ := approvedRetryFixture(t)
+	automatic, _ := principal.Actor(f.ctx)
+	automatic.PassportID = ids.UUID{}
+	f.ctx = principal.WithActor(f.ctx, automatic)
 	if _, err := f.invoke(t, `{"idempotency_key":"k-1"}`); err == nil {
 		t.Fatal("a 🟡 call with no approval was executed")
 	}

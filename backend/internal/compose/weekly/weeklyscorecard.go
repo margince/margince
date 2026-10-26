@@ -19,12 +19,10 @@ package weekly
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -144,41 +142,6 @@ func scoreWeek(
 	return Scorecard{Lead: lead, Deal: deal}, nil
 }
 
-// ladderRungSQL ranks an open lead status by its position on the ladder, so a
-// transition has a DIRECTION.
-//
-// The rungs are the generated contract's own constants, so a status renamed in
-// crm.yaml stops compiling here rather than silently ranking -1. Their ORDER is
-// this list — the contract's enum is alphabetical and says nothing about
-// direction — and it is the SQL mirror of contacts.LeadStatus.Advances, which is
-// the Go spelling of the same rule.
-//
-// A terminal or unknown status ranks -1 and so is never a step UP, which is
-// right: promoted and disqualified LEAVE the ladder rather than climbing it,
-// and each already has its own count.
-func ladderRungSQL(column string) string {
-	ladder := []crmcontracts.LeadStatus{
-		crmcontracts.LeadStatusNew,
-		crmcontracts.LeadStatusContacted,
-		crmcontracts.LeadStatusEngaged,
-	}
-	var b strings.Builder
-	b.WriteString("CASE " + column)
-	for rung, status := range ladder {
-		fmt.Fprintf(&b, " WHEN '%s' THEN %d", status, rung)
-	}
-	b.WriteString(" ELSE -1 END")
-	return b.String()
-}
-
-// climbedTheLadderSQL is the predicate for a step UP: both ends on the ladder,
-// and the destination above the origin. The Go spelling of this rule is
-// contacts.LeadStatus.Advances, and the two must agree — a gate below holds it.
-func climbedTheLadderSQL() string {
-	from, to := ladderRungSQL("from_status"), ladderRungSQL("to_status")
-	return "(" + from + ") >= 0 AND (" + to + ") > (" + from + ")"
-}
-
 // scoreLeads reads the funnel block, or reports it absent.
 //
 // ABSENT means the rep carried no lead in the window at all — not that nothing
@@ -220,12 +183,6 @@ func scoreLeads(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos, userPos := arg(start), arg(end), arg(userID)
-	// The RECORDER, used only where a meeting names no host — the same
-	// fallback countWeekMeetings applies. captured_by is a principal STRING
-	// rather than a user id, which is why this is not simply userID: comparing
-	// the text column to a uuid is a type error, and comparing it to the bare
-	// uuid text would never match.
-	capturedPos := arg("human:" + userID.String())
 	scope, err := auth.ScopeClauseFor(ctx, "lead", "l", arg)
 	if err != nil {
 		return nil, err
@@ -248,19 +205,7 @@ func scoreLeads(
 	// would describe eight slightly different weeks.
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		WITH mine AS (%[5]s),
-		-- Every status transition on those leads inside the window, one row per
-		-- audit entry. DISTINCT FROM rather than <>: a NULL on either side is a
-		-- change, and <> would silently drop the first transition of a lead
-		-- whose status was NULL before it.
-		moved AS (
-		  SELECT a.entity_id,
-		         a.before->>'status' AS from_status,
-		         a.after->>'status'  AS to_status
-		    FROM audit_log a
-		    JOIN mine ON mine.id = a.entity_id
-		   WHERE a.entity_type = 'lead'
-		     AND a.occurred_at >= $%[1]d AND a.occurred_at < $%[2]d
-		     AND a.before->>'status' IS DISTINCT FROM a.after->>'status'),
+		moved AS (`+LeadMovesSQL("mine", "$%[1]d", "$%[2]d")+`),
 		-- Meetings the rep's leads became something this week. Read from the
 		-- history table, so a meeting booked Monday and held Friday counts in
 		-- BOTH the booked and the held tally, which is what a funnel means.
@@ -269,14 +214,14 @@ func scoreLeads(
 		    FROM activity_meeting_history h
 		    JOIN activity m ON m.id = h.activity_id
 		   WHERE m.kind = 'meeting'
-		     AND `+meetingIsTheirsSQL("$%[3]d", "$%[6]d")+`
+		     AND `+meetingIsTheirsSQL("$%[3]d")+`
 		     AND m.archived_at IS NULL
 		     AND h.effective_at >= $%[1]d AND h.effective_at < $%[2]d
-		     AND (%[7]s))
+		     AND (%[6]s))
 		SELECT
-		  (SELECT count(*) FROM moved WHERE %[8]s),
-		  (SELECT count(*) FROM moved WHERE to_status = 'disqualified'),
-		  (SELECT count(*) FROM moved WHERE to_status = 'promoted'),
+		  (SELECT count(*) FROM moved WHERE move = '`+LeadMoveAdvanced+`'),
+		  (SELECT count(*) FROM moved WHERE move = '`+LeadMoveDisqualified+`'),
+		  (SELECT count(*) FROM moved WHERE move = '`+LeadMovePromoted+`'),
 		  (SELECT count(*) FROM lead l JOIN mine ON mine.id = l.id
 		    WHERE COALESCE(l.routed_at, l.created_at) >= $%[1]d
 		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d
@@ -289,8 +234,7 @@ func scoreLeads(
 		  (SELECT count(*) FROM met WHERE status = 'held' AND NOT partial_pre_history),
 		  (SELECT count(*) FROM met WHERE status = 'no_show' AND NOT partial_pre_history),
 		  (SELECT count(*) FROM met WHERE partial_pre_history)`,
-		startPos, endPos, userPos, scope, mine, capturedPos, meetingScope,
-		climbedTheLadderSQL()), args...).
+		startPos, endPos, userPos, scope, mine, meetingScope), args...).
 		Scan(&block.Advanced, &block.Disqualified, &block.Promoted,
 			&block.AnsweredInTarget, &block.Breached,
 			&block.Booked, &block.Held, &block.NoShow, &block.PartialHistory)

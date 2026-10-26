@@ -6,8 +6,8 @@ import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { isMailbox } from "../../format/connectorprovider";
+import { useConnectors } from "../../lib/connectors";
 import { throwProblem } from "../../lib/problem";
-import { useConnectors } from "./connectors";
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 

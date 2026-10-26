@@ -509,13 +509,13 @@ func TestTheCompanyListNarrowsByIndustryAndSizeBand(t *testing.T) {
 	setFirmographics(t, e, small, "Software", "1-10")
 	setFirmographics(t, e, big, "Software", "1001-5000")
 
-	industry := "Software"
+	industry := "software"
 	page, _, err := e.Contacts.ListCompanies(e.Admin(), contacts.ListCompaniesInput{Industry: &industry})
 	if err != nil {
 		t.Fatalf("listing by industry: %v", err)
 	}
 	if len(page) != 2 {
-		t.Fatalf("industry=Software returned %d accounts, want both software accounts", len(page))
+		t.Fatalf("industry=software returned %d accounts, want both software accounts", len(page))
 	}
 
 	band := "1-10"
@@ -525,6 +525,13 @@ func TestTheCompanyListNarrowsByIndustryAndSizeBand(t *testing.T) {
 	}
 	if len(sized) != 1 || ids.UUID(sized[0].Id) != small {
 		t.Fatalf("size_band=1-10 returned %d accounts, want only the small one", len(sized))
+	}
+
+	// Text the list does not define is refused for the same reason: an empty
+	// page would read as "no software accounts".
+	asWritten := "Software"
+	if _, _, err := e.Contacts.ListCompanies(e.Admin(), contacts.ListCompaniesInput{Industry: &asWritten}); err == nil {
+		t.Fatal("an industry outside the list was accepted; want a validation refusal")
 	}
 
 	// An unknown band is refused rather than answered with an empty page:

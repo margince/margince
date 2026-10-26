@@ -15,5 +15,5 @@
 // the outcome into the review it is about to freeze. Nothing here reads a
 // review, and the review never writes a plan.
 //
-// Tables owned: weekly_plan, weekly_plan_commitment
+// Tables owned: docs/reference/entity-model/weeklyplan.md.
 package weeklyplan

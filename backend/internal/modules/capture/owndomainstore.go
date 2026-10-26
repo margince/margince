@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -87,7 +88,7 @@ func (s *OwnDomainStore) List(ctx context.Context) (OwnDomainList, error) {
 		}
 		// The same set the capture drop reads, so the screen cannot call a
 		// domain unconfirmed while capture already treats it as ours.
-		trusted, err := trustedOwnDomainsTx(ctx, tx)
+		trusted, err := TrustedOwnDomainsTx(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -154,7 +155,7 @@ func (s *OwnDomainStore) Colleagues(ctx context.Context) (InternalDomains, error
 	var own InternalDomains
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		own, err = trustedOwnDomainsTx(ctx, tx)
+		own, err = TrustedOwnDomainsTx(ctx, tx)
 		return err
 	})
 	return own, err
@@ -257,7 +258,7 @@ func (s *OwnDomainStore) Remove(ctx context.Context, raw string) error {
 	// After the gate: "@" and " " both normalize to nothing, and answering 204
 	// for them without checking the grant would leave a hole the size of one
 	// unusual path segment.
-	domain := normalizeDomain(strings.TrimPrefix(strings.TrimSpace(raw), "@"))
+	domain := owndomain.Fold(strings.TrimPrefix(strings.TrimSpace(raw), "@"))
 	if domain == "" {
 		return nil
 	}
@@ -325,7 +326,7 @@ func ValidOwnDomain(raw string) (string, error) {
 	case len(domain) > 253:
 		return "", errors.New("that domain is too long")
 	}
-	// normalizeDomain deliberately keeps a domain IDNA cannot read, because its
+	// owndomain.Fold keeps a domain IDNA cannot read, because its
 	// original caller must not turn a parse failure into "internal". Here the
 	// opposite is right: a domain nothing can match is a typo, and storing it
 	// would look like protection that never fires.
@@ -336,7 +337,7 @@ func ValidOwnDomain(raw string) (string, error) {
 	// A public suffix is refused here so the contact typing it is told why.
 	// NewInternalDomains drops one anyway, whichever writer it came from — this
 	// is the readable error, not the guarantee.
-	if !ownableDomain(ascii) {
+	if !owndomain.Ownable(ascii) {
 		return "", fmt.Errorf("%s is a public suffix, not a company's domain — give the domain you register mail under", domain)
 	}
 	return ascii, nil
@@ -364,7 +365,7 @@ func (s *OwnDomainStore) ColleagueDomainsTx(ctx context.Context, tx pgx.Tx) ([]s
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	own, err := trustedOwnDomainsTx(ctx, tx)
+	own, err := TrustedOwnDomainsTx(ctx, tx)
 	if err != nil {
 		return nil, err
 	}

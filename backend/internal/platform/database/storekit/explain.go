@@ -40,6 +40,11 @@ type ExplainNode struct {
 	// masked column, a withheld field, or a fact on a linked record.
 	Value  *string `json:"value,omitempty"`
 	Hidden bool    `json:"hidden,omitempty"`
+	// Linked is what a link field holds on the record, named where the reader
+	// may open the row. Value is nil then; an empty link is no value, not hidden.
+	Linked []LinkedValue `json:"linked,omitempty"`
+	// LinkedTruncated says the record holds more linked values than Linked lists.
+	LinkedTruncated bool `json:"linked_truncated,omitempty"`
 	// ValueLabel names the record a reference value points at, when the
 	// reader may open it.
 	ValueLabel *string `json:"value_label,omitempty"`
@@ -68,6 +73,11 @@ type explainLeaf struct {
 	// references is the row-scoped record type the value names, when it
 	// names one; such a value is shown only if the reader may see that row.
 	references string
+	// linked marks a link field read back; raw receives its values, which
+	// resolveLinked then names for this reader.
+	linked    bool
+	raw       []string
+	reference Reference
 }
 
 // referencedTables are the reference targets whose rows carry a row scope.
@@ -98,7 +108,10 @@ func (q Query) Explain(ctx context.Context, tx pgx.Tx, p Predicate, recordID ids
 	selects := []string{"(" + base + ")", "(" + compiled + ")"}
 	for _, leaf := range leaves {
 		selects = append(selects, "("+leaf.verdict+")")
-		if leaf.hasValue {
+		switch {
+		case leaf.linked:
+			selects = append(selects, leaf.value)
+		case leaf.hasValue:
 			selects = append(selects, "("+leaf.value+")::text")
 		}
 	}
@@ -128,9 +141,13 @@ func scanExplanation(row pgx.Row, root *ExplainNode, leaves []explainLeaf) (Expl
 	var passesBase bool
 	var filterSelects *bool
 	targets := []any{&passesBase, &filterSelects}
-	for _, leaf := range leaves {
+	for i := range leaves {
+		leaf := &leaves[i]
 		targets = append(targets, &leaf.node.Result)
-		if leaf.hasValue {
+		switch {
+		case leaf.linked:
+			targets = append(targets, &leaf.raw)
+		case leaf.hasValue:
 			targets = append(targets, &leaf.node.Value)
 		}
 	}
@@ -177,16 +194,12 @@ func (q Query) explainTree(ctx context.Context, p Predicate, arg func(any) int) 
 		node.Field, node.Op, node.Operand = p.Field, p.Op, p.Value
 		leaf := explainLeaf{node: node, verdict: verdict, references: referencedTables[q.Fields[p.Field].References]}
 		field := q.Fields[p.Field]
-		if field.Withheld || field.Link != "" {
-			node.Hidden = true
-		} else {
-			value, masked, err := q.shownValue(ctx, p.Field, field)
-			if err != nil {
-				return err
-			}
-			node.Hidden = masked
-			leaf.value, leaf.hasValue = value, !masked
+		reading, err := q.readField(ctx, p.Field, field, arg)
+		if err != nil {
+			return err
 		}
+		node.Hidden = reading.hidden
+		leaf.value, leaf.hasValue, leaf.linked, leaf.reference = reading.expr, !reading.hidden && !reading.valueless, reading.linked, field.References
 		leaves = append(leaves, leaf)
 		return nil
 	}
@@ -274,6 +287,14 @@ func isFalse(b *bool) bool { return b != nil && !*b }
 // A row they may open is named beside its id.
 func withholdUnseenReferences(ctx context.Context, tx pgx.Tx, leaves []explainLeaf) error {
 	for _, leaf := range leaves {
+		if leaf.linked {
+			found, err := linkedLookup(ctx, tx, leaf.reference, leaf.raw)
+			if err != nil {
+				return fmt.Errorf("explain: %w", err)
+			}
+			leaf.node.Linked, leaf.node.LinkedTruncated = capLinked(resolveLinked(found, leaf.raw))
+			continue
+		}
 		if leaf.references == "" || leaf.node.Value == nil {
 			continue
 		}

@@ -25,14 +25,15 @@ import (
 
 //nolint:unparam // all four child writers here take (ctx, tx, wsID, contactID, …); dropping wsID from the two that do not spend it would make a reader check which is which at every call site.
 func replaceContactSocial(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, social map[string]any) error {
-	if social == nil {
-		return nil
+	rows, err := contactSocialInputs(social)
+	if social == nil || err != nil {
+		return err
 	}
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM contact_social WHERE contact_id = $1`, contactID); err != nil {
 		return fmt.Errorf("clear contact social rows: %w", err)
 	}
-	for _, row := range contactSocialInputs(social) {
+	for _, row := range rows {
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO contact_social (contact_id, platform, handle) VALUES ($1, $2, $3)`,
 			contactID, row.Platform, row.Handle); err != nil {
@@ -136,7 +137,7 @@ func replaceContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, 
 	}
 	// Only the addresses this contact does not already hold are inserted: a held
 	// address would collide with its own live row on the unique index.
-	return insertContactEmails(ctx, tx, wsID, contactID, source, by, fresh)
+	return insertContactEmails(ctx, tx, wsID, contactID, source, by, fresh, storekit.RefuseErased)
 }
 
 // liveContactEmails answers the addresses a contact currently holds, lowercased
@@ -181,6 +182,9 @@ func parseContactContacts(emails []ContactEmailInput, phones []ContactPhoneInput
 		if err != nil {
 			return err
 		}
+		if err := refuseMachineAddress(parsed.String()); err != nil {
+			return err
+		}
 		emails[i].Email = parsed.String()
 	}
 	for i, p := range phones {
@@ -201,8 +205,28 @@ func parseContactContacts(emails []ContactEmailInput, phones []ContactPhoneInput
 }
 
 //nolint:unparam // the same shape as its siblings; see replaceContactSocial.
-func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, source, by string, emails []ContactEmailInput) error {
+func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, source, by string, emails []ContactEmailInput, erasure storekit.ErasureAdmission) error {
+	// Every address a contact gains is written here, so every create and
+	// update door meets the erasure list without asking for it.
+	addresses := make([]string, 0, len(emails))
 	for _, e := range emails {
+		addresses = append(addresses, e.Email)
+	}
+	// The public booking page's admission skips the refusal; storekit's
+	// AdmitSelfBooking says why. It still takes the lock an erasure orders by.
+	if erasure == storekit.AdmitSelfBooking {
+		if err := storekit.LockSubjectKeys(ctx, tx, nil, addresses); err != nil {
+			return err
+		}
+	} else if err := storekit.RefuseErasedEmails(ctx, tx, "emails", addresses); err != nil {
+		return err
+	}
+	for _, e := range emails {
+		// Capture, channel, promotion and booking reach this writer without
+		// parseContactContacts, so the refusal is asked here too.
+		if err := refuseMachineAddress(e.Email); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO contact_email (contact_id, email, email_type, is_primary, position, source, captured_by, from_correspondence)
 			 VALUES ($1, lower($2), $3, $4, $5, $6, $7, $8)`,
@@ -223,8 +247,8 @@ func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, c
 // ensureContactEmailsUnclaimed is the dedupe pre-check, so the 409 can
 // carry the existing id; the unique index remains the structural
 // guarantee under races. The existing id is disclosed only when the
-// caller could read that row; the conflict itself is still answered
-// (existence-hiding survives the 409).
+// caller could read that row; a caller who cannot gets the held refusal
+// (heldcontact.go).
 func ensureContactEmailsUnclaimed(ctx context.Context, tx pgx.Tx, emails []ContactEmailInput) error {
 	return ensureContactEmailsUnclaimedExcept(ctx, tx, ids.ContactID{}, emails)
 }
@@ -246,15 +270,7 @@ func ensureContactEmailsUnclaimedExcept(ctx context.Context, tx pgx.Tx, self ids
 		if err != nil {
 			return fmt.Errorf("probe email dedupe: %w", err)
 		}
-		dup := &DuplicateEmailError{Email: e.Email}
-		visible, err := auth.VisibleTo(ctx, tx, "contact", existing.UUID)
-		if err != nil {
-			return err
-		}
-		if visible {
-			dup.ExistingID = existing
-		}
-		return dup
+		return claimedEmailRefusal(ctx, tx, e.Email, existing)
 	}
 	return nil
 }
@@ -263,10 +279,11 @@ func ensureContactEmailsUnclaimedExcept(ctx context.Context, tx pgx.Tx, self ids
 // function, the way leadColumns already composes its own two.
 var contactColumns = `id, full_name, first_name, last_name, title, owner_id, visibility,
 	address_line1, address_line2, address_city, address_region, address_postal_code, address_country,
+	` + addressCountriesSQL("contact") + `,
 	merged_into_id, converted_from_lead_id, source, captured_by,
 	source_system, source_author_id, source_author_name,
 	` + sourceAuthorSeatNameSQL("contact") + `,
-	version, created_at, updated_at, archived_at, last_activity_at, legal_hold`
+	version, created_at, updated_at, archived_at, last_activity_at, legal_hold, relationship_mark`
 
 // readContact resolves one contact row; active names the custom-field
 // columns to carry alongside the core ones — nil for internal decision
@@ -303,17 +320,21 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	var id ids.UUID
 	var ownerID, mergedInto, fromLead *ids.UUID
 	var addr crmcontracts.Address
+	var resolvedCountries []string
 	var version int64
 	var visibility string
 	var sourceSystem, authorName, authorSeatName *string
 	var authorID *ids.UUID
+	var mark *string
 
 	dests := []any{
 		&id, &p.FullName, &p.FirstName, &p.LastName, &p.Title, &ownerID, &visibility,
 		&addr.Line1, &addr.Line2, &addr.City, &addr.Region, &addr.PostalCode, &addr.Country,
+		&resolvedCountries,
 		&mergedInto, &fromLead, &p.Source, &p.CapturedBy,
 		&sourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt, &p.LastActivityAt, &p.LegalHold,
+		&mark,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {
@@ -333,7 +354,12 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	if a := addressOrNil(addr); a != nil {
 		p.Address = a
 	}
+	p.AddressCountryMismatch = addressCountryMismatch(addr.Country, resolvedCountries)
 	p.Version = &version
+	if mark != nil {
+		m := crmcontracts.ContactRelationshipMark(*mark)
+		p.RelationshipMark = &m
+	}
 	p.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
 	p.ImportedFrom = provenance.ImportedFrom(sourceSystem)
 	return p, nil

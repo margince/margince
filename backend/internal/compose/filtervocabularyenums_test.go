@@ -120,6 +120,7 @@ var coreOnlyFieldTypes = []storekit.FieldType{
 	storekit.FieldID,
 	// A host column, whose operand is folded to the host the column stores.
 	storekit.FieldDomain,
+	storekit.FieldDistance,
 }
 
 func everyFilterableFieldType() []storekit.FieldType {

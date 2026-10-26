@@ -124,7 +124,8 @@ func TestAWaitingPromiseIsNotWrittenWhenAReadingIsSurer(t *testing.T) {
 }
 
 // A customer who shares a colleague's exact name is not taken for the
-// colleague: the promise is put to a human rather than written as our task.
+// colleague. Nobody can be named as the promiser, so nobody is asked, and the
+// finding stays on the meeting.
 func TestACustomerSharingAColleaguesNameIsNotTakenForThem(t *testing.T) {
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
@@ -135,9 +136,12 @@ func TestACustomerSharingAColleaguesNameIsNotTakenForThem(t *testing.T) {
 	e.linkTranscriptContact(t, ids.UUID(contact.Id))
 
 	read := e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.95)})
-	if e.taskCount(t) != 0 || len(read.ProposalIDs) != 1 {
-		t.Errorf("a name both sides answer to became %d task(s) and %d proposal(s); want one proposal",
+	if e.taskCount(t) != 0 || len(read.ProposalIDs) != 0 {
+		t.Errorf("a name both sides answer to became %d task(s) and %d proposal(s); want neither",
 			e.taskCount(t), len(read.ProposalIDs))
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM activity_commitment_admission WHERE NOT current_work`); n != 1 {
+		t.Errorf("the promise is recorded %d time(s) on the meeting, want once", n)
 	}
 }
 
@@ -212,14 +216,14 @@ func TestADismissedPromiseOfOursIsNotProposedAgain(t *testing.T) {
 	}
 }
 
-// Two customers of one name tie a promise to neither: it is put to a human.
+// Two customers of one name tie a promise to neither, and nobody is asked.
 func TestTwoCustomersOfOneNameTieThePromiseToNeither(t *testing.T) {
 	e := setupTranscript(t)
 	linkInes(t, e)
 	linkInes(t, e)
 	read := e.read(t, cannedBrain{reply: ownedReply(t, "Ines Huber", 0.95)})
-	if len(read.ProposalIDs) != 1 {
-		t.Errorf("a name two customers answer to became %d proposals, want one put to a human", len(read.ProposalIDs))
+	if len(read.ProposalIDs) != 0 || e.taskCount(t) != 0 {
+		t.Errorf("a name two customers answer to became %d proposals and %d tasks, want none", len(read.ProposalIDs), e.taskCount(t))
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM conversation_claim WHERE kind = 'commitment_theirs'`); n != 0 {
 		t.Errorf("the promise was filed on %d customers who share the name", n)
@@ -266,9 +270,9 @@ func TestAPendingRetiredTranscriptCardCannotBeApproved(t *testing.T) {
 	e := setupTranscript(t)
 	id := integration.SeedIDRow(t, e.owner, `INSERT INTO approval
 		(id, kind, status, proposed_by, on_behalf_of, proposed_change, diff_hash, expires_at,
-		 target_entity_type, target_entity_id)
+		 target_entity_type, target_entity_id, requested_decider_id, requested_decider_source)
 		VALUES ($1, 'transcript_proposal', 'pending', 'agent:transcript-proposer', $2, '{}', 'retired-2',
-		        now() + interval '1 day', 'activity', $3)`, e.Rep1, e.activity.UUID)
+		        now() + interval '1 day', 'activity', $3, $2, 'on_behalf_of')`, e.Rep1, e.activity.UUID)
 	_, err := e.svc.Decide(e.ctx, ids.From[ids.ApprovalKind](id), true, nil)
 	refusal, ok := errors.AsType[*approvals.PreviewContextError](err)
 	if !ok || refusal.State != "unavailable" {

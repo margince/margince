@@ -5,7 +5,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
-import { PanelBody } from "../../design-system/panel";
+import { Panel, PanelBody } from "../../design-system/panel";
 import { sectionState } from "../../design-system/surfacestate";
 import { formatDate, formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
@@ -263,10 +263,11 @@ export function useSuggestionsBody({
       footer,
     };
   }
-  // How many the cap dropped that this caller should report. The count
-  // describes the whole list, so a narrowed caller reports none. "2 more" under
-  // a filtered card counts advice that card was never going to draw.
-  const notShown = keep ? 0 : (dropped ?? 0);
+  // How many the cap dropped, said once on the page. The finds list says it,
+  // being the list left when the proposed steps are set aside. The proposed steps
+  // report none. "2 more" under them would count advice that panel was never
+  // going to draw.
+  const notShown = keep === proposesAStep ? 0 : (dropped ?? 0);
   const footer =
     notShown > 0 || notNow.failure || write.isError ? (
       <>
@@ -349,7 +350,7 @@ export function useSuggestionsBody({
 // A suggestion that would become a task. The action decides it, not the kind.
 // A rule that names a prepared step offers one whatever it fired on. Reading
 // the kind here would leave the next such rule out.
-function proposesAStep(suggestion: Suggestion): boolean {
+export function proposesAStep(suggestion: Suggestion): boolean {
   return suggestion.action?.kind === "add_task";
 }
 
@@ -374,14 +375,15 @@ export function ProposedNextSteps(
     onOpenEmail?: (activityId: string) => void;
   }>,
 ) {
+  const t = useT();
   const body = useSuggestionsBody({ ...props, keep: proposesAStep });
   if (!body.ready) {
     return null;
   }
   return (
-    <>
+    <Panel title={t("co.next.proposed")}>
       {body.rows}
       {body.footer && <PanelBody>{body.footer}</PanelBody>}
-    </>
+    </Panel>
   );
 }

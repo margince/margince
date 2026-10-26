@@ -70,7 +70,16 @@ const (
 	// one, and cannot be spoofed into an answer by content that wants to look
 	// safe.
 	warningUntrustedContent = "untrusted_content"
+	// warningCaptureGap marks an answer about a contact whose threads include a
+	// colleague with no connected mailbox. Replies only that colleague gets are
+	// absent from the record.
+	warningCaptureGap = "capture_gap"
 )
+
+const captureGapMessage = "A colleague on this contact's threads has not connected a mailbox, " +
+	"so later mail may be missing. Say so. They are listed in capture_gaps and do not know the " +
+	"contact in the sense of this answer: never name them as a route in or as someone to ask. " +
+	"capture_gaps_total counts them all; when it is larger than the list, say how many more there are."
 
 const rowScopeFilteredMessage = "This answer covers only the records your access allows. " +
 	"Others may exist that you cannot see, so report what you found rather than what exists."

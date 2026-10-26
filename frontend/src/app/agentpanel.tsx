@@ -1,11 +1,11 @@
 import { type ReactNode, type RefObject, useId } from "react";
 import { Heading } from "../design-system/heading";
 import type { MarginceCoreState } from "../design-system/margince-core";
-import { settingsHref } from "../features/settings/settingsrouting";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { routeHash } from "../lib/router";
+import { settingsHref } from "../lib/settingsrouting";
 import type { PanelFrame } from "./agentpanelframe";
 import { EdgeLightSetting } from "./agentrail-edgelight";
 import { RailLine } from "./agentrail-line";

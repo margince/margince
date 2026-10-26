@@ -313,11 +313,11 @@ func relinkContactEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.C
 		return 0, err
 	}
 	args := pgx.NamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID, archiveStateKey: time.Now().UTC()}
-	if _, err := tx.Exec(ctx, `UPDATE relationship a SET archived_at = @archived WHERE `+mergeContactEdgeSource+` AND `+mergeContactEdgeDuplicate, args); err != nil {
+	if _, err := mergeEdgeWrite(ctx, tx, `archived_at = @archived`, mergeContactEdgeSource+` AND `+mergeContactEdgeDuplicate, args); err != nil {
 		return 0, err
 	}
-	tag, err := tx.Exec(ctx, `UPDATE relationship a SET contact_id = @target, is_current_primary = `+mergeContactEdgePrimary+` WHERE `+mergeContactEdgeSource, args)
-	return moved + tag.RowsAffected(), err
+	relinked, err := mergeEdgeWrite(ctx, tx, `contact_id = @target, is_current_primary = `+mergeContactEdgePrimary, mergeContactEdgeSource, args)
+	return moved + relinked, err
 }
 
 // relinkWorksWithEdges re-homes the merged contact's works_with pairs, on
@@ -327,17 +327,13 @@ func relinkContactEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.C
 // surviving record already states the fact.
 func relinkWorksWithEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) (int64, error) {
 	args := pgx.NamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID, archiveStateKey: time.Now().UTC()}
-	if _, err := tx.Exec(ctx, `UPDATE relationship a SET archived_at = @archived WHERE `+mergeWorksWithSource+` AND `+mergeWorksWithDuplicate, args); err != nil {
+	if _, err := mergeEdgeWrite(ctx, tx, `archived_at = @archived`, mergeWorksWithSource+` AND `+mergeWorksWithDuplicate, args); err != nil {
 		return 0, err
 	}
-	tag, err := tx.Exec(ctx, `UPDATE relationship a SET
+	return mergeEdgeWrite(ctx, tx, `
  contact_id = CASE WHEN a.contact_id = @source THEN @target::uuid ELSE a.contact_id END,
- counterparty_contact_id = CASE WHEN a.counterparty_contact_id = @source THEN @target::uuid ELSE a.counterparty_contact_id END
- WHERE `+mergeWorksWithSource, args)
-	if err != nil {
-		return 0, err
-	}
-	return tag.RowsAffected(), nil
+ counterparty_contact_id = CASE WHEN a.counterparty_contact_id = @source THEN @target::uuid ELSE a.counterparty_contact_id END`,
+		mergeWorksWithSource, args)
 }
 
 // relinkLinkRows re-homes the pure link tables (activity_link,

@@ -20,8 +20,26 @@ type AttachedDocument struct {
 	Checksum     string    `json:"checksum"`
 	CapturedBy   string    `json:"captured_by"`
 	CreatedAt    time.Time `json:"created_at"`
+	// Category is what kind of document this is; "link" is a document link a
+	// mail carried, which has no bytes.
+	Category string `json:"category,omitempty"`
+	// URL is the address of a link, absent for a file.
+	URL string `json:"url,omitempty"`
 	// ContractID is the agreement the file was filed against, absent for none.
 	ContractID *ids.UUID `json:"contract_id,omitempty"`
+	// Origin is the mail the file came with. Absent on an upload, and absent
+	// when the caller may not read the mail.
+	Origin *DocumentOrigin `json:"origin,omitempty"`
+}
+
+// DocumentOrigin names the mail a file came with, as the Documents tab names it.
+type DocumentOrigin struct {
+	ActivityID    ids.UUID  `json:"activity_id"`
+	Kind          string    `json:"kind"`
+	Subject       string    `json:"subject,omitempty"`
+	OccurredAt    time.Time `json:"occurred_at"`
+	SenderName    string    `json:"sender_name,omitempty"`
+	SenderAddress string    `json:"sender_address,omitempty"`
 }
 
 // DocumentPage is one page of a record's documents, newest first.

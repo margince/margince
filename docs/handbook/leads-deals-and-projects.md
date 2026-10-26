@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/leads frontend/src/features/deals frontend/src/features/projects backend/internal/modules/contacts/leadstatus.go backend/internal/modules/contacts/leadscore.go backend/internal/modules/deals/deal_create.go backend/internal/modules/deals/deal_update.go backend/internal/modules/projects -->
 # Leads, deals and projects
 
 A lead is someone you may sell to. A deal is one opportunity with one company, and a project is work a deal may belong to. See [Records](records.md) for contacts, companies, archiving, undo, custom fields and tags.
@@ -7,7 +8,7 @@ A lead is someone you may sell to. A deal is one opportunity with one company, a
 
 > "Leads are kept apart from Contacts. A lead becomes a contact only when you qualify it."
 
-A lead needs only a source. Email and LinkedIn address are the fields used to
+A lead needs no origin. Email and LinkedIn address are the fields used to
 find copies of one lead; a second live lead with the same email is refused.
 
 ### How do I create a lead?
@@ -15,7 +16,7 @@ To create a lead in Margince, open **Leads** in the sidebar and choose **New lea
 1. Enter the **Full name** (required).
 2. You may fill **Email**, **LinkedIn URL**, **Title** and **Company** (free text, not a link to a company record).
 3. Pick the **Owner** (required; **Unassigned** is one of the choices).
-4. Pick the **Source** (required). It starts on the first source in the list, most often "Created manually".
+4. Pick the **Origin** if you know it: where the lead came from, such as a referral or an event. You may add an **Origin note**, such as the event name. Only the origin counts for the score, and a lead with none gets no points for it.
 5. Fill any custom fields, then choose **Create**.
 Many leads at once come in through Settings → **Data import**.
 Also called: add a prospect, new lead.
@@ -57,9 +58,8 @@ Also called: convert a lead, promote a lead, turn a lead into a contact or oppor
 Qualifying a lead records what started it: a reply that came in, a meeting
 booked, a meeting held, or your own call. The **Why** line in the dialog is
 filled from the captured activity when there is one. If not, it reads "Reason:
-qualified by you." Mail you sent that had no reply **does not count**. A lead
-qualifies when they engage with you; importing it or writing to it is not
-enough.
+qualified by you." Mail you sent that had no reply **does not count**. A lead qualifies when
+they engage with you; importing it or writing to it is not enough.
 
 Then one of two things happens, in a single step:
 
@@ -138,7 +138,7 @@ Also called: restore a lead, undo a disqualification.
 ### How do I edit a lead?
 To edit a lead in Margince, open it from **Leads** and click the value to change in its **Details** panel. Each field changes in place, with no Edit button.
 1. Click a value, change it, and press Enter or pick from the list. Esc cancels. **Email** opens a small form with **Save**.
-2. Fields: **Full name**, **Email**, **Title**, **Company**, **Owner**, **Company routing key**, **Project**, **Source**, custom fields.
+2. Fields: **Full name**, **Email**, **Title**, **Company**, **Owner**, **Company routing key**, **Project**, **Origin**, **Origin note**, custom fields. **Added via** shows how the row came into Margince, and Margince writes it.
 **LinkedIn URL** cannot be changed on a lead. Status moves on the **Lead status** ladder; score moves with **Override score** and a reason. A closed lead "cannot be changed".
 Also called: update a lead, rename a lead, correct a prospect.
 
@@ -180,7 +180,8 @@ Old buying evidence carries its source date and a warning to check whether the b
 ### How do I create a deal?
 To create a deal in Margince, open **Deals** in the sidebar and choose **New deal**.
 1. Enter a **Deal name** (required).
-2. Pick a **Currency** (required: EUR, USD, GBP or CHF) and a **Stage** (required; only open stages are offered).
+2. Pick a **Currency** (required) and a **Stage** (required; only open stages are offered).
+   The form opens on your base currency. Your exchange-rate sheet's currencies come next, then all others.
 3. You may add a **Value**, a **Company**, and a **Project** (offered once a company is chosen).
    You may also add partner details, **Expected close**, and any custom fields.
 4. Choose **Create**. It stays turned off until every required field is filled.
@@ -284,7 +285,7 @@ A project page in Margince brings together everything filed under the work. Its 
 The large column opens with the figures **Open deals**, **Won deals**, **Open commitments** and **Activity**. Then come **Delivery health**, and the **Deals** card with **New deal**.
 Then comes **Open commitments**: open tasks filed under the project, soonest due first, late ones marked **Overdue**. The timeline follows.
 
-The side column of a project page in Margince holds **Companies**, **Responsibilities**, **Stakeholders**, **Contracts**, **Documents** and **Phase history**. **Phase history** records every phase move, with who made it and the reason. Files attached to the project's deals stay on the deals.
+The side column of a project page in Margince holds **Companies**, **Responsibilities**, **Stakeholders**, **Contracts**, **Documents** and **Phase history**. **Phase history** records every phase move, with who made it and the reason. A move an AI agent made names the colleague it worked for and the tool, as in "Anna Weber, via Claude, moved it". If nobody recorded who made a move, Phase history says so; it is never shown as **System**. Files attached to the project's deals stay on the deals.
 
 ### How do I edit or rename a project?
 To edit or rename a project in Margince, open it from **Projects** and choose **More actions** → **Edit project**. Change the fields and choose **Save**.
@@ -295,8 +296,8 @@ Also called: update a project, change the project's end date.
 
 ### How do I change a project's owner?
 To reassign a project in Margince, open it and choose **More actions** → **Assign to a colleague**. Search under **Search colleagues**, pick one and choose **Assign**. It confirms "Assigned to {name}".
-**Edit project** also has **Owner**, which lists every active colleague. A project cannot be claimed, so one with no owner can only be changed by a role that edits every project.
-Also called: hand over a project, change project lead, transfer a project.
+**Edit project** also has **Owner**, which lists the colleagues you may assign to, then **Unassigned**, which releases the project. A project cannot be claimed, so only a role that edits every project or someone it is shared with at **Write** can assign one.
+Also called: hand over a project, change project lead, transfer a project, release a project.
 
 ### How do I add or remove a company on a project?
 To add a company to a project in Margince, open the project and choose **Attach company** in its **Companies** panel. Search under **Search companies by name**, and pick a role under **As** (**Customer**, **Partner** or **Subcontractor**).

@@ -38,7 +38,7 @@ function mount(current = deal) {
   });
   const view = render(
     <StoryProviders>
-      <DealDetails deal={current} meId="u" />
+      <DealDetails deal={current} meId="u" stages={[]} />
     </StoryProviders>,
   );
   return { ...view, sent };

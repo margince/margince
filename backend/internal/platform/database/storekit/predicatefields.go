@@ -44,6 +44,10 @@ const (
 	// making arbitrary rewriting possible everywhere, which is the guarantee
 	// that makes "selects nothing" safe rather than merely unhelpful.
 	FieldDomain FieldType = "domain"
+	// FieldDistance is a place on the earth rather than a column: its Expr is
+	// the table alias, and the one operator is within_radius. It is core-only,
+	// like FieldDomain, because the catalogue offers no custom field of it.
+	FieldDistance FieldType = "distance"
 )
 
 // Field is one entry of a resource's closed filter vocabulary: the API
@@ -53,6 +57,9 @@ const (
 type Field struct {
 	Expr string
 	Type FieldType
+	// GeoTarget names the record type whose coordinate columns a FieldDistance
+	// field measures, as geocode.ColumnsFor knows it.
+	GeoTarget string
 	// Link makes this a correlated-subquery leaf rather than a base-table
 	// one: Expr names the column INSIDE the subquery, and Link is the
 	// EXISTS template — exactly one %s — the compiled comparison is
@@ -61,6 +68,9 @@ type Field struct {
 	// join), and a link row is present or absent where a column is null
 	// or not. Empty for every base-table field.
 	Link string
+	// ReadsLink says the values behind Link may be read back to a reader, so an
+	// explanation names them. A Link field without it reads as hidden.
+	ReadsLink bool
 	// References names the record type this field's ids point at, for a
 	// surface that has to offer the record rather than ask for its uuid.
 	//

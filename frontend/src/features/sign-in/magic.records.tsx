@@ -19,6 +19,7 @@ import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
+import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { ENTITY, isEntityKind } from "../../lib/entity";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
@@ -177,8 +178,8 @@ export function ChangeList({
           <dt className="t-caption">{historyFieldLabel(change.field, t)}</dt>
           <dd>
             {t("magic.records.fromTo", {
-              from: valueText(change.before, t),
-              to: valueText(change.after, t),
+              from: valueText(change.field, change.before, t),
+              to: valueText(change.field, change.after, t),
             })}
           </dd>
         </div>
@@ -189,14 +190,21 @@ export function ChangeList({
 
 // A stored value as text a reader recognises. Absent and empty read as "empty",
 // a list as its items, anything structured as its JSON, all cut to a length.
-function valueText(value: unknown, t: ReturnType<typeof useT>): string {
+function valueText(
+  field: string,
+  value: unknown,
+  t: ReturnType<typeof useT>,
+): string {
   if (value === null || value === undefined || value === "") {
     return t("magic.records.empty_value");
   }
-  const text = Array.isArray(value)
-    ? value.map((item) => String(item)).join(", ")
-    : typeof value === "object"
-      ? JSON.stringify(value)
-      : String(value);
+  const text =
+    field === INDUSTRY_FIELD && typeof value === "string"
+      ? industryWords(t, value)
+      : Array.isArray(value)
+        ? value.map((item) => String(item)).join(", ")
+        : typeof value === "object"
+          ? JSON.stringify(value)
+          : String(value);
   return text.length > VALUE_CHARS ? `${text.slice(0, VALUE_CHARS)}…` : text;
 }

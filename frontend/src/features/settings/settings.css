@@ -82,10 +82,9 @@
   color: var(--warningText);
 }
 
-/* The profile block, borrowed from the record page's identity header
-   (composed.css `.record-head`): the mark, then the name with its standing
-   badges on the same line, then the two meta lines that qualify it. Three loose
-   items in a wide box said nothing about which of them was the subject. */
+/* The profile block: the mark, then the name with its standing badges on the
+   same line, then the two meta lines that qualify it. Three loose items in a
+   wide box said nothing about which of them was the subject. */
 .settings-identity {
   display: flex;
   align-items: center;

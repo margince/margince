@@ -88,6 +88,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithFeedbackCarryReader(ai.NewFeedbackStore(InstallationDB(pool))).
 		WithGrantCarrier(identity.NewServiceFor(InstallationDB(pool))).
 		WithExtensions(ExtensionData()).
+		WithShareRequests(contactShareRequests(pool)).
 		WithInstallationRenamer(installationRenamer(pool))
 }
 
@@ -101,7 +102,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 // company page's own billing section, so a second one would let the finance
 // card and the account panel disagree about who the recipient is.
 func newFinanceHandlers(pool *pgxpool.Pool) finance.Handlers {
-	return finance.NewHandlers(InstallationDB(pool), identity.BaseCurrencyOf).
+	return finance.NewHandlers(InstallationDB(pool), FinanceRates()).
 		WithBillingContacts(financeBillingContacts{contacts: contacts.NewStore(InstallationDB(pool))})
 }
 
@@ -212,6 +213,7 @@ func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 	s.wireOnboardingSurface(pool)
 	s.wireSystemOfRecordReads(pool)
 	s.wireBulkSurface(pool)
+	s.wireHandoverSurface()
 }
 
 // wireStagedSurfaces binds the two surfaces that read the staged queue. They
@@ -246,7 +248,7 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	s.forecastHandlers = forecasting.NewHandlers(
 		newForecastStoreFor(pool),
 		ForecastDeals, ForecastPeriodAt, ForecastWritableScope,
-		ForecastConversionHistory, ForecastForwardMeasure,
+		ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals,
 		func() time.Time { return time.Now().UTC() },
 	)
 	// The floor comes from the constant rather than a setting for now: one
@@ -350,7 +352,8 @@ func (s *Server) wireOnboardingSurface(pool *pgxpool.Pool) {
 	// instance, like every other contacts-backed shadow here: the company
 	// form's write shape is contacts's, the transport is compose's.
 	s.companyHandlers = companyHandlers{
-		store:   contacts.NewStore(InstallationDB(pool)).WithInstallationRenamer(installationRenamer(pool)),
+		store: contacts.NewStore(InstallationDB(pool)).WithInstallationRenamer(installationRenamer(pool)).
+			WithGeocodeEnqueue(boundGeocodeEnqueue),
 		rollout: companyContextRolloutOnboarding,
 	}
 	s.siteReadHandlers = siteReadHandlers{companyContextRollout: companyContextRolloutOnboarding}
@@ -399,6 +402,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	}
 	s.claimHandlers = claimHandlers{contacts: s.contactsStore, deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
 	s.dealCommitmentHandlers = newDealCommitmentHandlers(pool)
+	s.promiseTakeOverHandlers = newPromiseTakeOverHandlers(pool)
 	// The importer maps only core columns (see importTargets for why custom
 	// fields are not among them), so it needs no field catalog of its own.
 	s.importHandlers = importHandlers{db: InstallationDB(pool), uploadLimit: s.uploadLimits.CSVImport}
@@ -471,16 +475,13 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 // confirmation lane's all-three-or-none rule.
 func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 	return consent.NewHandlers(InstallationDB(pool)).
-		// THE SAME APPROVALS ENGINE the inbox decides through, so a card raised
-		// here is answered there rather than sitting in a second queue nobody
-		// reads.
-		WithReviewRouter(reviewRouter{approvals: approvalsServiceWithEffects(pool)}).
 		WithEraser(privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryForDecision).WithExtensions(ExtensionData())).
 		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool), ExtensionData())).
 		WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
 			return identity.InstallationNameForPublicPage(ctx, pool)
 		})).
 		WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf)).
+		WithInstallationZone(identity.ZoneAppliedTx).
 		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf)).
 		// The controller particulars form reads and writes through the settings
 		// store; without it every read and write of the form is a server fault.

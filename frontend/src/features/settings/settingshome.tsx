@@ -2,16 +2,18 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ArrowLeft, Lock } from "lucide-react";
-import type { MouseEvent } from "react";
-import { EmptyState } from "../../design-system/atoms";
+import { type MouseEvent, useState } from "react";
+import { SetupSteps } from "../../components/setup-steps";
+import { Badge, Button, EmptyState } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { RoleBadge } from "../../design-system/rbac";
 import { useTooltip } from "../../design-system/tooltip";
 import { useT } from "../../i18n";
+import { opensElsewhere } from "../../lib/linkclick";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
-import { usePhoneViewport } from "../../lib/viewport";
 import {
   groupHeadingKey,
   readsOnly,
@@ -20,9 +22,11 @@ import {
   type SettingsGroupId,
   type SettingsPage,
   type SettingsReach,
-} from "./settingscatalog";
+} from "../../lib/settingscatalog";
+import { settingsHref } from "../../lib/settingsrouting";
+import { useSetupChecklist } from "../../lib/setup-checklist";
+import { usePhoneViewport } from "../../lib/viewport";
 import { PAGE_ICONS } from "./settingsnavicons";
-import { settingsHref } from "./settingsrouting";
 import { SettingsSearchBox } from "./settingssearchbox";
 
 /**
@@ -35,13 +39,7 @@ import { SettingsSearchBox } from "./settingssearchbox";
  * buttons in the first place.
  */
 function opensInThisTab(event: MouseEvent<HTMLAnchorElement>): boolean {
-  return (
-    event.button === 0 &&
-    !event.metaKey &&
-    !event.ctrlKey &&
-    !event.shiftKey &&
-    !event.altKey
-  );
+  return event.button === 0 && !opensElsewhere(event);
 }
 
 /**
@@ -130,6 +128,8 @@ export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
           directory, so the box comes here. */}
       {phone && <SettingsSearchBox pages={openable} />}
 
+      <YourSetup reach={reach} />
+
       {groupsOf(openable).map(({ group, items }) => (
         <Panel key={group} title={t(groupHeadingKey(group))}>
           <PanelBody>
@@ -185,6 +185,48 @@ export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
         </PanelBody>
       </Panel>
     </div>
+  );
+}
+
+/**
+ * The reader's own setup steps, the ones the top bar reminds them of. Hiding
+ * that reminder leaves this card alone: here the steps are always one look away.
+ */
+function YourSetup({ reach }: Readonly<{ reach: SettingsReach }>) {
+  const t = useT();
+  const setup = useSetupChecklist(reach);
+  const [showDone, setShowDone] = useState(false);
+  if (!setup.settled || setup.total === 0) {
+    return null;
+  }
+  const complete = setup.done === setup.total;
+  return (
+    <Panel
+      title={t("settings.home.setup.title")}
+      titleAction={<Badge>{t("settings.scope.self")}</Badge>}
+    >
+      <PanelBody>
+        {complete && (
+          <Callout
+            tone="success"
+            title={t("settings.home.setup.complete")}
+            actions={
+              showDone ? undefined : (
+                <Button onClick={() => setShowDone(true)}>
+                  {t("settings.home.setup.show")}
+                </Button>
+              )
+            }
+          />
+        )}
+        {(!complete || showDone) && (
+          <SetupSteps
+            steps={setup.steps}
+            count={{ done: setup.done, total: setup.total }}
+          />
+        )}
+      </PanelBody>
+    </Panel>
   );
 }
 

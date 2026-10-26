@@ -273,6 +273,8 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 - [ai-activity-rail.md](explanation/ai-activity-rail.md): how the app shows what the AI does while it
   works.
 - [search-and-retrieval.md](explanation/search-and-retrieval.md): how search finds records.
+- [search-box-ask.md](explanation/search-box-ask.md): how search tells a question from a name, and
+  which document set answers it.
 - [relationship-graph.md](explanation/relationship-graph.md): who on our team knows a contact.
 - [company-context.md](explanation/company-context.md): the profile of the company that runs the
   installation. The company record page is below.

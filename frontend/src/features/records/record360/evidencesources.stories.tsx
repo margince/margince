@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Cited } from "../../../components/citations";
 import { StoryProviders } from "../../../testing/story-utils";
-import type { Cited } from "./citations";
 import { EvidenceSources, fromCitations } from "./evidencesources";
 
 // The basis under a suggestion: the message it rests on as a row of its own,

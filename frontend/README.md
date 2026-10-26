@@ -9,7 +9,7 @@ visual direction is in [DESIGN.md](../DESIGN.md).
 
 ```sh
 pnpm install
-pnpm dev          # Vite dev server; proxies /v1 to http://localhost:8080 (BACKEND_PORT overrides)
+pnpm dev          # Vite dev server; proxies /v1 to http://localhost:18080 (BACKEND_PORT overrides)
 pnpm check        # the frontend gate: Biome + unit tests + tsc + build
 pnpm e2e          # build + the Playwright screen-acceptance harness
 pnpm gen:api      # regenerate src/api/schema.d.ts from ../backend/api/crm.yaml

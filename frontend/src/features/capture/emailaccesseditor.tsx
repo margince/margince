@@ -26,7 +26,7 @@ import type { components } from "../../api/schema";
 import { Badge, Button } from "../../design-system/atoms";
 import { ChoiceList } from "../../design-system/choicelist";
 import { ConfirmModal } from "../../design-system/confirmmodal";
-import { emailDetailKey } from "../../design-system/emaildetail";
+import { emailDetailKey } from "../../design-system/emailmessage";
 import { ErrorLine } from "../../design-system/errorline";
 import { VisibilityLine } from "../../design-system/visibility";
 import { formatNumber } from "../../format/format";

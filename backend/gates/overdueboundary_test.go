@@ -55,8 +55,8 @@ const deadlineOwner = "internal/shared/kernel/deadline"
 // now()` — and nothing in the SQL says which is being asked. A pattern that
 // could tell them apart would be a pattern that could be fooled.
 var schedulerClaims = gatekit.Waive(map[string]string{
-	"internal/compose/runnerservice.go":       "fires a cron-seeded agent when its scheduled moment has arrived. `!now.Before(due)` is the inclusive reading on purpose: a job due exactly on a tick must run on that tick, and nothing here is shown to a reader as late.",
-	"internal/modules/agents/runner/store.go": "claims the next runner job whose scheduled moment has arrived. This is the scheduler's question, and a job due exactly now must run rather than wait a tick; nothing here is shown to a reader as late.",
+	"internal/compose/runnerservice.go":           "fires a cron-seeded agent when its scheduled moment has arrived. `!now.Before(due)` is the inclusive reading on purpose: a job due exactly on a tick must run on that tick, and nothing here is shown to a reader as late.",
+	"internal/modules/agents/runner/claimjobs.go": "claims the next runner job whose scheduled moment has arrived. This is the scheduler's question, and a job due exactly now must run rather than wait a tick; nothing here is shown to a reader as late.",
 })
 
 // asksIfLateInSQL matches a statement asking whether a due column has been

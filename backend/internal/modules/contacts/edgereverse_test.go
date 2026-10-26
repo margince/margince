@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -112,6 +113,23 @@ func TestAKeyTheEdgeImageDoesNotCarryIsLeftUnsupplied(t *testing.T) {
 	}
 	if patch.IsCurrentPrimary != nil || patch.StartedAt != nil || patch.EndedAt != nil {
 		t.Errorf("an absent key reached the patch: %+v", patch)
+	}
+}
+
+// A merge moves an edge to another record, and no patch can put that back. So
+// the image a merge writes is refused rather than half restored.
+func TestAMergeMoveIsNotRestoredByAPatch(t *testing.T) {
+	t.Parallel()
+	source, target := ids.New[ids.ContactKind](), ids.New[ids.ContactKind]()
+	moved := relationshipRow{Kind: employmentKind, ContactID: &source, IsCurrentPrimary: true}
+	landed := moved
+	landed.ContactID, landed.IsCurrentPrimary = &target, false
+	before, _ := storekit.ChangedColumns(relationshipMoveImage(moved), relationshipMoveImage(landed))
+	if held := EdgeFieldsNoPatchRestores(before); len(held) != 1 || held[0] != endContactColumn {
+		t.Errorf("a merge move names %v as unrestorable, want [%s]", held, endContactColumn)
+	}
+	if _, err := relationshipPatchFromImage(before); err == nil {
+		t.Error("the reversal restated the flag and dropped the move")
 	}
 }
 

@@ -93,6 +93,48 @@ func TestACappedColleagueListSaysSo(t *testing.T) {
 	}
 }
 
+// A colleague on the threads with no mailbox is reported beside the list, never
+// inside it. The answer also warns that later mail may be missing. Without the
+// warning a model reads an empty "who knows them" as a complete record.
+func TestAnUncapturedColleagueIsNoticedAndNotListedAsKnowingThem(t *testing.T) {
+	invited := ids.NewV7()
+	tool := whoKnowsTool{list: func(context.Context, ids.UUID) (WhoKnowsReading, error) {
+		return WhoKnowsReading{
+			CaptureGaps:      []CaptureGap{{UserID: invited, DisplayName: "Ben Invited", Invited: true}},
+			CaptureGapsTotal: 3,
+		}, nil
+	}}
+	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
+	r.Register(tool)
+
+	out, err := r.Invoke(scopedAgentCtx(principal.ScopeRead), "who_knows",
+		json.RawMessage(`{"contact_id":"`+ids.NewV7().String()+`"}`))
+	if err != nil {
+		t.Fatalf("who_knows: %v", err)
+	}
+
+	env := sealedEnvelope(t, out)
+	gapWarning, warned := warningNamed(env, warningCaptureGap)
+	if !warned {
+		t.Errorf("an unattended seat on the threads raised no capture_gap warning: %v", env.Warnings)
+	}
+	// The list is capped, so the model must be told to report the rest.
+	if !strings.Contains(gapWarning.Message, "capture_gaps_total") ||
+		!strings.Contains(gapWarning.Message, "how many more") {
+		t.Errorf("the capture_gap warning names neither the total nor the remainder: %q", gapWarning.Message)
+	}
+	var payload WhoKnowsAnswer
+	if err := json.Unmarshal(payloadOf(t, out), &payload); err != nil {
+		t.Fatalf("unreadable payload: %v", err)
+	}
+	if len(payload.Colleagues) != 0 || len(payload.CaptureGaps) != 1 || payload.CaptureGaps[0].UserID != invited {
+		t.Errorf("seat listed wrongly: colleagues=%v gaps=%v", payload.Colleagues, payload.CaptureGaps)
+	}
+	if payload.CaptureGapsTotal != 3 {
+		t.Errorf("capture_gaps_total = %d, want the 3 the reading counted", payload.CaptureGapsTotal)
+	}
+}
+
 // And an uncapped one does not, or the warning says nothing.
 func TestAnUncappedColleagueListClaimsNoCap(t *testing.T) {
 	tool := whoKnowsTool{list: func(context.Context, ids.UUID) (WhoKnowsReading, error) {

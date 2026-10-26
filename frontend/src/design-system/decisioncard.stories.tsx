@@ -2,12 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import {
   type DecisionApproval,
   DecisionCard,
   type DecisionCardLabels,
+  type DecisionCardProps,
   DecisionStatusChip,
   type DecisionStatusLabels,
   DecisionToolChip,
@@ -185,9 +187,7 @@ export const Row: Story = {
 };
 
 // The row at LIST DENSITY: one line, and the proposal behind the line's own
-// control. It is the same decision and the same verbs — Accept and Later keep
-// their words, a rejection and an edit go in the menu — so what changes is how
-// much of it stands open, which is why this is a density and not a layout.
+// control. Reject and Accept keep their words; Later and Edit go in the menu.
 //
 // Check the line in BOTH themes at a narrow width: the question is the only
 // thing on it allowed to be clipped, and a chip that gave way instead would
@@ -250,6 +250,48 @@ export const CompactRowExpired: Story = {
     ...CompactRow.args,
     approval: approval({ expires_at: new Date(NOW - HOUR).toISOString() }),
   },
+};
+
+function HoldingCard(args: DecisionCardProps) {
+  const [held, setHeld] = useState(false);
+  return (
+    <DecisionCard
+      {...args}
+      onReject={() => setHeld(true)}
+      heldRejection={
+        held
+          ? { label: "Rejected", undo: "Undo", onUndo: () => setHeld(false) }
+          : undefined
+      }
+    />
+  );
+}
+
+async function pressReject(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement);
+  await userEvent.click(await canvas.findByRole("button", { name: "Reject" }));
+  await expect(await canvas.findByText("Rejected")).toHaveFocus();
+  await expect(canvas.getByRole("button", { name: "Undo" })).toBeVisible();
+}
+
+// A rejection in its undo window: the verbs give way to the bar until the
+// caller sends it or the reader takes it back.
+export const HeldRejection: Story = {
+  args: Deck.args,
+  render: (args) => <HoldingCard {...args} />,
+  play: async ({ canvasElement }) => pressReject(canvasElement),
+};
+
+export const HeldRejectionCompact: Story = {
+  args: CompactRow.args,
+  render: (args) => <HoldingCard {...args} />,
+  play: async ({ canvasElement }) => pressReject(canvasElement),
+};
+
+export const HeldRejectionPhone: Story = {
+  ...CompactRowPhone,
+  render: (args) => <HoldingCard {...args} />,
+  play: async ({ canvasElement }) => pressReject(canvasElement),
 };
 
 // Under six hours: the edge takes the warning tone. The countdown badge is the
@@ -425,7 +467,7 @@ export const CommitmentProposal: Story = {
       {
         field: "assignment",
         label: "On approval",
-        value: "Creates a task assigned to the person who approves.",
+        value: "Creates a task assigned to Lena Fischer.",
       },
       { field: "due_date", label: "Due", value: "No day stated" },
       {

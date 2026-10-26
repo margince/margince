@@ -16,6 +16,24 @@ export function laneRung(health: Health, tier: string, decisionFirst: boolean) {
   );
 }
 
+export type LaneKeyGap = components["schemas"]["AiLaneNeedingAKey"];
+
+/**
+ * The key the lane a task starts on is missing, when its saved binding cannot
+ * run without one.
+ *
+ * Keyed by the same lane name as laneRung. A saved binding that is not the one
+ * answering then lines up with the rung reporting the answering.
+ */
+export function laneKeyGap(
+  lanes: readonly LaneKeyGap[] | undefined,
+  tier: string,
+  decisionFirst: boolean,
+) {
+  const lane = decisionFirst ? DECIDE_RUNG : tier;
+  return lanes?.find((l) => l.lane === lane);
+}
+
 /**
  * How the lane a task starts on is answering, as the pill the providers list
  * uses for its own state. A decision-first task starts on the decision model,

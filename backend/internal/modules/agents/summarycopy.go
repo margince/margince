@@ -32,7 +32,7 @@ type summaryCopy struct {
 	onDeal, applyTag, addLineItem, updateLineItem, removeLineItem,
 	setStakeholder, removeStakeholder, setCompany, removeCompany,
 	confirmFact, updateFact, createFact, deleteFact, confirmProfileField, updateProfileField,
-	mergeTags, changeList, dismissDuplicate, reopenDuplicate string
+	mergeTags, changeList, dismissDuplicate, reopenDuplicate, setUpPartner string
 
 	// Lifecycle moves. A deal's target and source are stage semantics and pass
 	// through.
@@ -72,7 +72,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		logHead:             "Log a %s",
 		settingFields:       ", setting %s",
 		moreFields:          "+%d more",
-		overwriteHuman:      "Update %s %s: overwrite human-edited %s",
+		overwriteHuman:      "Update %s %s: overwrite %s, edited by hand",
 		merge:               "Merge %s %s into %s",
 		enrich:              "Read %s from %s and propose enrichment of %s",
 		ownDomain:           "its own domain",
@@ -95,6 +95,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		confirmProfileField: "Confirm profile field %s on company %s",
 		updateProfileField:  "Update profile field %s on company %s",
 		mergeTags:           "Fold tag %q into %q, releasing the name %q",
+		setUpPartner:        "Set up a partner program on company %s (role: %s), with no margin tier",
 		promoteLead:         "Promote lead %s to a contact (%s)",
 		disqualifyLead:      "Disqualify lead %s",
 		demoteLead:          "Reverse the promotion of lead %s",
@@ -169,6 +170,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		confirmProfileField: "Profilfeld %s zum Unternehmen %s bestätigen",
 		updateProfileField:  "Profilfeld %s zum Unternehmen %s ändern",
 		mergeTags:           "Tag %q in %q überführen und den Namen %q freigeben",
+		setUpPartner:        "Partnerprogramm für Firma %s einrichten (Rolle: %s), ohne Margenstufe",
 		promoteLead:         "Lead %s zum Kontakt überführen (%s)",
 		disqualifyLead:      "Lead %s disqualifizieren",
 		demoteLead:          "Überführung von Lead %s rückgängig machen",
@@ -243,6 +245,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		confirmProfileField: "Xác nhận trường hồ sơ %s của công ty %s",
 		updateProfileField:  "Cập nhật trường hồ sơ %s của công ty %s",
 		mergeTags:           "Gộp thẻ %q vào %q, giải phóng tên %q",
+		setUpPartner:        "Thiết lập chương trình đối tác cho công ty %s (vai trò: %s), chưa có bậc biên lợi nhuận",
 		promoteLead:         "Chuyển lead %s thành liên hệ (%s)",
 		disqualifyLead:      "Loại lead %s",
 		demoteLead:          "Hoàn tác việc chuyển đổi lead %s",

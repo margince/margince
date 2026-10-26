@@ -136,7 +136,10 @@ func attachedDocument(att crmcontracts.Attachment) agents.AttachedDocument {
 		Checksum:     orZero(att.Checksum),
 		CapturedBy:   orZero(att.CapturedBy),
 		CreatedAt:    att.CreatedAt,
+		Category:     string(orZero(att.Category)),
+		URL:          orZero(att.Url),
 		ContractID:   (*ids.UUID)(att.ContractId),
+		Origin:       documentOrigin(att.Origin),
 	}
 }
 
@@ -146,4 +149,22 @@ func orZero[T any](field *T) T {
 		return zero
 	}
 	return *field
+}
+
+// documentOrigin is the wire origin in the tool's flat shape.
+func documentOrigin(origin *crmcontracts.AttachmentOrigin) *agents.DocumentOrigin {
+	if origin == nil {
+		return nil
+	}
+	out := &agents.DocumentOrigin{
+		ActivityID: ids.UUID(origin.ActivityId),
+		Kind:       origin.Kind,
+		Subject:    orZero(origin.Subject),
+		OccurredAt: origin.OccurredAt,
+	}
+	if origin.Sender != nil {
+		out.SenderName = orZero(origin.Sender.DisplayName)
+		out.SenderAddress = origin.Sender.Address
+	}
+	return out
 }

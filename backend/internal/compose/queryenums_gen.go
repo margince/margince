@@ -22,30 +22,33 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/ai/call-stats/flow": {
 		{Name: "window", Values: []string{"24h", "7d", "30d"}, Array: false, Explode: true},
 	},
+	"GET /v1/ai/calls": {
+		{Name: "outcome", Values: []string{"answered", "fallback", "declined", "failed"}, Array: false, Explode: true},
+	},
 	"GET /v1/analytics/editions/{id}/evidence": {
-		{Name: "metric", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing"}, Array: false, Explode: true},
+		{Name: "metric", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "lead_first_response", "partner_pipeline", "partner_won", "partner_commission", "partner_activity"}, Array: false, Explode: true},
 	},
 	"GET /v1/analytics/evaluate": {
-		{Name: "blocks", Values: []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age", "sdr_outcomes", "target_progress", "forecast_support", "pipeline_movement", "metric_reading"}, Array: true, Explode: true},
+		{Name: "blocks", Values: []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age", "sdr_outcomes", "target_progress", "forecast_support", "pipeline_movement", "metric_reading", "breakdown"}, Array: true, Explode: true},
 		{Name: "close_window", Values: []string{"fiscal_quarter", "all_open"}, Array: false, Explode: true},
-		{Name: "metrics", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing"}, Array: true, Explode: true},
+		{Name: "metrics", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "lead_first_response", "partner_pipeline", "partner_won", "partner_commission", "partner_activity"}, Array: true, Explode: true},
 		{Name: "period", Values: []string{"this_month", "last_month", "last_week", "this_quarter", "custom"}, Array: false, Explode: true},
 		{Name: "scope_kind", Values: []string{"owner", "team", "workspace"}, Array: false, Explode: true},
 		{Name: "target_basis", Values: []string{"month", "fiscal_quarter"}, Array: false, Explode: true},
 	},
 	"GET /v1/analytics/evaluate.csv": {
-		{Name: "blocks", Values: []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age", "sdr_outcomes", "target_progress", "forecast_support", "pipeline_movement", "metric_reading"}, Array: true, Explode: true},
+		{Name: "blocks", Values: []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age", "sdr_outcomes", "target_progress", "forecast_support", "pipeline_movement", "metric_reading", "breakdown"}, Array: true, Explode: true},
 		{Name: "close_window", Values: []string{"fiscal_quarter", "all_open"}, Array: false, Explode: true},
-		{Name: "metrics", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing"}, Array: true, Explode: true},
+		{Name: "metrics", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "lead_first_response", "partner_pipeline", "partner_won", "partner_commission", "partner_activity"}, Array: true, Explode: true},
 		{Name: "period", Values: []string{"this_month", "last_month", "last_week", "this_quarter", "custom"}, Array: false, Explode: true},
 		{Name: "scope_kind", Values: []string{"owner", "team", "workspace"}, Array: false, Explode: true},
 		{Name: "target_basis", Values: []string{"month", "fiscal_quarter"}, Array: false, Explode: true},
 	},
 	"GET /v1/analytics/evidence": {
-		{Name: "blocks", Values: []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age", "sdr_outcomes", "target_progress", "forecast_support", "pipeline_movement", "metric_reading"}, Array: true, Explode: true},
+		{Name: "blocks", Values: []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age", "sdr_outcomes", "target_progress", "forecast_support", "pipeline_movement", "metric_reading", "breakdown"}, Array: true, Explode: true},
 		{Name: "close_window", Values: []string{"fiscal_quarter", "all_open"}, Array: false, Explode: true},
-		{Name: "metric", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing"}, Array: false, Explode: true},
-		{Name: "metrics", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing"}, Array: true, Explode: true},
+		{Name: "metric", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "lead_first_response", "partner_pipeline", "partner_won", "partner_commission", "partner_activity"}, Array: false, Explode: true},
+		{Name: "metrics", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "lead_first_response", "partner_pipeline", "partner_won", "partner_commission", "partner_activity"}, Array: true, Explode: true},
 		{Name: "period", Values: []string{"this_month", "last_month", "last_week", "this_quarter", "custom"}, Array: false, Explode: true},
 		{Name: "scope_kind", Values: []string{"owner", "team", "workspace"}, Array: false, Explode: true},
 		{Name: "target_basis", Values: []string{"month", "fiscal_quarter"}, Array: false, Explode: true},
@@ -67,6 +70,7 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/companies": {
 		{Name: "captured_by_kind", Values: []string{"human", "agent", "connector", "system"}, Array: false, Explode: true},
+		{Name: "industry", Values: []string{"agriculture", "automotive", "aerospace_defense", "chemicals_materials", "construction", "consumer_goods_retail", "education", "energy_utilities", "entertainment_media", "financial_services", "food_beverage", "government_public_sector", "healthcare", "hospitality_tourism", "insurance", "it_services", "software", "legal_professional_services", "logistics_transport", "manufacturing", "marketing_advertising", "mining_metals", "nonprofit", "pharma_biotech", "real_estate", "telecommunications"}, Array: false, Explode: true},
 		{Name: "lifecycle", Values: []string{"unknown", "target", "prospect", "opportunity", "customer", "former_customer", "disqualified"}, Array: false, Explode: true},
 		{Name: "relationship_type", Values: []string{"customer", "partner", "supplier", "investor", "portfolio_company", "competitor", "other"}, Array: false, Explode: true},
 		{Name: "size_band", Values: []string{"1-10", "11-50", "51-200", "201-500", "501-1000", "1001-5000", "5000+"}, Array: false, Explode: true},
@@ -80,7 +84,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "status", Values: []string{"draft", "active", "expired", "cancelled", "superseded"}, Array: false, Explode: true},
 	},
 	"GET /v1/companies/{id}/documents": {
-		{Name: "category", Values: []string{"contract", "offer", "legal", "email_attachment", "message_attachment", "other"}, Array: false, Explode: true},
+		{Name: "category", Values: []string{"contract", "offer", "legal", "email_attachment", "message_attachment", "other", "link"}, Array: false, Explode: true},
 		{Name: "doc_state", Values: []string{"draft", "current", "final", "superseded"}, Array: false, Explode: true},
 	},
 	"GET /v1/companies/{id}/hierarchy-rollup": {
@@ -88,6 +92,7 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/contacts": {
 		{Name: "captured_by_kind", Values: []string{"human", "agent", "connector", "system"}, Array: false, Explode: true},
+		{Name: "relationship_mark", Values: []string{"vendor_marketing", "any"}, Array: false, Explode: true},
 		{Name: "tag_mode", Values: []string{"any", "all", "none"}, Array: false, Explode: true},
 	},
 	"GET /v1/context-search": {
@@ -115,7 +120,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "tag_mode", Values: []string{"any", "all", "none"}, Array: false, Explode: true},
 	},
 	"GET /v1/deals/{id}/documents": {
-		{Name: "category", Values: []string{"contract", "offer", "legal", "email_attachment", "message_attachment", "other"}, Array: false, Explode: true},
+		{Name: "category", Values: []string{"contract", "offer", "legal", "email_attachment", "message_attachment", "other", "link"}, Array: false, Explode: true},
 	},
 	"GET /v1/deals/{id}/offers": {
 		{Name: "status", Values: []string{"draft", "sent", "accepted", "rejected", "expired", "superseded"}, Array: false, Explode: true},
@@ -219,7 +224,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "resource", Values: []string{"contacts", "companies", "deals", "activities", "leads", "partners", "projects"}, Array: false, Explode: true},
 	},
 	"GET /v1/worklist": {
-		{Name: "filter", Values: []string{"all", "urgent", "customer_waiting", "leads", "deals_at_risk", "meetings", "tasks", "decisions", "system", "except_decisions", "changed_since_brief"}, Array: false, Explode: true},
+		{Name: "filter", Values: []string{"all", "urgent", "customer_waiting", "leads", "deals_at_risk", "meetings", "tasks", "decisions", "relationships", "system", "except_decisions", "changed_since_brief"}, Array: false, Explode: true},
 		{Name: "scope", Values: []string{"mine", "unassigned", "team", "all"}, Array: false, Explode: true},
 	},
 }

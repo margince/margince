@@ -35,12 +35,9 @@ func commitmentTaskHistoryTx(ctx context.Context, tx pgx.Tx, source ids.UUID) ([
 	// The first update's before-image retains the original actor even after
 	// human edits. Current participants need not include that actor anymore.
 	unscrubbed := privacy.UnscrubbedImageSQL("h", fmt.Sprintf("$%d", arg(privacy.ScrubVerbs())))
-	query := fmt.Sprintf(`SELECT a.source_id, COALESCE(
- (SELECT h.before->>'assignee_id' FROM audit_log h
-  WHERE h.entity_type='activity' AND h.entity_id=a.id AND h.before ? 'assignee_id' AND (%s)
-  ORDER BY h.occurred_at, h.id LIMIT 1)::uuid, a.assignee_id)
+	query := fmt.Sprintf(`SELECT a.source_id, COALESCE((SELECT m.holder FROM (%s) m), a.assignee_id)
  FROM activity a WHERE a.source_activity_id=$%d AND a.source_system=$%d`,
-		unscrubbed, arg(source), arg(activities.CommitmentTaskSource))
+		firstMoveSQL("activity", "a", "assignee_id", unscrubbed), arg(source), arg(activities.CommitmentTaskSource))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading commitment task identities: %w", err)

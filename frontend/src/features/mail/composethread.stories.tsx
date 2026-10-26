@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import {
@@ -12,12 +11,12 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ComposeModal } from "./compose";
-import { ThreadPane } from "./composethread";
 
 const MESSAGES: components["schemas"]["Activity"][] = [
   "Delivery window",
   "Re: Pricing proposal",
 ].map((subject, index) => ({
+  offers_email: false,
   id: `message-${index}`,
   kind: "email",
   subject,
@@ -45,29 +44,11 @@ const MESSAGES: components["schemas"]["Activity"][] = [
   },
 }));
 
-function Conversation() {
-  const [selected, setSelected] = useState("message-0");
-  return (
-    <StoryProviders>
-      <ThreadPane
-        messages={MESSAGES}
-        selectedId={selected}
-        onSelect={setSelected}
-        pending={false}
-        failed={false}
-        onRetry={() => {}}
-        nameOf={() => undefined}
-        named
-      />
-    </StoryProviders>
-  );
-}
 const meta: Meta = {
   title: "Patterns/Compose mail/Conversation",
   excludeStories: ["selectedReplyRoutes"],
 };
 export default meta;
-export const SelectAndPreview: StoryObj = { render: () => <Conversation /> };
 export function selectedReplyRoutes() {
   return {
     "GET /me": meRoute({}),
@@ -128,9 +109,10 @@ export const DraftedBesideThread: StoryObj = {
     return <SelectedReplyComposer />;
   },
   play: async () => {
-    const dialog = within(await screen.findByRole("dialog"));
+    const frame = await screen.findByRole("dialog");
+    const dialog = within(frame);
     await userEvent.click(
-      await dialog.findByRole("button", { name: "Draft reply with AI" }),
+      await dialog.findByRole("button", { name: "Draft reply" }),
     );
     await dialog.findByText("AI-assisted draft");
     const editor = dialog.getByRole("textbox", { name: "Body" });
@@ -144,11 +126,36 @@ export const DraftedBesideThread: StoryObj = {
     );
     await expect(body.top).toBeGreaterThanOrEqual(0);
     const toolbar = dialog
-      .getByRole("button", { name: "Bold" })
+      .getByRole("toolbar", { name: "Body" })
       .getBoundingClientRect();
     await expect(body.bottom).toBeLessThanOrEqual(toolbar.top);
-    await expect(toolbar.bottom).toBeLessThanOrEqual(send.top);
-    await expect(send.bottom).toBeLessThanOrEqual(window.innerHeight);
+    // The window clips what passes its edge, so a page scroll check cannot see
+    // a foot control pushed out of it.
+    const edge = frame.getBoundingClientRect();
+    const marks = [
+      toolbar,
+      dialog.getByRole("button", { name: "Attach" }).getBoundingClientRect(),
+    ];
+    const sending = [
+      send,
+      dialog
+        .getByRole("button", { name: "Other ways to send" })
+        .getBoundingClientRect(),
+    ];
+    for (const control of [...marks, ...sending]) {
+      await expect(control.right).toBeLessThanOrEqual(edge.right);
+      await expect(control.bottom).toBeLessThanOrEqual(window.innerHeight);
+    }
+    for (const mark of marks) {
+      for (const sendControl of sending) {
+        const apart =
+          mark.right <= sendControl.left ||
+          sendControl.right <= mark.left ||
+          mark.bottom <= sendControl.top ||
+          sendControl.bottom <= mark.top;
+        await expect(apart).toBe(true);
+      }
+    }
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
       window.innerWidth,
     );

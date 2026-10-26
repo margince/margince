@@ -41,8 +41,12 @@ type UpdateCompanyInput struct {
 	SizeBand        *string
 	OwnerID         *ids.UserID
 	ParentCompanyID *ids.CompanyID
-	Address         *crmcontracts.Address
-	IfVersion       *int64
+	// AssessAgainstEntityID, when non-nil, chooses the legal entity whose
+	// offering the growth fit judges this company against. The default
+	// entity's id means the main offering and stores NULL.
+	AssessAgainstEntityID *ids.LegalEntityID
+	Address               *crmcontracts.Address
+	IfVersion             *int64
 	// LinkedInURL, when non-nil, sets or (when empty) clears the canonical
 	// LinkedIn company URL (PO-DDL-N-2). nil leaves it untouched.
 	LinkedInURL *string
@@ -181,7 +185,7 @@ func recordCompanyUpdate(
 	p *storekit.Patch, in UpdateCompanyInput, by string,
 ) error {
 	before, after := p.Before(), p.After()
-	if err := stampEditedDescriptionAuthor(ctx, tx, id, p); err != nil {
+	if err := stampEditedDescriptionAuthor(ctx, tx, id, in, p); err != nil {
 		return err
 	}
 	if err := recheckRenamedCompany(ctx, tx, id, p); err != nil {
@@ -268,8 +272,10 @@ func (s *Store) relocateIfAddressMoved(ctx context.Context, tx pgx.Tx, id ids.Co
 // TYPES by construction — *string as read from the row, string as the request
 // supplied it — and Moved counts a type change as a move, so it would call
 // every send a rewrite. describedDifferently compares the values themselves.
-func stampEditedDescriptionAuthor(ctx context.Context, tx pgx.Tx, id ids.CompanyID, p *storekit.Patch) error {
-	if !describedDifferently(p.Before(), p.After()) {
+func stampEditedDescriptionAuthor(ctx context.Context, tx pgx.Tx, id ids.CompanyID, in UpdateCompanyInput, p *storekit.Patch) error {
+	// A source note the industry funnel appended moves the description without
+	// the contact having written it, so only a sent description claims it.
+	if in.Description == nil || !describedDifferently(p.Before(), p.After()) {
 		return nil
 	}
 	// Not the replace-set principal: that one is empty unless the edit also

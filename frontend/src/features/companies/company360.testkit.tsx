@@ -7,8 +7,9 @@ import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { CompanyScreen } from "./companies";
-import type { SuggestionAction } from "./company360";
-import { TodayOnThisAccount } from "./companytoday";
+import { ProposedNextSteps, type SuggestionAction } from "./company360";
+import { type CompanyOverviewProps, CompanyReading } from "./companyreading";
+import { CompanyTasksFinds } from "./companytasksfinds";
 
 // The rules the composite read exists to keep:
 //
@@ -31,7 +32,7 @@ export const company: Company = {
   // writable (the fail-closed default) and loses the edit controls under test.
   writable: true,
   display_name: "Brandt Automotive GmbH",
-  industry: "Automotive",
+  industry: "automotive",
   captured_by: "human:u1",
   source: "manual",
   version: 1,
@@ -225,19 +226,53 @@ export function renderCompany() {
   render(<CompanyScreen id="o-1" />);
 }
 
-// The advice rows, through the brief the record page mounts them in.
+// The Overview's head as the record page mounts it, every verb a no-op unless
+// the test hands its own in.
+export function overviewReading(
+  three60: Company360,
+  verbs: Partial<CompanyOverviewProps> = {},
+): ReactNode {
+  return (
+    <CompanyReading
+      company={three60.company}
+      view={three60}
+      loading={false}
+      failed={false}
+      onOpenRecord={() => {}}
+      onOpenEmail={() => {}}
+      onOpenTasks={() => {}}
+      onOpenTask={() => {}}
+      onLogActivity={() => {}}
+      onDraftTo={() => {}}
+      onOpenTab={() => {}}
+      {...verbs}
+    />
+  );
+}
+
+// The advice rows, through the Tasks tab the record page mounts them on: the
+// proposed steps, then the other finds.
 export function renderSuggestions(
   three60: Company360,
   onPerform: (action: SuggestionAction) => void = () => {},
 ) {
   render(
-    <TodayOnThisAccount
-      companyId="o-1"
-      view={three60}
-      loading={false}
-      failed={false}
-      onOpenRecord={() => {}}
-      onPerform={onPerform}
-    />,
+    <>
+      <ProposedNextSteps
+        companyId={three60.company.id}
+        view={three60}
+        onOpenReceipt={() => {}}
+      />
+      <CompanyTasksFinds
+        companyId={three60.company.id}
+        view={three60}
+        onPrepareMeeting={() => {}}
+        onDraftTo={() => {}}
+        onOpenRecord={() => {}}
+        onOpenReceipt={() => {}}
+        onOpenEmail={() => {}}
+        onPerform={onPerform}
+      />
+    </>,
   );
 }

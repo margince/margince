@@ -108,7 +108,7 @@ function json(body: unknown): Response {
 // thing from the panel that changed, so if it survives, everything between them
 // did too.
 function recordHead(): Element {
-  const found = document.querySelector(".record-head");
+  const found = document.querySelector(".record-split-head");
   if (!found) {
     throw new Error("the record's header never rendered");
   }
@@ -144,7 +144,8 @@ function currentTab(): string {
   if (!on) {
     throw new Error("no tab is current");
   }
-  return on.textContent ?? "";
+  // The tab's name alone: a tab may carry a count after it.
+  return on.firstChild?.textContent ?? "";
 }
 
 // The routed subtree has to mount the shell and answer two chained reads before

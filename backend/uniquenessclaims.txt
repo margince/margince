@@ -192,7 +192,6 @@ internal/compose/meetingbrief/sections.go#var specSequence
 internal/compose/networkseams.go#func toAgentRisks
 internal/compose/oauthedge.go#func sessionDigest
 internal/compose/offerdraft.go#const offerDraftAgentID
-internal/compose/offeringconfirmed.go#func offeringConfirmed
 internal/compose/pipelinetrace/rungs.go#func unavailable
 internal/compose/project360/sectionswork.go#var entityTypeProject
 internal/compose/queryseam.go#func queryRunner
@@ -327,8 +326,8 @@ internal/modules/capture/channelconnfixture_test.go#method fakeTelegram.clearedW
 internal/modules/capture/channelsend.go#method Registry.liveChannelBindings
 internal/modules/capture/freemaildomain.go#const block at const auditKeyDomain
 internal/modules/capture/gmail/send.go#method Connector.stampedIdentity
+internal/modules/capture/htmltext/htmltext.go#func linkText
 internal/modules/capture/lifecycleaudit.go#func connectionAuditImage
-internal/modules/capture/mailmap/htmltext.go#func linkText
 internal/modules/capture/mailmap/mailmap.go#method Message.Addresses
 internal/modules/capture/mailmap/mailmap.go#type Message.addresses
 internal/modules/capture/oauthflow/oauthflow.go#package oauthflow

@@ -149,7 +149,7 @@ func (s *Store) RecordContext(
 		// disclose who else the message was refused for.
 		return Review{}, apperrors.ErrNotFound
 	}
-	if refusal.ReasonCode != commsauthz.ReasonNoEvidence {
+	if !answerableByContext(refusal.ReasonCode) {
 		return Review{}, &ContextNotAnswerableError{Why: whyAStatementCannotAnswer(refusal.ReasonCode)}
 	}
 	// THE REFUSALS ON THE ROW ARE A SNAPSHOT, taken when the send was refused.
@@ -256,13 +256,12 @@ func whyAStatementCannotAnswer(reason string) string {
 // HeldSubjectsForReview lists the contacts a review was refused for, so a caller
 // re-reading a review knows whom it may take a statement about.
 //
-// It exists because the answer is not simply "every refusal": only the ones
-// coded no_compatible_evidence can be answered this way, and offering a form
-// for the others is offering a box that cannot work.
+// Not every refusal qualifies. Only the ones answerableByContext names can be
+// answered this way. A form for the others would be a box that cannot work.
 func HeldSubjectsForReview(review Review) []ids.ContactID {
 	var out []ids.ContactID
 	for _, r := range review.Refusals {
-		if r.ReasonCode != commsauthz.ReasonNoEvidence || r.SubjectID == "" {
+		if !answerableByContext(r.ReasonCode) || r.SubjectID == "" {
 			continue
 		}
 		id, err := ids.Parse(r.SubjectID)
@@ -310,9 +309,6 @@ func (s *Store) refuseAnExchangeTooOldToCount(ctx context.Context, occurredAt ti
 // statement, in the words the rep needs.
 func whyThisReviewIsNotOpenToIt(state string) string {
 	switch state {
-	case ReviewAwaitingDecision:
-		return "somebody else is deciding this message, so adding evidence now would change the " +
-			"question under them; wait for their answer or withdraw the ask"
 	case ReviewCancelled:
 		return "this message was cancelled, so there is nothing left to send"
 	case ReviewResolved:

@@ -78,7 +78,11 @@ describe("a merged-away lead's page", () => {
       </StoryProviders>,
     );
 
-    expect(await screen.findByText(en["lead.mergedTitle"])).toBeTruthy();
+    expect(
+      await screen.findByText(en["lead.standing.merged"], {
+        selector: ".standing-sheet-word",
+      }),
+    ).toBeTruthy();
     // The pointer is the useful half: the survivor by NAME, as a link, because
     // a reader who learns the lead was merged wants the one it went into.
     const link = await screen.findByRole("link", { name: /Jonas Pedersen/ });
@@ -95,7 +99,7 @@ describe("a merged-away lead's page", () => {
 
     expect(
       await screen.findByText(en["lead.standing.merged"], {
-        selector: ".r360-standing",
+        selector: ".standing-sheet-word",
       }),
     ).toBeTruthy();
     // `contacted` with a first response is "their move" on a live lead. Drawn

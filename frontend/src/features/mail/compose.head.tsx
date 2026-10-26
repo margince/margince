@@ -1,58 +1,36 @@
-import type { components } from "../../api/schema";
+import type { ReactNode } from "react";
 import { Callout } from "../../design-system/callout";
-import {
-  type PickableProject,
-  ProjectPicker,
-} from "../../design-system/projectpicker";
+import { ProjectPicker } from "../../design-system/projectpicker";
+import { Switch } from "../../design-system/switch";
 import type { TokenSuggestion } from "../../design-system/tokeninput";
 import { INTL_LOCALE } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { Transport } from "../../lib/contacttransports";
 import { useProjectRecord } from "../projects/projectrecord";
-import type { VoiceProfile } from "./compose";
 import { StaleThreadNotice } from "./compose.notices";
-import { useThreadProject } from "./composeanchor";
-import { DraftBand } from "./composedraftband";
-import type { DraftProvenance, DraftUnavailable } from "./composedraftcall";
-import {
-  AccountDraftContext,
-  DraftOffer,
-  type PendingAction,
-} from "./composedraftcontext";
+import { colleagueMailboxesOf, useThreadProject } from "./composeanchor";
+import { AccountDraftContext } from "./composedraftcontext";
 import type { ComposeFields } from "./composefields";
 import type { ComposeRecords } from "./composefiling";
 import { AddressBlock, SubjectRow, TransportRow } from "./composehead";
+import { useReplyRecipient } from "./composereplyrecipient";
 import { SavedDraftNotices, type useSavedDraft } from "./composesaveddraft";
 import type { MissingField } from "./composesend";
 import type { useTransportDial } from "./composetarget";
-import type { VoiceDraft } from "./composevoicedraft";
 
 /**
- * The one control that says which project a message belongs to, on a reply
- * and on a message started from an account alike.
- *
- * It carries no explanation of its own. The tag it puts in the Subject field
- * shows there, and a rep who does not want it deletes it like any other text.
- * A sentence saying so would restate what the field already shows.
- *
- * Choosing None takes the tag out. Choosing a project puts it in. Nothing
- * renders when the record reaches no live project, because a list whose only
- * entry is None asks a question with one answer.
+ * The one control that says which project a message belongs to, beside the
+ * subject it tags. A reply and a message started from an account share it.
  */
-function ProjectFiling({
-  projects,
-  projectId,
-  onChange,
-}: Readonly<{
-  projects: readonly PickableProject[];
-  projectId: string;
-  onChange: (next: string) => void;
-}>) {
+export function ProjectFiling({
+  records,
+}: Readonly<{ records: ComposeRecords }>) {
   return (
     <ProjectPicker
-      projects={projects}
-      projectId={projectId}
-      onChange={onChange}
+      projects={records.reachableProjects}
+      projectId={records.projectFiling.projectId}
+      onChange={records.projectFiling.setProjectId}
+      compact
     />
   );
 }
@@ -94,52 +72,57 @@ function ChannelReplyFiling({ activityId }: Readonly<{ activityId?: string }>) {
   );
 }
 
-// The mail-only half of the composer. AI drafting has no endpoint for a channel,
-// and a channel request has no room for recipient and subject inputs. A channel
-// reply renders none of this, so it inherits none of its branching.
+// The key reaches the client's inbox, so it is a choice the rep sees. On by
+// default, because it is what files the client's answer under the project.
+export function SubjectTagSwitch({
+  filing,
+  disabled,
+}: Readonly<{
+  filing: Pick<ComposeRecords["projectFiling"], "tagged" | "setTagged">;
+  disabled: boolean;
+}>) {
+  const t = useT();
+  return (
+    <Switch
+      label={t("compose.projectKeyInSubject")}
+      checked={filing.tagged}
+      onChange={filing.setTagged}
+      disabled={disabled}
+    />
+  );
+}
+
+// The mail-only half of the head: who the message is to and what it is about.
+// A channel request has no room for recipient and subject inputs, so a channel
+// reply renders none of this and inherits none of its branching.
 function MailOnlyFields({
-  replying,
-  intent,
-  onIntentChange,
-  draft,
-  draftUnavailable,
-  provenance,
-  voiceMaturity,
-  reasons,
   to,
   onToChange,
   cc,
   onCcChange,
   bcc,
   onBccChange,
-  bccOpen,
-  onOpenBcc,
+  copiesOpen,
+  onOpenCopies,
   recipients,
   onToEditing,
   subject,
   onSubjectChange,
   rejectionInFlight,
-  answering,
   flagged,
   deadRecipients,
+  filing,
+  tagging,
 }: Readonly<{
-  replying: boolean;
-  intent: string;
-  onIntentChange: (next: string) => void;
-  draft: PendingAction;
-  draftUnavailable: DraftUnavailable | null;
-  provenance: DraftProvenance | null;
-  voiceMaturity: VoiceProfile["maturity"] | undefined;
-  reasons: components["schemas"]["AccountDraftReason"][];
   to: string[];
   onToChange: (next: string[]) => void;
   cc: string[];
   onCcChange: (next: string[]) => void;
   bcc: string[];
   onBccChange: (next: string[]) => void;
-  /** Whether the blind-copy row is drawn. A button until it is asked for. */
-  bccOpen: boolean;
-  onOpenBcc: () => void;
+  /** Whether the copy rows are drawn. A link until they are asked for. */
+  copiesOpen: boolean;
+  onOpenCopies: () => void;
   /** The addresses this record already knows, offered as the reader types. */
   recipients: readonly TokenSuggestion[];
   /** The reader has started typing a recipient, before any is committed. */
@@ -149,35 +132,15 @@ function MailOnlyFields({
   /** The fields a pressed Send is still waiting for. Empty until it is pressed. */
   flagged: ReadonlySet<MissingField>;
   rejectionInFlight: boolean;
-  /** The reply target or the current loading/error state. */
-  answering: string;
   /** The recipients on this draft that are known not to arrive. */
   deadRecipients: readonly string[];
+  /** Which project the message files under, beside the subject it tags. */
+  filing: ReactNode;
+  tagging: ReactNode;
 }>) {
   const t = useT();
-  const offer = (
-    <DraftOffer
-      replying={replying}
-      intent={intent}
-      onIntentChange={onIntentChange}
-      draft={draft}
-      unavailable={draftUnavailable}
-    />
-  );
   return (
     <>
-      {provenance ? (
-        <DraftBand
-          provenance={provenance}
-          maturity={voiceMaturity}
-          reasons={reasons}
-        >
-          {offer}
-        </DraftBand>
-      ) : (
-        offer
-      )}
-      <p className="t-caption mw-answering">{answering}</p>
       <AddressBlock
         to={to}
         onToChange={onToChange}
@@ -185,8 +148,8 @@ function MailOnlyFields({
         onCcChange={onCcChange}
         bcc={bcc}
         onBccChange={onBccChange}
-        bccOpen={bccOpen}
-        onOpenBcc={onOpenBcc}
+        copiesOpen={copiesOpen}
+        onOpenCopies={onOpenCopies}
         suggestions={recipients}
         onToEditing={onToEditing}
         invalidTo={flagged.has("to")}
@@ -200,40 +163,82 @@ function MailOnlyFields({
         invalid={flagged.has("subject")}
         need={t("compose.missingSubject")}
         disabled={rejectionInFlight}
+        aside={filing}
+        under={tagging}
       />
     </>
   );
 }
 
-// Whose conversation this is, when colleagues' mailboxes took it. Covering
-// for a colleague is ordinary work, so it states the fact without a warning
-// or a live region.
-function ColleagueMailboxNotice({
+// Covering for a colleague is ordinary work, so this states the fact without a
+// warning or a live region, and never holds the send.
+export function ReplyStandingNotice({
   seats,
+  offThread,
+  owner,
   nameOf,
 }: Readonly<{
   seats: readonly string[];
+  offThread: boolean;
+  /** The deal owner's name, absent when the roster cannot name the seat. */
+  owner: string | undefined;
   nameOf: (linkType: string, linkId: string) => string | undefined;
 }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  if (seats.length === 0) {
-    return null;
+  const ownerLine = owner ? t("compose.dealOwner", { owner }) : undefined;
+  const offThreadLine = ownerLine
+    ? `${t("compose.notOnThread")} ${ownerLine}`
+    : t("compose.notOnThread");
+  if (seats.length > 0) {
+    return (
+      <Callout kind="standing" title={t("compose.colleagueMailboxTitle")}>
+        <p>
+          {plural("compose.colleagueMailbox", seats.length, {
+            names: new Intl.ListFormat(INTL_LOCALE[locale], {
+              style: "long",
+              type: "conjunction",
+            }).format(
+              seats.map(
+                (seat) => nameOf("user", seat) ?? t("compose.colleagueUnnamed"),
+              ),
+            ),
+          })}
+        </p>
+        {offThread && <p>{offThreadLine}</p>}
+      </Callout>
+    );
   }
+  if (offThread) {
+    return (
+      <Callout kind="standing" title={t("compose.notOnThreadTitle")}>
+        {ownerLine}
+      </Callout>
+    );
+  }
+  return null;
+}
+
+// Read off the reply recipient the To field is offered from, so the notice and
+// the address it explains come from one answer.
+function ReplyStanding({
+  answering,
+  viewerId,
+  nameOf,
+}: Readonly<{
+  answering: string | undefined;
+  viewerId: string | undefined;
+  nameOf: (linkType: string, linkId: string) => string | undefined;
+}>) {
+  const standing = useReplyRecipient(answering);
   return (
-    <Callout kind="standing" title={t("compose.colleagueMailboxTitle")}>
-      {plural("compose.colleagueMailbox", seats.length, {
-        names: new Intl.ListFormat(INTL_LOCALE[locale], {
-          style: "long",
-          type: "conjunction",
-        }).format(
-          seats.map(
-            (seat) => nameOf("user", seat) ?? t("compose.colleagueUnnamed"),
-          ),
-        ),
-      })}
-    </Callout>
+    <ReplyStandingNotice
+      seats={colleagueMailboxesOf(standing.mailboxes, viewerId)}
+      offThread={standing.onThread === false}
+      owner={standing.dealOwnerId && nameOf("user", standing.dealOwnerId)}
+      nameOf={nameOf}
+    />
   );
 }
 
@@ -246,16 +251,14 @@ export function ComposeHead({
   transports,
   onTransportChange,
   staleThread,
-  colleagueSeats,
+  answering,
+  viewerId,
   nameOf,
   activityId,
   records,
   accountCompanyId,
-  answeringLine,
-  replying,
   flagged,
-  voice,
-  voiceMaturity,
+  rejectionInFlight,
   onToEditing,
 }: Readonly<{
   fields: ComposeFields;
@@ -264,17 +267,16 @@ export function ComposeHead({
   transports: readonly Transport[];
   onTransportChange: (next: string) => void;
   staleThread: boolean;
-  colleagueSeats: readonly string[];
+  /** The message a mail reply answers. */
+  answering: string | undefined;
+  viewerId: string | undefined;
   nameOf: (linkType: string, linkId: string) => string | undefined;
   activityId?: string;
   records: ComposeRecords;
   /** The company an account-started message is grounded in, if any. */
   accountCompanyId: string | undefined;
-  answeringLine: string;
-  replying: boolean;
   flagged: ReadonlySet<MissingField>;
-  voice: VoiceDraft;
-  voiceMaturity: VoiceProfile["maturity"] | undefined;
+  rejectionInFlight: boolean;
   onToEditing: () => void;
 }>) {
   const t = useT();
@@ -291,18 +293,14 @@ export function ComposeHead({
         onChange={onTransportChange}
       />
       <StaleThreadNotice stale={staleThread} />
-      <ColleagueMailboxNotice seats={colleagueSeats} nameOf={nameOf} />
-      {/* Mail asks where it files, in the subject tag. A channel send carries
-          no filing field, so it is told what the conversation inherits. */}
-      {dial.isChannelReply ? (
-        <ChannelReplyFiling activityId={activityId} />
-      ) : (
-        <ProjectFiling
-          projects={records.reachableProjects}
-          projectId={records.projectFiling.projectId}
-          onChange={records.projectFiling.setProjectId}
-        />
-      )}
+      <ReplyStanding
+        answering={dial.isChannelReply ? undefined : answering}
+        viewerId={viewerId}
+        nameOf={nameOf}
+      />
+      {/* Mail chooses where it files in the head. A channel send carries no
+          filing field, so it is told what the conversation inherits. */}
+      {dial.isChannelReply && <ChannelReplyFiling activityId={activityId} />}
       {/* The account path's recipient and deal sit with the rows that say
           what the message is. */}
       {accountCompanyId !== undefined && (
@@ -314,36 +312,32 @@ export function ComposeHead({
           onDealChange={account.setDealId}
         />
       )}
-      {/* Drafting and addresses are mail-only: there is no draft-message
-          endpoint, and a channel resolves its recipient on the server. */}
       {!dial.isChannelReply && (
         <MailOnlyFields
-          // The pane answers what is being replied to; the sentence serves
-          // the composer that has no pane.
-          answering={answeringLine}
-          replying={replying}
           flagged={flagged}
-          intent={fields.intent}
-          onIntentChange={fields.setIntent}
-          draft={voice.control}
-          draftUnavailable={fields.draftUnavailable}
-          provenance={fields.provenance}
-          voiceMaturity={voiceMaturity}
-          reasons={account.reasoning}
           to={fields.to}
           onToChange={fields.setTo}
           cc={fields.cc}
           onCcChange={fields.setCc}
           bcc={fields.bcc}
           onBccChange={fields.setBcc}
-          bccOpen={fields.bccOpen}
-          onOpenBcc={fields.openBcc}
+          copiesOpen={fields.copiesOpen}
+          onOpenCopies={fields.openCopies}
           recipients={records.recipients}
           onToEditing={onToEditing}
           subject={fields.subject}
           onSubjectChange={fields.setSubject}
-          rejectionInFlight={voice.rejectionInFlight}
+          rejectionInFlight={rejectionInFlight}
           deadRecipients={records.deadRecipients}
+          filing={<ProjectFiling records={records} />}
+          tagging={
+            records.projectFiling.ownTag && (
+              <SubjectTagSwitch
+                filing={records.projectFiling}
+                disabled={rejectionInFlight}
+              />
+            )
+          }
         />
       )}
     </>

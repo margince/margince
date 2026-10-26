@@ -34,20 +34,14 @@ export { OverflowMenu } from "./overflowmenu";
 export { TableScroll } from "./tablescroll";
 
 /**
- * The closed tone vocabulary, as a VALUE that the type is read from — so the
- * story that draws every tone and the gate that checks every tone is painted
- * walk the same list the compiler enforces. Spelled twice, they drift, and the
- * copy that goes stale is always the one nobody renders.
+ * The closed tone vocabulary, as a value the type is read from. The story and
+ * the gate that walk every tone then share the list the compiler enforces.
  *
- * `discovery` says a thing is NEW — newly arrived, newly offered, not yet how
- * things have always been. It is the one tone that reports no verdict: a status
- * says how something is GOING and this says how long it has been here, which is
- * why it is a word of its own rather than a borrowed `accent`.
+ * `discovery` says a thing is new. It reports no verdict: a status says how
+ * something is going, this says how long it has been here.
  *
- * `info` is the QUIET verdict, and it is what a row reaches for while a job is
- * still writing it — queued, syncing, in progress — and for a status that only
- * reports. It is not `accent`: accent is the brand asking for a press, and a
- * status wearing it told a reader the row was the page's next move.
+ * `info` is the quiet blue and never a status, which is one of the four kinds
+ * of `StatusBadge`. It is not `accent`: accent is the brand asking for a press.
  */
 export const BADGE_TONES = [
   "default",
@@ -62,17 +56,20 @@ export const BADGE_TONES = [
 
 type BadgeTone = (typeof BADGE_TONES)[number];
 
-// ONE leading mark, a glyph or the `live` dot; an `ai` badge's is Sparkles.
+type PlainTone = Exclude<BadgeTone, "ai">;
+
+// One leading mark, a glyph or the `live` dot; an `ai` badge's is Sparkles.
 type BadgeMark =
-  | { tone?: Exclude<BadgeTone, "ai">; icon?: LucideIcon; live?: never }
-  | { tone?: Exclude<BadgeTone, "ai">; icon?: never; live?: boolean }
-  | { tone: "ai"; icon?: never; live?: never };
+  | { tone?: PlainTone; icon?: LucideIcon; live?: never; dot?: never }
+  | { tone?: PlainTone; icon?: never; live?: boolean; dot?: boolean }
+  | { tone: "ai"; icon?: never; live?: never; dot?: never };
 
 export function Badge({
   variant = "soft",
   tone = "default",
   icon,
   live,
+  dot,
   wrap,
   children,
 }: Readonly<
@@ -95,6 +92,9 @@ export function Badge({
   return (
     <span className={classes.join(" ")}>
       {live && !provenance && <span className="badge-live-dot" aria-hidden />}
+      {dot && !live && !provenance && (
+        <span className="badge-dot" aria-hidden />
+      )}
       {Icon && <Icon size={12} aria-hidden="true" />}
       <span className="badge-label">{children}</span>
     </span>

@@ -4,9 +4,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Badge, EmptyState } from "../../design-system/atoms";
+import { EmptyState } from "../../design-system/atoms";
 import { type Fact, FactList } from "../../design-system/factlist";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
+import { StatusBadge, type StatusKind } from "../../design-system/statusbadge";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
@@ -24,11 +25,15 @@ type Drill = components["schemas"]["RestoreDrill"];
 
 const OUTCOME: Record<
   Drill["outcome"],
-  { label: MessageKey; tone: "danger" | "info" | undefined }
+  { label: MessageKey; kind: StatusKind; live?: boolean }
 > = {
-  passed: { label: "recoveryHealth.outcome.passed", tone: undefined },
-  failed: { label: "recoveryHealth.outcome.failed", tone: "danger" },
-  running: { label: "recoveryHealth.outcome.running", tone: "info" },
+  passed: { label: "recoveryHealth.outcome.passed", kind: "done" },
+  failed: { label: "recoveryHealth.outcome.failed", kind: "failure" },
+  running: {
+    label: "recoveryHealth.outcome.running",
+    kind: "neutral",
+    live: true,
+  },
 };
 
 // Hours and minutes: a recovery window is read against a four-hour target, and
@@ -70,13 +75,13 @@ function drillFacts(
     {
       key: "outcome",
       term: t("recoveryHealth.outcome"),
-      // A pass is the normal reading, so only the other outcomes take a badge.
-      value:
-        drill.outcome === "passed" ? (
-          t(outcome.label)
-        ) : (
-          <Badge tone={outcome.tone}>{t(outcome.label)}</Badge>
-        ),
+      value: (
+        <StatusBadge
+          kind={outcome.kind}
+          label={t(outcome.label)}
+          live={outcome.live}
+        />
+      ),
       note: t("recoveryHealth.startedAt", {
         when: formatDateTime(drill.started_at, locale, zone),
       }),

@@ -31,7 +31,8 @@ export type FilterOp =
   | "lte"
   | "in"
   | "contains"
-  | "exists";
+  | "exists"
+  | "within_radius";
 
 /**
  * A date counted back from the day the filter runs: `{ days_ago: 45 }` is the
@@ -40,14 +41,52 @@ export type FilterOp =
  */
 export type RelativeDate = Readonly<{ days_ago: number }>;
 
-/** A leaf's operand: a JSON scalar, a list for `in`, or a relative date. */
+/**
+ * The operand of `within_radius`: a point and a distance. `label` is the place
+ * name a reader typed, kept only to be shown back.
+ */
+export type RadiusOperand = Readonly<{
+  lat: number;
+  lon: number;
+  radius_km: number;
+  label?: string;
+}>;
+
+/** A leaf's operand: a JSON scalar, a list for `in`, a relative date or a radius. */
 export type LeafValue =
   | string
   | number
   | boolean
   | readonly string[]
   | readonly number[]
-  | RelativeDate;
+  | RelativeDate
+  | RadiusOperand;
+
+/**
+ * A point on the globe and a positive distance, the same bounds storekit's
+ * within_radius compiler enforces. The editor builds its operand through this
+ * too, so the client has one validator.
+ */
+export function isRadiusOperand(value: unknown): value is RadiusOperand {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  const { lat, lon, radius_km, label, ...rest } = value as Record<
+    string,
+    unknown
+  >;
+  return (
+    Object.keys(rest).length === 0 &&
+    typeof lat === "number" &&
+    Math.abs(lat) <= 90 &&
+    typeof lon === "number" &&
+    Math.abs(lon) <= 180 &&
+    typeof radius_km === "number" &&
+    Number.isFinite(radius_km) &&
+    radius_km > 0 &&
+    (label === undefined || typeof label === "string")
+  );
+}
 
 export function isRelativeDate(value: unknown): value is RelativeDate {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
@@ -243,6 +282,8 @@ function hasUsableOperand(op: FilterOp, value: LeafValue): boolean {
       return Array.isArray(value) && value.length > 0;
     case "contains":
       return typeof value === "string" && value !== "";
+    case "within_radius":
+      return isRadiusOperand(value);
     default:
       return (
         isRelativeDate(value) ||
@@ -262,6 +303,7 @@ const OPERATORS: ReadonlySet<string> = new Set<FilterOp>([
   "in",
   "contains",
   "exists",
+  "within_radius",
 ]);
 
 /**
@@ -348,7 +390,8 @@ function isLeafValue(value: unknown): value is LeafValue {
     typeof value === "string" ||
     typeof value === "number" ||
     typeof value === "boolean" ||
-    isRelativeDate(value)
+    isRelativeDate(value) ||
+    isRadiusOperand(value)
   ) {
     return true;
   }

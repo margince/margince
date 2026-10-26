@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -87,16 +88,22 @@ func (w *approvalNoticeReconcileWorker) Work(ctx context.Context, job *river.Job
 	return river.JobSnooze(time.Second)
 }
 
+// reconcilePage retracts every copy of a settled decision. It also retracts a
+// copy of a pending one sent to a member it is not asked of.
 func (w *approvalNoticeReconcileWorker) reconcilePage(ctx context.Context, after ids.UUID) (ids.UUID, int64, error) {
 	var page notices.OutstandingApprovalPage
 	var pending map[ids.ApprovalID]bool
+	var asked map[approvals.AskedPair]bool
 	err := w.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		page, err = w.notices.OutstandingApprovalNotices(ctx, tx, after, approvalNoticePageSize)
 		if err != nil {
 			return err
 		}
-		pending, err = w.approvals.StillPending(ctx, tx, page.ApprovalIDs)
+		if pending, err = w.approvals.StillPending(ctx, tx, page.ApprovalIDs); err != nil {
+			return err
+		}
+		asked, err = w.approvals.StillAskedOf(ctx, tx, askedPairs(page.Notices))
 		return err
 	})
 	if err != nil {
@@ -113,5 +120,43 @@ func (w *approvalNoticeReconcileWorker) reconcilePage(ctx context.Context, after
 		}
 		retracted += count
 	}
+	for _, held := range page.Notices {
+		if !pending[held.Approval] || asked[approvals.AskedPair{Approval: held.Approval, Recipient: held.Recipient}] {
+			continue
+		}
+		count, err := w.retractUnasked(ctx, held)
+		if err != nil {
+			return ids.Nil, retracted, err
+		}
+		retracted += count
+	}
 	return page.AfterID, retracted, nil
+}
+
+// retractUnasked takes a pending approval's copy back from its recipient, asked
+// again under the approval's lock in the same transaction. A request handed back
+// to this recipient since the page was read keeps its copy.
+func (w *approvalNoticeReconcileWorker) retractUnasked(ctx context.Context, held notices.OutstandingApprovalNotice) (int64, error) {
+	pair := approvals.AskedPair{Approval: held.Approval, Recipient: held.Recipient}
+	var taken int64
+	err := w.db.Tx(ctx, func(tx pgx.Tx) error {
+		asked, err := w.approvals.StillAskedOf(ctx, tx, []approvals.AskedPair{pair})
+		if err != nil || asked[pair] {
+			return err
+		}
+		taken, err = w.notices.RetractCopy(ctx, tx, held.ID)
+		return err
+	})
+	if err != nil {
+		return 0, fmt.Errorf("approval notice reconcile: %w", err)
+	}
+	return taken, nil
+}
+
+func askedPairs(copies []notices.OutstandingApprovalNotice) []approvals.AskedPair {
+	pairs := make([]approvals.AskedPair, 0, len(copies))
+	for _, held := range copies {
+		pairs = append(pairs, approvals.AskedPair{Approval: held.Approval, Recipient: held.Recipient})
+	}
+	return pairs
 }

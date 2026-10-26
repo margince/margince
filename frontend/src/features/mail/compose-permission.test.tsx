@@ -39,6 +39,7 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 const inbound: Activity = {
+  offers_email: false,
   id: "act-1",
   kind: "email",
   direction: "inbound",
@@ -114,9 +115,7 @@ async function openReplyAndAddress(address: string) {
       onClose={vi.fn()}
     />,
   );
-  await screen.findByText(
-    "This replies to the recipient’s own message, so no reason is needed.",
-  );
+  await screen.findByText(/Replying to “The quote”/);
   const user = userEvent.setup();
   await user.type(screen.getByLabelText("To"), address);
   await user.tab();
@@ -236,13 +235,11 @@ describe("the composer asks before anybody presses Send", () => {
         onClose={vi.fn()}
       />,
     );
-    await screen.findByText(
-      "This replies to the recipient’s own message, so no reason is needed.",
-    );
+    await screen.findByText(/Replying to “The quote”/);
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("To"), "anna@example.test");
     await user.tab();
-    await user.click(screen.getByRole("button", { name: "Bcc" }));
+    await user.click(screen.getByRole("button", { name: "Cc and Bcc" }));
     await user.type(screen.getByLabelText("Bcc"), "quiet@example.test");
     await user.tab();
 
@@ -287,9 +284,7 @@ describe("the composer asks before anybody presses Send", () => {
         onClose={vi.fn()}
       />,
     );
-    await screen.findByText(
-      "This replies to the recipient’s own message, so no reason is needed.",
-    );
+    await screen.findByText(/Replying to “The quote”/);
     expect(screen.queryByRole("button", { name: /ready to send/i })).toBeNull();
   });
 });

@@ -1,7 +1,13 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
@@ -101,6 +107,22 @@ describe("ChangePasswordCard", () => {
     expect(me?.state.isInvalidated).toBe(true);
     // Nothing else cached belonged to a session that ended: this one did not.
     expect(client.getQueryData(["contacts"])).toEqual([]);
+  });
+
+  // The change revokes every grant and passport issued for the reader, not
+  // only their other sessions, so the form says so before anything is typed.
+  it("warns what else stops before the fields", async () => {
+    const user = userEvent.setup();
+    const dialog = await openForm(user);
+    const warning = within(dialog).getByText(
+      "Everything else signed in as you stops",
+    );
+    const firstField = within(dialog).getByLabelText(/current password/i);
+    expect(
+      warning.compareDocumentPosition(firstField) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(within(dialog).getByText(/agents acting for you/)).toBeTruthy();
   });
 
   it("will not submit until the confirmation matches", async () => {

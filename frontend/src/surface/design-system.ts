@@ -54,6 +54,10 @@ export { Callout, type CalloutTone } from "../design-system/callout";
 // was. A binary a rep has to weigh is the one choice that must be readable at
 // rest, and no radio group existed to publish until this one.
 export { type Choice, ChoiceList } from "../design-system/choicelist";
+// useClipboardCopy, because the clipboard-spelling gate scans unit screens too,
+// and a unit had no other way to copy that passes it. It guards the secure
+// context and says why a copy failed, which a hand-written copy gets wrong.
+export { useClipboardCopy } from "../design-system/clipboardcopy";
 // DataTable, because a unit that has ROWS to show has otherwise to write a
 // bare `<table>`, and no extension ships a stylesheet — so what it gets is the
 // browser's default table, unaligned, unbounded, and scrolling the whole page
@@ -69,6 +73,14 @@ export { type Choice, ChoiceList } from "../design-system/choicelist";
 // page with it. A unit's listing is the second shape, and publishing the first
 // would promise a contract the core changes for its own record screens.
 export { DataTable } from "../design-system/datatable";
+// DateInput, because native-controls.test.ts refuses the browser's date field in
+// unit screens too, and a unit has no other control that asks for a day.
+export {
+  DateInput,
+  type ISODate,
+  isISODate,
+  isoOrBlank,
+} from "../design-system/dateinput";
 // ErrorLine, because a unit that says a write failed has otherwise only a bare
 // `<p>`: no danger ink, since a unit ships no stylesheet, and no announcement
 // unless it remembers `role="alert"`. The reader's words come from
@@ -88,6 +100,14 @@ export { ErrorLine } from "../design-system/errorline";
 // primitive that gets published rather than FieldGrid: a unit describing what it
 // connected is not editing it.
 export { type Fact, FactList } from "../design-system/factlist";
+// IconAction, because a unit's quiet verb beside a value (copy a link) is
+// otherwise a worded button that crowds its panel. The alternative is a bare
+// glyph with no name. This one is named for a screen reader and on hover.
+export { IconAction } from "../design-system/iconaction";
+// Panel and PanelBody, because a unit's deal panel stands in the page's own
+// column beside core's panels. A titled Card there is a second pane chrome,
+// which the catalog's Card row forbids and no gate can see in unit code.
+export { Panel, PanelBody } from "../design-system/panel";
 // RecordPicker, because the alternative is every unit that touches a core
 // record asking a contact to paste a UUID.
 //

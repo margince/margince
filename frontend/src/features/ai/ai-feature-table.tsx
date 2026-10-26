@@ -9,6 +9,7 @@ import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { aiTaskLabel } from "../../lib/ai-task-label";
 import { tierLabel, tierRank } from "./ai-decision-labels";
 import { decisionFirstOrder } from "./ai-feature-order";
+import type { LaneKeyGap } from "./ai-lane-state";
 import {
   ImpactBadge,
   TASK_DOT_LABEL,
@@ -27,6 +28,7 @@ export function AiFeatureTable({
   rows,
   health,
   providers,
+  lanesNeedingAKey,
   canTrace = false,
   onEdit,
   canManage = false,
@@ -39,6 +41,9 @@ export function AiFeatureTable({
   health?: Health;
   // Which providers refuse calls now, for a reader who may see it.
   providers?: Providers;
+  // The saved bindings holding no key, so a lane nothing is calling can be
+  // told from a lane whose binding cannot run.
+  lanesNeedingAKey?: readonly LaneKeyGap[];
   // The trace answers on `ai_diagnostics:read` alone (ai/callread.go), so a
   // reader without it is not offered a link onto a withheld card.
   canTrace?: boolean;
@@ -54,6 +59,7 @@ export function AiFeatureTable({
         row={row}
         health={health}
         providers={providers}
+        lanesNeedingAKey={lanesNeedingAKey}
         canTrace={canTrace}
         editable={onEdit !== undefined}
       />
@@ -156,12 +162,14 @@ function TaskCell({
   row,
   health,
   providers,
+  lanesNeedingAKey,
   canTrace,
   editable,
 }: Readonly<{
   row: Feature;
   health: Health | undefined;
   providers: Providers | undefined;
+  lanesNeedingAKey?: readonly LaneKeyGap[];
   canTrace: boolean;
   editable: boolean;
 }>) {
@@ -188,6 +196,7 @@ function TaskCell({
             row={row}
             health={health}
             providers={providers}
+            lanesNeedingAKey={lanesNeedingAKey}
             canTrace={canTrace}
             custom={editable && Object.keys(row.overrides ?? {}).length > 0}
           />

@@ -35,6 +35,8 @@ export const ProjectsByPhase: Story = {
             phase: "delivering",
             projects: 5,
             open_deal_value_minor: 4_000_00,
+            open_deal_unpriced: 2,
+            won_deal_unpriced: 0,
             won_deal_value_minor: 96_000_00,
           },
         ]}

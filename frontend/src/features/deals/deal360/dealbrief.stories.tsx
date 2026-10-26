@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { StoryProviders } from "../../../testing/story-utils";
 import { DealBrief } from "./dealbrief";
 
-// The human-authored brief on a deal page.
+// What this deal is: the human-authored brief on a deal page.
 //
 // The states worth seeing are the ones a dropped distinction would render the
 // same: an ABSENT brief against an empty-string one (both must say the field
@@ -31,8 +31,11 @@ export default meta;
 
 type Story = StoryObj<typeof DealBrief>;
 
+const edit = () => undefined;
+
 export const Short: Story = {
   args: {
+    onEdit: edit,
     brief:
       "They run payroll for about 400 seasonal staff and close the month by hand. They want the close down to two days.",
   },
@@ -40,6 +43,7 @@ export const Short: Story = {
 
 export const Long: Story = {
   args: {
+    onEdit: edit,
     brief: [
       "They run payroll for about 400 seasonal staff across six sites.",
       "Month-end close is manual and takes nine working days.",
@@ -57,13 +61,13 @@ export const Long: Story = {
 // reader cannot see a form they have not opened, so every unbriefed deal
 // looked like a product with no such field. It now names what it holds and
 // offers to fill it.
-export const Absent: Story = { args: { brief: null } };
+export const Absent: Story = { args: { brief: null, onEdit: edit } };
 
 // The same, for a stored empty string: whitespace is not a brief.
-export const Blank: Story = { args: { brief: "   " } };
+export const Blank: Story = { args: { brief: "   ", onEdit: edit } };
 
 // A deal this reader may not write: archived, somebody else's, or a mirror.
-// The panel still says the field exists; only the verb goes.
+// The card still says what the deal is; only the link goes.
 export const ReadOnly: Story = {
-  args: { brief: "They close the month by hand.", readOnly: true },
+  args: { brief: "They close the month by hand." },
 };

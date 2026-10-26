@@ -7,11 +7,14 @@ package mailmap
 // whether a calendar payload was among them.
 
 import (
-	"errors"
 	"io"
 	"strings"
 
+	"github.com/emersion/go-message"
 	"github.com/emersion/go-message/mail"
+
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/htmltext"
 )
 
 // extractText returns the message's plain-text body, its link hosts and the
@@ -21,73 +24,57 @@ import (
 // part exists, so an HTML-only newsletter still yields readable text. Attachment parts are collected on the SAME walk: a MIME reader
 // is single-pass, so a second walk would mean holding or re-parsing the whole
 // message to find files this one already stepped over.
-func extractText(reader *mail.Reader) walkedBody {
-	var plain, html string
-	var calendar calendarPart
-	files := newCollector()
-	for {
-		if files.exhausted() {
-			// Past any real message. Everything beyond is unread and reported
-			// as such rather than walked, because walking it is the work an
-			// unauthenticated sender was trying to buy.
-			files.truncated()
-			break
-		}
-		part, err := reader.NextPart()
-		if !usablePart(err) {
-			if !errors.Is(err, io.EOF) {
-				// A structural failure ends the walk, so any file after this
-				// point is lost. Recorded rather than passed over: a message
-				// whose files went missing must not read like one that carried
-				// none (DOC-AC-12).
-				files.truncated()
-			}
-			break
-		}
-		if attached, ok := part.Header.(*mail.AttachmentHeader); ok {
-			files.take(attached, part.Body)
-			if params, declared := declaresCalendar(attached); declared {
-				calendar.see(params, files.justAdmitted())
-			}
-			continue
-		}
-		inline, ok := part.Header.(*mail.InlineHeader)
-		if !ok {
-			continue
-		}
-		if readInlinePart(inline, part.Body, files, &plain, &html, &calendar) {
-			continue
-		}
-	}
+func extractText(root *message.Entity) walkedBody {
+	walk := &partWalker{files: newCollector()}
+	walk.run(root)
 	// Everything the sender named has had its claim on the bounds; what was
 	// held back takes what is left.
-	files.settle()
-	links, linksCut := linkHosts(plain, html)
+	walk.files.settle()
+	text, completeness := walk.text(), walk.completeness()
+	links, linksCut := walkLinks(walk.plain, walk.html)
+	if text == "" {
+		// A forward as attachment says nothing of its own; the original does.
+		// Its words are the original's, not the sender's, and the completeness
+		// says so: automatic work never reads them as this sender's.
+		inner := walk.readForwarded()
+		switch {
+		case inner == nil:
+		case inner.text() != "":
+			text, completeness = inner.text(), capture.BodyForwarded
+			links, linksCut = walkLinks(inner.plain, inner.html)
+		case inner.completeness() == capture.BodyUnreadable:
+			completeness = capture.BodyUnreadable
+		}
+	}
 	return walkedBody{
-		text: bodyText(plain, html), links: links, linksCut: linksCut,
-		parts: files.parts, drops: files.drops(), calendar: calendar,
+		text: text, links: links, linksCut: linksCut,
+		parts: walk.files.parts, drops: walk.files.drops(), calendar: walk.calendar,
+		completeness: completeness,
 	}
 }
 
 // walkedBody is what one walk over a message's parts found: the text, the
 // hosts its links lead to, its files and its calendar payload.
 type walkedBody struct {
-	text     string
-	links    []string
-	linksCut bool
-	parts    []Part
-	drops    []PartDrop
-	calendar calendarPart
+	text         string
+	links        []capture.MailLink
+	linksCut     bool
+	parts        []Part
+	drops        []PartDrop
+	calendar     calendarPart
+	completeness capture.BodyCompleteness
 }
 
-func bodyText(plain, html string) string {
+// bodyText is the text a mail is read by: its plain part, or its HTML rendered
+// when the plain part is blank. cut reports a render that stopped early.
+func bodyText(plain, html string) (text string, cut bool) {
 	if strings.TrimSpace(plain) != "" {
-		return strings.TrimSpace(plain)
+		return strings.TrimSpace(plain), false
 	}
 	if html != "" {
-		return htmlToText(html)
+		return htmltext.Render(html)
 	}
-	return ""
+	return "", false
 }
 
 // A calendar payload arrives by three routes: an unnamed inline part (the shape

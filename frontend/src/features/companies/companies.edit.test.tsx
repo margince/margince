@@ -2,12 +2,15 @@
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  companyEditFields,
+  mapCompanyUpdate,
+} from "../../components/companyform";
 import { company, jsonResponse } from "../../testing/company.fixtures";
 import { stubFetch } from "../../testing/company.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { CompanyScreen } from "./companies";
 import { openProfile, openRecordMenu, render } from "./companies.testkit";
-import { companyEditFields, mapCompanyUpdate } from "./companyform";
 
 afterEach(() => {
   cleanup();
@@ -25,7 +28,7 @@ describe("CompanyScreen — edit with If-Match (P-1)", () => {
         patchBody = JSON.parse(await request.text());
         return jsonResponse({
           ...company,
-          industry: "Manufacturing",
+          industry: "manufacturing",
           version: 2,
         });
       }
@@ -39,13 +42,13 @@ describe("CompanyScreen — edit with If-Match (P-1)", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Change Industry" }),
     );
-    const industry = await screen.findByLabelText("Industry");
-    await userEvent.clear(industry);
-    await userEvent.type(industry, "Manufacturing{Enter}");
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Manufacturing" }),
+    );
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchHeader).toBe("1");
-    expect(patchBody).toMatchObject({ industry: "Manufacturing" });
+    expect(patchBody).toMatchObject({ industry: "manufacturing" });
     // The company fixture carries no domains, so an edit that doesn't touch them
     // omits the field (untouched) rather than clearing the stored set.
     expect(patchBody).not.toHaveProperty("domains");
@@ -66,7 +69,7 @@ describe("CompanyScreen — edit with If-Match (P-1)", () => {
         patchBody = JSON.parse(await request.text());
         return jsonResponse({
           ...partner,
-          industry: "Manufacturing",
+          industry: "manufacturing",
           version: 2,
         });
       }
@@ -80,13 +83,13 @@ describe("CompanyScreen — edit with If-Match (P-1)", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Change Industry" }),
     );
-    const industry = await screen.findByLabelText("Industry");
-    await userEvent.clear(industry);
-    await userEvent.type(industry, "Manufacturing{Enter}");
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Manufacturing" }),
+    );
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchBody).toMatchObject({
-      industry: "Manufacturing",
+      industry: "manufacturing",
     });
     expect(patchBody).not.toHaveProperty("relationship_types");
   });
@@ -110,8 +113,12 @@ describe("CompanyScreen — edit domains round-trip (B7)", () => {
     });
     render(<CompanyScreen id="o-1" />);
 
+    // The fixture has no domain yet, so its row is folded in the details.
     await userEvent.click(
-      await screen.findByRole("button", { name: "Change Domains" }),
+      await screen.findByRole("button", { name: /^Show \d+ empty fields$/ }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Change Domain" }),
     );
     // The modal's own row-adder. The rail's details grid also offers an inline
     // "Add domain" to a seat with the grant, and this test is about the form.
@@ -425,6 +432,7 @@ describe("companyEditFields — the owner select never offers what it cannot sav
       // The identity translator: this suite is about the owner select's
       // required-ness, and a key reads as well as a word for that.
       (key) => key,
+      "en",
     ).find((field) => field.key === "owner_id");
 
   it("is required while the account has an owner, so no blank option renders", () => {

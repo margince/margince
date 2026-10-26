@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/consent backend/internal/modules/privacy backend/internal/shared/ports/commsauthz backend/internal/shared/ports/jurisdiction backend/internal/compose/jobs_privacyretention.go backend/internal/compose/siteleadnotice.go extensions/de -->
 # Privacy, consent & the GDPR engines
 
 How Margince meets its duties to a data subject. The **authorization engine** decides whether each
@@ -138,7 +139,6 @@ Anna" stops being true when Anna leaves:
 |---|---|
 | `needs_context` | More proof could answer this. The engine has no reason for the message to stand on. |
 | `needs_repair` | No proof can answer it. Something about the message or the address is wrong. |
-| `awaiting_decision` | Handed to someone who may override it. No longer the work of the sender. |
 | `resolved` | Someone closed it. |
 | `superseded` | A newer attempt at the same message stands in its place. |
 | `cancelled` | Nobody plans to send it. |
@@ -190,6 +190,31 @@ rules. This decides who may act against the answer those rules gave about one co
 installation that handed over the first has not handed over the second with it. The check is
 `auth.RequireHuman` plus the grant, so a passport that holds an admin's grants cannot make one.
 
+Every role that sends mail holds the grant: `rep`, `manager`, `management` and `admin`. The grant
+alone does not say which refusals a seat may send past. Each refusal reason declares what can
+resolve it in `commsauthz.RemediesFor`.
+
+- A reason that lists the plain exception can be sent past by any holder of the grant. Examples are
+  no evidence and no marketing consent.
+- A reason that lists only the admin exception can be sent past only by an admin. Examples are a
+  contact's own objection, withdrawal or stop request. A hard bounce and a frequency cap are two
+  more.
+
+`Review.DirectableBy` is the one check. `DirectSend` and the actions a refusal offers both ask it.
+
+A contact can be written to about a thread when three things hold:
+
+- They were To or Cc on an inbound mail a connector captured on that thread.
+- Someone who is not one of our seats wrote that mail.
+- One of our seats sent a captured mail on the same thread, of the same kind and provider.
+
+Mail our own side sends never counts. Capture files a colleague's mail as outbound, so it never
+counts either. So a seat cannot make this ground by copying the contact.
+
+The rule reads the thread key and records its basis against that thread. So it never becomes
+standing permission for the contact. It never supports a message the sender calls marketing.
+`copiedOnThisMatter` holds the whole rule.
+
 ## Reaching the subject without the message that carried the link
 
 Three records exist so a subject's own acts do not rest on a mailbox, a session or a token that has
@@ -228,6 +253,32 @@ since rotated.
 - **A public fix or erasure opens a case.** A subject who types into a confirm link opens a
   `data_subject_request` in the same transaction. The case gets a reference number and the last day to answer it.
   No row is left behind for nobody to work.
+- **A closed case keeps a proof.** The transaction that closes a case writes one
+  `privacy_request_proof` row (`backend/internal/modules/consent/requestproof.go`). It records the
+  number, the address the request came from, the arrival date and the kind. It also records the
+  identity check, the result, the closer and the answer date. The proof holds no other contact
+  data, so an erasure leaves it standing. A `not_verified` check closes a case only as rejected.
+- **The erasure counts its own work.** `Eraser.EraseContactCounted` runs every step of the erasure on a
+  `tallyTx` (`backend/internal/modules/privacy/erasuretally.go`). It counts the rows each writing
+  statement touched, by table and verb, so a new arm is counted without a change here. A row two
+  statements touch counts twice. Objects outside the database, such as attachment files, are
+  named as not counted. The tombstone carries this account, and so does the proof.
+- **A request certifies its erasure once.** A replay of reason `dsr:<request-id>` runs the whole
+  erasure again, so text written about the subject since the first run goes too. It writes no
+  second tombstone or event, and answers the account the first tombstone carries. So a close that
+  failed after its erasure committed stores the first account when it is retried.
+- **A proof lasts three years past its year.** `ProofKeepUntil` dates it to the first day of the
+  year after that, with the year and that day both read in `installation.timezone`. The
+  `privacy_request_proof_expiry` job deletes it in the first month of that year, unless the case
+  has `dispute_open` set.
+- **Expiry takes the requester off the case.** The pass ends the case with the tombstone the
+  erasure writes on a subject's other cases (`RetireExpiredRightsCaseTx`), injected by compose. It
+  writes an `anonymize` audit row on the case. Every audit reader hides the images older than such
+  a row. So the reference copied into the audit row that opened the case is no longer shown.
+- **Old cases get a proof too.** A data task writes proofs for cases closed before proofs
+  existed. It takes the closer from the latest audit row that moved the case into its status. It
+  finds the erasure by its reason, since the case's own reference may be a tombstone. What no
+  record shows is marked `unknown`.
 
 ## What the engine reports about itself
 
@@ -252,10 +303,12 @@ category refusing mail the old gate would have allowed.
 into consent's handlers.
 
 - **Article 17 erasure** (`Eraser.EraseContact`) removes the personal values from the normal rows in
-  place. It deletes raw capture, embeddings and attachment bytes. It hashes each address and handle into a
-  **suppression list**, so a later capture cannot add the subject again. It proves the work with a
-  **audit tombstone with no PII**, all in **one transaction per record**. That all-or-nothing
-  transaction *is* the promise. It refuses a subject under `legal_hold`.
+  place, and deletes raw capture, embeddings and attachment bytes. It proves the work with an **audit
+  tombstone with no PII**, all in **one transaction per record**, and that transaction *is* the
+  promise. It refuses a subject under `legal_hold`.
+- **The suppression list** holds a hash of each erased address and handle. No later capture, import
+  or typed create can store one again. A booking on the public booking page still can, because a
+  refusal there would show which addresses were erased.
 - **Article 15 subject access** (`AssembleSAR`) is one read that needs more rights. It needs the
   `contact.delete` grant **and** a row scope with no limit. It puts everything held about a contact
   into one export package: channels, deals, leads, activities, attachments, consent and its proof log,
@@ -287,8 +340,8 @@ not own**. The list: `contact`, `contact_email`/`_phone`/`_social`, `contact_cha
 `lead`, `activity`, `activity_participant`, `graph_interaction_edge`, `linkedin_connection`,
 `comms_outbound`, `deal`, `attachment`, `embedding`, `raw_capture`, `field_provenance`,
 `preference_token`, `capture_pending_counterparty`, `voice_learning_signal`, `ai_call` and
-`ai_call_payload`. The agreed list is the cross-writer map in `backend/gates/tableownership_test.go`,
-which gates it. That file, not this page, is the authority.
+`ai_call_payload`. The agreed list is the cross-writer map `crossStoreWrites` in
+`backend/gates/tableownershipwaivers_test.go`, and `backend/gates/tableownership_test.go` gates it. That file, not this page, is the authority.
 
 Four of those show *why* nothing else can reach them:
 
@@ -307,7 +360,7 @@ record. To route each delete through the module that owns the table would give u
 promise.
 
 Privacy's deletes are one of the agreed cross-writer exceptions to "a module writes only its own
-tables." Every such write is **agreed per table** in `backend/gates/tableownership_test.go`, with a
+tables." Every such write is **agreed per table** in `backend/gates/tableownershipwaivers_test.go`, with a
 reason that stands alone. A waiver with no reason, or an out-of-date one, fails the test. See
 [reference/modules.md](../reference/modules.md) for the map of who owns what and
 [write-backbone.md](write-backbone.md) for the write shape these deletes still follow.
@@ -556,5 +609,5 @@ version the build sends.
 | A website lead's notice | `internal/modules/consent/leadnotice.go` (`lead_privacy_notice`), `internal/compose/siteleadnotice.go`, `internal/modules/privacy/erasure_untoldlead.go` |
 | Decision counters | `internal/modules/consent/decisioncounter.go`, exported by `internal/compose/authzmetrics.go` |
 | The engine-and-gate report | `internal/modules/consent/authorizedisagreement.go`, run daily by `internal/compose/authzdisagreement.go` |
-| Cross-store agreement | `backend/gates/tableownership_test.go` |
+| Cross-store agreement | `backend/gates/tableownershipwaivers_test.go` |
 | Jurisdiction packs | `internal/shared/ports/jurisdiction/`, `extensions/de/` |

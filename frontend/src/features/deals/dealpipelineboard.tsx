@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ComponentProps, useId, useState } from "react";
+import { LogActivityAction } from "../../components/logactivity.action";
 import { Modal } from "../../design-system/atoms";
 import type { DealCardActions } from "../../design-system/dealcard";
 import { Heading } from "../../design-system/heading";
@@ -13,7 +14,6 @@ import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { routeHash } from "../../lib/router";
 import { useWriteTo } from "../../lib/writeto";
-import { LogActivityAction } from "../records/logactivity";
 import { dealMailAside } from "./dealmailaside";
 import { DealStatusCardPanel } from "./dealstatus";
 
@@ -105,11 +105,7 @@ function DealSummaryDrawer({
       </Heading>
       {summary && (
         <div className="record-stack">
-          <DealStatusCardPanel
-            key={summary.deal.id}
-            dealId={summary.deal.id}
-            dealName={summary.deal.name}
-          />
+          <DealStatusCardPanel key={summary.deal.id} deal={summary.deal} />
           <p>
             <a
               className="entity-link"

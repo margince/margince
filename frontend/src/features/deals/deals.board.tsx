@@ -7,6 +7,7 @@ import {
 } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
+import { useSuggestionGhosts } from "../../components/dealsuggestion";
 import { rosterOwnerNaming } from "../../components/entityref";
 import type {
   BoardColumn,
@@ -18,6 +19,12 @@ import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { dealRecordKeys, dealWinKeys } from "../../lib/activitykeys";
+import {
+  type DealFilters,
+  ownerDialParams,
+  type useDeals,
+  type useStageTotals,
+} from "../../lib/deals.queries";
 import { useMemberNames } from "../../lib/membernames";
 import type { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
@@ -28,13 +35,6 @@ import { useCompanyMarks } from "./dealcompanymarks";
 import { DealPipelineBoard } from "./dealpipelineboard";
 import type { Company, Deal, Pipeline, Stage } from "./deals";
 import { buildColumns } from "./deals.columns";
-import {
-  type DealFilters,
-  ownerDialParams,
-  type useDeals,
-  type useStageTotals,
-} from "./deals.queries";
-import { useSuggestionGhosts } from "./dealsuggestion";
 
 /**
  * What a terminal advance says about how the deal closed, on top of the stage

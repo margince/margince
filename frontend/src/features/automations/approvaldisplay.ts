@@ -11,7 +11,7 @@ import {
   stagedDealMove,
 } from "../../lib/approvalpreview";
 import { humanizeKind } from "./approvalkind";
-import { commitmentResponsibility } from "./approvalresponsibility";
+import { commitmentResponsibility, madeByRow } from "./approvalresponsibility";
 
 // Typed proposals expose declared business facts; raw-argument kinds retain their fields.
 export type {
@@ -30,6 +30,11 @@ const CLOSE_DATE_FLAGS = {
   unrealistic_soon: "approval.field.closeDateFlag.unrealistic_soon",
   unrealistic_stale: "approval.field.closeDateFlag.unrealistic_stale",
 } as const satisfies Readonly<Record<string, MessageKey>>;
+
+// A field whose value is already a word, under its caption.
+function textRow(field: string, label: MessageKey): DisplayField {
+  return { field, label, as: "text" };
+}
 
 export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
   {
@@ -115,23 +120,17 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
       { field: "email", label: "approval.field.email", as: "text" },
       { field: "domain", label: "approval.field.domain", as: "text" },
     ],
-    // Two records that look like one contact. The names are the whole comparison.
+    // A colleague asks the owner to share a contact. The summary names who
+    // asked; the payload holds only the ids the accept writes the share with.
+    contact_share: [],
+    // Two records that look like one contact. The names are the comparison; the
+    // position and the title beside them are what "Use as job title" weighs.
     linkedin_match: [
-      {
-        field: "connection_name",
-        label: "approval.field.connection_name",
-        as: "text",
-      },
-      {
-        field: "connection_company",
-        label: "approval.field.connection_company",
-        as: "text",
-      },
-      {
-        field: "contact_name",
-        label: "approval.field.contact_name",
-        as: "text",
-      },
+      textRow("connection_name", "approval.field.connection_name"),
+      textRow("connection_company", "approval.field.connection_company"),
+      textRow("connection_position", "approval.field.connection_position"),
+      textRow("contact_name", "approval.field.contact_name"),
+      textRow("contact_title", "approval.field.contact_title"),
     ],
     // A message that was scheduled and then stopped. Why it stopped is the whole
     // question, and the SUMMARY already carries that sentence: the server maps
@@ -207,7 +206,9 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
     // near-match. Every field the approval would write is captioned: the
     // decider must see the whole create, not its headline.
     vcard_create: [
-      { field: "full_name", label: "approval.field.name", as: "text" },
+      // `name` is what the accepted create writes; `full_name` is the folded
+      // identity and would show a name the contact never gets.
+      { field: "name", label: "approval.field.name", as: "text" },
       { field: "emails", label: "approval.field.email", as: "text" },
       { field: "company", label: "approval.field.company", as: "text" },
       { field: "title", label: "approval.field.title", as: "text" },
@@ -397,6 +398,7 @@ export function resolveDisplay(
       ...resolved.filter(
         (entry) => preview.state === "ready" && entry.lead && entry.value,
       ),
+      ...madeByRow(kind, change, names, t),
       ...commercialPreviewDisplay(preview, t, locale, formatDay),
     ];
   if (

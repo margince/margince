@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/ai backend/internal/modules/ai/providerkeys.go backend/internal/modules/ai/providerhealth.go backend/internal/modules/ai/pricesync.go backend/internal/modules/ai/routing.go backend/internal/modules/ai/openrouterrouting.go backend/internal/modules/ai/residency.go -->
 # AI providers
 
 An AI provider is the company whose models Margince calls. It is Anthropic,

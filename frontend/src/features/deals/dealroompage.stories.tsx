@@ -127,8 +127,8 @@ export const SettingTheEndDate: Story = {
       await screen.findByRole("button", { name: /Set end date/ }),
     );
     const dialog = await screen.findByRole("dialog", { name: "Set end date" });
-    await expect(within(dialog).getByLabelText(/Access ends on/)).toHaveValue(
-      "2026-11-30",
-    );
+    await expect(
+      within(dialog).getByRole("textbox", { name: "Access ends on" }),
+    ).toHaveValue("30/11/2026");
   },
 };

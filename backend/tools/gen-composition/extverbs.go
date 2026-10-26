@@ -23,6 +23,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -81,6 +82,13 @@ func extensionVerbs(units []extensionUnit, contracts map[string][]byte) ([]decla
 		out = append(out, found...)
 	}
 	sort.Slice(out, func(i, j int) bool { return verbKey(out[i].verb) < verbKey(out[j].verb) })
+	verbs := make([]extension.Verb, 0, len(out))
+	for _, d := range out {
+		verbs = append(verbs, d.verb)
+	}
+	if err := extension.CheckRbacDefaultsAgree(verbs); err != nil {
+		return nil, err
+	}
 	return out, nil
 }
 
@@ -211,7 +219,9 @@ type operationDoc struct {
 	AgentAccess yaml.Node `yaml:"x-agent-access"`
 	RbacObject  string    `yaml:"x-rbac-object"` // key spelled once in rbacObjectExtension
 	RbacAction  string    `yaml:"x-rbac-action"` // key spelled once in rbacActionExtension
-	RequestBody yaml.Node `yaml:"requestBody"`
+	// RbacDefaults is read by rbacDefaultsOf, which owns the key's spelling.
+	RbacDefaults yaml.Node `yaml:"x-rbac-defaults"`
+	RequestBody  yaml.Node `yaml:"requestBody"`
 	// Parameters is where a BODYLESS operation's arguments live. A GET and a
 	// DELETE carry no body, so the tool's input schema is assembled from the
 	// declared query parameters instead — see argumentSchema.
@@ -270,6 +280,30 @@ type subjectAnnotation struct {
 	Table string `yaml:"table"`
 }
 
+// requireOneAccessKind fails closed on an operation that declares neither or
+// both of x-mcp-tool and x-agent-access.
+//
+// Routes are mounted onto tool invocations (compose/extroutes.go), so an
+// operation with neither would be a documented endpoint answering 404 forever.
+func requireOneAccessKind(op *operationDoc) error {
+	if op.Tool.IsZero() && op.AgentAccess.IsZero() {
+		return fmt.Errorf("the operation declares neither %s nor %s — every extension operation is either a governed agent tool or explicitly human-only", mcpToolExtension, agentAccessExtension)
+	}
+	if !op.Tool.IsZero() && !op.AgentAccess.IsZero() {
+		return fmt.Errorf("the operation declares both %s and %s — exactly one", mcpToolExtension, agentAccessExtension)
+	}
+	return nil
+}
+
+// operationSchemas reads the operation's input and output schemas.
+func operationSchemas(method string, op *operationDoc) (input, output json.RawMessage, err error) {
+	if input, err = argumentSchema(strings.ToUpper(method), &op.RequestBody, &op.Parameters); err != nil {
+		return nil, nil, err
+	}
+	output, err = responseSchema(&op.Responses)
+	return input, output, err
+}
+
 func readOperation(base, unit, route, method string, node *yaml.Node) (declaredVerb, error) {
 	var op operationDoc
 	if err := node.Decode(&op); err != nil {
@@ -278,23 +312,14 @@ func readOperation(base, unit, route, method string, node *yaml.Node) (declaredV
 	if err := checkExtensionKeys(node); err != nil {
 		return declaredVerb{}, err
 	}
-	if op.Tool.IsZero() && op.AgentAccess.IsZero() {
-		// Fail closed. An extension operation declaring neither would publish
-		// a route this tier has no way to serve — routes are mounted onto tool
-		// invocations (compose/extroutes.go) — so it would be a documented
-		// endpoint answering 404 forever. Every operation is either a governed
-		// agent tool or explicitly human-only, the same invariant crm.yaml's
-		// own header states for core.
-		return declaredVerb{}, fmt.Errorf("the operation declares neither %s nor %s — every extension operation is either a governed agent tool or explicitly human-only", mcpToolExtension, agentAccessExtension)
+	if err := requireOneAccessKind(&op); err != nil {
+		return declaredVerb{}, err
 	}
-	if !op.Tool.IsZero() && !op.AgentAccess.IsZero() {
-		return declaredVerb{}, fmt.Errorf("the operation declares both %s and %s — exactly one", mcpToolExtension, agentAccessExtension)
-	}
-	input, err := argumentSchema(strings.ToUpper(method), &op.RequestBody, &op.Parameters)
+	input, output, err := operationSchemas(method, &op)
 	if err != nil {
 		return declaredVerb{}, err
 	}
-	output, err := responseSchema(&op.Responses)
+	defaults, err := rbacDefaultsOf(&op.RbacDefaults)
 	if err != nil {
 		return declaredVerb{}, err
 	}
@@ -322,6 +347,7 @@ func readOperation(base, unit, route, method string, node *yaml.Node) (declaredV
 			OutputSchema: output,
 			RbacObject:   op.RbacObject,
 			RbacAction:   extension.RbacAction(op.RbacAction),
+			RbacDefaults: defaults,
 		}
 	} else {
 		ann, err := decodeStrict[toolAnnotation](&op.Tool)
@@ -344,6 +370,7 @@ func readOperation(base, unit, route, method string, node *yaml.Node) (declaredV
 			OutputSchema:   output,
 			RbacObject:     op.RbacObject,
 			RbacAction:     extension.RbacAction(op.RbacAction),
+			RbacDefaults:   defaults,
 			Subject:        subjectOf(ann.Subject),
 		}
 	}
@@ -361,7 +388,7 @@ func readOperation(base, unit, route, method string, node *yaml.Node) (declaredV
 
 // readExtensionKeys are the x- annotations an extension operation may carry.
 // The set is closed and short on purpose; see checkExtensionKeys.
-var readExtensionKeys = []string{mcpToolExtension, agentAccessExtension, rbacObjectExtension, rbacActionExtension}
+var readExtensionKeys = []string{mcpToolExtension, agentAccessExtension, rbacObjectExtension, rbacActionExtension, rbacDefaultsExtension}
 
 // rbacObjectExtension names the RBAC object an extension operation gates on.
 const rbacObjectExtension = "x-rbac-object"

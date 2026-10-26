@@ -1,0 +1,136 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import type { ReactNode } from "react";
+import type { components } from "../../api/schema";
+import { Badge } from "../../design-system/atoms";
+import { EvidenceMark } from "../../design-system/evidencemark";
+import { Heading } from "../../design-system/heading";
+import {
+  type SectionState,
+  sectionState,
+} from "../../design-system/surfacestate";
+import { formatNumber } from "../../format/format";
+import { useLocale } from "../../i18n";
+import { roleOf } from "../../lib/provider-status";
+
+// Small pieces the rail's own sections draw off — a leaf so companyrail.tsx
+// and companyrailtags.tsx do not import each other, the same no-cycle shape
+// companylookups.ts already keeps for companies.tsx/company360.tsx.
+
+// A collapsible section's summary: the name, plus how many rows it carries.
+// Still drawn by the signals disclosure, the one section left inside a
+// `Disclosure` rather than its own `Panel`.
+//
+// `count` is absent, not zero, while the section is withheld, unavailable or
+// still loading: a "0" badge above the restricted notice below it reads as an
+// empty account rather than a permission boundary, the exact conflation
+// sectionState exists to keep apart.
+export function SectionSummary({
+  title,
+  count,
+}: Readonly<{ title: string; count?: number }>) {
+  const { locale } = useLocale();
+  return (
+    <span className="co-sect-summary">
+      {/* A heading, so the section is reachable by name in the outline: the
+          column is one pane of named slices, and each slice's name is a
+          heading under the pane rather than a card title of its own. */}
+      <Heading size="medium" className="co-sect-title">
+        {title}
+      </Heading>
+      {count != null && <Badge>{formatNumber(count, locale)}</Badge>}
+    </span>
+  );
+}
+
+// A paged section's rows are its count only when the page is the whole set.
+// `PageInfo` carries `has_more` and no total, so a cut page is a floor and not
+// a count — "25" beside sixty contacts is not a smaller truth but a wrong one.
+// Past the cut the count is absent, and a reader who sees no number goes and
+// looks, which is the outcome a wrong number prevents. The tab strip's badges
+// (companyTabCounts) and the rail's summaries and "All" verbs all read this
+// one rule.
+export function wholeCount(section?: {
+  data: readonly unknown[];
+  page: components["schemas"]["PageInfo"];
+}): number | undefined {
+  if (!section || section.page.has_more) {
+    return undefined;
+  }
+  return section.data.length;
+}
+
+type Company360 = components["schemas"]["Company360"];
+type Contacts = NonNullable<Company360["contacts"]>;
+
+// The contacts section as every surface reads it: the contacts in the server's
+// own rank, the count only while the page is whole, and whether the section
+// has answered at all. The details column's slice and the glance's chips both
+// draw this one reading rather than each taking it again.
+export function contactsSlice(
+  view: Company360 | undefined,
+  loading: boolean,
+): { contacts: Contacts["data"]; count?: number; state: SectionState } {
+  const contacts = view?.contacts?.data ?? [];
+  return {
+    contacts,
+    count: wholeCount(view?.contacts),
+    state: sectionState(
+      view,
+      "contacts",
+      Boolean(view?.contacts),
+      contacts.length,
+      loading,
+    ),
+  };
+}
+
+// A section has answered, one way or the other, only once it is ready or
+// empty; withheld, unavailable, loading and failed are all still "we don't
+// know yet" from the reader's side of the count badge.
+export function sectionAnswered(state: SectionState): boolean {
+  return state === "ready" || state === "empty";
+}
+
+// A contact's role as both company surfaces draw it: the title the server
+// chose, wearing its receipt when the title was bought rather than typed.
+// Null when there is no title at all — a function rather than a component so
+// that absence reaches the caller as nothing, where an element that renders
+// null still reads as a value and leaves an empty, padded line behind it.
+//
+// The rail and the glance had each been on their way to spelling this — one
+// with the mark, one without — which would have made a purchased title look
+// like a typed one on the card a click away from the row.
+export function contactRole(
+  contact: Pick<
+    components["schemas"]["Company360Contact"],
+    "title" | "provider_title" | "title_source"
+  >,
+): ReactNode {
+  const role = roleOf(contact);
+  if (!role) {
+    return null;
+  }
+  // Branched on the VALUE, not on title_source: that field is optional, and a
+  // server sending a purchased title without it would otherwise leave an
+  // unmarked claim standing as the installation's own.
+  if (contact.title_source !== "provider") {
+    return role;
+  }
+  return (
+    <EvidenceMark
+      value={role}
+      source={{ provenance: { kind: "connector", connector: "provider" } }}
+    />
+  );
+}
+
+// How many rows a rail card shows before pointing at the tab. The rail is a
+// glance, and a twenty-row card beside the work column is a second page, not
+// an anchor — the "All N" header verb is the way to the rest.
+//
+// Here rather than in either rail half: the deals card and the contacts card
+// both cut their list by it, and two copies would let one card quietly start
+// showing four.
+export const RAIL_ROW_LIMIT = 3;

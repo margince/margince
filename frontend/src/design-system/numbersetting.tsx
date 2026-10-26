@@ -6,27 +6,29 @@ import { isImeCommit } from "../lib/imecommit";
 import { TextInput } from "./atoms";
 import { describedByIds } from "./describedby";
 import { ErrorLine } from "./errorline";
+import { useSaveDraft } from "./savepage";
 import { type SettingControlProps, SettingRow } from "./settingrow";
 import "./numbersetting.css";
 
 /**
  * A whole number an admin sets inside a range, in a `SettingRow`'s right
- * column. It commits on Enter or blur like a rename, and only a whole number in
- * range reaches `onCommit`: anything else stays in the box, with `refusal`
- * under it, so the reader corrects what they typed instead of retyping it.
+ * column. Anything else stays in the box with `refusal` under it, so the
+ * reader corrects what they typed instead of retyping it.
  *
- * `refusal` is the caller's sentence because only the caller knows the unit —
- * "15 to 10,080 minutes" says what a bare "15 to 10,080" cannot. The row's own
- * description stays on the field and the refusal is ADDED to it, so a reader
- * hears the rule and how they broke it.
+ * Inside a `SavePageProvider` the typed number is a draft the page's save bar
+ * commits; elsewhere it commits on Enter or blur. `onCommit` may return the
+ * write's promise, so the bar can keep a refused draft.
  *
- * `lowestOn` is for a setting whose `min` of 0 means off: a value between 0
- * and `lowestOn` is refused too, so 0 and `lowestOn..max` are the choices.
+ * `refusal` is the caller's sentence because only the caller knows the unit.
+ * It is added to the row's description, so a reader hears the rule and how
+ * they broke it.
  *
- * Typing the stored value back is no edit at all. A draft is held against the
- * value it was typed over, so the box shows the stored value again the moment
- * that value moves — a save landing, a refetch, a colleague's change — rather
- * than a draft that would write the old number back on the next blur.
+ * `lowestOn` is for a setting whose `min` of 0 means off. A value between 0
+ * and `lowestOn` is refused too.
+ *
+ * Typing the stored value back is no edit. A draft is held against the value
+ * it was typed over. The box shows the stored value again when it moves (a
+ * save, a refetch, a colleague's change) instead of writing the old number back.
  */
 export function NumberSetting({
   control,
@@ -50,7 +52,7 @@ export function NumberSetting({
   refusal: string;
   /** The typed number in words under the box, for a unit a bare figure hides. */
   reading?: (value: number) => string;
-  onCommit: (next: number) => void;
+  onCommit: (next: number) => unknown;
   disabled?: boolean;
   /** Why this reader may not change it, under the box; refuses the edit alone. */
   reason?: ReactNode;
@@ -61,45 +63,11 @@ export function NumberSetting({
   describedBy?: string;
   testId?: string;
 }>) {
-  // `sent` is the number this draft already committed: the blur that follows
-  // an Enter would otherwise send it a second time while the first save is in
-  // flight. Enter itself always commits, so a refused save can be retried.
-  const [draft, setDraft] = useState<{
-    text: string;
-    over: number;
-    sent?: number;
-  } | null>(null);
-  const [refused, setRefused] = useState(false);
   const refusalId = useId();
   const readingId = useId();
   const reasonId = useId();
-  const live = draft !== null && draft.over === value ? draft : null;
-  const shown = live?.text ?? String(value);
-  const bounds = { min, max, lowestOn };
-  const typed = acceptedNumber(shown, bounds);
-  const words = reading && typed !== null ? reading(typed) : null;
-  const commit = (by: "enter" | "blur") => {
-    if (live === null) {
-      setRefused(false);
-      return;
-    }
-    if (Number(live.text.trim()) === value) {
-      setDraft(null);
-      setRefused(false);
-      return;
-    }
-    const next = acceptedNumber(live.text, bounds);
-    if (next === null) {
-      setRefused(true);
-      return;
-    }
-    setRefused(false);
-    if (by === "blur" && live.sent === next) {
-      return;
-    }
-    setDraft({ ...live, sent: next });
-    onCommit(next);
-  };
+  const number = useNumberDraft(value, { min, max, lowestOn }, onCommit);
+  const words = reading && number.typed !== null ? reading(number.typed) : null;
   return (
     <div className="settingrow-measure numbersetting">
       <TextInput
@@ -109,20 +77,20 @@ export function NumberSetting({
           describedBy,
           words && readingId,
           reason !== undefined && reasonId,
-          refused && refusalId,
+          number.refused && refusalId,
         )}
-        aria-invalid={refused ? true : undefined}
+        aria-invalid={number.refused ? true : undefined}
         className="t-num"
         data-testid={testId}
         inputMode="numeric"
-        value={shown}
+        value={number.shown}
         disabled={disabled || reason !== undefined}
-        onChange={(e) => setDraft({ text: e.target.value, over: value })}
-        onBlur={() => commit("blur")}
+        onChange={(e) => number.type(e.target.value)}
+        onBlur={() => number.commit("blur")}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !isImeCommit(e)) {
             e.preventDefault();
-            commit("enter");
+            number.commit("enter");
           }
         }}
       />
@@ -136,9 +104,67 @@ export function NumberSetting({
           {reason}
         </p>
       )}
-      <ErrorLine id={refusalId}>{refused ? refusal : null}</ErrorLine>
+      <ErrorLine id={refusalId}>{number.refused ? refusal : null}</ErrorLine>
     </div>
   );
+}
+
+type Bounds = Readonly<{ min: number; max: number; lowestOn?: number }>;
+
+// `sent` is the number this draft already committed. Without it the blur after
+// an Enter would send it twice while the first save is in flight. A saved
+// draft must not hold the page's bar open.
+function useNumberDraft(
+  value: number,
+  bounds: Bounds,
+  onCommit: (next: number) => unknown,
+) {
+  const [draft, setDraft] = useState<{
+    text: string;
+    over: number;
+    sent?: number;
+  } | null>(null);
+  const [refused, setRefused] = useState(false);
+  const live = draft !== null && draft.over === value ? draft : null;
+  const shown = live?.text ?? String(value);
+  const typed = acceptedNumber(shown, bounds);
+  const changed =
+    live !== null &&
+    (live.text.trim() === "" || Number(live.text.trim()) !== value);
+  const inPage = useSaveDraft({
+    dirty: changed && live?.sent === undefined,
+    invalid: typed === null,
+    save: async () => {
+      if (live === null || typed === null) return;
+      await onCommit(typed);
+      setDraft({ ...live, sent: typed });
+    },
+    discard: () => {
+      setDraft(null);
+      setRefused(false);
+    },
+  });
+  const commit = (by: "enter" | "blur") => {
+    if (live === null || !changed) {
+      if (live !== null) setDraft(null);
+      setRefused(false);
+      return;
+    }
+    setRefused(typed === null);
+    // In a page the bar sends the draft; here the reader only learns it is wrong.
+    // Enter always sends, so a refused save can be retried.
+    if (inPage || typed === null) return;
+    if (by === "blur" && live.sent === typed) return;
+    setDraft({ ...live, sent: typed });
+    onCommit(typed);
+  };
+  return {
+    shown,
+    typed,
+    refused,
+    type: (text: string) => setDraft({ text, over: value }),
+    commit,
+  };
 }
 
 // Digits only: `Number` would also read "1e3", "0x10" and " -5 " as numbers.

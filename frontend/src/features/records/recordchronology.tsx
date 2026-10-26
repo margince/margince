@@ -12,6 +12,10 @@ import type { MessageKey } from "../../i18n/en";
 import type { EntityKind } from "../../lib/entity";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
 import { useViewerId } from "../../lib/session";
+import {
+  TIMELINE_FILTERS,
+  type TimelineFilter,
+} from "../../lib/timelinefilter";
 import { changeTimeline, useFieldHistory } from "./history";
 import type { HistoryValueCtx } from "./historyvalues";
 
@@ -22,14 +26,6 @@ import type { HistoryValueCtx } from "./historyvalues";
 
 type Activity = components["schemas"]["Activity"];
 type ChangesQuery = ReturnType<typeof useFieldHistory>;
-
-// `conversations` is in the vocabulary but not in the base row. A page offers
-// it through `ChronologyFilter`'s own flag once it renders the cut. A pill
-// whose press changes nothing reads as a broken row.
-export const TIMELINE_FILTERS = ["all", "changes"] as const;
-export type TimelineFilter =
-  | (typeof TIMELINE_FILTERS)[number]
-  | "conversations";
 
 // Whether the cut reads the exchanges alone, which is every cut but Changes.
 // One predicate answers whether the change feed is read, what draws as loading

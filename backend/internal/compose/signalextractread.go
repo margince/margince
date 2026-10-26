@@ -85,6 +85,8 @@ type threadMessage struct {
 	// (email, call or meeting), shown to the settlement model as such. Empty
 	// for a message of the thread itself.
 	OffThread string
+	// Incomplete is a body the mail parser did not decode in full.
+	Incomplete bool
 }
 
 // settledThread is one conversation due for a read, with the account it

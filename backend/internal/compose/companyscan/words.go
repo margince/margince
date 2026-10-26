@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 const (
@@ -61,6 +62,7 @@ func readWords(
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	companyPos := arg(companyID)
 	sincePos := arg(now.AddDate(0, 0, -scanWindowDays))
+	nowPos := arg(now)
 	charsPos := arg(scanBodyChars)
 	capPos := arg(scanMessages)
 	scope, err := auth.ActivityContentClause(ctx, "a", arg)
@@ -81,7 +83,7 @@ func readWords(
 		 ORDER BY a.occurred_at DESC, a.id DESC
 		 LIMIT $%[4]d`,
 		activities.CompanyLinkedActivityExists(companyPos), sincePos, charsPos, capPos, scope,
-		relstrength.InteractionCountsSQL("a")), args...)
+		relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d::timestamptz", nowPos))), args...)
 	if err != nil {
 		return nil, fmt.Errorf("companyscan: reading the account's exchanges: %w", err)
 	}
@@ -94,6 +96,9 @@ func readWords(
 			return nil, err
 		}
 		message.At = message.At.UTC()
+		// The quote gate reads Text too, so a quoted reply can be neither shown
+		// nor cited as this message's words.
+		message.Text = textlang.SenderText(message.Text)
 		out = append(out, message)
 	}
 	if err := rows.Err(); err != nil {

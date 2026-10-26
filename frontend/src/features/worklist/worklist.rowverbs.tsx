@@ -360,6 +360,7 @@ const VERB_LABEL: Record<
   // Domain review owns the inline controls; these labels keep the contract map total.
   reopen: (t) => t("worklist.domainReview.retry"),
   keep: (t) => t("worklist.verb.keep"),
+  keep_as_vendor: (t) => t("worklist.verb.keepAsVendor"),
   discard: (t) => t("worklist.verb.discard"),
   // The composer's own word, not a second one: ChannelReplyAction draws the
   // button this labels, and two spellings of one act would read as two acts.

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useClaimSettle } from "../../components/taskactions";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { useClaimSettle } from "../worklist/taskactions";
 
 /**
  * Dismissing a commitment the reader judges was never made. Kept beside the

@@ -35,17 +35,15 @@ import {
 import { captureValueMessage } from "./capturevalue";
 import "./capture-owner-identities.css";
 
-// A seat's OWN other addresses: a send-as alias, a private domain the same
-// contact reads, an address they forward from.
+// A seat's own other addresses. Examples are a send-as alias, a private domain
+// the same contact reads, and an address they forward from.
 //
-// Mail among a contact's own addresses is not correspondence with anybody, so
-// declaring one keeps those messages out of the CRM and stops the address being
-// minted as a contact. Until this card there was no way to say so — the endpoint
-// shipped and nothing reached it.
+// Mail among a contact's own addresses is not correspondence with anybody.
+// Declaring one keeps those messages out of the CRM and stops the address being
+// minted as a contact.
 //
-// The caller's own only, and that is the point rather than a limitation: a
-// colleague's alias says which of THEIR mail is private, which is the thing the
-// list exists to protect.
+// The caller's own only, by design: a colleague's alias says which of their
+// mail is private, which is what the list exists to protect.
 
 type OwnerIdentity = components["schemas"]["CaptureOwnerIdentity"];
 type Kind = components["schemas"]["CaptureOwnerIdentityKind"];
@@ -224,10 +222,9 @@ const kindLabel: Record<Kind, MessageKey> = {
 /**
  * A row says where its claim came from, and only when the seat did not make it.
  *
- * An address somebody typed needs no explanation. One the product LEARNED does:
+ * An address somebody typed needs no explanation. One the product learned does:
  * a seat scanning this card would otherwise find an address they never entered
- * and have no way to tell whether they forgot adding it or something else did —
- * and they are the colleague who decides whether it stays.
+ * and could not tell who added it. They decide whether it stays.
  */
 function learnedNote(source: OwnerIdentity["source"]): MessageKey | null {
   switch (source) {

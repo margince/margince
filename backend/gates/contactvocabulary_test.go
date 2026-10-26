@@ -212,7 +212,6 @@ var retired = gatekit.Waive(map[string]string{
 	"backend/migrations/contactretentionscope_integration_test.go": "it seeds the retention rows " +
 		"an installation stored under the retired name, which is what the migration it replays exists " +
 		"to carry over",
-	"CHANGELOG.md": "entries say what they said when they were written",
 	"LICENSE": "the licence defines a Seat as a natural person, a legal term the licensor " +
 		"chose, and a licence is not restyled by a vocabulary rule",
 	"CODE_OF_CONDUCT.md": "the adopted Contributor Covenant, held verbatim by " +
@@ -235,8 +234,8 @@ var retired = gatekit.Waive(map[string]string{
 	// Settings → People is the SEATS group, beside Company and Sales. It heads
 	// the pages about colleagues with a licence, and it is the one surface in
 	// this tree where the plural still means the humans who work here.
-	"frontend/src/features/settings/settingscatalog.ts":              "the seats settings group",
-	"frontend/src/features/settings/settingscatalog.business.ts":     "the seats settings group",
+	"frontend/src/lib/settingscatalog.ts":                            "the seats settings group",
+	"frontend/src/lib/settingscatalog.business.ts":                   "the seats settings group",
 	"frontend/src/app/shell.stories.tsx":                             "the seats settings group",
 	"frontend/src/features/settings/settings-chrome.test.tsx":        "the seats settings group",
 	"frontend/src/features/settings/license.stories.tsx":             "a page under the seats settings group",
@@ -251,7 +250,7 @@ var retired = gatekit.Waive(map[string]string{
 	"frontend/src/features/settings/users-memberverbs.stories.tsx":   "a page under the seats settings group",
 	"frontend/src/features/settings/users-password-link.stories.tsx": "a page under the seats settings group",
 	"frontend/src/features/settings/users-rolecell.stories.tsx":      "a page under the seats settings group",
-	"frontend/src/features/records/share.parts.tsx": "the share target kind: a colleague with a seat, or a team " +
+	"frontend/src/components/share.parts.tsx": "the share target kind: a colleague with a seat, or a team " +
 		"of them — never this record",
 	"docs/handbook/settings.md": "it names the seats settings group, which is the heading a " +
 		"reader navigating Settings actually sees",

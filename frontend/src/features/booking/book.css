@@ -31,18 +31,6 @@
   margin-block: var(--space-4);
   align-items: center;
 }
-.book-policy-fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: var(--space-4);
-  align-items: start;
-}
-/* The seven days read as one week, so they run as a row and wrap. */
-.working-days {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-5);
-}
 .book-guest-page {
   min-height: 100vh;
   background: var(--bgPage);
@@ -177,27 +165,4 @@
    space-between would put a lone item at the start. */
 .book-picker-foot > .btn {
   margin-inline-start: auto;
-}
-.meeting-checklist {
-  display: grid;
-  gap: var(--space-2);
-  margin: var(--space-2) 0 0;
-  padding: 0;
-  list-style: none;
-}
-.meeting-checklist li {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-.meeting-checklist svg {
-  width: var(--controlIcon);
-  height: var(--controlIcon);
-  flex-shrink: 0;
-}
-.meeting-checklist li[data-done="true"] {
-  color: var(--textSecondary);
-}
-.meeting-length > .segmented {
-  align-self: flex-start;
 }

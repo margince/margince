@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -84,6 +85,36 @@ func TestTheGrowthFitFingerprintMovesWhenOurOwnOfferingIsConfirmed(t *testing.T)
 	}
 	if edited == confirmed {
 		t.Error("changing what this workspace sells left the key unchanged")
+	}
+}
+
+// Two offerings can describe themselves in identical words. Switching a company
+// from one to the other must still re-assess it, because the band is a claim
+// about which offering it was measured against.
+func TestTheGrowthFitFingerprintMovesWithTheChosenOfferingEvenWhenItsTextIsTheSame(t *testing.T) {
+	offering := Offering{Confirmed: true, Fingerprint: "same-words"}
+	main := fourOfSeven()
+	second := fourOfSeven()
+	second.AssessAgainst = ids.NewV7().String()
+	first, err := growthFitFingerprint(main, "routing-1", offering, string(textlang.English))
+	if err != nil {
+		t.Fatalf("fingerprint: %v", err)
+	}
+	other, err := growthFitFingerprint(second, "routing-1", offering, string(textlang.English))
+	if err != nil {
+		t.Fatalf("fingerprint: %v", err)
+	}
+	if first == other {
+		t.Error("choosing another offering with identical text left the key unchanged")
+	}
+}
+
+// The prompt and the key must name one offering.
+func TestTheGrowthFitRequestNamesTheOfferingTheKeyWasBuiltFrom(t *testing.T) {
+	in := fourOfSeven()
+	in.AssessAgainst = ids.NewV7().String()
+	if got := GrowthFitRequest(in, string(textlang.English)).CompanyContextOffering; got != in.AssessAgainst {
+		t.Errorf("request offering = %q, want %q", got, in.AssessAgainst)
 	}
 }
 

@@ -31,21 +31,46 @@ const company = {
   updated_at: "2026-06-01T08:00:00Z",
 };
 
+function renderCompanies(rows: readonly (typeof company)[]) {
+  globalThis.location.hash = "#/companies";
+  installFetchStub({
+    "GET /me": meRoute({ company: ["read", "update"] }),
+    "GET /companies": () =>
+      jsonResponse({
+        data: rows,
+        page: { next_cursor: null, has_more: false },
+      }),
+  });
+  return (
+    <StoryProviders>
+      <CompaniesScreen />
+    </StoryProviders>
+  );
+}
+
 export const CompaniesList: Story = {
-  render: () => {
-    globalThis.location.hash = "#/companies";
-    installFetchStub({
-      "GET /me": meRoute({ company: ["read", "update"] }),
-      "GET /companies": () =>
-        jsonResponse({
-          data: [company],
-          page: { next_cursor: null, has_more: false },
-        }),
-    });
-    return (
-      <StoryProviders>
-        <CompaniesScreen />
-      </StoryProviders>
-    );
-  },
+  render: () => renderCompanies([company]),
+};
+
+const longNames = [
+  "Brandt Automotive Fleet Services International Holdings Alpha",
+  "Brandt Automotive Fleet Services International Holdings Bravo",
+  "Brandt Automotive Fleet Services International Holdings Charlie",
+].map((display_name, i) => ({
+  ...company,
+  id: `o-long-${i}`,
+  display_name,
+  archived_at: i === 2 ? "2026-06-20T09:00:00Z" : undefined,
+}));
+
+export const LongNames: Story = {
+  name: "long names end in an ellipsis",
+  render: () => renderCompanies(longNames),
+};
+
+export const LongNamesPhone: Story = {
+  name: "long names wrap in the card — on a phone",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => renderCompanies(longNames),
 };

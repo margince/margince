@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -106,6 +105,7 @@ type facts struct {
 	// which is the honest answer for both.
 	seats []Seat
 	now   time.Time
+	loc   *time.Location
 	// lang is the installation's base language, which the card is written in.
 	// A status card is filed on the deal and read by anyone who opens it, so it
 	// takes the shared language rather than the reader's — the same rule that
@@ -213,7 +213,7 @@ func (s *Service) cardAndTimeline(
 	}
 	mv := decideMove(f)
 	in := project(f, mv)
-	fingerprint, err := Fingerprint(in, userID.UUID, s.routingVersion, f.now, f.lang)
+	fingerprint, err := Fingerprint(in, userID.UUID, s.routingVersion, f.now, f.loc, f.lang)
 	if err != nil {
 		return crmcontracts.DealStatusCard{}, nil, err
 	}
@@ -354,14 +354,13 @@ func (s *Service) gather(ctx context.Context, dealID ids.DealID) (facts, error) 
 	}
 	f.timeline = timeline
 	requestKind := string(crmcontracts.ActivityKindEmail)
-	requests, _, err := s.activities.ListActivities(ctx, activities.ListActivitiesInput{
+	f.requests, _, err = s.activities.ListActivities(ctx, activities.ListActivitiesInput{
 		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &limit,
 		RequestReviewAsOf: &f.now, Kind: &requestKind,
 	})
 	if err != nil {
 		return facts{}, fmt.Errorf("deal status: reading outstanding requests: %w", err)
 	}
-	f.requests = requests
 	// System-minted work is excluded because the card reads an open task as the
 	// next step somebody AGREED. A forecast-assurance review or a check-in
 	// reminder is the product filing work about the deal, and reading one as an
@@ -404,7 +403,9 @@ func (s *Service) gather(ctx context.Context, dealID ids.DealID) (facts, error) 
 		}
 		f.seats = seats
 	}
-	f.lang = identity.BaseLanguageForPrompt(ctx, s.pool)
+	if err = s.gatherInstallation(ctx, &f); err != nil {
+		return facts{}, err
+	}
 	return f, nil
 }
 

@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/import backend/internal/modules/migration backend/internal/modules/contacts/creatededupe.go backend/internal/modules/contacts/deduperecheck.go backend/internal/modules/contacts/dedupescan.go -->
 # Importing data
 
 **Data import** brings companies, contacts, prospects, deals and activities into Margince from CSV files. You find it in Settings, in the **Data** group. Only an admin or ops user can import. Nothing is written until you read the test run and choose to import.
@@ -50,7 +51,10 @@ These skip the row:
 - a row with no value in its `ref` column, or a `ref` that an earlier row of the same file already used;
 - an email address, domain or LinkedIn address that another live record already holds, when the row would create a second record under it;
 - a row whose record was archived since the earlier import;
+- a contact row whose email belongs to a sending system, such as `noreply@`, `notifications@` or `receipts@`;
 - a record type you may not create, or a change to a record you may not edit.
+
+A contact row with **First name** and **Last name** filled takes its full name from those two. This holds even when the file also has a **Full name** column. A contact you add or edit in Margince keeps the full name you type.
 
 These stop nothing. The row lands, and the problem is listed:
 - an owner email that no user has (**Unknown owner**): you become the owner, except for a lead, which stays unassigned;
@@ -96,11 +100,25 @@ Also called: ID from another system, key column, record ID from my old system.
 - **Custom fields:** a custom field has its own column. A list field takes one of its allowed values. A field that takes several values has them split by `;`.
 Also called: record owner, tag a group of records, import custom fields.
 
+### How does an address in one column import?
+A company or contact file may hold the whole address in one column. Map that column to `address.line1` and map no other address column. Margince then splits the address into its parts.
+
+If Margince cannot split it, the address stays in line 1, and the test run warns about that row. A file that also maps another address part keeps line 1 as it is written.
+Also called: import a full address, split an address column.
+
 ### How do I set a prospect's status?
 A `leads.csv` row can carry a `status`: `new`, `contacted` or `engaged`. Case does not matter. An empty box leaves a new prospect as `new`, and an existing one as it is.
 
 A file cannot set a prospect to qualified or disqualified. Use **Qualify** or **Disqualify** on the prospect. A row with another word is skipped, and the problem lists the allowed values.
 Also called: import lead status, set the stage of a lead.
+
+### How do I map a lead source from my old system to Origin?
+A `leads.csv` file can map a column to **Origin** and another to **Origin note**. Origin says where the lead came from. It is not the source name above, which says which import wrote the row.
+
+Margince matches the value to an origin in Settings by its name, ignoring case. "Cold Outreach" and "cold_outreach" both file the lead under **Cold outreach**. A value that matches no origin is kept as the lead's origin note, and the origin stays empty. Margince never guesses one. An empty box leaves the origin empty.
+
+A later file never replaces an origin a lead already has, because you may have set it by hand. It only fills a lead that has none. A lead with no origin gets no points for it, so an import does not lower a score.
+Also called: import lead source, map lead origin.
 
 ### How do I import deals?
 A `deals.csv` row is one deal. Each row needs a `ref`. A new deal also needs a `name` and a `stage`.
@@ -136,7 +154,7 @@ An `activities.csv` row is one note, call, meeting or email, put on the timeline
 | `direction` | `inbound` or `outbound`. Written only when the row creates the activity. |
 | `owner_email` | The Margince user the activity is attributed to. If none has this email, you are. |
 
-A contact's last activity becomes the newest imported date when it is newer. A `no_show` or `canceled` meeting does not count.
+A contact's last activity becomes the newest imported date when it is newer. A task does not count, and neither does a `no_show` or `canceled` meeting.
 Imported activities start no automation and sit on no follow-up reminder.
 
 A row is skipped, with its reason, in these cases:
@@ -168,6 +186,17 @@ Also called: duplicates on import, import made copies.
 ### Does an import file contacts with the same first name as duplicates?
 No. Two contacts that share only a first name are not filed, even at one company. Their last names must match and their first names must be close.
 Also called: duplicate queue too long after import, same name flagged.
+
+### Why did a pair leave the duplicate list without anyone deciding it?
+Margince checks the open duplicate list every night, and each time it starts. It closes a pair that today's rules would no longer suggest, for example two contacts who share only a first name. It also closes two companies with close names that share no address, phone number or contact.
+A pair someone has dismissed or reopened is never closed this way. A closed pair keeps its history, and it comes back by itself if the two records start to match again.
+Also called: duplicate gone, shorter duplicate list, fewer duplicates.
+
+### Does Margince find duplicates that were already there before?
+Yes. Every night Margince compares each company and contact that changed that day with all the others. It lists each new pair it finds on the duplicate list. An upgrade compares every record once.
+
+So two companies that one import wrote at the same time are listed, and so are records written before a matching rule existed. A pair someone has dismissed or merged is never listed again. Margince never merges a pair by itself.
+Also called: old duplicates, duplicates from before, duplicates not found, existing duplicates.
 
 ### How do I correct companies with a spreadsheet?
 To correct companies in Margince from a CSV, give each row the company's ID and map that column to **id**.

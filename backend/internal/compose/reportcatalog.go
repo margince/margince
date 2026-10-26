@@ -75,7 +75,7 @@ func describeReportDefaults(spec reportSpec) string {
 		if agg.Field != "" {
 			rendered += "(" + agg.Field + ")"
 		}
-		if agg.As != "" {
+		if agg.As != "" && agg.As != agg.Field {
 			rendered += " as " + agg.As
 		}
 		aggs = append(aggs, rendered)

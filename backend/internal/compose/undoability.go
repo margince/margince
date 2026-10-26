@@ -100,6 +100,17 @@ const (
 	// change the record, so the button is honest rather than a 403 waiting to
 	// happen.
 	ReasonNotWritableByCaller Reason = "not_writable_by_caller"
+	// ReasonLaterCompanyChange means a technical lookup's company or facts were
+	// written after it, a same-value refresh included. Its snapshot no longer
+	// describes the rows, so putting it back would overwrite that later work.
+	ReasonLaterCompanyChange Reason = "later_company_change"
+	// ReasonNoRestoreSnapshot means a technical lookup recorded before receipts
+	// kept the rows it replaced. No earlier value is invented for it.
+	ReasonNoRestoreSnapshot Reason = "no_restore_snapshot"
+	// ReasonCredentialNotKept means the text the entry replaced held a
+	// credential, which the trail keeps only masked. Putting the masked text
+	// back would overwrite what the member typed with the marker.
+	ReasonCredentialNotKept Reason = "credential_not_kept" //nolint:gosec // G101: the name of a refusal reason, not a credential
 )
 
 // Reasons lists the refusals in the order the branches are asked. It is the
@@ -118,9 +129,12 @@ var Reasons = []Reason{
 	ReasonAlreadyUndone,
 	ReasonEdgeRelinkUnsupported,
 	ReasonSuperseded,
+	ReasonCredentialNotKept,
 	ReasonBehindErasureBoundary,
 	ReasonNotRestorableByThisPath,
 	ReasonNullUnwritableByModule,
+	ReasonNoRestoreSnapshot,
+	ReasonLaterCompanyChange,
 }
 
 // Undoability is the answer for one audit row.
@@ -218,6 +232,9 @@ type Evaluator struct {
 	// follows it: reversing a create archives the link and asks the delete grant,
 	// where reversing an update asks update.
 	EdgeWritable func(ctx context.Context, tx pgx.Tx, facts contacts.EdgeFacts, entryAction string) error
+	// MaskedText names the patch keys whose value the trail keeps masked. The
+	// record keeps that text as typed, so the patch would write the marker.
+	MaskedText func(ctx context.Context, tx pgx.Tx, row AuditRow, patch map[string]json.RawMessage) ([]string, error)
 }
 
 // Evaluate answers whether this row can be put back.
@@ -232,6 +249,9 @@ func (e Evaluator) Evaluate(ctx context.Context, tx pgx.Tx, row AuditRow, mode M
 	// table this row is not on.
 	if row.EntityType == edgeEntityType {
 		return e.evaluateEdge(ctx, tx, row)
+	}
+	if isTechnicalReceipt(row) {
+		return e.evaluateTechnical(ctx, tx, row)
 	}
 	// A create, an archive, a promotion and a machine fill are undone by the
 	// module's own verb, not by replaying an image.
@@ -342,6 +362,15 @@ func (e Evaluator) trailState(ctx context.Context, tx pgx.Tx, row AuditRow, patc
 	}
 	if len(moved) > 0 {
 		return refuse(ReasonSuperseded, strings.Join(moved, ", ")), nil
+	}
+	if e.MaskedText != nil {
+		masked, err := e.MaskedText(ctx, tx, row, patch)
+		if err != nil {
+			return Undoability{}, err
+		}
+		if len(masked) > 0 {
+			return refuse(ReasonCredentialNotKept, strings.Join(masked, ", ")), nil
+		}
 	}
 	if e.BehindErasure != nil {
 		behind, err := e.BehindErasure(ctx, tx, row)

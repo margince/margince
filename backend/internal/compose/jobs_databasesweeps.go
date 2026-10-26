@@ -27,7 +27,8 @@ import (
 //     dispatcher is ticked (the schedules in wireJobs); the workspace worker is
 //     enqueued by it and never scheduled.
 //   - Installation-wide, with no workspace fan-out — agent-task retention,
-//     approval expiry, intro expiry, approval auto-apply. One row does the whole
+//     approval expiry, intro expiry, approval auto-apply, the past-activity
+//     clock refold. One row does the whole
 //     installation, so there is no child kind to enqueue.
 //
 // It also pulls in the AI-activity and brief-generate groups. Those are their
@@ -71,10 +72,14 @@ func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Lo
 	addDeclaredWorker[ApprovalAutoApplyArgs](reg, &approvalAutoApplyWorker{
 		pool: pool, identity: identity.NewService(pool), log: log,
 	})
+	addDeclaredWorker[PastActivityClockRefoldArgs](reg, &pastActivityClockWorker{
+		pool: pool, identity: identity.NewService(pool), log: log,
+	})
 	addAIActivitySweepJobs(reg, pool, log)
 	addDeclaredWorker[MailDraftRetentionArgs](reg, &mailDraftRetentionWorker{
 		drafts: activities.NewStore(InstallationDB(pool)), identity: identity.NewService(pool), log: log,
 	})
+	addDeclaredWorker[RequestProofExpiryArgs](reg, newRequestProofExpiryWorker(pool, time.Now, log))
 	addDeclaredWorker[WaitingHorizonRefreshArgs](reg, newWaitingHorizonRefreshWorker(pool, log))
 	addBriefGenerateJobs(reg, pool, log, briefMail)
 }

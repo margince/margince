@@ -88,6 +88,7 @@ func tagLinkFor(entity string) storekit.Field {
 		Type:       storekit.FieldID,
 		References: storekit.RefTag,
 		Link:       storekit.TagLinkTemplate(entity),
+		ReadsLink:  true,
 	}
 }
 
@@ -107,6 +108,9 @@ const domainFilterField = "domain"
 // because it varies by nothing — a constructor like tagLinkFor would be a
 // function returning a constant. It reads colOwnerID for the same reason the
 // base-table owner leaf does: one spelling of the owner column.
+//
+// An archived team keeps its memberships but names nobody, the same rule
+// storekit.OwnershipClause applies to the `owner_team_id` parameter.
 //
 // The dial has a third position the vocabulary needs no leaf for: unassigned is
 // `owner_id` with `exists: false`. A reader looking for it here should not
@@ -130,8 +134,10 @@ var ownerTeamField = storekit.Field{
 	Expr:       "tm.team_id",
 	Type:       storekit.FieldID,
 	References: storekit.RefTeam,
-	Link: "EXISTS (SELECT 1 FROM team_membership tm WHERE tm.user_id = " + colOwnerID +
-		" AND %s)",
+	ReadsLink:  true,
+	Link: "EXISTS (SELECT 1 FROM team_membership tm" +
+		" JOIN team tt ON tt.id = tm.team_id AND tt.archived_at IS NULL" +
+		" WHERE tm.user_id = " + colOwnerID + " AND %s)",
 }
 
 // customerLink is the EXISTS template a deal's filter reaches its customer
@@ -162,6 +168,7 @@ func projectCompanyField() storekit.Field {
 		Expr:       "c.company_id",
 		Type:       storekit.FieldID,
 		References: storekit.RefCompany,
+		ReadsLink:  true,
 		Link: "EXISTS (SELECT 1 FROM relationship c WHERE c.kind = 'project_company'" +
 			" AND c.project_id = t.id AND c.archived_at IS NULL AND %s)",
 	}
@@ -174,7 +181,7 @@ func customerField(
 	column string, fieldType storekit.FieldType, options ...string,
 ) storekit.Field {
 	return storekit.Field{
-		Expr: "o." + column, Type: fieldType, Link: customerLink, Options: options,
+		Expr: "o." + column, Type: fieldType, Link: customerLink, ReadsLink: true, Options: options,
 	}
 }
 
@@ -251,7 +258,7 @@ var segmentEngines = map[string]storekit.Query{
 		Fields: withFields(standardFields[typeCompany], map[string]storekit.Field{
 			ownerIDField:     {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
 			ownerTeamIDField: ownerTeamField,
-			"industry":       {Expr: "t.industry", Type: storekit.FieldText},
+			"industry":       {Expr: "t.industry", Type: storekit.FieldPicklist, Options: industryValues},
 			"size_band":      {Expr: "t.size_band", Type: storekit.FieldPicklist, Options: sizeBandValues},
 			"lifecycle":      {Expr: "t.lifecycle", Type: storekit.FieldPicklist, Options: lifecycleValues},
 			// RETIRED with the column (ADR-0079/A124), and kept here for the one
@@ -272,6 +279,8 @@ var segmentEngines = map[string]storekit.Query{
 			"hosting_provider": hostingProviderField,
 			"operated_service": operatedServiceField,
 			"technology":       technologyField,
+			// Compiles through geocode.Within; it has no value to read back.
+			"location": {Expr: "t", Type: storekit.FieldDistance, GeoTarget: typeCompany},
 		}),
 	},
 	"deal": {
@@ -297,7 +306,7 @@ var segmentEngines = map[string]storekit.Query{
 			// and survives on the company engine only so segments already
 			// written against it keep evaluating — a NEW way to name it would be
 			// a fresh dependency on a column that is going away.
-			"company_industry":  customerField("industry", storekit.FieldText),
+			"company_industry":  customerField("industry", storekit.FieldPicklist, industryValues...),
 			"company_size_band": customerField("size_band", storekit.FieldPicklist, sizeBandValues...),
 			"company_lifecycle": customerField("lifecycle", storekit.FieldPicklist, lifecycleValues...),
 		}),

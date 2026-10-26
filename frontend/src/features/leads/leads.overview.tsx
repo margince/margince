@@ -1,55 +1,14 @@
-import { Panel, PanelBody } from "../../design-system/panel";
 import type { RecordTimeline } from "../../design-system/recordtimeline";
-import { viewerZone } from "../../format/timezone";
-import { useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
-import { navigate } from "../../lib/router";
 import {
-  RecordReading,
-  TimelineThread,
-  TodayPanel,
-} from "../records/record360";
-import { RecordListsPanel } from "../records/recordlists";
-import { LeadBrief } from "./leadbrief";
-import { MergedLeadPanel } from "./leadmerged";
-import { LeadReadings } from "./leadreadings";
+  LeadEnquiryCard,
+  LeadKnowCard,
+  LeadQualifyPreviewCard,
+} from "./leadcards";
+import { LeadHowItStands } from "./leadhowitstands";
+import { LeadNextBar } from "./leadnext";
 import type { Lead, LeadWriter } from "./leads";
-import { PromotedLeadPanel, type PromotionRecord } from "./leads.promotion";
+import type { PromotionRecord } from "./leads.promotion";
 import { LeadScoreCard } from "./leads.score";
-import { LeadManualSignals } from "./leadsignals";
-import { leadStanding } from "./leadstanding";
-import { leadTodoRows } from "./leadtoday";
-
-/**
- * The call on a lead: where it stands, in a word, as a fact the server already
- * decided. The lead's own thread sits under it: what was said, the silence
- * since, what is dated ahead.
- */
-function LeadCall({
-  lead,
-  thread,
-  onOpenEmail,
-}: Readonly<{
-  lead: Lead;
-  thread: RecordTimeline;
-  // The page's one drawer, handed down to the thread. A conversation the
-  // thread names and cannot open is the one place in the product that does
-  // that.
-  onOpenEmail: (activityId: string) => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const standing = leadStanding(lead, t, locale, viewerZone());
-  return (
-    <LeadBrief
-      standing={{ label: standing.label, tone: standing.tone }}
-      because={standing.because}
-      restsOn={standing.restsOn}
-    >
-      <TimelineThread thread={thread} onOpenEmail={onOpenEmail} />
-    </LeadBrief>
-  );
-}
 
 export function LeadOverviewPane({
   lead,
@@ -58,74 +17,63 @@ export function LeadOverviewPane({
   promotion,
   terminalReasonId,
   thread,
+  asOf,
   onOpenEmail,
+  onQualify,
+  onDisqualify,
 }: Readonly<{
   lead: Lead;
   id: string;
   writer: LeadWriter;
   promotion: PromotionRecord;
   terminalReasonId: string;
-  // The lead's unfiltered timeline read, which the thread under the call is
-  // drawn from. It is the whole read, so its failure reaches the call too.
+  // The lead's unfiltered activity page. A filter is a view of the History
+  // tab, and a reading over a narrowed page would be false.
   thread: RecordTimeline;
-  // The page's one email drawer, for the thread under the call.
+  // The instant the page read the lead at; every reading here is made at it.
+  asOf: string;
   onOpenEmail: (activityId: string) => void;
+  onQualify: () => void;
+  onDisqualify: () => void;
 }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  // The lead carries no task id of its own. So the panel head's way out and
-  // the "Next task" row's own verb both open the same queue.
-  const onOpenTasks = () => navigate({ screen: "worklist" });
   return (
-    <div className="record-stack">
-      {/* The readings open the overview, as they do on every record page. */}
-      <LeadReadings lead={lead} />
-      {/* A merged-away lead's page leads with where it went, for the same
-          reason: the reader arrived asking what happened to this prospect. */}
-      {lead.merged_into_id && (
-        <MergedLeadPanel mergedIntoId={lead.merged_into_id} />
-      )}
-      {/* A promoted lead's page leads with what the promotion did. The reader
-          arrived asking whether this became a contact, and which one. */}
-      {lead.promoted_contact_id && (
-        <PromotedLeadPanel lead={lead} promotion={promotion} />
-      )}
-      {/* One reading, in parts, the shape every record page reads in. The call
-          with the lead's own thread under it comes first, then what needs a
-          contact. Under them sit two sections a reader consults rather than
-          reads: why it scores what it scores, and what the rep knows. */}
-      <RecordReading>
-        <LeadCall lead={lead} thread={thread} onOpenEmail={onOpenEmail} />
-        <TodayPanel onOpenTasks={onOpenTasks} tasksLabel={t("today.workQueue")}>
-          {leadTodoRows(lead, t, locale, recordZone, onOpenTasks)}
-        </TodayPanel>
-        {/* Full width, in sequence, rather than side by side (RecordReadingPair):
-            the score card is one line and the signals form is tall, and a
-            short card beside a long one reads as a layout that ran out of
-            content rather than as two readings a rep consults in order. */}
-        <LeadScoreCard
+    <>
+      {!lead.archived_at && (
+        <LeadNextBar
           lead={lead}
-          writer={writer}
-          terminalReasonId={terminalReasonId}
+          activities={thread.activities}
+          asOf={asOf}
+          refusedReasonId={writer.readOnly ? terminalReasonId : undefined}
+          onQualify={onQualify}
         />
-        <Panel title={t("lead.signalsTitle")}>
-          <PanelBody>
-            <LeadManualSignals
-              // Keyed by lead: a half-typed input for one lead must not be
-              // submitted against the next one the reader navigates to.
-              key={id}
-              id={id}
-              readOnlyReason={writer.readOnlyReason}
-            />
-          </PanelBody>
-        </Panel>
-        <RecordListsPanel
-          entityType="lead"
-          entityId={id}
-          archived={Boolean(lead.archived_at)}
-        />
-      </RecordReading>
-    </div>
+      )}
+      <LeadHowItStands
+        lead={lead}
+        writer={writer}
+        terminalReasonId={terminalReasonId}
+        thread={thread}
+        asOf={asOf}
+        onQualify={onQualify}
+        onDisqualify={onDisqualify}
+      />
+      <div className="lead-cards">
+        <div className="lead-cards-stack">
+          <LeadScoreCard
+            lead={lead}
+            writer={writer}
+            terminalReasonId={terminalReasonId}
+          />
+          <LeadKnowCard
+            id={id}
+            readOnlyReason={writer.readOnlyReason}
+            reasonId={writer.readOnly ? terminalReasonId : undefined}
+          />
+        </div>
+        <div className="lead-cards-stack">
+          <LeadEnquiryCard thread={thread} onOpenEmail={onOpenEmail} />
+          <LeadQualifyPreviewCard lead={lead} promotion={promotion} />
+        </div>
+      </div>
+    </>
   );
 }

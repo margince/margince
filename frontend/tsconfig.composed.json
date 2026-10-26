@@ -16,10 +16,7 @@
   // vanilla alias and typechecking a lane nobody composed.
   "extends": "./tsconfig.app.json",
   "compilerOptions": {
-    // Not a member of the solution build (tsconfig.json references only the
-    // app + node projects), so it needs neither project-reference metadata nor
-    // a build-info file shared with the vanilla lane.
-    "composite": false,
+    // Its own build-info file, so the vanilla lane's is never overwritten.
     "tsBuildInfoFile": "node_modules/.tmp/tsconfig.composed.tsbuildinfo",
     "paths": {
       "@composition/extensions": [
@@ -73,8 +70,7 @@
     }
   },
   // A unit's screen lives outside src/ entirely now, and tsc reaches it by
-  // following the generated registry's imports rather than by an include —
-  // which is why this project is composite:false and noEmit, with no rootDir
-  // for an out-of-tree input to violate.
+  // following the generated registry's imports rather than by an include, so
+  // this project sets no rootDir for an out-of-tree input to violate.
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }

@@ -38,6 +38,14 @@ var reportingMetrics = []metricSpec{
 	{crmcontracts.ReportingMetricDefinition{Id: reportingMeetingsHeld, Version: "2", Unit: reportingCountUnit, TemporalBasis: reportingEventPeriod, SupportsTarget: true, Blocks: []crmcontracts.ReportingBlockKind{reportingSdrOutcomes, reportingTargetProgress, reportingMetricReading}, Definition: reportingDefinitionWords[reportingMeetingsHeld].En}, string(recordTypeActivity), readReportingMeetings},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingAcceptedOpportunities, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingEventPeriod, SupportsTarget: true, Blocks: []crmcontracts.ReportingBlockKind{reportingSdrOutcomes, reportingTargetProgress, reportingMetricReading}, Definition: reportingDefinitionWords[reportingAcceptedOpportunities].En}, reportingCreditObject, readReportingAccepted},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingForecastLanding, Version: "1", Unit: reportingMoney, TemporalBasis: reportingStateAt, Blocks: []crmcontracts.ReportingBlockKind{crmcontracts.ReportingBlockKindForecastSupport, reportingMetricReading}, Definition: reportingDefinitionWords[reportingForecastLanding].En}, objectForecast, readReportingForecast},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingLeadsCreated, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingLeadsCreated].En}, string(recordTypeLead), readReportingLeadsCreated},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingLeadStatusMoves, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingLeadStatusMoves].En}, string(recordTypeLead), readReportingLeadStatusMoves},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingLeadsPromoted, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingEventPeriod, SupportsTarget: true, Blocks: []crmcontracts.ReportingBlockKind{reportingTargetProgress, reportingMetricReading}, Definition: reportingDefinitionWords[reportingLeadsPromoted].En}, string(recordTypeLead), readReportingLeadsPromoted},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingLeadFirstResponse, Version: "1", Unit: "hours", TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingMetricReading}, Definition: reportingDefinitionWords[reportingLeadFirstResponse].En}, string(recordTypeLead), readReportingLeadFirstResponse},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingPartnerPipeline, Version: "1", Unit: reportingMoney, TemporalBasis: reportingEventPeriod, SupportsTarget: true, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingTargetProgress, reportingMetricReading}, Definition: reportingDefinitionWords[reportingPartnerPipeline].En}, string(recordTypeDeal), readReportingPartnerPipeline},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingPartnerWon, Version: "1", Unit: reportingMoney, TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingPartnerWon].En}, string(recordTypeDeal), readReportingPartnerWon},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingPartnerCommission, Version: "1", Unit: reportingMoney, TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingPartnerCommission].En}, objectCommission, readReportingPartnerCommission},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingPartnerActivity, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingStateAt, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingPartnerActivity].En}, objectPartner, readReportingPartnerActivity},
 }
 
 type metricEvaluator struct {
@@ -48,9 +56,7 @@ func (metricEvaluator) Catalog(ctx context.Context, language textlang.Lang) (crm
 	out := crmcontracts.ReportingCatalog{Metrics: []crmcontracts.ReportingMetricDefinition{}}
 	for _, spec := range reportingMetrics {
 		if auth.Allows(ctx, spec.object, principal.ActionRead) {
-			definition := reportingMetricMetadata(spec)
-			definition.Definition = reportingDefinitionWords[definition.Id].In(language)
-			out.Metrics = append(out.Metrics, definition)
+			out.Metrics = append(out.Metrics, reportingMetricMetadata(spec, language))
 		}
 	}
 	return out, nil
@@ -73,6 +79,9 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 		}
 		facts, coverage, err := e.readIsolated(ctx, tx, spec, frame, framework)
 		if err != nil {
+			return out, err
+		}
+		if err := markOwnerWithheld(ctx, tx, facts); err != nil {
 			return out, err
 		}
 		out.Facts = append(out.Facts, facts...)

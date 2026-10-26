@@ -6,7 +6,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 
 ## project
 
-23 columns · primary key `(id)` · referenced by 10 foreign keys
+23 columns · primary key `(id)` · referenced by 12 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -16,7 +16,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 | `description` | `text` |  |  |
 | `ended_at` | `date` |  |  |
 | `key` | `text` |  | The short handle a human writes in a subject line. |
-| `last_activity_at` | `timestamp with time zone` |  | The newest workspace-audience activity filed under the project, maintained from the timeline on link write; a read accelerator that a rebuild must reproduce. |
+| `last_activity_at` | `timestamp with time zone` |  | The newest workspace-audience activity filed under the project, maintained from the timeline on link write. |
 | `name` | `text` | yes |  |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `phase` | `text`, default `'initiative'::text` | yes | Read-only here: transitions go through advanceProjectPhase so the history row and project.phase_changed are written from one transaction. |
@@ -110,11 +110,12 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 
 ## project_phase_history
 
-7 columns · primary key `(id)` · referenced by 0 foreign keys
+8 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `audit_log_id` | `uuid` |  |  |
 | `changed_by` | `text` | yes |  |
 | `from_phase` | `text` |  |  |
 | `occurred_at` | `timestamp with time zone`, default `now()` | yes |  |

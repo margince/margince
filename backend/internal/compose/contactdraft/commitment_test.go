@@ -10,6 +10,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/draftcore"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
@@ -236,8 +237,8 @@ func TestTheSnippetIsBounded(t *testing.T) {
 	long := strings.Repeat("Sehr ausführlicher Absatz über das Projekt. ", 60)
 
 	in := foldedWith(activity(true, "Langer Text", &long))
-	if got := len([]rune(in.Recent[0].Snippet)); got > draftInputSnippetRunes {
-		t.Errorf("the snippet is %d runes, bounded at %d", got, draftInputSnippetRunes)
+	if got := len([]rune(in.Recent[0].Snippet)); got > draftcore.TurnTextRunes {
+		t.Errorf("the snippet is %d runes, bounded at %d", got, draftcore.TurnTextRunes)
 	}
 }
 

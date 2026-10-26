@@ -59,6 +59,7 @@ export function DocumentBoard({
   verbs,
   empty,
   footer,
+  layout = "stacked",
 }: Readonly<{
   title: string;
   titleAction?: ReactNode;
@@ -69,6 +70,11 @@ export function DocumentBoard({
   empty: string;
   /** Drawn after the documents: the seller's "add a document" form. */
   footer?: ReactNode;
+  /**
+   * `deck` sets the documents beside one conversation column that holds every
+   * thread, each named by its document; a tile then only counts its threads.
+   */
+  layout?: "stacked" | "deck";
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -86,11 +92,25 @@ export function DocumentBoard({
   // asked about it, while the buyer — still on the last release — can. It joins
   // the room-wide panel rather than disappearing.
   const shown = new Set(documents.map((doc) => doc.id));
-  const roomThreads = threads.filter(
-    (thread) => !thread.document_id || !shown.has(thread.document_id),
-  );
+  const deck = layout === "deck";
+  const roomThreads = deck
+    ? threads
+    : threads.filter(
+        (thread) => !thread.document_id || !shown.has(thread.document_id),
+      );
+  const titles = new Map(documents.map((doc) => [doc.id, doc.title]));
+  // A thread about a document the board no longer lists still names that it
+  // was about a document, so it does not read as room-wide.
+  const aboutLabel = (title: string | undefined) =>
+    title ? t("threads.about", { title }) : t("threads.aboutRemoved");
+  const aboutOf = deck
+    ? (thread: DealRoomThread) =>
+        thread.document_id
+          ? aboutLabel(titles.get(thread.document_id))
+          : undefined
+    : undefined;
   return (
-    <>
+    <div className={deck ? "board-deck" : "board-stacked"}>
       <Panel title={title} titleAction={titleAction}>
         {documents.length === 0 ? (
           <PanelBody>
@@ -112,6 +132,7 @@ export function DocumentBoard({
                       doc={doc}
                       threads={byDocument.get(doc.id) ?? []}
                       verbs={verbs}
+                      threadsInline={!deck}
                     />
                   ))}
                 </div>
@@ -122,12 +143,12 @@ export function DocumentBoard({
         {footer ? <PanelBody>{footer}</PanelBody> : null}
       </Panel>
       <Panel
-        title={t("threads.roomTitle")}
+        title={t(deck ? "threads.conversationTitle" : "threads.roomTitle")}
         titleAction={<Badge>{formatNumber(roomThreads.length, locale)}</Badge>}
       >
         <PanelBody>
           {roomThreads.length === 0 ? <p>{t("threads.empty")}</p> : null}
-          <ThreadList threads={roomThreads} verbs={verbs} />
+          <ThreadList threads={roomThreads} verbs={verbs} aboutOf={aboutOf} />
           <ThreadComposer
             verbs={verbs}
             documentId={null}
@@ -135,7 +156,7 @@ export function DocumentBoard({
           />
         </PanelBody>
       </Panel>
-    </>
+    </div>
   );
 }
 
@@ -171,10 +192,13 @@ function DocumentCard({
   doc,
   threads,
   verbs,
+  threadsInline,
 }: Readonly<{
   doc: BoardDocument;
   threads: readonly DealRoomThread[];
   verbs: ThreadVerbs;
+  /** False when the threads are read in a conversation column beside the board. */
+  threadsInline: boolean;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -266,7 +290,9 @@ function DocumentCard({
               count: formatNumber(threads.length, locale),
             })}
           </span>
-          <ThreadList threads={threads} verbs={verbs} />
+          {threadsInline ? (
+            <ThreadList threads={threads} verbs={verbs} />
+          ) : null}
         </div>
       ) : null}
       <ThreadComposer

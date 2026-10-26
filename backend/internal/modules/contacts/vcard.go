@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -43,10 +44,19 @@ type VCardEntry struct {
 	Phones  []VCardChannel
 	URL     string
 	Address string
+	// PostalAddress is the same ADR property in its parts, as the record's
+	// address columns hold them.
+	PostalAddress crmcontracts.Address
+	// addressRank is how strongly the card prefers the ADR read so far; zero
+	// until one is read.
+	addressRank int
 	// Revised is what the card's REV property states: when this card was last
 	// changed. Nil where it states none, and the import then dates the card
 	// from its own clock.
 	Revised *time.Time
+	// ModelRead marks a card a model read off a photo. importOneVCard never
+	// writes such a card, on any arm: it is reported for approval or skipped.
+	ModelRead bool `json:"model_read,omitempty"`
 }
 
 // VCardChannel is one address or number with the kind the card gave it.
@@ -297,9 +307,7 @@ func applyVCardProperty(entry *VCardEntry, name string, params []string, raw str
 			entry.URL = strings.TrimSpace(value)
 		}
 	case "ADR":
-		if entry.Address == "" {
-			entry.Address = addressFromStructured(params, raw)
-		}
+		readVCardAddress(entry, params, raw)
 	case "REV":
 		if entry.Revised == nil {
 			entry.Revised = parseVCardRevision(value)
@@ -361,8 +369,9 @@ func storableRevision(at time.Time) *time.Time {
 	return &at
 }
 
-// decodeVCardValue undoes the two encodings a real-world card carries: the
-// quoted-printable of a 2.1-era exporter, and vCard's own backslash escapes.
+// decodeVCardValue undoes the encodings a real-world card carries: the
+// quoted-printable of a 2.1-era exporter, its CHARSET, and vCard's own
+// backslash escapes.
 func decodeVCardValue(params []string, raw string) string {
 	value := raw
 	for _, p := range params {
@@ -376,7 +385,7 @@ func decodeVCardValue(params []string, raw string) string {
 			}
 		}
 	}
-	return unescapeVCardText(value)
+	return unescapeVCardText(vcardText(params, value))
 }
 
 func decodeQuotedPrintable(s string) string {
@@ -449,22 +458,4 @@ func nameFromStructured(params []string, raw string) string {
 		ordered = append(ordered, parts[0])
 	}
 	return strings.Join(ordered, " ")
-}
-
-// addressFromStructured reads ADR: pobox;ext;street;locality;region;code;country
-// into one line, dropping the components a card left empty.
-func addressFromStructured(params []string, raw string) string {
-	parts := splitVCardComponents(params, raw)
-	var kept []string
-	for i, p := range parts {
-		// The first two components are a post-office box and an extended
-		// address; neither belongs in the one line a record shows.
-		if i < 2 {
-			continue
-		}
-		if trimmed := strings.TrimSpace(p); trimmed != "" {
-			kept = append(kept, trimmed)
-		}
-	}
-	return strings.Join(kept, ", ")
 }

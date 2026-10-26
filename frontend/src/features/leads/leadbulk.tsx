@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { mayOwnRecords } from "../../components/assigneepicker";
 import { useRoster } from "../../components/entityref";
 import { Button } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
@@ -11,13 +12,13 @@ import { formatNumber } from "../../format/format";
 import { leadIdentityName } from "../../format/leadname";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { leadWriteKeys } from "../../lib/leadkeys";
-import { useLeadDisqualifyReasons } from "../../lib/leadsources";
 import {
   ProblemError,
   problemMessageOf,
   throwProblem,
   unwrap,
 } from "../../lib/problem";
+import { useLeadDisqualifyReasons } from "./leadhandling";
 
 type Lead = components["schemas"]["Lead"];
 
@@ -273,7 +274,7 @@ export function LeadBulkBar({
         placeholder={t("lead.bulkOwnerPick")}
         disabled={run.isPending}
         onChange={setOwnerId}
-        options={(roster.data ?? []).map((entry) => ({
+        options={(roster.data ?? []).filter(mayOwnRecords).map((entry) => ({
           value: entry.id,
           // The user roster: every entry carries a display name; a team
           // (the other roster kind) is never asked for here.

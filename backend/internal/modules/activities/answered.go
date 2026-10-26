@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // answerArm is one kind of evidence that a message was answered: the rows it
@@ -271,7 +272,7 @@ func owedSQL(asOf, dismissedStillOwed, informsStillOwed, unjudgedResponseStillOw
 	 AND (` + informsStillOwed + ` OR a.owed_verdict IS DISTINCT FROM '` + OwedVerdictInformsUs + `'
 	   OR ` + acceptedRequestSQL + `)
 	 AND ((` + confirmedRequestSQL + `) OR NOT ` + machineSenderSQL + `)
-	 AND ((` + confirmedRequestSQL + `) OR NOT ` + calendarResponseSQL + `
+	 AND ((` + confirmedRequestSQL + `) OR NOT ` + calendarCopySQL + `
 	   OR (` + unjudgedResponseStillOwed + ` AND a.owed_verdict IS NULL))
 	 AND ((` + requestIntentSQL + `)
 	   OR (NOT EXISTS (SELECT 1 FROM activity newer
@@ -298,9 +299,12 @@ const machineSenderSQL = `EXISTS (
 
 // Captured mail needs an intent judgment before it becomes somebody's work.
 // The classifier still reads pending mail; a human can explicitly keep noise.
+// A machine verdict stands only while the mail was read in full; a human's
+// acceptance or reviewed verdict stands on its own.
 func capturedReplyAdmissionSQL(classifying, reviewingInformational string) string {
 	human := heldRequestSQL() + ` OR (a.owed_verdict = 'asks_us' AND ` + humanReviewedOwedSQL("a") + `)`
 	return `(` + classifying + ` OR (` + reviewingInformational + ` AND a.owed_verdict = 'informs_us') OR (` + human + `) OR (
    a.capture_label IS DISTINCT FROM 'noise'
-   AND (NOT starts_with(a.captured_by, '` + string(principal.PrincipalConnector) + `:') OR (` + confirmedRequestSQL + `))))`
+   AND (NOT starts_with(a.captured_by, '` + string(principal.PrincipalConnector) + `:') OR ` + acceptedRequestSQL + `
+     OR (a.owed_verdict = 'asks_us' AND ` + provenance.MailBodyCompleteSQL("a") + `))))`
 }

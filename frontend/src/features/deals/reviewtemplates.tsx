@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useId, useState } from "react";
-import { Badge, Button } from "../../design-system/atoms";
+import { Badge, Button, EmptyState } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { SurfaceState } from "../../design-system/surfacestate";
+import { QueryStates } from "../../design-system/querystates";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
@@ -24,21 +24,17 @@ import "./reviewtemplates.css";
  */
 export function ReviewTemplatesCard() {
   const t = useT();
-  const { data, isPending, isError } = useReviewTemplates();
-  const templates = data ?? [];
+  const query = useReviewTemplates();
+  const templates = query.data ?? [];
   const canEdit = useCanWrite("custom_field", "update");
   const [editing, setEditing] = useState<ReviewTemplate | null>(null);
-  if (isPending || isError || templates.length === 0) {
+  if (!query.isSuccess || templates.length === 0) {
     return (
       <Panel>
         <PanelBody>
-          <SurfaceState
-            state={isPending ? "loading" : isError ? "failed" : "empty"}
-            emptyLabel={t("reviewTemplates.empty")}
-            loadingLabel={t("reviewTemplates.title")}
-          >
-            {null}
-          </SurfaceState>
+          <QueryStates query={query} pendingLabel={t("reviewTemplates.title")}>
+            <EmptyState>{t("reviewTemplates.empty")}</EmptyState>
+          </QueryStates>
         </PanelBody>
       </Panel>
     );

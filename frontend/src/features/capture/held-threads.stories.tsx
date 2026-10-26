@@ -140,7 +140,7 @@ async function openHeld(canvasElement: HTMLElement) {
 }
 
 const meta = {
-  title: "Settings/You/Connections/Held threads",
+  title: "Settings/You/Capture activity/Held threads",
   component: ConnectionOutcomesCard,
 } satisfies Meta<typeof ConnectionOutcomesCard>;
 export default meta;

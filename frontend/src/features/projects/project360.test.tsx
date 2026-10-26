@@ -33,6 +33,14 @@ afterEach(() => {
   window.location.hash = "";
 });
 
+function lastOf(nodes: HTMLElement[]): HTMLElement {
+  const node = nodes.at(-1);
+  if (!node) {
+    throw new Error("no such control on the page");
+  }
+  return node;
+}
+
 function render(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -47,7 +55,7 @@ function render(ui: ReactNode) {
 }
 
 describe("ProjectScreen", () => {
-  it("renders the header, the stepper, the rollups and the sections", async () => {
+  it("renders the head, how it stands, the figures and the sections", async () => {
     projectsBackend({
       view: project360({
         deals: {
@@ -75,71 +83,158 @@ describe("ProjectScreen", () => {
       await screen.findByRole("heading", { name: "CRM rollout" }),
     ).toBeTruthy();
     expect(screen.getByText("ACME-CRM")).toBeTruthy();
-    expect(await screen.findByText("Brandt Automotive")).toBeTruthy();
+    // The account, once in the head's lines and once under About.
+    expect(await screen.findAllByText("Brandt Automotive")).toHaveLength(2);
 
-    // The stepper: the current phase is a marker, the other three are moves.
+    // Nobody has judged the project, so it reads as not assessed, never as on
+    // track; nothing is due, so the next bar says so.
+    expect(screen.getByText(en["standing.notAssessed"])).toBeTruthy();
+    expect(screen.getByText(en["standing.next.none"])).toBeTruthy();
+
+    // The ladder: the current phase is a marker, the others are moves.
     const stepper = screen.getByRole("group", { name: "Phase" });
-    expect(within(stepper).getByText("Initiative").tagName).toBe("SPAN");
+    expect(
+      stepper.querySelector('[aria-current="step"]')?.textContent,
+    ).toContain("Initiative");
     expect(screen.getByTestId("project-step-closed").tagName).toBe("BUTTON");
 
-    // The readings plate and the filing line.
-    const rollups = screen.getByTestId("project-rollups");
-    expect(within(rollups).getByText("€12,000.00")).toBeTruthy();
-    expect(within(rollups).getByText("€4,500.00")).toBeTruthy();
-    expect(within(rollups).getByText("4")).toBeTruthy();
-    expect(within(rollups).getByText("142 filed")).toBeTruthy();
-    // No coverage line: three numbers about how well the FILING SYSTEM has
-    // done its job are the machine's bookkeeping, not a reading of the work,
-    // and they were the first thing a reader met under the title.
+    // The figures: the phase's days, the open tasks, no file attached.
+    const figures = screen.getByTestId("project-figures");
+    expect(within(figures).getByText("31 days")).toBeTruthy();
+    expect(within(figures).getByText("4 open")).toBeTruthy();
+    expect(
+      within(figures).getByText(en["project.standing.noDocuments"]),
+    ).toBeTruthy();
     expect(screen.queryByTestId("project-coverage")).toBeNull();
 
-    // The sections: a linked deal row, a seated contact with their role, the
-    // phase history with its duration, and honest empty states elsewhere.
+    // The four cards: a linked deal row, the phase history with its visit,
+    // and empty states for contracts and tasks.
     expect(
       screen.getByRole("button", { name: "Phase one licence" }),
     ).toBeTruthy();
-    expect(screen.getByText("Anna Weber")).toBeTruthy();
-    expect(screen.getByText("Project lead")).toBeTruthy();
-    expect(screen.getByText("Started in Initiative")).toBeTruthy();
-    expect(screen.getByText(/31d · current/)).toBeTruthy();
+    expect(screen.getByText("Since 1 Jun · Me opened it")).toBeTruthy();
     expect(
       screen.getByText(/No contract is filed under this project/),
     ).toBeTruthy();
     expect(
-      screen.getByText(/No file is attached to this project/),
-    ).toBeTruthy();
-    expect(
       screen.getByText(/No open task is filed under this project/),
     ).toBeTruthy();
+
+    // Nothing else: the stakeholders, the files, the health log and the
+    // chronology open from the menus, not from the Overview.
+    expect(screen.queryByText("Anna Weber")).toBeNull();
     expect(
-      screen.getByText(/Nothing is filed under this project yet/),
+      screen.queryByText(/No file is attached to this project/),
+    ).toBeNull();
+    expect(screen.queryByText("Delivery health")).toBeNull();
+    expect(
+      screen.queryByRole("region", { name: en["record.timeline"] }),
+    ).toBeNull();
+  });
+
+  it("names an agent move, its reason and an unrecorded move on the phase history", async () => {
+    projectsBackend({
+      view: project360({
+        phase_history: {
+          data: [
+            {
+              id: "ph-1",
+              from_phase: null,
+              to_phase: "initiative",
+              reason: null,
+              changed_at: "2026-06-01T09:00:00Z",
+            },
+            {
+              id: "ph-2",
+              from_phase: "initiative",
+              to_phase: "delivering",
+              reason: "Contract signed",
+              changed_at: "2026-06-10T09:00:00Z",
+              changed_by: {
+                actor_type: "agent",
+                actor_id: "agent:p-1",
+                actor_name: null,
+                on_behalf_of: "u-1",
+                on_behalf_of_name: "Anna Weber",
+                agent_client: "Claude",
+                passport_id: "p-1",
+              },
+            },
+          ],
+          phase_durations: [
+            { phase: "initiative", seconds: 777_600, current: false },
+            { phase: "delivering", seconds: 1_900_800, current: true },
+          ],
+        },
+      }),
+    });
+    render(<ProjectScreen id="p-1" />);
+    expect(
+      await screen.findByText(
+        "Since 10 Jun · Anna Weber, via Claude, moved it · Contract signed",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("1 Jun → 10 Jun · Who made this move was not recorded"),
+    ).toBeTruthy();
+    expect(screen.queryByText(/System/)).toBeNull();
+  });
+
+  it("opens the stakeholders and the companies from the More menu", async () => {
+    const user = userEvent.setup();
+    projectsBackend({ view: project360() });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(
+      screen.getByRole("button", { name: en["project.more.contacts"] }),
+    );
+    const drawer = await screen.findByRole("dialog", {
+      name: en["project.more.contacts"],
+    });
+    expect(within(drawer).getByText("Anna Weber")).toBeTruthy();
+    expect(within(drawer).getByText("Project lead")).toBeTruthy();
+  });
+
+  it("opens the files from the Contracts card", async () => {
+    const user = userEvent.setup();
+    projectsBackend({ view: project360() });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    await user.click(
+      screen.getByRole("button", { name: en["project.documents.title"] }),
+    );
+    const drawer = await screen.findByRole("dialog", {
+      name: en["project.documents.title"],
+    });
+    expect(
+      within(drawer).getByText(/No file is attached to this project/),
     ).toBeTruthy();
   });
 
-  // The activity readings' way out. Both are counted from the record's own
-  // chronology, which is already on the page one screen down, so the door is a
-  // scroll rather than a route — and the id it aims at is the timeline
-  // SECTION's own, handed to `RecordView`, so the two cannot drift apart.
-  it("reveals the chronology from the activity readings", async () => {
+  // The update itself is read in the full history, which the More menu opens.
+  it("opens the full history from the More menu", async () => {
     projectsBackend({ view: project360() });
     render(<ProjectScreen id="pr-1" />);
-    const story = await screen.findByRole("region", {
-      name: en["record.timeline"],
-    });
-    expect(story.id).toBe("project-activity");
-    // jsdom implements no scrolling at all, so the page's own element is what
-    // records the call.
-    const scrolled = vi.fn();
-    story.scrollIntoView = scrolled;
+    await screen.findByRole("heading", { name: "CRM rollout" });
 
-    await userEvent.setup().click(
-      screen.getByRole("button", {
-        name: en["stat.open"],
-        description: en["project.rollups.activityCount"],
-      }),
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: en["record.moreActions"] }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: en["record.fullHistory"] }),
     );
 
-    expect(scrolled).toHaveBeenCalledTimes(1);
+    const drawer = await screen.findByRole("dialog", {
+      name: en["record.fullHistory"],
+    });
+    expect(
+      within(drawer).getByRole("region", { name: en["record.timeline"] }),
+    ).toBeTruthy();
+    expect(
+      within(drawer).getByText(/Nothing is filed under this project yet/),
+    ).toBeTruthy();
   });
 
   it("offers Relink and Reply on a timeline row", async () => {
@@ -149,8 +244,10 @@ describe("ProjectScreen", () => {
         activities: {
           data: [
             {
+              offers_email: false,
               id: "act-1",
               kind: "email",
+              writable: true,
               subject: "Kickoff agenda",
               occurred_at: "2026-07-01T09:00:00Z",
               is_done: false,
@@ -165,11 +262,21 @@ describe("ProjectScreen", () => {
       }),
     });
     render(<ProjectScreen id="pr-1" />);
-    await screen.findByText("Kickoff agenda");
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(
+      screen.getByRole("button", { name: en["record.fullHistory"] }),
+    );
+    const drawer = await screen.findByRole("dialog", {
+      name: en["record.fullHistory"],
+    });
+    await within(drawer).findByText("Kickoff agenda");
 
-    expect(screen.getByRole("button", { name: "Reply" })).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Relink" }));
-    expect(await screen.findByRole("dialog")).toBeTruthy();
+    expect(within(drawer).getByRole("button", { name: "Reply" })).toBeTruthy();
+    await user.click(within(drawer).getByRole("button", { name: "Relink" }));
+    await waitFor(() =>
+      expect(screen.getAllByRole("dialog").length).toBeGreaterThan(1),
+    );
   });
 
   it("says a withheld section is hidden rather than drawing it empty", async () => {
@@ -192,21 +299,15 @@ describe("ProjectScreen", () => {
     render(<ProjectScreen id="pr-1" />);
     await screen.findByRole("heading", { name: "CRM rollout" });
     const withheld = screen.getAllByText("Hidden for your role");
-    // The contracts card, the rollups plate, the company in the subtitle and
-    // the timeline: four withheld sections, four sentences, no empty state
-    // standing in for any of them. The coverage line is gone from the page, so
-    // it withholds nothing.
-    expect(withheld).toHaveLength(4);
+    // The contracts, company references and both financial readings stay hidden.
+    expect(withheld).toHaveLength(5);
     expect(
       screen.queryByText(/No contract is filed under this project/),
     ).toBeNull();
     expect(screen.queryByTestId("project-coverage")).toBeNull();
     expect(screen.queryByTestId("project-coverage-withheld")).toBeNull();
-    expect(screen.getByTestId("project-company-withheld")).toBeTruthy();
+    expect(screen.getAllByTestId("project-company-withheld")).toHaveLength(2);
     expect(screen.queryByText("Brandt Automotive")).toBeNull();
-    expect(
-      screen.queryByText(/Nothing is filed under this project yet/),
-    ).toBeNull();
   });
 
   it("closing asks for a reason, holds Confirm until it is given, and posts the move", async () => {
@@ -301,6 +402,11 @@ describe("ProjectScreen", () => {
     for (const label of ["New deal"]) {
       expect(screen.queryByRole("button", { name: label })).toBeNull();
     }
+    for (const label of [en["log.title"], en["log.addTask"]]) {
+      expect(
+        screen.getByRole("button", { name: label }).hasAttribute("disabled"),
+      ).toBe(true);
+    }
     // Inside the overflow menu the verbs are refused rather than dropped, so a
     // reader learns the verb exists and why it is shut. What must NOT happen is
     // a pressable one: clicking it opens the flow and the save 403s. Edit is
@@ -312,7 +418,13 @@ describe("ProjectScreen", () => {
     // aria-disabled for "busy" — and each carries aria-describedby pointing at
     // the one sentence in the band, so a reader is told why rather than left
     // with a dead control.
-    for (const label of [/^Edit project/, /^Archive/, /^Assign/, /^Share/]) {
+    for (const label of [
+      /^Edit project/,
+      /^Archive/,
+      /^Assign/,
+      /^Share/,
+      /^Record reading/,
+    ]) {
       const verbs = screen.queryAllByRole("button", { name: label });
       expect(verbs.length).toBeGreaterThan(0);
       for (const verb of verbs) {
@@ -446,6 +558,7 @@ describe("a commitment's task detail", () => {
   const TASK = {
     id: commitment.activity_id,
     kind: "task" as const,
+    writable: true,
     subject: commitment.subject,
     is_done: false,
     version: 1,
@@ -485,8 +598,11 @@ describe("a commitment's task detail", () => {
     showCommitments([]);
     render(<ProjectScreen id={project().id} />);
 
+    // The subject opens the task from the next bar and from its card row.
     await userEvent.click(
-      await screen.findByRole("button", { name: commitment.subject }),
+      lastOf(
+        await screen.findAllByRole("button", { name: commitment.subject }),
+      ),
     );
 
     // The task opened — the refusal below is about the VERBS, not about the
@@ -506,12 +622,18 @@ describe("a commitment's task detail", () => {
     showCommitments(["update"]);
     render(<ProjectScreen id={project().id} />);
 
+    // The subject opens the task from the next bar and from its card row.
     await userEvent.click(
-      await screen.findByRole("button", { name: commitment.subject }),
+      lastOf(
+        await screen.findAllByRole("button", { name: commitment.subject }),
+      ),
     );
 
+    // The next bar carries its own Done; the one this opens is in the dialog.
     expect(
-      await screen.findByRole("button", { name: en["tasks.complete"] }),
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: en["tasks.complete"],
+      }),
     ).toBeTruthy();
   });
 });

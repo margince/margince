@@ -1,0 +1,7 @@
+/* Legal's answer over the requester's note: two voices, one cell. */
+.legal-review-words {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  white-space: normal;
+}

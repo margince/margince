@@ -2,10 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { ContactRail } from "./contactrail";
 import "./contact360.css";
 import {
+  callMessengersRoute,
   installFetchStub,
   meRoute,
   StoryProviders,
@@ -58,6 +60,7 @@ const contact: components["schemas"]["Contact"] = {
   title: "Head of Fleet",
   social: { linkedin: "https://linkedin.com/in/danabuyer" },
   address: { city: "Munich", country: "DE" },
+  primary_email: "dana@brandt.example",
   emails: [
     {
       id: "pe-1",
@@ -148,6 +151,7 @@ const granted: View = {
   activities: {
     data: [
       {
+        offers_email: false,
         id: "a-1",
         kind: "email",
         direction: "inbound",
@@ -251,11 +255,21 @@ function rail(view: View, entries = guard.entries) {
     // so the session has to be routed: an unrouted probe denies every grant and
     // the gallery would show the read-only rail under every story name.
     "GET /me": meRoute({ contact: ["read", "update"] }),
+    "GET /installation/settings": callMessengersRoute(),
   });
   return (
     <StoryProviders>
       <div style={{ maxWidth: 320 }}>
-        <ContactRail view={view} guard={{ ...guard, entries }} />
+        <ContactRail
+          view={view}
+          consent={{
+            guard: { ...guard, entries },
+            loading: false,
+            failed: false,
+            onRetry: () => undefined,
+          }}
+          writeRefusalId="write-refused"
+        />
       </div>
     </StoryProviders>
   );
@@ -303,4 +317,54 @@ export const NoCorrespondencePurpose: Story = {
         reason: "They opted in on 3 March.",
       },
     ]),
+};
+
+const boughtPhone: View = {
+  ...granted,
+  contact: {
+    ...contact,
+    bought_fields: [
+      {
+        target: "phone:pp-1",
+        provider: "surfe",
+        applied_at: "2026-06-02T12:00:00Z",
+        paid: true,
+        trigger: "manual",
+      },
+    ],
+  },
+};
+
+// The bought mark belongs to the number, so it sits on the number's line and
+// the app links go under both.
+export const BoughtPhone: Story = {
+  name: "Bought phone number",
+  render: () => rail(boughtPhone),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("link", { name: "Open chat in Zalo" });
+    const number = canvas.getByRole("link", { name: "+493012345678" });
+    const handle = number.closest(".fieldgrid-handle");
+    const mark = handle?.querySelector(":scope > .evmark");
+    const chats = handle?.querySelector(":scope > .callaction-chats");
+    if (!mark || !chats) {
+      throw new Error("the phone row lost its bought mark or its app links");
+    }
+    const box = number.getBoundingClientRect();
+    await expect(mark.getBoundingClientRect().top).toBeLessThan(box.bottom);
+    await expect(chats.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      Math.max(box.bottom, mark.getBoundingClientRect().bottom) - 0.5,
+    );
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+      document.documentElement.clientWidth,
+    );
+  },
+};
+
+export const BoughtPhonePhone: Story = {
+  ...BoughtPhone,
+  name: "Bought phone number, phone",
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

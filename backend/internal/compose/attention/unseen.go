@@ -95,11 +95,17 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	// itself complete while the twelfth pushed a thirteenth off the page — the
 	// under-reading a truncation flag exists to prevent.
 	atCap(sourceMeetingOutcome, day.MeetingsUnreported, plannedCap)
+	// The forward lane reads at the same bound, soonest first in SQL, so a
+	// full page means a later meeting today was not read.
+	atCap(sourceMeeting, day.Meetings, plannedCap)
 	atCap(sourceAtRisk, day.AtRisk, quietDealBound)
 	if day.AtRisk != nil && day.AtRiskMoreAvailable != nil {
 		bounded[sourceAtRisk] = bounded[sourceAtRisk] || *day.AtRiskMoreAvailable
 	}
 	atCap("relationship_decay", day.RelationshipDecay, decayBound)
+	if day.RelationshipDecay != nil && day.RelationshipDecayMoreAvailable != nil {
+		bounded[sourceDecay] = bounded[sourceDecay] || *day.RelationshipDecayMoreAvailable
+	}
 	atCap("conversation_claim", day.Commitments, doneCap)
 	// The decision lane is read deeper than the rest, because a batch row
 	// counts a pile and a count taken from a page of ten would report ten over
@@ -233,6 +239,10 @@ const (
 func plannedWindowAtCap(lane []crmcontracts.AttentionItem) bool {
 	var today, upcoming int
 	for _, item := range lane {
+		// The reminder read is never cut, so its rows say nothing of either cap.
+		if reminded(item) {
+			continue
+		}
 		if isUpcoming(item.DueGroup) {
 			upcoming++
 			continue

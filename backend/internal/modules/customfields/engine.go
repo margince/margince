@@ -11,6 +11,8 @@
 // without a database in the unit-test lane; the Service (service.go)
 // wires the schema-pool transaction that runs them (ALTER TABLE +
 // custom_field catalog INSERT + one audit_log row, atomically).
+//
+// Tables owned: docs/reference/entity-model/customfields.md.
 package customfields
 
 import (

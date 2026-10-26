@@ -1,4 +1,4 @@
-import type { DealSuggestion } from "../features/deals/dealsuggestions.queries";
+import type { DealSuggestion } from "../components/dealsuggestions.queries";
 
 export const suggestion: DealSuggestion = {
   id: "01a0e9f1-0000-7000-8000-000000000001",

@@ -33,3 +33,38 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+/* The editor drawer: one card per question, the reorder tools beside it. */
+.rt-questions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+  padding: 0;
+  list-style: none;
+}
+/* Card inset draws the plate; the grid places number, fields and tools. */
+.rt-q {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--space-3);
+  align-items: start;
+}
+.rt-q-num {
+  padding-top: var(--space-1);
+  color: var(--textSecondary);
+}
+.rt-q-opts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  align-items: end;
+}
+.rt-q-tools {
+  display: flex;
+  gap: var(--gapActions);
+}
+/* The foot's row spans the drawer foot so Save lands on its end edge. */
+.rt-foot {
+  flex: 1 1 100%;
+}

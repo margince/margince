@@ -278,7 +278,7 @@ func applyAutoExecuteAndStageResidue(w http.ResponseWriter, r *http.Request, nex
 		// names the values it would write, not only the field names it would
 		// write them to: "overwrite human-edited amount_minor" told an
 		// approver which field was at stake and never with what.
-		Summary: fmt.Sprintf(said.overwriteHumanEdited, strings.Join(split.Conflicts, ", "),
+		Summary: fmt.Sprintf(said.overwriteHumanEdited, agents.FieldLabels(said.lang, split.Conflicts),
 			restSummary(said, pol, r, split.Staged)),
 	})
 	if sErr != nil {

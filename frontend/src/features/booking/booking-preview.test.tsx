@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { createQueryClient } from "../../app/queryclient";
+import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { formatTimeOfDay, fullDayName } from "../../format/format";
 import { formatDayFull, formatTimeRange } from "../../format/meetingtime";
 import { dayInZone, viewerZone } from "../../format/timezone";
@@ -247,13 +248,15 @@ it("refuses days with nothing free and clears the time when another day is chose
   // The first day with a free time is chosen for the guest.
   await user.click(await screen.findByRole("button", { name: slotName(0) }));
   expect(
-    screen.getByRole("button", {
-      name: "Tuesday, 6 October 2026, nothing free",
-    }),
-  ).toHaveProperty("disabled", true);
+    screen
+      .getByRole("button", { name: "Tuesday, 6 October 2026, nothing free" })
+      .getAttribute("aria-disabled"),
+  ).toBe("true");
   expect(
-    screen.getByRole("button", { name: "Monday, 5 October 2026" }),
-  ).toHaveProperty("disabled", false);
+    screen
+      .getByRole("button", { name: "Monday, 5 October 2026" })
+      .getAttribute("aria-disabled"),
+  ).toBeNull();
   await user.click(
     screen.getByRole("button", { name: "Wednesday, 7 October 2026" }),
   );
@@ -284,10 +287,10 @@ it("says when a month has no free time rather than hiding availability", async (
     await screen.findByText("No free times this month. Try the next month."),
   ).toBeTruthy();
   expect(
-    screen.getByRole("button", {
-      name: "Monday, 5 October 2026, nothing free",
-    }),
-  ).toHaveProperty("disabled", true);
+    screen
+      .getByRole("button", { name: "Monday, 5 October 2026, nothing free" })
+      .getAttribute("aria-disabled"),
+  ).toBe("true");
   expect(screen.queryByRole("button", { name: CONFIRM })).toBeNull();
 });
 
@@ -335,7 +338,14 @@ function Journey() {
       <button type="button" onClick={() => setPreview(!preview)}>
         Switch view
       </button>
-      {preview ? <BookingScreen hostSlug="preview" /> : <MeetingSettings />}
+      {preview ? (
+        <BookingScreen hostSlug="preview" />
+      ) : (
+        <SavePageProvider>
+          <MeetingSettings />
+          <PageSaveBar />
+        </SavePageProvider>
+      )}
     </>
   );
 }
@@ -370,10 +380,16 @@ it("returns from settings to a preview with the newly saved values in a fresh ca
   );
   await screen.findByRole("heading", { name: bookingProfile.title });
   await user.click(screen.getByRole("button", { name: "Switch view" }));
-  const title = await screen.findByLabelText("Meeting title");
+  await user.click(
+    await screen.findByRole("button", {
+      name: `More actions for ${bookingProfile.title}`,
+    }),
+  );
+  await user.click(screen.getByRole("button", { name: "Edit link" }));
+  const title = await screen.findByLabelText("Meeting name");
   await user.clear(title);
   await user.type(title, "Newly saved title");
-  await user.click(screen.getByRole("button", { name: "Save settings" }));
+  await user.click(screen.getByRole("button", { name: "Save link" }));
   await waitFor(() =>
     expect(latest).toMatchObject({ title: "Newly saved title" }),
   );
@@ -424,10 +440,10 @@ it("refreshes cached preview times after saving working hours", async () => {
   );
   expect(await screen.findByRole("button", { name: slotName(0) })).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Switch view" }));
-  fireEvent.change(await screen.findByLabelText("Day starts"), {
+  fireEvent.change(await screen.findByLabelText("From"), {
     target: { value: "10:00" },
   });
-  await user.click(screen.getByRole("button", { name: "Save settings" }));
+  await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() =>
     expect(client.getQueryData(["working-hours"])).toMatchObject({
       working_hours: { start_time: "10:00" },

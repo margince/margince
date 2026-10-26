@@ -65,6 +65,9 @@ export function leadScoreKey(id: string): QueryKey {
   return [...leadKey(id), "score"];
 }
 
+/** The factors and bands a rep may score with. Workspace-wide, not per lead. */
+export const leadSignalCatalogKey: QueryKey = ["lead-signal-catalog"];
+
 /** The signals a human added by hand, which the signals pane reads and writes. */
 export function leadManualSignalsKey(id: string): QueryKey {
   return [...leadKey(id), "manual-signals"];

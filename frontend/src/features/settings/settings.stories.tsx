@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { pickOption } from "../../design-system/select-testing";
+import type { SettingsPageId } from "../../lib/settingscatalog";
 import { readingsDay } from "../../testing/brief.fixtures";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
@@ -14,7 +15,6 @@ import {
 } from "../../testing/story-utils";
 import { SettingsScreen, settingsAddress } from "./settings";
 import { PipelinesCard } from "./settings.pipelines";
-import type { SettingsPageId } from "./settingscatalog";
 import {
   COMPANY_CONTEXT_OFF,
   EVERY_GRANT,

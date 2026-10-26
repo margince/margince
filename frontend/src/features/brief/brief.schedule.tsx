@@ -14,7 +14,7 @@ import { formatTimeOfDay } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { routeHash } from "../../lib/router";
-import { settingsHref } from "../settings/settingsrouting";
+import { settingsHref } from "../../lib/settingsrouting";
 import {
   isUnprepared,
   itemTitle,

@@ -47,7 +47,7 @@ export function BookingInviteScreen({
   const [from, setFrom] = useState(() => new Date().toISOString());
   const [searchAhead, setSearchAhead] = useState(false);
   const hours = useWorkingHours(true);
-  const profile = useSchedulingProfile(true);
+  const profile = useSchedulingProfile({ refreshOnReturn: true });
   const selectedId = edits.contact?.id ?? contactId ?? "";
   const contact = useQuery({
     ...contactQuery(selectedId || undefined),

@@ -253,9 +253,9 @@ func recordNoticeLines(line writeLine) {
 		"Informationen zur Verarbeitung Ihrer personenbezogenen Daten",
 		"Thông tin về việc xử lý dữ liệu cá nhân của quý khách")
 	line(func(c *Copy) *string { return &c.NoticeBody },
-		"We hold personal data about you. The link below explains how to review the details,\nwhere they came from, how they are used, and your privacy rights.\nYou can also contact us directly using the contact details in this message.",
-		"Wir haben personenbezogene Daten von Ihnen gespeichert. Über den folgenden Link erfahren Sie,\nwelche Daten das sind, woher sie stammen, wofür wir sie verwenden und welche Rechte Sie haben.\nBei Fragen können Sie sich auch direkt über die Kontaktdaten in dieser E-Mail an uns wenden.",
-		"Chúng tôi đang lưu dữ liệu cá nhân của quý khách. Liên kết dưới đây cho biết dữ liệu nào\nđược lưu, nguồn cung cấp, cách sử dụng và các quyền về dữ liệu của quý khách.\nQuý khách cũng có thể liên hệ trực tiếp theo thông tin trong email này.")
+		"We hold personal data about you. The link below explains how to review the details, where they came from, how they are used, and your privacy rights.\nYou can also contact us directly using the contact details in this message.",
+		"Wir haben personenbezogene Daten von Ihnen gespeichert. Über den folgenden Link erfahren Sie, welche Daten das sind, woher sie stammen, wofür wir sie verwenden und welche Rechte Sie haben.\nBei Fragen können Sie sich auch direkt über die Kontaktdaten in dieser E-Mail an uns wenden.",
+		"Chúng tôi đang lưu dữ liệu cá nhân của quý khách. Liên kết dưới đây cho biết dữ liệu nào được lưu, nguồn cung cấp, cách sử dụng và các quyền về dữ liệu của quý khách.\nQuý khách cũng có thể liên hệ trực tiếp theo thông tin trong email này.")
 	line(func(c *Copy) *string { return &c.NoticeIgnore },
 		"No reply or confirmation is required.",
 		"Sie müssen weder antworten noch etwas bestätigen.",
@@ -283,9 +283,9 @@ func confirmConsentLines(line writeLine) {
 		"Bitte bestätigen Sie Ihr Abonnement",
 		"Vui lòng xác nhận đăng ký của quý khách")
 	line(func(c *Copy) *string { return &c.ConfirmConsentBody },
-		"Confirm this subscription only if you want to receive these messages. We will send messages for this purpose\nonly after you confirm. You can withdraw your choice later.",
-		"Bestätigen Sie das Abonnement nur, wenn Sie diese Nachrichten erhalten möchten. Erst danach senden wir Ihnen\nNachrichten zu diesem Zweck. Sie können Ihre Einwilligung später widerrufen.",
-		"Chỉ xác nhận đăng ký nếu muốn nhận các thư này. Thư cho mục đích này chỉ được gửi sau khi\nquý khách xác nhận. Quý khách có thể rút lại sự đồng ý sau đó.")
+		"Confirm this subscription only if you want to receive these messages. We will send messages for this purpose only after you confirm. You can withdraw your choice later.",
+		"Bestätigen Sie das Abonnement nur, wenn Sie diese Nachrichten erhalten möchten. Erst danach senden wir Ihnen Nachrichten zu diesem Zweck. Sie können Ihre Einwilligung später widerrufen.",
+		"Chỉ xác nhận đăng ký nếu muốn nhận các thư này. Thư cho mục đích này chỉ được gửi sau khi quý khách xác nhận. Quý khách có thể rút lại sự đồng ý sau đó.")
 	line(func(c *Copy) *string { return &c.ConfirmPersonal },
 		"This link is for your use only.",
 		"Dieser Link ist nur für Sie bestimmt.",

@@ -23,6 +23,7 @@ function ask(over: Record<string, unknown> = {}) {
   return {
     id: "ir-1",
     contact_id: "p-1",
+    origin: "asked",
     requester_user_id: "u-requester",
     introducer_user_id: VIEWER,
     route_type: "direct",
@@ -357,4 +358,71 @@ it("keeps a failed outcome on the row it belongs to, not the next row acted on",
   expect(
     within(rowFor("row one")).getByText(en["contact.intro.completeFailed"]),
   ).toBeTruthy();
+});
+
+// An introduction recorded after the fact has no reason and no deadline. The
+// card says how it was made and marks it as recorded, and offers neither an
+// answer nor a withdraw, because nobody asked.
+it("renders a recorded introduction without a reason or any verb", async () => {
+  mockFetch([
+    ask({
+      origin: "recorded",
+      recorded_channel: "in_person",
+      status: "introduced",
+      internal_reason: null,
+      due_at: null,
+      introduced_at: "2026-08-30T00:00:00Z",
+      requester_user_id: "u-requester",
+      introducer_user_id: VIEWER,
+    }),
+  ]);
+  renderCard();
+
+  await waitFor(() => {
+    expect(screen.getByText(en["contact.intro.recordedBadge"])).toBeTruthy();
+  });
+  expect(screen.getByText(/Face to face/)).toBeTruthy();
+  expect(screen.queryByText(en["contact.intro.answerAction"])).toBeNull();
+  expect(screen.queryByText(en["contact.intro.withdrawAction"])).toBeNull();
+});
+
+// A failed read keeps the card: no card at all would read as no asks.
+it("says the asks could not be read and reads them again on retry", async () => {
+  let reads = 0;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const path = typeof input === "string" ? input : (input as Request).url;
+      if (path.includes("/intro-requests")) {
+        reads += 1;
+        return reads === 1
+          ? new Response(
+              JSON.stringify({ title: "Unavailable", status: 503 }),
+              {
+                status: 503,
+                headers: { "content-type": "application/problem+json" },
+              },
+            )
+          : new Response(JSON.stringify({ data: [ask()] }), {
+              status: 200,
+              headers: { "content-type": "application/json" },
+            });
+      }
+      return new Response(JSON.stringify({ user: { id: VIEWER } }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }),
+  );
+  renderCard();
+
+  expect(await screen.findByText(en["contact.intro.asksFailed"])).toBeTruthy();
+  await userEvent.click(
+    screen.getByRole("button", { name: en["common.retry"] }),
+  );
+  expect(
+    await screen.findByText(en["contact.intro.stateRequested"]),
+  ).toBeTruthy();
+  expect(reads).toBe(2);
+  expect(screen.queryByText(en["contact.intro.asksFailed"])).toBeNull();
 });

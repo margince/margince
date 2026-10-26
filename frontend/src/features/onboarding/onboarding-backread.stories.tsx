@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import {
   installFetchStub,
@@ -10,26 +10,30 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
-import { OnboardingBackread } from "./onboarding-backread";
+import { BackreadPanel, useOnboardingBackread } from "./onboarding-backread";
 
-// The backread step for the fe-uat render gate — one story per honest branch:
-// the window pick with its scope, a failed estimate that still allows the read,
-// a run in progress with and without a denominator, the finished read, and the
-// two failure states. Every fixture is a valid BackfillStatus/BackfillPreview,
-// so nothing here renders a count the wire could not have sent.
+// The backread step for the fe-uat render gate, one story per branch.
+// They cover the window pick with its scope and a failed estimate that still
+// allows the read. They also cover a run in progress with and without a
+// denominator, the finished read, and the two failure states.
+// Every fixture is a valid BackfillStatus/BackfillPreview.
+// Nothing here renders a count the wire could not have sent.
 
 type BackfillStatus = components["schemas"]["BackfillStatus"];
+
+// The panel as the connect step mounts it: the choice hook and its panel. The
+// start is the step footer's, storied with the connect scene.
+function Backread({ initial }: Readonly<{ initial: BackfillStatus }>) {
+  const choice = useOnboardingBackread({ provider: "gmail", initial });
+  return <BackreadPanel choice={choice} />;
+}
 
 function backreadStory(initial: BackfillStatus, routes: RouteMap = {}) {
   return () => {
     installFetchStub(routes);
     return (
       <StoryProviders>
-        <OnboardingBackread
-          provider="gmail"
-          initial={initial}
-          onDone={() => {}}
-        />
+        <Backread initial={initial} />
       </StoryProviders>
     );
   };
@@ -46,12 +50,12 @@ const preview =
       ...extra,
     });
 
-const meta: Meta<typeof OnboardingBackread> = {
+const meta: Meta<typeof Backread> = {
   title: "Onboarding/Backread",
-  component: OnboardingBackread,
+  component: Backread,
 };
 export default meta;
-type Story = StoryObj<typeof OnboardingBackread>;
+type Story = StoryObj<typeof Backread>;
 
 export const Pick: Story = {
   render: backreadStory(
@@ -77,10 +81,7 @@ export const Counting: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByText(/Counting messages in this period/i);
-    await expect(
-      canvas.getByRole("button", { name: /Connect and import/i }),
-    ).toBeEnabled();
+    await canvas.findByText(/Counting messages/i);
   },
 };
 
@@ -146,7 +147,7 @@ export const RunningWithoutDenominator: Story = {
   }),
 };
 
-// Partial counts: the tallies the run reported and no others — an absent count
+// Partial counts: the tallies the run reported and no others: an absent count
 // is a measurement nobody took, not a zero.
 export const PartialCounts: Story = {
   render: backreadStory({

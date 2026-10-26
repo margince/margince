@@ -26,6 +26,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // activityScan holds one row mid-flight: the contract record being built, and
@@ -68,8 +69,17 @@ type activityScan struct {
 	// passed, exactly like the subject and body.
 	raw              map[string]any
 	bulkMailAttested bool
-	version          int64
-	audience         string
+	bodyCompleteness string
+	// The seat the row's own columns name as its writer (writerSeatSQL), and
+	// its name. Read here, so the author projection costs no query of its own.
+	writerSeat                      *ids.UUID
+	writerSeatName, writerSeatEmail *string
+	// Who sent the row, as relstrength.Evidence reads it into automatic_kind.
+	origin          string
+	calendarMethod  *string
+	senderIsMachine bool
+	version         int64
+	audience        string
 	// contentAvailable is the caller's audience test, evaluated per row: it
 	// decides whether the content columns above reach the caller at all.
 	contentAvailable bool
@@ -126,6 +136,9 @@ var activityProjection = []activityColumn{
 	// about August: a colleague who has since left was still its author, and
 	// readEmailParties already refuses the same filter for the same reason.
 	{sourceAuthorSeatNameSQL, func(s *activityScan) any { return &s.sourceAuthorSeatName }},
+	{writerSeatSQL, func(s *activityScan) any { return &s.writerSeat }},
+	{writerSeatNameSQL, func(s *activityScan) any { return &s.writerSeatName }},
+	{writerSeatEmailSQL, func(s *activityScan) any { return &s.writerSeatEmail }},
 	{"a.version", func(s *activityScan) any { return &s.version }},
 	{"a.created_at", func(s *activityScan) any { return &s.a.CreatedAt }},
 	{"a.updated_at", func(s *activityScan) any { return &s.a.UpdatedAt }},
@@ -133,6 +146,10 @@ var activityProjection = []activityColumn{
 	{"a.thread_key", func(s *activityScan) any { return &s.threadKey }},
 	{"a.capture_label", func(s *activityScan) any { return &s.captureLabel }},
 	{"a.bulk_mail_attested", func(s *activityScan) any { return &s.bulkMailAttested }},
+	{"a.body_completeness", func(s *activityScan) any { return &s.bodyCompleteness }},
+	{"a.origin", func(s *activityScan) any { return &s.origin }},
+	{"a.calendar_method", func(s *activityScan) any { return &s.calendarMethod }},
+	{"a.sender_is_machine", func(s *activityScan) any { return &s.senderIsMachine }},
 	{"a.audience", func(s *activityScan) any { return &s.audience }},
 	{"a.audience_reason", func(s *activityScan) any { return &s.audienceReason }},
 	{"a.raw", func(s *activityScan) any { return &s.raw }},
@@ -266,6 +283,14 @@ func (s *activityScan) record() crmcontracts.Activity {
 	if s.contentAvailable {
 		a.ImportedFrom = provenance.ImportedFrom(s.a.SourceSystem)
 		a.Author = SourceAuthorOf(s.sourceAuthorID, s.sourceAuthorSeatName, s.sourceAuthorName, s.a.SourceSystem)
+		a.Voice = writerSeatVoice(s.writerSeat, s.writerSeatName, s.writerSeatEmail)
+	}
+	// Said of a mail's body, so it goes where the body goes. A withheld reader
+	// does not get it, nor does a row whose body an erasure removed, nor any
+	// row that is not mail.
+	if s.contentAvailable && a.Body != nil && s.kind == string(crmcontracts.ActivityKindEmail) {
+		completeness := crmcontracts.BodyCompleteness(s.bodyCompleteness)
+		a.BodyCompleteness = &completeness
 	}
 	if s.language != nil && s.contentAvailable {
 		lang := crmcontracts.ActivityLanguage(*s.language)
@@ -300,6 +325,13 @@ func (s *activityScan) record() crmcontracts.Activity {
 	}
 	bulk := s.bulkMailAttested
 	a.BulkMailAttested = &bulk
+	// The calendar method and the sender stamp describe what a message is, so
+	// they travel with its content. The origin is the product's own fact.
+	evidence := relstrength.Evidence{Kind: s.kind, Origin: s.origin}
+	if s.contentAvailable {
+		evidence.CalendarMethod, evidence.SenderIsMachine = deref(s.calendarMethod), s.senderIsMachine
+	}
+	a.AutomaticKind = automaticKindToWire(evidence)
 	version := s.version
 	a.Version = &version
 	// What a canonical email row draws, composed here so every reader of an
@@ -309,6 +341,17 @@ func (s *activityScan) record() crmcontracts.Activity {
 	// need joins this scan does not have, and the detail read fills them in.
 	a.EmailSummary = RowEmailSummary(a)
 	return a
+}
+
+// automaticKindToWire renders what sent a row no human wrote, nil when a
+// human wrote it.
+func automaticKindToWire(row relstrength.Evidence) *crmcontracts.ActivityAutomaticKind {
+	kind := row.Automatic()
+	if kind == "" {
+		return nil
+	}
+	wire := crmcontracts.ActivityAutomaticKind(kind)
+	return &wire
 }
 
 // RowEmailSummary is the email row's fields, for the kind that has them.

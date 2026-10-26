@@ -5,37 +5,39 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
+import {
+  Button,
+  Disclosure,
+  Field,
+  Modal,
+  PendingBody,
+  TextInput,
+} from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import { FileDropzone } from "../../design-system/filedropzone";
 import { Heading } from "../../design-system/heading";
-import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
+import { Panel, PanelBody } from "../../design-system/panel";
+import { ProviderMark } from "../../design-system/provider-mark";
+import { ProviderList, ProviderRow } from "../../design-system/providerrow";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
+import { Stack } from "../../design-system/stack";
+import { StatCard } from "../../design-system/statcard";
+import { StatStrip } from "../../design-system/statstrip";
+import { statusTone } from "../../design-system/statusbadge";
 import { Switch } from "../../design-system/switch";
 import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { postMultipart } from "../../lib/multipart";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import {
   LINKEDIN_ACCOUNT_KEY,
   useSaveLinkedInAccount,
 } from "../../lib/use-linkedin-account";
-import "./linkedin-import.css";
 
-// The LinkedIn connections import (ADR-0078 §2.1b).
-//
-// Your own export, not an integration: LinkedIn hands every member a
-// Connections.csv under Settings → Data privacy, and this reads it. No app
-// approval, no OAuth, nothing to configure.
-//
-// The copy says what happens to the file, because a user uploading their
-// personal address book into a company system deserves to know before they
-// click rather than after. The imported rows never become contacts.
-//
-// Two decisions, so two rows: which profile the imported network is attributed
-// to, and which file to read. The URL is an ANSWER — a value with a verb that
-// changes it — so the field that edits it lives in a modal and the row prints
-// what is set now. What the import PRODUCED is not an answer to anything and
-// gets no row: it is a report, and it renders under the list.
+// The LinkedIn network: the member's own Connections.csv
+// export, the profile it is credited to, and the companies it reaches. No app
+// approval, no OAuth. The imported rows never become contacts, and the row says
+// so before the member uploads their address book into a company system.
 
 type ImportSummary = {
   rows: number;
@@ -54,10 +56,8 @@ function useImportConnections() {
       });
       return payload as ImportSummary;
     },
-    // An import changes what all three cards on this tab read, and they hold
-    // separate cache keys. Without this the summary reports new matches while
-    // the queue beside it still shows the pre-import "nothing waiting" it
-    // cached on load — the page contradicts itself and only a reload fixes it.
+    // An import changes the account count, the connections and the reach, which
+    // hold separate cache keys; without this the panel contradicts itself.
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: LINKEDIN_ACCOUNT_KEY });
       await client.invalidateQueries({ queryKey: ["linkedin-connections"] });
@@ -77,16 +77,9 @@ function useLinkedInAccount() {
   });
 }
 
-// Your own LinkedIn account: the profile the onboarding act recorded, shown
-// back so it can be corrected. A member is the only authority on their own
-// profile URL, so this is the caller's row and nobody else's — the API has no
-// path to another member's.
-//
-// The row is the brief's value-and-verb shape: the URL that is stored reads on
-// the left, the verb that changes it sits at the same x as every other answer on
-// the page, and the field itself is in a modal. One input is not what put it
-// there — a URL with an Edit beside it is a row that says what it is set to,
-// while a text box in the card says only that something is editable.
+// Your own LinkedIn profile, shown back so it can be corrected. The API has no
+// path to another member's. Value and verb sit on the row, the field in a
+// modal. The row says what it is set to, not only that it is editable.
 function LinkedInProfileRow() {
   const t = useT();
   const account = useLinkedInAccount();
@@ -136,15 +129,9 @@ function LinkedInProfileRow() {
   return (
     <>
       <SettingRow
-        label={t("linkedinImport.profileLabel")}
-        // The answer the row holds. An empty URL is not a blank cell — it is
-        // "we have not recorded one", which is a different claim from "the
-        // member has no profile".
+        label={t("linkedinImport.editProfileTitle")}
+        // An empty URL is "not added here", not "the member has no profile".
         value={stored === "" ? t("linkedinImport.profileNotSet") : stored}
-        // What the setting DOES, which is what a description is for. The
-        // not-connected arm used to open "Not connected yet." — the same fact
-        // the `value` beside it already states as "Not recorded yet", said
-        // twice on one row in two different words.
         description={
           account.data?.connected
             ? t("linkedinImport.connectedNote")
@@ -152,7 +139,9 @@ function LinkedInProfileRow() {
         }
         control={
           <Button variant="ghost" onClick={() => setEditing(true)}>
-            {t("linkedinImport.editProfile")}
+            {stored === ""
+              ? t("linkedinImport.addProfile")
+              : t("linkedinImport.editProfile")}
           </Button>
         }
       />
@@ -263,7 +252,7 @@ function ReachVisibilityRow() {
       label={t("linkedinImport.reachVisibleLabel")}
       description={t("linkedinImport.reachVisibleHelp")}
       control={(props) => (
-        <div className="li-reach-visibility">
+        <Stack gap="2">
           <Switch
             label={t("linkedinImport.reachVisibleLabel")}
             labelHidden
@@ -284,82 +273,110 @@ function ReachVisibilityRow() {
               {problemMessageOf(save.error, t)}
             </Callout>
           )}
-        </div>
+        </Stack>
       )}
     />
   );
 }
 
-export function LinkedInImportCard() {
+/**
+ * The LinkedIn network: the import as a connection row, the profile it is
+ * credited to, the companies it reaches, and where to get the file.
+ */
+export function LinkedInNetworkPanel() {
   const t = useT();
-  const [fileName, setFileName] = useState<string | null>(null);
-  const importer = useImportConnections();
-
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const account = useLinkedInAccount();
+  const held = account.data?.connections;
   return (
-    // No per-card bottom margin: the tab owns the rhythm between its cards.
-    <Panel title={t("linkedinImport.title")}>
+    <Panel title={t("linkedinReach.title")}>
       <PanelBody>
-        {/* ONE description, in the spacing contract's spelling. A second
-            full-width paragraph under it — where to get the file, and what
-            happens to it — was a wall of prose before the card's first row, and
-            both halves of it belong to the import row rather than to the card:
-            they say what that one setting does. */}
-        <PanelIntro>{t("linkedinImport.sub")}</PanelIntro>
+        <ProviderList>
+          <ProviderRow
+            mark={<ProviderMark providerKey="linkedin" />}
+            name={t("linkedinImport.title")}
+            status={
+              held === undefined
+                ? undefined
+                : held === 0
+                  ? {
+                      tone: statusTone("neutral"),
+                      label: t("linkedinImport.notImported"),
+                    }
+                  : {
+                      tone: statusTone("done"),
+                      label: plural("linkedinImport.importedCount", held, {
+                        count: formatNumber(held, locale),
+                      }),
+                    }
+            }
+            // What happens to the file, said before the member drops it: their
+            // own address book is going into a company system.
+            facts={t("linkedinImport.sub")}
+          >
+            <ConnectionsImport />
+          </ProviderRow>
+        </ProviderList>
       </PanelBody>
       <SettingList bleed="settings">
         <LinkedInProfileRow />
         <ReachVisibilityRow />
-        {/* LinkedIn's export holds many CSVs and the wrong one fails with an
-            unhelpful parse error, so the description names the file to pick. */}
-        <SettingRow
-          label={t("linkedinImport.importLabel")}
-          description={t("linkedinImport.whichFile")}
-          control={
-            <div className="li-import-picker">
-              <label
-                className="li-import-button"
-                htmlFor="linkedin-import-file"
-              >
-                {t("linkedinImport.choose")}
-              </label>
-              <input
-                id="linkedin-import-file"
-                type="file"
-                accept=".csv,text/csv"
-                data-testid="linkedin-import-file"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  setFileName(file?.name ?? null);
-                  if (file) {
-                    importer.mutate(file);
-                  }
-                }}
-              />
-              {fileName && <span className="t-sub">{fileName}</span>}
-            </div>
-          }
-        />
       </SettingList>
-      {/* Outside the list: the import's progress and outcome answer no
-          setting. */}
-      {!importer.isIdle && (
-        <PanelBody>
-          {importer.isPending && (
-            <p className="t-sub">{t("linkedinImport.working")}</p>
-          )}
-          {importer.isError && (
-            <Callout
-              kind="outcome"
-              tone="danger"
-              title={t("linkedinImport.importFailed")}
-            >
-              {problemMessageOf(importer.error, t)}
-            </Callout>
-          )}
-          {importer.isSuccess && <ImportResult summary={importer.data} />}
-        </PanelBody>
-      )}
+      <PanelBody>
+        {/* LinkedIn's archive holds a dozen CSVs and the wrong one fails with
+            a parse error, so the way to the right file stays one click away. */}
+        <Disclosure summary={t("linkedinImport.importLabel")}>
+          <p>{t("linkedinImport.whichFile")}</p>
+        </Disclosure>
+      </PanelBody>
     </Panel>
+  );
+}
+
+/** The file, picked or dropped, and what the import made of it, under the row. */
+function ConnectionsImport() {
+  const t = useT();
+  const importer = useImportConnections();
+  const [file, setFile] = useState<File | undefined>(undefined);
+  return (
+    <Stack>
+      <FileDropzone
+        label={t("linkedinImport.choose")}
+        emptyLabel={t("linkedinImport.dropHint")}
+        accept=".csv,text/csv"
+        file={file}
+        onPick={(picked) => {
+          setFile(picked);
+          importer.mutate(picked);
+        }}
+      />
+      {importer.isIdle ? null : <ImportOutcome importer={importer} />}
+    </Stack>
+  );
+}
+
+/** What the import DID: a report under the row, not a setting beside it. */
+function ImportOutcome({
+  importer,
+}: Readonly<{ importer: ReturnType<typeof useImportConnections> }>) {
+  const t = useT();
+  if (importer.isPending) {
+    return <PendingBody visible label={t("linkedinImport.working")} />;
+  }
+  if (importer.isError) {
+    return (
+      <Callout
+        kind="outcome"
+        tone="danger"
+        title={t("linkedinImport.importFailed")}
+      >
+        {problemMessageOf(importer.error, t)}
+      </Callout>
+    );
+  }
+  return importer.data === undefined ? null : (
+    <ImportResult summary={importer.data} />
   );
 }
 
@@ -371,31 +388,31 @@ function ImportResult({ summary }: Readonly<{ summary: ImportSummary }>) {
   const { locale } = useLocale();
   return (
     <>
-      <dl data-testid="linkedin-import-result" className="li-import-result">
-        <div>
-          <dt>{t("linkedinImport.imported")}</dt>
-          <dd>{formatNumber(summary.imported, locale)}</dd>
-        </div>
-        <div>
-          <dt>{t("linkedinImport.confirmed")}</dt>
-          <dd>{formatNumber(summary.confirmed, locale)}</dd>
-        </div>
-        <div>
-          <dt>{t("linkedinImport.suggested")}</dt>
-          <dd>{formatNumber(summary.suggested, locale)}</dd>
-        </div>
+      <StatStrip testId="linkedin-import-result" density="compact">
+        <StatCard
+          label={t("linkedinImport.imported")}
+          value={formatNumber(summary.imported, locale)}
+        />
+        <StatCard
+          label={t("linkedinImport.confirmed")}
+          value={formatNumber(summary.confirmed, locale)}
+        />
+        <StatCard
+          label={t("linkedinImport.suggested")}
+          value={formatNumber(summary.suggested, locale)}
+        />
         {summary.skipped > 0 && (
-          <div>
-            <dt>{t("linkedinImport.skipped")}</dt>
-            <dd>{formatNumber(summary.skipped, locale)}</dd>
-          </div>
+          <StatCard
+            label={t("linkedinImport.skipped")}
+            value={formatNumber(summary.skipped, locale)}
+          />
         )}
-      </dl>
+      </StatStrip>
       {/* Zero matches on a new workspace is expected rather than wrong: the
           contacts an export matches arrive with mail capture over the hours
           after it. Saying so stops it reading as a broken import. */}
       {summary.confirmed + summary.suggested === 0 && summary.imported > 0 && (
-        <p className="t-sub">{t("linkedinImport.noMatchesYet")}</p>
+        <p className="t-caption">{t("linkedinImport.noMatchesYet")}</p>
       )}
     </>
   );

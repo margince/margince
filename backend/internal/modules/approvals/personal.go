@@ -11,12 +11,21 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// requestedDecider uses explicit responsibility, not permission to decide.
+// requestedDecider is the member stored at staging. A row decided before the
+// column existed falls back to the rule that named people then.
 func requestedDecider(a row) ids.UUID {
+	if a.RequestedDecider != nil {
+		return *a.RequestedDecider
+	}
+	return legacyRequestedDecider(a)
+}
+
+func legacyRequestedDecider(a row) ids.UUID {
 	if approvalsubject.PayloadOwned(a.Kind) {
-		return approvalsubject.Owner(a.ProposedChange)
+		return approvalsubject.Owner(a.Kind, a.ProposedChange)
 	}
 	if a.PassportID != nil && !a.PassportID.IsZero() && a.OnBehalfOf != nil {
 		return a.OnBehalfOf.UUID
@@ -64,4 +73,23 @@ func (s *Service) PendingInScope(ctx context.Context, scope ListInput, named []i
 		return nil
 	})
 	return visible, err
+}
+
+// StagedInItsDecidersSession reports whether the current decider is the
+// colleague whose own live conversation staged this, so it showed them the
+// request. A request handed to someone else since then is theirs to be told of.
+func (a row) StagedInItsDecidersSession() bool {
+	return a.StagedInConversationOf != nil && requestedDecider(a) == *a.StagedInConversationOf
+}
+
+// conversationOf is the colleague whose live conversation is staging, or zero.
+// That is an AI client connected on their own passport, outside a scheduled run.
+// A passport minted without a connection, as the overnight run's, is unattended.
+func conversationOf(ctx context.Context, p principal.Principal) ids.UUID {
+	_, unattended := principal.AgentRunID(ctx)
+	connected := p.Type == principal.PrincipalAgent && !p.PassportID.IsZero() && !p.ConnectionID.IsZero()
+	if unattended || !connected || p.OnBehalfOf.IsZero() {
+		return ids.Nil
+	}
+	return p.OnBehalfOf
 }

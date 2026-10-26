@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/scheduled.yml .github/actions/go-build-cache scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh -->
 # CI pipeline
 
 The merge gate as GitHub Actions. The workflow is
@@ -147,7 +148,7 @@ to run the Go unit gates. The other is to boot the sharded Postgres databases.
 | `frontend` | `frontend/**`, `backend/api/**` (the contract drives FE types), the composition inputs the lane type checks against (`extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile`, `scripts/**`), and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, plus `.github/actions/install-playwright-chromium/**` (it decides whether the UAT part can run at all, so a change to it cannot be reviewed without the lane it governs) | frontend lane, UAT |
 | `e2e` | `backend/**`, `frontend/**`, `docker-compose.dev.yml`, `extensions/**`, `fixtures/**`, `composition/**`, `scripts/**`, `Makefile` | full stack live-boot |
 | `images` | `Dockerfile`, `.dockerignore`, `docker-bake.hcl` | `images (build only)` |
-| `deps` | `go.work`, `go.work.sum`, `**/go.mod`, `**/go.sum`, `**/package.json`, `**/pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.syft.yaml`, `.grant.yaml`, `sbom-schemas/**`, `Makefile`, `scripts/sbom-census.sh`, `scripts/test-sbom-census.sh`, `.github/workflows/**`, `.github/actions/**` | the license gate |
+| `deps` | `go.work`, `go.work.sum`, `**/go.mod`, `**/go.sum`, `**/package.json`, `**/pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.syft.yaml`, `.grant.yaml`, `sbom-schemas/**`, `Makefile`, `scripts/sbom-census.sh`, `scripts/test-sbom-census.sh`, `scripts/sbom-license-parity.sh`, `scripts/test-sbom-license-parity.sh`, `.github/workflows/**`, `.github/actions/**` | the license gate |
 
 What the `backend` scope adds on top of `backend_db`:
 
@@ -157,7 +158,7 @@ What the `backend` scope adds on top of `backend_db`:
   still run the lane that holds them.
 - The rest of what the suite opens: `.github/**`, `.coderabbit.yaml`, `.env.example`, `.tool-versions`,
   `config/**`, `e2e/**`, `tools/**`, `user-guide/**`, `Dockerfile*`, `package.json`, `pnpm-lock.yaml`
-  and `renovate.json`. It also opens the root pages `README.md`, `CHANGELOG.md`, `CLA.md`,
+  and `renovate.json`. It also opens the root pages `README.md`, `CLA.md`,
   `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `LICENSING.md`, `SECURITY.md` and `SUPPORT.md`.
 
 That list is worked out from the tree, not kept by hand. `backend/gates/gatelanetrigger_test.go` checks every path literal
@@ -429,13 +430,15 @@ Two kinds of input stay hidden from that check, and each is declared through `ga
 - **What a process the test started read.** A test that runs `git ls-files` or `go list` opens nothing itself. So it
   walks the paths the process read.
 
-The first kind is held by a census, not a scan, because such paths are mostly built at run time. Before
-`cache-warm` saves an entry, it runs the cached pass again through
+The first kind is held by a census, not a scan, because such paths are mostly built at run time.
+`make test-input-census` runs the cached pass again through
 [`scripts/testlog-exec.sh`](../../scripts/testlog-exec.sh), with Go's test log on. Then
 `backend/tools/check-test-inputs` fails on any package that read outside its module without reading the
 matching digest.
 
-A failing census holds back the entry, so readers stay on the last good one. The second kind is held by
+The `backend-lint` job runs the census on every PR, so the PR that adds such a read fails. `cache-warm`
+runs it before it saves an entry, and a failing census holds back the entry, so readers stay on the last
+good one. The second kind is held by
 a gate: a cached test file that runs `git` or `go` must declare its inputs.
 
 ## The jobs

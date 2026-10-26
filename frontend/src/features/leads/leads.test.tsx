@@ -612,12 +612,14 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     render(<LeadScreen id="l-1" />);
 
     // It stays on the lead's own page.
-    expect(await screen.findByText(en["lead.promotedTitle"])).toBeTruthy();
+    expect(await screen.findByText(en["lead.card.qualifiedAs"])).toBeTruthy();
     expect(window.location.hash).not.toBe("#/contacts/p-42");
     // And it names WHICH outcome, which is the whole reason a rep opens it.
     // Awaited: the outcome comes from the audit read, a second request that
     // lands after the lead itself.
-    expect(await screen.findByText(en["lead.promotedMerged"])).toBeTruthy();
+    expect(
+      await screen.findByText(en["lead.promotedMerged"], { exact: false }),
+    ).toBeTruthy();
     expect(screen.getByText(/Inbound reply/)).toBeTruthy();
     expect(screen.getByText(/Replied asking for a quote\./)).toBeTruthy();
   });
@@ -656,8 +658,10 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     });
     render(<LeadScreen id="l-1" />);
     await userEvent.click(await screen.findByTestId("lead-qualify"));
+    // In the dialog: the overview's preview card reads the same answer.
+    const dialog = await screen.findByRole("dialog");
     expect(
-      await screen.findByText(en["lead.previewMergeWithheld"]),
+      await within(dialog).findByText(en["lead.previewMergeWithheld"]),
     ).toBeTruthy();
     expect(screen.queryByText(en["lead.previewCreate"])).toBeNull();
   });
@@ -690,6 +694,8 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       return jsonResponse(promoted);
     });
     render(<LeadScreen id="l-1" />);
+    // A rare verb, so it waits in the head's More menu.
+    await openLeadActions(user);
     await user.click(
       await screen.findByRole("button", { name: "Reverse qualification" }),
     );
@@ -770,7 +776,9 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     });
     render(<LeadScreen id="l-1" />);
 
-    expect(await screen.findByText(en["lead.promotedMerged"])).toBeTruthy();
+    expect(
+      await screen.findByText(en["lead.promotedMerged"], { exact: false }),
+    ).toBeTruthy();
     expect(historyURLs).toHaveLength(1);
     expect(historyURLs[0]).toContain("action=promote");
   });
@@ -799,7 +807,9 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       await screen.findByText("Qualified. This lead is read-only."),
     ).toBeTruthy();
     // The outcome line never claims a result it could not read.
-    expect(screen.queryByText(en["lead.promotedMerged"])).toBeNull();
+    expect(
+      screen.queryByText(en["lead.promotedMerged"], { exact: false }),
+    ).toBeNull();
   });
 
   it("re-reads the history after promoting, so the new audit row is not missed", async () => {

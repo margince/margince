@@ -72,7 +72,7 @@ changes none.
 | `capture_trace` | -R-- | -R-- | -R-- | ---- | ---- | -R-- |
 | `channel_connection` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `commission` | CRUD | CRUD | CRUD | -R-- | -R-- | CRUD |
-| `communication_exception` | CRUD | ---- | ---- | ---- | ---- | ---- |
+| `communication_exception` | CRUD | CR-- | CR-- | CR-- | ---- | ---- |
 | `company` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `computed_field` | -R-- | -R-- | -R-- | -R-- | -R-- | -R-- |
 | `consent_config` | CRUD | -R-- | ---- | ---- | ---- | CRUD |

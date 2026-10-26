@@ -255,35 +255,32 @@ func TestDedupeQueuePagesByConfidence(t *testing.T) {
 	}
 }
 
-// An over-cap page ask is CLAMPED to the maximum, not reset to the default.
-//
-// One condition covering both ends answered the default of twenty-five rows to
-// a caller asking for more than the page maximum. The ranked queue on Home asks
-// for a census of two hundred, so it saw the twenty-five highest-confidence
-// pairs and no others — and because the cut falls on the confidence order, the
-// ones that stayed hidden were the low-confidence pairs nothing else on the
-// surface would ever mention.
-//
-// The seed is read back through the store's own count rather than assumed: a
-// fuzzy create records what it scores, so the case guards that it really did
-// leave more open pairs than one default page holds.
+// A page ask past the maximum is clamped to it, not reset to the default.
+// Home asks for more than the maximum and must see every open pair. The seed
+// must leave more open pairs than a default page and at most the maximum.
+// Each employer is named after its surname alone. Employers that share a
+// leading name score as each other's duplicates, which would move the count.
 func TestAnOverCapPageAskIsClampedRatherThanResetToTheDefault(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	for _, name := range surnamesPastOnePage {
 		lower := strings.ToLower(name)
-		_, _ = seedContactPair(ctx, t, e,
-			"Kim "+name, "kim@"+lower+".test",
-			"Kym "+name, "kym@"+lower+".test", lower+".test")
+		e.seedEmployedContact(ctx, t, "Kim "+name, "kim@"+lower+".test", name, lower+".test")
+		if _, err := e.store.CreateContact(ctx, CreateContactInput{
+			FullName: "Kym " + name, Source: "manual",
+			Emails: []ContactEmailInput{{Email: "kym@" + lower + ".test", EmailType: "work", IsPrimary: true}},
+		}); err != nil {
+			t.Fatalf("create the near-duplicate of Kim %s: %v", name, err)
+		}
 	}
 
 	open, err := e.store.CountOpenDedupeCandidates(ctx)
 	if err != nil {
 		t.Fatalf("counting open pairs: %v", err)
 	}
-	if open <= dedupeQueueDefaultLimit {
-		t.Fatalf("the seed left %d open pairs, and this case needs more than one default page of %d",
-			open, dedupeQueueDefaultLimit)
+	if open <= dedupeQueueDefaultLimit || open > dedupeQueueMaxLimit {
+		t.Fatalf("the seed left %d open pairs, and this case needs more than one default page of %d and at most the maximum of %d",
+			open, dedupeQueueDefaultLimit, dedupeQueueMaxLimit)
 	}
 
 	rows, _, err := e.store.ListDedupeCandidates(ctx, DedupeQueueInput{Limit: dedupeQueueMaxLimit + 1})
@@ -766,7 +763,7 @@ func TestOpenCandidatesNamingHidesAPairOutsideTheCallersRowScope(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stranger, err := e.store.OpenCandidatesNaming(e.asOwnScoped(ids.NewV7()), entityContact, right)
+	stranger, err := e.store.OpenCandidatesNaming(e.asOwnScoped(ids.NewV7()), entityContact, right, nil)
 	if err != nil {
 		t.Fatalf("an out-of-scope read must answer empty, not fail: %v", err)
 	}
@@ -776,7 +773,7 @@ func TestOpenCandidatesNamingHidesAPairOutsideTheCallersRowScope(t *testing.T) {
 
 	// And the owner is still told, or the check above passes for the wrong
 	// reason — a query that answers nobody hides nothing.
-	owner, err := e.store.OpenCandidatesNaming(ctx, entityContact, right)
+	owner, err := e.store.OpenCandidatesNaming(ctx, entityContact, right, nil)
 	if err != nil {
 		t.Fatalf("the owner's read: %v", err)
 	}
@@ -796,7 +793,7 @@ func TestOpenCandidatesNamingHidesAPairOutsideTheCallersRowScope(t *testing.T) {
 func TestOpenCandidatesNamingIsSilentForARecordTypeWithNoQueue(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	rows, err := e.store.OpenCandidatesNaming(ctx, "deal", ids.NewV7())
+	rows, err := e.store.OpenCandidatesNaming(ctx, "deal", ids.NewV7(), nil)
 	if err != nil {
 		t.Fatalf("a record type with no queue must answer empty, not fail: %v", err)
 	}

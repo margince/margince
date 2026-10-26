@@ -75,15 +75,31 @@ func (s *Service) EffectiveAuthority(ctx context.Context, workspaceID, humanID i
 		seat principal.SeatType
 	)
 	err := s.liveUserTx(ctx, workspaceID, humanID, func(tx pgx.Tx, seatType string) error {
-		_, teams, perms, err := loadGrants(ctx, tx, ids.From[ids.UserKind](humanID))
-		if err != nil {
-			return err
-		}
-		rbac = authz.RBAC{Permissions: perms, TeamIDs: rawTeamIDs(teams)}
-		seat = principal.SeatType(seatType)
-		return nil
+		var err error
+		rbac, seat, err = authorityIn(ctx, tx, humanID, seatType)
+		return err
 	})
 	return rbac, seat, err
+}
+
+// EffectiveAuthorityTx is EffectiveAuthority read in the caller's transaction.
+// It answers only whether a member is told about something, never what they
+// may do, so the caller's isolation level is enough. ErrNotFound for a member
+// who is not live.
+func EffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	seatType, err := liveSeatType(ctx, tx, humanID)
+	if err != nil {
+		return authz.RBAC{}, "", err
+	}
+	return authorityIn(ctx, tx, humanID, seatType)
+}
+
+func authorityIn(ctx context.Context, tx pgx.Tx, humanID ids.UUID, seatType string) (authz.RBAC, principal.SeatType, error) {
+	_, teams, perms, err := loadGrants(ctx, tx, ids.From[ids.UserKind](humanID))
+	if err != nil {
+		return authz.RBAC{}, "", err
+	}
+	return authz.RBAC{Permissions: perms, TeamIDs: rawTeamIDs(teams)}, principal.SeatType(seatType), nil
 }
 
 // AdmittedAuthority answers the whole admission question in one snapshot: the
@@ -173,17 +189,23 @@ func (s *Service) liveUserTx(ctx context.Context, workspaceID, humanID ids.UUID,
 	// one compose could give it tomorrow. Read-only work at REPEATABLE READ
 	// takes its snapshot at the first statement and cannot serialize-fail.
 	return s.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
-		var seatType string
-		err := tx.QueryRow(ctx,
-			`SELECT seat_type FROM app_user
-			 WHERE id = $1 AND `+LiveMemberSQL("")+``,
-			humanID).Scan(&seatType)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
+		seatType, err := liveSeatType(ctx, tx, humanID)
 		if err != nil {
 			return err
 		}
 		return fn(tx, seatType)
 	})
+}
+
+// liveSeatType reads a live member's seat, ErrNotFound for anyone else.
+func liveSeatType(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (string, error) {
+	var seatType string
+	err := tx.QueryRow(ctx,
+		`SELECT seat_type FROM app_user
+		 WHERE id = $1 AND `+LiveMemberSQL("")+``,
+		humanID).Scan(&seatType)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", apperrors.ErrNotFound
+	}
+	return seatType, err
 }

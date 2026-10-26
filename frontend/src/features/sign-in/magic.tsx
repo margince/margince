@@ -70,11 +70,7 @@ export function MagicPanel({
   const titleId = useId();
   const receipt = magic.data;
   const withheld = receipt?.sources_unavailable ?? [];
-  const state = magic.isPending
-    ? "loading"
-    : magic.isError
-      ? "failed"
-      : "ready";
+  const state = queryState(magic);
   // Lines only off a read that answered: a refresh that failed keeps the last
   // answer cached, and drawing it would offer undos under "did not load".
   const shown = distinctReceipt(
@@ -86,8 +82,11 @@ export function MagicPanel({
   const done = rowsOf(shown?.done);
   const doneRecords = recordsOf(done);
   const coverageIncomplete = doneCoverageIncomplete(shown);
+  // The decision source read to its bound and still had more.
   const doneFloor =
-    sumIsFloor("done", rowsOf(receipt?.done)) || coverageIncomplete;
+    sumIsFloor("done", rowsOf(receipt?.done)) ||
+    coverageIncomplete ||
+    receipt?.done_is_floor === true;
   // "All" would claim the whole of a count that is only a floor.
   const doneFold = plural(
     doneFloor ? "magic.done.atLeast" : "magic.done.all",
@@ -101,14 +100,8 @@ export function MagicPanel({
     },
   );
   const byDay = shown ? spansDays(shown.since, shown.as_of) : false;
-  // A quiet window and an unread one are different answers. Nothing drawn
-  // over a read that answered is the quiet one, so the section stays away.
-  if (
-    state === "ready" &&
-    drawn.length === 0 &&
-    withheld.length === 0 &&
-    !coverageIncomplete
-  ) {
+  const read = sectionRead(state, shown, drawn, coverageIncomplete);
+  if (read === "empty") {
     return null;
   }
   return (
@@ -118,13 +111,13 @@ export function MagicPanel({
       </Eyebrow>
       <PanelBody>
         <SurfaceState
-          state={state}
+          state={read}
           emptyLabel=""
           loadingLabel={t("magic.loading")}
           detail={{ onRetry: () => void magic.refetch() }}
         >
           <WithheldSources withheld={withheld} />
-          {shown?.not_shown_count_withheld && drawn.length > 0 && (
+          {shown?.not_shown_count_withheld && (
             <p className="t-caption">{t("magic.visibleScope")}</p>
           )}
           {coverageIncomplete && (
@@ -151,6 +144,36 @@ export function MagicPanel({
       )}
     </section>
   );
+}
+
+function queryState(
+  query: Readonly<{ isPending: boolean; isError: boolean }>,
+): "loading" | "failed" | "ready" {
+  if (query.isPending) return "loading";
+  return query.isError ? "failed" : "ready";
+}
+
+// A quiet window and an unread one are different answers. Only a read that
+// answered completely, with nothing drawn, is empty and stays away. A lane
+// the response did not carry is unread, not empty, and a count this reader
+// may not be given is unmeasured.
+function sectionRead(
+  state: "loading" | "failed" | "ready",
+  shown: MagicReceipt | undefined,
+  drawn: readonly MagicLane[],
+  coverageIncomplete: boolean,
+): "loading" | "failed" | "ready" | "empty" | "unavailable" {
+  if (state !== "ready") return state;
+  if (LANES.some((lane) => !Array.isArray(shown?.[lane]))) {
+    return "unavailable";
+  }
+  const complete =
+    rowsOf(shown?.sources_unavailable).length === 0 &&
+    rowsOf(shown?.not_shown).length === 0 &&
+    shown?.not_shown_count_withheld !== true &&
+    shown?.done_is_floor !== true &&
+    !coverageIncomplete;
+  return drawn.length === 0 && complete ? "empty" : "ready";
 }
 
 function doneCoverageIncomplete(receipt: MagicReceipt | undefined): boolean {

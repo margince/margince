@@ -5,6 +5,7 @@ package company360
 
 import (
 	"context"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -34,12 +35,18 @@ func (a *assembly) readTimeline() error {
 	companyUUID := a.companyID.UUID
 	entityType := "company"
 	limit := sectionLimit
+	var conversationAsOf *time.Time
+	if a.opts.WrittenByHumanOnly {
+		conversationAsOf = &a.now
+	}
 	data, page, err := activities.ListActivitiesTx(a.ctx, a.tx, activities.ListActivitiesInput{
-		EntityType:      &entityType,
-		EntityID:        &companyUUID,
-		Limit:           &limit,
-		WithinProjectID: a.opts.ProjectID,
-		Columns:         a.activityColumns,
+		EntityType:       &entityType,
+		EntityID:         &companyUUID,
+		Limit:            &limit,
+		WithinProjectID:  a.opts.ProjectID,
+		WrittenByHuman:   a.opts.WrittenByHumanOnly,
+		ConversationAsOf: conversationAsOf,
+		Columns:          a.activityColumns,
 	})
 	if err != nil {
 		return err

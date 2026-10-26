@@ -45,8 +45,33 @@ func lockContactForEmployment(ctx context.Context, tx pgx.Tx, id ids.UUID) error
 // Retiring an employment fills an empty primary slot only when no choice remains.
 // Explicitly clearing the primary flag does not invoke this succession rule.
 func promoteLoneSurvivingEmployment(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) error {
-	if _, err := tx.Exec(ctx, `UPDATE relationship SET is_current_primary = true WHERE id = (`+employmentSuccessorSQL()+`)`, pgx.StrictNamedArgs{contactEntity: contactID, "excluded": nil}); err != nil {
+	if err := flipCurrentPrimary(ctx, tx, `UPDATE relationship SET is_current_primary = true
+ WHERE NOT is_current_primary AND id = (`+employmentSuccessorSQL()+`)`, pgx.StrictNamedArgs{contactEntity: contactID, "excluded": nil}); err != nil {
 		return fmt.Errorf("contacts: promoting the surviving employment for contact %s: %w", contactID, err)
+	}
+	return nil
+}
+
+// flipCurrentPrimary runs an UPDATE that moves only is_current_primary on edges
+// beside the one being written. Each edge it moves gets an audit row and an
+// event, like any other edge update. The statement must match only rows holding
+// the opposite value, which is what makes the before image exact.
+func flipCurrentPrimary(ctx context.Context, tx pgx.Tx, update string, args ...any) error {
+	rows, err := tx.Query(ctx, update+" RETURNING "+relationshipColumns, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	flipped, err := scanRelationships(rows)
+	if err != nil {
+		return err
+	}
+	for _, rel := range flipped {
+		before := relationshipFieldImage(rel)
+		before["is_current_primary"] = !rel.IsCurrentPrimary
+		if err := emitRelationshipChange(ctx, tx, "update", before, rel); err != nil {
+			return err
+		}
 	}
 	return nil
 }

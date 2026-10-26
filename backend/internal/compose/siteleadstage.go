@@ -132,6 +132,9 @@ func (w *siteDeepReadWorker) stageSiteLead(ctx context.Context, tx pgx.Tx, said 
 		return ids.ApprovalID{}, false, err
 	}
 	approvalID, err := w.approvals.StageOrJoinPendingInTx(ctx, tx, in)
+	if errors.Is(err, approvals.ErrNoDecider) {
+		return ids.ApprovalID{}, false, nil
+	}
 	if err != nil {
 		return ids.ApprovalID{}, false, err
 	}

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { FileOrigin } from "../../components/fileorigin";
 import { Badge, Button, EmptyState } from "../../design-system/atoms";
 import { FilterPills } from "../../design-system/filterpills";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
@@ -12,6 +13,7 @@ import {
 import { formatDateTime, formatNumber } from "../../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { attachmentAnchor } from "../../lib/attachmentlink";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
@@ -54,6 +56,7 @@ const CATEGORY_LABELS: Record<Category, MessageKey> = {
   email_attachment: "docs.category.email",
   message_attachment: "docs.category.message",
   other: "docs.category.other",
+  link: "docs.category.link",
 };
 
 // The chips a reader can press. `contract` is absent because the agreements
@@ -67,6 +70,7 @@ const FILTER_CATEGORIES: readonly Category[] = [
   "email_attachment",
   "message_attachment",
   "other",
+  "link",
 ];
 
 const STATE_LABELS: Record<DocState, MessageKey> = {
@@ -137,8 +141,11 @@ function supersededBase(shown: boolean): PluralBase {
 export function CompanyDocumentsCard({
   companyId,
   refusedReasonId,
+  onOpenEmail,
 }: Readonly<{
   companyId: string;
+  /** Opens a mail in the page's drawer, from the line naming a file's mail. */
+  onOpenEmail?: (activityId: string) => void;
   // The id of the page's sentence about why this account takes no changes,
   // while it does not. The upload hangs a file on the account through the
   // account's own write gate, so it is refused by the same fact as Edit.
@@ -274,7 +281,12 @@ export function CompanyDocumentsCard({
           </PanelBody>
         ) : (
           documents.map((doc) => (
-            <DocumentRow key={doc.id} doc={doc} canWriteDeals={canWriteDeals} />
+            <DocumentRow
+              key={doc.id}
+              doc={doc}
+              canWriteDeals={canWriteDeals}
+              onOpenEmail={onOpenEmail}
+            />
           ))
         )
       ) : (
@@ -298,7 +310,12 @@ export function CompanyDocumentsCard({
 function DocumentRow({
   doc,
   canWriteDeals,
-}: Readonly<{ doc: Attachment; canWriteDeals: boolean }>) {
+  onOpenEmail,
+}: Readonly<{
+  doc: Attachment;
+  canWriteDeals: boolean;
+  onOpenEmail?: (activityId: string) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -331,13 +348,10 @@ function DocumentRow({
               if somebody gave it one, else the filename: a display name is what
               a reader looks for; the filename is what arrived, and it is what
               the saved file is called. */}
-          <a
-            className="co-rowlink rec-title"
-            href={`/v1/attachments/${doc.id}`}
-            download={doc.filename}
-          >
+          <a className="co-rowlink rec-title" {...attachmentAnchor(doc)}>
             {doc.title || doc.filename}
           </a>
+          <FileOrigin origin={doc.origin} onOpenEmail={onOpenEmail} />
           {/* What qualifies the file, on one quiet line under its name: the
               filename it will save as when a human gave it a different title,
               where it came from, and when it arrived. The filename is absent

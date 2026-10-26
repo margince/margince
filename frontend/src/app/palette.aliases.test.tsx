@@ -6,17 +6,17 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  type CapabilityExpression,
-  SETTINGS_PAGES,
-  type SettingsPageId,
-} from "../features/settings/settingscatalog";
 import { COMPANY_CONTEXT_ON } from "../features/settings/settingspages.fixtures";
 import { settingsSearch } from "../features/settings/settingssearch";
 import { LocaleProvider, translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { RbacAction } from "../lib/accessgrants";
 import { companyContextCapabilitiesQueryKey } from "../lib/companycontextreach";
+import {
+  type CapabilityExpression,
+  SETTINGS_PAGES,
+  type SettingsPageId,
+} from "../lib/settingscatalog";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { type Command, matchingCommands, useBuiltinCommands } from "./palette";
 

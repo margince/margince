@@ -30,6 +30,10 @@ func (c *collector) WritePrometheus(w io.Writer) {
 		"Wall time of one provider API call, in seconds."), "op", snap.requestTime)
 	writeCounters(w, counterHeader(w, "margince_capture_backfill_messages_total",
 		"Messages a mailbox backfill walked since process start, by the outcome each came to."), "outcome", snap.messages)
+	writeProviderCounts(w, counterHeader(w, "margince_capture_calendar_events_listed_total",
+		"Calendar events provider lists handed to a pull since process start."), snap.listed)
+	writeCounters(w, counterHeader(w, "margince_capture_calendar_events_total",
+		"Calendar events a pull attempted since process start, by the one outcome each came to."), "outcome", snap.calendar)
 	writeHistograms(w, histogramHeader(w, "margince_capture_backfill_stage_seconds",
 		"Wall time one backfilled message spent in each stage, in seconds: fetch and parse are the provider's download and our parse, sink is the capture transaction, ensure the counterparty and project work after it."),
 		"stage", snap.stages)
@@ -56,6 +60,8 @@ type snapshot struct {
 	rateLimited         map[requestKey]uint64
 	requestTime, stages map[pair]httpserver.Histogram
 	messages, pages     map[pair]uint64
+	calendar            map[pair]uint64
+	listed              map[string]uint64
 	snoozed             map[pair]float64
 	retryAfter          map[string]float64
 }
@@ -71,6 +77,8 @@ func (c *collector) snapshot() snapshot {
 		requestTime: copyHistograms(c.requestTime),
 		stages:      copyHistograms(c.stages),
 		messages:    copyMap(c.messages),
+		calendar:    copyMap(c.calendar),
+		listed:      copyMap(c.listed),
 		pages:       copyMap(c.pages),
 		snoozed:     copyMap(c.snoozed),
 		retryAfter:  copyMap(c.retryAfter),
@@ -146,12 +154,22 @@ func writeHistograms(w io.Writer, name, label string, family map[pair]httpserver
 }
 
 func writeProviderSeconds(w io.Writer, name string, family map[string]float64) {
+	for _, provider := range sortedProviders(family) {
+		httpserver.WriteLine(w, "%s{provider=%s} %g\n", name, httpserver.Label(provider), family[provider])
+	}
+}
+
+func writeProviderCounts(w io.Writer, name string, family map[string]uint64) {
+	for _, provider := range sortedProviders(family) {
+		httpserver.WriteLine(w, "%s{provider=%s} %d\n", name, httpserver.Label(provider), family[provider])
+	}
+}
+
+func sortedProviders[V any](family map[string]V) []string {
 	providers := make([]string, 0, len(family))
 	for provider := range family {
 		providers = append(providers, provider)
 	}
 	sort.Strings(providers)
-	for _, provider := range providers {
-		httpserver.WriteLine(w, "%s{provider=%s} %g\n", name, httpserver.Label(provider), family[provider])
-	}
+	return providers
 }

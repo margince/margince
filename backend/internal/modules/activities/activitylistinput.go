@@ -47,7 +47,10 @@ type ListActivitiesInput struct {
 	// account that has no long thread.
 	SourceActivityID *ids.ActivityID
 	ThreadKey        *string
-	IncludeArchived  bool
+	// SentBy narrows to messages this contact is the From participant of, so a
+	// reply can read the addressee's mail a long thread's page cut off.
+	SentBy          *ids.UUID
+	IncludeArchived bool
 	// AssigneeID is the work queue's narrowing: the OPEN tasks one contact
 	// holds, which is what the contract declares the parameter to mean and
 	// what the partial index behind it is built on. Done-ness is part of
@@ -80,20 +83,15 @@ type ListActivitiesInput struct {
 	// capture provenance, imports and participants — never host_user_id. These
 	// only choose which of the rows a reader already passes the lane is about.
 	//
-	// OnMeetingOf is "mine": the meetings this contact is genuinely on — their own
-	// calendar hosted it, their seat imported it, or they are stamped as a
-	// participant. Three sources because a meeting reaches a contact three ways,
-	// and asking about the host alone would drop every meeting a colleague was
-	// invited to.
+	// OnMeetingOf is "mine" and MeetingHost is one named seat's day. Both ask
+	// storekit.MeetingResponsibilitySQL, so a rep's own day and a manager's
+	// view of it hold the same meetings. A seat that only imported a copy, or
+	// was copied on mail about it, does not answer for the meeting.
 	OnMeetingOf *ids.UserID
-	// MeetingHost is one NAMED contact's own calendar — a manager opening the day
-	// of the rep an exception named. Exact, unlike OnMeetingOf: asking for a
-	// rep's day means the rep's calendar, not every meeting they were invited to.
 	MeetingHost *ids.UserID
-	// UnhostedMeetings is the meetings no calendar claims: booked in the app, or
-	// captured before the host was recorded. Its own scope for the reason
-	// UnassignedQueue is one — unowned work is picked up deliberately rather
-	// than arriving unbidden in everybody's day.
+	// UnhostedMeetings is the meetings no seat answers for by that rule. It is
+	// its own scope, like UnassignedQueue: somebody picks unowned work up by
+	// choice, and it does not arrive in everybody's day.
 	UnhostedMeetings bool
 
 	// ReadableOnly drops the rows this caller may discover but not read, in SQL,
@@ -118,28 +116,24 @@ type ListActivitiesInput struct {
 	// preparing for an ERP meeting still wants the relationship's history;
 	// they do not want the datacentre migration.
 	WithinProjectID *ids.ProjectID
+	// ConversationAsOf keeps only the rows a drafting prompt can read at that
+	// instant, before the limit. The caller must be able to open the content.
+	// Rows dated later, and canceled or no-show meetings, are dropped
+	// (relstrength.HappenedByNowSQL). Rows cut after the fetch would
+	// spend the page and push real correspondence out of it.
+	ConversationAsOf *time.Time
+	// WrittenByHuman keeps only rows a human wrote (relstrength.WrittenByHumanSQL),
+	// before the limit, for a reader of correspondence such as a brief.
+	WrittenByHuman bool
 	// OccurredAfter / OccurredBefore bound the timeline to a range: the
 	// lower end inclusive, the upper end exclusive, so a calendar day is
 	// [day 00:00, next day 00:00) with no double-counting at midnight.
 	OccurredAfter  *time.Time
 	OccurredBefore *time.Time
-	// AwaitingOutcome narrows to meetings nobody has said the result of.
-	//
-	// A DIAL RATHER THAN A GO-SIDE FILTER, unlike the forward meetings lane
-	// which removes non-booked rows after reading. That lane's window is the
-	// rest of today, so what it discards is bounded by a set the database
-	// already made small. This question looks BACKWARD, where almost every
-	// meeting is settled: a newest-first page of the past is dominated by rows
-	// the filter throws away, and the unreported meeting from three days ago
-	// falls off the end. The lane then draws "nothing to report" over real
-	// work — lossy in the one direction that hides itself.
-	//
-	// It admits a NULL status as well as `booked`. Capture writes calendar
-	// events with no status at all, so a synced meeting that happened
-	// yesterday carries NULL and is exactly the row this asks for; matching
-	// only `booked` would empty the lane on every installation whose calendar
-	// is connected. Same rule as meetingStillWorthPreparing, which is the
-	// forward lane's spelling of the same fact.
+	// AwaitingOutcome narrows to meetings whose status is still open: booked,
+	// or NULL because capture writes calendar events with no status. Both
+	// meeting lanes set it so the status filter runs before the limit. A page
+	// cut first fills with held or canceled rows and hides the next real one.
 	AwaitingOutcome bool
 	// CustomerMeetingsOnly keeps meetings linked to a customer record, by the
 	// rule reporting counts customer meetings with (CustomerMeetingSQL). An
@@ -205,6 +199,12 @@ type ListActivitiesInput struct {
 	// row is reached, and the reader who most needs to see next week's deadline
 	// is exactly the reader who never does.
 	OpenAndDueAfter *time.Time
+	// RemindersDue narrows to the caller's own due reminders (taskreminder.go),
+	// newest reminder first. OrRemindersDue instead widens OpenAndDueBy with
+	// them, so the Worklist counts both in one statement. Both are
+	// content-gated, because a reminder offers the task to act on.
+	RemindersDue   bool
+	OrRemindersDue bool
 	// CustomFilters are the request's cf_ equality filters. They read content, so
 	// a row whose content the caller may not read drops out.
 	CustomFilters map[string]string

@@ -13,8 +13,10 @@ package leaddraft
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
+	"github.com/margince/margince/backend/internal/compose/draftcore"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -43,7 +45,7 @@ type LeadReader interface {
 // else, and an interface carrying the filter struct would let it ask for
 // anything. compose binds the seam (compose/leaddraftseam.go).
 type ActivityLister interface {
-	ForLead(ctx context.Context, id ids.LeadID) ([]crmcontracts.Activity, error)
+	ForLead(ctx context.Context, id ids.LeadID, now time.Time) ([]crmcontracts.Activity, error)
 }
 
 // Request is the transport's body, narrowed to what the writer needs.
@@ -55,6 +57,8 @@ type Request struct {
 	// Intent is the caller's own steering ("shorter", "ask for Tuesday"). The
 	// one input they typed, and the one input outside the fence.
 	Intent string
+	// RewriteOf is the draft the composer is showing; empty is a first draft.
+	RewriteOf string
 }
 
 // Service writes one draft per call.
@@ -121,14 +125,14 @@ func (s *Service) Draft(
 		return crmcontracts.CompanyEmailDraft{}, nil, httperr.Validation("email", "missing",
 			"this lead has no email address on record, so there is nobody to write to")
 	}
-	activities, err := s.acts.ForLead(ctx, leadID)
+	activities, err := s.acts.ForLead(ctx, leadID, s.envelope.Now())
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
 	envelope := s.envelope.Resolve(ctx,
-		draftfloor.Written{Body: contactdraft.CorrespondenceTextOf(activities), Purpose: req.Intent},
+		draftfloor.Written{Thread: draftcore.LanguageEvidenceOf(activities, s.envelope.Now()), Rewrite: req.RewriteOf, Purpose: req.Intent},
 		ConversationState(activities, s.envelope.Now()))
-	in := FromLead(lead, activities, req.Intent, envelope)
+	in := FromLead(lead, activities, req, envelope)
 	grounding, err := in.Grounding()
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err

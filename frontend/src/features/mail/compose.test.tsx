@@ -1,8 +1,10 @@
 /** @vitest-environment happy-dom */
+import { QueryClient } from "@tanstack/react-query";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { messageText } from "../../design-system/richtext-testing";
+import { draftButton } from "../../testing/composedraft.testkit";
 import { ComposeModal, RelinkModal } from "./compose";
 import {
   activity202,
@@ -34,6 +36,7 @@ describe("RelinkModal", () => {
         }),
       "POST /activities/act-1/relink": () => jsonResponse(activity202),
     });
+    const invalidate = vi.spyOn(QueryClient.prototype, "invalidateQueries");
     render(
       <RelinkModal
         activityId="act-1"
@@ -65,6 +68,10 @@ describe("RelinkModal", () => {
     // are one header slot, so a regression that wrote them separately would
     // send whichever came last — the key alone, silently unconditioned.
     expect(relink?.headers.get("If-Match")).toBe("4");
+    // An email drawer still open behind the dialog reads its filing again.
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: ["email-presentation", "act-1"],
+    });
   });
 
   // A copy read without a version cannot say what it is changing, so the relink
@@ -265,9 +272,7 @@ describe("ComposeModal", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     expect(await screen.findByDisplayValue("Re: Q3 numbers")).toBeTruthy();
     await waitFor(() =>
@@ -302,9 +307,7 @@ describe("ComposeModal", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     await screen.findByRole("heading", { name: "AI-assisted draft" });
     expect(
@@ -337,9 +340,7 @@ describe("ComposeModal", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     await screen.findByRole("heading", { name: "AI-assisted draft" });
     expect(screen.getByText(/This draft was written by AI/i)).toBeTruthy();
@@ -366,9 +367,7 @@ describe("ComposeModal", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     // The fill proves the draft landed, so the missing banner is the
     // disclosure being conditional rather than the response never arriving.
@@ -399,9 +398,7 @@ describe("ComposeModal", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     expect(
       await screen.findByText("Built from your writing samples · v3"),
@@ -432,9 +429,7 @@ describe("ComposeModal", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     expect(await screen.findByText(/does not use your voice/)).toBeTruthy();
   });
@@ -462,9 +457,7 @@ describe("ComposeModal", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     expect(await screen.findByDisplayValue("Re: Q3 numbers")).toBeTruthy();
     expect(screen.queryByText(/does not use your voice/)).toBeNull();
@@ -499,9 +492,7 @@ describe("ComposeModal", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     expect(
       await screen.findByText("Built from your writing samples · v3"),
@@ -523,9 +514,7 @@ describe("ComposeModal", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     expect(await screen.findByText(/AI drafting is unavailable/i)).toBeTruthy();
     // Manual composing still works — Send is present.
@@ -709,9 +698,7 @@ describe("ComposeModal", () => {
       />,
     );
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     expect(
       await screen.findByText(/did not finish the request in time/i),

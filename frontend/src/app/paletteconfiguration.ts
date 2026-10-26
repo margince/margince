@@ -8,11 +8,11 @@ import {
   CONFIGURATION_FILTER_PARAM,
   useConfiguration,
 } from "../features/settings/configurationentries";
-import type { SettingsPageId } from "../features/settings/settingscatalog";
 import {
   CONFIGURATION_PAGE,
   configurationFilterFor,
 } from "../features/settings/settingssearch";
+import type { SettingsPageId } from "../lib/settingscatalog";
 import type { Command } from "./palette";
 
 /** The id of the command that opens one settings page. */

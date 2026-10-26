@@ -43,6 +43,7 @@ export function Eyebrow({
   children,
   className,
   id,
+  size,
 }: Readonly<{
   // Defaults to `span`: the label use, which invents no document structure. A
   // caller that means a heading says so and takes the responsibility for where
@@ -51,6 +52,9 @@ export function Eyebrow({
   children: ReactNode;
   className?: string;
   id?: string;
+  /** The type of a heading eyebrow, when its level is deeper in the outline
+   *  than its look: a step line over a page title is an h2 set small. */
+  size?: HeadingSize;
 }>) {
   const classes = ["t-eyebrow", className ?? ""].filter(Boolean).join(" ");
   // A heading goes through `Heading`, the one spelling of the element in this
@@ -59,7 +63,12 @@ export function Eyebrow({
   // rightly does not offer them.
   if (isHeadingElement(as)) {
     return (
-      <Heading size={HEADING_SIZE[as]} as={as} className={classes} id={id}>
+      <Heading
+        size={size ?? HEADING_SIZE[as]}
+        as={as}
+        className={classes}
+        id={id}
+      >
         {children}
       </Heading>
     );

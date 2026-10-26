@@ -3,7 +3,8 @@
 
 import "./integrations-provider.css";
 import type { components } from "../../api/schema";
-import { EmptyState, TableScroll } from "../../design-system/atoms";
+import { EmptyState } from "../../design-system/atoms";
+import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { type Fact, FactList } from "../../design-system/factlist";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
@@ -128,6 +129,8 @@ function ProviderConnectionRows({
 // What THIS installation consumed. The hint on the row above says why it can
 // legitimately differ from the provider's own invoice: the same credits are
 // spendable through their app, so neither figure is a check on the other.
+type SpendMonth = NonNullable<ProviderConnection["spend"]>["months"][number];
+
 function SpendReading({
   connection,
 }: Readonly<{ connection: ProviderConnection }>) {
@@ -135,55 +138,53 @@ function SpendReading({
   const { locale } = useLocale();
   const months = connection.spend?.months ?? [];
   if (months.length === 0) {
-    return <p className="t-sub">{t("provider.spend.none")}</p>;
+    return <p className="t-caption">{t("provider.spend.none")}</p>;
   }
-  // The series only carries months that HAD spend, so its newest entry is not
-  // necessarily this one — an installation that bought nothing yet this month
-  // would otherwise see last month's total labelled as the current bill.
+  // The series only carries months that had spend, so its newest entry is not
+  // necessarily this one. Last month's total must not read as the current bill.
   const now = new Date();
   const current = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-01`;
+  const figure = (value: number) => formatNumber(value, locale);
+  const columns: DataTableColumn<SpendMonth>[] = [
+    {
+      key: "month",
+      header: t("provider.spend.month"),
+      render: (month) =>
+        month.month === current ? t("provider.spend.thisMonth") : month.month,
+    },
+    { key: "pool", header: t("provider.spend.pool"), render: (m) => m.pool },
+    {
+      key: "charged",
+      header: t("provider.spend.chargedHead"),
+      align: "end",
+      render: (m) => figure(m.charged_credits),
+    },
+    // Never folded into the charge: the platform does not know whether held
+    // credits were spent, so this is the figure a human reconciles by hand.
+    {
+      key: "held",
+      header: t("provider.spend.heldHead"),
+      align: "end",
+      render: (m) => figure(m.held_credits),
+    },
+    {
+      key: "runs",
+      header: t("provider.spend.runsHead"),
+      align: "end",
+      render: (m) => figure(m.runs),
+    },
+  ];
   return (
-    // Five columns of billing, all of them reconciled against an invoice, so
-    // none can be dropped on a narrow screen. `TableScroll` is the one spelling
-    // of the box that scrolls inside the card, the same one DataTable puts
-    // every list it draws inside (atoms.tsx).
-    <TableScroll className="provider-reading" label={t("provider.spend")}>
-      <table className="provider-spend-table">
-        <thead>
-          <tr>
-            <th>{t("provider.spend.month")}</th>
-            <th>{t("provider.spend.pool")}</th>
-            <th>{t("provider.spend.chargedHead")}</th>
-            <th>{t("provider.spend.heldHead")}</th>
-            <th>{t("provider.spend.runsHead")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {months.map((month) => (
-            <tr key={`${month.month}-${month.pool}`}>
-              <td>
-                {month.month === current
-                  ? t("provider.spend.thisMonth")
-                  : month.month}
-              </td>
-              <td>{month.pool}</td>
-              <td>{formatNumber(month.charged_credits, locale)}</td>
-              {/* Never folded into the charge: the platform does not know
-                  whether those credits were spent, and a total that quietly
-                  counted them either way would assert something it cannot
-                  support. This is the figure a human reconciles against the
-                  provider's invoice. */}
-              <td>
-                {month.held_credits > 0
-                  ? formatNumber(month.held_credits, locale)
-                  : "—"}
-              </td>
-              <td>{formatNumber(month.runs, locale)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </TableScroll>
+    // Not `bleed`: the table answers a stacked settings row, so it keeps the
+    // row's text column instead of spanning the panel.
+    <div className="provider-reading">
+      <DataTable
+        columns={columns}
+        rows={months}
+        rowKey={(month) => `${month.month}-${month.pool}`}
+        label={t("provider.spend")}
+      />
+    </div>
   );
 }
 
@@ -207,7 +208,7 @@ function CreditsReading({
     // Two different silences. With no key we never asked, and saying the
     // provider "has not told us" would blame them for our own empty state.
     return (
-      <p className="t-sub">
+      <p className="t-caption">
         {connection.credential_present
           ? t("provider.credits.none")
           : t("provider.credits.notConnected")}

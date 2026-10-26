@@ -80,11 +80,12 @@ const excerptRunes = 200
 // the account's timeline uses — one spelling, so they cannot drift. Every
 // candidate still passes the activity row scope, so the reader can open it.
 func newestMessage(
-	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, opts AssembleOptions,
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions,
 ) (lastMessage, bool, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	companyPos := arg(companyID)
+	nowPos := arg(now)
 	activityScope, err := auth.ActivityDiscoverClause(ctx, "a", arg)
 	if err != nil {
 		return lastMessage{}, false, err
@@ -112,7 +113,7 @@ func newestMessage(
 		  AND %[2]s`+opts.projectScope(arg)+`
 		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT 1`, activityScope, activities.CompanyLinkedActivityExists(companyPos), audience, excerptRunes,
-		relstrength.InteractionCountsSQL("a")), args...).
+		relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d::timestamptz", nowPos))), args...).
 		Scan(&found.ID, &direction, &found.At, &found.Kind, &subject, &excerpt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return lastMessage{}, false, nil
@@ -186,6 +187,8 @@ func hasOpenTask(
 // dismissal would silently match nothing.
 type suggestionInputs struct {
 	language textlang.Lang
+	// loc is the installation zone the advice counts its days in.
+	loc *time.Location
 	// timeline and pipeline are the two grants that decide which rules run at
 	// all. They are the object grants, which is exactly what makes a 360 section
 	// absent — row scope narrows a section, it does not withhold it.
@@ -242,12 +245,12 @@ func (in suggestionInputs) advisable() bool { return in.timeline || in.pipeline 
 func gatherSuggestionInputs(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time,
 	facts signalFacts, heading companyHeading, baseCurrency string,
-	opts AssembleOptions, language textlang.Lang,
+	opts AssembleOptions, language textlang.Lang, loc *time.Location,
 ) (suggestionInputs, error) {
 	timeline := auth.ReadGranted(ctx, "activity")
 	pipeline := auth.ReadGranted(ctx, "deal")
 	contractsGranted := auth.ReadGranted(ctx, "contract")
-	in := suggestionInputs{timeline: timeline, pipeline: pipeline, contracts: contractsGranted, language: language}
+	in := suggestionInputs{timeline: timeline, pipeline: pipeline, contracts: contractsGranted, language: language, loc: loc}
 	if in.contracts {
 		strip, err := readContractStrip(ctx, tx, companyID, now, baseCurrency)
 		if err != nil {
@@ -256,7 +259,7 @@ func gatherSuggestionInputs(
 		in.contractStrip = strip
 	}
 	if in.timeline {
-		newest, found, err := newestMessage(ctx, tx, companyID, opts)
+		newest, found, err := newestMessage(ctx, tx, companyID, now, opts)
 		if err != nil {
 			return suggestionInputs{}, err
 		}

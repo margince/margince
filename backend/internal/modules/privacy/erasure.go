@@ -17,12 +17,14 @@ package privacy
 import (
 	"context"
 	"fmt"
+	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -74,14 +76,27 @@ const (
 // (compose injects it into the DSR handler) and the retention engine's
 // polymorphic due-list — both hand over a bare UUID. The subject is
 // widened to a typed contact id once here and threaded typed from then on.
+func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason string) error {
+	_, err := e.EraseContactCounted(ctx, contactID, reason)
+	return err
+}
+
+// EraseContactCounted is EraseContact answering the erasure's account of its
+// work, for the proof a closed privacy request keeps. The cascade runs on a
+// tallyTx, so every statement it makes is counted.
+//
+// A replay of "dsr:<id>" runs the cascade again, which is idempotent and
+// erases what was written since. It certifies once: the first tombstone stays
+// the only one, and its account is the answer.
 //
 //nolint:gocognit,cyclop // the rename added no branch: this body is what it was under the old noun.
-func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason string) error {
+func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, reason string) (erased erasureaccount.Account, err error) {
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
-		return err
+		return erasureaccount.Account{}, err
 	}
 	subject := ids.From[ids.ContactKind](contactID)
-	return e.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = e.db.Tx(ctx, func(raw pgx.Tx) error {
+		tx := newTallyTx(raw)
 		floor, err := e.erasableUnderFloor(ctx, tx, subject)
 		if err != nil {
 			return err
@@ -186,17 +201,20 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 		if err != nil {
 			return err
 		}
-		channelsSuppressed, err := eraseChannelIdentities(ctx, tx, identities)
+		cleared, err := clearExtensionRows(ctx, tx, e.extensions, reason, map[extdecl.RecordKind][]ids.UUID{
+			extdecl.Contact: {subject.UUID}, extdecl.Lead: leadsWiped, extdecl.Activity: activitiesRedacted,
+		})
 		if err != nil {
 			return err
 		}
-
-		return e.eraseExtensionsAndTombstone(ctx, tx, subject, reason, leadsWiped, activitiesRedacted, contactErasureCounts{
+		erased, err = certifyErasure(ctx, tx, subject, reason, identities, e.uncountedArms(), contactErasureCounts{
 			emailsSuppressed: len(emails), rawRowsPurged: rawPurged, aiPayloadsPurged: aiPayloadsPurged,
 			activitiesRedacted: len(activitiesRedacted), activitiesRestricted: len(activitiesHeld),
-			channelIdentitiesSuppressed: channelsSuppressed,
+			extensionRowsCleared: cleared,
 		})
+		return err
 	})
+	return erased, err
 }
 
 // refuseContactUnderLegalHold refuses an erasure the workspace is obliged to

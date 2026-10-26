@@ -21,23 +21,6 @@ import (
 	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 )
 
-// eraseExtensionsAndTombstone clears the extension rows of the subject, its
-// lead twins and the activities this erasure redacted, then closes the cascade
-// with the count. An activity held under a floor keeps its extension rows too.
-func (e *Eraser) eraseExtensionsAndTombstone(
-	ctx context.Context, tx pgx.Tx, subject ids.ContactID, reason string,
-	leads, activities []ids.UUID, counts contactErasureCounts,
-) error {
-	cleared, err := clearExtensionRows(ctx, tx, e.extensions, reason, map[extdecl.RecordKind][]ids.UUID{
-		extdecl.Contact: {subject.UUID}, extdecl.Lead: leads, extdecl.Activity: activities,
-	})
-	if err != nil {
-		return err
-	}
-	counts.extensionRowsCleared = cleared
-	return tombstoneContactErasure(ctx, tx, subject, reason, counts)
-}
-
 // errExtensionRowHeld refuses an erasure or a clearing while a row an extension
 // keeps for the record is under legal hold. A held record refuses the same way.
 var errExtensionRowHeld = fmt.Errorf("a row an extension keeps for this record is under legal hold: %w", apperrors.ErrConflict)

@@ -103,6 +103,7 @@ const MAY_WRITE = {
     seat_type: "full",
     objects: { contact: { read: true, update: true } },
   },
+  confirm_requests_sendable: true,
 };
 
 export const Default: Story = {
@@ -186,9 +187,19 @@ export const ConfirmDetailsSent: Story = {
   },
 };
 
-// The token exists and nobody was sent it, because this installation has no
-// outbound relay. A rep who read "sent" here would wait for an answer that
-// cannot come.
+// An installation with no outbound relay. The ask is shown with its reason
+// rather than hidden. A rep then learns what is missing, instead of hunting
+// for an action nobody can see.
+export const ConfirmDetailsNoSystemMail: Story = {
+  render: section({
+    ...ROWS,
+    "GET /me": () =>
+      jsonResponse({ ...MAY_WRITE, confirm_requests_sendable: false }),
+  }),
+};
+
+// The token exists and nobody was sent it. The cause is no longer this
+// installation's posture, which is refused before a token exists.
 export const ConfirmDetailsUndelivered: Story = {
   render: section({
     ...ROWS,

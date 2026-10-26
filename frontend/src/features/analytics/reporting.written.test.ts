@@ -117,3 +117,26 @@ it("says no sales were won when the period has none", () => {
   );
   expect(sentences).toEqual([expect.stringMatching(/^No sales won in .+\.$/)]);
 });
+
+it("leaves the empty scope to the notice instead of saying no sales were won", () => {
+  const evaluation = withMetrics([
+    {
+      ...won,
+      value: 0,
+      target: undefined,
+      coverage: { status: "no_data", withheld: false },
+    },
+  ]);
+  const emptyScope = {
+    ...evaluation,
+    context: { ...evaluation.context, scope_holds_deals: false },
+  };
+  expect(writtenSummary(emptyScope, english)).toEqual([]);
+  const scopeWithDeals = {
+    ...evaluation,
+    context: { ...evaluation.context, scope_holds_deals: true },
+  };
+  expect(writtenSummary(scopeWithDeals, english)).toEqual([
+    expect.stringMatching(/^No sales won in .+\.$/),
+  ]);
+});

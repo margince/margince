@@ -10,5 +10,9 @@
 // this registry is the only place the SPA learns it exists. A composed unit
 // absent from this map is not an error: App.tsx falls through to the generic
 // published-operations card, which is what a unit with no bespoke screen gets.
+// extensionPanels holds the components units draw inline on core pages, by
+// unit and slot; a page's slot draws nothing when no unit fills it.
 
 export const extensionScreens = {};
+
+export const extensionPanels = {};

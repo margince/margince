@@ -1,23 +1,27 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { CreateField } from "../../components/create";
 import { useEntityName } from "../../components/entityref";
+import { RecordCustomFields } from "../../components/recordcustomfields";
+import { saveRecordEdit } from "../../components/recordedit";
 import { RecordFields, rawRecord } from "../../components/recordfields";
-import { useT } from "../../i18n";
+import { RecordTeam } from "../../components/recordteam";
+import { TagsPanel } from "../../components/tagspanel";
+import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
+import { Heading } from "../../design-system/heading";
+import { Modal } from "../../design-system/modal";
+import { useLocale, useT } from "../../i18n";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
 import { useCanWriteRecord } from "../../lib/capability";
-import { TagsPanel } from "../lists/tagspanel";
-import { RecordCustomFields } from "../records/recordcustomfields";
-import { saveRecordEdit } from "../records/recordedit";
+import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
 import { RecordListsPanel } from "../records/recordlists";
 import { useOwnerPicker, useRecordOwners } from "../records/recordreferences";
-import { RecordTeam } from "../records/recordteam";
-import { DealEmailAside } from "./dealemail";
+import { DealRecordRows } from "./deal360/dealheaderfacts";
 import {
   NEW_PROJECT_OWNER,
   resolveDealProject,
   useProjectsOfCompany,
 } from "./dealproject";
-import type { Deal } from "./deals";
+import type { Deal, Stage } from "./deals";
 import {
   attributedPartner,
   dealEditFields,
@@ -25,17 +29,22 @@ import {
   usePartnerOptions,
 } from "./deals.fields";
 import { dealEditRecord, mapDealUpdate, stringValues } from "./deals.write";
+import { ExtensionPanels } from "./extensionpanels";
 
 export function DealDetails({
   deal,
   meId,
+  stages,
 }: Readonly<{
   deal: Deal;
   meId: string;
+  stages: readonly Stage[];
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const partnerOptions = usePartnerOptions([]);
   const acquisitionSources = useAcquisitionSources().data;
+  const leadingCurrencies = useLeadingCurrencies();
   const masked = deal.masked_fields ?? [];
   const companyName = useEntityName("company", deal.company_id).name;
   const partnerName = useEntityName("company", deal.partner_company_id).name;
@@ -112,6 +121,9 @@ export function DealDetails({
                 : key,
           )}
         title={t("co.details.title")}
+        extraRows={
+          <DealRecordRows deal={deal} stages={stages} locale={locale} />
+        }
         fields={[
           ...dealEditFields(t, {
             partnerOptions,
@@ -121,6 +133,7 @@ export function DealDetails({
             me: meId,
             currentOwner: deal.owner_id ?? null,
             currency: deal.currency ?? "",
+            leadingCurrencies,
             acquisitionSources,
             currentAcquisitionSource: deal.acquisition_source,
           }).map(
@@ -187,33 +200,53 @@ function DealTagsSection({ deal }: Readonly<{ deal: Deal }>) {
   );
 }
 
-// The deal's context, for the details pane. First what the deal is and who of
-// ours owns it, then how the deal is filed and the mail card.
-export function DealContext({
+/**
+ * Every field of the deal in one drawer, with the editors that change them.
+ * They cover the fields, custom fields, who of ours is on it, its tags and its lists.
+ * The page's left column reads these; this is where they are written.
+ */
+export function DealDetailsDrawer({
   deal,
   meId,
+  stages,
+  open,
+  onClose,
 }: Readonly<{
   deal: Deal;
   meId: string;
+  stages: readonly Stage[];
+  open: boolean;
+  onClose: () => void;
 }>) {
-  // The same per-row answer the deal's other verbs read. An archived deal
-  // takes no new responsibilities, and neither does one this seat may read
-  // but not write.
+  const t = useT();
+  const headingId = useId();
+  // An archived deal takes no new responsibilities, and neither does one this
+  // seat may read but not write.
   const canWrite = useCanWriteRecord("deal", deal) && !deal.archived_at;
   return (
-    <>
-      {/* What the deal is commercially, then who of ours is on it. The buyer's
-          seats are not here: they live in the committee card in the column, with
-          the verbs that change them. The rail holds no second copy of that list. */}
-      <DealDetails deal={deal} meId={meId} />
-      <RecordTeam recordType="deal" recordId={deal.id} readOnly={!canWrite} />
-      <DealTagsSection deal={deal} />
-      <RecordListsPanel
-        entityType="deal"
-        entityId={deal.id}
-        archived={Boolean(deal.archived_at)}
-      />
-      <DealEmailAside dealId={deal.id} live={!deal.archived_at} />
-    </>
+    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="drawer">
+      <DrawerHead>
+        <Heading size="large" id={headingId} className="t-h2 modal-title">
+          {t("deal.editDetails")}
+        </Heading>
+      </DrawerHead>
+      <DrawerBody className="form-stack">
+        <DealDetails deal={deal} meId={meId} stages={stages} />
+        <RecordTeam recordType="deal" recordId={deal.id} readOnly={!canWrite} />
+        <DealTagsSection deal={deal} />
+        <RecordListsPanel
+          entityType="deal"
+          entityId={deal.id}
+          archived={Boolean(deal.archived_at)}
+        />
+        {/* Units' panels close the column, grouped under their own label: each
+            is an add-on's card about this deal, fenced off so its failure stays
+            there. */}
+        <ExtensionPanels
+          slot="record_panel.deal"
+          record={{ type: "deal", id: deal.id }}
+        />
+      </DrawerBody>
+    </Modal>
   );
 }

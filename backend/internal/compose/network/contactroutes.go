@@ -41,7 +41,7 @@ const routeCandidateCap = 5
 // so the card's recommendation and the list's first row cannot disagree.
 // Held by: TestTheRecommendationIsTheHeadOfTheList
 // (backend/internal/compose/network/contactroutes_test.go)
-func chooseRoutes(out *crmcontracts.ContactGraph, now time.Time) []crmcontracts.ContactGraphRouteCandidate {
+func chooseRoutes(out *crmcontracts.ContactGraph, now time.Time, loc *time.Location) []crmcontracts.ContactGraphRouteCandidate {
 	idx := indexNodes(out)
 	if idx.anchor == "" {
 		return nil
@@ -49,7 +49,7 @@ func chooseRoutes(out *crmcontracts.ContactGraph, now time.Time) []crmcontracts.
 
 	candidates := []crmcontracts.ContactGraphRouteCandidate{}
 	for i := range out.Edges {
-		candidate, ok := candidateFor(&out.Edges[i], idx, now)
+		candidate, ok := candidateFor(&out.Edges[i], idx, now, loc)
 		if !ok {
 			continue
 		}
@@ -96,7 +96,7 @@ func indexNodes(out *crmcontracts.ContactGraph) nodeIndex {
 // the picture and never in this list, because the list's only verb is "ask
 // this contact", and there is nobody here to ask.
 func candidateFor(
-	e *crmcontracts.ContactGraphEdge, idx nodeIndex, now time.Time,
+	e *crmcontracts.ContactGraphEdge, idx nodeIndex, now time.Time, loc *time.Location,
 ) (crmcontracts.ContactGraphRouteCandidate, bool) {
 	via := idx.users[e.From]
 	if via == nil {
@@ -107,7 +107,7 @@ func candidateFor(
 		ViaUserId:      *via,
 		ViaDisplayName: idx.labels[e.From],
 		StrengthBucket: bucketOf(e.StrengthBucket),
-		Evidence:       evidenceOf(e, now),
+		Evidence:       evidenceOf(e, now, loc),
 		// Nothing has been asked for until the introductions module says
 		// otherwise; a nil availability seam means every route is offerable.
 		Availability: crmcontracts.ContactGraphRouteAvailabilityAvailable,
@@ -168,7 +168,7 @@ func beatsCandidate(a, b crmcontracts.ContactGraphRouteCandidate) bool {
 
 // evidenceOf states the counts as facts. The sentence is the client's to
 // write: this server speaks English and the product speaks three languages.
-func evidenceOf(e *crmcontracts.ContactGraphEdge, now time.Time) crmcontracts.ContactGraphRouteEvidence {
+func evidenceOf(e *crmcontracts.ContactGraphEdge, now time.Time, loc *time.Location) crmcontracts.ContactGraphRouteEvidence {
 	ev := crmcontracts.ContactGraphRouteEvidence{
 		Interactions90d: e.Interactions90d,
 		Inbound90d:      e.Inbound90d,
@@ -177,7 +177,7 @@ func evidenceOf(e *crmcontracts.ContactGraphEdge, now time.Time) crmcontracts.Co
 	}
 	if e.LastAt != nil {
 		last := *e.LastAt
-		days := elapsed.Days(last, now)
+		days := elapsed.Days(last, now, loc)
 		ev.LastAt = &last
 		ev.DaysSinceLast = &days
 	}

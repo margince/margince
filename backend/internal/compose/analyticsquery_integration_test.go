@@ -21,7 +21,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -469,12 +471,9 @@ func TestATypedQueryAnswersTheAskersOwnPopulation(t *testing.T) {
 	}
 }
 
-// Asking for the workspace is REFUSED, not quietly narrowed.
-//
-// Narrowing would answer a different question than the one asked, with nothing
-// on the answer saying so — and a caller who could assert a wider population
-// and be silently given a smaller one has no way to tell the two apart from a
-// genuinely small one.
+// Asking for a colleague is refused, and asking for the workspace answers the
+// whole workspace. A narrower answer than the one asked for looks the same as
+// a small one.
 func TestATypedQueryRefusesAPopulationTheAskerCannotMeasure(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
@@ -484,12 +483,24 @@ func TestATypedQueryRefusesAPopulationTheAskerCannotMeasure(t *testing.T) {
 
 	_, err := e.askAnalytics(e.ownLensRepCtx(e.Rep1), t, analyticsquery.Query{
 		Entity:    "open-deals-per-company",
+		ScopeKind: ScopeKindOwner,
+		ScopeID:   e.Rep3.String(),
+		Measures:  []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "deals"}},
+	})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("asking for a colleague answered %v, want a refusal — a caller "+
+			"given a narrower answer than they asked for cannot tell it from a small one", err)
+	}
+	whole, err := e.askAnalytics(e.ownLensRepCtx(e.Rep1), t, analyticsquery.Query{
+		Entity:    "open-deals-per-company",
 		ScopeKind: ScopeKindWorkspace,
 		Measures:  []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "deals"}},
 	})
-	if !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("asking for the whole workspace answered %v, want a refusal — a caller "+
-			"given a narrower answer than they asked for cannot tell it from a small one", err)
+	if err != nil {
+		t.Fatalf("asking for the whole workspace was refused: %v", err)
+	}
+	if got := whole.Rows[0]["deals"]; got != float64(7) && got != int64(7) {
+		t.Fatalf("the workspace total is %v, want all 7 seeded deals", got)
 	}
 }
 
@@ -594,19 +605,20 @@ func TestASavedRunIsReAskedUnderTheReadersOwnLens(t *testing.T) {
 	}
 	q := analyticsquery.Query{
 		Entity:    "open-deals-per-company",
-		ScopeKind: ScopeKindWorkspace,
+		ScopeKind: ScopeKindOwner,
+		ScopeID:   e.Rep3.String(),
 		Measures:  []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "deals"}},
 	}
 
-	// Saved by a seat that MAY measure the workspace, and the answer says 14.
+	// Saved by the colleague on a wide seat, and the answer is their own 7.
 	wide := e.wideLensCtx(e.Rep3)
 	answer, err := e.askAnalytics(wide, t, q)
 	if err != nil {
 		t.Fatalf("the wider seat's question was refused: %v", err)
 	}
-	if got := answer.Rows[0]["deals"]; got != float64(14) && got != int64(14) {
-		t.Fatalf("the wide answer is %v, want 14 — the rest of this case compares "+
-			"against it and says nothing if it was not the whole installation", got)
+	if got := answer.Rows[0]["deals"]; got != float64(7) && got != int64(7) {
+		t.Fatalf("the wide answer is %v, want 7 — the rest of this case compares "+
+			"against it and says nothing if it was not the colleague's whole book", got)
 	}
 	var runID ids.UUID
 	if err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(wide,
@@ -618,13 +630,10 @@ func TestASavedRunIsReAskedUnderTheReadersOwnLens(t *testing.T) {
 		t.Fatalf("saving the run: %v", err)
 	}
 
-	// Opened by a rep who may measure only their own. The stored question asks
-	// for the workspace, and that is now a scope THIS reader may not have — so
-	// the refusal is the same one they would meet asking directly.
-	// The read's own refusal is what this asserts, so it is captured rather
-	// than returned: returning it would roll the transaction back and report
-	// the same error through a second path, and a transaction failure would
-	// then be indistinguishable from the refusal being looked for.
+	// Opened by a rep who may measure only their own, so the stored question
+	// about a colleague meets the refusal they would meet asking directly.
+	// The refusal is captured, not returned. A returned one rolls the
+	// transaction back, and a failed transaction then looks like the refusal.
 	var readErr error
 	if err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(e.ownLensRepCtx(e.Rep1),
 		func(ctx context.Context, tx pgx.Tx) error {
@@ -633,9 +642,50 @@ func TestASavedRunIsReAskedUnderTheReadersOwnLens(t *testing.T) {
 		}); err != nil {
 		t.Fatalf("opening the saved run: %v", err)
 	}
-	if !errors.Is(readErr, apperrors.ErrPermissionDenied) {
-		t.Fatalf("a rep opening a workspace-scoped run answered %v, want the refusal "+
+	if !errors.Is(readErr, apperrors.ErrNotFound) {
+		t.Fatalf("a rep opening a colleague-scoped run answered %v, want the refusal "+
 			"they would get asking it themselves — a saved link that answers wider "+
 			"than its reader is a way to read somebody else's numbers", readErr)
+	}
+}
+
+// A team's numbers keep counting the open deals of a member who left. The total
+// does not drop the day they leave.
+func TestATeamsNumbersKeepCountingADepartedMembersDeals(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for range 5 {
+		e.seedOpenDeal(t, "Rep1's own", 20, &e.Rep1, &amount, nil)
+	}
+	e.deactivate(t, e.Rep1)
+
+	answer, err := e.askAnalytics(e.wideLensCtx(e.Rep3), t, analyticsquery.Query{
+		Entity:    "open-deals-per-company",
+		ScopeKind: ScopeKindTeam,
+		ScopeID:   e.Team1.String(),
+		Measures:  []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "deals"}},
+	})
+	if err != nil {
+		t.Fatalf("naming the team was refused: %v", err)
+	}
+	if len(answer.Rows) != 1 {
+		t.Fatalf("an ungrouped query answered %d rows: %+v", len(answer.Rows), answer.Rows)
+	}
+	if got := answer.Rows[0]["deals"]; got != float64(5) && got != int64(5) {
+		t.Errorf("Team1 counts %v deals, want the 5 its departed member still owns", got)
+	}
+}
+
+// deactivate closes a seat through the identity service, as an admin would.
+func (e *forecastEnv) deactivate(t *testing.T, user ids.UUID) {
+	t.Helper()
+	admin := identity.Identity{
+		UserID: ids.From[ids.UserKind](e.Rep3), WorkspaceID: ids.From[ids.WorkspaceKind](e.WS),
+		SeatType: "full", Roles: []string{"admin"}, Permissions: integration.AdminPerms,
+	}
+	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	if err := identity.NewService(e.Pool).DeactivateUser(ctx, admin,
+		identity.DeactivateUserInput{UserID: ids.From[ids.UserKind](user)}); err != nil {
+		t.Fatalf("deactivate %s: %v", user, err)
 	}
 }

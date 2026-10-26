@@ -10,7 +10,7 @@
 // surfaces a company and a contact page read, and the quiet-project predicate
 // the signal scan and the reports share.
 //
-// Tables owned: project, project_phase_history.
+// Tables owned: docs/reference/entity-model/projects.md.
 // A project's stakeholders are `relationship` rows of kind project_stakeholder,
 // and that table is contacts's.
 //
@@ -24,13 +24,8 @@
 // constant named for an offer template's name column, and the reasoning for
 // both records had to be held at once to read either.
 //
-// What did NOT move, and why: the money a project's deals add up to
-// (deals.ProjectDealTotalsTx, deals.OpenDealBaseValueSQL) is read from the deal
-// table under the caller's DEAL row scope and priced by the deals module's
-// installation seam, so it stays there and this module consumes it through a
-// port compose injects. The deal↔project company rule
-// (deals.DealProjectCompanyMismatchError) likewise faults a deal's field on a deal
-// write.
+// Deal valuation stays with the deals module and is injected through a port.
+// The deal-to-project company constraint is also checked on the deal write.
 //
 // The edges the other direction are ports too: deals asks this module whether a
 // project may be attached (EnsureAttachable) and to advance a won deal's project

@@ -31,8 +31,13 @@ func TestLaterPassCannotReplaceANewerRenewalWithOlderEvidence(t *testing.T) {
 	for i, age := range []int{45, 3, 1} {
 		at := now.AddDate(0, 0, -age)
 		body := []string{"I will send pricing.", "I will send pricing by Monday.", "I will send pricing by Friday instead."}[i]
+		kind, source := "email", "manual"
+		if i == 0 {
+			// The original is imported history; a colleague's own late log would be proposed instead.
+			kind, source = "note", "import"
+		}
 		message, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-			Kind: "email", Body: &body, OccurredAt: &at, ThreadKey: "renewal-order", Direction: new("outbound"), Source: "manual",
+			Kind: kind, Body: &body, OccurredAt: &at, ThreadKey: "renewal-order", Direction: new("outbound"), Source: source,
 		})
 		if err != nil {
 			t.Fatal(err)

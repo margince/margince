@@ -6,6 +6,7 @@ import { useT } from "../../i18n";
 import { ComposeModal } from "./compose";
 import { useChannelReachable } from "./composereachability";
 import type { RelinkKind } from "./composerelink";
+import { rowAnswer } from "./rowanswer";
 
 type Activity = components["schemas"]["Activity"];
 
@@ -25,6 +26,7 @@ type Activity = components["schemas"]["Activity"];
 export function ChannelReplyAction({
   activityId,
   kind,
+  offersEmail = false,
   channelProvider,
   entityType,
   entityId,
@@ -35,6 +37,8 @@ export function ChannelReplyAction({
 }: Readonly<{
   activityId: string;
   kind: Activity["kind"];
+  /** The server can fill To for a new email about this row (`offers_email`). */
+  offersEmail?: boolean;
   channelProvider?: string;
   entityType: RelinkKind;
   entityId: string;
@@ -69,33 +73,48 @@ export function ChannelReplyAction({
   // opens and keys the composer, so each press gets a composer of its own — a
   // drawer that outlives its close would otherwise reopen on the draft the
   // reader abandoned, and offer to send it again.
-  const [reply, setReply] = useState<{ seq: number; open: boolean } | null>(
-    null,
-  );
+  const [reply, setReply] = useState<{
+    seq: number;
+    open: boolean;
+    from: HTMLElement;
+  } | null>(null);
   const reachable = useChannelReachable(
     kind === "message",
     contactId,
     channelProvider,
   );
-  if (!reachable) {
+  const answer = rowAnswer(kind);
+  // A written-about row is withheld through `offers_email`, which the server
+  // answers false for it, so only mail reaches the withheld branch below.
+  if (!reachable || (answer === "about" && !offersEmail)) {
     return null;
   }
+  const withheld = answer === "reply" && contentWithheld;
   // WITHHELD CONTENT IS NOT A PREPARED REPLY. `Write email` is an
   // account-started send with no prior message to answer, so a mark claiming a
   // rule read this thread and worked out an answer would claim exactly the
   // access the row has just been refused.
-  const proposed = contentWithheld ? undefined : prepared;
+  const proposed = withheld ? undefined : prepared;
   return (
     <>
       <Button
         variant={proposed ? "ai" : undefined}
-        onClick={() =>
-          setReply((prior) => ({ seq: (prior?.seq ?? 0) + 1, open: true }))
-        }
+        onClick={(event) => {
+          const from = event.currentTarget;
+          setReply((prior) => ({
+            seq: (prior?.seq ?? 0) + 1,
+            open: true,
+            from,
+          }));
+        }}
       >
         {proposed && <Sparkles aria-hidden="true" />}
         {proposed?.label ??
-          (contentWithheld ? t("compose.writeEmail") : t("compose.reply"))}
+          t(
+            withheld || answer === "about"
+              ? "compose.writeEmail"
+              : "compose.reply",
+          )}
       </Button>
       {reply !== null && (
         <ComposeModal
@@ -108,7 +127,7 @@ export function ChannelReplyAction({
           // CONVERSATION` re-rendered the row the reader had just been told
           // was not theirs, above a To field useReplyRecipient could resolve
           // nobody into.
-          activityId={contentWithheld ? undefined : activityId}
+          activityId={withheld ? undefined : activityId}
           entityType={entityType}
           entityId={entityId}
           contactId={contactId}
@@ -122,7 +141,7 @@ export function ChannelReplyAction({
           // Email is not a fallback, it is what the button says. `Write
           // email` is an account-started send, the same shape the composer
           // uses when there is no prior message at all.
-          kind={contentWithheld ? "email" : kind}
+          kind={withheld ? "email" : kind}
           // WHY THIS ONE IS BEING ANSWERED, where the caller knows. The drawer
           // reads the thread for itself; what it cannot read is the judgement
           // that put this message in front of a rep, and that judgement is what
@@ -131,6 +150,7 @@ export function ChannelReplyAction({
           open={reply.open}
           onClose={() => setReply({ ...reply, open: false })}
           onSent={onSent}
+          openedFrom={reply.from}
         />
       )}
     </>

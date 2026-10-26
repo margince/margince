@@ -121,9 +121,9 @@ func TestAColleaguesEmailedPromiseIsTheirTask(t *testing.T) {
 	}
 }
 
-// A promise in mail only one member may read is theirs alone: written by a
-// colleague, it is proposed to the owner rather than handed to the colleague,
-// and nothing about it is readable through the account.
+// A promise a colleague wrote in mail only another member may read asks
+// nobody. The colleague gets no task, the mailbox owner gets no request, and
+// the finding stays on the message.
 func TestAPromiseInPrivateMailStaysWithItsOwner(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -139,9 +139,12 @@ func TestAPromiseInPrivateMailStaysWithItsOwner(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 0 {
 		t.Errorf("a promise in another member's private mail became %d task(s) for the colleague", n)
 	}
-	staged := e.WsScalar(t, `SELECT coalesce(on_behalf_of::text, '') FROM approval WHERE kind = 'commitment_task'`)
-	if staged != e.Rep1.String() {
-		t.Errorf("the proposal is staged for %q, want the private mail's owner", staged)
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'commitment_task'`); n != 0 {
+		t.Errorf("%d request(s) staged for a promise nobody may be asked about, want none", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM activity_commitment_admission
+		WHERE outcome = 'promiser_not_assignable' AND NOT current_work`); n != 1 {
+		t.Errorf("the promise is recorded %d time(s) on the message, want once", n)
 	}
 }
 

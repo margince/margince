@@ -1,7 +1,11 @@
 import { useRef, useState } from "react";
+import { RecordTeam } from "../../components/recordteam";
+import type { useTaskUpdate } from "../../components/taskactions";
 import { EmptyState } from "../../design-system/atoms";
 import { liveProjects } from "../../design-system/projectpicker";
 import type { useT } from "../../i18n";
+import { useCanWriteRecord } from "../../lib/capability";
+import type { CompanyTab } from "../../lib/companytab";
 import { useRecordZone } from "../../lib/recordzone";
 import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { ComposeModal } from "../mail/compose";
@@ -9,26 +13,21 @@ import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { BillingContactsPanel } from "../projects/billingcontacts";
 import { PartnerTab } from "../projects/partners";
 import { openCitation } from "../records/record360";
-import type { useTaskUpdate } from "../worklist/taskactions";
 import type { Company, Company360View } from "./companies";
 import type { useCitedReceipt } from "./companies.chronology";
-import {
-  CompanyOverviewStack,
-  offerResearchOnOverview,
-} from "./companies.overview";
+import { CompanyOverviewStack } from "./companies.overview";
 import { CompanyProfileTab } from "./companies.profile";
 import { CompanyDealsAndTasksTabs } from "./companies.tabs";
+import { CompanyReachCard } from "./company-reach";
 import { recordNamesIn, type SuggestionAction } from "./company360";
-import { CompanyApprovalsPanel } from "./companyapprovals";
 import { CompanyContactsList } from "./companycontacts/contacts";
 import { CoverageBand } from "./companycontacts/summary";
 import { CompanyContractsCard } from "./companycontracts";
-import { useHasSiteRead } from "./companydeepread";
 import { CompanyDocumentsCard } from "./companydocuments";
 import { EvidenceModal } from "./companyevidence";
 import { CompanyFinanceCard } from "./companyfinance";
-import type { CompanyTab } from "./companytab";
 import "./company360.css";
+import "./companytabs.css";
 
 // What the composer is anchored on. A reply answers the message it names. An
 // account-started message names the contact it goes to, because it has no
@@ -87,8 +86,6 @@ export function CompanyRecordBody({
   composing,
   onCompose,
   onPerform,
-  decisionsOpen,
-  onDecisionsOpen,
   openTaskId,
   onOpenTask,
   onOpenTaskFromToday,
@@ -111,8 +108,6 @@ export function CompanyRecordBody({
   composing: ComposeAnchor | null;
   onCompose: (anchor: ComposeAnchor | null) => void;
   onPerform: (action: SuggestionAction) => void;
-  decisionsOpen: boolean;
-  onDecisionsOpen: (open: boolean) => void;
   openTaskId: string | null;
   onOpenTask: (activityId: string | null) => void;
   // Opens a task the daily brief named, switching to the Tasks tab first.
@@ -131,19 +126,14 @@ export function CompanyRecordBody({
   // empty it in front of the reader. Null only before the first composer opens.
   const shownAnchor = useRef<ComposeAnchor | null>(null);
   const recordZone = useRecordZone();
+  const canWriteCompany =
+    useCanWriteRecord("company", company) && !company.archived_at;
   if (composing !== null) {
     shownAnchor.current = composing;
   }
   // The meeting whose brief is open. "Prepare meeting" opens the brief drawer,
   // not the composer: a reply to a room nobody has sat in yet prepares no one.
   const [preparing, setPreparing] = useState<string | null>(null);
-  // Where the research offer lives, decided once for both the Overview stack
-  // and the Profile tab. Computing it twice is how the panel would come to
-  // appear in both places at once, or in neither.
-  const offerResearch = offerResearchOnOverview({
-    view,
-    read: useHasSiteRead(company.id),
-  });
   // The account's own names for the records the dossier cites, off the same
   // 360 the overview's own copy of the card reads.
   const dossierNames = recordNamesIn(view);
@@ -166,18 +156,14 @@ export function CompanyRecordBody({
             view={view}
             loading={loading}
             failed={failed}
-            onOpenHistory={onOpenHistory}
             onOpenTab={onTab}
+            taskUpdate={taskUpdate}
             onOpenRecord={openCitation}
-            onOpenReceipt={receipt.open}
             onOpenEmail={receipt.openEmail}
-            offerResearch={offerResearch}
             onOpenTasks={() => onTab("tasks")}
             onOpenTask={onOpenTaskFromToday}
             onLogActivity={onLogActivity}
-            onPrepareMeeting={setPreparing}
             onDraftTo={(id) => onCompose({ kind: "account", id })}
-            onPerform={onPerform}
           />
         </div>
       )}
@@ -201,6 +187,10 @@ export function CompanyRecordBody({
         onOpenTask={onOpenTask}
         onOpenRecord={openCitation}
         onOpenReceipt={receipt.open}
+        onOpenEmail={receipt.openEmail}
+        onPrepareMeeting={setPreparing}
+        onDraftTo={(id) => onCompose({ kind: "account", id })}
+        onPerform={onPerform}
         taskUpdate={taskUpdate}
       />
       {/* The composer, anchored on the message a draft_reply suggestion named.
@@ -219,7 +209,7 @@ export function CompanyRecordBody({
           rail's capped summary stands beside it. A top-3 glance is the
           reader's anchor across tabs, not a second copy of the roster. */}
       {tab === "contacts" && !company.archived_at && (
-        <div className="co-overview-stack">
+        <div className="co-tab-stack">
           {/* The account's contacts, ranked and paged. One representation, not
               three. A roster card, a connections card and a diagram would each
               answer "who works here" in a different shape. The reader's
@@ -248,6 +238,14 @@ export function CompanyRecordBody({
               companyId={company.id}
             />
           )}
+          {/* Our side of the account: who holds which responsibility, and
+              which colleagues can reach those not yet on file. */}
+          <RecordTeam
+            recordType="company"
+            recordId={company.id}
+            readOnly={!canWriteCompany}
+          />
+          <CompanyReachCard companyId={company.id} />
         </div>
       )}
       {/* Files get the whole column on their own tab, which is what the mockup
@@ -267,9 +265,9 @@ export function CompanyRecordBody({
         />
       )}
       {tab === "documents" && (
-        // The same stacked column the overview uses, so the two panels are
-        // spaced like every other pair in this record, not touching.
-        <div className="co-overview-stack">
+        // The tab's stacked column, so the two panels are spaced like every
+        // other pair in this record, not touching.
+        <div className="co-tab-stack">
           {/* The agreements come first: contract paper is what a reader opens
               this tab for. The library beneath holds everything else, since it
               withholds the paper already read on an agreement's own row. Two
@@ -280,18 +278,9 @@ export function CompanyRecordBody({
           <CompanyDocumentsCard
             companyId={company.id}
             refusedReasonId={refusedReasonId}
+            onOpenEmail={receipt.openEmail}
           />
         </div>
-      )}
-      {/* The decision queue belongs to the overview. Left standing over
-          Partner, it puts a panel from one tab on top of another. A reader who
-          switches tabs to get rid of it then cannot. */}
-      {decisionsOpen && tab === "overview" && (
-        <CompanyApprovalsPanel
-          companyId={company.id}
-          view={view}
-          onClose={() => onDecisionsOpen(false)}
-        />
       )}
       {receipt.cited && (
         <EvidenceModal
@@ -311,7 +300,7 @@ export function CompanyRecordBody({
       <CompanyProfileTab
         active={tab === "profile"}
         company={company}
-        offerOnOverview={offerResearch}
+        view={view}
         onOpenHistory={onOpenHistory}
         refusedReasonId={refusedReasonId}
         nameOf={dossierNames}

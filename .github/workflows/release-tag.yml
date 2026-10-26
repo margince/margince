@@ -2,10 +2,10 @@
 #
 # One gesture cuts a downloadable build:
 #
-#   git tag -a v0.0.1 -m "..." && git push origin v0.0.1
+#   git tag -a v1.0.0 -m "..." && git push origin v1.0.0
 #
-# The tag says which shelf it lands on. A plain v0.0.1 ships; a suffixed
-# v0.0.1-rc.1 publishes as a pre-release, so a build meant for testing does not
+# The tag says which shelf it lands on. A plain v1.0.0 ships; a suffixed
+# v1.0.0-rc.1 publishes as a pre-release, so a build meant for testing does not
 # become the download the release page offers by default. The D13 deployment's
 # production promotion is meant to select on that same answer and does not yet;
 # nothing here depends on it, because a tag moves no branch, so tagging a
@@ -47,6 +47,8 @@ jobs:
       # own scope, and naming any scope sets the rest to none, so contents
       # has to be spelled out alongside it.
       checks: read
+      # The open issues that carry release: blocker.
+      issues: read
     outputs:
       version: ${{ steps.v.outputs.version }}
       prerelease: ${{ steps.v.outputs.prerelease }}
@@ -100,6 +102,32 @@ jobs:
           git fetch --quiet --no-tags --force origin "refs/tags/$TAG:refs/tags/$TAG"
           tag_date="$(git for-each-ref --format='%(taggerdate:short)' "refs/tags/$TAG")"
           bash scripts/release-license-stamped.sh "$TAG" "$tag_date" LICENSE
+
+      - name: No open issue blocks a release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+          PRERELEASE: ${{ steps.v.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          # Milestones are months and name no release, so what a plain tag
+          # waits for is this label. A candidate ships before its blockers on
+          # purpose, so it only reports them.
+          blockers="$(gh issue list --repo "$GH_REPO" --state open --label "release: blocker" \
+            --limit 1000 --json number,title --jq '.[] | "#\(.number) \(.title)"')"
+          if [ -z "$blockers" ]; then
+            echo "release-tag: no open issue carries release: blocker."
+          elif [ "$PRERELEASE" = true ]; then
+            echo "release-tag: $TAG is a pre-release; these still block the release:"
+            echo "$blockers"
+          else
+            echo "release-tag: $TAG is blocked by:" >&2
+            echo "$blockers" >&2
+            echo "  Close them, or take the label off one the release can ship without," >&2
+            echo "  then re-run ALL jobs of this run: docs/how-to/cut-a-release.md." >&2
+            exit 1
+          fi
 
       - name: The tagged commit has no adverse verdict
         env:
@@ -163,9 +191,44 @@ jobs:
               echo "release-tag: verdict on $SHA is $verdict." ;;
           esac
 
+  # The hand-written half of the notes is a draft release, written before the
+  # tag. Only a token that can write sees a draft, so this read sits in a job of
+  # its own instead of in version; it still runs before either bundle builds.
+  draft:
+    name: A plain tag has its draft notes
+    needs: [version]
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Find the draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.version.outputs.version }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          # A published release of this tag is a re-run, and its body already
+          # holds the notes. --paginate because the list truncates at its page
+          # size instead of erroring.
+          body="$(gh api --paginate "repos/$GH_REPO/releases?per_page=100" \
+            --jq ".[] | select(.tag_name == \"$VERSION\") | .body // \"\"")"
+          if [ -n "${body//[[:space:]]/}" ]; then
+            echo "release-tag: $VERSION has its notes."
+          elif [ "$PRERELEASE" = true ]; then
+            echo "release-tag: $VERSION is a pre-release; its notes are the generated list."
+          else
+            echo "release-tag: $VERSION has no draft release with notes." >&2
+            echo "  Create a draft release for tag $VERSION with its highlights and" >&2
+            echo "  upgrade notes, then re-run ALL jobs: docs/how-to/cut-a-release.md." >&2
+            exit 1
+          fi
+
   desktop-macos:
     name: Build the macOS bundle
-    needs: [version]
+    needs: [version, draft]
     uses: ./.github/workflows/desktop-macos.yml
     permissions:
       contents: read
@@ -176,7 +239,7 @@ jobs:
 
   desktop-windows:
     name: Build the Windows bundle
-    needs: [version]
+    needs: [version, draft]
     uses: ./.github/workflows/desktop-windows.yml
     permissions:
       contents: read
@@ -186,7 +249,7 @@ jobs:
 
   release:
     name: Publish the GitHub release
-    needs: [version, desktop-macos, desktop-windows]
+    needs: [version, draft, desktop-macos, desktop-windows]
     runs-on: ubuntu-24.04-arm
     # Transfer work, not build work: two artifact downloads, one re-zip, one
     # upload. The bundles were produced inside the desktop lanes' own ceilings.
@@ -212,6 +275,17 @@ jobs:
             echo "dropped its outputs. Re-run ALL jobs so the tag is read again." >&2
             exit 1
           fi
+      # The merge subjects since the last release, and the script that lists
+      # them: full history and tags, no file contents but the script. Before the
+      # downloads, because a checkout cleans the workspace it lands in.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: scripts/release-notes.sh
+          sparse-checkout-cone-mode: false
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: margince-macos-${{ needs.version.outputs.version }}
@@ -284,24 +358,62 @@ jobs:
           password on the first launch only. After that the only copy is in
           `data/admin-password` inside the folder.
 
-          What changed in this release: [CHANGELOG.md](https://github.com/margince/margince/blob/main/CHANGELOG.md)
-
           Configuration, updating in place, and troubleshooting:
           [docs/how-to/build-the-desktop-app.md](https://github.com/margince/margince/blob/main/docs/how-to/build-the-desktop-app.md)
           NOTES
           sed -i "s/@VERSION@/$VERSION/g" notes.md
-          printf '\nRevision: %s\n' "$REVISION" >> notes.md
+          mv notes.md install.md
+
+          # The hand-written half: the draft's body, or on a re-run the
+          # published body above the marker, so the generated half is rebuilt
+          # instead of stacked a second time.
+          marker='<!-- release-tag: generated below -->'
+          gh api --paginate "repos/$GH_REPO/releases?per_page=100" \
+            --jq ".[] | select(.tag_name == \"$VERSION\")" > existing.json
+          jq -r '.body // ""' existing.json |
+            awk -v marker="$marker" '$0 == marker {stop = 1} !stop {print}' > written.md
+
+          # The newest plain release this commit descends from; none before the
+          # first one, which then lists no generated changes.
+          previous="$(git tag --merged "$REVISION^" --list 'v[0-9]*' --sort=-v:refname |
+            awk '!/-/ && !found {print; found = 1}')"
+
+          # GitHub refuses a body over 125,000 characters. The generated half
+          # gets what the written text leaves, less room for the headings, and
+          # the whole body is measured before any asset is uploaded.
+          limit=125000
+          room=$((limit - $(wc -m < written.md) - $(wc -m < install.md) - 1000))
+          {
+            cat written.md
+            printf '\n%s\n\n## Changes\n\n' "$marker"
+            if [ -n "$previous" ]; then
+              git log --first-parent --format=%s "$previous..$REVISION" |
+                bash scripts/release-notes.sh "$previous" "$VERSION" "$GH_REPO" "$room"
+            else
+              echo "The first release: the notes above cover everything before it."
+            fi
+            printf '\n## Install\n\n'
+            cat install.md
+            printf '\nRevision: %s\n' "$REVISION"
+          } > notes.md
+          size="$(wc -m < notes.md)"
+          if [ "$size" -gt "$limit" ]; then
+            echo "release-tag: the notes of $VERSION are $size characters; GitHub takes $limit." >&2
+            echo "  Shorten the draft release, then re-run ALL jobs." >&2
+            exit 1
+          fi
 
           # Re-running a failed run after the release was created must not fail:
           # the upload replaces the assets on the existing release instead.
-          if gh release view "$VERSION" >/dev/null 2>&1; then
-            echo "release-tag: $VERSION already exists — replacing its assets"
+          if [ -s existing.json ]; then
+            echo "release-tag: $VERSION exists as a draft or a release — filling it in"
             gh release upload "$VERSION" assets/* --clobber
             # The notes are rebuilt above on every run, so a re-run is also the
             # only way to correct them. Without this the body keeps whatever the
             # first run wrote, and a wrong first-launch instruction on the page
             # the download comes from would be unfixable by the lane that wrote it.
-            gh release edit "$VERSION" --notes-file notes.md
+            args=(--title "Margince $VERSION" --notes-file notes.md --draft=false --prerelease="$PRERELEASE")
+            gh release edit "$VERSION" "${args[@]}"
           else
             args=(--target "$REVISION" --title "Margince $VERSION" --notes-file notes.md --verify-tag)
             if [ "$PRERELEASE" = true ]; then

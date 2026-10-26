@@ -71,10 +71,16 @@ func TestReviewedHistoricalProposalWithdrawsWithoutRecreatingWork(t *testing.T) 
 	}
 }
 
+// stageRepairProposal stages a proposal on imported evidence, which the horizon retires.
 func stageRepairProposal(t *testing.T, e *integration.Env, at time.Time) (Commitment, ids.UUID) {
 	t.Helper()
+	return stageRepairProposalFrom(t, e, at, "import")
+}
+
+func stageRepairProposalFrom(t *testing.T, e *integration.Env, at time.Time, logged string) (Commitment, ids.UUID) {
+	t.Helper()
 	body := "I will prepare the account review."
-	source, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{Kind: "note", Body: &body, Source: "manual", OccurredAt: &at})
+	source, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{Kind: "note", Body: &body, Source: logged, OccurredAt: &at})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,5 +215,28 @@ func TestReviewedProposalRepairPreservesLaterHumanDecisionsAndSourcePrivacy(t *t
 				t.Fatal("repair withdrew a changed proposal")
 			}
 		})
+	}
+}
+
+func TestReviewedRepairLeavesAHandLoggedProposalPastTheHorizon(t *testing.T) {
+	e := integration.Setup(t)
+	now := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
+	stageRepairProposalFrom(t, e, now.AddDate(0, 0, -90), "manual")
+	operator := e.As(e.Rep1, nil, integration.AdminWithSignals)
+	if err := e.DB().Tx(operator, func(tx pgx.Tx) error {
+		review, err := previewHomeRepairSourceTx(operator, tx, "approval", ids.Nil, 10, now)
+		if err != nil {
+			return err
+		}
+		var scope homeRepairScope
+		if err := json.Unmarshal(review.Scope, &scope); err != nil {
+			return err
+		}
+		if len(scope.Tasks) != 1 || scope.Tasks[0].Action != repairLeaveCurrent || scope.Tasks[0].Reason != string(CommitmentHistoricalProposed) {
+			t.Fatalf("review=%+v, want the late proposal left for its promiser", scope)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
 	}
 }

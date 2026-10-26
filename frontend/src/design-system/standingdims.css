@@ -1,0 +1,102 @@
+/* StandingDims: three readings, each a dot, a name, and a value over the line
+   it rests on. The dot and the value take their tone from readingtone.ts. */
+
+.standing-dims {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  min-inline-size: 0;
+}
+.standing-dim {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  border-block-end: 1px solid var(--borderSubtle);
+}
+.standing-dim:last-child {
+  border-block-end: 0;
+}
+.standing-dim-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1 0 auto;
+  font: var(--fontBody);
+  color: var(--textPrimary);
+  white-space: nowrap;
+}
+.standing-dim-dot {
+  flex: none;
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--standing-dim-mark);
+}
+.standing-dim-reading {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  margin: 0;
+  text-align: end;
+  text-wrap: balance;
+}
+.standing-dim-value {
+  white-space: nowrap;
+  font: var(--fontBody);
+  font-weight: var(--fontWeightMedium);
+  font-variant-numeric: tabular-nums;
+  color: var(--standing-dim-ink);
+}
+.standing-dim[data-tone="neutral"] .standing-dim-value {
+  font-weight: var(--fontWeightRegular);
+}
+.standing-dim-sub {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+/* A reading that opens a card of what it counts: the same two lines, now one
+   button. The value takes the dotted underline every "where does this come
+   from" figure wears (evidencemark.css), so the row says it can be asked. */
+.standing-dim-peek {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-inline-size: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: end;
+  text-wrap: balance;
+  cursor: pointer;
+}
+.standing-dim-peek:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+.standing-dim-peek[data-peek-on="value"] .standing-dim-value,
+.standing-dim-peek[data-peek-on="sub"] .standing-dim-sub,
+.standing-dim-peek[data-peek-on="both"] .standing-dim-value,
+.standing-dim-peek[data-peek-on="both"] .standing-dim-sub {
+  text-decoration: underline dotted var(--borderStrong);
+  text-underline-offset: 3px;
+}
+.standing-dim-peek:hover .standing-dim-value,
+.standing-dim-peek:hover .standing-dim-sub,
+.standing-dim-peek[aria-expanded="true"] .standing-dim-value,
+.standing-dim-peek[aria-expanded="true"] .standing-dim-sub {
+  text-decoration-color: var(--accent);
+}

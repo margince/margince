@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
@@ -42,7 +43,7 @@ func (s *Store) mirrorLedger(
 	credited, orphans := applyCredits(ledger)
 	out.OrphanCredits += len(orphans)
 
-	base, err := s.baseCurrency(ctx, tx)
+	base, err := s.rates.BaseCurrency(ctx, tx)
 	if err != nil {
 		return err
 	}
@@ -150,22 +151,10 @@ type mirrorArgs struct {
 	// THIS invoice by. Resolved over the whole ledger before any write, so a
 	// note that arrives before its target still lands.
 	creditedAgainst int64
-	// baseCurrency is the workspace's reporting currency, and the ONLY reason
-	// the mirror knows it: an invoice already issued in it converts at exactly
-	// 1, which is an identity rather than an exchange rate. Anything else
-	// leaves fx_rate_to_base null, and the summary formulas refuse the total
-	// (FIN-AC-6) instead of summing across currencies.
+	// baseCurrency is the workspace's reporting currency, read once per
+	// ledger: every invoice in it converts into this one currency.
 	baseCurrency string
 }
-
-// fxRateToBase is the frozen rate an invoice converts at, or nil when this
-// build cannot supply one.
-//
-// There is no rate sheet yet. The one rate that needs no sheet is the identity:
-// an invoice issued in the workspace's own reporting currency is already in
-// base. Returning 1 for every other currency would be an invented rate, and a
-// total computed from invented rates is worse than no total — so those rows
-// stay null and the formulas refuse the figure.
 
 // mirrorInvoice upserts one invoice, writing only when the SOURCE's own values
 // changed.
@@ -178,24 +167,31 @@ func (s *Store) mirrorInvoice(
 	if err != nil {
 		return ids.UUID{}, wroteNothing, err
 	}
-	// The hash covers the SOURCE's values, and the rate is not one of them: it
-	// is derived from the workspace's base currency, which the source knows
-	// nothing about. So a row can be up to date on the source and still be
-	// missing a rate it should carry — and the skip below would keep it that
-	// way for good, because the source has no reason to change again.
-	wantRate, _ := fxRateToBase(inv, args.baseCurrency)
-	rateMissing := wantRate != nil && existing.fxRate == nil
 	// A relinked customer's invoices move even when the source is unchanged:
 	// the hash covers the source, and the company is the link's.
 	relinked := found && existing.image.CompanyID != args.companyID
-	if found && existing.hash == hash && !rateMissing && !relinked {
-		// The source says exactly what it said last time. Rewriting the row
-		// would bump its version and write an audit row for a change that did
-		// not happen — history minted four times a day, forever, by a sweep
-		// that read an unchanged ledger.
+	// The source says what it said last time. Rewriting the row would bump its
+	// version and write an audit row for a change that did not happen. That is
+	// history minted four times a day by a sweep over an unchanged ledger.
+	unchanged := found && existing.hash == hash && !relinked
+	if unchanged && existing.fxRate.Valid {
 		return existing.id, wroteNothing, nil
 	}
-	values := deriveValues(inv, s.now(), args.rowIDs, args.creditedAgainst, args.baseCurrency)
+	// The hash covers the source's values, and the rate is not one of them. A
+	// row mirrored before its day had a rate is current but unconvertible. A
+	// rate that has since appeared rewrites it.
+	rate, priced, err := s.rateFor(ctx, tx, inv, args.baseCurrency)
+	if err != nil {
+		return ids.UUID{}, wroteNothing, err
+	}
+	if unchanged && !priced {
+		return existing.id, wroteNothing, nil
+	}
+	var frozen *Rate
+	if priced {
+		frozen = &rate
+	}
+	values := deriveValues(inv, s.now(), args.rowIDs, args.creditedAgainst, frozen)
 	if found {
 		return existing.id, wroteUpdate,
 			updateInvoice(ctx, tx, existing.id, args, values, hash, existing.image)
@@ -209,9 +205,9 @@ func (s *Store) mirrorInvoice(
 type mirroredInvoice struct {
 	id   ids.UUID
 	hash string
-	// fxRate is nil on a row written before the mirror recorded one, which is
-	// what lets the skip above tell "unchanged" from "unchanged but unusable".
-	fxRate *float64
+	// fxRate is not Valid on a row whose issue day had no rate. That lets the
+	// skip above tell "unchanged" from "unchanged but unusable".
+	fxRate pgtype.Numeric
 	// image is what the money looked like before this pass, read under the
 	// same lock as the decision to rewrite it. Read from the ROW rather than
 	// rebuilt from the source: a before image that was never in the table
@@ -277,15 +273,16 @@ type invoiceValues struct {
 	creditsID  *ids.UUID
 	disputedAt *time.Time
 	voidAt     *time.Time
-	fxRate     *float64
+	fxRate     pgtype.Numeric
 	fxDate     *time.Time
 }
 
 func deriveValues(
 	inv SourceInvoice, now time.Time, rowIDs map[string]ids.UUID,
-	creditedAgainst int64, base string,
+	creditedAgainst int64, rate *Rate,
 ) invoiceValues {
-	open := max(inv.GrossMinor-inv.PaidMinor,
+	// What is still owed: credits applied settle an invoice as money does.
+	open := max(inv.GrossMinor-inv.PaidMinor-creditedAgainst,
 		// Overpaid. Nothing owed rather than a negative balance, which would
 		// read as us owing them.
 		0)
@@ -297,7 +294,9 @@ func deriveValues(
 	}
 	out := invoiceValues{openMinor: open, credited: creditedAgainst}
 	out.status = deriveStatus(inv, open, now)
-	out.fxRate, out.fxDate = fxRateToBase(inv, base)
+	if rate != nil {
+		out.fxRate, out.fxDate = rate.Value, &rate.On
+	}
 	if inv.CreditsExternalID != "" {
 		// A credit note whose target is not in this pass keeps its amount and
 		// loses only the pointer: dropping the row would lose real money from
@@ -320,7 +319,9 @@ func insertInvoice(
 	values invoiceValues, hash string,
 ) error {
 	inv := args.invoice
-	_, err := tx.Exec(ctx, `
+	// RETURNING the stored rate, so the after image spells it at the column's
+	// scale, as a later before image will read it.
+	err := tx.QueryRow(ctx, `
 		INSERT INTO finance_invoice
 		       (id, connection_id, company_id, external_id, number,
 		        issued_at, due_at, status, currency, net_minor, tax_minor, gross_minor,
@@ -328,13 +329,14 @@ func insertInvoice(
 		        credits_invoice_id, source_updated_at, sync_hash, fx_rate_to_base,
 		        fx_rate_date, source, captured_by)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-		        $16, $17, $18, $19, $20, $21, $22, $23, $24)`,
+		        $16, $17, $18, $19, $20, $21, $22, $23, $24)
+		RETURNING fx_rate_to_base`,
 		id, args.connectionID, args.companyID,
 		inv.ExternalID, nullable(inv.Number), inv.IssuedOn, inv.DueOn, values.status,
 		inv.Currency, inv.NetMinor, inv.TaxMinor, inv.GrossMinor, values.openMinor,
 		values.credited, inv.FullyPaidAt, values.disputedAt, values.voidAt,
 		values.creditsID, inv.UpdatedAt, hash, values.fxRate, values.fxDate,
-		args.source, args.capturedBy)
+		args.source, args.capturedBy).Scan(&values.fxRate)
 	if err != nil {
 		return fmt.Errorf("mirror the invoice: %w", err)
 	}
@@ -367,7 +369,7 @@ func updateInvoice(
 		return err
 	}
 	inv := args.invoice
-	_, err := tx.Exec(ctx, `
+	err := tx.QueryRow(ctx, `
 		UPDATE finance_invoice
 		   SET company_id = $2, number = $3, issued_at = $4, due_at = $5,
 		       status = $6, currency = $7, net_minor = $8, tax_minor = $9,
@@ -375,12 +377,13 @@ func updateInvoice(
 		       fully_paid_at = $13, disputed_at = $14, void_at = $15,
 		       credits_invoice_id = $16, source_updated_at = $17, sync_hash = $18,
 		       fx_rate_to_base = $19, fx_rate_date = $20
-		 WHERE id = $1`,
+		 WHERE id = $1
+		RETURNING fx_rate_to_base`,
 		id, args.companyID, nullable(inv.Number), inv.IssuedOn, inv.DueOn,
 		values.status, inv.Currency, inv.NetMinor, inv.TaxMinor, inv.GrossMinor,
 		values.openMinor, values.credited, inv.FullyPaidAt, values.disputedAt,
 		values.voidAt, values.creditsID, inv.UpdatedAt, hash,
-		values.fxRate, values.fxDate)
+		values.fxRate, values.fxDate).Scan(&values.fxRate)
 	if err != nil {
 		return fmt.Errorf("update the mirrored invoice: %w", err)
 	}

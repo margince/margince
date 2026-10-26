@@ -171,7 +171,7 @@ const openSenders = async ({
 };
 
 const meta = {
-  title: "Settings/You/Connections/Senders",
+  title: "Settings/You/Capture activity/Senders",
   component: ConnectionOutcomesCard,
 } satisfies Meta<typeof ConnectionOutcomesCard>;
 export default meta;

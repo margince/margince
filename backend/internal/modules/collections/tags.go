@@ -103,20 +103,27 @@ func (s *Store) CreateTag(ctx context.Context, name string, color, description *
 	}
 	var out tagRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		row := tx.QueryRow(ctx, `
-			INSERT INTO tag (name, color, description)
-			VALUES ($1, $2, $3)
-			RETURNING `+tagColumns, name, color, description)
 		var err error
-		if out, err = scanTag(row); err != nil {
-			if constraint, ok := storekit.UniqueViolation(err); ok && constraint == "uq_tag_name" {
-				return fmt.Errorf("tag %q: %w", name, apperrors.ErrConflict)
-			}
-			return err
-		}
-		_, err = storekit.Audit(ctx, tx, "create", auditentity.Tag, out.ID.UUID, nil, map[string]any{nameField: out.Name})
+		out, err = insertTagTx(ctx, tx, name, color, description)
 		return err
 	})
+	return out, err
+}
+
+// insertTagTx coins a validated name and audits it.
+func insertTagTx(ctx context.Context, tx pgx.Tx, name string, color, description *string) (tagRow, error) {
+	row := tx.QueryRow(ctx, `
+		INSERT INTO tag (name, color, description)
+		VALUES ($1, $2, $3)
+		RETURNING `+tagColumns, name, color, description)
+	out, err := scanTag(row)
+	if err != nil {
+		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == uqTagName {
+			return tagRow{}, fmt.Errorf("tag %q: %w", name, apperrors.ErrConflict)
+		}
+		return tagRow{}, err
+	}
+	_, err = storekit.Audit(ctx, tx, "create", auditentity.Tag, out.ID.UUID, nil, map[string]any{nameField: out.Name})
 	return out, err
 }
 

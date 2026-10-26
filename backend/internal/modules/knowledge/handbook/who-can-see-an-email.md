@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/capture/connection-settings.tsx frontend/src/components/mail-sharing.tsx frontend/src/features/capture/emailaccesseditor.tsx frontend/src/features/capture/held-threads.tsx backend/internal/modules/capture/mailposture.go backend/internal/modules/capture/sinkaudience.go backend/internal/modules/activities/audience.go backend/internal/modules/activities/audienceholds.go -->
 # Who can see an email
 
 Two things decide who can read an email in Margince, and **a "no" from either is a
@@ -75,9 +76,21 @@ it.
 ### Why is an email hidden from me?
 When an email in Margince shows "This message is not shared with you" or **Withheld**, you were not in its audience. The mailbox that captured it keeps it to the colleagues who were on it.
 
-The most likely reasons: the thread is **Held until classified** and nothing has judged it yet, or its owner set their mailbox to **Always held**. Or the sender or domain is under **Private correspondence**, or an administrator turned **Email sharing** off.
+The most likely reasons: the thread is **Held until checked** and nothing has judged it yet, or its owner set their mailbox to **Always held**. Or the sender or domain is under **Private correspondence**, or an administrator turned **Email sharing** off.
 Only the mailbox owner can open it up, by choosing **Share with the company** on the message. Ask them; an administrator cannot open it for you.
 Also called: email not visible, cannot read email, content for participants only.
+
+### Can I read a mail I sent when only a colleague's mailbox captured it?
+Yes, that one mail. You wrote to a customer and copied a colleague, and Margince
+has only your colleague's copy. You can open that copy because you sent it. You
+cannot open the other mail on that thread, or the customer's record, unless your
+colleague shares them. A promise you made in that mail comes to you as your own
+task or request, and your colleague can read that task too.
+
+This works only when your sign-in address is at one of your company's own
+domains. The mail server that received the mail must also have confirmed that it
+came from that domain.
+Also called: my own sent mail, mail I sent to a customer, copied colleague.
 
 ## Why this one is held
 
@@ -85,7 +98,7 @@ A held Margince message carries a reason, so you can see why it is held:
 
 | Reason | What happened |
 |---|---|
-| **Held until classified** | Nothing has judged it yet, and mail nothing has judged is held |
+| **Held until checked** | Nothing has judged it yet, and mail nothing has judged is held |
 | **Held by your setting** | Your mailbox asked for it |
 | **Held by the company** | An administrator turned mail sharing off |
 | **Held by classification** | A model judged the thread and held it |
@@ -97,7 +110,7 @@ A held Margince message carries a reason, so you can see why it is held:
 
 A later verdict clears some of these and not others:
 
-- **Held until classified** clears when a verdict comes in.
+- **Held until checked** clears once Margince has sorted the thread.
 - **Kept private** stays. Only a human's own decision sets it, and nothing
   automatic changes it.
 - **Held: counterparty mail** and **Marked confidential** both win over a later
@@ -116,9 +129,9 @@ it is about a colleague" says what the message is about.
 To change who can read mail captured from your mailbox in Margince, open **Settings → Connections**, open the mailbox, and change **Mail visibility**.
 1. Open the account menu, choose **Settings**, then **Connections**.
 2. Press the arrow at the end of the mailbox's row.
-3. Set **Mail visibility** to **Held until classified**, **Always held** or **Shared with the team**.
-4. When you narrow it, the **Apply to captured mail?** dialog offers **Also narrow captured mail**.
-5. Confirm with **Change mail visibility**.
+3. Set **Mail visibility** to **Held until checked**, **Always held** or **Shared with the team**.
+4. When you narrow it, the row **Apply to captured mail?** shows. Tick **Also narrow captured mail** to narrow mail already captured too.
+5. Press **Save** on the **Unsaved changes** bar.
 
 **Shared with the team** is refused until an administrator allows it for the company.
 Also called: mailbox privacy, mail posture, share my inbox.
@@ -128,7 +141,7 @@ Also called: mailbox privacy, mail posture, share my inbox.
 You set the mailbox posture at **Settings → Connections**, in each mailbox's
 settings, as **Mail visibility**.
 
-**Held until classified** is the default for every new mailbox. A message stays
+**Held until checked** is the default for every new mailbox. A message stays
 with whoever was on it until a model finds the thread to be plain business.
 Nothing is shared before a decision. So a model that is down or out of money
 leaves mail held, not open.
@@ -186,12 +199,12 @@ It holds mail from then on, and lifting it opens nothing again: "Lifting applies
 to new mail. Mail already held stays held."
 
 ### How do I share an email thread with my team?
-To share an email thread in Margince, open the captured message from a timeline and choose **Share with the company** beside its visibility mark. Or use **Share with the team** in **Settings → Connections → Held threads**.
+To share an email thread in Margince, open the captured message from a timeline and choose **Share with the company** beside its visibility mark. Or use **Share with the team** in **Settings → Capture activity → Held threads**.
 1. On a contact, company or deal timeline, open the email.
 2. Beside the mark under the subject, press **Share with the company**. It "Applies to the whole thread."
 3. To go back, press **Make private**.
 
-Or press **Share with the team** on the thread under **Settings → Connections → Held threads**.
+Or press **Share with the team** on the thread under **Settings → Capture activity → Held threads**.
 Only the mailbox owner can share. If a colleague also holds it, you see how many other seats still do.
 Also called: release an email, unhide a thread, make an email public.
 
@@ -246,6 +259,6 @@ never shows mail from another seat's own mailbox.
 | This mailbox's posture | Settings → Connections → Mail visibility |
 | The company-wide floor | Settings → Capture rules → Mail sharing and sync |
 | Hold mail with one contact or company | Private correspondence, on the contact's or company's page |
-| Share one thread | The message itself, or Settings → Connections → Held threads |
+| Share one thread | The message itself, or Settings → Capture activity → Held threads |
 | One logged message's audience | Change visibility, on its row |
 | Who can see the *record* | The contact or company header |

@@ -3,6 +3,8 @@
 
 package auth
 
+import "github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+
 // Which activities count as the record having been touched.
 //
 // Beside audienceaggregate.go, and here for the same reason: several modules ask
@@ -30,5 +32,5 @@ package auth
 //
 // Held by: TestEveryRecencyReadingExcludesTheSystemOrigins (backend/gates/recencyorigins_test.go)
 func OriginIsEngagement(alias string) string {
-	return " AND " + alias + ".origin NOT IN ('system_remediation', 'system_notice') "
+	return " AND " + relstrength.OriginIsEngagementSQL(alias) + " "
 }

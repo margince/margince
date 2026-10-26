@@ -186,7 +186,11 @@ func (a *assembly) readHealth() error {
 	health := crmcontracts.Company360Health{}
 
 	if inbound := a.out.LastInboundAt; inbound != nil {
-		days := elapsed.Days(*inbound, a.now)
+		loc, err := a.zone()
+		if err != nil {
+			return err
+		}
+		days := elapsed.Days(*inbound, a.now, loc)
 		health.DaysSinceLastInbound = &days
 	}
 
@@ -231,7 +235,11 @@ func (a *assembly) readHealth() error {
 	}
 	health.LastMeetingAt = lastMeeting
 
-	touch := relstrength.ReadInTouch(a.out.LastInboundAt, lastMeeting, nextMeeting, a.now)
+	loc, err := a.zone()
+	if err != nil {
+		return err
+	}
+	touch := relstrength.ReadInTouch(a.out.LastInboundAt, lastMeeting, nextMeeting, a.now, loc)
 	rateHealthDimensions(&health, a.out.StateStrip, touch)
 
 	a.out.Health = &health

@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // ownWords reads the messages each contact WROTE, newest first.
@@ -108,7 +109,7 @@ func ownWords(
 			return nil, err
 		}
 		out[contact] = append(out[contact], proposeroles.Message{
-			ActivityID: activity.String(), Subject: subject, Body: body,
+			ActivityID: activity.String(), Subject: subject, Body: textlang.SenderText(body),
 		})
 	}
 	return out, rows.Err()

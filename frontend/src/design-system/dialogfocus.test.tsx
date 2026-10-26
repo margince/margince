@@ -78,3 +78,48 @@ describe("a dialog on its way out hands the keyboard to the one below", () => {
     expect(drawer.contains(document.activeElement)).toBe(true);
   });
 });
+
+describe("Tab from the dialog box itself", () => {
+  function Bare() {
+    return (
+      <Modal open onClose={() => undefined} labelledBy="bare" intent="form">
+        <Heading size="large" id="bare">
+          Task
+        </Heading>
+        <Button>Done</Button>
+        <Button>Snooze</Button>
+      </Modal>
+    );
+  }
+
+  async function focusedBox() {
+    const user = userEvent.setup();
+    render(
+      <>
+        <button type="button">Behind</button>
+        <Bare />
+      </>,
+    );
+    const box = screen.getByRole("dialog", { name: "Task" });
+    box.focus();
+    expect(document.activeElement).toBe(box);
+    return { user, box };
+  }
+
+  it("wraps Shift+Tab to the last stop rather than leaving", async () => {
+    const { user, box } = await focusedBox();
+    await user.keyboard("{Shift>}{Tab}{/Shift}");
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Close" }),
+    );
+    expect(box.contains(document.activeElement)).toBe(true);
+  });
+
+  it("moves Tab to the first stop", async () => {
+    const { user } = await focusedBox();
+    await user.tab();
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Done" }),
+    );
+  });
+});

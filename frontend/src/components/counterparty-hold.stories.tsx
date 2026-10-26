@@ -8,7 +8,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../testing/story-utils";
-import { CounterpartyHoldRow } from "./counterparty-hold";
+import { CounterpartyHoldRow, type HoldScope } from "./counterparty-hold";
 
 // The hold control has two states worth a picture, and they are not the same
 // control with a flag: one OFFERS two verbs, the other reports a standing
@@ -23,7 +23,10 @@ const HELD_DOMAIN = {
   created_at: "2026-08-01T09:00:00Z",
 };
 
-function story(holds: unknown[], email = "office@studiolegal.de") {
+function story(
+  holds: unknown[],
+  scope: HoldScope = { address: "office@studiolegal.de" },
+) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({}),
@@ -31,7 +34,7 @@ function story(holds: unknown[], email = "office@studiolegal.de") {
     });
     return (
       <StoryProviders>
-        <CounterpartyHoldRow email={email} />
+        <CounterpartyHoldRow scope={scope} />
       </StoryProviders>
     );
   };
@@ -64,5 +67,22 @@ export const HeldByAddress: Story = {
 // button at once — the one place a reader learns which domain they are about
 // to hold.
 export const NotHeldLongDomain: Story = {
-  render: story([], "kanzlei@mandanten-postfach.nordrhein-westfalen.example"),
+  render: story([], {
+    address: "kanzlei@mandanten-postfach.nordrhein-westfalen.example",
+  }),
+};
+
+// The company page names the company, not a mailbox: one domain verb only.
+export const NotHeldCompany: Story = {
+  render: story([], { domain: "studiolegal.de" }),
+};
+
+export const HeldByDomainCompany: Story = {
+  render: story([HELD_DOMAIN], { domain: "studiolegal.de" }),
+};
+
+export const NotHeldLongDomainCompany: Story = {
+  render: story([], {
+    domain: "mandanten-postfach.nordrhein-westfalen.example",
+  }),
 };

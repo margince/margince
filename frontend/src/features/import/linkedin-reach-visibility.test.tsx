@@ -10,7 +10,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
-import { LinkedInImportCard } from "./linkedin-import";
+import { LinkedInNetworkPanel } from "./linkedin-import";
 
 // The member's own control over whether colleagues see their reach. On by
 // default, so the control has to show the on state to someone who has never
@@ -32,6 +32,12 @@ function renderCard(account: Record<string, unknown>): Array<unknown> {
     "GET /me/linkedin-account": () => jsonResponse(stored),
     "GET /me/linkedin-connections": () =>
       jsonResponse({ colleagues: [], total: 0 }),
+    "GET /me/linkedin-reach": () =>
+      jsonResponse({
+        accounts: [],
+        accounts_total: 0,
+        unresolved_connections: 0,
+      }),
     // A write handler is passed the parsed body, not the request.
     "PUT /me/linkedin-account": (body: unknown) => {
       saved.push(body);
@@ -45,7 +51,7 @@ function renderCard(account: Record<string, unknown>): Array<unknown> {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider>
-        <LinkedInImportCard />
+        <LinkedInNetworkPanel />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -108,7 +114,7 @@ it("refuses the switch when the reach setting could not be read", async () => {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider>
-        <LinkedInImportCard />
+        <LinkedInNetworkPanel />
       </LocaleProvider>
     </QueryClientProvider>,
   );

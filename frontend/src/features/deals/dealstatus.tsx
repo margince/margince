@@ -5,80 +5,59 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Badge, Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
+import { HowItStands } from "../../design-system/howitstands";
+import { NextBar, type NextBarMore } from "../../design-system/nextbar";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { QueryStates } from "../../design-system/querystates";
-import { useT } from "../../i18n";
+import {
+  calendarDaysBetween,
+  formatDayMonth,
+  formatNumber,
+} from "../../format/format";
+import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
-import { navigate } from "../../lib/router";
+import { useRecordZone } from "../../lib/recordzone";
 import { hasMoveControl, MoveButton } from "../records/movebutton";
 import {
-  CallCard,
-  EvidenceSources,
-  FoundMove,
-  fromDealMove,
+  Citations,
   openCitation,
   SentenceList,
   SignalStrip,
-  type StandingTone,
-  TodayPanel,
   useSetAside,
   WrittenBy,
 } from "../records/record360";
+import type { DealStandingHead } from "./deal360/dealhowitstands";
+import { dealVerdictTone, verdictSourceCount } from "./deal360/dealstanding";
+import { waitingSince } from "./deal360/dealwaiting";
 import { useDealSignals } from "./dealsignals";
 import "./dealstatus.css";
 
-// Deal360 — the deal page's written briefing, read before a call, in the
-// cards every record page reads in.
+// The deal page's reading, read before a call. The next bar is the one move
+// the status card names, with the verb that performs it. How it stands is the
+// call the server reached and its first line of reasoning, with its receipts.
+// The brief is drawn in the board's drawer only. It says what has happened and
+// what the buyer wants, in prose with its sources, the rest behind a fold.
 //
-// THE CALL: the standing the server reached, the first line of its reasoning
-// beside it, the findings that tripped, and the deal's own thread under them.
-// THE DAY'S WORK: the one move the briefing names, with the verb that performs
-// it. THE BRIEF: what has happened and what the buyer wants, in prose with its
-// sources, and the rest of the reasoning behind a fold for the reader who
-// wants it. Everything else on the page is a record; this is the reading.
-//
-// The READ writes nothing a user can see: the server caches the briefing per
-// reader, so a repeat view costs nothing and a changed deal is rewritten
-// before the read answers. The CLICK performs the move through the verb the
-// briefing names — the task door, the compose modal, the meeting-brief drawer
-// — so nothing here re-implements a write or skips its gates.
+// The read writes nothing a user can see: the server caches the card per
+// reader, and a changed deal is rewritten before the read answers. The click
+// performs the move through the verb the card names, so nothing here
+// re-implements a write or skips its gates.
 
 type DealStatusCard = components["schemas"]["DealStatusCard"];
 type DealStatusCardMove = components["schemas"]["DealStatusCardMove"];
 type DealStatusCardSection = components["schemas"]["DealStatusCardSection"];
+type Activity = components["schemas"]["Activity"];
+type DealRef = Readonly<{ id: string; name: string; stalled?: boolean }>;
 
-// The verdict words the server may send, and how each reads to a contact. A
-// word this build does not know renders as itself rather than as nothing:
-// the reader has learned four, and a fifth arriving from a newer server is
-// still a call the card must show.
+// The verdict words the server may send. A word this build does not know
+// renders as itself: a fifth arriving from a newer server is still a call the
+// card must show.
 const VERDICT_LABELS: Record<string, MessageKey> = {
   live: "deal360.verdict.live",
   drifting: "deal360.verdict.drifting",
   blocked: "deal360.verdict.blocked",
   cold: "deal360.verdict.cold",
 };
-
-// How loud each standing is. `live` is untoned deliberately: a card that
-// colours every state has no colour left for the one that needs it, and a
-// healthy deal shouting is how a reader learns to stop looking at the strip.
-const VERDICT_TONE: Record<string, StandingTone> = {
-  live: "calm",
-  drifting: "warning",
-  blocked: "danger",
-  cold: "danger",
-};
-
-// The tone for a standing this build does not know. Own-property lookup, and
-// NOT the healthy tone: a fifth word from a newer server is a call the card
-// must show, and colouring it green would report an unreadable word as good
-// news in the loudest element on the page.
-function verdictTone(standing: string): StandingTone {
-  const tone = Object.hasOwn(VERDICT_TONE, standing)
-    ? VERDICT_TONE[standing]
-    : undefined;
-  return tone ?? "unknown";
-}
 
 // The card's read, shared. Deal360 draws the briefing from it and the email
 // box takes `reply_to` out of the same entry, so the two cannot end up
@@ -102,111 +81,174 @@ export function useDealStatusCard(dealId: string, live: boolean) {
   });
 }
 
+/**
+ * The deal's reading on its Overview: the next move as a bar, How it stands,
+ * then the written brief. How it stands is drawn in every state of the read,
+ * because the stage ladder it carries is how the deal is moved. While the
+ * card is pending or unreadable it says so in its own words.
+ */
 export function DealStatusCardPanel({
-  dealId,
-  dealName,
-  pulse,
-  spine,
+  deal,
+  renderStanding,
   onOpenEmail,
+  timeline = [],
+  asOf,
+  more,
 }: Readonly<{
-  dealId: string;
-  dealName: string;
-  // Opens a cited message in the deal page's own email drawer. The card cites
-  // the conversations the deal was read from, and the page already mounts the
-  // drawer its timeline opens into.
+  deal: DealRef;
+  // How it stands, drawn by the page that holds the ladder's write path.
+  // Absent, the card draws the verdict alone, as the board's drawer does.
+  renderStanding?: (head: DealStandingHead) => ReactNode;
+  // Opens a cited message in the deal page's own email drawer.
   onOpenEmail?: (activityId: string) => void;
-  // Whose move it is, in one sentence (DealPulse). Under the call rather than
-  // in the header: it is a reading of the same status card, and the sentence
-  // the standing rests on.
-  pulse?: ReactNode;
-  // The deal's story as a thread, under the call it was read from. Handed in
-  // because the rows it is drawn from are the page's timeline, which this
-  // card does not read.
-  spine?: ReactNode;
+  // The page's timeline rows, to date the message a reply is owed to.
+  timeline?: readonly Activity[];
+  // The instant the page was read at, so the Next bar counts the wait to the
+  // same moment the figures under it do. Absent, the card's own instant.
+  asOf?: string;
+  // The other open tasks, for the Next bar's tail.
+  more?: NextBarMore;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  // The call card is drawn only for a live deal.
-  const status = useDealStatusCard(dealId, true);
+  const status = useDealStatusCard(deal.id, true);
   const rewrite = useMutation({
-    mutationKey: ["deal-status-refresh", dealId],
+    mutationKey: ["deal-status-refresh", deal.id],
     mutationFn: async () => {
       return unwrap(
         await api.GET("/deals/{id}/status", {
-          params: { path: { id: dealId }, query: { refresh: true } },
+          params: { path: { id: deal.id }, query: { refresh: true } },
         }),
         t,
       );
     },
     onSuccess: (data) =>
-      queryClient.setQueryData(["deal-status", dealId], data),
+      queryClient.setQueryData(["deal-status", deal.id], data),
   });
-  if (status.data?.story) {
+  const card = status.data;
+  const standing =
+    renderStanding ?? ((head: DealStandingHead) => <VerdictOnly head={head} />);
+  if (card?.story) {
     return (
-      <Briefing
-        dealId={dealId}
-        dealName={dealName}
-        card={status.data}
-        pulse={pulse}
-        spine={spine}
-        onOpenEmail={onOpenEmail}
-        onRewrite={() => rewrite.mutate()}
-        rewriting={rewrite.isPending}
-      />
+      <>
+        <DealNextBar
+          dealId={deal.id}
+          card={card}
+          timeline={timeline}
+          asOf={asOf ?? card.generated_at}
+          onOpenEmail={onOpenEmail}
+          more={more}
+        />
+        {standing(cardHead(card, deal, t, onOpenEmail))}
+        {/* The record page says what the brief says through How it stands and
+            its cards; the board's drawer has neither, so only it reads the
+            brief. */}
+        {renderStanding ? null : (
+          <Briefing
+            dealId={deal.id}
+            card={card}
+            onOpenEmail={onOpenEmail}
+            onRewrite={() => rewrite.mutate()}
+            rewriting={rewrite.isPending}
+          />
+        )}
+      </>
     );
   }
-  // Neither the pending read nor the failed one draws the call. That card
-  // exists to state a verdict, and a card holding a spinner where the verdict
-  // goes is the reading claiming to have reached one. The head every written
-  // reading carries still names what is being read.
+  // `story` is required on the wire, so a loaded card without one is not the
+  // shape the contract promises; saying so beats a verdict nobody reached.
   return (
     <>
-      <CallCard name={dealName}>
-        <QueryStates
-          query={status}
-          pendingLines={6}
-          pendingLabel={t("nav.deals")}
-        >
-          {status.isSuccess && !status.data?.story ? (
-            // `story` is required on the wire and the server always writes at
-            // least one line, so reaching here means a response that is not
-            // the shape the contract promises. Saying so beats an empty panel,
-            // which reads as a deal nobody has touched.
-            <PanelBody>
-              <p>{t("deal360.unreadable")}</p>
-            </PanelBody>
-          ) : null}
-        </QueryStates>
-      </CallCard>
-      {/* The day's work keeps its place under the call in every state of the
-          read: the page has one shape, and a panel that comes and goes with a
-          request reads as a record that has and then has not any work. What
-          it says follows the read — pending, failed — rather than claiming a
-          quiet day it has not established. */}
-      <TodayPanel
-        state={status.isPending ? "loading" : "failed"}
-        onOpenTasks={() => navigate({ screen: "worklist" })}
-        tasksLabel={t("today.workQueue")}
-      />
+      {standing(
+        unreadHead(
+          deal,
+          t,
+          status.isSuccess ? t("deal360.unreadable") : undefined,
+        ),
+      )}
+      {status.isError && <ErrorLine error={status.error} />}
     </>
   );
 }
 
+// The verdict without the deal page's ladder and figures. A read with no
+// instant of its own has no day to head the card with, so it draws nothing.
+function VerdictOnly({ head }: Readonly<{ head: DealStandingHead }>) {
+  const { locale } = useLocale();
+  const zone = useRecordZone();
+  if (!head.readAt) {
+    return null;
+  }
+  return (
+    <HowItStands
+      date={formatDayMonth(head.readAt, locale, zone)}
+      verdict={head.verdict}
+      sources={head.sources}
+    />
+  );
+}
+
+/** The head of How it stands when no card is on hand: the archived deal, a
+ *  read in flight or one that failed. Nothing model-written is claimed. */
+export function unreadHead(
+  deal: Pick<DealRef, "stalled">,
+  t: Translator,
+  sentence?: string,
+): DealStandingHead {
+  return {
+    verdict: deal.stalled
+      ? { word: t("deal.stalledBadge"), tone: "warning", sentence }
+      : { word: t("standing.notAssessed"), tone: "neutral", sentence },
+    sources: { by: "records" },
+  };
+}
+
+function cardHead(
+  card: DealStatusCard,
+  deal: Pick<DealRef, "stalled">,
+  t: Translator,
+  onOpenEmail?: (activityId: string) => void,
+): DealStandingHead {
+  if (!card.verdict) {
+    return { ...unreadHead(deal, t), readAt: card.generated_at };
+  }
+  const [lead] = card.verdict.because.sentences;
+  return {
+    verdict: {
+      word: verdictLabel(card.verdict.standing, t),
+      tone: dealVerdictTone(card.verdict.standing),
+      // The lead line keeps its receipts: it is the sentence a reader is most
+      // likely to challenge.
+      sentence: lead ? (
+        <>
+          {lead.text}
+          <Citations
+            evidence={lead.evidence}
+            onOpenRecord={openCitation}
+            onOpenEmail={onOpenEmail}
+          />
+        </>
+      ) : undefined,
+    },
+    // The indigo pill claims a model wrote the call; the structured fallback
+    // wrote this one when it did not.
+    sources:
+      card.generated_by === "model"
+        ? { by: "model", count: verdictSourceCount(card) }
+        : { by: "records" },
+    readAt: card.generated_at,
+  };
+}
+
 function Briefing({
   dealId,
-  dealName,
   card,
-  pulse,
-  spine,
   onOpenEmail,
   onRewrite,
   rewriting,
 }: Readonly<{
   dealId: string;
-  dealName: string;
   card: DealStatusCard;
-  pulse?: ReactNode;
-  spine?: ReactNode;
   // Opens a cited message in the deal page's email drawer; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
   onRewrite: () => void;
@@ -218,116 +260,58 @@ function Briefing({
   const coverage = useDealSignals(dealId);
   const because = card.verdict?.because.sentences ?? [];
   return (
-    <>
-      {/* The call, first and alone. It used to sit fourth, under three
-          paragraphs — which meant the one word a reader scanning thirty deals
-          needs was the last thing they reached. The lead sentence keeps its
-          RECEIPTS: it is the sentence a reader is most likely to challenge, on
-          a card whose whole premise is that they can. */}
-      <CallCard
-        name={dealName}
-        standing={
-          card.verdict
-            ? {
-                label: verdictLabel(card.verdict.standing, t),
-                tone: verdictTone(card.verdict.standing),
-              }
-            : undefined
-        }
-        because={
-          because.length > 0 ? (
-            <SentenceList
-              sentences={because.slice(0, 1)}
-              onOpenRecord={openCitation}
-              onOpenEmail={onOpenEmail}
-            />
-          ) : undefined
-        }
-      >
-        {pulse ? <PanelBody>{pulse}</PanelBody> : null}
-        <SignalStrip signals={coverage.signals} />
-        {spine}
-      </CallCard>
-      {/* Drawn only where there IS a move. A deal whose reading found nothing
-          owed today is a deal with one fewer card to read, not a card whose
-          body says it found nothing: the reading above already reports what
-          the day holds, and a panel repeating that in a sentence spends a
-          card on an absence. The pending and failed states keep their panel,
-          because a read still running has not established a quiet day. */}
-      {card.next ? (
-        <TodayPanel
-          onOpenTasks={() => navigate({ screen: "worklist" })}
-          tasksLabel={t("today.workQueue")}
-        >
-          <Move
-            key="next"
-            dealId={dealId}
-            move={card.next}
-            onOpenEmail={onOpenEmail}
-          />
-        </TodayPanel>
-      ) : null}
-      {/* The reading, under the call and the work: what has happened and
-          where that leaves things, in prose with its sources. What is holding
-          the deal up, what the buyer wants and the rest of the reasoning sit
-          behind a fold — every word still here and still cited, and none of it
-          between a scanning reader and the call. */}
-      <Panel
-        title={t("deal360.brief")}
-        // A machine's reading in EVERY state it can be in, so the tint rides
-        // the panel; which writer answered is sourcing, and sits in the foot
-        // beside the verb that has it written again.
-        tone="ai"
-        titleAction={<Badge tone="ai">{t("co.assistant.aiTag")}</Badge>}
-        footer={
-          <div className="deal360-foot">
-            <WrittenBy by={card.generated_by} />
-            <Button
-              // Quiet rather than filled: this asks the panel's own writer to
-              // run again, inside the panel that writer already filled.
-              variant="aiQuiet"
-              pending={rewriting}
-              onClick={onRewrite}
-            >
-              <RefreshCw aria-hidden />
-              {t("deal360.rewrite")}
-            </Button>
-          </div>
-        }
-      >
+    // What has happened and where that leaves things, in prose with its
+    // sources. The blocker, the buyer and the rest of the reasoning sit behind
+    // a fold, every word still cited.
+    <Panel
+      title={t("deal360.brief")}
+      // A machine's reading in every state it can be in, so the tint rides
+      // the panel. Which writer answered is sourcing, and sits in the foot
+      // beside the verb that has it written again.
+      tone="ai"
+      titleAction={<Badge tone="ai">{t("co.assistant.aiTag")}</Badge>}
+      footer={
+        <div className="deal360-foot">
+          <WrittenBy by={card.generated_by} />
+          <Button variant="aiQuiet" pending={rewriting} onClick={onRewrite}>
+            <RefreshCw aria-hidden />
+            {t("deal360.rewrite")}
+          </Button>
+        </div>
+      }
+    >
+      <SignalStrip signals={coverage.signals} />
+      <Section
+        section={card.story}
+        onOpenRecord={openCitation}
+        onOpenEmail={onOpenEmail}
+        lead
+      />
+      <details className="deal360-fold">
+        <summary>{t("deal360.readFull")}</summary>
         <Section
-          section={card.story}
+          heading={t("deal360.blocker")}
+          section={card.blocker}
           onOpenRecord={openCitation}
           onOpenEmail={onOpenEmail}
-          lead
+          tone="warning"
         />
-        <details className="deal360-fold">
-          <summary>{t("deal360.readFull")}</summary>
+        <Section
+          heading={t("deal360.buyer")}
+          section={card.buyer}
+          onOpenRecord={openCitation}
+          onOpenEmail={onOpenEmail}
+        />
+        {/* Its first line is already the verdict's sentence. */}
+        {because.length > 1 ? (
           <Section
-            heading={t("deal360.blocker")}
-            section={card.blocker}
-            onOpenRecord={openCitation}
-            onOpenEmail={onOpenEmail}
-            tone="warning"
-          />
-          <Section
-            heading={t("deal360.buyer")}
-            section={card.buyer}
+            section={{ sentences: because.slice(1) }}
             onOpenRecord={openCitation}
             onOpenEmail={onOpenEmail}
           />
-          {/* The rest of the verdict's reasoning. Its first line is already in
-              the call above, so this renders only what the head did not. */}
-          {because.length > 1 ? (
-            <Section
-              section={{ sentences: because.slice(1) }}
-              onOpenRecord={openCitation}
-              onOpenEmail={onOpenEmail}
-            />
-          ) : null}
-        </details>
-      </Panel>
-    </>
+        ) : null}
+      </details>
+    </Panel>
   );
 }
 
@@ -385,58 +369,96 @@ function verdictLabel(
   return key ? t(key) : standing;
 }
 
-// The move the briefing names, as the one row the agent is asking for: the
-// reason is the ask, the evidence under it is what it rests on, and the verb
-// at the row's end performs it.
-function Move({
+// The move the briefing names, as the bar at the top of the Overview. The
+// reason is the ask, the first line of evidence is why, and the verb performs
+// it. A move with no verb of its own can still be snoozed.
+function DealNextBar({
   dealId,
-  move,
+  card,
+  timeline,
+  asOf,
   onOpenEmail,
+  more,
 }: Readonly<{
   dealId: string;
-  move: DealStatusCardMove;
-  // Opens the message the move rests on. The recommended move is usually
-  // "answer them", and the reader's first act is to read what they said.
+  card: DealStatusCard;
+  timeline: readonly Activity[];
+  asOf: string;
   onOpenEmail?: (activityId: string) => void;
+  more?: NextBarMore;
 }>) {
-  // The basis splits by what each line HAS. A line naming a message this
-  // reader may open becomes that message — subject, sender, preview — because
-  // reading it is the move. A line naming no record is the sentence the server
-  // wrote, and stays one: a close date inside the week is a fact about the
-  // deal, not a row to open.
-  const { sources, prose } = fromDealMove(move.evidence);
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const zone = useRecordZone();
   const notNow = useDealMoveSetAside(dealId);
-  const fingerprint = move.fingerprint;
+  const move = card.next;
+  if (!move) {
+    return <NextBar more={more} />;
+  }
+  const late = replyLate(card, move, timeline, asOf, zone);
+  // Only the message the buyer is owed an answer to opens in the email
+  // drawer. A task or a meeting the move cites is not a message.
+  const message = move.evidence.some(
+    (row) => row.activity_id && row.activity_id === card.reply_to,
+  )
+    ? card.reply_to
+    : undefined;
+  const snooze = move.fingerprint ? notNow.deferOf(move.fingerprint) : null;
   return (
-    <FoundMove
-      title={move.reason}
-      basis={
-        move.evidence.length > 0 ? (
-          <>
-            {prose.length > 0 && (
-              <ul className="deal360-evidence t-caption">
-                {prose.map((text) => (
-                  <li key={text}>{text}</li>
-                ))}
-              </ul>
-            )}
-            <EvidenceSources sources={sources} onOpenEmail={onOpenEmail} />
-          </>
-        ) : undefined
-      }
-      action={
-        hasMoveControl(move) || notNow.failure ? (
-          <>
-            {hasMoveControl(move) && <MoveButton dealId={dealId} move={move} />}
-            {notNow.failure && <ErrorLine error={notNow.failure} inline />}
-          </>
-        ) : undefined
-      }
-      // A move with no verb of its own still has a way off the card. The
-      // server stamps each move a reader may set aside with its fingerprint.
-      defer={fingerprint ? notNow.deferOf(fingerprint) : undefined}
-    />
+    <>
+      <NextBar
+        title={move.reason}
+        late={
+          late === undefined
+            ? undefined
+            : {
+                label: plural("standing.days", late, {
+                  count: formatNumber(late, locale),
+                }),
+                tone: "warning",
+              }
+        }
+        sub={move.evidence[0]?.text}
+        insight={
+          message && onOpenEmail ? (
+            <Button variant="link" onClick={() => onOpenEmail(message)}>
+              {t("deal.standing.next.openMessage")}
+            </Button>
+          ) : undefined
+        }
+        action={
+          hasMoveControl(move) ? (
+            <MoveButton dealId={dealId} move={move} />
+          ) : undefined
+        }
+        snooze={
+          snooze
+            ? { onSnooze: snooze.onDefer, pending: snooze.pending }
+            : undefined
+        }
+        more={more}
+      />
+      {notNow.failure && <ErrorLine error={notNow.failure} />}
+    </>
   );
+}
+
+// Days the buyer has waited, when the move is the answer they are owed; any
+// other move is not late by that clock.
+function replyLate(
+  card: DealStatusCard,
+  move: DealStatusCardMove,
+  timeline: readonly Activity[],
+  asOf: string,
+  zone: string,
+): number | undefined {
+  const owed = move.evidence.some((row) => row.activity_id === card.reply_to);
+  const waiting = owed ? waitingSince(card, timeline) : null;
+  if (!waiting) {
+    return undefined;
+  }
+  return calendarDaysBetween(new Date(waiting.at), new Date(asOf), zone);
 }
 
 // The deal card's "Not now": set aside for this reader until the card names a

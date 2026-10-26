@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { settingsHref } from "../../lib/settingsrouting";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   IDLE_JOB_HEALTH,
@@ -10,7 +11,6 @@ import {
   render,
 } from "../../testing/settings.testkit";
 import { SettingsScreen } from "./settings";
-import { settingsHref } from "./settingsrouting";
 
 // The danger zone on the Maintenance entry. Reset data is the one control on
 // this screen that destroys an installation's data, so it is gated twice —
@@ -180,7 +180,7 @@ describe("ResetDataCard (danger zone)", () => {
     expect(screen.queryByText(/reset data/i)).toBeNull();
   });
 
-  it("enables the confirm button once the input is non-empty and POSTs the typed confirmation", async () => {
+  it("enables the confirm only for the company name and POSTs that name", async () => {
     const user = userEvent.setup();
     const posted: unknown[] = [];
     vi.stubGlobal(
@@ -197,15 +197,26 @@ describe("ResetDataCard (danger zone)", () => {
     );
 
     const dialog = await screen.findByRole("dialog");
-    // The company name is shown so the admin can copy it into the input.
-    expect(within(dialog).getByText("Acme Inc")).toBeTruthy();
+    // The label names the phrase, so the admin can read or copy it.
+    const input = within(dialog).getByLabelText(
+      "Type this company name: Acme Inc",
+    );
+    await waitFor(() => expect(input).toHaveFocus());
     const confirmButton = within(dialog).getByRole("button", {
       name: /reset all data/i,
     });
     expect(confirmButton).toHaveProperty("disabled", true);
 
-    const input = within(dialog).getByRole("textbox");
-    await user.type(input, "Acme Inc");
+    for (const wrong of ["Acme", "acme inc", "Wrong Name"]) {
+      await user.clear(input);
+      await user.type(input, wrong);
+      expect(confirmButton).toHaveProperty("disabled", true);
+    }
+
+    // A stray space is not a different name: it matches, and the request
+    // carries the name itself, so the server never sees the space.
+    await user.clear(input);
+    await user.type(input, "Acme Inc ");
     expect(confirmButton).toHaveProperty("disabled", false);
 
     await user.click(confirmButton);
@@ -215,6 +226,9 @@ describe("ResetDataCard (danger zone)", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
+  // The name on screen can be stale: renamed in another tab after this page
+  // read /me. The server compares against the stored name and refuses, and
+  // its message is shown in the dialog.
   it("surfaces the server's confirmation-mismatch message on a 422", async () => {
     const user = userEvent.setup();
     vi.stubGlobal(
@@ -234,7 +248,7 @@ describe("ResetDataCard (danger zone)", () => {
     );
     const dialog = await screen.findByRole("dialog");
     const input = within(dialog).getByRole("textbox");
-    await user.type(input, "Wrong Name");
+    await user.type(input, "Acme Inc");
     await user.click(
       within(dialog).getByRole("button", { name: /reset all data/i }),
     );
@@ -378,9 +392,11 @@ describe("ResetDataCard (danger zone)", () => {
     render(<SettingsScreen route={settingsHref("reset")} />);
 
     await confirmReset(user, "Acme Inc");
-    expect(
-      await screen.findByText(/Cleared: tables 84, job rows 12/),
-    ).toBeInTheDocument();
+    const summary = await screen.findByText(/Cleared: tables 84, job rows 12/);
+    const card = summary.closest("section");
+    if (!(card instanceof HTMLElement)) {
+      throw new Error("the reset summary renders outside a card");
+    }
 
     // Retry: the dialog stays open on error, so the summary from the first
     // attempt must not still be sitting behind it.
@@ -397,6 +413,7 @@ describe("ResetDataCard (danger zone)", () => {
     expect(
       await screen.findByText("The typed confirmation does not match."),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    // Read the card, not the page: the open dialog has a status line of its own.
+    expect(within(card).queryByRole("status")).not.toBeInTheDocument();
   });
 });

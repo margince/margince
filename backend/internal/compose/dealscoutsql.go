@@ -91,11 +91,7 @@ func scoutEvidenceSQL(in func(string) string, document string) string {
 	  SELECT filed.company_id, 'attachment', at.id, a.occurred_at, NULL, coalesce(nullif(at.checksum, ''), at.id::text), NULL::text
 	    FROM attachment at
 	    JOIN activity a ON a.id = at.activity_id
-	    JOIN LATERAL (
-	      SELECT at.company_id WHERE at.company_id IS NOT NULL
-	      UNION
-	      SELECT reach.company_id FROM (` + activities.CompanyReachSet() + `) reach
-	       WHERE reach.activity_id = a.id AND at.company_id IS NULL) filed ON true
+	    JOIN (` + activities.CompanyReachSet() + `) filed ON filed.activity_id = a.id
 	   WHERE at.archived_at IS NULL AND NOT at.bytes_withheld AND a.kind = 'email' AND a.direction = 'outbound'
 	     AND ` + workspaceEvidence("a") + ` AND ` + in("a.occurred_at") + `
 	     AND ` + document + `

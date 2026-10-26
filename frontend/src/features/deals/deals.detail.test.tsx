@@ -2,8 +2,8 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { components } from "../../api/schema";
-import { formatMoney } from "../../format/format";
+import { formatDayMonth, formatMoney } from "../../format/format";
+import { UTC_ZONE } from "../../format/timezone";
 import { translate } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
@@ -27,16 +27,10 @@ afterEach(() => {
   localStorage.clear();
 });
 
-type Approval = components["schemas"]["Approval"];
-
 function stubDealBackend(
   onRecord: Deal,
   offers: Offer[],
   onCreateOffer?: (body: unknown) => void,
-  // What is staged against this deal. The record reads the workspace-wide
-  // pending queue and filters it by target_entity_id, so a row only reaches
-  // the panel when it names this deal.
-  approvals: Approval[] = [],
 ) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : null;
@@ -83,9 +77,6 @@ function stubDealBackend(
     if (url.includes("/stakeholders")) {
       return jsonResponse({ data: [], page: { next_cursor: null } });
     }
-    if (url.includes("/approvals")) {
-      return jsonResponse({ data: approvals, page: { next_cursor: null } });
-    }
     if (url.includes("/activities")) {
       return jsonResponse({ data: [], page: { next_cursor: null } });
     }
@@ -105,7 +96,14 @@ async function openHeaderMenu(user: UserEvent | typeof userEvent = userEvent) {
   await user.click(await screen.findByRole("button", { name: "More actions" }));
 }
 
+// The deal's fields are written in the details drawer, behind the overflow.
 async function openEditForm(user: UserEvent | typeof userEvent = userEvent) {
+  await openHeaderMenu(user);
+  await user.click(
+    await screen.findByRole("button", {
+      name: translate("en", "deal.editDetails"),
+    }),
+  );
   await user.click(
     await screen.findByRole("button", { name: "Change Deal name" }),
   );
@@ -136,7 +134,7 @@ describe("DealScreen — edit, archive (A3)", () => {
 
   // A deal a partner brought must not look identical to one we won alone.
   // The partner is the fact a commission is computed from.
-  it("names the partner that brought the deal, and links to it", async () => {
+  it("names the partner that brought the deal, and how, in its details", async () => {
     const d = deal({
       id: "x",
       company_id: "o1",
@@ -158,10 +156,13 @@ describe("DealScreen — edit, archive (A3)", () => {
 
     render(<DealScreen id="x" />);
 
-    expect(
-      await screen.findByRole("link", { name: "VietnamPartner JSC" }),
-    ).toBeTruthy();
-    expect(screen.getByText("via")).toBeTruthy();
+    // One row names the partner and what it did, so both are read off its
+    // text rather than off two elements.
+    const partner = await screen.findByText(/VietnamPartner JSC/);
+    expect(partner.closest("aside")).not.toBeNull();
+    expect(partner.textContent).toContain(
+      translate("en", "deal.attributionSourced"),
+    );
   });
 
   // A form offers nothing the record already carries as a blank. The partner
@@ -269,6 +270,12 @@ describe("DealScreen — edit, archive (A3)", () => {
     );
 
     render(<DealScreen id="x" />);
+    await user.click(await screen.findByRole("button", { name: /more/i }));
+    await user.click(
+      await screen.findByRole("button", {
+        name: translate("en", "deal.editDetails"),
+      }),
+    );
     await user.click(
       await screen.findByRole("button", { name: "Change via partner" }),
     );
@@ -280,37 +287,24 @@ describe("DealScreen — edit, archive (A3)", () => {
 
   // Each fact is its own cell: adjacent spans in one text row run together
   // ("€48,000.00Acme Corpvia Northgate") while every text assertion passes.
-  it("keeps each fact in its own cell rather than running them together", async () => {
-    const d = deal({
-      id: "x",
-      amount_minor: 4_800_000,
-      currency: "EUR",
-      company_id: "o1",
-      partner_company_id: "p1",
-      partner_attribution: "sourced",
-    });
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (request: Request) => {
-        const url = request.url;
-        if (url.includes("/companies/p1")) {
-          return jsonResponse({ id: "p1", display_name: "Northgate" });
-        }
-        if (url.includes("/companies/o1")) {
-          return jsonResponse({ id: "o1", display_name: "Acme Corp" });
-        }
-        return stubBackend([d], { single: d })(request);
-      }),
-    );
+  // The head carries no facts strip. The facts the edit form does not hold
+  // (the stage, how the deal reached Margince and when) are rows of the
+  // details beside it.
+  it("names the stage, the source and the day it was created in its details", async () => {
+    const d = deal({ id: "x", stage_id: "s2" });
+    vi.stubGlobal("fetch", stubBackend([d], { single: d }));
 
     render(<DealScreen id="x" />);
-    await screen.findByRole("link", { name: "Northgate" });
-    const cells = [...document.querySelectorAll(".record-facts .record-fact")];
-    const texts = cells.map((cell) => cell.textContent);
 
-    expect(texts.some((text) => text?.includes("€48,000.00"))).toBe(true);
-    expect(texts.some((text) => text?.includes("Acme Corp"))).toBe(true);
-    expect(texts.every((text) => !text?.includes("€48,000.00Acme"))).toBe(true);
+    const created = await screen.findByText(translate("en", "list.created"));
+    const details = created.closest("aside");
+    if (!details) {
+      throw new Error("the creation day is not in the details");
+    }
+    expect(
+      within(details).getByText(translate("en", "deals.stage")),
+    ).toBeTruthy();
+    expect(document.querySelector(".record-facts")).toBeNull();
   });
 
   // Sourced and influenced are paid differently, so the line has to say which.
@@ -332,8 +326,10 @@ describe("DealScreen — edit, archive (A3)", () => {
 
     render(<DealScreen id="x" />);
 
-    expect(await screen.findByText("helped by")).toBeTruthy();
-    expect(screen.queryByText("via")).toBeNull();
+    const partner = await screen.findByText(/Xentral/);
+    expect(partner.textContent).toContain(
+      translate("en", "deal.attributionInfluenced"),
+    );
   });
 
   it("archive confirms then DELETEs", async () => {
@@ -674,6 +670,42 @@ describe("DealScreen reopen", () => {
     expect(moves[0]).toEqual([{ to_stage_id: "s1", status: "open" }, "4"]);
   });
 
+  it("correcting the close day of a closed deal posts the picked day under the version it was read at", async () => {
+    const posts: [unknown, string | null][] = [];
+    const d = deal({
+      id: "x",
+      status: "won",
+      stage_id: "s3",
+      closed_at: "2026-08-20T12:00:00Z",
+    });
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([d], { single: d, onCloseDay: (b, m) => posts.push([b, m]) }),
+    );
+    render(<DealScreen id="x" />);
+    await openHeaderMenu();
+    await userEvent.click(screen.getByTestId("correct-close-day-open"));
+    const dialog = within(await screen.findByRole("dialog"));
+    const input = dialog.getByTestId("correct-close-day-input");
+    expect((input as HTMLInputElement).value).toBe("20/08/2026");
+    await userEvent.clear(input);
+    await userEvent.type(input, "12/08/2026{Enter}");
+    await userEvent.click(
+      dialog.getByRole("button", { name: "Save close day" }),
+    );
+    await waitFor(() => expect(posts.length).toBe(1));
+    expect(posts[0]).toEqual([{ closed_on: "2026-08-12" }, "4"]);
+  });
+
+  it("offers no close-day correction on an open deal", async () => {
+    const d = deal({ id: "z", status: "open" });
+    vi.stubGlobal("fetch", stubBackend([d], { single: d }));
+    render(<DealScreen id="z" />);
+    await openHeaderMenu();
+    await screen.findByTestId("archive-record");
+    expect(screen.queryByTestId("correct-close-day-open")).toBeNull();
+  });
+
   it("reopen is not offered for an open deal", async () => {
     const d = deal({ id: "y", status: "open" });
     vi.stubGlobal("fetch", stubBackend([d], { single: d }));
@@ -685,7 +717,7 @@ describe("DealScreen reopen", () => {
 });
 
 describe("DealScreen offers panel", () => {
-  it("lists a deal's offers with status badge and formatted money", async () => {
+  it("lists each offer as a row: its number and version, when it was written and its net, and its status in words", async () => {
     vi.stubGlobal(
       "fetch",
       stubDealBackend(deal({}), [
@@ -700,9 +732,23 @@ describe("DealScreen offers panel", () => {
       ]),
     );
     render(<DealScreen id="d1" />);
-    await waitFor(() => expect(screen.getByText("OFF-0001")).toBeTruthy());
-    expect(screen.getByText("sent")).toBeTruthy();
-    expect(screen.getByText(formatMoney(119_000, "EUR", "en"))).toBeTruthy();
+    const title = translate("en", "deal.offers.rowTitle", {
+      number: "OFF-0001",
+      revision: "1",
+    });
+    expect(await screen.findByText(title)).toBeTruthy();
+    expect(
+      screen.getByText(
+        translate("en", "deal.offers.rowSub", {
+          date: formatDayMonth("2026-06-01T00:00:00Z", "en", UTC_ZONE),
+          net: formatMoney(100_000, "EUR", "en"),
+        }),
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(translate("en", "commercial.offer.sent")),
+    ).toBeTruthy();
+    expect(screen.queryByText("sent")).toBeNull();
   });
 
   it("creating a new offer posts a draft and navigates to it", async () => {
@@ -723,33 +769,6 @@ describe("DealScreen offers panel", () => {
     await waitFor(() =>
       expect(window.location.hash).toBe("#/offers/new-offer"),
     );
-  });
-});
-
-describe("DealScreen pending approvals", () => {
-  const staged = {
-    id: "ap-1",
-    kind: "advance_deal",
-    status: "pending",
-    summary: "Move Fleet retrofit to Proposal",
-    proposed_change: { to_stage_id: "s2" },
-    proposed_by: "agent:overnight",
-    target_entity_type: "deal",
-    target_entity_id: "d1",
-    created_at: "2026-07-01T08:00:00Z",
-    evidence: [],
-  } as Approval;
-
-  it("names the staged kind and its proposer in the product's words, not the wire's", async () => {
-    vi.stubGlobal("fetch", stubDealBackend(deal({}), [], undefined, [staged]));
-    render(<DealScreen id="d1" />);
-
-    // approval.kind.advance_deal: the key the inbox reads for the same kind.
-    expect(await screen.findByText("Advance deal")).toBeTruthy();
-    // trust.agentTag: an agent, named, rather than the doubled wire string.
-    expect(screen.getByText("Automated by Overnight agent")).toBeTruthy();
-    expect(screen.queryByText("advance_deal")).toBeNull();
-    expect(screen.queryByText("agent:overnight")).toBeNull();
   });
 });
 

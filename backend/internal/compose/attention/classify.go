@@ -29,36 +29,39 @@ import (
 func classifyDay(day crmcontracts.Attention, asOf time.Time, money dayMoney) []ranked {
 	rows := make([]ranked, 0, 64)
 	bar := materialBarOf(day, money)
-	rows = appendLane(rows, day.Meetings, asOf, classifyMeeting)
-	rows = appendLane(rows, day.MeetingsUnreported, asOf, classifyUnansweredMeeting)
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceMeeting, day.Meetings, asOf, classifyMeeting)
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceMeetingOutcome, day.MeetingsUnreported, asOf, classifyUnansweredMeeting)
 	admitted := admittedBriefItems(day, asOf)
-	rows = appendLane(rows, &admitted, asOf, func(item crmcontracts.AttentionItem, at time.Time) ranked {
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceBriefItem, &admitted, asOf, func(item crmcontracts.AttentionItem, at time.Time) ranked {
 		return classifyBriefItem(item, at, money)
 	})
-	rows = appendLane(rows, day.Commitments, asOf, classifyCommitment)
-	rows = appendLane(rows, day.DidNotRun, asOf, classifyFailedApproval)
-	rows = appendLane(rows, day.Dsr, asOf, classifyLegalDeadline)
-	rows = appendLane(rows, day.NoticeCases, asOf, classifyLegalDeadline)
-	rows = appendLane(rows, day.AtRisk, asOf, func(item crmcontracts.AttentionItem, at time.Time) ranked {
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceConversationClaim, day.Commitments, asOf, classifyCommitment)
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceFailedApproval, day.DidNotRun, asOf, classifyFailedApproval)
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceDsr, day.Dsr, asOf, classifyLegalDeadline)
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceNoticeCase, day.NoticeCases, asOf, classifyLegalDeadline)
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceDealAtRisk, day.AtRisk, asOf, func(item crmcontracts.AttentionItem, at time.Time) ranked {
 		return classifyRisk(item, at, bar, money)
 	})
-	rows = appendLane(rows, &day.Planned, asOf, classifyTask)
-	rows = appendLane(rows, day.Bounces, asOf, classifyBounce)
-	rows = appendLane(rows, day.Undelivered, asOf, classifyUndelivered)
-	rows = appendLane(rows, &day.NeedsYou, asOf, classifyDecision)
-	rows = appendLane(rows, day.RelationshipDecay, asOf, classifyDecay)
-	rows = appendLane(rows, day.CaptureHealth, asOf, classifySystem)
-	rows = appendLane(rows, day.DomainQuestions, asOf, classifyDomainQuestion)
-	rows = appendLane(rows, day.AiWorkHealth, asOf, classifySystem)
-	rows = appendLane(rows, day.AutomationHealth, asOf, classifySystem)
-	rows = appendLane(rows, day.Notices, asOf, classifySystem)
-	rows = appendLane(rows, day.Introductions, asOf, classifyIntroduction)
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceTask, &day.Planned, asOf, classifyTask)
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceBounce, day.Bounces, asOf, classifyBounce)
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceUndelivered, day.Undelivered, asOf, classifyUndelivered)
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceApproval, &day.NeedsYou, asOf, classifyDecision)
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceRelationshipDecay, day.RelationshipDecay, asOf, classifyDecay)
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceCaptureHealth, day.CaptureHealth, asOf, classifySystem)
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceDomainQuestion, day.DomainQuestions, asOf, classifyDomainQuestion)
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceAiWorkHealth, day.AiWorkHealth, asOf, classifySystem)
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceAutomationRun, day.AutomationHealth, asOf, classifySystem)
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceNotice, day.Notices, asOf, classifySystem)
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceIntroductionRequest, day.Introductions, asOf, classifyIntroduction)
 	return rows
 }
 
-// appendLane classifies one lane, skipping a lane the feed did not serve.
+// appendLane classifies one lane, skipping a lane the feed did not serve. Each
+// row remembers the lane it came from, so admission can name that lane when a
+// row of it is refused.
 func appendLane(
 	rows []ranked,
+	from crmcontracts.WorklistItemSource,
 	lane *[]crmcontracts.AttentionItem,
 	asOf time.Time,
 	classify func(crmcontracts.AttentionItem, time.Time) ranked,
@@ -68,6 +71,7 @@ func appendLane(
 	}
 	for _, item := range *lane {
 		row := classify(item, asOf)
+		row.lane = from
 		// Read by no classifier, so carried here once for every lane.
 		if item.SubjectMovedAt != nil {
 			row.subjectMovedAt = *item.SubjectMovedAt
@@ -98,6 +102,7 @@ func base(
 		NoticeOrigin:      item.NoticeOrigin,
 		PromiseRecipients: item.PromiseRecipients,
 		DomainReasonCode:  item.DomainReasonCode,
+		DomainNote:        item.DomainNote,
 		CauseRef:          item.CauseRef,
 		// The identity AND the words for it. The identity groups the row; the
 		// label is what the group says. Forwarding only the first is how the
@@ -274,7 +279,7 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		row.Because = append(row.Because, reason("unassigned", nil))
 	}
 	row.Because = appendReadOnly(row)
-	return ranked{
+	out := ranked{
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
 		overdue:    overdueAt(item.DueAt, asOf),
@@ -286,6 +291,14 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		// is a row a reader cannot make sense of.
 		ownerRef: ownerFromAssignee(item.AssigneeId),
 	}
+	// The reader asked to be reminded, so the reminder is the first thing the
+	// row says and the row leads the page.
+	if item.ReminderDue != nil && *item.ReminderDue {
+		out.item.Because = append([]crmcontracts.WorklistReason{reason("reminder_due", nil)}, out.item.Because...)
+		out.reminded = true
+		raiseToTop(&out)
+	}
+	return out
 }
 
 func waitingSubject(waiting WaitingCustomer) *crmcontracts.AttentionSubject {

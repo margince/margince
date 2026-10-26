@@ -111,14 +111,12 @@ func (r approvalPreviewReader) previewFiles(ctx context.Context, attachments *[]
 	if err != nil {
 		return nil, err
 	}
-	out := make([]crmcontracts.ApprovalPreviewFile, 0, len(files))
 	for _, file := range files {
 		if file.Filename == "" {
 			return nil, apperrors.ErrInvalidArgument
 		}
-		out = append(out, crmcontracts.ApprovalPreviewFile{Id: openapi_types.UUID(file.AttachmentID), Filename: file.Filename, ContentType: file.ContentType, ByteSize: file.ByteSize})
 	}
-	return out, nil
+	return activities.ApprovalPreviewFiles(files), nil
 }
 
 func (r approvalPreviewReader) previewLinkedRecords(ctx context.Context, links []activities.ActivityLinkInput) ([]crmcontracts.ApprovalPreviewDetail, error) {

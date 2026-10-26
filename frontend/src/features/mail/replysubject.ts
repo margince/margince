@@ -14,3 +14,13 @@ export function replySubject(subject: string): string {
   }
   return `Re: ${topic}`;
 }
+
+// A forward's subject carries one "Fwd:". Earlier forward markers fold into
+// it, and a "Re:" stays, since the forwarded message was a reply.
+export function forwardSubject(subject: string): string {
+  let topic = trimSubjectSpace(subject);
+  while (/^fwd?:/i.test(topic)) {
+    topic = trimSubjectSpace(topic.slice(topic.indexOf(":") + 1));
+  }
+  return `Fwd: ${topic}`;
+}

@@ -17,6 +17,7 @@ const VISITS: ExtensionDescriptor = {
   title: "",
   verbs: [],
   secretScope: "",
+  panels: [],
   entries: [
     {
       slot: "record_header.contact",

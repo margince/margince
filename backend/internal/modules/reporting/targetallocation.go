@@ -9,11 +9,18 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func (s *Service) targetAllocation(ctx context.Context, tx pgx.Tx, target *crmcontracts.ReportingTarget) error {
 	if target.Definition.Scope.Kind == reportingOwner || target.Definition.Retired != nil && *target.Definition.Retired {
 		return nil
+	}
+	visible, err := s.allocationVisible(ctx, tx, target.Definition.Scope)
+	if err != nil || !visible {
+		return err
 	}
 	members, err := s.authority.MembersFor(ctx, tx, target.Definition.Scope)
 	if err != nil {
@@ -32,6 +39,22 @@ func (s *Service) targetAllocation(ctx context.Context, tx pgx.Tx, target *crmco
 	difference := target.Definition.Value - total
 	target.AllocationDifference = &difference
 	return nil
+}
+
+// allocationVisible says whether the reader sees a target's allocation. It is
+// the sum of every member's owner target, and with one colleague in the scope
+// it is that colleague's target. So only a seat that reads all of them sees it:
+// row scope all, or a writer whose reach covers the scope.
+func (s *Service) allocationVisible(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope) (bool, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return false, apperrors.ErrPermissionDenied
+	}
+	// A lead's own teams are the members the lead reads every target of.
+	if auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll || scope.Kind == reportingManagedTeams {
+		return true, nil
+	}
+	return s.writeReaches(ctx, tx, scope)
 }
 
 func (s *Service) targetHistory(ctx context.Context, tx pgx.Tx, target *crmcontracts.ReportingTarget) error {

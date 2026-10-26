@@ -29,12 +29,19 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
-// handledWindow is how far back a receipt is worth reporting.
-//
-// A day, matching the lane the feed already draws. Past that a reader is
-// auditing rather than checking, and an audit is the trail's job — this surface
-// answers "what happened while I was away", which is a question about today.
+// handledWindow is how far back a receipt is worth reporting when no window
+// is bound: a day, the lane's own default.
 const handledWindow = 24 * time.Hour
+
+// HandledWindow answers where Done for you starts for this reader. Bound in
+// compose to the done lane's own resolver, so both read one window.
+type HandledWindow func(ctx context.Context, asOf time.Time) (time.Time, error)
+
+// WithHandledWindow binds the window the receipts are read over.
+func (s *Service) WithHandledWindow(w HandledWindow) *Service {
+	s.handledWindow = w
+	return s
+}
 
 // handledCap bounds one page of receipts.
 //
@@ -58,15 +65,24 @@ func (s *Service) HandledForYou(ctx context.Context) (crmcontracts.HandledForYou
 		}, nil
 	}
 	asOf := s.now()
+	since := asOf.Add(-handledWindow)
+	if s.handledWindow != nil {
+		resolved, err := s.handledWindow(ctx, asOf)
+		if err != nil {
+			return crmcontracts.HandledForYou{}, err
+		}
+		since = resolved
+	}
 	// One MORE than the page carries, so the bound can be reported as reached
 	// rather than inferred from a full page — a page that happened to hold
 	// exactly the cap would otherwise claim there was more when there was not.
-	recent, err := s.receipts.Recent(ctx, asOf.Add(-handledWindow), handledCap+1)
+	recent, err := s.receipts.Recent(ctx, since, handledCap+1)
 	if err != nil {
 		return crmcontracts.HandledForYou{}, err
 	}
 	out := crmcontracts.HandledForYou{
 		AsOf:      asOf,
+		Since:     &since,
 		Receipts:  make([]crmcontracts.Receipt, 0, len(recent)),
 		Truncated: len(recent) > handledCap,
 	}

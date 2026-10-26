@@ -15,6 +15,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -141,10 +142,10 @@ func setCompanyColumn(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, s
 	if spec.column == columnDescription {
 		value = headerLine(value)
 	}
-	var stored *string
-	if value != "" {
-		stored = &value
+	if spec.column == columnAddress {
+		return setCompanyAddress(ctx, tx, companyID, spec, value)
 	}
+	stored, _ := companyColumnArgument(spec.column, value)
 	write, ok := companyColumnWrites[spec.column]
 	if !ok {
 		// A field the form declares a column for that the shared table does not
@@ -157,4 +158,20 @@ func setCompanyColumn(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, s
 		return false, fmt.Errorf("set %s: %w", spec.name, err)
 	}
 	return tag.RowsAffected() > 0, nil
+}
+
+// The form resends its line on every save. An unchanged line must preserve
+// structured parts somebody may have edited directly on the company record.
+func setCompanyAddress(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, spec companyField, value string) (bool, error) {
+	var stated string
+	err := tx.QueryRow(ctx,
+		`SELECT value FROM company_profile_field WHERE company_id = $1 AND field = $2`,
+		companyID, spec.name).Scan(&stated)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return false, fmt.Errorf("read stated %s: %w", spec.name, err)
+	}
+	if err == nil && stated == value {
+		return false, nil
+	}
+	return writeCompanyAddress(ctx, tx, companyID, value, spec.authority)
 }

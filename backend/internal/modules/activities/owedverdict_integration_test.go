@@ -85,13 +85,13 @@ func TestTheBacklogIsTheWaitingQueueAndNotEveryUnjudgedMail(t *testing.T) {
 func TestAnOlderUnjudgedMessageSurvivesNewerJudgedOnes(t *testing.T) {
 	e := setupLoad(t)
 	contact := e.buyer(t)
-	old := e.waitingAgedFrom(t, "The oldest question", "buyer@customer.test", contact, 80)
+	old := e.waitingAgedFrom(t, "The oldest question", "buyer@customer.test", contact, 28)
 	// Judged, and newer — enough of them to fill the waiting query's own scan
 	// cap. That is what makes this a test rather than a hope: with the filter
 	// applied outside the statement, these WaitingScanCap newer rows are the
 	// whole candidate set and the older one is unreachable.
 	for i := range WaitingScanCap {
-		newer := e.waitingAgedFrom(t, "Newer thread", "buyer@customer.test", contact, (i%70)+1)
+		newer := e.waitingAgedFrom(t, "Newer thread", "buyer@customer.test", contact, (i%25)+1)
 		if _, err := storeKnowing(e).SetOwedVerdict(asClassifier(e), newer, OwedVerdictAsksUs, "prompts-test", dbNow(t, e)); err != nil {
 			t.Fatalf("judging newer message %d: %v", i, err)
 		}
@@ -169,7 +169,7 @@ func TestAJudgedMessageLeavesTheBacklogAndKeepsItsVerdict(t *testing.T) {
 func TestASecondVerdictDoesNotOverwriteTheFirst(t *testing.T) {
 	e := setupLoad(t)
 	contact := e.buyer(t)
-	activity := e.waitingFrom(t, "Can you confirm?", "buyer@customer.test", contact)
+	activity := e.waitingFromToRep(t, "Can you confirm?", "buyer@customer.test", contact)
 	s := storeKnowing(e)
 
 	if _, err := s.SetOwedVerdict(asClassifier(e), activity, OwedVerdictAsksUs, "prompts-test", dbNow(t, e)); err != nil {

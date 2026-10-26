@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/cmd backend/internal/compose backend/internal/platform/database/storekit backend/internal/platform/database/database.go backend/internal/platform/auth backend/internal/platform/events backend/api/crm.yaml -->
 # A guide to the backend for new developers
 
 The starting point for a developer new to the Margince backend. It is the map that joins the other docs
@@ -142,7 +143,8 @@ the tables of [reference/configuration.md](../reference/configuration.md). The s
     dead letter budget. No GDPR retention pass runs, and no brief from Surface B is scheduled.
   - For a split deployment, run `cmd/api --inline-relay=false` beside one or more workers. Run a worker
     in any case. River picks one leader, so two copies of the worker never run a job twice.
-- **`cmd/migrate`**: `up`/`down`. It connects with the **owner** role (the app role never owns schema).
+- **`cmd/migrate`**: `up`, `down` and the other commands that [configuration.md](../reference/configuration.md#cmdmigrate-schema-migrations)
+  lists. It connects with the **owner** role (the app role never owns schema).
 - `cmd/api` serves the governed agent tool surface at `/mcp`; there is no separate MCP binary.
 
 ---

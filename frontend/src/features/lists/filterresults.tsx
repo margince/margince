@@ -17,6 +17,7 @@
 
 import { useCompanyMarksByID } from "../../components/companymarks";
 import { type ListColumn, ListTable } from "../../design-system/listtable";
+import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
@@ -169,7 +170,7 @@ export function FilterResults({
             companies={companies}
           />
         ) : (
-          cellText(value)
+          cellText(value, name === INDUSTRY_FIELD ? t : undefined)
         );
       },
     };
@@ -232,12 +233,12 @@ function headerFor(
  * stringified rather than dropped: a jsonb column is rare in a preview, and
  * showing its shape beats showing nothing.
  */
-function cellText(value: unknown): string {
+function cellText(value: unknown, industryT?: ReturnType<typeof useT>): string {
   if (value === null || value === undefined) {
     return "—";
   }
   if (typeof value === "object") {
     return JSON.stringify(value);
   }
-  return String(value);
+  return industryT ? industryWords(industryT, String(value)) : String(value);
 }

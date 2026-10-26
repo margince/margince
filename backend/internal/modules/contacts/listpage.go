@@ -427,8 +427,5 @@ func quickFindTerm(q, entity string) string {
 	if entity != entityCompany {
 		return q
 	}
-	if _, domain, found := strings.Cut(q, "@"); found && domain != "" {
-		return domain
-	}
-	return q
+	return storekit.DomainTerm(q)
 }

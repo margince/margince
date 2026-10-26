@@ -10,9 +10,9 @@
 // pass with no guard at all — measured, not assumed.
 
 import { describe, expect, it } from "vitest";
+import { snoozedDueAt } from "../../components/taskactions";
 import { isISODate } from "../../design-system/dateinput";
 import { calendarDay, dueInstant } from "../../format/calendarday";
-import { snoozedDueAt } from "./taskactions";
 
 describe("the days a task may be moved to", () => {
   it("refuses what dueInstant cannot convert", () => {

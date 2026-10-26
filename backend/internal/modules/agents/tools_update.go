@@ -244,7 +244,7 @@ func (t updateRecord) stageConflicts(ctx context.Context, args updateRecordArgs,
 	// the contact and the agent wait on two different descriptions.
 	said := summaryIn(ctx, t.language)
 	summary := fmt.Sprintf(said.overwriteHuman,
-		said.noun(args.RecordType), recordLabel(rec), strings.Join(split.Conflicts, ", "))
+		said.noun(args.RecordType), recordLabel(rec), FieldLabels(said.lang, split.Conflicts))
 	req := StageRequest{
 		Tool:           "update_record",
 		ProposedChange: canonical,

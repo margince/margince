@@ -1,10 +1,14 @@
+import { RecordTabs } from "../../design-system/recordtabs";
+import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import type { ContactTab } from "../../lib/contacttab";
+import { CONTACT_TABS, type ContactTab } from "../../lib/contacttab";
 import { ContactDealsTab } from "./contactdeals";
-import { ContactFilesTab } from "./contactfiles";
+import { Employers } from "./contactemployers";
+import { ContactFilesTab, useContactFiles } from "./contactfiles";
 import { ContactMeetingsTab } from "./contactmeetings";
 import { ContactNetworkTab } from "./contactnetwork";
 import type { Contact360, ContactMomentAction } from "./contactpage";
+import { contactTabCounts } from "./contactpage.tabcounts";
 import { ContactResearchTab } from "./contactresearch";
 import { ContactTimelineTab } from "./contacttabs";
 
@@ -19,6 +23,52 @@ export const TAB_LABEL_KEYS: Readonly<Record<ContactTab, MessageKey>> = {
   research: "tab.research",
   documents: "tab.documents",
 };
+
+/**
+ * ContactRecordTabs is the strip over the work column. It carries the tab
+ * words every record shares and a count where the page holds the whole list.
+ * The dot on Research shows while a connected provider has never been asked
+ * about this contact. A cancelled run reads as never run too: nothing was bought.
+ *
+ * It reads the contact's files for the Documents count through the same query
+ * the Documents tab reads, so opening the tab costs no second request.
+ */
+export function ContactRecordTabs({
+  view,
+  value,
+  onChange,
+}: Readonly<{
+  view: Contact360;
+  value: ContactTab;
+  onChange: (next: ContactTab) => void;
+}>) {
+  const t = useT();
+  const files = useContactFiles(view.contact.id);
+  const filesRead =
+    files.query.isSuccess && !files.hasMore ? files.files.length : undefined;
+  return (
+    <RecordTabs
+      options={CONTACT_TABS}
+      value={value}
+      onChange={onChange}
+      labels={{
+        overview: t(TAB_LABEL_KEYS.overview),
+        timeline: t(TAB_LABEL_KEYS.timeline),
+        network: t(TAB_LABEL_KEYS.network),
+        deals: t(TAB_LABEL_KEYS.deals),
+        meetings: t(TAB_LABEL_KEYS.meetings),
+        research: t(TAB_LABEL_KEYS.research),
+        documents: t(TAB_LABEL_KEYS.documents),
+      }}
+      counts={contactTabCounts(view, filesRead)}
+      marks={{
+        research: (view.provider_profiles ?? []).some(
+          (profile) => profile.state === "never_run",
+        ),
+      }}
+    />
+  );
+}
 
 /**
  * ContactTabPanel is what the tab bar chose, and nothing else. The page above
@@ -63,11 +113,16 @@ export function ContactTabPanel({
       );
     case "network":
       return (
-        <ContactNetworkTab
-          contactId={contactId}
-          view={view}
-          onOpenEmail={onOpenEmail}
-        />
+        // Where they work, and worked, with the way to add or end a job:
+        // the relationship tab's first question.
+        <div className="record-stack">
+          <Employers view={view} />
+          <ContactNetworkTab
+            contactId={contactId}
+            view={view}
+            onOpenEmail={onOpenEmail}
+          />
+        </div>
       );
     case "deals":
       return <ContactDealsTab view={view} />;
@@ -86,6 +141,7 @@ export function ContactTabPanel({
         <ContactFilesTab
           contactId={contactId}
           refusedReasonId={refusedReasonId}
+          onOpenEmail={onOpenEmail}
         />
       );
     // Overview is drawn by the page itself, above this component. Its stack

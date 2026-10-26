@@ -42,6 +42,13 @@ import (
 // of an image this server immediately shrinks.
 const MaxMarkBytes = 5_000_000
 
+// MaxReadImageBytes bounds one image a model reads, before and after any
+// conversion. Inline bytes are base64 on every carrying adapter, so this is
+// about 10.7 MB of request body, an order of magnitude under the vendors'
+// ceilings. An upload route that hands an image to a reading reads no more
+// than this, so a larger file is never buffered.
+const MaxReadImageBytes = 8 << 20
+
 // ContentType is the media type of every normalized image this package
 // produces. Callers store it beside the bytes rather than carrying the
 // source's own type: the source format is not what gets served.

@@ -5,9 +5,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDate } from "./format";
 import {
   FALLBACK_RECORD_ZONE,
+  sameWallClockOnDay,
   startOfDayInZone,
   timezoneOptions,
   viewerZone,
+  zoneNameAndOffset,
   zoneOffsetMs,
 } from "./timezone";
 
@@ -144,6 +146,107 @@ describe("startOfDayInZone", () => {
   });
 });
 
+// Each row's answer differs from moving the UTC date by the same number of
+// days, so a "swap the date" implementation fails it.
+describe("sameWallClockOnDay", () => {
+  it.each([
+    {
+      why: "a Bangkok 03:00 on the 16th moves to 03:00 on the 18th",
+      source: "2026-01-15T20:00:00Z",
+      zone: "Asia/Bangkok",
+      day: "2026-01-18",
+      moved: "2026-01-17T20:00:00.000Z",
+    },
+    {
+      why: "a New York 22:00 on the 14th moves to 22:00 on the 20th",
+      source: "2026-01-15T03:00:00Z",
+      zone: "America/New_York",
+      day: "2026-01-20",
+      moved: "2026-01-21T03:00:00.000Z",
+    },
+    {
+      why: "a Berlin 15:00 keeps 15:00 across the spring switch",
+      source: "2026-03-20T14:00:00Z",
+      zone: "Europe/Berlin",
+      day: "2026-04-02",
+      moved: "2026-04-02T13:00:00.000Z",
+    },
+    {
+      why: "a Kathmandu 01:45 on the 16th moves to 01:45 on the 20th",
+      source: "2026-01-15T20:00:00Z",
+      zone: "Asia/Kathmandu",
+      day: "2026-01-20",
+      moved: "2026-01-19T20:00:00.000Z",
+    },
+  ])("$why", ({ source, zone, day, moved }) => {
+    expect(sameWallClockOnDay(source, day, zone)).toBe(moved);
+  });
+
+  it("puts a wall time the switch removes at the first instant after the gap", () => {
+    // 02:30 does not exist in Berlin on 29 March 2026: 02:00 jumps to 03:00.
+    expect(
+      sameWallClockOnDay("2026-03-20T01:30:00Z", "2026-03-29", "Europe/Berlin"),
+    ).toBe("2026-03-29T01:00:00.000Z");
+    // Lord Howe moves by half an hour, 02:00 to 02:30, on 4 October 2026.
+    expect(
+      sameWallClockOnDay(
+        "2026-09-19T15:45:00Z",
+        "2026-10-04",
+        "Australia/Lord_Howe",
+      ),
+    ).toBe("2026-10-03T15:30:00.000Z");
+  });
+
+  it("refuses a day the zone skipped whole", () => {
+    // Apia jumped from 29 to 31 December 2011; the 30th never happened there.
+    expect(() =>
+      sameWallClockOnDay("2011-12-29T22:00:00Z", "2011-12-30", "Pacific/Apia"),
+    ).toThrow(RangeError);
+    // The day after the jump exists, on the new +14:00 offset.
+    expect(
+      sameWallClockOnDay("2011-12-29T22:00:00Z", "2011-12-31", "Pacific/Apia"),
+    ).toBe("2011-12-30T22:00:00.000Z");
+  });
+
+  it("takes the earlier of a wall time the switch repeats", () => {
+    // 02:30 happens twice in Berlin on 25 October 2026: at 00:30Z on summer
+    // time, then at 01:30Z on winter time.
+    expect(
+      sameWallClockOnDay("2026-10-20T00:30:00Z", "2026-10-25", "Europe/Berlin"),
+    ).toBe("2026-10-25T00:30:00.000Z");
+  });
+
+  it("keeps the source's milliseconds", () => {
+    expect(
+      sameWallClockOnDay(
+        "2026-01-15T14:00:00.250Z",
+        "2026-01-16",
+        "Asia/Bangkok",
+      ),
+    ).toBe("2026-01-16T14:00:00.250Z");
+    // Also when the wall time falls in a gap and lands after it.
+    expect(
+      sameWallClockOnDay(
+        "2026-03-20T01:30:00.250Z",
+        "2026-03-29",
+        "Europe/Berlin",
+      ),
+    ).toBe("2026-03-29T01:00:00.250Z");
+  });
+
+  it("refuses a year Date.UTC would move into the 1900s", () => {
+    expect(() =>
+      sameWallClockOnDay("2026-01-15T14:00:00Z", "0099-09-09", "Asia/Bangkok"),
+    ).toThrow(RangeError);
+  });
+
+  it("refuses a day that does not exist", () => {
+    expect(() =>
+      sameWallClockOnDay("2026-01-15T14:00:00Z", "2026-02-30", "Asia/Bangkok"),
+    ).toThrow(RangeError);
+  });
+});
+
 describe("timezone choices", () => {
   it("names cities and their offset at the supplied date while retaining wire IDs", () => {
     const winter = timezoneOptions(
@@ -178,5 +281,39 @@ describe("timezone choices", () => {
       "Eastern (US) · UTC-5",
     );
     expect(zones.filter((zone) => zone.value === "UTC")).toHaveLength(1);
+  });
+});
+
+describe("zoneNameAndOffset", () => {
+  const at = new Date("2026-09-05T10:30:00Z");
+
+  it("names a given zone in the reader's language, not the IANA id", () => {
+    expect(zoneNameAndOffset("en-GB", at, "Asia/Bangkok")).toBe(
+      "Indochina Time · UTC+7",
+    );
+    expect(zoneNameAndOffset("vi-VN", at, "Asia/Bangkok")).toBe(
+      "Giờ Đông Dương · UTC+7",
+    );
+  });
+
+  it("reads the offset the zone has at that instant", () => {
+    expect(zoneNameAndOffset("en-GB", at, "Europe/Berlin")).toBe(
+      "Central European Summer Time · UTC+2",
+    );
+  });
+
+  it("shows a zone the formatters refuse as it was stored", () => {
+    expect(zoneNameAndOffset("en-GB", at, "Mars/Olympus")).toBe("Mars/Olympus");
+    // Intl names this one, as "GMT+01:00"; the formatters refuse it.
+    expect(zoneNameAndOffset("en-GB", at, "Etc/GMT-1")).toBe("Etc/GMT-1");
+  });
+
+  it("throws on a bad locale tag or instant instead of hiding it", () => {
+    expect(() => zoneNameAndOffset("en_GB!", at, "Asia/Bangkok")).toThrow(
+      RangeError,
+    );
+    expect(() =>
+      zoneNameAndOffset("en-GB", new Date(Number.NaN), "Asia/Bangkok"),
+    ).toThrow(RangeError);
   });
 });

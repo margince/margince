@@ -63,20 +63,14 @@ var FirstResponseTargetMinutes = config.DefineStored(config.Spec[int]{
 	MachineryApplied: true, // the band it produces rides lead rows the caller is separately gated for
 })
 
-// UnassignedEscalationUserID is who answers for a lead nobody owns.
+// UnassignedEscalationUserID is who answers for a lead nobody owns, or whose
+// owner has left.
 //
-// A breach on an OWNED lead escalates to its owner, which is the desk that owes
-// the answer. A breach on an unowned one had nobody: the task was written
-// assigned to no one and no notice went out at all, so the queue's worst case —
-// a lead nobody picked up, now past its response target — was the one case that
-// reached no human.
+// A breach goes to the lead's owner while that owner can be handed work. Else
+// it goes to this seat when one is set and eligible, and to nobody when not.
 //
-// A SETTING rather than a derived answer, because "who runs the intake queue"
-// is an operator's decision and no column in this installation holds it. The
-// manager role says who may work a team's records; it does not say which of
-// them answers for the leads nobody has taken. Empty is the honest default: an
-// installation that has not said leaves the breach where it was, and the queue
-// view is what surfaces it.
+// A SETTING, because "who runs the intake queue" is an operator's decision and
+// no column holds it. Empty leaves the breach unaddressed; the queue view shows it.
 var UnassignedEscalationUserID = config.DefineStored(config.Spec[string]{
 	Key:  "contacts.unassigned_escalation_user_id",
 	Env:  "MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID",
@@ -90,7 +84,7 @@ var UnassignedEscalationUserID = config.DefineStored(config.Spec[string]{
 		}
 		return nil
 	},
-	Doc: "The user id of the colleague who answers for a lead nobody owns once it misses its target; empty means nobody, " +
+	Doc: "The user id of the colleague who answers for a lead nobody owns, or whose owner has left, once it misses its target; empty means nobody, " +
 		"and a boot value that names no active colleague reaches nobody and logs a warning.",
 }, config.Store{
 	RBACObject: leadVocabularyObject, AuditVerb: settingsAuditVerb,

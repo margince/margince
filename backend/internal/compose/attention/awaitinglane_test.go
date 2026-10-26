@@ -22,7 +22,7 @@ func TestAFollowUpRowSaysWhoWroteLastAndHowLongAgo(t *testing.T) {
 	row := classifyAwaiting(AwaitedReply{
 		ActivityID: sent, Subject: "the proposal we discussed", SentAt: at.Add(-3 * 24 * time.Hour),
 		ContactID: ids.NewV7(), EmailSummary: &crmcontracts.EmailSummary{},
-	}, at).item
+	}, at, time.UTC).item
 
 	if row.SourceRecord == nil || row.SourceRecord.Type != "activity" || ids.UUID(row.SourceRecord.Id) != sent {
 		t.Fatalf("message source = %+v", row.SourceRecord)
@@ -51,7 +51,7 @@ func TestAFollowUpOffersReplyOnlyWhenTheComposerCanDraftIt(t *testing.T) {
 		"no summary": {ActivityID: ids.NewV7(), SentAt: at, ContactID: ids.NewV7()},
 		"no record":  {ActivityID: ids.NewV7(), SentAt: at, EmailSummary: &crmcontracts.EmailSummary{}},
 	} {
-		row := classifyAwaiting(awaited, at).item
+		row := classifyAwaiting(awaited, at, time.UTC).item
 		if slices.Contains(row.Actions, crmcontracts.WorklistItemActionsReply) {
 			t.Errorf("%s: actions = %v, want no reply", name, row.Actions)
 		}
@@ -67,7 +67,7 @@ func TestFollowUpsAreReadOnlyWhereTheReadersOwnDayIs(t *testing.T) {
 	reader := &countingAwaiting{rows: []AwaitedReply{{ActivityID: ids.NewV7(), SentAt: at}}}
 	for _, scope := range []TaskScope{TasksOwnedBy, TasksUnassigned} {
 		s := &Service{awaiting: reader, taskScope: scope}
-		scoped, refusals := s.readingAwaiting(context.Background(), at)
+		scoped, refusals := s.readingAwaiting(context.Background(), at, time.UTC)
 		if len(refusals) != 0 || len(scoped.followUps.rows) != 0 || scoped.followUps.read {
 			t.Errorf("scope %v read %d follow-ups, want none", scope, len(scoped.followUps.rows))
 		}
@@ -77,7 +77,7 @@ func TestFollowUpsAreReadOnlyWhereTheReadersOwnDayIs(t *testing.T) {
 	}
 	for _, scope := range []TaskScope{TasksMine, TasksVisible} {
 		s := &Service{awaiting: reader, taskScope: scope, now: func() time.Time { return at }}
-		scoped, refusals := s.readingAwaiting(context.Background(), at)
+		scoped, refusals := s.readingAwaiting(context.Background(), at, time.UTC)
 		if refusals[0] != nil || refusals[1] != nil || len(scoped.followUps.rows) != 1 {
 			t.Errorf("scope %v read %d follow-ups, want the reader's one", scope, len(scoped.followUps.rows))
 		}
@@ -111,7 +111,7 @@ func TestAFailedMeetingReadKeepsTheReplies(t *testing.T) {
 	} {
 		reader := &countingAwaiting{rows: []AwaitedReply{{ActivityID: ids.NewV7(), SentAt: at}}, meetingsErr: err}
 		s := &Service{awaiting: reader, taskScope: TasksMine, now: func() time.Time { return at }}
-		scoped, refusals := s.readingAwaiting(context.Background(), at)
+		scoped, refusals := s.readingAwaiting(context.Background(), at, time.UTC)
 		if len(scoped.followUps.rows) != 1 || refusals[0] != nil {
 			t.Errorf("%v: kept %d replies, refusal %v; want the one reply kept", err, len(scoped.followUps.rows), refusals[0])
 		}
@@ -130,7 +130,7 @@ func TestAMeetingFollowUpOffersAMessageToEveryoneItWasWith(t *testing.T) {
 	ranked, actionable := classifyMeetingFollowUp(AwaitedReply{
 		ActivityID: meeting, Subject: "Discovery workshop", SentAt: at.Add(-3 * 24 * time.Hour),
 		ContactID: first, DealID: ids.NewV7(), Recipients: []ids.UUID{first, second},
-	}, at)
+	}, at, time.UTC)
 	row := ranked.item
 	if row.SourceRecord == nil || row.SourceRecord.Type != "activity" || ids.UUID(row.SourceRecord.Id) != meeting {
 		t.Fatalf("meeting source = %+v", row.SourceRecord)
@@ -161,7 +161,7 @@ func TestAMeetingWithNoAttendeeOnFileOpensItsRecord(t *testing.T) {
 		"deal":    {ActivityID: ids.NewV7(), SentAt: at, DealID: ids.NewV7(), CompanyID: ids.NewV7()},
 		"company": {ActivityID: ids.NewV7(), SentAt: at, CompanyID: ids.NewV7()},
 	} {
-		ranked, actionable := classifyMeetingFollowUp(met, at)
+		ranked, actionable := classifyMeetingFollowUp(met, at, time.UTC)
 		row := ranked.item
 		if !actionable || row.Subject == nil || string(row.Subject.Type) != name {
 			t.Fatalf("%s: produced %v with subject %+v, want the %s opened", name, actionable, row.Subject, name)
@@ -175,7 +175,7 @@ func TestAMeetingWithNoAttendeeOnFileOpensItsRecord(t *testing.T) {
 			t.Errorf("%s: reasons = %+v, want one saying no attendee is on file", name, row.Because)
 		}
 	}
-	if _, actionable := classifyMeetingFollowUp(AwaitedReply{ActivityID: ids.NewV7(), SentAt: at}, at); actionable {
+	if _, actionable := classifyMeetingFollowUp(AwaitedReply{ActivityID: ids.NewV7(), SentAt: at}, at, time.UTC); actionable {
 		t.Error("a meeting with no attendee, deal or company on file produced a row")
 	}
 }
@@ -198,13 +198,52 @@ func TestNoMeetingFollowUpRowIsDrawnWithoutAnAction(t *testing.T) {
 		}
 	}
 	s := &Service{awaiting: &countingAwaiting{meetings: reads}, taskScope: TasksMine, now: func() time.Time { return at }}
-	scoped, _ := s.readingAwaiting(context.Background(), at)
+	scoped, _ := s.readingAwaiting(context.Background(), at, time.UTC)
 	if len(scoped.followUps.rows) != len(reads)-1 {
 		t.Fatalf("%d rows from %d reads, want every read but the one naming no record", len(scoped.followUps.rows), len(reads))
 	}
 	for _, row := range scoped.followUps.rows {
 		if len(row.item.Actions) == 0 {
 			t.Errorf("row %s was drawn with no action: %+v", row.item.Id, row.item)
+		}
+	}
+}
+
+func metDaysOf(t *testing.T, row crmcontracts.WorklistItem) int {
+	t.Helper()
+	for _, because := range row.Because {
+		if because.Kind == "met_days_ago" && because.Value != nil && because.Value.Days != nil {
+			return *because.Value.Days
+		}
+	}
+	t.Fatalf("no met_days_ago reason with a day count in %+v", row.Because)
+	return 0
+}
+
+// The count follows the installation's calendar. A meeting at 22:00 and a read
+// at 01:00 the next morning are one day apart by the wall, three hours by the clock.
+func TestAMeetingFollowUpCountsCalendarDaysInTheInstallationZone(t *testing.T) {
+	t.Parallel()
+	hcm, err := time.LoadLocation("Asia/Ho_Chi_Minh")
+	if err != nil {
+		t.Fatalf("load zone: %v", err)
+	}
+	met := time.Date(2026, 9, 6, 22, 0, 0, 0, hcm)
+	for name, c := range map[string]struct {
+		asOf time.Time
+		want int
+	}{
+		"same local day":         {time.Date(2026, 9, 6, 23, 30, 0, 0, hcm), 0},
+		"after local midnight":   {time.Date(2026, 9, 7, 1, 0, 0, 0, hcm), 1},
+		"a day and a half later": {time.Date(2026, 9, 8, 10, 0, 0, 0, hcm), 2},
+	} {
+		ranked, actionable := classifyMeetingFollowUp(
+			AwaitedReply{ActivityID: ids.NewV7(), SentAt: met, DealID: ids.NewV7()}, c.asOf, hcm)
+		if !actionable {
+			t.Fatalf("%s: no row", name)
+		}
+		if got := metDaysOf(t, ranked.item); got != c.want || ranked.waitingDays != c.want {
+			t.Errorf("%s: row says %d, ranks on %d, want %d", name, got, ranked.waitingDays, c.want)
 		}
 	}
 }

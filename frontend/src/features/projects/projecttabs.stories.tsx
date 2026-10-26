@@ -2,14 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { PageAsideProvider, usePageAside } from "../../components/pageaside";
 import { StoryProviders } from "../../testing/story-utils";
 import { ProjectTabs } from "./projecttabs";
 
-// The strip on its own, away from the project page, because the thing to look
-// at is the ROW rather than the page under it: one tab that is already the
-// page the reader is on, and the details switch at the far end doing the work
-// that earns the row.
+// The strip on its own, away from the project page. It has one tab that is already
+// the page the reader is on, and nothing at its far end.
 
 const meta: Meta<typeof ProjectTabs> = {
   title: "Records/Project 360/Tabs",
@@ -19,26 +16,11 @@ const meta: Meta<typeof ProjectTabs> = {
 export default meta;
 type Story = StoryObj<typeof ProjectTabs>;
 
-// The switch draws only for a screen that OFFERS a pane, so the story says it
-// has one the way a screen does — through the hook — rather than reaching past
-// the contract to set the flag itself.
-function Row() {
-  usePageAside();
-  return <ProjectTabs />;
-}
-
-function row(open: boolean) {
-  return () => (
+/** The one Overview tab. */
+export const Overview: Story = {
+  render: () => (
     <StoryProviders>
-      <PageAsideProvider open={open}>
-        <Row />
-      </PageAsideProvider>
+      <ProjectTabs />
     </StoryProviders>
-  );
-}
-
-/** The pane standing open: the switch reads as pressed. */
-export const DetailsOpen: Story = { render: row(true) };
-
-/** Folded away: the same row, the switch unpressed. */
-export const DetailsFolded: Story = { render: row(false) };
+  ),
+};

@@ -11,7 +11,7 @@ The 15 tables owned by `platform`, as the migrations build them. [Back to the en
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `action` | `text` | yes | One of `create`, `update`, `archive`, `merge`, `promote`, `restore` and 44 more. |
+| `action` | `text` | yes | One of `create`, `update`, `archive`, `merge`, `promote`, `restore` and 45 more. |
 | `actor_id` | `text` | yes |  |
 | `actor_type` | `text` | yes | One of `human`, `agent`, `connector`, `system`, `buyer`. |
 | `after` | `jsonb` |  |  |
@@ -33,7 +33,7 @@ The 15 tables owned by `platform`, as the migrations build them. [Back to the en
 
 **Rules**
 
-- `audit_log_action_check`: `CHECK ((action = ANY (ARRAY['create', 'update', 'archive', 'merge', 'promote', 'restore', 'export', 'erase', 'assign', 'advance_stage', 'advance_phase', 'approve', 'reject', 'consent_grant', 'consent_withdraw', 'activity_relink', 'record_share', 'record_unshare', 'resolve', 'demote', 'import', 'import_undo', 'disqualify', 'anonymize', 'send_email', 'reset_data', 'password_link_issued', 'connect', 'disconnect', 'schedule', 'reschedule', 'cancel', 'release', 'hold', 'expire', 'restrict', 'pin', 'accrue', 'pay', 'publish', 'pause', 'resume', 'close', 'invite', 'revoke', 'delete', 'place_legal_hold', 'lift_legal_hold', 'request_legal_review', 'withdraw_legal_review'])))`
+- `audit_log_action_check`: `CHECK ((action = ANY (ARRAY['create', 'update', 'archive', 'merge', 'promote', 'restore', 'export', 'erase', 'assign', 'advance_stage', 'advance_phase', 'approve', 'reject', 'consent_grant', 'consent_withdraw', 'activity_relink', 'record_share', 'record_unshare', 'resolve', 'demote', 'import', 'import_undo', 'disqualify', 'anonymize', 'send_email', 'reset_data', 'password_link_issued', 'connect', 'disconnect', 'schedule', 'reschedule', 'cancel', 'release', 'hold', 'expire', 'restrict', 'pin', 'accrue', 'pay', 'publish', 'pause', 'resume', 'close', 'invite', 'revoke', 'delete', 'place_legal_hold', 'lift_legal_hold', 'request_legal_review', 'withdraw_legal_review', 'mfa_removed'])))`
 - `audit_log_actor_type_check`: `CHECK ((actor_type = ANY (ARRAY['human', 'agent', 'connector', 'system', 'buyer'])))`
 - `audit_log_images_are_absent_or_present`: `CHECK (((before <> 'null') AND (after <> 'null')))`
 
@@ -42,6 +42,7 @@ The 15 tables owned by `platform`, as the migrations build them. [Back to the en
 - `audit_log_pkey`: `unique, btree (id)`
 - `idx_audit_actor`: `btree (actor_id, occurred_at DESC)`
 - `idx_audit_entity`: `btree (entity_type, entity_id, occurred_at DESC)`
+- `idx_audit_erasure_reason`: `btree (((evidence ->> 'reason'))) WHERE ((action = 'erase') AND (entity_type = 'contact'))`
 - `idx_audit_log_batch`: `btree (batch_id) WHERE (batch_id IS NOT NULL)`
 - `idx_audit_scrub_boundary`: `btree (entity_type, entity_id, occurred_at DESC, id DESC) WHERE (action = ANY (ARRAY['erase', 'anonymize', 'restrict']))`
 - `idx_audit_time`: `btree (occurred_at DESC)`

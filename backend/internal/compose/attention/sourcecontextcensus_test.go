@@ -5,6 +5,7 @@ package attention
 
 import (
 	"testing"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -31,8 +32,8 @@ func TestProducedWorklistSourcesKeepTheirContext(t *testing.T) {
 	contact, activity := ids.NewV7(), ids.NewV7()
 	rows = append(rows, classifyWaiting(WaitingCustomer{ActivityID: activity, ContactID: contact, Since: day.AsOf}, day.AsOf))
 	awaited := AwaitedReply{ActivityID: activity, ContactID: contact, SentAt: day.AsOf}
-	rows = append(rows, classifyAwaiting(awaited, day.AsOf))
-	meeting, ok := classifyMeetingFollowUp(awaited, day.AsOf)
+	rows = append(rows, classifyAwaiting(awaited, day.AsOf, time.UTC))
+	meeting, ok := classifyMeetingFollowUp(awaited, day.AsOf, time.UTC)
 	if !ok {
 		t.Fatal("meeting fixture produced no context")
 	}

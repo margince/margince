@@ -89,3 +89,38 @@ export const RefusedSave: Story = {
     await expect(refusal).toHaveClass("field-error");
   },
 };
+
+function DayExample() {
+  const [value, setValue] = useState("2026-03-01");
+  return (
+    <InlineText
+      label="Expected close"
+      placeholder="Not set"
+      value={value}
+      type="date"
+      canEdit
+      onSave={async (next) => setValue(next)}
+    />
+  );
+}
+
+// A day picked in the calendar saves it, the way Enter saves a typed one.
+export const Day: Story = {
+  render: () => <DayExample />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Change Expected close" }),
+    );
+    await userEvent.click(
+      await canvas.findByRole("button", { name: /^Choose date/ }),
+    );
+    const page = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await page.findByRole("button", { name: "Tuesday, 10 March 2026" }),
+    );
+    await expect(
+      await canvas.findByRole("button", { name: "Change Expected close" }),
+    ).toHaveTextContent("2026-03-10");
+  },
+};

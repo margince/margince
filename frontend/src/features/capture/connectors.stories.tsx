@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import type { GrantSpec } from "../../testing/mefixture";
 import {
   jsonResponse,
   type RouteMap,
@@ -12,17 +13,31 @@ import {
 } from "../../testing/story-utils";
 import { ConnectorsCard } from "./connectors";
 
-// Every story draws both panels, mail and the workspace's Telegram bot,
-// because the card does.
+// ConnectorsCard stories for the fe-uat render gate. They cover a healthy
+// connection, a reauth-needed one (the reconnect affordance), a sync-error one,
+// the empty state, and a load failure. All use the same GET /connectors shape
+// the unit tests (connectors.test.tsx) exercise.
+//
+// One ProviderRow per account, with its services listed under it. The
+// workspace's Telegram bot has its own stories on Integrations.
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 
-// Every story but the read-only one draws an administrator's view, so the
-// Telegram panel shows the verbs its layout is judged with.
-function stubAsBotManager(routes: RouteMap) {
-  stubWithSession(routes, {
-    channel_connection: ["read", "create", "update", "delete"],
-  });
+// The sharing plate under the mail card reads the company's capture posture.
+function stubAsMember(routes: RouteMap, allow: GrantSpec = {}) {
+  stubWithSession(
+    {
+      "GET /capture/settings": () =>
+        jsonResponse({
+          auto_enrich: true,
+          mail_sharing: true,
+          shared_posture_allowed: false,
+          signature_enrich: true,
+        }),
+      ...routes,
+    },
+    allow,
+  );
 }
 
 const gmailConnected: CaptureConnection = {
@@ -38,6 +53,8 @@ const gmailConnected: CaptureConnection = {
   last_synced_at: "2026-07-23T09:30:00Z",
   next_sync_due_at: "2026-07-23T09:35:00Z",
   watch_expires_at: "2026-08-01T00:00:00Z",
+  // A finished import, so the Past email service draws its figures with no
+  // request against a route this story never stubs.
   backfill: {
     state: "done",
     counts: { captured: 842, contacts_created: 96, companies_created: 21 },
@@ -72,9 +89,7 @@ const imapError: CaptureConnection = {
   last_sync_error_class: "unreachable",
 };
 
-// IMAP is poll-only — there is no push subscription to renew, so
-// watch_expires_at is always null for this provider. The card must read
-// that null as "polled", never as an expired push renewal.
+// IMAP is poll-only, so watch_expires_at is always null for it.
 const imapPolled: CaptureConnection = {
   id: "018f3a1b-0000-7000-8000-0000000000c4",
   provider: "imap",
@@ -90,13 +105,16 @@ const imapPolled: CaptureConnection = {
 
 function cardStory(
   connections: CaptureConnection[],
-  publicOrigin?: { origin: string; reachable?: boolean | null },
+  providers: components["schemas"]["CaptureProviderAvailability"][] = [],
+  allow: GrantSpec = {},
 ) {
   return () => {
-    stubAsBotManager({
-      "GET /connectors": () =>
-        jsonResponse({ data: connections, public_origin: publicOrigin }),
-    });
+    stubAsMember(
+      {
+        "GET /connectors": () => jsonResponse({ data: connections, providers }),
+      },
+      allow,
+    );
     return (
       <StoryProviders>
         <ConnectorsCard />
@@ -129,88 +147,90 @@ export const SyncError: Story = {
 };
 
 export const MixedRows: Story = {
-  render: cardStory([gmailConnected, gcalReauth, imapError, imapPolled]),
+  render: cardStory([gmailConnected, gcalReauth, imapError]),
 };
 
-// The badges are what tell a broken row from a healthy one, so their tones
-// must hold apart in dark too.
+// The statuses in dark, side by side: the tones that separate "connected",
+// "needs reconnecting" and "erroring" must hold apart in dark too.
 export const MixedRowsDark: Story = {
   globals: { theme: "dark" },
-  render: cardStory([gmailConnected, gcalReauth, imapError, imapPolled]),
+  render: cardStory([gmailConnected, gcalReauth, imapError]),
 };
 
-// At 390 each row keeps its verbs at the end of its first line.
+// The roster at 390px: each service's verbs drop under its sentence.
 export const MixedRowsPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  render: cardStory([gmailConnected, gcalReauth, imapError, imapPolled]),
+  render: cardStory([gmailConnected, gcalReauth, imapError]),
 };
 
 export const ImapPolled: Story = {
   render: cardStory([imapPolled]),
 };
 
-// Nothing connected: one row says so and carries the add verb.
+// No mailbox at all. The card leads with the steps once on top, then a tile per
+// vendor with its own Connect, the other-host row and the sharing plate.
 export const Empty: Story = {
   render: cardStory([]),
 };
 
-export const EmptyPhone: Story = {
-  globals: { viewport: { value: "phone" } },
-  tags: ["uat-phone"],
+export const EmptyDark: Story = {
+  globals: { theme: "dark" },
   render: cardStory([]),
 };
 
-// Only an address that did not answer earns a badge.
-export const OriginUnreachable: Story = {
-  render: cardStory([gmailConnected], {
-    origin: "http://localhost:8080",
-    reachable: false,
-  }),
+const MICROSOFT_UNWIRED: components["schemas"]["CaptureProviderAvailability"][] =
+  [
+    { provider: "gmail", reason: "ready" },
+    { provider: "graph", reason: "app_missing" },
+    { provider: "imap", reason: "ready" },
+  ];
+
+// Microsoft's company app is not registered here. Its tile keeps its place,
+// says Not set up and names who turns it on, with no Connect to press.
+export const EmptyOneVendorUnwired: Story = {
+  render: cardStory([], MICROSOFT_UNWIRED),
 };
 
-// The import lives in a dialog, so the roster spends no preview on load.
-export const ImportOldEmails: Story = {
-  render: cardStory([{ ...gmailConnected, backfill: { state: "done" } }]),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: /^Actions for Gmail/ }),
-    );
-    const page = within(canvasElement.ownerDocument.body);
-    await userEvent.click(
-      await page.findByRole("button", { name: "Import old emails" }),
-    );
-    await page.findByRole("dialog");
-  },
+export const EmptyOneVendorUnwiredDark: Story = {
+  globals: { theme: "dark" },
+  render: EmptyOneVendorUnwired.render,
+};
+
+// The same tile for someone who can register the app: the way to Sign-in and
+// apps stands where Connect would.
+export const EmptyOneVendorUnwiredAdmin: Story = {
+  render: cardStory([], MICROSOFT_UNWIRED, { capture_settings: ["update"] }),
+};
+
+export const EmptyOneVendorUnwiredAdminDark: Story = {
+  globals: { theme: "dark" },
+  render: EmptyOneVendorUnwiredAdmin.render,
 };
 
 /** Open the card's header verb, so the picture is the dialog behind it. */
 async function openAddDialog(canvasElement: HTMLElement) {
   const body = within(canvasElement.ownerDocument.body);
   await userEvent.click(
-    await body.findByRole("button", { name: "Add connector" }),
+    await body.findByRole("button", { name: "Add account" }),
   );
-  await body.findByRole("dialog", { name: "Add connector" });
+  await body.findByRole("dialog", { name: "Connect mail and calendar" });
 }
 
-// The "Add connector" affordance (Task 1): ONE verb in the card's header,
-// and the picks in the dialog it opens. What to check is that four providers
-// each carrying a sentence read as four rows of one list — the shape they
-// replaced was a strip of four buttons squeezed against a wrapping description,
-// with Gmail drawn primary on a card that exists to report a roster rather than
-// to push one mailbox.
-export const AddConnectionDialogAllProviders: Story = {
-  render: cardStory([]),
+// "Add account" opens the connect dialog on its first step: the account, as
+// three plates. The dialog's own steps have their stories beside it
+// (connect-flow.stories.tsx); these show it over the card it starts from.
+export const AddAccountDialog: Story = {
+  render: cardStory([imapPolled]),
   play: async ({ canvasElement }) => {
     await openAddDialog(canvasElement);
   },
 };
 
-// The same dialog once Gmail is on the roster: three picks, not four. And in
-// dark, where the muted description under each provider name is the ink most
-// likely to collapse into the dialog's own ground under the accent lift.
-export const AddConnectionDialogDark: Story = {
+// Gmail is on the roster and its calendar is not, so Google stays a pick: its
+// calendar is what is left to add. In dark, where the muted description under
+// each plate is the ink most likely to collapse into the dialog's ground.
+export const AddAccountDialogDark: Story = {
   globals: { theme: "dark" },
   render: cardStory([gmailConnected]),
   play: async ({ canvasElement }) => {
@@ -225,12 +245,11 @@ export const OneConnectedWithHeaderVerb: Story = {
 };
 
 // A refused connect reports itself where the press happened, not in a band of
-// its own further down the card. One `connect` mutation serves two surfaces, so
-// both placements are worth seeing: the add dialog's provider picks, and a
-// roster row's Reconnect.
+// its own further down the card. That is the connect dialog, and a roster row's
+// Reconnect.
 function connectFailureStory(connections: CaptureConnection[], path: string) {
   return () => {
-    stubAsBotManager({
+    stubAsMember({
       "GET /connectors": () => jsonResponse({ data: connections }),
       [`POST /connectors/${path}/connect`]: () =>
         jsonResponse(
@@ -246,16 +265,16 @@ function connectFailureStory(connections: CaptureConnection[], path: string) {
   };
 }
 
-export const AddConnectionFailed: Story = {
+export const AddAccountFailed: Story = {
   render: connectFailureStory([gmailConnected], "graph"),
   play: async ({ canvasElement }) => {
     await openAddDialog(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(body.getByRole("radio", { name: /^Microsoft 365/ }));
+    await userEvent.click(body.getByRole("button", { name: "Continue" }));
+    await userEvent.click(body.getByRole("button", { name: "Continue" }));
     await userEvent.click(
-      // "Connect Outlook": the button's accessible name is
-      // `connectors.connectProvider` filled with `connectors.provGraph`, and
-      // that provider's word moved from Microsoft to Outlook.
-      await body.findByRole("button", { name: "Connect Outlook" }),
+      body.getByRole("button", { name: "Continue to Microsoft 365" }),
     );
     await body.findByRole("alert");
   },
@@ -274,10 +293,22 @@ export const ReconnectFailed: Story = {
 
 export const LoadFailed: Story = {
   render: () => {
-    stubAsBotManager({
+    stubAsMember({
       "GET /connectors": () =>
         jsonResponse({ title: "Internal Server Error", detail: "boom" }, 500),
     });
+    return (
+      <StoryProviders>
+        <ConnectorsCard />
+      </StoryProviders>
+    );
+  },
+};
+
+// The roster read in flight: the card holds the room its rows will take.
+export const Loading: Story = {
+  render: () => {
+    stubAsMember({ "GET /connectors": () => new Promise(() => {}) });
     return (
       <StoryProviders>
         <ConnectorsCard />
@@ -291,7 +322,7 @@ export const LoadFailed: Story = {
 // error card.
 export const NotConfigured: Story = {
   render: () => {
-    stubAsBotManager({
+    stubAsMember({
       "GET /connectors": () => jsonResponse({ code: "not_implemented" }, 501),
     });
     return (
@@ -309,7 +340,7 @@ export const NotConfigured: Story = {
 function outcomeStory(outcome: string, connections: CaptureConnection[]) {
   return () => {
     globalThis.location.hash = `#/settings/connections/${outcome}`;
-    stubAsBotManager({
+    stubAsMember({
       "GET /connectors": () => jsonResponse({ data: connections }),
     });
     return (

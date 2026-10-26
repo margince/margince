@@ -104,19 +104,26 @@ export function useBackfillRun({
   provider,
   initial,
   previewHeld = false,
+  initialWindow,
 }: Readonly<{
   provider: Provider;
   /** The run row already embedded in the `GET /connectors` roster row — seeds
    *  the first render, so a live run shows immediately and never offers to
    *  start a second one. */
   initial?: BackfillStatus;
-  /** The caller has taken the setup view off screen for a reason of its own
-   *  (Settings' "skip the history import"), so the scope must not be counted
-   *  for a form nobody is looking at. */
+  /** The caller draws no setup view right now (a Settings account row that
+   *  only offers the import), so the scope must not be counted for a form
+   *  nobody is looking at. */
   previewHeld?: boolean;
+  /** The window the pick opens on: a window chosen at connect and held for
+   *  the reader is counted first, never the default, and stays a pick on
+   *  screen over a stopped run until a run of that window starts. */
+  initialWindow?: ImportWindow;
 }>) {
   const qc = useQueryClient();
-  const [window, setWindow] = useState<ImportWindow>(DEFAULT_IMPORT_WINDOW);
+  const [window, setWindow] = useState<ImportWindow>(
+    initialWindow ?? DEFAULT_IMPORT_WINDOW,
+  );
   // A run that has stopped — cancelled, failed or finished — is history, not a
   // reason the mailbox can never be imported again. This puts the window pick
   // back in front of the reader; the server still decides whether the pick is
@@ -172,7 +179,12 @@ export function useBackfillRun({
   // a read and spends nothing; the spend still waits for the explicit start.
   // Single-flight per window — `previewedWindow` stops it re-firing on unrelated
   // re-renders while still re-counting on a window change.
-  const isSetup = !previewHeld && (status.data?.state === "none" || restarting);
+  const awaitsHeld =
+    initialWindow !== undefined &&
+    !isLiveRun(status.data?.state) &&
+    status.data?.window !== initialWindow;
+  const isSetup =
+    !previewHeld && (status.data?.state === "none" || restarting || awaitsHeld);
   useEffect(() => {
     if (!isSetup || previewedWindow === window || preview.isPending) {
       return;
@@ -187,8 +199,10 @@ export function useBackfillRun({
     start,
     cancel,
     /** Start the import on the picked window, from the top when the reader
-     *  chose "start over", otherwise continuing a run that can be continued. */
-    begin: (pick: ImportWindow) => start.mutate({ window: pick, startOver }),
+     *  chose "start over", otherwise continuing a run that can be continued.
+     *  `onStarted` is for a surface that steps aside once the run is queued. */
+    begin: (pick: ImportWindow, onStarted?: () => void) =>
+      start.mutate({ window: pick, startOver }, { onSuccess: onStarted }),
     /** The window the picker is on. */
     window,
     setWindow,

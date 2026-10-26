@@ -133,6 +133,13 @@ func (s *Service) WithTeammates(t Teammates) *Service {
 	return s
 }
 
+// WithFormerTeammates binds the reader of colleagues who left, whose open work
+// a team view keeps.
+func (s *Service) WithFormerTeammates(f FormerTeammates) *Service {
+	s.former = f
+	return s
+}
+
 // WithOverdueLoad binds the team board's counting reader for tasks — an option
 // for the reason WithWaiting is one.
 //

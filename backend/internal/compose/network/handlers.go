@@ -16,6 +16,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -51,6 +52,19 @@ type Reads struct {
 	// were free. Nil leaves every route available, which is what the tab
 	// showed before this seam existed.
 	askedRoutes AskedRoutes
+	// seatGaps answers which colleagues are on the contact's threads without a
+	// connected mailbox. Nil leaves capture_gaps empty.
+	seatGaps SeatGaps
+}
+
+// SeatGaps reads the colleagues on a contact's threads who have no connected
+// mailbox. It runs in the caller's transaction, after the contact read gates.
+type SeatGaps func(ctx context.Context, tx pgx.Tx, contactID ids.UUID) (capture.UncapturedSeats, error)
+
+// WithSeatGaps binds the reader behind the capture_gaps notice.
+func (h Reads) WithSeatGaps(gaps SeatGaps) Reads {
+	h.seatGaps = gaps
+	return h
 }
 
 // NewReads builds the network surface over the pool.
@@ -65,6 +79,7 @@ func (h Reads) GetContactNetwork(w http.ResponseWriter, r *http.Request, id crmc
 	var out crmcontracts.ContactNetwork
 	out.ContactId = id
 	out.Colleagues = []crmcontracts.ContactNetworkColleague{}
+	out.CaptureGaps = []crmcontracts.ContactCaptureGap{}
 
 	ctx := r.Context()
 	err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
@@ -90,6 +105,20 @@ func (h Reads) GetContactNetwork(w http.ResponseWriter, r *http.Request, id crmc
 		}
 		for _, e := range edges {
 			out.Colleagues = append(out.Colleagues, WireColleague(e, names[e.UserID], now))
+		}
+		if h.seatGaps == nil {
+			return nil
+		}
+		gaps, err := h.seatGaps(ctx, tx, contactID.UUID)
+		if err != nil {
+			return err
+		}
+		out.CaptureGapsTotal = gaps.Total
+		for _, g := range gaps.Seats {
+			out.CaptureGaps = append(out.CaptureGaps, crmcontracts.ContactCaptureGap{
+				UserId: openapi_types.UUID(g.UserID), DisplayName: g.DisplayName,
+				Invited: g.Invited, LastOnThreadAt: g.LastOnThread,
+			})
 		}
 		return nil
 	})

@@ -105,6 +105,9 @@ func (s RestoreSeam) Restore(ctx context.Context, entityType string, id, auditID
 	if entry, decided, err := s.reverseCorrection(ctx, entityType, id, row, ifVersion); err != nil || decided {
 		return entry, err
 	}
+	if isTechnicalReceipt(row) {
+		return s.reverseTechnical(ctx, entityType, id, row, ifVersion)
+	}
 	if kind := inverseOf(row); kind != inverseNone {
 		return s.reverseByVerb(ctx, entityType, id, row, kind, ifVersion)
 	}

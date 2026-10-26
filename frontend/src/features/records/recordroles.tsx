@@ -4,6 +4,14 @@
 import { type FormEvent, useId, useState } from "react";
 import { rowsOf } from "../../api/rows";
 import {
+  type AssignmentRecordType,
+  type AssignmentSubjectKind,
+  type RecordRole,
+  useCreateRecordRole,
+  useRecordRoles,
+  useUpdateRecordRole,
+} from "../../components/recordassignments.queries";
+import {
   Badge,
   Button,
   Checkbox,
@@ -30,14 +38,6 @@ import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemMessageOf } from "../../lib/problem";
 import { useVocabGrants, vocabMenuColumn } from "../leads/leadvocab.rows";
-import {
-  type AssignmentRecordType,
-  type AssignmentSubjectKind,
-  type RecordRole,
-  useCreateRecordRole,
-  useRecordRoles,
-  useUpdateRecordRole,
-} from "./recordassignments.queries";
 
 const RECORD_KINDS: Record<AssignmentRecordType, MessageKey> = {
   company: "recordRoles.kind.company",

@@ -13,20 +13,32 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/calendarmethod"
 )
 
-// The predicate and the prompt name the same methods as a calendar response.
-// Otherwise the model reads a message as an answer while the lane still owes it.
+// The predicates and the prompt name the same methods. Otherwise the model
+// reads a message as an answer, or as an invitation, while the lane still owes it.
 func TestTheCalendarResponseReadersAgree(t *testing.T) {
 	t.Parallel()
-	inSQL := map[string]bool{}
-	for _, quoted := range regexp.MustCompile(`'([A-Z]+)'`).FindAllStringSubmatch(calendarResponseSQL, -1) {
-		inSQL[quoted[1]] = true
-	}
-	if len(inSQL) == 0 {
-		t.Fatal("read no method out of calendarResponseSQL")
-	}
-	for _, method := range []string{"PUBLISH", "REQUEST", "REPLY", "ADD", "CANCEL", "REFRESH", "COUNTER", "DECLINECOUNTER", ""} {
-		if inSQL[method] != calendarmethod.IsResponse(method) {
-			t.Errorf("%q: calendarResponseSQL says %v, calendarmethod.IsResponse says %v", method, inSQL[method], calendarmethod.IsResponse(method))
+	for _, reader := range []struct {
+		name  string
+		sql   string
+		admit func(string) bool
+	}{
+		{"calendarResponseSQL", calendarResponseSQL, calendarmethod.IsResponse},
+		{"calendarInvitationSQL", calendarInvitationSQL, calendarmethod.IsInvitation},
+		{"calendarCopySQL", calendarCopySQL, func(m string) bool {
+			return calendarmethod.IsResponse(m) || calendarmethod.IsInvitation(m)
+		}},
+	} {
+		inSQL := map[string]bool{}
+		for _, quoted := range regexp.MustCompile(`'([A-Z]+)'`).FindAllStringSubmatch(reader.sql, -1) {
+			inSQL[quoted[1]] = true
+		}
+		if len(inSQL) == 0 {
+			t.Fatalf("read no method out of %s", reader.name)
+		}
+		for _, method := range []string{"PUBLISH", "REQUEST", "REPLY", "ADD", "CANCEL", "REFRESH", "COUNTER", "DECLINECOUNTER", ""} {
+			if inSQL[method] != reader.admit(method) {
+				t.Errorf("%q: %s says %v, calendarmethod says %v", method, reader.name, inSQL[method], reader.admit(method))
+			}
 		}
 	}
 }

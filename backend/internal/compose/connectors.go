@@ -99,6 +99,9 @@ type connectorHandlers struct {
 	// wires this, and a test can hand over a fake without a database.
 	googleCredentials    appResolver
 	microsoftCredentials appResolver
+	// importer starts the past-email import a connect asked for, on the same
+	// engine as the backfill start endpoint (connectors_chain.go).
+	importer connectImport
 	// extOAuthGrants opens one unit's OAuth grants; nil reads them through the
 	// process's extension runtime binding, as the unit's Runtime does.
 	extOAuthGrants func(unit string) extOAuthGrants
@@ -208,34 +211,16 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 	if !ok {
 		return
 	}
-	// The body is optional for OAuth providers (they submit nothing), so an
-	// absent one is not a failure — only a malformed one is. ContentLength ==
-	// 0 is the reliable "definitely no body" signal; -1 (chunked, length
-	// unknown until read) must still be decoded, or a chunked request's
-	// return_to is silently dropped and a malformed chunked body skips
-	// rejection entirely.
-	returnTo := returnToOnboarding
-	if r.ContentLength != 0 {
-		var req crmcontracts.ConnectConnectorRequest
-		if !httperr.Decode(w, r, &req) {
-			return
-		}
-		if req.ReturnTo != nil && string(*req.ReturnTo) == returnToSettings {
-			returnTo = returnToSettings
-		}
+	// The body is optional for OAuth providers, so an absent one is not a
+	// failure; only a malformed or refused one is.
+	ask, ok := h.decodeConnectRequest(w, r, string(provider))
+	if !ok {
+		return
 	}
-	// CSRF: a random nonce goes into both a SameSite=Lax cookie and the signed
-	// state; the callback requires them to match, so a victim can't complete an
-	// attacker-initiated flow (account-linking CSRF).
-	nonce := setCSRFNonce(w, csrfCookieName(string(provider)), connectorCookiePath)
-	state := h.signer.sign(
-		connectState{
-			Workspace: ws, User: actor.UserID, Provider: string(provider),
-			Nonce: nonce, ReturnTo: returnTo, Version: stateVersionNamespacedCSRF,
-		},
-		time.Now().Add(connectStateTTL),
-	)
-	authURL := app.authCodeURL(state, h.callbackURL(string(provider)))
+	authURL := h.mintConsent(w, app, connectState{
+		Workspace: ws, User: actor.UserID, Provider: string(provider),
+		ReturnTo: ask.returnTo, Then: ask.then, WindowMonths: ask.windowMonths,
+	})
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ConnectConnectorResponse{AuthorizeUrl: &authURL})
 }
 
@@ -254,24 +239,28 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 	// started from. Verify it BEFORE branching on the outcome: a denial that
 	// began in Settings has to land back in Settings, or the contact never sees
 	// the note explaining what happened. An unverifiable state yields no
-	// trustworthy ReturnTo, so those paths keep the default.
+	// trustworthy ReturnTo, so those paths keep the default. A held import
+	// forwarded by a mail leg is offered whatever this calendar leg's outcome.
 	st, err := h.signer.verify(params.State, time.Now())
 	stateTrusted := err == nil && st.Provider == string(provider)
-	returnTo := returnToOnboarding
+	returnTo, held := returnToOnboarding, 0
 	if stateTrusted {
-		returnTo = st.ReturnTo
+		returnTo, held = st.ReturnTo, heldOnLeg(st)
+	}
+	land := func(outcome string) {
+		http.Redirect(w, r, h.landingURL(outcome, returnTo, string(provider), held), http.StatusFound)
 	}
 	// The user denied consent at the provider — surface it honestly, never as
 	// an error.
 	if params.Error != nil && *params.Error != "" {
-		http.Redirect(w, r, h.landingURL(outcomeDenied, returnTo, string(provider)), http.StatusFound)
+		land(outcomeDenied)
 		return
 	}
 	// A bad/expired/mismatched state or a missing code cannot proceed —
 	// redirect with an honest error, details logged only.
 	if !stateTrusted || params.Code == nil || *params.Code == "" {
 		slog.WarnContext(ctx, "connector callback rejected", "err", err, "provider", string(provider))
-		http.Redirect(w, r, h.landingURL(outcomeError, returnTo, string(provider)), http.StatusFound)
+		land(outcomeError)
 		return
 	}
 	// CSRF: the nonce cookie must match the nonce in the signed state, proving
@@ -282,7 +271,7 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 	// establishes is the BROWSER's identity — so the redirect can honor the
 	// surface the flow started from.
 	if !consumeCSRFNonce(w, r, string(provider), st) {
-		http.Redirect(w, r, h.landingURL(outcomeError, returnTo, string(provider)), http.StatusFound)
+		land(outcomeError)
 		return
 	}
 
@@ -295,7 +284,7 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 	if err := h.requireLiveGrantor(runCtx, st); err != nil {
 		slog.WarnContext(ctx, "connector callback: the granting human no longer holds live authority",
 			"err", err, "provider", string(provider))
-		http.Redirect(w, r, h.landingURL(outcomeError, returnTo, string(provider)), http.StatusFound)
+		land(outcomeError)
 		return
 	}
 
@@ -316,23 +305,23 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 		if err != nil {
 			logConnectFailure(ctx, string(provider), err)
 		}
-		http.Redirect(w, r, h.landingURL(outcomeError, returnTo, string(provider)), http.StatusFound)
+		land(outcomeError)
 		return
 	}
 
 	auth, err := app.authenticate(runCtx, *params.Code, h.callbackURL(string(provider)))
 	if err != nil {
 		logConnectFailure(ctx, string(provider), err)
-		http.Redirect(w, r, h.landingURL(connectFailureOutcome(string(provider), err), returnTo, string(provider)), http.StatusFound)
+		land(connectFailureOutcome(string(provider), err))
 		return
 	}
 
 	if _, err := h.registry.Connect(runCtx, string(provider), auth); err != nil {
 		slog.ErrorContext(ctx, "connector callback: persisting connection", "err", err, "provider", string(provider))
-		http.Redirect(w, r, h.landingURL(outcomeError, returnTo, string(provider)), http.StatusFound)
+		land(outcomeError)
 		return
 	}
-	http.Redirect(w, r, h.landingURL(outcomeOK, returnTo, string(provider)), http.StatusFound)
+	h.chainAfterConnect(runCtx, w, r, st)
 }
 
 // signedInHuman answers the human starting a consent and their workspace, or

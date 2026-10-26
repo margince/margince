@@ -13,10 +13,10 @@ import {
 import type { ReviewTemplate } from "./outcomereview.queries";
 import { ReviewTemplatesCard } from "./reviewtemplates";
 
-// The questions a closed deal is asked. The picture worth keeping is the list
-// an administrator actually meets: a win and a loss template side by side, each
-// outcome badge in its own tone, and a retired template still listed under the
-// badge that says it is no longer offered.
+// The questions a closed deal is asked. The list an administrator meets shows
+// a win and a loss template side by side, each badge in its own tone. A retired
+// template stays listed under the badge saying it is no longer offered.
+// Won is green and Lost grey: a loss is a result, not a fault.
 
 function template(over: Partial<ReviewTemplate>): ReviewTemplate {
   return {
@@ -70,7 +70,10 @@ const TEMPLATES: ReviewTemplate[] = [
 const READER: GrantSpec = { custom_field: ["read"] };
 const EDITOR: GrantSpec = { custom_field: ["read", "update"] };
 
-function served(answer: () => Response, grants: GrantSpec = READER) {
+function served(
+  answer: () => Response | Promise<Response>,
+  grants: GrantSpec = READER,
+) {
   return () => {
     installFetchStub({
       "GET /me": meRoute(grants),
@@ -125,4 +128,16 @@ export const EditableDark: Story = {
 /** No templates served: the card says so rather than drawing an empty list. */
 export const Empty: Story = {
   render: served(() => jsonResponse({ data: [] })),
+};
+
+/** The read in flight: the card holds the skeleton under its title. */
+export const Loading: Story = {
+  render: served(() => new Promise<Response>(() => {})),
+};
+
+/** The read refused: the error and its retry, and no list. */
+export const Failed: Story = {
+  render: served(() =>
+    jsonResponse({ title: "Server error", status: 500 }, 500),
+  ),
 };

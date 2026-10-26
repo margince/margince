@@ -1,7 +1,6 @@
-export { searchCompanyTargets as searchCompanyReferences } from "../companies/companyform";
 export { searchProjects as searchProjectReferences } from "../companies/companyprojects";
 
-import { useAssignableUserOptions } from "../../components/assigneepicker";
+import { useRecordOwnerOptions } from "../../components/assigneepicker";
 import {
   rosterOwnerName,
   useRoster,
@@ -12,11 +11,11 @@ import { useT } from "../../i18n";
 import { useMemberName } from "../../lib/membernames";
 import { useMe } from "../../lib/session";
 
-// Agent seats are left out: the server refuses one as an owner on every
-// record kind, so offering it only leads to a refusal.
+// Only colleagues the server says the reader may make an owner, so the picker
+// never offers somebody the save then refuses.
 export function useRecordOwners(ownerId: string | null | undefined) {
   const t = useT();
-  const options = useAssignableUserOptions();
+  const options = useRecordOwnerOptions();
   const missing =
     Boolean(ownerId) && !options.some((entry) => entry.value === ownerId);
   // Named by id: the current owner may be invited or deactivated, and the

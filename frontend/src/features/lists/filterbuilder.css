@@ -156,3 +156,19 @@
 .filter-money-unit {
   color: var(--textSecondary);
 }
+
+.filter-radius-value {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  flex: 1 1 12rem;
+}
+
+.filter-radius-value > .input {
+  flex: 1 1 6rem;
+  min-width: 5rem;
+}

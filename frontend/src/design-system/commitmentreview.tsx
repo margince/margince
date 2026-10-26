@@ -16,6 +16,8 @@ const REASONS: Readonly<Record<string, MessageKey>> = {
   before_mailbox_history_baseline: "commitment.review.beforeBaseline",
   later_context_not_assessed: "commitment.review.incomplete",
   later_context_not_read: "commitment.review.incomplete",
+  source_text_incomplete: "commitment.review.sourceIncomplete",
+  source_text_unassessed: "commitment.review.sourceUnassessed",
   source_time_unknown: "commitment.review.unknownDate",
   source_time_contradicted: "commitment.review.conflictingDates",
   meeting_cancelled: "commitment.review.canceledMeeting",
@@ -27,6 +29,7 @@ const REASONS: Readonly<Record<string, MessageKey>> = {
   semantic_request: "commitment.review.request",
   semantic_unclear: "commitment.review.unclear",
   semantic_unassessed: "commitment.review.unclear",
+  promiser_not_assignable: "commitment.review.noPromiser",
 };
 
 export function CommitmentReview({

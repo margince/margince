@@ -133,7 +133,7 @@ var controllerTemplates = map[string]controllerTemplate{
 		closing:  func(w mailcopy.Copy) string { return w.ConfirmRecordIgnore },
 	},
 	TemplateConsentConfirmation: {
-		version:  4,
+		version:  5,
 		category: commsauthz.CategoryConsentConfirmation,
 		subject:  func(w mailcopy.Copy) string { return w.ConfirmConsentSubject },
 		intro:    func(w mailcopy.Copy) string { return w.ConfirmConsentBody },
@@ -142,7 +142,7 @@ var controllerTemplates = map[string]controllerTemplate{
 	// Version 1, because this wording has never shipped. The two above moved
 	// for changes made after they had.
 	TemplatePrivacyNotice: {
-		version:  2,
+		version:  3,
 		category: commsauthz.CategoryPrivacyNotice,
 		subject:  func(w mailcopy.Copy) string { return w.NoticeSubject },
 		intro:    func(w mailcopy.Copy) string { return w.NoticeBody },
@@ -281,8 +281,10 @@ func historicalControllerVersion(key string, version int) bool {
 	case TemplateRecordConfirmation:
 		return version == 2
 	case TemplateConsentConfirmation:
-		return version == 3
-	case TemplatePrivacyNotice, TemplateOptOutAcknowledgement:
+		return version == 3 || version == 4
+	case TemplatePrivacyNotice:
+		return version == 1 || version == 2
+	case TemplateOptOutAcknowledgement:
 		return version == 1
 	}
 	return false

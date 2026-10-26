@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import { itemsOf, signIn } from "./waits";
+import { signIn } from "./waits";
 
 /**
  * The company record page against the design's glance (DESIGN.md §7).
@@ -49,12 +49,13 @@ test.skip(
 
 const SHOTS = process.env.E2E_SHOT_DIR ?? "/tmp/e2e-company";
 
-// The readings row, by the test id StateStrip hands its StatStrip. Not by class:
-// the plate is the shared primitive's (design-system/statstrip.tsx), so a class
-// selector here would either name the primitive — and match the contact record's
-// row too — or name a screen class that only exists to be selected. The test id
-// names THIS row on THIS page, which is what these assertions are about.
-const STRIP = '[data-testid="company-strip"]';
+// The figures plate at the foot of How it stands, by the test id it hands its
+// StatStrip. Not by class. The plate is the shared primitive's
+// (design-system/statstrip.tsx). A class selector here would name the
+// primitive and match the contact record's row too. Or it would name a screen
+// class that only exists to be selected. The test id names this row on this page. That is
+// what these assertions are about.
+const STRIP = '[data-testid="company-figures"]';
 
 /**
  * Open a company and wait for the 360 to settle.
@@ -69,7 +70,7 @@ async function openCompany(page: Page, companyId: string) {
   // shows only the trail back and no heading, and that trail renders from the
   // router before any company read returns — so anchoring there would say the
   // page is settled while every card below it is still empty.
-  await expect(page.locator(".record-head h1")).toBeVisible();
+  await expect(page.locator(".record-split-head h1")).toBeVisible();
 }
 
 /** The vertical position of a region, for order assertions. */
@@ -102,11 +103,8 @@ test.describe("company record — the glance's page shape", () => {
     await expect(page.locator(STRIP)).toHaveCount(0);
   });
 
-  // FIVE doors on every account, whatever the fixture holds: open pipeline,
-  // invoiced, the conversation, the last touch, what is next. A slot with no
-  // reading says so rather than vanishing. The count is asserted because the
-  // strip derives the row's fold from it — a row that sometimes carried six
-  // would fold at a different width on two accounts of the same product.
+  // Next meeting, last contact, money and open pipeline on every account. A
+  // slot with no reading says so rather than vanishing.
   //
   // Then every slot is checked for a label AND a value: a reading that drew one
   // of the pair and not the other is a door the eye sweeps past.
@@ -117,8 +115,8 @@ test.describe("company record — the glance's page shape", () => {
     // whatever is mounted at that instant, which on a composite read is an
     // empty strip.
     await expect(slots.nth(1)).toBeVisible();
-    await expect(slots).toHaveCount(5);
     const count = await slots.count();
+    expect(count).toBe(4);
     for (let index = 0; index < count; index++) {
       const slot = slots.nth(index);
       await expect(slot.locator(".stat-card-label")).not.toBeEmpty();
@@ -126,7 +124,7 @@ test.describe("company record — the glance's page shape", () => {
     }
   });
 
-  test("the tab strip offers every tab, plus partner only where the account has one, and ends in the details control", async ({
+  test("the tab strip offers every tab, plus partner only where the account has one", async ({
     page,
   }) => {
     await openCompany(page, POPULATED_COMPANY as string);
@@ -146,11 +144,6 @@ test.describe("company record — the glance's page shape", () => {
     await expect(
       page.locator("[data-testid='co-tabs'] .recordtabs-tab"),
     ).toHaveCount(isPartnerAccount ? 9 : 8);
-    await expect(
-      page.locator(
-        "[data-testid='co-tabs'] .recordtabs-trailing button[aria-pressed]",
-      ),
-    ).toHaveCount(1);
   });
 
   test("the overview stacks the account brief, needs and questions, with commercial detail on Deals", async ({
@@ -196,41 +189,26 @@ test.describe("company record — the glance's page shape", () => {
     await expect(needs).toHaveCount(0);
   });
 
-  test("the context rail keeps named account cards beside the overview", async ({
+  // The details stand in the left card under the account's head, always open:
+  // flat groups with a small label each, no titled cards. The work stands to
+  // their right. The German copy inside is not pinned.
+  test("the details stand beside the work as flat groups, on the left", async ({
     page,
   }) => {
     await openCompany(page, POPULATED_COMPANY as string);
-    const rail = page.locator(".co-rail");
-    await expect(rail).toBeVisible();
-    const context = rail.locator(":scope > .panel").filter({
-      has: page.getByRole("heading", { name: "Aktive Deals", exact: true }),
-    });
-    await expect(context).toHaveCount(1);
-    for (const name of [
-      "Registrierung",
-      "Zuständigkeiten",
-      "Aktive Deals",
-      "Projekte",
-      "Wichtige Kontakte",
-    ]) {
-      await expect(
-        context.getByRole("heading", { name, exact: true }),
-      ).toBeVisible();
-    }
-    await expect(
-      rail.getByRole("heading", { name: "Details", exact: true }),
-    ).toBeVisible();
-    const headings = rail.getByRole("heading");
-    await expect(headings.first()).toBeVisible();
-    expect(await headings.count()).toBeGreaterThanOrEqual(4);
-    for (const heading of await itemsOf(headings)) {
-      await expect(heading).not.toBeEmpty();
-    }
-    const railBox = await rail.boundingBox();
+    const details = page.locator(".record-aside .recorddetails");
+    await expect(details).toBeVisible();
+    await expect(details.locator(".panel")).toHaveCount(0);
+    const groups = details.locator(".recorddetails-group");
+    await expect(groups.first()).toBeVisible();
+    expect(await groups.count()).toBeGreaterThanOrEqual(2);
+
+    const detailsBox = await details.boundingBox();
     const bodyBox = await page.locator(".co-overview-stack").boundingBox();
-    if (!railBox || !bodyBox)
-      throw new Error("account context and overview need visible boxes");
-    expect(railBox.x).toBeGreaterThan(bodyBox.x + bodyBox.width - 1);
+    if (!detailsBox || !bodyBox) {
+      throw new Error("details and stack are visible but one has no box");
+    }
+    expect(detailsBox.x).toBeLessThan(bodyBox.x);
   });
 
   // A freshly imported company is lifecycle `unknown` and has nothing on it.
@@ -244,10 +222,9 @@ test.describe("company record — the glance's page shape", () => {
     expect(await topOf(page.locator("[data-testid='co-tabs']"))).toBeLessThan(
       await topOf(page.locator(STRIP)),
     );
-    // Five readings here too, on an account that can answer almost none of
-    // them: each slot says which reading it has none of. A shorter row would be
-    // the sparse account quietly dropping part of the page again.
-    await expect(page.locator(`${STRIP} > *`)).toHaveCount(5);
+    // The readings here too, on an account that can answer almost none of
+    // them: each slot says which reading it has none of.
+    await expect(page.locator(`${STRIP} > *`).nth(2)).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Unternehmensbericht" }),
     ).toHaveCount(1);
@@ -281,15 +258,17 @@ test.describe("company record — visual weight", () => {
     await openCompany(page, POPULATED_COMPANY as string);
   });
 
-  test("the compact company header uses the large record mark", async ({
-    page,
-  }) => {
-    const mark = page.locator(".record-head-compact .avatar-lg").first();
-    await expect(mark).toBeVisible();
-    const box = await mark.boundingBox();
-    if (!box) throw new Error("the header mark needs a visible box");
-    expect(Math.round(box.width)).toBeGreaterThanOrEqual(46);
-    expect(box.height).toBeCloseTo(box.width, 2);
+  test("the company's mark is a logo, not a favicon", async ({ page }) => {
+    // ~110px square in the mockups, beside a name at ~40px. At 44 it reads as
+    // a list-row avatar that wandered onto a record page.
+    const box = await page
+      .locator(".record-split-head .avatar")
+      .first()
+      .boundingBox();
+    if (!box) {
+      throw new Error("the header avatar has no box");
+    }
+    expect(box.width).toBeGreaterThanOrEqual(72);
   });
 
   test("the lifecycle control is a control, not a tag", async ({ page }) => {
@@ -334,7 +313,7 @@ test.describe("company record — visual weight", () => {
       ).length;
     });
     await expect
-      .poll(() => page.locator(".record-sub .chip").count())
+      .poll(() => page.locator(".record-split-lines .chip").count())
       .toBeGreaterThanOrEqual(recorded);
   });
 

@@ -14,9 +14,8 @@ package compose
 
 import (
 	"strings"
-	"unicode"
 
-	"golang.org/x/text/unicode/norm"
+	"github.com/margince/margince/backend/internal/platform/evidencefold"
 )
 
 // evidenceOnPage answers whether the claimed snippet is on the page:
@@ -30,45 +29,10 @@ func evidenceOnPage(pageText, pageNorm, snippet string) bool {
 	return strings.Contains(pageNorm, normalizeEvidence(snippet))
 }
 
-// normalizeEvidence reduces text to its comparable core: NFC, casefolded,
-// typographic quotes and dashes mapped to ASCII, soft hyphens dropped,
-// every whitespace run (NBSP included) collapsed to one space.
+// normalizeEvidence is the comparison form every no-guess gate matches
+// against; evidencefold owns it so the contacts module folds a name the same way.
 func normalizeEvidence(s string) string {
-	s = norm.NFC.String(s)
-	var b strings.Builder
-	b.Grow(len(s))
-	space := false
-	for _, r := range s {
-		switch {
-		case unicode.IsSpace(r):
-			space = true
-			continue
-		case r == '­': // soft hyphen: a rendering hint, not content
-			continue
-		case formatRune(r):
-			// The same rule one step wider — see formatrunes.go. A bidi
-			// override or a zero-width space between two letters must not
-			// stop a value matching the text that prints it.
-			continue
-		}
-		if space {
-			if b.Len() > 0 {
-				b.WriteByte(' ')
-			}
-			space = false
-		}
-		switch r {
-		case '‘', '’', '‚', '′': // ’ ‘ ‚ ′
-			b.WriteByte('\'')
-		case '“', '”', '„', '«', '»': // “ ” „ « »
-			b.WriteByte('"')
-		case '–', '—', '−': // – — −
-			b.WriteByte('-')
-		default:
-			b.WriteRune(unicode.ToLower(r))
-		}
-	}
-	return b.String()
+	return evidencefold.Normalize(s)
 }
 
 // Lane names: which extraction a finding (or drop) belongs to. The
@@ -93,8 +57,13 @@ const (
 	dropEmptyEvidence     = "empty_evidence"
 	dropEvidenceNotOnPage = "evidence_not_on_page"
 	dropConfidenceRange   = "confidence_out_of_range"
-	dropNameRoleUnlinked  = "name_role_not_in_snippet"
-	dropNoPublishedEmail  = "no_published_email"
+	dropBelowFloor        = "confidence_below_floor"
+	// dropNameUnmappable marks a signature name that is missing a half or whose
+	// parts do not read back as the printed line in the reported order. Nothing
+	// is written then, because the other choice is a guess.
+	dropNameUnmappable   = "name_not_mappable"
+	dropNameRoleUnlinked = "name_role_not_in_snippet"
+	dropNoPublishedEmail = "no_published_email"
 	// dropEmailOffSiteDomain marks a published contact whose printed address
 	// belongs to somebody else's domain — the testimonial case, where the page
 	// prints a customer's own address and the read would file them as staff.

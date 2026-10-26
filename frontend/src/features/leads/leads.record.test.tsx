@@ -13,6 +13,7 @@ import {
   lead,
   openLeadActions,
   render,
+  SHIPPED_LEAD_ORIGINS,
   stubFetch,
   stubFetchWithMe,
 } from "./leads.testkit";
@@ -61,6 +62,12 @@ describe("LeadScreen — edit with If-Match (P-1)", () => {
     });
     render(<LeadScreen id="l-1" />);
 
+    // The lead has no title, so About folds the field away until asked.
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: /^Show \d+ empty fields?$/,
+      }),
+    );
     await userEvent.click(
       await screen.findByRole("button", { name: "Change Title" }),
     );
@@ -74,21 +81,79 @@ describe("LeadScreen — edit with If-Match (P-1)", () => {
     expect(patchBody).not.toHaveProperty("score");
   });
 
-  it("preserves the Qualify button and score/status/company badges", async () => {
+  it("reads where the lead came from and how the row was added as two facts", async () => {
+    stubFetch(async (url) => {
+      if (url.endsWith("/v1/lead-origins")) {
+        return jsonResponse(SHIPPED_LEAD_ORIGINS);
+      }
+      return jsonResponse({
+        ...lead,
+        origin: "referral",
+        origin_label: "Referral",
+        origin_detail: "Berlin summit",
+        source: "mirror:csv:pipedrive-export:lead:l-7",
+        imported_from: "pipedrive-export",
+      });
+    });
+    render(<LeadScreen id="l-1" />);
+
+    const origin = await screen.findByText("Origin");
+    expect(origin.closest("div")).toHaveTextContent("Referral");
+    expect(screen.getByText("Berlin summit")).toBeTruthy();
+    const added = screen.getByText("Added via");
+    expect(added.closest("div")).toHaveTextContent(
+      "Imported from pipedrive-export",
+    );
+    expect(screen.queryByText(/mirror:csv/)).toBeNull();
+  });
+
+  it("moves the origin with a PATCH that carries the origin and no source", async () => {
+    let patchBody: Record<string, unknown> | null = null;
+    stubFetch(async (url, method, request) => {
+      if (method === "PATCH") {
+        patchBody = JSON.parse(await request.text());
+        return jsonResponse({ ...lead, origin: "partner", version: 2 });
+      }
+      if (url.endsWith("/v1/lead-origins")) {
+        return jsonResponse(SHIPPED_LEAD_ORIGINS);
+      }
+      return jsonResponse(lead);
+    });
+    render(<LeadScreen id="l-1" />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^Show \d+ empty fields?$/ }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Change Origin" }),
+    );
+    // The picker opens on the click that started editing.
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Partner" }),
+    );
+
+    await waitFor(() => expect(patchBody).toBeTruthy());
+    expect(patchBody).toMatchObject({ origin: "partner" });
+    expect(patchBody).not.toHaveProperty("source");
+  });
+
+  it("preserves the Qualify button and reads the score, status and company", async () => {
     stubFetch(async () => jsonResponse(lead));
     render(<LeadScreen id="l-1" />);
     expect(await screen.findByTestId("lead-qualify")).toHaveTextContent(
       "Qualify",
     );
-    // The score reads in the band and on the folded score section's summary.
-    expect(screen.getAllByText("Score: 72").length).toBeGreaterThan(0);
-    // Status and company are readings in the band's strip, not pills among
-    // pills. The word is the same everywhere. Otherwise a German reader sees
-    // "In Bearbeitung" on the chip and the raw enum "contacted" in the cell.
+    // The score is the ring in How it stands.
+    expect(
+      (await screen.findAllByText("72")).some((el) =>
+        el.classList.contains("standing-ring-score"),
+      ),
+    ).toBe(true);
+    // The status word is the ladder's own, never the raw enum: a German
+    // reader would otherwise meet "contacted" beside "In Bearbeitung".
     expect(
       screen
         .getAllByText("Contacted")
-        .some((el) => el.classList.contains("stat-card-value")),
+        .some((el) => el.classList.contains("stage-ladder-name")),
     ).toBe(true);
     expect(
       screen
@@ -525,24 +590,6 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     expect(assign.hasAttribute("disabled")).toBe(true);
   });
 
-  // The details pane is open by default and remembers being hidden. Owner
-  // shown only there sits behind a toggle for anyone who collapsed it. The one
-  // control that takes a lead out of the queue belongs where the reader acts.
-  it("keeps the owner reachable with the details pane collapsed", async () => {
-    stubFetchWithMe(async (url) => {
-      if (url.includes("/leads/l-1")) {
-        return jsonResponse({ ...lead, owner_id: null, writable: false });
-      }
-      return undefined;
-    }, "u-9");
-    render(<LeadScreen id="l-1" />);
-    await waitFor(() => expect(screen.getByText("Unassigned")).toBeTruthy());
-
-    // Collapse the pane the owner used to live in, then look again.
-    await userEvent.click(screen.getByRole("button", { name: "Hide details" }));
-    expect(screen.getByRole("button", { name: "Assign" })).toBeTruthy();
-  });
-
   it("hides Assign to me when the lead is already owned by the current user", async () => {
     const { urls } = stubFetchWithMe(
       async () => jsonResponse({ ...lead, owner_id: "u-9" }),
@@ -649,7 +696,7 @@ describe("LeadScreen — the header's Email verb", () => {
     expect(verb.hasAttribute("disabled")).toBe(false);
   });
 
-  it("opens the composer on the lead from the header's address, already addressed", async () => {
+  it("opens the composer on the lead from its address in About, already addressed", async () => {
     // The address is a button into the product's composer, not a link for
     // the reader's mail client. A message sent through `mailto:` is never
     // filed on the lead. The composer is offered because the reader has a
@@ -665,7 +712,7 @@ describe("LeadScreen — the header's Email verb", () => {
     await userEvent.click(address);
 
     const dialog = await screen.findByRole("dialog", {
-      name: /Send email/,
+      name: /New email/,
     });
     expect(
       await within(dialog).findByRole("button", {

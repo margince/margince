@@ -36,9 +36,10 @@ type Clock func() time.Time
 type BaseLanguage func(ctx context.Context) string
 
 // UserLanguage answers the language the calling rep reads the app in, or ""
-// when they never chose one. It sits above the installation's language: the
-// rep is the one who sends the draft, so their own language is the better
-// guess for a contact who has never written.
+// when they never chose one. It sits above the installation's language.
+// The rep sends the draft, so their own language is the better guess for a
+// contact who has never written. Any correspondence that names a
+// language outranks it.
 type UserLanguage func(ctx context.Context) string
 
 // Resolver assembles the envelope every drafting surface is handed.
@@ -110,14 +111,23 @@ func (r *Resolver) Now() time.Time {
 // are text to read; and the subject is the weaker of the two, being a line
 // contacts often leave in the sender's language on a reply they wrote in theirs.
 type Written struct {
+	// Addressee is the text the addressee wrote in their own mail, newest
+	// first, as draftcore.AddresseeEvidence gives it. It outranks Stored: it is
+	// the sender's own text with quotes cut, read with today's quote rule.
+	Addressee []string
 	// Stored is the language recorded on the message, empty when none is.
-	// It outranks detection: the same message read twice must not answer two
-	// languages because a quoted chain grew underneath it.
+	// It outranks the rest of the text: the same message read twice must not
+	// answer two languages because a quoted chain grew underneath it.
 	Stored string
 	// Body is the correspondence itself, quoted history included.
 	Body string
 	// Subject is the fallback text, read only when the body says nothing.
 	Subject string
+	// Thread is the other messages of the conversation, in the order
+	// draftcore.LanguageEvidence gives them: the recipient's own mail first.
+	// Read after the answered message so a reply whose own text names no
+	// language still follows the exchange, not the rep's app language.
+	Thread []string
 	// Rewrite is the draft being rewritten, read after the correspondence and
 	// before the purpose: "make it shorter" must not change its language.
 	Rewrite string
@@ -136,9 +146,10 @@ type Written struct {
 // draft unsigned (DRAFT-AC-E-6) — a drafting screen that errors because it
 // could not work out a greeting is worse than a draft the rep edits.
 //
-// The ladder is stored, then the correspondence, then the draft being
-// rewritten, then the rep's typed purpose, then the rep's own app language,
-// then the installation's language, then English. A purpose too short to clear
+// The ladder is the addressee's own mail, then stored, then the correspondence (the answered message, then the
+// rest of the thread). Then the draft being rewritten, then the rep's typed
+// purpose, then the rep's own app language, then the installation's language,
+// then English. A purpose too short to clear
 // the detector's bar falls to the rep's app language, which is why that tier
 // sits above the installation's.
 func (r *Resolver) Resolve(ctx context.Context, written Written, state convstate.State) Envelope {
@@ -161,7 +172,11 @@ func (r *Resolver) Resolve(ctx context.Context, written Written, state convstate
 // order both ladders trust it. One list, so a rewrite or a first message with
 // no correspondence keeps the du or Sie of the text that chose its language.
 func (w Written) evidence() []string {
-	return []string{w.Body, w.Subject, w.Rewrite, w.Purpose}
+	out := make([]string, 0, 4+len(w.Addressee)+len(w.Thread))
+	out = append(out, w.Addressee...)
+	out = append(out, w.Body, w.Subject)
+	out = append(out, w.Thread...)
+	return append(out, w.Rewrite, w.Purpose)
 }
 
 // register is the first du or Sie the evidence shows.
@@ -181,8 +196,11 @@ func register(written Written) textlang.Register {
 // would reach the prompt as an instruction to write in a language nothing else
 // in the product can render.
 func (r *Resolver) language(ctx context.Context, written Written) textlang.Lang {
-	// The stored label is above the ladder rather than in it: it is a fact
-	// somebody recorded, where every tier below is evidence being read now.
+	// The stored label sits under the addressee's own text and above the rest:
+	// it was read at capture, possibly under an older quote rule.
+	if lang := textlang.DetectFirst(written.Addressee...); lang != textlang.Unknown {
+		return lang
+	}
 	if textlang.Known(written.Stored) {
 		return textlang.Lang(written.Stored)
 	}

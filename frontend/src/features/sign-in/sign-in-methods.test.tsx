@@ -42,16 +42,30 @@ const fullSignInGrants: GrantSpec = {
   capture_settings: ["read"],
 };
 
+type Provider = { key: string; label: string; enabled: boolean };
+
+const GOOGLE: Provider = {
+  key: "google",
+  label: "Continue with Google",
+  enabled: true,
+};
+const MICROSOFT: Provider = {
+  key: "microsoft",
+  label: "Continue with Microsoft",
+  enabled: true,
+};
+
 function mount(
-  providers: { key: string; label: string; enabled: boolean }[],
+  providers: Provider[],
   groupRoleMap: Record<string, string> = {},
   allow: GrantSpec = fullSignInGrants,
   server: {
     required?: boolean;
     ownConfirmed?: boolean;
     ownAnswer?: Promise<Response>;
-    app?: "none" | "stored";
-    appAnswered?: Promise<void>;
+    app?: "none" | "stored" | "environment";
+    microsoftTenant?: string;
+    onScreen?: string[];
   } = {},
 ) {
   const calls: unknown[] = [];
@@ -92,13 +106,16 @@ function mount(
     }
     if (request.url.includes("/installation/oauth-apps/")) {
       appReads.push(request.url);
-      await server.appAnswered;
+      const vendor = /\/oauth-apps\/(google|microsoft)$/.exec(request.url)?.[1];
       return server.app
         ? jsonResponse({
-            provider: "google",
-            configured: server.app === "stored",
+            provider: vendor,
+            configured: server.app !== "none",
             source: server.app,
-            client_id: server.app === "stored" ? "client-1" : "",
+            client_id: server.app === "none" ? "" : "client-1",
+            ...(vendor === "microsoft" && server.microsoftTenant
+              ? { tenant: server.microsoftTenant }
+              : {}),
             redirect_uris: [],
           })
         : jsonResponse(
@@ -110,6 +127,7 @@ function mount(
     // installation aggregate, which answers a different route.
     return jsonResponse({
       sign_in_providers: providers,
+      sign_in_screen: server.onScreen ?? [],
       require_sso: false,
       require_mfa: server.required ?? false,
       oidc_group_role_map: storedMap,
@@ -127,58 +145,20 @@ function mount(
 }
 
 describe("the sign-in methods card", () => {
-  // Not merely "on": there is no value of the setting that removes password, so
-  // the control has to exist and refuse rather than be absent — an admin who
-  // cannot find the row cannot tell whether password sign-in is configured.
-  it("shows password as a method that cannot be switched off", async () => {
-    mount([{ key: "google", label: "Google", enabled: true }]);
-    const control = await screen.findByRole("switch", {
-      name: /email and password/i,
-    });
-    expect(control.getAttribute("aria-checked")).toBe("true");
-    // Natively disabled: aria-disabled is reserved for a write in flight, and a
-    // control that is merely busy would become flippable again a moment later.
-    // This one never does.
-    expect(control.hasAttribute("disabled")).toBe(true);
-  });
-
-  // The whole list travels. Sending only the flipped key would silently turn
-  // every other provider off, because the setting replaces rather than merges.
-  it("sends the whole remaining list when a provider is switched off", async () => {
-    const { calls } = mount([
-      { key: "google", label: "Google", enabled: true },
-      { key: "microsoft", label: "Microsoft", enabled: true },
-    ]);
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole("switch", { name: /google/i }));
-    // Waited on rather than read straight after the click: the request is only
-    // recorded when the mutation's fetch resolves, so a bare assertion here
-    // would pass on timing rather than on the body that was sent.
-    await waitFor(() =>
-      expect(calls).toEqual([{ enabled_oidc_providers: ["microsoft"] }]),
-    );
-  });
-
-  it("sends the provider added back when one is switched on", async () => {
-    const { calls } = mount([
-      { key: "google", label: "Google", enabled: false },
-      { key: "microsoft", label: "Microsoft", enabled: true },
-    ]);
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole("switch", { name: /google/i }));
-    await waitFor(() =>
-      expect(calls).toEqual([
-        { enabled_oidc_providers: ["microsoft", "google"] },
-      ]),
-    );
+  // There is no value of the setting that removes password, so the row says
+  // so in words and offers no switch to flip.
+  it("shows password as always on, with no switch", async () => {
+    mount([GOOGLE], {}, undefined, { onScreen: ["google"], app: "stored" });
+    expect(await screen.findByText("Always on")).toBeTruthy();
+    expect(
+      screen.queryByRole("switch", { name: /email and password/i }),
+    ).toBeNull();
   });
 
   // A failed refetch replaces the switches with the gate's error arm; a save
   // failure about those switches has nothing left to stand beside.
   it("drops a save failure once the settings themselves fail to load", async () => {
-    const { refusing, qc } = mount([
-      { key: "google", label: "Google", enabled: true },
-    ]);
+    const { refusing, qc } = mount([{ ...GOOGLE, enabled: false }]);
     const user = userEvent.setup();
     refusing.writes = true;
     await user.click(await screen.findByRole("switch", { name: /google/i }));
@@ -193,61 +173,38 @@ describe("the sign-in methods card", () => {
     expect(screen.queryByText("Change not saved")).toBeNull();
   });
 
-  // The switch is the admin's choice. The sign-in screen also needs the
-  // provider's app, so the row says when that is missing.
-  it("says a provider stays off the sign-in screen until its app exists", async () => {
-    mount([{ key: "google", label: "Google", enabled: true }], {}, undefined, {
-      app: "none",
+  // The verdict is the server's sign_in_screen, never worked out here.
+  it("says a provider is on the sign-in screen only when the server draws it", async () => {
+    mount([GOOGLE, MICROSOFT], {}, undefined, {
+      onScreen: ["google"],
+      app: "stored",
+      microsoftTenant: "dir",
     });
+    expect(await screen.findAllByText("On the sign-in screen")).toHaveLength(1);
     expect(
-      await screen.findByText(/not on the sign-in screen yet/i),
+      await screen.findByText("The Microsoft app cannot be used right now."),
     ).toBeTruthy();
-    const control = screen.getByRole("switch", { name: /google/i });
-    expect(control.getAttribute("aria-checked")).toBe("true");
+    expect(screen.getAllByText("Not on the sign-in screen")).toHaveLength(1);
   });
 
-  it("shows no hint on a switched-on provider until its app read answers", async () => {
-    let answer = () => {};
-    const appAnswered = new Promise<void>((resolve) => {
-      answer = resolve;
-    });
-    mount([{ key: "google", label: "Google", enabled: true }], {}, undefined, {
-      app: "none",
-      appAnswered,
-    });
-    expect(await screen.findByRole("switch", { name: /google/i })).toBeTruthy();
+  it("says a chosen provider is missing because its app is not set up", async () => {
+    mount([GOOGLE], {}, undefined, { app: "none" });
     expect(
-      screen.queryByText(/shows this provider on the sign-in screen/i),
-    ).toBeNull();
-    expect(screen.queryByText(/not on the sign-in screen yet/i)).toBeNull();
-    answer();
-    expect(
-      await screen.findByText(/not on the sign-in screen yet/i),
+      await screen.findByText("The Google app is not set up."),
     ).toBeTruthy();
+    expect(screen.getByText("Not on the sign-in screen")).toBeTruthy();
   });
 
-  it("keeps the plain hint on a switched-off provider and asks for no app", async () => {
-    const { appReads } = mount(
-      [
-        { key: "google", label: "Google", enabled: false },
-        { key: "microsoft", label: "Microsoft", enabled: true },
-      ],
-      {},
-      undefined,
-      { app: "none" },
-    );
+  it("says a Microsoft app with no directory keeps its button off the screen", async () => {
+    mount([MICROSOFT], {}, undefined, { app: "environment" });
     expect(
-      await screen.findByText(/not on the sign-in screen yet/i),
+      await screen.findByText(/Microsoft app is not limited to your/),
     ).toBeTruthy();
-    expect(screen.getAllByText(/not on the sign-in screen yet/i)).toHaveLength(
-      1,
-    );
-    expect(appReads.some((url) => url.endsWith("/google"))).toBe(false);
   });
 
   it("asks for no app when the reader may not read capture settings", async () => {
     const { appReads } = mount(
-      [{ key: "google", label: "Google", enabled: true }],
+      [GOOGLE],
       {},
       {
         installation_settings: ["read", "update"],
@@ -256,19 +213,78 @@ describe("the sign-in methods card", () => {
       { app: "none" },
     );
     expect(
-      await screen.findByText(/shows this provider on the sign-in screen/i),
+      await screen.findByText(
+        "The Continue with Google app cannot be used right now.",
+      ),
     ).toBeTruthy();
     expect(appReads).toEqual([]);
   });
 
-  it("describes a provider whose app is stored as shown on sign-in", async () => {
-    mount([{ key: "google", label: "Google", enabled: true }], {}, undefined, {
+  it("says a provider switched off is turned off", async () => {
+    mount([{ ...GOOGLE, enabled: false }]);
+    expect(await screen.findByText("Turned off")).toBeTruthy();
+  });
+
+  // Turning a provider off takes a way in from everyone who uses it, so the
+  // switch only opens the question; the typed phrase answers it.
+  it("sends nothing on switch-off until the phrase is typed and confirmed", async () => {
+    const { calls } = mount([GOOGLE, MICROSOFT], {}, undefined, {
+      onScreen: ["google", "microsoft"],
       app: "stored",
     });
-    expect(
-      await screen.findByText(/shows this provider on the sign-in screen/i),
-    ).toBeTruthy();
-    expect(screen.queryByText(/not on the sign-in screen yet/i)).toBeNull();
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("switch", { name: "Continue with Google" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Turn off Continue with Google?",
+    });
+    const confirm = within(dialog).getByRole("button", {
+      name: "Turn off Google sign-in",
+    });
+    expect(confirm).toHaveProperty("disabled", true);
+    expect(calls).toEqual([]);
+
+    await user.type(
+      within(dialog).getByRole("textbox"),
+      "I am aware of the risk",
+    );
+    await user.click(confirm);
+    // The whole remaining list travels: the setting replaces rather than
+    // merges, so sending only the flipped key would turn every other one off.
+    await waitFor(() =>
+      expect(calls).toEqual([{ enabled_oidc_providers: ["microsoft"] }]),
+    );
+  });
+
+  it("keeps the provider on, and sends nothing, when the admin backs out", async () => {
+    const { calls } = mount([GOOGLE], {}, undefined, {
+      onScreen: ["google"],
+      app: "stored",
+    });
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("switch", { name: "Continue with Google" }),
+    );
+    await user.click(await screen.findByRole("button", { name: "Keep it on" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(calls).toEqual([]);
+  });
+
+  // Turning one back on gives a way in rather than taking one, so it asks
+  // nothing and saves at once.
+  it("saves at once, with the provider added back, when one is switched on", async () => {
+    const { calls } = mount([{ ...GOOGLE, enabled: false }, MICROSOFT]);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("switch", { name: "Continue with Google" }),
+    );
+    await waitFor(() =>
+      expect(calls).toEqual([
+        { enabled_oidc_providers: ["microsoft", "google"] },
+      ]),
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   // An admin cannot add a provider here, so a deployment with none has nothing
@@ -412,9 +428,11 @@ describe("the group role grant editor", () => {
     const headers = within(panel)
       .getAllByRole("columnheader")
       .map((header) => header.textContent);
-    expect(headers).toEqual(["IdP group", "Granted role", "Actions"]);
+    expect(headers).toEqual(["Directory group", "Role they get", "Actions"]);
     // The role reads under its product name, the same label the roster uses.
-    const role = screen.getByRole("combobox", { name: /granted role/i });
+    const role = screen.getByRole("combobox", {
+      name: /role for the .* group/i,
+    });
     expect(role.textContent).toContain("Team lead");
   });
 
@@ -424,22 +442,22 @@ describe("the group role grant editor", () => {
     const { calls } = mount([], { sales: "rep" });
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: /add group/i }));
-    const groups = screen.getAllByRole("textbox", { name: /idp group/i });
+    const groups = screen.getAllByRole("textbox", { name: /directory group/i });
     const added = groups[groups.length - 1];
     if (!added) {
       throw new Error("the added row rendered no group input");
     }
     await user.type(added, "platform");
-    const roles = screen.getAllByRole("combobox", { name: /granted role/i });
+    const roles = screen.getAllByRole("combobox", {
+      name: /role for the .* group/i,
+    });
     const addedRole = roles[roles.length - 1];
     if (!addedRole) {
       throw new Error("the added row rendered no role picker");
     }
     await user.click(addedRole);
     await user.click(await screen.findByRole("option", { name: "Ops" }));
-    await user.click(
-      screen.getByRole("button", { name: /save group grants/i }),
-    );
+    await user.click(screen.getByRole("button", { name: /save group roles/i }));
     await waitFor(() =>
       expect(calls).toEqual([
         { oidc_group_role_map: { sales: "rep", platform: "ops" } },
@@ -453,9 +471,7 @@ describe("the group role grant editor", () => {
     await user.click(
       await screen.findByRole("button", { name: "Remove the sales mapping" }),
     );
-    await user.click(
-      screen.getByRole("button", { name: /save group grants/i }),
-    );
+    await user.click(screen.getByRole("button", { name: /save group roles/i }));
     await waitFor(() =>
       expect(calls).toEqual([
         { oidc_group_role_map: { engineering: "manager" } },
@@ -469,12 +485,10 @@ describe("the group role grant editor", () => {
     await user.click(
       await screen.findByRole("button", { name: "Remove the sales mapping" }),
     );
-    await user.click(
-      screen.getByRole("button", { name: /save group grants/i }),
-    );
+    await user.click(screen.getByRole("button", { name: /save group roles/i }));
     await waitFor(() =>
       expect(
-        screen.queryByRole("button", { name: /save group grants/i }),
+        screen.queryByRole("button", { name: /save group roles/i }),
       ).toBeNull(),
     );
     await waitFor(() =>
@@ -494,19 +508,17 @@ describe("the group role grant editor", () => {
     mount([], full);
     const user = userEvent.setup();
     const groups = await screen.findAllByRole("textbox", {
-      name: /idp group/i,
+      name: /directory group/i,
     });
     const last = groups.at(-1);
     if (!last) {
       throw new Error("the full map rendered no group input");
     }
     await user.type(last, "x");
-    await user.click(
-      screen.getByRole("button", { name: /save group grants/i }),
-    );
+    await user.click(screen.getByRole("button", { name: /save group roles/i }));
     await waitFor(() =>
       expect(
-        screen.queryByRole("button", { name: /save group grants/i }),
+        screen.queryByRole("button", { name: /save group roles/i }),
       ).toBeNull(),
     );
     await waitFor(() => expect(document.activeElement).toBe(groups[0]));
@@ -522,7 +534,7 @@ describe("the group role grant editor", () => {
     // The empty map says what it costs: nothing extra is granted.
     expect(await screen.findByText(/no groups are mapped/i)).toBeTruthy();
     await user.click(screen.getByRole("button", { name: /add group/i }));
-    const save = screen.getByRole("button", { name: /save group grants/i });
+    const save = screen.getByRole("button", { name: /save group roles/i });
     expect(save.hasAttribute("disabled")).toBe(true);
     expect(screen.getByText(/every mapping needs a group name/i)).toBeTruthy();
     await user.click(save);
@@ -535,14 +547,14 @@ describe("the group role grant editor", () => {
     mount([], {});
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: /add group/i }));
+    expect(screen.getByText(/groups only ever add a role/i)).toBeTruthy();
     expect(
-      screen.getByText(/grants the mapped roles and never removes any/i),
+      screen.getByText(
+        /taking someone out of a directory group does not take/i,
+      ),
     ).toBeTruthy();
     expect(
-      screen.getByText(/removing a member from an idp group does not take/i),
-    ).toBeTruthy();
-    expect(
-      screen.getByText(/mapping a group onto admin grants admin/i),
+      screen.getByText(/a group mapped to admin makes every invited member/i),
     ).toBeTruthy();
   });
 
@@ -554,11 +566,13 @@ describe("the group role grant editor", () => {
   // the grant editor withholds itself.
   it("shows the map read-only to a caller without the sign-in-policy grant", async () => {
     mount([], { sales: "rep" }, { installation_settings: ["read", "update"] });
-    const group = await screen.findByRole("textbox", { name: /idp group/i });
+    const group = await screen.findByRole("textbox", {
+      name: /directory group/i,
+    });
     expect(group.hasAttribute("disabled")).toBe(true);
     expect(screen.queryByRole("button", { name: /add group/i })).toBeNull();
     expect(
-      screen.queryByRole("button", { name: /save group grants/i }),
+      screen.queryByRole("button", { name: /save group roles/i }),
     ).toBeNull();
   });
 
@@ -568,11 +582,11 @@ describe("the group role grant editor", () => {
     const user = userEvent.setup();
     expect(await screen.findByDisplayValue("sales")).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: /save group grants/i }),
+      screen.queryByRole("button", { name: /save group roles/i }),
     ).toBeNull();
     await user.click(screen.getByRole("button", { name: /add group/i }));
     expect(
-      screen.getByRole("button", { name: /save group grants/i }),
+      screen.getByRole("button", { name: /save group roles/i }),
     ).toBeTruthy();
   });
 });

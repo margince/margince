@@ -13,12 +13,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider, useT } from "../../i18n";
 import { ENTITY_KINDS, type EntityKind } from "../../lib/entity";
+import type { TimelineFilter } from "../../lib/timelinefilter";
 import { ContactTimelineTab } from "../contacts/contacttabs";
 import {
   chronologyNotice,
   hasChronologyFooter,
   type RecordChronology,
-  type TimelineFilter,
   useRecordChronology,
 } from "./recordchronology";
 
@@ -44,7 +44,7 @@ function activity(
   row: Pick<SectionActivity, "id" | "kind" | "occurred_at"> &
     Partial<SectionActivity>,
 ): SectionActivity {
-  return { is_done: false, ...CAPTURED, ...row };
+  return { offers_email: false, is_done: false, ...CAPTURED, ...row };
 }
 
 const change: FieldChange = {

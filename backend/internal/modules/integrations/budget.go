@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
@@ -125,13 +126,13 @@ func (s *Store) poolUsedThisMonth(ctx context.Context, tx pgx.Tx, connID, pool s
 	// can never say there is budget left while the ceiling says otherwise.
 	var used int
 	err := tx.QueryRow(ctx, `
-		SELECT COALESCE(SUM(`+chargedCredits+`), 0)
+		SELECT COALESCE(SUM(`+storekit.ProviderChargedCredits+`), 0)
 		  FROM provider_run_reservation r
 		  JOIN provider_run run ON run.id = r.run_id
 		 WHERE r.pool = $2
 		   AND run.provider = (SELECT provider FROM provider_connection WHERE id = $1)
 		   AND run.created_at >= (date_trunc('month', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')
-		   AND `+spendExcludedStates,
+		   AND `+storekit.ProviderRunCharges,
 		connID, pool).Scan(&used)
 	if err != nil {
 		return 0, fmt.Errorf("integrations: reading %s spend: %w", pool, err)

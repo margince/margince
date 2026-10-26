@@ -15,16 +15,16 @@ import {
   UsersRound,
   Wrench,
 } from "lucide-react";
-import { type ReactNode, useRef, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { PageHeadAction } from "../components/pageheadaction";
 import { Button, Card } from "../design-system/atoms";
-import { SETTINGS_PAGES } from "../features/settings/settingscatalog";
 import { SettingsSearchBox } from "../features/settings/settingssearchbox";
 import type { Locale } from "../i18n";
 import { en } from "../i18n/en";
 import type { Route } from "../lib/router";
+import { SETTINGS_PAGES } from "../lib/settingscatalog";
 import type { GrantSpec } from "../testing/mefixture";
 import {
   installFetchStub,
@@ -32,11 +32,16 @@ import {
   meRoute,
   type RouteMap,
   StoryProviders,
-  WithInstallationBrand,
 } from "../testing/story-utils";
 import type { NavSection } from "./nav";
-import { CommandPalette, useBuiltinCommands } from "./palette";
 import { PageTitle, Shell } from "./shell";
+import {
+  COUNTS,
+  SeedInstallation,
+  SHELL_ROUTES,
+  ShellExample,
+  usePaletteSeam,
+} from "./shell.storykit";
 import { WorkspaceRail } from "./shellrail";
 import { TopBar } from "./topbar";
 // The settings stack's own sheet. A screen sheet loads with its screen, and the
@@ -63,11 +68,6 @@ const meta: Meta<typeof Shell> = {
 export default meta;
 type Story = StoryObj<typeof Shell>;
 
-// What is waiting, spelled once and handed to BOTH halves of the chrome the way
-// the shell hands it: the Decisions row's badge in the panel and the mark's chip
-// in the strip are two readings of one queue, and a frame that fed one and left
-// the other at nothing would draw the same queue as 12 and as empty at once.
-const COUNTS = { inbox: 12, tasks: 4 };
 const COMPANY_WORDMARK =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 700 200'%3E%3Crect width='700' height='200' fill='white'/%3E%3Ctext x='350' y='125' text-anchor='middle' font-family='sans-serif' font-size='92' font-weight='700' fill='%23ff6500'%3EGRADION%3C/text%3E%3C/svg%3E";
 // The same company's square badge. It exists because the wordmark above is
@@ -88,95 +88,10 @@ const COMPANY_BADGE =
  */
 function stubSession(allow: GrantSpec = {}, about: RouteMap = {}) {
   installFetchStub({
+    ...SHELL_ROUTES,
     "GET /me": meRoute(allow),
-    "GET /ai/usage": () =>
-      jsonResponse({
-        days: [],
-        budget: { monthly_tokens: 100, spent_tokens: 20, band: "normal" },
-      }),
     ...about,
   });
-}
-
-// The brand block reads the installation's brand off /me in the real app; a
-// story puts it on the stubbed /me so the company heads
-// the rail the way it does for every reader of a live installation. Without it
-// the block honestly falls back to the product's own mark and name.
-//
-// No logo_url: Storybook serves no object store, and what a broken image would
-// draw here is the monogram anyway. The monogram IS the case worth framing —
-// the mark a company gets when its site declared no icon.
-function SeedInstallation({
-  children,
-  logoUrl,
-  logoIconUrl,
-}: Readonly<{
-  children: ReactNode;
-  logoUrl?: string;
-  logoIconUrl?: string;
-}>) {
-  return (
-    <WithInstallationBrand
-      brand={{
-        display_name: "Gradion GmbH",
-        logo_url: logoUrl,
-        logo_icon_url: logoIconUrl,
-      }}
-    >
-      {children}
-    </WithInstallationBrand>
-  );
-}
-
-/**
- * The search row wired to the thing it actually opens.
- *
- * `onOpenSearch` is not a decorative prop: the top bar's field is the only
- * pointer route into the command palette, so a story that stubbed it would show
- * a control that does nothing and prove nothing. The app mounts the palette
- * beside the shell (App.tsx) — so does this, off the same builtin command list.
- */
-function usePaletteSeam() {
-  const [open, setOpen] = useState(false);
-  const commands = useBuiltinCommands();
-  const palette = (
-    <CommandPalette
-      open={open}
-      onClose={() => setOpen(false)}
-      commands={commands}
-    />
-  );
-  return { openSearch: () => setOpen(true), palette };
-}
-
-function ShellExample({
-  at = "#/",
-  children,
-}: Readonly<{
-  // The address this frame stands on. Stated on every frame rather than left to
-  // whatever the last one visited: the catalog keeps one iframe across a walk
-  // between stories, so a frame that named a route used to rename the page in
-  // every frame opened after it. `#/` is the product's own first destination.
-  at?: string;
-  children: ReactNode;
-}>) {
-  // Where the frame OPENS, once, and not where it is held: the rail's rows are
-  // real links, so a frame that restated its address on every render would drag
-  // a reader back the instant they used the navigation it is a picture of.
-  const opened = useRef(false);
-  if (!opened.current) {
-    opened.current = true;
-    globalThis.location.hash = at;
-  }
-  const { openSearch, palette } = usePaletteSeam();
-  return (
-    <>
-      <Shell onOpenSearch={openSearch} counts={COUNTS}>
-        {children}
-      </Shell>
-      {palette}
-    </>
-  );
 }
 
 export const Default: Story = {

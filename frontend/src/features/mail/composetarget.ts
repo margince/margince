@@ -76,11 +76,15 @@ export function useAnswerTarget({
 }
 
 // The files attached per target. An upload may finish after a switch, and its
-// callback keeps the bank of the target it started on.
-export function useTargetFiles(fileTarget: string) {
+// callback keeps the bank of the target it started on. Seeded files belong to
+// the target the composer opened on, read once when it mounts.
+export function useTargetFiles(
+  fileTarget: string,
+  seeded: readonly ChosenFile[] = [],
+) {
   const [filesByTarget, setFilesByTarget] = useState<
     Record<string, readonly ChosenFile[]>
-  >({});
+  >(() => (seeded.length > 0 ? { [fileTarget]: seeded } : {}));
   const files = filesByTarget[fileTarget] ?? [];
   const setFiles = (
     update: (current: readonly ChosenFile[]) => readonly ChosenFile[],

@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/design-system/provenance.tsx frontend/src/app/ai-activity.ts frontend/src/app/agentrail.tsx frontend/src/features/voice-knowledge/documentextraction.tsx backend/internal/modules/aiactivity backend/internal/modules/ai backend/internal/platform/providerhealthstore -->
 # What the AI does, and what it does not
 
 What the AI makes for you, and how to read it. The rules that limit it (the
@@ -14,13 +15,13 @@ Everything it suggests carries its evidence. Changes to your records either wait
 Also called: AI features, assistant, copilot, what can Margince AI do.
 
 ### Can the AI send email on my behalf?
-Inside the app, no: **Draft with AI** in the email composer writes a draft, and only you press **Send**. An outside agent you connected can send as you, at once, if it holds the **Send messages** permission. The screen where you allow that says it "sends messages as you, without asking first".
+Inside the app, no: **Draft email** in the email composer writes a draft, and only you press **Send**. An outside agent you connected can send as you, at once, if it holds the **Send messages** permission. The screen where you allow that says it "sends messages as you, without asking first".
 
-The one exception is an installation that set a [send floor](agents-and-passports.md#your-installation-can-be-stricter), which turns every agent send into an approval. Every send still needs recorded consent for its purpose. The Morning brief agent that runs during the night can never send.
+Every send still needs recorded consent for its purpose. The Morning brief agent that runs during the night can never send.
 Also called: auto-send, send without asking, AI emails customers.
 
 ### How do I draft an email with AI?
-To have Margince draft an email, open the composer from a contact's page and choose **Draft with AI**. The button reads **Email**, or **Write** where there are several channels. The composer is where you confirm: it says "Review and edit the draft. Sending cannot be undone."
+To have Margince draft an email, open the composer from a contact's page and choose **Draft email**. The button on the page reads **Email**, or **Write** where there are several channels. The composer is where you confirm: nothing goes out until you press **Send**.
 
 Check and edit the draft, fill in **Reason for contact** when it asks, then choose **Send**; nothing asks again. The AI never adds a sign-off; you set your signature in **Settings → Account**.
 Also called: AI writer, write a reply, compose with AI.
@@ -42,7 +43,7 @@ Also called: AI outage, no credit, mail stuck unsure, enrichment stopped.
 
 ## What the AI does for you
 
-**Drafting.** The AI writes email drafts (**Draft with AI**). It does not send
+**Drafting.** The AI writes email drafts (**Draft email**). It does not send
 them. Your email signature is yours: the app notes "AI drafts never add a
 sign-off."
 

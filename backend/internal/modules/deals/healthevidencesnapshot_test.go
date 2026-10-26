@@ -23,6 +23,9 @@ package deals
 // fragments.
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"strings"
 	"testing"
@@ -61,4 +64,58 @@ func TestTheRecencyNumberAndItsEvidenceAreReadTogether(t *testing.T) {
 				strings.TrimSpace(statement))
 		}
 	}
+}
+
+// The meeting-ahead answer feeds both recency and the stalled flag, so it is
+// read in the statement that reads the clock it is measured against.
+func TestTheMeetingAheadIsReadWithTheClock(t *testing.T) {
+	t.Parallel()
+	file, err := parser.ParseFile(token.NewFileSet(), "health.go", nil, 0)
+	if err != nil {
+		t.Fatalf("parsing health.go: %v", err)
+	}
+	together := 0
+	ast.Inspect(file, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok || len(call.Args) < 2 {
+			return true
+		}
+		if readsTheClock(call.Args[1]) {
+			if !callsMeetingAhead(call.Args[1]) {
+				t.Error("a statement in health.go reads last_activity_at without MeetingAheadSQL: read the two " +
+					"together, or recency and the stalled flag can answer from two moments")
+			}
+			together++
+		}
+		return true
+	})
+	if together == 0 {
+		t.Fatal("no statement in health.go reads last_activity_at, so this test checks nothing")
+	}
+}
+
+func readsTheClock(expr ast.Expr) bool {
+	found := false
+	ast.Inspect(expr, func(n ast.Node) bool {
+		if lit, ok := n.(*ast.BasicLit); ok {
+			if text, isString := gatekit.LiteralText(lit); isString && strings.Contains(text, "d.last_activity_at") {
+				found = true
+			}
+		}
+		return !found
+	})
+	return found
+}
+
+func callsMeetingAhead(expr ast.Expr) bool {
+	found := false
+	ast.Inspect(expr, func(n ast.Node) bool {
+		if call, ok := n.(*ast.CallExpr); ok {
+			if name, ok := call.Fun.(*ast.Ident); ok && name.Name == "MeetingAheadSQL" {
+				found = true
+			}
+		}
+		return !found
+	})
+	return found
 }

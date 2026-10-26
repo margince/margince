@@ -123,6 +123,20 @@ func (s *Sink) WithParticipantNamer(name ParticipantNamer) *Sink {
 	return &c
 }
 
+// LeadScorer scores a lead the sink is about to insert. It answers the opening
+// score for the row and a function that writes the first score-history point
+// once the row exists. The contacts module owns the scoring and the history
+// table, so compose injects it. Nil leaves the database default, which is what
+// fixtures get.
+type LeadScorer func(ctx context.Context, tx pgx.Tx, title, origin string) (int, func(context.Context, pgx.Tx, ids.LeadID) error, error)
+
+// WithLeadScorer returns a copy that scores every lead it creates.
+func (s *Sink) WithLeadScorer(score LeadScorer) *Sink {
+	c := *s
+	c.scoreLead = score
+	return &c
+}
+
 // recordThisImport writes the acting seat's import row, makes them a
 // participant, and re-derives the audience over the contributors that now
 // includes them.
@@ -167,7 +181,7 @@ func (s *Sink) recordThisImport(
 		fields.judged.bccOnly); err != nil {
 		return err
 	}
-	if err := stampMessageEnds(ctx, tx, id, owner, fields, rec.Counterparty); err != nil {
+	if err := stampMessageEnds(ctx, tx, id, owner, fields, rec); err != nil {
 		return err
 	}
 	// The confidentiality question for THIS seat's view of the thread, opened
@@ -252,7 +266,8 @@ func seatDeliveredTx(
 // rewrote the identity, a mailbox echoing its own send.
 //
 // Otherwise only on evidence that the two mailboxes hold ONE message rather than
-// two that share a Message-ID: the same subject, body and files.
+// two that share a Message-ID: the same subject, body and files. Masked text is
+// no such evidence, so masked mail asks maskedReplayIsProvenTx instead.
 //
 // The address test below cannot answer that on its own. It reads the addresses
 // off the record being captured, and on a replay that record is whatever this
@@ -297,18 +312,23 @@ func replayClaimIsProvenTx(
 	if err != nil || held {
 		return held, err
 	}
+	masked, err := eitherSideMaskedTx(ctx, tx, id, fields)
+	if err != nil {
+		return false, err
+	}
+	if masked {
+		return maskedReplayIsProvenTx(ctx, tx, id, seat, carried)
+	}
 	var same bool
+	args := []any{id, fields.Subject, fields.Body, carried}
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM activity a
 			 WHERE a.id = $1
 			   AND a.subject IS NOT DISTINCT FROM NULLIF($2, '')
 			   AND a.body IS NOT DISTINCT FROM NULLIF($3, '')
-			   AND NOT EXISTS (
-			       SELECT 1 FROM attachment f
-			        WHERE f.activity_id = a.id
-			          AND (f.checksum IS NULL OR f.checksum <> ALL($4))))`,
-		id, fields.Subject, fields.Body, carried).Scan(&same); err != nil {
+			   AND `+storedFilesWereCarried(len(args))+`)`,
+		args...).Scan(&same); err != nil {
 		return false, fmt.Errorf("capture: comparing %s with the message it collided with: %w", id, err)
 	}
 	return same, nil

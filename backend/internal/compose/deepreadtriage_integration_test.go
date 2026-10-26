@@ -64,7 +64,23 @@ func newTriageTestWorker(e *integration.Env, site *fakeSite, extractBrain comple
 func openTriageQuestion(t *testing.T, e *integration.Env, domain, email, display string) SiteDeepReadArgs {
 	t.Helper()
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
+	res := captureMailFrom(t, e, e.Rep1, domain, email, display)
+	if !res.TriagePending {
+		t.Fatalf("ensure %s did not open the triage question: %+v", email, res)
+	}
 
+	read, _, err := e.Contacts.StartDomainTriageSiteRead(ctx, domain, systemDomainTriageActor, nil)
+	if err != nil {
+		t.Fatalf("starting the triage read: %v", err)
+	}
+	return SiteDeepReadArgs{Workspace: e.WS, SiteReadID: read.ID, RequestedBy: systemDomainTriageActor}
+}
+
+// captureMailFrom lands one inbound mail from the sender in the owner's
+// mailbox, through the ensure every capture path shares.
+func captureMailFrom(t *testing.T, e *integration.Env, owner ids.UUID, domain, email, display string) contacts.EnsureCounterpartyResult {
+	t.Helper()
+	ctx := e.As(owner, nil, integration.AdminPerms)
 	activityID := ids.New[ids.ActivityKind]()
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
@@ -77,21 +93,13 @@ func openTriageQuestion(t *testing.T, e *integration.Env, domain, email, display
 	}
 	res, err := e.Contacts.EnsureCounterparty(ctx, contacts.EnsureCounterpartyInput{
 		Email: email, DisplayName: display, Domain: domain,
-		OwnerID: e.Rep1, ActivityID: activityID,
+		OwnerID: owner, ActivityID: activityID,
 		Source: "gmail:" + activityID.String(), CapturedBy: "connector:gmail",
 	})
 	if err != nil {
 		t.Fatalf("ensure %s: %v", email, err)
 	}
-	if !res.TriagePending {
-		t.Fatalf("ensure %s did not open the triage question: %+v", email, res)
-	}
-
-	read, _, err := e.Contacts.StartDomainTriageSiteRead(ctx, domain, systemDomainTriageActor, nil)
-	if err != nil {
-		t.Fatalf("starting the triage read: %v", err)
-	}
-	return SiteDeepReadArgs{Workspace: e.WS, SiteReadID: read.ID, RequestedBy: systemDomainTriageActor}
+	return res
 }
 
 // triageState reads back what the run decided.

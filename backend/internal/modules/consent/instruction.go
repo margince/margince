@@ -23,6 +23,7 @@ package consent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -157,6 +158,9 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 		review, err := claimReviewForDirectionTx(ctx, tx, reviewID)
 		if err != nil {
 			return err
+		}
+		if !directableBy(ctx, review.Refusals) {
+			return apperrors.ErrPermissionDenied
 		}
 		// THE FACTS ARE THE REVIEW'S, not the clock's. An instruction says "on
 		// what this review recorded, send anyway", and dating it from now would
@@ -332,10 +336,6 @@ func validateDirect(in DirectInput) error {
 	// caller free to name any version could write "v99" onto an instruction and
 	// the record would assert an acknowledgement of text nobody ever wrote —
 	// which is exactly the assertion a dispute about an override turns on.
-	//
-	// The queue card has its own version because a card and a modal are not the
-	// same words: somebody approving from a list read a summary, and recording
-	// them as having read the modal's caution would overstate what they saw.
 	// COMPARED AND STORED AS THE SAME VALUE. Trimming only for the comparison
 	// let " override-v1 " pass the check and land on the row, where it names a
 	// version the served set does not contain — so the record would claim an
@@ -357,6 +357,9 @@ type directableReview struct {
 	// IntentID is the held message this review is about, so the decision can
 	// fingerprint what the human is looking at.
 	IntentID ids.UUID
+	// Refusals are the reasons the message was held, which decide whether this
+	// caller may direct past them (directableBy).
+	Refusals []RefusedRecipient
 }
 
 // claimReviewForDirectionTx takes the review this decision is about.
@@ -368,17 +371,22 @@ type directableReview struct {
 // impossible.
 func claimReviewForDirectionTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (directableReview, error) {
 	var out directableReview
+	var refusals []byte
 	err := tx.QueryRow(ctx, `
 		SELECT state, opened_at,
-		       coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid)
+		       coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid),
+		       coalesce(refusals, '[]'::jsonb)
 		  FROM communication_review
 		 WHERE id = $1 AND resolved_at IS NULL
-		 FOR UPDATE`, id).Scan(&out.State, &out.OpenedAt, &out.IntentID)
+		 FOR UPDATE`, id).Scan(&out.State, &out.OpenedAt, &out.IntentID, &refusals)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return directableReview{}, apperrors.ErrNotFound
 	}
 	if err != nil {
 		return directableReview{}, fmt.Errorf("consent: reading the review this decision answers: %w", err)
+	}
+	if err := json.Unmarshal(refusals, &out.Refusals); err != nil {
+		return directableReview{}, fmt.Errorf("consent: reading what this review refused: %w", err)
 	}
 	return out, nil
 }
@@ -423,24 +431,6 @@ func isDuplicateInstruction(err error) bool {
 
 // servedWarningVersion reports whether this build published the wording a
 // caller says they were shown.
-//
-// TWO, and they are different surfaces rather than two spellings of one. The
-// override warning is the caution in the modal a director reads before sending;
-// the queue-card version names the summary an approver answered from a list.
-// Recording one as the other would say somebody read words they never saw.
 func servedWarningVersion(version string) bool {
-	switch strings.TrimSpace(version) {
-	case OverrideWarningVersion, QueueCardWarningVersion:
-		return true
-	default:
-		return false
-	}
+	return strings.TrimSpace(version) == OverrideWarningVersion
 }
-
-// QueueCardWarningVersion names the summary an approver answers from in the
-// approvals queue, as distinct from the modal's own caution.
-//
-// It lives here rather than in compose so the validator and the effect that
-// writes it read one constant: two spellings would let a version be recorded
-// that the check does not admit.
-const QueueCardWarningVersion = "queue-card-v1"

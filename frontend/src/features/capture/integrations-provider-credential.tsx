@@ -3,7 +3,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plug } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../../api/client";
 import {
   Badge,
@@ -13,6 +13,7 @@ import {
   TextInput,
 } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import { ConfirmPhraseBox } from "../../design-system/confirmphrase";
 import { Heading } from "../../design-system/heading";
 import {
   ProviderMark,
@@ -164,6 +165,7 @@ export function CredentialRow({
   const [disconnecting, setDisconnecting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [typed, setTyped] = useState("");
+  const phraseInput = useRef<HTMLInputElement>(null);
 
   const connect = useMutation({
     // The key arrives as a variable rather than through a closure over the
@@ -325,17 +327,20 @@ export function CredentialRow({
           setDeleting(false);
           setTyped("");
         }}
+        initialFocusTo={() => phraseInput.current}
       >
-        <p>{t("provider.deleteDataConfirm.body")}</p>
-        <Field label={t("provider.deleteDataConfirm.typed")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={typed}
-              onChange={(event) => setTyped(event.target.value)}
-            />
-          )}
-        </Field>
+        <ConfirmPhraseBox
+          title={t("provider.deleteDataConfirm.impactTitle")}
+          impact={[
+            t("provider.deleteDataConfirm.impact.values"),
+            t("provider.deleteDataConfirm.impact.spend"),
+          ]}
+          prompt={t("provider.deleteDataConfirm.typed")}
+          phrase={providerName(connection)}
+          value={typed}
+          onChange={setTyped}
+          inputRef={phraseInput}
+        />
       </ConfirmModal>
     </>
   );

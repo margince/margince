@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { formatMoney } from "../../format/format";
+import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { askedToClose } from "./deal360/confirmadvance.testkit";
 import { DealsScreen } from "./deals";
@@ -46,7 +47,7 @@ describe("DealsScreen", () => {
       stubBackend([deal({ expected_close_date: "2099-10-14" })]),
     );
     render(<DealsScreen />);
-    expect(await screen.findByText("closes 14 Oct")).toBeTruthy();
+    expect(await screen.findByText("closes 14 Oct 2099")).toBeTruthy();
   });
 
   it("board↔table swaps views over the same fetched set without a reload", async () => {
@@ -354,8 +355,8 @@ describe("DealsScreen", () => {
             stage_id: "s1",
             currency: "EUR",
             deals: 250,
-            raw_minor: 9_999_999,
-            weighted_minor: 1_234_567,
+            base_minor: 9_999_999,
+            weighted_base_minor: 1_234_567,
           },
         ],
       }),
@@ -363,7 +364,7 @@ describe("DealsScreen", () => {
     render(<DealsScreen />);
     await waitFor(() =>
       expect(
-        screen.getByText(formatMoney(9_999_999, "EUR", "en")),
+        screen.getByText(`≈ ${formatMoney(9_999_999, "EUR", "en")}`),
       ).toBeTruthy(),
     );
     expect(
@@ -371,6 +372,36 @@ describe("DealsScreen", () => {
     ).toBeTruthy();
     // The true stage count (250), not "1" (the single loaded card's count).
     expect(screen.getByText("250 deals")).toBeTruthy();
+  });
+
+  it.each([
+    { name: "the report frame", timezone: UTC_ZONE, day: "01/10/2026" },
+    {
+      name: "the record clock for older responses",
+      timezone: undefined,
+      day: "02/10/2026",
+    },
+  ])("reads the valuation date on $name", async ({ timezone, day }) => {
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({ stage_id: "s1" })], {
+        stageTotalsAsOf: "2026-10-01T23:30:00Z",
+        stageTotalsTimezone: timezone,
+        stageTotalsRows: [
+          {
+            stage_id: "s1",
+            deals: 1,
+            base_minor: 10000,
+            weighted_base_minor: 4000,
+            priced_deals: 1,
+          },
+        ],
+      }),
+    );
+    render(<DealsScreen />);
+    expect(
+      await screen.findByText(`Converted · rates as of ${day}`),
+    ).toBeTruthy();
   });
 
   // The report measures every deal the reader may see, which is the set the
@@ -431,7 +462,48 @@ describe("DealsScreen", () => {
     ).toBe(1);
   });
 
+  it.each([
+    {
+      name: "archived deals are included",
+      query: "include_archived=true",
+      reason:
+        "Loaded deals only. Totals are unavailable while archived deals are included.",
+    },
+    {
+      name: "one stage filters the board's cards",
+      query: "stage_id=s1",
+      reason: "Loaded deals only. Totals are unavailable with a stage filter.",
+    },
+  ])("withholds report totals when $name", async ({ query, reason }) => {
+    window.location.hash = `#/deals?${query}`;
+    const dealUrls: string[] = [];
+    let totalsAsked = false;
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({})], {
+        onDealsUrl: (url) => dealUrls.push(url),
+        onStageTotalsBody: () => {
+          totalsAsked = true;
+        },
+        stageTotalsRows: [
+          { stage_id: "s1", deals: 250, base_minor: 9_999_999 },
+          { stage_id: "s2", deals: 250, base_minor: 9_999_999 },
+        ],
+      }),
+    );
+    render(<DealsScreen />);
+    await screen.findByText("Fleet retrofit");
+    expect(dealUrls.some((url) => url.includes(query))).toBe(true);
+    expect(totalsAsked).toBe(false);
+    expect(screen.getByText(reason)).toBeTruthy();
+    expect(screen.queryByText("250 deals")).toBeNull();
+    expect(
+      screen.queryByText(`≈ ${formatMoney(9_999_999, "EUR", "en")}`),
+    ).toBeNull();
+  });
+
   it("sends the board's active filters to the deals-by-stage totals request", async () => {
+    window.location.hash = "#/deals?forecast_category=commit";
     let sentBody: unknown;
     vi.stubGlobal(
       "fetch",
@@ -446,7 +518,14 @@ describe("DealsScreen", () => {
       expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
     expect(sentBody).toMatchObject({
-      group_by: ["stage_id", "currency"],
+      filters: { forecast_category: "commit" },
+      group_by: ["stage_id"],
+      aggregates: [
+        { fn: "count", as: "deals" },
+        { fn: "sum", field: "amount_base_minor", as: "base_minor" },
+        { fn: "sum", field: "weighted_base_minor", as: "weighted_base_minor" },
+        { fn: "count", field: "amount_base_minor", as: "priced_deals" },
+      ],
     });
   });
 
@@ -480,9 +559,9 @@ describe("DealsScreen", () => {
   });
 
   // A deal won on a purchase order or a phone call has no contract to point at.
-  // The server refuses that win without a reason. So the confirm dialog asks
-  // the question the refusal implies, rather than leaving the deal open.
-  it("a win the server refuses for want of evidence asks how it was won, and sends the answer", async () => {
+  // The dialog reads that when it opens and asks how it was won before Confirm,
+  // rather than refusing a press that never had the answer.
+  it("a deal with no contract asks how it was won before Confirm, and sends the answer", async () => {
     const advances: unknown[] = [];
     vi.stubGlobal(
       "fetch",
@@ -500,18 +579,78 @@ describe("DealsScreen", () => {
     dropOnStage("s3");
     await askedToClose("Won");
 
-    // The first confirm asks for nothing: a deal with a contract wins here, and
-    // only the server knows which this is.
+    // Asked on opening, and Confirm waits for the answer. Nothing is posted yet.
+    await screen.findByText("How was it won?");
+    expect(
+      screen.getByRole("button", { name: "Confirm" }).hasAttribute("disabled"),
+    ).toBe(true);
+    expect(advances).toHaveLength(0);
+
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "How was it won?" }),
+      "On a purchase order",
+    );
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => expect(advances).toHaveLength(1));
+    expect(advances[0]).toEqual({
+      to_stage_id: "s3",
+      status: "won",
+      won_without_contract_reason: "purchase_order",
+    });
+  });
+
+  it("a deal with a contract is never asked how it was won", async () => {
+    const advances: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({})], { onAdvance: (body) => advances.push(body) }),
+    );
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    await waitFor(() =>
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
+    );
+
+    dropOnStage("s3");
+    await askedToClose("Won");
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => expect(advances).toHaveLength(1));
+    expect(screen.queryByText("How was it won?")).toBeNull();
+    expect(advances[0]).toEqual({ to_stage_id: "s3", status: "won" });
+  });
+
+  // The server decides, and asks again when the win lands. A contract archived
+  // while the dialog sat open leaves the read saying "signed". The first
+  // Confirm is refused, and the dialog grows the question then.
+  it("a win the server refuses after the read said signed asks how it was won", async () => {
+    const advances: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({})], {
+        demandsWinEvidence: true,
+        winEvidenceRead: "signed",
+        onAdvance: (body) => advances.push(body),
+      }),
+    );
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    await waitFor(() =>
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
+    );
+
+    dropOnStage("s3");
+    await askedToClose("Won");
     expect(screen.queryByText("How was it won?")).toBeNull();
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
-    // Refused: the dialog stays open and grows the question rather than
-    // dropping the reader back on a board that has snapped the card home.
+    // The dialog stays open rather than dropping the reader back on a board
+    // that has snapped the card home.
     await screen.findByText("How was it won?");
     expect(screen.getByText("Move to Won?")).toBeTruthy();
     expect(advances).toHaveLength(1);
-
-    // Confirm stays refused until the question is answered.
     expect(
       screen.getByRole("button", { name: "Confirm" }).hasAttribute("disabled"),
     ).toBe(true);
@@ -529,6 +668,26 @@ describe("DealsScreen", () => {
       status: "won",
       won_without_contract_reason: "purchase_order",
     });
+  });
+
+  it("a contract read that fails leaves the question to the server's refusal", async () => {
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({})], {
+        demandsWinEvidence: true,
+        winEvidenceRead: "unreadable",
+      }),
+    );
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    await waitFor(() =>
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
+    );
+
+    dropOnStage("s3");
+    await askedToClose("Won");
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
+    await screen.findByText("How was it won?");
   });
 
   // "Other" is the one member that explains nothing on its own, so the
@@ -551,7 +710,6 @@ describe("DealsScreen", () => {
 
     dropOnStage("s3");
     await askedToClose("Won");
-    await user.click(screen.getByRole("button", { name: "Confirm" }));
     await screen.findByText("How was it won?");
 
     await pickOption(
@@ -567,8 +725,8 @@ describe("DealsScreen", () => {
     expect(confirm().hasAttribute("disabled")).toBe(false);
     await user.click(confirm());
 
-    await waitFor(() => expect(advances).toHaveLength(2));
-    expect(advances[1]).toEqual({
+    await waitFor(() => expect(advances).toHaveLength(1));
+    expect(advances[0]).toEqual({
       to_stage_id: "s3",
       status: "won",
       won_without_contract_reason: "other",
@@ -586,8 +744,10 @@ describe("DealsScreen", () => {
     vi.stubGlobal(
       "fetch",
       stubBackend([withoutPaper, withPaper], {
-        // Only d1 lacks evidence. d2 wins on the first confirm.
+        // Only d1 lacks evidence. d2 wins on the first confirm. The read says
+        // signed for both, so d1's question comes from the refusal alone.
         demandsWinEvidence: ["d1"],
+        winEvidenceRead: "signed",
       }),
     );
     const user = userEvent.setup();
@@ -646,7 +806,6 @@ describe("DealsScreen", () => {
 
     dropOnStage("s3");
     await askedToClose("Won");
-    await user.click(screen.getByRole("button", { name: "Confirm" }));
     await screen.findByText("How was it won?");
 
     await pickOption(
@@ -665,8 +824,8 @@ describe("DealsScreen", () => {
     expect(screen.queryByLabelText("Details")).toBeNull();
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
-    await waitFor(() => expect(advances).toHaveLength(2));
-    expect(advances[1]).toEqual({
+    await waitFor(() => expect(advances).toHaveLength(1));
+    expect(advances[0]).toEqual({
       to_stage_id: "s3",
       status: "won",
       won_without_contract_reason: "purchase_order",
@@ -689,7 +848,6 @@ describe("DealsScreen", () => {
 
     dropOnStage("s3");
     await askedToClose("Won");
-    await user.click(screen.getByRole("button", { name: "Confirm" }));
     await screen.findByText("How was it won?");
 
     await pickOption(

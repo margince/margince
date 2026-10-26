@@ -76,10 +76,13 @@ provider. [docs/reference/ai-egress.md](docs/reference/ai-egress.md) lists, for 
 - Phone calls and click-to-call.
 - A hosted service or many companies in one installation. One installation serves one company.
 
-Open work is in [GitHub issues](https://github.com/margince/margince/issues), and past releases are in
-[CHANGELOG.md](CHANGELOG.md).
+Open work is in [GitHub issues](https://github.com/margince/margince/issues), and past releases are on the
+[releases page](https://github.com/margince/margince/releases).
 
 ## Security
+
+Using Margince and something is wrong? The handbook's
+[Report a problem](docs/handbook/report-a-problem.md) says how to tell us, and what to leave out.
 
 Report a security problem in private, as [SECURITY.md](SECURITY.md) explains. Do not open a public issue
 for it.

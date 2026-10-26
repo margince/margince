@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { company360 } from "../../testing/company.fixtures";
 import {
@@ -39,7 +38,7 @@ const company: Company = {
   legal_name: "Brandt Automotive GmbH",
   lifecycle: "customer",
   owner_id: "u-1",
-  industry: "Automotive",
+  industry: "automotive",
   size_band: "51-200",
   linkedin_url: "https://linkedin.com/company/brandt",
   address: { city: "Munich", country: "DE" },
@@ -129,9 +128,7 @@ const withheld: View = {
 function Rail({ view, row }: Readonly<{ view?: View; row?: Company }>) {
   installFetchStub({
     // Without a routed session useCan("company","update") fails closed
-    // (useMe's no-authorization fallback) and canEdit is false for every field
-    // the DetailsGrid draws, contradicting this file's own claim that every
-    // seeded demo account grants full RBAC.
+    // (useMe's no-authorization fallback) and no field would be editable.
     "GET /me": meRoute({ company: ["read", "update"] }),
     // Payment is the third health meter, sourced from usePaymentHealth off
     // this endpoint rather than off view.health. A no_connection reply
@@ -160,11 +157,9 @@ function Rail({ view, row }: Readonly<{ view?: View; row?: Company }>) {
     <StoryProviders>
       <div style={{ maxWidth: 340 }}>
         <CompanyRail
-          companyId="o-1"
-          company={row}
+          company={row ?? view?.company ?? company}
           view={view}
           loading={false}
-          onTab={() => {}}
         />
       </div>
     </StoryProviders>
@@ -172,24 +167,6 @@ function Rail({ view, row }: Readonly<{ view?: View; row?: Company }>) {
 }
 
 export const Populated: Story = { render: () => <Rail view={populated} /> };
-
-export const OneSectionOpen: Story = {
-  render: () => <Rail view={populated} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const summary = (name: string) =>
-      canvas.getByText(name).closest("summary") ?? canvasElement;
-    const contacts = summary("Key contacts");
-    const registration = summary("Registration");
-    const deals = summary("Active deals");
-    await expect(contacts).toHaveAttribute("aria-expanded", "true");
-    await expect(registration).toHaveAttribute("aria-expanded", "false");
-    await expect(deals).toHaveAttribute("aria-expanded", "false");
-    await userEvent.click(deals);
-    await expect(deals).toHaveAttribute("aria-expanded", "true");
-    await expect(contacts).toHaveAttribute("aria-expanded", "false");
-  },
-};
 
 export const SectionWithheld: Story = {
   render: () => <Rail view={withheld} />,

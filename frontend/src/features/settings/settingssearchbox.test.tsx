@@ -9,12 +9,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { companyContextCapabilitiesQueryKey } from "../../lib/companycontextreach";
 import * as router from "../../lib/router";
+import { SETTINGS_PAGES, type SettingsPage } from "../../lib/settingscatalog";
 import { meFixture } from "../../testing/mefixture";
 import {
   configurationQueryKey,
   type SettingName,
 } from "./configurationentries";
-import { SETTINGS_PAGES, type SettingsPage } from "./settingscatalog";
 import {
   COMPANY_CONTEXT_OFF,
   COMPANY_CONTEXT_ON,

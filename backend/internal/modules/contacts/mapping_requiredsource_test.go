@@ -3,8 +3,8 @@
 
 package contacts
 
-// A lead and a relationship name their source, as a contact, a company and a
-// deal already must. A record with no origin cannot be traced.
+// A relationship names its source, as a contact, a company and a deal already
+// must. A lead that names none is filed as manual. A record with no origin cannot be traced.
 
 import (
 	"errors"
@@ -14,10 +14,18 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
+func TestALeadWithNoSourceIsFiledAsManual(t *testing.T) {
+	t.Parallel()
+	in, err := LeadCreationInput(crmcontracts.CreateLeadRequest{})
+	if err != nil || in.Source != "manual" {
+		t.Errorf("lead with no source = %q, %v; want manual: the wire no longer requires it", in.Source, err)
+	}
+}
+
 func TestALeadAndARelationshipMustNameTheirSource(t *testing.T) {
 	t.Parallel()
 	for _, origin := range []string{"", "   ", "\u200b"} {
-		_, leadErr := LeadCreationInput(crmcontracts.CreateLeadRequest{Source: origin})
+		_, leadErr := LeadCreationInput(crmcontracts.CreateLeadRequest{Source: &origin})
 		_, relErr := relationshipCreateInput(crmcontracts.CreateRelationshipRequest{Source: origin})
 		for name, err := range map[string]error{"lead": leadErr, "relationship": relErr} {
 			assertOriginRequired(t, name, origin, err)
@@ -27,7 +35,7 @@ func TestALeadAndARelationshipMustNameTheirSource(t *testing.T) {
 
 func TestALeadAndARelationshipKeepTheirSourceTrimmed(t *testing.T) {
 	t.Parallel()
-	lead, err := LeadCreationInput(crmcontracts.CreateLeadRequest{Source: "  manual "})
+	lead, err := LeadCreationInput(crmcontracts.CreateLeadRequest{Source: new("  manual ")})
 	if err != nil || lead.Source != "manual" {
 		t.Errorf("lead source = %q, %v; want manual", lead.Source, err)
 	}

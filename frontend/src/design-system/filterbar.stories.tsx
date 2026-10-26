@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Button, Field, SegmentedControl } from "./atoms";
+import { Button, Field, SearchField, SegmentedControl } from "./atoms";
 import { FilterBar } from "./filterbar";
 import { Select } from "./select";
 
@@ -65,6 +65,51 @@ export const DialsOnly: Story = {
 
 export const Phone: Story = {
   ...WithActionsAndCaption,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+const dial = (label: string, value: string, choices: readonly string[]) => (
+  <Field label={label}>
+    {(field) => (
+      <Select
+        {...field}
+        value={value}
+        options={choices.map((choice) => ({ value: choice, label: choice }))}
+        onChange={() => {}}
+      />
+    )}
+  </Field>
+);
+
+// A log's bar in the 720-wide settings column. A search and four dials wrap
+// onto a second line. Clear holds the trailing edge once a dial is set. The
+// caption counts what the dials let through.
+export const InASettingsColumn: Story = {
+  render: () => (
+    <div style={{ maxWidth: 720 }}>
+      <FilterBar
+        label="Filters"
+        actions={<Button>Clear filters</Button>}
+        caption="1 to 25 of 25 calls loaded"
+      >
+        <Field label="Search calls">
+          {(field) => <SearchField {...field} value="" onChange={() => {}} />}
+        </Field>
+        {dial("Feature", "Message classification", [
+          "All features",
+          "Message classification",
+        ])}
+        {dial("When", "Last day", ["Any time", "Last day"])}
+        {dial("Outcome", "Any outcome", ["Any outcome", "Failed"])}
+        {dial("Model", "Any model", ["Any model", "gemini-2.5-flash"])}
+      </FilterBar>
+    </div>
+  ),
+};
+
+export const InASettingsColumnPhone: Story = {
+  ...InASettingsColumn,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };

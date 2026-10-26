@@ -1,0 +1,21 @@
+/* A tab body that draws more than one card: the split feed's own 16px
+   rhythm, so the cards of a tab sit as far apart as the feed's sections. */
+.co-tab-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* The tick leads the task's name on one line, the linked records under it. */
+.co-tasktable-task {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.co-tasktable-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}

@@ -49,7 +49,7 @@ export function emptyPage(): Response {
 export const company: Company = {
   id: "o-1",
   display_name: "Brandt Automotive GmbH",
-  industry: "Automotive",
+  industry: "automotive",
   captured_by: "human:u1",
   source: "manual",
   version: 1,

@@ -56,9 +56,13 @@ var mergePathFiles = []string{
 // gatekit reports an entry that stops matching, so a waiver cannot outlive the
 // column it was written for.
 var companyFKsTheMergeLeaves = gatekit.Waive(map[string]string{
-	"deal_suggestion.company_id":      "a suggestion is Deal Scout's reading of ONE company's evidence, fingerprinted over that company's id and held to one open suggestion per company, so a moved row could collide with the survivor's own and would hash differently from anything the survivor is offered. The merge archives the retired company instead, which the next scout pass reads as a suggestion that no longer stands (superseded); the evidence the merge relinks raises the survivor's own suggestion",
-	"tag_suggestion.company_id":       "a tag suggestion is the tag scout's reading of ONE record's evidence, held to one open suggestion per tag and record, so a moved row could collide with the survivor's own. The merge archives the retired company, which the next scout pass reads as a suggestion that no longer stands (superseded); the activities the merge relinks raise the survivor's own suggestion",
-	"suggestion_dismissal.company_id": "a dismissal is keyed by a fingerprint computed over the company's OWN id, so a row moved onto the survivor would hash differently from anything the survivor is ever offered and could never match again. The merge retires them with the company instead of moving rows that cannot work; a reader may be offered the equivalent suggestion about the survivor once, and dismissing it again sticks. Re-deriving the fingerprints belongs to the suggestion engine that defines them",
+	"company_address_country.company_id":       "a derived check of the retired company's own address, not a fact about the survivor; it goes with the retired row (ON DELETE CASCADE), and the survivor gets its own check from the next sweep once its address is due",
+	"deal_suggestion.company_id":               "a suggestion is Deal Scout's reading of ONE company's evidence, fingerprinted over that company's id and held to one open suggestion per company, so a moved row could collide with the survivor's own and would hash differently from anything the survivor is offered. The merge archives the retired company instead, which the next scout pass reads as a suggestion that no longer stands (superseded); the evidence the merge relinks raises the survivor's own suggestion",
+	"tag_suggestion.company_id":                "a tag suggestion is the tag scout's reading of ONE record's evidence, held to one open suggestion per tag and record, so a moved row could collide with the survivor's own. The merge archives the retired company, which the next scout pass reads as a suggestion that no longer stands (superseded); the activities the merge relinks raise the survivor's own suggestion",
+	"suggestion_dismissal.company_id":          "a dismissal is keyed by a fingerprint computed over the company's OWN id, so a row moved onto the survivor would hash differently from anything the survivor is ever offered and could never match again. The merge retires them with the company instead of moving rows that cannot work; a reader may be offered the equivalent suggestion about the survivor once, and dismissing it again sticks. Re-deriving the fingerprints belongs to the suggestion engine that defines them",
+	"signal.entity_company_id":                 "a trigger fills it from entity_type and entity_id, and moveKindIDSingles moves that pair, so the key follows it to the survivor",
+	"weekly_plan_commitment.linked_company_id": "a trigger fills it from linked_record_type and linked_record_id, and moveKindIDSingles moves that pair, so the key follows it to the survivor",
+	"user_record_view.entity_company_id":       "a trigger fills it from the pair, which the merge leaves on the retired record for the reason kindIDPairsTheMergeLeaves gives user_record_view.entity_id",
 })
 
 // sqlWriteTarget matches the table a statement writes.
@@ -79,6 +83,10 @@ var sqlWriteTarget = regexp.MustCompile(`(?i)\b(?:UPDATE|INSERT\s+INTO|DELETE\s+
 // The survivor arrives as `$2` in a positional statement and as `@target` in
 // one bound through pgx.NamedArgs (the merge's mergeTargetKey).
 var assignsToSurvivor = regexp.MustCompile(`(?i)([a-z_][a-z0-9_]*)\s*=\s*[^=]*?(?:\$(?:2|%d)|@target\b)`)
+
+// edgeWriteSet matches the SET clause handed to the contacts module's one edge
+// writer, which runs it as an UPDATE of relationship that no literal names.
+var edgeWriteSet = regexp.MustCompile("mergeEdgeWrite\\(\\s*ctx\\s*,\\s*tx\\s*,\\s*`([^`]*)`")
 
 // updateSetClause is the assignment list of an UPDATE: what follows `SET`, up
 // to its `WHERE`.
@@ -230,6 +238,11 @@ func tablesTheMergeWrites(t *testing.T) map[string]bool {
 			// statement is ever given.
 			if concatenatedColumn.MatchString(stmt) {
 				written[table+".company_id"] = true
+			}
+		}
+		for _, call := range edgeWriteSet.FindAllStringSubmatch(string(body), -1) {
+			for _, moved := range assignsToSurvivor.FindAllStringSubmatch(call[1], -1) {
+				written["relationship."+strings.ToLower(moved[1])] = true
 			}
 		}
 	}

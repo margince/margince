@@ -1,24 +1,11 @@
+/* A file's name and, for one the deal has hidden, the badge that says so. */
 .deal-file {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.deal-file-main {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.deal-file-side {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  flex-shrink: 0;
+  min-width: 0;
 }
 
-.deal-file-hidden .deal-file-main {
+.deal-file-hidden .cell-link {
   opacity: 0.6;
 }

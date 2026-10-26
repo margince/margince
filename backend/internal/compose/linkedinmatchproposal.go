@@ -45,11 +45,11 @@ const linkedInMatchKind = "linkedin_match"
 
 // linkedInMatchProposal is what the inbox renders and the effect executes.
 //
-// It carries the ghost's OWN strings — the name and employer LinkedIn
-// exported — because that is what a human judges the guess on. It does NOT
-// carry anything else about the connection: a ghost is a third party who never
-// agreed to be in this CRM, and a staged payload is read by anyone who can
-// decide it.
+// It carries the ghost's own strings: the name, employer and position LinkedIn
+// exported. A human judges the guess on those. It carries nothing else about
+// the connection, because a ghost is a third party who never agreed to be in
+// this CRM. Anyone who can decide a staged payload reads it. For the same
+// reason it names no CRM company: the card resolves the company for its reader.
 type linkedInMatchProposal struct {
 	ConnectionID ids.UUID `json:"connection_id"`
 	// OwnerUserID is the member whose network produced the pair, stamped at
@@ -61,9 +61,32 @@ type linkedInMatchProposal struct {
 	// ConnectionName and ConnectionCompany are the export's own spelling. The
 	// folded forms the matcher compared on are deliberately absent: nobody can
 	// decide "andreas muller · simio".
-	ConnectionName    string `json:"connection_name"`
-	ConnectionCompany string `json:"connection_company,omitempty"`
-	ContactName       string `json:"contact_name"`
+	ConnectionName     string `json:"connection_name"`
+	ConnectionCompany  string `json:"connection_company,omitempty"`
+	ConnectionPosition string `json:"connection_position,omitempty"`
+	ContactName        string `json:"contact_name"`
+	// ContactTitle and EmployerRelationshipID are the contact's title and
+	// current primary employment when the card was staged. The apply refuses a
+	// ticked box whose field has moved since.
+	ContactTitle           string    `json:"contact_title,omitempty"`
+	EmployerRelationshipID *ids.UUID `json:"employer_relationship_id,omitempty"`
+	// EmployerCompanyID is the existing company the import placed the
+	// connection at; absent means the card offers no employer.
+	EmployerCompanyID *ids.UUID `json:"employer_company_id,omitempty"`
+	// UseAsTitle and UseAsEmployer are the card's two boxes, and the only
+	// members a human's edit may change. A card staged before they existed
+	// carries neither and applies only the profile link.
+	UseAsTitle    *bool `json:"use_as_title,omitempty"`
+	UseAsEmployer *bool `json:"use_as_employer,omitempty"`
+}
+
+// fields is the proposal as the contacts store applies it.
+func (p linkedInMatchProposal) fields() contacts.LinkedInMatchFields {
+	return contacts.LinkedInMatchFields{
+		Position: p.ConnectionPosition, ContactTitle: p.ContactTitle,
+		EmployerCompanyID: p.EmployerCompanyID, EmployerRelationshipID: p.EmployerRelationshipID,
+		UseAsTitle: p.UseAsTitle != nil && *p.UseAsTitle, UseAsEmployer: p.UseAsEmployer != nil && *p.UseAsEmployer,
+	}
 }
 
 // withGhostOwnerAsSubject records the acting member as the subject the
@@ -179,12 +202,7 @@ func stagePendingLinkedInMatches(
 }
 
 func stageOneLinkedInMatch(ctx context.Context, svc *approvals.Service, said approvalSummaryCopy, m contacts.PendingLinkedInMatch) (bool, error) {
-	canonical, hash, err := diffhash.Object(map[string]any{
-		"connection_id": m.ConnectionID.String(), "owner_user_id": m.OwnerUserID.String(),
-		"contact_id":      m.ContactID.String(),
-		"connection_name": m.ConnectionName, "connection_company": m.ConnectionCompany,
-		"contact_name": m.ContactName,
-	})
+	canonical, hash, err := diffhash.Object(linkedInMatchPayload(m))
 	if err != nil {
 		return false, err
 	}
@@ -213,7 +231,38 @@ func stageOneLinkedInMatch(ctx context.Context, svc *approvals.Service, said app
 		Summary: fmt.Sprintf(said.linkedInLooksLike,
 			m.ConnectionName, employerOrPlaceholder(said, m.ConnectionCompany), m.ContactName),
 	})
+	if errors.Is(err, approvals.ErrNoDecider) {
+		return false, nil
+	}
 	return proposed, err
+}
+
+// linkedInMatchPayload is the staged change, spelled as linkedInMatchProposal
+// reads it. Every field the card shows is in it, so a later export with a new
+// position supersedes the pending card through JoinPending.
+//
+//craft:ignore naked-any diffhash.Object canonicalizes a JSON object, and its members hold strings and booleans alike
+func linkedInMatchPayload(m contacts.PendingLinkedInMatch) map[string]any {
+	payload := map[string]any{
+		"connection_id": m.ConnectionID.String(), "owner_user_id": m.OwnerUserID.String(),
+		companionContactField: m.ContactID.String(),
+		"connection_name":     m.ConnectionName, "connection_company": m.ConnectionCompany,
+		"contact_name": m.ContactName,
+		"use_as_title": m.Fields.UseAsTitle, "use_as_employer": m.Fields.UseAsEmployer,
+	}
+	optional := map[string]string{"connection_position": m.Fields.Position, "contact_title": m.Fields.ContactTitle}
+	if m.Fields.EmployerCompanyID != nil {
+		optional["employer_company_id"] = m.Fields.EmployerCompanyID.String()
+	}
+	if m.Fields.EmployerRelationshipID != nil {
+		optional["employer_relationship_id"] = m.Fields.EmployerRelationshipID.String()
+	}
+	for key, value := range optional {
+		if value != "" {
+			payload[key] = value
+		}
+	}
+	return payload
 }
 
 func employerOrPlaceholder(said approvalSummaryCopy, employer string) string {
@@ -251,17 +300,60 @@ func linkedInMatchDeclineEffect(store *contacts.Store) approvals.DeclinedEffect 
 	}
 }
 
+// linkedInMatchPrecheck refuses a ticked box that no longer fits while the card
+// is still pending. That is a title or employer set while it waited, a new
+// export, or a decider who may not make the employer write. Refused after the
+// decision, the card would stay approved and its apply would fail every retry.
+func linkedInMatchPrecheck(store *contacts.Store) approvals.ReleasePrecheck {
+	return func(ctx context.Context, staged, edited json.RawMessage) error {
+		payload := staged
+		if len(edited) > 0 {
+			payload = edited
+		}
+		p, err := readLinkedInMatchProposal(payload)
+		if err != nil {
+			return err
+		}
+		return store.CheckLinkedInMatchFields(ctx, p.apply())
+	}
+}
+
+func readLinkedInMatchProposal(raw json.RawMessage) (linkedInMatchProposal, error) {
+	var p linkedInMatchProposal
+	if err := json.Unmarshal(raw, &p); err != nil {
+		return p, fmt.Errorf("compose: unreadable LinkedIn match proposal: %w", err)
+	}
+	return p, nil
+}
+
+// apply is the accepted match as the contacts store writes it.
+func (p linkedInMatchProposal) apply() contacts.LinkedInMatchApply {
+	return contacts.LinkedInMatchApply{
+		ConnectionID: p.ConnectionID, OwnerUserID: p.OwnerUserID, ContactID: p.ContactID, Fields: p.fields(),
+	}
+}
+
 // linkedInMatchAcceptEffect links the connection to the contact and puts the
-// LinkedIn address on the record — the same write the automatic exact-name
-// path performs, released by a human instead of by a string comparison.
-func linkedInMatchAcceptEffect(svc *approvals.Service) approvals.ApprovedEffect {
+// LinkedIn address on the record. That is the write the automatic exact-name
+// path performs, released by a human. It also writes the boxes they ticked.
+func linkedInMatchAcceptEffect(svc *approvals.Service, store *contacts.Store) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
-		var p linkedInMatchProposal
-		if err := json.Unmarshal(proposedChange, &p); err != nil {
-			return fmt.Errorf("compose: unreadable LinkedIn match proposal: %w", err)
+		p, err := readLinkedInMatchProposal(proposedChange)
+		if err != nil {
+			return err
 		}
 		if _, ok := principal.Actor(ctx); !ok {
 			return errors.New("compose: LinkedIn match effect without a deciding principal")
+		}
+		apply := p.apply()
+		// Read before the transaction opens: the catalog read takes its own,
+		// and a second pool acquire inside the write is a deadlock under load.
+		if apply.Fields.UseAsTitle {
+			columns, err := store.ActiveContactUpdateColumns(ctx)
+			if err != nil {
+				return err
+			}
+			apply.Columns = columns
 		}
 		// ONE TRANSACTION, which is what RedeemAndApply is for. Redeem-then-apply
 		// was two: the redemption committed, and a failure in the apply left the
@@ -278,7 +370,7 @@ func linkedInMatchAcceptEffect(svc *approvals.Service) approvals.ApprovedEffect 
 		// is making the claim themselves, and the write must be gated by their
 		// grants and recorded against them.
 		return svc.RedeemAndApply(ctx, approvalID, linkedInMatchKind, diffHash, func(tx pgx.Tx) error {
-			return contacts.ApplyLinkedInMatchTx(ctx, tx, p.ConnectionID, p.OwnerUserID, p.ContactID)
+			return store.ApplyLinkedInMatchTx(ctx, tx, apply)
 		})
 	}
 }

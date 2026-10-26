@@ -148,20 +148,23 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	var ownerID, parentID, mergedInto *ids.UUID
 	var lifecycle string
 	var addr crmcontracts.Address
+	var resolvedCountries []string
 	var logoObjectKey *string
 	var linkedinURL *string
 	var version int64
 	var visibility string
+	var assessAgainst *ids.UUID
 	var sourceSystem, authorName, authorSeatName *string
 	var authorID *ids.UUID
 
 	dests := []any{
 		&id, &o.DisplayName, &o.LegalName, &o.Description, &o.Industry, &o.SizeBand, &ownerID, &visibility,
 		&addr.Line1, &addr.Line2, &addr.City, &addr.Region, &addr.PostalCode, &addr.Country,
+		&resolvedCountries,
 		&lifecycle, &parentID, &mergedInto, &logoObjectKey, &linkedinURL, &o.Source, &o.CapturedBy,
 		&sourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &o.CreatedAt, &o.UpdatedAt, &o.ArchivedAt, &o.IsAnchor,
-		&o.LastActivityAt, &o.LegalHold,
+		&o.LastActivityAt, &o.LegalHold, &assessAgainst,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {
@@ -182,9 +185,11 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	o.Lifecycle = &lc
 	o.LogoUrl = LogoURL(id, logoObjectKey, LogoWide)
 	o.LinkedinUrl = linkedinURL
+	o.AssessAgainstEntityId = uuidPtr(assessAgainst)
 	if a := addressOrNil(addr); a != nil {
 		o.Address = a
 	}
+	o.AddressCountryMismatch = addressCountryMismatch(addr.Country, resolvedCountries)
 	o.Version = &version
 	o.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
 	o.ImportedFrom = provenance.ImportedFrom(sourceSystem)

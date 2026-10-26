@@ -10,6 +10,9 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { today } from "../../format/calendarday";
+import { formatDate } from "../../format/format";
+import { viewerZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { ModelPricesCard } from "../ai/ai-price-sync";
@@ -25,6 +28,7 @@ import { FxRatesCard } from "./rates";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 function jsonResponse(body: unknown, status = 200) {
@@ -324,6 +328,86 @@ describe("the rate sheets", () => {
       "disabled",
       true,
     );
+  });
+
+  it("dates a currency rate on the day picked from the calendar", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-07-20T12:00:00Z"));
+    const urls: string[] = [];
+    const backend = ratesBackend(RATE_SETTER, "full", urls);
+    const posted: unknown[] = [];
+    vi.stubGlobal("fetch", async (input: Request) => {
+      if (input.method === "POST") posted.push(await input.clone().json());
+      return backend(input);
+    });
+    const user = userEvent.setup();
+    render(<RateSheets />);
+    await waitFor(() => expect(screen.getByText("USD")).toBeTruthy());
+
+    await user.click(
+      within(rateCard("Currency rates")).getByRole("button", {
+        name: "Set rate",
+      }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    await user.type(dialog.getByLabelText("From"), "GBP");
+    await user.type(dialog.getByLabelText("Rate (to base currency)"), "1.17");
+    await user.click(dialog.getByRole("button", { name: /^Choose date/ }));
+    await user.click(
+      await screen.findByRole("button", { name: "Friday, 24 July 2026" }),
+    );
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(posted).toEqual([
+        { from_currency: "GBP", rate: "1.17", effective_date: "2026-07-24" },
+      ]),
+    );
+  });
+
+  it("refuses a model price effective before the reader's today", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-07-20T12:00:00Z"));
+    const user = userEvent.setup();
+    mount(RATE_SETTER);
+    await screen.findByText("claude-opus-4-8");
+
+    await user.click(
+      within(rateCard("Model prices")).getByRole("button", {
+        name: "Add model rate",
+      }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    await user.click(dialog.getByRole("button", { name: /^Choose date/ }));
+    const lastWeek = await screen.findByRole("button", {
+      name: /^Wednesday, 15 July 2026, Earliest date: /,
+    });
+    expect(lastWeek.getAttribute("aria-disabled")).toBe("true");
+  });
+
+  it("offers the floor as Today, so the marked day is one the price may take", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-07-20T12:00:00Z"));
+    const user = userEvent.setup();
+    mount(RATE_SETTER);
+    await screen.findByText("claude-opus-4-8");
+    await user.click(
+      within(rateCard("Model prices")).getByRole("button", {
+        name: "Add model rate",
+      }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    const effective = dialog.getByRole<HTMLInputElement>("textbox", {
+      name: "Effective",
+    });
+    await user.tripleClick(effective);
+    await user.keyboard("{Backspace}");
+    await user.click(dialog.getByRole("button", { name: /^Choose date/ }));
+    const pickToday = await screen.findByRole("button", { name: "Today" });
+    expect(pickToday).toHaveProperty("disabled", false);
+    await user.click(pickToday);
+
+    expect(effective.value).toBe(formatDate(today(), "en", viewerZone()));
   });
 
   it("shows write affordances for an admin", async () => {

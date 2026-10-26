@@ -121,15 +121,21 @@ func counterpartyAcceptEffect(svc *approvals.Service, store *contacts.Store,
 			UserID:     decider.UserID,
 			OnBehalfOf: decider.UserID,
 		})
+		// Asked as the decider, since the write below runs as the system. A
+		// decider who may not promote a lead leaves it where it is.
+		promoteLeads, err := contacts.MayPromoteHeldLeads(ctx)
+		if err != nil {
+			return err
+		}
 		var triageDomain string
 		if err := svc.RedeemAndApply(ctx, approvalID, counterpartyProposalKind, diffHash, func(tx pgx.Tx) error {
 			// Asked again as the decider on the write's own transaction: the
 			// precheck answered before the decision, and the contact can move.
-			if err := store.ProbeCounterpartyMatchTx(ctx, tx, proposal.Email); err != nil {
+			if err := store.ProbeCounterpartyMatchTx(ctx, tx, proposal.Email, proposal.Domain); err != nil {
 				return err
 			}
 			var applyErr error
-			triageDomain, applyErr = applyCounterpartyAccept(execCtx, tx, store, filer, pending, proposal)
+			triageDomain, applyErr = applyCounterpartyAccept(execCtx, tx, store, filer, pending, proposal, promoteLeads)
 			return applyErr
 		}); err != nil {
 			return err
@@ -150,19 +156,26 @@ func counterpartyAcceptEffect(svc *approvals.Service, store *contacts.Store,
 // It reports the domain still owed a company verdict, for the caller to
 // queue once the redemption has committed.
 func applyCounterpartyAccept(ctx context.Context, tx pgx.Tx, store *contacts.Store,
-	filer *connectorTagFiler, pending *capture.PendingStore, proposal approvalsubject.Counterparty,
+	filer *connectorTagFiler, pending *capture.PendingStore, proposal approvalsubject.Counterparty, promoteLeads bool,
 ) (string, error) {
 	created, err := createCounterpartyRecords(ctx, tx, store, filer, counterpartyCreation{
-		Email:       proposal.Email,
-		DisplayName: proposal.DisplayName,
-		Domain:      proposal.Domain,
-		OwnerID:     proposal.OwnerID,
-		ActivityID:  proposal.ActivityID,
-		Source:      counterpartyProposalKind,
-		CapturedBy:  counterpartyExecutorActor,
+		DispositionID:     proposal.DispositionID,
+		Email:             proposal.Email,
+		DisplayName:       proposal.DisplayName,
+		Domain:            proposal.Domain,
+		OwnerID:           proposal.OwnerID,
+		ActivityID:        proposal.ActivityID,
+		Source:            counterpartyProposalKind,
+		CapturedBy:        counterpartyExecutorActor,
+		SkipLeadPromotion: !promoteLeads,
 	})
 	if err != nil {
 		return "", err
+	}
+	// A seat's address keeps `real` for the reason correctRefusedVerdict gives.
+	if created.SeatAddress {
+		return "", pending.ResolveReviewedAs(ctx, tx, proposal.DispositionID,
+			capture.PendingStatusReal, capture.KindContact, seatAddressReason)
 	}
 	// An address erased while the offer sat in the inbox creates nothing, and
 	// the ledger says so rather than reporting `real` for a contact who does not
@@ -202,7 +215,7 @@ func counterpartyPrecheck(store *contacts.Store) approvals.ReleasePrecheck {
 		if err := refuseSenderEdit(proposal, edited); err != nil {
 			return err
 		}
-		return store.ProbeCounterpartyMatch(ctx, proposal.Email)
+		return store.ProbeCounterpartyMatch(ctx, proposal.Email, proposal.Domain)
 	}
 }
 

@@ -29,7 +29,9 @@ const ROOM: DealRoom = {
   updated_at: "2026-08-22T09:00:00Z",
 };
 
-function drawWithDownloads(downloads: number) {
+type Participant = components["schemas"]["DealRoomParticipant"];
+
+function drawWithDownloads(downloads: number, seat: Partial<Participant> = {}) {
   installFetchStub({
     "GET /deal-rooms/room-1/participants": () =>
       jsonResponse({
@@ -47,6 +49,7 @@ function drawWithDownloads(downloads: number) {
             created_at: "2026-08-22T09:10:00Z",
             updated_at: "2026-08-24T14:02:00Z",
             download_count: downloads,
+            ...seat,
           },
         ],
         page: { next_cursor: null },
@@ -72,7 +75,30 @@ describe("what a seat has taken out of the room", () => {
     "counts the downloads in the reader's grammar (%i)",
     async (count, said) => {
       drawWithDownloads(count);
-      expect(await screen.findByText(said)).toBeTruthy();
+      expect(await screen.findByText(new RegExp(said))).toBeTruthy();
     },
   );
+
+  it("names the documents taken on the seat's own line", async () => {
+    drawWithDownloads(2, { documents_downloaded: ["Offer.pdf", "MSA.pdf"] });
+    expect(
+      await screen.findByText(/2 documents downloaded: Offer\.pdf, MSA\.pdf/),
+    ).toBeTruthy();
+  });
+});
+
+describe("where a seat stands", () => {
+  it.each<[string, Partial<Participant>, string]>([
+    ["signed in", {}, "Signed in"],
+    ["not in yet", { has_signed_in: false }, "Invited"],
+    [
+      "asking for a new link",
+      { link_requested_at: "2026-08-25T08:00:00Z" },
+      "Link requested",
+    ],
+    ["revoked", { revoked_at: "2026-08-26T08:00:00Z" }, "Revoked"],
+  ])("badges a seat that is %s", async (_case, seat, badge) => {
+    drawWithDownloads(0, seat);
+    expect(await screen.findByText(badge)).toBeTruthy();
+  });
 });

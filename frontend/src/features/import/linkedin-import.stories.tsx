@@ -7,182 +7,180 @@ import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
+  type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
-import { LinkedInImportCard } from "./linkedin-import";
+import { LinkedInNetworkPanel } from "./linkedin-import";
 
-// LinkedInImportCard stories for the fe-uat render gate. The card is a personal
-// surface — it reads /me/linkedin-account and writes the caller's own row — so
-// no grant gates it and the stories differ only in what the account read says.
-//
-// The card is two SettingRows now: the profile URL as a value with an Edit verb,
-// and the file picker. The edit FIELD lives in a Modal, which renders into the
-// document body rather than into the story canvas — so the story that shows it
-// scopes its `play` past `canvasElement`.
-//
-// ONE description above them, and only one. A second full-width paragraph used
-// to stand between it and the first row — where to get the file, and what
-// happens to it — and both halves of that belong to the import row rather than
-// to the card, so they read in that row's description now. What to check here is
-// that nothing on the card is prose before the list.
+// The LinkedIn network panel for the fe-uat render gate. It shows the import as
+// a connection row with its drop zone, the profile row, the reach and the
+// how-to. It is a personal surface, so the stories differ only in what the
+// reads and the import return. The profile editor is a Modal in the document
+// body, so its story scopes `play` past `canvasElement`.
 
-function cardStory(account: { profile_url?: string; connected?: boolean }) {
+type Account = Readonly<{
+  profile_url?: string;
+  connected?: boolean;
+  connections?: number;
+}>;
+
+const NO_REACH = { accounts: [], accounts_total: 0, unresolved_connections: 0 };
+
+const REACHED = {
+  accounts: [
+    {
+      company_id: "018f3a1b-0000-7000-8000-0000000000a1",
+      display_name: "Nordwind Logistik GmbH",
+      connections: 14,
+      contacts_on_file: 3,
+    },
+  ],
+  accounts_total: 1,
+  unresolved_connections: 1420,
+};
+
+const IMPORTED: Account = {
+  profile_url: "https://www.linkedin.com/in/lars-brandt",
+  connected: true,
+  connections: 4108,
+};
+
+function panelStory(
+  account: Account,
+  reach: unknown = NO_REACH,
+  extra: RouteMap = {},
+) {
   return () => {
     installFetchStub({
       "GET /me": () => jsonResponse(meFixture()),
-      "GET /me/linkedin-account": () => jsonResponse(account),
+      "GET /me/linkedin-account": () =>
+        jsonResponse({ connected: false, connections: 0, ...account }),
+      "GET /me/linkedin-reach": () => jsonResponse(reach),
+      ...extra,
     });
     return (
       <StoryProviders>
-        <LinkedInImportCard />
+        <LinkedInNetworkPanel />
       </StoryProviders>
     );
   };
 }
 
-const meta: Meta<typeof LinkedInImportCard> = {
-  title: "Settings/You/Connections/LinkedIn import",
-  component: LinkedInImportCard,
-};
-export default meta;
-type Story = StoryObj<typeof LinkedInImportCard>;
-
-/** Open the profile row's Edit dialog. */
-async function openProfileEditor(canvasElement: HTMLElement) {
-  const body = within(canvasElement.ownerDocument.body);
-  await userEvent.click(await body.findByRole("button", { name: "Edit" }));
-  await body.findByRole("textbox", { name: /LinkedIn profile URL/ });
+async function dropTheExport(canvasElement: HTMLElement) {
+  await userEvent.upload(
+    await within(canvasElement).findByLabelText("Import Connections.csv"),
+    new File(["First Name,Last Name\n"], "Connections.csv", {
+      type: "text/csv",
+    }),
+  );
 }
 
-// The profile the onboarding act recorded, shown back so it can be corrected.
-// This is the row shape the whole tab is built from: what it is on the left,
-// what it is set to at the same x as every other answer, and the verb beside it.
-export const KnownProfile: Story = {
-  render: cardStory({
-    profile_url: "https://www.linkedin.com/in/lars-brandt",
-    connected: true,
-  }),
+const meta: Meta<typeof LinkedInNetworkPanel> = {
+  title: "Settings/You/Connections/LinkedIn network",
+  component: LinkedInNetworkPanel,
 };
+export default meta;
+type Story = StoryObj<typeof LinkedInNetworkPanel>;
 
-// Nothing recorded yet: the row says "Not recorded yet" rather than leaving the
-// value blank, which is a different claim from "this member has no profile". The
-// description beside it says what RECORDING one does — it used to open "Not
-// connected yet", which is the same fact the value already carries, stated twice
-// on one row in two different words.
-export const NoProfileYet: Story = {
-  render: cardStory({ profile_url: "", connected: false }),
-};
+// The approved first visit: Not imported, profile Not added with Add profile,
+// the reach empty state, and the how-to closed.
+export const NothingYet: Story = { render: panelStory({ profile_url: "" }) };
 
-// The field itself, in the dialog the Edit verb opens. Save is refused until the
-// URL actually changes — the dialog opens on the stored value, so an unchanged
-// one is a write with nothing in it.
-export const EditingTheProfile: Story = {
-  render: cardStory({
-    profile_url: "https://www.linkedin.com/in/lars-brandt",
-    connected: true,
-  }),
-  play: async ({ canvasElement }) => {
-    await openProfileEditor(canvasElement);
-  },
-};
-
-// The same dialog in dark. Everything in it now comes from the design system —
-// Modal, Field, TextInput, both Buttons — so what to check is the dialog's own
-// ground against the card behind it, and that the refused Save still reads as
-// refused rather than as absent.
-export const EditingTheProfileDark: Story = {
+export const NothingYetDark: Story = {
   globals: { theme: "dark" },
-  render: cardStory({
-    profile_url: "https://www.linkedin.com/in/lars-brandt",
-    connected: true,
-  }),
-  play: async ({ canvasElement }) => {
-    await openProfileEditor(canvasElement);
-  },
+  render: panelStory({ profile_url: "" }),
 };
 
-// What the import PRODUCED, which is the one thing on this card that is not a
-// row: four counts under the list, reporting an act that has already happened.
-// Skipped rows are in the picture on purpose — a file half-ignored under a
-// success message is worse than a refusal, and this is the story that says
-// whether the skipped count reads as a finding or as a fourth statistic.
-export const ImportSummary: Story = {
-  render: () => {
-    installFetchStub({
-      "GET /me": () => jsonResponse(meFixture()),
-      "GET /me/linkedin-account": () =>
-        jsonResponse({
-          profile_url: "https://www.linkedin.com/in/lars-brandt",
-          connected: true,
-        }),
-      "POST /me/linkedin-connections": () =>
-        jsonResponse({
-          rows: 4120,
-          imported: 4108,
-          skipped: 12,
-          confirmed: 37,
-          suggested: 214,
-        }),
-    });
-    return (
-      <StoryProviders>
-        <LinkedInImportCard />
-      </StoryProviders>
-    );
-  },
+// After an import: the count in the row's badge and the reach table below.
+export const Imported: Story = { render: panelStory(IMPORTED, REACHED) };
+
+export const ImportedDark: Story = {
+  globals: { theme: "dark" },
+  render: panelStory(IMPORTED, REACHED),
+};
+
+export const ImportedPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: panelStory(IMPORTED, REACHED),
+};
+
+// The field itself, in the dialog the Edit verb opens.
+export const EditingTheProfile: Story = {
+  render: panelStory(IMPORTED, REACHED),
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
-    // The input is visually hidden but focusable and real — the label beside it
-    // is what a reader presses. Waiting on the RESULT rather than on a duration:
-    // a story that slept would pass on a fast machine and screenshot a spinner
-    // on a slow one.
-    await userEvent.upload(
-      body.getByTestId("linkedin-import-file"),
-      new File(["First Name,Last Name\n"], "Connections.csv", {
-        type: "text/csv",
+    await userEvent.click(await body.findByRole("button", { name: "Edit" }));
+    await body.findByRole("textbox", { name: /LinkedIn profile URL/ });
+  },
+};
+
+// What the import produced, reported under the row. Skipped rows stay in the
+// picture: a file half-ignored under a success message is worse than a refusal.
+export const ImportSummary: Story = {
+  render: panelStory({ profile_url: "" }, NO_REACH, {
+    "POST /me/linkedin-connections": () =>
+      jsonResponse({
+        rows: 4120,
+        imported: 4108,
+        skipped: 12,
+        confirmed: 37,
+        suggested: 214,
       }),
+  }),
+  play: async ({ canvasElement }) => {
+    await dropTheExport(canvasElement);
+    await within(canvasElement).findByTestId("linkedin-import-result");
+  },
+};
+
+// The export is being read: the wait stands under the row in words.
+export const Importing: Story = {
+  render: panelStory({ profile_url: "" }, NO_REACH, {
+    "POST /me/linkedin-connections": () => new Promise<Response>(() => {}),
+  }),
+  play: async ({ canvasElement }) => {
+    await dropTheExport(canvasElement);
+    await within(canvasElement).findByText("Reading export…");
+  },
+};
+
+// The file was refused: the server's reason under the row, the zone still
+// there to pick the right file.
+export const ImportFailed: Story = {
+  render: panelStory({ profile_url: "" }, NO_REACH, {
+    "POST /me/linkedin-connections": () =>
+      jsonResponse(
+        { title: "Unprocessable", detail: "This file is not Connections.csv." },
+        422,
+      ),
+  }),
+  play: async ({ canvasElement }) => {
+    await dropTheExport(canvasElement);
+    await within(canvasElement).findByText(
+      "The export was not imported. Retry.",
     );
-    await body.findByTestId("linkedin-import-result");
   },
 };
 
 export const AccountReadFailed: Story = {
-  render: () => {
-    installFetchStub({
-      "GET /me": () => jsonResponse(meFixture()),
-      "GET /me/linkedin-account": () =>
-        jsonResponse(
-          {
-            title: "Internal Server Error",
-            detail: "the profile store is down",
-          },
-          500,
-        ),
-    });
-    return (
-      <StoryProviders>
-        <LinkedInImportCard />
-      </StoryProviders>
-    );
-  },
+  render: panelStory({}, NO_REACH, {
+    "GET /me/linkedin-account": () =>
+      jsonResponse(
+        { title: "Internal Server Error", detail: "the profile store is down" },
+        500,
+      ),
+  }),
 };
 
-// The card in dark. One control on it is still hand-rolled: a native file input
-// carries a browser-drawn button whose label cannot be set, so it is hidden and
-// a real <label> — `.li-import-button` in linkedin-import.css — stands in for
-// it. `FileDropzone` is the design system's file control and does not fit here:
-// it is a full-width dashed drop zone with its own `Field` label, so it cannot
-// sit in a row's right column, and it passes no `accept` through to the input,
-// which this card needs because LinkedIn's export archive holds a dozen CSVs.
-// That hand-rolled control fills itself with --bgElevated, the same token the
-// card under it uses, and its only separation from that ground is one
-// --borderSubtle hairline: what to check is whether it still reads as a
-// pressable thing rather than as a sentence, with the ghost Edit button one row
-// above it as the design system's own comparison standing in the same picture.
-export const KnownProfileDark: Story = {
-  globals: { theme: "dark" },
-  render: cardStory({
-    profile_url: "https://www.linkedin.com/in/lars-brandt",
-    connected: true,
+// The reach read failed: the panel says so with a retry where the table stands,
+// and the import above it still works.
+export const ReachReadFailed: Story = {
+  render: panelStory(IMPORTED, NO_REACH, {
+    "GET /me/linkedin-reach": () =>
+      jsonResponse(
+        { title: "Internal Server Error", detail: "the reach index is down" },
+        500,
+      ),
   }),
 };

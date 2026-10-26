@@ -22,6 +22,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -47,16 +48,22 @@ type attentionReceipts struct {
 }
 
 func (r attentionReceipts) Recent(ctx context.Context, since time.Time, limit int) ([]attention.Receipt, error) {
-	decided, err := recentReceipts(since, limit, func(scan int) ([]crmcontracts.Approval, error) {
+	receipts, _, err := r.RecentWithMore(ctx, since, limit)
+	return receipts, err
+}
+
+// RecentWithMore is Recent, and whether either source holds more than it
+// returned.
+func (r attentionReceipts) RecentWithMore(ctx context.Context, since time.Time, limit int) ([]attention.Receipt, bool, error) {
+	decided, more, err := recentReceipts(since, limit, func(cursor string, width int) ([]crmcontracts.Approval, storekit.Page, error) {
 		status := approvalStatusApproved
 		bySystem := true
-		rows, _, err := r.svc.ListWire(ctx, approvals.ListInput{
-			Status: &status, DecidedBySystem: &bySystem, DecidedAfter: &since, Limit: scan,
+		return r.svc.ListWire(ctx, approvals.ListInput{
+			Status: &status, DecidedBySystem: &bySystem, DecidedAfter: &since, Limit: width, Cursor: cursor,
 		})
-		return rows, err
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	// The close-date sweep's own corrections, which no approval records.
 	//
@@ -71,16 +78,19 @@ func (r attentionReceipts) Recent(ctx context.Context, since time.Time, limit in
 	// be told about, while it may well have approvals the system decided for it.
 	// Propagating the refusal took the whole receipt surface away over a grant
 	// that has nothing to do with the rows it was hiding.
-	corrections, err := r.deals.RecentCorrectionsOwnedBy(ctx, since, limit)
+	corrections, err := r.deals.RecentCorrectionsOwnedBy(ctx, since, limit+1)
 	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
-		return nil, err
+		return nil, false, err
+	}
+	if len(corrections) > limit {
+		corrections, more = corrections[:limit], true
 	}
 	for _, correction := range corrections {
 		decided = append(decided, correctionReceipt(correction))
 	}
 	decided, err = r.withChangeReviews(ctx, decided)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	// Newest first across BOTH sources: merged by appending, the corrections
 	// would sit under every approval however recent, and the reader's most
@@ -89,9 +99,9 @@ func (r attentionReceipts) Recent(ctx context.Context, since time.Time, limit in
 		return decided[i].OccurredAt.After(decided[j].OccurredAt)
 	})
 	if len(decided) > limit {
-		decided = decided[:limit]
+		decided, more = decided[:limit], true
 	}
-	return decided, nil
+	return decided, more, nil
 }
 
 // correctionReceipt renders one applied correction as a card.
@@ -125,28 +135,35 @@ func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
 	}
 }
 
-// recentReceipts turns the store's rows into the lane's cards.
+// approvalPageWidth is the widest page the approvals inbox serves. A wider
+// ask is answered with its default page, so a longer read pages instead.
+const approvalPageWidth = 200
+
+// recentReceipts turns the store's rows into the lane's cards, paging the
+// inbox until `limit` rows came back or the inbox said it had no more.
 //
-// The read is bounded by the lane rather than widened past it: the store answers
-// "approved, decided by the system, decided since" itself, so the limit applies
-// to rows that qualify. The window belongs in SQL with the rest — the page is
-// ordered by created_at while the window is about decided_at, so a window
-// applied afterwards can discard a whole page and hide a decision made minutes
-// ago beneath approvals staged more recently.
-//
-// The re-check below is not a second filter. It is what makes the deref of
-// DecidedAt safe in this package, where the SQL guaranteeing it is elsewhere.
-//
-// The page reader is a parameter so a test can answer exactly the width it was
-// asked for; nothing else varies it.
+// The window belongs in SQL with the rest. The page is ordered by created_at
+// and the window is about decided_at. A window applied afterwards could drop
+// a whole page and hide a recent decision. The re-check in
+// receiptsWithin is what makes the deref of DecidedAt safe in this package.
 func recentReceipts(
-	since time.Time, limit int, page func(scan int) ([]crmcontracts.Approval, error),
-) ([]attention.Receipt, error) {
-	rows, err := page(limit)
-	if err != nil {
-		return nil, err
+	since time.Time, limit int,
+	page func(cursor string, width int) ([]crmcontracts.Approval, storekit.Page, error),
+) ([]attention.Receipt, bool, error) {
+	var rows []crmcontracts.Approval
+	cursor := ""
+	for len(rows) < limit {
+		got, next, err := page(cursor, min(approvalPageWidth, limit-len(rows)))
+		if err != nil {
+			return nil, false, err
+		}
+		rows = append(rows, got...)
+		if !next.HasMore || next.NextCursor == "" {
+			return receiptsWithin(rows, since), false, nil
+		}
+		cursor = next.NextCursor
 	}
-	return receiptsWithin(rows, since), nil
+	return receiptsWithin(rows, since), true, nil
 }
 
 // receiptsWithin keeps the decided rows inside the lane's window.
@@ -174,6 +191,7 @@ func receiptsWithin(rows []crmcontracts.Approval, since time.Time) []attention.R
 		if row.TargetEntityType != nil && row.TargetEntityId != nil {
 			receipt.TargetType = *row.TargetEntityType
 			receipt.TargetID = ids.UUID(*row.TargetEntityId)
+			receipt.TargetLabel = row.TargetLabel
 		}
 		out = append(out, receipt)
 	}

@@ -227,6 +227,9 @@ func registerSignInProvider(s *Server, pool *pgxpool.Pool, p signInProvider, rou
 		routes,
 	)
 	s.authHandlers = s.WithOIDCProvidersEnabledFn(enabledOidcProviders(pool, identity.NewService(pool), configured))
+	// A method value copies the handlers as they stand, so it is rebound on
+	// every registration for the same reason the enabled function is.
+	s.signInScreen = s.SignInScreenProviders
 	// The settings screen needs the same list, so an admin sees the providers
 	// this deployment can actually offer rather than a free-text field. Set
 	// HERE rather than in assembly because only these options know what was

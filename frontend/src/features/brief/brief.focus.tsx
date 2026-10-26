@@ -5,6 +5,7 @@
 // beside it. The panel's head, states and foot are in brief.feed.tsx.
 
 import { useRef } from "react";
+import { TaskNextSteps } from "../../components/tasknextsteps";
 import { Button, Card } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
 import {
@@ -14,6 +15,7 @@ import {
 } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { useActivity } from "../../lib/activityread";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import {
@@ -74,11 +76,19 @@ export function Triage({
     (hasPane(lead) ||
       lead.source === "task" ||
       lead.source === "meeting_outcome");
-  const details = context ? (
-    <Button variant="ghost" onClick={() => onContext(lead)}>
-      {t("brief.focus.context")}
-    </Button>
-  ) : undefined;
+  // A task row's id is its activity's, so the card reads the task it shows.
+  const task = useActivity(lead.id, lead.source === "task").data;
+  const cardVerbs =
+    context || task ? (
+      <>
+        {context && (
+          <Button variant="ghost" onClick={() => onContext(lead)}>
+            {t("brief.focus.context")}
+          </Button>
+        )}
+        {task && <TaskNextSteps task={task} offerOpen={false} />}
+      </>
+    ) : undefined;
   // The head's facts come from the helpers the row uses, so the card and the
   // queue agree. A message is dated by its arrival, the rest by its own clock.
   // The reader's own pin is the queue's reason, not the card's.
@@ -124,7 +134,7 @@ export function Triage({
                 new Map([["filter", lead.category]]),
               )
             }
-            context={details}
+            context={cardVerbs}
             // The card around this row says whose it is, why it is here and
             // where it stands in the day. Each is said once, in its own place.
             framed

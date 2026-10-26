@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
+import { expect, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -13,9 +14,11 @@ import { ChannelReplyAction } from "./compose.reply";
 //  - on a MAIL row it is always offered, and its word is "Reply";
 //  - on a CHANNEL row it is offered only where the contact is reachable on the
 //    transport that carried the conversation, and withheld where they are not;
-//  - where the row's content is withheld it keeps working but changes its WORD
-//    to "Write email", because writing to a contact is not answering a message
-//    nobody may read;
+//  - on a call, note, meeting or task row its word is "Write email", offered
+//    only where the server says it can fill To (`offers_email`);
+//  - where a mail or channel row's content is withheld it keeps working but
+//    changes its WORD to "Write email", because writing to a contact is not
+//    answering a message nobody may read;
 //  - where a rule PREPARED this reply it wears the agent's face and mark, and
 //    the caller's own word for the act.
 //
@@ -143,6 +146,71 @@ export const WithheldWritesEmail: Story = {
         </Row>
       </StoryProviders>
     );
+  },
+};
+
+/** A logged call the server can address: the verb writes a new email about it,
+ *  never a reply to it. */
+export const CallWritesEmail: Story = {
+  render: () => {
+    installFetchStub({});
+    return (
+      <StoryProviders>
+        <Row
+          when="24 August, 11:15"
+          said="Voicemail. Rang twice, then voicemail."
+        >
+          <ChannelReplyAction
+            activityId="a-6"
+            kind="call"
+            offersEmail
+            entityType="contact"
+            entityId="p-1"
+            contactId="p-1"
+          />
+        </Row>
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("button", { name: "Write email" });
+  },
+};
+
+/** A note the server cannot address, beside a call it can: only the call
+ *  offers Write email. */
+export const NoteWithNobodyToWriteTo: Story = {
+  render: () => {
+    installFetchStub({});
+    return (
+      <StoryProviders>
+        <Row when="24 August, 11:20" said="Asked for the revised annex.">
+          <ChannelReplyAction
+            activityId="a-7"
+            kind="note"
+            offersEmail={false}
+            entityType="contact"
+            entityId="p-1"
+            contactId="p-1"
+          />
+        </Row>
+        <Row when="24 August, 11:15" said="Voicemail. Rang twice.">
+          <ChannelReplyAction
+            activityId="a-8"
+            kind="call"
+            offersEmail
+            entityType="contact"
+            entityId="p-1"
+            contactId="p-1"
+          />
+        </Row>
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: "Write email" });
+    await expect(canvas.getAllByRole("button")).toHaveLength(1);
   },
 };
 

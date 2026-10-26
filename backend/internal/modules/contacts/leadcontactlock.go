@@ -26,15 +26,23 @@ const promoteAttempts = 3
 // would close a deadlock cycle with it.
 //
 // A zero contact locks the lead alone. A promotion passes IncludeArchived, so
-// a candidate a merge has retired still locks and the move shows.
+// a candidate a merge has retired still locks and the move shows. between runs
+// after the contact lock and before the lead lock, where a promotion takes its
+// duplicate-lane locks (lockorder.go); nil runs nothing.
 //
 // Held by: TestOneLockOrderOverTheLeadAndItsContact (backend/gates/leadcontactlockorder_test.go)
 func lockContactThenLead(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, contactFilter storekit.ArchivedFilter, leadID ids.LeadID,
+	between func() error,
 ) error {
 	if !contactID.IsZero() {
 		if _, err := storekit.LockRow(ctx, tx, "contact", contactID.UUID, contactFilter); err != nil {
 			return fmt.Errorf("lock the lead's contact: %w", err)
+		}
+	}
+	if between != nil {
+		if err := between(); err != nil {
+			return err
 		}
 	}
 	if _, err := storekit.LockRow(ctx, tx, "lead", leadID.UUID, storekit.IncludeArchived); err != nil {

@@ -1,6 +1,7 @@
 import { useQuery, type useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { unwrap } from "../../lib/problem";
+import { roomBriefKey } from "./dealroombrief.key";
 
 export function participantsKey(roomId: string) {
   return ["deal-room-participants", roomId] as const;
@@ -15,6 +16,7 @@ export function refreshSeats(
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: participantsKey(roomId) }),
     queryClient.invalidateQueries({ queryKey: ["deal-rooms-of"] }),
+    queryClient.invalidateQueries({ queryKey: roomBriefKey(roomId) }),
   ]);
 }
 

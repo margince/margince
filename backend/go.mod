@@ -13,14 +13,13 @@ require (
 	github.com/emersion/go-imap/v2 v2.0.0-beta.8
 	github.com/emersion/go-message v0.18.2
 	github.com/getkin/kin-openapi v0.149.0
-	github.com/go-chi/chi/v5 v5.3.2
+	github.com/go-chi/chi/v5 v5.4.0
 	github.com/go-pdf/fpdf v0.9.0
 	github.com/jackc/pgerrcode v0.0.0-20250907135507-afb5586c32a6
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/klippa-app/go-pdfium v1.20.0
 	// The composed extension set (ADR-0120): a constant import path the role
-	// binaries wire — api, worker and mcp today; migrate joins when the
-	// extension migration namespace lands. Bare builds resolve the committed
+	// binaries wire: api, worker and migrate. Bare builds resolve the committed
 	// vanilla stub via this replace, `make` lanes override it with the
 	// generated module under build/composition/ via the generated go.work (a
 	// workspace `use` wins over a member replace).

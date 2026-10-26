@@ -25,7 +25,7 @@ func TestCompanyRollupToWireMapsRestrictedNodes(t *testing.T) {
 		RootID:                 ids.NewV7(),
 		Scope:                  companyRollupScopeTree,
 		WeightedPipelineMinor:  12_345,
-		ClosedWonMinor:         6_789,
+		ClosedWonMinor:         new(int64(6_789)),
 		BaseCurrency:           "EUR",
 		ActivityCount30d:       3,
 		AggregatedAccountCount: 2,

@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -94,8 +95,8 @@ func checkParsedCells(object string, fields map[string]string) (map[string]any, 
 }
 
 // storedSpelling is the parser each object's store runs on a phone or a
-// LinkedIn URL. A company's page and a contact's slot are narrower than a
-// lead's profile URL.
+// LinkedIn URL. A company takes a company page; a contact and a lead take a
+// profile.
 func storedSpelling(object, target, text string) (string, error) {
 	switch {
 	case target == fieldPhone:
@@ -103,10 +104,8 @@ func storedSpelling(object, target, text string) (string, error) {
 		return phone.String(), err
 	case object == migration.ObjectCompany:
 		return contacts.NormalizeCompanyLinkedInURL(text)
-	case object == migration.ObjectContact:
-		return contacts.NormalizeContactLinkedInURL(text)
 	default:
-		return contacts.NormalizeLinkedInURL(text)
+		return contacts.NormalizeContactLinkedInURL(text)
 	}
 }
 
@@ -307,6 +306,10 @@ func unwritableReason(object string, fields map[string]string) *cellProblem {
 		}
 		if _, err := values.ParseEmail(email); err != nil {
 			return problemOf(fieldEmail, fields[fieldEmail], migration.Why(migration.ReasonNotAnEmail, "value", fields[fieldEmail]))
+		}
+		// The contacts store refuses a sending system's address; a lead may hold one.
+		if object == migration.ObjectContact && mailidentity.HasMachineLocalpart(email) {
+			return problemOf(fieldEmail, fields[fieldEmail], migration.Why(migration.ReasonEmailNamesNoContact, "value", email))
 		}
 		return nil
 	}

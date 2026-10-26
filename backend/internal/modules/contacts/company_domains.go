@@ -15,6 +15,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -138,13 +139,14 @@ func ensureCompanyDomainsUnclaimed(ctx context.Context, tx pgx.Tx, domains []Com
 // insertCompanyDomains lands the company's domains; the unique index remains the
 // structural guarantee under races, mapping uq_company_domain to the typed
 // 409 and a second primary domain to a plain conflict. Each claim files the
-// companies named after its domain for review.
+// companies named after its domain, and the holders of the domain it is a
+// subdomain of, for review.
 func insertCompanyDomains(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, source, by string, domains []CompanyDomainInput) error {
 	for _, d := range domains {
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by)
-			 VALUES ($1, lower($2), $3, $4, $5)`,
-			companyID, d.Domain, d.IsPrimary, source, by); err != nil {
+			`INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by, domain_folded)
+			 VALUES ($1, lower($2), $3, $4, $5, $6)`,
+			companyID, d.Domain, d.IsPrimary, source, by, owndomain.StoredOwn(d.Domain)); err != nil {
 			if name, ok := storekit.UniqueViolation(err); ok {
 				if name == "uq_company_domain" {
 					return &DuplicateDomainError{Domain: d.Domain}
@@ -154,6 +156,9 @@ func insertCompanyDomains(ctx context.Context, tx pgx.Tx, companyID ids.CompanyI
 			return fmt.Errorf("insert company domain: %w", err)
 		}
 		if err := fileNameDomainTwins(ctx, tx, companyID, normalizeDomain(d.Domain), source, by); err != nil {
+			return err
+		}
+		if err := fileSubdomainClaimants(ctx, tx, companyID, d.Domain, source, by); err != nil {
 			return err
 		}
 	}

@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -98,11 +99,15 @@ func NewRequestSettler(pool *pgxpool.Pool, brain completer, now func() time.Time
 // reason the owed pass gives: a batch where every verdict abstains makes no
 // progress by the verdict count and would re-ask the same threads forever.
 func (s *RequestSettler) RunWorkspace(ctx context.Context, maxVerdicts int) error {
-	if s.brain == nil {
-		return nil
-	}
 	if maxVerdicts <= 0 {
 		maxVerdicts = settleCatchUpCap
+	}
+	// No model is needed to see that a verdict's evidence is gone.
+	if _, err := s.store.WithdrawLostSettlements(ctx, s.now(), maxVerdicts); err != nil {
+		return fmt.Errorf("request settle: withdrawing verdicts whose evidence is gone: %w", err)
+	}
+	if s.brain == nil {
+		return nil
 	}
 	judged := 0
 	calls := newSweepCalls(maxVerdicts, settleBatchSize)
@@ -220,7 +225,7 @@ func conversationRows(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 ) ([]threadMessage, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT id, coalesce(direction, ''), coalesce(subject, ''),
-		       coalesce(left(body, $1), ''), occurred_at
+		       coalesce(left(body, $1), ''), occurred_at, NOT `+provenance.MailBodyCompleteSQL("activity")+`
 		  FROM activity
 		 WHERE thread_key = (SELECT thread_key FROM activity WHERE id = $2)
 		   AND thread_key IS NOT NULL
@@ -256,7 +261,7 @@ func conversationRows(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 	for rows.Next() {
 		var message threadMessage
 		if err := rows.Scan(&message.ID, &message.Direction, &message.Subject,
-			&message.Body, &message.At); err != nil {
+			&message.Body, &message.At, &message.Incomplete); err != nil {
 			return nil, err
 		}
 		out = append(out, message)

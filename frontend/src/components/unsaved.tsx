@@ -1,8 +1,10 @@
 import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
+import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
 import { navigate, type Route, useHash } from "../lib/router";
 import {
+  type Saver,
   UnsavedContext,
   useHasUnsavedChanges,
   useUnsavedGuard,
@@ -39,7 +41,7 @@ import type { UrlParams } from "../lib/urlstate";
  * is allowed to move, and the browser's gestures are left alone.
  */
 
-export { useHasUnsavedChanges, useUnsavedGuard };
+export { type Saver, useHasUnsavedChanges, useUnsavedGuard };
 
 /**
  * Guard `dirty` like `useUnsavedGuard`, and return the one way to leave
@@ -134,7 +136,6 @@ export function UnsavedGuard<Address extends string>({
   onKeep: (address: Address) => void;
   children: (address: Address) => ReactNode;
 }>) {
-  const t = useT();
   const registry = useUnsavedRegistry(null);
   // The address whose content is on screen. It follows `address` freely until a
   // draft is at stake, and then stops until the question is answered.
@@ -156,19 +157,82 @@ export function UnsavedGuard<Address extends string>({
   return (
     <UnsavedContext.Provider value={registry}>
       {children(shown)}
-      <ConfirmModal
+      <LeaveQuestion
         open={asking}
+        savers={registry.savers}
+        onStay={() => onKeep(shown)}
+        onLeave={() => setShown(address)}
+      />
+    </UnsavedContext.Provider>
+  );
+}
+
+/**
+ * The question asked on the way out of a draft. Closing it is the safe answer,
+ * so Escape and the backdrop both keep the edit. A dialog whose dismissal
+ * destroys work punishes the reader for not reading it. With `savers` it
+ * offers Save, and leaves only once every one of them has written.
+ */
+function LeaveQuestion({
+  open,
+  savers,
+  onStay,
+  onLeave,
+}: Readonly<{
+  open: boolean;
+  savers: readonly Saver[];
+  onStay: () => void;
+  onLeave: () => void;
+}>) {
+  const t = useT();
+  const [saving, setSaving] = useState(false);
+  const [refused, setRefused] = useState(false);
+  if (savers.length === 0) {
+    return (
+      <ConfirmModal
+        open={open}
         title={t("unsaved.title")}
         confirmLabel={t("unsaved.discard")}
         confirmVariant="danger"
-        // Closing the question is the SAFE answer, so Escape and the backdrop
-        // both keep the edit. A dialog whose dismissal destroys work is a
-        // dialog that punishes the reader for not reading it.
-        onClose={() => onKeep(shown)}
-        onConfirm={() => setShown(address)}
+        onClose={onStay}
+        onConfirm={onLeave}
       >
         <p>{t("unsaved.body")}</p>
       </ConfirmModal>
-    </UnsavedContext.Provider>
+    );
+  }
+  // A refusal belongs to this asking; the next one starts clean.
+  const answer = (then: () => void) => () => {
+    setRefused(false);
+    then();
+  };
+  const save = async () => {
+    setSaving(true);
+    setRefused(false);
+    const saved = await Promise.all(savers.map((saver) => saver()));
+    setSaving(false);
+    if (saved.every(Boolean)) onLeave();
+    else setRefused(true);
+  };
+  return (
+    <ConfirmModal
+      open={open}
+      title={t("unsaved.saveTitle")}
+      confirmLabel={t("saveBar.save")}
+      cancelLabel={t("unsaved.stay")}
+      pending={saving}
+      error={refused ? t("unsaved.saveRefused") : null}
+      actionsLead={
+        <Button variant="ghost" disabled={saving} onClick={answer(onLeave)}>
+          {t("saveBar.discard")}
+        </Button>
+      }
+      onClose={answer(onStay)}
+      onConfirm={() => {
+        void save();
+      }}
+    >
+      <p>{t("unsaved.saveBody")}</p>
+    </ConfirmModal>
   );
 }

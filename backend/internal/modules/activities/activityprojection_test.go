@@ -204,6 +204,10 @@ func assertProjection(t *testing.T, got crmcontracts.Activity, index map[string]
 	assertString(t, "a.meeting_status", stringOf(got.MeetingStatus))
 	assertString(t, "a.capture_label", stringOf(got.CaptureLabel))
 	assertString(t, "a.audience", stringOf(got.Audience))
+	// Served for mail only, and the sentinel row's kind is not mail.
+	if got.BodyCompleteness != nil {
+		t.Errorf("a.body_completeness served on a %q row", got.Kind)
+	}
 	if string(got.Kind) != "a.kind" {
 		t.Errorf("a.kind landed as %q", got.Kind)
 	}
@@ -444,6 +448,9 @@ func TestAWithheldRowCarriesNoAudienceReason(t *testing.T) {
 	if got.Body != nil {
 		t.Errorf("a withheld row carried a body")
 	}
+	if got.BodyCompleteness != nil {
+		t.Errorf("a withheld row said how much of its body could be read")
+	}
 	if got.ThreadKey != nil {
 		t.Errorf("a withheld row carried a thread key — it identifies the message at the provider")
 	}
@@ -485,6 +492,69 @@ func TestImportedFromFollowsTheContentAudience(t *testing.T) {
 			got := scan.record()
 			if (got.ImportedFrom != nil) != tc.wantName {
 				t.Fatalf("imported_from = %v, present want %v", got.ImportedFrom, tc.wantName)
+			}
+		})
+	}
+}
+
+// body_completeness is said of a mail's body, so it is served only with one.
+func TestBodyCompletenessIsServedOnlyWithAMailBody(t *testing.T) {
+	body := "From: a@x.test"
+	for _, tc := range []struct {
+		name      string
+		kind      string
+		available bool
+		body      *string
+		want      bool
+	}{
+		{"readable mail", "email", true, &body, true},
+		{"withheld mail", "email", false, &body, false},
+		{"erased mail", "email", true, nil, false},
+		{"a task", "task", true, &body, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			scan := activityScan{contentAvailable: tc.available, kind: tc.kind, bodyCompleteness: "partial"}
+			scan.a.Body = tc.body
+			got := scan.record()
+			if served := got.BodyCompleteness != nil; served != tc.want {
+				t.Fatalf("body_completeness served = %v, want %v", served, tc.want)
+			}
+			if tc.want && *got.BodyCompleteness != crmcontracts.BodyCompletenessPartial {
+				t.Errorf("body_completeness = %q, want the column's value", *got.BodyCompleteness)
+			}
+		})
+	}
+}
+
+// What a message is (an invitation, a sending system's notice) is content: a
+// reader who may not open the message is not told it. The product's own mail
+// is the origin, not content, and stays marked.
+func TestAutomaticKindFollowsTheContentAudience(t *testing.T) {
+	t.Parallel()
+	invite := "REQUEST"
+	for _, tc := range []struct {
+		name      string
+		scan      activityScan
+		available bool
+		want      crmcontracts.ActivityAutomaticKind
+	}{
+		{"an invitation the reader may open", activityScan{kind: "email", origin: "human", calendarMethod: &invite}, true, crmcontracts.ActivityAutomaticKindCalendar},
+		{"an invitation the reader may not open", activityScan{kind: "email", origin: "human", calendarMethod: &invite}, false, ""},
+		{"a notice the reader may open", activityScan{kind: "email", origin: "human", senderIsMachine: true}, true, crmcontracts.ActivityAutomaticKindSendingSystem},
+		{"a notice the reader may not open", activityScan{kind: "email", origin: "human", senderIsMachine: true}, false, ""},
+		{"the product's own mail, withheld", activityScan{kind: "email", origin: OriginSystemNotice}, false, crmcontracts.ActivityAutomaticKindProduct},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.scan.contentAvailable = tc.available
+			got := tc.scan.record().AutomaticKind
+			if tc.want == "" {
+				if got != nil {
+					t.Fatalf("automatic_kind = %s on a row the reader may not open", *got)
+				}
+				return
+			}
+			if got == nil || *got != tc.want {
+				t.Fatalf("automatic_kind = %v, want %s", got, tc.want)
 			}
 		})
 	}

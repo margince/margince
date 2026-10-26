@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import { describe, expect, it } from "vitest";
-import { worstOf } from "./companylookups";
+import { worstOf } from "../../components/companylookups";
 
 // The health verdict is the WORST dimension, never an average (PO-AC-N-11,
 // ADR-0095/A146).

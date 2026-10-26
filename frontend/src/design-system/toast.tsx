@@ -64,7 +64,7 @@ export type ToastId = number;
 const TOAST_MS = 3500;
 
 /** How long a confirmation carrying a verb stays: long enough to reach for it. */
-const ACTION_TOAST_MS = 8000;
+export const ACTION_TOAST_MS = 8000;
 
 /**
  * What the message SAYS about itself, in the five-state vocabulary, as a VALUE

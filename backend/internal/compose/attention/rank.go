@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -70,6 +71,9 @@ const meetingHorizon = 2 * time.Hour
 // produced it is the server's business.
 type ranked struct {
 	item crmcontracts.WorklistItem
+	// lane is the source of the lane that produced the row; empty for a row
+	// read outside the day's lanes, whose own source names it.
+	lane crmcontracts.WorklistItemSource
 	// deadlineAt is the moment this item's clock runs out, zero when it has
 	// none. Overdue items carry a past instant and sort first by that fact.
 	deadlineAt time.Time
@@ -117,6 +121,9 @@ type ranked struct {
 	// reader's ordering preference move a figure their manager reads.
 	pinned        bool
 	semanticLevel int
+	// reminded says the row is a task of the reader's whose reminder came due.
+	// It sorts at the pin level for the same reason, and means what it meant.
+	reminded bool
 	// opportunity is the overnight brief's own composite for this deal, between
 	// 0 and 1, and zero where the night did not rank it.
 	//
@@ -397,6 +404,13 @@ func moneyValue(r ranked) *crmcontracts.WorklistValue {
 func daysSince(from, asOf time.Time) int {
 	days, _ := deadline.DaysPast(&from, asOf)
 	return days
+}
+
+// calendarDaysSince is how many calendar days in loc `from` lies before
+// `asOf`, so a same-day event is zero and one across local midnight is one.
+// Clamped at zero for the same clock-skew reason as daysSince.
+func calendarDaysSince(from, asOf time.Time, loc *time.Location) int {
+	return max(elapsed.Days(from, asOf, loc), 0)
 }
 
 func daysValue(days int) *crmcontracts.WorklistValue {

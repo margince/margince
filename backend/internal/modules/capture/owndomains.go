@@ -9,118 +9,24 @@ package capture
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-	"golang.org/x/net/idna"
-	"golang.org/x/net/publicsuffix"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 )
 
-// normalizeDomain folds a mail domain to the one form the own-domain set is
-// compared in: lowercased, trailing dot stripped, IDNA-encoded. A domain that
-// fails IDNA is returned lowercased rather than dropped — the caller is deciding
-// whether to KEEP a message, and discarding an unreadable domain here would
-// silently turn a parse failure into "internal", which is the one answer that
-// loses correspondence rather than keeping it.
-func normalizeDomain(domain string) string {
-	domain = strings.ToLower(strings.TrimSpace(domain))
-	domain = strings.TrimSuffix(domain, ".")
-	if domain == "" {
-		return ""
-	}
-	ascii, err := idna.Lookup.ToASCII(domain)
-	if err != nil {
-		return domain
-	}
-	return ascii
-}
-
-// domainOfAddress returns the normalized domain of a mail address, or "" when
-// the address carries none that can be read. An address with no readable domain
-// is not internal (see InternalDomains.Covers).
-func domainOfAddress(address string) string {
-	address = strings.TrimSpace(address)
-	at := strings.LastIndex(address, "@")
-	if at < 0 || at == len(address)-1 {
-		return ""
-	}
-	return normalizeDomain(address[at+1:])
-}
-
-// InternalDomains is the workspace's own mail domains, normalized once so a
-// membership test is a comparison rather than a query.
+// InternalDomains is the workspace's own mail domains. owndomain.Set holds the
+// fold and the coverage test; this adds what capture asks of a message.
 type InternalDomains struct {
-	domains []string
+	owndomain.Set
 }
 
-// NewInternalDomains normalizes and de-duplicates the registered domains, and
-// drops any that are not a domain someone can own.
-//
-// The public-suffix filter lives HERE, where the set is built, rather than only
-// where an administrator types one in. The set is fed from three places — the
-// admin surface, the mailbox seed, and the company's own registered domains —
-// and the company's come from a website field a human filled in during cold
-// start, which no validation of this kind has ever seen. A `co.uk` reaching the
-// set from any of them would make every company beneath it internal and stop
-// the workspace keeping their correspondence, unrecoverably. Filtering at
-// construction makes that impossible to reintroduce by adding a fourth writer.
+// NewInternalDomains folds the registered domains through the one own-domain rule.
 func NewInternalDomains(raw []string) InternalDomains {
-	seen := make(map[string]bool, len(raw))
-	out := make([]string, 0, len(raw))
-	for _, d := range raw {
-		n := normalizeDomain(d)
-		if n == "" || seen[n] || !ownableDomain(n) {
-			continue
-		}
-		seen[n] = true
-		out = append(out, n)
-	}
-	return InternalDomains{domains: out}
-}
-
-// ownableDomain reports whether a domain is one somebody registers, as opposed
-// to a public suffix under which anyone may register. EffectiveTLDPlusOne fails
-// for exactly the latter.
-func ownableDomain(domain string) bool {
-	_, err := publicsuffix.EffectiveTLDPlusOne(domain)
-	return err == nil
-}
-
-// Empty reports whether the workspace has registered no own domain at all.
-//
-// An empty set makes NOTHING internal, so every message is captured. That is
-// the honest posture rather than a fallback guess: an installation that has
-// named no domain of its own is making no claim about what its contacts's mail
-// is, and inventing one from a connected mailbox would be right in some
-// workspaces and wrong in the rest.
-func (d InternalDomains) empty() bool { return len(d.domains) == 0 }
-
-// Covers reports whether address belongs to one of the workspace's own domains.
-//
-// A registered domain covers its SUBDOMAINS: acme.com covers mail.acme.com.
-// Exact string equality was the failure mode with teeth — it leaks the internal
-// mail of every company that sends from a subdomain, and it looks exactly like
-// working correctly. The suffix test includes the separating dot so acme.com
-// does not cover the unrelated acme.com.example.net.
-//
-// An address with no readable domain is NOT covered, so the message is kept.
-func (d InternalDomains) Covers(address string) bool {
-	return d.CoversDomain(domainOfAddress(address))
-}
-
-// CoversDomain is Covers for a domain already separated from its address.
-func (d InternalDomains) CoversDomain(domain string) bool {
-	domain = normalizeDomain(domain)
-	if domain == "" {
-		return false
-	}
-	for _, own := range d.domains {
-		if domain == own || strings.HasSuffix(domain, "."+own) {
-			return true
-		}
-	}
-	return false
+	return InternalDomains{owndomain.New(raw)}
 }
 
 // AllInternal reports whether every one of these addresses is on an own domain
@@ -132,7 +38,7 @@ func (d InternalDomains) CoversDomain(domain string) bool {
 // external, which is what keeps the intro motion working — a colleague writing
 // to a prospect with the prospect copied is correspondence, not chatter.
 func (d InternalDomains) AllInternal(addresses []string) bool {
-	if d.empty() {
+	if d.Empty() {
 		return false
 	}
 	judged := 0
@@ -168,15 +74,8 @@ func (d InternalDomains) External(addresses []string) []string {
 	return out
 }
 
-// anchorDomains is what the installation's own company currently claims. It is
-// a READ of another module's table, which reads are free to be: the question is
-// "does a human say this domain is ours", and the anchor company is the
-// only place that answer lives.
-const anchorDomains = `
-	SELECT d.domain
-	  FROM company_domain d
-	  JOIN company o ON o.id = d.company_id
-	 WHERE o.is_anchor AND o.archived_at IS NULL AND d.archived_at IS NULL`
+// anchorDomains is what the installation's own company currently claims.
+const anchorDomains = auth.OwnCompanyDomainsSQL
 
 // ownDomainsTx reads every domain that might be ours — the company's own, plus
 // every candidate a connected mailbox contributed. This is the set for
@@ -186,7 +85,7 @@ func ownDomainsTx(ctx context.Context, tx pgx.Tx) (InternalDomains, error) {
 	return queryDomains(ctx, tx, `SELECT domain FROM workspace_email_domain UNION `+anchorDomains)
 }
 
-// trustedOwnDomainsTx reads only the domains a human vouched for: those the own
+// TrustedOwnDomainsTx reads only the domains a human vouched for: those the own
 // company claims, and those an administrator confirmed.
 //
 // Storing a message or not is a stronger consequence than creating a contact or
@@ -199,41 +98,13 @@ func ownDomainsTx(ctx context.Context, tx pgx.Tx) (InternalDomains, error) {
 // seen. A company that corrects a mistyped domain, or changes it, stops
 // suppressing the old one immediately — a cached answer would go on hiding mail
 // for a domain nobody claims any more, and nothing would ever revoke it.
-func trustedOwnDomainsTx(ctx context.Context, tx pgx.Tx) (InternalDomains, error) {
-	return queryDomains(ctx, tx,
-		`SELECT domain FROM workspace_email_domain WHERE verified UNION `+anchorDomains)
+func TrustedOwnDomainsTx(ctx context.Context, tx pgx.Tx) (InternalDomains, error) {
+	return queryDomains(ctx, tx, auth.TrustedOwnDomainsSQL)
 }
 
 func queryDomains(ctx context.Context, tx pgx.Tx, query string) (InternalDomains, error) {
-	rows, err := tx.Query(ctx, query)
-	if err != nil {
-		return InternalDomains{}, fmt.Errorf("capture: reading the own-domain set: %w", err)
-	}
-	defer rows.Close()
-
-	var raw []string
-	for rows.Next() {
-		var d string
-		if err := rows.Scan(&d); err != nil {
-			return InternalDomains{}, fmt.Errorf("capture: reading the own-domain set: %w", err)
-		}
-		raw = append(raw, d)
-	}
-	if err := rows.Err(); err != nil {
-		return InternalDomains{}, fmt.Errorf("capture: reading the own-domain set: %w", err)
-	}
-	return NewInternalDomains(raw), nil
-}
-
-// Domains returns the normalized domains in the set, for a caller that needs to
-// show them rather than test against them.
-//
-// A COPY: the set decides which mail is stored, and every other method on it
-// only reads. Handing out the backing slice would let a caller that appends or
-// sorts its display list change what counts as internal, with nothing at the
-// call site to suggest it had.
-func (d InternalDomains) Domains() []string {
-	return append([]string(nil), d.domains...)
+	own, err := owndomain.Read(ctx, tx, query)
+	return InternalDomains{own}, err
 }
 
 // SelfSet is one SEAT's own addresses: the exact aliases they declared, plus
@@ -300,26 +171,9 @@ func NewSelfSetWithIdentityOnly(addresses, identityOnly, domains []string) SelfS
 	return set
 }
 
-// foldAddress is one address in the form both sides of a comparison agree on:
-// lowercased, and its DOMAIN half normalized the way a claimed domain is, so a
-// unicode domain and its punycode form are one address rather than two.
-//
-// The local part is folded in case and otherwise left alone. Plus-addressing is
-// deliberately NOT stripped: `me+news@` is a different address, and treating it
-// as the same would silence mail to an address the seat never declared — the
-// direction that loses a message rather than keeping one.
-func foldAddress(address string) string {
-	folded := strings.ToLower(strings.TrimSpace(address))
-	at := strings.LastIndex(folded, "@")
-	if at < 0 {
-		return folded
-	}
-	domain := normalizeDomain(folded[at+1:])
-	if domain == "" {
-		return folded
-	}
-	return folded[:at+1] + domain
-}
+// foldAddress is one address in the form both sides of a comparison agree on.
+// Plus-addressing is kept: `me+news@` is a different address.
+func foldAddress(address string) string { return mailidentity.FoldAddress(address) }
 
 // Covers reports whether this address is one the seat declared as their own,
 // exactly or by one of their domains.
@@ -367,7 +221,7 @@ func (s SelfSet) Covers(address string) bool {
 // Empty reports whether the seat declared nothing, which lets a caller skip
 // work rather than test every address against an empty set.
 func (s SelfSet) Empty() bool {
-	return len(s.addresses) == 0 && len(s.identityOnly) == 0 && s.domains.empty()
+	return len(s.addresses) == 0 && len(s.identityOnly) == 0 && s.domains.Empty()
 }
 
 // WithoutSelf is the addresses that are NOT the seat's own, order preserved.

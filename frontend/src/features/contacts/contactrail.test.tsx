@@ -10,23 +10,16 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { LocaleProvider, type Translator, translate } from "../../i18n";
+import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
-import { ContactRail, contactStanding } from "./contactrail";
+import { Employers } from "./contactemployers";
+import { ContactRail } from "./contactrail";
 
-// The rail's words are short verdicts — "One-sided", "Never", "No inbound",
-// "Thin", "Nothing stands out on this relationship." — which is exactly why the
-// withheld case has to be pinned here rather than left to review. A verdict
-// reads as a measured fact whatever produced it, and the 360 hands an
-// unreadable section to the client by leaving it out: absent-because-empty and
-// absent-because-forbidden arrive as the same undefined field, distinguished
-// only by `sections_omitted`.
-//
-// So every test below comes in a PAIR with the granted one beside it. A test
-// that only checks the withheld side would pass just as happily against a rail
-// that hedged every reading, and a rail that says "Not shown" about a contact
-// who genuinely never wrote is the same defect pointed the other way.
+// The left column and the employers beside it. A section the reader
+// has no grant for arrives as an absent field named in `sections_omitted`.
+// Every withheld case sits beside the granted one: a column that hedged every
+// reading would pass a suite that checked only the withheld side.
 
 type Contact360 = components["schemas"]["Contact360"];
 type Activity = components["schemas"]["Activity"];
@@ -63,6 +56,7 @@ const contact: components["schemas"]["Contact"] = {
 
 function inboundEmail(): Activity {
   return {
+    offers_email: false,
     id: "a-1",
     kind: "email",
     direction: "inbound",
@@ -263,10 +257,22 @@ function mount(
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  // The left column, with the employers it used to hold beside it: they now
+  // live on the Network tab, as the same component.
   const tree = (shown: Contact360) => (
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <ContactRail view={shown} guard={guard} />
+        <ContactRail
+          view={shown}
+          consent={{
+            guard,
+            loading: false,
+            failed: false,
+            onRetry: () => undefined,
+          }}
+          writeRefusalId="write-refused"
+        />
+        <Employers view={shown} />
       </LocaleProvider>
     </QueryClientProvider>
   );
@@ -288,17 +294,16 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// A section is scoped through its own heading: "Hidden — your role cannot read
-// this" is one sentence the rail may say about four different sections, and an
-// unscoped match cannot tell which one said it.
+// A panel is scoped through its own heading. "Hidden for your role" is one
+// sentence several panels may say, and an unscoped match cannot tell which.
 //
-// Matched on the heading's PREFIX rather than on the whole summary, because a
-// section whose verbs the reader holds carries them inside the same summary —
-// so an exact match would find the section only while the capability probe was
+// Matched on the heading's prefix rather than on the whole summary, because a
+// section whose verbs the reader holds carries them inside the same summary.
+// An exact match would find the section only while the capability probe was
 // still in flight.
 function section(heading: string): HTMLElement {
   const titles = document.querySelectorAll<HTMLElement>(
-    ".pe-rail > .panel > .panel-head h2",
+    ".panel > .panel-head h2",
   );
   for (const title of titles) {
     if ((title.textContent ?? "").startsWith(heading)) {
@@ -313,55 +318,7 @@ function section(heading: string): HTMLElement {
 
 const WITHHELD_SENTENCE = "Hidden for your role";
 
-// contactStanding is the one line of relationship standing the record's head
-// carries: a pure derivation from the two touch timestamps, tested directly
-// rather than through a mount: the words and the tone are what the head
-// renders, and nothing about drawing them belongs to this rail any more.
-describe("contactStanding", () => {
-  const t: Translator = (key, params) => translate("en", key, params);
-
-  it("reads a two-way relationship as strong, with the trend of its last touch", () => {
-    const view: Contact360 = {
-      ...emptyButGranted,
-      last_inbound_at: daysAgo(3),
-      last_outbound_at: daysAgo(8),
-    };
-    expect(contactStanding(view, t)).toEqual({
-      words: "Strong · warming",
-      tone: "success",
-    });
-  });
-
-  it("reads a silence past the quiet threshold as at risk", () => {
-    // 40 days outlasts contactquiet.ts's QUIET_AFTER_DAYS (14), so this is
-    // unambiguously past the line rather than pinned to it.
-    const view: Contact360 = {
-      ...emptyButGranted,
-      last_inbound_at: daysAgo(40),
-    };
-    const standing = contactStanding(view, t);
-    expect(standing?.tone).toBe("danger");
-    expect(standing?.words.startsWith("At risk")).toBe(true);
-  });
-
-  it("calls a contact nobody has ever heard from thin, with no trend to state", () => {
-    const view: Contact360 = {
-      ...emptyButGranted,
-      last_inbound_at: null,
-      last_outbound_at: null,
-    };
-    expect(contactStanding(view, t)).toEqual({
-      words: "Thin",
-      tone: undefined,
-    });
-  });
-
-  it("gives no standing at all when the touch dates are withheld", () => {
-    expect(contactStanding(withheld, t)).toBeNull();
-  });
-});
-
-describe("the rail leaves conversation history in the overview and Timeline", () => {
+describe("the left column leaves conversation history to the overview", () => {
   it.each([emptyButGranted, withheld, granted])(
     "does not duplicate recent activity",
     (view) => {
@@ -654,7 +611,7 @@ describe("which employer is the current one", () => {
         },
       ]),
     );
-    await screen.findByText("Notice GmbH");
+    await screen.findAllByText("Notice GmbH");
 
     const [first, second] = employerOrder();
     expect(first).toContain("Notice GmbH");
@@ -705,7 +662,7 @@ describe("which employer is the current one", () => {
         },
       ]),
     );
-    await screen.findByText("Brandt Automotive GmbH");
+    await screen.findAllByText("Brandt Automotive GmbH");
 
     await user.click(screen.getByRole("button", { name: "More actions" }));
     await user.click(screen.getByRole("button", { name: "Mark as ended" }));
@@ -723,16 +680,6 @@ describe("which employer is the current one", () => {
     // The LOCAL date, formatted by hand. Reaching for toISOString() here would
     // send yesterday's date to anybody west of UTC for most of their working day.
     expect((body as Record<string, unknown>).ended_at).toBe("2026-08-18");
-  });
-});
-
-describe("how the contact is filed", () => {
-  // The tags panel is shared with the company and deal pages, and it draws in
-  // the rail's SECTION chrome here: the contact rail is one card of headed
-  // sections, so a second card inside it would be a box in a box.
-  it("draws the contact's tags in the rail", async () => {
-    mount(granted);
-    expect(await screen.findByText("Champion")).toBeTruthy();
   });
 });
 
@@ -774,7 +721,7 @@ describe("a contact with no primary employer", () => {
         employment("rel-2", "Kessler Logistik AG", false),
       ]),
     );
-    await screen.findByText("Brandt Automotive GmbH");
+    await screen.findAllByText("Brandt Automotive GmbH");
     expect(screen.queryByText(en["contact.rail.noPrimaryEmployer"])).toBeNull();
   });
 
@@ -801,6 +748,7 @@ describe("the consent rail's transport row", () => {
     ...granted,
     contact: {
       ...contact,
+      primary_email: "dana@brandt.example",
       emails: [
         {
           id: "pe-1",
@@ -835,23 +783,21 @@ describe("the consent rail's transport row", () => {
   it("stays unanswered when no correspondence purpose is defined", async () => {
     mount(reachable, marketingOnly);
 
-    const panel = section(en["contact.rail.consentTitle"]);
-    // The grant that does exist keeps its own name and its own answer.
-    expect(await within(panel).findByText("Newsletter")).toBeTruthy();
-    // Scoped to the row rather than matched across the panel: the phone row
-    // reads "Unknown" too the moment a fixture gains a number, and a
-    // whole-panel match would then pass on the wrong row.
-    const email = within(panel)
-      .getByText(en["contact.rail.email"])
-      .closest(".pe-rail-row");
-    if (!(email instanceof HTMLElement)) {
-      throw new Error("the consent panel drew no Email row");
+    // Scoped to the row: the phone row reads "Unknown" too the moment a
+    // fixture gains a number, and a column-wide match would pass on it.
+    const mail = (await screen.findByText("Business mail")).closest(
+      ".factlist-row",
+    );
+    if (!(mail instanceof HTMLElement)) {
+      throw new Error("the column drew no Business mail row");
     }
     expect(
-      within(email).getByText(en["contact.consent.unknownWord"]),
+      within(mail).getByText(en["contact.consent.unknownWord"]),
     ).toBeTruthy();
     expect(
-      within(email).queryByText(en["contact.consent.allowedWord"]),
+      within(mail).queryByText(en["contact.consent.allowedWord"]),
     ).toBeNull();
+    // The marketing grant is the Research tab's consent panel's to name.
+    expect(screen.queryByText("Newsletter")).toBeNull();
   });
 });

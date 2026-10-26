@@ -282,7 +282,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `voice_build_one_active`: `unique, btree (voice_profile_id) WHERE (status = ANY (ARRAY['queued', 'deferred', 'running']))`
 - `voice_build_pkey`: `unique, btree (id)`
 - `voice_build_poll`: `btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
-- `voice_build_profile_fk`: `btree (voice_profile_id)`
+- `voice_build_profile_version_ix`: `btree (voice_profile_id, result_version)`
 - `voice_build_requester_fk`: `btree (requested_by) WHERE (requested_by IS NOT NULL)`
 
 ## voice_corpus_source
@@ -385,7 +385,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 - `uq_voice_learning_signal_draft`: `unique, btree (draft_ref_hash)`
 - `voice_learning_signal_pkey`: `unique, btree (id)`
-- `voice_learning_signal_profile_fk`: `btree (voice_profile_id)`
+- `voice_learning_signal_profile_version_ix`: `btree (voice_profile_id, profile_version)`
 - `voice_learning_signal_retention`: `btree (retention_until) WHERE (content_erased_at IS NULL)`
 
 ## voice_profile
@@ -472,6 +472,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 **Indexes**
 
 - `uq_voice_profile_delta_version`: `unique, btree (voice_profile_id, to_version)`
+- `voice_profile_delta_from_version_ix`: `btree (voice_profile_id, from_version)`
 - `voice_profile_delta_history`: `btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `voice_profile_delta_pkey`: `unique, btree (id)`
 
@@ -529,3 +530,4 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `voice_profile_version_history`: `btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `voice_profile_version_one_active`: `unique, btree (voice_profile_id) WHERE (status = 'active')`
 - `voice_profile_version_pkey`: `unique, btree (id)`
+- `voice_profile_version_predecessor_ix`: `btree (voice_profile_id, predecessor_version)`

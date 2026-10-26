@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import type { TimelineFilters } from "./recordtimeline";
 import { TimelineFilterBar } from "./timelinefilterbar";
@@ -74,4 +75,28 @@ export const FullyNarrowed: Story = {
       }}
     />
   ),
+};
+
+/**
+ * The record feed column is about 250px wide on a phone, so From and To cannot
+ * share the line and To drops under From. The play fails if a date box clips
+ * its own day or the frame scrolls sideways.
+ */
+export const BoundedRangeInFeedColumn: Story = {
+  name: "bounded range, in the feed column",
+  render: () => (
+    <div style={{ inlineSize: 250 }} data-testid="feed-column">
+      <Live initial={{ after: "2026-10-24", before: "2026-10-25" }} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const from = await canvas.findByRole("textbox", { name: "From" });
+    const to = await canvas.findByRole("textbox", { name: "To" });
+    for (const box of [from, to]) {
+      await expect(box.scrollWidth).toBeLessThanOrEqual(box.clientWidth);
+    }
+    const frame = await canvas.findByTestId("feed-column");
+    await expect(frame.scrollWidth).toBeLessThanOrEqual(frame.clientWidth);
+  },
 };

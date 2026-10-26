@@ -4,143 +4,69 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
-import { Popover } from "../../design-system/popover";
-import { provenanceOf } from "../../design-system/provenanceof";
-import { Fact, RecordFacts } from "../../design-system/recordfacts";
-import { ProvenanceTag } from "../../design-system/trust";
-import { formatDateAbbrev, formatNumber } from "../../format/format";
+import { formatNumber } from "../../format/format";
+import { industryWords } from "../../format/industry";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useMemberName } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
-import { useViewerId } from "../../lib/session";
-import {
-  CompanyOwnerControl,
-  companyWebsite,
-  displayHost,
-} from "./companyheader";
+import { routeHash } from "../../lib/router";
+import { companyWebsite, displayHost } from "./companyheader";
 
-// The account's name-line subtitle and its facts strip: what CompanyIdentityLine
-// used to draw as one running sentence, in the contact record page's own
-// shapes, an inline subtitle beside the name, and named cells under it.
+// The lines under the account's name.
 
 type Company = components["schemas"]["Company"];
 type Company360 = components["schemas"]["Company360"];
 
 /**
- * CompanySubtitle is what the account is and the one way in every reader
- * already knows, leading the marks row under the name (CompanyMarks). The
- * name's own line holds the lifecycle control alone. Nothing is drawn for an
- * account with neither, so the row does not open on an empty gap.
+ * CompanyHeadLines are the lines under the account's name, one fact each:
+ * what it is, its site, and the best way in. Nothing is drawn for a fact the
+ * account does not have, so the head never opens on an empty line.
  */
-export function CompanySubtitle({
-  company,
-}: Readonly<{ company: Company }>): ReactNode {
-  const website = companyWebsite(company);
-  if (!company.industry && !website) {
-    return null;
-  }
-  return (
-    <div className="record-sub record-sub-inline">
-      {company.industry}
-      {website && (
-        <>
-          {company.industry ? " · " : ""}
-          <a className="co-meta-link" href={website}>
-            {displayHost(website)}
-          </a>
-        </>
-      )}
-    </div>
-  );
-}
-
-/**
- * CompanyIdentityFacts is the head's facts strip: the way in, who holds the
- * account, and when its own row was written and by whom. Re-houses what
- * CompanyIdentityLine drew as one sentence, as the same named cells every
- * other record page's facts strip carries (RecordFacts).
- */
-export function CompanyIdentityFacts({
+export function CompanyHeadLines({
   company,
   view,
   loading,
 }: Readonly<{
   company: Company;
-  // The 360 the page already holds. Absent while it loads, and the strength
-  // reading absent again once it lands, for a company nobody has a way in on.
+  // The 360 the page already holds; its strength names the way in.
   view?: Company360;
   loading?: boolean;
 }>): ReactNode {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
-  const viewerId = useViewerId();
-  const provenance = provenanceOf(
-    company.captured_by,
-    viewerId,
-    company.author,
-    company.source,
-    company.imported_from,
-  );
-  // Named by id, the same read every author/owner tag resolves through,
-  // asked for only when the provenance names a human at all.
-  const authorName = useMemberName(
-    provenance.kind === "human" ? provenance.userId : undefined,
-  );
   const website = companyWebsite(company);
   const wayIn = loading ? undefined : view?.strength;
+  // The 360 already carries the way-in contact's name, so the line reads it
+  // from there; the reference only resolves a contact the page did not list.
+  const named = view?.contacts?.data.find(
+    (row) => row.contact_id === wayIn?.contributor_contact_id,
+  );
   return (
-    <RecordFacts>
+    <>
+      {company.industry && <span>{industryWords(t, company.industry)}</span>}
       {website && (
-        <Fact label={t("field.domain")}>
-          <a className="co-meta-link" href={website}>
-            {displayHost(website)}
-          </a>
-        </Fact>
+        <a className="entity-link" href={website}>
+          {displayHost(website)}
+        </a>
       )}
-      {company.industry && (
-        <Fact label={t("history.field.industry")}>{company.industry}</Fact>
-      )}
-      {company.size_band && (
-        <Fact label={t("history.field.size_band")}>
-          {t("co.pulse.sizeBand", { band: company.size_band })}
-        </Fact>
-      )}
-      {/* The owner control, not a read of the owner: on an unowned account it
-          is the claim door, and a label here left that account with no way to
-          become anybody's. */}
-      <Fact label={t("co.pulse.owner")}>
-        <CompanyOwnerControl company={company} hideLabel />
-      </Fact>
       {wayIn?.contributor_contact_id && (
-        <Fact label={t("co.pulse.strongestLead")}>
-          {/* No space before the tail: it opens with its own comma, so the
-              name and the clause read as one sentence. */}
-          <EntityRef kind="contact" id={wayIn.contributor_contact_id} />
+        <span>
+          {t("co.pulse.strongestLead")}{" "}
+          {/* No space before the tail: it opens with its own comma. */}
+          {named ? (
+            <a
+              className="entity-link"
+              href={routeHash({ screen: "contacts", id: named.contact_id })}
+            >
+              {named.full_name}
+            </a>
+          ) : (
+            <EntityRef kind="contact" id={wayIn.contributor_contact_id} />
+          )}
           {plural("co.pulse.strengthTail", wayIn.contact_count, {
             count: formatNumber(wayIn.contact_count, locale),
           })}
-        </Fact>
+        </span>
       )}
-      <Fact label={t("list.created")}>
-        {formatDateAbbrev(company.created_at, locale, zone)}
-      </Fact>
-      {/* The provenance pill names the KIND of source; the popover behind it
-          answers WHICH one, on the same rule the contact page's Source fact
-          keeps for a mailbox capture's message id. */}
-      <Fact label={t("history.field.source")}>
-        <Popover
-          label={
-            <ProvenanceTag
-              provenance={provenance}
-              renderUser={() => authorName.data ?? undefined}
-            />
-          }
-        >
-          <p className="t-body">{company.source || t("trust.sourceUnknown")}</p>
-        </Popover>
-      </Fact>
-    </RecordFacts>
+    </>
   );
 }

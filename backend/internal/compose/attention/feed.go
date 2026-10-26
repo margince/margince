@@ -91,6 +91,7 @@ type Service struct {
 	tagSuggestions TagSuggestions
 	tasks          Tasks
 	receipts       Receipts
+	handledWindow  HandledWindow
 	briefing       Briefing
 	// commitments is OPTIONAL: nil means no commitments lane, and Assemble
 	// leaves the field unset rather than sending an empty array.
@@ -203,6 +204,7 @@ type Service struct {
 	// admits. A lane whose absence widened a scope would be a security hole
 	// wearing the shape of a missing feature.
 	teammates   Teammates
+	former      FormerTeammates
 	namedTeams  NamedTeams
 	weeklyPlans WeeklyPlans
 	planRows    []ranked
@@ -322,7 +324,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 		out.Counts.DealSuggestionsOpen = count.suggestions
 		out.Counts.TagSuggestionsOpen = count.tagSuggestions
 	})
-	beside := besideDay{failed: count.failed, until: until}
+	beside := besideDay{failed: count.failed, until: until, zone: loc}
 	if err != nil {
 		return crmcontracts.Attention{}, besideDay{}, err
 	}

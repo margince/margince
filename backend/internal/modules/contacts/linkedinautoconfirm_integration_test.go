@@ -298,6 +298,10 @@ func assertConfirmWroteEverything(t *testing.T, e *dedupeEnv, contact ids.Contac
 	if n := e.eventCount(t, "linkedin_match.decided"); n != 1 {
 		t.Errorf("the confirm emitted %d linkedin_match.decided events, want 1", n)
 	}
+	// No human ticked a box, so an automatic confirm writes neither field.
+	if n := e.silentDecisionCount(t); n != 1 {
+		t.Errorf("%d decided events say neither title nor employer was written, want 1", n)
+	}
 	if n := e.eventCount(t, "contact.updated"); n < 1 {
 		t.Errorf("the confirm emitted %d contact.updated events, want at least the handle gain", n)
 	}
@@ -463,6 +467,21 @@ func (e *dedupeEnv) auditCount(t *testing.T, entityType string, entityID ids.UUI
 }
 
 // eventCount counts the outbox events of one type.
+// silentDecisionCount counts the decided events that say the decision wrote
+// neither the title nor the employer.
+func (e *dedupeEnv) silentDecisionCount(t *testing.T) int {
+	t.Helper()
+	ctx := e.as()
+	var n int
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'linkedin_match.decided'
+			   AND envelope->'payload' @> '{"title_written": false, "employer_written": false}'`).Scan(&n)
+	}); err != nil {
+		t.Fatalf("counting decided events: %v", err)
+	}
+	return n
+}
+
 func (e *dedupeEnv) eventCount(t *testing.T, eventType string) int {
 	t.Helper()
 	ctx := e.as()

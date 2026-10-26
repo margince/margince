@@ -10,6 +10,7 @@ import {
   waitFor,
   within,
 } from "storybook/test";
+import { en } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   jsonResponse,
@@ -31,6 +32,7 @@ const DSRS = {
       status: "open",
       due_at: "2026-08-01T00:00:00Z",
       due_overridden: false,
+      dispute_open: false,
       created_at: "2026-07-01T00:00:00Z",
     },
     {
@@ -41,6 +43,7 @@ const DSRS = {
       resolution: "sent by post",
       due_at: "2026-07-12T00:00:00Z",
       due_overridden: false,
+      dispute_open: false,
       created_at: "2026-06-01T00:00:00Z",
     },
     {
@@ -52,6 +55,7 @@ const DSRS = {
       assignee_id: "u-1",
       due_at: "2099-11-30T00:00:00Z",
       due_overridden: false,
+      dispute_open: false,
       created_at: "2026-06-01T00:00:00Z",
     },
     {
@@ -63,6 +67,7 @@ const DSRS = {
       resolution: "No record of this address",
       due_at: "2026-05-01T00:00:00Z",
       due_overridden: false,
+      dispute_open: false,
       created_at: "2026-04-01T00:00:00Z",
     },
   ],
@@ -321,7 +326,10 @@ async function armErasureConfirm(canvasElement: HTMLElement) {
   const row = await findRow("8f3a-contact-uuid");
   await userEvent.type(within(row).getByLabelText(/resolution/i), "verified");
   await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
-  await userEvent.type(await screen.findByLabelText(/type erase/i), "ERASE");
+  await userEvent.type(
+    await screen.findByLabelText(`${en["privacy.typeErasePrompt"]} ERASE`),
+    "ERASE",
+  );
 }
 
 // The typed-ERASE confirm modal for the destructive erasure fulfil —

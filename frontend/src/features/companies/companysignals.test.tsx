@@ -5,7 +5,7 @@ import "@testing-library/jest-dom/vitest";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { SignalsSection } from "./companyrail";
+import { SignalsSection } from "./companysignals";
 
 // A newsroom signal CITES its article rather than copying it, so the headline
 // on the row is the whole of what this product holds. Without the address the

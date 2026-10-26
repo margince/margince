@@ -198,9 +198,8 @@ func (v Version) Validate() error {
 // knows the answer, so the declaration is where it has to come from.
 type Description string
 
-// Validate requires a non-empty, single-line printable sentence. The bound is
-// the same one Version keeps and for the same reason: this string is rendered
-// verbatim to an operator and written into the unit manifest.
+// Validate requires a non-empty, single-line printable sentence. The
+// Extensions settings page shows it to an operator as written.
 func (d Description) Validate() error {
 	if strings.TrimSpace(string(d)) == "" {
 		return errors.New("extension description is empty — the access screen lists the unit by it")
@@ -446,6 +445,10 @@ type Extension struct {
 	// Entries are the unit's ways into its own screen from core screens: the
 	// Log activity form and the contact, company and deal headers. See Entry.
 	Entries []Entry
+
+	// Panels are the unit's components drawn inline on core pages, such as a
+	// deal page's side column. See Panel.
+	Panels []Panel
 }
 
 // MigrationsDir is the one spelling of the subdirectory a unit's

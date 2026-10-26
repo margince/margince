@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/htmltext"
 )
 
 const envelopeOwner = "reader@ourco.example"
@@ -228,7 +229,7 @@ func TestTheEnvelopeCarriesALinkListCutShort(t *testing.T) {
 // The walk reads a body as a mail client renders it. Each case is markup a
 // token walk reads otherwise than the reader sees it, so a link would hide.
 func TestTheLinkWalkReadsTheLinksTheReaderSees(t *testing.T) {
-	filler := strings.Repeat("x", maxTokenLen+1000)
+	filler := strings.Repeat("x", htmltext.MaxTokenLen+1000)
 	landing := `<a href="https://landing.example.org/">x</a>`
 	cases := map[string]string{
 		"a long stylesheet before a link":    `<STYLE>` + filler + `</Style >` + landing,
@@ -271,5 +272,44 @@ func TestAnUnreadableRecipientHeaderIsMarked(t *testing.T) {
 				t.Errorf("recipients unreadable = %v, want %v", envelope.RecipientsUnreadable, tc.want)
 			}
 		})
+	}
+}
+
+// The address list and the host list come from one walk.
+// A link keeps the text a reader sees on it.
+func TestLinkWalkReturnsAddressesAndTheirHosts(t *testing.T) {
+	plain := "Deck: https://docs.google.com/presentation/d/abc/edit"
+	body := `<a href="` + googleRedirect("https://drive.google.com/file/d/xyz/view") + `">  The  contract
+		</a><a href="mailto:a@example.com">mail</a>`
+
+	links, cut := walkLinks(plain, body)
+	want := []capture.MailLink{
+		{URL: "https://docs.google.com/presentation/d/abc/edit"},
+		{URL: "https://drive.google.com/file/d/xyz/view", Text: "The contract"},
+	}
+	if !slices.Equal(links, want) || cut {
+		t.Fatalf("links are %v (cut %v), want %v", links, cut, want)
+	}
+	hosts, hostsCut := linkHosts(plain, body)
+	derived, _ := hostsOf(links)
+	if !slices.Equal(hosts, derived) || hostsCut {
+		t.Errorf("hosts %v differ from the hosts of the address list %v", hosts, derived)
+	}
+}
+
+func TestLinkWalkKeepsTheTextOfALinkAlsoWrittenOutInPlainText(t *testing.T) {
+	address := "https://docs.google.com/document/d/abc/edit"
+	links, _ := walkLinks(address, `<a href="`+address+`">Notes</a>`)
+
+	if len(links) != 1 || links[0].Text != "Notes" {
+		t.Errorf("links are %v, want one address carrying the text Notes", links)
+	}
+}
+
+func TestLinkTextIsBounded(t *testing.T) {
+	links, _ := walkLinks("", `<a href="https://docs.google.com/a">`+strings.Repeat("x", maxAnchorRunes*3)+`</a>`)
+
+	if len(links) != 1 || len([]rune(links[0].Text)) != maxAnchorRunes {
+		t.Errorf("anchor text length is %d, want %d", len([]rune(links[0].Text)), maxAnchorRunes)
 	}
 }

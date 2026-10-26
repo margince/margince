@@ -42,7 +42,7 @@ const CONNECTION = {
 
 const page = { next_cursor: null, has_more: false };
 
-type Call = { method: string; path: string; body: unknown };
+type Call = { method: string; path: string; q: string | null; body: unknown };
 
 // The backend at the HTTP boundary: answers by method and path from `routes`,
 // and records every request so a test can assert what was sent.
@@ -59,7 +59,12 @@ function backend(
       const path = url.pathname.replace(/^\/v1/, "");
       const text = await req.clone().text();
       const body = text ? JSON.parse(text) : null;
-      calls.push({ method: req.method, path, body });
+      calls.push({
+        method: req.method,
+        path,
+        q: url.searchParams.get("q"),
+        body,
+      });
       if (path === "/me") return jsonResponse(meFixture({ allow }));
       const handler = routes[`${req.method} ${path}`];
       if (!handler)
@@ -226,7 +231,7 @@ describe("FinanceSourceCard", () => {
     expect(await screen.findByTestId("finance-customer-CUST-A")).toBeTruthy();
   });
 
-  it("links an unlinked customer and unlinks a linked one", async () => {
+  it("links an unlinked customer, searching for its name first, and unlinks a linked one", async () => {
     const calls = backend({
       "GET /finance/source": () =>
         jsonResponse({ available: AVAILABLE, connection: CONNECTION }),
@@ -258,9 +263,14 @@ describe("FinanceSourceCard", () => {
     const rowA = await screen.findByTestId("finance-customer-CUST-A");
     await user.click(within(rowA).getByRole("button", { name: "Link" }));
     const dialog = await screen.findByRole("dialog");
-    await user.type(
-      within(dialog).getByRole("searchbox", { name: "Find a company" }),
-      "Alp",
+    const search = within(dialog).getByRole("searchbox", {
+      name: "Find a company",
+    });
+    expect((search as HTMLInputElement).value).toBe("Customer A");
+    await waitFor(() =>
+      expect(
+        calls.find((c) => c.method === "GET" && c.path === "/companies")?.q,
+      ).toBe("Customer A"),
     );
     await user.click(
       await within(dialog).findByRole("button", { name: "Alpha AG" }),

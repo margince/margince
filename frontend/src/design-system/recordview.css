@@ -1,0 +1,390 @@
+/* RecordView: two cards in a row. The details card is a
+   fixed 340px and stays in view as the page scrolls; the sheet takes the
+   rest up to 920px and may shrink to nothing, so the row never scrolls
+   sideways. Under 900px of row the details card takes the full width above
+   the sheet and scrolls with the page. */
+
+.record-split {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-inline-size: 1320px;
+  margin-inline: auto;
+}
+.record-split-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--space-6);
+}
+.record-split-details,
+.record-split-sheet {
+  background: var(--pane);
+  border: 1px solid var(--paneEdge);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-rest);
+  min-inline-size: 0;
+}
+/* Only the two main cards rest on a shadow. A pane inside one is a box in a
+   box, and its hairline alone separates it. */
+.record-split-details .panel,
+.record-split-sheet .panel {
+  box-shadow: none;
+}
+
+.record-split-details {
+  flex: 0 0 340px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-5);
+  position: sticky;
+  inset-block-start: 0;
+  max-block-size: calc(
+    100dvh -
+    var(--topbarH, 0px) -
+    var(--pageGapTop, 0px) -
+    var(--space-6)
+  );
+  overflow-y: auto;
+  /* The card scrolls only to stay in view, so its bar is no part of the
+     picture until the pointer is on the card. */
+  scrollbar-color: transparent transparent;
+}
+/* Under :where() so the shell's accent still lights the bar itself
+   (app.css). */
+.record-split-details:where(:hover) {
+  scrollbar-color: var(--borderControl) transparent;
+}
+/* Chrome and Safari draw a 6px bar from the WebKit pseudo-elements, which
+   they ignore while either standard property is set; Firefox keeps the thin
+   standard bar. Three classes outrank the shell's hover rule (app.css). */
+@supports selector(::-webkit-scrollbar) {
+  .record-split .record-split-row .record-split-details {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+  .record-split-details::-webkit-scrollbar {
+    width: 6px;
+  }
+  /* The track stops short of the card's rounded corners. */
+  .record-split-details::-webkit-scrollbar-track {
+    margin: var(--r-lg) 0;
+  }
+  .record-split-details::-webkit-scrollbar-thumb {
+    background: transparent;
+  }
+  .record-split-details:hover::-webkit-scrollbar-thumb {
+    background: var(--borderControl);
+  }
+  .record-split-details::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+  }
+}
+.record-split-sheet {
+  flex: 1 1 0;
+  max-inline-size: 920px;
+  overflow: hidden;
+}
+
+/* The head: mark and name, one fact per line, the pills, the verbs. A rule
+   under it runs across the card's padding to its edges. */
+.record-split-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-block-end: var(--space-5);
+  margin-inline: calc(-1 * var(--space-5));
+  padding-inline: var(--space-5);
+  border-block-end: 1px solid var(--borderSubtle);
+}
+.record-split-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.record-split-name {
+  flex: 1;
+  min-inline-size: 0;
+  color: var(--textPrimary);
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+.record-split-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  color: var(--textSecondary);
+}
+.record-split-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* The verbs as one bordered bar of tiles, glyph over word, sharing the width.
+   A glyph-only verb shows its accessible name as the word, so the tile and
+   the screen reader say one thing. The one filled verb runs full width above
+   the tiles; a refusal sentence the verbs point at drops under them. */
+.record-split-verbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0;
+  padding: 2px;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-control);
+  background: var(--bgElevated);
+}
+/* Every tile starts from one basis, larger than any tile's own padding and
+   small enough that six fit the card, so the bar shares out equal widths
+   whether a verb is a bare button or wraps one. */
+.record-split-verbs > * {
+  flex: 1 1 var(--space-10);
+  display: flex;
+  min-inline-size: 0;
+}
+.record-split-verbs > * > .btn,
+.record-split-verbs > * > .btn-with-reason,
+.record-split-verbs .btn-with-reason > .btn {
+  flex: 1 1 0;
+  display: flex;
+  min-inline-size: 0;
+}
+.record-split-verbs .btn:not(.btn-primary) {
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-1);
+  inline-size: auto;
+  min-block-size: var(--space-12);
+  block-size: 100%;
+  padding: var(--space-2) 0;
+  overflow: hidden;
+  border-color: transparent;
+  border-inline-width: 0;
+  box-shadow: none;
+  background: var(--bgElevated);
+  font: var(--fontBodySmall);
+  text-align: center;
+  white-space: nowrap;
+  color: var(--textSecondary);
+}
+/* A hairline between neighbouring tiles carries the grouping, so the tiles
+   themselves stay flat. */
+.record-split-verbs
+> :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p) {
+  position: relative;
+}
+.record-split-verbs
+  > :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)
+  ~ :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)::before,
+.record-split-verbs
+  > :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)
+  ~ *
+  > .btn-with-reason:has(> .t-caption)
+  > .btn::before,
+.record-split-verbs
+  > :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)
+  ~ .btn-with-reason:has(> .t-caption):not(:has(> .btn-primary))
+  > .btn::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block: var(--space-3);
+  inline-size: 1px;
+  background: var(--borderSubtle);
+}
+.record-split-verbs .btn:not(.btn-primary):hover {
+  background: var(--bgHover);
+  color: var(--textPrimary);
+}
+/* One short word under the glyph, on one line in every language; the full
+   verb is the control's name and its tip. */
+.record-split-verbs .verb-word {
+  display: block;
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.record-split-verbs .btn-icon:not(.btn-primary):not(:has(.verb-word))::after {
+  content: attr(aria-label);
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.record-split-verbs > .btn-primary,
+.record-split-verbs > .btn-with-reason:has(> .btn-primary) {
+  flex-basis: 100%;
+  order: -1;
+  justify-content: center;
+}
+.record-split-verbs > .btn-with-reason:has(> .btn-primary) {
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-block-end: var(--space-1);
+}
+.record-split-verbs > .btn-with-reason > .btn-primary {
+  flex: none;
+  align-self: stretch;
+  justify-content: center;
+}
+/* A tile's refusal is a sentence too wide for the tile: it runs along the
+   bar's foot, in room the bar keeps for it. */
+.record-split-verbs:has(> * > .btn-with-reason > .t-caption),
+.record-split-verbs:has(> .btn-with-reason > .btn:not(.btn-primary)) {
+  position: relative;
+  padding-block-end: calc(var(--space-2) + 2lh);
+}
+.record-split-verbs > * > .btn-with-reason > .t-caption,
+.record-split-verbs > .btn-with-reason:not(:has(> .btn-primary)) > .t-caption {
+  position: absolute;
+  inset-inline: var(--space-2);
+  inset-block-end: var(--space-1);
+}
+/* A positioned tile would hold the sentence to its own width. So the tile that
+   states one stays static, and its button fills it and draws the hairline. */
+.record-split-verbs > :has(> .btn-with-reason > .t-caption),
+.record-split-verbs
+  > .btn-with-reason:has(> .t-caption):not(:has(> .btn-primary)) {
+  position: static;
+}
+.record-split-verbs
+  > :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)
+  ~ :is(
+    :has(> .btn-with-reason > .t-caption),
+    .btn-with-reason:has(> .t-caption):not(:has(> .btn-primary))
+  )::before {
+  content: none;
+}
+.record-split-verbs > * > .btn-with-reason:has(> .t-caption) > .btn,
+.record-split-verbs
+  > .btn-with-reason:has(> .t-caption):not(:has(> .btn-primary))
+  > .btn {
+  position: relative;
+  align-self: stretch;
+}
+.record-split-verbs > p {
+  flex-basis: 100%;
+  order: 1;
+  padding: var(--space-1) var(--space-2);
+}
+
+.record-split-tabs {
+  padding: var(--space-3) var(--space-6) 0;
+  border-block-end: 1px solid var(--borderSubtle);
+}
+/* The strip is as wide as the sheet it sits in. The page's breakout (a strip
+   as wide as the work column) would run it past the sheet's edge, where the
+   sheet clips the last tabs instead of letting the strip scroll. */
+.record-split-tabs .recordtabs {
+  inline-size: auto;
+  margin-inline: 0;
+  margin-block-end: 0;
+  padding-inline: 0;
+}
+.record-split-tabs .recordtabs-row {
+  padding-inline: 0;
+}
+/* Words spaced by the strip's gap rather than each tab's padding, and a count
+   as a quiet figure after its label, so a record's tabs fit the sheet. */
+.record-split-tabs .recordtabs-strip {
+  gap: var(--space-5);
+}
+.record-split-tabs .recordtabs-tab {
+  gap: var(--space-1);
+  padding-inline: 0;
+  color: var(--textSecondary);
+}
+.record-split-tabs .recordtabs-tab[aria-pressed="true"],
+.record-split-tabs .recordtabs-tab[aria-current="page"] {
+  color: var(--textPrimary);
+}
+.record-split-tabs .recordtabs-tab .optioncount {
+  display: inline;
+  min-inline-size: 0;
+  padding: 0;
+  background: var(--pane);
+  color: var(--textSecondary);
+  font-weight: var(--fontWeightRegular);
+}
+/* On a laptop the sheet is too narrow for eight tabs and their counts, and a
+   strip that scrolls hides its last tabs. The details card gives up 40px, the
+   tabs close up, and a count stays in the tab's name for a screen reader while
+   it leaves the screen. */
+@container (min-width: 901px) and (max-width: 1100px) {
+  .record-split-details {
+    flex-basis: 316px;
+    padding-inline: var(--space-4);
+  }
+  .record-split-head {
+    margin-inline: calc(-1 * var(--space-4));
+    padding-inline: var(--space-4);
+  }
+  .record-split-tabs {
+    padding-inline: var(--space-5);
+  }
+  .record-split-tabs .recordtabs-strip {
+    gap: var(--space-3);
+  }
+  .record-split-tabs .recordtabs-tab {
+    position: relative;
+  }
+  .record-split-tabs .recordtabs-tab .optioncount {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+.record-split-feed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-6) var(--space-8);
+  min-inline-size: 0;
+}
+.record-split-feed > .record-band {
+  margin: 0;
+}
+@container (max-width: 900px) {
+  .record-split-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .record-split-details {
+    flex-basis: auto;
+    position: static;
+    max-block-size: none;
+    overflow-y: visible;
+  }
+  .record-split-sheet {
+    flex-basis: auto;
+    max-inline-size: none;
+  }
+  /* The details sit in columns when they have the sheet's width, so they do
+     not push the sheet a screen down the page. */
+  .record-split-details .recorddetails {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    align-items: start;
+    gap: var(--space-6) var(--space-8);
+  }
+  .record-split-details .recorddetails > .recorddetails-toggle,
+  .record-split-details .recorddetails > .recorddetails-note {
+    grid-column: 1 / -1;
+  }
+  .record-split-details .recorddetails > .recorddetails-toggle {
+    justify-self: start;
+  }
+}

@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -110,8 +111,10 @@ func Setup(t *testing.T) *Env {
 	}
 	seedInstallationIdentity(ctx, t, owner)
 	for i, user := range []ids.UUID{e.Rep1, e.Rep2, e.Rep3, e.AdminUser} {
+		address := string(rune('a'+i)) + "@authz.test"
 		if _, err := owner.Exec(ctx,
-			`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, $3)`, user, string(rune('a'+i))+"@authz.test", "Rep"); err != nil {
+			`INSERT INTO app_user (id, email, display_name, email_domain_folded) VALUES ($1, $2, $3, $4)`,
+			user, address, "Rep", owndomain.StoredOfAddress(address)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -288,7 +291,7 @@ func (e *Env) AgentCtx() context.Context {
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", SeatType: principal.SeatFull,
-		PassportID: e.AgentPassport,
+		PassportID: e.AgentPassport, OnBehalfOf: e.Rep1,
 	})
 }
 
@@ -354,7 +357,7 @@ func (e *Env) AgentCtxWithPassport(passportID ids.UUID) context.Context {
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", SeatType: principal.SeatFull,
-		PassportID: passportID,
+		PassportID: passportID, OnBehalfOf: e.Rep1,
 	})
 }
 

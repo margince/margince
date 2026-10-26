@@ -1,17 +1,29 @@
+import type { ReactNode } from "react";
+import {
+  TaskCompleteCheck,
+  TaskQuickActions,
+  type useTaskUpdate,
+} from "../../components/taskactions";
 import { Card, EmptyState, Skeleton } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { sectionState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
+import type { CompanyTab } from "../../lib/companytab";
 import type { OpenReceipt } from "../records/record360";
-import { TaskQuickActions, type useTaskUpdate } from "../worklist/taskactions";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
 import type { Company, Company360View } from "./companies";
-import { DealsCard, NextSteps, ProposedNextSteps } from "./company360";
+import {
+  DealsCard,
+  ProposedNextSteps,
+  type SuggestionAction,
+} from "./company360";
 import { NewDealAction } from "./companyactions";
 import { CompanyContractState, CompanyLastOffer } from "./companycommercial";
 import { CompanyProjectsPanel } from "./companyprojects";
-import type { CompanyTab } from "./companytab";
+import { CompanyTasksFinds } from "./companytasksfinds";
+import { CompanyTaskTable } from "./companytaskstable";
 import "./company360.css";
+import "./companytabs.css";
 
 // CompanyDealsAndTasksTabs holds both new tab bodies plus the modal either
 // can open. It lives apart from CompanyPage to keep that render legible: the
@@ -26,6 +38,10 @@ export function CompanyDealsAndTasksTabs({
   onOpenTask,
   onOpenRecord,
   onOpenReceipt,
+  onOpenEmail,
+  onPrepareMeeting,
+  onDraftTo,
+  onPerform,
   taskUpdate,
 }: Readonly<{
   tab: CompanyTab;
@@ -41,16 +57,21 @@ export function CompanyDealsAndTasksTabs({
   // chip on the Tasks tab lands where the same chip on the overview does.
   onOpenRecord: (entityType: string, entityId: string) => void;
   onOpenReceipt: OpenReceipt;
+  onOpenEmail: (activityId: string) => void;
+  // The verbs the Tasks tab's finds perform: the meeting brief, the
+  // composer, and a suggestion's own action.
+  onPrepareMeeting: (activityId: string) => void;
+  onDraftTo: (contactId: string) => void;
+  onPerform: (action: SuggestionAction) => void;
   taskUpdate: ReturnType<typeof useTaskUpdate>;
 }>) {
   const t = useT();
   return (
     <>
       {tab === "deals" && !company.archived_at && (
-        // The record's own stack, which every tab body with more than one
-        // panel takes. The work column puts no gap between its children, so
-        // two bare sibling panels would read as one card with a rule through it.
-        <div className="record-stack">
+        // The tab body's own stack: two bare sibling panels would read as one
+        // card with a rule through it.
+        <div className="co-tab-stack">
           {/* Beside the deals card, not inside it. The card's `extra` slot only
               renders when the deals section itself is readable. A reader with
               the contract grant and not the deal grant would then never see
@@ -90,6 +111,20 @@ export function CompanyDealsAndTasksTabs({
           onOpenRecord={onOpenRecord}
           onOpenReceipt={onOpenReceipt}
           update={taskUpdate}
+          finds={
+            view && (
+              <CompanyTasksFinds
+                companyId={company.id}
+                view={view}
+                onPrepareMeeting={onPrepareMeeting}
+                onDraftTo={onDraftTo}
+                onOpenRecord={onOpenRecord}
+                onOpenReceipt={onOpenReceipt}
+                onOpenEmail={onOpenEmail}
+                onPerform={onPerform}
+              />
+            )
+          }
         />
       )}
       {tab === "tasks" && !company.archived_at && openTaskId && (
@@ -146,9 +181,8 @@ function CompanyDealsTab({
 // the work queue offers (taskactions.tsx). It is one mutation, so a task
 // finished here is finished on the queue too.
 //
-// `NextSteps` renders `null` on a withheld section, which suits its
-// middle-column layout. As a whole tab body that would be a blank tab, which
-// the four-states rule forbids. So the withheld case is caught here first.
+// A withheld section is caught here first: the table leaves it to its caller,
+// and a blank tab body is what the four-states rule forbids.
 function CompanyTasksTab({
   companyId,
   view,
@@ -157,6 +191,7 @@ function CompanyTasksTab({
   onOpenRecord,
   onOpenReceipt,
   update,
+  finds,
 }: Readonly<{
   companyId: string;
   view?: Company360View;
@@ -165,6 +200,8 @@ function CompanyTasksTab({
   onOpenRecord: (entityType: string, entityId: string) => void;
   onOpenReceipt: OpenReceipt;
   update: ReturnType<typeof useTaskUpdate>;
+  // What Margince found beyond the proposed steps, under them.
+  finds?: ReactNode;
 }>) {
   const t = useT();
   if (!view && !failed) {
@@ -193,28 +230,37 @@ function CompanyTasksTab({
       </Panel>
     );
   }
+  // The list first, then the advice that would become a task. Each is its own
+  // card, so the recommended steps never read as rows already on the list.
   return (
-    <NextSteps
-      view={view}
-      proposed={
-        <ProposedNextSteps
-          companyId={companyId}
-          view={view}
-          onOpenRecord={onOpenRecord}
-          onOpenReceipt={onOpenReceipt}
-        />
-      }
-      onOpenTask={(step) => onOpenTask(step.activity_id)}
-      update={update}
-      renderAction={(step) => (
-        <TaskQuickActions
-          activityId={step.activity_id}
-          version={step.version}
-          dueAt={step.due_at}
-          update={update}
-          showComplete={false}
-        />
-      )}
-    />
+    <div className="co-tab-stack">
+      <CompanyTaskTable
+        view={view}
+        onOpenTask={(step) => onOpenTask(step.activity_id)}
+        renderTick={(step) => (
+          <TaskCompleteCheck
+            activityId={step.activity_id}
+            version={step.version}
+            update={update}
+          />
+        )}
+        renderAction={(step) => (
+          <TaskQuickActions
+            activityId={step.activity_id}
+            version={step.version}
+            dueAt={step.due_at}
+            update={update}
+            showComplete={false}
+          />
+        )}
+      />
+      <ProposedNextSteps
+        companyId={companyId}
+        view={view}
+        onOpenRecord={onOpenRecord}
+        onOpenReceipt={onOpenReceipt}
+      />
+      {finds}
+    </div>
   );
 }

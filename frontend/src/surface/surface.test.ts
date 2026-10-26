@@ -48,6 +48,9 @@ describe("the published frontend surface", () => {
       // sideways with it. Not ListTable: that one is a record list with
       // server-backed dials a caller owes state to.
       "DataTable",
+      // DateInput: the gate that refuses the browser's date field reads unit
+      // screens too. See the note beside its export.
+      "DateInput",
       "EmptyState",
       // ErrorLine: a unit saying a write failed has otherwise only a bare `<p>`,
       // with no danger ink and no announcement. See the note beside its export.
@@ -57,6 +60,13 @@ describe("the published frontend surface", () => {
       // hand-wrote a `<dl>` that nothing styled. See the note beside its export.
       "FactList",
       "Field",
+      // IconAction: a unit's glyph verb beside a value, named once for both a
+      // screen reader and a pointer. See the note beside its export.
+      "IconAction",
+      // Panel and PanelBody: a unit's deal panel stands in the page's own
+      // column, where the catalog wants a Panel and forbids a titled Card.
+      "Panel",
+      "PanelBody",
       "RecordPicker",
       // Row and Stack: the gap every other name on this list works around. A
       // unit ships no stylesheet, so before these its only ways to separate two
@@ -74,6 +84,11 @@ describe("the published frontend surface", () => {
       "TextInput",
       "TokenInput",
       "TokenList",
+      "isISODate",
+      "isoOrBlank",
+      // useClipboardCopy: the one spelling of a copy, which the clipboard gate
+      // holds unit screens to as well. See the note beside its export.
+      "useClipboardCopy",
     ]);
     expect(Object.keys(apiSurface).sort()).toEqual([
       "ProblemError",

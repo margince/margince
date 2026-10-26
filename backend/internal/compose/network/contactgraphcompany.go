@@ -28,9 +28,11 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 )
 
 // accountContact is one COWORKER of the contact — another contact at the same
@@ -78,6 +80,22 @@ func (h Reads) addAccountGroup(
 	return dropped, h.addAccountEdges(ctx, tx, contacts, now, out)
 }
 
+// seatViewer is the user whose typed seat aliases this viewer may see: the
+// same UserID row scope keys on. An agent holds it only on a passport whose
+// user is the one it acts for. Any other agent, a connector or the system sees
+// proven seat addresses alone.
+func seatViewer(viewer principal.Principal) ids.UUID {
+	switch viewer.Type {
+	case principal.PrincipalHuman:
+		return viewer.UserID
+	case principal.PrincipalAgent:
+		if viewer.ActsAsItsUser() && viewer.OnBehalfOf == viewer.UserID {
+			return viewer.UserID
+		}
+	}
+	return ids.Nil
+}
+
 // readCompanyContacts finds the other current employees of this contact's
 // employer, row-scoped in the query itself.
 //
@@ -113,6 +131,15 @@ func readCompanyContacts(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 	if scope == "" {
 		scope = narrowsNothing
 	}
+	// A workspace seat is never a coworker at another company, whatever edge
+	// an older write left on it. An alias the viewer only typed hides the
+	// contact from the viewer alone. Count and page share this predicate.
+	seats, err := storekit.WorkspaceSeatAddresses(ctx, tx)
+	if err != nil {
+		return nil, 0, err
+	}
+	viewer, _ := principal.Actor(ctx)
+	seatPos := arg(seats.For(seatViewer(viewer)))
 	limitPos := arg(graphAccountCap)
 
 	// count(*) OVER () rides the same row-scoped predicate as the page, so the
@@ -141,7 +168,7 @@ func readCompanyContacts(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 		   AND colleague.kind = 'employment'
 		   AND `+employment.IsCurrentSQL("colleague.ended_at")+`
 		   AND colleague.archived_at IS NULL
-		  JOIN contact p ON p.id = colleague.contact_id AND p.archived_at IS NULL
+		  JOIN contact p ON p.id = colleague.contact_id AND p.archived_at IS NULL AND `+relationshipmark.NotMarkedSQL("p")+`
 		 WHERE theirs.contact_id = $%d
 		   AND theirs.kind = 'employment'
 		   AND `+employment.IsCurrentSQL("theirs.ended_at")+`
@@ -149,11 +176,15 @@ func readCompanyContacts(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 		   AND p.id <> $%d
 		   AND (%s)
 		   AND (%s)
+		   AND NOT EXISTS (
+		       SELECT 1 FROM contact_email se
+		        WHERE se.contact_id = p.id AND se.archived_at IS NULL
+		          AND lower(se.email) = ANY($%d))
 		)
 		SELECT id, full_name, title, count(*) OVER () AS total
 		  FROM coworkers WHERE edge_rank = 1
 		 ORDER BY full_name, id
-		 LIMIT $%d`, contactPos, contactPos, edgeBound, scope, limitPos), args...)
+		 LIMIT $%d`, contactPos, contactPos, edgeBound, scope, seatPos, limitPos), args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("network: reading who else works at a contact's company: %w", err)
 	}

@@ -98,6 +98,8 @@ const (
 	// `personal` — but it is the OWNER's, and a colleague reading it is the
 	// disclosure this kind exists to prevent.
 	KindAdvisor = "advisor"
+	// KindVendorPitch is a named human selling the business something unasked.
+	KindVendorPitch = "vendor_pitch"
 )
 
 // PendingMaxAttempts bounds the verdict retries (ADR-0072 §5: retries=2). A row
@@ -266,13 +268,13 @@ func recordDisposition(ctx context.Context, tx pgx.Tx, in dispositionRow) (strin
 	_, err = tx.Exec(ctx, `
 		INSERT INTO capture_pending_counterparty
 		  (email, domain, display_name, activity_id, owner_id, status,
-		   disposition_reason, next_attempt_at)
+		   disposition_reason, next_attempt_at, backfill_id)
 		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), $4, $5, $6, NULLIF($7, ''),
-		        CASE WHEN $8::boolean THEN now() END)
+		        CASE WHEN $8::boolean THEN now() END, $9)
 		ON CONFLICT `+conflict+`
 		DO NOTHING`,
 		email, strings.ToLower(strings.TrimSpace(in.Domain)), in.DisplayName,
-		in.ActivityID, in.OwnerID, in.Status, in.Reason, due)
+		in.ActivityID, in.OwnerID, in.Status, in.Reason, due, backfillRunOf(ctx))
 	if err != nil {
 		return "", fmt.Errorf("capture: recording the counterparty disposition: %w", err)
 	}
@@ -334,6 +336,9 @@ func (s *PendingStore) ResolveAs(
 	ctx context.Context, tx pgx.Tx, p PendingCounterparty, status, kind, reason string, byOwner bool,
 	measured VerdictMeasurement,
 ) (bool, error) {
+	if err := storekit.LockSeatAddressChecks(ctx, tx, p.Email); err != nil {
+		return false, err
+	}
 	tag, err := tx.Exec(ctx, `
 		UPDATE capture_pending_counterparty
 		   SET status = $2, disposition_reason = NULLIF($3, ''),
@@ -408,42 +413,6 @@ func (s *PendingStore) Defer(ctx context.Context, p PendingCounterparty, backoff
 	})
 	if err != nil {
 		return fmt.Errorf("capture: deferring disposition %s: %w", p.ID, err)
-	}
-	return nil
-}
-
-// Retire ends a claimed row at `unsure`: the model was asked its allowance of
-// times and never cleared the floor, so the question passes to a human.
-//
-// Terminal by construction: it stamps the attempt count it asserts and the time
-// it stopped, so an operator reading the row sees why it ended rather than
-// having to infer it from a counter that says something else.
-//
-// measured is the LAST answer, and this is the row where it matters most. A
-// sender retired here is one the model had an opinion about and could not hold
-// with enough confidence — "it said contact at 0.78 twice" is the whole reason a
-// contact is now being asked, and dropping it would leave the human with the
-// question and none of the evidence.
-func (s *PendingStore) Retire(
-	ctx context.Context, p PendingCounterparty, reason string, measured VerdictMeasurement,
-) error {
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `
-			UPDATE capture_pending_counterparty
-			   SET status = 'unsure', disposition_reason = NULLIF($2, ''),
-			       attempts = $4, resolved_at = now(),
-			       confidence = $5, served_model = NULLIF($6, ''),
-			       next_attempt_at = NULL, claimed_until = NULL, claimed_by = NULL,
-			       updated_at = now()
-			 WHERE id = $1 AND status = 'pending' AND claimed_by = $3`,
-			p.ID, reason, p.Claim, PendingMaxAttempts, measured.confidence(), measured.Model)
-		if err == nil && tag.RowsAffected() == 0 {
-			return declinedRetire(ctx, tx, p.ID, p.Claim)
-		}
-		return err
-	})
-	if err != nil {
-		return fmt.Errorf("capture: retiring disposition %s: %w", p.ID, err)
 	}
 	return nil
 }

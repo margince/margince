@@ -86,7 +86,7 @@ func nextMove(f facts) crmcontracts.DealStatusCardMove {
 			subject = said.Say(statusWords.Meeting)
 		}
 		return move(ActionOpenMeetingBrief,
-			fmt.Sprintf(said.Say(statusWords.Prepare), said.until(f.now, meeting.StartsAt)),
+			fmt.Sprintf(said.Say(statusWords.Prepare), said.until(f.now, meeting.StartsAt, f.loc)),
 			map[string]any{argActivityID: activityID},
 			crmcontracts.DealNextBestActionEvidence{ActivityId: &activityID, Text: fmt.Sprintf(said.Say(statusWords.Booked), subject)})
 	}
@@ -150,7 +150,7 @@ func farMeetingMove(f facts) crmcontracts.DealStatusCardMove {
 	}
 	activityID := openapi_types.UUID(meeting.ID)
 	return move(ActionOpenMeetingBrief,
-		fmt.Sprintf(said.Say(statusWords.FarMeeting), said.until(f.now, meeting.StartsAt)),
+		fmt.Sprintf(said.Say(statusWords.FarMeeting), said.until(f.now, meeting.StartsAt, f.loc)),
 		map[string]any{argActivityID: activityID},
 		crmcontracts.DealNextBestActionEvidence{ActivityId: &activityID, Text: fmt.Sprintf(said.Say(statusWords.Booked), subject)})
 }
@@ -247,7 +247,7 @@ func sinceLastContact(f facts) string {
 	if !ok {
 		return said.Say(statusWords.Never)
 	}
-	return said.since(f.now, last.OccurredAt)
+	return said.since(f.now, last.OccurredAt, f.loc)
 }
 
 // The stakeholder roles this file reasons about. They are the wire values
@@ -367,15 +367,19 @@ func unansweredInbound(f facts) (crmcontracts.Activity, bool) {
 }
 
 // lastContact is the newest exchange that has already happened. The timeline's
-// first rows can be scheduled meetings with future times, which are plans and
-// not contact; a canceled or no-show meeting is no contact at all.
+// first rows can be scheduled meetings, which are plans and not contact. A
+// canceled or no-show meeting and automatic mail are no contact either.
 func lastContact(f facts) (crmcontracts.Activity, bool) {
 	for _, a := range f.timeline {
 		var status string
 		if a.MeetingStatus != nil {
 			status = string(*a.MeetingStatus)
 		}
-		if !a.OccurredAt.After(f.now) && relstrength.InteractionCounts(string(a.Kind), status) {
+		var automatic relstrength.AutomaticKind
+		if a.AutomaticKind != nil {
+			automatic = relstrength.AutomaticKind(*a.AutomaticKind)
+		}
+		if !a.OccurredAt.After(f.now) && relstrength.InteractionCounts(string(a.Kind), status, automatic) {
 			return a, true
 		}
 	}
@@ -389,7 +393,7 @@ func nextStepReason(f facts) string {
 		return said.Say(statusWords.NoContactNext)
 	}
 	return fmt.Sprintf(said.Say(statusWords.QuietNext),
-		said.since(f.now, last.OccurredAt))
+		said.since(f.now, last.OccurredAt, f.loc))
 }
 
 func lastContactEvidence(f facts) []crmcontracts.DealNextBestActionEvidence {
@@ -443,12 +447,12 @@ func (said statusCopy) subjectOf(a crmcontracts.Activity) string {
 	return *a.Subject
 }
 
-func (said statusCopy) since(now, then time.Time) string {
-	return said.spell(calendarDaysBetween(then, now))
+func (said statusCopy) since(now, then time.Time, loc *time.Location) string {
+	return said.spell(elapsed.Days(then, now, loc))
 }
 
-func (said statusCopy) until(now, then time.Time) string {
-	days := calendarDaysBetween(now, then)
+func (said statusCopy) until(now, then time.Time, loc *time.Location) string {
+	days := elapsed.Days(now, then, loc)
 	switch days {
 	case 0:
 		return said.Say(statusWords.Today)
@@ -457,16 +461,6 @@ func (said statusCopy) until(now, then time.Time) string {
 	default:
 		return fmt.Sprintf(said.Say(statusWords.InDays), days)
 	}
-}
-
-// calendarDaysBetween counts whole days between two moments by the CALENDAR.
-//
-// The arithmetic is shared/kernel/elapsed's: the coverage chips beside this
-// card count the same silence, and the two used to disagree on screen because
-// each carried its own spelling. See that package for why the calendar and not
-// the clock.
-func calendarDaysBetween(from, to time.Time) int {
-	return elapsed.Days(from, to)
 }
 
 func (said statusCopy) spell(days int) string {

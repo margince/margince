@@ -82,6 +82,11 @@ type CreateContactInput struct {
 	// CustomFields carries the request body's cf_* keys. A key no active catalog
 	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
+	// auditEvidence rides on the create's audit row. Unexported, so no request
+	// can claim the evidence an import writes for itself.
+	auditEvidence map[string]any
+	// erasure is set only by EnsureContactByEmail, from its caller.
+	erasure storekit.ErasureAdmission
 }
 
 // CreateContact inserts the contact + child rows + audit + event atomically.
@@ -108,7 +113,7 @@ func (s *Store) CreateContact(ctx context.Context, in CreateContactInput) (crmco
 		out, err = s.createContactInTx(ctx, tx, in, by, active)
 		return err
 	})
-	return out, err
+	return out, s.AskHolderToShare(ctx, err)
 }
 
 // CreateContactTx is CreateContact for a caller that already opened a
@@ -194,19 +199,20 @@ func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateConta
 		CapturedBy:   by,
 		CustomFields: in.CustomFields,
 		Active:       active,
+		erasure:      in.erasure,
 	})
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
 
-	auditID, err := storekit.Audit(ctx, tx, "create", "contact", id.UUID, nil, map[string]any{"full_name": in.FullName})
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "create", "contact", id.UUID, nil, map[string]any{"full_name": in.FullName}, in.auditEvidence)
 	if err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("audit contact create: %w", err)
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventContactCreated{FullName: in.FullName}); err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("emit contact.created: %w", err)
 	}
-	if err := match.recordIfReview(ctx, tx, id, in.FullName, in.Source, by); err != nil {
+	if _, err := match.recordIfReview(ctx, tx, id, in.FullName, in.Source, by); err != nil {
 		return crmcontracts.Contact{}, err
 	}
 	// Somebody typing in a contact who is already a lead has qualified them.
@@ -264,8 +270,13 @@ func (s *Store) GetContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactID,
 
 // EnsureContactByEmail returns the contact holding this address, creating one
 // when none does — where an address seen on a message becomes a record.
-func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, source string) (ids.UUID, error) {
+func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, source string, erasure storekit.ErasureAdmission) (ids.UUID, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
+		return ids.Nil, err
+	}
+	// Before the lookup, so a machine-address contact made before the refusal
+	// existed is not handed back either.
+	if err := refuseMachineAddress(email); err != nil {
 		return ids.Nil, err
 	}
 	lookup := func() (ids.UUID, bool, error) {
@@ -295,13 +306,14 @@ func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, sourc
 		FullName: fullName,
 		Emails:   []ContactEmailInput{{Email: email, EmailType: emailTypeWork, IsPrimary: true}},
 		Source:   source,
+		erasure:  erasure,
 	})
 	if err == nil {
 		return ids.UUID(created.Id), nil
 	}
 	// A concurrent capture of the same email won the race: its row IS
 	// the idempotent answer.
-	if _, ok := errors.AsType[*DuplicateEmailError](err); ok {
+	if IsClaimedEmail(err) {
 		if id, found, lookupErr := lookup(); lookupErr == nil && found {
 			return id, nil
 		}

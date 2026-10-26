@@ -167,6 +167,29 @@ it("shows a dash where a row has no value", () => {
   expect(screen.getByText("—")).toBeTruthy();
 });
 
+it("words an industry code in its column", () => {
+  render(
+    <FilterResults
+      preview={{
+        resource: "company",
+        match_count: 1,
+        columns: ["id", "display_name", "industry"],
+        rows: [{ id: "c1", display_name: "Acme", industry: "healthcare" }],
+        truncated: false,
+      }}
+      fields={[]}
+      named={["industry"]}
+      unit="companies"
+      widthsKey="filter-preview-companies"
+      pending={false}
+    />,
+    { wrapper },
+  );
+
+  expect(screen.getByText("Healthcare")).toBeTruthy();
+  expect(screen.queryByText("healthcare")).toBeNull();
+});
+
 it("says what the caller worded for an empty answer", () => {
   // Only the caller knows which connector the filter ran on, so the advice
   // is its own; the table only has to show it.

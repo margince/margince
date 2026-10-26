@@ -58,6 +58,7 @@ internal/compose/connectors_graph_test.go 2
 internal/compose/connectors_test.go 3
 internal/compose/connectors_wiring_test.go 1
 internal/compose/correctionrevert_integration_test.go 2
+internal/compose/datatask_machinesender_integration_test.go 1
 internal/compose/dealscout_integration_test.go 1
 internal/compose/dealscoutplan_integration_test.go 1
 internal/compose/dealscoutsql_test.go 2
@@ -131,7 +132,6 @@ internal/compose/integration/daily_flows_bench_test.go 4
 internal/compose/integration/daily_seats_bench_test.go 1
 internal/compose/integration/daily_seed_bench_test.go 2
 internal/compose/integration/dealfigures_integration_test.go 2
-internal/compose/integration/dealforecasthistory_integration_test.go 1
 internal/compose/integration/dealstatus_facts_integration_test.go 1
 internal/compose/integration/dealsuggestion_http_integration_test.go 1
 internal/compose/integration/decaylane_integration_test.go 4
@@ -259,6 +259,7 @@ internal/compose/proposalsfollowdeal_integration_test.go 1
 internal/compose/providerreceived_integration_test.go 2
 internal/compose/providerselect_test.go 5
 internal/compose/publicoriginprobe_test.go 7
+internal/compose/qualifiedinteraction_integration_test.go 1
 internal/compose/rateproposals_integration_test.go 3
 internal/compose/reconcile_integration_test.go 3
 internal/compose/recordinversefill_integration_test.go 2
@@ -266,6 +267,7 @@ internal/compose/recoveryhealth_integration_test.go 2
 internal/compose/relationshiphealth_integration_test.go 1
 internal/compose/report_dealsbystage_integration_test.go 1
 internal/compose/reporting_bench_test.go 1
+internal/compose/reporting_sections_integration_test.go 4
 internal/compose/requestsettleoffthread_integration_test.go 5
 internal/compose/restoredrill_integration_test.go 7
 internal/compose/retentiongraph_integration_test.go 1
@@ -400,7 +402,7 @@ internal/modules/contacts/occurrenceimage_integration_test.go 1
 internal/modules/contacts/profilefieldprecedence_integration_test.go 1
 internal/modules/contacts/promoteconsent_integration_test.go 1
 internal/modules/contacts/promoteheld_integration_test.go 4
-internal/modules/contacts/strengthasof_integration_test.go 3
+internal/modules/contacts/strengthasof_integration_test.go 2
 internal/modules/contacts/vcardimport_integration_test.go 2
 internal/modules/deals/edgegrant_test.go 5
 internal/modules/deals/fxrates_integration_test.go 2

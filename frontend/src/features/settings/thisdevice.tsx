@@ -3,34 +3,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../../design-system/atoms";
-import { Panel } from "../../design-system/panel";
-import { SettingList, SettingRow } from "../../design-system/settingrow";
+import { SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
 import { logUnexpectedError } from "../../lib/problem";
-import {
-  type InstallOutcome,
-  type InstallState,
-  useInstallState,
-} from "../../lib/pwa";
+import type { InstallOutcome, InstallState } from "../../lib/pwa";
 
-export function ThisDevicePanel() {
-  return <InstallPanel install={useInstallState()} />;
-}
-
-/** Absent where the browser cannot install: a capability this device lacks,
- *  not a refusal. */
-export function InstallPanel({ install }: Readonly<{ install: InstallState }>) {
-  const t = useT();
+/** The install row, absent where the browser cannot install: a capability
+ *  this device lacks, not a refusal. */
+export function InstallSettingRow({
+  install,
+}: Readonly<{ install: InstallState }>) {
   if (install.kind === "unavailable") {
     return null;
   }
-  return (
-    <Panel title={t("settings.deviceCard")}>
-      <SettingList bleed="settings">
-        <InstallRow install={install} />
-      </SettingList>
-    </Panel>
-  );
+  return <InstallRow install={install} />;
 }
 
 function InstallRow({

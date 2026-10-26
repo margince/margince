@@ -76,7 +76,7 @@ func TestEachSuggestionNamesWhatPerformingItMeans(t *testing.T) {
 	company := ids.From[ids.CompanyKind](ids.NewV7())
 	unanswered := ids.NewV7()
 
-	stale := englishSuggestions.staleThread(company, now, lastMessage{
+	stale := englishSuggestions.staleThread(company, now, time.UTC, lastMessage{
 		ID: unanswered, Direction: "outbound", At: now.AddDate(0, 0, -14),
 	})
 	if stale == nil || stale.Action == nil {

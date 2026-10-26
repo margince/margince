@@ -14,5 +14,5 @@
 // lead_score_recompute) — is compose/workflows.go, so that file is the
 // authoritative list of what runs.
 //
-// Tables owned: automation, workflow_run, automation_effect_claim.
+// Tables owned: docs/reference/entity-model/automation.md.
 package automation

@@ -109,3 +109,28 @@ export const SaveRefusedPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };
+
+/** A new Admin mapping asks for the typed phrase before it is saved. */
+export const AdminConfirm: Story = {
+  render: story({ "crm-admins": "admin", Sales: "rep" }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("combobox", { name: "Role for the Sales group" }),
+    );
+    await userEvent.click(
+      await within(canvasElement.ownerDocument.body).findByRole("option", {
+        name: "Admin",
+      }),
+    );
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Save group roles" }),
+    );
+    await within(canvasElement.ownerDocument.body).findByRole("dialog");
+  },
+};
+
+export const AdminConfirmDark: Story = {
+  ...AdminConfirm,
+  globals: { theme: "dark" },
+};

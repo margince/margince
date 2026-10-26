@@ -3,6 +3,7 @@
 
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { type Translator, useT } from "../i18n";
 import { ProblemError } from "./problem";
 
 // Names a colleague by id, batching every id asked for within one tick into
@@ -37,12 +38,34 @@ function memberNameQueryOptions(id: string) {
  * colleague does not exist when the server merely refused.
  */
 export function useMemberName(id: string | null | undefined) {
+  const t = useT();
   return useQuery({
     ...memberNameQueryOptions(id ?? ""),
     // `id` is non-null wherever the query actually runs: `enabled` gates it,
     // and the key above already distinguishes each id's cache entry.
     enabled: Boolean(id),
+    select: (seat: Seat | null) => (seat ? seatLabel(seat, t) : null),
   });
+}
+
+/** The name of a colleague who left, or null for anyone else or a pending read. */
+export function useDepartedName(id: string | null | undefined): string | null {
+  const read = useQuery({
+    ...memberNameQueryOptions(id ?? ""),
+    enabled: Boolean(id),
+  });
+  return read.data?.departed ? read.data.name : null;
+}
+
+/** A named seat, and whether that colleague left. */
+type Seat = Readonly<{ name: string; departed: boolean }>;
+
+/**
+ * The name a screen prints. A colleague who left is marked, because the work
+ * they still own counts in their team's views until somebody takes it over.
+ */
+function seatLabel(seat: Seat, t: Translator): string {
+  return seat.departed ? t("ref.memberLeft", { name: seat.name }) : seat.name;
 }
 
 /**
@@ -56,6 +79,7 @@ export function useMemberName(id: string | null | undefined) {
 export function useMemberNames(
   ids: readonly string[],
 ): ReadonlyMap<string, string> {
+  const t = useT();
   const unique = [...new Set(ids.filter(Boolean))];
   const reads = useQueries({
     queries: unique.map((id) => memberNameQueryOptions(id)),
@@ -64,7 +88,7 @@ export function useMemberNames(
   reads.forEach((read, index) => {
     const id = unique[index];
     if (id !== undefined && read.data != null) {
-      names.set(id, read.data);
+      names.set(id, seatLabel(read.data, t));
     }
   });
   return names;
@@ -74,7 +98,7 @@ export function useMemberNames(
 // page: the names an earlier page returned are answers the server gave, and a
 // single map could only report them as a read that never arrived.
 type Naming = Readonly<{
-  named: ReadonlyMap<string, string>;
+  named: ReadonlyMap<string, Seat>;
   failures: ReadonlyMap<string, ProblemError>;
 }>;
 
@@ -85,7 +109,7 @@ type Naming = Readonly<{
 let queued: string[] = [];
 let batch: Promise<Naming> | null = null;
 
-async function nameOf(id: string): Promise<string | null> {
+async function nameOf(id: string): Promise<Seat | null> {
   const { named, failures } = await join(id);
   const failed = failures.get(id);
   if (failed) {
@@ -110,7 +134,7 @@ function join(id: string): Promise<Naming> {
 }
 
 async function readNames(ids: readonly string[]): Promise<Naming> {
-  const named = new Map<string, string>();
+  const named = new Map<string, Seat>();
   const failures = new Map<string, ProblemError>();
   for (let at = 0; at < ids.length; at += MAX_SEATS_PER_REQUEST) {
     const page = ids.slice(at, at + MAX_SEATS_PER_REQUEST);
@@ -129,7 +153,10 @@ async function readNames(ids: readonly string[]): Promise<Naming> {
       continue;
     }
     for (const seat of data.data) {
-      named.set(seat.id, seat.display_name);
+      named.set(seat.id, {
+        name: seat.display_name,
+        departed: seat.departed === true,
+      });
     }
   }
   return { named, failures };

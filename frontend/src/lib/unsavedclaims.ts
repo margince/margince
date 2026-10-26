@@ -17,13 +17,25 @@ export type UnsavedRegistry = Readonly<{
   /** Whether anything inside this scope has an edit that has not been written. */
   dirty: boolean;
   dirtyScopes: ReadonlySet<string>;
-  claim: (token: string, dirty: boolean, scope?: string) => void;
+  /**
+   * What the leave question may call to write the drafts. Empty unless every
+   * dirty claim can save, so Save is offered only when it would leave nothing
+   * unsaved behind.
+   */
+  savers: readonly Saver[];
+  claim: (token: string, dirty: boolean, scope?: string, save?: Saver) => void;
   release: (token: string) => void;
 }>;
 
+/** Writes a claim's draft; resolves true once it is saved. */
+export type Saver = () => Promise<boolean>;
+
 export const UnsavedContext = createContext<UnsavedRegistry | null>(null);
 
-type Claims = ReadonlyMap<string, Readonly<{ dirty: boolean; scope?: string }>>;
+type Claims = ReadonlyMap<
+  string,
+  Readonly<{ dirty: boolean; scope?: string; save?: Saver }>
+>;
 
 /**
  * The claims made below one surface. Each claim also reaches `parent`, so a
@@ -37,18 +49,14 @@ export function useUnsavedRegistry(
   const parentRelease = parent?.release;
 
   const claim = useCallback(
-    (token: string, next: boolean, scope?: string) => {
-      parentClaim?.(token, next, scope);
+    (token: string, next: boolean, scope?: string, save?: Saver) => {
+      parentClaim?.(token, next, scope, save);
       setClaims((held) => {
-        if (
-          held.get(token)?.dirty === next &&
-          held.get(token)?.scope === scope
-        ) {
+        const was = held.get(token);
+        if (was?.dirty === next && was.scope === scope && was.save === save) {
           return held;
         }
-        const grown = new Map(held);
-        grown.set(token, { dirty: next, scope });
-        return grown;
+        return new Map(held).set(token, { dirty: next, scope, save });
       });
     },
     [parentClaim],
@@ -69,19 +77,20 @@ export function useUnsavedRegistry(
     [parentRelease],
   );
 
-  return useMemo<UnsavedRegistry>(
-    () => ({
-      dirty: [...claims.values()].some((entry) => entry.dirty),
+  return useMemo<UnsavedRegistry>(() => {
+    const dirtyClaims = [...claims.values()].filter((entry) => entry.dirty);
+    return {
+      dirty: dirtyClaims.length > 0,
       claim,
       release,
       dirtyScopes: new Set(
-        [...claims.values()].flatMap((entry) =>
-          entry.dirty && entry.scope ? [entry.scope] : [],
-        ),
+        dirtyClaims.flatMap((entry) => (entry.scope ? [entry.scope] : [])),
       ),
-    }),
-    [claims, claim, release],
-  );
+      savers: dirtyClaims.every((entry) => entry.save)
+        ? dirtyClaims.flatMap((entry) => (entry.save ? [entry.save] : []))
+        : [],
+    };
+  }, [claims, claim, release]);
 }
 
 export function useHasUnsavedChanges(scope?: string): boolean {
@@ -96,15 +105,22 @@ export function useHasUnsavedChanges(scope?: string): boolean {
  *
  * A hook, because the draft sits several components below the guard. Outside
  * a provider (a story, a test) it claims nothing.
+ *
+ * `save` lets the leave question offer Save as well as Discard. It must be
+ * stable across renders, or every render re-claims.
  */
-export function useUnsavedGuard(dirty: boolean, scope?: string): void {
+export function useUnsavedGuard(
+  dirty: boolean,
+  scope?: string,
+  save?: Saver,
+): void {
   const { claim, release } = useContext(UnsavedContext) ?? {};
   // One token per mounting, so two rows of the same card are two claims.
   const token = useId();
 
   useEffect(() => {
-    claim?.(token, dirty, scope);
-  }, [claim, token, dirty, scope]);
+    claim?.(token, dirty, scope, save);
+  }, [claim, token, dirty, scope, save]);
 
   // A claim left after unmount would guard a draft that no longer exists.
   useEffect(() => () => release?.(token), [release, token]);

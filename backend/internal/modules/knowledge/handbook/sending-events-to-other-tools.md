@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/settings/webhooks.tsx frontend/src/features/settings/webhookdrawer.tsx frontend/src/features/settings/webhooks.secret.tsx backend/internal/modules/webhooks -->
 # Sending events to other tools
 
 A webhook sends a message to another tool when something happens in Margince: a deal is won, a

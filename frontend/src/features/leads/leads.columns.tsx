@@ -14,7 +14,7 @@ import { CellStrip, type ListColumn } from "../../design-system/listtable";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { leadIdentityName } from "../../format/leadname";
 import type { useLocale, useT } from "../../i18n";
-import { type LeadSource, sourceLabelFor } from "../../lib/leadsources";
+import { type LeadOrigin, originLabelFor } from "../../lib/leadorigins";
 import { openTaskCountLabel } from "./leadopentasks";
 import {
   SlaBadge,
@@ -32,7 +32,7 @@ export function leadColumns(
   t: Translate,
   locale: Locale,
   recordZone: string,
-  sources: readonly LeadSource[] | undefined,
+  origins: readonly LeadOrigin[] | undefined,
 ): ListColumn<Lead>[] {
   return [
     {
@@ -115,11 +115,12 @@ export function leadColumns(
     // The shared column, now that this header can offer a sort.
     lastActivityColumn<Lead>(t, locale, recordZone),
     {
-      key: "source",
-      header: t("lead.source"),
-      sort: "source", // the catalog's label, which is what the cell prints
-
-      cell: (lead: Lead) => <span>{sourceLabelFor(lead, sources, t)}</span>,
+      key: "origin",
+      header: t("lead.origin"),
+      sort: "origin", // the catalog's label, which is what the cell prints
+      cell: (lead: Lead) => (
+        <span>{originLabelFor(lead, origins) ?? t("lead.originUnset")}</span>
+      ),
     },
     tagsColumn<Lead>(t),
     ownerColumn<Lead>(t),

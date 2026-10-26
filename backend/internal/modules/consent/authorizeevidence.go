@@ -18,7 +18,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -143,6 +145,80 @@ func wroteIntoThread(ctx context.Context, tx pgx.Tx, threadKey string, subject s
 	return found, nil
 }
 
+// copiedOnThisMatter reports whether the recipient was To or Cc on a captured
+// mail an outside sender wrote onto this message's thread. One of our seats must
+// also have sent a captured mail on the thread.
+//
+// It supports correspondence about this thread's matter only. The thread key
+// scopes the query, and recordBasis keys the basis row by the same thread. So
+// it never becomes standing permission for the contact. repliesToTheSubject
+// asks for authorship; being copied is a weaker ground. It lets a rep reply to
+// all or follow up on the thread's subject. A marketing
+// claim against it is still denied by putClaimToEvidence. Counsel reviews the
+// rule before release, so it lives in this one function.
+//
+// The copying mail must be inbound with an author who is not one of our seats.
+// Otherwise a rep could make the evidence by copying the contact on own mail.
+// Capture files a colleague's mail as outbound (sent_by_colleague), so the
+// direction test covers that case too. Our seat's mail must be outbound and
+// connector-captured on the same medium and provider. A thread key alone is
+// shared across media, and a hand-typed activity says whatever its author typed.
+//
+// Participation is proved by the captured address alone. A relink repoints
+// p.contact_id to another contact while the address stays, so the mutable
+// contact link would carry the standing to another contact.
+//
+// The thread key is the sender's References root, so it proves nothing alone.
+// The copying mail must come from a sender the receiving server authenticated.
+// One of our seats must also have written to that same sender on the thread
+// (correspondence.ConversationSQL). A stranger who forges the key of
+// a thread we wrote on to somebody else shares no correspondent with it.
+//
+// Named by anchor when there is one and by thread key otherwise, the same
+// choice repliedIntoThisConversation makes, so staging and transmit agree.
+func copiedOnThisMatter(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (bool, error) {
+	if subject.Kind != entityContact {
+		return false, nil
+	}
+	threadKey := req.ThreadKey
+	if req.AnchorActivityID != (ids.UUID{}) {
+		threadKey = threadKeyOf(ctx, tx, req.AnchorActivityID)
+	}
+	if threadKey == "" {
+		return false, nil
+	}
+	var found bool
+	err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			  FROM activity a
+			  JOIN activity_participant p ON p.activity_id = a.id
+			 WHERE a.thread_key = $2
+			   AND a.archived_at IS NULL
+			   AND `+correspondence.AuthenticatedInboundSQL("a")+`
+			   AND p.role IN ('to', 'cc')
+			   AND $1 <> '' AND lower(p.address) = lower($1)
+			   AND EXISTS (
+			       SELECT 1 FROM activity_participant author
+			        WHERE author.activity_id = a.id
+			          AND author.role = 'from'
+			          AND author.user_id IS NULL)
+			   AND EXISTS (
+			       SELECT 1
+			         FROM activity ours
+			         JOIN activity_participant op ON op.activity_id = ours.id
+			        WHERE `+correspondence.ConversationSQL("ours", "a")+`
+			          AND `+correspondence.OurOutboundSQL("ours")+`
+			          AND ours.captured_by LIKE 'connector:%'
+			          AND op.role = 'from'
+			          AND op.user_id IS NOT NULL)
+		)`, subject.Address, threadKey).Scan(&found)
+	if err != nil {
+		return false, fmt.Errorf("consent: read whether the recipient was copied on this thread: %w", err)
+	}
+	return found, nil
+}
+
 // wroteToUsWithin reports whether the subject SENT us something inside the
 // window, on any thread.
 //
@@ -199,13 +275,16 @@ func wroteToUsWithin(ctx context.Context, tx pgx.Tx, subject subjectRef, since t
 // from activity's. A channel counterparty carries no address at all
 // (connector.Counterparty's doc), so without this arm a customer's own
 // inbound message could never be evidence that a rep's reply answers it.
-const authorIsTheSubject = `(
-			         p.role = 'from'
-			         AND (
-			               ($1 = 'contact' AND p.contact_id = $2::uuid)
-			            OR ($3 <> '' AND p.contact_id IS NULL AND lower(p.address) = lower($3))
-			            OR ($5 <> '' AND p.contact_id IS NULL AND p.channel_user_id = $5 AND a.channel_provider = $4)
-			             )
+const authorIsTheSubject = `(p.role = 'from' AND ` + participantIsTheSubject + `)`
+
+// participantIsTheSubject is the identity half of authorIsTheSubject, without
+// the role. The participant row p names this recipient by record, by bare
+// address or by channel account. copiedOnThisMatter does not read it, because
+// a relink can repoint the record. Same placeholders as authorIsTheSubject.
+const participantIsTheSubject = `(
+			            ($1 = 'contact' AND p.contact_id = $2::uuid)
+			         OR ($3 <> '' AND p.contact_id IS NULL AND lower(p.address) = lower($3))
+			         OR ($5 <> '' AND p.contact_id IS NULL AND p.channel_user_id = $5 AND a.channel_provider = $4)
 			       )`
 
 // liveDealInLinks reports whether one of the records this message is filed

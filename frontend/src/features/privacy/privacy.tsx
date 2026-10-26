@@ -3,7 +3,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { type ReactNode, useId, useMemo, useState } from "react";
+import { type ReactNode, useId, useMemo, useRef, useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
 import {
@@ -14,8 +14,13 @@ import {
 } from "../../design-system/atoms";
 import { CardBoundary } from "../../design-system/cardboundary";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import {
+  ConfirmPhraseBox,
+  phraseMatches,
+} from "../../design-system/confirmphrase";
 import { ErrorLine } from "../../design-system/errorline";
 import { FilterPills } from "../../design-system/filterpills";
+import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { PanelBody, PanelIntro } from "../../design-system/panel";
 import {
   LoadMoreButton,
@@ -27,15 +32,18 @@ import {
   type RecordPickerCandidate,
 } from "../../design-system/recordpicker";
 import { Select } from "../../design-system/select";
+import { Stack } from "../../design-system/stack";
 import { useNow } from "../../format/now";
 import { viewerZone } from "../../format/timezone";
 import { useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { isOption } from "../../lib/options";
 import {
+  closingBody,
   DSR_KIND_LABEL,
   DSR_STATUS_FACETS,
   DSR_STATUS_LABEL,
+  type DsrClosing,
   type DsrStatusFacet,
   isIllegalTransition,
   isLegalHold,
@@ -67,8 +75,6 @@ import "./privacy.css";
 
 type CreateDataSubjectRequest =
   components["schemas"]["CreateDataSubjectRequest"];
-type UpdateDataSubjectRequest =
-  components["schemas"]["UpdateDataSubjectRequest"];
 type DsrKind = CreateDataSubjectRequest["kind"];
 type RequestDeadline = components["schemas"]["RequestDeadline"];
 
@@ -165,7 +171,11 @@ export function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
         className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
-          if (ready && !create.isPending)
+          if (
+            ready &&
+            !create.isPending &&
+            !refuseUnreadableField(event.currentTarget)
+          )
             create.mutate({ request: draft, computed });
         }}
       >
@@ -190,18 +200,22 @@ export function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
         </Field>
 
         {draft.kind === "erasure" ? (
-          <div className="field">
-            <span className="t-label">{t("privacy.contact")}</span>
-            <RecordPicker
-              label={t("privacy.contact")}
-              searchTargets={searchContactCandidates}
-              selected={draft.contact}
-              onPick={(candidate) =>
-                edit({ contact: candidate, subjectRef: candidate.id })
-              }
-            />
-            <p className="t-caption">{t("privacy.erasureNeedsContact")}</p>
-          </div>
+          <Field
+            label={t("privacy.contact")}
+            hint={t("privacy.erasureNeedsContact")}
+          >
+            {(control) => (
+              <RecordPicker
+                id={control.id}
+                aria-describedby={control["aria-describedby"]}
+                searchTargets={searchContactCandidates}
+                selected={draft.contact}
+                onPick={(candidate) =>
+                  edit({ contact: candidate, subjectRef: candidate.id })
+                }
+              />
+            )}
+          </Field>
         ) : (
           <Field
             label={t("privacy.subjectRef")}
@@ -245,36 +259,39 @@ export function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
   );
 }
 
+// The word that fulfils an erasure. It stays English in every locale.
+const ERASE_PHRASE = "ERASE";
+
 // Fulfilling an erasure wipes a contact across the whole system, so it waits on
-// a typed ERASE. A legal-hold 409 is a lawful refusal, told apart from a fault.
+// a typed ERASE_PHRASE. A legal-hold 409 is a lawful refusal, told apart from a
+// fault.
 function FulfilErasureModal({
   dsr,
-  resolution,
+  closing,
   onClose,
   returnFocusTo,
 }: Readonly<{
   dsr: DataSubjectRequest | null;
-  resolution: string;
+  closing: DsrClosing | null;
   onClose: () => void;
   returnFocusTo: () => HTMLElement | null;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const [typed, setTyped] = useState("");
+  const phraseInput = useRef<HTMLInputElement>(null);
 
   const patch = useMutation({
     mutationFn: async (
-      fulfilment: Readonly<{ request: DataSubjectRequest; resolution: string }>,
+      fulfilment: Readonly<{
+        request: DataSubjectRequest;
+        closing: DsrClosing;
+      }>,
     ) => {
-      const body: UpdateDataSubjectRequest = { status: "fulfilled" };
-      // Omitted when blank: an empty string is a value the server would write.
-      if (fulfilment.resolution.trim()) {
-        body.resolution = fulfilment.resolution.trim();
-      }
       return unwrap(
         await api.PATCH("/data-subject-requests/{id}", {
           params: { path: { id: fulfilment.request.id } },
-          body,
+          body: closingBody("fulfilled", fulfilment.closing),
         }),
       );
     },
@@ -315,24 +332,26 @@ function FulfilErasureModal({
       title={t("privacy.fulfilErasureTitle")}
       confirmLabel={t("privacy.erasureConfirm")}
       confirmVariant="danger"
-      confirmDisabled={
-        typed.trim().toUpperCase() !== "ERASE" || held || movedOn
+      // A reported hold or a request that moved on fails the same way on every
+      // retry. So the confirm stays shut until the operator reopens the dialog
+      // against the request's current state.
+      confirmDisabled={!phraseMatches(typed, ERASE_PHRASE) || held || movedOn}
+      onConfirm={() =>
+        dsr && closing && patch.mutate({ request: dsr, closing })
       }
-      onConfirm={() => dsr && patch.mutate({ request: dsr, resolution })}
       pending={patch.isPending}
       error={errorMessage}
       returnFocusTo={returnFocusTo}
+      initialFocusTo={() => phraseInput.current}
     >
       <p>{t("privacy.erasureIrreversible")}</p>
-      <Field label={t("privacy.typeErase")}>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={typed}
-            onChange={(event) => setTyped(event.target.value)}
-          />
-        )}
-      </Field>
+      <ConfirmPhraseBox
+        prompt={t("privacy.typeErasePrompt")}
+        phrase={ERASE_PHRASE}
+        value={typed}
+        onChange={setTyped}
+        inputRef={phraseInput}
+      />
       <ErasureRefusals held={held} movedOn={movedOn} />
     </ConfirmModal>
   );
@@ -348,7 +367,7 @@ export function PrivacyInboxCard() {
   // One erasure confirm at the card root, carrying the answer the drawer drafted.
   const [fulfilling, setFulfilling] = useState<{
     dsr: DataSubjectRequest;
-    resolution: string;
+    closing: DsrClosing;
   } | null>(null);
 
   // `privacy_request:read`: the rows name whoever exercised an Art. 15/17
@@ -424,19 +443,19 @@ export function PrivacyInboxCard() {
     <>
       <PanelBody>
         <PanelIntro>{t("settings.privacySub")}</PanelIntro>
-        {/* Once a cut is chosen it stays, so an empty cut can be left again. */}
-        {canSee && (facet !== "all" || rows.length > 0) && (
-          <div className="filter-tabs">
+        <Stack gap="3">
+          {/* Once a cut is chosen it stays, so an empty cut can be left again. */}
+          {canSee && (facet !== "all" || rows.length > 0) && (
             <FilterPills
               pills={facetPills}
               value={facet}
               onChange={setFacet}
               label={t("privacy.facetLabel")}
             />
-          </div>
-        )}
-        <LinkedCaseNotice linked={linked} />
-        {body}
+          )}
+          <LinkedCaseNotice linked={linked} />
+          {body}
+        </Stack>
       </PanelBody>
       <CardBoundary>
         {body === null && (
@@ -456,15 +475,13 @@ export function PrivacyInboxCard() {
             titleId={detailTitleId}
             nowMs={nowMs}
             onClose={() => toggle(open.id)}
-            onFulfilErasure={(dsr, resolution) =>
-              setFulfilling({ dsr, resolution })
-            }
+            onFulfilErasure={(dsr, closing) => setFulfilling({ dsr, closing })}
           />
         )}
       </CardBoundary>
       <FulfilErasureModal
         dsr={fulfilling?.dsr ?? null}
-        resolution={fulfilling?.resolution ?? ""}
+        closing={fulfilling?.closing ?? null}
         onClose={() => setFulfilling(null)}
         // The fulfil verb is gone once the request closes; the drawer's title stays.
         returnFocusTo={() => document.getElementById(detailTitleId)}

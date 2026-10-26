@@ -889,3 +889,23 @@ export const BandsAndSeamsPhone: StoryObj = {
   render: () => <BandsAndSeamsPanes />,
   play: ({ canvasElement }) => groupHeadsReadUnderTheTitle(canvasElement),
 };
+
+/** The head as one line with no band: the small title beside its action and
+ *  no rule under them. A card under a verdict reads as a list, not a zone. */
+export const FlatHead: Story = {
+  render: () => (
+    <Panel
+      flatHead
+      title="Also on your list"
+      titleAction={<Button variant="link">All tasks</Button>}
+    >
+      <PanelBody>Rows sit inside the card's own padding.</PanelBody>
+    </Panel>
+  ),
+  play: async ({ canvasElement }) => {
+    const region = within(canvasElement).getByRole("region", {
+      name: "Also on your list",
+    });
+    await expect(region.querySelector(".panel-head-flat")).not.toBeNull();
+  },
+};

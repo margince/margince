@@ -82,11 +82,7 @@ func readContractStrip(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 	// contract ending today the moment UTC midnight passes while the contract's
 	// own read still calls it active all local day — two surfaces disagreeing
 	// about the same row.
-	tzName, err := identity.TimezoneAppliedTx(ctx, tx)
-	if err != nil {
-		return contractStrip{}, fmt.Errorf("resolve the installation's timezone: %w", err)
-	}
-	loc, err := storekit.LoadZone(tzName)
+	loc, err := identity.ZoneAppliedTx(ctx, tx)
 	if err != nil {
 		return contractStrip{}, err
 	}

@@ -6,124 +6,112 @@
 package integration
 
 // A column default is not something a human typed. A company created by a
-// human without a lifecycle holds 'unknown' only because the column says so;
-// an agent moving it on overwrites nobody, so the write applies directly.
+// human without a lifecycle holds 'unknown' only because the column says so.
+// Automatic work moving it on overwrites nobody, so the write applies directly.
+// A value a human did type holds automatic work back: it may not stage an
+// approval, so the change is refused and the value stays.
 
 import (
+	"encoding/json"
 	"net/http"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
-func TestAgentChangesAFieldThatStillHoldsItsColumnDefault(t *testing.T) {
+func TestAutomaticWorkChangesAFieldThatStillHoldsItsColumnDefault(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	companyID := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Defaulted Lifecycle GmbH"})
-	bearer := companyAgentBearer(t, e)
-
-	if lifecycle, approval := agentPatchCompany(t, e, bearer, companyID, "lifecycle", "prospect"); approval != "" || lifecycle != "prospect" {
-		t.Fatalf("agent moved a defaulted lifecycle → lifecycle %q, approval %q; want it applied with no approval",
-			lifecycle, approval)
+	if lifecycle, held := agentPatchCompany(t, e, companyID, "lifecycle", "prospect"); held || lifecycle != "prospect" {
+		t.Fatalf("automatic work moved a defaulted lifecycle → lifecycle %q, held back %v; want it applied",
+			lifecycle, held)
 	}
 
 	// Once a human sets the field, it is theirs.
 	if status := e.Call(t, "PATCH", "/v1/companies/"+companyID, AnyMap{"lifecycle": "customer"}, nil, nil); status != http.StatusOK {
 		t.Fatalf("human sets lifecycle → %d", status)
 	}
-	if lifecycle, approval := agentPatchCompany(t, e, bearer, companyID, "lifecycle", "former_customer"); approval == "" || lifecycle != "customer" {
-		t.Errorf("agent overwrote a lifecycle a human set → lifecycle %q, approval %q; want it staged and unchanged",
-			lifecycle, approval)
+	if lifecycle, held := agentPatchCompany(t, e, companyID, "lifecycle", "former_customer"); !held || lifecycle != "customer" {
+		t.Errorf("automatic work overwrote a lifecycle a human set → lifecycle %q, held back %v; want it refused and unchanged",
+			lifecycle, held)
 	}
 }
 
-func TestAgentStillAsksBeforeOverwritingAValueTypedAtCreate(t *testing.T) {
+func TestAutomaticWorkIsRefusedAValueTypedAtCreate(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	companyID := createdID(t, e, "/v1/companies", AnyMap{
 		"source":       "manual",
 		"display_name": "Typed Industry GmbH", "industry": "Logistics",
 	})
-	bearer := companyAgentBearer(t, e)
-
-	if industry, approval := agentPatchCompany(t, e, bearer, companyID, "industry", "Retail"); approval == "" || industry != "Logistics" {
-		t.Errorf("agent overwrote the industry the human typed at create → industry %q, approval %q", industry, approval)
+	if industry, held := agentPatchCompany(t, e, companyID, "industry", "Retail"); !held || industry != "logistics_transport" {
+		t.Errorf("automatic work overwrote the industry the human typed at create → industry %q, held back %v", industry, held)
 	}
 }
 
-// Who can see a record is never a default an agent moves unasked: narrowing a
+// Who can see a record is never a default automatic work moves: narrowing a
 // human's company to its owner hides it from every colleague.
-func TestAgentAsksBeforeNarrowingWhoSeesAHumanCreatedRecord(t *testing.T) {
+func TestAutomaticWorkIsRefusedNarrowingWhoSeesAHumanCreatedRecord(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	companyID := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Defaulted Visibility GmbH"})
-	bearer := companyAgentBearer(t, e)
-
-	if visibility, approval := agentPatchCompany(t, e, bearer, companyID, "visibility", "owner"); approval == "" || visibility != "workspace" {
-		t.Errorf("agent narrowed a defaulted visibility → visibility %q, approval %q; want it staged for approval",
-			visibility, approval)
+	if visibility, held := agentPatchCompany(t, e, companyID, "visibility", "owner"); !held || visibility != "workspace" {
+		t.Errorf("automatic work narrowed a defaulted visibility → visibility %q, held back %v; want it refused",
+			visibility, held)
 	}
 }
 
-// A boolean default is not nobody's edit: a product a human added is on sale
-// because it is active, so taking it off sale is theirs to approve.
-func TestAgentAsksBeforeMovingABooleanDefaultOnAHumanCreatedRecord(t *testing.T) {
+// A boolean default is not nobody's edit. A product a human added is on sale
+// because it is active, so automatic work may not take it off sale.
+func TestAutomaticWorkIsRefusedMovingABooleanDefaultOnAHumanCreatedRecord(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	productID := createdID(t, e, "/v1/products", AnyMap{
 		"name": "Defaulted Active Day", "unit_price_minor": 1000, "currency": "EUR", "source": "manual",
 	})
-	bearer := companyAgentBearer(t, e)
-
-	var problem struct {
-		Code string `json:"code"`
-	}
-	status := e.Call(t, "PATCH", "/v1/products/"+productID, AnyMap{"active": false}, bearer, &problem)
-	if status != http.StatusForbidden || problem.Code != "approval_required" {
-		t.Errorf("agent took a human's product off sale → %d %q; want it staged for approval", status, problem.Code)
+	if held := automaticPatch(t, e, "product", productID, AnyMap{"active": false}); !held {
+		t.Error("automatic work took a human's product off sale")
 	}
 	var product struct {
 		Active bool `json:"active"`
 	}
 	if status := e.Call(t, "GET", "/v1/products/"+productID, nil, nil, &product); status != http.StatusOK || !product.Active {
-		t.Errorf("after the staged refusal the product reads %d active=%v; want it still on sale", status, product.Active)
+		t.Errorf("after the refusal the product reads %d active=%v; want it still on sale", status, product.Active)
 	}
 }
 
-func companyAgentBearer(t *testing.T, e *apptest.AppEnv) map[string]string {
+// agentPatchCompany sends automatic work's one-field change and returns the
+// value the record holds afterwards, and whether the change was held back.
+func agentPatchCompany(t *testing.T, e *apptest.AppEnv, companyID, field, value string) (current string, held bool) {
 	t.Helper()
-	var minted struct {
-		Token string `json:"token"`
-	}
-	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
-		"label": "column-default agent", "scopes": []string{"read", "write"},
-	}, nil, &minted); status != http.StatusCreated {
-		t.Fatalf("issue passport → %d", status)
-	}
-	return map[string]string{"Authorization": "Bearer " + minted.Token}
-}
-
-// agentPatchCompany sends the agent's one-field change and returns the value
-// the record holds afterwards plus the approval it staged, if any.
-func agentPatchCompany(t *testing.T, e *apptest.AppEnv, bearer map[string]string, companyID, field, value string) (current, approvalID string) {
-	t.Helper()
-	var problem struct {
-		Code   string `json:"code"`
-		Detail string `json:"detail"`
-	}
-	switch status := e.Call(t, "PATCH", "/v1/companies/"+companyID, AnyMap{field: value}, bearer, &problem); {
-	case status == http.StatusForbidden && problem.Code == "approval_required":
-		approvalID = ExtractStagedApprovalID(t, problem.Detail)
-	case status != http.StatusOK:
-		t.Fatalf("agent %s patch → %d %q", field, status, problem.Code)
-	}
+	held = automaticPatch(t, e, "company", companyID, AnyMap{field: value})
 	var company map[string]any
 	if status := e.Call(t, "GET", "/v1/companies/"+companyID, nil, nil, &company); status != http.StatusOK {
 		t.Fatalf("read back → %d", status)
 	}
-	held, ok := company[field].(string)
+	current, ok := company[field].(string)
 	if !ok {
 		t.Fatalf("read back carries no %s string: %v", field, company[field])
 	}
-	return held, approvalID
+	return current, held
+}
+
+// automaticPatch sends update_record as automatic work and reports whether it
+// was held back: refused because a field it touches is human-owned. Nothing is
+// ever staged for it.
+func automaticPatch(t *testing.T, e *apptest.AppEnv, recordType, id string, fields AnyMap) bool {
+	t.Helper()
+	call, err := json.Marshal(AnyMap{"record_type": recordType, "id": id, "fields": fields})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = automaticInvoker(t, e)("update_record", string(call))
+	if isPassportlessStagingRefusal(err) {
+		return true
+	}
+	if err != nil {
+		t.Fatalf("automatic %s patch → %v", recordType, err)
+	}
+	return false
 }

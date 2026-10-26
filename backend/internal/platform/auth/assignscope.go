@@ -89,6 +89,39 @@ func EnsureAssignee(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
 	return ensureAssigneeWith(ctx, tx, dest, AssigneeEligibleSQL)
 }
 
+// EligibleAssignees answers EnsureAssignee for many seats in one query. It
+// returns the candidates the caller may make an owner. It asks the same
+// hypothetical row, so a picker built on it offers what the write accepts.
+func EligibleAssignees(ctx context.Context, tx pgx.Tx, candidates []ids.UUID) (map[ids.UUID]bool, error) {
+	eligible := make(map[ids.UUID]bool, len(candidates))
+	if len(candidates) == 0 {
+		return eligible, nil
+	}
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	candidatesPos := arg(candidates)
+	rows, err := tx.Query(ctx, fmt.Sprintf(
+		`SELECT u.owner_id FROM (
+		   SELECT id AS owner_id, status, archived_at, is_agent, seat_type
+		   FROM app_user WHERE id = ANY($%d)) u WHERE %s`,
+		candidatesPos, AssigneeEligibleSQL(p, "u", arg)), args...)
+	if err != nil {
+		return nil, fmt.Errorf("ask which seats may own records: %w", err)
+	}
+	admitted, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("ask which seats may own records: %w", err)
+	}
+	for _, id := range admitted {
+		eligible[id] = true
+	}
+	return eligible, nil
+}
+
 // EnsureNewRecordOwner is EnsureAssignee for the owner named on a record's
 // create, where an invited colleague is also eligible (newRecordOwnerSQL).
 func EnsureNewRecordOwner(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {

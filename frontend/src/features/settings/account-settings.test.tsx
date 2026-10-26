@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { pickOption } from "../../design-system/select-testing";
 import { meFixture } from "../../testing/mefixture";
 import {
@@ -17,7 +18,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("says so under Language when the account refuses the new language", async () => {
+it("says so on the save bar and under the field when the account refuses the new language", async () => {
   const user = userEvent.setup();
   installFetchStub({
     "GET /me": () => jsonResponse(meFixture({})),
@@ -36,16 +37,21 @@ it("says so under Language when the account refuses the new language", async () 
   });
   render(
     <StoryProviders>
-      <AccountSettings />
+      <SavePageProvider>
+        <AccountSettings />
+        <PageSaveBar />
+      </SavePageProvider>
     </StoryProviders>,
   );
   const language = await screen.findByRole("combobox", { name: "Language" });
-  const before = language.getAttribute("aria-describedby");
   await pickOption(user, language, "Deutsch");
-  const refusal = await screen.findByRole("alert");
-  expect(before).not.toContain(refusal.id);
-  expect(screen.getByRole("combobox", { name: "Sprache" })).toHaveAttribute(
-    "aria-describedby",
-    `${before} ${refusal.id}`,
-  );
+  expect(language).toHaveTextContent("Deutsch");
+  await user.click(await screen.findByRole("button", { name: "Save" }));
+  const alerts = await screen.findAllByRole("alert");
+  for (const alert of alerts) {
+    expect(alert).toHaveTextContent("The language could not be saved.");
+  }
+  // The field names its own refusal beside the bar's summary.
+  const named = (language.getAttribute("aria-describedby") ?? "").split(" ");
+  expect(alerts.some((alert) => named.includes(alert.id))).toBe(true);
 });

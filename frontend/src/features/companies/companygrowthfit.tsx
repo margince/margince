@@ -12,9 +12,10 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { Meter } from "../../design-system/readings";
-import { formatDateTime, formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { formatDateTime, formatNumber, INTL_LOCALE } from "../../format/format";
+import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import type { Locale } from "../../i18n/locale";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import {
@@ -31,6 +32,41 @@ import "./company360.css";
 
 type GrowthFit = components["schemas"]["CompanyGrowthFit"];
 type Band = GrowthFit["band"];
+
+type GrowthFitInput = components["schemas"]["GrowthFitInput"];
+type GrowthFitNextStep = components["schemas"]["GrowthFitNextStep"];
+
+// Typed as full records, so a code the server gains without a wording here
+// fails the type check instead of printing as a raw code.
+const INPUT_LABELS: Record<GrowthFitInput, MessageKey> = {
+  offer_summary: "co.growthFit.input.offerSummary",
+  icp: "co.growthFit.input.icp",
+  industry: "co.growthFit.input.industry",
+  buying_center: "co.growthFit.input.buyingCenter",
+  buying_intents: "co.growthFit.input.buyingIntents",
+  employee_range: "co.growthFit.input.employeeRange",
+  technology: "co.growthFit.input.technology",
+};
+
+const NEXT_STEP_KEYS: Record<GrowthFitNextStep, MessageKey> = {
+  gather_inputs: "co.growthFit.step.gatherInputs",
+  record_profile: "co.growthFit.step.recordProfile",
+  confirm_offering: "co.growthFit.step.confirmOffering",
+  configure_model: "co.growthFit.step.configureModel",
+  retry_later: "co.growthFit.step.retryLater",
+};
+
+// The missing inputs as one phrase in the reader's own list grammar.
+function missingWords(
+  t: Translator,
+  locale: Locale,
+  missing: readonly GrowthFitInput[] | undefined,
+): string {
+  return new Intl.ListFormat(INTL_LOCALE[locale], {
+    style: "long",
+    type: "conjunction",
+  }).format((missing ?? []).map((code) => t(INPUT_LABELS[code])));
+}
 
 type SubScoreDimension = NonNullable<
   GrowthFit["sub_scores"]
@@ -240,7 +276,9 @@ function GrowthFitVerdict({ fit }: Readonly<{ fit: GrowthFit }>) {
         )}
         {fit.next_step && (
           <p className="co-growth-fit-next">
-            {t("co.growthFit.nextStep", { step: fit.next_step })}
+            {t(NEXT_STEP_KEYS[fit.next_step], {
+              missing: missingWords(t, locale, fit.data_completeness.missing),
+            })}
           </p>
         )}
       </PanelBody>
@@ -313,6 +351,7 @@ function GrowthFitReasons({
   onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const missing = fit.data_completeness.missing;
   // The two sides of the argument are read AGAINST each other, so they sit in
   // one block as two columns rather than as two stacked sections a reader has
@@ -376,7 +415,7 @@ function GrowthFitReasons({
       )}
       {missing && missing.length > 0 && (
         <GrowthFitRow label="co.growthFit.missing">
-          <p>{missing.join(", ")}</p>
+          <p>{missingWords(t, locale, missing)}</p>
         </GrowthFitRow>
       )}
     </>

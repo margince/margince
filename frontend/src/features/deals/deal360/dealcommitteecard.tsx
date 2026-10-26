@@ -1,109 +1,81 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Who is on this deal — ONE card.
-//
-// Until this, the same seats were drawn three times on one page: the committee
-// map named them under its picture, a rail panel listed them again with their
-// engagement, and the stakeholders table listed them a third time with the
-// verbs. Three lists of one committee are three things to keep in step, and
-// the page had already drifted — the rail's own note claimed it held the seats
-// so the map would not, while the map held them anyway.
-//
-// The table wins because it is the only one of the three that can ADD and
-// REMOVE a seat, and a reader who has just added someone should see them
-// appear in the list they were looking at. The map keeps the picture it alone
-// can draw, and engagement — the fact the rail contributed — rides the table as
-// a column, where it sits beside the contact it describes.
-
 import type { components } from "../../../api/schema";
-import { Badge } from "../../../design-system/atoms";
-import { Panel, PanelBody } from "../../../design-system/panel";
-import { useT } from "../../../i18n";
+import { OverviewCard } from "../../../design-system/overviewcard";
+import { useLocale, useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
-import { RelationshipRows } from "../../records/relationshiprows";
+import { useMemberName } from "../../../lib/membernames";
 import { AddRelationshipAction } from "../../records/relationships";
-import { CommitteeReading } from "./dealcommittee";
+import { CommitteeReading, committeeFoot } from "./dealcommittee";
+import { committeeOf } from "./dealstanding";
 
 type DealCoverage = components["schemas"]["DealCoverage"];
 
 /**
- * DealCommitteeCard is the deal's committee card: the coverage picture, then the
- * stakeholders themselves with the verbs that change them.
+ * DealCommitteeCard is the deal's committee on its Overview. It shows who of the
+ * buyer is on it, who we are in touch with, and the seats the coverage rules
+ * find missing. Each seat opens its contact.
  */
 export function DealCommitteeCard({
   dealId,
+  ownerId,
   coverage,
   withheld,
   pending,
   refusedReasonId,
+  roleLabel,
 }: Readonly<{
   dealId: string;
+  ownerId?: string | null;
   coverage?: DealCoverage;
   withheld: boolean;
   pending: boolean;
-  // The page's one sentence about why this deal takes no changes: a seat is
-  // written through the deal's own write gate, so these verbs are refused by
-  // the same fact as Edit.
+  // The page's one sentence about why this deal takes no changes. A seat is
+  // written through the deal's own write gate, so the same fact that refuses
+  // Edit refuses the verb.
   refusedReasonId?: string;
+  // A stakeholder role in the reader's words.
+  roleLabel: (role: string) => string;
 }>) {
   const t = useT();
-  const scope = { deal_id: dealId };
   const canCreate = useCanWrite("relationship", "create");
-  // Engagement by contact, for the column below. The two reads are the same
-  // edges — coverage counts them, /relationships lists them — so a row without
-  // a seat is a row the coverage read did not cover (withheld, or still in
-  // flight), and it says nothing rather than guessing "quiet", which would
-  // report a silence nobody measured.
-  const engagement = new Map(
-    (coverage?.stakeholders ?? []).map((seat) => [
-      seat.contact_id,
-      seat.engaged,
-    ]),
-  );
+  const { locale } = useLocale();
+  const owner = useMemberName(ownerId).data ?? undefined;
+  const foot = committeeFoot(coverage, withheld, t, locale);
+  // Nobody named and no seat missing is an answer, drawn as every card's
+  // empty row; a withheld or pending read keeps the picture's own states.
+  const committee = committeeOf(coverage, withheld);
+  const nobody =
+    !pending &&
+    committee.state === "read" &&
+    committee.named === 0 &&
+    committee.gaps === 0;
   return (
-    <Panel
-      title={t("deal.committee.title")}
-      titleAction={
+    <OverviewCard
+      title={t("deal.committee.card")}
+      action={
         canCreate ? (
           <AddRelationshipAction
-            scope={scope}
+            scope={{ deal_id: dealId }}
             refusedReasonId={refusedReasonId}
+            variant="link"
           />
         ) : undefined
       }
+      empty={t("deal.standing.committee.none")}
+      foot={foot?.text}
+      footTone={foot?.warn ? "warn" : undefined}
     >
-      {/* The picture sits in the body's padding; the seats are ruled rows that
-          run edge to edge under it, which is why the two are siblings here
-          rather than one slot trying to be both. */}
-      <PanelBody>
+      {!nobody && (
         <CommitteeReading
           coverage={coverage}
           withheld={withheld}
           pending={pending}
+          owner={owner}
+          roleLabel={roleLabel}
         />
-      </PanelBody>
-      <RelationshipRows
-        scope={scope}
-        refusedReasonId={refusedReasonId}
-        stacked
-        extra={{
-          label: t("deal.committee.engagement"),
-          render: (rel) => {
-            const engaged = rel.contact_id
-              ? engagement.get(rel.contact_id)
-              : undefined;
-            if (engaged === undefined) {
-              return null;
-            }
-            return (
-              <Badge tone={engaged ? "success" : undefined}>
-                {engaged ? t("coverage.engaged") : t("coverage.quiet")}
-              </Badge>
-            );
-          },
-        }}
-      />
-    </Panel>
+      )}
+    </OverviewCard>
   );
 }

@@ -9,11 +9,12 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, type MockInstance, vi } from "vitest";
 import { DateFormatsProvider } from "../../app/dateformats";
 import { formatDate } from "../../format/format";
 import { LocaleProvider, useLocale } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "./aicaches";
 import { InstallationSettingsCard } from "./installation-settings";
 
 // Settings → Installation: the company's name, reporting zone and base
@@ -52,6 +53,9 @@ function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
     timezone: "Europe/Berlin",
     base_currency: "EUR",
     base_currency_locked: opts.locked ?? false,
+    call_whatsapp: true,
+    call_telegram: true,
+    call_zalo: true,
     ...(opts.lockedReason
       ? { base_currency_locked_reason: opts.lockedReason }
       : {}),
@@ -91,10 +95,10 @@ function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
   return { fetchMock, patch: () => capturedPatch };
 }
 
-function render(node: ReactNode) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+function render(
+  node: ReactNode,
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+) {
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider>{node}</LocaleProvider>
@@ -492,4 +496,194 @@ it("saves regional formats together and updates existing date readers", async ()
     expect(patch()).toEqual({ date_format: "dmy", time_format: "24h" }),
   );
   expect(await screen.findByText("23.09.2026")).toBeTruthy();
+});
+
+function serverTextRefetches(
+  invalidate: MockInstance<QueryClient["invalidateQueries"]>,
+): unknown[] {
+  const prefixes = new Set(
+    LANGUAGE_DEPENDENT_QUERY_PREFIXES.map((prefix) => JSON.stringify(prefix)),
+  );
+  return invalidate.mock.calls
+    .map(([filters]) => JSON.stringify(filters?.queryKey))
+    .filter((key) => prefixes.has(key));
+}
+
+describe("the calling switches", () => {
+  it("refetches no model-written text, since a messenger is no language", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, patch } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    render(<InstallationSettingsCard />, client);
+
+    await user.click(await screen.findByRole("switch", { name: "Zalo chat" }));
+    await waitFor(() => expect(patch()).toEqual({ call_zalo: false }));
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("switch", { name: "Zalo chat" })
+          .getAttribute("aria-checked"),
+      ).toBe("false"),
+    );
+    expect(serverTextRefetches(invalidate)).toEqual([]);
+  });
+
+  it("refetches every model-written text when the base language is saved", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, patch } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    render(<InstallationSettingsCard />, client);
+
+    const dialog = await openFrom(user, /edit base language/i);
+    await user.click(
+      within(dialog).getByRole("combobox", { name: /base language/i }),
+    );
+    await user.click(screen.getByRole("option", { name: "Deutsch" }));
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+    await waitFor(() => expect(patch()).toEqual({ base_language: "de" }));
+    await waitFor(() =>
+      expect(serverTextRefetches(invalidate)).toHaveLength(
+        LANGUAGE_DEPENDENT_QUERY_PREFIXES.length,
+      ),
+    );
+  });
+
+  it("refetches every model-written text when the reporting timezone is saved", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, patch } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    render(<InstallationSettingsCard />, client);
+
+    const dialog = await openFrom(user, /edit reporting timezone/i);
+    const zone = within(dialog).getByLabelText(/reporting timezone/i);
+    await user.clear(zone);
+    await user.type(zone, "Asia/Ho_Chi_Minh");
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+    await waitFor(() =>
+      expect(patch()).toEqual({ timezone: "Asia/Ho_Chi_Minh" }),
+    );
+    await waitFor(() =>
+      expect(serverTextRefetches(invalidate)).toHaveLength(
+        LANGUAGE_DEPENDENT_QUERY_PREFIXES.length,
+      ),
+    );
+  });
+
+  it("holds the other switches while one switch's write is out", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backendFor(SETTINGS_EDITOR);
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.method === "PATCH") await held;
+        return fetchMock(req);
+      }),
+    );
+    render(<InstallationSettingsCard />);
+
+    await user.click(
+      await screen.findByRole("switch", { name: "WhatsApp chat" }),
+    );
+    const telegram = screen.getByRole<HTMLButtonElement>("switch", {
+      name: "Telegram chat",
+    });
+    await waitFor(() => expect(telegram.disabled).toBe(true));
+    expect(
+      screen
+        .getByRole("switch", { name: "WhatsApp chat" })
+        .getAttribute("aria-busy"),
+    ).toBe("true");
+    release();
+    await waitFor(() => expect(telegram.disabled).toBe(false));
+    expect(
+      screen
+        .getByRole("switch", { name: "WhatsApp chat" })
+        .getAttribute("aria-checked"),
+    ).toBe("false");
+  });
+
+  it("turns one messenger off with a patch of its own key alone", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, patch } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+    render(<InstallationSettingsCard />);
+
+    const whatsapp = await screen.findByRole("switch", {
+      name: "WhatsApp chat",
+    });
+    expect(whatsapp.getAttribute("aria-checked")).toBe("true");
+    await user.click(whatsapp);
+
+    await waitFor(() => expect(patch()).toEqual({ call_whatsapp: false }));
+    await waitFor(() =>
+      expect(whatsapp.getAttribute("aria-checked")).toBe("false"),
+    );
+    for (const name of ["Telegram chat", "Zalo chat"]) {
+      expect(
+        screen.getByRole("switch", { name }).getAttribute("aria-checked"),
+      ).toBe("true");
+    }
+  });
+
+  it("refuses every switch to a role that cannot change them, and says why", async () => {
+    const { fetchMock } = backendFor({});
+    vi.stubGlobal("fetch", fetchMock);
+    render(<InstallationSettingsCard />);
+
+    await screen.findByRole("switch", { name: "WhatsApp chat" });
+    const reason = screen.getByText(
+      "Only an administrator or operations user can change these settings.",
+    );
+    for (const name of ["WhatsApp chat", "Telegram chat", "Zalo chat"]) {
+      const control = screen.getByRole<HTMLButtonElement>("switch", { name });
+      expect(control.disabled).toBe(true);
+      expect(control.getAttribute("aria-describedby") ?? "").toContain(
+        reason.id,
+      );
+    }
+  });
+
+  it("locks the switch a boot source sets, and only that one", async () => {
+    const reason =
+      "Set by MARGINCE_INSTALLATION_CALL_ZALO (environment). Change it there.";
+    const { fetchMock } = backendFor(SETTINGS_EDITOR, {
+      locks: [
+        {
+          key: "installation.call_zalo",
+          origin: { source: "env", name: "MARGINCE_INSTALLATION_CALL_ZALO" },
+        },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<InstallationSettingsCard />);
+
+    const zalo = await screen.findByRole<HTMLButtonElement>("switch", {
+      name: "Zalo chat",
+    });
+    expect(zalo.disabled).toBe(true);
+    const lock = screen.getByText(reason);
+    expect(zalo.getAttribute("aria-describedby") ?? "").toContain(lock.id);
+    expect(
+      screen.getByRole<HTMLButtonElement>("switch", { name: "WhatsApp chat" })
+        .disabled,
+    ).toBe(false);
+  });
 });

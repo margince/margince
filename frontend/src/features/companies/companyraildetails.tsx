@@ -2,114 +2,45 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
-import { Hash, MapPin } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { useUnsavedGuard } from "../../components/unsaved";
 import { EvidenceMark } from "../../design-system/evidencemark";
-import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
+import { FieldRow } from "../../design-system/fieldgrid";
 import { InlineText } from "../../design-system/inlinetext";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useCanWriteRecord } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { invalidateCompany } from "../../lib/recordwritekeys";
 import { useRecordZone } from "../../lib/recordzone";
-import {
-  profileFieldsKey,
-  useCompanyProfileFields,
-} from "../records/evidenceverdict";
-import { CompanyDetails } from "./companydetails";
-import { useCompanyReadOnlyReason } from "./companyheader";
 import { VatMark } from "./companyvatmark";
 import { derivedSource } from "./evidencesource";
+import { profileFieldsKey } from "./evidenceverdict";
 
-// The rail's own Details grid (companyrail.tsx's DetailsGrid), split into
-// this file so the rail file stays under the 500-line ceiling: one panel
-// section (Details) and its field rows is a natural seam, not an arbitrary
-// cut.
-
-type Company = components["schemas"]["Company"];
 type ProfileField = components["schemas"]["CompanyProfileField"];
 // The path parameter's own closed vocabulary, taken from the generated contract
 // rather than respelled: a field name this endpoint does not accept is then a
 // compile error here rather than a 422 the reader meets.
 type ProfileFieldKey = components["parameters"]["ProfileFieldKey"];
-// Not `keyof Address`: the wire type carries a `[key: string]: unknown` catch-all
-// alongside its six named parts (schema.d.ts's own escape hatch for a future
-// field), which collapses `keyof` down to bare `string` and loses every part's
-// actual value type. The six literals are the only ones this row ever writes.
-export function DetailsGrid({ company }: Readonly<{ company?: Company }>) {
-  if (!company) {
-    return null;
-  }
-  // Split into its own component (rather than returning early above and
-  // calling the hooks below unconditionally) so every hook in this file runs
-  // on every render of THIS component and stays absent entirely on the
-  // no-company one — an early return between hook calls fails the Rules
-  // of Hooks the moment `company` flips between defined and not, which a
-  // 360 read that answers slower than the shell mount does routinely.
-  return <DetailsGridBody company={company} />;
+
+// One sidecar field: a value that has no column on `company` and is written
+// through the profile-field path. The details' Registration rows and the
+// Profile tab write the same fields through this one writer. So the two never
+// disagree about what they last wrote or which precondition they sent.
+export function SidecarFieldRow(props: SidecarFieldProps) {
+  const t = useT();
+  const label =
+    props.label ?? (props.labelKey ? t(props.labelKey) : props.field);
+  return (
+    <FieldRow label={label} icon={props.icon}>
+      <SidecarFieldValue {...props} />
+    </FieldRow>
+  );
 }
 
-// The two legal-identity fields that live only in the evidence sidecar: the
-// VAT/tax identifier and the address the company is REGISTERED at.
-//
-// Neither has a column on `company`, so neither can ride the rows above:
-// they are written through the profile-field correction path instead. That
-// difference is invisible to a reader and should stay so — a rep stating the
-// company's VAT number is doing the same thing as stating its legal name, and
-// the two rows sit together because they are the same kind of fact.
-//
-// `registered_address` is NOT the postal address in the disclosure below. That
-// one is six columns describing where the company OPERATES; this one is the
-// single line a register prints. Collapsing them was never intended, so the
-// labels have to keep them apart.
-const SIDECAR_FIELDS = [
-  {
-    field: "register_vat",
-    labelKey: "co.profileField.register_vat",
-    icon: <Hash />,
-    placeholderKey: "field.addRegisterVat",
-  },
-  {
-    field: "registered_address",
-    labelKey: "co.profileField.registered_address",
-    icon: <MapPin />,
-    placeholderKey: "field.addRegisteredAddress",
-  },
-] as const satisfies readonly {
-  field: ProfileFieldKey;
-  labelKey: MessageKey;
-  icon: ReactNode;
-  placeholderKey: MessageKey;
-}[];
-
-// One sidecar field's row. The value comes from the profile-fields read rather
-// than from `company`, which carries no sidecar claim.
-// Exported because the Profile tab writes the SAME sidecar fields through the
-// same PATCH — one writer for a profile-field value, mounted twice, so the rail
-// and the tab can never disagree about what they last wrote or which
-// precondition they sent. `multiline` is the tab's case: the narrative fields
-// (what they sell, who they sell to) are paragraphs, and a paragraph in a
-// single-line input is a field a reader cannot read back while typing it.
-export function SidecarFieldRow({
-  companyId,
-  anchor,
-  fields,
-  fieldsLoaded,
-  field,
-  labelKey,
-  label: labelText,
-  icon,
-  placeholderKey,
-  canEdit,
-  readOnlyReason,
-  multiline,
-  guardDetails,
-}: Readonly<{
+type SidecarFieldProps = Readonly<{
   companyId: string;
   // The record's `is_anchor`: its fields are also the settings company profile.
   anchor: boolean;
@@ -137,7 +68,23 @@ export function SidecarFieldRow({
   readOnlyReason: string | undefined;
   multiline?: boolean;
   guardDetails?: boolean;
-}>) {
+}>;
+
+/** One sidecar field's value and its marks, for a row its caller draws. */
+export function SidecarFieldValue({
+  companyId,
+  anchor,
+  fields,
+  fieldsLoaded,
+  field,
+  labelKey,
+  label: labelText,
+  placeholderKey,
+  canEdit,
+  readOnlyReason,
+  multiline,
+  guardDetails,
+}: SidecarFieldProps) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -178,7 +125,7 @@ export function SidecarFieldRow({
     ? derivedSource(current, locale, recordZone)
     : undefined;
   return (
-    <FieldRow label={label} icon={icon}>
+    <>
       {/* Editing and provenance are two controls, not one: EvidenceMark makes
           its value the button that opens the receipt, and InlineText makes it
           the button that starts an edit. One element cannot be both, so the
@@ -217,39 +164,6 @@ export function SidecarFieldRow({
           canAsk={canEdit}
         />
       )}
-    </FieldRow>
-  );
-}
-
-export function CompanyProfileDetails({
-  company,
-}: Readonly<{ company: Company }>) {
-  const canUpdate = useCanWriteRecord("company", company);
-  const readOnlyReason = useCompanyReadOnlyReason(company);
-  const query = useCompanyProfileFields(company.id);
-  return (
-    <FieldGrid icons>
-      {SIDECAR_FIELDS.map((sidecar) => (
-        <SidecarFieldRow
-          key={sidecar.field}
-          guardDetails
-          companyId={company.id}
-          anchor={company.is_anchor === true}
-          fields={query.data ?? []}
-          fieldsLoaded={query.isSuccess}
-          canEdit={canUpdate && !readOnlyReason}
-          readOnlyReason={readOnlyReason}
-          {...sidecar}
-        />
-      ))}
-    </FieldGrid>
-  );
-}
-function DetailsGridBody({ company }: Readonly<{ company: Company }>) {
-  return (
-    <>
-      <CompanyDetails company={company} />
-      <CompanyProfileDetails company={company} />
     </>
   );
 }

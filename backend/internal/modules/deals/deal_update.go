@@ -107,18 +107,22 @@ func (s *Store) UpdateDealTx(ctx context.Context, tx pgx.Tx, id ids.DealID,
 	return s.updateDealInTx(ctx, tx, id, in, active.cols)
 }
 
+// lockThenEnsureWritable takes the deal row lock and only then asks the write
+// check. A reassignment that commits between the two would otherwise let the
+// former owner write. Writers lock the deal before any stage or ledger row.
+func lockThenEnsureWritable(ctx context.Context, tx pgx.Tx, id ids.DealID) error {
+	if _, err := storekit.LockRow(ctx, tx, dealTable, id.UUID, storekit.LiveOnly); err != nil {
+		return err
+	}
+	return auth.EnsureWritable(ctx, tx, dealTable, id.UUID)
+}
+
 // updateDealInTx is UpdateDeal's transactional body, shared by the
 // store-opened (UpdateDeal) and caller-opened (UpdateDealTx) entry points.
 func (s *Store) updateDealInTx(ctx context.Context, tx pgx.Tx,
 	id ids.DealID, in UpdateDealInput, active []fieldcatalog.Column,
 ) (crmcontracts.Deal, error) {
-	if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
-		return crmcontracts.Deal{}, err
-	}
-	// Locked before `current` is read: the patch and the owner hand-over are
-	// built from it, and a concurrent reassignment committing in between would
-	// hand the cards on from an owner the deal no longer has.
-	if _, err := storekit.LockRow(ctx, tx, dealTable, id.UUID, storekit.LiveOnly); err != nil {
+	if err := lockThenEnsureWritable(ctx, tx, id); err != nil {
 		return crmcontracts.Deal{}, err
 	}
 	// current reads WITH active columns so the patch's audit before-image

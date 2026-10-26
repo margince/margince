@@ -23,13 +23,11 @@ package activities
 //	so the user is stated on the row. Exact, no inference.
 //
 //	Class 2 — an activity a connector captured. `captured_by` reads
-//	`connector:gmail` and names no human, but capture_connection is
-//	per-user-per-provider, so the provider identifies the mailbox owner — as
-//	long as the workspace has exactly ONE connection for that provider. With
-//	two, the activity could belong to either mailbox and no evidence on the
-//	row distinguishes them, so it stays unattributed rather than being
-//	attributed to a coin flip. A wrong edge is worse than a missing one: it
-//	tells someone to ask a colleague who has never met the contact.
+//	`connector:gmail:<user>`, naming the mailbox owner the authenticated
+//	connector acted for. Exact, no inference. A bare `connector:gmail`
+//	names no mailbox, so such a row stays without participants. No count
+//	of connections proves whose mail it was: a removed connection row would
+//	hand a colleague's mail to whoever is left.
 //
 //	Class 3 — an activity whose importer named its author in the system it
 //	came from. It is EXCLUDED, and the reason is not that its participants are
@@ -52,14 +50,6 @@ package activities
 // and it is a different kind of work — it reads message bodies, needs its own
 // address-matching rules, and its failure mode is silently mis-attributing a
 // meeting. It gets its own slice.
-//
-// A note on connection rebinding, because the obvious worry does not apply:
-// capture_connection upserts on (workspace, user, provider), so re-authorizing
-// a DIFFERENT Google account re-points the same row and `account_bound_at`
-// records when. That changes which MAILBOX the row holds — never which human.
-// Since class 2 attributes an activity to a user and not to an address, an
-// activity captured before a rebind still belongs to the same contact, and the
-// rebind is irrelevant to it.
 
 import (
 	"context"
@@ -130,37 +120,21 @@ func (s *Store) BackfillParticipantsBatch(ctx context.Context, limit int) (int, 
 // rebuilt against them. The repair would appear to work and then silently come
 // undone.
 func backfillParticipants(ctx context.Context, tx pgx.Tx, limit int) (int, error) {
-	tag, err := tx.Exec(ctx, `
+	rows, err := tx.Query(ctx, `
 		WITH candidate AS (
 		    SELECT a.id, a.direction, a.counterparty_email, o.user_id
 		      FROM activity a
 		      JOIN LATERAL (
-		           -- Class 1 wins over class 2: a human-logged activity states
-		           -- its user, and a connector guess must never override that.
+		           -- A row matches at most one arm: its stamp is either
+		           -- human or connector.
 		           SELECT u.id AS user_id
 		             FROM app_user u
 		            WHERE a.captured_by = 'human:' || u.id::text
 		            UNION ALL
-		           -- Class 2a: connector provenance that NAMES its mailbox owner
-		           -- (connector:gmail:<user>). Exact, no inference — every
-		           -- row captured since that provenance shipped.
+		           -- Class 2: the mailbox owner the connector stamp names.
 		           SELECT u.id
 		             FROM app_user u
-		            WHERE a.captured_by LIKE 'connector:%:' || u.id::text
-		            UNION ALL
-		           -- Class 2b: older rows stamped with the connector alone,
-		           -- from before the owner was recorded. Attributable only
-		           -- when the workspace has exactly ONE connection for that
-		           -- provider; with two, the row could belong to either
-		           -- mailbox and nothing on it separates them, so it stays
-		           -- unattributed rather than attributed to a coin flip.
-		           SELECT c.user_id
-		             FROM capture_connection c
-		            WHERE a.captured_by = 'connector:' || c.provider
-		              AND NOT EXISTS (
-		                  SELECT 1 FROM capture_connection other
-		                   WHERE other.provider = c.provider AND other.id <> c.id)
-		            LIMIT 1
+		            WHERE u.id::text = `+auth.ConnectorSeatSQL("a")+`
 		      ) o ON true
 		     WHERE a.archived_at IS NULL
 		       -- The same set every other writer of a participant row accepts,
@@ -204,9 +178,10 @@ func backfillParticipants(ctx context.Context, tx pgx.Tx, limit int) (int, error
 		              CASE WHEN c.direction = 'inbound' THEN 'from' ELSE 'to' END
   ) r
 		 WHERE r.user_id IS NOT NULL OR r.contact_id IS NOT NULL OR r.address IS NOT NULL
-		ON CONFLICT DO NOTHING`, limit)
+		ON CONFLICT DO NOTHING
+		RETURNING id, coalesce(address, '')`, limit)
 	if err != nil {
 		return 0, fmt.Errorf("activities: backfilling interaction participants: %w", err)
 	}
-	return int(tag.RowsAffected()), nil
+	return foldInsertedParticipants(ctx, tx, rows)
 }

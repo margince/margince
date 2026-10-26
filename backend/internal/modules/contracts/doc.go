@@ -5,7 +5,7 @@
 // their renewal dates, their cancellation, and the renewal chain that links a
 // succession of them (ADR-0109/A160).
 //
-// Tables owned: contract.
+// Tables owned: docs/reference/entity-model/contracts.md.
 //
 // Spine: Handlers→Store. A contract is a record, not an engine — the one
 // multi-step path (renewal, which creates a successor and supersedes its

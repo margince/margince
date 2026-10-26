@@ -106,3 +106,36 @@ export const classificationRepairReview: components["schemas"]["HomeRepairReview
       },
     ],
   };
+
+export const settlementRepairReview: components["schemas"]["HomeRepairReview"] =
+  {
+    ...repairReview,
+    limit: 2,
+    counts: {
+      reclassify: 0,
+      archive: 0,
+      withdraw: 0,
+      supersede: 0,
+      review: 0,
+      keep: 1,
+      revalidate: 1,
+    },
+    tasks: [
+      {
+        id: reviewedTaskID,
+        source: "settlement",
+        version: 3,
+        snapshot: "d".repeat(64),
+        action: "revalidate_settlement",
+        reason: "settlement_revalidate",
+      },
+      {
+        id: "0192aaaa-0000-7000-8000-00000000beef",
+        source: "settlement",
+        version: 2,
+        snapshot: "e".repeat(64),
+        action: "leave_current",
+        reason: "settlement_human_work",
+      },
+    ],
+  };

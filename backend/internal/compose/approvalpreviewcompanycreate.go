@@ -45,9 +45,10 @@ func (r approvalPreviewReader) companyCreationPreview(ctx context.Context, appro
 
 func (r approvalPreviewReader) companyCreationDetails(ctx context.Context, plan contacts.CompanyCreationPreview) ([]crmcontracts.ApprovalPreviewDetail, []string, error) {
 	in := plan.Input
+	industry, description := contacts.CompanyIndustryColumns(in.Industry, in.Description)
 	fields := map[string]any{
-		"display_name": in.DisplayName, fieldLegalName: in.LegalName, descriptionField: in.Description,
-		fieldIndustry: in.Industry, fieldSizeBand: in.SizeBand, bulkParamOwner: in.OwnerID, refColParentCompany: in.ParentCompanyID,
+		"display_name": in.DisplayName, fieldLegalName: in.LegalName, descriptionField: description,
+		fieldIndustry: industry, fieldSizeBand: in.SizeBand, bulkParamOwner: in.OwnerID, refColParentCompany: in.ParentCompanyID,
 		fieldLinkedIn: in.LinkedInURL, fieldSource: in.Source, previewFieldSourceSystem: in.SourceSystem,
 		previewFieldSourceAuthorName: in.Author.AuthorName, previewFieldSourceAuthorID: in.Author.AuthorID,
 		previewLifecycle: previewLifecycleUnknown,

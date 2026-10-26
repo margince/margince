@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/analytics backend/internal/modules/reporting backend/internal/modules/forecasting backend/internal/compose/analyticsquery backend/internal/compose/weekly -->
 # Performance and saved sales reports
 
 ## Where do I start my sales review?
@@ -32,6 +33,8 @@ Every chart can also be read as numbers. Select a mark, with a click or the keys
   apart. A held meeting keeps the host that was recorded when it was held. An older meeting with no such record, or only part of one, is given to its host of today. The details for the number say when this happens. An accepted opportunity stays with
   the SDR who created it after the deal gets a new owner. These two lines do not
   show a rate of turning one into the other.
+- **Leads:** new leads by origin and lead status changes by the new status. Leads qualified into a deal show out of all that came in. First response time is the middle wait. Lead figures take no pipeline.
+- **Partners:** pipeline created and sales won on deals that name a partner. Each is split by partner and by whether the partner sourced or influenced the deal. Commission earned is split by partner, and active partners are counted as things stand. A partner company you cannot open shows as "Partner you cannot see".
 - **Sales and SDR summaries:** totals for the time span above their charts. Target progress
   shows only for given targets; an SDR without a target sees totals without a
   target column. Exact amounts, time zones and who gets credit stay in the
@@ -70,7 +73,11 @@ Select an edition in the history to see the values, targets, graphs and records 
 
 ## How do I set targets or export figures?
 
-Open **Targets** and choose sales won, qualified pipeline created, meetings held or accepted opportunities. Select the owner or team, the pipeline where that is offered, and month or fiscal quarter. Choose a year and a first month; only months that can start a fiscal quarter are offered. Each new version needs a reason. Filter the list by active or retired status and by first month. The team target stays apart from the targets of each member; the difference shows as **Unallocated** or **Overallocated**.
+Open **Targets** and choose a figure that takes a target: sales won, qualified pipeline created, meetings held, accepted opportunities, leads qualified or partner pipeline. Select the owner or team, and month or fiscal quarter. A sales or partner figure can also be held to one pipeline; a lead or SDR figure counts every pipeline.
+
+Choose a year and a first month; only months that can start a fiscal quarter are offered. Each new version needs a reason. Filter the list by active or retired status and by first month. The team target stays apart from the targets of each member; the difference shows as **Unallocated** or **Overallocated**.
+
+A team lead, management or an admin sets targets. Every other seat with access to **Targets** sees its own targets, the targets of its teams and the company targets. It sees no button to add one. When none is set yet, the list says who sets them. Your own progress shows under **Analytics** → **My outcomes**.
 
 Use **Export CSV**, next to **Save report**, for the report's numbers of today. Export a fixed edition for the numbers and question answers it stored. An export follows the same permissions and the same limits as the screen. For a report you build yourself, open **Reports** → **New custom report** or ask your connected AI to report through Margince.
 

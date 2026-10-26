@@ -9,20 +9,17 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { ContactCommitmentsCard, hasOpenCommitments } from "./contactcards";
+import { ContactClaimReadings, ContactCommitmentsCard } from "./contactcards";
+import { hasOpenCommitments } from "./contactoverview.rows";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ConversationClaim = components["schemas"]["ConversationClaim"];
 
-// The commitments card reads a promise against the clock, and it used to need a
-// full elapsed DAY before it would say overdue — so for 24 hours the contact
-// said "due yesterday" about the same promise the task list, the agent tool and
-// the SQL all called late. These pin the boundary at the instant.
+// The Commitments card reads a promise against the clock. It used to need a
+// full elapsed day before it said overdue. For 24 hours it called a promise
+// "due yesterday" that the task list called late. These pin the boundary at
+// the instant.
 
-// The provenance every fixture contact carries, typed from the contract rather
-// than asserted: these are Contact360's own contact fields, so a change to any
-// of them fails here instead of being widened away by the assertion that used
-// to stand in for the type.
 const CAPTURED: Pick<
   Contact360["contact"],
   "source" | "captured_by" | "created_at" | "updated_at"
@@ -33,20 +30,16 @@ const CAPTURED: Pick<
   updated_at: "2026-08-01T08:00:00Z",
 };
 
-// The reader every case renders as. useViewerId reads it off the shared /me
-// cache, and whose task a row is decides how the row is prefixed.
-const VIEWER = "00000000-0000-4000-8000-000000000001";
-
 beforeEach(() => {
   installFetchStub({ "GET /me": meRoute({ activity: ["read"] }) });
 });
 
-// The reading moment every case below is an offset from. Fixed, because a
-// suite that reads the machine's calendar changes its verdict in December.
+// Fixed, because a suite that reads the machine's calendar changes its
+// verdict in December.
 const NOW = "2026-08-25T12:00:00Z";
 const HOUR = 3_600_000;
 
-function claim(dueAt: string | null): ConversationClaim {
+function claim(over: Partial<ConversationClaim> = {}): ConversationClaim {
   return {
     id: "c-1",
     kind: "commitment_ours",
@@ -55,16 +48,17 @@ function claim(dueAt: string | null): ConversationClaim {
     source_quote: "I'll send the quote on Monday.",
     status: "open",
     needs_review: false,
-    due_at: dueAt,
+    due_at: null,
+    ...over,
   };
 }
 
-function viewWithDue(dueAt: string | null): Contact360 {
+function viewWith(claims: ConversationClaim[]): Contact360 {
   return {
     as_of: NOW,
     contact: { id: "p-1", full_name: "Dana Buyer", ...CAPTURED },
     sections_omitted: [],
-    claims: [claim(dueAt)],
+    claims,
   };
 }
 
@@ -72,12 +66,20 @@ function at(offsetMs: number): string {
   return new Date(Date.parse(NOW) + offsetMs).toISOString();
 }
 
-function renderDue(dueAt: string | null) {
+function renderCard(view: Contact360, onAllTasks = () => undefined) {
   render(
     <StoryProviders>
-      <ContactCommitmentsCard view={viewWithDue(dueAt)} firstName="Dana" />
+      <ContactCommitmentsCard
+        view={view}
+        firstName="Dana"
+        onAllTasks={onAllTasks}
+      />
     </StoryProviders>,
   );
+}
+
+function renderDue(dueAt: string | null) {
+  renderCard(viewWith([claim({ due_at: dueAt })]));
 }
 
 afterEach(() => {
@@ -85,187 +87,145 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("the commitments card's due status", () => {
-  // The clock is injected, never the machine's: `Date.now()` inside the card is
-  // what decides the verdict, so a real clock would move these cases every run.
+describe("the Commitments card's due pill", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW));
   });
 
   it("calls a promise overdue the moment it passes, not a day later", () => {
-    // The reported case: 23 hours past due read as "due yesterday" here while
-    // every other surface called it overdue.
     renderDue(at(-23 * HOUR));
-    expect(screen.getByText("overdue by less than a day")).toBeTruthy();
-    expect(screen.queryByText(/^due /)).toBeNull();
+    expect(screen.getByText("Overdue by less than a day")).toBeTruthy();
+    expect(screen.queryByText(/^Due /)).toBeNull();
   });
 
   it("counts whole days only once a whole day has passed", () => {
     renderDue(at(-49 * HOUR));
-    // Two whole days and one hour is two days late, never three.
-    expect(screen.getByText("overdue 2 days")).toBeTruthy();
+    expect(screen.getByText("Overdue 2 days")).toBeTruthy();
+  });
+
+  it("says one day in the singular", () => {
+    renderDue(at(-25 * HOUR));
+    expect(screen.getByText("Overdue 1 day")).toBeTruthy();
   });
 
   it("is not overdue at the instant it falls due", () => {
-    // A reader told they have missed something at the instant it becomes due
-    // has been told something untrue.
     renderDue(at(0));
-    expect(screen.getByText("due today")).toBeTruthy();
+    expect(screen.getByText("Due today")).toBeTruthy();
   });
 
   it("keeps a promise still hours away under today, not tomorrow", () => {
     renderDue(at(11 * HOUR));
-    expect(screen.getByText("due today")).toBeTruthy();
+    expect(screen.getByText("Due today")).toBeTruthy();
   });
 
   it("names tomorrow only for the day after this one", () => {
     renderDue(at(26 * HOUR));
-    expect(screen.getByText("due tomorrow")).toBeTruthy();
+    expect(screen.getByText("Due tomorrow")).toBeTruthy();
   });
 
-  it("falls back to the open badge when the due instant is unreadable", () => {
-    // A due date nothing can parse names no deadline; "overdue NaN days" is
-    // the one reading that must not reach a reader.
+  it("reads an unreadable due instant as no date at all", () => {
     renderDue("whenever");
     expect(screen.getByText("Open")).toBeTruthy();
   });
 
-  it("shows the open badge when there is no due date at all", () => {
-    renderDue(null);
-    expect(screen.getByText("Open")).toBeTruthy();
+  it("marks what they owe as waiting on them", () => {
+    renderCard(viewWith([claim({ kind: "commitment_theirs" })]));
+    expect(screen.getByText("Waiting")).toBeTruthy();
   });
 });
 
-// A task IS a promise. The card read extracted claims alone, so a record whose
-// only open promise was a task — which is what an accepted transcript proposal
-// becomes — said "nothing has been promised" under a headline naming it.
-describe("open tasks are commitments too", () => {
-  function viewWithTask(dueAt: string | null): Contact360 {
-    return {
-      as_of: NOW,
-      contact: { id: "p-1", full_name: "Dana Buyer", ...CAPTURED },
-      sections_omitted: [],
-      next_steps: {
-        data: [
-          {
-            id: "t-1",
-            kind: "task",
-            subject: "Send the MCP whitepaper",
-            occurred_at: NOW,
-            is_done: false,
-            due_at: dueAt,
-            ...CAPTURED,
-          },
-        ],
-        page: { has_more: false },
-      },
-    };
-  }
-
-  it("lists an undated task as ours and open", () => {
-    render(
-      <StoryProviders>
-        <ContactCommitmentsCard view={viewWithTask(null)} firstName="Dana" />
-      </StoryProviders>,
+describe("the Commitments card's rows", () => {
+  it("prefixes our promise with Team and theirs with their first name", () => {
+    renderCard(
+      viewWith([
+        claim(),
+        claim({
+          id: "c-2",
+          kind: "commitment_theirs",
+          body: "confirm the attendees",
+        }),
+      ]),
     );
-
     expect(
-      screen.getAllByText(/Send the MCP whitepaper/).length,
+      screen.getAllByText("Team: Send the pilot quote").length,
     ).toBeGreaterThan(0);
-    expect(screen.getByText("Open")).toBeDefined();
+    expect(
+      screen.getAllByText("Dana: confirm the attendees").length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("shows the words a promise was read from under it", () => {
+    renderCard(viewWith([claim()]));
+    expect(screen.getByText("“I'll send the quote on Monday.”")).toBeTruthy();
+  });
+
+  it("has no button inside a row: dismissal lives on the Research tab", () => {
+    renderCard(viewWith([claim()]));
+    expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
+  });
+
+  it("ticks a kept promise and names no deadline for it", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW));
+    renderCard(
+      viewWith([
+        claim({ status: "done", task_activity_id: "t-1", due_at: at(-HOUR) }),
+      ]),
+    );
+    expect(
+      screen.getByRole("checkbox", { name: /Send the pilot quote/ }),
+    ).toHaveProperty("checked", true);
+    expect(screen.queryByText(/Overdue/)).toBeNull();
+  });
+
+  it("leaves a promise that became an open task to the task", () => {
+    const view = viewWith([claim({ task_activity_id: "t-1" })]);
+    view.next_steps = {
+      data: [
+        {
+          offers_email: false,
+          id: "t-1",
+          kind: "task",
+          subject: "Send the pilot quote",
+          occurred_at: NOW,
+          is_done: false,
+          ...CAPTURED,
+        },
+      ],
+      page: { has_more: false },
+    };
+    renderCard(view);
+    expect(screen.queryByText(/Send the pilot quote/)).toBeNull();
+  });
+
+  it("says nothing is promised when nothing is", () => {
+    renderCard(viewWith([]));
+    expect(screen.getByText(/No commitments or questions/)).toBeTruthy();
+  });
+
+  it("says the claims are hidden rather than absent when withheld", () => {
+    renderCard({
+      ...viewWith([]),
+      claims: undefined,
+      sections_omitted: ["claims"],
+    });
+    expect(screen.getByText("Hidden for your role")).toBeTruthy();
     expect(screen.queryByText(/No commitments or questions/)).toBeNull();
   });
 
-  it("reads an overdue task against the clock, like a claim", () => {
-    vi.setSystemTime(new Date(Date.parse(NOW)));
-    render(
-      <StoryProviders>
-        <ContactCommitmentsCard
-          view={viewWithTask(at(-25 * HOUR))}
-          firstName="Dana"
-        />
-      </StoryProviders>,
-    );
-
-    // One whole day, in the singular: the wording comes from the reader's own
-    // plural rule rather than from one string with a count poured into it.
-    expect(screen.getByText("overdue 1 day")).toBeDefined();
-  });
-
-  it('keeps "You" on a task the reader holds themselves', async () => {
-    // The writer assigns every human-written task to its author, so this is
-    // the ordinary case, not a corner: a rule reading "assigned" as "somebody
-    // else's" would strip the prefix from nearly every task on the page.
-    const view = viewWithTask(null);
-    // biome-ignore lint/style/noNonNullAssertion: the fixture above builds it.
-    view.next_steps!.data[0].assignee_id = VIEWER;
-    render(
-      <StoryProviders>
-        <ContactCommitmentsCard view={view} firstName="Dana" />
-      </StoryProviders>,
-    );
-
-    // The reader's identity arrives with /me, so the prefix appears on the
-    // render after it resolves.
-    await waitFor(() =>
-      expect(
-        screen.getAllByText(/You: Send the MCP whitepaper/).length,
-      ).toBeGreaterThan(0),
-    );
-  });
-
-  it("does not tell the reader they owe a colleague's task", () => {
-    const view = viewWithTask(null);
-    // biome-ignore lint/style/noNonNullAssertion: the fixture above builds it.
-    view.next_steps!.data[0].assignee_id = "u-someone-else";
-    render(
-      <StoryProviders>
-        <ContactCommitmentsCard view={view} firstName="Dana" />
-      </StoryProviders>,
-    );
-
-    expect(screen.queryByText(/You: Send the MCP whitepaper/)).toBeNull();
-    expect(
-      screen.getAllByText(/Send the MCP whitepaper/).length,
-    ).toBeGreaterThan(0);
-  });
-
-  it("names a task whose subject it may not see", () => {
-    const view = viewWithTask(null);
-    // biome-ignore lint/style/noNonNullAssertion: the fixture above builds it.
-    view.next_steps!.data[0].subject = null;
-    render(
-      <StoryProviders>
-        <ContactCommitmentsCard view={view} firstName="Dana" />
-      </StoryProviders>,
-    );
-
-    expect(screen.getAllByText(/an open task/).length).toBeGreaterThan(0);
-  });
-
-  it("still says nothing is promised when there is neither claim nor task", () => {
-    render(
-      <StoryProviders>
-        <ContactCommitmentsCard
-          view={{
-            as_of: NOW,
-            contact: { id: "p-1", full_name: "Dana Buyer", ...CAPTURED },
-            sections_omitted: [],
-          }}
-          firstName="Dana"
-        />
-      </StoryProviders>,
-    );
-
-    expect(screen.getByText(/No commitments or questions/)).toBeDefined();
+  it("opens the task queue from All tasks", async () => {
+    const onAllTasks = vi.fn();
+    renderCard(viewWith([claim()]), onAllTasks);
+    (await screen.findByRole("button", { name: "All tasks" })).click();
+    expect(onAllTasks).toHaveBeenCalledOnce();
   });
 });
 
-// A commitment read from a conversation carries the words it was read from, so
-// the reader can check it, and a way to dismiss a reading that got it wrong.
-describe("a commitment read from a conversation", () => {
-  it("shows its words and offers to dismiss it", async () => {
+// Dismissing a reading is a judgement about the extractor, made beside the
+// words it was read from.
+describe("the claim readings on the Research tab", () => {
+  it("shows each open reading with its words and dismisses it", async () => {
     const settled: unknown[] = [];
     installFetchStub({
       "GET /me": meRoute({ activity: ["read"], contact: ["read", "update"] }),
@@ -276,7 +236,7 @@ describe("a commitment read from a conversation", () => {
     });
     render(
       <StoryProviders>
-        <ContactCommitmentsCard view={viewWithDue(null)} firstName="Dana" />
+        <ContactClaimReadings view={viewWith([claim()])} />
       </StoryProviders>,
     );
     expect(screen.getByText("“I'll send the quote on Monday.”")).toBeTruthy();
@@ -294,101 +254,22 @@ describe("a commitment read from a conversation", () => {
     });
     render(
       <StoryProviders>
-        <ContactCommitmentsCard view={viewWithDue(null)} firstName="Dana" />
+        <ContactClaimReadings view={viewWith([claim()])} />
       </StoryProviders>,
     );
     await screen.findByText("“I'll send the quote on Monday.”");
-    // The answer is only meaningful once the grants have arrived: before
-    // that, the button is withheld for not knowing, not for the grant.
     await waitFor(() => expect(meServed).toBe(true));
     await act(async () => {});
     expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
   });
 
-  it("stays as a kept commitment once its task is done", () => {
-    const view = viewWithDue(null);
-    // biome-ignore lint/style/noNonNullAssertion: the fixture above builds it.
-    const kept = view.claims![0];
-    kept.task_activity_id = "t-1";
-    kept.status = "done";
-    render(
+  it("draws nothing once every reading is settled", () => {
+    const { container } = render(
       <StoryProviders>
-        <ContactCommitmentsCard view={view} firstName="Dana" />
+        <ContactClaimReadings view={viewWith([claim({ status: "done" })])} />
       </StoryProviders>,
     );
-    const box = screen.getByRole("checkbox", { name: /Send the pilot quote/ });
-    expect(box).toHaveProperty("checked", true);
-  });
-
-  it("names no deadline once kept", () => {
-    vi.setSystemTime(new Date(Date.parse(NOW)));
-    const view = viewWithDue(at(-25 * HOUR));
-    // biome-ignore lint/style/noNonNullAssertion: the fixture above builds it.
-    view.claims![0].status = "done";
-    render(
-      <StoryProviders>
-        <ContactCommitmentsCard view={view} firstName="Dana" />
-      </StoryProviders>,
-    );
-    expect(
-      screen.getByRole("checkbox", { name: /Send the pilot quote/ }),
-    ).toHaveProperty("checked", true);
-    expect(screen.queryByText(/overdue/)).toBeNull();
-  });
-
-  it("is drawn once, as the open task, when its task was reopened", () => {
-    const view = viewWithDue(null);
-    // biome-ignore lint/style/noNonNullAssertion: the fixture above builds it.
-    const kept = view.claims![0];
-    kept.task_activity_id = "t-1";
-    kept.status = "done";
-    view.next_steps = {
-      data: [
-        {
-          id: "t-1",
-          kind: "task",
-          subject: "Send the pilot quote",
-          occurred_at: NOW,
-          is_done: false,
-          ...CAPTURED,
-        },
-      ],
-      page: { has_more: false },
-    };
-    render(
-      <StoryProviders>
-        <ContactCommitmentsCard view={view} firstName="Dana" />
-      </StoryProviders>,
-    );
-    // One row: its visible text and its checkbox's hidden label.
-    expect(screen.getAllByText(/Send the pilot quote/)).toHaveLength(2);
-  });
-
-  it("is drawn once, as its task, when it became one", () => {
-    const view = viewWithDue(null);
-    // biome-ignore lint/style/noNonNullAssertion: the fixture above builds it.
-    view.claims![0].task_activity_id = "t-1";
-    view.next_steps = {
-      data: [
-        {
-          id: "t-1",
-          kind: "task",
-          subject: "Send the pilot quote",
-          occurred_at: NOW,
-          is_done: false,
-          ...CAPTURED,
-        },
-      ],
-      page: { has_more: false },
-    };
-    render(
-      <StoryProviders>
-        <ContactCommitmentsCard view={view} firstName="Dana" />
-      </StoryProviders>,
-    );
-    // One row: its visible text and its checkbox's hidden label.
-    expect(screen.getAllByText(/Send the pilot quote/)).toHaveLength(2);
-    expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
+    expect(container.querySelector(".panel")).toBeNull();
   });
 });
 
@@ -403,16 +284,19 @@ describe("responsibility and historical conversation findings", () => {
 
   it("keeps an unverified old finding out of open obligations while retaining its source", async () => {
     const user = userEvent.setup();
-    const view = viewWithDue("2024-07-08T09:00:00Z");
-    const old = claim("2024-07-08T09:00:00Z");
+    const old = claim({ due_at: "2024-07-08T09:00:00Z" });
     old.needs_review = true;
     old.occurred_at = "2024-07-05T09:00:00Z";
     old.source_label = "Rollout planning";
-    view.claims = [old];
+    const view = viewWith([old]);
     expect(hasOpenCommitments(view)).toBe(false);
     render(
       <StoryProviders>
-        <ContactCommitmentsCard view={view} firstName="Dana" />
+        <ContactCommitmentsCard
+          view={view}
+          firstName="Dana"
+          onAllTasks={() => undefined}
+        />
       </StoryProviders>,
     );
     expect(

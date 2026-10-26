@@ -12,8 +12,10 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -33,6 +35,18 @@ func (r approvalPreviewReader) commitmentPreview(ctx context.Context, approval c
 	if !commitmentPreviewIdentityMatches(approval, proposal) {
 		return out, nil
 	}
+	open, err := r.promisesStillOpen(ctx, proposal)
+	if previewUnavailable(err) {
+		out.State = previewUnavailableState
+		return out, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if !open {
+		out.State = previewStaleState
+		return out, nil
+	}
 	sourceType := crmcontracts.ApprovalEvidenceSourceType(string(recordTypeActivity))
 	citation, err := r.currentCitation(ctx, crmcontracts.ApprovalEvidence{SourceType: &sourceType, SourceId: new(openapi_types.UUID(proposal.SourceActivityID)), EvidenceSnippet: proposal.Quote})
 	if state := evidenceFailureState(err); state != "" {
@@ -42,7 +56,7 @@ func (r approvalPreviewReader) commitmentPreview(ctx context.Context, approval c
 	if err != nil {
 		return nil, err
 	}
-	recipients, err := r.commitmentRecipientNames(ctx, proposal)
+	recipients, err := r.commitmentRecipientNames(ctx, raw, proposal)
 	if state := evidenceFailureState(err); state != "" {
 		out.State = state
 		return out, nil
@@ -60,19 +74,18 @@ func (r approvalPreviewReader) commitmentPreview(ctx context.Context, approval c
 		}
 		return out, nil
 	}
-	return r.commitmentCreationPreview(ctx, proposal, out, recipients, citation)
-}
-
-func (r approvalPreviewReader) commitmentCreationPreview(ctx context.Context, proposal CommitmentTaskProposal, out *crmcontracts.ApprovalPreview, recipients []string, citation crmcontracts.ApprovalEvidence) (*crmcontracts.ApprovalPreview, error) {
-	changes := []crmcontracts.ApprovalPreviewChange{commitmentCreateValue("summary", previewValueText, proposal.Summary)}
-	actor, found := principal.Actor(ctx)
-	if !found {
+	assignee, named := approvalsubject.CommitmentAskedOf(raw)
+	if !named {
+		// A proposal for nobody is withheld from every reader; one reached
+		// anyway names no owner rather than the reader.
 		return out, nil
 	}
-	assignee := actor.UserID
-	if proposal.SeatID != nil {
-		assignee = *proposal.SeatID
-	}
+	return r.commitmentCreationPreview(ctx, proposal, assignee, out, recipients, citation)
+}
+
+// commitmentCreationPreview names the promiser as the owner, for every reader.
+func (r approvalPreviewReader) commitmentCreationPreview(ctx context.Context, proposal CommitmentTaskProposal, assignee ids.UUID, out *crmcontracts.ApprovalPreview, recipients []string, citation crmcontracts.ApprovalEvidence) (*crmcontracts.ApprovalPreview, error) {
+	changes := []crmcontracts.ApprovalPreviewChange{commitmentCreateValue("summary", previewValueText, proposal.Summary)}
 	owner, err := r.referenceValue(ctx, bulkParamOwner, assignee.String())
 	if previewUnavailable(err) {
 		out.State = previewUnavailableState
@@ -97,9 +110,19 @@ func commitmentCreateValue(field, kind, text string) crmcontracts.ApprovalPrevie
 	return crmcontracts.ApprovalPreviewChange{Field: field, Before: crmcontracts.ApprovalPreviewValue{Kind: previewValueEmpty}, After: crmcontracts.ApprovalPreviewValue{Kind: kind, Text: approvals.SanitizeSummary(text)}}
 }
 
-func (r approvalPreviewReader) commitmentRecipientNames(ctx context.Context, proposal CommitmentTaskProposal) ([]string, error) {
+// commitmentRecipientNames names who the promise was made to, once its claims
+// are still open. A colleague holding a promise from another member's private
+// mail reads no name. Those claims are on that member's private records, so
+// the reader that filed them checks them, and they stay unnamed.
+func (r approvalPreviewReader) commitmentRecipientNames(ctx context.Context, raw []byte, proposal CommitmentTaskProposal) ([]string, error) {
 	named := commitmentClaimIDs(proposal.ClaimID, proposal.ClaimIDs)
-	claims, err := contacts.NewStore(r.db).ClaimsByIDs(ctx, named)
+	reader := ctx
+	asked, _ := approvalsubject.CommitmentAskedOf(raw)
+	unnamed := heldByAnotherThanOwner(proposal.PrivateTo, asked)
+	if unnamed {
+		reader = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: signalScanActor})
+	}
+	claims, err := contacts.NewStore(r.db).ClaimsByIDs(reader, named)
 	if err != nil {
 		return nil, err
 	}
@@ -117,6 +140,9 @@ func (r approvalPreviewReader) commitmentRecipientNames(ctx context.Context, pro
 	}
 	if !open {
 		return nil, apperrors.ErrVersionSkew
+	}
+	if unnamed {
+		return nil, nil
 	}
 	return names, nil
 }
@@ -157,4 +183,22 @@ func commitmentPreviewIdentityMatches(approval crmcontracts.Approval, proposal C
 	return !proposal.SourceActivityID.IsZero() && proposal.Locator != "" && strings.TrimSpace(proposal.Summary) != "" && proposal.Quote != "" &&
 		approval.TargetEntityType != nil && *approval.TargetEntityType == string(recordTypeActivity) &&
 		approval.TargetEntityId != nil && ids.UUID(*approval.TargetEntityId) == proposal.SourceActivityID
+}
+
+// promisesStillOpen is whether the promises the proposal names are all still
+// open; one settled or dismissed since staging makes the proposal stale. A
+// proposal naming no claim rests on its recorded commitment decision.
+func (r approvalPreviewReader) promisesStillOpen(ctx context.Context, proposal CommitmentTaskProposal) (bool, error) {
+	var open bool
+	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		claims := commitmentClaimIDs(proposal.ClaimID, proposal.ClaimIDs)
+		if len(claims) == 0 {
+			open, err = activities.CommitmentStillOpenTx(ctx, tx, proposal.SourceActivityID, proposal.Locator)
+			return err
+		}
+		open, err = contacts.NewStore(r.db).ClaimsStillOpenTx(ctx, tx, claims)
+		return err
+	})
+	return open, err
 }

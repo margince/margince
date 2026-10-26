@@ -23,9 +23,9 @@ import (
 func TestTheRefreshPassLeavesColleaguesMailOutOfTheSpread(t *testing.T) {
 	e := integration.Setup(t)
 	e.WsExec(t, `INSERT INTO workspace_email_domain (domain, source, verified) VALUES ('colleagues.test', 'admin', true)`)
-	// Customers wait forty days for an answer, so the horizon is 120 days. The
-	// colleagues' mail is answered within a minute and outnumbers it: counted,
-	// the slow percentile falls to minutes and the horizon to the fourteen-day floor.
+	// Customers wait forty days for an answer, so the horizon reaches its
+	// 30-day ceiling. The colleagues' mail is answered within a minute and
+	// outnumbers it: counted, the horizon falls to the fourteen-day floor.
 	e.WsExec(t, `
 		CREATE TEMP TABLE horizon_seed AS
 		  SELECT gen_random_uuid() id, g, g <= 40 AS customer,
@@ -36,8 +36,9 @@ func TestTheRefreshPassLeavesColleaguesMailOutOfTheSpread(t *testing.T) {
 		  SELECT id, 'Seed '||g, 'seed', 'system' FROM horizon_seed;
 		INSERT INTO activity (id, kind, direction, subject, occurred_at, thread_key, source, captured_by, counterparty_email)
 		  SELECT id, 'email', 'inbound', 'Topic '||g, at_time, 'in'||g, 'seed', 'system', addr FROM horizon_seed;
-		INSERT INTO activity_participant (id, activity_id, role, address)
-		  SELECT gen_random_uuid(), id, 'from', addr FROM horizon_seed;
+		-- Lowercase ASCII addresses, whose folded domain is the domain as written.
+		INSERT INTO activity_participant (id, activity_id, role, address, address_domain_folded)
+		  SELECT gen_random_uuid(), id, 'from', addr, split_part(addr, '@', 2) FROM horizon_seed;
 		INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
 		  SELECT gen_random_uuid(), id, 'contact', id FROM horizon_seed;
 		INSERT INTO activity (kind, direction, subject, occurred_at, thread_key, source, captured_by,
@@ -56,7 +57,7 @@ func TestTheRefreshPassLeavesColleaguesMailOutOfTheSpread(t *testing.T) {
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT horizon_days FROM activity_waiting_horizon`).Scan(&days)
 	})
-	if err != nil || days != 120 {
-		t.Fatalf("the stored horizon is (%d, %v), want 120 from the customers' forty-day answers alone", days, err)
+	if err != nil || days != 30 {
+		t.Fatalf("the stored horizon is (%d, %v), want the 30-day ceiling from the customers' answers alone", days, err)
 	}
 }

@@ -55,6 +55,17 @@ func relationshipFieldImage(rel relationshipRow) map[string]any {
 	}
 }
 
+// relationshipMoveImage is the field image plus the endpoints, for a merge,
+// which moves an edge to another record.
+func relationshipMoveImage(rel relationshipRow) map[string]any {
+	image := relationshipFieldImage(rel)
+	image[endContactColumn] = rel.ContactID
+	image[endCompanyColumn] = rel.CompanyID
+	image[endCounterpartyCompanyColumn] = rel.CounterpartyCompanyID
+	image[endCounterpartyContactColumn] = rel.CounterpartyContact
+	return image
+}
+
 // edgeImageDate renders a link's date the way Postgres renders the `date`
 // column it came from, keeping absence as absence.
 //
@@ -96,17 +107,23 @@ func emitRelationshipChange(ctx context.Context, tx pgx.Tx, action string, befor
 func emitRelationshipChangeWithEvidence(ctx context.Context, tx pgx.Tx, action string,
 	before map[string]any, rel relationshipRow, evidence map[string]any,
 ) error {
-	// Through the shared resolver, which answers with an error rather than a
-	// nil dereference: this used to read the endpoint pointer the kind implied
-	// straight off the row, and a kind whose shape did not hold would panic
-	// here instead of refusing.
-	anchorObject, anchorID, err := anchorIDOf(rel)
-	if err != nil {
-		return err
-	}
 	after := relationshipIdentityImage(rel)
 	if !storekit.AbsentImage(before) {
 		before, after = storekit.ChangedColumns(before, relationshipFieldImage(rel))
+	}
+	return emitRelationshipNarrowedImagePairs(ctx, tx, action, before, after, rel, evidence)
+}
+
+// emitRelationshipNarrowedImagePairs is the write shape for an image pair the
+// caller has already narrowed.
+func emitRelationshipNarrowedImagePairs(ctx context.Context, tx pgx.Tx, action string,
+	before, after map[string]any, rel relationshipRow, evidence map[string]any,
+) error {
+	// Through the shared resolver, which answers with an error rather than a
+	// nil dereference when a kind's shape does not hold.
+	anchorObject, anchorID, err := anchorIDOf(rel)
+	if err != nil {
+		return err
 	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, action, "relationship", rel.ID, before, after, evidence)
 	if err != nil {

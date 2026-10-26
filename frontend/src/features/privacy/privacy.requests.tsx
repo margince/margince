@@ -7,12 +7,12 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import {
   EntityRef,
-  RosterPartialNote,
   rosterOwnerName,
   useRoster,
   useRosterPartial,
+  useRosterPartialHint,
 } from "../../components/entityref";
-import { Badge, Button, Field, Textarea } from "../../design-system/atoms";
+import { Button, Field, Textarea } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
@@ -20,6 +20,7 @@ import { type Fact, FactList } from "../../design-system/factlist";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { Select, type SelectOption } from "../../design-system/select";
+import { StatusBadge } from "../../design-system/statusbadge";
 import { formatDate } from "../../format/format";
 import { ruleText } from "../../format/jurisdiction";
 import { viewerZone } from "../../format/timezone";
@@ -28,9 +29,12 @@ import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
 import {
+  closingBody,
+  closingReady,
   DSR_KIND_LABEL,
+  DSR_STATUS_KIND,
   DSR_STATUS_LABEL,
-  DSR_STATUS_TONE,
+  type DsrClosing,
   type DsrStatus,
   isIllegalTransition,
   isOverdue,
@@ -40,6 +44,7 @@ import {
 import { ProblemError, problemMessageOf, unwrap } from "../../lib/problem";
 import "./privacy.css";
 import { isUuid } from "../../lib/uuid";
+import { DsrDispute, DsrProofFields } from "./privacy.requestproof";
 
 export type DataSubjectRequest = components["schemas"]["DataSubjectRequest"];
 type UpdateDataSubjectRequest =
@@ -120,7 +125,7 @@ export function DsrTable({
         <span className="dsr-due">
           <span>{formatDate(dsr.due_at, locale, tz)}</span>
           {isOverdue(dsr.due_at, dsr.status, nowMs) && (
-            <Badge tone="danger">{t("privacy.overdue")}</Badge>
+            <StatusBadge kind="failure" label={t("privacy.overdue")} />
           )}
         </span>
       ),
@@ -151,7 +156,11 @@ export function DsrTable({
 function DsrStatusBadge({ status }: Readonly<{ status: DsrStatus }>) {
   const t = useT();
   return (
-    <Badge tone={DSR_STATUS_TONE[status]}>{t(DSR_STATUS_LABEL[status])}</Badge>
+    <StatusBadge
+      kind={DSR_STATUS_KIND[status]}
+      label={t(DSR_STATUS_LABEL[status])}
+      live={status === "in_progress"}
+    />
   );
 }
 
@@ -209,12 +218,16 @@ export function DsrDetail({
   titleId: string;
   nowMs: number;
   onClose: () => void;
-  onFulfilErasure: (dsr: DataSubjectRequest, resolution: string) => void;
+  onFulfilErasure: (dsr: DataSubjectRequest, closing: DsrClosing) => void;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const canWork = useCanWrite("privacy_request", "update");
-  const [resolution, setResolution] = useState(dsr.resolution ?? "");
+  const [closing, setClosing] = useState<DsrClosing>({
+    resolution: dsr.resolution ?? "",
+    identityCheck: "",
+    requesterEmail: "",
+  });
 
   const patch = useMutation({
     mutationFn: async (vars: {
@@ -238,16 +251,16 @@ export function DsrDetail({
   });
 
   function transition(next: DsrStatus) {
-    const answer = resolution.trim();
     if (dsr.kind === "erasure" && next === "fulfilled") {
-      onFulfilErasure(dsr, answer);
+      onFulfilErasure(dsr, closing);
       return;
     }
-    // Omitted when blank: an empty string is a value the server would write.
-    patch.mutate({
-      id: dsr.id,
-      body: answer ? { status: next, resolution: answer } : { status: next },
-    });
+    patch.mutate({ id: dsr.id, body: closingBody(next, closing) });
+  }
+
+  function draft(change: Partial<DsrClosing>) {
+    setClosing((current) => ({ ...current, ...change }));
+    if (patch.isError) patch.reset();
   }
 
   const problem =
@@ -289,6 +302,18 @@ export function DsrDetail({
             </ErrorLine>
           )}
           {isTerminal(dsr.status) && <p>{t("privacy.closed")}</p>}
+          {isTerminal(dsr.status) && dsr.dispute_open && (
+            <p>{t("privacy.disputeOpen")}</p>
+          )}
+          {canWork && isTerminal(dsr.status) && (
+            <DsrDispute
+              open={dsr.dispute_open}
+              pending={patch.isPending}
+              onChange={(next) =>
+                patch.mutate({ id: dsr.id, body: { dispute_open: next } })
+              }
+            />
+          )}
           {open && (
             <Field
               label={t("privacy.resolution")}
@@ -297,19 +322,19 @@ export function DsrDetail({
               {(control) => (
                 <Textarea
                   {...control}
-                  value={resolution}
-                  onChange={(event) => {
-                    setResolution(event.target.value);
-                    if (patch.isError) patch.reset();
-                  }}
+                  value={closing.resolution}
+                  onChange={(event) =>
+                    draft({ resolution: event.target.value })
+                  }
                 />
               )}
             </Field>
           )}
+          {open && <DsrProofFields closing={closing} onDraft={draft} />}
           {open && (
             <DsrTransitions
               status={dsr.status}
-              answered={Boolean(resolution.trim() || dsr.resolution)}
+              ready={(next) => closingReady(next, closing, dsr.resolution)}
               pending={patch.isPending}
               onTransition={transition}
             />
@@ -351,7 +376,7 @@ function DsrFacts({
         <span className="dsr-due">
           <span>{formatDate(dsr.due_at, locale, tz)}</span>
           {isOverdue(dsr.due_at, dsr.status, nowMs) && (
-            <Badge tone="danger">{t("privacy.overdue")}</Badge>
+            <StatusBadge kind="failure" label={t("privacy.overdue")} />
           )}
         </span>
       ),
@@ -386,6 +411,7 @@ function DsrFacts({
       value: dsr.resolution,
     });
   }
+
   return <FactList facts={facts} />;
 }
 
@@ -400,41 +426,38 @@ function DsrAssignee({
 }>) {
   const t = useT();
   const roster = useRoster("user", true);
-  const partial = useRosterPartial("user", true);
+  const partialHint = useRosterPartialHint(useRosterPartial("user", true));
   // An agent seat cannot hold the row scope a subject request needs.
   const assignable = (roster.data ?? []).flatMap((entry) =>
     "display_name" in entry && !entry.is_agent ? [entry] : [],
   );
   const current = useUnofferedAssignee(dsr.assignee_id, assignable, t);
   return (
-    <div className="field">
-      <Field label={t("privacy.assignee")}>
-        {(control) => (
-          <Select
-            {...control}
-            options={assigneeOptions(assignable, current, t)}
-            value={dsr.assignee_id ?? ""}
-            disabled={pending}
-            onChange={(next) => {
-              if (next !== (dsr.assignee_id ?? "")) onAssign(next || null);
-            }}
-          />
-        )}
-      </Field>
-      <RosterPartialNote partial={partial} />
-    </div>
+    <Field label={t("privacy.assignee")} hint={partialHint}>
+      {(control) => (
+        <Select
+          {...control}
+          options={assigneeOptions(assignable, current, t)}
+          value={dsr.assignee_id ?? ""}
+          disabled={pending}
+          onChange={(next) => {
+            if (next !== (dsr.assignee_id ?? "")) onAssign(next || null);
+          }}
+        />
+      )}
+    </Field>
   );
 }
 
-// A close needs its answer: the draft in the field or the one already stored.
+// A close needs its answer and its identity check (closingReady).
 function DsrTransitions({
   status,
-  answered,
+  ready,
   pending,
   onTransition,
 }: Readonly<{
   status: DsrStatus;
-  answered: boolean;
+  ready: (next: DsrStatus) => boolean;
   pending: boolean;
   onTransition: (next: DsrStatus) => void;
 }>) {
@@ -444,10 +467,7 @@ function DsrTransitions({
       {nextStatuses(status).map((next) => (
         <Button
           key={next}
-          disabled={
-            pending ||
-            ((next === "fulfilled" || next === "rejected") && !answered)
-          }
+          disabled={pending || (isTerminal(next) && !ready(next))}
           onClick={() => onTransition(next)}
         >
           {t(transitionLabelKey(next))}

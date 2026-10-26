@@ -183,9 +183,9 @@ func TestTheDeclaredRbacObjectIsEnforcedOnTheRestPath(t *testing.T) {
 	}
 }
 
-// TestAToolDeclaringNoObjectIsUnaffected: de and crm-hello own no
-// records and declare no object, so nothing about them may become
-// conditional on a grant nobody can hold. Without this, the natural
+// TestAToolDeclaringNoObjectIsUnaffected: de owns no records and declares
+// no object, so nothing about it may become conditional on a grant nobody can
+// hold. Without this, the natural
 // implementation — require the object always — would refuse every unit tool in
 // the tree.
 func TestAToolDeclaringNoObjectIsUnaffected(t *testing.T) {

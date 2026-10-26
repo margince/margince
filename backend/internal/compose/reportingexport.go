@@ -62,10 +62,12 @@ func editionCSV(edition crmcontracts.ReportingEdition) ([]byte, error) {
 func reportingCSVRows(evaluation crmcontracts.ReportingEvaluation) [][]string {
 	rows := [][]string{{"metric", "block", "label", extractionValueKey, reportingTarget, "comparison", "upper", "unit", reportingCurrency, "context", "coverage", "captured_at"}}
 	appendRow := func(metric, block, label string, value, target, comparison, upper *float64, unit, context, status string) {
+		// A count or a duration has no currency; naming one would read as money.
+		currency := ""
 		if unit == reportingMoney || unit == evaluation.Context.Currency {
-			unit = "minor_units"
+			unit, currency = reportingMinorUnits, evaluation.Context.Currency
 		}
-		rows = append(rows, []string{metric, block, formulacell.Guard(label), reportingCSVNumber(value), reportingCSVNumber(target), reportingCSVNumber(comparison), reportingCSVNumber(upper), unit, evaluation.Context.Currency, context, status, evaluation.Context.EvaluatedAt.Format(time.RFC3339Nano)})
+		rows = append(rows, []string{metric, block, formulacell.Guard(label), reportingCSVNumber(value), reportingCSVNumber(target), reportingCSVNumber(comparison), reportingCSVNumber(upper), unit, currency, context, status, evaluation.Context.EvaluatedAt.Format(time.RFC3339Nano)})
 	}
 	for _, metric := range evaluation.Metrics {
 		appendRow(string(metric.Id), "headline", string(metric.Id), metric.Value, metric.Target, nil, nil, metric.Unit, metric.Evidence.ContextId, string(metric.Coverage.Status))

@@ -434,14 +434,13 @@ func stageForApproval(ctx context.Context, approvals Approvals, language baselan
 
 // HeldDraftKind is the staging kind an automation-composed email waits under.
 //
-// It is deliberately NOT send_email, which is the kind an agent's own 🟡 send
-// stages under. Two reasons, and either alone would be enough. The pin: this
-// kind waives the target version pin (approvals' contextTargetKinds) because a
-// draft waits in an inbox while ordinary work bumps the message it answers —
-// and send_email must keep its pin, so sharing the name would silently waive
-// it for agent sends too. The effect: the release executor is registered per
-// kind, and an agent's staged send must not acquire an executor that fires it
-// on approval when its own surface redeems it by token.
+// It differs from send_email, the kind an agent's send stages under when a
+// tier floor makes it confirm first. Two reasons, and either alone would be enough.
+// The pin: this kind waives the target version pin (approvals' contextTargetKinds).
+// A draft waits in an inbox while ordinary work bumps the message it answers.
+// send_email must keep its pin, so a shared name would waive it for agent sends too.
+// The effect: the release executor is registered per kind. An agent's staged
+// send is redeemed by token, so it must not gain an executor that fires it on approval.
 const HeldDraftKind = "held_draft"
 
 // stageHeldDraft puts one composed draft in front of a human.

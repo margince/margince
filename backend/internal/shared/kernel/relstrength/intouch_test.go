@@ -31,7 +31,7 @@ func TestReadInTouchCountsMeetingsAsContact(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got := ReadInTouch(optionalDaysAgo(tc.inbound), optionalDaysAgo(tc.met), optionalDaysAhead(tc.booked), now)
+			got := ReadInTouch(optionalDaysAgo(tc.inbound), optionalDaysAgo(tc.met), optionalDaysAhead(tc.booked), now, time.UTC)
 			if got.Basis != tc.wantBasis || got.Days != tc.wantDays {
 				t.Fatalf("reading = %s after %d days, want %s after %d", got.Basis, got.Days, tc.wantBasis, tc.wantDays)
 			}
@@ -49,7 +49,7 @@ func TestReadInTouchCountsMeetingsAsContact(t *testing.T) {
 // anybody yet and must not keep a quiet account off "at risk".
 func TestAMessageDatedAheadIsNotContact(t *testing.T) {
 	t.Parallel()
-	got := ReadInTouch(optionalDaysAhead(3), nil, nil, now)
+	got := ReadInTouch(optionalDaysAhead(3), nil, nil, now, time.UTC)
 	if got.Basis != InTouchNever || got.Current() {
 		t.Fatalf("reading = %s (current %v), want never — the message has not been sent yet", got.Basis, got.Current())
 	}
@@ -59,7 +59,7 @@ func TestAMessageDatedAheadIsNotContact(t *testing.T) {
 // counts only as the booking the caller passes separately.
 func TestAMeetingAheadIsNotOneHeld(t *testing.T) {
 	t.Parallel()
-	got := ReadInTouch(daysAgo(77), optionalDaysAhead(3), nil, now)
+	got := ReadInTouch(daysAgo(77), optionalDaysAhead(3), nil, now, time.UTC)
 	if got.Basis != InTouchQuiet {
 		t.Fatalf("basis = %s, want %s — a meeting that has not happened yet is not contact we had", got.Basis, InTouchQuiet)
 	}
@@ -102,7 +102,7 @@ func TestTheGoAndSQLMeetingRulesAgree(t *testing.T) {
 	if !MeetingStatusCounts("") || !strings.Contains(meeting, "IS NULL") {
 		t.Error("an untracked meeting must count in both rules")
 	}
-	if InteractionCounts("meeting", "canceled") || !InteractionCounts("email", "") || InteractionCounts("note", "") {
+	if InteractionCounts("meeting", "canceled", "") || !InteractionCounts("email", "", "") || InteractionCounts("note", "", "") {
 		t.Error("InteractionCounts must refuse a canceled meeting and a note, and admit an email")
 	}
 }
@@ -133,5 +133,20 @@ func TestTookPlaceAndAheadSplitByTheClock(t *testing.T) {
 	ahead := MeetingAheadSQL("m", "$9")
 	if !strings.Contains(ahead, "m.occurred_at > $9") || strings.Contains(ahead, "held") {
 		t.Errorf("ahead = %q, want an untracked or booked meeting still to come", ahead)
+	}
+}
+
+func TestOnlyContactKindsMoveTheLastActivityClock(t *testing.T) {
+	t.Parallel()
+	rule := LastActivityCountsSQL("a", "now()")
+	const want = "a.kind IN ('email','message','meeting','call','note')"
+	if !strings.Contains(rule, want) {
+		t.Fatalf("LastActivityCountsSQL = %q, want it to carry %q", rule, want)
+	}
+	if strings.Contains(rule, "'task'") {
+		t.Fatalf("LastActivityCountsSQL = %q names a task, so filing one moves the clock", rule)
+	}
+	if got := LastActivityKinds(); strings.Join(got, ",") != "email,message,meeting,call,note" {
+		t.Fatalf("LastActivityKinds() = %v", got)
 	}
 }

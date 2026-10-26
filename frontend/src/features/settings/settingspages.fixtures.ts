@@ -55,6 +55,7 @@ const CAPTURE_SETTINGS: Schemas["CaptureSettings"] = {
   auto_enrich_daily_cap: 500,
   site_read: { max_pages: 60, max_mib: 32, wall_seconds: 240 },
   mail_sync_interval_seconds: 120,
+  confidentiality_pass_cap: 40,
 };
 
 const INSTALLATION_SETTINGS: Schemas["InstallationSettings"] = {
@@ -73,6 +74,9 @@ const INSTALLATION_SETTINGS: Schemas["InstallationSettings"] = {
   date_format: "dmy",
   time_format: "24h",
   base_currency_locked: false,
+  call_whatsapp: true,
+  call_telegram: true,
+  call_zalo: true,
 };
 
 // A fresh installation's port, read from its default.
@@ -147,6 +151,17 @@ export const NOTIFICATION_ROUTES: RouteMap = {
 };
 
 // Every page story routes all of these: a card can sit on more than one page.
+// No vendor app yet: the answer the sign-in page reads for each vendor. The
+// contract makes it complete, so an unrouted read would be an answer no server
+// gives.
+const NO_OAUTH_APP = (provider: string) => ({
+  provider,
+  configured: false,
+  client_id: "",
+  source: "none",
+  redirect_uris: [],
+});
+
 export const UNUSED_INSTALLATION_ROUTES: RouteMap = {
   ...NOTIFICATION_ROUTES,
   ...UNUSED_AI,
@@ -154,6 +169,16 @@ export const UNUSED_INSTALLATION_ROUTES: RouteMap = {
   "GET /capture/activity": () => jsonResponse(QUIET_CAPTURE),
   "GET /capture/activity/workspace": () => jsonResponse(QUIET_CAPTURE),
   "GET /capture/settings": () => jsonResponse(CAPTURE_SETTINGS),
+  "GET /installation/oauth-apps/google": () =>
+    jsonResponse(NO_OAUTH_APP("google")),
+  "GET /installation/oauth-apps/microsoft": () =>
+    jsonResponse(NO_OAUTH_APP("microsoft")),
+  "GET /me/linkedin-reach": () =>
+    jsonResponse({
+      accounts: [],
+      accounts_total: 0,
+      unresolved_connections: 0,
+    }),
   "GET /installation/agent-clients": () => jsonResponse(agentClientList([])),
   "GET /knowledge/corpora": () =>
     jsonResponse({ items: [] } satisfies Schemas["KnowledgeCorpusList"]),

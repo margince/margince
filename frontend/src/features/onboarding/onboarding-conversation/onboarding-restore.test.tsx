@@ -389,13 +389,13 @@ describe("restore into the conversational shell", () => {
     });
     render(<OnboardingScreen />);
 
-    expect(await screen.findByText("Connect your accounts")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Google/ })).toBeTruthy();
-    // Microsoft is a live OAuth path now — the chip opens the same connect
-    // panel Google does, no "Soon" placeholder. It starts disabled until the
-    // roster fetch verifies nothing is connected yet, same as every mail
-    // provider card.
-    const microsoft = screen.getByRole("button", { name: /Microsoft/ });
+    expect(
+      await screen.findByText("Connect your mail and calendar"),
+    ).toBeTruthy();
+    expect(screen.getByRole("radio", { name: /Google/ })).toBeTruthy();
+    // Microsoft is a live OAuth path, held until the roster read verifies
+    // nothing is connected yet, same as every account.
+    const microsoft = screen.getByRole("radio", { name: /Microsoft/ });
     await waitFor(() => expect(microsoft).not.toBeDisabled());
   });
 
@@ -551,7 +551,9 @@ describe("restore into the conversational shell", () => {
     });
     render(<OnboardingScreen />);
 
-    expect(await screen.findByText("Connect your accounts")).toBeTruthy();
+    expect(
+      await screen.findByText("Connect your mail and calendar"),
+    ).toBeTruthy();
   });
 
   // Leaving the voice act lands directly on the merged connect screen — mail
@@ -569,7 +571,9 @@ describe("restore into the conversational shell", () => {
       await screen.findByRole("button", { name: "Continue" }),
     );
 
-    expect(await screen.findByText("Connect your accounts")).toBeTruthy();
+    expect(
+      await screen.findByText("Connect your mail and calendar"),
+    ).toBeTruthy();
     // The LinkedIn card is on this same screen, unopened until asked for.
     expect(
       screen.queryByRole("button", { name: "Skip LinkedIn for now" }),
@@ -597,7 +601,7 @@ describe("restore into the conversational shell", () => {
       expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
     });
 
-    await userEvent.click(screen.getByRole("button", { name: /LinkedIn/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Add profile" }));
     await userEvent.click(
       await screen.findByRole("button", { name: "Skip LinkedIn for now" }),
     );
@@ -757,7 +761,7 @@ describe("finishing the connect act", () => {
     render(<OnboardingScreen />);
 
     const without = await screen.findByRole("button", {
-      name: /Continue without a mailbox/,
+      name: "Skip for now",
     });
     await waitFor(() => expect(without).not.toBeDisabled());
     await userEvent.click(without);
@@ -773,9 +777,7 @@ describe("finishing the connect act", () => {
     // The retry succeeds: how the step was left lands as the completion
     // itself, THEN the shell navigates.
     options.putStatus = undefined;
-    await userEvent.click(
-      screen.getByRole("button", { name: /Continue without a mailbox/ }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Skip for now" }));
     await waitFor(() => {
       expect(window.location.hash).toBe("#/home");
     });

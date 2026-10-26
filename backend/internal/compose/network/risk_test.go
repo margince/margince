@@ -173,7 +173,7 @@ func TestTheEngagementRulesWaitForTheFirstTouch(t *testing.T) {
 func TestALongSilentDealStillReportsItsEngagementFindings(t *testing.T) {
 	old := DealCoverage{
 		DealID: ids.NewV7(), EverTouched: true, LastTouchAt: daysAgo(120),
-		TouchedAsOf: testNow, Status: dealStatusOpen,
+		TouchedAsOf: testNow, Zone: time.UTC, Status: dealStatusOpen,
 		Stakeholders: []deals.DealStakeholder{
 			seat(false, roleChampion), seat(false, "user"),
 		},
@@ -220,7 +220,7 @@ func TestGoingColdMeasuresAgainstTheClockThatStampedTheTouch(t *testing.T) {
 	for _, skew := range []time.Duration{-24 * time.Hour, 0, 24 * time.Hour} {
 		cover := DealCoverage{
 			DealID: ids.NewV7(), Status: dealStatusOpen,
-			LastTouchAt: daysAgo(silent), TouchedAsOf: testNow.Add(skew),
+			LastTouchAt: daysAgo(silent), TouchedAsOf: testNow.Add(skew), Zone: time.UTC,
 			Stakeholders: []deals.DealStakeholder{seat(true, roleChampion), seat(true, "user")},
 		}
 		days := 0
@@ -260,7 +260,7 @@ func TestGoingColdFiresOnTheReportingWindowAndOnlyWhileTheDealIsOpen(t *testing.
 	cover := func(status string, touched int) DealCoverage {
 		return DealCoverage{
 			DealID: ids.NewV7(), Status: status,
-			LastTouchAt: daysAgo(touched), TouchedAsOf: testNow, Stakeholders: base,
+			LastTouchAt: daysAgo(touched), TouchedAsOf: testNow, Zone: time.UTC, Stakeholders: base,
 		}
 	}
 
@@ -312,7 +312,7 @@ func TestGoingColdCountsTheCalendarSoTheChipAndTheCardAgree(t *testing.T) {
 	lateEvening := time.Date(2026, 5, 16, 23, 0, 0, 0, time.UTC)
 	cover := DealCoverage{
 		DealID: ids.NewV7(), Status: dealStatusOpen, LastTouchAt: lateEvening,
-		TouchedAsOf:  testNow,
+		TouchedAsOf: testNow, Zone: time.UTC,
 		Stakeholders: []deals.DealStakeholder{seat(true, roleChampion), seat(true, "user")},
 	}
 	risks := foldRisks(cover, testEnglish)

@@ -241,10 +241,10 @@ var plainPools = []struct{ prefix, list string }{
 var plainCaps = map[string]int{
 	plainWordsFile:                     plainWordCap,
 	"docs/how-to/plain-words.txt":      1385,
-	"docs/explanation/plain-words.txt": 1659,
-	"docs/handbook/plain-words.txt":    1398,
-	"docs/reference/plain-words.txt":   1757,
-	plainProjectFile:                   1802,
+	"docs/explanation/plain-words.txt": 1657,
+	"docs/handbook/plain-words.txt":    1395,
+	"docs/reference/plain-words.txt":   1754,
+	plainProjectFile:                   1801,
 }
 
 // glossaryLegacyMax is how many names may still lack a meaning: the names pages

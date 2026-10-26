@@ -1,3 +1,4 @@
+<!-- describes: backend/internal/shared/kernel/langcopy/langcopy.go backend/internal/shared/ports/baselanguage/baselanguage.go backend/internal/modules/identity/baselanguage.go backend/internal/shared/kernel/dealrole/words.go backend/internal/shared/kernel/owedwork/duecopy.go -->
 # Language in shared explanations
 
 A shared record needs a stable explanation. A reader changing their interface language must not

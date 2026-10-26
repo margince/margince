@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { draftButton } from "../../testing/composedraft.testkit";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -95,9 +96,7 @@ describe("drafting a reply to a message that is gone", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     expect(await screen.findByText(/no longer available/i)).toBeTruthy();
     expect(screen.queryByText("not found")).toBeNull();
@@ -132,13 +131,12 @@ describe("drafting a reply to a message that is gone", () => {
 
     // The fresh-mail composer will not draft without a purpose, so the click
     // below would otherwise be a no-op and this test would pass vacuously.
+    draftButton();
     await userEvent.type(
       screen.getByPlaceholderText(/Purpose of the email|Purpose of the reply/),
       "Ask about the rollout",
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     expect(
       await screen.findByText("That contact is no longer on file."),
@@ -171,9 +169,7 @@ describe("drafting a reply to a message that is gone", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     // The shared line for a failure with no reader-facing cause, which is
     // what a 502 is. What matters is the branch it is NOT on.

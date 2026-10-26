@@ -187,7 +187,7 @@ admin can also change under Settings.
 | `certlog_base_url` | `MARGINCE_CERTLOG_BASE_URL` | `--certlog-base-url` | `string` | — | worker | Base URL of a certificate log, or public for a free public one; unset makes no outbound lookups of what a company runs. |
 | `connector_state_key` | `MARGINCE_CONNECTOR_STATE_KEY` | `--connector-state-key` | `string`, secret | — | api | HMAC key of at least 32 bytes signing the OAuth connect state; required for the Gmail and Graph connect flows. |
 | `dsn` | `MARGINCE_DSN` | `--dsn` | `string`, secret | — | api, migrate, worker | Postgres DSN of the runtime app role; migrate falls back to it when `MARGINCE_OWNER_DSN` is unset. |
-| `geocode_base_url` | `MARGINCE_GEOCODE_BASE_URL` | `--geocode-base-url` | `string` | — | api, worker | Nominatim base URL, or public; set it on the api and the worker together, or a lookup is never queued. |
+| `geocode_base_url` | `MARGINCE_GEOCODE_BASE_URL` | `--geocode-base-url` | `string` | — | api, worker | Nominatim base URL; unset or public uses the public service, off stops the lookup of map points; give the api and the worker the same value, or a lookup is never queued. |
 | `gmail_client_id` | `MARGINCE_GMAIL_CLIENT_ID` | `--gmail-client-id` | `string` | — | api, worker | Google OAuth client id of the Gmail capture connector. |
 | `gmail_client_secret` | `MARGINCE_GMAIL_CLIENT_SECRET` | `--gmail-client-secret` | `string`, secret | — | api, worker | Google OAuth client secret of the Gmail capture connector. |
 | `gmail_jwks_url` | `MARGINCE_GMAIL_JWKS_URL` | `--gmail-jwks-url` | `string` | — | api | Override of the Google OIDC JWKS URL, for test and dev. |
@@ -263,6 +263,7 @@ admin can also change under Settings.
 |---|---|---|---|---|---|---|
 | `capture.auto_enrich` | `MARGINCE_CAPTURE_AUTO_ENRICH` | — | `bool`, stored | `true` | api, worker | Read a new contact's company web page automatically. |
 | `capture.auto_enrich_daily_cap` | `MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP` | — | `int`, 1 to 20000, stored | `500` | api, worker | Automatic company web-page reads the installation may start in one UTC day. |
+| `capture.confidentiality_pass_cap` | `MARGINCE_CAPTURE_CONFIDENTIALITY_PASS_CAP` | — | `int`, 1 to 200, stored | `40` | api, worker | Held mail threads one review pass may judge; the rest wait for the next pass. |
 | `capture.freemail_extra` | `MARGINCE_CAPTURE_FREEMAIL_EXTRA` | — | `list<string>` | — | api, worker | Ignored, with a warning at boot; the consumer-mail list is edited under Settings. |
 | `capture.freemail_never` | `MARGINCE_CAPTURE_FREEMAIL_NEVER` | — | `list<string>` | — | api, worker | Ignored, with a warning at boot; the consumer-mail list is edited under Settings. |
 | `capture.mail_sharing` | `MARGINCE_CAPTURE_MAIL_SHARING` | — | `bool`, stored | `true` | api, worker | Let every colleague who can see a contact read the email captured with them; off keeps new mail to those on it. |
@@ -298,7 +299,7 @@ admin can also change under Settings.
 | `contacts.first_response_enabled` | `MARGINCE_CONTACTS_FIRST_RESPONSE_ENABLED` | — | `bool`, stored | `false` | api, worker | Track a first-response target on every lead. |
 | `contacts.first_response_target_minutes` | `MARGINCE_CONTACTS_FIRST_RESPONSE_TARGET_MINUTES` | — | `int`, 15 to 10080, stored | `240` | api, worker | Minutes a lead may wait for its first real response once its clock starts. |
 | `contacts.signature_template` | `MARGINCE_CONTACTS_SIGNATURE_TEMPLATE` | — | `string`, stored | — | api, worker | The email signature of the workspace, used in place of the own signature of each sender; empty means none. |
-| `contacts.unassigned_escalation_user_id` | `MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID` | — | `string`, stored | — | api, worker | The user id of the colleague who answers for a lead nobody owns once it misses its target; empty means nobody, and a boot value that names no active colleague reaches nobody and logs a warning. |
+| `contacts.unassigned_escalation_user_id` | `MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID` | — | `string`, stored | — | api, worker | The user id of the colleague who answers for a lead nobody owns, or whose owner has left, once it misses its target; empty means nobody, and a boot value that names no active colleague reaches nobody and logs a warning. |
 
 ### `data_tasks`
 
@@ -347,6 +348,9 @@ admin can also change under Settings.
 | `installation.agent_window_hours` | `MARGINCE_INSTALLATION_AGENT_WINDOW_HOURS` | — | `int`, 1 to 168, stored | `24` | api, worker | Hours in the window the agent limits count over; set at boot, it also keeps a length an admin saved for the next reset from taking over. |
 | `installation.agent_writes_per_window` | `MARGINCE_INSTALLATION_AGENT_WRITES_PER_WINDOW` | — | `int`, 10 to 5000, stored | `200` | api, worker | Changing calls one agent passport may make per window. |
 | `installation.base_language` | `MARGINCE_INSTALLATION_BASE_LANGUAGE` | — | `string`, stored | `en` | api, worker | The language AI writes the shared record in: en, de or vi. |
+| `installation.call_telegram` | `MARGINCE_INSTALLATION_CALL_TELEGRAM` | — | `bool`, stored | `true` | api, worker | Show a Telegram chat link next to a contact's phone number that starts with a country code. |
+| `installation.call_whatsapp` | `MARGINCE_INSTALLATION_CALL_WHATSAPP` | — | `bool`, stored | `true` | api, worker | Show a WhatsApp chat link next to a contact's phone number that starts with a country code. |
+| `installation.call_zalo` | `MARGINCE_INSTALLATION_CALL_ZALO` | — | `bool`, stored | `true` | api, worker | Show a Zalo chat link next to a contact's phone number that starts with a country code. |
 | `installation.close_date_sweep_interval_seconds` | `MARGINCE_INSTALLATION_CLOSE_DATE_SWEEP_INTERVAL_SECONDS` | — | `int`, 3600 to 604800, stored | `86400` | api, worker | Seconds between the close-date sweeps. |
 | `installation.country` | `MARGINCE_INSTALLATION_COUNTRY` | — | `string`, stored | `""` | api, worker | Where the installation is established, as a two-letter ISO 3166-1 code in small letters; empty for none. |
 | `installation.date_format` | `MARGINCE_INSTALLATION_DATE_FORMAT` | — | `string`, stored | `locale` | api, worker | How dates are written: locale, dmy, mdy or ymd. |
@@ -519,12 +523,14 @@ every write that commits would leave its outbox row with nothing to send it.
 ### Lookups on public services
 
 `--geocode-base-url` and `--vat-check-base-url` are read by both roles: the worker does the lookup,
-and the api decides whether to queue one. Set each on both roles or on none. The value `public`
+and the api decides whether to queue one. Give each the same value on both roles. The value `public`
 picks the public service of each, which this installation asks one request at a time:
 
-- **Geocoding** uses the public Nominatim service, for a test only. Its rules let a scheduled client
-  send 4 requests a minute, so Margince waits 15 seconds between requests. Unset, company addresses
-  get no map point, and a `within_radius` query answers `distance_ranking_unavailable`.
+- **Map points** are looked up by default. Unset or `public` uses the public Nominatim service. Its rules let
+  a scheduled client send 4 requests a minute, so Margince waits 15 seconds between requests. The
+  value `off` switches the lookup off: company addresses get no map point, and a `within_radius`
+  query answers `distance_ranking_unavailable`. Any other value is the base URL of your own
+  Nominatim.
 - **VAT checks** use the VIES service of the EU, with 2 seconds between checks. Unset, Margince
   stores the VAT ID of a company as its web page stated it.
 - **`--certlog-base-url`**, on the worker, turns on the technical lookup. That reads what a company
@@ -935,12 +941,59 @@ preview guess. Every family below is sent for a Gmail import. A Microsoft 365 im
 | `margince_capture_backfill_snooze_seconds_total` | `provider`, `reason` | seconds the import picked to wait: `pacing` between good pages; after a failed page `rate_limited`, `unreachable`, `token_rejected` or `internal`; `rate_limited_in_page` for a short limit a page waited out inside itself; `resumed` when a run was opened again while its job was ending |
 | `margince_capture_backfill_retry_after_seconds_total` | `provider` | the Retry-After the provider asked for on the fault and in-page waits; the gap to their snooze total is the wait our own ladder added |
 
+A calendar pull, for Google and Microsoft 365, counts two things. The pull runs in the worker, which
+serves both families on its `--observe-addr`:
+
+- `margince_capture_calendar_events_listed_total` (`provider`): the events each provider list handed
+  to a pull, counted before any is written.
+- `margince_capture_calendar_events_total` (`provider`, `outcome`): the one outcome each listed
+  event ended on.
+
+`outcome` is one of these:
+
+- `captured`: the writer stored the meeting, or found it already stored.
+- `dropped_no_event_id` or `dropped_no_party_besides_the_owner`: the calendar rules kept it out.
+- `cancelled` or `declined_by_the_calendar_owner`: the writer was told the meeting is off. A meeting
+  never captured has nothing to close, so this does not say that a row changed.
+- `sink_skipped`: the writer refused it, for example because every party is on the workspace's own
+  domains. The writer leaves its own trace row that says why.
+- `failed`: the write failed. The pull stops there and saves no progress, so the next pull lists
+  the same events again.
+- `not_attempted`: the event came after a failed write in the same list, so the pull never reached
+  it.
+- `unreadable`: the event could not be read.
+- `beyond_horizon` (Google only): the event starts more than a year from now, and its new start was
+  handed to the writer.
+- `cancel_unsupported` or `move_unsupported`: the writer offers no way to cancel or move.
+
+Once a pull ends, it has counted one outcome for each listed event; a gap is a pull still running.
+With debug logging on, the `calendar event settled` line names the event id of each attempted event. An
+event that could not be read has no id. The families add up all connections of one process. They do not say which connection listed an
+event, and a missing line does not prove that a provider never listed it.
+
 Compare `sum by (stage) (rate(margince_capture_backfill_stage_seconds_sum[5m]))` across stages to
 see whether the Google download or our transaction takes most of the time of a message. Use
 `sum(rate(margince_connector_requests_total{op="get_metadata"}[5m])) - sum(rate(margince_connector_requests_total{op="get_raw"}[5m]))`
 to see how many messages needed no full download after the headers read. Use
 `rate(margince_connector_requests_total{result="rate_limited"}[5m])` to see whether the provider is
 slowing the import down.
+
+### Reading the mail review backlog
+
+A mailbox in the classified posture holds every captured message until the review pass answers its
+thread. The pass asks the model about up to `capture.confidentiality_pass_cap` threads per run, answered
+or not, and the rest wait for the next run. The job gauges cannot show a pass that runs on time and still falls
+behind, so `cmd/api` serves two more gauges beside them. They are read from the thread ledger at
+scrape time, and every api replica answers the same numbers, so read them with `max`, never `sum`:
+
+| Family | Labels | Meaning |
+|---|---|---|
+| `margince_capture_confidentiality_waiting_threads` | — | held threads the pass has not answered yet and can still claim; a seat that left the classified posture is not counted |
+| `margince_capture_confidentiality_oldest_wait_seconds` | — | how long the longest-held of them has been hidden from the team, counted from the capture of the message that opened the thread; 0 when none waits |
+
+Alert when the age stays above how often the pass runs. An admin then raises the cap under
+Settings → Capture rules, or by `PATCH /v1/capture/settings`, and the next run uses it.
+
 ## cmd/worker: the background process role
 
 **Outbound mail does not leave without this process.** Every role that takes a send stages it (the

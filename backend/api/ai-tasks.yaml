@@ -84,7 +84,9 @@
 #                     only a local decision model.
 #   company_context   the ADR-0065 policy: `none`, or scopes + token_budget
 #                     (+ conditional, meaning "only when the caller requests
-#                     it"). Absent-by-accident must be a build error, never a
+#                     it"; + offering_selectable, meaning "the caller may name
+#                     which legal entity's offering the context describes").
+#                     Absent-by-accident must be a build error, never a
 #                     runtime one.
 #   cost_unit         the ADR-0067/0068 unit rule BY NAME. The arithmetic
 #                     (observed-unit and denominator functions, the work-shape
@@ -105,9 +107,8 @@
 # gates a merge.
 #
 # frontier sits one rung above premium: the strongest model a deployment is
-# willing to pay for. No task ladder selects it — it is declared so an operator
-# can bind one, and so a task that genuinely needs the top rung has a name to
-# reach for without redefining what premium means for every other task.
+# willing to pay for. signal_extract's ladder selects it. A task that needs the
+# top rung names it, so premium keeps one meaning for every other task.
 tiers: [local_small, cheap_cloud, premium, frontier, local_large]
 
 tasks:
@@ -253,9 +254,9 @@ tasks:
     on_budget_exhausted: degrade
     on_outage: degrades
     status: shipped
-    sites: [company_brief, company_ask, company_dossier, meeting_plan, meeting_brief, contact_brief]
+    sites: [company_brief, company_ask, company_dossier, meeting_plan, meeting_brief, contact_brief, deal_room_brief]
     company_context: {scopes: [identity], token_budget: 300, conditional: true}
-    doc: "Six grounded-prose sites, all over what the VIEWER can already see, assembled per viewer because visibility is per viewer. company_brief — the standing account brief: what this account is, where it stands, what changed. Its operation is deprecated and the company record page no longer renders it — the page's lead card is now the account's work in flight, spelled from the records — but the assembly stays, because company_ask is served from the same handlers. company_ask — the prepared questions behind Ask Margince: the question is chosen from a fixed list rather than typed, because each one names the records its answer must be written from, which is what lets every sentence cite a record the reader could open themselves. company_dossier — what the COMPANY is, from its own recorded facts: deliberately not the account composite, because a dossier that could see the pipeline would describe the pipeline and the separation from the brief would collapse on the first prompt revision. meeting_plan — what to DO in one booked meeting: the outcome to earn, the opener, the one risk with its response, what the other side is likely to ask and what to ask them. It rides this lane rather than its own because it is the same task — grounded prose over records the caller can already see — but it reads a different projection: the account arc with the excerpts behind it, rather than the whole assembled input, because the specificity of every question comes from what contacts actually wrote. meeting_brief — the SECTIONS beside that plan, written under the same request: what the meeting is, who is in the room, what they promised, what changed. It is a second call and a second prompt, not a rendering of the plan, which is why it is its own site rather than a variant of meeting_plan. contact_brief — the contact page's standing relationship brief: who this contact is commercially, what they have said they care about, what changed, and the one move that follows. It rides this lane for meeting_plan's reason — the same task over a different projection — and reads the claims extracted from conversations with the contact's own words behind them, what CHANGED about the relationship, and each recent message through the server's own one-line summary of what was written, rather than the timeline's subjects and directions: a brief written from transport events says only that mail was exchanged, which is true of every contact in the system."
+    doc: "Seven grounded-prose sites, all over what the VIEWER can already see, assembled per viewer because visibility is per viewer. company_brief — the standing account brief: what this account is, where it stands, what changed. Its operation is deprecated and the company record page no longer renders it — the page's lead card is now the account's work in flight, spelled from the records — but the assembly stays, because company_ask is served from the same handlers. company_ask — the prepared questions behind Ask Margince: the question is chosen from a fixed list rather than typed, because each one names the records its answer must be written from, which is what lets every sentence cite a record the reader could open themselves. company_dossier — what the COMPANY is, from its own recorded facts: deliberately not the account composite, because a dossier that could see the pipeline would describe the pipeline and the separation from the brief would collapse on the first prompt revision. meeting_plan — what to DO in one booked meeting: the outcome to earn, the opener, the one risk with its response, what the other side is likely to ask and what to ask them. It rides this lane rather than its own because it is the same task — grounded prose over records the caller can already see — but it reads a different projection: the account arc with the excerpts behind it, rather than the whole assembled input, because the specificity of every question comes from what contacts actually wrote. meeting_brief — the SECTIONS beside that plan, written under the same request: what the meeting is, who is in the room, what they promised, what changed. It is a second call and a second prompt, not a rendering of the plan, which is why it is its own site rather than a variant of meeting_plan. contact_brief — the contact page's standing relationship brief: who this contact is commercially, what they have said they care about, what changed, and the one move that follows. It rides this lane for meeting_plan's reason — the same task over a different projection — and reads the claims extracted from conversations with the contact's own words behind them, what CHANGED about the relationship, and each recent message through the server's own one-line summary of what was written, rather than the timeline's subjects and directions: a brief written from transport events says only that mail was exchanged, which is true of every contact in the system. deal_room_brief — the brief on a deal's Deal Room tab: what the room's buyers did and what is waiting on the seller, written from the room's buyers, documents and threads. It rides this lane for contact_brief's reason, over the room's own projection, and is written on every request rather than cached, because a room moves with each buyer's click."
 
   growth_fit:
     display_name: "Company fit assessment"
@@ -266,7 +267,7 @@ tasks:
     on_outage: degrades
     status: shipped
     sites: [growth_fit]
-    company_context: {scopes: [offer, positioning, proof], token_budget: 1200}
+    company_context: {scopes: [offer, positioning, proof], token_budget: 1200, offering_selectable: true}
     doc: "How well one company fits what we sell. The only site on the company view that must read OUR offering as well as theirs — a fit is a claim about two companies, and judging one against a guess about the other is what the DOSS-AC-13 band cap exists to stop. Our own context is never citable: evidence is target-side only, so a factor drawn from what we sell is labelled an assessment and still cites their records, or the grounding filter drops it (DOSS-AC-6). The band the model proposes is not the band served — the deterministic completeness gate can lower it to `unknown` or cap it at `moderate`, and never raises it."
 
   draft_reply:
@@ -422,10 +423,10 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
-    sites: [fields]
+    sites: [fields, cards]
     no_payload: true
     company_context: none
-    doc: "read ONE attached document — a scanned form, an invoice, an order confirmation — for the four deal facts a human may then accept onto the deal (records-depth RD-PARAM-N-3), each carrying the quote it was read from. premium-only BY CONTRACT for site_extract's reason and one of its own: a rung that cannot carry the document is not a degraded answer to this question, it is a different question, so there is no rung to degrade to. no_payload BY CONTRACT: a scanned contract or invoice is exactly the content that must never reach ai_call_payload, whatever the deployment's capture posture says. A reading takes seconds and can fail, so it is a durable record its surface polls (records-depth RD-DDL-4), never work done inside the request that asks for it."
+    doc: "read ONE attached document — a scanned form, an invoice, an order confirmation — for the four deal facts a human may then accept onto the deal (records-depth RD-PARAM-N-3), each carrying the quote it was read from. premium-only BY CONTRACT for site_extract's reason and one of its own: a rung that cannot carry the document is not a degraded answer to this question, it is a different question, so there is no rung to degrade to. no_payload BY CONTRACT: a scanned contract or invoice is exactly the content that must never reach ai_call_payload, whatever the deployment's capture posture says. A reading takes seconds and can fail, so it is a durable record its surface polls (records-depth RD-DDL-4), never work done inside the request that asks for it. The `cards` site reads a PHOTO of business cards instead, on the same ladder and the same carriage declaration, for the contact import: an importer waits on it in the request, and the result goes to the approval queue, never to a contact."
 
   site_extract:
     display_name: "Website research"

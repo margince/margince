@@ -56,19 +56,11 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     // which body is open and the toggle puts the context column away. These are
     // named, since nothing in the DOM tells a view control from a write. So the
     // list stays short, and a mutation added later is still caught.
+    // The tabs are skipped structurally below: a tab's name carries a count
+    // that changes with the record.
     const viewControls = new Set([
-      "Overview",
-      "Deals and projects",
-      "History",
-      "Hide details",
       // The trigger discloses; the open above sweeps the verbs behind it.
       "More actions",
-      // The day's work opens the task LIST: a door to another screen, which
-      // writes nothing on this record.
-      en["today.workQueue"],
-      // A reading's receipt: it opens what the figure was computed from and
-      // writes nothing.
-      "Evidence",
     ]);
     // The one write a terminal lead offers, in its own set so a reader cannot
     // mistake it for a control that writes nothing. Reopening is the undo of
@@ -81,11 +73,11 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     // ordinary a word to exempt everywhere it might appear.
     const contextColumn = document.querySelector(".page-zones-aside-column");
     for (const button of screen.getAllByRole("button")) {
-      // The accessible name, not the text: the panel switch is icon-only, so
-      // its text is empty. A set keyed on text would exempt every unlabelled
-      // button on the page along with it.
+      // The accessible name, not the text: the panel switch is icon-only,
+      // and a verb tile's text is its short word. A set keyed on text would
+      // exempt every unlabelled button on the page along with it.
       const name =
-        button.textContent?.trim() || (button.getAttribute("aria-label") ?? "");
+        button.getAttribute("aria-label") || button.textContent?.trim() || "";
       // The call's own disclosure is skipped the same way. It opens the
       // readings a verdict rests on and writes nothing. Its name carries a
       // count that changes with the record.
@@ -93,6 +85,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
         viewControls.has(name) ||
         closureReversals.has(name) ||
         contextColumn?.contains(button) ||
+        button.closest(".recordtabs-strip") ||
         button.classList.contains("r360-rests-toggle") ||
         // A reading's door, skipped structurally: every stat card says the same
         // word, so a set keyed on "Open" would exempt any control sharing it.
@@ -135,6 +128,8 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     });
     render(<LeadScreen id="l-1" />);
 
+    // A rare verb, so it waits in the head's More menu.
+    await openLeadActions();
     const reopen = await screen.findByRole("button", { name: "Reopen" });
     expect((reopen as HTMLButtonElement).disabled).toBe(false);
     await userEvent.click(reopen);
@@ -192,15 +187,14 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       }),
     );
     render(<LeadScreen id="l-1" />);
-    // The header's word stays lower-case because it sits inside a line the
-    // score begins. The readings card writes its own line and says so in
-    // sentence case.
-    await waitFor(() =>
-      expect(screen.getAllByText(/· overridden$/).length).toBeGreaterThan(0),
-    );
+    // The score card says whose number it is and what the model said.
+    expect(
+      await screen.findByText("Human override: Strong buying signal"),
+    ).toBeTruthy();
+    expect(screen.getByText("Model score: 50")).toBeTruthy();
   });
 
-  it("explains the score with its factors and the arithmetic that reconciles them", async () => {
+  it("explains the score with its factors and one line on the total and its decay", async () => {
     stubFetchWithMe(async (url) => {
       if (url.includes("/score")) {
         return jsonResponse({
@@ -223,13 +217,19 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     });
     render(<LeadScreen id="l-1" />);
 
-    await waitFor(() =>
-      expect(screen.getByText("Decision-maker title")).toBeTruthy(),
+    // A decayed factor puts the decay rule in the foot, once for the card.
+    const foot = await screen.findByText(
+      "46 in total · activity points halve every 14 days",
     );
-    expect(screen.getByText("Lead replied")).toBeTruthy();
-    // The decay is shown as arithmetic a reader can check, not asserted.
-    expect(screen.getByText("25, halved every 14 days")).toBeTruthy();
-    expect(screen.getByText("Sum 45.60, rounded to 46, score 46")).toBeTruthy();
+    // Scoped to the score card: the readings in How it stands name the same
+    // factors as what Fit and Engagement rest on.
+    const card = foot.closest("section");
+    if (!(card instanceof HTMLElement)) {
+      throw new Error("the foot is not inside the score card");
+    }
+    expect(within(card).getByText("Decision-maker title")).toBeTruthy();
+    expect(within(card).getByText("Lead replied")).toBeTruthy();
+    expect(within(card).queryByText(/halved every/)).toBeNull();
   });
 
   it("shows a manual signal from the breakdown, and offers the questions that add one", async () => {
@@ -266,13 +266,27 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       return jsonResponse(lead);
     });
     render(<LeadScreen id="l-1" />);
+    // The card's row: the band and the reason under the factor, and who
+    // entered it at the row's end. A factor nobody entered says so.
+    expect(
+      await screen.findByText("Some budget · CFO named a Q4 line item"),
+    ).toBeTruthy();
+    const budget = screen
+      .getByText("Some budget · CFO named a Q4 line item")
+      .closest("li");
     await waitFor(() =>
-      expect(screen.getByText("CFO named a Q4 line item")).toBeTruthy(),
+      expect(budget?.textContent).toContain("Set by Lena F."),
     );
+    expect(screen.getAllByText("Not asked yet")).toHaveLength(2);
+    // The questions that add one sit behind the card's link.
+    expect(screen.queryByLabelText("Budget?")).toBeNull();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Add to the score" }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
     for (const question of ["Website traffic?", "Company size?", "Budget?"]) {
-      expect(screen.getByLabelText(question)).toBeTruthy();
+      expect(dialog.getByLabelText(question)).toBeTruthy();
     }
-    expect(screen.getByRole("button", { name: "Add to score" })).toBeTruthy();
   });
 
   it("a closed lead shows its manual signals read-only, with the reason", async () => {
@@ -290,11 +304,18 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       });
     });
     render(<LeadScreen id="l-1" />);
-    await waitFor(() => expect(screen.getByText("Lead signals")).toBeTruthy());
-    expect(screen.queryByRole("button", { name: "Add to score" })).toBeNull();
+    await waitFor(() =>
+      expect(
+        screen.getAllByText("Disqualified. This lead is read-only.").length,
+      ).toBeGreaterThan(0),
+    );
+    // The link stays, refused with the page's one sentence.
+    const add = screen.getByRole("button", { name: "Add to the score" });
+    expect(add).toBeDisabled();
     expect(
-      screen.getAllByText("This lead is closed and cannot be changed.").length,
-    ).toBeGreaterThan(0);
+      document.getElementById(add.getAttribute("aria-describedby") ?? "")
+        ?.textContent,
+    ).toBeTruthy();
   });
 
   it("never prints an absent source into the sentence about it", async () => {
@@ -326,26 +347,10 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     });
     render(<LeadScreen id="l-1" />);
 
-    // Said wherever the score is. The score card states it in the open; the
-    // reading beside it keeps its receipt behind its "Evidence" door. So the
-    // sentence counts once before that door opens and twice after, and
-    // neither surface can drop it unnoticed.
+    // The score card states it in the open, once.
     const notStored =
       "The breakdown for this score is not stored yet. The next update shows it.";
     await waitFor(() => expect(screen.getAllByText(notStored)).toHaveLength(1));
-    const grid = document.querySelector(".readings-grid");
-    if (!(grid instanceof HTMLElement)) {
-      throw new Error("the lead's readings row is not on the page");
-    }
-    const scoreCard = within(grid).getByText("Score").closest(".stat-card");
-    if (!(scoreCard instanceof HTMLElement)) {
-      throw new Error("the score reading is not a card in the readings row");
-    }
-    const user = userEvent.setup();
-    await user.click(
-      within(scoreCard).getByRole("button", { name: "Evidence" }),
-    );
-    await waitFor(() => expect(screen.getAllByText(notStored)).toHaveLength(2));
     expect(screen.queryByText("Score inputs:")).toBeNull();
     expect(
       screen.queryByText("No factors counted toward this score yet."),
@@ -477,7 +482,8 @@ describe("LeadScreen — an archived lead does not ask for what the server refus
     );
 
     expect(urls.filter((url) => /\/(score|lists|tags)/.test(url))).toEqual([]);
-    expect(screen.queryByText(en["lead.scoreFactorsFailed"])).toBeNull();
+    // No section reads as failed: a refused read was never asked.
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("reads all three for a live lead", async () => {

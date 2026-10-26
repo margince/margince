@@ -69,8 +69,9 @@ is still the answer. Ask for the seam in review.
 
 Two rules follow from this, and both have failed here before:
 
-- **A module writes only the tables it owns**, declared in its `doc.go` and checked by
-  `backend/gates/tableownership_test.go`. A write into a sibling's table goes over the module boundary.
+- **A module writes only the tables it owns**, declared in `tableOwners`
+  (`backend/gates/tableownerregistry_test.go`) and checked by `backend/gates/tableownership_test.go`.
+  A write into a sibling's table goes over the module boundary.
 - **A package-keyed gate misses an in-package duplicate.** The table owner test keys its
   waivers `<package>:<table>`, so it never sees a second writer in the same module. Boundary gates and
   duplicate gates find other things; you need both.

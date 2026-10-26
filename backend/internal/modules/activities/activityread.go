@@ -45,7 +45,7 @@ func (s *Store) GetActivity(ctx context.Context, id ids.ActivityID, archived sto
 	return out, s.attachCustomValues(ctx, &out)
 }
 
-// activitySortFields is what a caller may order the timeline by: the four
+// activitySortFields is what a caller may order the timeline by: the five
 // instants an activity carries, and nothing else.
 //
 // They are the axes a timeline HAS. `kind`, `direction` and the rest are
@@ -59,18 +59,21 @@ var activitySortFields = map[string]storekit.SortField{
 	"due_at":      storekit.Column(storekit.KindTimestamp),
 	"created_at":  storekit.Column(storekit.KindTimestamp),
 	"updated_at":  storekit.Column(storekit.KindTimestamp),
+	"remind_at":   storekit.Column(storekit.KindTimestamp),
 }
 
-// The two orders this read takes when the caller names none.
+// The orders this read takes when the caller names none.
 //
 // Newest-first is the timeline. The task queue orders by the date the work is
 // OWED rather than the date it was logged: a cap applied over the wrong order
 // keeps the tasks most recently filed, and capping this one keeps the tasks
 // nearest their deadline — which is what a page capped at a dozen can actually
 // afford to drop.
+// Due reminders lead with the latest to come due.
 const (
 	defaultTimelineSort = "-occurred_at"
 	dueQueueSort        = "due_at"
+	reminderQueueSort   = "-remind_at"
 )
 
 // requestPriorityOrder is the ONE order this read still builds by hand, and it
@@ -118,7 +121,10 @@ func timelineSort(ctx context.Context, in ListActivitiesInput, arg func(any) int
 		return storekit.ParseListSort(ctx, in.Sort, activitySortFields, arg)
 	}
 	spec := defaultTimelineSort
-	if in.OpenAndDueBy != nil || in.OpenAndDueAfter != nil {
+	switch {
+	case in.RemindersDue:
+		spec = reminderQueueSort
+	case in.OpenAndDueBy != nil || in.OpenAndDueAfter != nil:
 		spec = dueQueueSort
 	}
 	return storekit.ParseListSort(ctx, &spec, activitySortFields, arg)
@@ -142,6 +148,7 @@ func (s *Store) ListActivities(ctx context.Context, in ListActivitiesInput) ([]c
 	if in.TaskAsOf == nil {
 		in.TaskAsOf = new(s.now())
 	}
+	asReminderQueue(ctx, &in)
 	var activities []crmcontracts.Activity
 	var page storekit.Page
 	var err error
@@ -239,7 +246,10 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 	if err := WithEmailRowFacts(ctx, tx, one); err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	if err := attachLinks(ctx, tx, one); err != nil {
+	if err := AttachLinks(ctx, tx, one); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	if err := WithOffersEmail(ctx, tx, one); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	if err := attachColleagues(ctx, tx, &one[0]); err != nil {
@@ -248,10 +258,13 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 	if err := WithCommitmentAdmissions(ctx, tx, one); err != nil {
 		return crmcontracts.Activity{}, err
 	}
+	if err := StampActivitiesWritable(ctx, tx, one); err != nil {
+		return crmcontracts.Activity{}, err
+	}
 	return one[0], nil
 }
 
-// attachLinks fills the contract's links[] on a page of activities in ONE
+// AttachLinks fills the contract's links[] on a page of activities in one
 // query — the column the timeline's "via" chips and the per-contact filter
 // read. Batched rather than per-row because the timeline reads a page at a
 // time.
@@ -263,7 +276,7 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 // deal on the same thread — to a caller who cannot read them. A link whose
 // target is out of scope is dropped, so links[] answers "what this is about,
 // as far as you can see".
-func attachLinks(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activity) error {
+func AttachLinks(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activity) error {
 	if len(activities) == 0 {
 		return nil
 	}
@@ -359,6 +372,7 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 	if in.TaskAsOf == nil {
 		in.TaskAsOf = new(s.now())
 	}
+	asReminderQueue(ctx, &in)
 	var total int
 	var err error
 	if len(in.CustomFilters) > 0 {

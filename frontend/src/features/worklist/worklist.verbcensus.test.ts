@@ -73,6 +73,7 @@ const ANSWERED_BY = {
   // settings screen to retype a domain the row is already holding.
   reopen: { how: "inline", file: "worklist.domainquestion.tsx" },
   keep: { how: "inline", file: "worklist.domainquestion.tsx" },
+  keep_as_vendor: { how: "inline", file: "worklist.domainquestion.tsx" },
   discard: { how: "inline", file: "worklist.domainquestion.tsx" },
   // Putting an overnight correction back acts in place, on the receipt that
   // reported it. It is the one verb this queue draws OUTSIDE the row: the

@@ -3,7 +3,7 @@
 
 package contacts
 
-// The score a corrected source implies, folded into the edit's own UPDATE.
+// The score a corrected origin implies, folded into the edit's own UPDATE.
 //
 // The row's version trigger fires on every UPDATE. A rescore written as a
 // second statement after the edit therefore raises the version twice.
@@ -32,11 +32,11 @@ type stagedLeadRescore struct {
 }
 
 // stageLeadRescore scores the lead as the patch will leave it. A corrected
-// source, or a withdrawn override (resume), stages the new number. It goes to
+// origin, or a withdrawn override (resume), stages the new number. It goes to
 // score_computed under an override, and to score otherwise.
 //
-// The number is a stamp. It is derived from the source, so it stays out of the
-// audit images, and a restore of the source edit re-derives it.
+// The number is a stamp. It is derived from the origin, so it stays out of the
+// audit images, and a restore of the origin edit re-derives it.
 //
 // History records the number moving, except for a withdrawn override. The clear
 // has already set score to the retained value, yet the newest entry still names
@@ -44,7 +44,7 @@ type stagedLeadRescore struct {
 func stageLeadRescore(
 	ctx context.Context, tx pgx.Tx, id ids.LeadID, current crmcontracts.Lead, p *storekit.Patch, resume bool,
 ) (stagedLeadRescore, error) {
-	if _, sourceMoved := p.Moved()["source"]; !sourceMoved && !resume {
+	if _, originMoved := p.Moved()[leadOriginField]; !originMoved && !resume {
 		return stagedLeadRescore{}, nil
 	}
 	after := p.After()
@@ -52,11 +52,11 @@ func stageLeadRescore(
 		return stagedLeadRescore{}, nil
 	}
 	title := stagedOptionalString(after, "title", current.Title)
-	source := stagedString(after, "source", current.Source)
+	origin := stagedOptionalString(after, leadOriginField, current.Origin)
 	reason := stagedOptionalString(after, "score_override_reason", current.ScoreOverrideReason)
 	displayed := stagedInt(after, "score", current.Score)
 
-	scored, err := scoreLeadFor(ctx, tx, id, time.Now().UTC(), title, &source)
+	scored, err := scoreLeadFor(ctx, tx, id, time.Now().UTC(), title, origin)
 	if err != nil {
 		return stagedLeadRescore{}, err
 	}

@@ -26,11 +26,12 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   comment-budget test-comment-budget comment-density \
   check-extension-modules \
   no-jurisdiction test-no-jurisdiction \
-  pkg-freeze test-desktop-launcher changelog-sections \
-  test-changelog-sections test-dev-postgres-container test-e2e-llm-check \
+  pkg-freeze test-desktop-launcher \
+  test-dev-postgres-container test-e2e-llm-check \
   test-release-version-stamped test-closing-declaration test-release-patch-base \
-  test-published-tag \
-  test-craft-review test-release-tag-version test-release-license-stamped
+  test-published-tag test-docs-describing \
+  test-craft-review test-release-tag-version test-release-license-stamped \
+  test-release-notes
 
 # How wide the gate fan-out runs: the machine's online core count, so a 4-core
 # CI runner and an 18-core laptop each get the width they have without anybody
@@ -66,7 +67,8 @@ MINIO_PORT ?= 29000
 # answer lands in its own assignment so `set -e` sees the refusal — a helper
 # called inside another command's argument would fail unnoticed.
 
-.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch bench-daily bench-daily-clean perfdoc config-gen lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition check-static test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln vendor-live tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-sbom-census test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-test-budget comment-budget test-comment-budget comment-density comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-release-tag-version test-release-license-stamped test-release-version-stamped test-closing-declaration test-release-patch-base test-published-tag test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: gate-timings
+.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch bench-daily bench-daily-clean perfdoc config-gen lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition check-static test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln vendor-live tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-sbom-census test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-test-budget comment-budget test-comment-budget comment-density comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-release-tag-version test-release-license-stamped test-release-notes test-release-version-stamped test-closing-declaration test-release-patch-base test-published-tag docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
 
@@ -204,6 +206,16 @@ check-go:
 ## and a prerequisite here would only run them twice.
 check-gates:
 	@cd backend && $(GO) test -count=1 -run 'TestEveryPackageLevelReasonMapIsAWaiverOrADeclaredFixture|TestEveryWaiversDeclarationIsSweptForStalenessExactlyOnce|TestGatekitServesTestsOnly|TestEveryVersionPinnedTableBumpsItsVersion|TestEveryToolRegistrarIsInvokedByEveryFullRegistry|TestAPublishedFieldNameIsAFieldNameNotProse|TestEveryValidationFieldLiteralNamesAContractField|TestSeamReachableModulesCarryTheirOwnFieldVerdict|TestEveryStoreEntryPointIsAuthGated' ./gates
+
+## gate-timings — where the gates lane spent its time, gate by gate. The lane
+## already runs its gates in parallel, so what a run costs is the sum of their
+## work over the cores it is given: this prints both, and the costliest gates,
+## so an optimization starts from a reading rather than from a guess.
+gate-timings:
+	@mkdir -p backend/.tmp
+	@cd backend && $(GO) test ./gates/ -count=1 -v > .tmp/gate-timings.log 2>&1 || true
+	@GATE_TIMING_CORES="$$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)" \
+		bash scripts/gate-timings.sh backend/.tmp/gate-timings.log
 
 ## infra-up / infra-down — aliases for the dev stack (some deploy tooling and
 ## UAT guides call the infra lane by these names). infra-up
@@ -419,8 +431,9 @@ ds-spacing-roles:
 ## drawer clipped its own heading against the viewport edge.
 space-tokens:
 	frontend/scripts/check-space-tokens.sh
-## native-controls — no browser-drawn dropdown: `<select>`, `<option>` or
-## `<optgroup>` anywhere under frontend/src or extensions/*/frontend. It is a
+## native-controls — no browser-drawn control: `<select>`, `<option>`,
+## `<optgroup>` or a native date input (`type="date"` on `input` or
+## `TextInput`) anywhere under frontend/src or extensions/*/frontend. It is a
 ## vitest fitness function over the TypeScript AST now — see
 ## frontend/src/design-system/native-controls.test.ts — so it runs in `fe-unit`
 ## with the rest of the suite. This target keeps its name for anyone who runs
@@ -1036,6 +1049,14 @@ test-sbom-sign:
 test-sbom-census:
 	@./scripts/test-sbom-census.sh
 
+## test-sbom-license-parity — prove the licence comparison inside
+## `sbom-parity` fails on each way the three signed documents can disagree,
+## and passes on the ways they differ harmlessly. Planted documents, and the
+## real script: a comparison nothing tests is one that can quietly compare
+## the intersection and report a pass.
+test-sbom-license-parity:
+	@./scripts/test-sbom-license-parity.sh
+
 ## test-api-entrypoint — prove the container entrypoint writes the bootstrap
 ## credential ONLY onto an unprovisioned installation, retires a spent one, and
 ## refuses to start when it cannot tell which it is. Every failure on that path
@@ -1280,6 +1301,19 @@ fe-file-length:
 test-budget:
 	@./scripts/check-test-budget.sh $(LOG)
 
+## test-input-census — every cached unit-test package that reads a file outside
+## its module also reads that file's tree digest, or a replayed pass outlives an
+## edit to it. Judged on a real run, since such paths are mostly built at run
+## time; a failing test does not decide it. CI's backend-lint job and
+## cache-warm both run it.
+test-input-census:
+	@set -e; logs="$$(mktemp -d)"; trap 'rm -rf "$$logs"' EXIT; \
+	if ! TESTLOG_DIR="$$logs" $(MAKE) -C backend -k test-cached test-extensions TEST_EXEC="$(CURDIR)/scripts/testlog-exec.sh"; then \
+	  echo "test-input-census: a test failed under the census; its inputs are judged all the same" >&2; \
+	fi; \
+	./scripts/ci-stable-mtimes.sh --names > "$$logs/names.tsv"; \
+	cd backend && GOWORK="$(CURDIR)/go.work" go run ./tools/check-test-inputs -logs "$$logs" -names "$$logs/names.tsv"
+
 ## test-test-budget — the budget gate's own test, run by check-backend because
 ## the gate itself runs only on CI, where a refusal that stopped firing reads green.
 test-test-budget:
@@ -1359,18 +1393,6 @@ test-e2e-llm-check:
 test-dev-postgres-container:
 	@./scripts/test-dev-postgres-container.sh
 
-## changelog-sections — Keep a Changelog: one section per change type per
-## release. Three `### Changed` sections shipped under [Unreleased], each
-## appended by an author who had no signal the others existed.
-changelog-sections:
-	@./scripts/check-changelog-sections.sh
-
-## test-changelog-sections — prove that gate fires on each duplicate shape and
-## stays silent on the lookalikes: the same type under two RELEASES, a heading
-## above the first release, and a file it can read nothing out of.
-test-changelog-sections:
-	@./scripts/test-check-changelog-sections.sh
-
 ## test-release-version-stamped — prove the release bake refuses to publish a set
 ## that carries no release version. An empty or "dev" VERSION builds and pushes
 ## perfectly well and ships a fleet whose mixed-release guard is inert, which
@@ -1387,6 +1409,19 @@ test-release-version-stamped:
 ## for and report the defect as absent.
 test-closing-declaration:
 	@./scripts/check-closing-declaration.test.sh
+
+## docs-describing — list the explanation and handbook pages whose describes
+## line names code this branch changes. Each one goes in the pull request body
+## as `- <page>: still true` or `- <page>: updated`; docs-describing.yml asks.
+docs-describing:
+	@base="$$(git merge-base origin/main HEAD)" && \
+	DOCS_DESCRIBING_CHANGED="$$( { git diff --name-only "$$base"; git ls-files --others --exclude-standard; } | sort -u)" \
+	./scripts/check-docs-describing.sh
+
+## test-docs-describing — prove the docs-describing check asks about a page whose
+## code changed, and accepts only an answer it can read.
+test-docs-describing:
+	@./scripts/check-docs-describing.test.sh
 
 ## test-release-patch-base — prove a release patch is cut from what was last
 ## PUBLISHED, not from this push's previous tip. The two agree only while every
@@ -1420,6 +1455,12 @@ test-release-tag-version:
 test-release-license-stamped:
 	@./scripts/release-license-stamped.test.sh
 
+## test-release-notes — the release notes builder's own test: which merge
+## subjects a release lists, in which section, and what the size budget cuts.
+## Its one caller is a tag push, like the tag reader's.
+test-release-notes:
+	@./scripts/release-notes.test.sh
+
 ## no-jurisdiction — pack-boundary fitness gate: no country-specific
 ## regulatory identifier (XRechnung/ZUGFeRD/DATEV/…) or ISO-3166 code appears
 ## in core CODE — Go AND SQL — only in the jurisdiction seam
@@ -1432,8 +1473,8 @@ no-jurisdiction:
 	@./scripts/check-no-jurisdiction.sh
 
 ## test-no-jurisdiction — the jurisdiction gate's own test. It is a SEPARATE
-## target like every other gate-plus-test pair here (migration-versions,
-## changelog-sections) so the fan-out runs them side by side and a reader can
+## target like every other gate-plus-test pair here (migration-versions)
+## so the fan-out runs them side by side and a reader can
 ## see from the list that this gate is tested.
 test-no-jurisdiction:
 	@./scripts/check-no-jurisdiction.test.sh
@@ -1685,8 +1726,10 @@ sbom:
 sbom-supplement:
 	@test -f $(SBOM_DIR)/margince.cdx.json || { echo "FAIL: no SBOM found — run 'make sbom' first"; exit 1; }
 	@set -e; cdx=$(SBOM_DIR)/margince.cdx.json; s22=$(SBOM_DIR)/margince.spdx221.json; \
+	  s30=$(SBOM_DIR)/margince.spdx300.json; \
 	  jq --slurpfile m sbom-schemas/license-supplement.json '$$m[0] as $$map | .components |= map(((.purl // "") | sub("@[^@]*$$"; "")) as $$k | if $$map[$$k] != null then .licenses = [{"license": {"id": $$map[$$k]}}] else . end)' "$$cdx" > "$$cdx.tmp" && mv "$$cdx.tmp" "$$cdx"; \
-	  jq --slurpfile m sbom-schemas/license-supplement.json '$$m[0] as $$map | .packages |= map((([.externalRefs[]? | select(.referenceType == "purl") | .referenceLocator] | (.[0] // "")) | sub("@[^@]*$$"; "")) as $$k | if $$map[$$k] != null then (.licenseConcluded = $$map[$$k] | .licenseDeclared = $$map[$$k]) else . end)' "$$s22" > "$$s22.tmp" && mv "$$s22.tmp" "$$s22"
+	  jq --slurpfile m sbom-schemas/license-supplement.json '$$m[0] as $$map | .packages |= map((([.externalRefs[]? | select(.referenceType == "purl") | .referenceLocator] | (.[0] // "")) | sub("@[^@]*$$"; "")) as $$k | if $$map[$$k] != null then (.licenseConcluded = $$map[$$k] | .licenseDeclared = $$map[$$k]) else . end)' "$$s22" > "$$s22.tmp" && mv "$$s22.tmp" "$$s22" ; \
+	  jq --slurpfile m sbom-schemas/license-supplement.json -f sbom-schemas/spdx30-licenses.jq "$$s30" > "$$s30.tmp" && mv "$$s30.tmp" "$$s30"
 
 ## sbom-normalize — reconcile syft's three writers so all three SBOMs describe one
 ## tree, the invariant the constellation dist gate enforces. syft scans the export
@@ -1726,6 +1769,10 @@ sbom-parity:
 	  else \
 	    echo "FAIL: SBOM file sets differ — see the diff above"; exit 1; \
 	  fi
+	@# The packages and their licenses, which the file sets above say nothing
+	@# about: a supplement that reached two of the three documents drifted
+	@# under this target for as long as it compared files alone.
+	@bash scripts/sbom-license-parity.sh $(SBOM_DIR)
 
 ## sbom-census — the license gate's coverage check: every package a committed
 ## pnpm-lock.yaml resolves must be an npm component of the CycloneDX SBOM,

@@ -42,6 +42,15 @@
     padding-block: var(--space-3);
   }
 }
+/* The flat head: the title and its action on one baseline, set on the card's
+ * own inset instead of a band. After the two overrides above so it wins at
+ * every width. */
+.panel-head-flat {
+  align-items: baseline;
+  min-height: 0;
+  padding: var(--space-5) var(--space-5) var(--space-2);
+  border-bottom: none;
+}
 /* The zone's title in the display face: the one word a reader finds a zone
  * by, so it is set as a heading rather than as a label on a card.
  *
@@ -337,6 +346,11 @@
   flex-wrap: wrap;
   gap: var(--gapActions);
   padding: 0 var(--padPanel) var(--padPanel);
+}
+/* An action that renders nothing must not leave the band's padding as a
+   blank strip under the rows. */
+.panel-actions:empty {
+  display: none;
 }
 /* Directly under the header there is no body above to be spaced off, so the
  * strip pays for its own top interval; so it does under a list's last row. */

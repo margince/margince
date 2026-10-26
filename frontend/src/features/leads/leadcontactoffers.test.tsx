@@ -202,6 +202,10 @@ describe("a lead's identity, offered from the contacts", () => {
       </RecordShell>,
     );
 
+    // A rare verb, so it waits in the head's More menu.
+    await user.click(
+      await screen.findByRole("button", { name: "More actions" }),
+    );
     await user.click(
       await screen.findByRole("button", { name: "Fill from a contact" }),
     );

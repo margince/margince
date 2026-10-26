@@ -13,6 +13,7 @@ workflow is outside the gate:
 | `merge-attest.yml` | every push to `main` | No (runs after the merge) |
 | `review-coverage.yml` | pull request events, a sent review | No |
 | `closing-declaration.yml` | pull request events | No |
+| `docs-describing.yml` | pull request events | No |
 | `issue-closed.yml` | issue `closed`, a daily check, manual dispatch | No |
 | `main-health.yml` | `main` every two hours, manual dispatch | No |
 | `scheduled.yml` | daily and weekly on `main` | No |
@@ -125,6 +126,24 @@ that users do not read the warning.
 [`scripts/check-closing-declaration.sh`](../../scripts/check-closing-declaration.sh) makes the
 report. It reads its evidence from the environment, so a fixture can drive every case
 (`make test-closing-declaration`).
+
+## `docs-describing.yml`
+
+What starts it: `opened`, `reopened`, `edited`, `synchronize` and `ready_for_review`. The rule it asks
+about, and the form of each answer, are in
+[docs-prose-style.md](docs-prose-style.md#a-list-the-code-owns-is-linked-and-a-page-names-the-code-it-describes).
+This workflow lists the explanation and handbook pages whose `describes:` paths the pull request changes.
+Then it looks for an answer to each one in the body.
+
+A check cannot tell that a sentence stopped being true. The answer is a human's, and the workflow asks
+for it where the reviewer reads. It warns and never fails, for the same reason as
+`closing-declaration.yml`, and deletes its comment once every page is answered. A failed query for the
+changed files stops without a comment. On a pull request from a fork, the token cannot write a comment,
+so the report is only in the job summary.
+
+The report comes from [`scripts/check-docs-describing.sh`](../../scripts/check-docs-describing.sh). It reads
+its evidence from the environment, so a fixture can drive every case (`make test-docs-describing`).
+`make docs-describing` prints the same list for a local branch.
 
 ## `issue-closed.yml`
 
@@ -334,15 +353,18 @@ cannot both claim the one release page.
 
 The tag is the version, read and checked by
 [`scripts/release-tag-version.sh`](../../scripts/release-tag-version.sh)
-(`make test-release-tag-version`). A plain `v0.0.1` becomes the download the page offers by
-default; a tag with an ending, such as `v0.0.1-rc.1`, becomes a `pre-release`. A tag the script cannot
+(`make test-release-tag-version`). A plain `v1.0.0` becomes the download the page offers by
+default; a tag with an ending, such as `v1.0.0-rc.1`, becomes a `pre-release`. A tag the script cannot
 read is refused in seconds, before either bundle compiles PostgreSQL from source.
 
-Three more checks share that first job. The tag points at a commit on `main`. `LICENSE` carries the
+More checks share that first job. The tag points at a commit on `main`. `LICENSE` carries the
 release's Change Date and version, checked by
 [`scripts/release-license-stamped.sh`](../../scripts/release-license-stamped.sh)
-(`make test-release-license-stamped`). And the commit carries no failing `verdict` from
-`merge-attest`.
+(`make test-release-license-stamped`). No open issue carries `release: blocker`. And
+the commit carries no failing `verdict` from `merge-attest`.
+
+The `draft` job then checks that a plain tag has a draft release with notes. It holds
+`contents: write` only to read: GitHub shows a draft to no token that cannot write.
 
 That last check picks releases, and does not gate merges.
 To merge past `ci` is a standing decision here, so a missing result passes. A result that exists
@@ -353,8 +375,15 @@ workflows the pull request check runs, so a release bundle cannot differ from th
 approved.
 
 The release job renames the macOS tarball after the version. It runs `zip` again on the Windows
-tree that `download-artifact` opened, and creates the release with both added. It queues and does not
-cancel. By that job the lane is making a release and uploading files, and a stopped run would
+tree that `download-artifact` opened. It publishes the draft with both added, or creates the release
+for a pre-release that has no draft.
+
+Under the draft's text it lists the pull requests merged since
+the last plain release. A release body holds at most 125,000 characters, and the list gets what the
+draft leaves. The list comes from
+[`scripts/release-notes.sh`](../../scripts/release-notes.sh) (`make test-release-notes`).
+
+The release job queues and does not cancel. By that job the lane is making a release and uploading files, and a stopped run would
 leave that half done. How to drive it is in [cut-a-release.md](../how-to/cut-a-release.md).
 
 ## `desktop-macos.yml` / `desktop-windows.yml`

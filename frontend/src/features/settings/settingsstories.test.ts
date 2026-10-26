@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { storyCensus } from "../../../scripts/lib/story-files";
 import { titledStories } from "../../../scripts/lib/story-title";
 import { translate } from "../../i18n";
-import { SETTINGS_PAGES, type SettingsPageId } from "./settingscatalog";
+import { SETTINGS_PAGES, type SettingsPageId } from "../../lib/settingscatalog";
 
 // Storybook's settings tree and the product's settings sidebar say the same
 // words, or the workbench describes a product that no longer exists.
@@ -81,7 +81,7 @@ describe("the settings stories are filed where the product files them", () => {
   // Pinned by hand rather than floored: a story retitled away from `Settings/`
   // drops out of the corpus above, and only an exact count notices it go.
   it("reads every settings story, and says how many that is", () => {
-    expect(settingsStories.length).toBe(196);
+    expect(settingsStories.length).toBe(201);
   });
 
   // A file whose title does not resolve drops out of the filter above;

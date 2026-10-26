@@ -9,6 +9,23 @@ export type DateTimePreferences = Readonly<{
   timeFormat: TimeFormat;
 }>;
 
+export type DatePart = "day" | "month" | "year";
+
+/** How a reader writes a day: which part comes first, and what stands between. */
+export type DatePattern = Readonly<{
+  order: readonly [DatePart, DatePart, DatePart];
+  separator: string;
+}>;
+
+/** The patterns an installation can name; `locale` leaves it to the UI language. */
+export const FIXED_DATE_PATTERNS: Readonly<
+  Record<Exclude<DateFormat, "locale">, DatePattern>
+> = {
+  dmy: { order: ["day", "month", "year"], separator: "." },
+  mdy: { order: ["month", "day", "year"], separator: "/" },
+  ymd: { order: ["year", "month", "day"], separator: "-" },
+};
+
 const DEFAULTS: DateTimePreferences = {
   dateFormat: "locale",
   timeFormat: "locale",
@@ -55,10 +72,8 @@ export function formatPreferredDate(
   const format = current.dateFormat;
   if (format === "locale") return formatter.format(instant);
   const parts = formatter.formatToParts(instant);
-  const day = parts.find((part) => part.type === "day")?.value ?? "";
-  const month = parts.find((part) => part.type === "month")?.value ?? "";
-  const year = parts.find((part) => part.type === "year")?.value ?? "";
-  if (format === "dmy") return `${day}.${month}.${year}`;
-  if (format === "mdy") return `${month}/${day}/${year}`;
-  return `${year}-${month}-${day}`;
+  const pattern = FIXED_DATE_PATTERNS[format];
+  return pattern.order
+    .map((type) => parts.find((part) => part.type === type)?.value ?? "")
+    .join(pattern.separator);
 }

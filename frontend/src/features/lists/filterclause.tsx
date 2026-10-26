@@ -72,7 +72,8 @@ function labelledInOrder(
 
 /** A new clause starts on the vocabulary's first field, a reader picks from there. */
 export function firstClause(fields: readonly VocabularyField[]): Node {
-  const first = fields[0];
+  // A place is a poor start for a blank clause, so a distance field comes last.
+  const first = fields.find((f) => f.type !== "distance") ?? fields[0];
   if (!first) {
     // A resource with no filterable field cannot happen through this screen —
     // the vocabulary read 404s rather than answering an empty set — but the tree
@@ -209,6 +210,7 @@ export function ClauseRow({
         references={chosen?.references}
         options={chosen?.options}
         currency={chosen?.currency}
+        field={chosen?.name}
         op={op}
         value={value}
         onChange={(nextValue) =>

@@ -98,8 +98,8 @@ bootstrap_admin:
 # connector_state_key: ${file:/run/secrets/connector_state_key}
 # # Postgres DSN of the runtime app role; migrate falls back to it when MARGINCE_OWNER_DSN is unset.
 # dsn: ${file:/run/secrets/dsn}
-# # Nominatim base URL, or public; set it on the api and the worker together, or a lookup is never
-# # queued.
+# # Nominatim base URL; unset or public uses the public service, off stops the lookup of map points;
+# # give the api and the worker the same value, or a lookup is never queued.
 # geocode_base_url:
 # # Google OAuth client id of the Gmail capture connector.
 # gmail_client_id:
@@ -255,6 +255,9 @@ bootstrap_admin:
 #   # Automatic company web-page reads the installation may start in one UTC day.
 #   # default: 500
 #   auto_enrich_daily_cap: 500
+#   # Held mail threads one review pass may judge; the rest wait for the next pass.
+#   # default: 40
+#   confidentiality_pass_cap: 40
 #   # Ignored, with a warning at boot; the consumer-mail list is edited under Settings.
 #   freemail_extra:
 #   # Ignored, with a warning at boot; the consumer-mail list is edited under Settings.
@@ -327,8 +330,9 @@ bootstrap_admin:
 #   # The email signature of the workspace, used in place of the own signature of each sender; empty
 #   # means none.
 #   signature_template:
-#   # The user id of the colleague who answers for a lead nobody owns once it misses its target; empty
-#   # means nobody, and a boot value that names no active colleague reaches nobody and logs a warning.
+#   # The user id of the colleague who answers for a lead nobody owns, or whose owner has left, once
+#   # it misses its target; empty means nobody, and a boot value that names no active colleague
+#   # reaches nobody and logs a warning.
 #   unassigned_escalation_user_id:
 
 # ---- data_tasks ----
@@ -415,6 +419,15 @@ bootstrap_admin:
 #   # The language AI writes the shared record in: en, de or vi.
 #   # default: en
 #   base_language: en
+#   # Show a Telegram chat link next to a contact's phone number that starts with a country code.
+#   # default: true
+#   call_telegram: true
+#   # Show a WhatsApp chat link next to a contact's phone number that starts with a country code.
+#   # default: true
+#   call_whatsapp: true
+#   # Show a Zalo chat link next to a contact's phone number that starts with a country code.
+#   # default: true
+#   call_zalo: true
 #   # Seconds between the close-date sweeps.
 #   # default: 86400
 #   close_date_sweep_interval_seconds: 86400

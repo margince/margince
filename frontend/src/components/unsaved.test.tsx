@@ -188,6 +188,108 @@ describe("UnsavedGuard", () => {
   });
 });
 
+/** A draft whose page can save it, and optionally a second one it cannot. */
+function SaveablePage({
+  save,
+  lone = false,
+  onKeep,
+}: Readonly<{
+  save: () => Promise<boolean>;
+  lone?: boolean;
+  onKeep?: (address: string) => void;
+}>) {
+  const [address, setAddress] = useState("first");
+  return (
+    <LocaleProvider>
+      <button type="button" onClick={() => setAddress("second")}>
+        go second
+      </button>
+      <UnsavedGuard
+        address={address}
+        onKeep={(kept) => {
+          setAddress(kept);
+          onKeep?.(kept);
+        }}
+      >
+        {(shown) =>
+          shown === "first" ? (
+            <>
+              <SaveableCard save={save} />
+              {lone && <DraftCard />}
+            </>
+          ) : (
+            <p>Second page</p>
+          )
+        }
+      </UnsavedGuard>
+    </LocaleProvider>
+  );
+}
+
+function SaveableCard({ save }: Readonly<{ save: () => Promise<boolean> }>) {
+  const [typed, setTyped] = useState("");
+  useUnsavedGuard(typed !== "", undefined, save);
+  return (
+    <label>
+      Name
+      <input value={typed} onChange={(event) => setTyped(event.target.value)} />
+    </label>
+  );
+}
+
+describe("UnsavedGuard with a save", () => {
+  it("offers Save, Discard and Stay, and moves on once Save has written", async () => {
+    const user = userEvent.setup();
+    const save = vi.fn(async () => true);
+    render(<SaveablePage save={save} />);
+    await user.type(screen.getByRole("textbox", { name: /Name/ }), "Jane");
+    await user.click(screen.getByRole("button", { name: "go second" }));
+
+    expect(screen.getByRole("button", { name: "Discard" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Stay" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText("Second page")).toBeInTheDocument();
+  });
+
+  it("stays on the page and says so when the save is refused", async () => {
+    const user = userEvent.setup();
+    render(<SaveablePage save={async () => false} />);
+    await user.type(screen.getByRole("textbox", { name: /Name/ }), "Jane");
+    await user.click(screen.getByRole("button", { name: "go second" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByRole("alert")).toBeVisible();
+    expect(screen.queryByText("Second page")).toBeNull();
+  });
+
+  it("keeps the edit on Stay", async () => {
+    const user = userEvent.setup();
+    const onKeep = vi.fn();
+    render(<SaveablePage save={async () => true} onKeep={onKeep} />);
+    await user.type(screen.getByRole("textbox", { name: /Name/ }), "Jane");
+    await user.click(screen.getByRole("button", { name: "go second" }));
+    await user.click(screen.getByRole("button", { name: "Stay" }));
+
+    expect(onKeep).toHaveBeenCalledWith("first");
+    expect(screen.getByRole("textbox", { name: /Name/ })).toHaveValue("Jane");
+  });
+
+  it("offers no Save while a draft it cannot save is also unsaved", async () => {
+    const user = userEvent.setup();
+    render(<SaveablePage save={async () => true} lone />);
+    await user.type(screen.getByRole("textbox", { name: /Name/ }), "Jane");
+    await user.type(screen.getByRole("textbox", { name: /Signature/ }), "J");
+    await user.click(screen.getByRole("button", { name: "go second" }));
+
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Discard changes" }),
+    ).toBeVisible();
+  });
+});
+
 // The app's shape around one held draft: the guard above whatever the address
 // picks, and a page whose own save is the way off it.
 function Routed({ page }: Readonly<{ page: ReactNode }>) {

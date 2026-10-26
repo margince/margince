@@ -1,72 +1,128 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
-import { Button, EmptyState, Field } from "../../design-system/atoms";
-import { FilterBar } from "../../design-system/filterbar";
+import { SEARCH_DEBOUNCE_MS } from "../../components/listqueryparams";
+import { Button, EmptyState } from "../../design-system/atoms";
+import { CountLine } from "../../design-system/listsurface";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
   LoadMoreButton,
   QueryGate,
   QueryStates,
 } from "../../design-system/querystates";
-import { Select } from "../../design-system/select";
+import { SurfaceState } from "../../design-system/surfacestate";
 import { type Translator, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { aiTaskLabel } from "../../lib/ai-task-label";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
 import { useMe } from "../../lib/session";
-import { hashWithParams, useUrlParams } from "../../lib/urlstate";
-import { settingsHref } from "../settings/settingsrouting";
+import { settingsHref } from "../../lib/settingsrouting";
+import {
+  hashWithParams,
+  type UrlParams,
+  useUrlParams,
+} from "../../lib/urlstate";
 import { tierLabel } from "./ai-decision-labels";
 import { providerName } from "./ai-provider-names";
+import { type AiCallRecord, CallDrawer } from "./aicalls-detail";
+import {
+  CALL_PARAMS,
+  type CallFilters,
+  CallFiltersBar,
+  callFiltersOf,
+  callQueryOf,
+  isNarrowed,
+  UNFILTERED_CALLS,
+  withCallFilters,
+} from "./aicalls-filters";
 import { CallTable } from "./aicalls-table";
+import { ExportScenarioDialog } from "./aiexport";
 import "./aicalls.css";
 
-// The trace's first page, as one query the card and the page header share.
-//
-// The header wants a single fact from it — when the runtime last called a model
-// — and the unfiltered trace is where that fact lives, so it asks for the same
-// window under the same key rather than opening a second read of the same
-// endpoint. `task: ""` is the card's own no-filter state, which is why the two
-// coincide exactly when the reader has filtered nothing.
-function useCallTrace(task: string, filter: CallFilter, enabled: boolean) {
+/** The address dial the trace is narrowed by, so a task row can link to its calls. */
+export const CALL_TASK_PARAM = CALL_PARAMS.task;
+
+/**
+ * The dials a figure elsewhere narrows the trace by, each the `/ai/calls`
+ * filter of the same name. `model` is also the toolbar's own model dial.
+ */
+const CALL_FILTER_PARAMS = [
+  "provider",
+  "model",
+  "served_model",
+  "served_provider",
+  "tier",
+] as const;
+type CallFilterParam = (typeof CALL_FILTER_PARAMS)[number];
+export type CallFilter = Partial<
+  Record<CallFilterParam | typeof CALL_TASK_PARAM, string>
+>;
+
+// The figure dials the filter bar has no control for, so its caption names them.
+const FIGURE_PARAMS = [
+  "provider",
+  "served_model",
+  "served_provider",
+  "tier",
+] as const;
+type FigureParam = (typeof FIGURE_PARAMS)[number];
+type FigureFilter = Partial<Record<FigureParam, string>>;
+
+/** The trace narrowed to the calls behind one figure. */
+export function callsHrefFor(filter: CallFilter): string {
+  return hashWithParams(
+    routeHash(settingsHref("model-calls")),
+    new Map(Object.entries(filter)),
+  );
+}
+
+function figureFilterOf(params: UrlParams): FigureFilter {
+  return Object.fromEntries(
+    FIGURE_PARAMS.flatMap((key) => {
+      const value = params.get(key);
+      return value ? [[key, value]] : [];
+    }),
+  );
+}
+
+// The trace as the server narrows it. Every dial is in the key, so a changed
+// filter is a fresh walk from the newest call. No cursor is reused across
+// questions.
+function useCallTrace(
+  filters: CallFilters,
+  figure: FigureFilter,
+  enabled: boolean,
+) {
   return useInfiniteQuery({
     enabled,
-    queryKey: ["ai-calls", task, filter],
+    queryKey: ["ai-calls", filters, figure],
     initialPageParam: FIRST_PAGE,
-    queryFn: async ({ pageParam }) => {
-      return unwrap(
+    queryFn: async ({ pageParam }) =>
+      unwrap(
         await api.GET("/ai/calls", {
           params: {
             query: {
+              ...callQueryOf(filters, Date.now()),
+              ...figure,
               cursor: pageParam ?? undefined,
-              task: task || undefined,
-              ...filter,
             },
           },
         }),
-      );
-    },
+      ),
     getNextPageParam: (last) => last.page.next_cursor ?? null,
   });
 }
 
 /**
- * When the runtime last reached a model — and, where there is no instant to
- * give, WHICH silence this is.
+ * When the runtime last reached a model and, where there is no instant to
+ * give, which silence this is.
  *
- * `never` is a claim about the INSTALLATION: nothing has ever called a model.
- * The other three are claims about the READ — this reader may not make it, it
- * has not answered yet, it failed — and none of them is evidence about the
- * installation at all. One `null` over all four let a caller say "Never called"
- * over a trace that was still arriving, which is the defect this type exists to
- * make unspellable.
- *
- * `failed` is its own arm rather than folded into `unread` for the reason
- * `never` is its own: only one of the two resolves by waiting, and a reading
- * that goes silent on a broken read tells a reader nothing is wrong. Every
- * caller draws it; none may assume another surface will.
+ * `never` is a claim about the installation. The other three (`unread`,
+ * `failed` and a withheld read) are claims about the read, never about the
+ * installation. One `null` over all four let a caller say "Never called" over a
+ * trace that was still arriving. `failed` is its own arm. Only `unread`
+ * resolves by waiting.
  */
 export type LastCall =
   | { state: "withheld" }
@@ -78,10 +134,9 @@ export type LastCall =
 /**
  * The newest call, as a state a caller can switch on.
  *
- * Its OWN query rather than the card's. The card pages through a filtered trace
- * on demand; this wants the newest row and wants it to keep up, and the two
- * cannot share a key without one imposing its refetch on the other — a poll
- * over every page the reader had loaded.
+ * It has its own query rather than the card's. The card pages through a
+ * filtered trace on demand. This wants the newest row and wants it to keep up.
+ * Sharing a key would make one impose its refetch on the other.
  */
 export function useLastCallAt(): LastCall {
   const canSee = useCan("ai_diagnostics", "read");
@@ -91,9 +146,7 @@ export function useLastCallAt(): LastCall {
     // The header says how long ago the last call was, so the figure has to move
     // while the page is open. A minute is the resolution it reads at.
     refetchInterval: 60_000,
-    queryFn: async () => {
-      return unwrap(await api.GET("/ai/calls", {}));
-    },
+    queryFn: async () => unwrap(await api.GET("/ai/calls", {})),
   });
   // Read through the grant, not only around it. A revoked grant disables the
   // query but leaves its last answer in the cache, and answering from it would
@@ -113,166 +166,248 @@ export function useLastCallAt(): LastCall {
     : { state: "never" };
 }
 
-/** The address dial the trace is narrowed by, so a task row can link to its calls. */
-export const CALL_TASK_PARAM = "task";
+function CallTrace({
+  query,
+  narrowed,
+  taskOnly,
+  onClear,
+}: Readonly<{
+  query: ReturnType<typeof useCallTrace>;
+  narrowed: boolean;
+  taskOnly: boolean;
+  onClear: () => void;
+}>) {
+  const t = useT();
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<AiCallRecord | null>(null);
+  const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
+  const captureEnabled = query.data?.pages[0]?.payload_capture_enabled ?? false;
+  const at = rows.findIndex((call) => call.id === openId);
+  const open = at >= 0 ? rows[at] : undefined;
+  const step = (offset: number) => {
+    const next = rows[at + offset];
+    return next ? () => setOpenId(next.id) : undefined;
+  };
+
+  if (rows.length === 0) {
+    // Under a filter the empty trace is a fact about the filter, not about the
+    // installation, and the way back is beside it.
+    return (
+      <PanelBody>
+        {narrowed ? (
+          <EmptyState
+            title={t(taskOnly ? "aicalls.taskEmpty" : "aicalls.filteredEmpty")}
+            action={<Button onClick={onClear}>{t("aicalls.clear")}</Button>}
+          >
+            {null}
+          </EmptyState>
+        ) : (
+          <EmptyState>{t("aicalls.empty")}</EmptyState>
+        )}
+      </PanelBody>
+    );
+  }
+  return (
+    <>
+      <CallTable calls={rows} onOpen={(call) => setOpenId(call.id)} />
+      {query.hasNextPage && (
+        <PanelBody>
+          <LoadMoreButton query={query} />
+        </PanelBody>
+      )}
+      {open && (
+        <CallDrawer
+          call={open}
+          captureEnabled={captureEnabled}
+          onClose={() => setOpenId(null)}
+          onPrev={step(-1)}
+          onNext={step(1)}
+          onExport={(detail) => {
+            // One dialog at a time: the export opens in place of the drawer
+            // rather than over it, which would stack two Escape handlers.
+            setOpenId(null);
+            setExporting(detail);
+          }}
+        />
+      )}
+      {exporting && (
+        <ExportScenarioDialog
+          call={exporting}
+          onClose={() => {
+            setExporting(null);
+            setOpenId(exporting.id);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+function withSelected(listed: readonly string[], selected: string) {
+  return selected && !listed.includes(selected)
+    ? [selected, ...listed]
+    : listed;
+}
 
 /**
- * The other dials a figure narrows the trace by — where a call ended — each
- * the `/ai/calls` filter of the same name.
+ * The search box as typed, written to the address once typing settles. The
+ * address is the query key, so writing every keystroke would send one request
+ * per character, with answers free to land out of order.
+ *
+ * An address that moves on its own (Back, a cleared filter) moves the box with
+ * it. Trimmed equality keeps the box from eating a space the reader types past.
  */
-export const CALL_FILTER_PARAMS = [
-  "provider",
-  "model",
-  "served_model",
-  "served_provider",
-  "tier",
-] as const;
-type CallFilterParam = (typeof CALL_FILTER_PARAMS)[number];
-export type CallFilter = Partial<
-  Record<CallFilterParam | typeof CALL_TASK_PARAM, string>
->;
-
-/** The trace narrowed to the calls behind one figure. */
-export function callsHrefFor(filter: CallFilter): string {
-  return hashWithParams(
-    routeHash(settingsHref("model-calls")),
-    new Map(Object.entries(filter)),
-  );
+function useSettledSearch(
+  settled: string,
+  onSettle: (search: string) => void,
+): [string, (typed: string) => void] {
+  const [typed, setTyped] = useState(settled);
+  const [seen, setSeen] = useState(settled);
+  if (settled !== seen) {
+    setSeen(settled);
+    if (settled.trim() !== typed.trim()) setTyped(settled);
+  }
+  useEffect(() => {
+    if (typed.trim() === settled.trim()) return;
+    const timer = setTimeout(() => onSettle(typed), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [typed, settled, onSettle]);
+  return [typed, setTyped];
 }
 
 export function AiCallsCard() {
   const t = useT();
   const me = useMe();
-  // Same seam as the spend card: `ai_diagnostics:read` (ai/callread.go). The
-  // seat ceiling stays out of the question either way (capability.ts) — a read
-  // seat may still read a diagnostic.
+  // `ai_diagnostics:read` is what `GET /ai/calls` asks for (ai/callread.go).
+  // The seat ceiling stays out of it: a read seat may read a diagnostic.
   const canSee = useCan("ai_diagnostics", "read");
   const [params, setParams] = useUrlParams();
-  const task = params.get(CALL_TASK_PARAM) ?? "";
-  const setTask = (next: string) => {
-    const dials = new Map(params);
-    dials.set(CALL_TASK_PARAM, next);
-    setParams(dials);
-  };
-  const filter: CallFilter = Object.fromEntries(
-    CALL_FILTER_PARAMS.flatMap((key) => {
-      const value = params.get(key);
-      return value ? [[key, value]] : [];
-    }),
+  const filters = useMemo(() => callFiltersOf(params), [params]);
+  const figure = useMemo(() => figureFilterOf(params), [params]);
+  const setFilters = useCallback(
+    (next: CallFilters) => setParams(withCallFilters(params, next)),
+    [params, setParams],
   );
-  const clearFilter = () => {
-    const dials = new Map(params);
-    for (const key of CALL_FILTER_PARAMS) dials.delete(key);
+  const clearAll = () => {
+    const dials = new Map(withCallFilters(params, UNFILTERED_CALLS));
+    for (const key of FIGURE_PARAMS) dials.delete(key);
     setParams(dials);
   };
-  const query = useCallTrace(task, filter, canSee);
-  const calls = query.data?.pages.flatMap((page) => page.data) ?? [];
-  const captureEnabled = query.data?.pages[0]?.payload_capture_enabled ?? false;
-  // The server's complete task set, carried on every page: the tasks on the
-  // loaded rows collapse to the one selected once a filter applies.
-  const listed = query.data?.pages[0]?.task_options ?? [];
-  // A task reached by link may have no calls yet and so be absent from the
-  // server's set; it stays selectable so the select shows what is filtered.
-  const options =
-    task && !listed.some((option) => option.task === task)
-      ? [{ task }, ...listed]
-      : listed;
+  const [search, setSearch] = useSettledSearch(
+    filters.search,
+    useCallback(
+      (typed) => setFilters({ ...filters, search: typed }),
+      [filters, setFilters],
+    ),
+  );
+  const query = useCallTrace(filters, figure, canSee);
+  // The server's complete sets, carried on every page, not the values on the
+  // loaded rows. Those collapse to the one selected once a dial is set.
+  const first = query.data?.pages[0];
+  // A value reached by link may have no calls yet and be absent from the
+  // server's set. It stays selectable so the select shows what is filtered.
+  const listedTasks = first?.task_options ?? [];
+  const tasks =
+    filters.task && !listedTasks.some((option) => option.task === filters.task)
+      ? [{ task: filters.task }, ...listedTasks]
+      : listedTasks;
+  const models = withSelected(first?.models ?? [], filters.model);
+  const hasFigure = Object.keys(figure).length > 0;
+  const narrowed = isNarrowed(filters) || hasFigure;
+  const taskOnly =
+    !hasFigure && !isNarrowed({ ...filters, task: "" }) && filters.task !== "";
 
   if (!canSee) {
-    // Withheld, not absent — the same choice the spend card above it makes. An
-    // absent trace reads as "the installation made no model calls", which is a
-    // claim about the data rather than about who may read it. No request either:
-    // the query is disabled, because a settled denial is not a failure to retry.
+    // Withheld, not absent: an absent trace reads as "the installation made no
+    // model calls". No request either, because a settled denial is no failure.
     return (
       <Panel>
         <PanelBody>
           <QueryGate query={me} pendingLabel={t("aicalls.title")}>
-            {() => <EmptyState>{t("aicalls.withheld")}</EmptyState>}
+            {() => (
+              <SurfaceState
+                state="withheld"
+                emptyLabel={t("aicalls.empty")}
+                loadingLabel={t("aicalls.title")}
+                detail={{ withheldReason: t("aicalls.withheld") }}
+              >
+                {null}
+              </SurfaceState>
+            )}
           </QueryGate>
         </PanelBody>
       </Panel>
     );
   }
 
-  const filtered = Object.keys(filter).length > 0;
-  // No bottom margin of its own: `.settings-stack` owns the gap between cards.
+  const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
+  // The figure a link cut the trace to has no dial of its own. The caption
+  // names it and Clear takes it away with the rest.
+  const caption = (
+    <>
+      {hasFigure &&
+        `${t("aicalls.filtered", { filter: figureWords(figure, t) })} `}
+      <CountLine
+        unit={t("aicalls.unit")}
+        first={1}
+        last={rows.length}
+        total={rows.length}
+        more={query.hasNextPage}
+      />
+    </>
+  );
+  // `.settings-stack` owns the gap between the bar and the card.
   return (
     <>
-      {query.data !== undefined && (
-        <FilterBar
-          label={t("aicalls.filters")}
-          actions={
-            filtered ? (
-              <Button variant="link" onClick={clearFilter}>
-                {t("aicalls.filtered.clear")}
-              </Button>
-            ) : null
-          }
-          caption={
-            filtered
-              ? t("aicalls.filtered", { filter: filterWords(filter, t) })
-              : undefined
-          }
-        >
-          <Field label={t("aicalls.col.task")} className="aicalls-task">
-            {(field) => (
-              <Select
-                {...field}
-                value={task}
-                onChange={setTask}
-                // "All tasks" is a real option, not the placeholder: a reader
-                // who filtered to one task has to be able to come back.
-                options={[
-                  { value: "", label: t("aicalls.filter.all") },
-                  ...options.map((option) => ({
-                    value: option.task,
-                    label: aiTaskLabel(option.task, t, option.display_name),
-                  })),
-                ]}
-              />
-            )}
-          </Field>
-        </FilterBar>
-      )}
-      <Panel className="aicalls-card">
+      <CallFiltersBar
+        tasks={tasks}
+        models={models}
+        filters={filters}
+        search={search}
+        onSearch={setSearch}
+        onChange={setFilters}
+        actions={
+          narrowed && <Button onClick={clearAll}>{t("aicalls.clear")}</Button>
+        }
+        caption={query.data === undefined ? undefined : caption}
+      />
+      <Panel>
         {query.data === undefined && (
           <PanelBody>
-            <QueryStates query={query} pendingLabel={t("aicalls.title")}>
+            <QueryStates
+              query={query}
+              pendingLabel={t("aicalls.title")}
+              pendingLines={6}
+            >
               {null}
             </QueryStates>
           </PanelBody>
         )}
-        {query.data !== undefined && calls.length === 0 && (
-          <PanelBody>
-            <EmptyState>{t("aicalls.empty")}</EmptyState>
-          </PanelBody>
-        )}
-        {calls.length > 0 && (
-          <CallTable calls={calls} captureEnabled={captureEnabled} />
-        )}
-        {query.hasNextPage && (
-          <PanelBody>
-            <LoadMoreButton query={query} />
-          </PanelBody>
+        {query.data !== undefined && (
+          <CallTrace
+            query={query}
+            narrowed={narrowed}
+            taskOnly={taskOnly}
+            onClear={clearAll}
+          />
         )}
       </Panel>
     </>
   );
 }
 
-const FILTER_TERM = {
+const FIGURE_TERM = {
   provider: "aiTerms.provider",
-  model: "aicalls.col.model",
   served_model: "aicalls.filter.servedModel",
   served_provider: "aicalls.filter.servedProvider",
   tier: "aiTerms.tier",
-} as const satisfies Record<CallFilterParam, MessageKey>;
+} as const satisfies Record<FigureParam, MessageKey>;
 
 // Each dial under its own name, with a vendor or a tier named as the rest of
-// this page names them. A model id and an upstream host are their own names.
-function filterWords(filter: CallFilter, t: Translator): string {
-  return CALL_FILTER_PARAMS.flatMap((key) => {
-    const value = filter[key];
+// this page names them. An upstream host is its own name.
+function figureWords(figure: FigureFilter, t: Translator): string {
+  return FIGURE_PARAMS.flatMap((key) => {
+    const value = figure[key];
     if (!value) return [];
     const shown =
       key === "provider"
@@ -280,6 +415,6 @@ function filterWords(filter: CallFilter, t: Translator): string {
         : key === "tier"
           ? tierLabel(value, t)
           : value;
-    return [`${t(FILTER_TERM[key])}: ${shown}`];
+    return [`${t(FIGURE_TERM[key])}: ${shown}`];
   }).join(" · ");
 }

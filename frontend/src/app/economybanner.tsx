@@ -2,11 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { Callout } from "../design-system/callout";
-import { settingsHref } from "../features/settings/settingsrouting";
 import { useT } from "../i18n";
 import { useCan, useCanWrite } from "../lib/capability";
 import { unwrap } from "../lib/problem";
 import { routeHash } from "../lib/router";
+import { settingsHref } from "../lib/settingsrouting";
 
 export function EconomyBanner() {
   const t = useT();

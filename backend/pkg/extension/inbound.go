@@ -48,10 +48,9 @@ const (
 // with no session reaches it, and nothing else about the request identifies a
 // caller.
 //
-// It is a REQUEST an operator resolves, exactly as a Tool's tier and a
-// SecretsRequest are: declaring an endpoint mounts nothing an operator has not
-// enabled, and the bounds below are what the unit ASKS for — an installation
-// ceiling may grant less, in which case the manifest records both numbers.
+// Declaring an endpoint mounts nothing an operator has not enabled. The core
+// mounts the bounds below as declared: Validate refuses one over its maximum,
+// and nothing clamps it.
 //
 // The core owns admission and the unit owns meaning. The core resolves the
 // installation's workspace, refuses an undeclared slug, caps the body, meters

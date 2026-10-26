@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, within } from "storybook/test";
-import { Button, Card, Disclosure, TextInput } from "./atoms";
+import { Button, Card, Disclosure, SegmentedControl, TextInput } from "./atoms";
 import { ChoiceList } from "./choicelist";
 import { DataTable } from "./datatable";
 import { Panel, PanelBody, PanelIntro } from "./panel";
@@ -339,6 +339,38 @@ export const BleedAtPhoneWidth: Story = {
   parameters: { layout: "fullscreen" },
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+const DENSITIES = ["compact", "comfortable"] as const;
+type Density = (typeof DENSITIES)[number];
+
+// A short pick among two or three answers sits in the control column and,
+// like a Switch, writes on the pick.
+function DensityRow() {
+  const [density, setDensity] = useState<Density>("comfortable");
+  return (
+    <Panel title="Display">
+      <SettingList bleed="settings">
+        <SettingRow
+          label="Row density"
+          description="How tightly lists pack their rows."
+          control={
+            <SegmentedControl
+              label="Row density"
+              options={DENSITIES}
+              value={density}
+              onChange={setDensity}
+              labels={{ compact: "Compact", comfortable: "Comfortable" }}
+            />
+          }
+        />
+      </SettingList>
+    </Panel>
+  );
+}
+
+export const SegmentedControlControl: Story = {
+  render: () => <DensityRow />,
 };
 
 function rowBoxes(row: Element) {

@@ -25,7 +25,7 @@ function Head({
   const [to, setTo] = useState<string[]>(["ada@brandt.example"]);
   const [cc, setCc] = useState<string[]>([]);
   const [bcc, setBcc] = useState<string[]>([]);
-  const [bccOpen, setBccOpen] = useState(false);
+  const [copiesOpen, setCopiesOpen] = useState(false);
   return (
     <StoryProviders>
       <AddressBlock
@@ -35,8 +35,8 @@ function Head({
         onCcChange={setCc}
         bcc={bcc}
         onBccChange={setBcc}
-        bccOpen={bccOpen}
-        onOpenBcc={() => setBccOpen(true)}
+        copiesOpen={copiesOpen}
+        onOpenCopies={() => setCopiesOpen(true)}
         suggestions={[]}
         onToEditing={() => {}}
         invalidTo={invalidTo}

@@ -168,15 +168,11 @@ export type PendingAction = Readonly<{
   error: string | null;
 }>;
 
-// The drawer BEFORE a machine has written anything: what the rep wants said,
-// and the one control that asks for it. It is the pre-draft face of the same
-// block the disclosure band takes over once a draft exists — the two never
-// show together, because the band's whole claim is about words that are on
-// screen.
+// The ask for a draft: what the rep wants said, and the one control that asks
+// for it. It stays once a draft exists, so a changed steer can ask again.
 //
-// Rejecting a draft is not here. It is a verdict on the finished words and it
-// sits in the action row with the other verdicts (send, cancel), where a rep
-// decides what happens to the message rather than how it gets written.
+// Rejecting a draft sits beside the disclosure instead. It is a verdict on the
+// finished words.
 export function DraftOffer({
   replying = false,
   intent,
@@ -191,33 +187,34 @@ export function DraftOffer({
   unavailable: DraftUnavailable | null;
 }>) {
   const t = useT();
+  const ask = replying ? "compose.replyIntent" : "compose.newIntent";
   return (
     <div className="compose-offer">
-      {!replying && (
-        <p className="t-caption">{t("compose.draftContextHint")}</p>
-      )}
-      {/* A NAME above the box, not only a placeholder: the placeholder is the
-          example and disappears the moment the reader types, so a field named
-          that way had no name at all the instant it held anything. The verb
-          stays on the box's own line — it acts on what was typed there, and a
-          row is how the pair reads as one ask. */}
-      <Field label={t(replying ? "compose.replyIntent" : "compose.newIntent")}>
+      {/* One line, as a mail client draws its own: the ask names itself in its
+          placeholder, and a screen reader hears the same name as the label. A
+          new message says what the model reads, as the line's own hint. */}
+      <Field
+        label={t(ask)}
+        labelHidden
+        hint={
+          // Read to a screen reader; on screen the placeholder says it, and a
+          // second line made the band heavy.
+          replying ? undefined : (
+            <span className="sr-only">{t("compose.draftContextHint")}</span>
+          )
+        }
+      >
         {(control) => (
           <div className="compose-draftbar">
+            <Sparkles aria-hidden="true" />
             <TextInput
               {...control}
-              placeholder={t(
-                replying ? "compose.replyIntent" : "compose.newIntent",
-              )}
+              placeholder={t(ask)}
               value={intent}
               onChange={(event) => onIntentChange(event.target.value)}
             />
-            {/* The agent's own verb, so it carries the agent's own colour and
-                its mark. Drawn as an ordinary ghost button it read as the
-                quietest control in the drawer when it is the one thing in here
-                a machine does. Indigo means "Margince does this" everywhere
-                else on the record; a composer that said it in grey is the one
-                surface where the reader has to guess. */}
+            {/* The agent's own verb, in the agent's own colour and mark:
+                indigo means "Margince does this" everywhere on the record. */}
             <Button
               variant="ai"
               onClick={draft.run}
@@ -225,8 +222,7 @@ export function DraftOffer({
               pending={draft.pending}
               busyLabel={t("compose.drafting")}
             >
-              <Sparkles aria-hidden="true" />
-              {t(replying ? "compose.draftReply" : "compose.draftWithAi")}
+              {t(replying ? "compose.draftReply" : "compose.draftEmail")}
             </Button>
           </div>
         )}

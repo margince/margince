@@ -16,7 +16,8 @@ package activities
 // Extracted from listActivitiesFilter, which the length ceiling had outgrown —
 // and the two arms belong together anyway, because what makes them safe is that
 // their bounds MEET rather than overlap.
-func openTaskWindowClauses(in ListActivitiesInput, arg func(any) int) []string {
+// reminders widens the upper bound: a due reminder is today's work.
+func openTaskWindowClauses(in ListActivitiesInput, reminders string, arg func(any) int) []string {
 	const openTask = "a.kind = 'task' AND NOT a.is_done AND a.due_at IS NOT NULL"
 	var clauses []string
 	if in.OpenAndDueBy != nil {
@@ -30,6 +31,9 @@ func openTaskWindowClauses(in ListActivitiesInput, arg func(any) int) []string {
 			// owed now: nobody named a later day for either.
 			deadline = "(" + deadline + sprintf(" OR (a.due_at IS NULL AND a.source_system = ANY($%d)))",
 				arg([]string{EmailRequestTaskSource, CommitmentTaskSource}))
+		}
+		if in.OrRemindersDue && reminders != "" {
+			deadline = "(" + deadline + " OR " + reminders + ")"
 		}
 		clauses = append(clauses, "a.kind = 'task' AND NOT a.is_done AND "+deadline)
 	}

@@ -27,7 +27,11 @@ import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { billingOf, billingPatchOf } from "./billingclassification";
 import "../lists/listsection.css";
-import { currencyOptions } from "../../format/currencychoices";
+import {
+  currencyOptions,
+  type LeadingCurrencies,
+} from "../../format/currencychoices";
+import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
 import {
   OTHER_UNIT,
   storedUnitOf,
@@ -78,7 +82,10 @@ export async function searchProductCandidates(
 }
 
 // Built per render: option labels are shown as given, so they arrive translated.
-function productFields(t: Translator): CreateField[] {
+function productFields(
+  t: Translator,
+  leadingCurrencies: LeadingCurrencies,
+): CreateField[] {
   return [
     { key: "name", label: "product.name", required: true },
     { key: "sku", label: "product.sku" },
@@ -107,7 +114,7 @@ function productFields(t: Translator): CreateField[] {
       label: "product.currency",
       type: "select",
       required: true,
-      options: currencyOptions(),
+      options: currencyOptions(leadingCurrencies),
     },
     { key: "default_tax_rate", label: "product.taxRate", type: "number" },
     {
@@ -265,7 +272,8 @@ export function ProductsAdmin() {
     initialSort: "name",
     paramScope: "products",
   });
-  const fields = productFields(t);
+  const leading = useLeadingCurrencies();
+  const fields = productFields(t, leading);
 
   const createProduct = async (values: Record<string, string>) => {
     return unwrap(
@@ -278,9 +286,9 @@ export function ProductsAdmin() {
             storedUnitOf(values.unit ?? "", values.unit_other ?? "") || null,
           unit_price_minor: toMinor(
             values.unit_price,
-            values.currency || "EUR",
+            values.currency || leading[0],
           ),
-          currency: values.currency || "EUR",
+          currency: values.currency || leading[0],
           default_tax_rate: values.default_tax_rate
             ? Number(values.default_tax_rate)
             : null,
@@ -365,6 +373,7 @@ export function ProductsAdmin() {
           )}
           {canArchive && (
             <ArchiveAction
+              requires={{ object: "product", action: "delete" }}
               label={t("product.archive")}
               confirmText={t("product.archiveConfirm")}
               archivedMessage={t("record.archiveDone", { name: p.name })}

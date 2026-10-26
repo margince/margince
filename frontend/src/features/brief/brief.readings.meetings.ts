@@ -4,7 +4,7 @@
 import { formatNumber } from "../../format/format";
 import type { Locale, Translator, usePlural } from "../../i18n";
 import { navigate } from "../../lib/router";
-import { settingsHref } from "../settings/settingsrouting";
+import { settingsHref } from "../../lib/settingsrouting";
 import type { Worklist } from "../worklist/worklist.queries";
 import {
   type CalendarDay,

@@ -78,11 +78,18 @@ func restoreMailRecipientsBatch(ctx context.Context, tx pgx.Tx, in datatask.Batc
 }
 
 // A missing original link uses the same guarded natural-key fallback as participant replay.
-const mailRecipientOriginalScope = `FROM activity a JOIN raw_capture rc ON rc.id = a.raw_capture_id
- OR (a.raw_capture_id IS NULL AND rc.source_system = a.source_system AND rc.source_id = a.source_id)
- WHERE a.kind = 'email' AND a.archived_at IS NULL
- AND split_part(a.captured_by, ':', 1) = 'connector'
+const mailRecipientOriginalScope = `FROM activity a JOIN raw_capture rc ON ` + storedMailOriginal + `
+ WHERE a.kind = 'email' AND a.archived_at IS NULL AND ` + storedMailProvider
+
+// storedMailOriginal matches raw_capture rc to the activity a it is the
+// original of. storedMailProvider limits a to the mail connectors whose
+// original is the message's own RFC 822 bytes.
+const (
+	storedMailOriginal = `(rc.id = a.raw_capture_id
+ OR (a.raw_capture_id IS NULL AND rc.source_system = a.source_system AND rc.source_id = a.source_id))`
+	storedMailProvider = `split_part(a.captured_by, ':', 1) = 'connector'
  AND split_part(a.captured_by, ':', 2) IN ('gmail', 'imap', 'graph')`
+)
 
 func estimateMailRecipientOriginals(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {
 	if err := auth.Require(ctx, "data_task", principal.ActionRead); err != nil {

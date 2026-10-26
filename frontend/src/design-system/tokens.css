@@ -469,6 +469,9 @@
      drawn outside the shell — a settings card's own story renders one — and a
      measure that resolved to nothing there would silently uncap it. */
   --settingsColumn: 1024px;
+  /* The widest a typed answer gets in a settings row: past it a short value
+     sits in a box that reads as a banner. */
+  --settingsFieldMeasure: 30rem;
 
   /* THE OVERLAY MEASURES, one per `Modal` intent (modal.tsx). A box is its
      measure or the glass less its gutter, whichever is narrower. */
@@ -480,6 +483,11 @@
      to read across. */
   --drawerWindowWidth: 1440px;
   --dialogFullWidth: 1240px;
+  /* The docked window (DockedWindow): its own size beside the page, and the
+     grown one. The glass less a gutter bounds both. */
+  --dockWidth: 560px;
+  --dockHeight: 640px;
+  --dockGrownWidth: 880px;
 
   /* Vertical-rhythm scale — the 4/8/12/16/24 rungs the screens were already
    * reaching for ad-hoc (inconsistently spelled 10/12/14/16 before this).

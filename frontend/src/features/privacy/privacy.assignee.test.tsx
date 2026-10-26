@@ -49,6 +49,7 @@ function dsrAssignedTo(assigneeId: string): DataSubjectRequest {
     assignee_id: assigneeId,
     due_at: "2026-08-01T00:00:00Z",
     due_overridden: false,
+    dispute_open: false,
     created_at: "2026-07-01T00:00:00Z",
   };
 }
@@ -105,6 +106,7 @@ function namesOf(byId: Readonly<Record<string, string>>): NameServer {
         ([id, display_name]): components["schemas"]["SeatName"] => ({
           id,
           display_name,
+          departed: false,
         }),
       ),
     });

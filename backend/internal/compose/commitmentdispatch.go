@@ -11,8 +11,9 @@ package compose
 //   - A promise one of OUR colleagues made becomes their task. Read confidently
 //     enough, it is written directly and marked as the extractor's; otherwise
 //     it is proposed to them and written when they accept.
-//   - A promise nobody can be named for is proposed to whoever the reading
-//     belongs to, and accepting it makes it theirs.
+//   - A promise whose colleague cannot be given the task — nobody named, an
+//     agent seat, a seat that left, or private mail they may not read — stays
+//     as the open claim on the contact. Nobody else is asked for it.
 //
 // The task is keyed on the promise's evidence locator, archived tasks
 // included, so a task a rep dismissed is never written again.
@@ -22,6 +23,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -33,14 +35,16 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // CommitmentTaskKind is the staging kind for a promise read too unsurely to
 // become a task without asking.
-const CommitmentTaskKind = "commitment_task"
+const CommitmentTaskKind = approvalsubject.KindCommitmentTask
 
 // CommitmentTaskConfidence separates automatic tasks from proposals after semantic admission.
 // Certified firm promises must clear this threshold; confidence cannot admit a non-action.
@@ -82,14 +86,17 @@ type Commitment struct {
 	PromisedTo *ids.ContactID
 	Recipients []ids.ContactID
 	// DueDate is the day the source stated, YYYY-MM-DD, or empty.
-	DueDate    string
+	DueDate string
+	// DueZone is the IANA zone that day ends in: the promiser's own when the
+	// day was read from their week, the installation's when empty.
+	DueZone    string
 	Confidence float64
 	// NeedsConfirmation keeps reported promises from assigning work without review.
 	NeedsConfirmation bool
 	Links             []activities.ActivityLinkInput
 	// PrivateTo is the one member the conversation answers to, when it is
-	// private mail. The task is theirs alone to read, and nobody else's to
-	// hold: a promise in mail only they may read is proposed to them.
+	// private mail. A promise another colleague made there is theirs only when
+	// they may open its message, and its task is read by the two of them.
 	PrivateTo *ids.UUID
 	// Locator identifies the promise across readings; see commitmentLocator.
 	Locator string
@@ -106,7 +113,8 @@ type CommitmentOutcome string
 
 const (
 	// CommitmentRemembered means it was already a task, already proposed or
-	// refused, or dismissed by a human. Nothing new was written.
+	// refused, dismissed by a human, or nobody is responsible for it. Nothing
+	// new was written.
 	CommitmentRemembered CommitmentOutcome = "remembered"
 	// CommitmentWatched is the customer's promise, filed on their record.
 	CommitmentWatched CommitmentOutcome = "watched"
@@ -116,6 +124,15 @@ const (
 	CommitmentTaskWritten CommitmentOutcome = "task_written"
 	// CommitmentProposed is staged for a human to accept.
 	CommitmentProposed CommitmentOutcome = "proposed"
+	// CommitmentHistoricalProposed is a promise the 30-day horizon stopped on
+	// evidence a colleague logged by hand: staged for its promiser to accept.
+	// Like any pending proposal its decision stays open, because the card
+	// rests on it; no task exists until the promiser accepts.
+	CommitmentHistoricalProposed CommitmentOutcome = "historical_proposed"
+	// CommitmentPromiserUnassignable is a promise nobody may be asked about. Its
+	// maker is unknown, has left, or does not own the private mail it is in. It
+	// is recorded on its source as a finding, and no work is created for anyone.
+	CommitmentPromiserUnassignable CommitmentOutcome = "promiser_not_assignable"
 )
 
 // commitmentLocator names one promise across readings of one source: the same
@@ -144,19 +161,27 @@ func NewCommitmentDispatcher(pool *pgxpool.Pool, approval *approvals.Service) *C
 }
 
 // DispatchTx applies the rule to one promise inside the caller's transaction.
-// A proposal is staged under ctx's principal, on behalf of the colleague when
-// one is named; the caller decides who an unnamed promise is staged for by
-// what ctx carries. The id is the approval when one was staged, the task when
+// A proposal is staged under ctx's principal, on behalf of the colleague who
+// made the promise. The id is the approval when one was staged, the task when
 // one was written.
 func (d *CommitmentDispatcher) DispatchTx(
 	ctx context.Context, tx pgx.Tx, c Commitment, bundleID ids.UUID,
 ) (CommitmentOutcome, ids.UUID, error) {
+	c, err := withStatedWeek(ctx, tx, c)
+	if err != nil {
+		return CommitmentRemembered, ids.UUID{}, err
+	}
 	outcome, id, err := d.routeCommitment(ctx, tx, c, bundleID)
 	if err != nil || outcome == CommitmentRemembered || outcome == CommitmentOutcome(activities.CommitmentSourceUnavailable) {
 		return outcome, id, err
 	}
 	evidence := make([]openapi_types.UUID, 0, len(c.ReadMessages))
 	for _, message := range c.ReadMessages {
+		// The recorded decision is shown with the message, and the colleague
+		// who sent it must not learn which other mail on the thread exists.
+		if promisedOnAnothersPrivateThread(c) && message != c.SourceActivityID {
+			continue
+		}
 		evidence = append(evidence, openapi_types.UUID(message))
 	}
 	decision := crmcontracts.CommitmentAdmission{Locator: c.Locator, Summary: c.Summary, SourceQuote: c.Quote, Outcome: string(outcome), CurrentWork: !outcome.withheld(), RuleVersion: activities.CommitmentAdmissionVersion, EvidenceIds: evidence, EvaluatedAt: c.AsOf}
@@ -173,20 +198,21 @@ func (d *CommitmentDispatcher) DispatchTx(
 
 func (d *CommitmentDispatcher) routeCommitment(ctx context.Context, tx pgx.Tx, c Commitment, bundleID ids.UUID) (CommitmentOutcome, ids.UUID, error) {
 	filing := extractorContext(ctx, c.Extractor)
-	reason, err := d.admission(ctx, tx, c)
+	read, err := d.admission(ctx, tx, c)
 	if err != nil {
 		return CommitmentRemembered, ids.UUID{}, err
 	}
+	reason, late := read.Reason, c.proposeLate(read)
 	if reason == activities.CommitmentSourceUnavailable {
 		return CommitmentOutcome(reason), ids.UUID{}, nil
 	}
-	if reason == activities.CommitmentCurrent {
+	if reason == activities.CommitmentCurrent || late {
 		offered, err := d.offeredBefore(ctx, tx, c)
 		if err != nil {
 			return CommitmentRemembered, ids.Nil, err
 		}
 		if offered != nil {
-			return d.reconcilePendingRecipients(ctx, tx, c, *offered, bundleID)
+			return d.reconcilePendingRecipients(ctx, tx, c, *offered, bundleID, late)
 		}
 	}
 	if c.Theirs == nil {
@@ -223,6 +249,14 @@ func (d *CommitmentDispatcher) routeCommitment(ctx context.Context, tx pgx.Tx, c
 	if outcome := c.Meaning.withheldOutcome(); outcome != "" {
 		return outcome, ids.UUID{}, nil
 	}
+	if late {
+		c.NeedsConfirmation = true
+		outcome, id, err := d.createOurCommitment(ctx, tx, c, bundleID, true)
+		if outcome == CommitmentProposed {
+			outcome = CommitmentHistoricalProposed
+		}
+		return outcome, id, err
+	}
 	if reason != activities.CommitmentCurrent {
 		return d.retainWithheld(ctx, tx, c, reason, recorded)
 	}
@@ -230,10 +264,12 @@ func (d *CommitmentDispatcher) routeCommitment(ctx context.Context, tx pgx.Tx, c
 		return d.watchCommitment(filing, tx, c, reason)
 	}
 
-	return d.createOurCommitment(ctx, tx, c, bundleID)
+	return d.createOurCommitment(ctx, tx, c, bundleID, false)
 }
 
-func (d *CommitmentDispatcher) createOurCommitment(ctx context.Context, tx pgx.Tx, c Commitment, bundleID ids.UUID) (CommitmentOutcome, ids.UUID, error) {
+// createOurCommitment writes or proposes one of our colleagues' promises. A
+// late one is read late, so it waits the whole horizon for its promiser.
+func (d *CommitmentDispatcher) createOurCommitment(ctx context.Context, tx pgx.Tx, c Commitment, bundleID ids.UUID, late bool) (CommitmentOutcome, ids.UUID, error) {
 	filing := extractorContext(ctx, c.Extractor)
 
 	claimIDs, open, err := d.fileRecipientClaims(filing, tx, c, activities.CommitmentCurrent, false)
@@ -245,27 +281,42 @@ func (d *CommitmentDispatcher) createOurCommitment(ctx context.Context, tx pgx.T
 		claimID, claimIDs = &claimIDs[0], nil
 	}
 
-	// Whether the seat can be GIVEN the task, asked before writing one. An automatic
-	// writer may only assign to an active colleague, and most seats on imported mail
-	// never signed in or have left — so a promise sent by one of them reaches the
-	// writer and is refused, which fails the whole conversation and every later pass
-	// over it.
-	holdsWork := false
-	if c.Seat != nil {
-		var err error
-		if holdsWork, err = activities.SeatCanHoldAutomaticWork(ctx, tx, ids.From[ids.UserKind](*c.Seat)); err != nil {
-			return CommitmentRemembered, ids.UUID{}, err
-		}
+	// Whether the promiser can be GIVEN the task, asked before writing one. A
+	// refused write would fail the conversation and every later pass over it.
+	// Asked with the create door's rule, so an invited colleague counts.
+	asked, state, err := commitmentAskedOf(ctx, tx, c)
+	if err != nil {
+		return CommitmentRemembered, ids.UUID{}, err
 	}
-	if !c.NeedsConfirmation && holdsWork && c.Confidence >= CommitmentTaskConfidence && mayHoldPrivateTask(c.PrivateTo, *c.Seat) {
+	if asked.IsZero() {
+		return CommitmentPromiserUnassignable, ids.UUID{}, nil
+	}
+	if !c.NeedsConfirmation && c.Confidence >= CommitmentTaskConfidence {
 		task, err := writeCommitmentTask(ctx, tx, d.tasks, d.claims, commitmentTask{
 			Extractor: c.Extractor, Locator: c.Locator, Summary: c.Summary, Body: c.Body,
-			SourceActivityID: c.SourceActivityID, Links: c.Links, DueDate: c.DueDate,
-			Assignee: *c.Seat, ClaimID: claimID, ClaimIDs: claimIDs, PrivateTo: c.PrivateTo,
+			SourceActivityID: c.SourceActivityID, Links: c.Links, DueDate: c.DueDate, DueZone: c.DueZone,
+			Assignee: asked, ClaimID: claimID, ClaimIDs: claimIDs, PrivateTo: c.PrivateTo,
+			Origin: activities.OriginAgent,
 		})
 		return CommitmentTaskWritten, task, err
 	}
-	return d.propose(ctx, tx, c, holdsWork, claimID, claimIDs, bundleID)
+	proposal := CommitmentTaskProposal{
+		SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party,
+		SeatID: &asked, PromiserSeatID: &asked, DueDate: c.DueDate, DueZone: c.DueZone, Links: c.Links, Quote: c.Quote,
+		Locator: c.Locator, ClaimID: claimID, ClaimIDs: claimIDs, Body: c.Body, PrivateTo: c.PrivateTo,
+	}
+	return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID, asked, commitmentWindow(state, late))
+}
+
+// commitmentWindow is how long a proposal waits for its promiser. An invited
+// colleague finds the card when they first sign in, which may be weeks away,
+// and the default 72 hours would expire it unseen. A promise from a late
+// report is as old as the horizon already, so it gets the same wait.
+func commitmentWindow(state activities.SeatWorkState, late bool) *time.Duration {
+	if state != activities.SeatInvited && !late {
+		return nil
+	}
+	return new(time.Duration(provenance.CommitmentHorizonDays) * 24 * time.Hour)
 }
 
 func (d *CommitmentDispatcher) watchCommitment(ctx context.Context, tx pgx.Tx, c Commitment, reason activities.CommitmentAdmissionReason) (CommitmentOutcome, ids.UUID, error) {
@@ -361,7 +412,7 @@ func (d *CommitmentDispatcher) fileClaim(
 		Renewal: c.AdmissionSourceID != nil && reason == activities.CommitmentCurrent,
 	}
 	if c.DueDate != "" {
-		due, err := commitmentDueInstant(ctx, tx, c.DueDate)
+		due, err := commitmentDueInstant(ctx, tx, c.DueDate, c.DueZone)
 		if err != nil {
 			return crmcontracts.ConversationClaim{}, false, err
 		}
@@ -370,30 +421,17 @@ func (d *CommitmentDispatcher) fileClaim(
 	return d.claims.RecordConversationClaimTx(ctx, tx, in)
 }
 
-// propose stages the promise for a human. A proposal refused before, or one
-// still waiting, is not staged again: the identity is the locator.
-func (d *CommitmentDispatcher) propose(
-	ctx context.Context, tx pgx.Tx, c Commitment, holdsWork bool, claimID *ids.UUID, claimIDs []ids.UUID, bundleID ids.UUID,
+// stageCommitmentProposal puts one promise to the one colleague asked. With
+// nobody asked it stages nothing: a promise is never left for whoever reads it.
+// A proposal refused before, or one still waiting, is not staged again: the
+// identity is the locator.
+func (d *CommitmentDispatcher) stageCommitmentProposal(
+	ctx context.Context, tx pgx.Tx, c Commitment, proposal CommitmentTaskProposal, bundleID ids.UUID, asked ids.UUID, window *time.Duration,
 ) (CommitmentOutcome, ids.UUID, error) {
-	seat := c.Seat
-	if !holdsWork {
-		seat = nil
+	if asked.IsZero() {
+		return CommitmentPromiserUnassignable, ids.UUID{}, nil
 	}
-	if c.PrivateTo != nil && !mayHoldPrivateTask(c.PrivateTo, derefSeat(seat)) {
-		seat = c.PrivateTo
-	}
-	if seat != nil {
-		ctx = onBehalfOf(ctx, *seat)
-	}
-	proposal := CommitmentTaskProposal{
-		SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party,
-		SeatID: seat, PromiserSeatID: c.Seat, PromiserUnresolved: c.Seat == nil, DueDate: c.DueDate, Links: c.Links, Quote: c.Quote,
-		Locator: c.Locator, ClaimID: claimID, ClaimIDs: claimIDs, Body: c.Body, PrivateTo: c.PrivateTo,
-	}
-	return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID)
-}
-
-func (d *CommitmentDispatcher) stageCommitmentProposal(ctx context.Context, tx pgx.Tx, c Commitment, proposal CommitmentTaskProposal, bundleID ids.UUID) (CommitmentOutcome, ids.UUID, error) {
+	ctx = onBehalfOf(ctx, asked)
 	raw, err := json.Marshal(proposal)
 	if err != nil {
 		return CommitmentRemembered, ids.UUID{}, fmt.Errorf("compose: marshal commitment proposal: %w", err)
@@ -421,17 +459,15 @@ func (d *CommitmentDispatcher) stageCommitmentProposal(ctx context.Context, tx p
 		Evidence:       evidence,
 		BundleID:       bundleID,
 		JoinPending:    true,
+		TTL:            window,
 	})
+	if errors.Is(err, approvals.ErrNoDecider) {
+		return CommitmentRemembered, ids.UUID{}, nil
+	}
 	if err != nil || !staged {
 		return CommitmentRemembered, ids.UUID{}, err
 	}
 	return CommitmentProposed, approvalID.UUID, nil
-}
-
-// mayHoldPrivateTask reports whether a member may hold a task about this
-// conversation: any member when it is shared, only its owner when it is private.
-func mayHoldPrivateTask(privateTo *ids.UUID, seat ids.UUID) bool {
-	return privateTo == nil || *privateTo == seat
 }
 
 // derefSeat is the seat or the zero id, which no private conversation names.

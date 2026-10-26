@@ -1,5 +1,5 @@
 import "./reporting.css";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -12,9 +12,10 @@ import { Select } from "../../design-system/select";
 import { formatNumber, INTL_LOCALE } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
-import { throwProblem, unwrap } from "../../lib/problem";
+import { throwProblem } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import type { ReportingReport } from "./reporting.model";
+import { useReportingCatalog } from "./reporting.queries";
 
 type Schedule = components["schemas"]["ReportingSchedule"];
 type Input = components["schemas"]["ReportingScheduleInput"];
@@ -44,12 +45,7 @@ export function ReportingScheduleDialog({
     },
   );
   const canRetention = useCan("retention_policy", "read");
-  const readiness = useQuery({
-    queryKey: ["reporting-catalog"],
-    queryFn: async () => {
-      return unwrap(await api.GET("/analytics/metrics"));
-    },
-  });
+  const readiness = useReportingCatalog();
   const ready = readiness.data?.schedule_ready === true;
   const retentionDays = readiness.data?.edition_retention_days;
   const plural = usePlural();

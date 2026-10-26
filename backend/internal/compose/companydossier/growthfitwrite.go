@@ -31,7 +31,9 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -72,14 +74,17 @@ func GrowthFitRequest(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
 		System:   growthFitSystemFor(fence, lang),
-		Messages: []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in))}},
+		Messages: []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in, lang))}},
 		// Our own offering is what makes this a FIT rather than a description, so
 		// the task contract declares the company block UNCONDITIONAL here and
 		// there is no flag to set: a growth fit written without it is the guess
 		// the band cap exists to flag.
-		MaxTokens:      ai.ReasoningOutputMaxTokens,
-		ResponseSchema: growthFitSchema(),
-		SecretStripper: ai.NewSecretStripper(),
+		// The offering the context describes is the one the cache key was built
+		// from: both read it off the same Input.
+		CompanyContextOffering: in.AssessAgainst,
+		MaxTokens:              ai.ReasoningOutputMaxTokens,
+		ResponseSchema:         growthFitSchema(),
+		SecretStripper:         ai.NewSecretStripper(),
 	}
 }
 
@@ -87,6 +92,10 @@ func GrowthFitRequest(in Input, lang string) model.Request {
 // the entity_type a citation of it names, so the key a model reads is the type
 // it writes. A profile field cited as a fact grounds nothing and is dropped.
 type modelInput struct {
+	// Industry is the company column worded in the prompt language. The company
+	// row stays uncitable, so a claim can cite the value only through the
+	// profile field when one exists.
+	Industry      string                             `json:"industry,omitempty"`
 	ProfileFields []crmcontracts.CompanyProfileField `json:"profile_field"`
 	Facts         []crmcontracts.CompanyFact         `json:"fact"`
 }
@@ -98,8 +107,8 @@ type modelInput struct {
 // values to fingerprint them, which returns the error a genuine failure would
 // raise. An empty prompt would still reach the model fenced, and the grounding
 // filter refuses the reply that came back from it.
-func encodeInput(in Input) string {
-	encoded, _ := json.Marshal(modelInput{ProfileFields: in.ProfileFields, Facts: in.Facts}) //nolint:errchkjson // plain structs of scalars; marshal cannot fail
+func encodeInput(in Input, lang string) string {
+	encoded, _ := json.Marshal(modelInput{Industry: contacts.IndustryWords(in.Industry, textlang.Lang(lang)), ProfileFields: in.ProfileFields, Facts: in.Facts}) //nolint:errchkjson // plain structs of scalars; marshal cannot fail
 	return string(encoded)
 }
 

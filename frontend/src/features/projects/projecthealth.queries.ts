@@ -7,6 +7,7 @@ import {
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { throwProblem } from "../../lib/problem";
+import { project360Key } from "./project360.key";
 
 // How a project is going, as somebody judged it on a day.
 //
@@ -60,7 +61,7 @@ export function useRecordProjectHealth(projectId: string) {
     // old judgement would be the page disagreeing with itself.
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: projectHealthKey(projectId) });
-      qc.invalidateQueries({ queryKey: ["project360", projectId] });
+      qc.invalidateQueries({ queryKey: project360Key(projectId) });
     },
   });
 }
@@ -88,14 +89,7 @@ export function useCorrectProjectHealth(projectId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: projectHealthKey(projectId) });
-      qc.invalidateQueries({ queryKey: ["project360", projectId] });
+      qc.invalidateQueries({ queryKey: project360Key(projectId) });
     },
   });
-}
-
-/** The reading that stands: newest first, corrections already excluded server-side. */
-export function currentAssessment(
-  rows: ProjectHealthAssessment[] | undefined,
-): ProjectHealthAssessment | undefined {
-  return rows?.find((row) => !row.superseded);
 }

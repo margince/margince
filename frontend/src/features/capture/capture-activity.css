@@ -63,7 +63,6 @@
   margin: 0;
   max-width: 60ch;
 }
-.capture-activity__drawer-sub,
 .capture-activity__drawer-transport {
   margin: 0 0 var(--space-3);
 }
@@ -73,4 +72,15 @@
    reader came to check and is the one line here they can act on. */
 .capture-activity__drawer-message {
   margin: 0 0 var(--space-3);
+}
+
+/* The filtered count and its way back share one line, wrapping on a phone. */
+.capture-activity__countline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+.capture-activity__countline > p {
+  margin: 0;
 }

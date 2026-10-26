@@ -1,38 +1,26 @@
 import { useQuery } from "@tanstack/react-query";
-import { useId, useState } from "react";
-import { api } from "../../api/client";
+import { type ReactNode, useCallback, useId, useState } from "react";
 import type { components } from "../../api/schema";
-import { PageAsideToggle, usePageAside } from "../../components/pageaside";
-import { useHasUnsavedChanges } from "../../components/unsaved";
-import { Modal } from "../../design-system/atoms";
-import { Heading } from "../../design-system/heading";
 import { liveProjects } from "../../design-system/projectpicker";
-import { RecordTabs } from "../../design-system/recordtabs";
 import { RecordView } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import { useRecordWriteRefusal } from "../../lib/capability";
 import { contactPageState, contactQuery } from "../../lib/contact.queries";
 import { BRIEF_PARAM } from "../../lib/contactpage.address";
-import {
-  CONTACT_TABS,
-  type ContactTab,
-  contactTabRoute,
-} from "../../lib/contacttab";
+import { type ContactTab, contactTabRoute } from "../../lib/contacttab";
 import { useOpenEmail } from "../../lib/openemail";
-import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { scrollPageToTop } from "../../lib/reveal";
 import { useUrlParams } from "../../lib/urlstate";
-import { useFoldedViewport } from "../../lib/viewport";
 import { BriefQueue } from "../brief/brief.queue";
 import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { useWaitingDraftBand } from "../mail/composewaitingdraft";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { useContact360 } from "./contact360";
-import { ContactActions } from "./contactactions";
+import { ContactActions, useActivityGate } from "./contactactions";
 import { ArchivedContactPage } from "./contactarchived";
+import { useConsentGuard } from "./contactconsentpanel";
 import { ContactResearchDrawer } from "./contactdrawers";
-import { ContactFacts } from "./contactfacts";
 import { ContactOpening } from "./contactopening";
 import { ContactOverview } from "./contactoverview";
 import { ContactRail } from "./contactrail";
@@ -44,6 +32,7 @@ import {
 } from "../worklist/worklist.return";
 import {
   ContactActivityDrawer,
+  ContactCallStart,
   ContactMailDrawer,
   ContactWriteTo,
   type Drawer,
@@ -51,13 +40,36 @@ import {
   useComposer,
 } from "./contactpage.drawers";
 import { ContactMarks } from "./contactpage.marks";
-import { ContactTabPanel, TAB_LABEL_KEYS } from "./contactpage.tabs";
+import { ContactRecordTabs, ContactTabPanel } from "./contactpage.tabs";
 
 export { runContactMomentAction } from "./contactpage.drawers";
 
 export type Contact360 = components["schemas"]["Contact360"];
 
 export type ContactMomentAction = components["schemas"]["ContactMomentAction"];
+
+// The refusals the left card's footnote states, or nothing while the record
+// and the activity gate refuse nothing.
+function refusalsOf(
+  readOnlyReason: string | undefined,
+  readOnlyReasonId: string,
+  activity: ReturnType<typeof useActivityGate>,
+  t: ReturnType<typeof useT>,
+): ReactNode {
+  const activityRefused = activity.refusedId !== undefined;
+  if (!readOnlyReason && !activityRefused) {
+    return undefined;
+  }
+  return (
+    <>
+      {readOnlyReason && <span id={readOnlyReasonId}>{readOnlyReason}</span>}
+      {readOnlyReason && activityRefused && " "}
+      {activityRefused && (
+        <span id={activity.sentenceId}>{t("record.logActivityRefused")}</span>
+      )}
+    </>
+  );
+}
 
 export function ContactPageV2({
   id,
@@ -69,56 +81,23 @@ export function ContactPageV2({
   const [openEmail, setOpenEmail] = useOpenEmail();
   const t = useT();
   const recordZone = useRecordZone();
-  const details = usePageAside();
-  // What the pane's switch says in each state: this page's pane holds the
-  // permissions as well as the details, and the button names both.
-  const paneWords = {
-    show: t("contact.overview.detailsShow"),
-    hide: t("contact.overview.detailsHide"),
-  };
-  const narrow = useFoldedViewport();
-  const [mobileDetails, setMobileDetails] = useState(false);
-  const detailsTitle = useId();
-  const detailsDirty = useHasUnsavedChanges("details");
-  const closeMobileDetails = () => {
-    if (!detailsDirty) setMobileDetails(false);
-  };
   const record = useQuery(contactQuery(id));
-  // The server refuses the 360, the brief and the guard for an archived row.
-  // The 360 runs beside the row read; the other two wait for its answer.
+  // The server refuses the 360 and the guard for an archived row. The 360
+  // runs beside the row read; the guard waits for its answer.
   const live = record.isSuccess && !record.data.archived_at;
   // Read at screen level and handed down, so the schema request runs BESIDE
   // the contact's rather than after it — an edit opened before this landed
   // would otherwise offer a form with no custom fields on it.
   const view = useContact360(id, !record.data?.archived_at);
 
-  const brief = useQuery({
-    queryKey: ["contactBrief", id],
-    enabled: live,
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/contacts/{id}/brief", {
-          params: { path: { id } },
-        }),
-      );
-    },
-  });
-
-  const guard = useQuery({
-    queryKey: ["contactConsentGuard", id],
-    enabled: live,
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/contacts/{id}/consent/guard", {
-          params: { path: { id } },
-        }),
-      );
-    },
-  });
+  const guard = useConsentGuard(id, live);
+  const activity = useActivityGate();
+  const writeRefusalId = useId();
 
   // Which drawer is open, if any. One at a time: two surfaces over the same
   // record would each claim to be the thing the reader is doing.
   const [drawer, setDrawer] = useState<Drawer>(null);
+  const openCallLog = useCallback(() => setDrawer("activity_call"), []);
   const [briefedMeeting, openBrief] = useBriefedMeeting();
   // What the action that opened the composer wanted written. A rung knows WHY
   // it fired and says so in its prefill; before this the client dropped that
@@ -159,11 +138,13 @@ export function ContactPageV2({
     notYours: t("contact.notYoursToChange"),
   });
   const refusedReasonId = readOnlyReason ? readOnlyReasonId : undefined;
+  // A live contact states its read-only sentence in the left card's
+  // footnote; the archived page has no such card, so its band states it.
   const band = useWaitingDraftBand({
     anchor: { type: "contact", id },
     composerOpen: drawer === "composer",
     onOpen: () => openComposer(""),
-    readOnlyReason,
+    readOnlyReason: record.data?.archived_at ? readOnlyReason : undefined,
     readOnlyReasonId,
   });
 
@@ -202,20 +183,30 @@ export function ContactPageV2({
       nextMeetingId: view.data.next_meeting?.activity_id ?? null,
     });
 
-  // The pane is the rail alone. It used to end in an email box with its own
-  // "Draft the reply": the same verb the head's Email button already carries,
-  // drawn a second time as the pane's one filled control.
+  // What the record refuses this reader, stated once at the foot of the left
+  // card: every refused verb points at its sentence by id. The rail adds the
+  // Email verb's own refusal, which it reads from the same transports.
+  const refusals = refusalsOf(readOnlyReason, readOnlyReasonId, activity, t);
   const contactDetails = (
     <ContactRail
       view={view.data}
-      guard={guard.data}
-      guardLoading={guard.isPending}
-      guardFailed={guard.isError}
-      onRetryGuard={() => {
-        void guard.refetch();
+      consent={{
+        guard: guard.data,
+        loading: guard.isPending,
+        failed: guard.isError,
+        onRetry: () => {
+          void guard.refetch();
+        },
       }}
+      refusals={refusals}
+      writeRefusalId={writeRefusalId}
     />
   );
+
+  const openTab = (next: ContactTab) => {
+    navigateKeepingReturn(contactTabRoute(id, next));
+    scrollPageToTop();
+  };
 
   return (
     <div className="wrap">
@@ -223,38 +214,26 @@ export function ContactPageV2({
           and everything on the page, the rail included, answers a pressed
           address with this page's own composer. */}
       <ContactWriteTo contactId={id} onWrite={() => openComposer("")}>
-        <div className="record-sheet">
+        <ContactCallStart
+          contactId={id}
+          canLog={!activity.pending && activity.refusedId === undefined}
+          onCall={openCallLog}
+        >
           <RecordView
             back={<WorklistReturnLink />}
-            // The contact's context, in the details pane beside the work: it is
-            // true of the CONTACT, not of the open tab, so a tab change leaves
-            // it put. The same pane, fold and memory as every other record.
-            // At phone width there is no column to fold: the same cards open as
-            // the drawer below instead, so the record hands the view no pane at
-            // all rather than one that folds to nothing beside nothing.
-            aside={narrow ? undefined : contactDetails}
-            asideOpen={details.open}
+            // The contact's details, under the head in the left card. They hold
+            // for the contact, not the open tab, so a tab change leaves them put.
+            // The split folds them above the feed once the row has no room.
+            aside={contactDetails}
             name={contact.full_name}
             identity={contact.id}
-            // One rung under the record scale: the name is still the largest
-            // thing on the page, but beside a work column that opens on the
-            // agent's ask it no longer needs to be the size of a masthead.
-            scale="compact"
-            // The role and the company on the name's own line, the marks under
-            // it, and the ways to reach them as a strip across the head: three
-            // registers a reader takes in one glance rather than a stack of
-            // lines under a masthead.
+            // What they do and where under the name, then the pills. The ways
+            // to reach them are details, and live in the aside.
             nameBadge={<ContactSubtitle view={view.data} />}
-            pulse={<ContactMarks view={view.data} tab={tab} />}
-            badges={
-              <ContactFacts
-                contact={contact}
-                buyingRole={view.data.commercial?.role}
-              />
-            }
+            pulse={<ContactMarks view={view.data} />}
             actions={
-              // refusedReasonId is the SAME sentence the band below states —
-              // one write-gate for the whole header, not a narrower one per
+              // refusedReasonId is the same sentence the band below states.
+              // It is one write gate for the whole header, not a narrower one per
               // verb. Edit, merge and archive ride inside the header's menu,
               // so they read it too.
               <ContactActions
@@ -264,73 +243,29 @@ export function ContactPageV2({
                 onResearch={() => setDrawer("research")}
                 onLogActivity={() => setDrawer("activity_log")}
                 onAddTask={() => setDrawer("activity_task")}
+                activity={activity}
+                writeRefusalId={writeRefusalId}
                 refusedReasonId={refusedReasonId}
               />
             }
-            actionsInline
             zone={recordZone}
-            // Stated ONCE for the page, where both columns and every tab can see
+            // Stated once for the page, where both columns and every tab can see
             // it. Every control the record refuses points at its reason by id.
             band={band}
             tabs={
-              <RecordTabs
-                options={CONTACT_TABS}
+              <ContactRecordTabs
+                view={view.data}
                 value={tab}
-                onChange={(next) => {
-                  navigateKeepingReturn(contactTabRoute(id, next));
-                  scrollPageToTop();
-                }}
-                // The switch for the details pane, at the end of the tab row: it
-                // chooses what the page shows beside the work, so it stands with
-                // the controls that choose what the work column shows.
-                trailing={
-                  <PageAsideToggle
-                    quiet
-                    labels={paneWords}
-                    controlled={
-                      narrow
-                        ? {
-                            open: mobileDetails,
-                            labels: paneWords,
-                            onToggle: () => setMobileDetails((open) => !open),
-                          }
-                        : undefined
-                    }
-                  />
-                }
-                labels={{
-                  overview: t(TAB_LABEL_KEYS.overview),
-                  timeline: t(TAB_LABEL_KEYS.timeline),
-                  network: t(TAB_LABEL_KEYS.network),
-                  deals: t(TAB_LABEL_KEYS.deals),
-                  meetings: t(TAB_LABEL_KEYS.meetings),
-                  research: t(TAB_LABEL_KEYS.research),
-                  documents: t(TAB_LABEL_KEYS.documents),
-                }}
-                // At least one connected provider has never been asked about this
-                // contact, so there is a lookup waiting behind the tab. ANY of them
-                // is enough: the reader still has somebody to ask, even if another
-                // provider already answered. A CANCELLED run reads as never_run
-                // too, and the dot coming back is right — nothing was bought.
-                marks={{
-                  research: (view.data.provider_profiles ?? []).some(
-                    (profile) => profile.state === "never_run",
-                  ),
-                }}
+                onChange={openTab}
               />
             }
           >
             {tab === "overview" && (
               <ContactOverview
                 view={view.data}
-                brief={brief.data}
-                briefLoading={brief.isLoading}
-                briefFailed={brief.isError}
-                onRetryBrief={() => {
-                  brief.refetch();
-                }}
                 onAction={runAction}
                 onOpenEmail={setOpenEmail}
+                onOpenTab={openTab}
               />
             )}
 
@@ -344,8 +279,8 @@ export function ContactPageV2({
               refusedReasonId={refusedReasonId}
             />
             {/* One drawer over the record. The timeline's rows and the rail's
-            citations both open into it, so a reader who finds a message in the
-            aside and one who finds it in the body land in the same place. */}
+          citations both open into it, so a reader who finds a message in the
+          aside and one who finds it in the body land in the same place. */}
             <OpenEmailDrawer
               activityId={openEmail}
               zone={recordZone}
@@ -380,32 +315,11 @@ export function ContactPageV2({
               onClose={() => setDrawer(null)}
             />
             {/* The work queue, over the record: the same drawer the Home page
-              opens, driven by the same address, so a link to it from here
-              and from there is one link. */}
+            opens, driven by the same address, so a link to it from here
+            and from there is one link. */}
             <BriefQueue />
           </RecordView>
-        </div>
-        {/* Rendered whether or not it is showing, and told so by `open`: a
-            drawer whose caller conditions its ELEMENT can only ever appear —
-            there is nothing left on the page to animate on its way out. */}
-        <Modal
-          open={narrow && mobileDetails}
-          onClose={closeMobileDetails}
-          // The drawer holds fields the reader may be part-way through
-          // changing, and `closeMobileDetails` refuses to leave while one is
-          // open. The refusal says WHY on the control that carries it, rather
-          // than answering the press with nothing.
-          closeReason={detailsDirty ? t("record.finishFieldEdit") : undefined}
-          labelledBy={detailsTitle}
-          intent="drawer"
-        >
-          <div className="pe-drawer-title">
-            <Heading size="large" id={detailsTitle}>
-              {t("contact.overview.detailsPermissions")}
-            </Heading>
-          </div>
-          {contactDetails}
-        </Modal>
+        </ContactCallStart>
       </ContactWriteTo>
     </div>
   );

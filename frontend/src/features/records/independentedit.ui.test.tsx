@@ -139,6 +139,7 @@ it("saves Customer tier when a background logo update changed the company versio
   });
   render(<CompanyScreen id="o-1" />);
   const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Profile" }));
   await user.click(
     await screen.findByRole("button", { name: "Change Customer tier" }),
   );
@@ -225,6 +226,8 @@ it("saves a deal's name across an unrelated update using the fresh version", asy
     }),
   );
   render(<DealScreen id="x" />);
+  fireEvent.click(await screen.findByRole("button", { name: "More actions" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Edit details" }));
   fireEvent.click(
     await screen.findByRole("button", { name: "Change Deal name" }),
   );

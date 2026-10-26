@@ -48,6 +48,8 @@ func (s *Store) ContactRelationshipChangesTx(
 	contactID ids.ContactID,
 	now time.Time,
 	within *ids.ProjectID,
+	touch relstrength.Touches,
+	zone *time.Location,
 ) ([]relstrength.Change, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, err
@@ -59,7 +61,7 @@ func (s *Store) ContactRelationshipChangesTx(
 	if err != nil {
 		return nil, err
 	}
-	return relstrength.Changes(in, now), nil
+	return relstrength.Changes(withTouch(in, touch, zone), now), nil
 }
 
 // ContactChanges is one contact's derived changes, carrying the id and the name
@@ -88,6 +90,8 @@ func (s *Store) RelationshipChangesForContacts(
 	tx pgx.Tx,
 	contacts []ids.ContactID,
 	now time.Time,
+	touches map[ids.ContactID]relstrength.Touches,
+	zone *time.Location,
 ) ([]ContactChanges, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, err
@@ -101,11 +105,15 @@ func (s *Store) RelationshipChangesForContacts(
 	}
 	out := make([]ContactChanges, 0, len(visible))
 	for _, contact := range visible {
+		touch, ok := touches[contact.id]
+		if !ok {
+			continue
+		}
 		in, err := changeInputs(ctx, tx, contact.id, now, nil)
 		if err != nil {
 			return nil, err
 		}
-		changes := relstrength.Changes(in, now)
+		changes := relstrength.Changes(withTouch(in, touch, zone), now)
 		if len(changes) == 0 {
 			continue
 		}
@@ -158,9 +166,19 @@ func visibleContactNames(ctx context.Context, tx pgx.Tx, contacts []ids.ContactI
 	return out, rows.Err()
 }
 
-// changeInputs gathers the present fold, the same fold as it stood one
-// comparison window ago, and the two timestamps a returning reply is measured
-// between.
+// withTouch adds the moments the last-touch reader owns. The fold below holds
+// only the strength-window counts. No second statement here answers "when did
+// they last write" differently from the date a surface prints.
+func withTouch(in relstrength.ChangeInputs, touch relstrength.Touches, zone *time.Location) relstrength.ChangeInputs {
+	in.LastTouch = touch.LastTouch
+	in.LatestInbound = touch.LatestInbound
+	in.PrecedingInteraction = touch.Preceding
+	in.Zone = zone
+	return in
+}
+
+// changeInputs gathers the present fold and the same fold as it stood one
+// comparison window ago.
 func changeInputs(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	now time.Time, within *ids.ProjectID,
@@ -176,6 +194,7 @@ func changeInputs(
 		now.AddDate(0, 0, -relStrengthWindowDays),
 		asOf,
 		asOf.AddDate(0, 0, -relStrengthWindowDays),
+		now,
 	}
 	foldWithin := ""
 	if within != nil {
@@ -196,41 +215,18 @@ func changeInputs(
 		       max(a.occurred_at) FILTER (WHERE a.occurred_at < $3),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $4 AND a.occurred_at < $3),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $4 AND a.occurred_at < $3 AND a.direction = 'inbound'),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $4 AND a.occurred_at < $3 AND a.direction = 'outbound'),
-		       max(a.occurred_at) FILTER (WHERE a.direction = 'inbound')
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $4 AND a.occurred_at < $3 AND a.direction = 'outbound')
 		  FROM activity a
 		  JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
-		 WHERE `+strengthCounts+` AND a.archived_at IS NULL`+
+		 WHERE `+strengthCountsAt(5)+` AND a.archived_at IS NULL`+
 		auth.AudienceWorkspaceOnly("a")+foldWithin,
 		foldArgs...,
 	).Scan(
 		&in.Current.LastInteraction, &in.Current.Count90d, &in.Current.Inbound90d, &in.Current.Outbound90d,
 		&in.Previous.LastInteraction, &in.Previous.Count90d, &in.Previous.Inbound90d, &in.Previous.Outbound90d,
-		&in.LatestInbound,
 	); err != nil {
 		return relstrength.ChangeInputs{}, fmt.Errorf("contacts: reading a contact's relationship history: %w", err)
 	}
 
-	if in.LatestInbound == nil {
-		return in, nil
-	}
-	// The far side of the silence their reply broke. A separate statement
-	// because it is bounded by a value the first one returns.
-	precedingArgs := []any{contactID, *in.LatestInbound}
-	precedingWithin := ""
-	if within != nil {
-		precedingArgs = append(precedingArgs, *within)
-		precedingWithin = " AND " + activityWithinProject("a", len(precedingArgs))
-	}
-	if err := tx.QueryRow(ctx, `
-		SELECT max(a.occurred_at)
-		  FROM activity a
-		  JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
-		 WHERE `+strengthCounts+` AND a.archived_at IS NULL
-		   AND a.occurred_at < $2`+auth.AudienceWorkspaceOnly("a")+precedingWithin,
-		precedingArgs...,
-	).Scan(&in.PrecedingInteraction); err != nil {
-		return relstrength.ChangeInputs{}, fmt.Errorf("contacts: reading what preceded a contact's last reply: %w", err)
-	}
 	return in, nil
 }

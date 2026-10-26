@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/settings/installation-configuration.tsx frontend/src/features/settings/configurationentries.ts frontend/src/app/paletteconfiguration.ts backend/internal/compose/handlers_configuration.go backend/internal/compose/configseam.go backend/internal/platform/config/overview.go -->
 # Configuration
 
 The **Configuration** page lists every setting the installation reads, what its value is and where that value comes from. It is read-only. It sits in the **Governance** group of Settings, and only users who may change installation settings see it, which Admin and Ops do.

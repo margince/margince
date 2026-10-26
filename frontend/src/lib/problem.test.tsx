@@ -360,21 +360,46 @@ describe("problemMessageOf", () => {
     expect(problemMessageOf(refusal, t)).not.toBe("Internal Server Error");
   });
 
+  // The wire shape httperr.Validation sends: the top-level code is
+  // `validation_error` and the module's own code rides only on the field fault.
+  it("says in the reader's language that a win needs its reason, from the field fault's code", () => {
+    const refusal = new ProblemError({
+      code: "validation_error",
+      status: 422,
+      detail: "validation failed",
+      details: {
+        errors: [
+          {
+            field: "won_without_contract_reason",
+            code: "win_evidence_required",
+            message:
+              "a won deal needs a signed contract with its paper attached, or a reason why there is none (imported, purchase_order)",
+          },
+        ],
+      },
+    });
+    for (const locale of ["en", "de", "vi"] as const) {
+      const line = problemMessageOf(refusal, (key) => translate(locale, key));
+      expect(line).toBe(translate(locale, "deals.winEvidenceRequired"));
+      expect(line).not.toContain("purchase_order");
+    }
+  });
+
   it("prefers the surface's own copy for a failure the server never described", () => {
     expect(
       problemMessageOf(
         new Error("Failed to fetch"),
         t,
-        t("connectors.loadFailed"),
+        t("settings.saveFailed"),
       ),
-    ).toBe(t("connectors.loadFailed"));
+    ).toBe(t("settings.saveFailed"));
     // A server problem still speaks for itself. The fallback is for the case
     // where there is nothing to say, not a way to overwrite the server.
     expect(
       problemMessageOf(
         new ProblemError({ detail: "budget exhausted" }),
         t,
-        t("connectors.loadFailed"),
+        t("settings.saveFailed"),
       ),
     ).toBe("budget exhausted");
   });
@@ -415,7 +440,7 @@ describe("problemMessageOf, for a request that never reached Margince", () => {
       problemMessageOf(
         refused("unreachable", "DELETE"),
         t,
-        t("connectors.loadFailed"),
+        t("settings.saveFailed"),
       ),
     ).toBe(t("connectivity.uncertain.unreachable"));
   });
@@ -425,12 +450,8 @@ describe("problemMessageOf, for a request that never reached Margince", () => {
       t("common.errorNoCause"),
     );
     expect(
-      problemMessageOf(
-        refused("offline", "GET"),
-        t,
-        t("connectors.loadFailed"),
-      ),
-    ).toBe(t("connectors.loadFailed"));
+      problemMessageOf(refused("offline", "GET"), t, t("settings.saveFailed")),
+    ).toBe(t("settings.saveFailed"));
   });
 });
 

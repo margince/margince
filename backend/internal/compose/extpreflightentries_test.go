@@ -61,3 +61,38 @@ func TestPreflightEntryObjectsNeedsAnOperationGatedOnTheObject(t *testing.T) {
 		t.Fatal("an entry gated through another unit's operation was admitted")
 	}
 }
+
+func visitPanel(slot extension.PanelSlot) extension.Panel {
+	return extension.Panel{Slot: slot, Export: "VisitPanel", Object: "ext_visits_report"}
+}
+
+func TestPreflightPanelsAdmitsOnePanelPerSlot(t *testing.T) {
+	unit := extension.Extension{
+		Name: "visits", Version: "0.1.0",
+		Panels: []extension.Panel{visitPanel(extension.SlotDealPanel)},
+	}
+	if err := preflightPanels(unit); err != nil {
+		t.Fatalf("one panel was refused: %v", err)
+	}
+	unit.Panels = append(unit.Panels, visitPanel(extension.SlotDealPanel))
+	if err := preflightPanels(unit); err == nil || !strings.Contains(err.Error(), "two panels") {
+		t.Fatalf("err = %v, want the duplicate-panel refusal", err)
+	}
+	unit.Panels = []extension.Panel{visitPanel("record_panel.lead")}
+	if err := preflightPanels(unit); err == nil {
+		t.Fatal("a panel in a slot no core page draws was admitted")
+	}
+}
+
+func TestPreflightEntryObjectsHoldsPanelsToTheSameRule(t *testing.T) {
+	units := []extension.Extension{{
+		Name: "visits", Version: "0.1.0",
+		Panels: []extension.Panel{visitPanel(extension.SlotDealPanel)},
+	}}
+	if err := preflightEntryObjects(units, []extension.Verb{{Unit: "visits", RbacObject: "ext_visits_report"}}); err != nil {
+		t.Fatalf("a panel on a gated object was refused: %v", err)
+	}
+	if err := preflightEntryObjects(units, []extension.Verb{{Unit: "visits", RbacObject: "ext_visits_note"}}); err == nil {
+		t.Fatal("a panel on an object no operation gates on was admitted")
+	}
+}

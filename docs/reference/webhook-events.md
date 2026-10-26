@@ -111,6 +111,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`intro_request.completed`](#intro_requestcompleted) | contact | 1 |
 | [`intro_request.created`](#intro_requestcreated) | contact | 1 |
 | [`intro_request.decided`](#intro_requestdecided) | contact | 1 |
+| [`intro_request.recorded`](#intro_requestrecorded) | contact | 1 |
 | [`intro_request.replied`](#intro_requestreplied) | contact | 1 |
 | [`lead.created`](#leadcreated) | lead | 1 |
 | [`lead.demoted`](#leaddemoted) | lead | 1 |
@@ -161,6 +162,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`user.activated`](#useractivated) | user | 1 |
 | [`user.deactivated`](#userdeactivated) | user | 1 |
 | [`user.invited`](#userinvited) | user | 1 |
+| [`user.mfa_removed`](#usermfa_removed) | user | 1 |
 | [`user.password_link_issued`](#userpassword_link_issued) | user | 1 |
 | [`user.reactivated`](#userreactivated) | user | 1 |
 | [`user_delivery.changed`](#user_deliverychanged) | user | 1 |
@@ -632,7 +634,7 @@ Payload for conversation_claim.captured, something promised, asked or decided in
 
 Record: `contact` · version 1
 
-Payload for conversation_claim.changed. A claim was corrected, renewed, dismissed or erased. A downstream reader holding the old claim needs to refresh it, or remove it when the status is erased.
+Payload for conversation_claim.changed. A claim was corrected, renewed, taken over, dismissed or erased. A downstream reader holding the old claim needs to refresh it, or remove it when the status is erased.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1019,6 +1021,19 @@ Payload for intro_request.decided. The colleague gave one of the four bounded an
 | `data.intro_request_id` | string (uuid) | yes |  |
 | `data.introducer_user_id` | string (uuid) | yes |  |
 
+### `intro_request.recorded`
+
+Record: `contact` · version 1
+
+Payload for intro_request.recorded, a colleague recorded an introduction that already happened outside Margince. It is not intro_request.completed. That event means an ask was marked done, and its consumers must not see a row that never had an ask. `introducer_user_id` made the introduction and `introduced_user_id` was introduced.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.contact_id` | string (uuid) | yes |  |
+| `data.intro_request_id` | string (uuid) | yes |  |
+| `data.introduced_user_id` | string (uuid) | yes |  |
+| `data.introducer_user_id` | string (uuid) | yes |  |
+
 ### `intro_request.replied`
 
 Record: `contact` · version 1
@@ -1094,7 +1109,7 @@ Payload for lead.sla_breached: the first scan on which a lead's first-response d
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.deadline` | string (date-time) | yes | The first-response deadline that passed. |
-| `data.escalation_target` | string (uuid) | no | The user the escalation task is assigned to (absent when nobody owns the lead). |
+| `data.escalation_target` | string (uuid) | no | The seat the scan chose for the escalation: the lead's owner while that owner can be handed work, else the intake seat. Delivery asks again, so the task and notice can go to the intake seat instead, or to nobody. Absent when no seat was chosen, so it can differ from `owner_id`. |
 | `data.owner_id` | string (uuid) | no | The lead's owner at breach time (absent when unrouted). |
 
 ### `lead.updated`
@@ -1123,7 +1138,7 @@ Payload for lead_disqualify_reason.changed. A disqualification reason was added,
 
 Record: `lead_source` · version 1
 
-Payload for lead_source.changed. A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because every lead carries a source value. A subscriber that renders or groups by source re-reads the catalog on this event. The payload carries `key` and not `label`. The key is what leads carry and what a subscriber keys its own cache by. It is also the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists. Publishing it here would invite a subscriber to trust a copy that can go stale.
+Deprecated: the lead source list no longer feeds the score, and a separate breaking change retires it. Payload for lead_source.changed. A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because every lead carries a source value. A subscriber that renders or groups by source re-reads the catalog on this event. The payload carries `key` and not `label`. The key is what leads carry and what a subscriber keys its own cache by. It is also the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists. Publishing it here would invite a subscriber to trust a copy that can go stale.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1150,7 +1165,9 @@ Payload for linkedin_match.decided. A connection was linked to a contact on file
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
+| `data.employer_written` | boolean | no | Whether the decision made the company the import placed the connection at the contact's current employer. True only when the member ticked "Use as employer". False on every automatic confirmation. |
 | `data.profile_url_written` | boolean | yes | Whether the decision put a LinkedIn handle on the contact. False on every rejection, and false on a confirmation whose contact already carried one, a value on a record is somebody's statement and is never overwritten. |
+| `data.title_written` | boolean | no | Whether the decision put the export's position on the contact as its title. True only when the member ticked "Use as title" and the title changed. False on every automatic confirmation. |
 
 ### `linkedin_network.imported`
 
@@ -1449,7 +1466,8 @@ Payload for relationship_nudge.decided. A rep set a lapsed contact aside so thei
 |---|---|---|---|
 | `data.action` | string: `dismissed`, `restored` | yes | What was decided. The undo, `restored`, is carried rather than inferred from a row going quiet. A decision withdrawn is itself a decision. A consumer counting how often reps put relationships down has to see it happen. |
 | `data.contact_id` | string (uuid) | yes |  |
-| `data.dismissed_until` | string (date-time) | no | When the contact comes back to the lane. Present on `dismissed` and absent on `restored`, which carries no moment because a restore takes effect now. It is never absent on a dismissal: a dismissal with no end is the shape this feature refuses to have. |
+| `data.dismissed_until` | string (date-time) | no | When the contact comes back to the lane. Present on a dated `dismissed` and absent on `restored`, which carries no moment because a restore takes effect now. Absent on a permanent stop, which `permanent` says. |
+| `data.permanent` | boolean | no | True when the reader stopped following the contact with no end date. Only on `dismissed`; the reader resumes it with `restored`. |
 
 ### `retention.applied`
 
@@ -1605,6 +1623,18 @@ Payload for user.invited, an admin provisioned a new active member with a single
 | `data.role` | string | yes | The single system role key granted to the new member. |
 | `data.team_ids` | array of string | no | The teams the member joined on arrival, when the invite named any. |
 | `data.user_id` | string (uuid) | yes | The invited member. |
+
+### `user.mfa_removed`
+
+Record: `user` · version 1
+
+Payload for user.mfa_removed. An admin removed a member's confirmed second factor. Every session the member held ended with it. The password alone opens the account until the member sets a factor up again. So `by` and `user_id` are both required: this event records who weakened which sign-in.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.by` | string (uuid) | yes | The admin who removed it. |
+| `data.sessions_ended` | integer | yes | How many live sessions of the member the removal ended. |
+| `data.user_id` | string (uuid) | yes | The member whose second factor was removed. |
 
 ### `user.password_link_issued`
 

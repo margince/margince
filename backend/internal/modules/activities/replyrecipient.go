@@ -17,7 +17,7 @@ package activities
 import (
 	"context"
 	"errors"
-	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -52,10 +52,21 @@ type ReplyRecipient struct {
 	// Empty where the record holds no surname, which is an answer: the greeting
 	// falls back to the familiar form rather than to a guess.
 	LastName string
-	// FiledAddress is the reachable primary email of the one contact a note is
-	// filed on, never a seat's or a shared mailbox's. Empty on anything else,
-	// including a note filed on several contacts: there the rep chooses.
+	// WrittenAbout marks a row that records work about a contact rather than
+	// correspondence with one: its To comes from FiledAddress, never the participants.
+	WrittenAbout bool
+	// FiledAddress is the reachable address of a written-about row's one readable linked
+	// contact, never a seat's or a shared mailbox's. Several linked contacts leave it empty.
 	FiledAddress string
+}
+
+// GreetingNames are the first name (or full name when there is none) and the
+// surname a greeting uses.
+func (r ReplyRecipient) GreetingNames() (greeting, surname string) {
+	if r.FirstName != "" {
+		return r.FirstName, r.LastName
+	}
+	return r.FullName, r.LastName
 }
 
 // ReplyRecipientFor names the contact a reply to this activity is written to.
@@ -80,13 +91,20 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		return ReplyRecipient{}, err
 	}
 
-	var out ReplyRecipient
+	var (
+		out     ReplyRecipient
+		written bool
+		filed   string
+	)
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The activity read applies the link-walk scope. Reaching a contact
 		// through an activity the caller cannot see would answer a name their
 		// own scope withholds.
 		activity, err := readActivityContent(ctx, tx, id, storekit.LiveOnly)
 		if err != nil {
+			return err
+		}
+		if written, filed, err = writtenAboutAddress(ctx, tx, id, activity.Kind); err != nil {
 			return err
 		}
 
@@ -114,37 +132,34 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		// a "to" recipient (our own outbound, where the addressee is the
 		// counterparty), then anyone else on it, then the bare link.
 		q := `
-			SELECT p.full_name, coalesce(p.first_name, ''), coalesce(p.last_name, ''),
-			       coalesce((SELECT pe.email
-			                   FROM contact_email pe
-			                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL` +
+				SELECT p.id, p.full_name, coalesce(p.first_name, ''), coalesce(p.last_name, ''),
+				       coalesce((SELECT pe.email
+				                   FROM contact_email pe
+				                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL` +
 			contactaddress.ReachableOrder + `
-			                  LIMIT 1), ''),
-			       NOT EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = $1),
-			       count(*) OVER ()
-			  FROM contact p
-			  JOIN (
-			       SELECT contact_id,
-			              CASE role WHEN 'from' THEN 1 WHEN 'to' THEN 2 ELSE 3 END AS rank,
-			              created_at, id
-			         FROM activity_participant
-			        WHERE activity_id = $1 AND contact_id IS NOT NULL
-			       UNION ALL
-			       SELECT contact_id, 4 AS rank, created_at, id
-			         FROM activity_link
-			        WHERE activity_id = $1 AND contact_id IS NOT NULL
-			  ) c ON c.contact_id = p.id
-			 WHERE p.archived_at IS NULL`
+				                  LIMIT 1), '')
+				  FROM contact p
+				  JOIN (
+				       SELECT contact_id,
+				              CASE role WHEN 'from' THEN 1 WHEN 'to' THEN 2 ELSE 3 END AS rank,
+				              created_at, id
+				         FROM activity_participant
+				        WHERE activity_id = $1 AND contact_id IS NOT NULL
+				       UNION ALL
+				       SELECT contact_id, 4 AS rank, created_at, id
+				         FROM activity_link
+				        WHERE activity_id = $1 AND contact_id IS NOT NULL
+				  ) c ON c.contact_id = p.id
+				 WHERE p.archived_at IS NULL`
 		if scope != "" {
 			q += ` AND (` + scope + `)`
 		}
 		q += ` ORDER BY c.rank, c.created_at, c.id LIMIT 1`
 
+		var contactID ids.UUID
 		var address string
-		var unattended bool
-		var candidates int
 		err = tx.QueryRow(ctx, q, args...).Scan(
-			&out.FullName, &out.FirstName, &out.LastName, &address, &unattended, &candidates)
+			&contactID, &out.FullName, &out.FirstName, &out.LastName, &address)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Linked to nobody, or to a contact out of scope. Both mean no
 			// name, which the floor renders as an unnamed greeting rather
@@ -164,41 +179,29 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		// recipient would greet "steireif Partnernet," which is worse than
 		// either. The empty recipient is already this type's documented answer
 		// for "no name", and the floor opens without one.
-		shared := mailrole.GreetsNobody(out.FullName, address)
-		if shared {
+		if mailrole.GreetsNobody(out.FullName, address) {
 			out = ReplyRecipient{}
 		}
-		// With no participants every candidate is a linked contact this caller
-		// may read, so exactly one is the only unambiguous addressee.
-		if shared || activity.Kind != crmcontracts.ActivityKindNote || !unattended || candidates != 1 {
-			return nil
-		}
-		out.FiledAddress, err = filedAddress(ctx, tx, address)
-		return err
+		return nil
 	})
 	if err != nil {
 		return ReplyRecipient{}, err
 	}
+	out.WrittenAbout, out.FiledAddress = written, filed
 	return out, nil
 }
 
-// filedAddress is a note's contact address unless it is one of our own seats.
-// ReplyAddressFor drops a participant carrying user_id; a note has no
-// participant, so the seat is recognised by its address instead.
-func filedAddress(ctx context.Context, tx pgx.Tx, address string) (string, error) {
-	if address == "" {
-		return "", nil
+// writtenAboutAddress says whether a reply to this kind writes about the record,
+// and the address it offers when it does.
+func writtenAboutAddress(ctx context.Context, tx pgx.Tx, id ids.ActivityID, kind crmcontracts.ActivityKind) (bool, string, error) {
+	if !slices.Contains(writtenAboutKinds, kind) {
+		return false, "", nil
 	}
-	var seat bool
-	if err := tx.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM app_user WHERE lower(email) = lower($1))`,
-		address).Scan(&seat); err != nil {
-		return "", fmt.Errorf("check whether a note's address is a seat: %w", err)
+	offered, err := offeredEmails(ctx, tx, []ids.UUID{id.UUID})
+	if err != nil {
+		return false, "", err
 	}
-	if seat {
-		return "", nil
-	}
-	return address, nil
+	return true, offered[id.UUID], nil
 }
 
 // GreetingName is the one name a floor draft greets by, or empty.

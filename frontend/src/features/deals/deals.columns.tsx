@@ -4,14 +4,14 @@ import { Badge } from "../../design-system/atoms";
 import { CellStrip, type ListColumn } from "../../design-system/listtable";
 import type { BoardMoneyColumn } from "../../design-system/pipelineboard";
 import { FieldGuard } from "../../design-system/rbac";
-import { middayInstant } from "../../format/calendarday";
 import { formatDate, formatDuration, formatMoney } from "../../format/format";
 import type { Locale, useT } from "../../i18n";
+import { closeDayOf } from "../../lib/closeday";
+import type { StageTotals } from "../../lib/deals.queries";
 import { toBoardDeal } from "./boarddeal";
 import type { CompanyNaming } from "./dealcompanymarks";
 import { lastMailColumn } from "./dealmailaside";
 import type { Deal, Stage } from "./deals";
-import type { StageTotals } from "./deals.queries";
 
 export function buildColumns(
   stages: Stage[],
@@ -36,18 +36,18 @@ export function buildColumns(
         // No totals row yet: the report is still in flight, or this stage was
         // not in it. Either way the figure is unknown rather than zero, and the
         // column draws it as absent while still stating the count below.
-        rawMinor: stageTotals?.rawMinor ?? null,
-        weightedMinor: stageTotals?.weightedMinor ?? null,
+        rawMinor: stageTotals?.baseMinor ?? null,
+        weightedMinor: stageTotals?.weightedBaseMinor ?? null,
         currency: stageTotals?.currency ?? null,
         deals: stageDeals.map((deal) => toBoardDeal(deal, naming, owners)),
         // The true count, not the loaded page's. It falls back to the page
         // count while totals are still loading, so the column shows some
         // number rather than a misleading 0.
         count: stageTotals?.count ?? stageDeals.length,
-        // Withheld totals hide the sum for their own reason, which is not the
-        // mixed-currency one the column says by default.
-        sumHidden:
-          totalsWithheld !== undefined || (stageTotals?.sumHidden ?? false),
+        asOf: stageTotals?.asOf ?? null,
+        timezone: stageTotals?.timezone ?? null,
+        unpricedCount: stageTotals?.unpricedCount ?? null,
+        sumHidden: totalsWithheld !== undefined,
         sumHiddenReason: totalsWithheld,
       };
     });
@@ -166,15 +166,11 @@ export function dealColumns(
       key: "close",
       header: t("deals.close"),
       holds: "date",
-      sort: "expected_close_date",
-      cell: (deal) =>
-        deal.expected_close_date
-          ? formatDate(
-              middayInstant(deal.expected_close_date, recordZone),
-              locale,
-              recordZone,
-            )
-          : null,
+      sort: "close_day",
+      cell: (deal) => {
+        const day = closeDayOf(deal);
+        return day ? formatDate(day, locale, recordZone) : null;
+      },
     },
     ownerColumn<Deal>(t),
     {

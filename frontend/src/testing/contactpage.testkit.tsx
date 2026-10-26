@@ -41,6 +41,7 @@ export const view: Contact360 = {
     // may not write, and the controls correctly disappear.
     writable: true,
     version: 1,
+    primary_email: "dana@brandt.example",
     emails: [
       {
         id: "pe-1",
@@ -58,6 +59,7 @@ export const view: Contact360 = {
   activities: {
     data: [
       {
+        offers_email: false,
         id: "a-1",
         kind: "email",
         subject: "Fleet renewal",
@@ -80,7 +82,7 @@ export const view: Contact360 = {
 // One fixed grant set, named at module scope beside the view above rather than
 // rebuilt inline on every mount.
 const callerGrants: Parameters<typeof meRoute>[0] = {
-  contact: ["read", "update"],
+  contact: ["read", "update", "delete"],
   activity: ["create"],
 };
 

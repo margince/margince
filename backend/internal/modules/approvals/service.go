@@ -8,7 +8,7 @@
 // object — bound to the exact proposed change (diff_hash), the staging
 // passport, and the target row's version, consumed exactly once.
 //
-// Tables owned: approval. Imports shared + platform + the generated
+// Imports shared + platform + the generated
 // contract only; never a sibling module — the agent surface stages and
 // redeems through an adapter injected at the composition root.
 package approvals

@@ -38,7 +38,7 @@ async function openReach({
 }: Readonly<{ canvasElement: HTMLElement }>) {
   await userEvent.click(
     await within(canvasElement).findByRole("button", {
-      name: "View Network reach",
+      name: "View LinkedIn network",
     }),
   );
   await within(canvasElement.ownerDocument.body).findByRole("table", {

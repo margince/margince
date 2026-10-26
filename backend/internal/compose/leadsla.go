@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -39,7 +40,7 @@ import (
 // leadSLATaskSource is the (source_system) under which the escalation task
 // is logged; with the lead id and breach time as source_id it makes the
 // write idempotent across redelivery of the same breach event.
-const leadSLATaskSource = "lead_sla"
+const leadSLATaskSource = provenance.LeadSLATaskSource
 
 // activityKindTask is the activity kind the escalation writes.
 const activityKindTask = "task"
@@ -53,9 +54,9 @@ const activityKindTask = "task"
 const noticeLegWrap = "recording the notice"
 
 // leadSLAEscalation is the §18.2 escalation: on lead.sla_breached, one
-// kind=task activity linked to the lead, due now, assigned to the
-// escalation target the event names (the owner today), titled after the
-// breach.
+// kind=task activity linked to the lead, due now, titled after the breach.
+// It goes to the event's escalation target: the owner, or the intake seat when
+// the owner has left.
 type leadSLAEscalation struct {
 	db         *database.DB
 	activities *activities.Store
@@ -145,16 +146,25 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 		words := mailcopy.For(string(identity.BaseLanguageForRecord(ctx, tx)))
 		subject := words.NoticeSLASubject
 		in.Subject = &subject
-		if _, _, err := w.activities.LogActivityTx(ctx, tx, in); err != nil {
+		seat, addressed, err := deliverableSeat(ctx, tx, in.AssigneeID)
+		if err != nil {
+			return err
+		}
+		task := in
+		task.AssigneeID = nil
+		if addressed {
+			task.AssigneeID = &seat
+		}
+		if _, _, err := w.activities.LogActivityTx(ctx, tx, task); err != nil {
 			return fmt.Errorf("logging the task: %w", err)
 		}
-		// A breach with no named target still writes its task; there is nobody
-		// to address the notice to, and inventing one would misdeliver it.
-		if in.AssigneeID == nil {
+		// A breach with no seat to address still writes its task; there is
+		// nobody to address the notice to, and inventing one would misdeliver it.
+		if !addressed {
 			return nil
 		}
 		if _, err := w.notices.CreateTx(ctx, tx, notices.NewNotice{
-			Recipient: *in.AssigneeID,
+			Recipient: seat,
 			Kind:      noticeKindLeadSLA,
 			Subject:   subject,
 			Body:      words.NoticeSLABody,
@@ -167,6 +177,27 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 		return workflow.RunResult{}, fmt.Errorf("lead sla escalation: %w", err)
 	}
 	return workflow.RunResult{Applied: eff.Actions}, nil
+}
+
+// deliverableSeat is the seat the task and notice go to: the event's target
+// while it is an active colleague, else the intake seat, else nobody.
+//
+// The target was chosen when the scan ran, and the run is delivered later, so
+// the seat may have changed in between. A refused task write aborts the
+// transaction and loses the breach, so the scan's own rule is asked again.
+func deliverableSeat(ctx context.Context, tx pgx.Tx, named *ids.UserID) (ids.UserID, bool, error) {
+	if named == nil {
+		return ids.UserID{}, false, nil
+	}
+	answers, err := contacts.SeatAnswersBreach(ctx, tx, named.UUID)
+	if err != nil || answers {
+		return *named, err == nil, err
+	}
+	intake, configured, err := contacts.IntakeSeat(ctx, tx)
+	if err != nil || !configured {
+		return ids.UserID{}, false, err
+	}
+	return ids.From[ids.UserKind](intake), true, nil
 }
 
 func (leadSLAEscalation) IdempotencyKey(ev workflow.Event) string {

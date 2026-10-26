@@ -18,7 +18,7 @@ import (
 
 func TestNotificationEligibilityRefusesMissingExpiredAndUnrepresentedDecisions(t *testing.T) {
 	e := setupStaging(t)
-	id, err := e.svc.Stage(e.sweeping(), StageInput{
+	id, err := e.svc.Stage(e.forRep(), StageInput{
 		Kind: "fx_rate_proposal", ProposedChange: []byte(`{}`), DiffHash: "notification-expiry",
 	})
 	if err != nil {
@@ -35,7 +35,7 @@ func TestNotificationEligibilityRefusesMissingExpiredAndUnrepresentedDecisions(t
 			t.Fatalf("ineligible decision %s: could=%t err=%v", candidate, could, err)
 		}
 		if err := e.svc.db.Tx(e.as(), func(tx pgx.Tx) error {
-			could, err := e.svc.PendingDecidableInTx(e.as(), tx, candidate)
+			could, err := e.svc.PendingAskedOfInTx(e.as(), tx, candidate)
 			if could {
 				t.Error("notification accepted a missing or expired decision")
 			}
@@ -47,7 +47,7 @@ func TestNotificationEligibilityRefusesMissingExpiredAndUnrepresentedDecisions(t
 	if could, err := e.svc.PendingDecidableBy(e.sweeping(), id); could || !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("unrepresented system decision: could=%t err=%v", could, err)
 	}
-	if could, err := e.svc.PendingDecidableInTx(e.sweeping(), nil, id); could || !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if could, err := e.svc.PendingAskedOfInTx(e.sweeping(), nil, id); could || !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("unrepresented system notification: could=%t err=%v", could, err)
 	}
 }
@@ -62,7 +62,7 @@ func TestNotificationAndMaintenancePropagateUnavailableTransactions(t *testing.T
 		t.Fatal(err)
 	}
 	id := ids.New[ids.ApprovalKind]()
-	if could, err := e.svc.PendingDecidableInTx(e.as(), tx, id); could || !errors.Is(err, pgx.ErrTxClosed) {
+	if could, err := e.svc.PendingAskedOfInTx(e.as(), tx, id); could || !errors.Is(err, pgx.ErrTxClosed) {
 		t.Fatalf("notification on closed transaction: could=%t err=%v", could, err)
 	}
 	if could, err := e.svc.pendingDecidable(e.as(), tx, id); could || !errors.Is(err, pgx.ErrTxClosed) {

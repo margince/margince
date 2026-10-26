@@ -231,7 +231,6 @@ jobs:
               - 'pnpm-lock.yaml'
               - 'renovate.json'
               - 'README.md'
-              - 'CHANGELOG.md'
               - 'CLA.md'
               - 'LICENSING.md'
               - 'CODE_OF_CONDUCT.md'
@@ -337,6 +336,11 @@ jobs:
               # first, so an edit to either one alone still reaches the lane.
               - 'scripts/sbom-census.sh'
               - 'scripts/test-sbom-census.sh'
+              # The licence comparison `sbom-parity` runs, for the same reason:
+              # it decides whether the three documents agree, so an edit to it
+              # alone has to re-run the lane that trusts its verdict.
+              - 'scripts/sbom-license-parity.sh'
+              - 'scripts/test-sbom-license-parity.sh'
               # EVERY workflow, not just this one. syft catalogs a `uses:` as a
               # package, so any workflow that gains a reference changes what the
               # license gate judges — a pinned remote action brings its license,
@@ -538,6 +542,14 @@ jobs:
       - name: Backend static gate (make check-static)
         working-directory: .
         run: make check-static
+      # A test read outside its module that skips the tree digest merges green
+      # and breaks cache-warm's save hours later. Here it fails the PR that
+      # adds it. On this job because it finishes minutes before
+      # deterministic-gates, so the census's uncached pass adds no wall clock.
+      - name: Census the test cache's inputs (make test-input-census)
+        if: ${{ !cancelled() }}
+        working-directory: .
+        run: make test-input-census
 
   # The composed-build lane (ADR-0120): materialize the walking-skeleton
   # reference extension into extensions/, compose, and run the backend
@@ -866,6 +878,11 @@ jobs:
       # still fails.
       - name: the census still catches a short SBOM
         run: make test-sbom-census
+      # The licence comparison is the other half of what `sbom-parity` holds, and
+      # it drifted for as long as nothing tested it: two defects in it reached
+      # review. Planted documents prove each way the three can disagree.
+      - name: the licence comparison still catches a disagreement
+        run: make test-sbom-license-parity
       # syft and grant run through digest-pinned Docker images (see the Makefile),
       # so the runner needs only Docker — pre-installed on ubuntu-latest.
       # One step, because the retry has to wrap BOTH: `.syft.yaml` sets

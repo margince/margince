@@ -22,7 +22,7 @@ import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
 import { useMe } from "../../lib/session";
-import { settingsHref } from "../settings/settingsrouting";
+import { settingsHref } from "../../lib/settingsrouting";
 import { DecisionSummary } from "./aiusage-decisions";
 import {
   aggregate,

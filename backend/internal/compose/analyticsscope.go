@@ -17,10 +17,12 @@ package compose
 // of it. Both narrow; neither widens. The row scope says what may be seen, this
 // says what was asked about, and an answer is the intersection.
 //
-// The lens comes from the principal's own row-scope tier rather than from a
-// role name the frontend sent: own reads own, team reads its teams plus
-// itself, all reads the workspace. A requested scope outside the lens is
-// refused here, once, so every analytics surface refuses it the same way.
+// Two decisions live here. Totals: every seat that reads deals may measure the
+// whole company or any live team, so the figures agree for all of them.
+// Owners: which owners a seat may measure one by one (resolveOwnerScope) still
+// follows the principal's own row-scope tier. Every owner-keyed output narrows
+// to it through the owner gate. Assertions about a population (a
+// forecast call, a share) stay on the strict tier rules in ResolveAssertionScope.
 
 import (
 	"context"
@@ -170,7 +172,7 @@ func analyticsPopulationExpression(ctx context.Context, tx pgx.Tx, requested Req
 		// makes for a named colleague, so it stays exact for the same reason,
 		// regardless of unowned.
 		return resolved, fmt.Sprintf(
-			"%s IN (%s)", col, liveTeamMembersSQL(arg(*resolved.ID), "= $%d")), nil
+			"%s IN (%s)", col, teamMembersSQL(arg(*resolved.ID), "= $%d")), nil
 	case ScopeKindManagedTeams:
 		// A team manager who named nothing is asking about the work they are
 		// accountable for, which is their teams AND themselves. Themselves
@@ -181,7 +183,7 @@ func analyticsPopulationExpression(ctx context.Context, tx pgx.Tx, requested Req
 		teams := arg(p.TeamIDs)
 		clause := fmt.Sprintf(
 			"(%s = $%d OR %s IN (%s))",
-			col, me, col, liveTeamMembersSQL(teams, "= ANY($%d)"))
+			col, me, col, teamMembersSQL(teams, "= ANY($%d)"))
 		if unowned == unownedIsPartOfDefault {
 			// Always the caller's own default population (never requestable by
 			// name, see ScopeKindManagedTeams's own doc), so the same
@@ -211,19 +213,15 @@ func ownedOrUnowned(col, clause string) string {
 	return fmt.Sprintf("(%s IS NULL OR %s)", col, clause)
 }
 
-// liveTeamMembersSQL selects the members of a team, as the installation stands
-// today: a live team, and a member who can still act.
-//
-// Membership rows deliberately outlive both — an archived team keeps its rows so
-// a restore brings them back, and deactivating a seat leaves the row alone. A
-// predicate reading team_membership by itself therefore measures contacts who left,
-// which is the defect this replaces: the resolver refuses a departed colleague as
-// a population of their own while their deals went on counting inside their old
-// team's total.
-func liveTeamMembersSQL(pos int, match string) string {
+// teamMembersSQL selects the members of a live team whose work its numbers
+// count. Those are members who can act, and members who left but are not archived.
+// A departed colleague's open deals stay in the totals until somebody takes
+// them over. Every screen marks that owner as having left.
+func teamMembersSQL(pos int, match string) string {
 	return fmt.Sprintf(`SELECT tm.user_id FROM team_membership tm
 		JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL
-		JOIN app_user u ON u.id = tm.user_id AND `+identity.LiveMemberSQL("u")+`
+		JOIN app_user u ON u.id = tm.user_id
+		 AND ((`+identity.LiveMemberSQL("u")+`) OR (`+identity.DepartedMemberSQL("u")+`))
 		WHERE tm.team_id `+match, pos)
 }
 
@@ -253,10 +251,6 @@ func resolveAnalyticsScope(
 
 	switch requested.Kind {
 	case ScopeKindWorkspace:
-		if lens != principal.RowScopeAll {
-			return ResolvedScope{}, fmt.Errorf(
-				"the whole workspace is outside what you may measure: %w", apperrors.ErrPermissionDenied)
-		}
 		if requested.ID != nil {
 			return ResolvedScope{}, fmt.Errorf(
 				"the workspace scope names no subject: %w", apperrors.ErrInvalidArgument)
@@ -268,7 +262,7 @@ func resolveAnalyticsScope(
 			return ResolvedScope{}, fmt.Errorf(
 				"a team scope names which team: %w", apperrors.ErrInvalidArgument)
 		}
-		return resolveTeamScope(p, lens, *requested.ID)
+		return resolveTeamScope(*requested.ID), nil
 
 	case ScopeKindOwner:
 		if requested.ID == nil {
@@ -311,16 +305,55 @@ func ownScope(p principal.Principal) ResolvedScope {
 	return ResolvedScope{Kind: ScopeKindOwner, ID: &me}
 }
 
-func resolveTeamScope(p principal.Principal, lens principal.RowScope, id ids.UUID) (ResolvedScope, error) {
-	if lens == principal.RowScopeOwn {
-		return ResolvedScope{}, fmt.Errorf(
-			"no team is within what you may measure: %w", apperrors.ErrNotFound)
+// resolveTeamScope accepts any team for totals; labelScope refuses an archived
+// or unknown one as absent.
+func resolveTeamScope(id ids.UUID) ResolvedScope {
+	return ResolvedScope{Kind: ScopeKindTeam, ID: &id}
+}
+
+// ResolveAssertionScope answers the population a caller may ASSERT about
+// (record a forecast, issue a share). Totals are open to every seat that reads
+// deals. A standing number is a commitment, so the workspace needs row scope
+// all and a team needs membership.
+func ResolveAssertionScope(
+	ctx context.Context, tx pgx.Tx, requested RequestedScope,
+) (ResolvedScope, error) {
+	resolved, err := ResolveAnalyticsScope(ctx, tx, requested)
+	if err != nil {
+		return ResolvedScope{}, err
 	}
-	if lens == principal.RowScopeTeam && !containsID(p.TeamIDs, id) {
-		return ResolvedScope{}, fmt.Errorf(
-			"that team is not one of yours: %w", apperrors.ErrNotFound)
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		return ResolvedScope{}, errors.New("compose: no actor bound to context")
 	}
-	return ResolvedScope{Kind: ScopeKindTeam, ID: &id}, nil
+	if err := assertionLensRefusal(p, requested, resolved); err != nil {
+		return ResolvedScope{}, err
+	}
+	return resolved, nil
+}
+
+// assertionLensRefusal is the strict tier rule for asserting about a
+// population, decidable without a database.
+func assertionLensRefusal(p principal.Principal, requested RequestedScope, resolved ResolvedScope) error {
+	lens := p.Permissions.RowScope
+	if auth.Unbounded(p) {
+		lens = principal.RowScopeAll
+	}
+	switch resolved.Kind {
+	case ScopeKindWorkspace:
+		if requested.Kind != "" && lens != principal.RowScopeAll {
+			return fmt.Errorf(
+				"the whole workspace is outside what you may measure: %w", apperrors.ErrPermissionDenied)
+		}
+	case ScopeKindTeam:
+		if lens == principal.RowScopeOwn {
+			return fmt.Errorf("no team is within what you may measure: %w", apperrors.ErrNotFound)
+		}
+		if lens == principal.RowScopeTeam && !containsID(p.TeamIDs, *resolved.ID) {
+			return fmt.Errorf("that team is not one of yours: %w", apperrors.ErrNotFound)
+		}
+	}
+	return nil
 }
 
 func resolveOwnerScope(

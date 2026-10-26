@@ -3,90 +3,51 @@
 
 import { type ReactNode, useRef } from "react";
 import type { components } from "../../api/schema";
-import { ProjectContractRow } from "../../components/contractterms";
 import { EntityRef } from "../../components/entityref";
-import { Badge } from "../../design-system/atoms";
-import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
+import { Badge, Button } from "../../design-system/atoms";
+import {
+  OverviewCard,
+  OverviewList,
+  OverviewRow,
+} from "../../design-system/overviewcard";
 import {
   type SectionState,
   SurfaceState,
   sectionState,
 } from "../../design-system/surfacestate";
-import {
-  formatBytes,
-  formatDateAbbrev,
-  formatDateTime,
-  formatDuration,
-  formatMoneyOrAbsent,
-} from "../../format/format";
-import { useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import { DEAL_STATUS_LABEL } from "../../format/dealstatus";
+import { formatMoneyWhole, formatNumber } from "../../format/format";
+import { formatDateAbbrev, formatDayMonth } from "../../format/format.dates";
+import { daysPast } from "../../format/lateness";
+import { formatMoneyOrWord } from "../../format/moneyword";
+import { useLocale, usePlural, useT } from "../../i18n";
+import { usePipelines } from "../../lib/pipelines.queries";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { projectRoleLabel } from "../records/record360";
-import { isProjectPhase, PHASE_LABEL } from "./projects.form";
+import { CONTRACT_STATUS_LABEL } from "./contractlifecycle";
 import {
   AddProjectStakeholder,
   RemoveProjectStakeholder,
 } from "./projectstakeholders";
 
-// The project page's sections, each drawn from ONE composite read
-// (GET /projects/{id}/360). Every card below answers the same three questions
-// in the same order — withheld, unavailable, empty — through `sectionState`,
-// so a section a grant refused says so rather than drawing an empty list that
-// reads as "there is none".
+// The project page's cards, each drawn from one composite read
+// (GET /projects/{id}/360). Every card answers the same three questions in the
+// same order (withheld, unavailable, empty) through `sectionState`. So a
+// section a grant refused says so rather than drawing an empty list that reads
+// as "there is none".
 
 export type Project360 = components["schemas"]["Project360"];
 type Project360Section = components["schemas"]["Project360Section"];
 type Deal = components["schemas"]["Deal"];
-type Attachment = components["schemas"]["Attachment"];
+type Contract = components["schemas"]["Contract"];
 type Stakeholder = components["schemas"]["Project360Stakeholder"];
 type Commitment = components["schemas"]["Project360Commitment"];
-type PhaseTransition = components["schemas"]["Project360PhaseTransition"];
 
 // Every section of the page the reader may lack a grant for. `documents`
 // rides the project grant itself and is never in `sections_omitted`, so it is
 // not in this union either.
 type SectionKey = Project360Section | "documents";
-
-/**
- * SectionPanel is the shape every card on this page takes: a titled Panel
- * whose rows run edge to edge when the section is `ready`, and whose
- * message states — withheld, unavailable, empty, loading — are SurfaceState's
- * own sentences in a padded body. The empty sentence is the caller's, because
- * what belongs in a section is the one thing only the section knows.
- */
-function SectionPanel({
-  title,
-  state,
-  emptyLabel,
-  titleAction,
-  children,
-}: Readonly<{
-  title: string;
-  state: SectionState;
-  emptyLabel: string;
-  titleAction?: ReactNode;
-  children: ReactNode;
-}>) {
-  return (
-    <Panel title={title} titleAction={titleAction}>
-      {state === "ready" ? (
-        children
-      ) : (
-        <PanelBody>
-          <SurfaceState
-            state={state}
-            emptyLabel={emptyLabel}
-            loadingLabel={title}
-          >
-            {null}
-          </SurfaceState>
-        </PanelBody>
-      )}
-    </Panel>
-  );
-}
 
 export function stateOf(
   view: Project360 | undefined,
@@ -105,77 +66,46 @@ export function stateOf(
   return sectionState(view, section, present, count);
 }
 
-function phaseWord(phase: string, t: (key: MessageKey) => string): string {
-  return isProjectPhase(phase) ? t(PHASE_LABEL[phase]) : phase;
-}
-
 /**
- * Every phase transition, oldest first, with how long the project has spent
- * in each phase so far. A reopened project visits a phase twice and the
- * duration sums the visits, which is what the server's fold already says.
+ * The card shape of the Overview. It shows the rows when the section is
+ * `ready`, and its own empty sentence when there are none. A section the
+ * reader may not read, or that failed, gets SurfaceState's sentence.
  */
-export function PhaseHistoryCard({
-  view,
-}: Readonly<{ view: Project360 | undefined }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const history = view?.phase_history;
-  const rows = history?.data ?? [];
-  const state = stateOf(view, "phase_history", Boolean(history), rows.length);
+export function OverviewSection({
+  title,
+  action,
+  state,
+  emptyLabel,
+  foot,
+  children,
+}: Readonly<{
+  title: string;
+  action?: ReactNode;
+  state: SectionState;
+  emptyLabel: string;
+  foot?: ReactNode;
+  children: ReactNode;
+}>) {
   return (
-    <SectionPanel
-      title={t("project.history.title")}
-      state={state}
-      emptyLabel={t("project.history.empty")}
+    <OverviewCard
+      title={title}
+      action={action}
+      foot={foot}
+      empty={state === "empty" ? emptyLabel : undefined}
+      emptyAction={
+        state === "empty" || state === "ready" ? undefined : (
+          <SurfaceState
+            state={state}
+            emptyLabel={emptyLabel}
+            loadingLabel={title}
+          >
+            {null}
+          </SurfaceState>
+        )
+      }
     >
-      {history && history.phase_durations.length > 0 && (
-        <PanelBody>
-          <ul className="project-durations">
-            {history.phase_durations.map((duration) => (
-              <li key={duration.phase}>
-                <span>{phaseWord(duration.phase, t)}</span>
-                <span className="t-num">
-                  {formatDuration(duration.seconds * 1000, locale)}
-                  {duration.current && ` · ${t("project.history.current")}`}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </PanelBody>
-      )}
-      {rows.map((transition) => (
-        <TransitionRow key={transition.id} transition={transition} />
-      ))}
-    </SectionPanel>
-  );
-}
-
-function TransitionRow({
-  transition,
-}: Readonly<{ transition: PhaseTransition }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  return (
-    <PanelRow className="project-row">
-      <span>
-        {transition.from_phase
-          ? t("project.history.moved", {
-              from: phaseWord(transition.from_phase, t),
-              to: phaseWord(transition.to_phase, t),
-            })
-          : t("project.history.born", {
-              phase: phaseWord(transition.to_phase, t),
-            })}
-      </span>
-      <span className="project-row-meta t-caption">
-        <span>{formatDateTime(transition.changed_at, locale, recordZone)}</span>
-        <span>
-          {transition.changed_by.display_name ?? t("project.history.bySystem")}
-        </span>
-        {transition.reason && <span>“{transition.reason}”</span>}
-      </span>
-    </PanelRow>
+      {state === "ready" && <OverviewList>{children}</OverviewList>}
+    </OverviewCard>
   );
 }
 
@@ -185,58 +115,78 @@ export function ProjectDealsCard({
   actions,
 }: Readonly<{ view: Project360 | undefined; actions?: ReactNode }>) {
   const t = useT();
-  const { locale } = useLocale();
   const deals = view?.deals?.data ?? [];
   const state = stateOf(view, "deals", Boolean(view?.deals), deals.length);
   return (
-    <SectionPanel
+    <OverviewSection
       title={t("project.deals.title")}
+      action={state === "ready" || state === "empty" ? actions : undefined}
       state={state}
       emptyLabel={t("project.deals.empty")}
-      titleAction={state === "ready" || state === "empty" ? actions : undefined}
+      foot={view?.deals?.page.has_more && t("project.deals.more")}
     >
       {deals.map((deal) => (
-        <ProjectDealRow key={deal.id} deal={deal} locale={locale} />
+        <ProjectDealRow key={deal.id} deal={deal} />
       ))}
-      {view?.deals?.page.has_more && (
-        <PanelBody>
-          <p className="t-caption">{t("project.deals.more")}</p>
-        </PanelBody>
-      )}
-    </SectionPanel>
+    </OverviewSection>
   );
 }
 
-function ProjectDealRow({
-  deal,
-  locale,
-}: Readonly<{ deal: Deal; locale: ReturnType<typeof useLocale>["locale"] }>) {
+// The stage an open deal stands in, by name, from the pipelines the reader
+// may read; absent when the stage cannot be read.
+function useStageName(stageId: string | null): string | undefined {
+  const pipelines = usePipelines().data ?? [];
+  return pipelines
+    .flatMap((pipeline) => pipeline.stages ?? [])
+    .find((stage) => stage.id === stageId)?.name;
+}
+
+function ProjectDealRow({ deal }: Readonly<{ deal: Deal }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  const stage = useStageName(deal.stage_id);
+  const closed = deal.closed_at
+    ? formatDayMonth(deal.closed_at, locale, recordZone)
+    : undefined;
+  let sub = t(DEAL_STATUS_LABEL[deal.status]);
+  if (deal.status === "open" && stage) {
+    sub = t("project.deals.openAt", { stage });
+  } else if (deal.status !== "open" && closed) {
+    sub = t(
+      deal.status === "won" ? "project.deals.wonOn" : "project.deals.lostOn",
+      { date: closed },
+    );
+  }
   return (
-    <PanelRow className="project-row">
-      <button
-        type="button"
-        className="project-rowlink"
-        onClick={() => navigate({ screen: "deals", id: deal.id })}
-      >
-        {deal.name}
-      </button>
-      <span className="project-row-meta t-caption">
-        <Badge tone={deal.status === "won" ? "success" : undefined}>
-          {deal.status}
-        </Badge>
-        <span className="t-num">
-          {formatMoneyOrAbsent(deal.amount_minor, deal.currency, locale)}
-        </span>
-      </span>
-    </PanelRow>
+    <OverviewRow
+      title={
+        <button
+          type="button"
+          className="project-rowlink"
+          onClick={() => navigate({ screen: "deals", id: deal.id })}
+        >
+          {deal.name}
+        </button>
+      }
+      sub={sub}
+      right={formatMoneyOrWord(
+        deal.amount_minor,
+        deal.currency,
+        locale,
+        "",
+        formatMoneyWhole,
+      )}
+      figure
+    />
   );
 }
 
 /**
- * The contacts seated on the project, each with the seat they hold — and the
+ * The contacts seated on the project, each with the seat they hold, and the
  * verbs that put them there.
  *
- * The verbs ride `titleAction`, which `SectionPanel` draws only on a section
+ * The verbs ride the card's action, which the card draws only on a section
  * that is ready or empty. That is deliberate rather than incidental: a reader
  * whose grant withheld the seats is told so, and offering them an Add button
  * over a list they were not allowed to read would invite a write against
@@ -268,11 +218,11 @@ export function StakeholdersCard({
   // survives every removal and is rendered exactly when a Remove button is.
   const addVerb = useRef<HTMLDivElement>(null);
   return (
-    <SectionPanel
+    <OverviewSection
       title={t("project.stakeholders.title")}
       state={state}
       emptyLabel={t("project.stakeholders.empty")}
-      titleAction={
+      action={
         writable ? (
           <div ref={addVerb}>
             <AddProjectStakeholder projectId={projectId} />
@@ -291,7 +241,7 @@ export function StakeholdersCard({
           }
         />
       ))}
-    </SectionPanel>
+    </OverviewSection>
   );
 }
 
@@ -308,29 +258,38 @@ function StakeholderRow({
 }>) {
   const t = useT();
   return (
-    <PanelRow className="project-row">
-      <EntityRef kind="contact" id={seat.contact_id} name={seat.contact_name} />
-      <span className="project-row-meta t-caption">
-        {seat.role && <Badge>{projectRoleLabel(seat.role, t)}</Badge>}
-        {writable && (
+    <OverviewRow
+      title={
+        <EntityRef
+          kind="contact"
+          id={seat.contact_id}
+          name={seat.contact_name}
+        />
+      }
+      sub={seat.role && projectRoleLabel(seat.role, t)}
+      right={
+        writable && (
           <RemoveProjectStakeholder
             projectId={projectId}
             contactId={seat.contact_id}
             contactName={seat.contact_name}
             returnFocusTo={returnFocusTo}
           />
-        )}
-      </span>
-    </PanelRow>
+        )
+      }
+    />
   );
 }
 
-/** The agreements filed under the project. */
+/**
+ * The agreements filed under the project. The files the project holds are a
+ * step away, behind the card's Documents link.
+ */
 export function ProjectContractsCard({
   view,
-}: Readonly<{ view: Project360 | undefined }>) {
+  onOpenDocuments,
+}: Readonly<{ view: Project360 | undefined; onOpenDocuments?: () => void }>) {
   const t = useT();
-  const { locale } = useLocale();
   const contracts = view?.contracts?.data ?? [];
   const state = stateOf(
     view,
@@ -339,91 +298,76 @@ export function ProjectContractsCard({
     contracts.length,
   );
   return (
-    <SectionPanel
+    <OverviewSection
       title={t("project.contracts.title")}
+      action={
+        onOpenDocuments && (
+          <Button variant="link" onClick={onOpenDocuments}>
+            {t("project.documents.title")}
+          </Button>
+        )
+      }
       state={state}
       emptyLabel={t("project.contracts.empty")}
     >
       {contracts.map((contract) => (
-        <ProjectContractRow
-          key={contract.id}
-          contract={contract}
-          locale={locale}
-        />
+        <ContractRow key={contract.id} contract={contract} />
       ))}
-    </SectionPanel>
+    </OverviewSection>
   );
 }
 
-/** The files attached to the project itself, newest first. */
-export function ProjectDocumentsCard({
-  view,
-}: Readonly<{ view: Project360 | undefined }>) {
+function ContractRow({ contract }: Readonly<{ contract: Contract }>) {
   const t = useT();
   const { locale } = useLocale();
-  const documents = view?.documents?.data ?? [];
-  const state = stateOf(
-    view,
-    "documents",
-    Boolean(view?.documents),
-    documents.length,
-  );
+  const zone = useRecordZone();
+  const signed = contract.signed_on
+    ? formatDayMonth(contract.signed_on, locale, zone)
+    : undefined;
+  const ends = contract.ends_on
+    ? formatDateAbbrev(contract.ends_on, locale, zone)
+    : undefined;
+  let sub: string | undefined;
+  if (signed && ends) {
+    sub = t("project.contracts.signedRuns", { signed, ends });
+  } else if (signed) {
+    sub = t("project.contracts.signed", { date: signed });
+  } else if (ends) {
+    sub = t("project.contracts.runsTo", { date: ends });
+  }
   return (
-    <SectionPanel
-      title={t("project.documents.title")}
-      state={state}
-      emptyLabel={t("project.documents.empty")}
-    >
-      {documents.map((doc) => (
-        <DocumentRow key={doc.id} doc={doc} locale={locale} />
-      ))}
-    </SectionPanel>
-  );
-}
-
-function DocumentRow({
-  doc,
-  locale,
-}: Readonly<{
-  doc: Attachment;
-  locale: ReturnType<typeof useLocale>["locale"];
-}>) {
-  const recordZone = useRecordZone();
-  return (
-    <PanelRow className="project-row">
-      {/* The name is the download, as on the company page: one thing to find
-          for the one thing the row does. */}
-      <a
-        className="project-rowlink"
-        href={`/v1/attachments/${doc.id}`}
-        download={doc.filename}
-      >
-        {doc.title || doc.filename}
-      </a>
-      <span className="project-row-meta t-caption">
-        {doc.byte_size != null && (
-          <span className="t-num">{formatBytes(doc.byte_size, locale)}</span>
-        )}
-        <span>{formatDateAbbrev(doc.created_at, locale, recordZone)}</span>
-      </span>
-    </PanelRow>
+    <OverviewRow
+      title={contract.title || contract.contract_number}
+      sub={sub}
+      right={
+        <Badge tone={contract.status === "active" ? "success" : undefined}>
+          {t(CONTRACT_STATUS_LABEL[contract.status])}
+        </Badge>
+      }
+    />
   );
 }
 
 /** The open tasks filed under the project, soonest due first. */
 export function CommitmentsCard({
   view,
+  meId,
+  tick,
   onOpenTask,
+  onOpenAll,
 }: Readonly<{
   view: Project360 | undefined;
+  // The signed-in user, so their own tasks read "You".
+  meId?: string;
+  // The complete box of one task, for a reader who may write tasks.
+  tick?: (activityId: string) => ReactNode;
   // Opens one commitment's task detail. Owned by the screen rather than by
-  // this card, because the modal is one per page: a card that mounted its own
-  // would put a second dialog on a screen that already has one whenever both
-  // are open.
+  // this card, because the modal is one per page.
   onOpenTask?: (activityId: string) => void;
+  // Opens every task of the project, done ones included.
+  onOpenAll?: () => void;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
   const commitments = view?.commitments?.data ?? [];
   const state = stateOf(
     view,
@@ -432,63 +376,95 @@ export function CommitmentsCard({
     commitments.length,
   );
   return (
-    <SectionPanel
-      title={t("project.commitments.title")}
+    <OverviewSection
+      title={t("record.commitments")}
+      action={
+        onOpenAll && (
+          <Button variant="link" onClick={onOpenAll}>
+            {t("project.commitments.all")}
+          </Button>
+        )
+      }
       state={state}
       emptyLabel={t("project.commitments.empty")}
     >
-      {commitments.map((commitment) => (
-        <CommitmentRow
-          key={commitment.activity_id}
-          commitment={commitment}
-          locale={locale}
-          onOpenTask={onOpenTask}
-        />
-      ))}
-    </SectionPanel>
+      {view &&
+        commitments.map((commitment) => (
+          <CommitmentRow
+            key={commitment.activity_id}
+            commitment={commitment}
+            asOf={view.as_of}
+            mine={
+              commitment.assignee_id !== null && commitment.assignee_id === meId
+            }
+            tick={tick}
+            onOpenTask={onOpenTask}
+          />
+        ))}
+    </OverviewSection>
   );
 }
 
 function CommitmentRow({
   commitment,
-  locale,
+  asOf,
+  mine,
+  tick,
   onOpenTask,
 }: Readonly<{
   commitment: Commitment;
-  locale: ReturnType<typeof useLocale>["locale"];
+  asOf: string;
+  mine: boolean;
+  tick?: (activityId: string) => ReactNode;
   onOpenTask?: (activityId: string) => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
   // The record's clock, exactly as the tasks screen reads it. A commitment is a
   // deadline the team agreed, so the day it names cannot depend on where the
   // reader is sitting.
   const recordZone = useRecordZone();
+  // The server's `overdue` is the verdict; the days only word it.
+  const late = commitment.due_at
+    ? daysPast(Date.parse(commitment.due_at), Date.parse(asOf)).days
+    : 0;
+  const who = mine ? t("project.standing.you") : commitment.assignee_name;
+  const sub = [
+    who,
+    commitment.due_at &&
+      t("project.standing.event.due", {
+        date: formatDayMonth(commitment.due_at, locale, recordZone),
+      }),
+  ].filter(Boolean);
   return (
-    <PanelRow className="project-row">
-      {/* The subject opens the task, the way this file's other two rows open
-          theirs. It was flat text here, so a reader who wanted the description,
-          the assignee or the verbs behind a commitment had nowhere to press —
-          on the one card that names what the project owes. */}
-      {onOpenTask ? (
-        <button
-          type="button"
-          className="project-rowlink"
-          onClick={() => onOpenTask(commitment.activity_id)}
-        >
-          {commitment.subject}
-        </button>
-      ) : (
-        <span>{commitment.subject}</span>
-      )}
-      <span className="project-row-meta t-caption">
-        {commitment.due_at && (
-          <span>{formatDateAbbrev(commitment.due_at, locale, recordZone)}</span>
-        )}
-        {commitment.overdue && (
-          <Badge tone="danger">{t("project.commitments.overdue")}</Badge>
-        )}
-        {commitment.assignee_name && <span>{commitment.assignee_name}</span>}
-      </span>
-    </PanelRow>
+    <OverviewRow
+      lead={tick?.(commitment.activity_id)}
+      title={
+        onOpenTask ? (
+          <button
+            type="button"
+            className="project-rowlink"
+            onClick={() => onOpenTask(commitment.activity_id)}
+          >
+            {commitment.subject}
+          </button>
+        ) : (
+          commitment.subject
+        )
+      }
+      sub={sub.length > 0 ? sub.join(" · ") : undefined}
+      right={
+        commitment.overdue && (
+          <Badge tone="danger">
+            {late > 0
+              ? plural("project.standing.daysLate", late, {
+                  count: formatNumber(late, locale),
+                })
+              : t("project.commitments.overdue")}
+          </Badge>
+        )
+      }
+    />
   );
 }

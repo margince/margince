@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
@@ -51,6 +51,7 @@ const FILES: Attachment[] = [
 ];
 
 const KICKOFF = {
+  writable: true,
   id: "act-kickoff",
   kind: "meeting",
   subject: "Kickoff with Brandt IT",
@@ -77,12 +78,22 @@ function Files({
   data,
   allow,
   archived,
-}: Readonly<{ data: Attachment[]; allow?: GrantSpec; archived?: boolean }>) {
+  writable = true,
+}: Readonly<{
+  data: Attachment[];
+  allow?: GrantSpec;
+  archived?: boolean;
+  writable?: boolean;
+}>) {
   stub(data, allow);
   return (
     <StoryProviders>
       <div style={{ maxWidth: 560 }}>
-        <ActivityFiles activityId="act-kickoff" archived={archived} />
+        <ActivityFiles
+          activityId="act-kickoff"
+          writable={writable}
+          archived={archived}
+        />
       </div>
     </StoryProviders>
   );
@@ -123,9 +134,11 @@ export const RowAction: Story = {
       }),
     );
     const dialog = await within(document.body).findByRole("dialog");
-    await expect(
-      await within(dialog).findByRole("link", { name: /price-list-2026\.pdf/ }),
-    ).toBeVisible();
+    const file = await within(dialog).findByRole("link", {
+      name: /price-list-2026\.pdf/,
+    });
+    // The modal fades in, so the file is visible only once it has.
+    await waitFor(() => expect(file).toBeVisible());
   },
 };
 export const RowActionDark: Story = {

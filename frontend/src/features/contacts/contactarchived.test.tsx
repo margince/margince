@@ -99,6 +99,7 @@ describe("the contact page on an archived row", () => {
       jsonResponse({
         ...archivedContact,
         emails: [liveView.contact.emails?.[0]],
+        primary_email: liveView.contact.primary_email,
       });
     mount(routes);
 

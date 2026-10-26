@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { KeyedName } from "../../design-system/keyedname";
-import { formatDateTime, formatNumber } from "../../format/format";
+import { RowOpen } from "../../design-system/rowopen";
+import { formatDateTime } from "../../format/format";
 import { useNow } from "../../format/now";
 import { formatRelativeTime } from "../../format/relativetime";
 import { viewerZone } from "../../format/timezone";
@@ -16,25 +16,14 @@ import { aiTaskLabel } from "../../lib/ai-task-label";
 import {
   callCodeName,
   callCodeTone,
-  DECIDE_RUNG,
   isKnownCallCode,
-  tierLabel,
 } from "./ai-decision-labels";
-import { providerName } from "./ai-provider-names";
-import { CallDetailPanel } from "./aicalls-detail";
+import { costLabel, ladderAttempts } from "./aicalls-vocab";
 import "./aicalls.css";
 
 type CallSummary = components["schemas"]["AiCallSummary"];
 
 const RELATIVE_TICK_MS = 60_000;
-
-// The attempts the ladder itself made. A decision model that fell back is the
-// first of `calls_attempted`; the next rung is a second model, not a retry.
-function ladderAttempts(call: CallSummary): number {
-  return call.decision_attempted
-    ? call.calls_attempted - 1
-    : call.calls_attempted;
-}
 
 /** One badge, and only for a call that did not go as asked; a normal call carries none. */
 export function CallOutcome({ call }: Readonly<{ call: CallSummary }>) {
@@ -47,10 +36,12 @@ export function CallOutcome({ call }: Readonly<{ call: CallSummary }>) {
     return isKnownCallCode(code) ? (
       badge
     ) : (
-      <CellStack>
-        {badge}
-        <code className="keyed-name-key">{code}</code>
-      </CellStack>
+      <span className="aicalls-outcome">
+        <CellStack>
+          {badge}
+          <code className="keyed-name-key">{code}</code>
+        </CellStack>
+      </span>
     );
   }
   if (call.degraded) {
@@ -62,59 +53,32 @@ export function CallOutcome({ call }: Readonly<{ call: CallSummary }>) {
   return null;
 }
 
-// The rung the call ended on and its vendor. A tier is empty on a call that
-// failed before routing; a decision model asked first is named before the rung.
-function rungCaption(call: CallSummary, t: Translator): string {
-  const tier = tierLabel(call.tier, t);
-  const rung =
-    call.decision_attempted && call.tier !== DECIDE_RUNG
-      ? t("aicalls.model.afterDecision", { tier })
-      : tier;
-  return [rung, providerName(call.provider, t)].filter(Boolean).join(" · ");
-}
-
-function TokenFigure({
-  call,
-  children,
-}: Readonly<{ call: CallSummary; children: ReactNode }>) {
-  const t = useT();
-  return (
-    <span className="aicalls-figure">
-      <CellStack>
-        <span>{children}</span>
-        {call.cache_hit && (
-          <span className="t-caption">{t("aicalls.badge.cacheHit")}</span>
-        )}
-      </CellStack>
-    </span>
-  );
-}
-
+// Five columns fit the settings column without a sideways scroll; the rung,
+// tokens and latency are one press away in the drawer.
 function callColumns(
   t: Translator,
   locale: Locale,
   now: number,
+  onOpen: (call: CallSummary) => void,
 ): DataTableColumn<CallSummary>[] {
   const zone = viewerZone();
   return [
     {
       key: "when",
       header: t("aicalls.col.when"),
-      render: (call) => {
-        const at = formatDateTime(call.occurred_at, locale, zone);
-        return (
-          <CellStack>
-            <span className="aicalls-time">{at}</span>
-            <time dateTime={call.occurred_at} title={at} className="t-caption">
-              {formatRelativeTime(call.occurred_at, locale, new Date(now))}
-            </time>
-          </CellStack>
-        );
-      },
+      render: (call) => (
+        <time
+          dateTime={call.occurred_at}
+          title={formatDateTime(call.occurred_at, locale, zone)}
+          className="aicalls-nowrap"
+        >
+          {formatRelativeTime(call.occurred_at, locale, new Date(now))}
+        </time>
+      ),
     },
     {
-      key: "task",
-      header: t("aicalls.col.task"),
+      key: "feature",
+      header: t("aicalls.col.feature"),
       fold: "title",
       render: (call) => (
         <KeyedName
@@ -127,87 +91,72 @@ function callColumns(
       key: "model",
       header: t("aicalls.col.model"),
       render: (call) => (
-        <span className="aicalls-model-line">
-          <CellStack>
-            <code className="aicalls-model">{call.served_model}</code>
-            <span className="t-caption">{rungCaption(call, t)}</span>
-          </CellStack>
-        </span>
-      ),
-    },
-    {
-      key: "tokens",
-      header: t("aicalls.col.tokens"),
-      align: "end",
-      render: (call) => (
-        <TokenFigure call={call}>
-          {formatNumber(call.tokens_in, locale)} /{" "}
-          {formatNumber(call.tokens_out, locale)}
-        </TokenFigure>
-      ),
-      folded: (call) => (
-        <TokenFigure call={call}>
-          {t("aicalls.folded.tokens", {
-            in: formatNumber(call.tokens_in, locale),
-            out: formatNumber(call.tokens_out, locale),
-          })}
-        </TokenFigure>
-      ),
-    },
-    {
-      key: "latency",
-      header: t("aicalls.col.latency"),
-      align: "end",
-      render: (call) => (
-        <span className="aicalls-figure">
-          {t("aicalls.ms", { value: formatNumber(call.latency_ms, locale) })}
-        </span>
-      ),
-      folded: (call) => (
-        <span className="aicalls-figure">
-          {t("aicalls.folded.latency", {
-            value: formatNumber(call.latency_ms, locale),
-          })}
-        </span>
+        <code className="aicalls-model">{call.served_model}</code>
       ),
     },
     {
       key: "outcome",
       header: t("aicalls.col.outcome"),
-      fold: "end",
       render: (call) => <CallOutcome call={call} />,
+    },
+    {
+      key: "cost",
+      header: t("aicalls.col.cost"),
+      align: "end",
+      // An unpriced call says so in words, with why on hover: a blank reads as free.
+      render: (call) => (
+        <span
+          className="aicalls-nowrap"
+          title={
+            call.estimated_cost_microusd === undefined
+              ? t("aicalls.cost.unpricedHint")
+              : undefined
+          }
+        >
+          {costLabel(call, locale, t)}
+        </span>
+      ),
+    },
+    {
+      key: "open",
+      header: t("table.actions"),
+      headerHidden: true,
+      align: "end",
+      fold: "end",
+      render: (call) => (
+        <RowOpen
+          label={t("aicalls.open", {
+            feature: aiTaskLabel(call.task, t, call.task_display_name),
+            when: formatDateTime(call.occurred_at, locale, zone),
+          })}
+          onOpen={() => onOpen(call)}
+        />
+      ),
     },
   ];
 }
 
+/** The trace; a row opens its call in the drawer beside it. */
 export function CallTable({
   calls,
-  captureEnabled,
-}: Readonly<{ calls: readonly CallSummary[]; captureEnabled: boolean }>) {
+  onOpen,
+}: Readonly<{
+  calls: readonly CallSummary[];
+  onOpen: (call: CallSummary) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const now = useNow(RELATIVE_TICK_MS);
-  const zone = viewerZone();
   return (
     <DataTable
       bleed
       fold
       label={t("aicalls.callsLabel")}
-      columns={callColumns(t, locale, now)}
+      columns={callColumns(t, locale, now, onOpen)}
       rows={[...calls]}
       rowKey={(call) => call.id}
       rowTestId={(call) => `call-${call.id}`}
-      detail={{
-        header: t("aicalls.col.detail"),
-        toggleLabel: (call) =>
-          t("aicalls.expandCall", {
-            task: aiTaskLabel(call.task, t, call.task_display_name),
-            when: formatDateTime(call.occurred_at, locale, zone),
-          }),
-        render: (call) => (
-          <CallDetailPanel id={call.id} captureEnabled={captureEnabled} />
-        ),
-      }}
+      onRowClick={onOpen}
     />
   );
 }

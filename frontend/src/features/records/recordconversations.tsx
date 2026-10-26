@@ -22,7 +22,8 @@ import { GroupedTimelineList } from "../../design-system/timeline";
 import type { TimelineGroup } from "../../design-system/timelineentry";
 import { isConversationKind } from "../../design-system/timelineentry";
 import { useT } from "../../i18n";
-import { type TimelineFilter, useChronologyFilter } from "./recordchronology";
+import type { TimelineFilter } from "../../lib/timelinefilter";
+import { useChronologyFilter } from "./recordchronology";
 
 /**
  * The kinds this cut can draw, for the dial that narrows it. DERIVED from the

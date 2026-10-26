@@ -1,0 +1,85 @@
+name: deal_room_brief_reads_the_blocker
+task: summarize
+site: deal_room_brief
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  title: Ops automation rollout
+  state: live
+  buyers:
+    - label: lena
+      name: Lena Vogt
+      signed_in: true
+      last_seen_on: "2026-10-22"
+      downloaded: [Order form]
+    - label: tomas
+      name: Tomas Petrauskas
+      signed_in: true
+      last_seen_on: "2026-10-20"
+      asked_for_new_link_on: "2026-10-22"
+  documents:
+    - label: proposal
+      title: Proposal v3
+      group: commercial
+    - label: order_form
+      title: Order form
+      group: commercial
+    - label: msa
+      title: MSA redline
+      group: legal
+  # Three threads wait on the reader. The two newest are small asks; the
+  # oldest is the one legal sign-off turns on, and the floor only counts it,
+  # so naming what it says is the model's contribution.
+  threads:
+    - label: resend
+      document_label: order_form
+      comments:
+        - speaker: buyer
+          author: Lena Vogt
+          "on": "2026-10-22"
+          body: Could you resend the order form? The link still shows the old version.
+    - label: kickoff
+      comments:
+        - speaker: buyer
+          author: Lena Vogt
+          "on": "2026-10-21"
+          body: Who from your side joins the kickoff call?
+    - label: cap
+      document_label: msa
+      comments:
+        - speaker: buyer
+          author: Tomas Petrauskas
+          "on": "2026-10-20"
+          body: >
+            Clause 11.2 caps liability at fees paid. Our legal team will not
+            sign until the cap is twelve months of fees.
+    - label: workflows
+      document_label: proposal
+      resolved: true
+      comments:
+        - speaker: your_side
+          author: Demo Admin
+          "on": "2026-10-18"
+          body: Section 4 has the three workflows we scoped on the call.
+        - speaker: buyer
+          author: Lena Vogt
+          "on": "2026-10-19"
+          body: Confirmed, those are the three.
+expect:
+  outcome: accepted
+  answer:
+    cites_label: cap
+    names_token: liability
+  bands:
+    # The floor quotes the two newest waiting threads and is useful alone, so
+    # the bar is reading the blocker reliably, not flawlessly.
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the brief leads with what blocks this deal — the buyer's
+    unanswered objection to the liability cap on the MSA redline — rather than
+    with the newest message, a request to resend a file. Score whether it says
+    what the objection is in the buyer's terms, and whether it notices that a
+    buyer asked for a new link. Penalise any date the summary did not supply,
+    and any words from your side reported as a buyer's.

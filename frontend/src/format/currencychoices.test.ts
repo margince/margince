@@ -2,47 +2,71 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { currencyCodes, currencyOptions } from "./currencychoices";
+import {
+  currencyCodes,
+  currencyOptions,
+  FALLBACK_LEADING_CURRENCIES,
+} from "./currencychoices";
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
 describe("currencyCodes", () => {
-  it("falls back to the leading four where the platform has no currency list", () => {
-    vi.stubGlobal("Intl", { ...Intl, supportedValuesOf: undefined });
-    expect(currencyCodes("NOK")).toEqual(["EUR", "USD", "GBP", "CHF", "NOK"]);
+  it("leads with the codes it is given, in that order", () => {
+    expect(currencyCodes(["NOK", "SEK", "JPY"]).slice(0, 3)).toEqual([
+      "NOK",
+      "SEK",
+      "JPY",
+    ]);
   });
 
-  it("offers the currencies the workspace prices in, not only four", () => {
-    const codes = currencyCodes();
-    expect(codes).toContain("JPY");
-    expect(codes).toContain("NOK");
-    expect(codes).toContain("VND");
-  });
-
-  it("leads with the four most used and lists each code once", () => {
-    const codes = currencyCodes();
-    expect(codes.slice(0, 4)).toEqual(["EUR", "USD", "GBP", "CHF"]);
+  it("lists each code once, also the current one when it already leads", () => {
+    const codes = currencyCodes(["NOK", "SEK"], "SEK");
+    expect(codes.slice(0, 2)).toEqual(["NOK", "SEK"]);
     expect(new Set(codes).size).toBe(codes.length);
   });
 
-  it("keeps the code a record already carries, even one the platform does not list", () => {
-    expect(currencyCodes("ZZZ")[4]).toBe("ZZZ");
+  it("falls back to the leading codes where the platform has no currency list", () => {
+    vi.stubGlobal("Intl", { ...Intl, supportedValuesOf: undefined });
+    expect(currencyCodes(FALLBACK_LEADING_CURRENCIES, "NOK")).toEqual([
+      "EUR",
+      "USD",
+      "GBP",
+      "CHF",
+      "NOK",
+    ]);
   });
 
-  it("does not repeat the current code when it is already offered", () => {
-    expect(currencyCodes("JPY").filter((code) => code === "JPY")).toHaveLength(
-      1,
-    );
+  it("offers the whole ISO list after the leading codes", () => {
+    const codes = currencyCodes(["NOK"]);
+    expect(codes).toContain("JPY");
+    expect(codes).toContain("VND");
+  });
+
+  it("keeps the code a record already carries, even one the server would not assign", () => {
+    expect(currencyCodes(["NOK", "SEK"], "ZZZ")[2]).toBe("ZZZ");
+  });
+
+  it("never offers a code the server refuses, also not as a leading code", () => {
+    const codes = currencyCodes(["ZZZ", "NOK"]);
+    expect(codes[0]).toBe("NOK");
+    expect(codes.filter((code) => code === "ZZZ")).toEqual([]);
+  });
+
+  it("offers only assigned codes from the platform list", () => {
+    vi.stubGlobal("Intl", {
+      ...Intl,
+      supportedValuesOf: () => ["EUR", "QQQ", "JPY"],
+    });
+    expect(currencyCodes(["NOK"])).toEqual(["NOK", "EUR", "JPY"]);
   });
 });
 
 describe("currencyOptions", () => {
   it("uses the code as its own label", () => {
-    expect(currencyOptions().find((option) => option.value === "NOK")).toEqual({
-      value: "NOK",
-      label: "NOK",
-    });
+    expect(
+      currencyOptions(["NOK"]).find((option) => option.value === "JPY"),
+    ).toEqual({ value: "JPY", label: "JPY" });
   });
 });

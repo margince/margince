@@ -200,6 +200,7 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 			dataTaskMetricsSection(pool),
 			jobMetricsSection(func(ctx context.Context) (jobs.Snapshot, error) { return jobs.Stats(ctx, pool) }),
 			backfillFleetSection(backfillFleetReader(pool)),
+			threadBacklogSection(threadBacklogReader(pool)),
 		),
 	})))
 	// The anonymous public edges sit between the session middleware (which

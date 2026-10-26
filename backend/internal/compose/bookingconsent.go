@@ -196,7 +196,7 @@ func (a bookingConsentAdapter) askMarketing(ctx context.Context, contactID ids.U
 	if m == nil {
 		return activities.MarketingNotRequested, nil
 	}
-	issued, err := a.store.IssueConsentLink(ctx,
+	issued, err := a.store.IssueBookedConsentLink(ctx,
 		ids.From[ids.ContactKind](contactID), ids.From[ids.PurposeKind](m.PurposeID), m.TickedFrom)
 	if err == nil {
 		// STAGED, not merely minted. issueLink answers a token it could not

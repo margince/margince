@@ -20,11 +20,11 @@ package capture
 // links are derived from those rows rather than re-resolved, and a meeting whose
 // attendee is a contact is filed under that contact.
 //
-// CONTACT links only. A meeting may never link straight to a company
-// (activities.refuseACompanyMeeting, and a trigger behind it): the account is
-// reached through the attendee's employment, which is exactly what the company
-// reach walk's third arm does. Filing the meeting under the contact is therefore
-// enough to put it on the company page too.
+// Contact and lead links only. A lead attendee is matched by exact address.
+// A meeting may never link straight to a company
+// (activities.refuseACompanyMeeting, and a trigger behind it). The company
+// reach walk finds the account through the attendee's employment, so the
+// contact link puts the meeting on the company page too.
 //
 // Nothing is CREATED from an invite. An attendee with no contact record stays an
 // address here; an invitation is not correspondence, and one all-hands with
@@ -39,13 +39,9 @@ package capture
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -53,111 +49,35 @@ import (
 // beside the only capture path that treats meetings differently from mail.
 const meetingKind = "meeting"
 
-// maxDerivedMeetingLinks bounds how many contacts one captured meeting is filed
-// under.
+// maxDerivedMeetingLinks bounds how many records one captured activity is filed
+// under through its participants.
 //
-// The ceiling is activities.maxActivityLinks — an activity may be filed under
-// at most 25 records, for every transport including a human's own. It is spelled
-// again here rather than shared because a module never imports a sibling; what
-// must not drift is the NUMBER, and a meeting that reached the cap has stopped
-// being a meeting and become a broadcast, where the attendee list is the record
-// and the filing is not.
+// It mirrors activities.maxActivityLinks, because a module never imports a
+// sibling. An activity is filed under at most 25 records on every transport.
 //
 // Held by: TestTheLinkCeilingHasOneValue (backend/gates/linkceilingparity_test.go)
 const maxDerivedMeetingLinks = 25
 
-// linkResolvedMeetingParticipants files a captured meeting under each attendee
-// the workspace already has a contact for, and answers how many links it wrote.
-//
-// The count is what the audience limiter reads: a meeting that lands with links
-// is not a link-less record and must not be held to its participants. It counts
-// links actually WRITTEN — a conflict, a cap or an invisible target all mean no
-// link — because the limiter's write is deterministic, and claiming a link that
-// does not exist would leave the meeting workspace-readable with nothing filing
-// it anywhere.
-func (s *Sink) linkResolvedMeetingParticipants(
-	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, existing int,
-) (int, error) {
-	contacts, err := meetingParticipantsWithContacts(ctx, tx, activityID)
-	if err != nil {
-		return 0, err
-	}
-	// The budget is what the row can still take, not a fresh 25: a connector
-	// record may already carry links of its own, and the ceiling is on the
-	// activity rather than on this step.
-	budget := maxDerivedMeetingLinks - existing
-	written := 0
-	for _, contact := range contacts {
-		if written >= budget {
-			break
-		}
-		// A connector may not plant a link to a record its granting human could
-		// not see (H1), the same probe linkActivity makes. Not-found is skipped
-		// rather than failed: the meeting happened, the participant row already
-		// records that this contact was in it, and refusing the capture over a
-		// filing decision would throw away a message we read successfully.
-		if err := auth.EnsureLinkTarget(ctx, tx, "contact", contact.UUID); err != nil {
-			if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
-				continue
-			}
-			return 0, fmt.Errorf("capture: meeting link target %s: %w", contact, err)
-		}
-		tag, err := tx.Exec(ctx, `
-			INSERT INTO activity_link (activity_id, entity_type, contact_id)
-			VALUES ($1, 'contact', $2)
-			ON CONFLICT DO NOTHING`, activityID, contact)
-		if err != nil {
-			return 0, fmt.Errorf("capture: filing a meeting under its attendee: %w", err)
-		}
-		written += int(tag.RowsAffected())
-	}
-	return written, nil
-}
+// projectLinkReservation is the seat a meeting keeps for the project
+// ladder, which files it after the capture commits and reads no budget. The
+// ladder retries on every replay, so a meeting filled to 25 here would refuse
+// its project link forever.
+const projectLinkReservation = 1
 
-// meetingParticipantsWithContacts answers the contacts this meeting's participant
-// rows resolved to, organizer first and then by id.
+// linkResolvedMeetingParticipants files a captured meeting under each attendee
+// who is a live contact or a live lead (participantfiling.go), organizer first.
 //
-// Ordered because the cap can cut the list: whoever called the meeting is the
-// most useful filing, and a deterministic order means a replay of the same
-// meeting files it the same way rather than under whichever rows came back
-// first.
-//
-// The id is settled against a merge here, for the reason every writer of
-// activity_link settles it: no reader walks merged_into_id, so a link written
-// to a retired contact leaves the meeting on a record nobody opens.
-func meetingParticipantsWithContacts(
-	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
-) ([]ids.ContactID, error) {
-	// The redirect is followed BEFORE liveness is judged, and the liveness test
-	// is on the record the redirect lands on. A merge archives the source and
-	// points it at the survivor in one write, so testing the source's own
-	// archived_at would drop an attendee whose record simply moved — the meeting
-	// would silently lose a link to a contact the workspace still has.
-	rows, err := tx.Query(ctx, `
-		SELECT survivor.id AS contact_id,
-		       bool_or(ap.role = 'organizer') AS organized
-		  FROM activity_participant ap
-		  JOIN contact p ON p.id = ap.contact_id
-		  JOIN contact survivor ON survivor.id = coalesce(p.merged_into_id, p.id)
-		 WHERE ap.activity_id = $1 AND ap.contact_id IS NOT NULL
-		   AND survivor.archived_at IS NULL
-		 GROUP BY survivor.id
-		 ORDER BY organized DESC, contact_id`, activityID)
-	if err != nil {
-		return nil, fmt.Errorf("capture: reading a meeting's resolved attendees: %w", err)
-	}
-	defer rows.Close()
-	var out []ids.ContactID
-	for rows.Next() {
-		var contact ids.ContactID
-		var organized bool
-		if err := rows.Scan(&contact, &organized); err != nil {
-			return nil, fmt.Errorf("capture: reading a meeting's resolved attendees: %w", err)
-		}
-		out = append(out, contact)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("capture: reading a meeting's resolved attendees: %w", err)
-	}
-	return out, nil
+// It answers the links written, which the audience limiter reads. A meeting
+// with links is not held to its participants. A claimed link that was never
+// written would open a meeting that nothing files.
+func (s *Sink) linkResolvedMeetingParticipants(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, existing int, private bool,
+) (int, error) {
+	// The ceiling is on the activity, so a connector's own links count.
+	return fileUnderParticipants(tx, activityID, participantFiling{
+		decider: ctx,
+		budget:  max(maxDerivedMeetingLinks-existing-projectLinkReservation, 0),
+		private: private,
+		write:   insertParticipantLink(ctx, tx, activityID),
+	})
 }

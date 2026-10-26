@@ -14,10 +14,10 @@ package contacts
 // that to a colleague would take a contact off a queue whose owner never made
 // the call.
 //
-// NEVER PERMANENT. The column is NOT NULL, so there is no forever to store. A
-// permanent dismissal would silently delete a contact from a rep's attention and
-// leave nothing to notice it, which is the failure the hidden-backlog guardrail
-// exists to catch — reached by a door that guardrail cannot see.
+// Temporary or permanent. A dated row sets the contact aside until a moment. A
+// NULL `dismissed_until` is a stop with no end date, for a reader who has
+// decided the relationship is over. Both stay reversible through
+// RestoreRelationshipNudge, and neither hides the contact's own page.
 
 import (
 	"context"
@@ -65,73 +65,141 @@ func (e *NudgeDaysError) FieldFault() (field, code, message string) {
 func (s *Store) DismissRelationshipNudge(
 	ctx context.Context, contactID ids.ContactID, days int,
 ) error {
+	return s.DismissRelationshipNudges(ctx, []ids.ContactID{contactID}, NudgeSpan{Days: days})
+}
+
+// NudgeSpan is how long a dismissal holds: Days from now, or Permanent.
+type NudgeSpan struct {
+	Days      int
+	Permanent bool
+}
+
+// until is the stored end of the span: nil for a permanent stop.
+func (span NudgeSpan) until(now time.Time) (*time.Time, error) {
+	if span.Permanent {
+		if span.Days != 0 {
+			return nil, &NudgeDaysError{Days: span.Days}
+		}
+		return nil, nil //nolint:nilnil // a permanent stop stores no end moment, and NULL is that stop
+	}
+	if span.Days < 1 || span.Days > nudgeDismissalMaxDays {
+		return nil, &NudgeDaysError{Days: span.Days}
+	}
+	moment := dismissalDeadline(now, span.Days)
+	return &moment, nil
+}
+
+// DismissRelationshipNudges sets every listed contact aside for this reader,
+// in one transaction: all of them or none. A contact the reader cannot read
+// refuses the whole request, as it does for one.
+func (s *Store) DismissRelationshipNudges(
+	ctx context.Context, contactIDs []ids.ContactID, span NudgeSpan,
+) error {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return err
 	}
-	if days < 1 || days > nudgeDismissalMaxDays {
-		return &NudgeDaysError{Days: days}
+	now := s.clock()
+	until, err := span.until(now)
+	if err != nil {
+		return err
 	}
 	reader, err := humanReader(ctx)
 	if err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		// Reading the contact is the licence to set them aside, and a contact
-		// this reader cannot open answers 404 like one that does not exist.
+		for _, contactID := range contactIDs {
+			if err := setNudgeAside(ctx, tx, contactID, reader, now, until); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// setNudgeAside writes one reader's dismissal of one contact, with its audit
+// and event, after the same visibility check a single dismissal makes.
+func setNudgeAside(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, reader ids.UUID, now time.Time, until *time.Time) error {
+	if err := auth.EnsureVisible(ctx, tx, "contact", contactID.UUID); err != nil {
+		return err
+	}
+	if err := lockContactForAttach(ctx, tx, contactID); err != nil {
+		return err
+	}
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return err
+	}
+	var replaced *time.Time
+	found := true
+	if err := tx.QueryRow(ctx, `
+		SELECT dismissed_until FROM relationship_nudge_dismissal
+		 WHERE contact_id = $1 AND reader_id = $2`,
+		contactID, reader).Scan(&replaced); errors.Is(err, pgx.ErrNoRows) {
+		found = false
+	} else if err != nil {
+		return fmt.Errorf("contacts: reading the standing dismissal: %w", err)
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`
+		INSERT INTO relationship_nudge_dismissal
+		       (contact_id, reader_id, dismissed_until, set_by, set_at)
+		VALUES ($%[1]d, $%[2]d, $%[3]d, $%[4]d, $%[5]d)
+		ON CONFLICT (contact_id, reader_id) DO UPDATE
+		   SET dismissed_until = EXCLUDED.dismissed_until,
+		       set_by = EXCLUDED.set_by,
+		       set_at = EXCLUDED.set_at`,
+		arg(contactID), arg(reader), arg(until), arg(by), arg(now.UTC().Truncate(time.Microsecond))),
+		args...); err != nil {
+		return fmt.Errorf("contacts: dismissing a relationship nudge: %w", err)
+	}
+	return recordNudgeDismissal(ctx, tx, contactID, actionDismissed, until, found, replaced)
+}
+
+// NudgeState is one reader's standing choice about a quiet contact.
+type NudgeState struct {
+	// Stopped is a permanent stop; Until is set for a dated dismissal still in
+	// force. Neither means the reader follows the contact.
+	Stopped bool
+	Until   *time.Time
+}
+
+// RelationshipNudgeState reads this reader's own choice for the contact, under
+// the same visibility check a dismissal makes. A colleague's choice is never
+// read.
+func (s *Store) RelationshipNudgeState(ctx context.Context, contactID ids.ContactID) (NudgeState, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return NudgeState{}, err
+	}
+	reader, err := humanReader(ctx)
+	if err != nil {
+		return NudgeState{}, err
+	}
+	var state NudgeState
+	err = s.tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.EnsureVisible(ctx, tx, "contact", contactID.UUID); err != nil {
 			return err
 		}
-		// The lock every row naming a contact takes before it is written. An
-		// archive in flight can otherwise commit between its own probe and its
-		// sweep, leaving a live dismissal on an archived contact — which reads
-		// as fine to every sequential test.
-		if err := lockContactForAttach(ctx, tx, contactID); err != nil {
-			return err
-		}
-		by, err := storekit.CapturedBy(ctx)
-		if err != nil {
-			return err
-		}
-		// The moment is computed HERE rather than taken from the caller: the
-		// server owns now, and a client computing an instant from a clock that
-		// is minutes out writes a dismissal that expires early or late for a
-		// reason nobody can see.
-		//
-		// time.Now() rather than an injected clock, matching every other write
-		// in this store. The tests below assert the SPAN the row carries rather
-		// than an instant, so nothing here needs a clock held still.
-		until := dismissalDeadline(time.Now(), days)
-		// What deadline was already standing, read under the contact lock taken
-		// above so the upsert below cannot race it. A re-dismissal REPLACES this
-		// value, and an audit row that named only the new one would leave
-		// nobody able to say what it displaced — which is the before-image every
-		// audited replacement owes.
-		var replaced *time.Time
-		if err := tx.QueryRow(ctx, `
+		var until *time.Time
+		err := tx.QueryRow(ctx, `
 			SELECT dismissed_until FROM relationship_nudge_dismissal
-			 WHERE contact_id = $1 AND reader_id = $2`,
-			contactID, reader).Scan(&replaced); err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("contacts: reading the standing dismissal: %w", err)
+			 WHERE contact_id = $1 AND reader_id = $2`, contactID, reader).Scan(&until)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
 		}
-		// Every placeholder derived from the argument slice rather than typed:
-		// nothing checks that a hand-written $N still names the value a caller
-		// appends, and this statement carries five.
-		var args []any
-		arg := func(v any) int { args = append(args, v); return len(args) }
-		if _, err := tx.Exec(ctx, fmt.Sprintf(`
-			INSERT INTO relationship_nudge_dismissal
-			       (contact_id, reader_id, dismissed_until, set_by, set_at)
-			VALUES ($%[1]d, $%[2]d, $%[3]d, $%[4]d, now())
-			ON CONFLICT (contact_id, reader_id) DO UPDATE
-			   SET dismissed_until = EXCLUDED.dismissed_until,
-			       set_by = EXCLUDED.set_by,
-			       set_at = now()`,
-			arg(contactID), arg(reader), arg(until), arg(by)),
-			args...); err != nil {
-			return fmt.Errorf("contacts: dismissing a relationship nudge: %w", err)
+		if err != nil {
+			return fmt.Errorf("contacts: reading the reader's nudge choice: %w", err)
 		}
-		return recordNudgeDismissal(ctx, tx, contactID, actionDismissed, &until, replaced)
+		switch {
+		case until == nil:
+			state.Stopped = true
+		case until.After(s.clock()):
+			state.Until = until
+		}
+		return nil
 	})
+	return state, err
 }
 
 // RestoreRelationshipNudge puts a set-aside contact back on this reader's lane.
@@ -170,8 +238,8 @@ func (s *Store) RestoreRelationshipNudge(ctx context.Context, contactID ids.Cont
 		err := tx.QueryRow(ctx, fmt.Sprintf(`
 			DELETE FROM relationship_nudge_dismissal
 			 WHERE contact_id = $%[1]d AND reader_id = $%[2]d
-			 RETURNING dismissed_until > now()`,
-			arg(contactID), arg(reader)), args...).Scan(&wasApplying)
+			 RETURNING dismissed_until IS NULL OR dismissed_until > $%[3]d`,
+			arg(contactID), arg(reader), arg(s.clock())), args...).Scan(&wasApplying)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Never set aside. Idempotent: the reader's goal state holds.
 			return nil
@@ -182,7 +250,7 @@ func (s *Store) RestoreRelationshipNudge(ctx context.Context, contactID ids.Cont
 		if !wasApplying {
 			return nil
 		}
-		return recordNudgeDismissal(ctx, tx, contactID, actionRestored, nil, nil)
+		return recordNudgeDismissal(ctx, tx, contactID, actionRestored, nil, false, nil)
 	})
 }
 
@@ -216,11 +284,15 @@ func dismissalDeadline(now time.Time, days int) time.Time {
 // announcement, in the same transaction as the judgement itself.
 func recordNudgeDismissal(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
-	action string, until, replaced *time.Time,
+	action string, until *time.Time, hadOne bool, replaced *time.Time,
 ) error {
 	after := map[string]any{"nudge_dismissal": action}
+	permanent := action == actionDismissed && until == nil
 	if until != nil {
 		after["dismissed_until"] = until.UTC()
+	}
+	if permanent {
+		after["permanent"] = true
 	}
 	// A re-dismissal replaces a deadline that was standing, so it images the
 	// one it displaced. A first dismissal replaces nothing and records an
@@ -228,8 +300,11 @@ func recordNudgeDismissal(
 	// there was a prior row rather than by which verb was pressed.
 	var auditID ids.UUID
 	var err error
-	if replaced != nil {
-		before := map[string]any{"dismissed_until": replaced.UTC()}
+	if hadOne {
+		before := map[string]any{"permanent": replaced == nil}
+		if replaced != nil {
+			before = map[string]any{"dismissed_until": replaced.UTC()}
+		}
 		auditID, err = storekit.Audit(ctx, tx, "update", "contact", contactID.UUID, before, after)
 	} else {
 		auditID, err = storekit.AuditEvent(ctx, tx, "update", "contact", contactID.UUID, after)
@@ -244,6 +319,9 @@ func recordNudgeDismissal(
 	if until != nil {
 		moment := until.UTC()
 		payload.DismissedUntil = &moment
+	}
+	if permanent {
+		payload.Permanent = &permanent
 	}
 	return storekit.EmitEvent(ctx, tx, auditID, contactID.UUID, payload)
 }
@@ -282,5 +360,5 @@ func NotDismissedClause(ctx context.Context, alias string, at time.Time, arg fun
 		SELECT 1 FROM relationship_nudge_dismissal d
 		 WHERE d.contact_id = %s.contact_id
 		   AND d.reader_id = $%d
-		   AND d.dismissed_until > $%d)`, alias, arg(reader), arg(at)), nil
+		   AND (d.dismissed_until IS NULL OR d.dismissed_until > $%d))`, alias, arg(reader), arg(at)), nil
 }

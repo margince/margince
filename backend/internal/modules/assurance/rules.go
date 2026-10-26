@@ -42,6 +42,10 @@ type Subject struct {
 	HasNextStep bool
 	// Whether an economic buyer has been identified on the deal.
 	HasEconomicBuyer bool
+	// How many of the deal's stage's REQUIRED exit criteria no unrefuted
+	// evidence says are met. Zero for a stage that declares none, which is
+	// every stage until an installation configures one.
+	UnmetExitCriteria int
 }
 
 // Finding is what a rule noticed, before it becomes a stored exception.
@@ -74,6 +78,7 @@ const (
 	TypeNoEconomicBuyer  = "no_economic_buyer"
 	TypeBuyerSilent      = "buyer_silent"
 	TypeCommitUnpriced   = "commit_unpriced"
+	TypeStageExitUnmet   = "stage_exit_unmet"
 )
 
 // DealAmountTypes are the types whose claim and observed slots carry money that
@@ -158,6 +163,7 @@ func Rules() []Rule {
 		closePast(), closeUnconfirmed(), closePushed(),
 		amountVsOffer(), amountVsContract(),
 		noNextStep(), noEconomicBuyer(), buyerSilent(), commitUnpriced(),
+		stageExitUnmet(),
 	}
 }
 
@@ -350,4 +356,27 @@ func LogicalKey(f Finding) string {
 // differently at noon than at midnight on the same day.
 func day(at time.Time) time.Time {
 	return time.Date(at.Year(), at.Month(), at.Day(), 0, 0, 0, 0, at.Location())
+}
+
+// A deal in a stage whose own exit criteria are not met.
+//
+// Asked of every category, unlike the forecast rules. The stage is what
+// declares the bar: a criterion exists only where an installation wrote one,
+// so a stage nobody configured produces no finding.
+//
+// Met means unrefuted evidence saying so. A criterion whose evidence was
+// contradicted later is unmet again, which is why the evidence carries a
+// refutation rather than being deleted.
+func stageExitUnmet() Rule {
+	return Rule{Type: TypeStageExitUnmet, Version: "v1", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
+		if s.UnmetExitCriteria == 0 {
+			return nil
+		}
+		return &Finding{
+			Type: TypeStageExitUnmet, SubjectID: s.DealID, Severity: SeverityMedium,
+			Claim:         map[string]any{"stage": s.StageName},
+			Observed:      map[string]any{"unmet_exit_criteria": s.UnmetExitCriteria},
+			AffectedMinor: s.AmountMinor, Currency: s.Currency,
+		}
+	}}
 }

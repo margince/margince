@@ -68,7 +68,7 @@ func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.A
 	}
 	out := &crmcontracts.ApprovalPreview{Version: 1, State: previewUnavailableState, Changes: []crmcontracts.ApprovalPreviewChange{}, ReviewerReason: previewReviewer(ctx, approval)}
 	out.Evidence = &[]crmcontracts.ApprovalEvidence{}
-	if approval.Kind == heldScheduledSendKind || approval.Kind == "communication_review" {
+	if approval.Kind == heldScheduledSendKind {
 		return r.scheduledApprovalPreview(ctx, approval, out)
 	}
 	if approval.Kind == "coldstart" {
@@ -85,6 +85,9 @@ func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.A
 	}
 	if approval.Kind == operationMergeTags {
 		return r.tagMergePreview(ctx, approval, out)
+	}
+	if approval.Kind == operationSetUpPartner {
+		return r.partnerSetUpPreview(ctx, approval, out)
 	}
 	if approval.Kind == operationCommitImport {
 		return r.importPreview(ctx, approval, out)
@@ -264,6 +267,14 @@ func previewUnavailable(err error) bool {
 	return errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrInvalidArgument) || errors.Is(err, apperrors.ErrSeatTierInsufficient)
 }
 
+// The reasons previewReviewer gives, which the card and the approval email
+// each turn into one sentence.
+const (
+	reviewerRequestedDecider = "requested_decider"
+	reviewerOnBehalfOf       = "on_behalf_of"
+	reviewerRecordAuthority  = "record_authority"
+)
+
 func previewReviewer(ctx context.Context, approval crmcontracts.Approval) string {
 	actor, ok := principal.Actor(ctx)
 	viewer := actor.UserID
@@ -271,12 +282,12 @@ func previewReviewer(ctx context.Context, approval crmcontracts.Approval) string
 		viewer = actor.OnBehalfOf
 	}
 	if ok && approval.RequestedDeciderId != nil && ids.UUID(*approval.RequestedDeciderId) == viewer {
-		return "requested_decider"
+		return reviewerRequestedDecider
 	}
 	if ok && approval.OnBehalfOf != nil && ids.UUID(*approval.OnBehalfOf) == viewer {
-		return "on_behalf_of"
+		return reviewerOnBehalfOf
 	}
-	return "record_authority"
+	return reviewerRecordAuthority
 }
 
 func (r approvalPreviewReader) value(ctx context.Context, field string, raw json.RawMessage) (crmcontracts.ApprovalPreviewValue, error) {

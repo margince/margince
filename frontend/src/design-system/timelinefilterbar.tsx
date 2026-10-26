@@ -6,7 +6,7 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { isImeCommit } from "../lib/imecommit";
 import { Field, SearchField } from "./atoms";
-import { DateInput, type ISODate, isISODate } from "./dateinput";
+import { DateInput } from "./dateinput";
 import {
   ACTIVITY_KINDS,
   type ActivityKind,
@@ -79,7 +79,6 @@ export function TimelineFilterBar({
       label: t(KIND_LABEL[kind]),
     })),
   ];
-  const day = (raw: string): ISODate | "" => (isISODate(raw) ? raw : "");
   return (
     <div className="timeline-filters">
       <div className="timeline-filters-row">
@@ -115,7 +114,7 @@ export function TimelineFilterBar({
                 value={value.after ?? ""}
                 max={value.before || undefined}
                 onChange={(event) =>
-                  onChange({ ...value, after: day(event.target.value) })
+                  onChange({ ...value, after: event.target.value })
                 }
               />
             )}
@@ -127,7 +126,7 @@ export function TimelineFilterBar({
                 value={value.before ?? ""}
                 min={value.after || undefined}
                 onChange={(event) =>
-                  onChange({ ...value, before: day(event.target.value) })
+                  onChange({ ...value, before: event.target.value })
                 }
               />
             )}

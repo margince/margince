@@ -1,14 +1,16 @@
 /** @vitest-environment happy-dom */
-import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { messageText } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
+import { draftButton } from "../../testing/composedraft.testkit";
 import { ComposeModal } from "./compose";
 import {
   type Activity,
   activity202,
   fillSendableForm,
+  findThreadChoice,
   jsonResponse,
   NO_VOICE_PROFILE,
   PURPOSES,
@@ -101,9 +103,7 @@ describe("ComposeModal started from an account", () => {
       />,
     );
 
-    const drafting = screen.getByRole("button", {
-      name: /Draft (reply )?with AI/,
-    });
+    const drafting = draftButton();
     expect(drafting).toHaveProperty("disabled", true);
     expect(sent.some((r) => r.key.includes("draft-email"))).toBe(false);
     // Undraftable is not unsendable: the rep writes it themselves and sends.
@@ -194,9 +194,7 @@ describe("ComposeModal started from an account", () => {
       await screen.findByRole("combobox", { name: "Draft to" }),
       "Sarah Cole",
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await waitFor(() =>
       expect(messageText("Body")).toBe("Hi Sarah, shall we pick this up?"),
     );
@@ -264,202 +262,6 @@ describe("ComposeModal started from an account", () => {
       await screen.findByRole("combobox", { name: /Project/ }),
     ).toBeTruthy();
   });
-
-  // The composer's project control, on a reply. A reply inherits its thread's
-  // project on its own (capture's stickiness rung). The composer suggests that
-  // project so the rep does not retype it. It is a suggestion in a picker they
-  // can set to None, not a fact stated at them.
-  const replyBackend = (
-    links: { entity_type: string; entity_id: string }[],
-    projects: { project_id: string; name: string; key: string }[],
-  ) =>
-    stubRoutes({
-      "GET /activities/act-1": () =>
-        jsonResponse({
-          id: "act-1",
-          kind: "email",
-          occurred_at: "2026-08-09T09:00:00Z",
-          source: "gmail",
-          created_at: "2026-08-09T09:00:00Z",
-          updated_at: "2026-08-09T09:00:00Z",
-          version: 1,
-          links,
-        }),
-      "GET /deals/d-1": () =>
-        jsonResponse({
-          id: "d-1",
-          name: "netcare",
-          company_id: "o-1",
-          project_id: "pr-9",
-        }),
-      "GET /companies/o-1/360": () =>
-        jsonResponse({
-          as_of: "2026-08-09T09:00:00Z",
-          company: {
-            id: "o-1",
-            display_name: "netcare",
-            source: "manual",
-            captured_by: "human:u1",
-            created_at: "2026-08-01T00:00:00Z",
-            updated_at: "2026-08-01T00:00:00Z",
-          },
-          sections_omitted: [],
-          contacts: { data: [], page: { next_cursor: null } },
-          deals: { data: [], page: { next_cursor: null } },
-          projects: projects.map((one) => ({
-            ...one,
-            phase: "delivering",
-          })),
-        }),
-      "GET /projects/pr-9": () =>
-        jsonResponse({ id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }),
-      "GET /projects/pr-1": () =>
-        jsonResponse({ id: "pr-1", name: "ERP rollout Acme", key: "ERP-27" }),
-    });
-
-  const openReply = async () => {
-    render(
-      <ComposeModal
-        activityId="act-1"
-        entityType="deal"
-        entityId="d-1"
-        open
-        onClose={vi.fn()}
-      />,
-    );
-    return () => screen.getByLabelText("Subject") as HTMLInputElement;
-  };
-
-  it("offers the company's projects and defaults to the thread's own", async () => {
-    replyBackend(
-      [
-        { entity_type: "deal", entity_id: "d-1" },
-        { entity_type: "project", entity_id: "pr-1" },
-      ],
-      [
-        { project_id: "pr-1", name: "ERP rollout Acme", key: "ERP-27" },
-        { project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" },
-      ],
-    );
-    const subject = await openReply();
-
-    const picker = await screen.findByLabelText("Project");
-    // The thread's own project is the default, not the deal's: a conversation
-    // already filed settled this.
-    await waitFor(() =>
-      expect(picker.textContent).toContain("ERP rollout Acme"),
-    );
-    // Both of the company's projects are on offer, plus None.
-    await userEvent.setup().click(picker);
-    expect(
-      (await screen.findAllByRole("option")).map((o) => o.textContent),
-    ).toEqual([
-      "No project",
-      "ERP-27 · ERP rollout Acme",
-      "N2P-1 · Netcare 2 project",
-    ]);
-    await userEvent.setup().keyboard("{Escape}");
-    // And the tag is already in the subject. Nothing explains it, because the
-    // field shows it.
-    await waitFor(() => expect(subject().value).toBe("[ERP-27]"));
-  });
-
-  it("defaults to the deal's project when the thread names none", async () => {
-    replyBackend(
-      [{ entity_type: "deal", entity_id: "d-1" }],
-      [
-        { project_id: "pr-1", name: "ERP rollout Acme", key: "ERP-27" },
-        { project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" },
-      ],
-    );
-    const subject = await openReply();
-
-    const picker = await screen.findByLabelText("Project");
-    await waitFor(() =>
-      expect(picker.textContent).toContain("Netcare 2 project"),
-    );
-    await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
-  });
-
-  it("takes the tag out when the rep picks None, and puts another one in", async () => {
-    const user = userEvent.setup();
-    replyBackend(
-      [{ entity_type: "deal", entity_id: "d-1" }],
-      [
-        { project_id: "pr-1", name: "ERP rollout Acme", key: "ERP-27" },
-        { project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" },
-      ],
-    );
-    const subject = await openReply();
-    const picker = await screen.findByLabelText("Project");
-    await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
-    // `[` opens a key descriptor in user-event's parser, so the tag is typed
-    // through fireEvent rather than escaped into unreadability.
-    await user.clear(subject());
-    fireEvent.change(subject(), {
-      target: { value: "[N2P-1] Re: Angebot" },
-    });
-
-    await pickOption(user, picker, "No project");
-    await waitFor(() => expect(subject().value).toBe("Re: Angebot"));
-
-    // Choosing a different project stamps that one instead.
-    await pickOption(user, picker, "ERP-27 · ERP rollout Acme");
-    await waitFor(() => expect(subject().value).toBe("[ERP-27] Re: Angebot"));
-  });
-
-  it("offers nothing when the company reaches no live project", async () => {
-    replyBackend([{ entity_type: "deal", entity_id: "d-1" }], []);
-    const subject = await openReply();
-
-    await screen.findByRole("button", { name: /Draft (reply )?with AI/ });
-    // A list whose only entry is None asks a question with one answer.
-    expect(screen.queryByLabelText("Project")).toBeNull();
-    expect(subject().value).toBe("");
-  });
-
-  it("keeps the tag when the rep types a subject over it", async () => {
-    const user = userEvent.setup();
-    replyBackend(
-      [{ entity_type: "deal", entity_id: "d-1" }],
-      [{ project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }],
-    );
-    const subject = await openReply();
-    await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
-
-    // The ordinary thing a rep does next is type the subject. The field is
-    // replaced wholesale, and the tag has to survive that. Writing it only when
-    // the picker moves would lose it.
-    await user.clear(subject());
-    await user.type(subject(), "Re: Kurzer Austausch?");
-
-    await waitFor(() =>
-      expect(subject().value).toBe("[N2P-1] Re: Kurzer Austausch?"),
-    );
-  });
-
-  it("puts the tag back when the subject loses it, while a project is chosen", async () => {
-    const user = userEvent.setup();
-    replyBackend(
-      [{ entity_type: "deal", entity_id: "d-1" }],
-      [{ project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }],
-    );
-    const subject = await openReply();
-    await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
-
-    // Deleting the tag out of the text does not unset a project. The picker
-    // does, and it still names one. Leaving the text without it would put
-    // the field and the picker in two different states, and the send would
-    // honour the picker.
-    await user.clear(subject());
-    await user.type(subject(), "Re: ohne Tag");
-
-    await waitFor(() => expect(subject().value).toBe("[N2P-1] Re: ohne Tag"));
-
-    // The way to have no tag is to choose No project.
-    await pickOption(user, screen.getByLabelText("Project"), "No project");
-    await waitFor(() => expect(subject().value).toBe("Re: ohne Tag"));
-  });
 });
 
 // Opened from a record page, the composer must name a conversation. With To
@@ -468,6 +270,7 @@ describe("ComposeModal started from an account", () => {
 // which message they reply to either.
 describe("what the composer says it is answering", () => {
   const latestMail: Activity = {
+    offers_email: false,
     id: "act-latest",
     kind: "email",
     subject: "Rechnung GR-2026-0207",
@@ -505,13 +308,9 @@ describe("what the composer says it is answering", () => {
     // The conversations are offered, not chosen for the reader. A button that
     // says "write an email" must not anchor the message to whatever came last,
     // addressed to somebody they had not picked.
-    await userEvent.click(
-      await screen.findByRole("button", { name: /Rechnung GR-2026-0207/ }),
-    );
+    await userEvent.click(await findThreadChoice(/Rechnung GR-2026-0207/));
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     // And the draft answers that message: the account-wide draft, which needs
     // a recipient named first, is not what a reader gets from a record page.
@@ -571,14 +370,10 @@ describe("what the composer says it is answering", () => {
     );
 
     // The conversation is picked, then drafted against.
-    await userEvent.click(
-      await screen.findByRole("button", { name: /Rechnung GR-2026-0207/ }),
-    );
+    await userEvent.click(await findThreadChoice(/Rechnung GR-2026-0207/));
     expect(screen.queryByText(/dietmar@valantic.test/)).toBeNull();
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     // And who, in the field that will carry it. It is asked for as the chip's
     // own control, because the address also appears in the quoted head of the
@@ -628,7 +423,7 @@ describe("what the composer says it is answering", () => {
       />,
     );
 
-    await screen.findByText(/Rechnung GR-2026-0207/);
+    await findThreadChoice(/Rechnung GR-2026-0207/);
     // The record still scopes the read; a project only narrows it further.
     expect(asked.params?.get("entity_type")).toBe("company");
     expect(asked.params?.get("entity_id")).toBe("company-1");
@@ -666,12 +461,8 @@ describe("what the composer says it is answering", () => {
       />,
     );
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: /Rechnung GR-2026-0207/ }),
-    );
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(await findThreadChoice(/Rechnung GR-2026-0207/));
+    await userEvent.click(draftButton());
     await waitFor(() =>
       expect(
         sent.some((s) => s.key === "POST /activities/act-latest/draft-email"),

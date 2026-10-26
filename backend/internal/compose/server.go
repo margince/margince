@@ -198,12 +198,11 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// Constructed, not merely embedded: the handler carries no nil-pool
 		// branch, so the zero value would panic on the first authenticated
 		// read rather than answer anything at all.
-		jobHealthHandlers: jobHealthHandlers{pool: pool},
-		captureHealthHandlers: captureHealthHandlers{
-			pool: pool, now: func() time.Time { return time.Now().UTC() },
-		},
+		jobHealthHandlers:             jobHealthHandlers{pool: pool},
+		captureHealthHandlers:         captureHealthHandlers{pool: pool, now: utcNow},
 		extensionsHandlers:            newExtensionsHandlers(pool),
-		extensionIngestHealthHandlers: extensionIngestHealthHandlers{pool: pool, now: func() time.Time { return time.Now().UTC() }},
+		extensionIngestHealthHandlers: extensionIngestHealthHandlers{pool: pool, now: utcNow},
+		automaticWorkHandlers:         automaticWorkHandlers{pool: pool, now: utcNow},
 		recoveryHealthHandlers: recoveryHealthHandlers{
 			ledger: continuity.NewStore(InstallationDB(pool)),
 			now:    func() time.Time { return time.Now().UTC() },

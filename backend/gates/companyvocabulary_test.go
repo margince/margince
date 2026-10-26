@@ -102,7 +102,6 @@ var exempt = gatekit.Waive(map[string]string{
 	"backend/migrations/custom": "the same, one namespace over — and the migration that MOVES a\n\t\tstored value has to name the value it is moving",
 	"backend/migrations/testdata/rbac_baseline_era_defaults.json": "pinned byte for byte to the " +
 		"baseline commit by rbacbaselineerafixture_test.go; it IS the matrix the server seeded then",
-	"CHANGELOG.md": "entries say what they said when they were written",
 	"docs/plain-words-project.txt": "a plain word list holds every word its pages use, " +
 		"and a page that quotes a word to avoid puts it here; the pages themselves are checked",
 	"docs/how-to/plain-words.txt":      "the same, for the how-to pages",
@@ -151,6 +150,7 @@ var exempt = gatekit.Waive(map[string]string{
 	"backend/internal/modules/contacts/vcard.go":                                "vCard's ORG property (RFC 6350)",
 	"backend/internal/modules/contacts/vcard_test.go":                           "vCard's ORG property (RFC 6350)",
 	"backend/internal/modules/contacts/vcardimport.go":                          "vCard's ORG property (RFC 6350)",
+	"backend/internal/modules/contacts/vcardarms.go":                            "vCard's ORG property (RFC 6350)",
 	"backend/internal/modules/contacts/vcardsourceliveness_integration_test.go": "vCard's ORG property (RFC 6350)",
 	"backend/internal/compose/vcardproposal_integration_test.go":                "vCard's ORG property (RFC 6350)",
 	"extensions/vn/vn.go": "an organisation in the ordinary sense — the party holding data and " +

@@ -11,6 +11,7 @@ import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { CellStrip } from "../../design-system/listtable";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { LoadMoreButton, QueryStates } from "../../design-system/querystates";
+import { StatusBadge, type StatusKind } from "../../design-system/statusbadge";
 import { formatDateAbbrev, formatDateTime } from "../../format/format";
 import { formatRelativeTime } from "../../format/relativetime";
 import { viewerZone } from "../../format/timezone";
@@ -238,7 +239,7 @@ function MemberIdentity({ member }: Readonly<{ member: User }>) {
           {/* The agent seat owns records, so it is listed; the badge keeps it
               from passing for a colleague. */}
           {member.is_agent && <Badge tone="ai">{t("users.agentSeat")}</Badge>}
-          <StatusBadge status={member.status} />
+          <MemberStatus status={member.status} />
         </span>
         <span className="t-caption">{member.email}</span>
       </CellStack>
@@ -269,14 +270,14 @@ function MemberTeams({
 }
 
 // Active is every seat's ordinary state, so only the exceptions are marked.
-// Invited is work in flight, not a fault.
-const STATUS_TONE = {
-  invited: "info",
-  suspended: "warning",
-  deactivated: "default",
-} as const;
+// Invited and deactivated are settled facts; a suspension asks someone to act.
+const STATUS_KIND = {
+  invited: "neutral",
+  suspended: "attention",
+  deactivated: "neutral",
+} as const satisfies Readonly<Record<string, StatusKind>>;
 
-function StatusBadge({ status }: Readonly<{ status: string }>) {
+function MemberStatus({ status }: Readonly<{ status: string }>) {
   const t = useT();
   if (
     status !== "invited" &&
@@ -286,7 +287,10 @@ function StatusBadge({ status }: Readonly<{ status: string }>) {
     return null;
   }
   return (
-    <Badge tone={STATUS_TONE[status]}>{t(`users.status.${status}`)}</Badge>
+    <StatusBadge
+      kind={STATUS_KIND[status]}
+      label={t(`users.status.${status}`)}
+    />
   );
 }
 

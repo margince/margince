@@ -4,6 +4,7 @@
 import { useRef, useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
+import { mayOwnRecords } from "../../components/assigneepicker";
 import { useUpdateRecord } from "../../components/edit";
 import {
   RosterPartialNote,
@@ -61,7 +62,7 @@ export function AssignProjectOwnerAction({
   });
 
   const options = roster.data?.flatMap((entry): ListPopoverOption[] =>
-    "display_name" in entry
+    "display_name" in entry && mayOwnRecords(entry)
       ? [{ id: entry.id, name: entry.display_name, keywords: [entry.email] }]
       : [],
   );

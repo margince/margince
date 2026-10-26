@@ -7,11 +7,10 @@ package compose
 
 // What an inbound reply may publish.
 //
-// A contact kept to its owner records why, and a reply from the address ends
-// exactly one of those reasons: mail we sent that nobody had answered. Each
-// test narrows a contact through the writer that production uses, then lands a
-// reply through the real capture sink. The first test is the case that must
-// widen; every other one runs the same reply and must not.
+// A contact kept to its owner records why. A reply from the address ends one
+// of those reasons: mail we sent that nobody had answered. A reply to any seat
+// ends it, the owner's or a colleague's. Each test narrows a contact through
+// the writer that production uses, then lands a reply through the real sink.
 
 import (
 	"context"
@@ -66,20 +65,139 @@ func TestAReplyOnAHeldThreadDoesNotPublish(t *testing.T) {
 	requireStillNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
 }
 
-// Capture privacy is the importing seat's: a colleague's own answered mail is
-// not authority to publish the contact this seat is keeping.
-func TestAReplyInAnotherSeatsMailboxDoesNotPublish(t *testing.T) {
-	e := setupWithOwnMailbox(t)
-	e.WsExec(t, `
-		INSERT INTO capture_connection
-		       (user_id, provider, status, credential_ref, mail_posture, account_label)
-		VALUES ($1, 'gmail', 'connected', 'vault:test', 'shared', 'b@authz.test')`, e.Rep2)
+// The address the owner wrote to answers a colleague instead. The workspace is
+// working with them, so the contact the verdict judged a business counterparty
+// is published by that reply, in the colleague's own mailbox.
+func TestAReplyToAColleaguePublishesAContactNobodyHadAnswered(t *testing.T) {
+	e := setupWithSecondMailbox(t)
 	const email = "buyer@twoseats.example"
 	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-two-seats"))
 	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
 
+	seedThreadedMail(t, e, email, "Our offer", "outbound", "thr-colleague")
 	captureInboundThroughRealSinkAs(mailboxOwnerCtx(e, e.Rep2), t, e, "b@authz.test",
-		"reply-two-seats", email, "thr-two-seats")
+		"reply-two-seats", email, "thr-colleague")
+
+	if visibility, _ := contactVisibility(t, e, email); visibility != "workspace" {
+		t.Fatalf("after the address answered a colleague, the contact is %q, want workspace", visibility)
+	}
+}
+
+// A colleague's reply that the live hook lost is published by the verdict
+// worker's pass. The same pass repairs a contact narrowed before a reply to a
+// colleague counted.
+func TestTheVerdictPassPublishesAContactWhoseAddressAnsweredAColleague(t *testing.T) {
+	e := setupWithSecondMailbox(t)
+	const email = "buyer@colleaguesreply.example"
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-col"))
+	seedThreadedMail(t, e, email, "Our offer", "outbound", "thr-col-b")
+	captureInboundThroughRealSinkAs(withoutContactUpdate(mailboxOwnerCtx(e, e.Rep2)), t, e, "b@authz.test",
+		"reply-col", email, "thr-col-b")
+	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
+
+	publishAnswered(t, e)
+
+	if visibility, _ := contactVisibility(t, e, email); visibility != "workspace" {
+		t.Errorf("the verdict pass left a contact who answered a colleague %q, want workspace", visibility)
+	}
+}
+
+// The verdict reads the evidence the reply hook publishes on, so a reply on a
+// held thread is no answer at verdict time either.
+func TestAVerdictDoesNotCountAReplyOnAHeldThread(t *testing.T) {
+	e := setupWithOwnMailbox(t)
+	const email = "buyer@heldanswer.example"
+	activity := seedThreadedMail(t, e, email, "Intro", "outbound", "thr-open-intro")
+	seedThreadedMail(t, e, email, "Terms", "outbound", "thr-held-answer")
+	seedThreadedMail(t, e, email, "Re: Terms", "inbound", "thr-held-answer")
+	seedThreadHold(t, e, "thr-held-answer", "held")
+
+	judge(t, e, email, capture.KindContact, activity)
+
+	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
+}
+
+// A held mailbox promises its mail is shared with nobody, so a reply captured
+// into it publishes nobody: not the owner's own contact.
+func TestAReplyInTheOwnersHeldMailboxDoesNotPublish(t *testing.T) {
+	e := integration.Setup(t)
+	connectSeatMailbox(t, e, e.Rep1, "a@authz.test", "held")
+	const email = "buyer@ownerheld.example"
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-owner-held"))
+
+	captureInboundThroughRealSink(t, e, e.Rep1, "reply-owner-held", email, "thr-owner-held")
+
+	requireStillNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
+}
+
+// The same promise from a colleague's held mailbox.
+func TestAReplyInAColleaguesHeldMailboxDoesNotPublish(t *testing.T) {
+	e := setupWithOwnMailbox(t)
+	connectSeatMailbox(t, e, e.Rep2, "b@authz.test", "held")
+	const email = "buyer@colleagueheldbox.example"
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-col-box"))
+	seedThreadedMail(t, e, email, "Our offer", "outbound", "thr-col-box-b")
+
+	captureInboundThroughRealSinkAs(mailboxOwnerCtx(e, e.Rep2), t, e, "b@authz.test",
+		"reply-col-box", email, "thr-col-box-b")
+
+	requireStillNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
+}
+
+// A reply imported under the held posture stays no evidence after the mailbox
+// is later opened: the import recorded the promise.
+func TestAReplyImportedWhileHeldStaysNoEvidenceOnceTheMailboxOpens(t *testing.T) {
+	e := integration.Setup(t)
+	connectSeatMailbox(t, e, e.Rep1, "a@authz.test", "held")
+	const email = "buyer@heldthenshared.example"
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-held-then"))
+	captureInboundThroughRealSink(t, e, e.Rep1, "reply-held-then", email, "thr-held-then")
+
+	e.WsExec(t, `UPDATE capture_connection SET mail_posture = 'shared' WHERE user_id = $1`, e.Rep1)
+
+	requireStillNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
+}
+
+// A mailbox switched to held before the reconciling pass reaches its reply
+// publishes nothing from it either.
+func TestAReplyInAMailboxHeldSinceItsImportIsNoEvidence(t *testing.T) {
+	e := setupWithOwnMailbox(t)
+	const email = "buyer@sharedthenheld.example"
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-shared-then"))
+	captureInboundThroughRealSinkAs(withoutContactUpdate(mailboxOwnerCtx(e, e.Rep1)), t, e, "a@authz.test",
+		"reply-shared-then", email, "thr-shared-then")
+
+	e.WsExec(t, `UPDATE capture_connection SET mail_posture = 'held' WHERE user_id = $1`, e.Rep1)
+
+	requireStillNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
+}
+
+// A colleague's reply ends only the reason that says nobody answered. An
+// advisor is the owner's whoever the address writes to.
+func TestAReplyToAColleagueDoesNotPublishAnAdvisor(t *testing.T) {
+	e := setupWithSecondMailbox(t)
+	const email = "taxadvisor@colleague.example"
+	judge(t, e, email, capture.KindAdvisor, seedThreadedMail(t, e, email, "Your return", "inbound", "thr-adv-col"))
+	requireNarrowed(t, e, email, contacts.NarrowedAdvisor)
+
+	seedThreadedMail(t, e, email, "A question", "outbound", "thr-adv-col-b")
+	captureInboundThroughRealSinkAs(mailboxOwnerCtx(e, e.Rep2), t, e, "b@authz.test",
+		"reply-adv-col", email, "thr-adv-col-b")
+
+	requireStillNarrowed(t, e, email, contacts.NarrowedAdvisor)
+}
+
+// A reply to a colleague on a held thread is no evidence, as it is for the
+// owner.
+func TestAReplyToAColleagueOnAHeldThreadDoesNotPublish(t *testing.T) {
+	e := setupWithSecondMailbox(t)
+	const email = "buyer@colleagueheld.example"
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-col-held"))
+	seedThreadedMail(t, e, email, "Our offer", "outbound", "thr-col-held-b")
+	seedThreadHold(t, e, "thr-col-held-b", "held")
+
+	captureInboundThroughRealSinkAs(mailboxOwnerCtx(e, e.Rep2), t, e, "b@authz.test",
+		"reply-col-held", email, "thr-col-held-b")
 
 	requireStillNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
 }
@@ -181,19 +299,6 @@ func TestAReplyDoesNotPublishAContactThatRecordsNoReason(t *testing.T) {
 	}
 }
 
-// A reply only a colleague's mailbox caught is no answer to this owner, and it
-// stays none when the owner's own next message arrives.
-func TestAColleaguesReplyDoesNotPublishOnTheOwnersNextMessage(t *testing.T) {
-	e := setupWithOwnMailbox(t)
-	const email = "buyer@colleaguesreply.example"
-	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-col"))
-	captureInboundThroughRealSink(t, e, e.Rep2, "reply-col", email, "thr-col")
-
-	captureInboundThroughRealSink(t, e, e.Rep1, "later-col", email, "thr-col-later")
-
-	requireStillNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
-}
-
 // A reply on a held thread stays no evidence when a later message from the
 // same address lands on a thread nothing holds.
 func TestAHeldReplyDoesNotPublishOnALaterUnheldMessage(t *testing.T) {
@@ -242,21 +347,91 @@ func TestOneFailingContactDoesNotStopTheVerdictPass(t *testing.T) {
 	requireNarrowed(t, e, stuck, contacts.NarrowedOutboundNoAnswer)
 }
 
+// A run of contacts that keep failing does not hide the ones after it. The
+// pass moves past them and reaches the rest, more than a page later.
+func TestFailingContactsDoNotStarveTheContactsBehindThem(t *testing.T) {
+	e := setupWithOwnMailbox(t)
+	stuck := []string{"one@stuckfirst.example", "two@stuckfirst.example", "three@stuckfirst.example"}
+	fine := []string{"four@finelater.example", "five@finelater.example"}
+	var refused []string
+	for i, email := range append(append([]string{}, stuck...), fine...) {
+		loseTheLivePromotion(t, e, email, fmt.Sprintf("thr-starve-%d", i))
+		if i < len(stuck) {
+			refused = append(refused, "'"+contactIDFor(t, e, email).String()+"'")
+		}
+	}
+	refuseUpdates(t, "contact", "OLD.id IN ("+strings.Join(refused, ", ")+")")
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	engine.answeredPage = 2
+
+	// Two pages hold a failure each; the third holds only a contact that lands.
+	for pass, wantFailure := range []bool{true, true, false} {
+		err := engine.PublishAnsweredContactsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS))
+		if (err != nil) != wantFailure {
+			t.Errorf("pass %d answered %v, want a reported failure: %v", pass+1, err, wantFailure)
+		}
+	}
+
+	for _, email := range fine {
+		if visibility, _ := contactVisibility(t, e, email); visibility != "workspace" {
+			t.Errorf("%s behind a failing run stayed %q, want workspace", email, visibility)
+		}
+	}
+}
+
+// A pass that reaches the end starts over, so a contact skipped for a failure
+// is published once it stops failing.
+func TestThePassStartsOverAndRetriesASkippedContact(t *testing.T) {
+	e := setupWithOwnMailbox(t)
+	emails := []string{"first@wraparound.example", "second@wraparound.example", "third@wraparound.example"}
+	for i, email := range emails {
+		loseTheLivePromotion(t, e, email, fmt.Sprintf("thr-wrap-%d", i))
+	}
+	first := contactIDFor(t, e, emails[0])
+	refuseUpdates(t, "contact", fmt.Sprintf("OLD.id = '%s' AND NEW.title IS DISTINCT FROM 'publishable'", first))
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	engine.answeredPage = 2
+	pass := func() error {
+		return engine.PublishAnsweredContactsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS))
+	}
+	if err := pass(); err == nil {
+		t.Fatal("the first pass reported no failure for the refused contact")
+	}
+	if err := pass(); err != nil {
+		t.Fatalf("the second pass, which reaches the end: %v", err)
+	}
+	e.WsExec(t, `UPDATE contact SET title = 'publishable' WHERE id = $1`, first)
+
+	if err := pass(); err != nil {
+		t.Fatalf("the pass after the end: %v", err)
+	}
+
+	if visibility, _ := contactVisibility(t, e, emails[0]); visibility != "workspace" {
+		t.Errorf("the skipped contact stayed %q after the pass started over, want workspace", visibility)
+	}
+}
+
 // loseTheLivePromotion captures the address's reply under the owner's grant
 // without contact update, so the live promotion is refused by its own object
 // gate and the contact is left owed publication.
 func loseTheLivePromotion(t *testing.T, e *integration.Env, email, thread string) {
 	t.Helper()
 	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", thread))
-	ctx := mailboxOwnerCtx(e, e.Rep1)
+	captureInboundThroughRealSinkAs(withoutContactUpdate(mailboxOwnerCtx(e, e.Rep1)), t, e, "a@authz.test",
+		"reply-"+thread, email, thread)
+	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
+}
+
+// withoutContactUpdate is a mailbox grant with contact update taken away, so
+// the live promotion is refused by its own object gate.
+func withoutContactUpdate(ctx context.Context) context.Context {
 	actor, _ := principal.Actor(ctx)
 	actor.Permissions.Objects = map[string]principal.ObjectGrant{
 		"activity": {Create: true, Read: true},
 		"contact":  {Create: true, Read: true},
 		"company":  {Create: true, Read: true, Update: true},
 	}
-	captureInboundThroughRealSinkAs(principal.WithActor(ctx, actor), t, e, "a@authz.test", "reply-"+thread, email, thread)
-	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
+	return principal.WithActor(ctx, actor)
 }
 
 // Upgrade state: a row narrowed before reasons existed. A later verdict judging
@@ -302,6 +477,24 @@ func setupWithOwnMailbox(t *testing.T) *integration.Env {
 		       (user_id, provider, status, credential_ref, mail_posture, account_label)
 		VALUES ($1, 'gmail', 'connected', 'vault:test', 'shared', 'a@authz.test')`, e.Rep1)
 	return e
+}
+
+// setupWithSecondMailbox also connects Rep2's mailbox, the colleague whose
+// own correspondence with the address the tests above are about.
+func setupWithSecondMailbox(t *testing.T) *integration.Env {
+	t.Helper()
+	e := setupWithOwnMailbox(t)
+	connectSeatMailbox(t, e, e.Rep2, "b@authz.test", "shared")
+	return e
+}
+
+// connectSeatMailbox connects one seat's mailbox under the posture given.
+func connectSeatMailbox(t *testing.T, e *integration.Env, seat ids.UUID, address, posture string) {
+	t.Helper()
+	e.WsExec(t, `
+		INSERT INTO capture_connection
+		       (user_id, provider, status, credential_ref, mail_posture, account_label)
+		VALUES ($1, 'gmail', 'connected', 'vault:test', $2, $3)`, seat, posture, address)
 }
 
 // publishAnswered runs the verdict worker's reconciling pass.

@@ -102,8 +102,13 @@ const notificationMailBudget = 45 * time.Second
 // finds the attempt spent and sends nothing — and a unique-by-args window would
 // add a second, weaker guard in front of the one that actually holds, in the
 // place a reader would then look for the guarantee.
+//
+// The job waits approvalMailDelay. An agent's burst of approvals is then all
+// written when the first job runs, and leaves in its one message.
 func notificationMailOpts() *river.InsertOpts {
-	return jobs.QueuedAs[SendNotificationEmailArgs](&river.InsertOpts{MaxAttempts: notificationMailJobAttempts})
+	return jobs.QueuedAs[SendNotificationEmailArgs](&river.InsertOpts{
+		MaxAttempts: notificationMailJobAttempts, ScheduledAt: time.Now().Add(approvalMailDelay),
+	})
 }
 
 // notificationMailWorker mails one claimed notice.
@@ -228,7 +233,7 @@ func (w *notificationMailWorker) deliver(ctx context.Context, attempt notices.Em
 	if !live {
 		return
 	}
-	attempt, current, readErr := refreshApprovalNotice(seatCtx, w.pool, attempt, mailNow(w.now))
+	attempt, facts, current, readErr := refreshApprovalNotice(seatCtx, w.pool, attempt, mailNow(w.now), forSingleEmail)
 	if readErr != nil {
 		w.recordMailFailure(ctx, attempt.Notice.ID, "approval could not be read")
 		return
@@ -237,23 +242,29 @@ func (w *notificationMailWorker) deliver(ctx context.Context, attempt notices.Em
 		return
 	}
 	words := recipientMailCopy(seatCtx, w.pool)
+	sent := []approvalMailItem{{attempt: attempt, facts: facts}}
+	if attempt.ApprovalID != nil {
+		sent = append(sent, w.approvalBurst(ctx, seatCtx, attempt)...)
+	}
+	if sent = w.reserveApprovalMail(ctx, seatCtx, sent, words); len(sent) == 0 {
+		return
+	}
 
 	// Bounded like the two digests' sends are: the wall clock the kind declares
 	// covers the whole job, and one unreachable relay must not spend all of it
 	// holding a River worker.
 	bounded, cancel := context.WithTimeout(ctx, notificationMailBudget)
 	defer cancel()
-	message := notificationMessage(attempt.Notice, notificationBase(attempt, w.mail.PublicBaseURL), words)
-	if attempt.ApprovalID != nil {
-		message.AppendContent(approvalMailAction(attempt, w.mail.PublicBaseURL, words))
-	}
+	subject, message := approvalMailMessage(sent, w.mail.PublicBaseURL, words)
 	message.AppendContent(routineFooterContent(w.mail.PublicBaseURL, words))
-	if err := mailer.SendProduct(bounded, w.mail.Mailer, address, notificationMailSubject(attempt.Notice, words), message); err != nil {
-		// LOGGED AND RECORDED, never retried. The attempt is spent; what is
-		// left to do is make the absence answerable.
+	if err := mailer.SendProduct(bounded, w.mail.Mailer, address, subject, message); err != nil {
+		// Logged and recorded, never retried. The attempts are spent; what is
+		// left to do is make the absence answerable on every notice it carried.
 		w.log.WarnContext(ctx, "the notice was attempted and did not go out",
-			"notice", attempt.Notice.ID, "cause", err)
-		w.recordMailFailure(ctx, attempt.Notice.ID, err.Error())
+			"notice", attempt.Notice.ID, "carried", len(sent), "cause", err)
+		for _, item := range sent {
+			w.recordMailFailure(ctx, item.attempt.Notice.ID, err.Error())
+		}
 	}
 }
 
@@ -330,13 +341,38 @@ func notificationMailSubject(notice notices.Notice, words mailcopy.Copy) string 
 // breaks in the recipient and the subject, which are the header fields; the
 // body is the sender's to keep honest, and a notice's subject and body are
 // written by producers that bound their length and not their structure.
-func notificationMessage(notice notices.Notice, base string, words mailcopy.Copy) emailview.Message {
+//
+// An approval's facts replace the repeated subject: the record as the heading,
+// when there is one, then one line per fact and the deadline.
+func notificationMessage(notice notices.Notice, facts approvalMailFacts, base string, words mailcopy.Copy) emailview.Message {
 	var body emailview.Content
 	body.Paragraph(words.NotificationIntro)
-	body.Heading(mailcopy.OneLine(notice.Subject))
-	body.Paragraph(mailcopy.Snippet(notice.Body, 600))
+	writeNoticeSection(&body, notice, facts)
 	body.Action(words.NotificationOpen, mailcopy.Destination(base, mailcopy.WorklistFragment))
 	return body.Message(notificationMailSubject(notice, words), string(words.Language), words.NotificationPreview)
+}
+
+// writeNoticeSection is one notice's part of a message: its facts when it has
+// them, else its subject and body.
+func writeNoticeSection(body *emailview.Content, notice notices.Notice, facts approvalMailFacts) {
+	if !facts.Rich {
+		body.Heading(mailcopy.OneLine(notice.Subject))
+		body.Paragraph(mailcopy.Snippet(notice.Body, 600))
+		return
+	}
+	if facts.Heading != "" {
+		body.Heading(mailcopy.OneLine(facts.Heading))
+	}
+	for _, line := range facts.Lines {
+		value := mailcopy.Snippet(line.Value, 600)
+		if line.Label != "" {
+			value = mailcopy.OneLine(line.Label) + ": " + value
+		}
+		body.Paragraph(value)
+	}
+	if facts.Deadline != "" {
+		body.Paragraph(mailcopy.OneLine(facts.Deadline))
+	}
 }
 
 func noticeWorkspace(ctx context.Context) ids.UUID {

@@ -168,9 +168,10 @@ func TestASenderKeptTheOwnersIsNotQueuedForColleagues(t *testing.T) {
 	}
 }
 
-// Two email-less namesakes at the employer: the queue pairs the sender with
-// one of them, the one the fuzzy tier ranks first, and never both.
-func TestTwoEmaillessNamesakesYieldOnePair(t *testing.T) {
+// An email-less name matching two namesakes at the employer queues a pair with
+// each of them. Each pair is a question for a human: nothing merges, and the
+// sender stays its own contact holding its own address.
+func TestAnEmaillessNameMatchingTwoNamesakesQueuesAPairWithEach(t *testing.T) {
 	e := integration.Setup(t)
 	alices := seedEmaillessAlices(t, e, 2)
 
@@ -178,8 +179,24 @@ func TestTwoEmaillessNamesakesYieldOnePair(t *testing.T) {
 	sender := senderOf(t, e, alices[0])
 	runVerdict(t, e, &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}})
 	colleague := e.As(e.Rep2, nil, colleaguePerms)
-	if got := len(pairsJoining(colleague, t, e, alices[0].UUID, sender)) +
-		len(pairsJoining(colleague, t, e, alices[1].UUID, sender)); got != 1 {
-		t.Fatalf("the sender is paired %d times with the two namesakes, want 1", got)
+	for _, alice := range alices {
+		if got := len(pairsJoining(colleague, t, e, alice.UUID, sender)); got != 1 {
+			t.Fatalf("the sender is paired %d times with namesake %s, want 1", got, alice)
+		}
+	}
+	if held := contactsHolding(t, e, aliceSender); len(held) != 1 || held[0] != sender {
+		t.Fatalf("after the verdict %v hold %s, want the sender %s alone", held, aliceSender, sender)
+	}
+	var unmerged int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT count(*) FROM contact
+			 WHERE id = ANY($1) AND archived_at IS NULL AND merged_into_id IS NULL`,
+			[]ids.UUID{sender, alices[0].UUID, alices[1].UUID}).Scan(&unmerged)
+	}); err != nil {
+		t.Fatalf("reading the three contacts: %v", err)
+	}
+	if unmerged != 3 {
+		t.Fatalf("%d of the sender and two namesakes are live and unmerged, want 3: a review pair never merges", unmerged)
 	}
 }

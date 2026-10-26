@@ -395,7 +395,7 @@ var vanillaStubs = []struct {
 	},
 	{
 		rel:   frontendScreensVanillaStub,
-		emit:  func() []byte { return extScreensGen(nil) },
+		emit:  func() []byte { return extScreensGen(nil, nil) },
 		align: "align the committed stub with tools/gen-composition (emit.go's extScreensGenHeader)",
 	},
 	{

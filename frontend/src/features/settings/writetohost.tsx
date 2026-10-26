@@ -3,8 +3,8 @@
 
 import { type ReactNode, useCallback, useState } from "react";
 import { isMailbox } from "../../format/connectorprovider";
+import { useConnectors } from "../../lib/connectors";
 import { WriteToProvider, type WriteToTarget } from "../../lib/writeto";
-import { useConnectors } from "../capture/connectors";
 import { ComposeModal } from "../mail/compose";
 
 /**

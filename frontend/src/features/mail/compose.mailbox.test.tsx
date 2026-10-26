@@ -11,7 +11,9 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { draftButton } from "../../testing/composedraft.testkit";
 import { ComposeModal } from "./compose";
+import { findThreadChoice } from "./compose.testkit";
 
 // Whose conversation the composer is answering.
 //
@@ -76,6 +78,7 @@ afterEach(() => {
 
 describe("whose mailbox the composer is answering from", () => {
   const colleaguesMail: Activity = {
+    offers_email: false,
     id: "act-charlotte",
     kind: "email",
     subject: "ACTION REQUIRED: IMMEDIATE PAYMENT REQUIRED",
@@ -90,7 +93,13 @@ describe("whose mailbox the composer is answering from", () => {
   // The reader is u-lars throughout; Charlotte is the seat whose mailbox took
   // delivery. Both are needed before the notice can decide anything, which is
   // why every case below stubs them.
-  function mailboxRoutes(mailboxUserIds: string[]) {
+  function mailboxRoutes(
+    mailboxUserIds: string[],
+    standing: {
+      viewer_on_conversation?: boolean;
+      deal_owner_user_id?: string | null;
+    } = { viewer_on_conversation: true, deal_owner_user_id: null },
+  ) {
     return {
       "GET /me": () =>
         jsonResponse({
@@ -121,12 +130,16 @@ describe("whose mailbox the composer is answering from", () => {
           first_name: "Accounts",
           address: "accounts@vendor.test",
           mailbox_user_ids: mailboxUserIds,
+          ...standing,
         }),
     };
   }
 
-  async function openOnColleaguesThread(mailboxUserIds: string[]) {
-    stubRoutes(mailboxRoutes(mailboxUserIds));
+  async function openOnColleaguesThread(
+    mailboxUserIds: string[],
+    standing?: Parameters<typeof mailboxRoutes>[1],
+  ) {
+    stubRoutes(mailboxRoutes(mailboxUserIds, standing));
     render(
       <ComposeModal
         entityType="company"
@@ -135,22 +148,20 @@ describe("whose mailbox the composer is answering from", () => {
         onClose={vi.fn()}
       />,
     );
-    await userEvent.click(
-      await screen.findByRole("button", {
-        name: /ACTION REQUIRED/,
-      }),
-    );
+    await userEvent.click(await findThreadChoice(/ACTION REQUIRED/));
   }
 
   // The positive control. Every withholding case below is only meaningful
   // because this one proves the notice renders at all when it should.
   it("names the colleague whose mailbox took delivery", async () => {
     await openOnColleaguesThread(["u-charlotte"]);
-    expect(await screen.findByText(/mailbox of Charlotte Weber/)).toBeTruthy();
-    // And says where the reply comes from, which is the half that stops a
-    // reader assuming the send goes out as Charlotte.
+    expect(await screen.findByText(/Charlotte Weber’s mailbox/)).toBeTruthy();
+    // And says where the reply goes and comes from, which is the half that
+    // stops a reader taking Charlotte for the recipient or the sender.
     expect(
-      screen.getByText(/from your own mailbox, under your name/),
+      screen.getByText(
+        /goes to the recipients below, from your own mailbox and under your name/,
+      ),
     ).toBeTruthy();
   });
 
@@ -158,7 +169,7 @@ describe("whose mailbox the composer is answering from", () => {
   // Answering your own mail is not answering somebody else's.
   it("says nothing when the reader's own mailbox took delivery", async () => {
     await openOnColleaguesThread(["u-charlotte", "u-lars"]);
-    await screen.findByRole("button", { name: /Draft (reply )?with AI/ });
+    await draftButton();
     expect(screen.queryByText(/mailbox/)).toBeNull();
   });
 
@@ -166,7 +177,7 @@ describe("whose mailbox the composer is answering from", () => {
   // anybody. An empty list is an answer, and the answer is "nobody's".
   it("says nothing when no mailbox took delivery", async () => {
     await openOnColleaguesThread([]);
-    await screen.findByRole("button", { name: /Draft (reply )?with AI/ });
+    await draftButton();
     expect(screen.queryByText(/mailbox/)).toBeNull();
   });
 
@@ -197,9 +208,7 @@ describe("whose mailbox the composer is answering from", () => {
         onClose={vi.fn()}
       />,
     );
-    await userEvent.click(
-      await screen.findByRole("button", { name: /ACTION REQUIRED/ }),
-    );
+    await userEvent.click(await findThreadChoice(/ACTION REQUIRED/));
     expect(
       await screen.findByText(/Charlotte Weber and Mara Ott/),
     ).toBeTruthy();
@@ -224,14 +233,12 @@ describe("whose mailbox the composer is answering from", () => {
         onClose={vi.fn()}
       />,
     );
-    await userEvent.click(
-      await screen.findByRole("button", { name: /ACTION REQUIRED/ }),
-    );
-    const notice = await screen.findByText(/mailbox of a colleague/);
+    await userEvent.click(await findThreadChoice(/ACTION REQUIRED/));
+    const notice = await screen.findByText(/came in to a colleague’s mailbox/);
     expect(notice).toBeTruthy();
     // Never the raw id, and never the doubled possessive a bare fragment makes.
     expect(notice.textContent).not.toMatch(/u-ghost/);
-    expect(notice.textContent).not.toMatch(/'s's/);
+    expect(notice.textContent).not.toMatch(/’s’s/);
   });
 
   // Until the viewer is known, every thread would read as somebody else's.
@@ -248,10 +255,8 @@ describe("whose mailbox the composer is answering from", () => {
         onClose={vi.fn()}
       />,
     );
-    await userEvent.click(
-      await screen.findByRole("button", { name: /ACTION REQUIRED/ }),
-    );
-    await screen.findByRole("button", { name: /Draft (reply )?with AI/ });
+    await userEvent.click(await findThreadChoice(/ACTION REQUIRED/));
+    await draftButton();
     expect(screen.queryByText(/mailbox/)).toBeNull();
   });
 
@@ -294,7 +299,7 @@ describe("whose mailbox the composer is answering from", () => {
         onClose={vi.fn()}
       />,
     );
-    await screen.findByText(/mailbox of Charlotte Weber/);
+    await screen.findByText(/Charlotte Weber’s mailbox/);
 
     // Re-anchor on the reader's OWN thread, whose answer has not arrived yet.
     // Charlotte's name must go at once rather than waiting for it.
@@ -337,10 +342,78 @@ describe("whose mailbox the composer is answering from", () => {
         onClose={vi.fn()}
       />,
     );
-    await userEvent.click(
-      await screen.findByRole("button", { name: /ACTION REQUIRED/ }),
-    );
-    await screen.findByRole("button", { name: /Draft (reply )?with AI/ });
-    expect(screen.queryByText(/mailbox/)).toBeNull();
+    await userEvent.click(await findThreadChoice(/ACTION REQUIRED/));
+    await draftButton();
+    expect(screen.queryByText(/mailbox|not on this thread/)).toBeNull();
+  });
+
+  // Anyone who may read a deal's thread may answer it. A reader who is not on
+  // it is told so, and who owns the deal, and the send stays theirs to make.
+  describe("a reader who is not on the thread", () => {
+    it("is told so, with the deal owner named", async () => {
+      await openOnColleaguesThread(["u-charlotte"], {
+        viewer_on_conversation: false,
+        deal_owner_user_id: "u-charlotte",
+      });
+      expect(
+        await screen.findByText(
+          "You are not on this thread. Charlotte Weber owns this deal.",
+        ),
+      ).toBeTruthy();
+    });
+
+    it("is told only that when the deal has no owner", async () => {
+      await openOnColleaguesThread(["u-charlotte"], {
+        viewer_on_conversation: false,
+        deal_owner_user_id: null,
+      });
+      expect(
+        await screen.findByText("You are not on this thread."),
+      ).toBeTruthy();
+      expect(screen.queryByText(/owns this deal/)).toBeNull();
+    });
+
+    it("never names an owner the roster cannot", async () => {
+      await openOnColleaguesThread(["u-charlotte"], {
+        viewer_on_conversation: false,
+        deal_owner_user_id: "u-former",
+      });
+      expect(
+        await screen.findByText("You are not on this thread."),
+      ).toBeTruthy();
+      expect(screen.queryByText(/owns this deal|u-former/)).toBeNull();
+    });
+
+    it("hears it on its own when no colleague's mailbox took the thread", async () => {
+      await openOnColleaguesThread([], {
+        viewer_on_conversation: false,
+        deal_owner_user_id: "u-charlotte",
+      });
+      expect(
+        await screen.findByText("You are not on this thread"),
+      ).toBeTruthy();
+      expect(screen.getByText("Charlotte Weber owns this deal.")).toBeTruthy();
+      expect(screen.queryByText(/mailbox/)).toBeNull();
+    });
+
+    it("can still send", async () => {
+      await openOnColleaguesThread(["u-charlotte"], {
+        viewer_on_conversation: false,
+        deal_owner_user_id: "u-charlotte",
+      });
+      await screen.findByText(/You are not on this thread/);
+      const send = screen.getByRole("button", { name: /^Send$/ });
+      expect(send.hasAttribute("disabled")).toBe(false);
+      expect(send.getAttribute("aria-disabled")).not.toBe("true");
+    });
+  });
+
+  it("adds nothing about the thread for a reader on it", async () => {
+    await openOnColleaguesThread(["u-charlotte"], {
+      viewer_on_conversation: true,
+      deal_owner_user_id: "u-charlotte",
+    });
+    await screen.findByText(/Charlotte Weber’s mailbox/);
+    expect(screen.queryByText(/not on this thread|owns this deal/)).toBeNull();
   });
 });

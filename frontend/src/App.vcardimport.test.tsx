@@ -65,7 +65,7 @@ describe("the vCard import address", () => {
       expect(
         await screen.findByRole(
           "heading",
-          { level: 1, name: "Import vCards" },
+          { level: 1, name: "Import business cards" },
           { timeout: SETTLE_MS },
         ),
       ).toBeInTheDocument();
@@ -83,7 +83,7 @@ describe("the vCard import address", () => {
         within(trail).getByRole("link", { name: "Contacts" }),
       ).toHaveAttribute("href", "#/contacts");
       expect(trail.querySelector('[aria-current="page"]')).toHaveTextContent(
-        "Import vCards",
+        "Import business cards",
       );
       expect(document.querySelectorAll('[aria-current="page"]')).toHaveLength(
         1,
@@ -111,7 +111,7 @@ describe("the vCard import address", () => {
       window.location.hash = "#/contacts/import";
       await screen.findByRole(
         "heading",
-        { level: 1, name: "Import vCards" },
+        { level: 1, name: "Import business cards" },
         { timeout: SETTLE_MS },
       );
 
@@ -125,7 +125,7 @@ describe("the vCard import address", () => {
       );
       expect(window.location.hash.split("?")[0]).toBe("#/contacts");
       expect(
-        screen.queryByRole("heading", { name: "Import vCards" }),
+        screen.queryByRole("heading", { name: "Import business cards" }),
       ).not.toBeInTheDocument();
     },
     SETTLE_MS * 3,

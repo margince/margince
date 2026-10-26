@@ -42,9 +42,21 @@ func TestAHeldMessageIsNotCountedInRelationshipStrength(t *testing.T) {
 	e := integration.Setup(t)
 	contact := seedLinkedContact(t, e, "anwalt@kanzlei.example")
 	contactID := ids.From[ids.ContactKind](contact)
+	// Both messages are dated by this test, not by the database. The count is
+	// bounded by `occurred_at <= now` (relstrength.InteractionCountsAtSQL), and
+	// `now` here is the Go clock while an undated seed takes the column's
+	// `DEFAULT now()`, the server's.
+	//
+	// Nothing orders those two instants. A server a moment ahead dates the row
+	// after `now`, so the row falls outside the window.
+	//
+	// The guard below then reports an open message that was not counted. It held
+	// on a machine whose container clock trailed the host's, and failed in the
+	// lane.
 	now := time.Now()
+	dated := now.Add(-time.Hour)
 
-	open := seedLinkedActivity(t, e, contact, "workspace")
+	open := seedLinkedActivityAt(t, e, contact, "workspace", dated)
 	before, err := e.Contacts.ContactStrength(e.Admin(), contactID, now)
 	if err != nil {
 		t.Fatalf("reading strength: %v", err)
@@ -56,7 +68,7 @@ func TestAHeldMessageIsNotCountedInRelationshipStrength(t *testing.T) {
 		t.Fatal("the open message's id is not among the contributing ids; the held case below would then prove nothing")
 	}
 
-	held := seedLinkedActivity(t, e, contact, "participants")
+	held := seedLinkedActivityAt(t, e, contact, "participants", dated)
 	after, err := e.Contacts.ContactStrength(e.Admin(), contactID, now)
 	if err != nil {
 		t.Fatalf("reading strength: %v", err)
@@ -167,7 +179,9 @@ func TestAHeldSenderIsNotStagedForReview(t *testing.T) {
 	}
 }
 
-func seedLinkedActivityAt(t *testing.T, e *integration.Env, contact ids.UUID, audience string, occurredAt time.Time) {
+func seedLinkedActivityAt(t *testing.T, e *integration.Env, contact ids.UUID,
+	audience string, occurredAt time.Time,
+) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -194,6 +208,7 @@ func seedLinkedActivityAt(t *testing.T, e *integration.Env, contact ids.UUID, au
 	}); err != nil {
 		t.Fatalf("seeding a linked activity: %v", err)
 	}
+	return id
 }
 
 func seedLinkedContact(t *testing.T, e *integration.Env, email string) ids.UUID {
@@ -211,28 +226,6 @@ func seedLinkedContact(t *testing.T, e *integration.Env, email string) ids.UUID 
 		return err
 	}); err != nil {
 		t.Fatalf("seeding a contact: %v", err)
-	}
-	return id
-}
-
-func seedLinkedActivity(t *testing.T, e *integration.Env, contact ids.UUID, audience string) ids.UUID {
-	t.Helper()
-	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(context.Background(), `
-			INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id,
-			                      source, captured_by, audience)
-			VALUES ($1, 'email', 'Betreff', 'body', 'inbound', 'gmail', $2,
-			        'gmail:'||$2, 'connector:gmail', $3)`,
-			id, "agg-"+id.String(), audience); err != nil {
-			return err
-		}
-		_, err := tx.Exec(context.Background(), `
-			INSERT INTO activity_link (activity_id, entity_type, contact_id)
-			VALUES ($1, 'contact', $2)`, id, contact)
-		return err
-	}); err != nil {
-		t.Fatalf("seeding a linked activity: %v", err)
 	}
 	return id
 }

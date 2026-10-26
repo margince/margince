@@ -20,6 +20,8 @@ package agents
 // human-only (crm.yaml), so no agent reaches that route and a resolver for it
 // would answer for a door nobody can open.
 //
+// The tier-free write is set_up_partner.
+//
 // list, tag and offer are outside the record seam's vocabulary
 // (servedByTheRecordSeam, command.go), so the Guards on those resolvers stand
 // down through that check. deal is served, so createOffer's Guards read it.

@@ -1,4 +1,3 @@
-import type { components } from "../../api/schema";
 import {
   COMPANY_LIFECYCLE_LABELS,
   COMPANY_LIFECYCLE_STAGES,
@@ -6,13 +5,16 @@ import {
 import { formatNumber } from "../../format/format";
 import type { Locale, PluralTranslator, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { dealCloseOutcome } from "../../lib/approvalpreview";
 import { WON_REASON_LABELS, WON_REASONS } from "../../lib/winreason";
-import { KIND_LABEL } from "./approvalkindlabel";
 
 // Re-exported so the surfaces that read the map by name keep their import, and
 // so this file stays the one place a reader looks for approval-kind vocabulary.
-export { KIND_LABEL };
+export {
+  approvalKindLabel,
+  approvalLabel,
+  humanizeKind,
+  KIND_LABEL,
+} from "../../lib/approvalkindlabel";
 
 // What a reader may CHANGE before accepting, per kind.
 //
@@ -95,6 +97,9 @@ export const EDITABLE_FIELDS: Readonly<
   // something the approver is agreeing TO rather than something to retype. The
   // server refuses an edited anchor outright (it is an entity reference, and
   // edit scope pins those), so offering it would only invite a refusal.
+  // A LinkedIn match is answered with its two boxes, never by retyping the
+  // export's strings: the server refuses an edit to anything else.
+  linkedin_match: [],
   held_draft: [
     { field: "subject", as: "text", label: "decision.draftSubject" },
     { field: "body", as: "textarea", label: "decision.draftBody" },
@@ -153,39 +158,6 @@ export const EDITABLE_FIELDS: Readonly<
     },
   ],
 };
-
-/** humanize turns an unmapped wire enum into readable words. */
-export function humanizeKind(kind: string): string {
-  return kind.replaceAll("_", " ");
-}
-
-export function approvalKindLabel(kind: string, t: Translator): string {
-  const key = KIND_LABEL[kind];
-  return key ? t(key) : humanizeKind(kind);
-}
-
-// approvalLabel names one request's action. A deal move that closes the deal
-// says so; "Advance deal" over a close-as-lost tells the reader the opposite.
-type ApprovalPreview = components["schemas"]["ApprovalPreview"];
-
-export function approvalLabel(
-  approval: Readonly<{
-    kind: string;
-    preview?: ApprovalPreview | null;
-    proposed_change?: Readonly<Record<string, unknown>> | null;
-  }>,
-  t: Translator,
-): string {
-  if (approval.kind === "advance_deal" || approval.kind === "progress_deal") {
-    const outcome = dealCloseOutcome(
-      approval.preview,
-      approval.proposed_change,
-    );
-    if (outcome === "won") return t("approval.kind.closeDealWon");
-    if (outcome === "lost") return t("approval.kind.closeDealLost");
-  }
-  return approvalKindLabel(approval.kind, t);
-}
 
 // A rate proposal's apply re-reads the sheet, so its lost race is answered by
 // a fresh refresh rather than by staging the same proposal again.

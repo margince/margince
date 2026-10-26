@@ -49,6 +49,12 @@ func goSplitterTables(t *testing.T) map[string][]string {
 		}
 		out[name] = entries
 	}
+	for name, entries := range goSplitterFileTables(t, "internal/shared/kernel/mailquote/replyheader.go") {
+		if _, exists := out[name]; exists {
+			t.Fatalf("duplicate splitter vocabulary %s", name)
+		}
+		out[name] = entries
+	}
 	return out
 }
 

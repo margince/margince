@@ -1,18 +1,20 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en } from "../../i18n/en";
 import {
   company,
   company360,
   companyBackstop,
+  emptySection,
   jsonResponse,
 } from "../../testing/company.fixtures";
 import { stubFetch } from "../../testing/company.testkit";
-import { AssistantPanel } from "../voice-knowledge/assistant";
 import { CompanyScreen } from "./companies";
 import { openProfile, render } from "./companies.testkit";
-import { TodayOnThisAccount } from "./companytoday";
+import { renderSuggestions } from "./company360.testkit";
+import { AssistantPanel } from "./companyassistant";
 
 afterEach(() => {
   cleanup();
@@ -32,18 +34,27 @@ const stalledSuggestion = {
   evidence: [{ entity_type: "deal", entity_id: "d-1" }],
 };
 
-// The suggestion rows, through the brief the record page mounts them in.
+// The suggestion rows, through the Tasks tab the record page mounts them on.
 function renderSuggestionsFor(three60: unknown) {
-  render(
-    <TodayOnThisAccount
-      companyId="o-1"
-      view={three60 as never}
-      loading={false}
-      failed={false}
-      onOpenRecord={() => {}}
-      onPerform={() => {}}
-    />,
+  renderSuggestions(three60 as never);
+}
+
+// The Latest card's section and its rows, once the 360 has landed.
+function latestCard(): HTMLElement | null {
+  return (
+    screen.queryByRole("heading", { name: "Latest" })?.closest("section") ??
+    null
   );
+}
+
+async function latestRows(): Promise<HTMLElement[]> {
+  await waitFor(() => expect(latestCard()?.querySelector("li")).toBeTruthy());
+  return Array.from(latestCard()?.querySelectorAll("li") ?? []);
+}
+
+// The page's own Tasks tab, where the advice reads.
+async function openTasks() {
+  await userEvent.click(await screen.findByRole("button", { name: /^Tasks/ }));
 }
 
 describe("CompanyScreen — next-step suggestions", () => {
@@ -78,17 +89,17 @@ describe("CompanyScreen — next-step suggestions", () => {
     });
     const { container } = render(<CompanyScreen id="o-1" />);
     await screen.findByRole("heading", { name: company.display_name });
-    await waitFor(() =>
-      expect(container.querySelector(".co-rail")).toBeTruthy(),
-    );
+    await openTasks();
 
     await userEvent.click(
       await screen.findByRole("button", { name: "Create draft" }),
     );
-    // The composer stands over the record. The details pane it covers is
-    // still where the reader left it.
-    await screen.findByRole("button", { name: "Cancel" });
-    expect(container.querySelector(".co-rail")).toBeTruthy();
+    // The composer stands over the record. The details it covers are still
+    // where the reader left them.
+    await screen.findByRole("button", { name: "Close" });
+    expect(
+      container.querySelector(".record-aside .recorddetails"),
+    ).toBeTruthy();
   });
 
   it("goes to the deal an open-deal action names", async () => {
@@ -104,6 +115,7 @@ describe("CompanyScreen — next-step suggestions", () => {
       },
     });
     render(<CompanyScreen id="o-1" />);
+    await openTasks();
     await userEvent.click(
       await screen.findByRole("button", { name: "Open deal" }),
     );
@@ -159,11 +171,16 @@ describe("CompanyScreen — next-step suggestions", () => {
     expect(screen.queryByText(/more not shown/)).toBeNull();
   });
 
+  // An empty list would read "nothing needs you" beside a move the Next bar
+  // still asks for, so the Tasks tab leaves the list out.
   it("offers no advice row when the account needs nothing", async () => {
     stubFetch(companyBackstop);
     renderSuggestionsFor(company360);
 
-    await screen.findByRole("heading", { name: "Needs attention" });
+    await screen.findByRole("heading", { name: "Signals" });
+    expect(
+      screen.queryByRole("heading", { name: "Needs attention" }),
+    ).toBeNull();
     expect(screen.queryByRole("button", { name: "Not now" })).toBeNull();
   });
 
@@ -326,135 +343,160 @@ describe("CompanyScreen — Ask Margince", () => {
   });
 });
 
-// One column beside the left rail, with the account's context in the right
-// aside and tags and lists in that column's own panel. A layout change must
-// not become an availability change.
-describe("CompanyScreen — State D's one column and its card grid", () => {
-  it("puts the account's context on the right, beside the work", async () => {
+// The Overview is the design's inventory and nothing else: the Next bar, How
+// it stands, then four cards. Every other reading lives on the tab the design
+// gives it, so a layout change is never an availability change.
+describe("CompanyScreen — the Overview and the details beside it", () => {
+  it("puts the account's details beside the work, as flat groups", async () => {
     stubFetch(companyBackstop, { company360 });
     const { container } = render(<CompanyScreen id="o-1" />);
     await screen.findByRole("heading", { name: company.display_name });
 
-    await waitFor(() =>
-      expect(container.querySelector(".co-overview-stack")).toBeTruthy(),
-    );
-    // The context is the record's details pane, beside the work under the tab
-    // row. The record keeps no left rail: a second column would be a third
-    // place to look.
     const pane = container.querySelector(".record-aside");
-    expect(pane).toBeTruthy();
-    expect(pane?.querySelector(".co-rail")).toBeTruthy();
-    expect(container.querySelector(".record-rail")).toBeNull();
-  });
-
-  // Every card is on the page, wherever it sits. Each is named, not counted:
-  // a count passes on a layout that lost one card and grew another. Each is
-  // asserted where it lives: the pipeline on the Deals tab, the money on the
-  // Finance tab, tags/lists in the context column.
-  it("carries every panel of the overview stack, and files what is left in the context column", async () => {
-    stubFetch(companyBackstop, { company360 });
-    const { container } = render(<CompanyScreen id="o-1" />);
-    await screen.findByRole("heading", { name: company.display_name });
-
-    // The overview stack: what is worth doing and the pipeline's own figures.
-    // The advice rows are the suggestions suite's above.
-    const stack = container.querySelector(".co-overview-stack");
-    expect(stack).toBeTruthy();
-    // The money is a tab, so the overview column must not also carry it: a
-    // figure in two places must be reconciled. Contract and pipeline figures,
-    // projects and Finance each read on their own tab. "Commercial" also names
-    // a health dimension in the brief, so the panel heading is what is checked.
-    const headings = within(stack as HTMLElement)
-      .getAllByRole("heading")
-      .map((heading) => heading.textContent);
-    expect(headings).not.toContain("Commercial");
-    expect(stack?.textContent).not.toContain("Finance");
-    expect(stack?.textContent).not.toContain("Lists & tags");
-
-    // What is in flight reads on the Deals tab and the rail's DealsSection.
-    // This fixture has none, so the fit card takes the overview's work slot:
-    // whether to sell here at all differs from what is running today.
-    expect(stack?.textContent).toContain("Growth fit");
-
-    // What Margince spotted reads in the work column, beside the rest of what
-    // wants a decision, rather than in the context column.
-    expect(stack?.textContent).toContain("Signals");
-
-    // The relationships and how the account is filed live in the page's
-    // context column. That column is the shell's and is portalled out of this
-    // record's tree, so it is queried off the document. The rail's summaries
-    // stand on every tab, capped to their top rows.
-    const rail = document.querySelector(".co-rail");
-    expect(rail).toBeTruthy();
-    for (const card of ["Active deals", "Key contacts", "Details", "Tags"]) {
-      expect(rail?.textContent).toContain(card);
-    }
-
-    // The pipeline and the commercial picture have their own tab too. Named by
-    // prefix: a tab carries the count of what is behind it, so its accessible
-    // name is the label and the figure.
-    await userEvent.click(screen.getByRole("button", { name: /^Deals/ }));
     await waitFor(() =>
-      expect(screen.getByRole("heading", { name: "Deals" })).toBeTruthy(),
+      expect(pane?.querySelector(".recorddetails")).toBeTruthy(),
     );
+    // No titled cards in the details: groups, not a "Details" panel.
+    expect(pane?.querySelector(".panel-title")).toBeNull();
+    expect(pane?.textContent).toContain("Ownership");
+    expect(pane?.textContent).toContain("Registration");
   });
 
-  // Cards of unequal height never share a row: a tall needs list beside a
-  // short Ask box leaves a gap. So the glance is one column at every width,
-  // in the order a rep works it.
-  it("stacks the glance in one column: what needs a contact, the money, what the account is, then the questions", async () => {
+  it("draws exactly the four cards under How it stands", async () => {
     stubFetch(companyBackstop, { company360 });
     const { container } = render(<CompanyScreen id="o-1" />);
     await screen.findByRole("heading", { name: company.display_name });
 
     const stack = container.querySelector(".co-overview-stack");
-    expect(container.querySelector(".co-glance-cols")).toBeNull();
-    if (!(stack instanceof HTMLElement)) {
-      throw new Error("overview stack did not render");
+    await waitFor(() =>
+      expect(stack?.querySelector(".co-overview-grid")).toBeTruthy(),
+    );
+    const cards = Array.from(
+      stack?.querySelectorAll(
+        ".co-overview-grid .panel-head-flat .panel-title",
+      ) ?? [],
+    ).map((title) => title.textContent);
+    expect(cards).toEqual([
+      "Also on your list",
+      "Deals and projects",
+      "Latest",
+      "Contacts",
+    ]);
+    for (const gone of [
+      "Growth fit",
+      "Signals",
+      "Needs attention",
+      "Company overview",
+      "Ask about this company",
+      "Active deals",
+      "Key contacts",
+    ]) {
+      expect(stack?.textContent).not.toContain(gone);
     }
-
-    // Each pane's own title, in DOM order.
-    const headings = within(stack)
-      .getAllByRole("heading")
-      .map((heading) => heading.textContent);
-    const needsAt = headings.indexOf("Needs attention");
-    const dossierAt = headings.indexOf("Company overview");
-    const askAt = headings.indexOf("Ask about this company");
-    // The fit card takes this account's slot. Nothing in this fixture is in
-    // flight, so the question is whether to sell here at all.
-    const fitAt = headings.indexOf("Growth fit");
-    expect(needsAt).toBeGreaterThanOrEqual(0);
-    expect(dossierAt).toBeGreaterThan(needsAt);
-    expect(askAt).toBeGreaterThan(dossierAt);
-    expect(fitAt).toBeGreaterThan(askAt);
   });
 
-  // The drawer opens over the record, not into a column of it. It is portalled
-  // above a scrim and takes none of the page's width. So the details pane stays
-  // where the reader left it, while the drawer stands and after it closes.
-  it("leaves the details pane standing while a composer is open", async () => {
+  it("keeps the readings it moved reachable on their own tabs", async () => {
+    stubFetch(companyBackstop, { company360 });
+    render(<CompanyScreen id="o-1" />);
+    await screen.findByRole("heading", { name: company.display_name });
+
+    await openTasks();
+    expect(
+      await screen.findByRole("heading", { name: "Signals" }),
+    ).toBeTruthy();
+    await openProfile();
+    expect(
+      await screen.findByRole("heading", { name: "Ask about this company" }),
+    ).toBeTruthy();
+  });
+
+  it("keeps the description out of the details and edits it on Profile", async () => {
+    const described = { ...company, description: "Runs fleet depots." };
+    stubFetch(
+      async (url) =>
+        url.endsWith("/companies/o-1")
+          ? jsonResponse(described)
+          : companyBackstop(url),
+      { company360: { ...company360, company: described } },
+    );
+    const { container } = render(<CompanyScreen id="o-1" />);
+    await screen.findByRole("heading", { name: company.display_name });
+    const aside = () => container.querySelector(".record-aside");
+    await waitFor(() =>
+      expect(aside()?.querySelector(".recorddetails")).toBeTruthy(),
+    );
+    expect(aside()?.textContent).not.toContain("Runs fleet depots.");
+
+    await openProfile();
+    expect(await screen.findByText("Runs fleet depots.")).toBeTruthy();
+  });
+
+  it("titles the Next bar with the task the moment cites, not its headline", async () => {
+    stubFetch(companyBackstop, {
+      company360: {
+        ...company360,
+        moment: {
+          claim_key: "moment:account_promise_task:t-1",
+          evidence_fingerprint: "c".repeat(64),
+          rule: "overdue_promise",
+          headline: "You owe them: Send the renewal paperwork",
+          why_now: "Due 3 days ago and still open.",
+          confidence: "observed_fact",
+          evidence: [{ type: "task", id: "t-1", label: "Renewal" }],
+          recommended_action: {
+            kind: "complete_task",
+            label: "Open it from the task list",
+            state: "blocked",
+          },
+        },
+        next_steps: {
+          ...emptySection,
+          data: [
+            {
+              activity_id: "t-1",
+              subject: "Send the renewal paperwork",
+              due_at: "2026-05-29T09:00:00Z",
+              overdue: true,
+            },
+          ],
+        },
+      },
+    });
+    render(<CompanyScreen id="o-1" />);
+
+    // The task also stands on the timeline, so it is found more than once.
+    expect(
+      (await screen.findAllByText("Send the renewal paperwork")).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryByText("You owe them: Send the renewal paperwork"),
+    ).toBeNull();
+  });
+
+  // The drawer opens over the record, not into a column of it. The details stay
+  // where the reader left them while it stands and after it closes.
+  it("leaves the details standing while a composer is open", async () => {
     stubFetch(companyBackstop, { company360 });
     const { container } = render(<CompanyScreen id="o-1" />);
     await screen.findByRole("heading", { name: company.display_name });
-    await waitFor(() =>
-      expect(container.querySelector(".co-rail")).toBeTruthy(),
-    );
+    const details = () =>
+      container.querySelector(".record-aside .recorddetails");
+    await waitFor(() => expect(details()).toBeTruthy());
 
     await userEvent.click(screen.getByRole("button", { name: "Email" }));
-    await screen.findByRole("button", { name: "Cancel" });
-    expect(container.querySelector(".co-rail")).toBeTruthy();
+    await screen.findByRole("button", { name: "Close" });
+    expect(details()).toBeTruthy();
 
-    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
     await waitFor(() =>
-      expect(screen.queryByRole("button", { name: "Cancel" })).toBeNull(),
+      expect(screen.queryByRole("button", { name: "Close" })).toBeNull(),
     );
-    expect(container.querySelector(".co-rail")).toBeTruthy();
+    expect(details()).toBeTruthy();
   });
 
-  // A call or a note often carries no subject. Counting only the subjected
-  // rows would draw "nothing logged with them yet" on an account called five
-  // times. That is a false statement about the account, made from a row.
-  it("counts every logged activity, not only the ones with a subject", async () => {
+  // A call or a note often carries no subject. Dropping the unsubjected rows
+  // would draw "nothing logged" on an account called five times.
+  it("lists a logged call in Latest, even with no subject", async () => {
     stubFetch(companyBackstop, {
       company360: {
         ...company360,
@@ -471,34 +513,21 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
         },
       },
     });
-    const { container } = render(<CompanyScreen id="o-1" />);
+    render(<CompanyScreen id="o-1" />);
     await screen.findByRole("heading", { name: company.display_name });
 
-    // Folded on arrival, naming how much it holds: that subjectless call
-    // counts.
-    const stack = container.querySelector(".co-overview-stack");
-    const fold = stack?.querySelector("details");
-    const summary = fold?.querySelector("summary");
-    await waitFor(() => expect(summary?.textContent).toContain("Activity · 1"));
-    expect(fold?.open).toBe(false);
-
-    // Opened, the call is in it, not the sentence an account with nothing
-    // logged would get.
-    if (!summary) {
-      throw new Error("the thread fold draws no summary to open it by");
-    }
-    await userEvent.click(summary);
-    expect(fold?.open).toBe(true);
-    expect(stack?.textContent).not.toContain("Nothing logged with them yet");
+    const rows = await latestRows();
+    expect(rows[0]?.textContent).toContain("Call");
+    expect(latestCard()?.textContent).not.toContain(en["co.recent.empty"]);
   });
 
-  // A control that says only "show" makes a reader open it to find out whether
-  // it was worth opening. The folded row carries the newest exchange, so the
-  // decision is made before the click and the glance keeps its space.
-  it("teases the newest exchange on the folded row, without opening it", async () => {
+  // The newest exchange is the one a reader came back for, so it leads.
+  it("lists the newest exchange first in Latest", async () => {
     stubFetch(companyBackstop, {
       company360: {
         ...company360,
+        // Latest lists what already happened, so the read is dated after both.
+        as_of: "2026-06-03T09:00:00Z",
         activities: {
           data: [
             {
@@ -520,22 +549,12 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
         },
       },
     });
-    const { container } = render(<CompanyScreen id="o-1" />);
+    render(<CompanyScreen id="o-1" />);
     await screen.findByRole("heading", { name: company.display_name });
 
-    const fold = container
-      .querySelector(".co-overview-stack")
-      ?.querySelector("details");
-    const summary = fold?.querySelector("summary");
-    await waitFor(() =>
-      expect(summary?.textContent).toContain("Rate sheet sent"),
-    );
-
-    // Teased, not opened: the row says what is under it while the section
-    // stays folded.
-    expect(fold?.open).toBe(false);
-    // The newest, not the first the reader would meet scrolling.
-    expect(summary?.textContent).not.toContain("Quarterly review");
+    const rows = await latestRows();
+    expect(rows[0]?.textContent).toContain("Rate sheet sent");
+    expect(rows[1]?.textContent).toContain("Quarterly review");
   });
 
   // A name and a link say somebody exists. To pick which contact to call, a
@@ -587,7 +606,8 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
       expect(each.getAttribute("href")).toBe("#/contacts/p-1");
     }
     const name = names[0];
-    expect(screen.getAllByText("Head of Procurement").length).toBeGreaterThan(
+    // The title shares its line with the company's name.
+    expect(screen.getAllByText(/Head of Procurement/).length).toBeGreaterThan(
       0,
     );
 
@@ -634,8 +654,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     // So these match the title at the start, not the whole band.
     const opensWith = (title: string) =>
       headings().some((one) => one?.startsWith(title));
-    await waitFor(() => expect(opensWith("Details")).toBe(true));
-    expect(opensWith("Description")).toBe(true);
+    await waitFor(() => expect(opensWith("How they buy")).toBe(true));
     expect(opensWith("Company facts")).toBe(true);
     // The roll-up is one of the panes that runs its own read, so it arrives
     // on its own clock rather than with the ones above.

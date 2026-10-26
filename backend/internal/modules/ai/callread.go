@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -55,6 +54,12 @@ type CallSummary struct {
 	// DecisionAttempted is read across the whole logical call because a
 	// fallback's terminal row is the completion, not the decision it replaced.
 	DecisionAttempted bool
+	// Outcome is the reader's bucket, computed by callOutcomeSQL so the list
+	// filter and the label on each row are one definition.
+	Outcome string
+	// CostMicroUSD prices every attempt of the logical call; nil when an
+	// attempt spent tokens with no rate, so a partial sum never reads as whole.
+	CostMicroUSD *int64
 }
 
 // CallAttempt is one rung in a logical call's oldest-first attempt ladder.
@@ -107,36 +112,83 @@ type CallPage struct {
 	Items      []CallSummary
 	NextCursor string
 	HasMore    bool
-	// Tasks is the workspace's COMPLETE terminal-task set (sorted), carried on
-	// every page as filter metadata so the trace dropdown offers every task,
-	// not just the ones on the current page. Independent of the page's cursor
-	// and task filter.
-	Tasks []string
+	// Tasks and Models are the workspace's complete terminal sets (sorted).
+	// Every page carries them so the dropdowns offer every value, not just
+	// the current page's. They ignore cursor and filters.
+	Tasks  []string
+	Models []string
 }
 
-// The payload existence check keeps list reads independent of captured
-// content size. Its alias stays distinct from the detail join alias. The
-// decision probe is a correlated aggregate over ai_call_logical_idx, so a page
-// costs one statement however many rows it carries.
-const callSummaryColumns = `c.id, c.occurred_at, c.task, c.kind, c.tier, c.provider, c.model_id,
+// callSummaryFrom joins each terminal row `c` to two aggregates over its
+// logical call's attempts on ai_call_logical_idx. `lc` says whether a decision
+// model was asked. `lp` is the attempts' cost, priced as CostReport prices them.
+// They are apart so an outcome filter reads only `lc`. That prices just the
+// rows it keeps.
+func callSummaryFrom(query *callQuery) string {
+	fallbackFrom, fallbackTo := rateFallbacks()
+	rate := rateMatch("ac.provider", "ac.model_id", "ac.occurred_at::date",
+		query.arg(fallbackFrom), query.arg(fallbackTo))
+	return storekit.SQLf(`ai_call c
+	CROSS JOIN LATERAL (
+	SELECT COALESCE(bool_or(la.kind = 'decision'), false) AS decision_attempted
+	FROM ai_call la WHERE la.logical_call_id = c.logical_call_id) lc
+	CROSS JOIN LATERAL (
+	SELECT COALESCE(SUM(%s), 0) AS cost_microusd,
+	       COUNT(*) FILTER (WHERE %s) AS unpriced_attempts
+	FROM ai_call ac LEFT JOIN LATERAL (%s) r ON true
+	WHERE ac.logical_call_id = c.logical_call_id) lp`,
+		callCostMicroUSD("ac"), callUnpriced("ac"), rate)
+}
+
+// callSummarySelect is the summary column list. The payload probe is an
+// existence check so a list read never loads captured content.
+func callSummarySelect(outcome string) string {
+	return storekit.SQLf(`c.id, c.occurred_at, c.task, c.kind, c.tier, c.provider, c.model_id,
 	c.served_model, c.attempt, c.tokens_in, c.tokens_out, c.reasoning_tokens,
 	c.cached_tokens, c.latency_ms, c.cache_hit, c.degraded, c.error_sentinel,
 	EXISTS (SELECT 1 FROM ai_call_payload pp WHERE pp.ai_call_id = c.id),
-	(SELECT COALESCE(bool_or(la.kind = 'decision'), false) FROM ai_call la
-	 WHERE la.logical_call_id = c.logical_call_id)`
+	lc.decision_attempted, %s, lp.cost_microusd, lp.unpriced_attempts`, outcome)
+}
 
 type rowScanner interface {
 	Scan(dest ...any) error
 }
 
-func scanCallSummary(row rowScanner) (CallSummary, error) {
-	var summary CallSummary
-	err := row.Scan(&summary.ID, &summary.OccurredAt, &summary.Task, &summary.Kind, &summary.Tier,
+// callSummaryScan is the scan target for callSummarySelect's columns, in order;
+// finish settles the cost once the row is read.
+type callSummaryScan struct {
+	summary  *CallSummary
+	cost     int64
+	unpriced int64
+}
+
+func (target *callSummaryScan) dest() []any {
+	summary := target.summary
+	return []any{
+		&summary.ID, &summary.OccurredAt, &summary.Task, &summary.Kind, &summary.Tier,
 		&summary.Provider, &summary.ModelID, &summary.ServedModel, &summary.Attempt,
 		&summary.TokensIn, &summary.TokensOut, &summary.ReasoningTokens,
 		&summary.CachedTokens, &summary.LatencyMS, &summary.CacheHit, &summary.Degraded,
-		&summary.ErrorSentinel, &summary.HasPayload, &summary.DecisionAttempted)
-	return summary, err
+		&summary.ErrorSentinel, &summary.HasPayload, &summary.DecisionAttempted,
+		&summary.Outcome, &target.cost, &target.unpriced,
+	}
+}
+
+func (target *callSummaryScan) finish() {
+	if target.unpriced == 0 {
+		cost := target.cost
+		target.summary.CostMicroUSD = &cost
+	}
+}
+
+func scanCallSummary(row rowScanner) (CallSummary, error) {
+	var summary CallSummary
+	target := callSummaryScan{summary: &summary}
+	if err := row.Scan(target.dest()...); err != nil {
+		return CallSummary{}, err
+	}
+	target.finish()
+	return summary, nil
 }
 
 func finishCallPage(items []CallSummary, limit int) (CallPage, error) {
@@ -155,33 +207,9 @@ func finishCallPage(items []CallSummary, limit int) (CallPage, error) {
 	return page, nil
 }
 
-// CallListFilter narrows the call list to the calls that ended on one task,
-// provider, model, answering model, upstream host or tier. An empty field
-// filters nothing.
-type CallListFilter struct {
-	Task, Provider, Model, ServedModel, ServedProvider, Tier string
-}
-
-// columns is each set filter beside its column, a compile-time expression.
-func (f CallListFilter) columns() []struct{ column, value string } {
-	var out []struct{ column, value string }
-	for _, c := range []struct{ column, value string }{
-		{"c.task", f.Task},
-		{"c.provider", f.Provider},
-		{"c.model_id", f.Model},
-		{answeredModelSQL("c"), f.ServedModel},
-		{"c.served_provider", f.ServedProvider},
-		{"c.tier", f.Tier},
-	} {
-		if c.value != "" {
-			out = append(out, c)
-		}
-	}
-	return out
-}
-
-// ListCalls returns terminal attempts newest-first. Retry siblings remain
-// available through the detail ladder, not as duplicate list entries.
+// ListCalls returns terminal attempts newest-first, narrowed by filter.
+// Retry siblings remain available through the detail ladder, not as
+// duplicate list entries.
 func (s *CallReadStore) ListCalls(
 	ctx context.Context,
 	cursor *string,
@@ -192,58 +220,38 @@ func (s *CallReadStore) ListCalls(
 		return CallPage{}, err
 	}
 	n := storekit.ClampLimit(limit)
-	where := "c.is_terminal"
-	args := []any{}
-	addArg := func(value any) int {
-		args = append(args, value)
-		return len(args)
-	}
-	var whereSb198 strings.Builder
-	for _, f := range filter.columns() {
-		fmt.Fprintf(&whereSb198, " AND %s = $%d", f.column, addArg(f.value))
-	}
-	where += whereSb198.String()
+	query := newCallQuery()
+	from := callSummaryFrom(query)
+	where := filter.where(query)
 	if cursor != nil && *cursor != "" {
 		decoded, err := storekit.DecodeCursor(*cursor)
 		if err != nil {
 			return CallPage{}, err
 		}
-		where += fmt.Sprintf(
+		where += storekit.SQLf(
 			" AND (c.occurred_at, c.id) < ($%d, $%d)",
-			addArg(decoded.CreatedAt), addArg(decoded.ID),
+			query.arg(decoded.CreatedAt), query.arg(decoded.ID),
 		)
 	}
 
-	items := make([]CallSummary, 0, n+1)
-	tasks := []string{}
+	var items []CallSummary
+	var tasks, models []string
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, storekit.SQLf(
-			`SELECT %s FROM ai_call c WHERE %s ORDER BY c.occurred_at DESC, c.id DESC LIMIT %d`,
-			callSummaryColumns, where, n+1,
-		), args...)
+			`SELECT %s FROM %s WHERE %s ORDER BY c.occurred_at DESC, c.id DESC LIMIT %d`,
+			callSummarySelect(query.outcome), from, where, n+1,
+		), query.args...)
 		if err != nil {
 			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			item, err := scanCallSummary(rows)
-			if err != nil {
-				return err
-			}
-			items = append(items, item)
-		}
-		if err := rows.Err(); err != nil {
+		items, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (CallSummary, error) {
+			return scanCallSummary(row)
+		})
+		if err != nil {
 			return err
 		}
-		// The complete terminal-task set for the filter dropdown, computed in
-		// the SAME tx (one round-trip): array_agg over EVERY terminal row, so
-		// it is independent of this page's cursor and task filter — the
-		// dropdown stays complete no matter what is on screen. is_terminal
-		// matches this list's own universe, so no option filters to nothing.
-		return tx.QueryRow(
-			ctx,
-			`SELECT COALESCE(array_agg(DISTINCT task ORDER BY task), '{}') FROM ai_call WHERE is_terminal`,
-		).Scan(&tasks)
+		tasks, models, err = readCallFacets(ctx, tx)
+		return err
 	})
 	if err != nil {
 		return CallPage{}, err
@@ -252,8 +260,21 @@ func (s *CallReadStore) ListCalls(
 	if err != nil {
 		return CallPage{}, err
 	}
-	page.Tasks = tasks
+	page.Tasks, page.Models = tasks, models
 	return page, nil
+}
+
+// readCallFacets is the complete terminal task and model sets for the filter
+// dropdowns, over every terminal row so they stay complete whatever the page
+// shows. is_terminal matches the list's own universe, so no option filters to
+// nothing; a call naming no model at all offers no blank option.
+func readCallFacets(ctx context.Context, tx pgx.Tx) (tasks, models []string, err error) {
+	err = tx.QueryRow(ctx, storekit.SQLf(`SELECT
+		COALESCE(array_agg(DISTINCT c.task ORDER BY c.task), '{}'),
+		COALESCE(array_agg(DISTINCT %[1]s ORDER BY %[1]s) FILTER (WHERE %[1]s <> ''), '{}')
+		FROM ai_call c WHERE c.is_terminal`, callModelSQL),
+	).Scan(&tasks, &models)
+	return tasks, models, err
 }
 
 func scanCallDetail(row rowScanner) (CallDetail, ids.UUID, error) {
@@ -263,18 +284,16 @@ func scanCallDetail(row rowScanner) (CallDetail, ids.UUID, error) {
 	// All four arrive NULL together when the join found no configuration.
 	var taskContractHash, routingConfigHash, promptVersion *string
 	var providerParams []byte
-	err := row.Scan(&detail.ID, &detail.OccurredAt, &detail.Task, &detail.Kind, &detail.Tier,
-		&detail.Provider, &detail.ModelID, &detail.ServedModel, &detail.Attempt,
-		&detail.TokensIn, &detail.TokensOut, &detail.ReasoningTokens,
-		&detail.CachedTokens, &detail.LatencyMS, &detail.CacheHit, &detail.Degraded,
-		&detail.ErrorSentinel, &detail.HasPayload, &detail.DecisionAttempted, &detail.CorrelationID,
+	target := callSummaryScan{summary: &detail.CallSummary}
+	err := row.Scan(append(target.dest(), &detail.CorrelationID,
 		&detail.AgentRunID, &detail.ServedIdentitySource, &detail.ConfigHash,
 		&detail.ContextScopes, &detail.ContextFingerprint, &logicalID,
 		&requestPayload, &responsePayload,
-		&taskContractHash, &routingConfigHash, &promptVersion, &providerParams)
+		&taskContractHash, &routingConfigHash, &promptVersion, &providerParams)...)
 	if err != nil {
 		return CallDetail{}, ids.UUID{}, err
 	}
+	target.finish()
 	detail.LogicalCallID = logicalID
 	if requestPayload != nil && responsePayload != nil {
 		detail.Payload = &Payload{Request: requestPayload, Response: responsePayload}
@@ -299,20 +318,23 @@ func (s *CallReadStore) GetCall(ctx context.Context, id ids.UUID) (CallDetail, e
 		return CallDetail{}, err
 	}
 	var detail CallDetail
+	query := newCallQuery()
+	from := callSummaryFrom(query)
+	idArg := query.arg(id)
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx, storekit.SQLf(
 			`SELECT %s, c.correlation_id, c.agent_run_id, c.served_identity_source,
 				c.config_hash, c.context_scopes, c.context_fingerprint, c.logical_call_id,
 				p.request_payload, p.response_payload,
 				cfg.task_contract_hash, cfg.routing_config_hash, cfg.prompt_version, cfg.provider_params
-			 FROM ai_call c
+			 FROM %s
 			 LEFT JOIN ai_call_payload p ON p.ai_call_id = c.id
 			 -- The dimension the call's hash names. LEFT because the hash is
 			 -- NULLABLE, not because a row might be missing: ai_call_config_fk
 			 -- makes a hash that IS set always have one behind it.
 			 LEFT JOIN ai_call_config cfg ON cfg.hash = c.config_hash
-			 WHERE c.is_terminal AND c.id = $1`, callSummaryColumns,
-		), id)
+			 WHERE c.is_terminal AND c.id = $%d`, callSummarySelect(query.outcome), from, idArg,
+		), query.args...)
 		var logicalID ids.UUID
 		var err error
 		detail, logicalID, err = scanCallDetail(row)

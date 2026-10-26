@@ -35,6 +35,9 @@ type InstallationSettings struct {
 	BaseLanguage string
 	DateFormat   string
 	TimeFormat   string
+	CallWhatsApp bool
+	CallTelegram bool
+	CallZalo     bool
 	// FiscalYearStartMonth is the month the business year begins, 1..12.
 	FiscalYearStartMonth int
 	// DeadWorkBannerHours is how far back the maintenance banner looks before
@@ -101,6 +104,9 @@ type InstallationPatch struct {
 	// leaves the switch unchanged.
 	DynamicClientRegistration *bool
 	MetadataDocumentClients   *bool
+	CallWhatsApp              *bool
+	CallTelegram              *bool
+	CallZalo                  *bool
 	// Country selects the jurisdiction pack. "" selects none. A change runs
 	// the store's country-change hook in the same transaction.
 	Country *string
@@ -261,7 +267,7 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err != nil {
 		return InstallationSettings{}, err
 	}
-	return InstallationSettings{
+	out := InstallationSettings{
 		Name: name, Timezone: zone, BaseCurrency: currency, BaseLanguage: language, DateFormat: dateFormat, TimeFormat: timeFormat,
 		FiscalYearStartMonth:       fiscalStart,
 		DeadWorkBannerHours:        bannerHours,
@@ -271,7 +277,11 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 		EnabledOidcProviders: providers,
 		Operations:           operations,
 		AgentAllowances:      allowances,
-	}, nil
+	}
+	if err := s.readCallMessengers(ctx, &out); err != nil {
+		return InstallationSettings{}, err
+	}
+	return out, nil
 }
 
 // baseCurrencyLock asks the probe LockBaseCurrencyWith also gave the write.
@@ -377,16 +387,15 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
-	operations, err := in.Operations.writes()
-	if err != nil {
-		return nil, err
-	}
-	allowances, err := in.AgentAllowances.writes()
-	if err != nil {
-		return nil, err
-	}
 	fields := []pendingWrite{name, zone, currency, language, fiscal, bannerHours, tokenTTL, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA, groupRoleMap, country, dynamic, metadataDocuments}
-	return append(append(fields, operations...), allowances...), nil
+	for _, group := range []func() ([]pendingWrite, error){in.Operations.writes, in.AgentAllowances.writes, in.callMessengerWrites} {
+		writes, err := group()
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, writes...)
+	}
+	return fields, nil
 }
 
 // UpdateInstallation applies a sparse patch. Named for the same reason as
@@ -436,29 +445,6 @@ func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in I
 		return InstallationSettings{}, err
 	}
 	return s.GetInstallation(ctx)
-}
-
-// refuseRenameTx admits only the name the installation already holds. The
-// anchor company's display name is that name, and a rename here would drift
-// from it. An older client resending the name it read still saves.
-func refuseRenameTx(ctx context.Context, tx pgx.Tx, c *config.Config, next *string) error {
-	if next == nil {
-		return nil
-	}
-	if err := settings.LockForWrite(ctx, tx, Name.Key()); err != nil {
-		return err
-	}
-	current, err := config.StoredValTx(ctx, tx, c, Name)
-	if err != nil {
-		return err
-	}
-	if *next == current {
-		return nil
-	}
-	return c.LockFirst(Name.Key(), settings.InvalidValue{
-		Setting: Name.Key(), Code: "set_on_company_profile",
-		Reason: "the installation's name is the company's name; change it on the company profile",
-	})
 }
 
 // changeCountryTx runs the country-change hook under the setting's write lock,

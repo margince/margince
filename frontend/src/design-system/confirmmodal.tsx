@@ -1,8 +1,9 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { Children, useId } from "react";
 import { useT } from "../i18n";
 import { Button, Modal } from "./atoms";
 import { ErrorLine } from "./errorline";
+import { refuseUnreadableField } from "./formvalidity";
 import { Heading } from "./heading";
 import type { ModalIntent } from "./modal";
 import { AutonomyDot } from "./trust";
@@ -17,6 +18,7 @@ export function ConfirmModal({
   title,
   tier,
   confirmLabel,
+  cancelLabel,
   confirmVariant = "primary",
   confirmDisabled = false,
   actionsLead,
@@ -36,6 +38,9 @@ export function ConfirmModal({
   title: string;
   tier?: DotTier;
   confirmLabel: string;
+  // The way back, named for what it keeps ("Keep it on") where a bare Cancel
+  // would not say what staying put means. Defaults to Cancel.
+  cancelLabel?: string;
   // The confirm button's tone. Defaults to "primary" (backward-compatible);
   // a destructive confirm (e.g. reject-with-reason) passes "danger" so it
   // doesn't read green like an approve.
@@ -86,6 +91,9 @@ export function ConfirmModal({
   const close = () => {
     if (!pending) onClose();
   };
+  const confirm = (event: MouseEvent<HTMLButtonElement>) => {
+    if (!refuseUnreadableField(event.currentTarget)) onConfirm();
+  };
   return (
     <Modal
       open={open}
@@ -120,7 +128,7 @@ export function ConfirmModal({
             stopped something they did not. */}
         <span className="actions-pair">
           <Button onClick={onClose} disabled={pending}>
-            {t("create.cancel")}
+            {cancelLabel ?? t("create.cancel")}
           </Button>
           {/* The compound this dialog used to carry — `pending || confirmDisabled`
             — folded two unrelated facts into one attribute: a write in flight
@@ -131,7 +139,7 @@ export function ConfirmModal({
             <span className="actions-split">
               <Button
                 variant={confirmVariant}
-                onClick={onConfirm}
+                onClick={confirm}
                 pending={pending}
                 disabled={confirmDisabled}
                 reason={confirmReason}
@@ -143,7 +151,7 @@ export function ConfirmModal({
           ) : (
             <Button
               variant={confirmVariant}
-              onClick={onConfirm}
+              onClick={confirm}
               pending={pending}
               disabled={confirmDisabled}
               reason={confirmReason}

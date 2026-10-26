@@ -11,25 +11,16 @@ import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 
-// Which accounts a member's imported network reaches (ADR-0078 §2.1b) — the
-// answer the whole import is for.
-//
-// It is the half that works on a one-contact workspace: asking which COLLEAGUE
-// knows an account has no content when there is one member, while asking
-// whether your own network reaches it has content immediately.
-//
-// What the list cannot show is stated above the figures it qualifies.
+// Which accounts a member's imported network reaches: the answer the whole
+// import is for, and the half that has content on a one-member workspace.
 
 export type LinkedInReach = components["schemas"]["LinkedInReachResponse"];
 type ReachAccount = LinkedInReach["accounts"][number];
 
-// The largest page the contract's `limit` admits, asked for explicitly. This
-// view has no cursor — the endpoint declares no cursor parameter and the
-// response carries none — so ONE page is the whole of what a reader can reach,
-// which makes where the list stops this screen's stated choice rather than the
-// server's unnamed default of 50. The row's caveat reads `accounts_total`,
-// computed over everything, so what sits past the edge is still counted out
-// loud.
+// The largest page the contract's `limit` admits, asked for explicitly. The
+// endpoint declares no cursor, so one page is all a reader can reach. The list
+// edge is therefore this screen's choice, not the server's default of 50.
+// The caveat reads `accounts_total`, so what sits past the edge is still counted.
 const REACH_PAGE_LIMIT = 200;
 
 const REACH_KEY = ["linkedin-reach", REACH_PAGE_LIMIT] as const;
@@ -48,13 +39,9 @@ export function useLinkedInReach() {
 }
 
 /**
- * The card's caveat: what this view cannot show, in the terms the state calls
- * for.
- *
- * Two sentences, never both — a reader looking at a list needs to know where it
- * stops, and a reader looking at an empty one needs to know that the
- * connections exist and simply match nothing on file yet. Neither is a
- * footnote: they qualify the figures, so they read before them.
+ * What this view cannot show, read before the figures it qualifies: where a
+ * list stops, or that an empty list hides connections matching nothing yet.
+ * `undefined` when there is nothing to say.
  */
 export function reachCaveat(
   t: ReturnType<typeof useT>,

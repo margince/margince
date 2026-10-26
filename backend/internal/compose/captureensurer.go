@@ -53,6 +53,7 @@ func newCounterpartyStore(pool *pgxpool.Pool) *contacts.Store {
 		WithConsumerMail(capture.MatcherTx).
 		WithAudienceRecompute(activities.RecomputeAudienceTx).
 		WithVatCheckEnqueue(boundVatCheckEnqueue()).
+		WithGeocodeEnqueue(boundGeocodeEnqueue).
 		// A captured contact can take a lead over (promoteheld.go), and a
 		// promotion carries the lead's stops and consent links or refuses —
 		// wired as the server's store wires them (serverassembly.go).
@@ -102,6 +103,9 @@ func (p contactsEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensu
 		OwnerScoped:     true,
 		NarrowedBecause: contacts.NarrowedAwaitingVerdict,
 	})
+	if errors.Is(err, contacts.ErrCounterpartyIsSeat) {
+		return capture.EnsureOutcome{}, nil
+	}
 	if errors.Is(err, contacts.ErrCounterpartySuppressed) {
 		// A13: the erased address stays dead — a deliberate no-op, not a
 		// fault for the reconcile queue, and nothing was created to count.
@@ -122,6 +126,9 @@ func (p contactsEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensu
 	if in.Replied {
 		p.promoteOnReply(ctx, in, res.ContactID)
 	}
+	if !res.ContactCreated {
+		p.liftVendorMark(ctx, in.Email, res.ContactID)
+	}
 	return capture.EnsureOutcome{
 		ContactCreated: res.ContactCreated,
 		ContactID:      res.ContactID.UUID,
@@ -138,10 +145,25 @@ func (p contactsEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensu
 // PublishAnsweredContactsWorkspace makes any promotion this one loses.
 func (p contactsEnsurer) promoteOnReply(ctx context.Context, in capture.EnsureRequest, contactID ids.ContactID) {
 	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
-		return publishAnsweredTx(ctx, tx, p.store, contactID, in.OwnerID, in.Email)
+		return publishAnsweredTx(ctx, tx, p.store, contactID, in.Email)
 	})
 	if err != nil {
 		p.log.ErrorContext(ctx, "capture: publishing a contact on their reply failed",
+			"contact", contactID.String(), "err", err)
+	}
+}
+
+// liftVendorMark clears the automatic vendor mark on a contact that later mail
+// reached, when the workspace now corresponds with the address.
+//
+// Its own transaction and logged, like promoteOnReply: the message is already
+// captured, and LiftVendorMarksWorkspace makes any clearing this one loses.
+func (p contactsEnsurer) liftVendorMark(ctx context.Context, email string, contactID ids.ContactID) {
+	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+		return liftVendorMarkTx(ctx, tx, p.store, contactID, email)
+	})
+	if err != nil {
+		p.log.ErrorContext(ctx, "capture: clearing a vendor mark on later mail failed",
 			"contact", contactID.String(), "err", err)
 	}
 }

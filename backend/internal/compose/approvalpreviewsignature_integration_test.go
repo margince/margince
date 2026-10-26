@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestMailApprovalSignsOnlyAsItsActualHumanSender(t *testing.T) {
@@ -28,7 +29,9 @@ func TestMailApprovalSignsOnlyAsItsActualHumanSender(t *testing.T) {
 			}
 			proposer := ctx
 			if mode == "agent" {
-				proposer = e.AgentCtx()
+				agent, _ := principal.Actor(e.AgentCtx())
+				agent.OnBehalfOf = e.AdminUser
+				proposer = principal.WithActor(e.AgentCtx(), agent)
 			}
 			raw, hash, err := diffhash.Canonical([]byte(fmt.Sprintf(`{"to":["buyer@example.test"],"body":"Delivery Friday.","links":[{"entity_type":"company","entity_id":%q}]}`, company)))
 			if err != nil {

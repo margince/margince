@@ -68,7 +68,7 @@ func TestALongSilenceSplitsTheArcIntoMoments(t *testing.T) {
 		// Well past arcGapDays.
 		mail(contactID, 28, "New question", "inbound"),
 	}
-	moments := clusterThreads(threadsOf(history))
+	moments := clusterThreads(threadsOf(history), time.UTC)
 	if len(moments) != 2 {
 		t.Fatalf("moments = %d, want 2 — a three-week gap closes one", len(moments))
 	}

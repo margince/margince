@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"testing"
 	"time"
 
@@ -315,5 +316,36 @@ func TestGoogleSignInMountedWithoutAClientIsNotOffered(t *testing.T) {
 	}
 	if len(s.configuredProviders) != 1 || s.configuredProviders[0].Key != "google" {
 		t.Fatalf("configuredProviders = %+v, want google listed for the settings screen", s.configuredProviders)
+	}
+	if got := s.signInScreenKeys(context.Background()); got == nil || len(got) != 0 {
+		t.Fatalf("sign_in_screen = %#v, want an empty list: listed for the settings screen, not drawn", got)
+	}
+}
+
+// The policy read's sign_in_screen is the probe's own answer, so it must track
+// every provider registered, in either order, and say [] where none is composed.
+func TestTheSignInScreenFollowsEveryRegisteredProvider(t *testing.T) {
+	google := GoogleSignInConfig{
+		ClientID: "gcid", ClientSecret: "gsecret", StateKey: "0123456789012345678901234567890123",
+		RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed",
+	}
+	for name, opts := range map[string][]Option{
+		"google-then-microsoft": {WithGoogleSignIn(google), WithMicrosoftSignIn(completeMicrosoftConfig())},
+		"microsoft-then-google": {WithMicrosoftSignIn(completeMicrosoftConfig()), WithGoogleSignIn(google)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var s Server
+			for _, opt := range opts {
+				opt(&s, nil)
+			}
+			got := s.signInScreenKeys(context.Background())
+			if len(got) != 2 || !slices.Contains(got, "google") || !slices.Contains(got, "microsoft") {
+				t.Fatalf("sign_in_screen = %v, want google and microsoft", got)
+			}
+		})
+	}
+	var bare Server
+	if got := bare.signInScreenKeys(context.Background()); got == nil || len(got) != 0 {
+		t.Fatalf("sign_in_screen with no provider composed = %#v, want an empty list", got)
 	}
 }

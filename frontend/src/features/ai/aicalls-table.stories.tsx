@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { Panel } from "../../design-system/panel";
@@ -10,6 +11,7 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
+import { CallDrawer } from "./aicalls-detail";
 import { CallTable } from "./aicalls-table";
 
 type CallSummary = components["schemas"]["AiCallSummary"];
@@ -35,6 +37,8 @@ const call: CallSummary = {
   error_sentinel: null,
   has_payload: false,
   decision_attempted: false,
+  outcome: "answered",
+  estimated_cost_microusd: 4300,
 };
 
 const CALLS: CallSummary[] = [
@@ -54,6 +58,8 @@ const CALLS: CallSummary[] = [
     tier: "premium",
     calls_attempted: 3,
     error_sentinel: "provider_quota",
+    outcome: "failed",
+    estimated_cost_microusd: undefined,
   },
   {
     ...call,
@@ -90,11 +96,20 @@ const DETAIL = {
 
 function Calls() {
   installFetchStub({ "GET /ai/calls/call-1": () => jsonResponse(DETAIL) });
+  const [open, setOpen] = useState<CallSummary | null>(null);
   return (
     <StoryProviders>
-      <Panel className="aicalls-card">
-        <CallTable calls={CALLS} captureEnabled={false} />
+      <Panel>
+        <CallTable calls={CALLS} onOpen={setOpen} />
       </Panel>
+      {open && (
+        <CallDrawer
+          call={open}
+          captureEnabled={false}
+          onClose={() => setOpen(null)}
+          onExport={() => undefined}
+        />
+      )}
     </StoryProviders>
   );
 }
@@ -113,17 +128,10 @@ export const OutcomesPhone: Story = {
   tags: ["uat-phone"],
   play: async ({ canvasElement }) => {
     await within(canvasElement).findAllByRole("row");
-    for (const row of canvasElement.querySelectorAll(
-      "tbody tr:not([hidden])",
-    )) {
-      const box = (selector: string) =>
-        row.querySelector(selector)?.closest("td")?.getBoundingClientRect();
-      const model = box(".aicalls-model-line");
-      const figures = box(".aicalls-figure");
-      await expect(figures?.top).toBeGreaterThanOrEqual(model?.bottom ?? 0);
-      const exact = row.querySelector(".aicalls-time")?.getBoundingClientRect();
-      await expect(exact?.width).toBeLessThanOrEqual(1);
-    }
+    const scroller = canvasElement.querySelector(".table-scroll");
+    await expect(scroller?.scrollWidth).toBeLessThanOrEqual(
+      scroller?.clientWidth ?? 0,
+    );
   },
 };
 export const Opened: Story = {
@@ -131,7 +139,7 @@ export const Opened: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(
       await canvas.findByRole("button", {
-        name: /Show attempts for Message classification/,
+        name: /Open the Message classification call/,
       }),
     );
     await canvas.findByRole("heading", { name: "Attempts" });

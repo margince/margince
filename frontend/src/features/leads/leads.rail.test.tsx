@@ -119,9 +119,8 @@ function render(ui: ReactNode) {
   );
 }
 
-/** Open the rail's folded score section and start an override. */
+/** Start an override from the score card's head. */
 async function openOverride(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByText(/Score: 72/));
   await user.click(
     await screen.findByRole("button", { name: "Override score" }),
   );
@@ -184,7 +183,7 @@ describe("the lead page's one write, read from two columns", () => {
 
     // The rail renders on every tab, so its writes can be refused on one the
     // ladder panel — where this sentence used to live — never reaches.
-    await user.click(await screen.findByRole("button", { name: "History" }));
+    await user.click(await screen.findByRole("button", { name: /^History/ }));
     await user.click(await screen.findByRole("button", { name: "Assign" }));
     await pickOption(
       user,

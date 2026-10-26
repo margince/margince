@@ -32,6 +32,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -175,7 +176,11 @@ func (h Reads) buildContactGraph(
 	dropped.Peer = &peerDropped
 
 	out.DroppedCount = &dropped
-	routes := chooseRoutes(out, now)
+	loc, err := identity.ZoneAppliedTx(ctx, tx)
+	if err != nil {
+		return err
+	}
+	routes := chooseRoutes(out, now, loc)
 	out.Routes = &routes
 	out.Route = chooseRoute(routes)
 	return nil

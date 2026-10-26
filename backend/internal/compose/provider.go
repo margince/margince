@@ -79,6 +79,7 @@ func NewProviderFor(db *database.DB) *Provider {
 			WithFeedbackCarryReader(ai.NewFeedbackStore(db)).
 			WithGrantCarrier(identity.NewServiceFor(db)).
 			WithExtensions(ExtensionData()).
+			WithShareRequests(contactShareRequests(pool)).
 			WithInstallationRenamer(installationRenamer(pool)),
 		deals:       deals.NewProvider(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
 		projects:    projects.ProviderOver(ProjectsStoreOver(db)),

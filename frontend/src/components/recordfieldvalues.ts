@@ -1,5 +1,6 @@
-import { formatMoney } from "../format/format";
+import { formatDateAbbrev, formatMoney } from "../format/format";
 import { toMinorUnits } from "../format/minorunits";
+import { viewerZone } from "../format/timezone";
 import type { Locale, useT } from "../i18n";
 import {
   type CreateField,
@@ -9,6 +10,16 @@ import {
   splitMultiselectValue,
 } from "./create";
 import { prefillFromRecord, prefillRowsFromRecord } from "./edit.prefill";
+
+export function dateDisplay(
+  field: CreateField,
+  stored: string,
+  locale: Locale,
+): string | undefined {
+  return field.type === "date" && stored
+    ? formatDateAbbrev(stored, locale, viewerZone())
+    : undefined;
+}
 
 export function selectOptions(
   field: CreateField,

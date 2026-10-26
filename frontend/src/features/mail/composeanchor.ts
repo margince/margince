@@ -2,10 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { type Dispatch, type SetStateAction, useEffect, useRef } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useRoster } from "../../components/entityref";
+import { useSettledValue } from "../../design-system/debouncedsearch";
 import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
@@ -17,6 +24,7 @@ import { keptTag } from "./composedraftcall";
 import type { RelinkKind } from "./composerelink";
 import { useRecentConversations, useThreadMessages } from "./composethread";
 import { replySubject } from "./replysubject";
+import { rowAnswer } from "./rowanswer";
 
 type Activity = components["schemas"]["Activity"];
 type ThreadProject = ReturnType<typeof useThreadProject>;
@@ -60,8 +68,8 @@ export function useThreadProject(
     projectId: (query.data?.links ?? []).find(
       (link) => link.entity_type === "project",
     )?.entity_id,
-    // An unanswered or failed read is not "no project". Falling through to
-    // the deal's project would contradict the server, which re-reads the anchor.
+    // An unanswered or failed read is not "no project". The composer waits
+    // rather than suggest a filing it may take back.
     settled: !activityId || (!query.isPending && !query.isError),
   };
 }
@@ -107,27 +115,62 @@ export function colleagueMailboxesOf(
 function answeringLineOf(
   answering: string | undefined,
   anchorRead: ThreadProject,
+  replying: boolean,
   t: ReturnType<typeof useT>,
   locale: Locale,
-): string {
+): { line: string; when?: string } {
   if (!answering) {
-    return t("compose.newEmail");
+    return { line: t("compose.newEmail") };
   }
   const anchor = anchorRead.activity;
   if (!anchor?.occurred_at || anchor.content_state === "withheld") {
-    return t(
-      anchorRead.failed ? "compose.threadFailed" : "compose.threadPending",
-    );
+    return {
+      line: t(
+        anchorRead.failed ? "compose.threadFailed" : "compose.threadPending",
+      ),
+    };
   }
-  return t(
+  const named = {
+    subject: anchor.subject || t("email.noSubject"),
+    when: formatDateTime(anchor.occurred_at, locale, viewerZone()),
+  };
+  // Apart, so a narrow bar cuts the subject and still shows when it happened.
+  if (!replying) {
+    return {
+      line: t("compose.aboutRow", named),
+      when: t("compose.aboutWhen", named),
+    };
+  }
+  const key =
     anchor.direction === "outbound"
       ? "compose.followingUp"
-      : "compose.replyingTo",
-    {
-      subject: anchor.subject || t("email.noSubject"),
-      when: formatDateTime(anchor.occurred_at, locale, viewerZone()),
-    },
-  );
+      : "compose.replyingTo";
+  return { line: t(key, named) };
+}
+
+// The window's name: the subject as typed, or what the message answers, or
+// whom a new one is to. A bare project tag is not a subject anybody typed.
+export function windowTitle(
+  input: Readonly<{
+    isChannelReply: boolean;
+    wordingTitle: string;
+    replying: boolean;
+    anchorSubject: string | null | undefined;
+    subject: string;
+    recordName: string | undefined;
+    t: ReturnType<typeof useT>;
+  }>,
+): string {
+  const { t } = input;
+  // A channel reply keeps the send's own title.
+  if (input.isChannelReply) return input.wordingTitle;
+  if (stripEveryKeyTag(input.subject).trim()) return input.subject.trim();
+  if (input.replying) {
+    return replySubject(input.anchorSubject?.trim() || t("email.noSubject"));
+  }
+  return input.recordName
+    ? t("compose.newEmailTo", { name: input.recordName })
+    : t("compose.newEmail");
 }
 
 // Whether the thread pane rides beside the form. It holds its place while the
@@ -145,7 +188,7 @@ function conversationShown(
     return false;
   }
   const kind = read.anchorRead.activity?.kind;
-  const correspondence = kind === "email" || kind === "message";
+  const correspondence = kind !== undefined && rowAnswer(kind) === "reply";
   const { conversation } = read;
   const threadVisible =
     conversation.messages.length > 0 ||
@@ -190,6 +233,7 @@ function useReplySubject(
 export function useComposeThread({
   open,
   answering,
+  rowKind,
   isChannelReply,
   entityType,
   entityId,
@@ -198,6 +242,8 @@ export function useComposeThread({
 }: Readonly<{
   open: boolean;
   answering: string | undefined;
+  /** The kind of the row that opened the composer, until its anchor is read. */
+  rowKind?: Activity["kind"];
   isChannelReply: boolean;
   entityType: RelinkKind;
   entityId: string;
@@ -208,6 +254,9 @@ export function useComposeThread({
   const { locale } = useLocale();
   const anchorRead = useThreadProject(answering, open);
   const anchorActivity = anchorRead.activity;
+  const replying =
+    Boolean(answering) &&
+    rowAnswer(anchorActivity?.kind ?? rowKind) === "reply";
   const conversation = useThreadMessages(open ? anchorActivity : undefined);
   // Named but not yet read: the column holds its place. A failed read is not
   // still arriving, so the pane lets go of it.
@@ -215,13 +264,27 @@ export function useComposeThread({
     Boolean(answering) && anchorActivity === undefined && !anchorRead.failed;
   // Mail is the transport that can open a conversation, so it alone offers.
   const offeringThreads = !isChannelReply;
+  // Asked on a reply too: the rail keeps the other conversations beside the
+  // one being answered, so the draft can move to one of them.
   const recent = useRecentConversations(
     entityType,
     entityId,
-    open && offeringThreads && !answering,
+    open && offeringThreads,
     { nameOf, t, locale },
   );
+  // A search reads its own list. The bar's count, and whether threads are
+  // offered at all, stay those of the record.
+  const [search, setSearch] = useState("");
+  const searched = useSettledValue(search).trim();
+  const found = useRecentConversations(
+    entityType,
+    entityId,
+    open && offeringThreads && searched !== "",
+    { nameOf, t, locale },
+    searched,
+  );
   useReplySubject(answering, anchorActivity, setSubject);
+  const answered = answeringLineOf(answering, anchorRead, replying, t, locale);
   const showConversation = conversationShown({
     isChannelReply,
     answering,
@@ -229,22 +292,27 @@ export function useComposeThread({
     anchorUnresolved,
     conversation,
   });
-  // The ways in, when the reader has not taken one. A pending or failed read
-  // keeps the column, so the record never looks as though it had no history.
-  const showChoices =
+  // A pending or failed read keeps the rail, so the record never looks as
+  // though it had no history. So does older mail not read yet.
+  const offered =
     offeringThreads &&
-    !answering &&
-    (recent.pending || recent.failed || recent.conversations.length > 0);
+    (recent.pending ||
+      recent.failed ||
+      recent.more ||
+      recent.conversations.length > 0);
   return {
     anchorRead,
     anchorActivity,
     conversation,
     anchorUnresolved,
     recent,
-    answeringLine: answeringLineOf(answering, anchorRead, t, locale),
-    showConversation,
-    showChoices,
-    splitColumns: showConversation || showChoices,
+    listed: searched ? found : recent,
+    search,
+    setSearch,
+    replying,
+    answeringLine: answered.line,
+    answeringWhen: answered.when,
+    splitColumns: showConversation || offered,
   };
 }
 

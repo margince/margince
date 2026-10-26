@@ -88,8 +88,9 @@ const combiningDiaeresis = '\u0308'
 // The BASE LETTER decides, because NFD leaves a mark directly after the letter it
 // belongs to:
 //
-//   - Latin and Greek write accents, and those go — Müller/Mueller, Straße,
-//     Việt Nam, Οδυσσεύς all depend on it.
+//   - Latin and Greek write accents, and those go — Müller/Muller, Straße,
+//     Việt Nam, Οδυσσεύς all depend on it. "Mueller" is a different spelling
+//     and meets "Müller" only through digraphNameKey.
 //   - Hebrew and Arabic write vocalization, optional and usually absent, so a
 //     pointed spelling folds onto the plain one.
 //   - Everything else writes letters, and those stay.
@@ -158,6 +159,39 @@ func NormalizeContactName(s string) string { return foldedNameKey(s) }
 // One helper because the contact lane and the company lane ask one question.
 func foldedNameKey(s string) string {
 	return collapseSpaces(strings.ReplaceAll(normalizeName(s), "'", ""))
+}
+
+// companyNamesAreTheSame answers whether two names are one name. Only case,
+// accents and spacing are folded. A legal suffix stays, for the reason
+// CompanyCandidateScore.ExactName gives.
+func companyNamesAreTheSame(left, right string) bool {
+	l, r := foldedNameKey(left), foldedNameKey(right)
+	return l != "" && l == r
+}
+
+// collapseSpaces reduces every run of whitespace to one space. A name read off
+// a web page carries the spacing of its markup, and "Baqend  GmbH" is not a
+// different company from "Baqend GmbH".
+func collapseSpaces(s string) string { return strings.Join(strings.Fields(s), " ") }
+
+// umlautDigraphs writes ä, ö and ü the way German does without them.
+var umlautDigraphs = strings.NewReplacer("ä", "ae", "ö", "oe", "ü", "ue", "Ä", "Ae", "Ö", "Oe", "Ü", "Ue")
+
+// digraphNameKey is the contact-name key with umlauts written as digraphs, so
+// "Björn" and "Bjoern" share a key while "Bjoern" and "Bjorn" do not. It sits
+// beside NormalizeContactName and never replaces it. That key also feeds
+// locks, stored review hashes and other lanes, none of which may move.
+func digraphNameKey(s string) string {
+	return foldedNameKey(umlautDigraphs.Replace(norm.NFC.String(s)))
+}
+
+// contactNameSimilarity is nameSimilarity for the contact lane, taking the
+// better of the plain and the digraph spelling. Only the contact score asks
+// it: lead dedupe and site-contact routing keep nameSimilarity as it is.
+func contactNameSimilarity(a, b string) float64 {
+	plain := nameSimilarity(a, b)
+	digraph := nameSimilarity(umlautDigraphs.Replace(norm.NFC.String(a)), umlautDigraphs.Replace(norm.NFC.String(b)))
+	return max(plain, digraph)
 }
 
 // NormalizeCompanyName is normalizeName plus the PO-PARAM-1 legal-suffix
@@ -334,4 +368,14 @@ func jaro(a, b string) float64 {
 func exactNameKeySQL(expr string) string {
 	return storekit.SQLf(
 		`btrim(regexp_replace(replace(f_fold_apostrophes(lower(%s)), 'ς', 'σ'), '\s+', ' ', 'g'))`, expr)
+}
+
+// exactDigraphNameKeySQL is exactNameKeySQL over the name with its umlauts
+// written as digraphs: the SQL side of digraphNameKey. It is its own arm of the
+// contact candidate query, so a "Björn"/"Bjoern" pair reaches the name lane
+// whatever the trigram arm makes of it. It composes to NFC first, as the Go key
+// does, so an "o" followed by a combining diaeresis is an "ö" here too.
+func exactDigraphNameKeySQL(expr string) string {
+	return exactNameKeySQL(storekit.SQLf(
+		`replace(replace(replace(normalize(lower(%s), NFC), 'ä', 'ae'), 'ö', 'oe'), 'ü', 'ue')`, expr))
 }

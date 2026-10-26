@@ -37,6 +37,7 @@ describe("refreshAfterRoleEdit", () => {
       ["roles", "live"],
       ["me"],
       ["access-preview", "rep", ""],
+      ["analytics-context"],
     ];
     for (const key of keys) {
       client.setQueryData(key, []);

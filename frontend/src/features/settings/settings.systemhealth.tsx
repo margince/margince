@@ -8,7 +8,9 @@ import { useProviderHealth } from "../../lib/ai-provider-health";
 import { useCan } from "../../lib/capability";
 import { routeHash } from "../../lib/router";
 import { useMe } from "../../lib/session";
+import { settingsHref } from "../../lib/settingsrouting";
 import { ProviderHealthCard } from "../capture/providerhealth";
+import { AutomaticWorkHealthCard } from "./automaticworkhealth";
 import { CaptureHealthCard, useCaptureHealth } from "./capturehealth";
 import { DataTasksHealthCard } from "./datataskshealth";
 import {
@@ -24,7 +26,6 @@ import { HealthStrip } from "./healthcard";
 import { JobHealthCard, useJobHealth } from "./jobhealth";
 import { BackgroundSchedulesCard, SendPacingCard } from "./operationsettings";
 import { RecoveryHealthCard, useRecoveryHealth } from "./recoveryhealth";
-import { settingsHref } from "./settingsrouting";
 import {
   type HealthReading,
   intakeReading,
@@ -159,6 +160,7 @@ export function SystemHealthPage() {
       {readings.intake.panel && <ExtensionIngestHealthCard />}
       {readings.providers.panel && <ProviderHealthCard />}
       <CaptureHealthCard />
+      <AutomaticWorkHealthCard />
       <RecoveryHealthCard />
       <DataTasksHealthCard />
       {/* The values the background work runs on, under the readings of what

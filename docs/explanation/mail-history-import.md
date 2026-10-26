@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/capture/backfill.go backend/internal/modules/capture/backfillpager.go backend/internal/modules/capture/backfillyields.go backend/internal/modules/capture/gmail/backfill.go backend/internal/modules/capture/graph/backfill.go backend/internal/compose/costestimate backend/internal/compose/backfilltransport.go frontend/src/features/capture/backfill.tsx -->
 # Mail history import: the capped scan back in time and its cost
 
 Connecting a mailbox starts *standing sync*: from then on, new mail comes in. A new connection is also
@@ -216,7 +217,7 @@ total.
 | the count and page fetch at the provider end | `internal/modules/capture/gmail/backfill.go`, `.../graph/backfill.go` |
 | the cost estimate code | `internal/compose/costestimate/` |
 | HTTP surface | `internal/compose/backfilltransport.go` |
-| the consent screen | `frontend/src/features/import/backfill.tsx` |
+| the consent screen | `frontend/src/features/capture/backfill.tsx` |
 
 ## Where to go next
 

@@ -1,71 +1,44 @@
-/* The row itself belongs to design-system/settingrow.css. */
+/* Connected inboxes and the workspace's messaging bot (Settings, Connections).
+   The rows themselves belong to the design system (ProviderRow, ServiceRow,
+   SettingRow); what is left here is what is specific to a CONNECTION: an
+   import's progress, and the account's settings. The empty card's tiles live in
+   connection-empty.css. */
 
-.connector-id {
+/* What a service reports under its caption: an import's progress and counts. */
+.connection-service-progress {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-.connector-id > svg {
-  width: 18px;
-  height: 18px;
-  color: var(--accentText);
-  flex: none;
-}
-
-/* The name and any badge that says something is wrong, on one line. */
-.connector-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-2);
-}
-
-/* An address is one unbroken token; it must not widen the page on a phone. */
-.connector-account {
-  overflow-wrap: anywhere;
-}
-
-/* Facts sit apart with no separator glyph; a long one starts its own line. */
-.connector-caption {
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: var(--space-3);
-}
-
-.connector-facts {
-  display: grid;
+  flex-direction: column;
   gap: var(--space-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  margin-top: var(--space-1);
+}
+.connection-service-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+.connection-service-facts b {
+  color: var(--textPrimary);
+  font-variant-numeric: tabular-nums;
+}
+.connection-service-held {
+  margin-top: var(--space-2);
 }
 
-.connector-actions,
+/* The account's standing decisions sit under its services, headed by whose
+   mail they are about. */
+.connection-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+/* The history-baseline row's date and its verbs, wrapping on a narrow pane. */
 .connector-baseline {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--gapActions);
-}
-
-.connector-baseline {
-  flex-wrap: wrap;
-}
-
-/* On a phone a roster row keeps its menu and chevron at the end of its first
-   line, and Reconnect takes a line of its own under the naming. */
-@media (max-width: 640px) {
-  .settinglist-records > .settingrow:has(.connector-head) {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
-  }
-  .settingrow:has(.connector-head) > .settingrow-control {
-    display: contents;
-  }
-  .connector-reconnect {
-    grid-row: 2;
-    grid-column: 1 / -1;
-    justify-self: start;
-  }
 }

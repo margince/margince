@@ -135,6 +135,8 @@ func (said transcriptCopy) transcriptWithheldReason(outcome CommitmentOutcome) s
 		return said.Say(transcriptWords.Request)
 	case "semantic_unclear", "semantic_unassessed":
 		return said.Say(transcriptWords.Unclear)
+	case CommitmentPromiserUnassignable:
+		return said.Say(transcriptWords.NoPromiser)
 	}
 	switch activities.CommitmentAdmissionReason(outcome) {
 	case activities.CommitmentHistorical:

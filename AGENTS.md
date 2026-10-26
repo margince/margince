@@ -74,6 +74,10 @@ one you checked in the code; history goes in git. A new page goes in the folder 
 names, in that page's table "One job per page". What a user of the app sees goes in `docs/handbook/`,
 never in `reference/` or `how-to/`, which are for those who build or run Margince.
 
+A list the code holds is linked, never typed again. An explanation or handbook page names its code
+in a `describes:` line. A PR that changes that code says whether the page still holds
+(`make docs-describing`).
+
 **A red `main` is claimed once.** Before you look into a failure that is not yours, run
 `gh pr list --state open --label "claim: main-red"` and read the bodies; each names the tests it
 covers. Old claims, how to release one, and why two half fixes leave `main` red:
@@ -167,7 +171,9 @@ Commands that only read (`git status`, `diff`, `log`) can run in the sandbox.
    not reach the integration lane. For a backend Go change, also run `make test-it DIR=<pkg>` for
    each integration package it touches. CI runs the whole lane on every non-draft PR that changes
    `backend/`; `make check-all` runs it locally.
-3. Push and open a PR.
+3. Push and open a PR. The release notes print its title. Use `feat(scope): …`, `fix(scope): …` or
+   `perf(scope): …` for what a user or operator notices. Add `!` (`fix(api)!: …`) when it breaks a
+   setting, an API client or an upgrade; such a title lists under **Breaking**.
 4. CI, CodeRabbit and SonarCloud must all pass. Deal with review findings; do not dismiss them.
 5. Merge only when all checks are green: `gh pr merge <n> --squash`, then remove the branch.
 
@@ -183,8 +189,11 @@ The DAG is `shared → platform → modules → compose → cmd`, and three tool
 
 1. **A module never imports a sibling or `compose`.** If A needs B,
    `compose` injects the edge.
-2. **A module writes only the tables it owns**, declared in its `doc.go` and gated
-   by `backend/gates/tableownership_test.go`.
+2. **A module writes only the tables it owns.** `tableOwners`
+   (`backend/gates/tableownerregistry_test.go`) declares the owner, and
+   `backend/gates/tableownership_test.go` holds the writes to it. The pages in
+   `docs/reference/entity-model/` are built from that map. A `doc.go` names its page
+   and never copies the list.
 3. **Two module shapes, and only two**: *Handlers→Store* for CRUD modules,
    *Handlers→Service* for engine modules. Do not make up a third.
 4. **`internal/contracts/` and `*_gen.go` are generated** from

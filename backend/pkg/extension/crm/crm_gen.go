@@ -9,6 +9,27 @@ import (
 	"time"
 )
 
+// Defines values for ActivityAutomaticKind.
+const (
+	Calendar      ActivityAutomaticKind = "calendar"
+	Product       ActivityAutomaticKind = "product"
+	SendingSystem ActivityAutomaticKind = "sending_system"
+)
+
+// Valid indicates whether the value is a known member of the ActivityAutomaticKind enum.
+func (e ActivityAutomaticKind) Valid() bool {
+	switch e {
+	case Calendar:
+		return true
+	case Product:
+		return true
+	case SendingSystem:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityCaptureLabel.
 const (
 	ActivityCaptureLabelCommitment ActivityCaptureLabel = "commitment"
@@ -192,6 +213,30 @@ func (e ActivityAudience) Valid() bool {
 	}
 }
 
+// Defines values for ActivityAuthorKind.
+const (
+	Colleague     ActivityAuthorKind = "colleague"
+	ContactRecord ActivityAuthorKind = "contact_record"
+	Machine       ActivityAuthorKind = "machine"
+	Unresolved    ActivityAuthorKind = "unresolved"
+)
+
+// Valid indicates whether the value is a known member of the ActivityAuthorKind enum.
+func (e ActivityAuthorKind) Valid() bool {
+	switch e {
+	case Colleague:
+		return true
+	case ContactRecord:
+		return true
+	case Machine:
+		return true
+	case Unresolved:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityLinkEntityType.
 const (
 	ActivityLinkEntityTypeCompany ActivityLinkEntityType = "company"
@@ -213,6 +258,63 @@ func (e ActivityLinkEntityType) Valid() bool {
 	case ActivityLinkEntityTypeLead:
 		return true
 	case ActivityLinkEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityVoiceContactRole.
+const (
+	Addressee ActivityVoiceContactRole = "addressee"
+	Attendee  ActivityVoiceContactRole = "attendee"
+	Author    ActivityVoiceContactRole = "author"
+	Cc        ActivityVoiceContactRole = "cc"
+	Organizer ActivityVoiceContactRole = "organizer"
+	Other     ActivityVoiceContactRole = "other"
+)
+
+// Valid indicates whether the value is a known member of the ActivityVoiceContactRole enum.
+func (e ActivityVoiceContactRole) Valid() bool {
+	switch e {
+	case Addressee:
+		return true
+	case Attendee:
+		return true
+	case Author:
+		return true
+	case Cc:
+		return true
+	case Organizer:
+		return true
+	case Other:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BodyCompleteness.
+const (
+	Complete   BodyCompleteness = "complete"
+	Forwarded  BodyCompleteness = "forwarded"
+	Partial    BodyCompleteness = "partial"
+	Unassessed BodyCompleteness = "unassessed"
+	Unreadable BodyCompleteness = "unreadable"
+)
+
+// Valid indicates whether the value is a known member of the BodyCompleteness enum.
+func (e BodyCompleteness) Valid() bool {
+	switch e {
+	case Complete:
+		return true
+	case Forwarded:
+		return true
+	case Partial:
+		return true
+	case Unassessed:
+		return true
+	case Unreadable:
 		return true
 	default:
 		return false
@@ -426,17 +528,23 @@ type Activity struct {
 	// AssigneeId Task only.
 	AssigneeId *string `json:"assignee_id,omitempty"`
 
-	// Audience Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity.
+	// Audience Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the workspace's own domains.
 	Audience *ActivityAudience `json:"audience,omitempty"`
 
-	// AudienceReason Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `pending_verdict` (nothing has judged the message yet), `manual` (a human said so). Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
+	// AudienceReason Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of the workspace; no verdict opens it, the mailbox owner sharing the thread does), `manual` (a human said so). A classifier's own kind, such as `legal`, may stand in for `verdict`. Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
 	AudienceReason *string `json:"audience_reason,omitempty"`
 
 	// Author Who wrote this where it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a message captured from a mailbox or typed here has no author but the one `captured_by` already names.
 	// WITHHELD WITH THE CONTENT. It is absent whenever `content_state` is `withheld`, alongside the subject and the body — a free-text name that arrived with imported text is content about a human, which is why the Art. 17 redaction clears it with the words rather than keeping it as a marker. A reader who may not read a held message does not learn who wrote it either.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who wrote it years earlier in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague wrote a decade of everybody else's correspondence.
 	Author *SourceAuthor `json:"author,omitempty"`
-	Body   *string       `json:"body,omitempty"`
+
+	// AutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+	AutomaticKind *ActivityAutomaticKind `json:"automatic_kind,omitempty"`
+	Body          *string                `json:"body,omitempty"`
+
+	// BodyCompleteness How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased.
+	BodyCompleteness *BodyCompleteness `json:"body_completeness,omitempty"`
 
 	// BulkMailAttested This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply.
 	BulkMailAttested *bool `json:"bulk_mail_attested,omitempty"`
@@ -494,15 +602,18 @@ type Activity struct {
 	// Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 	Language *ActivityLanguage `json:"language,omitempty"`
 
-	// Links One activity may link to >1 entity (contact + deal).
+	// Links Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360.
 	Links *[]ActivityLink `json:"links,omitempty"`
 
 	// MeetingStatus Set only when kind=meeting.
-	MeetingStatus *ActivityMeetingStatus  `json:"meeting_status,omitempty"`
-	OccurredAt    time.Time               `json:"occurred_at"`
-	Raw           *map[string]interface{} `json:"raw,omitempty"`
+	MeetingStatus *ActivityMeetingStatus `json:"meeting_status,omitempty"`
+	OccurredAt    time.Time              `json:"occurred_at"`
 
-	// RemindAt Task only. Reminder-fire time; the B-E16.6 scan reads tasks whose reminder is due, not-done, and un-archived.
+	// OffersEmail Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, described on `ReplyRecipient`. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. A client offers Write email only when this is true, and reads the address from reply-recipient.
+	OffersEmail bool                    `json:"offers_email"`
+	Raw         *map[string]interface{} `json:"raw,omitempty"`
+
+	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 	Source   string     `json:"source"`
 
@@ -524,9 +635,18 @@ type Activity struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version              *RowVersion            `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty"`
+
+	// Voice Who wrote this activity and what part the page's contact had in it. Filled on list, detail and 360 reads. Withheld with the content: absent whenever `content_state` is `withheld`.
+	Voice *ActivityVoice `json:"voice,omitempty"`
+
+	// Writable Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
+	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// ActivityAutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+type ActivityAutomaticKind string
 
 // ActivityCaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 type ActivityCaptureLabel string
@@ -554,6 +674,23 @@ type ActivityMeetingStatus string
 // ActivityAudience Who may read an activity's content — see Activity.audience.
 type ActivityAudience string
 
+// ActivityAuthor One author, named by the record that identifies them.
+type ActivityAuthor struct {
+	Address     *string `json:"address,omitempty"`
+	ContactId   *string `json:"contact_id,omitempty"`
+	DisplayName *string `json:"display_name,omitempty"`
+
+	// IsReader The author is the signed-in caller.
+	IsReader bool `json:"is_reader"`
+
+	// Kind `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+	Kind   ActivityAuthorKind `json:"kind"`
+	UserId *string            `json:"user_id,omitempty"`
+}
+
+// ActivityAuthorKind `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+type ActivityAuthorKind string
+
 // ActivityFollowUpTask defines model for ActivityFollowUpTask.
 type ActivityFollowUpTask struct {
 	AssigneeId *string    `json:"assignee_id,omitempty"`
@@ -572,6 +709,31 @@ type ActivityLink struct {
 
 // ActivityLinkEntityType defines model for ActivityLink.EntityType.
 type ActivityLinkEntityType string
+
+// ActivityVoice Who wrote an activity, read from what is recorded on it, and the part the
+// page's contact had in it. Every surface that names a speaker reads this
+// rather than guessing from `direction`: a mail that came in was not
+// necessarily written by the contact whose page shows it.
+type ActivityVoice struct {
+	// Author Who wrote it: the `from` party of a message, the organizer of a meeting, the seat or imported author of a note, call or task. Null when nothing recorded names an author, which a reader shows as no author rather than a guess.
+	Author *ActivityAuthor `json:"author,omitempty"`
+
+	// ContactRole Present only on a row read for one contact (the contact 360). The part that contact had: `author` when they wrote it, `addressee` when it was written To them, `cc` when they were copied, `organizer` or `attendee` on a meeting, and `other` when no visible participant row names them (the row is only filed under them). Absent too on a row that records no participant at all, where nothing says which part they had.
+	ContactRole *ActivityVoiceContactRole `json:"contact_role,omitempty"`
+}
+
+// ActivityVoiceContactRole Present only on a row read for one contact (the contact 360). The part that contact had: `author` when they wrote it, `addressee` when it was written To them, `cc` when they were copied, `organizer` or `attendee` on a meeting, and `other` when no visible participant row names them (the row is only filed under them). Absent too on a row that records no participant at all, where nothing says which part they had.
+type ActivityVoiceContactRole string
+
+// BodyCompleteness How much of a mail's text Margince could decode. `complete`: all of it. `partial`: a text
+// part was not read in full (it broke while decoding, or it ran past the size limit), so
+// the body may lack text. `unreadable`: none of it, so the body holds only the From and To
+// lines Margince adds. `forwarded`: the mail said nothing of its own, and the body is the
+// text of the original it forwarded, not the sender's own words. `unassessed`: a mail
+// stored before this was recorded and not yet checked against its stored original, or one
+// with no original to check. Automatic work (promises, requests and their settlement, and
+// the events read from a conversation) is read only from a `complete` mail body.
+type BodyCompleteness string
 
 // CommitmentAdmission A recorded decision about whether a promise creates current work. Re-reading replaces this decision without changing human-owned work.
 type CommitmentAdmission struct {
@@ -644,7 +806,7 @@ type CreateActivityRequest struct {
 	MeetingStatus *CreateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
 
-	// Participants The message's own address headers, for mail this installation never captured. Email only — any other kind returns `422 code: field_not_valid_for_kind` — and `direction` is required alongside it, because the counterparty is derived from the two together: an inbound message is with its sender, an outbound one with the first recipient who is not the sending mailbox.
+	// Participants The message's own address headers, for mail this installation never captured. Email only — any other kind returns `422 code: field_not_valid_for_kind` — and `direction` is required alongside it, because the counterparty is derived from the two together: an inbound message is with its sender, an outbound one with the first recipient who is not the sending mailbox. An inbound message whose `from` is the mail system itself (postmaster, mailer-daemon, a bounce address) is a delivery report and returns `422` on `participants.from`.
 	Participants *struct {
 		Cc   *[]string `json:"cc,omitempty"`
 		From *string   `json:"from,omitempty"`
@@ -654,7 +816,7 @@ type CreateActivityRequest struct {
 	// Raw Provenance an importer keeps with the record — the source system's own representation of this activity. Stored verbatim and returned by `getActivity`. It is content: a reader who may not read this activity's subject and body does not receive it either, and the retention and noise-redaction paths destroy it with the rest of the text.
 	Raw *map[string]interface{} `json:"raw,omitempty"`
 
-	// RemindAt Task only.
+	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 
 	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
@@ -813,7 +975,10 @@ type EmailSummary struct {
 	// would branch on and never reach.
 	DisplayStatus EmailAccessStatus `json:"display_status"`
 
-	// Move Whose move it is, derived from what this reader can see of the thread. `none` when
+	// Move Whose move it is, derived from what this reader can see of the thread.
+	// `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
+	// that is still the last word with them. A calendar invitation, update, cancellation
+	// or answer is `none` unless someone confirmed it asks us something. `none` also when
 	// the question cannot be answered honestly — an unanswerable move is not a claim.
 	Move       EmailSummaryMove `json:"move"`
 	OccurredAt time.Time        `json:"occurred_at"`
@@ -836,7 +1001,10 @@ type EmailSummary struct {
 // EmailSummaryDirection defines model for EmailSummary.Direction.
 type EmailSummaryDirection string
 
-// EmailSummaryMove Whose move it is, derived from what this reader can see of the thread. `none` when
+// EmailSummaryMove Whose move it is, derived from what this reader can see of the thread.
+// `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
+// that is still the last word with them. A calendar invitation, update, cancellation
+// or answer is `none` unless someone confirmed it asks us something. `none` also when
 // the question cannot be answered honestly — an unanswerable move is not a claim.
 type EmailSummaryMove string
 
@@ -945,12 +1113,28 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "author")
 	}
 
+	if raw, found := object["automatic_kind"]; found {
+		err = json.Unmarshal(raw, &a.AutomaticKind)
+		if err != nil {
+			return fmt.Errorf("error reading 'automatic_kind': %w", err)
+		}
+		delete(object, "automatic_kind")
+	}
+
 	if raw, found := object["body"]; found {
 		err = json.Unmarshal(raw, &a.Body)
 		if err != nil {
 			return fmt.Errorf("error reading 'body': %w", err)
 		}
 		delete(object, "body")
+	}
+
+	if raw, found := object["body_completeness"]; found {
+		err = json.Unmarshal(raw, &a.BodyCompleteness)
+		if err != nil {
+			return fmt.Errorf("error reading 'body_completeness': %w", err)
+		}
+		delete(object, "body_completeness")
 	}
 
 	if raw, found := object["bulk_mail_attested"]; found {
@@ -1137,6 +1321,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "occurred_at")
 	}
 
+	if raw, found := object["offers_email"]; found {
+		err = json.Unmarshal(raw, &a.OffersEmail)
+		if err != nil {
+			return fmt.Errorf("error reading 'offers_email': %w", err)
+		}
+		delete(object, "offers_email")
+	}
+
 	if raw, found := object["raw"]; found {
 		err = json.Unmarshal(raw, &a.Raw)
 		if err != nil {
@@ -1217,6 +1409,22 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "version")
 	}
 
+	if raw, found := object["voice"]; found {
+		err = json.Unmarshal(raw, &a.Voice)
+		if err != nil {
+			return fmt.Errorf("error reading 'voice': %w", err)
+		}
+		delete(object, "voice")
+	}
+
+	if raw, found := object["writable"]; found {
+		err = json.Unmarshal(raw, &a.Writable)
+		if err != nil {
+			return fmt.Errorf("error reading 'writable': %w", err)
+		}
+		delete(object, "writable")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -1271,10 +1479,24 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.AutomaticKind != nil {
+		object["automatic_kind"], err = json.Marshal(a.AutomaticKind)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'automatic_kind': %w", err)
+		}
+	}
+
 	if a.Body != nil {
 		object["body"], err = json.Marshal(a.Body)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'body': %w", err)
+		}
+	}
+
+	if a.BodyCompleteness != nil {
+		object["body_completeness"], err = json.Marshal(a.BodyCompleteness)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'body_completeness': %w", err)
 		}
 	}
 
@@ -1429,6 +1651,11 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		return nil, fmt.Errorf("error marshaling 'occurred_at': %w", err)
 	}
 
+	object["offers_email"], err = json.Marshal(a.OffersEmail)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'offers_email': %w", err)
+	}
+
 	if a.Raw != nil {
 		object["raw"], err = json.Marshal(a.Raw)
 		if err != nil {
@@ -1492,6 +1719,20 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["version"], err = json.Marshal(a.Version)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.Voice != nil {
+		object["voice"], err = json.Marshal(a.Voice)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'voice': %w", err)
+		}
+	}
+
+	if a.Writable != nil {
+		object["writable"], err = json.Marshal(a.Writable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'writable': %w", err)
 		}
 	}
 

@@ -4,35 +4,31 @@
 Three record pages answer the same question about other records: *where do we stand with this, and
 what do I do about it?* They render the same parts. These are grounded text with sources, a section
 shell that tells "nothing here" from "you may not read this", and wire values turned into words. This
-folder holds those parts.
+folder holds those parts, except two that code outside the kit reads as well. The grounded text with
+its sources is in `src/components/citations.tsx`, and the wire values turned into words are in
+`src/lib/recordlabels.ts`. `index.ts` still exports both, so a record page takes the whole kit from
+one place.
 
 ## The reading, in parts
 
 Every record page reads in the same order, and the parts are here:
 
-- `reading.tsx`: the group (`RecordReading`, `RecordReadingPair`) and the call (`CallCard`). The head
-  of the call has an indigo mark that says a machine read the record. Then comes the standing, with
-  the sentence it rests on, and then what the call was read from.
+- `reading.tsx`: the two reference sections a reader looks up and does not read through, side by side
+  (`RecordReadingPair`).
 - `today.tsx`: the "Needs attention" panel (`TodayPanel`) and its two row shapes. One is the move
   the agent is asking for (`FoundMove`); the other is a to-do the record already has (`TodoRow`).
 - `setaside.ts`: the "Not now" a move carries and the Undo after it (`useSetAside`). Each page hands
   in its own two calls, so the deal, contact and company moves are put off the same way.
-- `spine.tsx` and `timelinespine.ts`: the thread. `timelinespine.ts` reads its source from a bare
-  timeline page, for the records that have no composite read. `lastcontact.ts` dates the "Last
-  contact" stop and the gap after it from one reading.
 
 A record page hands in its own answers (which standing, which rows), and owes the reader the same
 shape as the record next to it.
 
 `moment.ts` is the moment as a page reads it. The server picks one from a fixed ladder. This file
-holds the calls every page must answer the same way:
+holds the call every page must answer the same way: whether what the moment rests on says something
+its headline does not (`basisAddsARecord`).
 
-- the word for the rule (`MOMENT_RULE_LABEL`)
-- whether it belongs in the day's work at all (`momentIsARow`)
-- whether what it rests on says something its headline does not (`basisAddsARecord`)
-
-`FoundMove` draws the moment, on the contact page and in the account brief alike, and
-`MomentEvidence` in `momentevidence.tsx` draws the chips under it.
+`FoundMove` draws a move, and `MomentEvidence` in `momentevidence.tsx` draws the chips under a
+moment.
 
 ## What belongs here
 
@@ -54,5 +50,5 @@ calls it what it is. So a reader of `record360` is not told that a deal's senten
 
 The shared classes keep their `co-` prefix (`co-brief-lines`, `co-card` and so on) and are in
 `company360.css`. No module here imports the stylesheet of a screen. The kit's own classes, including
-the ones `verdict.tsx` uses, are in `record360.css`. `RailPanel` is in `src/design-system/`, where
+the signal strip's in `verdict.tsx`, are in `record360.css`. `RailPanel` is in `src/design-system/`, where
 `frontend/AGENTS.md` says a building block that a second screen imports belongs.

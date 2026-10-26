@@ -64,6 +64,11 @@ const (
 	repairUnreadable     = "unreadable"
 )
 
+// meetingAttendeeRuleVersion is the attendee rule a settled meeting was
+// replayed under. Version 2 records the calendar owner's own provider role, so
+// meetings settled at version 1 are offered once more.
+const meetingAttendeeRuleVersion = 2
+
 // meetingAttendeeRepairPerTick bounds one pass. The population is finite and
 // shrinks by exactly what each tick settles, so a small batch drains it without
 // holding a long transaction over the activity table.
@@ -101,16 +106,7 @@ func repairMeetingAttendeesBatch(ctx context.Context, pool *pgxpool.Pool, limit 
 func selectMeetingRepairCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]replayCandidate, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT a.id, a.kind, split_part(a.captured_by, ':', 2), rc.id,
-		       coalesce((
-		         SELECT c.account_label
-		           FROM capture_connection c
-		          WHERE c.provider = split_part(a.captured_by, ':', 2)
-		            AND (
-		              c.user_id::text = split_part(a.captured_by, ':', 3)
-		              OR (split_part(a.captured_by, ':', 3) = '' AND NOT EXISTS (
-		                  SELECT 1 FROM capture_connection other
-		                   WHERE other.provider = c.provider AND other.id <> c.id)))
-		          LIMIT 1), '')
+		       `+stampedMailboxLabelSQL+`
 		  FROM activity a
 		  JOIN raw_capture rc
 		    ON rc.source_system = a.source_system AND rc.source_id = a.source_id
@@ -119,9 +115,9 @@ func selectMeetingRepairCandidates(ctx context.Context, tx pgx.Tx, limit int) ([
 		   AND split_part(a.captured_by, ':', 2) = ANY($2)
 		   AND NOT EXISTS (
 		       SELECT 1 FROM activity_meeting_attendee_repair r
-		        WHERE r.activity_id = a.id AND r.outcome <> $3)
+		        WHERE r.activity_id = a.id AND r.outcome <> $3 AND r.rule_version >= $4)
 		 ORDER BY a.id
-		 LIMIT $1`, limit, []string{sourceGCal, sourceGraphCal}, repairCapped)
+		 LIMIT $1`, limit, []string{sourceGCal, sourceGraphCal}, repairCapped, meetingAttendeeRuleVersion)
 	if err != nil {
 		return nil, fmt.Errorf("compose: selecting captured meetings whose attendees can be resolved: %w", err)
 	}
@@ -224,11 +220,11 @@ func repairOneMeeting(ctx context.Context, tx pgx.Tx, c replayCandidate, payload
 // under the current rule, so no later pass offers it again.
 func markMeetingRepaired(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, outcome string) error {
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO activity_meeting_attendee_repair (activity_id, outcome)
-		VALUES ($1, $2)
+		INSERT INTO activity_meeting_attendee_repair (activity_id, outcome, rule_version)
+		VALUES ($1, $2, $3)
 		ON CONFLICT (activity_id) DO UPDATE
-		   SET outcome = excluded.outcome, repaired_at = now()`,
-		activityID, outcome); err != nil {
+		   SET outcome = excluded.outcome, repaired_at = now(), rule_version = excluded.rule_version`,
+		activityID, outcome, meetingAttendeeRuleVersion); err != nil {
 		return fmt.Errorf("compose: recording that a meeting's attendees were resolved: %w", err)
 	}
 	return nil

@@ -13,25 +13,29 @@
 // deal, while a refused one names the reason.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckSquare, FileText } from "lucide-react";
+import { CalendarPlus, CheckSquare, FileText, Phone } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { ifMatch, requireVersion } from "../../../api/version";
 import { ArchiveAction } from "../../../components/archive";
 import { ExtensionEntries } from "../../../components/extensionentries";
+import { LogActivityAction } from "../../../components/logactivity.action";
+import { searchCompanyContacts } from "../../../components/meetingattendees";
 import { Button, OverflowMenu } from "../../../design-system/atoms";
 import { ConfirmModal } from "../../../design-system/confirmmodal";
 import { ErrorLine } from "../../../design-system/errorline";
+import { VerbWord } from "../../../design-system/iconaction";
+import { ListPopover } from "../../../design-system/listpopover";
 import { useT } from "../../../i18n";
 import { dealRecordKeys } from "../../../lib/activitykeys";
 import { useCanWrite } from "../../../lib/capability";
 import { unwrap } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
 import { useMe } from "../../../lib/session";
-import { LogActivityAction } from "../../records/logactivity";
 import { RecordEmailVerb } from "../../records/recordemail";
 import { ShareAction } from "../../records/share";
+import { CorrectCloseDayAction } from "./correctcloseday";
 import { useDealCoverage } from "./usedealcoverage";
 import { useDealRecipientAddress } from "./usedealrecipient";
 import "./deal360.css";
@@ -163,9 +167,12 @@ export function DealActions({
   deal,
   openStages,
   refusedReasonId,
+  onEditDetails,
 }: Readonly<{
   deal: Deal;
   openStages: Stage[];
+  // Opens the drawer that holds every field of the deal and its editors.
+  onEditDetails: () => void;
   // The id of the page's one sentence about why this deal takes no changes —
   // archived, or not this caller's to write — and undefined while it does.
   // Every verb the sentence refuses points at that one element instead of
@@ -176,7 +183,7 @@ export function DealActions({
   const refusedByArchive = deal.archived_at ? refusedReasonId : undefined;
   // The log/task drawer's own state: one drawer with two doors, the same
   // shape companyheaderactions.tsx and leads.tsx keep for the identical pair.
-  const [drawer, setDrawer] = useState<"log" | "task" | null>(null);
+  const [drawer, setDrawer] = useState<"log" | "task" | "call" | null>(null);
   // useCanWrite, not useCan: the two log verbs issue a POST, and a read seat
   // is refused before RBAC is consulted, the rule every other record header
   // states for the identical verb.
@@ -199,25 +206,38 @@ export function DealActions({
           company and lead headers draw. A rep moving between records must not
           have to re-find the verb they just used on the last one. */}
       <DealEmailVerb deal={deal} disabledReasonId={refusedByArchive} />
-      {/* A hairline between reaching the record and recording what happened
-          to it: two groups of verbs, not one toolbar. */}
-      <span className="record-actions-sep" aria-hidden="true" />
       <Button
         disabled={logPending}
         reasonId={logRefused}
+        title={t("log.kindCall")}
+        onClick={() => setDrawer("call")}
+      >
+        <Phone aria-hidden="true" />
+        <VerbWord word={t("record.verb.call")} label={t("log.kindCall")} />
+      </Button>
+      <DealBookMeeting
+        companyId={deal.company_id ?? undefined}
+        allowed={logGrantKnown && canLog && !refusedByArchive}
+        pending={logPending}
+        reasonId={logRefused}
+      />
+      <Button
+        disabled={logPending}
+        reasonId={logRefused}
+        title={t("log.title")}
         onClick={() => setDrawer("log")}
       >
-        <FileText aria-hidden="true" /> {t("log.title")}
+        <FileText aria-hidden="true" />
+        <VerbWord word={t("record.verb.log")} label={t("log.title")} />
       </Button>
-      {/* Keeps its words rather than a glyph alone: a tick box is the mark
-          for COMPLETING a task, so squaring this one would name the opposite
-          of what it does. */}
       <Button
         disabled={logPending}
         reasonId={logRefused}
+        title={t("log.addTask")}
         onClick={() => setDrawer("task")}
       >
-        <CheckSquare aria-hidden="true" /> {t("log.addTask")}
+        <CheckSquare aria-hidden="true" />
+        <VerbWord word={t("record.verb.task")} label={t("log.addTask")} />
       </Button>
       <ExtensionEntries
         slot="record_header.deal"
@@ -227,7 +247,7 @@ export function DealActions({
         <LogActivityAction
           entityType="deal"
           entityId={deal.id}
-          askedKind={drawer === "task" ? "task" : undefined}
+          askedKind={drawer === "log" ? undefined : drawer}
           openOnMount
           onClose={() => setDrawer(null)}
         />
@@ -238,9 +258,13 @@ export function DealActions({
           place in a row — the header carries identity and the one verb a
           reader reaches for. Archive goes last, farthest from the press
           that opened the menu. */}
-      <OverflowMenu label={t("record.moreActions")}>
+      <OverflowMenu
+        label={t("record.moreActions")}
+        word={t("record.verb.more")}
+      >
         {/* Worded rather than a bare pencil: among named verbs the square
             would be the one row naming nothing. */}
+        <Button onClick={onEditDetails}>{t("deal.editDetails")}</Button>
         <ShareAction
           recordType="deal"
           recordId={deal.id}
@@ -252,14 +276,21 @@ export function DealActions({
             told about it — absent, not refused. An archived closed deal keeps
             it, refused: the reader came asking whether this can come back. */}
         {(deal.status === "won" || deal.status === "lost") && (
-          <ReopenAction
-            dealId={deal.id}
-            dealVersion={deal.version}
-            openStages={openStages}
-            disabledReasonId={refusedReasonId}
-          />
+          <>
+            <CorrectCloseDayAction
+              deal={deal}
+              disabledReasonId={refusedReasonId}
+            />
+            <ReopenAction
+              dealId={deal.id}
+              dealVersion={deal.version}
+              openStages={openStages}
+              disabledReasonId={refusedReasonId}
+            />
+          </>
         )}
         <ArchiveAction
+          requires={{ object: "deal", action: "delete" }}
           disabledReasonId={refusedReasonId}
           label={t("deal.archive")}
           confirmText={t("deal.archiveConfirm")}
@@ -280,5 +311,53 @@ export function DealActions({
         />
       </OverflowMenu>
     </>
+  );
+}
+
+// Meet books with one of the account's contacts, through that contact's own
+// booking screen. A deal on no company has nobody to book with yet.
+function DealBookMeeting({
+  companyId,
+  allowed,
+  pending,
+  reasonId,
+}: Readonly<{
+  companyId?: string;
+  allowed: boolean;
+  pending: boolean;
+  reasonId?: string;
+}>) {
+  const t = useT();
+  const face = (
+    <>
+      <CalendarPlus aria-hidden="true" />
+      <VerbWord
+        word={t("record.verb.meet")}
+        label={t("scheduling.bookContact")}
+      />
+    </>
+  );
+  if (!allowed || !companyId) {
+    return (
+      <Button
+        disabled={pending || !companyId}
+        reasonId={reasonId}
+        title={t("scheduling.bookContact")}
+      >
+        {face}
+      </Button>
+    );
+  }
+  return (
+    <ListPopover
+      label={face}
+      title={t("scheduling.bookContact")}
+      searchLabel={t("scheduling.bookPickContact")}
+      search={(term) => searchCompanyContacts(companyId, term)}
+      onPick={(contact, done) => {
+        done();
+        navigate({ screen: "book", id: `contact-${contact.id}` });
+      }}
+    />
   );
 }

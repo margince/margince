@@ -1,6 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useId, useRef, useState } from "react";
 import { api } from "../../api/client";
+import { RedirectUriGroup } from "../../components/oauth-redirects";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
@@ -10,8 +11,16 @@ import { QueryGate, QueryStates } from "../../design-system/querystates";
 import { lockFor } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
-import { RedirectUriGroup } from "./oauth-redirects";
+import {
+  APP_LIST_KEY,
+  appKey,
+  useOAuthApp,
+  useRemoveOAuthApp,
+  useSetOAuthApp,
+  type Vendor,
+  vendorCopy,
+} from "../../lib/oauth-app";
+import { problemMessageOf, throwProblem } from "../../lib/problem";
 
 /**
  * An OAuth app this installation holds: Google's or Microsoft's, which mailbox
@@ -27,41 +36,6 @@ import { RedirectUriGroup } from "./oauth-redirects";
  * and an operator needs to see WHICH app their installation uses to check it
  * against the vendor's console.
  */
-
-export type Vendor = "google" | "microsoft";
-
-// The setting key a deployment's own app locks, per vendor.
-const appKey = {
-  google: "capture.google_app",
-  microsoft: "capture.microsoft_app",
-} as const satisfies Record<Vendor, string>;
-
-// vendorCopy is each vendor's own wording, as literal message keys.
-//
-// A record of literals rather than a template built from the provider name: the
-// translator's key type is a closed union, so a computed key types as a plain
-// string and a missing translation would reach a reader as a raw key instead of
-// failing the build.
-export const vendorCopy = {
-  google: {
-    title: "oauthApp.google.title",
-    sub: "oauthApp.google.sub",
-    absent: "oauthApp.google.absent",
-    redirectSub: "oauthApp.google.redirectSub",
-    clientIdPlaceholder: "oauthApp.google.clientIdPlaceholder",
-    removeConfirmTitle: "oauthApp.google.removeConfirmTitle",
-    removeConfirmBody: "oauthApp.google.removeConfirmBody",
-  },
-  microsoft: {
-    title: "oauthApp.microsoft.title",
-    sub: "oauthApp.microsoft.sub",
-    absent: "oauthApp.microsoft.absent",
-    redirectSub: "oauthApp.microsoft.redirectSub",
-    clientIdPlaceholder: "oauthApp.microsoft.clientIdPlaceholder",
-    removeConfirmTitle: "oauthApp.microsoft.removeConfirmTitle",
-    removeConfirmBody: "oauthApp.microsoft.removeConfirmBody",
-  },
-} as const;
 
 /**
  * Which app a card is about: a core vendor by its key, or a unit's app by its
@@ -107,87 +81,6 @@ function cardCopy(app: OAuthAppIdentity, t: ReturnType<typeof useT>): CardCopy {
   };
 }
 
-// The query key carries the vendor, so storing one app does not blank the
-// other's card — one key for both would make every write invalidate a view it
-// says nothing about.
-function appQueryKey(provider: string) {
-  return ["installation-oauth-app", provider];
-}
-
-const APP_LIST_KEY = ["installation-oauth-apps"];
-
-export function useOAuthApp(provider: string) {
-  return useQuery({
-    queryKey: appQueryKey(provider),
-    queryFn: async () => {
-      const { data, error, response } = await api.GET(
-        "/installation/oauth-apps/{provider}",
-        { params: { path: { provider } } },
-      );
-      if (error || !response.ok) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-}
-
-export function useSetOAuthApp(provider: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    // Collected the moment nothing observes it, because what this mutation's
-    // `variables` hold is a credential rather than a form field. The caller
-    // resets it once settled for the same reason.
-    gcTime: 0,
-    mutationFn: async (vars: {
-      clientId: string;
-      clientSecret: string;
-      tenant: string;
-    }) => {
-      unwrap(
-        await api.PUT("/installation/oauth-apps/{provider}", {
-          params: { path: { provider } },
-          body: {
-            client_id: vars.clientId,
-            client_secret: vars.clientSecret,
-            // Omitted rather than sent empty: the server refuses a tenant on a
-            // vendor that has no directories, and an empty string is a value.
-            ...(vars.tenant === "" ? {} : { tenant: vars.tenant }),
-          },
-        }),
-      );
-    },
-    onSuccess: async () => {
-      // All three: the card's own view, the setup report (which names this
-      // step as outstanding whether or not it blocks anything), and the
-      // connector roster, whose per-provider availability is decided by
-      // whether this app exists.
-      await queryClient.invalidateQueries({ queryKey: appQueryKey(provider) });
-      await queryClient.invalidateQueries({ queryKey: APP_LIST_KEY });
-      await queryClient.invalidateQueries({ queryKey: ["installation-setup"] });
-      await queryClient.invalidateQueries({ queryKey: ["connectors"] });
-    },
-  });
-}
-
-function useRemoveOAuthApp(provider: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async () => {
-      unwrap(
-        await api.DELETE("/installation/oauth-apps/{provider}", {
-          params: { path: { provider } },
-        }),
-      );
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: appQueryKey(provider) });
-      await queryClient.invalidateQueries({ queryKey: APP_LIST_KEY });
-      await queryClient.invalidateQueries({ queryKey: ["installation-setup"] });
-    },
-  });
-}
-
 // The deployment's app is the one every connect uses, so it locks this form: a
 // stored app would be saved and never read. `lockReasonId` is set only while the
 // reason is drawn.
@@ -207,20 +100,6 @@ function useAppLock(
     lockReasonId: lock.disabled ? lockId : undefined,
     stored: loaded?.configured === true && !lock.disabled,
   };
-}
-
-/**
- * Every OAuth app this installation holds: the two core vendors', then one per
- * app an extension unit declares.
- */
-export function OAuthAppCards() {
-  return (
-    <>
-      <OAuthAppCard provider="google" />
-      <OAuthAppCard provider="microsoft" />
-      <UnitOAuthAppCards />
-    </>
-  );
 }
 
 /**

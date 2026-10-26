@@ -1,0 +1,30 @@
+/* The bounded connect-time backfill: window picker, estimate box, run view.
+ * The setup and the run are neutral Panels; the figures are a StatStrip and the
+ * bar a ProgressBar, so this sheet keeps only the estimate box and the scanned line. */
+
+/* The scope before the spend. One box with the onboarding scope
+   (onboarding-backread.css `.ob-backread-scope`): same ground, air and corner. */
+.backfill-estimate {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border-radius: var(--r-sm);
+  background: var(--bgInset);
+}
+.backfill-estimate p {
+  margin: 0;
+}
+.backfill-estimate > button {
+  margin-top: var(--space-2);
+}
+
+/* Tabular, so a climbing count changes its digits without moving the share. */
+.capture-scanned {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}

@@ -67,6 +67,12 @@ function sameOrder(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((key, index) => key === b[index]);
 }
 
+// Keys are unique within a list, so equal size and containment is set equality.
+function sameKeys(a: readonly string[], b: readonly string[]): boolean {
+  const held = new Set(b);
+  return a.length === b.length && a.every((key) => held.has(key));
+}
+
 const STEP: Readonly<Record<string, number>> = { ArrowUp: -1, ArrowDown: 1 };
 
 // The run of movable keys around `key`, as [from, to). A fixed row is a wall:
@@ -205,10 +211,7 @@ export function useSortableRows<T>(
       landed &&
       !current.sort?.busy &&
       moved &&
-      sameOrder(
-        [...current.items.map(current.keyOf)].sort(),
-        [...carried.start].sort(),
-      ) &&
+      sameKeys(current.items.map(current.keyOf), carried.start) &&
       !sameOrder(carried.order, carried.start)
     ) {
       commit([...carried.order], moved);

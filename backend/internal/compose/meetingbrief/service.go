@@ -293,6 +293,7 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	var history []HistoryIn
 	var excerpts []ExcerptIn
 	var seats []ids.UUID
+	var zone *time.Location
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		// The requested project is gated BEFORE the meeting is read, because
 		// the meeting read already narrows by it (the attendees' last-touch
@@ -304,6 +305,9 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 		}
 		loaded, err := s.readMeeting(ctx, tx, activityID, requested)
 		if err != nil {
+			return err
+		}
+		if zone, err = identity.ZoneAppliedTx(ctx, tx); err != nil {
 			return err
 		}
 		room = loaded
@@ -334,24 +338,11 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 			return err
 		}
 		excerpts, err = s.readExcerpts(ctx, tx,
-			excerptTargets(clusterThreads(threadsOf(history))))
+			excerptTargets(clusterThreads(threadsOf(history), zone)))
 		if err != nil {
 			return err
 		}
-		spoke, ever, err := s.readLastSpoke(ctx, tx, loaded, scope, s.now().UTC())
-		if err != nil {
-			return err
-		}
-		if !ever {
-			// No baseline is FIRST CONTACT, and nothing has moved "since" a
-			// conversation that never happened.
-			return nil
-		}
-		lastSpoke = &spoke
-		if loaded.Deal == nil {
-			return nil
-		}
-		moves, roomHidden, err = briefCopyFor(language).readDealMoves(ctx, tx, loaded.Deal.ID, spoke, s.now().UTC())
+		lastSpoke, moves, roomHidden, err = s.readSinceLastSpoke(ctx, tx, loaded, scope, language)
 		return err
 	})
 	if err != nil {
@@ -360,6 +351,7 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 
 	in := s.foldRoom(room, perAttendee, earlier, lastSpoke, moves, roomHidden, history, excerpts, seats)
 	in.Language = language
+	in.Zone = zone
 	if len(room.Attendees) == 0 {
 		// Nobody in the room this caller may see. The header still stands, and
 		// assembling a 360 for a contact nobody named would be a read of a

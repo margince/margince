@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
-import { EmailEnvelope, emailDetailKey } from "./emaildetail";
+import { EmailEnvelope, emailDetailKey } from "./emailmessage";
 import { EmailText } from "./emailtext";
 import { Heading } from "./heading";
 import { SurfaceState } from "./surfacestate";

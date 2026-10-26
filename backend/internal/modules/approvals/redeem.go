@@ -283,6 +283,10 @@ var contextTargetKinds = map[string]string{
 		"disposition; it never writes the activity. Pinning bound the answer to a row " +
 		"that relinking, a participant correction or a subject fix bumps — every one of " +
 		"which is ordinary inbox work on the very message the question is about.",
+	approvalsubject.KindContactShare: "A share request is filed under the CONTACT it asks for, " +
+		"because that is the record its owner decides about. The effect writes a record " +
+		"grant and never the contact's own fields. Pinning bound the answer to a row that " +
+		"every edit and every captured message bumps while the request waits in the inbox.",
 	kindCommitmentTask: "A promise read out of a conversation is filed under the ACTIVITY " +
 		"it was said in — the message or the meeting — because those words are the evidence " +
 		"a human judges it on. The effect CREATES a task activity and never writes the " +
@@ -317,10 +321,13 @@ var unpinnedKinds = map[string]string{
 	kindLinkedInMatch: "The proposal's claim is \"this imported connection is this contact\", and no " +
 		"field edit on the contact can make that claim false — the founder decision is " +
 		"explicitly that editing a contact must not cancel a LinkedIn match waiting to be " +
-		"decided. The write it authorizes is an additive, idempotent contact_social insert " +
-		"rather than a patch of any field a human could have seen, so there is no content " +
-		"state for a pin to protect. Pinning also broke the second of two matches onto one " +
-		"contact, because applying the first bumps that contact's version.",
+		"decided. The profile link it writes is an additive, idempotent contact_social insert. " +
+		"The title and employer a human may tick are patches, and each is guarded on its own: " +
+		"the card carries the title and the current primary employment it was staged against, " +
+		"and the apply refuses a ticked box under the contact lock when that field has moved " +
+		"(contacts.checkLinkedInMatchFields). A whole-contact pin would add nothing to that and " +
+		"would cancel the match for an unrelated edit. Pinning also broke the second of two " +
+		"matches onto one contact, because applying the first bumps that contact's version.",
 }
 
 // TargetIsContextOnly reports whether this kind's target names context rather

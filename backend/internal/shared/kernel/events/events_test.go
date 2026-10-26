@@ -123,7 +123,7 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// object because "issued" alone would not say what was issued, and on
 		// an identity stream that also mints passports the distinction is the
 		// whole point of the event.
-		"password_link_issued": true,
+		"password_link_issued": true, "mfa_removed": true,
 		// A won deal earned its partner a commission. Past tense like the rest;
 		// `decided` above already covers the approve/pay/void half.
 		"accrued": true,
@@ -132,6 +132,7 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// and a lent name — and naming the type for one of them would leave the
 		// other with no way to be reported.
 		"completed": true,
+		"recorded":  true,
 		// The contact answered. It is a verb of its own because nothing a contact
 		// presses produces it: the fact is observed from captured activity.
 		"replied": true,

@@ -201,6 +201,46 @@ func (s *Store) queryAwaitingReplies(
 	return scanFollowUps(rows, "a reply the reader is waiting for")
 }
 
+// awaitingTheirAnswerSQL is a mail on alias a the reader sent that still waits
+// on the other side, for the badge and the follow-up lane. sentByReader is
+// sentByReaderSQL. laterContent gates the later message, so a reply the reader
+// may not read decides nothing. A calendar copy asks nobody a question. A
+// thread key is chosen by the sender, so a later message counts only when
+// filed under the same record.
+func awaitingTheirAnswerSQL(asOf, sentByReader, laterContent string) string {
+	return `(a.kind = 'email'
+	   AND a.direction = 'outbound'
+	   AND a.archived_at IS NULL
+	   AND NOT ` + ImportedHistorySQL + `
+	   AND ` + relstrength.WrittenByHumanSQL("a") + `
+	   AND NOT ` + calendarCopySQL + `
+	   AND ` + sentByReader + `
+	   AND NOT EXISTS (SELECT 1 FROM activity later
+	                    WHERE later.archived_at IS NULL
+	                      AND ` + laterContent + `
+	                      AND ` + relstrength.WrittenByHumanSQL("later") + `
+	                      AND a.thread_key IS NOT NULL AND a.thread_key <> ''
+	                      AND later.thread_key = a.thread_key
+	                      AND later.kind = a.kind
+	                      AND later.channel_provider IS NOT DISTINCT FROM a.channel_provider
+	                      AND (later.occurred_at, later.id) > (a.occurred_at, a.id)
+	                      AND later.occurred_at <= ` + asOf + `
+	                      AND EXISTS (SELECT 1 FROM activity_link heard
+	                                    JOIN activity_link sent ON sent.activity_id = a.id
+	                                   WHERE heard.activity_id = later.id
+	                                     AND (heard.contact_id = sent.contact_id
+	                                       OR heard.company_id = sent.company_id))))`
+}
+
+// sentByReaderSQL is true when the reader sent the mail on alias a. Sent and
+// captured mail stamp the sender as the seat. Mail logged by hand names one of
+// the reader's addresses.
+func sentByReaderSQL(reader, addresses string) string {
+	return `EXISTS (SELECT 1 FROM activity_participant me
+	   WHERE me.activity_id = a.id AND me.role = 'from'
+	     AND (me.user_id = ` + reader + ` OR lower(me.address) = ANY(` + addresses + `::text[])))`
+}
+
 // awaitingRepliesSQL: every rule sits before the cap.
 //
 //  1. as of, 2. content gate on a, 3. link visibility on wl, 4. the reader's
@@ -221,37 +261,10 @@ var awaitingRepliesSQL = `
 	                '00000000-0000-0000-0000-000000000000'::uuid)
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
-	 WHERE a.kind = 'email'
-	   AND a.direction = 'outbound'
-	   AND a.archived_at IS NULL
-	   AND NOT ` + ImportedHistorySQL + `
+	 WHERE ` + awaitingTheirAnswerSQL("$%[1]d", sentByReaderSQL("$%[9]d", "$%[4]d"), "%[7]s") + `
 	   AND a.occurred_at <= $%[1]d::timestamptz - make_interval(days => $%[5]d::int)
 	   AND a.occurred_at >= $%[1]d::timestamptz - make_interval(days => $%[5]d::int + %[6]d)
 	   AND %[2]s
-	   -- The reader sent it. Mail sent through the product and mail captured
-	   -- from a mailbox stamp the sender as the seat with no address; mail
-	   -- logged by hand names the address.
-	   AND EXISTS (SELECT 1 FROM activity_participant me
-	                WHERE me.activity_id = a.id AND me.role = 'from'
-	                  AND (me.user_id = $%[9]d OR lower(me.address) = ANY($%[4]d::text[])))
-	   -- Still the last word on its conversation with its contacts: nothing
-	   -- newer on the thread from a record it went to. A thread key is a
-	   -- header the sender chose, so a message on it counts only when it is
-	   -- filed under the same contact or company.
-	   AND NOT EXISTS (SELECT 1 FROM activity later
-	                    WHERE later.archived_at IS NULL
-	                      AND %[7]s
-	                      AND a.thread_key IS NOT NULL AND a.thread_key <> ''
-	                      AND later.thread_key = a.thread_key
-	                      AND later.kind = a.kind
-	                      AND later.channel_provider IS NOT DISTINCT FROM a.channel_provider
-	                      AND (later.occurred_at, later.id) > (a.occurred_at, a.id)
-	                      AND later.occurred_at <= $%[1]d
-	                      AND EXISTS (SELECT 1 FROM activity_link heard
-	                                    JOIN activity_link sent ON sent.activity_id = a.id
-	                                   WHERE heard.activity_id = later.id
-	                                     AND (heard.contact_id = sent.contact_id
-	                                       OR heard.company_id = sent.company_id)))
 	   -- Nor any contact since with someone it went to, on any channel: a call
 	   -- or a meeting with them is a follow-up already made.
 	   AND NOT EXISTS (SELECT 1 FROM activity_link sent

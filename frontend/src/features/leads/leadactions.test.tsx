@@ -14,6 +14,7 @@ import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { LeadScreen } from "./leads";
+import { SIGNAL_CATALOG } from "./leadsignals.fixture";
 
 // Explicit outreach controls remain available without inventing work.
 
@@ -50,15 +51,14 @@ const lead: Lead = {
   updated_at: "2026-06-20T08:00:00Z",
 };
 
-// The six shipped lead sources GET /lead-sources serves on a fresh install,
-// read by the overview even where no test here cares which one this lead
-// carries.
-const SHIPPED_LEAD_SOURCES = {
+// The lead origins GET /lead-origins serves, read by the overview even where
+// no test here cares which one this lead carries.
+const SHIPPED_LEAD_ORIGINS = {
   data: [
     {
-      id: "src-manual",
-      key: "manual",
-      label: "Created manually",
+      id: "origin-event",
+      key: "event",
+      label: "Event",
       intent: "neutral",
       sort_order: 10,
       active: true,
@@ -69,7 +69,6 @@ const SHIPPED_LEAD_SOURCES = {
       updated_at: "2026-01-01T00:00:00Z",
     },
   ],
-  discovered: [],
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -122,9 +121,9 @@ function stubLead(
       }
       if (
         request.method === "GET" &&
-        request.url.endsWith("/v1/lead-sources")
+        request.url.endsWith("/v1/lead-origins")
       ) {
-        return jsonResponse(SHIPPED_LEAD_SOURCES);
+        return jsonResponse(SHIPPED_LEAD_ORIGINS);
       }
       if (
         request.method === "GET" &&
@@ -134,6 +133,9 @@ function stubLead(
           first_response_enabled: true,
           first_response_target_minutes: 240,
         });
+      }
+      if (request.url.endsWith("/lead-signal-catalog")) {
+        return jsonResponse(SIGNAL_CATALOG);
       }
       if (request.method === "GET" && request.url.includes("/manual-signals")) {
         return jsonResponse({ data: [] });
@@ -208,7 +210,7 @@ describe("the lead header's Email verb", () => {
     await user.click(email);
 
     const dialog = await screen.findByRole("dialog", {
-      name: /Send email/,
+      name: /New email/,
     });
     expect(
       within(dialog).getByRole("button", {

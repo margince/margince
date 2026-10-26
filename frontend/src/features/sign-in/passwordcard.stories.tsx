@@ -145,6 +145,14 @@ export const Mismatch: Story = {
   ),
 };
 
+// The same dialog in dark: the warning that leads the form and the field
+// refusal under it are tones that move between themes.
+export const MismatchDark: Story = {
+  ...Mismatch,
+  name: "Confirmation does not match, dark",
+  globals: { theme: "dark" },
+};
+
 /**
  * The server refused it — the current password was wrong.
  *

@@ -1,32 +1,26 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { wholeCount } from "../../components/companyrailshared";
-import { PageAsideToggle } from "../../components/pageaside";
+import {
+  LIFECYCLE_LABELS,
+  LIFECYCLE_OPTIONS,
+  RELATIONSHIP_TYPE_LABELS,
+  SIZE_BAND_OPTIONS,
+} from "../../components/companylookups";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordTabs } from "../../design-system/recordtabs";
 import { useT } from "../../i18n";
+import { COMPANY_TABS, type CompanyTab } from "../../lib/companytab";
 import { unwrap } from "../../lib/problem";
 import { scrollPageToTop } from "../../lib/reveal";
 import { useAddressedTab } from "../records/recordtab";
 import { CompanyPage } from "./companies.page";
 import { useAcknowledgeCompanyView, useCompany360 } from "./company360";
 import { hasFinance } from "./companyfinance";
-import {
-  LIFECYCLE_LABELS,
-  LIFECYCLE_OPTIONS,
-  RELATIONSHIP_TYPE_LABELS,
-  SIZE_BAND_OPTIONS,
-} from "./companylookups";
-import {
-  COMPANY_TABS,
-  type CompanyTab,
-  REFUSED_WHEN_ARCHIVED,
-  useShownCompanyTab,
-} from "./companytab";
+import { wholeCount } from "./companyrailshared";
+import { REFUSED_WHEN_ARCHIVED, useShownCompanyTab } from "./companytab";
 
 export { CompaniesScreen } from "./companies.list";
-export { offerResearchOnOverview } from "./companies.overview";
 export { profileFieldLabel } from "./companies.profile";
 
 export type Company = components["schemas"]["Company"];
@@ -76,11 +70,17 @@ function companyTabCounts(
     return {};
   }
   const counts: Partial<Record<CompanyTab, number>> = {};
+  // The server's exact total where it sent one: the history page is capped,
+  // so without it the whole-page rule leaves the tab uncounted.
+  const history = view.activities?.page.total ?? wholeCount(view.activities);
+  if (history != null) {
+    counts.timeline = history;
+  }
   const contacts = wholeCount(view.contacts);
   if (contacts != null) {
     counts.contacts = contacts;
   }
-  const deals = wholeCount(view.deals);
+  const deals = dealsAndProjectsCount(view);
   if (deals != null) {
     counts.deals = deals;
   }
@@ -89,6 +89,20 @@ function companyTabCounts(
     counts.tasks = tasks;
   }
   return counts;
+}
+
+// The tab holds both lists, so its figure is their sum, and only while both
+// are whole. One cut-short list makes the sum a floor, not a count.
+function dealsAndProjectsCount(view: Company360View): number | undefined {
+  const deals = wholeCount(view.deals);
+  if (
+    deals == null ||
+    !view.projects ||
+    view.projects_page?.has_more !== false
+  ) {
+    return undefined;
+  }
+  return deals + view.projects.length;
 }
 
 function companyTabsFor(
@@ -186,14 +200,9 @@ function CompanyRecord({
   const tab = useShownCompanyTab(company.id, archived, addressed);
   const assembled = archived ? undefined : view.data;
   const visibleTabs = companyTabsFor(company, tab);
-  // The strip stands whatever it holds: the details switch rides at its end,
-  // so a row that disappeared for an account with one body to read would take
-  // the only way into the pane with it — and one strip on every record page is
-  // what lets a reader learn where the switch is once.
   const tabs = (
-    // A TEST ID rather than a class: the walk from the page's own tab strip to
-    // the switch at its end is what two screen journeys assert, and nothing
-    // draws this wrapper.
+    // A test id rather than a class: journeys walk the page's own tab strip,
+    // and nothing draws this wrapper.
     <div data-testid="co-tabs">
       <RecordTabs
         options={visibleTabs}
@@ -203,19 +212,6 @@ function CompanyRecord({
           scrollPageToTop();
         }}
         counts={companyTabCounts(assembled)}
-        // The switch for the account's own details column, at the end of
-        // the tab row: it chooses what the page shows beside the work, so it
-        // stands with the controls that choose what the work column shows,
-        // and never in the head among the record's verbs.
-        trailing={
-          <PageAsideToggle
-            quiet
-            labels={{
-              show: t("record.panel.showDetails"),
-              hide: t("record.panel.hideDetails"),
-            }}
-          />
-        }
         labels={{
           // "360", not the shared "Overview": this tab is the account's
           // one assembled reading, and the card inside it is named the same

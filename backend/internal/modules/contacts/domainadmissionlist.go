@@ -135,6 +135,8 @@ const domainPendingReason = `
 	    THEN 'An existing company carries this name. Confirm whether this domain belongs to it.'
 	  WHEN '` + PendingForwardedIdentity + `'
 	    THEN 'This domain forwards to a different site. Confirm its identity before linking a company.'
+	  WHEN '` + PendingVendorVerdict + `'
+	    THEN 'The site reads as a mail or hosting vendor. Create the company anyway?'
 	  WHEN '` + PendingReservedDomain + `'
 	    THEN 'Reserved domain: automatic company identification is paused.'
 	  ELSE '' END`
@@ -174,7 +176,11 @@ const domainPendingReason = `
 // Note this admits an undecided row that also carries an admission: re-withholding
 // an admitted domain leaves both columns set, and such a row belongs on a list of
 // decisions whoever owns it.
-var domainStandingWhere = `d.admission IS NOT NULL OR d.pending_reason = '` + PendingReservedDomain + `'
+//
+// A vendor question always lands here too. Its personal card goes only to the
+// decider vendorDeciderSQL names, so this list keeps the fact
+// reachable when no seat owes it.
+var domainStandingWhere = `d.admission IS NOT NULL OR d.pending_reason IN ('` + PendingReservedDomain + `', '` + PendingVendorVerdict + `')
 	OR (d.pending_reason IS NOT NULL AND NOT EXISTS (
 	      SELECT 1 FROM company_domain_question_reader r JOIN app_user u ON u.id = r.reader_id
 	       WHERE r.domain = d.domain

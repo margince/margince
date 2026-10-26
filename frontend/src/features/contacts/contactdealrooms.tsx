@@ -3,7 +3,7 @@ import { DoorOpen, UserX } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { RoomStateBadge, STATE_LABELS } from "../../components/dealroom";
+import { RoomStateBadge } from "../../components/dealroom";
 import { Button } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
@@ -14,6 +14,7 @@ import { useCanWrite } from "../../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { participantsKey } from "../deals/dealroomaccess";
+import "./contacttabs.css";
 
 // The rooms a contact can still enter, on the contact's own page. An admin
 // removing "Max, who left the buyer" knows the contact, not the deals — the
@@ -107,12 +108,10 @@ function RoomRow({
   const mayManage = useCanWrite("deal_room", "update");
   const [confirming, setConfirming] = useState(false);
   return (
-    <PanelRow>
-      <div>
-        <p>{room.title}</p>
-        <p className="t-caption">{t(STATE_LABELS[room.state])}</p>
-      </div>
-      <div className="card-actions">
+    <PanelRow className="ct-item">
+      <span className="ct-item-title">{room.title}</span>
+      <div className="ct-item-end">
+        <RoomStateBadge state={room.state} />
         <Button
           variant="ghost"
           onClick={() =>

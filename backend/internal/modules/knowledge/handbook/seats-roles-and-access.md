@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go -->
 # Seats, roles and who can see what
 
 What you can do in Margince is decided by three things, and one cannot stand in for another:
@@ -44,11 +45,18 @@ They must sign in again after that. Bringing them back takes a full seat again, 
 Also called: restore a user, re-enable an account.
 
 ### A colleague left: who gets their deals, and how do I reassign their records?
-When a colleague leaves and you deactivate them in Margince, they stay the owner of their deals, leads, contacts, companies and projects. Nothing gets a new owner on its own. Give the work to others before you deactivate them.
-1. List what they own: **Filters and views** → **New filter** → **Contacts** → **Add condition** → **Owner**.
-2. **Deals** and **Leads**: tick the rows and press **Assign** in the bar for many rows. See [Lists, filters and views](lists-filters-and-views.md).
-3. **Contacts** and **Companies**, one at a time: **Owner** in **Details**.
-4. **Projects**, one at a time: open the project and choose **More actions** → **Assign to a colleague**.
+When a colleague leaves and you deactivate them in Margince, they stay the owner of their deals, leads, contacts, companies and projects. Nothing gets a new owner on its own. Hand the work over in **Settings → Members**, before or after you deactivate them.
+1. Open **Settings → Members**.
+2. Open the **Actions for {name}** menu on their row and choose **Hand over work**.
+3. The box says what they still own. Pick the colleague under **Give it to** and press **Hand over**.
+
+Every lead, contact, company, deal and project you may change moves to that colleague. Their tasks, automations and Deal Rooms stay where they are. The **Deactivate {name}?** box also says what they still own and offers **Hand over work**.
+
+Some contacts and companies only the colleague who left could see. They move too once the colleague is deactivated, and stay visible to the new owner alone. Before that, they stay with the colleague.
+
+Until you hand it over, their open work still counts in their team's Worklist and numbers. Their name shows as "(left)", and their Worklist rows say the work needs a new owner.
+
+To give their records to several colleagues, filter a list by **Owner** instead. A colleague who left shows there as "(deactivated)". Tick the rows and press **Assign** in the bar for many rows. See [Lists, filters and views](lists-filters-and-views.md).
 Also called: offboarding, handover, a rep left, transfer a colleague's accounts.
 
 ### How do I reset someone's password?
@@ -58,6 +66,14 @@ To reset a colleague's password in Margince, open **Settings → Members**. Open
 3. Send it to them yourself. The box says: "Send this link to the member through a trusted channel. It works once and is shown only now."
 The box shows when the link ends. To change your own password, use **Settings → Account → Change password** instead.
 Also called: forgot password, password reset, locked out.
+
+### How do I let in a colleague who lost their two-step sign-in?
+To let a colleague in who lost both their phone app and their backup codes, open **Settings → Members**. Open the **Actions for {name}** menu on their row and choose **Remove two-step sign-in**.
+1. Choose **Remove two-step sign-in**.
+2. Read the box and choose **Remove two-step sign-in** again.
+
+They are signed out everywhere, and their password alone signs them in until they set up two-step sign-in again. If your installation requires it, Margince asks them to set it up again at once. The menu offers this only for a colleague who has two-step sign-in on. It never shows on your own row: you remove your own in **Settings → Account**, with a code. The audit log records who removed it.
+Also called: lost phone, lost backup codes, reset two-step sign-in, reset MFA.
 
 ### How do I create a team?
 To create a team in Margince, open **Settings → Teams** and choose **New team** at the top of the page.
@@ -127,6 +143,8 @@ If you hold more than one role, you get the most that any of them allows.
 
 You can copy and change roles in **Settings → Roles and permissions**. A new role starts as a copy of another (**New role**, then **Copy rights from**). Only an Admin copies, restores or widens a role; other users who may edit roles rename, narrow or archive one. An archived role gives nothing. The table above shows the six roles as they come. A changed or custom role reaches what its permissions allow.
 
+An extension added to your installation can bring its own rights, listed in the same screen. If the extension names a starting grant for a role, Margince fills it in once, at the first start that includes that grant. It fills only a role that has no entry for that right. After that, your changes stand. Turn a right off and it stays off, even after an upgrade. Your own roles never get a starting grant, so tick what they need.
+
 ## Row scope: which records, not which kinds
 
 Row scope has three levels: **own**, **team**, **all**.
@@ -183,6 +201,14 @@ When you cannot see a record in Margince, one of three things is true. The recor
 
 Ask the record's owner to share it with you (**Share** on the record). Or ask them to choose **All users in the company** behind the access chip under the record's name. An admin's role does not open a private record either: only a share does. A record you can read but not edit gives a different refusal: "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access."
 Also called: record missing, access denied, 404, cannot open a contact.
+
+### Why can't I create a contact a colleague already has?
+A contact that capture made from a colleague's mail can be private to that colleague. When you create a contact with the same email address, Margince refuses it, so the CRM does not hold the contact twice. It says "A colleague already has this contact. Margince asked them to share it with you."
+
+Your colleague then finds a request in **Review**: "Mira Voss asks you to share this contact." **Accept** shares it with you for writing, or for reading if your seat may only read. **Decline** closes the request. Another try does not ask again while a request is open or after your colleague declined. After a decline Margince says only "A colleague already has this contact."
+
+The refusal does not name the contact or its owner.
+Also called: contact already exists, email already taken, hidden contact.
 
 ### How do I share a record with a colleague?
 To share one contact, company, lead, deal or project with a colleague or a team, open the record and choose **Share**. Then fill in **Share this record**.
@@ -290,7 +316,7 @@ To invite and remove colleagues you need the permission to manage users. Only th
 
 Inviting, deactivating and the **Members** settings list all answer to that permission. So a custom role that holds it manages colleagues without being called Admin.
 
-**Your access must cover theirs.** To act on an **Admin's** account you need the Admin role yourself. If not, deactivating or bringing them back needs their admin permissions and row scope. A set-password link, a role change or an invite needs everything the account holds or will hold, fields and teams included. Only an Admin changes their own role. A member on an archived role gets no link and cannot be brought back until an Admin gives them a live role.
+**Your access must cover theirs.** To act on an **Admin's** account you need the Admin role yourself. If not, deactivating or bringing them back needs their admin permissions and row scope. A set-password link, removing two-step sign-in, a role change or an invite needs everything the account holds or will hold, fields and teams included. Only an Admin changes their own role. A member on an archived role gets no link and cannot be brought back until an Admin gives them a live role.
 
 **Inviting.** You choose a role, and the colleague is created with no password. If your Margince sends email, they get a link. If not, the admin takes a link that works once from **Get set-password link** and gives it to them. An invite link lasts 7 days.
 
