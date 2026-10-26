@@ -184,3 +184,31 @@ func TestACardOnAStaleMeetingClaimIsRefusedBeforeThePass(t *testing.T) {
 		t.Errorf("the check changed the stored claim to met = %s; only the pass writes", got)
 	}
 }
+
+// The pass sets a machine claim to what the meeting proves now, both ways. A
+// domain added and removed again, or a status corrected, brings it back.
+func TestAWithdrawnMeetingClaimComesBackWhenTheMeetingProvesItAgain(t *testing.T) {
+	f := newAuthorshipFixture(t)
+	f.heldCriterion()
+	byDomain := f.heldClaim(f.heldMeeting("rep@ourco.test", "ines@buyer-corp.test"), deals.ExtractedByDeterministic)
+	canceled := f.heldMeeting("rep@ourco.test", "omar@customer.test")
+	byStatus := f.heldClaim(canceled, deals.ExtractedByDeterministic)
+
+	if _, err := f.own.Add(f.Admin(), "buyer-corp.test"); err != nil {
+		t.Fatal(err)
+	}
+	f.WsExec(t, `UPDATE activity SET meeting_status = 'canceled' WHERE id = $1`, canceled)
+	f.runPass()
+	if a, b := f.met(byDomain), f.met(byStatus); a != "false" || b != "false" {
+		t.Fatalf("after the domain was added and the meeting canceled the claims are met = %s, %s, want false, false", a, b)
+	}
+
+	if err := f.own.Remove(f.Admin(), "buyer-corp.test"); err != nil {
+		t.Fatal(err)
+	}
+	f.WsExec(t, `UPDATE activity SET meeting_status = 'held' WHERE id = $1`, canceled)
+	f.runPass()
+	if a, b := f.met(byDomain), f.met(byStatus); a != "true" || b != "true" {
+		t.Errorf("after the domain was removed and the meeting held again the claims are met = %s, %s, want true, true", a, b)
+	}
+}
