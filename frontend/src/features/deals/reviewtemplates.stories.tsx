@@ -159,6 +159,33 @@ export const Vietnamese: Story = {
   },
 };
 
+// A German question longer than a phone row: it wraps, and the Required mark
+// beside it keeps its whole word.
+const GERMAN_WIN = {
+  ...SHIPPED_WIN,
+  questions: [
+    ...SHIPPED_WIN.questions,
+    {
+      key: "decision",
+      label: "Welche Abteilung hat die Entscheidung am Ende getroffen?",
+      type: "text",
+      required: true,
+    },
+  ],
+};
+
+export const GermanPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: served(() => jsonResponse({ data: [GERMAN_WIN] }), READER, "de"),
+  play: async ({ canvasElement }) => {
+    const marks = await within(canvasElement).findAllByText("Erforderlich");
+    for (const mark of marks) {
+      await expect(mark.scrollWidth).toBeLessThanOrEqual(mark.clientWidth);
+    }
+  },
+};
+
 /** No templates served: the card says so rather than drawing an empty list. */
 export const Empty: Story = {
   render: served(() => jsonResponse({ data: [] })),
