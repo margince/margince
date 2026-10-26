@@ -4,6 +4,7 @@
 import type { components } from "../../../api/schema";
 import { INTL_LOCALE } from "../../../format/intllocale";
 import type { Locale, Translator } from "../../../i18n";
+import { shippedLabel } from "../../../lib/shippedlabels";
 
 type DealCoverage = components["schemas"]["DealCoverage"];
 type RecordAssignment = components["schemas"]["RecordAssignment"];
@@ -48,7 +49,14 @@ export function committeeTeam({
     add(owner.id, owner.name, t("deal.committee.owner"));
   }
   for (const held of assignments) {
-    add(...assignee(held, t), held.role_label || held.role_key);
+    const role = shippedLabel(
+      {
+        label: held.role_label || held.role_key,
+        label_key: held.role_label_key,
+      },
+      t,
+    );
+    add(...assignee(held, t), role);
   }
   const carrier = (coverage?.risks ?? []).find(
     (risk) => risk.kind === "single_threaded_ours",

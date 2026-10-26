@@ -72,6 +72,25 @@ describe("our side of the committee", () => {
     ]);
   });
 
+  it("names a built-in job in the reader's language and a relabelled one as typed", () => {
+    const de = (key: MessageKey, vars?: Record<string, string>) =>
+      translate("de", key, vars);
+    const team = committeeTeam({
+      assignments: [
+        {
+          ...held("u1", "Lena Fischer", "Account manager"),
+          role_label_key: "recordRoles.builtin.account_manager",
+        },
+        held("u1", "Lena Fischer", "Presales lead"),
+      ],
+      t: de,
+      locale: "de",
+    });
+    expect(team[0]?.jobs).toBe(
+      `${translate("de", "recordRoles.builtin.account_manager")}, Presales lead`,
+    );
+  });
+
   it("keeps a team apart from a colleague and says it is a team", () => {
     const team = committeeTeam({
       assignments: [held("x", "Delivery", "Support", "team")],
