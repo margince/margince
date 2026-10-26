@@ -30769,6 +30769,13 @@ export interface components {
             role: string;
             /** @description A two-way exchange in the window — both directions, not just our sends. */
             engaged: boolean;
+            /**
+             * Format: date-time
+             * @description When this contact last wrote to us, over all history, from the same fold as the contact's relationship strength. Absent when nothing inbound was captured, and for a caller without the activity grant, so its absence is not a claim that they never wrote.
+             */
+            last_inbound_at?: string | null;
+            /** @description How to read `last_inbound_at`, from the activity it names. Absent when that is absent. */
+            last_inbound_precision?: components["schemas"]["OccurredPrecision"];
         };
         /**
          * @description One finding, with the records behind it. `kind` names the rule so a surface can
@@ -31489,6 +31496,12 @@ export interface components {
             /** Format: uuid */
             deal_id: string;
             stakeholders: components["schemas"]["DealCoverageSeat"][];
+            /**
+             * @description One entry per colleague with recorded interaction with the deal's seats, warmest
+             *     first. `interactions_90d` sums the colleague's exchanges with every seat, and the
+             *     score is their warmest single relationship. `single_threaded_ours` reads the same
+             *     entries, so its colleague is always one of them.
+             */
             our_side: components["schemas"]["ContactNetworkColleague"][];
             risks: components["schemas"]["DealCoverageRisk"][];
             /**

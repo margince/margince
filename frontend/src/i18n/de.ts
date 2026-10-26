@@ -4710,7 +4710,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.committee.title": "Buying Center",
   "deal.committee.legendEngaged": "Im Austausch",
   "deal.committee.legendQuiet": "Nicht im Austausch",
-  "deal.committee.legendGap": "Abdeckungslücke",
+  "deal.committee.legendGap": "Unbesetzte Rolle",
   "deal.strip.close.inDays_one": "in {days} Tag",
   "deal.strip.close.inDays_other": "in {days} Tagen",
   "deal.strip.close.overdue_one": "{days} Tag überfällig",
@@ -10743,7 +10743,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "coverage.seatWithheld": "Ein Kontakt, den du nicht lesen kannst",
   "coverage.daysSinceTouch": "{days} T",
   "coverage.risk.single_threaded_theirs": "Nur ein Kontakt",
-  "coverage.risk.single_threaded_ours": "Von einer Person im Team betreut",
+  "coverage.risk.single_threaded_ours":
+    "Ein Teammitglied führt fast den ganzen Austausch",
   "coverage.risk.coverage_gap": "Kein engagierter Champion",
   "coverage.risk.champion_left": "Champion ist ausgeschieden",
   "coverage.risk.stakeholder_left": "Stakeholder ist ausgeschieden",
@@ -15842,8 +15843,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.offers.rowSub": "Erstellt am {date} · netto {net}",
   "deal.committee.seatSub": "{role} · {engagement}",
   "deal.committee.owner": "Verantwortlich",
-  "deal.committee.gap.coverageGap": "Niemand intern trägt den Deal",
-  "deal.committee.gap.singleThreaded": "Weniger als zwei aktiv",
+  "deal.committee.ourTeam": "Dein Team",
+  "deal.committee.theirTeam": "Kundenseite",
+  "deal.committee.legend": "Was die Zeichen bedeuten",
+  "deal.committee.noRole": "Keine Rolle gesetzt",
+  "deal.committee.seatWrote":
+    "{role} · {engagement} · zuletzt geschrieben am {date}",
+  "deal.committee.carriesContact": "Führt den Großteil des Austauschs",
+  "deal.committee.teamUnread":
+    "Nicht lesbar, wer sonst an diesem Deal arbeitet.",
+  "deal.committee.missing.champion": "Es fehlt: ein Champion im Austausch",
+  "deal.committee.missing.firstContact":
+    "Es fehlt: ein Kontakt auf Kundenseite",
+  "deal.committee.missing.secondContact":
+    "Nur ein Kontakt. Füge einen zweiten hinzu.",
+  "deal.committee.missing.secondEngaged":
+    "Weniger als zwei im Austausch. Erreiche einen zweiten Kontakt.",
   "deal.committee.foot": "{named} benannt · {engaged} von {named} aktiv",
   "deal.brief.title": "Worum es geht",
   "deal.room.open": "Öffnen",

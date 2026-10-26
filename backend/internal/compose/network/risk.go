@@ -140,8 +140,12 @@ type DealCoverage struct {
 	// and carried as ids so the fold stays pure.
 	DepartedContactIDs []ids.UUID
 	Stakeholders       []deals.DealStakeholder
+	// SeatsInbound dates each seat's last message to us. Nil for a caller
+	// without the activity grant.
+	SeatsInbound map[ids.UUID]SeatInbound
 	// OurSide is the colleagues with recorded interaction with the deal's
-	// stakeholders, warmest first.
+	// stakeholders, one edge per colleague and contact, warmest first.
+	// OurColleagues folds it to one entry per colleague.
 	OurSide []ColleagueEdge
 	Risks   []Risk
 	// SectionsOmitted names the sections withheld for lack of the edge grant.
@@ -237,6 +241,9 @@ func CoverageFor(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now time.Tim
 	}
 	out.DepartedContactIDs, err = readDeparted(ctx, tx, facts.companyID, contacts)
 	if err != nil {
+		return out, err
+	}
+	if out.SeatsInbound, err = readSeatsInbound(ctx, tx, contacts, now); err != nil {
 		return out, err
 	}
 	edges, err := search.EdgesForContacts(ctx, tx, contacts)
@@ -418,19 +425,18 @@ const reportThreadingFloor = 2
 // sent the only two messages that have ever been exchanged would flag as
 // concentrated, when it is simply new.
 func ourSideConcentration(c DealCoverage, say langcopy.Spoken) (Risk, bool) {
+	colleagues := OurColleagues(c.OurSide)
 	total := 0
-	byUser := map[ids.UUID]int{}
-	for _, e := range c.OurSide {
-		total += e.Count90d
-		byUser[e.UserID] += e.Count90d
+	for _, colleague := range colleagues {
+		total += colleague.Count90d
 	}
 	if total < ourSideMinInteractions {
 		return Risk{}, false
 	}
-	for user, n := range byUser {
-		if float64(n) >= ourSideDominanceShare*float64(total) {
+	for _, colleague := range colleagues {
+		if float64(colleague.Count90d) >= ourSideDominanceShare*float64(total) {
 			return Risk{
-				Kind: RiskSingleThreadedOurs, DealID: c.DealID, UserIDs: []ids.UUID{user},
+				Kind: RiskSingleThreadedOurs, DealID: c.DealID, UserIDs: []ids.UUID{colleague.UserID},
 				Summary: say.Say(riskWords.OurSideDominance),
 			}, true
 		}

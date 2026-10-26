@@ -37671,7 +37671,12 @@ type DealCommitments struct {
 
 // DealCoverage defines model for DealCoverage.
 type DealCoverage struct {
-	DealId  openapi_types.UUID        `json:"deal_id"`
+	DealId openapi_types.UUID `json:"deal_id"`
+
+	// OurSide One entry per colleague with recorded interaction with the deal's seats, warmest
+	// first. `interactions_90d` sums the colleague's exchanges with every seat, and the
+	// score is their warmest single relationship. `single_threaded_ours` reads the same
+	// entries, so its colleague is always one of them.
 	OurSide []ContactNetworkColleague `json:"our_side"`
 	Risks   []DealCoverageRisk        `json:"risks"`
 
@@ -37722,8 +37727,14 @@ type DealCoverageSeat struct {
 	ContactName *string `json:"contact_name,omitempty"`
 
 	// Engaged A two-way exchange in the window — both directions, not just our sends.
-	Engaged bool   `json:"engaged"`
-	Role    string `json:"role"`
+	Engaged bool `json:"engaged"`
+
+	// LastInboundAt When this contact last wrote to us, over all history, from the same fold as the contact's relationship strength. Absent when nothing inbound was captured, and for a caller without the activity grant, so its absence is not a claim that they never wrote.
+	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
+
+	// LastInboundPrecision How to read `last_inbound_at`, from the activity it names. Absent when that is absent.
+	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+	Role                 string             `json:"role"`
 }
 
 // DealDocument One file in a deal's Files area: the attachment, whether it is hidden from this

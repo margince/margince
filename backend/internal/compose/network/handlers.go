@@ -247,9 +247,13 @@ func wireCoverage(
 		if name, ok := contacts[s.ContactID]; ok {
 			seat.ContactName = &name
 		}
+		if inbound, ok := c.SeatsInbound[s.ContactID]; ok {
+			seat.LastInboundAt = &inbound.At
+			seat.LastInboundPrecision = activitywhen.Stated(inbound.Precision)
+		}
 		out.Stakeholders = append(out.Stakeholders, seat)
 	}
-	for _, e := range c.OurSide {
+	for _, e := range OurColleagues(c.OurSide) {
 		colleague := crmcontracts.ContactNetworkColleague{
 			UserId:          openapi_types.UUID(e.UserID),
 			DisplayName:     names[e.UserID],

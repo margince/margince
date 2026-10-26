@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, within } from "storybook/test";
 import {
   jsonResponse,
   StoryProviders,
   stubWithSession,
 } from "../../testing/story-utils";
 import { RelationshipsTab } from "./relationshiprows";
+import { AddRelationshipAction } from "./relationships";
 
 // RelationshipsTab reads GET /relationships?contact_id=… (there is no
 // GET /relationships/{id} in the contract — every row is hydrated straight
@@ -82,6 +83,39 @@ export const Adding: Story = {
       await within(canvasElement).findByTestId("add-relationship"),
     );
     await screen.findByRole("dialog");
+  },
+};
+
+/**
+ * The verb offered for one missing seat. Its description names the gap it
+ * fills, and its form opens on the role that seat needs.
+ */
+export const AddingForAMissingSeat: Story = {
+  render: () => {
+    stubWithSession({}, MAY_WRITE_RELATIONSHIPS);
+    return (
+      <StoryProviders>
+        <p id="missing-seat">Missing: an engaged champion</p>
+        <AddRelationshipAction
+          scope={{ deal_id: "d-1" }}
+          seatRole="champion"
+          describedBy="missing-seat"
+        />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const verb = await within(canvasElement).findByRole("button", {
+      name: "Add stakeholder",
+    });
+    await expect(verb).toHaveAccessibleDescription(
+      "Missing: an engaged champion",
+    );
+    await userEvent.click(verb);
+    const dialog = await screen.findByRole("dialog");
+    await expect(
+      within(dialog).getByRole("textbox", { name: "Role" }),
+    ).toHaveValue("champion");
   },
 };
 

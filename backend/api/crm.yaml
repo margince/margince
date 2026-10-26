@@ -43248,6 +43248,16 @@ components:
         engaged:
           type: boolean
           description: 'A two-way exchange in the window — both directions, not just our sends.'
+        last_inbound_at:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            When this contact last wrote to us, over all history, from the same fold as the
+            contact's relationship strength. Absent when nothing inbound was captured, and for a
+            caller without the activity grant, so its absence is not a claim that they never wrote.
+        last_inbound_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `last_inbound_at`, from the activity it names. Absent when that is absent.
 
     DealCoverageRisk:
       type: object
@@ -44152,7 +44162,14 @@ components:
       properties:
         deal_id:      { type: string, format: uuid }
         stakeholders: { type: array, items: { $ref: '#/components/schemas/DealCoverageSeat' } }
-        our_side:     { type: array, items: { $ref: '#/components/schemas/ContactNetworkColleague' } }
+        our_side:
+          type: array
+          description: |
+            One entry per colleague with recorded interaction with the deal's seats, warmest
+            first. `interactions_90d` sums the colleague's exchanges with every seat, and the
+            score is their warmest single relationship. `single_threaded_ours` reads the same
+            entries, so its colleague is always one of them.
+          items: { $ref: '#/components/schemas/ContactNetworkColleague' }
         risks:        { type: array, items: { $ref: '#/components/schemas/DealCoverageRisk' } }
         sections_omitted:
           type: array

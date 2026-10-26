@@ -1,97 +1,56 @@
-/* The buying committee: our owner, the curves, and the seat rows. The rows
-   and the curves share one pitch, so each curve ends on its row's dot. */
+/* The buying committee: our team beside their team, each a list of rows led
+   by a mark, and the legend under both. The sides stack once the card is too
+   narrow to hold two readable columns. */
 
-.dc-graph {
-  --dc-pitch: 52px;
+/* The container the sides measure, so they stack by the card's width rather
+   than the window's. */
+.dc-committee {
+  container-type: inline-size;
+}
+
+.dc-sides {
   display: grid;
-  grid-template-columns: 72px 72px minmax(0, 1fr);
-  align-items: center;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-5);
   padding-block: var(--space-3) var(--space-2);
   border-block-start: 1px solid var(--borderSubtle);
 }
 
-/* Our owner: the dot sits on the middle line the curves start from, and the
-   name hangs under it. */
-.dc-us {
-  position: relative;
-  align-self: stretch;
-  min-width: 0;
-  text-align: center;
+@container (max-width: 30rem) {
+  .dc-sides {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
-.dc-us-words {
-  position: absolute;
-  inset-inline: 0;
-  top: calc(50% + 12px);
+.dc-side {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 2px; /* ds:ignore the name and its sub line sit closer than the smallest step */
+  gap: var(--space-2);
+  min-inline-size: 0;
 }
 
-.dc-us-dot {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  translate: -50% -50%;
-  corner-shape: round;
-  width: 16px;
-  height: 16px;
-  border-radius: var(--r-full);
-  background: var(--textPrimary);
-}
-
-.dc-us-name {
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  font: var(--fontBodySmall);
-  font-weight: var(--fontWeightMedium);
-  color: var(--textPrimary);
-}
-
-.dc-us-role {
-  font: var(--fontBodySmall);
-  color: var(--textSecondary);
-}
-
-.dc-links {
-  display: block;
-  overflow: visible;
-}
-
-.dc-link {
-  fill: none;
-  stroke: var(--success);
-  stroke-width: 1.5;
-}
-
-.dc-link-gap {
-  stroke: var(--warning);
-  stroke-dasharray: 3 3;
-}
-
-.dc-seats {
+.dc-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-/* The dot sits on the curve's end, so the row starts half a dot early. */
-.dc-seat {
-  height: var(--dc-pitch);
+.dc-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-2);
-  margin-inline-start: calc(-1 * var(--space-2));
-  min-width: 0;
+  min-inline-size: 0;
 }
 
 .dc-seat-open {
   all: unset;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-2);
-  min-width: 0;
+  min-inline-size: 0;
   cursor: pointer;
   border-radius: var(--r-sm);
 }
@@ -100,13 +59,51 @@
   outline: var(--focus-ring);
 }
 
+/* The text wraps rather than clipping: a role, an engagement and a date are
+   three facts, and a cut one is a fact the reader never gets. */
+.dc-row-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.dc-row-name {
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+}
+
+.dc-seat-open:hover .dc-row-name {
+  color: var(--accentText);
+}
+
+.dc-row-sub {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+
+.dc-row-gap .dc-row-name {
+  color: var(--warningText);
+}
+
+/* The mark sits on the name's line. */
 .dc-dot {
   corner-shape: round;
   flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
+  inline-size: 12px;
+  block-size: 12px;
+  margin-block-start: var(--space-1);
   border-radius: var(--r-full);
   box-sizing: border-box;
+}
+
+/* Our side is a square, so it never reads as one more state of a buyer seat. */
+.dc-dot-ours {
+  border-radius: calc(var(--r-xs) / 2);
+  background: var(--textPrimary);
 }
 
 .dc-dot-engaged {
@@ -121,39 +118,6 @@
 .dc-dot-gap {
   border: 1.5px dashed var(--warning);
   background: var(--warningBg);
-}
-
-.dc-seat-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.dc-seat-name,
-.dc-seat-sub {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dc-seat-name {
-  font: var(--fontBodySmall);
-  font-weight: var(--fontWeightMedium);
-  color: var(--textPrimary);
-}
-
-.dc-seat-open:hover .dc-seat-name {
-  color: var(--accentText);
-}
-
-.dc-seat-sub {
-  font: var(--fontBodySmall);
-  color: var(--textSecondary);
-}
-
-.dc-seat-gap .dc-seat-name,
-.dc-seat-gap .dc-seat-sub {
-  color: var(--warningText);
 }
 
 .dc-legend {
@@ -173,23 +137,6 @@
   gap: var(--space-2);
 }
 
-.dc-swatch {
-  corner-shape: round;
-  width: 8px;
-  height: 8px;
-  border-radius: var(--r-full);
-  flex: 0 0 auto;
-  box-sizing: border-box;
-}
-
-.dc-swatch-engaged {
-  background: var(--success);
-}
-
-.dc-swatch-quiet {
-  background: var(--borderStrong);
-}
-
-.dc-swatch-gap {
-  border: 1.5px dashed var(--warning);
+.dc-legend .dc-dot {
+  margin-block-start: 0;
 }

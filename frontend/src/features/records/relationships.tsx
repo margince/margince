@@ -90,6 +90,8 @@ export function AddRelationshipAction({
   refusedReasonId,
   only,
   variant,
+  seatRole,
+  describedBy,
 }: Readonly<{
   scope: RelationshipScope;
   // The id of the anchor page's sentence about why its record takes no
@@ -104,6 +106,10 @@ export function AddRelationshipAction({
   only?: { kind: CreatableRelationshipKind; label: MessageKey };
   // "link" when the verb is a card's one link rather than a button.
   variant?: "link";
+  // The role the form opens with, for a verb offered for one missing seat.
+  seatRole?: string;
+  // The id of the words that say which seat this verb fills.
+  describedBy?: string;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -121,7 +127,7 @@ export function AddRelationshipAction({
   const [kind, setKind] = useState<CreatableRelationshipKind>(
     defaultOption.kind,
   );
-  const [role, setRole] = useState("");
+  const [role, setRole] = useState(seatRole ?? "");
   const [startedAt, setStartedAt] = useState<ISODate | "">("");
   const [term, setTerm] = useState("");
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -213,7 +219,7 @@ export function AddRelationshipAction({
   function close() {
     setOpen(false);
     setKind(defaultOption.kind);
-    setRole("");
+    setRole(seatRole ?? "");
     setStartedAt("");
     setTerm("");
     setCandidates([]);
@@ -227,6 +233,7 @@ export function AddRelationshipAction({
       <Button
         variant={variant}
         reasonId={refusedReasonId}
+        aria-describedby={describedBy}
         onClick={() => setOpen(true)}
         data-testid="add-relationship"
       >
