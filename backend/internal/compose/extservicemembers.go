@@ -5,9 +5,10 @@ package compose
 
 // The service member each landing unit runs its feed as.
 //
-// A unit that declares an ingress source lands records on a schedule, and that
-// needs a member nobody signs in as. Installing the unit is what says so, so the
-// boot makes the member and an admin does not have to declare it by hand.
+// A unit that lands companies or deals on a schedule needs a member nobody signs
+// in as. Installing the unit is what says so, so the boot makes the member and an
+// admin does not have to declare it by hand. A unit that lands only activities
+// runs as the human who opened its endpoint, so it gets no member.
 
 import (
 	"context"
@@ -21,7 +22,7 @@ import (
 )
 
 // EnsureExtensionServiceMembers makes the service member of every composed unit
-// that declares an ingress source and has none yet. Every process role calls it
+// that lands companies or deals and has none yet. Every process role calls it
 // once the installation is bound. The make is idempotent and serialized, so the
 // api and the worker booting together make one member each.
 //
@@ -31,7 +32,7 @@ import (
 func EnsureExtensionServiceMembers(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger, exts []extension.Extension) error {
 	var want []identity.ServiceMemberInput
 	for _, e := range exts {
-		if len(e.Ingress) > 0 {
+		if landsCompaniesOrDeals(e) {
 			want = append(want, identity.ServiceMemberInput{Extension: string(e.Name), DisplayName: string(e.Name) + " feed"})
 		}
 	}

@@ -154,12 +154,15 @@ func TestAUnitThatLandsRecordsGetsItsServiceMemberAtBootOnce(t *testing.T) {
 	ctx := context.Background()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	lands := extension.Extension{Name: "feeder", Ingress: []extension.IngressSource{
-		{System: "feeder", Lands: []extension.RecordKind{extension.KindActivity}},
+		{System: "feeder", Lands: []extension.RecordKind{extension.KindDeal}},
+	}}
+	human := extension.Extension{Name: "human", Ingress: []extension.IngressSource{
+		{System: "human", Lands: []extension.RecordKind{extension.KindActivity}},
 	}}
 	quiet := extension.Extension{Name: "quiet"}
 	boot := func() {
 		t.Helper()
-		if err := compose.EnsureExtensionServiceMembers(ctx, e.Pool, logger, []extension.Extension{lands, quiet}); err != nil {
+		if err := compose.EnsureExtensionServiceMembers(ctx, e.Pool, logger, []extension.Extension{lands, human, quiet}); err != nil {
 			t.Fatalf("EnsureExtensionServiceMembers: %v", err)
 		}
 	}
@@ -177,6 +180,9 @@ func TestAUnitThatLandsRecordsGetsItsServiceMemberAtBootOnce(t *testing.T) {
 	boot()
 	if got := members("feeder"); got != 1 {
 		t.Fatalf("a unit that lands records has %d service members after two boots, want 1", got)
+	}
+	if got := members("human"); got != 0 {
+		t.Errorf("a unit that lands only activities has %d service members, want none", got)
 	}
 	if got := members("quiet"); got != 0 {
 		t.Errorf("a unit that lands nothing has %d service members, want none", got)

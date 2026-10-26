@@ -1,6 +1,8 @@
 # Declare a service member for an unattended feed
 
 A service member is a member of the installation that no human signs in as. An extension's scheduled feed lands records as this member, so the feed does not stop when a colleague leaves. This page is for an installation admin who sets a feed up. It is also for an extension author who wants to know what the feed will run as.
+The core makes the member at boot for each installed extension that lands companies or deals. An extension that lands only activities runs as the colleague who opened its endpoint, so it gets none.
+
 
 ## Why a feed needs one
 
