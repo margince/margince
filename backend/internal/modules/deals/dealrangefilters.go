@@ -40,24 +40,19 @@ type RangeFilters struct {
 	// currency, as the Value sort reads it.
 	ValueMin *int64
 	ValueMax *int64
-	// Currency is the ISO-4217 code the deal is priced in.
+	// Currency is the ISO-4217 code the deal is priced in, and Country the
+	// ISO-3166 alpha-2 code on its company's address. Either case matches.
 	Currency *string
-	// Country is the ISO-3166 alpha-2 code on the deal's company address.
-	Country *string
+	Country  *string
 	// valuation is the base currency, rate day and zone, read by the store
 	// itself when readsValuation says a dial needs them.
 	valuation dealValuation
 }
 
-// widenMinor and upperCode turn a seam operand into the field's own shape.
+// widenMinor turns a seam operand into the field's own width.
 func widenMinor(v *int) *int64 {
 	minor := int64(*v)
 	return &minor
-}
-
-func upperCode(v *string) *string {
-	code := strings.ToUpper(*v)
-	return &code
 }
 
 // readsValuation reports whether the dials need the base currency, the rate
@@ -68,6 +63,9 @@ func (f RangeFilters) readsValuation() bool {
 
 // appendRangeFilters adds the commercial dials to a deal list's clauses.
 func appendRangeFilters(ctx context.Context, where []string, f RangeFilters, arg func(any) int) ([]string, error) {
+	if err := refuseNegativeValues(f); err != nil {
+		return nil, err
+	}
 	if err := refuseInvertedRanges(f); err != nil {
 		return nil, err
 	}
@@ -85,10 +83,10 @@ func appendRangeFilters(ctx context.Context, where []string, f RangeFilters, arg
 		if err := auth.RefuseMaskedFilter(ctx, maskObject, filterCurrency, fieldmask.DealCurrency); err != nil {
 			return nil, err
 		}
-		where = append(where, storekit.SQLf("currency = $%d", arg(*f.Currency)))
+		where = append(where, storekit.SQLf("currency = $%d", arg(strings.ToUpper(*f.Currency))))
 	}
 	if f.Country != nil {
-		clause, err := countryFilterClause(ctx, *f.Country, arg)
+		clause, err := countryFilterClause(ctx, strings.ToUpper(*f.Country), arg)
 		if err != nil {
 			return nil, err
 		}
@@ -116,6 +114,23 @@ func calendarDay(day *time.Time) *string {
 	}
 	iso := day.Format(time.DateOnly)
 	return &iso
+}
+
+// refuseNegativeValues refuses a value bound below zero, which the contract's
+// minimum rules out. No deal is worth less than nothing, so it would match none.
+func refuseNegativeValues(f RangeFilters) error {
+	for _, bound := range []struct {
+		field string
+		value *int64
+	}{{filterValueMin, f.ValueMin}, {filterValueMax, f.ValueMax}} {
+		if bound.value != nil && *bound.value < 0 {
+			return &values.ParseError{
+				Field: bound.field, Code: "out_of_range",
+				Message: bound.field + " must be zero or more",
+			}
+		}
+	}
+	return nil
 }
 
 // refuseInvertedRanges refuses a lower bound above its upper one. Such a range

@@ -98,9 +98,8 @@ var dealListFilters = storekit.FilterSet[ListDealsInput]{
 	filterCloseTo:   storekit.FilterDate(func(in *ListDealsInput, v *time.Time) { in.CloseTo = v }),
 	filterValueMin:  storekit.FilterNumber(func(in *ListDealsInput, v *int) { in.ValueMin = widenMinor(v) }),
 	filterValueMax:  storekit.FilterNumber(func(in *ListDealsInput, v *int) { in.ValueMax = widenMinor(v) }),
-	// Upper-cased because the columns store codes that way.
-	filterCurrency: storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Currency = upperCode(v) }),
-	filterCountry:  storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Country = upperCode(v) }),
+	filterCurrency:  storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Currency = v }),
+	filterCountry:   storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Country = v }),
 }
 
 // ListFilters names what SearchEntity can narrow one entity type by.

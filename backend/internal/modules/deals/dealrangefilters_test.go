@@ -6,6 +6,7 @@ package deals
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -77,5 +78,41 @@ func TestTheCountryFilterNeedsCompanyRead(t *testing.T) {
 	country := "DE"
 	if _, _, err := rangeClauses(dealsOnly, t, RangeFilters{Country: &country}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("country for a seat without company.read → %v, want permission denied", err)
+	}
+}
+
+// The columns store codes upper-cased. The HTTP list and the agent's filter
+// both reach the store, so a lower-case code matches on either path.
+func TestACodeFilterMatchesWhateverCaseItIsGivenIn(t *testing.T) {
+	currency, country := "usd", "de"
+	_, args, err := rangeClauses(systemFilterCtx(), t, RangeFilters{Currency: &currency, Country: &country})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"USD", "DE"} {
+		if !slices.Contains(args, any(want)) {
+			t.Errorf("the dials bound %v, want the upper-cased code %s", args, want)
+		}
+	}
+}
+
+// No deal is worth less than nothing. A negative bound is refused by name
+// rather than answered with a page that reads as every deal or none.
+func TestANegativeValueBoundIsRefusedByName(t *testing.T) {
+	negative := int64(-1)
+	for _, tc := range []struct {
+		field string
+		in    RangeFilters
+	}{
+		{filterValueMin, RangeFilters{ValueMin: &negative}},
+		{filterValueMax, RangeFilters{ValueMax: &negative}},
+	} {
+		t.Run(tc.field, func(t *testing.T) {
+			_, _, err := rangeClauses(systemFilterCtx(), t, tc.in)
+			var refused *values.ParseError
+			if !errors.As(err, &refused) || refused.Field != tc.field || refused.Code != "out_of_range" {
+				t.Errorf("a negative %s → %v, want out_of_range on it", tc.field, err)
+			}
+		})
 	}
 }
