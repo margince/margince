@@ -18,8 +18,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// A handover is an update: a seat that may only read moves nothing and is told
-// so, and a read-only reader counts the tasks it can see.
+// A handover is an update, so a seat that may only read moves nothing and is
+// told so. A dead connection fails the move and the count.
 func TestHandingOverTasksNeedsTheUpdateGrantAndASoundConnection(t *testing.T) {
 	e := setupPromises(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
