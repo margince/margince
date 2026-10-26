@@ -81,5 +81,6 @@ func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Lo
 	})
 	addDeclaredWorker[RequestProofExpiryArgs](reg, newRequestProofExpiryWorker(pool, time.Now, log))
 	addDeclaredWorker[WaitingHorizonRefreshArgs](reg, newWaitingHorizonRefreshWorker(pool, log))
+	addDeclaredWorker[EvidenceAuthorshipArgs](reg, newEvidenceAuthorshipWorker(pool, log))
 	addBriefGenerateJobs(reg, pool, log, briefMail)
 }

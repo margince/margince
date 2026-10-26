@@ -1809,6 +1809,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.privacy_request_proof_expiry":
     "Bereinigung der Nachweise zu Datenschutzanfragen",
   "systemJob.waiting_horizon_refresh": "Messung der Antwortzeiten",
+  "systemJob.evidence_authorship": "Prüfung der Absender von Deal-Belegen",
   "systemJob.meeting_delivery": "Versand von Kalendereinladungen",
   "systemJob.merge": "Zusammenführung von Datensätzen",
   "systemJob.notice_case_open": "Aufnahme von Datenschutzanfragen",

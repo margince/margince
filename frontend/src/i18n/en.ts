@@ -1758,6 +1758,7 @@ export const en = {
   "systemJob.mail_draft_retention": "Mail draft cleanup",
   "systemJob.privacy_request_proof_expiry": "Privacy request proof cleanup",
   "systemJob.waiting_horizon_refresh": "Reply time measurement",
+  "systemJob.evidence_authorship": "Deal evidence author check",
   "systemJob.meeting_delivery": "Calendar delivery",
   "systemJob.merge": "Record merge",
   "systemJob.notice_case_open": "Privacy request intake",
