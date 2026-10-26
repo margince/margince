@@ -73,8 +73,8 @@ export function terminalBadge(
 }
 
 /**
- * The reasons a closed lead's sentence reads: none while the list is loading,
- * and an empty list once it failed, so the stored label stands in.
+ * The reasons a closed lead's sentence reads. None while the list is loading;
+ * an empty list once it failed, so the stored label stands in.
  */
 export function standingReasons(
   read: Readonly<{

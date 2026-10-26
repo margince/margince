@@ -63,8 +63,8 @@ func TestRefusedListFiltersNamesWhatTheListWouldRefuse(t *testing.T) {
 	}
 }
 
-// The probe runs the list's clauses with nobody bound, which is a fault and
-// never a refusal: reading it as one would offer or withhold dials at random.
+// With nobody bound, the probe meets a fault and never a refusal. Read as a
+// refusal, it would offer or withhold dials at random.
 func TestRefusedListFiltersReturnsAFaultThatIsNoRefusal(t *testing.T) {
 	if _, err := RefusedListFilters(context.Background()); err == nil {
 		t.Error("probing with no caller bound answered, want the missing actor as an error")

@@ -16,16 +16,16 @@ import (
 
 // dealFilterSamples is one operand per deal list filter a grant or a mask can
 // refuse, each of a shape the list accepts.
-var dealFilterSamples = map[string]string{
-	"company_id":          "00000000-0000-7000-8000-000000000001",
-	"project_id":          "00000000-0000-7000-8000-000000000002",
-	"partner_company_id":  "00000000-0000-7000-8000-000000000003",
-	"partner_sourced":     "true",
-	"partner_attribution": "sourced",
-	"value_min":           "0",
-	"value_max":           "0",
-	"currency":            "EUR",
-	"country":             "DE",
+var dealFilterSamples = []struct{ parameter, sample string }{
+	{"company_id", "00000000-0000-7000-8000-000000000001"},
+	{"project_id", "00000000-0000-7000-8000-000000000002"},
+	{"partner_company_id", "00000000-0000-7000-8000-000000000003"},
+	{"partner_sourced", "true"},
+	{"partner_attribution", "sourced"},
+	{"value_min", "0"},
+	{"value_max", "0"},
+	{"currency", "EUR"},
+	{"country", "DE"},
 }
 
 // narrowSignedInRole moves the signed-in admin onto a role of its own: the
@@ -85,11 +85,12 @@ func refusedDealFilters(t *testing.T, e *apptest.AppEnv) []string {
 	return *me.Authorization.RefusedDealFilters
 }
 
-// assertSnapshotMatchesTheList asks the list itself for every filter, so the
-// snapshot is held to the list's answer and never to a list the test keeps.
+// assertSnapshotMatchesTheList asks the list itself for every sampled filter,
+// so the snapshot is held to what the list answers, refused or not.
 func assertSnapshotMatchesTheList(t *testing.T, e *apptest.AppEnv, refused []string) {
 	t.Helper()
-	for parameter, sample := range dealFilterSamples {
+	for _, filter := range dealFilterSamples {
+		parameter, sample := filter.parameter, filter.sample
 		var problem codeRefusal
 		status := e.Call(t, "GET", "/v1/deals?"+parameter+"="+sample, nil, nil, &problem)
 		masked := status == http.StatusUnprocessableEntity && len(problem.Details.Errors) == 1 &&
@@ -128,7 +129,7 @@ func TestMeNamesTheValueFiltersARoleMaskRefuses(t *testing.T) {
 }
 
 // A mask that lifts on the deals the reader may change still withholds the
-// rest, so the value dials are refused even on a page of the reader's own deals.
+// rest. So the value dials are refused, even on a page of the reader's own deals.
 func TestMeNamesTheValueFiltersAWriteConditionedMaskRefuses(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
@@ -183,13 +184,11 @@ func TestAPrivateCompanyOnOneDealRefusesNoFilter(t *testing.T) {
 	if status := e.Call(t, "GET", "/v1/deals", nil, nil, &page); status != http.StatusOK {
 		t.Fatalf("GET /v1/deals = %d", status)
 	}
-	idx := slices.IndexFunc(page.Data, func(row struct {
-		ID           string   `json:"id"`
-		MaskedFields []string `json:"masked_fields"`
-	}) bool {
-		return row.ID == deal.ID
-	})
-	if idx < 0 || !slices.Contains(page.Data[idx].MaskedFields, "company_id") {
+	masked := false
+	for _, row := range page.Data {
+		masked = masked || (row.ID == deal.ID && slices.Contains(row.MaskedFields, "company_id"))
+	}
+	if !masked {
 		t.Fatalf("the deal on the private company was not listed with company_id masked: %+v", page.Data)
 	}
 

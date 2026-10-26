@@ -51,13 +51,11 @@ const ATTRIBUTION_OPTIONS: { value: string; label: MessageKey }[] = [
  * An empty list also answers "is there a partner programme here". An
  * installation that never made a company a partner has no partner question to
  * ask. The two fields stay off the form entirely.
- *
- * A partner is a company, so a reader without company.read is offered none and
- * nothing is asked of a server that would refuse it.
  */
 export function usePartnerOptions(
   companies: { id: string; display_name: string }[],
 ): { value: string; label: string }[] {
+  // A partner is a company, so a reader without company.read is asked nothing.
   const readsCompanies = useCan("company", "read");
   const partners = useQuery({
     queryKey: ["partners", "options"],

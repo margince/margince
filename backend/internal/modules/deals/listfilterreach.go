@@ -4,8 +4,8 @@
 package deals
 
 // Which deal list filters this caller would be refused, said before they ask.
-// A screen that offers a dial the list then refuses shows a failure where a
-// narrowing was promised, so the answer is read off the list's own clauses.
+// A dial the list then refuses shows a failure where a narrowing was promised.
+// So the answer is read off the list's own clauses.
 
 import (
 	"context"
@@ -34,10 +34,10 @@ func refusableFilterProbes() []struct {
 		{filterPartnerCompanyID, ListDealsInput{PartnerCompanyID: &ids.CompanyID{}}},
 		{filterPartnerSourced, ListDealsInput{PartnerSourced: &sourced}},
 		{filterPartnerAttribution, ListDealsInput{PartnerAttribution: &attribution}},
-		{filterValueMin, ListDealsInput{RangeFilters: RangeFilters{ValueMin: &zero}}},
-		{filterValueMax, ListDealsInput{RangeFilters: RangeFilters{ValueMax: &zero}}},
-		{filterCurrency, ListDealsInput{RangeFilters: RangeFilters{Currency: &currency}}},
-		{filterCountry, ListDealsInput{RangeFilters: RangeFilters{Country: &country}}},
+		{filterValueMin, ListDealsInput{ValueMin: &zero}},
+		{filterValueMax, ListDealsInput{ValueMax: &zero}},
+		{filterCurrency, ListDealsInput{Currency: &currency}},
+		{filterCountry, ListDealsInput{Country: &country}},
 	}
 }
 
@@ -62,10 +62,9 @@ func RefusedListFilters(ctx context.Context) ([]string, error) {
 }
 
 // refusedForReach tells a refusal of the caller's grant or mask from a fault
-// in the probe's own operand, which would be a bug here and is returned.
+// in the probe's own operand. Such a fault is a bug here, and is returned.
 func refusedForReach(err error) bool {
-	var masked *values.ParseError
-	if errors.As(err, &masked) {
+	if masked, ok := errors.AsType[*values.ParseError](err); ok {
 		return masked.Code == auth.CodeFieldMasked
 	}
 	return errors.Is(err, apperrors.ErrPermissionDenied)
