@@ -25,6 +25,7 @@ import {
 } from "../../lib/leadkeys";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
+import { LeadCompanyName } from "./leadcompany";
 import { openTaskCountLabel } from "./leadopentasks";
 import type { Lead } from "./leadpresentation";
 import { DisqualifyDialog } from "./leads.disqualify";
@@ -153,20 +154,22 @@ function LeadCard({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  // A div with a stretched opener, as the deal card has. A company link inside
+  // a button would be invalid markup and would not take its own click.
   return (
-    <button
-      type="button"
-      className="deal-card"
-      data-lead={lead.id}
-      onClick={() => onOpen(lead)}
-      {...dragHandlers}
-    >
-      <span className="deal-name">
+    <div className="deal-card" data-lead={lead.id} {...dragHandlers}>
+      <button
+        type="button"
+        className="deal-name deal-open lead-card-open"
+        onClick={() => onOpen(lead)}
+      >
         {leadIdentityName(lead) || t("lead.unnamed")}
-      </span>
-      {lead.company_name && (
+      </button>
+      {(lead.company_id || lead.company_name?.trim()) && (
         <span className="deal-company">
-          <span className="deal-company-name">{lead.company_name}</span>
+          <span className="deal-company-name deal-company-link">
+            <LeadCompanyName lead={lead} />
+          </span>
         </span>
       )}
       <span>
@@ -185,7 +188,7 @@ function LeadCard({
             : ""}
         </span>
       </span>
-    </button>
+    </div>
   );
 }
 

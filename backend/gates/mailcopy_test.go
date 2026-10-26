@@ -56,7 +56,6 @@ var mailLabelPairs = []struct {
 	// a language that puts the total first would otherwise read backwards.
 	{"brief.weekly.ofDue", func(c mailcopy.Copy) string { return placeholders(c.WeeklyOfDue) }},
 	{"brief.weekly.dealsWon", func(c mailcopy.Copy) string { return c.WeeklyDealsWon }},
-	{"brief.weekly.dealsLost", func(c mailcopy.Copy) string { return c.WeeklyDealsLost }},
 	{"brief.weekly.dealsMoved", func(c mailcopy.Copy) string { return c.WeeklyMoved }},
 	{"brief.weekly.decided", func(c mailcopy.Copy) string { return c.WeeklyDecided }},
 	{"brief.weekly.queueWorked", func(c mailcopy.Copy) string { return c.WeeklyQueue }},
@@ -69,7 +68,6 @@ var mailLabelPairs = []struct {
 	{"brief.weekly.outcome.moved", func(c mailcopy.Copy) string { return c.WeeklyOutcomeMoved }},
 	{"brief.weekly.notRecorded", func(c mailcopy.Copy) string { return c.WeeklyNotRecorded }},
 	{"brief.weekly.recordedFrom", func(c mailcopy.Copy) string { return c.WeeklyRecordedFrom }},
-	{"brief.weekly.noRecords", func(c mailcopy.Copy) string { return c.WeeklyNoRecords }},
 	{"brief.weekly.partialFrom", func(c mailcopy.Copy) string { return c.WeeklyPartialFrom }},
 	{"brief.weekly.partialValue", func(c mailcopy.Copy) string { return c.WeeklyPartialValue }},
 	{"brief.week.beforeHistory", func(c mailcopy.Copy) string { return c.WeeklyBeforeHistory }},

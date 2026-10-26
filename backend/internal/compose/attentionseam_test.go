@@ -229,22 +229,25 @@ func asQuiet(edges ...search.InteractionEdge) []search.QuietContact {
 // A silence older than the suggestion ceiling leaves the lane, counted from
 // the touch the row prints, while one a day inside it stays.
 func TestAQuietRelationshipPastTheCeilingLeavesTheLane(t *testing.T) {
+	// The decided rule: silent for longer than 180 days leaves. Day 180 stays
+	// a suggestion; day 181 does not.
 	inside, past := ids.NewV7(), ids.NewV7()
 	owner := ids.NewV7()
-	ceiling := readInstantForDecay.AddDate(0, 0, -quietSuggestionCeilingDays)
+	atCeiling := readInstantForDecay.AddDate(0, 0, -quietSuggestionCeilingDays)
+	dayAfter := atCeiling.AddDate(0, 0, -1)
 	lane := quietRelationships(
 		[]search.QuietContact{
-			{Edge: search.InteractionEdge{ContactID: inside, LastAt: ceiling.AddDate(0, 0, 1)}, OwnerID: owner},
-			{Edge: search.InteractionEdge{ContactID: past, LastAt: ceiling}, OwnerID: owner},
+			{Edge: search.InteractionEdge{ContactID: inside, LastAt: atCeiling}, OwnerID: owner},
+			{Edge: search.InteractionEdge{ContactID: past, LastAt: dayAfter}, OwnerID: owner},
 		},
 		[]contacts.ContactChanges{
 			{
 				ContactID: ids.From[ids.ContactKind](inside), DisplayName: "Inside",
-				Changes: []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, At: ceiling.AddDate(0, 0, 1), Days: quietSuggestionCeilingDays - 1}},
+				Changes: []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, At: atCeiling, Days: quietSuggestionCeilingDays}},
 			},
 			{
 				ContactID: ids.From[ids.ContactKind](past), DisplayName: "Past",
-				Changes: []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, At: ceiling, Days: quietSuggestionCeilingDays}},
+				Changes: []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, At: dayAfter, Days: quietSuggestionCeilingDays + 1}},
 			},
 		},
 		nil, readInstantForDecay,

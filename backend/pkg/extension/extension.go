@@ -62,7 +62,9 @@
 //     one arrives, `on` becomes that connection's identity and every unit's
 //     poll changes with it. What will NOT change is the pair of facts behind
 //     it: the member has to have deposited a credential with the unit, and the
-//     landing runs on their live authority.
+//     landing runs on their live authority. A service member an operator
+//     declared for the unit is such a member, so a connection that arrives
+//     would carry its id the same way.
 //
 // A unit written against today's surface will need editing when either lands.
 // That is acceptable precisely because the composed set is the trust boundary:
@@ -428,6 +430,10 @@ type Extension struct {
 	// Entries are the unit's ways into its own screen from core screens: the
 	// Log activity form and the contact, company and deal headers. See Entry.
 	Entries []Entry
+
+	// Settings are the values an admin can change for the unit, drawn by the
+	// core on the unit's card of the Extensions page. See Setting.
+	Settings []Setting
 
 	// Panels are the unit's components drawn inline on core pages, such as a
 	// deal page's side column. See Panel.

@@ -24,6 +24,7 @@ const MESSAGES: components["schemas"]["Activity"][] = [
   direction: index === 0 ? "inbound" : "outbound",
   thread_key: "delivery",
   occurred_at: "2026-09-01T09:00:00Z",
+  occurred_precision: "instant",
   created_at: "2026-09-01T09:00:00Z",
   updated_at: "2026-09-01T09:00:00Z",
   source: "manual",
@@ -36,6 +37,7 @@ const MESSAGES: components["schemas"]["Activity"][] = [
     preview: "We can deliver the first phase in September…",
     direction: index === 0 ? "inbound" : "outbound",
     occurred_at: "2026-09-01T09:00:00Z",
+    occurred_precision: "instant" as const,
     counterparty: "Ada Sommer",
     display_status: "team",
     move: "needs_reply",
@@ -89,6 +91,17 @@ export const DraftedBesideThread: StoryObj = {
   render: () => {
     installFetchStub({
       ...selectedReplyRoutes(),
+      // The composer keeps the draft as the reader writes; the server answers
+      // with the draft it stored, so the composer reads its own words back.
+      "PUT /mail-drafts": (body) =>
+        jsonResponse({
+          ...(typeof body === "object" && body !== null ? body : {}),
+          id: "md-1",
+          version: 1,
+          agent_drafted: true,
+          created_at: "2026-09-01T10:00:00Z",
+          updated_at: "2026-09-01T10:00:00Z",
+        }),
       "POST /activities/message-0/draft-email": () =>
         jsonResponse({
           subject: "Re: Delivery window",

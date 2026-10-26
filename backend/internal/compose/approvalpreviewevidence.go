@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/lifecyclereview"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -19,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -206,6 +208,7 @@ func setLifecyclePreviewContext(preview *crmcontracts.ApprovalPreview, current l
 	if !current.SourceID.IsZero() {
 		preview.LifecycleEvidence = &crmcontracts.LifecyclePreviewEvidence{
 			Scope: crmcontracts.LifecyclePreviewEvidenceScope(current.Scope), OccurredAt: current.OccurredAt,
+			OccurredPrecision: *activitywhen.PrecisionOf(occurredday.Moment{At: current.OccurredAt, DateOnly: current.DateOnly}),
 		}
 		if current.Workstream != "" {
 			preview.LifecycleEvidence.Workstream = &current.Workstream

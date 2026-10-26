@@ -31,6 +31,7 @@ import {
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { ProblemError } from "../../lib/problem";
 import { useRecordTags } from "../../lib/tags.queries";
+import { LeadCompany } from "./leadcompany";
 import { LeadOwnerControl, statusSetBy } from "./leadheader";
 import { LeadProjectAttachButton } from "./leadraillinks";
 import type { Lead, LeadWriter } from "./leads";
@@ -168,8 +169,17 @@ function useAboutRows(
     { value: "", label: t("lead.originNone") },
     ...originPickOptions(origins.data, lead.origin),
   ];
+  const companyName = text("company_name", "create.companyName");
   const rows: DetailRow[] = [
-    text("company_name", "create.companyName"),
+    {
+      ...companyName,
+      value: (
+        <>
+          {companyName.value}
+          <LeadCompany lead={lead} nameShown />
+        </>
+      ),
+    },
     text("title", "create.contactTitle"),
     {
       key: "email",

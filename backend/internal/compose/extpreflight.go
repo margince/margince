@@ -112,6 +112,22 @@ func preflightEntries(e extension.Extension) error {
 	return nil
 }
 
+// preflightSettings validates one unit's settings through the published
+// Setting.Validate the generator runs, and refuses one key declared twice.
+func preflightSettings(e extension.Extension) error {
+	seen := make(map[string]bool, len(e.Settings))
+	for _, s := range e.Settings {
+		if err := s.Validate(); err != nil {
+			return fmt.Errorf("compose: extension %q: %w", e.Name, err)
+		}
+		if seen[s.Key] {
+			return fmt.Errorf("compose: extension %q declares setting %q twice", e.Name, s.Key)
+		}
+		seen[s.Key] = true
+	}
+	return nil
+}
+
 // preflightSurfaces checks what a unit draws on core screens: its entries and
 // its panels.
 func preflightSurfaces(e extension.Extension) error {

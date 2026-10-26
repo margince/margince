@@ -288,11 +288,21 @@ func TestActivityWritersSayWhatAMissingTimeDoes(t *testing.T) {
 		"create_record": createRecordCopy.render(),
 	} {
 		if !strings.Contains(rendered, pastDayNeedsATime) {
-			t.Errorf("%s does not say to ask for the time of a past day", name)
+			t.Errorf("%s does not say how to send a past day with no time", name)
 		}
 	}
-	if !strings.Contains(updateRecordCopy.render(), "keeps its time of day unless the user names one") {
+	if !strings.Contains(pastDayNeedsATime, `occurred_precision "day"`) {
+		t.Error("a past day with no time must be sent as a day, not asked about or given a made-up hour")
+	}
+	if !strings.Contains(string(logActivity{}.Spec().InputSchema), `"occurred_precision"`) {
+		t.Error("log_activity's schema does not offer the occurred_precision the copy tells the model to send")
+	}
+	update := updateRecordCopy.render()
+	if !strings.Contains(update, "keeps its time of day unless the user names one") {
 		t.Error("update_record does not say a moved activity keeps its time of day")
+	}
+	if !strings.Contains(update, `send occurred_precision "day" again`) {
+		t.Error("update_record does not say a moved date-only activity must restate its precision")
 	}
 	if !strings.Contains(recordFieldsDescription, "carries Z or the offset the user gave") {
 		t.Error("the fields description does not say where an rfc3339 offset comes from")

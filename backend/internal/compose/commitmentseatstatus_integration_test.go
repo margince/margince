@@ -250,6 +250,11 @@ func seedOwedCommitmentSignal(t *testing.T, e *integration.Env, thread string, a
 	integration.LinkActivity(t, integration.OwnerConn(t), message, "contact", contact)
 	e.WsExec(t, `INSERT INTO activity_participant (activity_id, user_id, contact_id, role)
 		VALUES ($1, $2, NULL, 'from')`, message, e.Rep1)
+	// The create audit a real capture writes on the seat's behalf. Without it
+	// the seat row is the shape the legacy backfill guessed, which no reader
+	// takes as the rep having sent the mail (auth.ParticipantStandsSQL).
+	e.WsExec(t, `INSERT INTO audit_log (id, actor_type, actor_id, on_behalf_of, action, entity_type, entity_id)
+		VALUES (uuidv7(), 'connector', 'connector:gmail', $1, 'create', 'activity', $2)`, e.Rep1, message)
 	// entity_type is required while resolution_state is 'resolved', which is its
 	// default: signal_resolved_has_entity refuses a resolved signal that names no
 	// record, and a commitment signal names the account it is owed on.

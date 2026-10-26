@@ -29,7 +29,7 @@ func TestOurOwnSentMailReachesAFollowUp(t *testing.T) {
 		note,
 		withBody(mail(crmcontracts.ActivityDirectionOutbound, at(48), "Pricing"), "Second ask: please confirm the 40 seats."),
 		withBody(mail(crmcontracts.ActivityDirectionOutbound, at(240), "Pricing"), "First ask: can we send a quote?"),
-	}, draftedAt)
+	}, draftedAt, time.UTC)
 
 	if len(recent) != 3 {
 		t.Fatalf("read %d turns, want 3", len(recent))
@@ -50,7 +50,7 @@ func TestATurnIsBoundedTheSameWhoeverWroteIt(t *testing.T) {
 	recent := FoldRecent([]crmcontracts.Activity{
 		withBody(mail(crmcontracts.ActivityDirectionOutbound, draftedAt.Add(-time.Hour), "Out"), long),
 		withBody(mail(crmcontracts.ActivityDirectionInbound, draftedAt.Add(-2*time.Hour), "In"), long),
-	}, draftedAt)
+	}, draftedAt, time.UTC)
 	if got, want := len([]rune(recent[0].Said)), len([]rune(recent[1].Snippet)); got != want || got > draftcore.TurnTextRunes {
 		t.Errorf("our mail is read at %d runes and theirs at %d, want one bound of %d", got, want, draftcore.TurnTextRunes)
 	}

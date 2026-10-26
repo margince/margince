@@ -72,6 +72,16 @@ func (r *fakeRuntime) Ingest(_ context.Context, on UserID, rec Record) (Result, 
 	return Result{Ref: Ref{Type: "activity", ID: "00000000-0000-7000-8000-000000000001"}, Disposition: DispositionAccepted}, nil
 }
 
+// The batch pair answers for the seam's shape only; compose/extingressbatch.go
+// is where the saved position is tested, on a database.
+func (r *fakeRuntime) IngestBatch(context.Context, UserID, SourceName, []Record, BatchPosition) ([]Result, error) {
+	return nil, nil
+}
+
+func (r *fakeRuntime) IngestPosition(context.Context, SourceName) (BatchPosition, error) {
+	return "", nil
+}
+
 // ingestCall is one recorded Ingest, so a test can assert WHAT was handed over
 // rather than only that something was.
 type ingestCall struct {

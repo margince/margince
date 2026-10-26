@@ -86,6 +86,7 @@ afterEach(() => {
 
 function decayRow(because: WorklistItem["because"]): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "d1",
     source: "relationship_decay",
     category: "system",
@@ -129,6 +130,7 @@ describe("a task says who holds it", () => {
   it("says nobody owns the one nobody has taken", async () => {
     draw([
       {
+        occurred_precision: "instant",
         id: "t1",
         source: "task",
         category: "tasks",
@@ -146,6 +148,7 @@ describe("a task says who holds it", () => {
   it("says nothing about ownership on a task somebody holds", async () => {
     draw([
       {
+        occurred_precision: "instant",
         id: "t2",
         source: "task",
         category: "tasks",
@@ -174,6 +177,7 @@ describe("a task says who holds it", () => {
 describe("a row says its deadline once", () => {
   function dueRow(overrides: Partial<WorklistItem> = {}): WorklistItem {
     return {
+      occurred_precision: "instant",
       id: "t1",
       source: "task",
       category: "tasks",
@@ -318,6 +322,7 @@ describe("a follow-up row says why it is there", () => {
   it("says how long the reader's message has gone unanswered", async () => {
     const { container } = draw([
       {
+        occurred_precision: "instant",
         id: "f1",
         source: "awaiting_reply",
         category: "tasks",
@@ -343,6 +348,7 @@ describe("a follow-up row says why it is there", () => {
   it("says a meeting has no attendee on file", async () => {
     const { container } = draw([
       {
+        occurred_precision: "instant",
         id: "m1",
         source: "meeting_follow_up",
         category: "meetings",

@@ -114,7 +114,7 @@ describe("the research tab's enrichment evidence", () => {
     expect(
       screen.getByText(/Dana Buyer, Head of Fleet at Brandt Automotive GmbH/),
     ).toBeTruthy();
-    expect(screen.getByText(/Read from site_read on/)).toBeTruthy();
+    expect(screen.getByText(/Read from their company website on/)).toBeTruthy();
   });
 
   it("keeps two readings of the same field as separate rows rather than one colliding on the key", () => {

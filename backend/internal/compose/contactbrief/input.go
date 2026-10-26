@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -256,8 +257,8 @@ func FromView(view crmcontracts.Contact360) Input {
 	if view.Strength != nil {
 		in.Strength = view.Strength.Score
 	}
-	in.LastInbound = stamp(view.LastInboundAt)
-	in.LastOutbound = stamp(view.LastOutboundAt)
+	in.LastInbound = contactcontext.StampOf(view.LastInboundAt, view.LastInboundPrecision)
+	in.LastOutbound = contactcontext.StampOf(view.LastOutboundAt, view.LastOutboundPrecision)
 	in.Employer = currentEmployer(view)
 	foldCommercial(&in, view)
 	foldMoment(&in, view)
@@ -357,7 +358,7 @@ func foldRecent(in *Input, view crmcontracts.Contact360) {
 		folded := ActIn{
 			ID:       activity.Id.String(),
 			Kind:     string(activity.Kind),
-			At:       stampAt(activity.OccurredAt),
+			At:       activitywhen.Text(activity),
 			Withheld: withheldContent(activity),
 		}
 		if activity.Subject != nil {
@@ -395,12 +396,8 @@ func withheldContent(activity crmcontracts.Activity) bool {
 		*activity.ContentState == crmcontracts.ActivityContentStateWithheld
 }
 
-// stamp renders an optional instant in one fixed format, so two timestamps
-// compare as strings the way the instants they name compare — and so the
-// fingerprint does not churn on a formatting difference.
-func stamp(at *time.Time) string { return contactcontext.Stamp(at) }
-
-// stampAt is stamp for an instant that is always present.
+// stampAt renders an instant in one fixed format. Two stamps then compare as
+// strings as their instants do, and the fingerprint does not churn on format.
 func stampAt(at time.Time) string { return at.UTC().Format(time.RFC3339) }
 
 // Fingerprint keys the cache on everything that could change the text: the

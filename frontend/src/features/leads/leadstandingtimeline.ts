@@ -8,11 +8,16 @@ import type {
   TimelineGap,
 } from "../../design-system/standingtimeline";
 import {
+  type ActivityMoment,
+  activityDay,
+  activityDaysAway,
+  activityHasHappened,
+} from "../../format/activitywhen";
+import {
   formatDayMonth,
   formatDuration,
   formatNumber,
 } from "../../format/format";
-import { calendarDaysBetween } from "../../format/format.dates";
 import { leadIdentityName } from "../../format/leadname";
 import type { ReadingContext } from "./leadstandingparts";
 import { nextBookedMeeting } from "./leadstandingparts";
@@ -33,6 +38,7 @@ function newestExchange(
   activities: readonly Activity[],
   direction: "inbound" | "outbound",
   asOf: number,
+  record: string,
 ): Activity | undefined {
   return activities
     .filter(
@@ -41,7 +47,7 @@ function newestExchange(
         EXCHANGE_KINDS.has(row.kind) &&
         row.meeting_status !== "canceled" &&
         row.meeting_status !== "no_show" &&
-        Date.parse(row.occurred_at) <= asOf,
+        activityHasHappened(row, asOf, record),
     )
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))[0];
 }
@@ -61,8 +67,16 @@ export function leadTimeline(
   const asOf = Date.parse(ctx.asOf);
   const day = (at: string) => formatDayMonth(at, locale, zone);
   const name = leadIdentityName(lead) || t("lead.unnamed");
-  const theirs = newestExchange(activities, "inbound", asOf);
-  const ours = newestExchange(activities, "outbound", asOf);
+  const dayOf = (row: Activity) =>
+    activityDay(
+      row.occurred_at,
+      row.occurred_precision,
+      locale,
+      zone,
+      formatDayMonth,
+    );
+  const theirs = newestExchange(activities, "inbound", asOf, ctx.record);
+  const ours = newestExchange(activities, "outbound", asOf, ctx.record);
   const events: TimelineEvent[] = [
     {
       key: "received",
@@ -85,19 +99,19 @@ export function leadTimeline(
       at: theirs.occurred_at,
       title: t("standing.wrote", { name }),
       sub: theirsIsLast
-        ? t("lead.timeline.lastContact", { at: day(theirs.occurred_at) })
-        : day(theirs.occurred_at),
+        ? t("lead.timeline.lastContact", { at: dayOf(theirs) })
+        : dayOf(theirs),
       kind: theirsIsLast ? "last" : "done",
       activityIds: [theirs.id],
     });
   }
-  const meeting = nextBookedMeeting(activities, ctx.asOf);
+  const meeting = nextBookedMeeting(activities, ctx.asOf, ctx.record);
   if (meeting) {
     events.push({
       key: `meeting-${meeting.id}`,
       at: meeting.occurred_at,
       title: meeting.subject?.trim() || t("lead.figure.nextMeeting"),
-      sub: t("lead.timeline.booked", { at: day(meeting.occurred_at) }),
+      sub: t("lead.timeline.booked", { at: dayOf(meeting) }),
       kind: "ahead",
     });
   }
@@ -105,7 +119,13 @@ export function leadTimeline(
   return {
     events,
     gap:
-      newest && silence(lead, newest.occurred_at, Boolean(theirsIsLast), ctx),
+      newest &&
+      silence(
+        lead,
+        { at: newest.occurred_at, precision: newest.occurred_precision },
+        Boolean(theirsIsLast),
+        ctx,
+      ),
   };
 }
 
@@ -140,20 +160,23 @@ function firstResponseEvent(
 // no silence worth drawing.
 function silence(
   lead: Lead,
-  from: string,
+  from: ActivityMoment,
   yourMove: boolean,
   ctx: ReadingContext,
 ): TimelineGap | undefined {
-  const days = calendarDaysBetween(
-    new Date(from),
-    new Date(ctx.asOf),
+  const asOf = Date.parse(ctx.asOf);
+  const days = -activityDaysAway(
+    from.at,
+    from.precision,
+    asOf,
     ctx.zone,
+    ctx.record,
   );
   if (lead.archived_at || days < 1) {
     return undefined;
   }
   return {
-    from,
+    from: from.at,
     title: ctx.t("contact.strip.days", {
       count: formatNumber(days, ctx.locale),
     }),

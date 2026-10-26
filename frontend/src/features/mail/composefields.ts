@@ -11,7 +11,7 @@ import type {
   DraftUnavailable,
   Grounding,
 } from "./composedraftcall";
-import type { SavedDraftFields } from "./composesaveddraft";
+import type { SavedDraftFields } from "./composesaveddraftcalls";
 import type { EditSeed } from "./schedulededit";
 
 type DraftReason = components["schemas"]["AccountDraftReason"];

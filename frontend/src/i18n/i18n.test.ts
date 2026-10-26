@@ -30,6 +30,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "deal.committee.seatSub",
   "lead.card.askedQuote",
   "signatureTemplate.placeholder",
+  "agent.fact.sourceOnProvider",
   // The promiser and stored summary are values separated by punctuation.
   "magic.action.approval_commitment_task_named",
   "magic.action.approval_commitment_task_summary",
@@ -231,7 +232,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "co.brief.cite.lead",
   // The borrowed noun in the singular, which English and Vietnamese spell alike;
   // the plural arms differ because English pluralises.
-  "today.scan.readDeals_one",
   "analytics.forecastDeals_one",
   "filters.library.records.deal_one",
   "filters.library.records.lead_one",

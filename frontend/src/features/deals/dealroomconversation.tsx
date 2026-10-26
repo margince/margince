@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Button } from "../../design-system/atoms";
+import { Badge, Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { QueryStates } from "../../design-system/querystates";
 import { useT } from "../../i18n";
@@ -137,6 +137,13 @@ export function DealRoomConversation({
     filename: doc.filename,
     meta: doc.filename && doc.filename !== doc.title ? doc.filename : "",
     byteSize: doc.byte_size,
+    lapsed: !doc.reaches_buyer,
+    status: doc.reaches_buyer ? undefined : (
+      <>
+        <Badge tone="warning">{t("room.docs.lapsed")}</Badge>
+        <p className="t-caption">{t("room.docs.lapsedNote")}</p>
+      </>
+    ),
     actions: <RemoveButton room={room} doc={doc} refusal={refusal} />,
   }));
   return (

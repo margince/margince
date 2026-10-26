@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
@@ -123,6 +124,14 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 // timing reads only those, here and in the reporting catalog.
 const NonImportedLeadSQL = "NOT starts_with(COALESCE(l.source_system, ''), '" + provenance.ReservedSourceSystemPrefix + "')"
 
+// leadArrivedInWeekSQL is the week's lead cohort under alias l, with the
+// window bound at positions 1 and 2. A lead is in it when it arrived in the
+// window, is not archived and no import wrote it. Both the weekly counts and
+// the frozen scorecard read it, so they describe the same leads.
+const leadArrivedInWeekSQL = `COALESCE(l.routed_at, l.created_at) >= $%[1]d
+		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d
+		      AND l.archived_at IS NULL AND ` + NonImportedLeadSQL
+
 // Both the weekly counts and the funnel scorecard use the arrival cohort and
 // the same closing instant. A missing breach stamp does not prove an SLA target.
 const (
@@ -155,22 +164,20 @@ func countWeekLeads(
 		return 0, 0, 0, err
 	}
 	scope = orUnbounded(scope)
-	// One window expression, three counts over it.
-	const arrived = `COALESCE(l.routed_at, l.created_at) >= $%[1]d
-		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d AND ` + NonImportedLeadSQL
+	// One cohort, three counts over it.
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT
 		  (SELECT count(*) FROM lead l
-		    WHERE l.owner_id = $%[3]d AND l.archived_at IS NULL
-		      AND `+arrived+` AND (%[4]s)),
+		    WHERE l.owner_id = $%[3]d
+		      AND `+leadArrivedInWeekSQL+` AND (%[4]s)),
 		  (SELECT count(*) FROM lead l
-		    WHERE l.owner_id = $%[3]d AND l.archived_at IS NULL
-		      AND `+arrived+`
+		    WHERE l.owner_id = $%[3]d
+		      AND `+leadArrivedInWeekSQL+`
 		      AND `+responseRecordedInWeekSQL+`
 		      AND (%[4]s)),
 		  (SELECT count(*) FROM lead l
-		    WHERE l.owner_id = $%[3]d AND l.archived_at IS NULL
-		      AND `+arrived+`
+		    WHERE l.owner_id = $%[3]d
+		      AND `+leadArrivedInWeekSQL+`
 		      AND `+breachRecordedInWeekSQL+` AND (%[4]s))`,
 		startPos, endPos, userPos, scope), args...).
 		Scan(&routed, &answered, &breached)
@@ -218,6 +225,14 @@ func meetingIsTheirsSQL(seat string) string {
 	return storekit.MeetingResponsibilitySQL("m", seat)
 }
 
+// NextStepTaskSQL is "task is a next step recorded from meeting": a live task
+// made from it once the meeting began (occurredday.StartSQL). Each caller adds
+// its own upper bound and scope.
+func NextStepTaskSQL(task, meeting string) string {
+	return task + ".source_activity_id = " + meeting + ".id AND " + task + ".kind = 'task' AND " +
+		task + ".archived_at IS NULL AND " + task + ".created_at >= " + occurredday.StartSQL(meeting)
+}
+
 func countWeekMeetings(
 	ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.Time,
 ) (held, withNextStep int, err error) {
@@ -240,7 +255,7 @@ func countWeekMeetings(
 	heldByRep := `m.kind = 'meeting' AND m.archived_at IS NULL
 		      AND (m.meeting_status IS NULL OR m.meeting_status = 'held')
 		      AND ` + meetingIsTheirsSQL("$%[3]d") + `
-		      AND m.occurred_at >= $%[1]d AND m.occurred_at < $%[2]d
+		      AND ` + occurredday.WithinSQL("m", "$%[1]d", "$%[2]d") + `
 		      AND (%[4]s)`
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT
@@ -248,11 +263,9 @@ func countWeekMeetings(
 		  (SELECT count(*) FROM activity m WHERE `+heldByRep+`
 		      AND EXISTS (
 		        SELECT 1 FROM activity task
-		         WHERE task.source_activity_id = m.id AND task.kind = 'task'
-		           AND task.archived_at IS NULL
-		           AND task.created_at >= m.occurred_at
+		         WHERE %[6]s
 		           AND task.created_at < $%[2]d AND (%[5]s)))`,
-		startPos, endPos, hostPos, scope, taskScope), args...).
+		startPos, endPos, hostPos, scope, taskScope, NextStepTaskSQL("task", "m")), args...).
 		Scan(&held, &withNextStep)
 	if err != nil {
 		return 0, 0, fmt.Errorf("weekly: counting the week's meetings: %w", err)

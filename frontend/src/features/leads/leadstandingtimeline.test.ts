@@ -15,6 +15,7 @@ const ctx: ReadingContext = {
   t,
   locale: "en",
   zone: UTC_ZONE,
+  record: UTC_ZONE,
   asOf: "2026-08-13T10:00:00Z",
 };
 
@@ -32,6 +33,7 @@ const lead: Lead = {
 
 function row(extra: Partial<Activity>): Activity {
   return {
+    occurred_precision: "instant",
     offers_email: false,
     id: "a1",
     kind: "email",

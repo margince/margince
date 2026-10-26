@@ -7,6 +7,7 @@ import type { components } from "../../api/schema";
 import { activityTimeline } from "../../design-system/activitytimeline";
 import type { NameOf } from "../../design-system/participants";
 import { groupChronology } from "../../design-system/timelinegroups";
+import type { OccurredPrecision } from "../../format/activitywhen";
 import type { Locale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import type { RelinkKind } from "./compose";
@@ -161,20 +162,27 @@ export function useRecentConversations(
   // draws them.
   const conversations = groupChronology(entries)
     .filter((group) => group.kind !== "bulk")
-    .map((group) => ({
+    .flatMap((group): Conversation[] => {
       // The newest member: continuing a conversation means answering its last
       // message, which is the same activity a Reply on the History tab names.
-      anchorId: group.id,
-      subject: group.entries[0]?.subject ?? group.entries[0]?.title ?? "",
-      counterparts: group.entries[0]?.counterparts,
-      atIso: group.entries[0]?.atIso ?? "",
-      count: group.entries.length,
-      partial: group.partial,
-      summary: group.entries[0]?.emailSummary,
-      // Every message the run holds, so a reply to an older one still finds
-      // the conversation it belongs to.
-      memberIds: group.entries.map((entry) => entry.id),
-    }));
+      const [newest] = group.entries;
+      if (newest === undefined) return [];
+      return [
+        {
+          anchorId: group.id,
+          subject: newest.subject ?? newest.title,
+          counterparts: newest.counterparts,
+          atIso: newest.atIso,
+          atPrecision: newest.atPrecision,
+          count: group.entries.length,
+          partial: group.partial,
+          summary: newest.emailSummary,
+          // Every message the run holds, so a reply to an older one still
+          // finds the conversation it belongs to.
+          memberIds: group.entries.map((entry) => entry.id),
+        },
+      ];
+    });
   // A failed read is reported as one rather than as a record with no history:
   // folded into an empty list it would send the reader to a fresh mail with
   // nothing said, which is the surprise the offer exists to prevent.
@@ -201,6 +209,7 @@ export type Conversation = {
   subject: string;
   counterparts?: string;
   atIso: string;
+  atPrecision: OccurredPrecision;
   count: number;
   partial: boolean;
   summary?: EmailSummary;

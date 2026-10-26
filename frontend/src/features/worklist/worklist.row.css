@@ -186,9 +186,16 @@
   margin: 0;
 }
 /* A name long enough to wrap reads from the row's start edge, not centred as a
-   verb's label is. */
-.worklist-row-title > .btn-valuelabel {
+   verb's label is, whether it sits in the title or in the title's heading. */
+.worklist-row-title > .btn-valuelabel,
+.worklist-row-title > .heading > .btn-valuelabel {
+  justify-content: flex-start;
   text-align: start;
+}
+/* A flex item's floor is its content's width, which would hold a long
+   headline wider than the card. */
+.worklist-row-title > .heading {
+  min-width: 0;
 }
 
 .worklist-row-detail,

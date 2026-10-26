@@ -3,7 +3,10 @@
 
 package compose
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestCommitmentMeaningKeepsNonActionsOutOfWork(t *testing.T) {
 	for _, state := range commitmentMeaningStates {
@@ -69,5 +72,32 @@ func TestCommitmentMeaningRefusesMissingOrContradictoryState(t *testing.T) {
 	var absent *commitmentMeaning
 	if got := absent.withheldOutcome(); got != "semantic_unassessed" {
 		t.Fatalf("missing meaning = %s", got)
+	}
+}
+
+func TestCommitmentMeaningReadsLooseTimingAsNoDeadline(t *testing.T) {
+	const source = "I will send you the edited recording once it is ready."
+	for _, tc := range []struct {
+		name, reply, quote string
+	}{
+		{"loose timing is dropped", `{"state":"open","condition":"","deadline_precision":"none","deadline_quote":"once it is ready"}`, ""},
+		{"a range keeps its words", `{"state":"open","condition":"","deadline_precision":"range","deadline_quote":"next week"}`, "next week"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var event extractedEvent
+			if err := json.Unmarshal([]byte(`{"kind":"commitment_made","commitment":`+tc.reply+`}`), &event); err != nil {
+				t.Fatal(err)
+			}
+			if event.Meaning.DeadlineQuote != tc.quote {
+				t.Fatalf("deadline quote = %q, want %q", event.Meaning.DeadlineQuote, tc.quote)
+			}
+		})
+	}
+	var event extractedEvent
+	if err := json.Unmarshal([]byte(`{"commitment":{"state":"open","condition":"","deadline_precision":"none","deadline_quote":"once it is ready"}}`), &event); err != nil {
+		t.Fatal(err)
+	}
+	if reason := validateCommitmentMeaning(event.Meaning, "", source); reason != "" {
+		t.Fatalf("a promise with loose timing was refused: %s", reason)
 	}
 }

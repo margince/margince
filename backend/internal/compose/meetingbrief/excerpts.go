@@ -155,7 +155,7 @@ func excerptTargets(moments []ArcMoment) []string {
 func threadsNewestFirst(threads []thread) []thread {
 	ordered := slices.Clone(threads)
 	sort.SliceStable(ordered, func(i, j int) bool {
-		return ordered[i].Last.After(ordered[j].Last)
+		return ordered[i].Last.At.After(ordered[j].Last.At)
 	})
 	return ordered
 }

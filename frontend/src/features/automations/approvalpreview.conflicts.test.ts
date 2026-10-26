@@ -86,6 +86,7 @@ it("keeps source date and scope visible while an active agreement blocks termina
       lifecycle_evidence: {
         scope: "workstream",
         occurred_at: "2026-07-31T12:00:00Z",
+        occurred_precision: "instant",
         workstream: "Atlas pilot",
       },
       conflicts: [
@@ -98,7 +99,8 @@ it("keeps source date and scope visible while an active agreement blocks termina
     },
     (key) => key,
     "en",
-    () => "31 July 2026",
+    undefined,
+    "UTC",
   );
   expect(rows).toEqual(
     expect.arrayContaining([
@@ -106,7 +108,10 @@ it("keeps source date and scope visible while an active agreement blocks termina
         field: "lifecycle_scope",
         value: "approval.preview.scopeWorkstream",
       }),
-      expect.objectContaining({ field: "source_date", value: "31 July 2026" }),
+      expect.objectContaining({
+        field: "source_date",
+        value: expect.stringContaining("31"),
+      }),
       expect.objectContaining({ field: "workstream", value: "Atlas pilot" }),
       expect.objectContaining({
         field: "preview_conflict_0",
@@ -115,4 +120,42 @@ it("keeps source date and scope visible while an active agreement blocks termina
     ]),
   );
   expect(rows.some((row) => row.field === "owner_id")).toBe(false);
+});
+
+// An instant source is dated on the record's clock, so it does not follow the
+// reader west of it. A `day` source keeps its own date, though in Auckland its
+// stored noon is the next morning.
+it("dates the lifecycle source on the record's clock", () => {
+  const sourceDate = (
+    occurred_at: string,
+    occurred_precision: "instant" | "day",
+    zone: string,
+  ) =>
+    commercialPreviewDisplay(
+      {
+        version: 1,
+        changes: [],
+        reviewer_reason: "record_authority",
+        state: "ready",
+        lifecycle_evidence: {
+          scope: "company",
+          occurred_at,
+          occurred_precision,
+        },
+      },
+      (key) => key,
+      "en",
+      undefined,
+      zone,
+    ).find((row) => row.field === "source_date")?.value;
+  const instant = sourceDate(
+    "2026-07-31T05:00:00Z",
+    "instant",
+    "Asia/Ho_Chi_Minh",
+  );
+  expect(instant).toContain("31");
+  expect(instant).not.toContain("30");
+  const day = sourceDate("2026-07-31T12:00:00Z", "day", "Pacific/Auckland");
+  expect(day).toContain("31");
+  expect(day).not.toContain("Aug");
 });

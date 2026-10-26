@@ -55,6 +55,8 @@ type CreateProjectInput struct {
 	// SourceSystem names the system an import took this project from; nil
 	// for one created here, which is what makes it unattributable.
 	SourceSystem *string
+	// SourceID is this project's id in SourceSystem; the pair is unique.
+	SourceID *string
 	// Author is who wrote it in the system it came from; zero when unknown.
 	Author storekit.SourceAuthorInput
 	// CustomFields carries the request body's cf_* keys. A key no active catalog

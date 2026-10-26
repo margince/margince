@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -63,10 +64,12 @@ func (w leadFirstResponse) Apply(ctx context.Context, ev workflow.Event, eff wor
 	}
 	applied := false
 	for _, t := range touches {
-		if !isFirstResponseActivity(t) {
+		// A day touch dated today is not yet an answer. The SLA scan stamps it
+		// once its date ends (stampDayAnswers).
+		if !isFirstResponseActivity(t) || t.respondedAt.After(leadSLAClock()) {
 			continue
 		}
-		set, err := w.store.RecordLeadFirstResponse(ctx, t.lead, t.occurredAt)
+		set, err := w.store.RecordLeadFirstResponse(ctx, t.lead, t.respondedAt)
 		if err != nil {
 			return workflow.RunResult{}, fmt.Errorf("record first response on lead %s: %w", t.lead, err)
 		}
@@ -149,7 +152,7 @@ func ladderStepFor(t leadResponseTouch) (LeadStatus, bool) {
 	switch {
 	case t.direction == "inbound", t.kind == "meeting" && (t.meetingStatus == "booked" || t.meetingStatus == "held"):
 		return LeadStatusEngaged, true
-	case t.direction == "outbound", humanLoggedNote(t):
+	case t.direction == touchOutbound, humanLoggedNote(t):
 		return LeadStatusContacted, true
 	}
 	return "", false
@@ -159,10 +162,13 @@ func ladderStepFor(t leadResponseTouch) (LeadStatus, bool) {
 // decide whether the activity was a genuine response, and what the ladder
 // needs to decide which step it earns.
 type leadResponseTouch struct {
-	lead          ids.LeadID
-	direction     string
-	capturedBy    string
-	occurredAt    time.Time
+	lead       ids.LeadID
+	direction  string
+	capturedBy string
+	occurredAt time.Time
+	// respondedAt is when the touch counts as an answer (occurredday.ProvenSQL):
+	// a day touch once its whole date has ended.
+	respondedAt   time.Time
 	hadInbound    bool
 	kind          string
 	meetingStatus string
@@ -174,13 +180,42 @@ type leadResponseTouch struct {
 // provenance instead.
 const activitySourceManual = "manual"
 
+// touchOutbound and touchNote are the direction and kind the first-response
+// rule compares, so mayAnswerSQL renders the literals the Go rule reads.
+const (
+	touchOutbound = "outbound"
+	touchNote     = "note"
+)
+
+// humanCapturedPrefix is the captured_by namespace of a human author.
+var humanCapturedPrefix = string(principal.PrincipalHuman) + ":"
+
+// mayAnswerSQL is isFirstResponseActivity for the activity under alias, linked
+// to lead. It admits a human's outbound, any outbound after the lead wrote in,
+// or a note a rep typed. TestMayAnswerSQLAgreesWithTheGoRule holds the two together.
+func mayAnswerSQL(lead, alias string) string {
+	human := fmt.Sprintf(`%s.captured_by LIKE '%s%%'`, alias, humanCapturedPrefix)
+	return fmt.Sprintf(`((%[1]s.direction = '%[2]s' AND (%[5]s OR %[6]s))
+		OR (%[1]s.kind = '%[3]s' AND %[1]s.source = '%[4]s' AND %[5]s))`,
+		alias, touchOutbound, touchNote, activitySourceManual, human, inboundBeforeSQL(lead, alias))
+}
+
+// inboundBeforeSQL is a touch's hadInbound: the lead had written in before the
+// activity under alias.
+func inboundBeforeSQL(lead, alias string) string {
+	return fmt.Sprintf(`EXISTS (SELECT 1 FROM activity_link li JOIN activity ai ON ai.id = li.activity_id
+		WHERE li.lead_id = %[1]s AND ai.direction = 'inbound' AND ai.archived_at IS NULL AND %[3]s
+		  AND ai.occurred_at < %[2]s.occurred_at -- occurred_at raw: an inbound before the touch, an ordering of rows
+		)`, lead, alias, auth.ActivityAvailableClause("ai"))
+}
+
 // humanLoggedNote is the ONE spelling of "a rep typed this note into the
 // composer" — the ladder's contact arm and the first-response rule
 // (isFirstResponseActivity) both read it, so they cannot drift apart.
 //
 // Held by: TestEachRuleBearingTouchFieldHasOneReader (backend/internal/modules/contacts/responsetouch_test.go)
 func humanLoggedNote(t leadResponseTouch) bool {
-	return t.kind == "note" && t.source == activitySourceManual && humanCaptured(t)
+	return t.kind == touchNote && t.source == activitySourceManual && humanCaptured(t)
 }
 
 // humanCaptured reads the captured_by grammar's human namespace off a touch.
@@ -192,7 +227,7 @@ func humanLoggedNote(t leadResponseTouch) bool {
 // one of the two, and the ladder and the first-response clock would then
 // disagree about whether a contact was involved.
 func humanCaptured(t leadResponseTouch) bool {
-	return strings.HasPrefix(t.capturedBy, string(principal.PrincipalHuman)+":")
+	return strings.HasPrefix(t.capturedBy, humanCapturedPrefix)
 }
 
 // leadResponseTouches answers which leads the activity is linked to, with
@@ -202,12 +237,8 @@ func (s *Store) leadResponseTouches(ctx context.Context, activityID ids.Activity
 	var out []leadResponseTouch
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT l.lead_id, coalesce(a.direction, ''), a.captured_by, a.occurred_at,
-			       EXISTS (SELECT 1 FROM activity_link li JOIN activity ai ON ai.id = li.activity_id
-			               WHERE li.lead_id = l.lead_id AND ai.direction = 'inbound'
-			                 AND ai.archived_at IS NULL AND `+auth.ActivityAvailableClause("ai")+`
-			                 AND ai.occurred_at < a.occurred_at),
-			       a.kind, coalesce(a.meeting_status, ''), a.source
+			SELECT l.lead_id, coalesce(a.direction, ''), a.captured_by, a.occurred_at, `+inboundBeforeSQL("l.lead_id", "a")+`,
+			       a.kind, coalesce(a.meeting_status, ''), a.source, `+occurredday.ProvenSQL("a")+`
 			FROM activity_link l JOIN activity a ON a.id = l.activity_id
 			WHERE l.activity_id = $1 AND l.lead_id IS NOT NULL AND a.archived_at IS NULL
 			  AND `+auth.ActivityAvailableClause("a"), activityID)
@@ -217,7 +248,7 @@ func (s *Store) leadResponseTouches(ctx context.Context, activityID ids.Activity
 		defer rows.Close()
 		for rows.Next() {
 			var t leadResponseTouch
-			if err := rows.Scan(&t.lead, &t.direction, &t.capturedBy, &t.occurredAt, &t.hadInbound, &t.kind, &t.meetingStatus, &t.source); err != nil {
+			if err := rows.Scan(&t.lead, &t.direction, &t.capturedBy, &t.occurredAt, &t.hadInbound, &t.kind, &t.meetingStatus, &t.source, &t.respondedAt); err != nil {
 				return err
 			}
 			out = append(out, t)

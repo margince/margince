@@ -95,24 +95,6 @@ type Captured = { key: string; body: unknown };
 // is the day the reader reads", which has to hold on every laptop rather than
 // only on one that runs UTC.
 const PICKED_DAY = "2026-07-10";
-// Two readers, NAMED — never this machine's own zone.
-//
-// Every instant these tests assert on is anchored to the RECORD zone, so
-// reading one back through `Intl.DateTimeFormat().resolvedOptions().timeZone`
-// asks what the runner's clock says and passes only where the runner happens to
-// sit. This file passed in Asia/Ho_Chi_Minh and failed in UTC, Berlin, Tokyo,
-// Auckland, São Paulo and Los Angeles — one zone green out of seven, and the
-// green one is where it was written.
-//
-// FAR_WEST_READER is exactly twelve hours from the record zone, which is the
-// span `middayInstant` promises a backdated day survives across. It is the edge
-// of that promise rather than a comfortable middle, and Bogotá keeps −05 all
-// year so no DST switch moves it.
-const FAR_WEST_READER = "America/Bogota";
-// And the far east. +14 is the largest offset any zone has, seven hours from
-// the record zone, so the eastern side of the promise is not close to its edge
-// — asserted anyway, because the two directions fail separately.
-const FAR_EAST_READER = "Pacific/Kiritimati";
 
 // An instant off a captured body, narrowed so a missing one cannot pass as `undefined`.
 function postedInstant(body: unknown, key: "due_at" | "occurred_at"): string {
@@ -333,7 +315,7 @@ describe("log activity from a 360", () => {
     expect(dayBox("Due date").value).toBe(shown(PICKED_DAY));
   });
 
-  it("posts a backdated note's occurred_at inside the picked day", async () => {
+  it("posts a backdated note as its picked date alone", async () => {
     const captured: Captured[] = [];
     stubApi({ "POST /activities": createdActivity }, captured);
     render(<LogActivity entityType="company" entityId="o1" />);
@@ -348,14 +330,10 @@ describe("log activity from a 360", () => {
     );
     const post = captured.find((entry) => entry.key === "POST /activities");
     if (!post) throw new Error("expected a POST /activities to be captured");
-    // The instant lands on the day the writer picked in the record zone, where
-    // the record pages render timelines — and still on it for a reader at
-    // either edge of the twelve hours `middayInstant` promises. A note never
-    // carries a due date, backdated or not.
-    const occurred = new Date(postedInstant(post.body, "occurred_at"));
-    expect(calendarDay(occurred, INSTALLATION_ZONE)).toBe(PICKED_DAY);
-    expect(calendarDay(occurred, FAR_WEST_READER)).toBe(PICKED_DAY);
-    expect(calendarDay(occurred, FAR_EAST_READER)).toBe(PICKED_DAY);
+    // A backdated note names its date and no time. The server reads the date
+    // in the value's own offset, so UTC noon names the picked day.
+    expect(post.body).toHaveProperty("occurred_at", `${PICKED_DAY}T12:00:00Z`);
+    expect(post.body).toHaveProperty("occurred_precision", "day");
     expect(post.body).not.toHaveProperty("due_at");
   });
 
@@ -398,6 +376,7 @@ describe("log activity from a 360", () => {
     const occurred = new Date(postedInstant(post.body, "occurred_at"));
     // The day the composer offered IS the day the timeline files it under.
     expect(calendarDay(occurred, INSTALLATION_ZONE)).toBe("2026-08-22");
+    expect(post.body).toHaveProperty("occurred_precision", "instant");
   });
 
   // A meeting and a call are WITH A CONTACT, and the server refuses either one

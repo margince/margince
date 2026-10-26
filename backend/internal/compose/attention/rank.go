@@ -21,8 +21,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // The hard priority bands. A level is a claim about WHAT KIND of work an item
@@ -249,6 +249,8 @@ func renderInOrder(rows []ranked, reader ids.UUID) []crmcontracts.WorklistItem {
 			item.Dispositions = &offered
 		}
 		item.PrimaryAction = primaryActionFor(item)
+		// A row built without a time states one anyway, since the wire requires it.
+		item.OccurredPrecision = precisionOf(&item.OccurredPrecision)
 		// The heading this row sits under. Stamped after the sort, so it
 		// describes a row's place on the page it is actually on.
 		band := crmcontracts.WorklistItemBand(bandOfRow(row))
@@ -406,11 +408,11 @@ func daysSince(from, asOf time.Time) int {
 	return days
 }
 
-// calendarDaysSince is how many calendar days in loc `from` lies before
-// `asOf`, so a same-day event is zero and one across local midnight is one.
+// calendarDaysSince counts calendar days in loc from the activity's date to
+// `asOf`. A same-day event is zero, and one across local midnight is one.
 // Clamped at zero for the same clock-skew reason as daysSince.
-func calendarDaysSince(from, asOf time.Time, loc *time.Location) int {
-	return max(elapsed.Days(from, asOf, loc), 0)
+func calendarDaysSince(from occurredday.Moment, asOf time.Time, loc *time.Location) int {
+	return max(occurredday.DaysSince(from, asOf, loc), 0)
 }
 
 func daysValue(days int) *crmcontracts.WorklistValue {

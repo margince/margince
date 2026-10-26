@@ -85,7 +85,7 @@ func weeklyConfirmedFollowup(ctx context.Context, tx pgx.Tx, facts []reporting.F
 	if visible == "" {
 		visible = sqlUnnarrowed
 	}
-	query := "SELECT count(DISTINCT task.source_activity_id) FROM activity task JOIN activity meeting ON meeting.id=task.source_activity_id WHERE task.source_activity_id=ANY(" + b.add(meetingIDs) + "::uuid[]) AND task.kind='task' AND task.archived_at IS NULL AND task.created_at>=meeting.occurred_at AND task.created_at<" + b.add(end) + " AND " + visible
+	query := "SELECT count(DISTINCT task.source_activity_id) FROM activity task JOIN activity meeting ON meeting.id=task.source_activity_id WHERE task.source_activity_id=ANY(" + b.add(meetingIDs) + "::uuid[]) AND " + weekly.NextStepTaskSQL("task", "meeting") + " AND task.created_at<" + b.add(end) + " AND " + visible
 	var count int
 	err = tx.QueryRow(ctx, query, b.values...).Scan(&count)
 	return count, err

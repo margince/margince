@@ -1,6 +1,6 @@
 import { Lock, Send } from "lucide-react";
 import { useState } from "react";
-import { formatDate, formatNumber, formatTimeOfDay } from "../format/format";
+import { formatNumber } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import { Avatar, Button } from "./atoms";
 import { attachmentCount, EmailFiles, EmailWords } from "./emailentry";
@@ -14,7 +14,9 @@ import {
   automaticLabel,
   CommitmentReviewFlag,
   directionClass,
+  entryDay,
   entryMove,
+  entryTimeOfDay,
   groupCountLabel,
   MoveFlag,
   TIMELINE_ICON,
@@ -238,7 +240,7 @@ function ThreadMessage({
   const lead = messageLead(entry, t);
   const visibility = messageVisibilityState(entry);
   const onOpen = threadMessageOpener(entry);
-  const day = formatDate(entry.atIso, locale, zone);
+  const day = entryDay(entry, locale, zone);
   const content = (
     <>
       <MessageMark entry={entry} />
@@ -260,8 +262,9 @@ function ThreadMessage({
           shows: a one-message thread printed its date twice a hand apart, and
           an older member from another day still needs its own. */}
       <span className="tl-msg-when t-num">
-        {day !== cardDay && `${day} `}
-        {formatTimeOfDay(entry.atIso, locale, zone)}
+        {[day !== cardDay && day, entryTimeOfDay(entry, locale, zone)]
+          .filter(Boolean)
+          .join(" ")}
       </span>
     </>
   );
@@ -333,7 +336,7 @@ export function ThreadRow({
       {/* The same three columns a single row sits on (date, rail, what
           happened), because a conversation is a row of the chronology. Its
           mark is the kind's own icon: a dot would say it was one message. */}
-      <TimelineWhen atIso={newest.atIso} zone={zone} />
+      <TimelineWhen entry={newest} zone={zone} />
       <span className="tl-rail" aria-hidden="true">
         <span className="tl-icon">
           <Icon aria-hidden />
@@ -342,9 +345,15 @@ export function ThreadRow({
       <div className="tl-body">
         <div className="tl-thread">
           <span className="tl-head">
-            <Eyebrow>{t("timeline.group.kind")}</Eyebrow>
-            <span>{groupCountLabel(group, locale)}</span>
-            {participants && <span>{participants}</span>}
+            <Eyebrow className="tl-head-part">
+              {t("timeline.group.kind")}
+            </Eyebrow>
+            <span className="tl-head-part">
+              {groupCountLabel(group, locale)}
+            </span>
+            {participants && (
+              <span className="tl-head-part">{participants}</span>
+            )}
             {/* Whose move the conversation waits on, read off its newest
                 message. It goes on the card that stands for it, never on the
                 members inside. */}
@@ -378,7 +387,7 @@ export function ThreadRow({
                 <ThreadMessage
                   entry={entry}
                   zone={zone}
-                  cardDay={formatDate(newest.atIso, locale, zone)}
+                  cardDay={entryDay(newest, locale, zone)}
                 />
               </li>
             ))}

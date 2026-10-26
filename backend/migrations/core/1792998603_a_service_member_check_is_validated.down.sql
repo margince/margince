@@ -1,0 +1,2 @@
+-- A validated CHECK cannot be marked unvalidated again. The previous
+-- migration's down drops the constraint, so this down migrates nothing back.

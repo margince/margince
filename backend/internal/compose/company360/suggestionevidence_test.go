@@ -4,6 +4,7 @@
 package company360
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -125,5 +126,23 @@ func TestTheCitationsWordsNeverReachTheFingerprint(t *testing.T) {
 	a, b := englishSuggestions.stalledDealSuggestions([]stalledDeal{unnamed}), englishSuggestions.stalledDealSuggestions([]stalledDeal{renamed})
 	if a[0].Fingerprint != b[0].Fingerprint {
 		t.Errorf("the stalled-deal fingerprint moved with the name:\n  %s\n  %s", a[0].Fingerprint, b[0].Fingerprint)
+	}
+}
+
+// A day message counts its wait from the date it names. Its stored noon UTC is
+// already the next morning in Kiritimati, a day short.
+func TestAQuietDayMessageCountsFromItsOwnDate(t *testing.T) {
+	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 8, 17, 9, 0, 0, 0, kiritimati)
+	newest := lastMessage{
+		ID: ids.NewV7(), Direction: "outbound", DateOnly: true,
+		At: time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC),
+	}
+	got := englishSuggestions.staleThread(testCompanyID(t), now, kiritimati, newest)
+	if got == nil || got.Title == nil || !strings.Contains(*got.Title, "14") {
+		t.Fatalf("a day message dated 14 days ago reads %+v, want a 14-day wait", got)
 	}
 }

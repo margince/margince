@@ -47,6 +47,26 @@ func TestAMailOriginNamesOnlyAMailTheCallerMayRead(t *testing.T) {
 	}
 }
 
+// A mail logged by its day hands its precision on. Its file is then dated by
+// that day, not by the stored noon read on a clock.
+func TestAMailOriginCarriesTheMailsPrecision(t *testing.T) {
+	e := setupPromises(t)
+	day, moment := ids.NewV7(), ids.NewV7()
+	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, occurred_precision, source, captured_by)
+		VALUES ($1, 'email', 'inbound', 'Posted order', '2026-08-21T12:00:00Z', 'day', 'seed', 'system'),
+		       ($2, 'email', 'inbound', 'Signed order', now(), 'instant', 'seed', 'system')`, day, moment)
+
+	origins := e.mailOrigins(e.reading("activity"), t, day, moment)
+	for mail, want := range map[ids.UUID]crmcontracts.OccurredPrecision{
+		day:    crmcontracts.OccurredPrecisionOccurredPrecisionDay,
+		moment: crmcontracts.OccurredPrecisionOccurredPrecisionInstant,
+	} {
+		if got := origins[mail]; got == nil || got.OccurredPrecision != want {
+			t.Errorf("mail %s: origin is %+v, want precision %s", mail, got, want)
+		}
+	}
+}
+
 // A reader without contact read sees the sender the header states, and no
 // contact behind it. A file's origin and the email viewer agree.
 func TestASenderNamesNoContactToAReaderWithoutContactRead(t *testing.T) {

@@ -31,9 +31,6 @@
 # tree it describes.
 # wording it used to miss finds claims that were already here, and this file
 # written by somebody who has not audited the claims would be worse than an
-../desktop/launcher/console.go#func say
-../desktop/launcher/main.go#type stack
-../desktop/launcher/postgres.go#type cluster.connArgs
 cmd/api/resetruntime.go#func newResetLane
 cmd/worker/boot.go#func workerModelPathSpec
 gates/aiactivitycatalogparity_test.go#func producedKinds

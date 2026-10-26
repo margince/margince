@@ -168,6 +168,7 @@ describe("the hidden-backlog panel", () => {
             email_summary: {
               activity_id: id,
               occurred_at: "2026-09-01T08:00:00Z",
+              occurred_precision: "instant",
               version: 1,
               subject: "Monthly report",
               preview: "The figures for August are attached.",

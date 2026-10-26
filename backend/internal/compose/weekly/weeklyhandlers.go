@@ -157,6 +157,7 @@ func scorecardToWire(card Scorecard) *crmcontracts.WeeklyReviewScorecard {
 	if l := card.Lead; l != nil {
 		out.Lead = &crmcontracts.WeeklyScorecardLeadBlock{
 			Advanced: l.Advanced, Disqualified: l.Disqualified, Promoted: l.Promoted,
+			Arrived:          l.Arrived,
 			AnsweredInTarget: l.AnsweredInTarget, Breached: l.Breached,
 			MeetingsBooked: l.Booked, MeetingsHeld: l.Held, MeetingsNoShow: l.NoShow,
 			MeetingsPartialHistory: l.PartialHistory,

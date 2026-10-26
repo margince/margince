@@ -100,6 +100,7 @@ const guard: components["schemas"]["ContactConsentGuard"] = {
       channel: "email",
       verdict: "allowed",
       reason: "She wrote to you three days ago.",
+      reason_code: "qualifying_event",
     },
     {
       purpose_key: "phone_outreach",
@@ -107,6 +108,7 @@ const guard: components["schemas"]["ContactConsentGuard"] = {
       channel: "phone",
       verdict: "unknown",
       reason: "No consent recorded.",
+      reason_code: "no_consent",
     },
   ],
 };
@@ -151,6 +153,7 @@ const granted: View = {
   activities: {
     data: [
       {
+        occurred_precision: "instant",
         offers_email: false,
         id: "a-1",
         kind: "email",
@@ -181,6 +184,7 @@ const granted: View = {
   next_meeting: {
     activity_id: "a-2",
     starts_at: daysAgo(-4),
+    occurred_precision: "instant",
     subject: "Fleet retrofit walkthrough",
   },
 };
@@ -315,6 +319,7 @@ export const NoCorrespondencePurpose: Story = {
         channel: "email",
         verdict: "allowed",
         reason: "They opted in on 3 March.",
+        reason_code: "consent_confirmed",
       },
     ]),
 };

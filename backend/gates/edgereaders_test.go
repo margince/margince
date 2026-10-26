@@ -212,6 +212,7 @@ var deferredEdgeReads = gatekit.Waive(map[string]string{})
 // calleeGatedEdgeReads: a fragment whose every runner takes the edge gate by a
 // path the census cannot follow, such as a storekit.Field value.
 var calleeGatedEdgeReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/vcardarms.go:holdsLiveEmployment":                     "whether a contact already holds a live employment at a company, as one boolean that only ever skips a write. Its one caller is ensureEmployment, which goes on to CreateRelationshipTx and its relationship create gate. No edge column leaves it",
 	"internal/modules/collections/vocabstandardfields.go:contactEmployerLink":        "the contact list's employer filter leaf. It travels inside contactEmployerField, which is Withheld until bindEmployerScope asks auth.EdgeReadAdmitted and fills its scope with auth.EdgeReadScope",
 	"internal/modules/contacts/linkedinmatchfields.go:linkedInCurrentEmploymentJoin": "the current employment joined as `cur` for the LinkedIn review. Its one runner is suggestedMatches, which asks auth.Require(ctx, \"contact\", read); cur.id reaches a card only when linkedInOfferColumns' employerScope (auth.EdgeReadScope) admits that edge",
 })

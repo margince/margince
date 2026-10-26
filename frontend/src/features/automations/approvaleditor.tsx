@@ -39,6 +39,7 @@ import { ApprovalDecider, ApprovalTarget } from "./approvaltarget";
 import "./approvalrow.css";
 import { QueryGate } from "../../design-system/querystates";
 import { unwrap } from "../../lib/problem";
+import { useRecordZone } from "../../lib/recordzone";
 import "../../design-system/querystates.css";
 
 // The two slots an ApprovalRow hands to `DecisionCard`: the "view everything"
@@ -176,16 +177,18 @@ function ApprovalDetailBody({
   const t = useT();
   const change = (approval.proposed_change ?? {}) as Record<string, unknown>;
   const approvalNames = useApprovalNames([approval]);
+  const recordZone = useRecordZone();
   const display = resolveDisplay(
     approval.kind,
     change,
     t,
-    stagedDayFormatter(locale, zone),
+    stagedDayFormatter(locale, recordZone),
     approvalNames,
     approval.requested_decider_id,
     approval.assignee_inactive,
     approval.preview,
     locale,
+    recordZone,
   );
   const named = withoutRepeatedLead(display, approval.summary).filter(
     (entry) => entry.value !== null,

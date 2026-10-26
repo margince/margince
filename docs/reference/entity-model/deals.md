@@ -72,7 +72,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal
 
-43 columns · primary key `(id)` · referenced by 27 foreign keys
+44 columns · primary key `(id)` · referenced by 27 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -105,6 +105,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `project_id` | `uuid` |  | The body of work this deal belongs to. |
 | `source_author_id` | `uuid` |  | Points at `app_user.id`. |
 | `source_author_name` | `text` |  |  |
+| `source_id` | `text` |  | At most 128 characters. |
 | `stage_id` | `uuid` | yes | The deal's current stage; must belong to pipeline_id. |
 | `status` | `text`, default `'open'::text` | yes | One of `open`, `won`, `lost`. |
 | `wait_until` | `date` |  | 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag. |
@@ -132,7 +133,6 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `pipeline_id` | `pipeline` | the parent cannot be deleted while this row points at it |
 | `project_id` | `project` | deleting the parent keeps this row and clears the link |
 | `source_author_id` | `app_user` | deleting the parent keeps this row and clears the link |
-| `stage_id` | `stage` | the parent cannot be deleted while this row points at it |
 | `stage_id, pipeline_id` | `stage` | the parent cannot be deleted while this row points at it |
 
 **Rules**
@@ -153,6 +153,8 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_partner_attribution_pairing`: `CHECK (((partner_company_id IS NULL) = (partner_attribution IS NULL)))`
 - `deal_priority_check`: `CHECK (((priority IS NULL) OR (priority = ANY (ARRAY['low', 'medium', 'high']))))`
 - `deal_source_author_needs_a_source`: `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
+- `deal_source_id_length`: `CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128))))`
+- `deal_source_id_needs_a_source`: `CHECK (((source_id IS NULL) OR (source_system IS NOT NULL)))`
 - `deal_status_check`: `CHECK ((status = ANY (ARRAY['open', 'won', 'lost'])))`
 - `deal_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `deal_won_without_contract_detail`: `CHECK (((won_without_contract_reason IS DISTINCT FROM 'other') OR ((won_without_contract_detail IS NOT NULL) AND (btrim(won_without_contract_detail) <> ''))))`
@@ -178,6 +180,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `idx_deal_search`: `gin (search_tsv)`
 - `idx_deal_stage`: `btree (stage_id) WHERE (archived_at IS NULL)`
 - `idx_deal_stalled`: `btree (last_activity_at) WHERE ((status = 'open') AND (archived_at IS NULL))`
+- `uq_deal_source`: `unique, btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))`
 
 **Triggers**
 
@@ -840,7 +843,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## stage
 
-10 columns · primary key `(id)` · referenced by 10 foreign keys
+10 columns · primary key `(id)` · referenced by 9 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

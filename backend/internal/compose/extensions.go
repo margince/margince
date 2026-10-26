@@ -246,28 +246,7 @@ func validateExtensionSet(exts []extension.Extension) error {
 		if err := preflightSubjectRights(e, subjectRightsCodes); err != nil {
 			return err
 		}
-		if err := preflightDocuments(e); err != nil {
-			return err
-		}
-		if err := preflightTools(e); err != nil {
-			return err
-		}
-		if err := preflightSecrets(e); err != nil {
-			return err
-		}
-		if err := preflightJobs(e); err != nil {
-			return err
-		}
-		if err := preflightFailureClasses(e); err != nil {
-			return err
-		}
-		if err := preflightSubscriptions(e); err != nil {
-			return err
-		}
-		if err := preflightSystemReads(e); err != nil {
-			return err
-		}
-		if err := preflightIngress(e); err != nil {
+		if err := preflightDeclarations(e); err != nil {
 			return err
 		}
 		if err := preflightChannels(e, claimedProviders); err != nil {
@@ -283,6 +262,9 @@ func validateExtensionSet(exts []extension.Extension) error {
 			return err
 		}
 		if err := preflightSurfaces(e); err != nil {
+			return err
+		}
+		if err := preflightSettings(e); err != nil {
 			return err
 		}
 		if err := preflightOAuthApps(e, oauthApps); err != nil {

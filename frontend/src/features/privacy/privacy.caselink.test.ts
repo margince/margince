@@ -176,6 +176,7 @@ describe("the worklist row that names a case", () => {
   // test then asserts against a shape the wire never sends.
   function dsrRow(id: string): WorklistItem {
     return {
+      occurred_precision: "instant",
       id,
       source: "dsr",
       category: "system",

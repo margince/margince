@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useId, useRef, useState } from "react";
 
 import type { components } from "../api/schema";
+import type { ActivityWhenFormatter } from "../format/activitywhen";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { Badge, Modal } from "./atoms";
@@ -47,7 +48,7 @@ export function EmailDetail({
   open?: boolean;
   onClose: () => void;
   /** The caller owns the reader's timezone, so it owns the formatting. */
-  formatWhen: (iso: string) => string;
+  formatWhen: ActivityWhenFormatter;
   /**
    * Who reads this thread, and the control to change it, under the subject.
    *
@@ -154,7 +155,7 @@ function ThreadState({
     isError: boolean;
     refetch: () => unknown;
   }>;
-  formatWhen: (iso: string) => string;
+  formatWhen: ActivityWhenFormatter;
   renderRecords?: (presentation: EmailPresentation) => ReactNode;
   related?: () => ReactNode;
   notice?: string;

@@ -94,6 +94,21 @@ type Story = StoryObj<typeof QualifyDialog>;
  *  something to sell is the reason this lead reached this state. */
 export const OpensWithADeal: Story = { render: dialog({}) };
 
+/** Engaged by a meeting logged for its date alone: the reason names that
+ *  date, with no time. */
+export const EngagedByADayMeeting: Story = {
+  render: dialog({
+    lead: {
+      qualification_evidence: {
+        trigger: "meeting_held",
+        activity_id: "l-meeting-1",
+        occurred_at: "2026-08-22T12:00:00Z",
+        occurred_precision: "day",
+      },
+    },
+  }),
+};
+
 /** A lead nobody has engaged yet: the same dialog with the deal block
  *  unticked, so qualifying does not quietly open an opportunity. */
 export const ContactOnly: Story = {

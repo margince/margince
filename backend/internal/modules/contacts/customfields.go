@@ -66,6 +66,19 @@ func (s *Store) ActiveCompanyColumns(ctx context.Context) (CustomColumns, error)
 	return s.activeCustomColumns(ctx, "company", principal.ActionRead)
 }
 
+// CompanyColumnsFrom is ActiveCompanyColumns through a catalog the caller bound
+// to the transaction it already holds, so reading it takes no second connection.
+func CompanyColumnsFrom(ctx context.Context, catalog fieldcatalog.Reader) (CustomColumns, error) {
+	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
+		return CustomColumns{}, err
+	}
+	cols, err := catalog.ActiveColumns(ctx, companyEntity)
+	if err != nil {
+		return CustomColumns{}, err
+	}
+	return CustomColumns{cols: cols}, nil
+}
+
 // ActiveLeadColumns is ActiveContactColumns for FillEmptyLeadFieldsTx. It takes
 // lead:UPDATE rather than read, because the seam it feeds writes: the refusal
 // belongs before the catalog read, not after it.

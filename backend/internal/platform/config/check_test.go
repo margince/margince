@@ -78,6 +78,33 @@ func TestACheckOfABrokenConfigurationReturnsEveryFault(t *testing.T) {
 	}
 }
 
+// A setting only a sibling program reads is never parsed here. The check names
+// it, wherever it is set, instead of calling the whole file valid.
+func TestACheckNamesTheSettingsAnotherProgramReads(t *testing.T) {
+	reg, src := sources(t, fixture{
+		args:  []string{"--check-config"},
+		env:   []string{ns + "DSN=postgres://db/crm", ns + "JOB_DRAIN_WINDOW=later"},
+		files: map[string]string{"margince.yaml": "log:\n  level: warn\njob_drain_window: soon\n"},
+	}, level, dsn)
+	src.Known = config.Names{Keys: []string{"job_drain_window"}, Envs: []string{ns + "JOB_DRAIN_WINDOW"}}
+	var out strings.Builder
+	if err := config.Check(&out, reg, src); err != nil {
+		t.Fatalf("a sibling's setting failed this program's check: %v", err)
+	}
+	for _, want := range []string{
+		"config: not checked here, another program reads it: job_drain_window (base_file ",
+		"config: not checked here, another program reads it: " + ns + "JOB_DRAIN_WINDOW (env)",
+		"config: valid for this program; the 2 setting(s) another program reads need its own --check-config",
+	} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("the check output lacks %q:\n%s", want, out.String())
+		}
+	}
+	if strings.Contains(out.String(), "another program reads it: log.level") {
+		t.Errorf("the check named one of its own settings as another program's:\n%s", out.String())
+	}
+}
+
 // One misspelt parent is one fault naming the section it meant, beside the
 // suggestion a misspelt leaf gets.
 func TestAnUnknownYAMLKeyNamesTheKeyItLikelyMeant(t *testing.T) {
@@ -95,5 +122,40 @@ func TestAnUnknownYAMLKeyNamesTheKeyItLikelyMeant(t *testing.T) {
 	}
 	if strings.Contains(msg, "lgo.level") || strings.Contains(msg, "lgo.format") {
 		t.Errorf("a misspelt section was reported once per child:\n%s", msg)
+	}
+}
+
+// YAML forbids a key twice in one mapping, and the parser keeps the last. A
+// repeat is a fault naming both lines, in a setting section or a bootstrap one.
+func TestARepeatedYAMLKeyIsAFaultNamingBothLines(t *testing.T) {
+	reg, src := sources(t, fixture{
+		args: []string{"--check-config"},
+		env:  []string{ns + "DSN=postgres://db/crm"},
+		files: map[string]string{"margince.yaml": "log:\n  level: debug\n" +
+			"workspace:\n  name: Acme\n  name: Beta\n" +
+			"log:\n  level: info\n"},
+	}, level, dsn)
+	src.BootstrapRoots = map[string]bool{"workspace": true}
+	var out strings.Builder
+	err := config.Check(&out, reg, src)
+	if err == nil {
+		t.Fatalf("a file with repeated keys passed the check:\n%s", out.String())
+	}
+	for _, want := range []string{"log appears on lines 1 and 6; keep one", "workspace.name appears on lines 4 and 5; keep one"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the faults lack %q:\n%v", want, err)
+		}
+	}
+}
+
+func TestARefusalNamesItsProgramOnce(t *testing.T) {
+	for err, want := range map[error]string{
+		errors.New("api: log_level in margince.yaml: want one of debug, info"): "api: log_level in margince.yaml: want one of debug, info",
+		errors.New("log_level in margince.yaml: want one of debug, info"):      "api: log_level in margince.yaml: want one of debug, info",
+		errors.New("apiary: closed"):                                           "api: apiary: closed",
+	} {
+		if got := config.RoleAPI.Refusal(err); got != want {
+			t.Errorf("Refusal(%q) = %q, want %q", err, got, want)
+		}
 	}
 }

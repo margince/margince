@@ -71,7 +71,7 @@ func opportunityCompany(ctx context.Context, tx pgx.Tx, buyer *ids.UUID, source 
  JOIN activity source ON source.id = $%d
  JOIN company buyer_company ON buyer_company.id = employer.company_id
   AND buyer_company.archived_at IS NULL AND NOT buyer_company.is_anchor
- WHERE employer.contact_id = $%d AND `+buyerEmployment("employer", "source.occurred_at"), arg(source), arg(*buyer))
+ WHERE employer.contact_id = $%d AND `+buyerEmployment("employer", "source"), arg(source), arg(*buyer))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return ids.Nil, err

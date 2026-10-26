@@ -25,6 +25,7 @@ type WorklistItem = components["schemas"]["WorklistItem"];
 
 function noticeItem(): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "n1",
     source: "notice",
     category: "system",
@@ -135,6 +136,7 @@ export const AMeetingWithItsStartTime: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "m1",
       source: "meeting",
       category: "meetings",
@@ -185,6 +187,7 @@ export const AMeetingWithNobodyToBriefAgainst: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "m2",
       source: "meeting",
       category: "meetings",
@@ -212,6 +215,7 @@ export const ATaskNobodyOwnsBeingPutDown: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "01a05500-0000-7000-8000-0000000000a1",
       source: "task",
       category: "tasks",
@@ -254,6 +258,7 @@ export const AWaitingBuyerWithEveryVerb: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "01a05500-0000-7000-8000-0000000000a1",
       source: "customer_waiting",
       category: "customer_waiting",
@@ -291,6 +296,7 @@ export const ATaskBeingHandedOn: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "01a05500-0000-7000-8000-0000000000a2",
       source: "task",
       category: "tasks",
@@ -328,6 +334,7 @@ export const ABriefItemToAdvance: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "bi1",
       source: "brief_item",
       category: "deals_at_risk",
@@ -356,6 +363,7 @@ export const APromiseWithItsEvidence: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "cc1",
       source: "conversation_claim",
       category: "tasks",
@@ -383,6 +391,7 @@ export const AQuietContactToSetAside: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "01a05500-0000-7000-8000-0000000000aa",
       source: "relationship_decay",
       category: "customer_waiting",
@@ -410,6 +419,7 @@ export const AnApprovedThingThatDidNotRun: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "fa1",
       source: "failed_approval",
       category: "system",
@@ -438,6 +448,7 @@ export const AMailboxThatStopped: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "sh1",
       source: "capture_health",
       category: "system",
@@ -463,6 +474,7 @@ export const ACalendarThatStopped: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "sh2",
       source: "capture_health",
       category: "system",
@@ -487,6 +499,7 @@ export const ALeadWaitingOnAFirstReply: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "lr1",
       source: "lead_response",
       category: "leads",
@@ -515,6 +528,7 @@ export const APrivacyRequestOnItsClock: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "dsr1",
       source: "dsr",
       category: "system",
@@ -543,6 +557,7 @@ export const ADisclosureThisContactIsOwed: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "notice1",
       source: "notice_case",
       category: "system",
@@ -573,6 +588,7 @@ export const AMeetingWithNoOutcomeRecorded: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "m2",
       source: "meeting_outcome",
       category: "meetings",
@@ -596,6 +612,7 @@ export const AMeetingNamingItsCustomerAndHost: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       ...AMeetingWithNoOutcomeRecorded.args?.item,
       id: "m3",
       source: "meeting_outcome",
@@ -635,6 +652,7 @@ export const AWaitingBuyerAsTheMessage: Story = {
     ...baseArgs,
     onOpenEmail: () => undefined,
     item: {
+      occurred_precision: "instant",
       id: "01a05500-0000-7000-8000-0000000000e1",
       source: "customer_waiting",
       category: "customer_waiting",
@@ -649,6 +667,7 @@ export const AWaitingBuyerAsTheMessage: Story = {
         subject: "Re: pricing for the retrofit",
         preview: "Can you confirm the lead time before Friday?",
         occurred_at: "2026-09-01T07:42:00Z",
+        occurred_precision: "instant",
         direction: "inbound",
         counterparty: "Kirsten Vogel",
         attachment_count: 1,
@@ -700,6 +719,7 @@ export const AMessageOnALimitedThread: Story = {
     ...baseArgs,
     onOpenEmail: () => undefined,
     item: {
+      occurred_precision: "instant",
       id: "01a05500-0000-7000-8000-0000000000e2",
       source: "customer_waiting",
       category: "customer_waiting",
@@ -713,6 +733,7 @@ export const AMessageOnALimitedThread: Story = {
         subject: "Re: the amended terms",
         preview: "Legal has one more question on clause 4.",
         occurred_at: "2026-09-01T15:10:00Z",
+        occurred_precision: "instant",
         direction: "inbound",
         counterparty: "Ana Sommer",
         attachment_count: 0,
@@ -743,6 +764,7 @@ export const ADecisionToAnswerOnTheRow: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "01a05500-0000-7000-8000-0000000000d2",
       source: "approval",
       category: "decisions",
@@ -791,6 +813,7 @@ export const ADealAtRiskWithItsFigures: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "01a05500-0000-7000-8000-0000000000da",
       source: "deal_at_risk",
       category: "deals_at_risk",

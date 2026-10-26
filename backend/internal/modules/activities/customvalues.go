@@ -16,8 +16,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -30,6 +32,17 @@ type CustomColumns struct{ cols []fieldcatalog.Column }
 // exist is schema, and the read that uses them carries its own gate.
 func (s *Store) ActiveActivityColumns(ctx context.Context) (CustomColumns, error) {
 	cols, err := s.customColumns(ctx)
+	return CustomColumns{cols: cols}, err
+}
+
+// ActivityColumnsFrom is ActiveActivityColumns through a catalog the caller
+// bound to the transaction it already holds, so reading it takes no second
+// connection.
+func ActivityColumnsFrom(ctx context.Context, catalog fieldcatalog.Reader) (CustomColumns, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return CustomColumns{}, err
+	}
+	cols, err := catalog.ActiveColumns(ctx, customFieldObject)
 	return CustomColumns{cols: cols}, err
 }
 

@@ -21,8 +21,9 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { TIMELINE_KIND_LABEL } from "../../design-system/timelineentry";
 import { isTranscriptActivity } from "../../design-system/transcriptread";
-import { formatDate, formatDateTime } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { formatActivityWhen } from "../../format/activitywhen";
+import { formatDate, formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { activityFollowUpsKey, TASK_QUEUE_KEY } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
 import { useCanWrite } from "../../lib/capability";
@@ -33,6 +34,9 @@ import { worklistKey } from "../worklist/worklist.queries";
 import "../../design-system/emaildetail.css";
 
 type Activity = components["schemas"]["Activity"];
+type ActivityLink = components["schemas"]["ActivityLink"];
+type MeetingGuest = components["schemas"]["MeetingGuest"];
+type MeetingResponse = components["schemas"]["MeetingResponse"];
 
 // The kinds whose linked contacts were in the room. On a note or a task a
 // linked contact is what the entry is about, so it is filed, not attending.
@@ -51,6 +55,7 @@ export function OpenActivityDrawer({
   zone,
   onClose,
   activity,
+  about,
 }: Readonly<{
   activityId: string | null;
   /** The record's timezone, which the page owns. */
@@ -59,6 +64,9 @@ export function OpenActivityDrawer({
   /** The answer of a live read the host already holds, so the drawer does not
    *  read the activity a second time. Absent, the drawer reads it. */
   activity?: Activity;
+  /** What the host opened it for, drawn above the activity: a worklist row
+   *  says what it asks of the reader. */
+  about?: ReactNode;
 }>) {
   const [shown, setShown] = useState<string | null>(activityId);
   if (activityId !== null && activityId !== shown) {
@@ -74,6 +82,7 @@ export function OpenActivityDrawer({
       zone={zone}
       onClose={onClose}
       given={activity?.id === shown ? activity : undefined}
+      about={about}
     />
   );
 }
@@ -84,12 +93,14 @@ function ActivityDetail({
   zone,
   onClose,
   given,
+  about,
 }: Readonly<{
   activityId: string;
   open: boolean;
   zone: string;
   onClose: () => void;
   given?: Activity;
+  about?: ReactNode;
 }>) {
   const t = useT();
   const titleId = useId();
@@ -115,7 +126,7 @@ function ActivityDetail({
       </DrawerHead>
       <DrawerBody>
         {activity ? (
-          <ActivityBody activity={activity} zone={zone} />
+          <ActivityBody activity={activity} zone={zone} about={about} />
         ) : (
           <SurfaceState
             state={
@@ -140,7 +151,8 @@ function ActivityDetail({
 function ActivityBody({
   activity,
   zone,
-}: Readonly<{ activity: Activity; zone: string }>) {
+  about,
+}: Readonly<{ activity: Activity; zone: string; about?: ReactNode }>) {
   const t = useT();
   const { locale } = useLocale();
   const [opened, setOpened] = useState<string | null>(null);
@@ -158,12 +170,22 @@ function ActivityBody({
   const filed = attended
     ? links.filter((link) => link.entity_type !== "contact")
     : links;
+  // Guests no visible link shows: not a contact yet, past the link ceiling, or
+  // a contact this reader may not open. The invitation's name stands in.
+  const guests = attended ? (activity.guests ?? []) : [];
   const colleagues = colleaguesOf(activity);
+  const answers = answersOf(activity);
   return (
     <div className="emaildetail__body">
+      {about}
       <div className="emaildetail__parties">
         <PartyLine label={t("activity.detail.when")}>
-          {formatDateTime(activity.occurred_at, locale, zone)}
+          {formatActivityWhen(
+            activity.occurred_at,
+            activity.occurred_precision,
+            locale,
+            zone,
+          )}
           {activity.kind === "task" && activity.due_at && (
             <>
               {" "}
@@ -177,17 +199,19 @@ function ActivityBody({
             <Badge tone="success">{t("tasks.isDone")}</Badge>
           )}
         </PartyLine>
-        {attendees.length > 0 && (
-          <PartyLine label={t("activity.detail.attendees")}>
-            <RecordLinks links={attendees} newTab />
-          </PartyLine>
-        )}
+        <AttendeesLine
+          attendees={attendees}
+          guests={guests}
+          answers={answers}
+          leftOut={activity.guests_left_out}
+        />
         {colleagues.length > 0 && (
           <PartyLine label={t("activity.detail.colleagues")}>
             {colleagues.map((id, index) => (
               <Fragment key={id}>
                 {index > 0 && ", "}
                 <EntityRef kind="user" id={id} />
+                <ResponseBadge response={answers.get(`user:${id}`)} />
               </Fragment>
             ))}
           </PartyLine>
@@ -255,6 +279,104 @@ function CustomFieldLines({ activity }: Readonly<{ activity: Activity }>) {
 }
 
 // The host first, then every other colleague the read names, each once.
+// The contacts a meeting is filed under, then the guests no visible link shows.
+function AttendeesLine({
+  attendees,
+  guests,
+  answers,
+  leftOut = 0,
+}: Readonly<{
+  attendees: readonly ActivityLink[];
+  guests: readonly MeetingGuest[];
+  answers: ReadonlyMap<string, MeetingResponse>;
+  leftOut?: number;
+}>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  if (attendees.length + guests.length === 0) {
+    return null;
+  }
+  return (
+    <PartyLine label={t("activity.detail.attendees")}>
+      {attendees.map((link, index) => (
+        <Fragment key={link.entity_id}>
+          {index > 0 && ", "}
+          <EntityRef kind="contact" id={link.entity_id} newTab />
+          <ResponseBadge response={answers.get(`contact:${link.entity_id}`)} />
+        </Fragment>
+      ))}
+      {guests.map((guest, index) => (
+        <Fragment key={guest.contact_id ?? guest.address}>
+          {attendees.length + index > 0 && ", "}
+          {guest.contact_id ? (
+            <EntityRef kind="contact" id={guest.contact_id} newTab />
+          ) : (
+            <span title={guest.address}>
+              {guest.display_name || guest.address}
+            </span>
+          )}
+          <ResponseBadge response={guest.response} />
+        </Fragment>
+      ))}
+      {leftOut > 0 && (
+        <>
+          {" "}
+          {plural("activity.detail.guestsLeftOut", leftOut, {
+            count: formatNumber(leftOut, locale),
+          })}
+        </>
+      )}
+    </PartyLine>
+  );
+}
+
+// An accepted answer shows nothing: being on the list already says it.
+function ResponseBadge({
+  response,
+}: Readonly<{ response: MeetingResponse | undefined }>) {
+  const t = useT();
+  switch (response) {
+    case "declined":
+      return (
+        <>
+          {" "}
+          <Badge tone="danger">{t("activity.detail.response.declined")}</Badge>
+        </>
+      );
+    case "tentative":
+      return (
+        <>
+          {" "}
+          <Badge tone="warning">
+            {t("activity.detail.response.tentative")}
+          </Badge>
+        </>
+      );
+    case "needs_action":
+      return (
+        <>
+          {" "}
+          <Badge>{t("activity.detail.response.needsAction")}</Badge>
+        </>
+      );
+    default:
+      return null;
+  }
+}
+
+function answersOf(activity: Activity): Map<string, MeetingResponse> {
+  const answers = new Map<string, MeetingResponse>();
+  for (const answer of activity.attendee_responses ?? []) {
+    if (answer.user_id) {
+      answers.set(`user:${answer.user_id}`, answer.response);
+    } else if (answer.contact_id) {
+      answers.set(`contact:${answer.contact_id}`, answer.response);
+    }
+  }
+  return answers;
+}
+
 function colleaguesOf(activity: Activity): string[] {
   const seats = [activity.host_user_id, ...(activity.colleague_ids ?? [])];
   return [...new Set(seats.filter((id): id is string => Boolean(id)))];

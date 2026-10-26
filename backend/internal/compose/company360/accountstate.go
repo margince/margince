@@ -16,10 +16,11 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -36,13 +37,16 @@ func (a *assembly) readLastTouch() error {
 	touch := touched[a.companyID]
 	a.out.LastInboundAt = touch.InboundAt
 	a.out.LastOutboundAt = touch.OutboundAt
+	a.out.LastInboundPrecision = activitywhen.Stated(touch.InboundPrecision)
+	a.out.LastOutboundPrecision = activitywhen.Stated(touch.OutboundPrecision)
 	direction := crmcontracts.RelationshipDirection(relstrength.Sides{TheyWrote: touch.InboundAt != nil, WeWrote: touch.OutboundAt != nil}.Direction())
 	a.out.RelationshipDirection = &direction
 	if c := touch.Contact; c != nil {
 		a.out.LastContact = &crmcontracts.Company360LastContact{
-			ActivityId: openapi_types.UUID(c.ActivityID.UUID),
-			At:         c.At,
-			Kind:       crmcontracts.Company360LastContactKind(c.Kind),
+			ActivityId:        openapi_types.UUID(c.ActivityID.UUID),
+			At:                c.At,
+			OccurredPrecision: crmcontracts.OccurredPrecision(c.Precision),
+			Kind:              crmcontracts.Company360LastContactKind(c.Kind),
 		}
 	}
 	return nil
@@ -81,12 +85,16 @@ func (a *assembly) readStateStrip() error {
 
 	if in.timeline {
 		strip.Engagement = new(struct {
-			LastInboundAt  *time.Time                                       `json:"last_inbound_at,omitempty"`
-			LastOutboundAt *time.Time                                       `json:"last_outbound_at,omitempty"`
-			State          crmcontracts.Company360StateStripEngagementState `json:"state"`
+			LastInboundAt         *time.Time                                       `json:"last_inbound_at,omitempty"`
+			LastInboundPrecision  *crmcontracts.OccurredPrecision                  `json:"last_inbound_precision,omitempty"`
+			LastOutboundAt        *time.Time                                       `json:"last_outbound_at,omitempty"`
+			LastOutboundPrecision *crmcontracts.OccurredPrecision                  `json:"last_outbound_precision,omitempty"`
+			State                 crmcontracts.Company360StateStripEngagementState `json:"state"`
 		})
 		strip.Engagement.LastInboundAt = a.out.LastInboundAt
 		strip.Engagement.LastOutboundAt = a.out.LastOutboundAt
+		strip.Engagement.LastInboundPrecision = a.out.LastInboundPrecision
+		strip.Engagement.LastOutboundPrecision = a.out.LastOutboundPrecision
 		strip.Engagement.State = engagementState(in, a.now)
 	}
 	if in.pipeline {
@@ -187,12 +195,14 @@ func (a *assembly) readHealth() error {
 	}
 	health := crmcontracts.Company360Health{}
 
-	if inbound := a.out.LastInboundAt; inbound != nil {
+	var inbound *occurredday.Moment
+	if at := a.out.LastInboundAt; at != nil {
+		inbound = &occurredday.Moment{At: *at, DateOnly: occurredday.IsStatedDay(a.out.LastInboundPrecision)}
 		loc, err := a.zone()
 		if err != nil {
 			return err
 		}
-		days := elapsed.Days(*inbound, a.now, loc)
+		days := occurredday.DaysSince(*inbound, a.now, loc)
 		health.DaysSinceLastInbound = &days
 	}
 
@@ -235,13 +245,15 @@ func (a *assembly) readHealth() error {
 	if err != nil {
 		return err
 	}
-	health.LastMeetingAt = lastMeeting
+	if lastMeeting != nil {
+		health.LastMeetingAt, health.LastMeetingPrecision = &lastMeeting.At, activitywhen.PrecisionOf(*lastMeeting)
+	}
 
 	loc, err := a.zone()
 	if err != nil {
 		return err
 	}
-	touch := relstrength.ReadInTouch(a.out.LastInboundAt, lastMeeting, nextMeeting, a.now, loc)
+	touch := relstrength.ReadInTouch(inbound, lastMeeting, nextMeeting, a.now, loc)
 	rateHealthDimensions(&health, a.out.StateStrip, touch)
 
 	a.out.Health = &health

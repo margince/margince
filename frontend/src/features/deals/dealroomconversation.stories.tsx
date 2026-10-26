@@ -47,6 +47,7 @@ function roomDocument(over: Partial<DealRoomDocument>): DealRoomDocument {
     title: "Commercial terms v4",
     position: 1,
     filename: "commercial-terms-v4.pdf",
+    reaches_buyer: true,
     byte_size: 412_000,
     source: "manual",
     version: 1,
@@ -166,4 +167,16 @@ export const RoomFinished: Story = {
  *  change it, one sentence saying so. */
 export const ReadOnlySeat: Story = {
   render: board(DOCUMENTS, THREADS, { mayWrite: false }),
+};
+
+/** A file deleted on the deal after it was shared: the entry stays for the
+ *  seller to remove, marked as one the buyer no longer gets. */
+export const FileGoneFromTheDeal: Story = {
+  render: board(
+    [
+      DOCUMENTS[0] ?? roomDocument({}),
+      roomDocument({ ...DOCUMENTS[1], reaches_buyer: false }),
+    ],
+    THREADS,
+  ),
 };

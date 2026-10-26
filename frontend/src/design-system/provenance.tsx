@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
+import { providerName } from "../format/connectorprovider";
 import { isMessageKey, type Translator, useT } from "../i18n";
 import { Badge } from "./atoms";
 import "./trust.css";
@@ -116,7 +117,9 @@ export function provenanceLabel(
       return job ? t("trust.systemTag", { job }) : t("trust.systemUnnamed");
     }
     case "connector":
-      return t("trust.connectorTag", { connector: provenance.connector });
+      return t("trust.connectorTag", {
+        connector: providerName(provenance.connector, t),
+      });
     case "buyer":
       return t("trust.typedByBuyer");
     case "import":

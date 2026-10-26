@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // The verdicts a domain can carry. Only Pending leaves the question open.
@@ -36,12 +37,10 @@ const (
 	// company that is emphatically not the sender's employer (live.fr is
 	// Microsoft's), so it must not become their company either.
 	DomainProvider = "provider"
-	// DomainNoSite — nothing identified a company. Whether one nonetheless
-	// EXISTS depends on which path got here, and company_id says which: a
-	// site that could not be read falls to the sender's name and creates the
-	// company when that name does not explain the domain, while a landing page
-	// the classifier read as parked creates nothing. Both are settled, and both
-	// mean the same thing for the next message — stop asking.
+	// DomainNoSite: nothing identified a company. The classifier read the
+	// landing page as parked, and no company is created. A site that could not
+	// be read never lands here: it settles personal when the sender's name
+	// explains the domain, and stays pending otherwise.
 	DomainNoSite = "no_site"
 )
 
@@ -237,10 +236,9 @@ func newestEvidenceFor(ctx context.Context, tx pgx.Tx, domain string, activityID
 	var occurred *time.Time
 	err := tx.QueryRow(ctx, `
 		SELECT max(a.occurred_at)
-		  FROM activity a
-		  LEFT JOIN activity_participant ap ON ap.activity_id = a.id
+		  FROM activity a LEFT JOIN activity_participant ap ON ap.activity_id = a.id AND NOT ap.past_party_cap
 		 WHERE a.restricted_at IS NULL AND a.archived_at IS NULL
-		   AND a.occurred_at <= now() + $3::interval
+		   AND `+occurredday.BegunSQL("a", "now() + $3::interval")+`
 		   AND (lower(split_part(ap.address, '@', 2)) = $1
 		    OR lower(split_part(ap.address, '@', 2)) LIKE '%.' || `+storekit.EscapeLikeSQL("$1")+`
 		    OR a.id = $2)`, domain, activityID, mailClockSkewAllowance).Scan(&occurred)

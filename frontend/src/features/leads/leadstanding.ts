@@ -1,5 +1,6 @@
 import type { components } from "../../api/schema";
 import type { ReadingTone } from "../../design-system/readingtone";
+import { activityDay, type OccurredPrecision } from "../../format/activitywhen";
 import { formatDateAbbrev } from "../../format/format";
 import { leadIdentityName } from "../../format/leadname";
 import type { Locale, Translator } from "../../i18n";
@@ -72,6 +73,7 @@ export function leadStanding(
   t: Translator,
   locale: Locale,
   zone: string,
+  record: string,
 ): LeadStanding {
   const when = (at: string) => formatDateAbbrev(at, locale, zone);
   // Merged away is read first: the merge archives the loser and leaves
@@ -108,7 +110,9 @@ export function leadStanding(
       word: lead.first_response_at
         ? t("lead.standing.inMotion")
         : t("lead.status.engaged"),
-      sentence: engagedSentence(lead, t, when),
+      sentence: engagedSentence(lead, t, (at, precision) =>
+        activityDay(at, precision, locale, record, formatDateAbbrev),
+      ),
       tone: "success",
     };
   }
@@ -128,12 +132,12 @@ export function leadStanding(
   };
 }
 
-// The captured signal that moved the lead to Engaged, dated. A lead set to
-// Engaged by hand carries none, and keeps the general sentence.
+// The signal that moved the lead to Engaged, dated on the record's clock, a
+// day entry by its own date. A lead set by hand keeps the general sentence.
 function engagedSentence(
   lead: Lead,
   t: Translator,
-  when: (at: string) => string,
+  when: (at: string, precision: OccurredPrecision) => string,
 ): string {
   const evidence = lead.qualification_evidence;
   if (!evidence?.occurred_at) {
@@ -141,6 +145,6 @@ function engagedSentence(
   }
   return t(EVIDENCE_SENTENCE[evidence.trigger], {
     name: leadIdentityName(lead) || t("lead.unnamed"),
-    at: when(evidence.occurred_at),
+    at: when(evidence.occurred_at, evidence.occurred_precision ?? "instant"),
   });
 }

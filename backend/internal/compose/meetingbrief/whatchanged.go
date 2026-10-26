@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -32,28 +33,25 @@ import (
 // before this meeting, and whether they ever have. Any captured activity the
 // reader took part in counts, whichever way it went: an outbound-only gap
 // does not reset the baseline.
-func (s *Service) readLastSpoke(ctx context.Context, tx pgx.Tx, room meeting, project *ids.ProjectID, now time.Time) (time.Time, bool, error) {
+func (s *Service) readLastSpoke(ctx context.Context, tx pgx.Tx, room meeting, project *ids.ProjectID, now time.Time) (Occurred, bool, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == (ids.UUID{}) || len(room.Room) == 0 {
 		// An agent on a passport reads as the human behind it; a principal with
 		// no user has never spoken to anyone.
-		return time.Time{}, false, nil
+		return Occurred{}, false, nil
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	mePos := arg(actor.UserID)
 	roomPos := arg(room.ID)
-	// Before the meeting AND before now: a brief read for a meeting already
+	// Before the meeting, and happened by now: a brief read for a meeting already
 	// held must not take a later conversation as "before we spoke".
-	ceiling := now
-	if room.StartsAt.Before(ceiling) {
-		ceiling = room.StartsAt
-	}
-	ceilingPos := arg(ceiling)
+	opensPos := arg(room.Opens)
+	happened := occurredday.HappenedSQL("a", fmt.Sprintf("$%d", arg(now)))
 	contactsPos := arg(room.Room)
 	scope, err := auth.ActivityDiscoverClause(ctx, "a", arg)
 	if err != nil {
-		return time.Time{}, false, err
+		return Occurred{}, false, err
 	}
 	if scope == "" {
 		scope = scopeAll
@@ -71,22 +69,27 @@ func (s *Service) readLastSpoke(ctx context.Context, tx pgx.Tx, room meeting, pr
 			    WHERE pf.activity_id = a.id AND pf.project_id IS NOT NULL))`,
 			arg(*project))
 	}
-	var last *time.Time
+	var last Occurred
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT max(a.occurred_at)
+		SELECT a.occurred_at, a.occurred_precision = 'day'
 		  FROM activity a
 		  JOIN activity_participant ap ON ap.activity_id = a.id AND ap.user_id = $%d
-		 WHERE a.id <> $%d AND a.occurred_at < $%d AND a.archived_at IS NULL
+		   AND `+auth.ParticipantStandsSQL("ap", "a")+`
+		 WHERE a.id <> $%d AND a.archived_at IS NULL
+		   AND %s
+		   AND %s
 		   AND EXISTS (SELECT 1 FROM activity_link l
 		                WHERE l.activity_id = a.id AND l.entity_type = 'contact' AND l.contact_id = ANY($%d))
-		   AND %s AND %s`, mePos, roomPos, ceilingPos, contactsPos, scope, within), args...).Scan(&last)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return time.Time{}, false, fmt.Errorf("read when the reader last spoke to the room: %w", err)
+		   AND %s AND %s
+		 ORDER BY a.occurred_at DESC, a.id DESC
+		 LIMIT 1`, mePos, roomPos, occurredday.BeforeSQL("a", fmt.Sprintf("$%d", opensPos)), happened, contactsPos, scope, within), args...).Scan(&last.At, &last.DateOnly)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Occurred{}, false, nil
 	}
-	if last == nil {
-		return time.Time{}, false, nil
+	if err != nil {
+		return Occurred{}, false, fmt.Errorf("read when the reader last spoke to the room: %w", err)
 	}
-	return *last, true, nil
+	return last, true, nil
 }
 
 // whatChangedSection lists what happened after the baseline, sharpest first
@@ -109,7 +112,8 @@ func whatChangedSection(in Input, ranked *rankedClaims) []Sentence {
 	// After the baseline and not after now: a claim on a future-dated row
 	// has not happened yet.
 	after := func(c ClaimIn) bool {
-		return c.OccurredAt != nil && c.OccurredAt.After(since) && !c.OccurredAt.After(in.Now)
+		return c.OccurredAt != nil && c.OccurredAt.At.After(since.At) &&
+			occurredday.Begun(occurredday.Moment(*c.OccurredAt), in.Now, in.Zone)
 	}
 	for _, claim := range ranked.takeAll(after, whatChangedCap) {
 		out = append(out, Sentence{
@@ -126,7 +130,7 @@ func whatChangedSection(in Input, ranked *rankedClaims) []Sentence {
 	conversations := 0
 	var newest *ActIn
 	for i := range in.Recent {
-		if in.Recent[i].At.After(since) && !in.Recent[i].At.After(in.Now) {
+		if act := in.Recent[i]; act.At.After(since.At) && occurredday.Happened(act.Kind, occurredday.Moment{At: act.At, DateOnly: act.DateOnly}, in.Now, in.Zone) {
 			conversations++
 			if newest == nil {
 				newest = &in.Recent[i]
@@ -169,7 +173,7 @@ func (said briefCopy) changedClaimLine(claim ClaimIn) string {
 // moved on the linked deal since. Both are nil without a baseline.
 func (s *Service) readSinceLastSpoke(
 	ctx context.Context, tx pgx.Tx, room meeting, scope *ids.ProjectID, language string,
-) (*time.Time, []DealMoveIn, bool, error) {
+) (*Occurred, []DealMoveIn, bool, error) {
 	spoke, ever, err := s.readLastSpoke(ctx, tx, room, scope, s.now().UTC())
 	if err != nil {
 		return nil, nil, false, err
@@ -182,6 +186,6 @@ func (s *Service) readSinceLastSpoke(
 	if room.Deal == nil {
 		return &spoke, nil, false, nil
 	}
-	moves, hidden, err := briefCopyFor(language).readDealMoves(ctx, tx, room.Deal.ID, spoke, s.now().UTC())
+	moves, hidden, err := briefCopyFor(language).readDealMoves(ctx, tx, room.Deal.ID, spoke.At, s.now().UTC())
 	return &spoke, moves, hidden, err
 }

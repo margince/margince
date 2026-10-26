@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import type { components } from "../../../api/schema";
+import { en } from "../../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -142,4 +144,35 @@ export const Empty: Story = {
       );
     },
   ],
+};
+
+/**
+ * A call logged by its date alone. The row names that date and no clock, so a
+ * stored noon never reads as the hour they wrote.
+ */
+export const DayEntry: Story = {
+  args: { companyId: "o-1" },
+  decorators: [
+    (Story) => {
+      stub([
+        contact("Sabine Vogel", "waiting", {
+          title: "Head of Partnerships",
+          last_inbound_at: "2026-08-30T12:00:00Z",
+          last_inbound_precision: "day",
+        }),
+      ]);
+      return (
+        <StoryProviders>
+          <Story />
+        </StoryProviders>
+      );
+    },
+  ],
+  play: async ({ canvasElement }) => {
+    const touch = await within(canvasElement).findByText(
+      new RegExp(`^${en["co.contacts.theyWrote"]} · `),
+    );
+    await expect(touch.textContent).toMatch(/30/);
+    await expect(touch.textContent).not.toMatch(/\d:\d\d/);
+  },
 };

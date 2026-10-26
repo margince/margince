@@ -555,6 +555,17 @@ paths:
             A screen that names many companies it did not list itself, such as the deals board,
             reads them in one request instead of one each. An id the caller cannot see, or that
             is archived without `include_archived`, is simply absent from the page.
+        - name: source_system
+          in: query
+          schema: {type: string, maxLength: 128}
+          description: |-
+            Companies that came from this outside system, matched exactly. Send `source_id`
+            too to find the one company holding that id there. A company the caller cannot
+            see, or that is archived without `include_archived`, is simply absent from the page.
+        - name: source_id
+          in: query
+          schema: {type: string, maxLength: 128}
+          description: An id in an outside system, matched exactly. Send `source_system` with it, because the same id can mean different companies in different systems.
       responses:
         '200':
           description: A page of companies.
@@ -1450,6 +1461,17 @@ paths:
           description: |-
             How several `tag_id` values combine. `any` selects a record carrying at least one
             of them, `all` a record carrying every one, `none` a record carrying not one.
+        - name: source_system
+          in: query
+          schema: {type: string, maxLength: 128}
+          description: |-
+            Deals that came from this outside system, matched exactly. Send `source_id` too to
+            find the one deal holding that id there. A deal that is archived without
+            `include_archived` is simply absent from the page.
+        - name: source_id
+          in: query
+          schema: {type: string, maxLength: 128}
+          description: An id in an outside system, matched exactly. Send `source_system` with it, because the same id can mean different deals in different systems.
       responses:
         '200':
           description: A page of deals.
@@ -2578,12 +2600,12 @@ paths:
           in: query
           schema: {type: string, format: date-time}
           description: >-
-            Only activities that occurred at or after this instant (inclusive). Pairs with `occurred_before` for a date range; either may stand alone.
+            Only activities that occurred at or after this instant (inclusive). A `day` entry is placed where its date begins in the installation's time zone. Pairs with `occurred_before` for a date range; either may stand alone.
         - name: occurred_before
           in: query
           schema: {type: string, format: date-time}
           description: >-
-            Only activities that occurred strictly before this instant (exclusive), so a day range is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`.
+            Only activities that occurred strictly before this instant (exclusive), a `day` entry placed where its date begins in the installation's time zone. So a day range is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`, both in that zone.
         - name: waiting_reply
           in: query
           schema: {type: boolean}
@@ -3431,7 +3453,8 @@ paths:
       summary: Create a lead.
       description: |-
         With name + email returns 201 + stable UUID; round-trips on GET.
-        `company_name` is FREE TEXT — a lead has NO company FK. Lead-internal exact-email
+        `company_name` is FREE TEXT; a company link (`company_id`) is set only by a human through
+        `POST /leads/{id}/link-company`, never on create. Lead-internal exact-email
         dedupe → 409 with existing lead id. Bulk/connector sourcing uses (source_system, source_id)
         for idempotent re-import. A `project_id` that names no project the caller can read
         answers 422 naming `project_id`, the same for a missing project and for one hidden by row scope.
@@ -8076,7 +8099,8 @@ components:
       name: limit
       in: query
       schema: {type: integer, minimum: 1, maximum: 200, default: 50}
-      description: Max items in the page.
+      description: >-
+        Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
     Sort:
       name: sort
       in: query
@@ -8363,7 +8387,7 @@ components:
         One retained email, reduced to what a row shows without opening it. Present on an
         activity only when `kind=email`; every other kind carries none, and a reader that
         branches on this field is asking the one question that decides the canonical row.
-      required: [activity_id, occurred_at, display_status, attachment_count, move, version]
+      required: [activity_id, occurred_at, occurred_precision, display_status, attachment_count, move, version]
       properties:
         request_has_reminder:
           type: boolean
@@ -8378,6 +8402,9 @@ components:
             One line of the sender's own text, signature and quoted history already removed.
             Null when withheld, and when the message has no text of its own.
         occurred_at: {type: string, format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
         direction: {type: [string, 'null'], enum: [null, inbound, outbound]}
         counterparty:
           type: [string, 'null']
@@ -8568,7 +8595,7 @@ components:
         One email, composed for reading. The message and its parties come from the activity's
         own store; the access block is assembled from the same authority that performs the
         write, so what this says a caller may do is what the caller may do.
-      required: [id, lifecycle, occurred_at, summary, access, version, from, to, cc, bcc, attachments, links, bcc_withheld, can_reply, can_relink]
+      required: [id, lifecycle, occurred_at, occurred_precision, summary, access, version, from, to, cc, bcc, attachments, links, bcc_withheld, can_reply, can_relink]
       properties:
         id: {type: string, format: uuid}
         lifecycle:
@@ -8579,6 +8606,9 @@ components:
             correspondence. A scheduled send and a draft awaiting approval will borrow the
             frame when the reads that serve them land, and they are not listed until then.
         occurred_at: {type: string, format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
         summary:
           $ref: '#/components/schemas/EmailSummary'
         body:
@@ -8797,7 +8827,7 @@ components:
       description: 'What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.'
     ImportReasonCode:
       type: string
-      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_unreadable]
+      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_unreadable]
       description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.'
     CreateImportRunRequest:
       type: object
@@ -9350,7 +9380,7 @@ components:
       description: |-
         One activity a derived number was computed from, named well enough to be
         recognised and opened.
-      required: [activity_id, kind, occurred_at, content_state]
+      required: [activity_id, kind, occurred_at, occurred_precision, content_state]
       properties:
         activity_id: {type: string, format: uuid}
         kind:
@@ -9363,6 +9393,9 @@ components:
           description: >-
             The activity's own subject line. Null when it has none, and when the content is not this reader's — the two are told apart by `content_state`, never by this field being empty.
         occurred_at: {type: string, format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
         content_state:
           type: string
           enum: [available, withheld]
@@ -9787,7 +9820,8 @@ components:
           type: array
           items: {$ref: '#/components/schemas/ContactPhoneInput'}
         source: {type: string}
-        source_system: {type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it.'}
+        source_id: {type: [string, 'null'], maxLength: 128, description: 'The id this contact has in source_system. Needs source_system, and the pair is unique: a second contact with the same pair is 409.'}
+        source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
       additionalProperties: true
@@ -10068,7 +10102,8 @@ components:
           type: array
           items: {$ref: '#/components/schemas/CompanyDomainInput'}
         source: {type: string}
-        source_system: {type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it.'}
+        source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
+        source_id: {type: [string, 'null'], maxLength: 128, description: 'The id this company has in source_system. Needs source_system, and the pair is unique: a second company with the same pair is 409. Look a company up by it with the `source_system` and `source_id` filters on `listCompanies`.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
       additionalProperties: true
@@ -10381,6 +10416,9 @@ components:
           type: string
           format: date-time
           description: An instant, so the client names its day in the record's own zone.
+        at_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `at`, from the row it names. `day` means only its UTC date is known. Absent with `at`.
     Company360Health:
       type: object
       description: |-
@@ -10409,6 +10447,9 @@ components:
         last_meeting_at:
           type: [string, 'null']
           format: date-time
+        last_meeting_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `last_meeting_at`, from the row it names. Absent when that is null or absent.
         active_contacts:
           type: [integer, 'null']
           description: How many contacts here have interacted at all — the account's real surface.
@@ -10451,6 +10492,12 @@ components:
                 `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting.
             last_inbound_at: {type: [string, 'null'], format: date-time}
             last_outbound_at: {type: [string, 'null'], format: date-time}
+            last_inbound_precision:
+              allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+              description: How to read `last_inbound_at`, from the activity it names. Absent when that is null.
+            last_outbound_precision:
+              allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+              description: How to read `last_outbound_at`, from the activity it names. Absent when that is null.
         commercial:
           type: [object, 'null']
           description: Null when the caller has no deal grant.
@@ -10745,10 +10792,13 @@ components:
       type: object
       description: |-
         The next meeting with this account that has not happened yet, and who is in it.
-      required: [activity_id, starts_at, subject, participants]
+      required: [activity_id, starts_at, occurred_precision, subject, participants]
       properties:
         activity_id: {type: string, format: uuid}
         starts_at: {type: string, format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `starts_at`. `day` means only its date is known, and the meeting stays next for that whole date.
         subject: {type: string}
         linked_deal_id:
           type: [string, 'null']
@@ -10786,6 +10836,10 @@ components:
           format: date-time
           description: |-
             The date the EVIDENCE carries — when the thread went quiet, when the deal last moved.
+        due_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: >-
+            How to read `due_at` where it is an activity's time, from that activity. Absent when `due_at` is null, and when it is when a deal last moved, a stored clock with no precision.
         fingerprint:
           type: string
           description: |-
@@ -10923,6 +10977,12 @@ components:
           format: date-time
           description: >-
             When we last wrote to one of the account's current contacts. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
+        last_inbound_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `last_inbound_at`, from the row it names. Absent when that is null or absent.
+        last_outbound_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `last_outbound_at`, from the row it names. Absent when that is null or absent.
         relationship_direction:
           $ref: '#/components/schemas/RelationshipDirection'
           description: >-
@@ -11084,7 +11144,7 @@ components:
         most one row.
       required: [field, value, evidence_snippet, source, captured_by, captured_at]
       properties:
-        field: {type: string, enum: [title, phone, role, linkedin, company_name, address, website]}
+        field: {type: string, enum: [first_name, last_name, title, phone, role, linkedin, company_name, address, website]}
         value: {type: string}
         value_key:
           type: string
@@ -11202,9 +11262,12 @@ components:
         new_activities: {type: integer, minimum: 0}
     Company360LastContact:
       type: object
-      required: [at, kind, activity_id]
+      required: [at, kind, activity_id, occurred_precision]
       properties:
         at: {type: string, format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `at`. `day` means only its date is known, its UTC date, so a client draws no time.
         kind:
           type: string
           enum: [email, call, meeting, message]
@@ -11253,6 +11316,18 @@ components:
           format: date-time
           description: >-
             The newest exchange in either direction, a meeting included: the moment "quiet for N days" counts from. Absent when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
+        last_inbound_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `last_inbound_at`, from the row it names. Absent when that is null or absent.
+        last_outbound_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `last_outbound_at`, from the row it names. Absent when that is null or absent.
+        last_contact_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `last_contact_at`, from the row it names. Absent when that is null or absent.
+        last_live_inbound_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `last_live_inbound_at`, from the row it names. Absent when that is null or absent.
         sections_omitted:
           type: array
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
@@ -11405,10 +11480,13 @@ components:
       description: |-
         The soonest booked meeting with this contact. Absent means either none is booked or the
         caller cannot read meetings — `sections_omitted` is what separates the two.
-      required: [activity_id, starts_at]
+      required: [activity_id, starts_at, occurred_precision]
       properties:
         activity_id: {type: string, format: uuid}
         starts_at: {type: string, format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `starts_at`. `day` means only its date is known, and the meeting stays next for that whole date.
         subject: {type: [string, 'null']}
         linked_deal_id: {type: [string, 'null'], format: uuid}
         participants:
@@ -11431,7 +11509,7 @@ components:
       type: object
       description: |-
         One thing said in a captured conversation, with the evidence it was read from.
-      required: [id, kind, body, source_activity_id, source_quote, status, needs_review]
+      required: [id, kind, body, source_activity_id, source_quote, occurred_precision, status, needs_review]
       properties:
         id: {type: string, format: uuid}
         kind: {$ref: '#/components/schemas/ConversationClaimKind'}
@@ -11446,6 +11524,10 @@ components:
           type: [string, 'null']
           description: How to name the source in a chip — the thread subject or the meeting title.
         occurred_at: {type: [string, 'null'], format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: >-
+            How to read `occurred_at`, the source activity's time. `day` means only its date is known, so a client draws no time. `instant` when `occurred_at` is absent.
         status:
           type: string
           description: '`open`: the loop is live. `done` — kept or answered. `dismissed` — a human said it was never a claim, and it stays so the next run cannot resurrect it.'
@@ -11480,7 +11562,7 @@ components:
       type: object
       description: |-
         One thread or meeting, condensed to what it was about.
-      required: [key, channel, direction, title, summary, occurred_at, activity_count]
+      required: [key, channel, direction, title, summary, occurred_at, occurred_precision, activity_count]
       properties:
         key:
           type: string
@@ -11505,6 +11587,10 @@ components:
           description: One sentence about what the conversation was, not what it contained.
         generated_by: {$ref: '#/components/schemas/WrittenBy'}
         occurred_at: {type: string, format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: >-
+            How to read `occurred_at`, from the newest activity the entry folds. `day` means only its date is known, its UTC date, so a client draws no time.
         activity_count:
           type: integer
           minimum: 1
@@ -11861,7 +11947,7 @@ components:
         interactions_90d: {type: integer}
         inbound_90d: {type: integer}
         outbound_90d: {type: integer}
-        last_at: {type: [string, 'null'], format: date-time}
+        last_at: {type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` among the activities the edge counts. A client orders edges by it.'}
         receipts:
           type: array
           maxItems: 3
@@ -11870,11 +11956,14 @@ components:
           items: {$ref: '#/components/schemas/ContactGraphReceipt'}
     ContactGraphReceipt:
       type: object
-      required: [activity_id, occurred_at, kind]
+      required: [activity_id, occurred_at, occurred_precision, kind]
       properties:
         activity_id: {type: string, format: uuid}
         subject: {type: [string, 'null']}
         occurred_at: {type: string, format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
         kind:
           type: string
           enum: [email, call, meeting, note, task, message]
@@ -11989,7 +12078,7 @@ components:
         freshness_at:
           type: string
           format: date-time
-          description: When the fact behind this moment happened, so a reader can judge its age themselves.
+          description: When the fact behind this moment happened, so a reader can judge its age themselves. It reads as an instant; for a day entry it is that date's noon UTC, and the evidence it is taken from says so in `observed_precision`.
         evidence:
           type: array
           description: What the moment is derived from. Never empty — a reason with no evidence is an opinion.
@@ -12022,7 +12111,10 @@ components:
           type: string
           format: uuid
           description: The newest attested outbound email to the contact sent after the promise was made.
-        wrote_at: {type: string, format: date-time}
+        wrote_at:
+          type: string
+          format: date-time
+          description: When that email was sent, read as an instant. The same email in the moment's evidence carries `observed_precision`.
     ContactMomentRule:
       type: string
       description: |-
@@ -12048,6 +12140,9 @@ components:
           type: string
           description: A verbatim excerpt of the evidence, never a summary of it.
         observed_at: {type: string, format: date-time}
+        observed_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `observed_at` when it is an activity's time, from the row it names. `day` means only its UTC date is known, so a reader takes no time from it. Absent with `observed_at`, and beside a promise's due date.
     ContactMomentAction:
       type: object
       description: |-
@@ -12168,6 +12263,9 @@ components:
           type: boolean
           description: True when the colleague has not signed in yet.
         last_on_thread_at: {type: string, format: date-time}
+        last_on_thread_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `last_on_thread_at`, from the activity it names.
     DealCoverageSeat:
       type: object
       description: One stakeholder seat, and whether it is a relationship or just a name.
@@ -12310,11 +12408,15 @@ components:
       additionalProperties: false
     DealNextBestActionEvidence:
       type: object
-      required: [text]
+      required: [text, occurred_precision]
       properties:
         text: {type: string}
         activity_id: {type: [string, 'null'], format: uuid}
         occurred_at: {type: [string, 'null'], format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: >-
+            How to read `occurred_at`, from the activity it names. `day` means only its date is known, its UTC date, so a client draws no time. `instant` on a row with no such time.
         email_summary:
           allOf: [{$ref: '#/components/schemas/EmailSummary'}]
           readOnly: true
@@ -12335,7 +12437,7 @@ components:
           description: False when a commitment was left out because its contact or its message is outside what the caller may read.
     DealCommitment:
       type: object
-      required: [id, contact_id, contact_name, body, source_quote, source_activity_id, source_kind, occurred_at]
+      required: [id, contact_id, contact_name, body, source_quote, source_activity_id, source_kind, occurred_at, occurred_precision]
       properties:
         id: {type: string, format: uuid, description: 'The id of the claim, which `POST /claims/{id}/settle` takes.'}
         contact_id: {type: string, format: uuid}
@@ -12346,6 +12448,9 @@ components:
         source_kind: {type: string, description: 'The kind of activity it was read from (`email`, `meeting`, …), so a client opens it in the reader that kind needs.'}
         due_at: {type: string, format: date-time, nullable: true, description: 'Absent when the conversation named no day.'}
         occurred_at: {type: string, format: date-time, description: 'When it was said.'}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
     ReportEvidenceSearchRequest:
       type: object
       description: What `search_report_evidence` takes beside the run the path names.
@@ -12426,6 +12531,7 @@ components:
       properties:
         evidence: {type: array, items: {$ref: '#/components/schemas/AgentExcerpt'}}
         occurred_at: {type: string}
+        occurred_precision: {type: string, enum: [day], description: 'Present when only the date of occurred_at is known: name its UTC date, unconverted, and no time.'}
         record_id: {type: string, format: uuid}
         record_type: {type: string}
         summary: {type: string}
@@ -13201,6 +13307,9 @@ components:
         title: {type: string, nullable: true}
         engagement: {$ref: '#/components/schemas/ContactEngagement'}
         last_inbound_at: {type: string, format: date-time, nullable: true}
+        last_inbound_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `last_inbound_at`, from the activity it names. Absent when that is null.
     CompanyCoverageCommittee:
       type: object
       required: [seats, gaps, unlisted_seats]
@@ -13293,6 +13402,12 @@ components:
           format: date-time
           nullable: true
           description: When we last wrote to them, over all history. Read beside `last_inbound_at`, the pair says which way the conversation is owed.
+        last_inbound_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `last_inbound_at`, from the activity it names. Absent when that is null.
+        last_outbound_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `last_outbound_at`, from the activity it names. Absent when that is null.
     CompanyContactListResponse:
       type: object
       required: [data, page]
@@ -13412,9 +13527,12 @@ components:
     DealLastEmail:
       type: object
       description: The newest workspace-visible email on a deal, as `Deal.last_email` carries it.
-      required: [occurred_at, direction]
+      required: [occurred_at, occurred_precision, direction]
       properties:
         occurred_at: {type: string, format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
         direction:
           type: [string, 'null']
           enum: [inbound, outbound, null]
@@ -13565,7 +13683,8 @@ components:
         owner_id: {type: [string, 'null'], format: uuid}
         expected_close_date: {type: [string, 'null'], format: date, description: 'Deals are born open, so a date before today is rejected 422.'}
         source: {type: string}
-        source_system: {type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it.'}
+        source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
+        source_id: {type: [string, 'null'], maxLength: 128, description: 'The id this deal has in source_system. Needs source_system, and the pair is unique: a second deal with the same pair is 409. Look a deal up by it with the `source_system` and `source_id` filters on `listDeals`.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
       additionalProperties: true
@@ -14143,7 +14262,8 @@ components:
         started_at: {type: [string, 'null'], format: date}
         target_end_date: {type: [string, 'null'], format: date}
         source: {type: string}
-        source_system: {type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it.'}
+        source_id: {type: [string, 'null'], maxLength: 128, description: 'The id this project has in source_system. Needs source_system, and the pair is unique: a second project with the same pair is 409.'}
+        source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
       additionalProperties: true
@@ -14902,6 +15022,29 @@ components:
           type: string
           format: date-time
           description: The renewing message's source time when the decision was recorded.
+    MeetingGuest:
+      type: object
+      description: One guest on a meeting who is not a colleague seat.
+      required: [display_name]
+      properties:
+        address: {type: string, description: 'The address the invitation named them by. Absent when no row holds one.'}
+        display_name: {type: string, description: "The contact's name when you may read the contact, else the name the invitation gave, else empty."}
+        contact_id: {type: string, format: uuid, description: 'The contact this guest is. Present only when you may read that contact.'}
+        response:
+          allOf: [{$ref: '#/components/schemas/MeetingResponse'}]
+          description: What the guest answered the invitation. Absent when no calendar stated an answer.
+    MeetingResponse:
+      type: string
+      enum: [accepted, declined, tentative, needs_action]
+      description: A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
+    MeetingAttendeeResponse:
+      type: object
+      description: The answer one colleague or linked contact on a meeting gave its invitation. Exactly one of `user_id` and `contact_id` is set.
+      required: [response]
+      properties:
+        user_id: {type: string, format: uuid, description: 'The colleague, one of `colleague_ids` or the host.'}
+        contact_id: {type: string, format: uuid, description: 'The contact, one of the contact `links` you see.'}
+        response: {$ref: '#/components/schemas/MeetingResponse'}
     Activity:
       type: object
       description: |-
@@ -14914,7 +15057,7 @@ components:
         **Custom fields**: the values of the workspace's activity custom fields arrive as extra
         top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
         `withheld`.
-      required: [id, kind, occurred_at, source, captured_by, created_at, updated_at, offers_email]
+      required: [id, kind, occurred_at, occurred_precision, source, captured_by, created_at, updated_at, offers_email]
       properties:
         writable:
           type: boolean
@@ -14943,6 +15086,9 @@ components:
           description: >-
             What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
         occurred_at: {type: string, format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `occurred_at`. `day` means only its date is known, so a client draws the date without a time.
         due_at: {type: [string, 'null'], format: date-time, description: Task only.}
         remind_at: {type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.'}
         assignee_id: {type: [string, 'null'], format: uuid, description: Task only.}
@@ -14961,6 +15107,24 @@ components:
           items: {type: string, format: uuid}
           description: >-
             The colleagues recorded as taking part: the one who logged a call or meeting, the ones named as attending, and the seats capture stamped on a captured one, never a blind copy. Filled wherever one activity is answered whole (its read, its update); a list leaves it out. Withheld with the content, so it is absent whenever `content_state` is `withheld`.
+        guests:
+          type: array
+          readOnly: true
+          items: {$ref: '#/components/schemas/MeetingGuest'}
+          description: >-
+            Meeting only: the guests who are not a colleague seat and whose contact is not among the `links` you see. That covers a guest who is not a contact yet, and one past the link ceiling or filed under a contact you may not read. `contact_id` is set only for a contact you may read. A colleague is in `colleague_ids`. Filled wherever one activity is answered whole; a list leaves it out. Withheld with the content, like `colleague_ids`.
+        attendee_responses:
+          type: array
+          readOnly: true
+          items: {$ref: '#/components/schemas/MeetingAttendeeResponse'}
+          description: >-
+            Meeting only: the answers the colleagues and the linked contacts you see gave the invitation, for those a calendar stated one for. A guest in `guests` carries their own `response`. Filled and withheld like `guests`.
+        guests_left_out:
+          type: integer
+          minimum: 0
+          readOnly: true
+          description: >-
+            Meeting only: how many outside guests of a meeting past the party cap are not listed, because a crowded meeting keeps at most 200 by address. Filled and withheld like `guests`.
         direction: {type: [string, 'null'], enum: [null, inbound, outbound], description: 'inbound/outbound for email/call; null for note/task.'}
         email_summary:
           allOf: [{$ref: '#/components/schemas/EmailSummary'}]
@@ -15231,6 +15395,10 @@ components:
         subject: {type: [string, 'null']}
         body: {type: [string, 'null']}
         occurred_at: {type: string, format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: >-
+            `day` when only the date is known: the date `occurred_at` names in its own offset is stored at noon UTC of that date, and its date is the UTC date. Omitted means `instant`. `day` without `occurred_at` is refused with 422.
         due_at: {type: [string, 'null'], format: date-time}
         remind_at: {type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.'}
         assignee_id: {type: [string, 'null'], format: uuid}
@@ -15300,6 +15468,11 @@ components:
       type: string
       enum: [workspace, participants, selected]
       description: Who may read an activity's content — see Activity.audience.
+    OccurredPrecision:
+      type: string
+      enum: [instant, day]
+      description: >-
+        How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
     AudienceMember:
       type: object
       description: |-
@@ -15316,6 +15489,10 @@ components:
         subject: {type: [string, 'null']}
         body: {type: [string, 'null']}
         occurred_at: {type: string, format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: >-
+            How to read `occurred_at` from now on. A patch that sends `occurred_at` without this field sets `instant`, because a new time is a known time. `day` stores the date at noon UTC: the date `occurred_at` names in its own offset, or, sent alone, the date the stored instant falls on in the installation's zone. `instant` on a `day` activity needs `occurred_at` too, or the stored noon would read as a real 12:00, and is refused with 422.
         due_at: {type: [string, 'null'], format: date-time}
         assignee_id: {type: [string, 'null'], format: uuid}
         remind_at: {type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.'}
@@ -15405,12 +15582,15 @@ components:
       readOnly: true
       description: >-
         The mail a file came with. Present on a Documents list row whose file hangs off a mail the caller may read; absent on an upload, and absent when the caller may not read the mail.
-      required: [activity_id, kind, occurred_at]
+      required: [activity_id, kind, occurred_at, occurred_precision]
       properties:
         activity_id: {type: string, format: uuid, description: The mail to open.}
         kind: {type: string, description: 'The activity kind the file arrived with: email, message.'}
         subject: {type: [string, 'null']}
         occurred_at: {type: string, format: date-time, description: When the mail was sent or received.}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
         sender:
           $ref: '#/components/schemas/EmailParty'
           description: >-
@@ -15438,12 +15618,15 @@ components:
     DealDocumentOrigin:
       type: object
       description: Where a captured file came from. Present for a file that arrived with a message linked to the deal; absent for a file uploaded on the deal.
-      required: [activity_id, kind, occurred_at]
+      required: [activity_id, kind, occurred_at, occurred_precision]
       properties:
         activity_id: {type: string, format: uuid}
         kind: {type: string, description: 'The activity kind the file arrived with: email, message, meeting.'}
         subject: {type: [string, 'null']}
         occurred_at: {type: string, format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
         counterparty_email: {type: [string, 'null'], format: email}
     DealDocumentListResponse:
       type: object
@@ -15944,7 +16127,7 @@ components:
             sent message carried.
     Lead:
       type: object
-      description: A thin, segregated prospect. Mirrors the `lead` table. NO company FK.
+      description: A thin, segregated prospect. Mirrors the `lead` table.
       required: [id, status, score, source, captured_by, created_at, updated_at]
       properties:
         legal_hold:
@@ -15959,9 +16142,16 @@ components:
         phone: {type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes."}
         linkedin_url: {type: [string, 'null'], description: 'Normalized LinkedIn profile URL; the exact-match dedupe key.'}
         title: {type: [string, 'null']}
-        company_name: {type: [string, 'null'], description: Free text; there is no foreign key to a company.}
+        company_name: {type: [string, 'null'], description: 'Free text, as captured or typed. It names the company until a human links one (`company_id`).'}
+        company_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. Null until then, and null again when an edit of `company_name` no longer names the linked company. Withheld when the reader cannot open that company. The link adds no contact; converting the lead makes it a contact employed there.
+        company_match: {$ref: '#/components/schemas/LeadCompanyMatch'}
         candidate_company_key: {type: [string, 'null'], description: Loose key for ABM routing without creating a company.}
-        project_id: {type: [string, 'null'], format: uuid, description: 'The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm and none can: a lead has no company_id, only candidate_company_key, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.'}
+        project_id: {type: [string, 'null'], format: uuid, description: 'The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm: a lead''s company_id is an optional link a human confirms, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.'}
         status: {type: string, enum: [new, contacted, engaged, promoted, disqualified], default: new, description: 'The activity-driven ladder: new → contacted (we reached out) → engaged (they answered or a meeting is booked/held) → promoted (qualified: a contact exists) | disqualified. contacted and engaged are set by the system from captured activity and may be set by hand.'}
         score: {type: integer, default: 0, description: 'Lead-local scoring; never reads the contact graph. While an override is in force this is the human-set value (see score_override_reason).'}
         score_override_reason: {type: [string, 'null'], readOnly: true, description: 'Non-null ⇒ `score` is a human Commercial-Judgement override and recompute is suppressed; the machine value is retained in `score_computed`.'}
@@ -15997,6 +16187,10 @@ components:
           readOnly: true
           description: 'Derived from sla_deadline_at and first_response_at; null once responded or on a terminal lead. Orders the work queue above score.'
         last_activity_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'Most recent activity at or before now linked to this lead — the "last touch" a work queue row shows. A task never counts, whoever filed it.'}
+        last_activity_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. Absent when that is null.
         open_task_count: {type: [integer, 'null'], readOnly: true, description: 'Open `kind=task` activities linked to this lead; the derived next step is the earliest of them.'}
         next_task_subject: {type: [string, 'null'], readOnly: true, description: 'Subject of the earliest open task linked to this lead.'}
         next_task_due_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'Due time of the earliest open task linked to this lead; undated tasks follow dated ones.'}
@@ -16075,7 +16269,7 @@ components:
         title: {type: [string, 'null']}
         company_name: {type: [string, 'null']}
         candidate_company_key: {type: [string, 'null'], description: 'Loose ABM routing key. Format: lowercased registrable domain when known (`acme.com`), else a slug of company_name. Never a company FK.'}
-        project_id: {type: [string, 'null'], format: uuid, description: 'The body of work this lead belongs to; carries no same-company guard (a lead has no company).'}
+        project_id: {type: [string, 'null'], format: uuid, description: 'The body of work this lead belongs to; carries no same-company guard, also for a lead linked to a company.'}
         status: {type: string, enum: [new, contacted, engaged], description: 'A human may place an open lead on any open step, forwards or back; the system only ever moves forwards.'}
         source: {type: string, minLength: 1, deprecated: true, description: 'Deprecated and read-only. How the row reached Margince, which Margince writes. Sending the stored value is accepted; any other value is 422 on `source`. Set `origin` to say where the lead came from.'}
         origin: {type: [string, 'null'], description: 'Where the lead came from: an ACTIVE key from `/lead-origins`, or the key the lead already carries (a retired key is 422 only for a new value). Changing it recomputes the score. Null clears it, and the lead scores neutral.'}
@@ -16091,6 +16285,15 @@ components:
             row scope — else `422 owner_not_assignable`, which names no more than that so the
             refusal does not disclose the roster or the team graph.
       additionalProperties: true
+    LeadCompanyMatch:
+      type: object
+      readOnly: true
+      description: >-
+        A company the lead's `company_name` names exactly, offered for a human to confirm. Confirming sets `company_id` and creates no contact. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise.
+      required: [id, name]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string, description: The company's display name.}
     PromoteLeadRequest:
       type: object
       required: [trigger]
@@ -16115,7 +16318,7 @@ components:
         Open a deal in the same transaction as the promotion. Omit both ids to use the
         default pipeline's first open stage; a pipeline alone takes its first open stage; a
         stage alone is placed in its own pipeline. The deal's owner is the lead's owner
-        and its company is left unset (a lead has no company). The deal's id lands
+        and its company is left unset, also for a lead linked to a company. The deal's id lands
         on the lead as `qualified_deal_id`; a deal failure rolls the whole promotion back.
       properties:
         pipeline_id: {type: [string, 'null'], format: uuid}
@@ -16138,6 +16341,9 @@ components:
           enum: [inbound_reply, meeting_booked, meeting_held]
         activity_id: {type: string, format: uuid}
         occurred_at: {type: string, format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `occurred_at`, present beside it. `day` means only its date is known, its UTC date, so a client draws no time.
     PromoteLeadResponse:
       type: object
       required: [contact, merged]
@@ -18094,6 +18300,10 @@ components:
         occurred_at:
           type: string
           format: date-time
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: >-
+            How to read `occurred_at` on an activity's row. `day` means only its date is known, its UTC date, so a client draws no time. Absent on a row that is not an activity's, whose time is an instant.
         owner_id:
           type: string
           format: uuid
@@ -18245,6 +18455,10 @@ components:
           description: >-
             `invited` is a seat that exists and has never been entered: the member holds a licensed seat and appears in the roster, but has set no password and can sign in by no method until they redeem their invitation link. Redeeming it makes them `active`, which is the only status that may sign in.
         is_agent: {type: boolean, default: false, description: First-party Agent Runner identity vs a human seat.}
+        service_extension:
+          type: [string, 'null']
+          description: >-
+            The extension unit this seat is the service member of: the identity that unit's scheduled feed runs as. Null for every other seat, including an AI agent seat, so a client tells the two apart by this field and not by `is_agent`. Present only for an admin caller, with `roles`.
         assignable:
           type: boolean
           description: >-
@@ -19584,10 +19798,13 @@ components:
     LifecyclePreviewEvidence:
       type: object
       description: Current readable source and scope supporting a company lifecycle review.
-      required: [scope, occurred_at]
+      required: [scope, occurred_at, occurred_precision]
       properties:
         scope: {type: string, enum: [company, workstream, unknown]}
         occurred_at: {type: string, format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
         workstream: {type: string}
     ApprovalPreview:
       type: object
@@ -20158,7 +20375,7 @@ components:
         One document a room puts in front of its buyer: a pointer at an attachment
         filed on the deal, with a buyer-facing title, a group and an order. The
         attachment row is the exact version shown.
-      required: [id, room_id, attachment_id, group_key, title, position, filename, source, version, created_at, updated_at]
+      required: [id, room_id, attachment_id, group_key, title, position, filename, reaches_buyer, source, version, created_at, updated_at]
       properties:
         id: {type: string, format: uuid}
         room_id: {type: string, format: uuid}
@@ -20167,6 +20384,14 @@ components:
         title: {type: string}
         position: {type: integer}
         filename: {type: string, readOnly: true, description: "The attachment's stored filename, for the seller's reference."}
+        reaches_buyer:
+          type: boolean
+          readOnly: true
+          description: |-
+            Whether this entry's file is still in the deal's Files area. False once the file was
+            deleted on the deal, hidden from it, or its message unlinked or narrowed; the entry
+            stays in the room until the seller removes it. Whether the room itself is open to its
+            buyer is the room's own state, not this field.
         content_type: {type: [string, 'null'], readOnly: true}
         byte_size: {type: [integer, 'null'], format: int64, readOnly: true}
         archived_at: {type: [string, 'null'], format: date-time}

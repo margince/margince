@@ -286,6 +286,7 @@ describe("the moves on the list, and the foot under them", () => {
         next_meeting: {
           activity_id: "a-1",
           starts_at: "2026-08-12T09:00:00Z",
+          occurred_precision: "instant",
           subject: "Renewal review",
           participants: [{ contact_id: "p-1", display_name: "Dana Buyer" }],
         },
@@ -399,7 +400,7 @@ describe("the account scan on the needs list", () => {
           state: "done",
           generated_at: "2026-08-07T08:58:00Z",
           generated_by: "model",
-          read: { exchanges: 14, deals: 2 },
+          read: { exchanges: 14, deals: 2, window_days: 180 },
           stale: true,
           findings: [ruleRow, modelRow],
           findings_dropped: 0,
@@ -410,7 +411,11 @@ describe("the account scan on the needs list", () => {
     expect(screen.getByText(/nobody has come back/)).toBeTruthy();
     expect(screen.queryByRole("status")).toBeNull();
     expect(screen.getByText("Written by Margince")).toBeTruthy();
-    expect(screen.getByText("Analyzed 14 exchanges and 2 deals")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Analyzed 14 exchanges in the last 180 days and 2 open deals",
+      ),
+    ).toBeTruthy();
     expect(
       screen.getByText(
         "The company has changed since. It is analyzed again within the hour.",
@@ -468,13 +473,17 @@ describe("the account scan on the needs list", () => {
           state: "done",
           generated_at: "2026-08-07T08:58:00Z",
           generated_by: "model",
-          read: { exchanges: 1, deals: 1 },
+          read: { exchanges: 1, deals: 1, window_days: 180 },
           findings: [ruleRow],
           findings_dropped: 0,
         },
       },
     );
-    expect(screen.getByText("Analyzed 1 exchange and 1 deal")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Analyzed 1 exchange in the last 180 days and 1 open deal",
+      ),
+    ).toBeTruthy();
   });
 
   it("says why the model did not write the rows when the read degraded", () => {

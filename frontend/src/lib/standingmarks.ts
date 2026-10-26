@@ -3,6 +3,7 @@
 
 import type { components } from "../api/schema";
 import type { TimelineMark } from "../design-system/standingtimeline";
+import { activityDay, activityHasHappened } from "../format/activitywhen";
 import { formatDayMonth } from "../format/format.dates";
 import type { Locale, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -36,13 +37,15 @@ export function activityMarks(
     t: Translator;
     locale: Locale;
     zone: string;
+    // The record zone, which a date-only activity is read in.
+    record: string;
     // The instant the record was read at; nothing after it has happened.
     asOf: string;
     // Where pressing a card row goes, when the page has a History tab to open.
     onOpen?: () => void;
   }>,
 ): TimelineMark[] {
-  const { t, locale, zone, onOpen } = words;
+  const { t, locale, zone, record, onOpen } = words;
   const asOf = Date.parse(words.asOf);
   return rows
     .filter(
@@ -50,7 +53,7 @@ export function activityMarks(
         row.kind !== "task" &&
         !row.archived_at &&
         !NOT_HELD.has(row.meeting_status ?? "") &&
-        Date.parse(row.occurred_at) <= asOf,
+        activityHasHappened(row, asOf, record),
     )
     .map((row): TimelineMark => {
       const what = t(KIND_WORD[row.kind]);
@@ -58,12 +61,19 @@ export function activityMarks(
       return {
         key: row.id,
         at: row.occurred_at,
+        precision: row.occurred_precision,
         kind: row.kind,
         direction: direction ?? undefined,
         what,
         title: (row.subject ?? row.email_summary?.subject)?.trim() || what,
         detail: messageDetail(row, t),
-        when: formatDayMonth(row.occurred_at, locale, zone),
+        when: activityDay(
+          row.occurred_at,
+          row.occurred_precision,
+          locale,
+          zone,
+          formatDayMonth,
+        ),
         onOpen,
       };
     });

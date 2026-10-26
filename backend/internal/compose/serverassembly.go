@@ -35,7 +35,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/finance"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/integrations"
@@ -91,20 +90,6 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithInstallationRenamer(installationRenamer(pool))
 }
 
-// newFinanceHandlers builds the invoicing transport over the two edges it
-// cannot reach for itself: the installation's base currency, and who at the
-// account receives an invoice.
-//
-// The billing-contact edge is an injection rather than an import for the
-// ordinary ADR-0054 reason — contacts owns relationship, finance owns the
-// invoice — and it matters more than usual here: the same read serves the
-// company page's own billing section, so a second one would let the finance
-// card and the account panel disagree about who the recipient is.
-func newFinanceHandlers(pool *pgxpool.Pool) finance.Handlers {
-	return finance.NewHandlers(InstallationDB(pool), FinanceRates()).
-		WithBillingContacts(financeBillingContacts{contacts: contacts.NewStore(InstallationDB(pool))})
-}
-
 // newActivitiesHandlers builds the timeline transport over the sibling
 // modules its inbound and outbound edges need.
 func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
@@ -115,6 +100,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	gate := consentGateFor(pool)
 	return activities.NewHandlers(InstallationDB(pool)).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
+		WithRecordZone(installationZoneTx).
 		WithSettings(StoredConfig(pool)).
 		WithLocks(loadedLocks).
 		WithConsent(gate).

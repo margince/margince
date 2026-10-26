@@ -13,8 +13,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 )
 
 // projectHeaderLine names the engagement and where it stands. The key rides
@@ -41,6 +39,9 @@ func meetingLine(in Input) string {
 		subject = said.Say(headerWords.Meeting)
 	}
 	when := in.StartsAt.Format("2006-01-02 15:04 MST")
+	if in.StartsDateOnly {
+		when = in.startsText()
+	}
 	if in.Company == "" {
 		return fmt.Sprintf("%s, %s.", subject, when)
 	}
@@ -77,7 +78,7 @@ func (said briefCopy) priorMeetingLine(prior PriorMeetingIn, now time.Time, loc 
 	if subject == "" {
 		subject = said.Say(touchWords.Meeting)
 	}
-	days := elapsed.Days(prior.StartsAt, now, loc)
+	days := prior.StartsAt.daysAgo(now, loc)
 	switch {
 	case days <= 0:
 		return fmt.Sprintf(said.Say(touchWords.MetToday), subject)

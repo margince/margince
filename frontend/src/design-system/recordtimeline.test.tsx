@@ -48,6 +48,7 @@ function activity(
   row: Pick<Activity, "id" | "subject" | "occurred_at"> & Partial<Activity>,
 ): Activity {
   return {
+    occurred_precision: "instant",
     offers_email: false,
     kind: "email",
     is_done: false,
@@ -444,6 +445,7 @@ describe("a record timeline you can work in", () => {
             email_summary: {
               activity_id: "a-1",
               occurred_at: "2026-08-12T09:00:00Z",
+              occurred_precision: "instant",
               version: 1,
               subject: "Pricing for 40 seats",
               preview: "What would this cost for 40 seats?",
@@ -506,6 +508,7 @@ describe("a record timeline you can work in", () => {
         email_summary: {
           activity_id: id,
           occurred_at: `2026-08-1${index}T09:00:00Z`,
+          occurred_precision: "instant",
           version: 1,
           subject: "Cutover plan",
           preview: "Are we still moving on the 14th?",

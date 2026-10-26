@@ -2,6 +2,11 @@ import type { useInteractionLabel } from "../../components/interactionchrome";
 import { activityTimeline } from "../../design-system/activitytimeline";
 import type { ReadingTone } from "../../design-system/readingtone";
 import { groupChronology } from "../../design-system/timelinegroups";
+import {
+  activityDay,
+  activityHasHappened,
+  type OccurredPrecision,
+} from "../../format/activitywhen";
 import { primaryPhone } from "../../format/contacturi";
 import { formatDayMonth } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
@@ -31,6 +36,7 @@ type Said = Readonly<{
   // The timeline row the conversation came from; a thread entry has none.
   row: Activity | null;
   occurredAt: string;
+  occurredPrecision: OccurredPrecision;
   title: string;
   status: Status;
   emailId: string | null;
@@ -49,14 +55,21 @@ export function memoryRows(
   recordZone: string,
 ): MemoryRow[] {
   const entries = view.conversation_memory ?? [];
-  const said = entries.length > 0 ? entries.map(fromEntry) : folded(view, t);
+  const said =
+    entries.length > 0 ? entries.map(fromEntry) : folded(view, t, recordZone);
   return said.map((row) => ({
     key: row.key,
     title: row.title || interactionLabel(row.kind, row.provider),
     sub: [
       interactionLabel(row.kind, row.provider),
       directionWord(row, t),
-      formatDayMonth(row.occurredAt, locale, recordZone),
+      activityDay(
+        row.occurredAt,
+        row.occurredPrecision,
+        locale,
+        recordZone,
+        formatDayMonth,
+      ),
     ]
       .filter(Boolean)
       .join(" · "),
@@ -83,6 +96,7 @@ function fromEntry(entry: Entry): Said {
     provider: entry.channel_provider ?? null,
     row: null,
     occurredAt: entry.occurred_at,
+    occurredPrecision: entry.occurred_precision,
     title: entry.title,
     // An entry carries no author or page role, so nothing here overrides the
     // duty the server stated for it.
@@ -92,9 +106,11 @@ function fromEntry(entry: Entry): Said {
   };
 }
 
-function folded(view: Contact360, t: Translator): Said[] {
+function folded(view: Contact360, t: Translator, recordZone: string): Said[] {
+  // A meeting still to come belongs on the Next bar, not among what was said.
+  const now = Date.now();
   const rows = (view.activities?.data ?? []).filter(
-    (row) => row.kind !== "task" && !isFuture(row),
+    (row) => row.kind !== "task" && activityHasHappened(row, now, recordZone),
   );
   const byId = new Map(rows.map((row) => [row.id, row]));
   return groupChronology(activityTimeline(rows)).flatMap((group) => {
@@ -107,6 +123,7 @@ function folded(view: Contact360, t: Translator): Said[] {
       provider: row.channel_provider ?? null,
       row,
       occurredAt: row.occurred_at,
+      occurredPrecision: row.occurred_precision,
       // Withheld is read from the row's own state rather than trusted to have
       // been stripped, so a subject the server forgot to null never prints.
       title:
@@ -117,11 +134,6 @@ function folded(view: Contact360, t: Translator): Said[] {
       emailId: row.kind === "email" ? row.id : null,
     };
   });
-}
-
-// A meeting still to come belongs on the Next bar, not among what was said.
-function isFuture(row: Activity): boolean {
-  return new Date(row.occurred_at).getTime() > Date.now();
 }
 
 // Only an answer on this conversation settles it; a contact can owe several.

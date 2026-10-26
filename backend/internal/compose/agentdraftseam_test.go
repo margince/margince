@@ -96,7 +96,7 @@ func TestDraftEmailBuildsTheRequestTheContactComposerBuilds(t *testing.T) {
 
 // fenceMarker is the per-call nonce of the untrusted-data fence, the one part
 // of a request minted fresh on every call by design.
-var fenceMarker = regexp.MustCompile(`untrusted-[0-9a-f-]{36}`)
+var fenceMarker = regexp.MustCompile(`untrusted-[a-z2-7]{26}`)
 
 func unfenced(requests []model.Request) string {
 	return fenceMarker.ReplaceAllString(fmt.Sprintf("%+v", requests), "untrusted-FENCE")

@@ -19,6 +19,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // latestQualifyingEvent finds the most recent thing on the record that makes
@@ -237,7 +239,7 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 		JOIN activity_participant p ON p.activity_id = a.id
 		     AND p.role = 'from' AND p.contact_id = $1::uuid
 		WHERE a.direction = 'inbound' AND a.archived_at IS NULL
-		  AND a.occurred_at >= $2
+		  AND `+occurredday.FromSQL("a", "$2")+`
 		ORDER BY a.occurred_at DESC
 		LIMIT 1`, contactID, since).Scan(&activityID, &event.OccurredAt)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -323,8 +325,8 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 		  AND a.counterparty_email IS NULL
 		  AND a.captured_by LIKE 'connector:%'
 		  AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))
-		  AND a.occurred_at >= $2
-		  AND a.occurred_at <= now() + $3::interval
+		  AND `+occurredday.FromSQL("a", "$2")+`
+		  AND a.occurred_at <= now() + $3::interval -- occurred_at raw: a 90-day diary horizon; a day entry near its far edge decides nothing
 		ORDER BY a.occurred_at DESC
 		LIMIT 1`, contactID, since, meetingHorizonInterval).Scan(&activityID, &event.OccurredAt)
 	if errors.Is(err, pgx.ErrNoRows) {

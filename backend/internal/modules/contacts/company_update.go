@@ -17,6 +17,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -69,6 +70,9 @@ type UpdateCompanyInput struct {
 	// CustomFields carries the request body's cf_* keys. A key no active catalog
 	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
+	// AdoptSource stamps an outside id onto a company that holds none. Only an
+	// intake that matched a hand-made company by a natural key sets it.
+	AdoptSource *OutsideID
 }
 
 // UpdateCompany applies one edit to one company, in a single
@@ -122,6 +126,9 @@ func (s *Store) updateCompanyInTx(
 	if err := storekit.EnsureIfMatch(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
 		return crmcontracts.Company{}, err
 	}
+	if err := stageAdoptedSource(ctx, tx, id, p, in.AdoptSource); err != nil {
+		return crmcontracts.Company{}, err
+	}
 	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
 		return crmcontracts.Company{}, err
 	}
@@ -154,6 +161,9 @@ func (s *Store) updateCompanyInTx(
 		}
 		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == companyLinkedInKey {
 			return crmcontracts.Company{}, &DuplicateCompanyLinkedInError{URL: deref(in.LinkedInURL)}
+		}
+		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == companySourceKey {
+			return crmcontracts.Company{}, fmt.Errorf("a company with this source_system and source_id already exists: %w", apperrors.ErrConflict)
 		}
 		return crmcontracts.Company{}, fmt.Errorf("apply company patch: %w", err)
 	}

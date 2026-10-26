@@ -29,6 +29,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/profileverdicts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -155,7 +156,10 @@ func (w *vcardIngestWorker) importCards(ctx context.Context, args VCardIngestArg
 	// commits; the object-store fetches, and then a transaction per card, all
 	// happen after. A check here — before the writes, however close to them —
 	// would leave exactly the gap it looks like it closes.
-	store := contacts.NewStore(InstallationDB(w.pool))
+	// The verdict reader decides whether a human's correction still stands
+	// against a mailed card, as it does for an uploaded one.
+	store := contacts.NewStore(InstallationDB(w.pool)).
+		WithProfileVerdictReader(profileverdicts.MergeReader(InstallationDB(w.pool)))
 	results, err := store.ImportVCardsFromMessage(actorCtx, entries, args.Activity)
 	if err != nil {
 		return err

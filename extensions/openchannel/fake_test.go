@@ -96,6 +96,15 @@ func (r *fakeRuntime) Secrets() extension.Secrets { return r.secrets }
 
 func (r *fakeRuntime) Caller() extension.Caller { return r.caller }
 
+// The batch pair is unused by this unit; the seam's shape is all it answers for.
+func (r *fakeRuntime) IngestBatch(context.Context, extension.UserID, extension.SourceName, []extension.Record, extension.BatchPosition) ([]extension.Result, error) {
+	return nil, nil
+}
+
+func (r *fakeRuntime) IngestPosition(context.Context, extension.SourceName) (extension.BatchPosition, error) {
+	return "", nil
+}
+
 func (r *fakeRuntime) Tx(ctx context.Context, fn func(context.Context, extension.Tx) error) error {
 	if r.txErr != nil {
 		return r.txErr

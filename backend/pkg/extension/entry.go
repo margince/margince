@@ -25,6 +25,12 @@ const (
 	SlotCompanyHeader EntrySlot = "record_header.company"
 	// SlotDealHeader is the verb row in a deal page's header.
 	SlotDealHeader EntrySlot = "record_header.deal"
+	// SlotContactMark is the small note beside a contact page's header verbs.
+	SlotContactMark EntrySlot = "record_mark.contact"
+	// SlotCompanyMark is the small note beside a company page's header verbs.
+	SlotCompanyMark EntrySlot = "record_mark.company"
+	// SlotDealMark is the small note beside a deal page's header verbs.
+	SlotDealMark EntrySlot = "record_mark.deal"
 )
 
 // EntrySlots is every slot a core screen renders. The frontend's list mirrors
@@ -32,7 +38,10 @@ const (
 //
 // Held by: TestTheFrontendEntrySlotsMatchTheGoOnes (backend/gates/frontendentryslots_test.go)
 func EntrySlots() []EntrySlot {
-	return []EntrySlot{SlotLogActivity, SlotContactHeader, SlotCompanyHeader, SlotDealHeader}
+	return []EntrySlot{
+		SlotLogActivity, SlotContactHeader, SlotCompanyHeader, SlotDealHeader,
+		SlotContactMark, SlotCompanyMark, SlotDealMark,
+	}
 }
 
 // Valid reports whether a core screen renders this slot.

@@ -133,6 +133,9 @@ func TestASendersMailIsCountedFromTheSeatsOwnMailbox(t *testing.T) {
 	if d.LastSeenAt == nil || !d.LastSeenAt.Equal(newer) {
 		t.Errorf("last seen = %v, want the newest message at %v", d.LastSeenAt, newer)
 	}
+	if d.LastSeenPrecision != "instant" {
+		t.Errorf("last seen precision = %q, want the newest message's instant", d.LastSeenPrecision)
+	}
 }
 
 // The ledger keeps a closed question beside the one its sender's next message

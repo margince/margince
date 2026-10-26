@@ -157,6 +157,26 @@ describe("a deal row carrying a decided next step", () => {
     ).toBeNull();
   });
 
+  it("wears the mark only on a link where the model writes", async () => {
+    // A deal's draft move reaches the deal, where nothing drafts on arrival; a
+    // contact's opens the composer, which does.
+    for (const [subject, marked] of [
+      [{ type: "deal", id: "01a05500-0000-7000-8000-0000000000d2" }, false],
+      [{ type: "contact", id: "01a05500-0000-7000-8000-0000000000c5" }, true],
+    ] as const) {
+      cleanup();
+      stub(aDayWith(aQuietDeal({ subject, move: { action: "draft_email" } })));
+      renderWorklist();
+
+      const link = await screen.findByRole("link", {
+        name: marked
+          ? en["worklist.verb.draft_email_now"]
+          : en["worklist.verb.draft_email"],
+      });
+      expect(link.classList.contains("btn-ai"), subject.type).toBe(marked);
+    }
+  });
+
   it("draws no button for a step it cannot perform", async () => {
     // Two undrawable moves: a create_task with no body would post {} and only
     // be refused, and `draft_email` deliberately has no control here.
@@ -231,7 +251,7 @@ describe("a waiting message whose prepared move is the reply", () => {
     ).toBeNull();
   });
 
-  it("keeps the mark on it, because a rule worked the move out", async () => {
+  it("keeps the mark on it, because the press drafts", async () => {
     aWaitingRow();
 
     const draft = await screen.findByRole("button", {
@@ -255,5 +275,38 @@ describe("a waiting message whose prepared move is the reply", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeNull();
     });
+  });
+
+  it("starts the draft on that one press", async () => {
+    // The mark promises that the model writes. A composer that waited for its
+    // own Draft button would make the reader press the same promise twice.
+    aWaitingRow();
+    const asked: unknown[] = [];
+    const passthrough = globalThis.fetch;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.endsWith(`/activities/${WAITING.id}/draft-email`)) {
+          asked.push(
+            JSON.parse(
+              input instanceof Request
+                ? await input.clone().text()
+                : String(init?.body ?? "{}"),
+            ),
+          );
+          return jsonResponse({ subject: "Re: pricing", body: "Thanks!" });
+        }
+        return passthrough(input, init);
+      }),
+    );
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["worklist.verb.draft_reply_now"],
+      }),
+    );
+    await waitFor(() => expect(asked).toHaveLength(1));
   });
 });

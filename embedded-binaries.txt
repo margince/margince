@@ -1,0 +1,19 @@
+# A dependency's own license says nothing about compiled code it carries. A
+# `.wasm` is a build output, so the SBOM reads the Go module's license and never
+# the license of the source that wasm was built from.
+#
+# Every embedded binary in the three programs is named here with what it was
+# built from and that source's license. `scripts/embedded-binary-licenses.sh`
+# refuses one that is missing, one whose license .grant.yaml does not allow, and
+# an entry the build no longer carries.
+#
+# The corpus is the packages `go list -json -deps ./cmd/...` reports, so a new
+# dependency is covered the day it is added. A `testdata/` fixture in the module
+# cache is not: no build reaches it.
+#
+# module | embedded file | built from | that source's license
+github.com/klippa-app/go-pdfium | pdfium.wasm | the PDFium C++ library, compiled to WebAssembly by the module's publisher; the module itself is MIT, and its README states PDFium's own license | Apache-2.0
+golang.org/x/net | data/nodes | a pre-compiled snapshot of Mozilla's Public Suffix List, stated in publicsuffix/list.go; the module itself is BSD-3-Clause | MPL-2.0
+golang.org/x/net | data/children | the same Public Suffix List snapshot as data/nodes, which the two files index together | MPL-2.0
+google.golang.org/protobuf | editions_defaults.binpb | protobuf's own edition descriptors, compiled from the .proto sources in the same module | BSD-3-Clause
+github.com/margince/margince/backend | module/licensecheck.wasm.module | the license-validation module this product's publisher builds and publishes, bundled byte-for-byte and held to a recorded digest by licensecheck/module_test.go | BUSL-1.1

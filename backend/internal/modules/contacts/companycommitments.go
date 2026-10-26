@@ -78,8 +78,9 @@ type CompanyCommitment struct {
 	// is not yet late, which is the ranking's business rather than this read's.
 	DueAt *time.Time
 	// OccurredAt is when it was said, which breaks ties between two promises
-	// sharing a due date.
+	// sharing a due date. Precision says whether it names only a date.
 	OccurredAt time.Time
+	Precision  string
 }
 
 // OpenCommitmentsForCompany reads the open promises made to the contacts
@@ -207,7 +208,7 @@ func rankedClaims(
 	// edge is existence-tested rather than joined.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id, c.contact_id, coalesce(pr.full_name, ''), c.body, c.source_quote,
-		       c.source_activity_id, a.kind, c.due_at, a.occurred_at,
+		       c.source_activity_id, a.kind, c.due_at, a.occurred_at, a.occurred_precision,
 		       count(*) OVER () AS admitted
 		  FROM conversation_claim c
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
@@ -231,7 +232,7 @@ func rankedClaims(
 	for rows.Next() {
 		var row CompanyCommitment
 		if err := rows.Scan(&row.ID, &row.ContactID, &row.ContactName, &row.Body, &row.SourceQuote,
-			&row.ActivityID, &row.SourceKind, &row.DueAt, &row.OccurredAt, &admitted); err != nil {
+			&row.ActivityID, &row.SourceKind, &row.DueAt, &row.OccurredAt, &row.Precision, &admitted); err != nil {
 			return nil, 0, fmt.Errorf("scan an open commitment: %w", err)
 		}
 		out = append(out, row)

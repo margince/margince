@@ -412,6 +412,7 @@ function lifecycleDecision(blocked: boolean): Approval {
       lifecycle_evidence: {
         scope: "company",
         occurred_at: "2026-07-31T12:00:00Z",
+        occurred_precision: "day",
       },
       changes: [
         {

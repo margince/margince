@@ -1119,6 +1119,10 @@ func (stubs) MergeCompany(w nethttp.ResponseWriter, r *nethttp.Request, id crmco
 	httperr.NotImplemented(w, r, "MergeCompany")
 }
 
+func (stubs) ListCompanyOfferedValues(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListCompanyOfferedValues")
+}
+
 func (stubs) GetPartner(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetPartner")
 }
@@ -1903,6 +1907,14 @@ func (stubs) ListExtensions(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListExtensions")
 }
 
+func (stubs) GetExtensionSettings(w nethttp.ResponseWriter, r *nethttp.Request, name string) {
+	httperr.NotImplemented(w, r, "GetExtensionSettings")
+}
+
+func (stubs) UpdateExtensionSettings(w nethttp.ResponseWriter, r *nethttp.Request, name string) {
+	httperr.NotImplemented(w, r, "UpdateExtensionSettings")
+}
+
 func (stubs) GetFieldHistory(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetFieldHistoryParams) {
 	httperr.NotImplemented(w, r, "GetFieldHistory")
 }
@@ -2293,6 +2305,10 @@ func (stubs) DemoteLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcont
 
 func (stubs) DraftLeadEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DraftLeadEmail")
+}
+
+func (stubs) LinkLeadCompany(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "LinkLeadCompany")
 }
 
 func (stubs) ListLeadManualSignals(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
@@ -3373,6 +3389,14 @@ func (stubs) CreateFormerMember(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) NameSeats(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.NameSeatsParams) {
 	httperr.NotImplemented(w, r, "NameSeats")
+}
+
+func (stubs) DeclareServiceMember(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DeclareServiceMember")
+}
+
+func (stubs) ArchiveServiceMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ArchiveServiceMember")
 }
 
 func (stubs) GetUserAccess(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

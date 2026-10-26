@@ -39,7 +39,7 @@ func FromLead(
 		RewriteOf: strings.TrimSpace(req.RewriteOf),
 		Envelope:  envelope,
 		Recipient: recipientOf(lead, activities),
-		Recent:    contactdraft.FoldRecent(activities, envelope.At()),
+		Recent:    contactdraft.FoldRecent(activities, envelope.At(), envelope.Zone()),
 	}
 }
 
@@ -125,9 +125,9 @@ func lastEachWay(activities []crmcontracts.Activity) (inbound, outbound time.Tim
 //
 // Held by: TestTheConversationStateReadsTheSameTwoInstants
 // (backend/internal/compose/leaddraft/fold_test.go)
-func ConversationState(activities []crmcontracts.Activity, now time.Time) convstate.State {
+func ConversationState(activities []crmcontracts.Activity, now time.Time, zone *time.Location) convstate.State {
 	inbound, outbound := lastEachWay(activities)
-	return draftcore.ClassifyWithLogged(now, inbound, outbound, activities)
+	return draftcore.ClassifyWithLogged(now, zone, inbound, outbound, activities)
 }
 
 func deref(s *string) string {

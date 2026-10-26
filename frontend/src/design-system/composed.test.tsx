@@ -9,8 +9,13 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { formatMoneyCompact, MONEY_ABSENT } from "../format/format";
+import {
+  formatDayMonth,
+  formatMoneyCompact,
+  MONEY_ABSENT,
+} from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { lastEmailAgo } from "../testing/dealmail";
 import { DealCard } from "./dealcard";
 import { armHoverIntent } from "./hoverintent-testing";
 import {
@@ -278,7 +283,7 @@ describe("DealCard + PipelineBoard", () => {
       <DealCard
         deal={{
           ...deal,
-          lastEmail: { agoMs: 10 * 86_400_000, direction: "outbound" },
+          lastEmail: lastEmailAgo(10 * 86_400_000, "outbound"),
         }}
         href="#/deals/d1"
         zone="Europe/Berlin"
@@ -294,6 +299,30 @@ describe("DealCard + PipelineBoard", () => {
     expect(screen.queryByText("Last email:")).toBeNull();
   });
 
+  // A `day` mail has no hour to count an age from, so the chip names its day.
+  // A short date keeps the dense chip on one line.
+  it("dates a date-only last email by its day and month", () => {
+    render(
+      <DealCard
+        deal={{
+          ...deal,
+          lastEmail: {
+            at: "2026-09-14T12:00:00Z",
+            precision: "day",
+            measuredAt: Date.parse("2026-09-15T12:00:00Z"),
+            direction: "outbound",
+          },
+        }}
+        href="#/deals/d1"
+        zone="Pacific/Kiritimati"
+      />,
+    );
+    // The 14th even in Kiritimati, where its noon UTC is the 15th.
+    const day = formatDayMonth("2026-09-14T12:00:00Z", "en", "UTC");
+    expect(screen.getByText(day)).toBeTruthy();
+    expect(screen.queryByText(/ago/)).toBeNull();
+  });
+
   // Given an aside, the line is a flyout's trigger: what the caller read from
   // the timeline opens under a settled pointer and closes when it leaves. The
   // content is the caller's — this tier fetches nothing.
@@ -303,7 +332,7 @@ describe("DealCard + PipelineBoard", () => {
       <DealCard
         deal={{
           ...deal,
-          lastEmail: { agoMs: 2 * 86_400_000, direction: "inbound" },
+          lastEmail: lastEmailAgo(2 * 86_400_000, "inbound"),
         }}
         href="#/deals/d1"
         zone="Europe/Berlin"
@@ -501,6 +530,7 @@ describe("RecordView + timeline", () => {
             kind: "email",
             title: "Re: fleet retrofit offer",
             atIso: "2026-06-12T09:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "agent", agent: "capture" },
           },
           {
@@ -508,6 +538,7 @@ describe("RecordView + timeline", () => {
             kind: "note",
             title: "Call notes",
             atIso: "2026-06-14T10:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "human", self: true },
           },
         ]}
@@ -537,6 +568,7 @@ describe("RecordView + timeline", () => {
             kind: "email",
             title: "Update zu Margince",
             atIso: "2026-07-17T09:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "agent", agent: "capture" },
             body,
           },
@@ -560,6 +592,7 @@ describe("RecordView + timeline", () => {
             kind: "email",
             title: "Update zu Margince",
             atIso: "2026-07-17T09:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "agent", agent: "capture" },
             body: "   ",
           },
@@ -581,6 +614,7 @@ describe("RecordView + timeline", () => {
             kind: "email",
             title: "Re: Q3",
             atIso: "2026-07-01T00:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "human", self: true },
             actions: (
               <button type="button" key="reply">
@@ -605,6 +639,7 @@ describe("TimelineText on a mail row", () => {
       kind,
       title: "Re: Angebot",
       atIso: "2026-07-01T00:00:00Z",
+      atPrecision: "instant" as const,
       provenance: { kind: "human" as const, self: true },
       body,
     },
@@ -619,6 +654,7 @@ describe("TimelineText on a mail row", () => {
   const IGNORED_SUMMARY = {
     activity_id: "a-ignored",
     occurred_at: "2026-07-01T00:00:00Z",
+    occurred_precision: "instant" as const,
     display_status: "team" as const,
     attachment_count: 0,
     move: "none" as const,
@@ -646,6 +682,7 @@ describe("TimelineText on a mail row", () => {
               kind,
               title: "Was besprochen wurde",
               atIso: "2026-07-01T00:00:00Z",
+              atPrecision: "instant",
               provenance: { kind: "human" as const, self: true },
               body: "Der ganze Text, den dieser Eintrag traegt.",
               emailSummary: IGNORED_SUMMARY,
@@ -678,6 +715,7 @@ describe("TimelineText on a mail row", () => {
             kind: "email",
             title: "Re: Angebot",
             atIso: "2026-07-01T09:12:00Z",
+            atPrecision: "instant",
             provenance: { kind: "human" as const, self: true },
             body: "Der Text der Mail.",
             emailSummary: {
@@ -714,6 +752,7 @@ describe("TimelineText on a mail row", () => {
             kind: "email",
             title: "Re: Angebot",
             atIso: "2026-07-01T00:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "human" as const, self: true },
             direction: "inbound",
             counterparts: "Anna Berger",

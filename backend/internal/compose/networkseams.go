@@ -100,7 +100,7 @@ func whoKnowsLister(pool *pgxpool.Pool, store *contacts.Store) agents.WhoKnowsLi
 			for _, s := range seats.Seats {
 				gaps = append(gaps, agents.CaptureGap{
 					UserID: s.UserID, DisplayName: s.DisplayName, Invited: s.Invited,
-					LastOnThreadAt: s.LastOnThread,
+					LastOnThreadAt: s.LastOnThread, LastOnThreadPrecision: s.LastOnThreadPrecision,
 				})
 			}
 			return nil

@@ -6,10 +6,10 @@ package weekly
 // How WELL the week went, as against what happened in it.
 //
 // The counts beside this say a rep was sent 40 leads and held 6 meetings. This
-// says they answered 12 inside the target and 4 of those meetings left a next
-// step behind. The two are different questions and a reader wants both, but
-// only this one is a judgement, so only this one has to be careful about what
-// it does when there is nothing to judge.
+// says 12 of those leads had a first response recorded by the close, and 4 of
+// those meetings left a next step behind. A reader wants both. Only this one
+// is a judgement, so only this one has to be careful when there is nothing to
+// judge.
 //
 // A BLOCK IS PRESENT OR ABSENT, NEVER ZEROED. A rep who carried no leads at all
 // did not score zero on the funnel — the funnel was not their work that week,
@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // Scorecard is one week's judgement of one rep's work.
@@ -50,8 +51,11 @@ type LeadBlock struct {
 	Disqualified int
 	Promoted     int
 
-	// The SLA slice, carried here as well as on Counts so a reader of the
-	// scorecard has the whole funnel in one record.
+	// The SLA slice, read from the cohort Arrived counts. AnsweredInTarget is
+	// every first response recorded by the close, late ones included. A late
+	// answer is also a breach, so only responses are subtracted from Arrived.
+	// Arrived is nil on a week frozen before it was recorded.
+	Arrived          *int
 	AnsweredInTarget int
 	Breached         int
 
@@ -201,8 +205,9 @@ func scoreLeads(
 		 WHERE l.owner_id = $%[1]d AND (%[2]s)`, userPos, scope)
 
 	block := &LeadBlock{}
-	// One statement for the whole block: eight counts read at eight moments
-	// would describe eight slightly different weeks.
+	var arrived int
+	// One statement for the whole block: ten counts read at ten moments
+	// would describe ten slightly different weeks.
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		WITH mine AS (%[5]s),
 		moved AS (`+LeadMovesSQL("mine", "$%[1]d", "$%[2]d")+`),
@@ -223,12 +228,12 @@ func scoreLeads(
 		  (SELECT count(*) FROM moved WHERE move = '`+LeadMoveDisqualified+`'),
 		  (SELECT count(*) FROM moved WHERE move = '`+LeadMovePromoted+`'),
 		  (SELECT count(*) FROM lead l JOIN mine ON mine.id = l.id
-		    WHERE COALESCE(l.routed_at, l.created_at) >= $%[1]d
-		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d
+		    WHERE `+leadArrivedInWeekSQL+`),
+		  (SELECT count(*) FROM lead l JOIN mine ON mine.id = l.id
+		    WHERE `+leadArrivedInWeekSQL+`
 		      AND `+responseRecordedInWeekSQL+`),
 		  (SELECT count(*) FROM lead l JOIN mine ON mine.id = l.id
-		    WHERE COALESCE(l.routed_at, l.created_at) >= $%[1]d
-		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d
+		    WHERE `+leadArrivedInWeekSQL+`
 		      AND `+breachRecordedInWeekSQL+`),
 		  (SELECT count(*) FROM met WHERE status = 'booked' AND NOT partial_pre_history),
 		  (SELECT count(*) FROM met WHERE status = 'held' AND NOT partial_pre_history),
@@ -236,11 +241,12 @@ func scoreLeads(
 		  (SELECT count(*) FROM met WHERE partial_pre_history)`,
 		startPos, endPos, userPos, scope, mine, meetingScope), args...).
 		Scan(&block.Advanced, &block.Disqualified, &block.Promoted,
-			&block.AnsweredInTarget, &block.Breached,
+			&arrived, &block.AnsweredInTarget, &block.Breached,
 			&block.Booked, &block.Held, &block.NoShow, &block.PartialHistory)
 	if err != nil {
 		return nil, fmt.Errorf("weekly: scoring the week's funnel: %w", err)
 	}
+	block.Arrived = &arrived
 	return block, nil
 }
 
@@ -350,7 +356,7 @@ func scoreDeals(
 	// median, and that is absent rather than zero days.
 	var median *int
 	err = tx.QueryRow(ctx, fmt.Sprintf(dealScoreSQL,
-		startPos, endPos, userPos, sincePos, stakeholdersPos,
+		startPos, endPos, userPos, occurredday.WithinSQL("act", fmt.Sprintf("$%d", sincePos), fmt.Sprintf("$%d", endPos)), stakeholdersPos,
 		forecastRank("last_cat"), forecastRank("first_cat"), scope, zonePos,
 		weekEndDealsSQL(fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos)), taskScope, activityScope,
 		taskCompletionAtSQL("task", fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos)), currentTask),

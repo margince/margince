@@ -127,7 +127,7 @@ func previewLines(line writeLine) {
 
 func weeklyPresentationLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyLeads }, "Leads assigned", "Zugewiesene Leads", "Lead được phân công")
-	line(func(c *Copy) *string { return &c.WeeklyAnswered }, "First replies within the target time", "Erste Antworten innerhalb der Zielzeit", "Phản hồi đầu tiên đúng hạn")
+	line(func(c *Copy) *string { return &c.WeeklyAnswered }, "First replies recorded by week close", "Erste Antworten bis Wochenende erfasst", "Phản hồi đầu tiên ghi nhận trước khi kết thúc tuần")
 	line(func(c *Copy) *string { return &c.WeeklyBreached }, "First replies overdue", "Überfällige erste Antworten", "Phản hồi đầu tiên quá hạn")
 	line(func(c *Copy) *string { return &c.WeeklyMeetings }, "Meetings held", "Durchgeführte Termine", "Cuộc họp đã diễn ra")
 	line(func(c *Copy) *string { return &c.WeeklyNextSteps }, "Meetings with a next step", "Termine mit nächstem Schritt", "Cuộc họp có bước tiếp theo")

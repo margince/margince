@@ -247,6 +247,11 @@ var piiTables = map[string]piiHandling{
 	// given by them, which makes it disclosable twice over — the values and
 	// the fact that they were purchased.
 	"contact_provider_claim": {erasureWrite: true, sarRead: true},
+	// What a feed last offered for a company's text fields. The text can quote
+	// an employee, so the erasure of a subject deletes the offers of every
+	// company they were employed by. Not exported: the rows describe the
+	// company, which the subject's Art. 15 package does not carry.
+	"company_offered_value": {erasureWrite: true, sarRead: false},
 	// What a purchase FILLED on the record. It keeps the value it wrote for a
 	// plain column — the title, the profile URL — because the revert has
 	// nothing else to recognise the value by, and a hash of an address or a

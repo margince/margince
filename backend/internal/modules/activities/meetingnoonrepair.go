@@ -29,22 +29,24 @@ const MeetingNoonCutoffMigration = "1792761600"
 // noonMeetingScope selects meetings whose last start change is an update made
 // before the cutoff. A human actor made it, and it set the outcome with a start at
 // noon of the day the start already had. No later change moved the start. The
-// zone is $1, the cutoff migration $2.
+// zone is $1, the cutoff migration $2. A day meeting is stored at noon UTC and
+// has no start to restore, so neither side of that save is one.
 const noonMeetingScope = `
   FROM activity a
   JOIN LATERAL (
        SELECT au.action, au.actor_type, au.occurred_at AS saved_at, au.after ? 'meeting_status' AS set_status,
               (au.before ->> 'occurred_at')::timestamptz AS original,
-              (au.after ->> 'occurred_at')::timestamptz AS moved
+              (au.after ->> 'occurred_at')::timestamptz AS moved,
+              au.before ->> 'occurred_precision' AS original_precision
          FROM audit_log au
         WHERE au.entity_type = 'activity' AND au.entity_id = a.id AND au.after ? 'occurred_at'
         ORDER BY au.occurred_at DESC, au.id DESC LIMIT 1) last ON true
- WHERE a.kind = 'meeting' AND a.meeting_status IS NOT NULL
+ WHERE a.kind = 'meeting' AND a.meeting_status IS NOT NULL AND a.occurred_precision = 'instant'
    AND a.restricted_at IS NULL AND a.archived_at IS NULL
    AND (a.occurred_at AT TIME ZONE $1)::time = TIME '12:00:00'
    AND last.action = 'update' AND last.actor_type = 'human' AND last.set_status AND last.moved = a.occurred_at AND last.original IS NOT NULL
    AND (last.original AT TIME ZONE $1)::date = (a.occurred_at AT TIME ZONE $1)::date
-   AND (last.original AT TIME ZONE $1)::time <> TIME '12:00:00'
+   AND (last.original AT TIME ZONE $1)::time <> TIME '12:00:00' AND last.original_precision IS DISTINCT FROM 'day'
    AND last.saved_at < (SELECT m.applied_at FROM schema_migrations_core m WHERE m.version = $2)
    AND NOT EXISTS (SELECT 1 FROM meeting_invitation i WHERE i.activity_id = a.id AND i.status <> 'canceled')`
 

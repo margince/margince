@@ -50,8 +50,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -261,10 +261,11 @@ func (said momentCopy) meetingPrepMoment(_ context.Context, now time.Time, page 
 	}
 	id := meeting.ActivityId
 	evidence := []crmcontracts.ContactMomentEvidence{{
-		Type:       crmcontracts.ContactMomentEvidenceTypeActivity,
-		Id:         &id,
-		Label:      label,
-		ObservedAt: &meeting.StartsAt,
+		Type:              crmcontracts.ContactMomentEvidenceTypeActivity,
+		Id:                &id,
+		Label:             label,
+		ObservedAt:        &meeting.StartsAt,
+		ObservedPrecision: &meeting.OccurredPrecision,
 	}}
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:meeting_prep",
@@ -319,11 +320,13 @@ func (said momentCopy) reEngagedMoment(_ context.Context, now time.Time, page *c
 	if page.LastOutboundAt == nil {
 		return crmcontracts.ContactMoment{}, false
 	}
-	sinceWeWrote := elapsed.Days(*page.LastOutboundAt, inbound, said.zone)
+	sinceWeWrote := occurredday.DaysBetween(
+		occurredday.Moment{At: *page.LastOutboundAt, DateOnly: occurredday.IsStatedDay(page.LastOutboundPrecision)},
+		occurredday.Moment{At: inbound, DateOnly: occurredday.IsStatedDay(page.LastLiveInboundPrecision)}, said.zone)
 	if sinceWeWrote < reEngagedQuietDays {
 		return crmcontracts.ContactMoment{}, false
 	}
-	evidence := []crmcontracts.ContactMomentEvidence{said.inboundEvidence(page, inbound)}
+	evidence := []crmcontracts.ContactMomentEvidence{said.inboundEvidence(page, inbound, page.LastLiveInboundPrecision)}
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:re_engaged",
 		Rule:                crmcontracts.ContactMomentRuleReEngaged,
@@ -371,15 +374,15 @@ func (said momentCopy) goneQuietMoment(_ context.Context, now time.Time, page *c
 		// They answered. Silence is not the story.
 		return crmcontracts.ContactMoment{}, false
 	}
-	waiting := elapsed.Days(outbound, now, said.zone)
+	waiting := occurredday.DaysSince(occurredday.Moment{At: outbound, DateOnly: occurredday.IsStatedDay(page.LastOutboundPrecision)}, now, said.zone)
 	if waiting < goneQuietAfterDays {
 		return crmcontracts.ContactMoment{}, false
 	}
 	quietFor := waiting
 	if page.LastInboundAt != nil {
-		quietFor = elapsed.Days(*page.LastInboundAt, now, said.zone)
+		quietFor = occurredday.DaysSince(occurredday.Moment{At: *page.LastInboundAt, DateOnly: occurredday.IsStatedDay(page.LastInboundPrecision)}, now, said.zone)
 	}
-	evidence := said.outboundEvidence(page, outbound)
+	evidence := said.outboundEvidence(page, outbound, page.LastOutboundPrecision)
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:gone_quiet",
 		Rule:                crmcontracts.ContactMomentRuleGoneQuiet,

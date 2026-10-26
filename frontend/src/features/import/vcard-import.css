@@ -34,3 +34,41 @@
 .vcard-import-warning {
   color: var(--warningText);
 }
+
+/* A card's fields sit under its line, full width, so the report reads as the
+   card itself: what it said, and what the import did with each line. */
+.vcard-import-fields {
+  flex-basis: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.vcard-import-fields ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.vcard-import-report .vcard-import-fields li {
+  padding: 0;
+  border-bottom: 0;
+}
+
+.vcard-import-field-label {
+  min-width: 8rem;
+  color: var(--textSecondary);
+}
+
+/* What the card did not carry, as one muted line of names. */
+.vcard-import-absent {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.vcard-import-absent ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

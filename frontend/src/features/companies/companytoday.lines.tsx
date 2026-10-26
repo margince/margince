@@ -90,6 +90,7 @@ export function scanFoot({
             deals: plural("today.scan.readDeals", scan.read.deals, {
               count: formatNumber(scan.read.deals, locale),
             }),
+            days: formatNumber(scan.read.window_days, locale),
           })}
         </span>
       )}
@@ -141,10 +142,11 @@ export function manualMoveRows({
             name={recipient.full_name}
           />
         }
+        // Not indigo: the composer opens empty and waits for the rep to say
+        // what the message is for, so the press itself starts no model.
         verb={{
           label: t("today.draft.act"),
           onAct: () => onDraftTo(recipient.contact_id),
-          byMargince: true,
         }}
       />,
     );

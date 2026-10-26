@@ -289,6 +289,7 @@ function meeting(
   row: Pick<Activity, "id" | "occurred_at"> & Partial<Activity>,
 ) {
   return {
+    occurred_precision: "instant",
     offers_email: false,
     kind: "meeting",
     subject: "Weekly call",
@@ -322,6 +323,7 @@ const withBooking: components["schemas"]["Contact360"] = {
   next_meeting: {
     activity_id: booked.id,
     starts_at: booked.occurred_at,
+    occurred_precision: "instant",
     subject: "Weekly call",
     participants: [{ contact_id: "p-1", full_name: "Dana Buyer" }],
   },
@@ -545,6 +547,7 @@ it("says how far off each meeting ahead is, on the read's own clock", async () =
       next_meeting: {
         activity_id: soon.id,
         starts_at: soon.occurred_at,
+        occurred_precision: "instant",
         subject: "Weekly call",
       },
     },

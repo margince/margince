@@ -73,7 +73,13 @@ func writeVerbLiterals(b *strings.Builder, verbs []declaredVerb) {
 			// above: the zero value is every verb as it behaves today, and a
 			// literal `false` on every one of them would bury the one field
 			// that actually says something.
-			b.WriteString("\t\t\tHumanOnly:      true,\n")
+			// A multi-line RbacDefaults value before it ends gofmt's alignment
+			// block, so the field is then written with a single space.
+			if len(v.RbacDefaults) > 0 {
+				b.WriteString("\t\t\tHumanOnly: true,\n")
+			} else {
+				b.WriteString("\t\t\tHumanOnly:      true,\n")
+			}
 		}
 		b.WriteString("\t\t},\n")
 	}

@@ -25,6 +25,7 @@ type EmailSummary = components["schemas"]["EmailSummary"];
 const READABLE: EmailSummary = {
   activity_id: "11111111-1111-4111-8111-111111111111",
   occurred_at: "2026-09-01T09:12:00Z",
+  occurred_precision: "instant",
   display_status: "team",
   attachment_count: 2,
   move: "needs_reply",

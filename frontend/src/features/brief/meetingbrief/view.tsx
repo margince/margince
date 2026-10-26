@@ -74,7 +74,6 @@ export function MeetingBriefView({
   titleId,
   onClose,
   scopeSlot,
-  formatWhen,
   formatDay,
 }: Readonly<{
   state: BriefViewState;
@@ -88,7 +87,6 @@ export function MeetingBriefView({
   // The project picker or the scope line, built by the drawer because only it
   // knows what the reader chose.
   scopeSlot?: ReactNode;
-  formatWhen?: (utcIso: string) => string;
   formatDay?: (utcIso: string) => string;
 }>) {
   const t = useT();
@@ -105,7 +103,6 @@ export function MeetingBriefView({
           brief={brief}
           meeting={meeting}
           preparedFor={preparedFor}
-          formatWhen={formatWhen}
         />
       </DrawerHead>
       <DrawerBody>

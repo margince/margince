@@ -45,6 +45,22 @@ func TestPreflightEntriesRefusesASlotNoCoreScreenRenders(t *testing.T) {
 	}
 }
 
+func TestPreflightSettingsRefusesAKeyTwiceAndAnUndrawableSetting(t *testing.T) {
+	live := extension.Setting{Key: "live", Label: "Live", Kind: extension.SettingSwitch}
+	unit := func(s ...extension.Setting) extension.Extension {
+		return extension.Extension{Name: "visits", Version: "0.1.0", Settings: s}
+	}
+	if err := preflightSettings(unit(live, extension.Setting{Key: "region", Label: "Region", Kind: extension.SettingText})); err != nil {
+		t.Fatalf("distinct settings were refused: %v", err)
+	}
+	if err := preflightSettings(unit(live, live)); err == nil || !strings.Contains(err.Error(), "twice") {
+		t.Errorf("err = %v, want the duplicate-key refusal", err)
+	}
+	if err := preflightSettings(unit(extension.Setting{Key: "live", Kind: extension.SettingSwitch})); err == nil {
+		t.Error("a setting with no label was admitted")
+	}
+}
+
 func TestPreflightEntryObjectsNeedsAnOperationGatedOnTheObject(t *testing.T) {
 	units := []extension.Extension{unitWithEntries(visitEntry(extension.SlotLogActivity, ""))}
 	gated := []extension.Verb{{Unit: "visits", RbacObject: "ext_visits_report"}}

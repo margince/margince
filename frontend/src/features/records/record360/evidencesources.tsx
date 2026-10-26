@@ -28,7 +28,7 @@ import {
   type OpenReceipt,
 } from "../../../components/citations";
 import { EmailEntry } from "../../../design-system/emailentry";
-import { formatDateTime } from "../../../format/format";
+import { formatActivityWhen } from "../../../format/activitywhen";
 import { useLocale } from "../../../i18n";
 import { useRecordZone } from "../../../lib/recordzone";
 // The basis block is styled beside the citation chips it falls back to, in the
@@ -107,8 +107,9 @@ export function EvidenceSources({
     <div className="co-evidence-sources">
       {messages.map((source) => {
         const withheld = source.summary.display_status === "withheld";
-        const timestamp = formatDateTime(
+        const timestamp = formatActivityWhen(
           source.summary.occurred_at,
+          source.summary.occurred_precision,
           locale,
           recordZone,
         );

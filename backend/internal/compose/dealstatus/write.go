@@ -20,6 +20,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -63,7 +64,7 @@ func storyLines(f facts) []sentence {
 	lines := []sentence{plain(fmt.Sprintf(said.Say(statusWords.Story), f.deal.Name, said.dealStatus(string(f.deal.Status))))}
 	if last, ok := lastContact(f); ok {
 		lines = append(lines, said.cited(
-			fmt.Sprintf(said.Say(statusWords.LastContact), said.since(f.now, last.OccurredAt, f.loc), said.subjectOf(last)),
+			fmt.Sprintf(said.Say(statusWords.LastContact), said.since(f.now, activitywhen.MomentOf(last), f.loc), said.subjectOf(last)),
 			last))
 	} else {
 		lines = append(lines, plain(said.Say(statusWords.NoContact)))
@@ -279,9 +280,10 @@ func citedRecord(f facts, id string) (crmcontracts.Activity, bool) {
 func taskAsActivity(t activities.OpenTask) crmcontracts.Activity {
 	subject := t.Subject
 	out := crmcontracts.Activity{
-		Id:      openapi_types.UUID(t.ID),
-		Kind:    crmcontracts.ActivityKindTask,
-		Subject: &subject,
+		Id:                openapi_types.UUID(t.ID),
+		Kind:              crmcontracts.ActivityKindTask,
+		Subject:           &subject,
+		OccurredPrecision: crmcontracts.OccurredPrecisionOccurredPrecisionInstant,
 	}
 	if t.DueAt != nil {
 		out.OccurredAt = *t.DueAt

@@ -106,7 +106,18 @@ func MeetingAheadSQL(alias string) string {
 		WHERE ahead_link.deal_id = ` + deal + `.id AND ahead.archived_at IS NULL
 		  AND ahead.kind = 'meeting' AND ` + relstrength.NotCalledOffSQL("ahead") +
 		auth.OriginIsEngagement("ahead") + ` AND ahead.audience = 'workspace'
-		  AND ahead.occurred_at > coalesce(` + deal + `.last_activity_at, '-infinity'))`
+		  AND coalesce(` + deal + `.last_activity_at, '-infinity') < ahead.occurred_at -- occurred_at raw: the stored clock holds an occurred_at
+		)`
+}
+
+// LastActivityDaySQL says the activity the deal's stored clock names is a day
+// entry, so days since it count from its own date. The clock holds that row's
+// occurred_at, which is how the row is found.
+func LastActivityDaySQL(deal string) string {
+	return `EXISTS (SELECT 1 FROM activity_link day_link
+		JOIN activity day_row ON day_row.id = day_link.activity_id
+		WHERE day_link.deal_id = ` + deal + `.id AND day_row.archived_at IS NULL
+		  AND day_row.occurred_at = ` + deal + `.last_activity_at AND day_row.occurred_precision = 'day')`
 }
 
 // PartnerSourcedSQL is the list-filter spelling of "this deal is

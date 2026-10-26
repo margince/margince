@@ -25,6 +25,9 @@ package compose
 // numerator can exceed its denominator is not a rate.
 
 import (
+	"fmt"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -85,7 +88,7 @@ const (
 		  JOIN activity_link al ON al.activity_id = t.id
 		 WHERE h.status = 'accepted'
 		   AND (h.lead_id = al.lead_id OR h.contact_id = al.contact_id)
-		   AND h.decided_at >= t.occurred_at
+		   AND h.decided_at >= %s
 		 ORDER BY h.decided_at
 		 LIMIT 1
 	) hoff ON true`
@@ -108,7 +111,7 @@ func meetingConversionSpec() reportSpec {
 	return reportSpec{
 		entity: datasource.EntityActivity,
 		table:  tableActivity,
-		joins:  []string{joinAcceptedHandoff},
+		joins:  []string{fmt.Sprintf(joinAcceptedHandoff, occurredday.StartSQL("t"))},
 		// Row scope for an activity is real per-row discoverability rather than
 		// the identity-table TRUE a deal's is, so this walks it the way
 		// activities-by-kind does. The population default's hardcoded owner_id

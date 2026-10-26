@@ -63,6 +63,8 @@ const (
 	filterSLAState         = "sla_state"
 	filterListID           = "list_id"
 	filterIncludeAnchor    = "include_anchor"
+	filterSourceSystem     = "source_system"
+	filterSourceID         = "source_id"
 	filterRelationshipMark = "relationship_mark"
 )
 
@@ -105,7 +107,9 @@ var companyListFilters = storekit.FilterSet[ListCompaniesInput]{
 	filterOwnerID:         storekit.FilterID(func(in *ListCompaniesInput, id *ids.UserID) { in.OwnerID = id }),
 	filterRelationshipType: storekit.FilterWord(
 		func(in *ListCompaniesInput, v *string) { in.RelationshipType = v }),
-	filterTag: storekit.FilterIDList[ids.TagKind](func(in *ListCompaniesInput, v []ids.UUID) { in.TagIDs = v }),
+	filterSourceSystem: storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.SourceSystem = v }),
+	filterSourceID:     storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.SourceID = v }),
+	filterTag:          storekit.FilterIDList[ids.TagKind](func(in *ListCompaniesInput, v []ids.UUID) { in.TagIDs = v }),
 	filterTagMode: storekit.FilterWord(func(in *ListCompaniesInput, v *string) {
 		in.TagMode = tagModeOrDefault(v)
 	}),

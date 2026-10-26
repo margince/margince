@@ -48,6 +48,8 @@ type lastMessage struct {
 	ID        ids.UUID
 	Direction string
 	At        time.Time
+	// DateOnly says At is a day entry's anchor, so only its date is known.
+	DateOnly bool
 	// Kind is the channel the exchange happened on, which is what lets the
 	// citation say "email you sent" rather than "activity".
 	Kind string
@@ -105,7 +107,7 @@ func newestMessage(
 	var found lastMessage
 	var direction, subject, excerpt *string
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT a.id, a.direction, a.occurred_at, a.kind,
+		SELECT a.id, a.direction, a.occurred_at, a.occurred_precision = 'day', a.kind,
 		       CASE WHEN %[3]s THEN a.subject END,
 		       CASE WHEN %[3]s THEN left(a.body, %[4]d) END
 		FROM activity a
@@ -114,7 +116,7 @@ func newestMessage(
 		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT 1`, activityScope, activities.CompanyLinkedActivityExists(companyPos), audience, excerptRunes,
 		relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d::timestamptz", nowPos))), args...).
-		Scan(&found.ID, &direction, &found.At, &found.Kind, &subject, &excerpt)
+		Scan(&found.ID, &direction, &found.At, &found.DateOnly, &found.Kind, &subject, &excerpt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return lastMessage{}, false, nil
 	}

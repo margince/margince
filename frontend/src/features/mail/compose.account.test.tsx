@@ -270,6 +270,7 @@ describe("ComposeModal started from an account", () => {
 // which message they reply to either.
 describe("what the composer says it is answering", () => {
   const latestMail: Activity = {
+    occurred_precision: "instant",
     offers_email: false,
     id: "act-latest",
     kind: "email",

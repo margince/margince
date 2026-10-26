@@ -69,6 +69,7 @@ func (h Handlers) ListCompanies(w http.ResponseWriter, r *http.Request, params c
 	in.Unassigned = params.Unassigned
 	in.Industry = enumArg(params.Industry)
 	in.SizeBand = enumArg(params.SizeBand)
+	in.SourceSystem, in.SourceID = params.SourceSystem, params.SourceId
 	if params.ListId != nil {
 		if in.Membership, err = h.memberFilter(r.Context(), *params.ListId, companyEntity); err != nil {
 			writeStoreErr(w, r, err)

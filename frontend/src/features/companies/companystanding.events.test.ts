@@ -29,6 +29,7 @@ const BASE: Company360 = {
 
 function activity(over: Partial<Activity> & Pick<Activity, "id">): Activity {
   return {
+    occurred_precision: "instant",
     offers_email: false,
     kind: "meeting",
     occurred_at: "2026-06-03T10:00:00Z",
@@ -69,6 +70,7 @@ describe("companyTimeline", () => {
       {
         last_contact: {
           at: "2026-08-01T08:00:00Z",
+          occurred_precision: "instant",
           kind: "email",
           activity_id: "a-2",
         },
@@ -109,6 +111,7 @@ describe("companyTimeline", () => {
       next_meeting: {
         activity_id: "m-1",
         starts_at: "2026-08-20T10:00:00Z",
+        occurred_precision: "instant",
         subject: "Walkthrough",
         participants: [],
       },

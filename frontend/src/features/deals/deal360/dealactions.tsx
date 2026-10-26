@@ -243,6 +243,7 @@ export function DealActions({
         slot="record_header.deal"
         record={{ type: "deal", id: deal.id }}
       />
+      <ExtensionEntries slot="record_mark.deal" />
       {drawer && (
         <LogActivityAction
           entityType="deal"

@@ -14,6 +14,7 @@ import (
 	"errors"
 	"strings"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -157,6 +158,9 @@ func assembledContext(ctx context.Context, assembled retrieval.Context) Assemble
 			if !item.OccurredAt.IsZero() {
 				at := item.OccurredAt
 				built.OccurredAt = &at
+			}
+			if item.DateOnly {
+				built.OccurredPrecision = string(crmcontracts.OccurredPrecisionOccurredPrecisionDay)
 			}
 			items = append(items, built)
 		}

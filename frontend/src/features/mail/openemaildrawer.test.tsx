@@ -31,9 +31,11 @@ const PRESENTATION: EmailPresentation = {
   id: MESSAGE,
   lifecycle: "delivered",
   occurred_at: "2026-09-01T09:15:00Z",
+  occurred_precision: "instant",
   summary: {
     activity_id: MESSAGE,
     occurred_at: "2026-09-01T09:15:00Z",
+    occurred_precision: "instant",
     version: 3,
     subject: "Angebot Q4",
     preview: "Können wir Dienstag kurz sprechen?",

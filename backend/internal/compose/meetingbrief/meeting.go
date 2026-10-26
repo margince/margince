@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -39,9 +40,12 @@ const scopeNone = "FALSE"
 
 // meeting is the room, as the brief reads it.
 type meeting struct {
-	ID        ids.UUID
-	Subject   string
-	StartsAt  time.Time
+	ID       ids.UUID
+	Subject  string
+	StartsAt time.Time
+	DateOnly bool
+	// Opens is when the room opens (opensAt), the ceiling on what came before.
+	Opens     time.Time
 	Deal      *dealRow
 	Project   *projectRow
 	Attendees []attendeeRow
@@ -88,7 +92,22 @@ type attendeeRow struct {
 	// LastTouch is the newest conversation with this attendee BEFORE this
 	// meeting. Null is the first-time flag: it means nothing was ever captured
 	// with them, which is exactly "you have not met".
-	LastTouch *time.Time `json:"last_touch"`
+	LastTouch *touchRow `json:"last_touch"`
+}
+
+// touchRow is the newest conversation the meeting query names for an attendee,
+// with the precision read off that same row.
+type touchRow struct {
+	At       time.Time `json:"at"`
+	DateOnly bool      `json:"date_only"`
+}
+
+// occurred is the touch as the brief reads it; nil is no touch at all.
+func (r *touchRow) occurred() *Occurred {
+	if r == nil {
+		return nil
+	}
+	return &Occurred{At: r.At, DateOnly: r.DateOnly}
 }
 
 // firstTime reports whether the reader is meeting this contact for the first
@@ -107,7 +126,7 @@ func (a attendeeRow) firstTime() bool { return a.LastTouch == nil }
 // It narrows the attendees' last-touch dates only when the meeting itself is
 // filed under no project: a filed meeting's own project wins, and a request
 // that disagrees with it is refused by resolveScope after this read.
-func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUID, requested *ids.ProjectID) (meeting, error) {
+func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUID, requested *ids.ProjectID, now time.Time) (meeting, error) {
 	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, activityID); err != nil {
 		return meeting{}, err
 	}
@@ -115,6 +134,7 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idPos := arg(activityID)
 	requestedPos := arg(nullableProject(requested))
+	happened := occurredday.HappenedSQL("pa", fmt.Sprintf("$%d", arg(now)))
 	clauses, err := roomClauses(ctx, arg)
 	if err != nil {
 		return meeting{}, err
@@ -129,8 +149,8 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	var project projectRow
 	var projectID *ids.UUID
 	err = tx.QueryRow(ctx, fmt.Sprintf(meetingQuery, clauses.deal, clauses.contact, idPos, clauses.touch, clauses.seat, clauses.project, requestedPos,
-		clauses.amount), args...).
-		Scan(&out.ID, &out.StartsAt, &subject,
+		clauses.amount, happened), args...).
+		Scan(&out.ID, &out.StartsAt, &out.DateOnly, &subject,
 			&dealID, &deal.Name, &stage, &deal.AmountMinor, &currency, &deal.CloseDate,
 			&projectID, &project.Name, &project.Key, &project.Phase, &project.TargetEndDate,
 			&attendees)
@@ -176,11 +196,11 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 // told about rather than filtering it afterwards, plus the seat edge's own
 // admission on the LEFT JOIN that carries the deal role.
 //
-// last_touch is the most recent captured conversation with that attendee, and
-// it is what makes the first-time flag honest: null means we have never
-// exchanged anything with them, which is precisely "you have not met".
+// last_touch is the newest conversation with that attendee that has happened
+// by now. The first-time flag reads it: null means we have never exchanged
+// anything with them, which is "you have not met".
 const meetingQuery = `
-	SELECT a.id, a.occurred_at, a.subject,
+	SELECT a.id, a.occurred_at, a.occurred_precision = 'day', a.subject,
 	       d.id, COALESCE(d.name, ''), d.stage_name, d.amount_minor, d.currency, d.expected_close_date,
 	       pr.id, COALESCE(pr.name, ''), COALESCE(pr.key, ''), COALESCE(pr.phase, ''), pr.target_end_date,
 	       COALESCE((
@@ -190,10 +210,12 @@ const meetingQuery = `
 	                  'title', COALESCE(p.title, ''),
 	                  'deal_role', COALESCE(r.role, ''),
 	                  'last_touch', (
-	                    SELECT max(pa.occurred_at) FROM activity pa
+	                    SELECT json_build_object('at', pa.occurred_at, 'date_only', pa.occurred_precision = 'day')
+	                    FROM activity pa
 	                    JOIN activity_participant pp ON pp.activity_id = pa.id
 	                    WHERE pp.contact_id = p.id AND pa.archived_at IS NULL
-	                      AND pa.id <> a.id AND pa.occurred_at <= a.occurred_at
+	                      AND pa.id <> a.id AND pa.occurred_at <= a.occurred_at -- occurred_at raw: a touch before this meeting, an ordering of rows
+	                      AND %[9]s
 	                      AND pa.audience = 'workspace'
 	                      AND %[4]s
 	                      -- Workspace-visible messages only. A brief is read by
@@ -221,6 +243,7 @@ const meetingQuery = `
 	                          OR NOT EXISTS (
 	                            SELECT 1 FROM activity_link tf
 	                            WHERE tf.activity_id = pa.id AND tf.project_id IS NOT NULL))
+	                    ORDER BY pa.occurred_at DESC, pa.id DESC LIMIT 1
 	                  ))
 	                ORDER BY p.full_name, p.id)
 	         FROM (SELECT DISTINCT ap.contact_id FROM activity_participant ap
@@ -418,4 +441,13 @@ func deref(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// opensAt is when a meeting opens: its start. A day meeting opens when its date
+// begins in the installation zone, since its stored noon is no hour.
+func opensAt(room meeting, zone *time.Location) time.Time {
+	if !room.DateOnly {
+		return room.StartsAt
+	}
+	return occurredday.Begins(room.StartsAt, zone)
 }

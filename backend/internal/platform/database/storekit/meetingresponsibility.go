@@ -3,7 +3,11 @@
 
 package storekit
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
+)
 
 // MeetingResponsibilitySQL renders "this seat answers for this meeting", over
 // the activity row `meeting` and the seat expression `seat`. The Worklist
@@ -22,9 +26,11 @@ func MeetingResponsibilitySQL(meeting, seat string) string {
 	return fmt.Sprintf(`((%[1]s.host_user_id = %[2]s AND NOT starts_with(%[1]s.captured_by, 'connector:'))
 	   OR EXISTS (SELECT 1 FROM activity_participant attending
 	               WHERE attending.activity_id = %[1]s.id AND attending.user_id = %[2]s
-	                 AND attending.role IN ('organizer', 'attendee'))
+	                 AND attending.role IN ('organizer', 'attendee')
+	                 AND %[3]s)
 	   OR EXISTS (SELECT 1 FROM meeting_invitation booked
-	               WHERE booked.activity_id = %[1]s.id AND booked.host_user_id = %[2]s))`, meeting, seat)
+	               WHERE booked.activity_id = %[1]s.id AND booked.host_user_id = %[2]s))`,
+		meeting, seat, auth.ParticipantStandsSQL("attending", meeting))
 }
 
 // UnclaimedMeetingSQL is a meeting no seat answers for by that same evidence.
@@ -32,6 +38,8 @@ func UnclaimedMeetingSQL(meeting string) string {
 	return fmt.Sprintf(`((%[1]s.host_user_id IS NULL OR starts_with(%[1]s.captured_by, 'connector:'))
 	   AND NOT EXISTS (SELECT 1 FROM activity_participant attending
 	               WHERE attending.activity_id = %[1]s.id AND attending.user_id IS NOT NULL
-	                 AND attending.role IN ('organizer', 'attendee'))
-	   AND NOT EXISTS (SELECT 1 FROM meeting_invitation booked WHERE booked.activity_id = %[1]s.id))`, meeting)
+	                 AND attending.role IN ('organizer', 'attendee')
+	                 AND %[2]s)
+	   AND NOT EXISTS (SELECT 1 FROM meeting_invitation booked WHERE booked.activity_id = %[1]s.id))`,
+		meeting, auth.ParticipantStandsSQL("attending", meeting))
 }

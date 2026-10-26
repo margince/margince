@@ -349,17 +349,11 @@ func restoreSupersededPhone(ctx context.Context, tx pgx.Tx, contactID ids.Contac
 // agreeing, and a mismatch would fail by matching nothing rather than by
 // failing. TestTheRestoreMatchesTheLedgersOwnClaimKey holds them together.
 func refuseIfCorrected(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, field string) error {
-	var corrected bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM ai_feedback
-			 WHERE subject_type = 'contact' AND subject_id = $1
-			   AND claim_kind = 'profile_field' AND verdict = 'corrected'
-			   AND claim_key = encode(sha256(('profile_field:' || $2)::bytea), 'hex'))`,
-		contactID, field).Scan(&corrected); err != nil {
-		return fmt.Errorf("contacts: looking for a correction on %s: %w", field, err)
+	corrected, err := correctedProfileFieldNames(ctx, tx, contactID, []string{field})
+	if err != nil {
+		return err
 	}
-	if corrected {
+	if corrected[field] {
 		return apperrors.ErrConflict
 	}
 	return nil

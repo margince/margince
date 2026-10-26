@@ -840,6 +840,9 @@
                 "type": "string",
                 "format": "date-time"
               },
+              "occurred_precision": {
+                "type": "string"
+              },
               "sender_address": {
                 "type": "string"
               },
@@ -1364,6 +1367,9 @@
                       "occurred_at": {
                         "type": "string",
                         "format": "date-time"
+                      },
+                      "occurred_precision": {
+                        "type": "string"
                       },
                       "record_id": {
                         "type": "string",
@@ -5957,6 +5963,9 @@
                       "type": "string",
                       "format": "date-time"
                     },
+                    "occurred_precision": {
+                      "type": "string"
+                    },
                     "sender_address": {
                       "type": "string"
                     },
@@ -7598,6 +7607,9 @@
                           "occurred_at": {
                             "type": "string",
                             "format": "date-time"
+                          },
+                          "occurred_precision": {
+                            "type": "string"
                           },
                           "record_id": {
                             "type": "string",
@@ -13393,6 +13405,9 @@
                 "last_on_thread_at": {
                   "type": "string",
                   "format": "date-time"
+                },
+                "last_on_thread_precision": {
+                  "type": "string"
                 },
                 "user_id": {
                   "type": "string",

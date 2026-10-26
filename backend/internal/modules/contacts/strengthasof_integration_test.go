@@ -38,7 +38,7 @@ func (e *dedupeEnv) seedInteraction(t *testing.T, contactID ids.ContactID, at ti
 }
 
 // seedInteractionOfKind is seedInteraction for a chosen activity kind.
-func (e *dedupeEnv) seedInteractionOfKind(t *testing.T, contactID ids.ContactID, kind string, at time.Time, direction string) {
+func (e *dedupeEnv) seedInteractionOfKind(t *testing.T, contactID ids.ContactID, kind string, at time.Time, direction string) ids.ActivityID {
 	t.Helper()
 	id := ids.New[ids.ActivityKind]()
 	ctx := e.as()
@@ -61,6 +61,21 @@ func (e *dedupeEnv) seedInteractionOfKind(t *testing.T, contactID ids.ContactID,
 		return err
 	}); err != nil {
 		t.Fatalf("seeding an interaction: %v", err)
+	}
+	return id
+}
+
+// seedDayInteraction is seedInteractionOfKind for an entry that names only the
+// date its anchor sits on.
+func (e *dedupeEnv) seedDayInteraction(t *testing.T, contactID ids.ContactID, kind string, anchor time.Time, direction string) {
+	t.Helper()
+	id := e.seedInteractionOfKind(t, contactID, kind, anchor, direction)
+	ctx := e.as()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE activity SET occurred_precision = 'day' WHERE id = $1`, id)
+		return err
+	}); err != nil {
+		t.Fatalf("dating an interaction by its day: %v", err)
 	}
 }
 
@@ -240,5 +255,27 @@ func TestSingleContactAndChangeFoldsBoundAtNow(t *testing.T) {
 	}
 	if in.Current.LastInteraction == nil || !in.Current.LastInteraction.Equal(now) {
 		t.Errorf("change-fold recency came from %v, want %v", in.Current.LastInteraction, now)
+	}
+}
+
+// A day entry counts by its date. At 09:00 UTC a day email dated today has
+// happened, though it is stored at noon. A day meeting dated today has not.
+func TestADayInteractionCountsByItsDate(t *testing.T) {
+	e := setupDedupe(t)
+	now := time.Date(2026, time.March, 10, 9, 0, 0, 0, time.UTC)
+	anchor := time.Date(2026, time.March, 10, 12, 0, 0, 0, time.UTC)
+	contact := e.seedVisibleContact(t, "Day Contact")
+	e.seedDayInteraction(t, contact, "email", anchor, "inbound")
+	e.seedDayInteraction(t, contact, "meeting", anchor, "outbound")
+
+	single, err := e.store.ContactStrength(e.as(), contact, now)
+	if err != nil {
+		t.Fatalf("reading one contact's strength: %v", err)
+	}
+	if single.InteractionCount90d != 1 {
+		t.Errorf("the fold counted %d, want 1: the day email, not the meeting whose date has not ended", single.InteractionCount90d)
+	}
+	if single.LastInteraction == nil || !single.LastInteraction.Equal(anchor) {
+		t.Errorf("recency came from %v, want the day email's anchor %v", single.LastInteraction, anchor)
 	}
 }

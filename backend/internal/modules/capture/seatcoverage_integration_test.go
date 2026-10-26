@@ -14,11 +14,14 @@ package capture
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -31,6 +34,8 @@ type seatThread struct {
 	archived  bool
 	seatEmail string
 	role      string
+	// day files the thread as a day entry dated today.
+	day bool
 	// contactID puts the thread on an existing contact; zero seeds a new one.
 	contactID ids.UUID
 }
@@ -75,10 +80,14 @@ func seedThread(ctx context.Context, t *testing.T, tx pgx.Tx, th seatThread) ids
 	if th.archived {
 		archivedAt = "now()"
 	}
+	at, precision := clocktest.Now(t), "instant"
+	if th.day {
+		at, precision = occurredday.AnchorIn(at, time.UTC), "day"
+	}
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO activity (kind, occurred_at, direction, source, captured_by, audience, archived_at)
-		VALUES ($1, now(), 'inbound', 'imap', 'connector:imap', $2, `+archivedAt+`)
-		RETURNING id`, th.kind, th.audience).Scan(&activityID); err != nil {
+		INSERT INTO activity (kind, occurred_at, occurred_precision, direction, source, captured_by, audience, archived_at)
+		VALUES ($1, $3, $4, 'inbound', 'imap', 'connector:imap', $2, `+archivedAt+`)
+		RETURNING id`, th.kind, th.audience, at, precision).Scan(&activityID); err != nil {
 		t.Fatalf("seeding activity: %v", err)
 	}
 	if _, err := tx.Exec(ctx, `
@@ -121,6 +130,8 @@ func TestSeatCoverage(t *testing.T) {
 			thread: seatThread{kind: "email", audience: "workspace"}, wantSeat: true, wantInvite: true},
 		{name: "an active seat with no mailbox is a permitted positive", status: "active",
 			thread: seatThread{kind: "email", audience: "workspace"}, wantSeat: true},
+		{name: "a meeting known by its date says so", status: "active",
+			thread: seatThread{kind: "meeting", audience: "workspace", attested: true, day: true}, wantSeat: true},
 		{name: "an invited organiser of an attested meeting is found by user_id", status: "invited",
 			thread: seatThread{kind: "meeting", audience: "workspace", attested: true}, wantSeat: true, wantInvite: true},
 		{name: "a seat with a connected mailbox is covered", status: "active",
@@ -171,6 +182,9 @@ func TestSeatCoverage(t *testing.T) {
 				}
 				if got.Total != 1 {
 					t.Fatalf("total = %d, want 1", got.Total)
+				}
+				if want := map[bool]string{true: "day", false: "instant"}[tc.thread.day]; got.Seats[0].LastOnThreadPrecision != want {
+					t.Fatalf("last on thread precision = %q, want %q", got.Seats[0].LastOnThreadPrecision, want)
 				}
 				return nil
 			}); err != nil {

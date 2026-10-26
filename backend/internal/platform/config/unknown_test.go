@@ -42,6 +42,32 @@ func TestTheReportNeverCarriesAValue(t *testing.T) {
 	}
 }
 
+// A variable a ${env:NAME} reference reads is consumed, wherever the reference
+// sits. Reporting it would tell the operator to delete what the boot depends on.
+func TestAVariableAReferenceReadsIsNotReported(t *testing.T) {
+	reg, src := sources(t, fixture{
+		args: []string{"--env-file", "{dir}/margince.env"},
+		env: []string{
+			ns + "MAIL_PW=from-yaml-bootstrap", ns + "SIBLING_PW=from-yaml-sibling",
+			ns + "DB_PW=from-env-file", ns + "STRAY=nobody-reads-me",
+		},
+		files: map[string]string{
+			"margince.yaml": "workspace:\n  smtp:\n    password: ${env:" + ns + "MAIL_PW}\n" +
+				"worker_token: ${env:" + ns + "SIBLING_PW}\n",
+			"margince.env": ns + "DSN=${env:" + ns + "DB_PW}\n",
+		},
+	}, level, dsn)
+	src.BootstrapRoots = map[string]bool{"workspace": true}
+	src.Known = config.Names{Keys: []string{"worker_token"}}
+	cfg, err := config.Load(reg, src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := cfg.Warnings(); len(got) != 1 || got[0] != ns+"STRAY" {
+		t.Fatalf("warnings = %v, want only the variable nothing references", got)
+	}
+}
+
 func TestTheReportIgnoresWhatIsNotOursToJudge(t *testing.T) {
 	got := warningsFor(t,
 		"PATH=/usr/bin",                // the platform's, not ours

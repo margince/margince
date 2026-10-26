@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useLayoutEffect, useRef } from "react";
+import { lastEmailAgo } from "../testing/dealmail";
 import { Button, SegmentedControl } from "./atoms";
 import { ListSurface } from "./listsurface";
 import {
@@ -56,7 +57,7 @@ const boardColumns: BoardMoneyColumn[] = [
         singleThreaded: true,
         closeDate: "2026-10-14",
         owner: { id: "u-1", name: "Ada Lindqvist" },
-        lastEmail: { agoMs: 2 * DAY_MS, direction: "inbound" },
+        lastEmail: lastEmailAgo(2 * DAY_MS, "inbound"),
       }),
       // A close date the nightly run set and nobody confirmed: marked, not
       // hidden.
@@ -64,7 +65,7 @@ const boardColumns: BoardMoneyColumn[] = [
         stalled: true,
         closeDate: "2026-09-30",
         closeDateProvisional: true,
-        lastEmail: { agoMs: 10 * DAY_MS, direction: "outbound" },
+        lastEmail: lastEmailAgo(10 * DAY_MS, "outbound"),
       }),
     ],
   },

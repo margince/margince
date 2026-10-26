@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 126.6 KB |
+| Tool catalog | 126.8 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 33304 |
+| Approx. wire tokens | 33354 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 25.0 KB | 19% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 32.4 KB | 25% | Yes, every step |
+| Descriptions (incl. governance clause) | 32.5 KB | 25% | Yes, every step |
 | Input schemas | 60.5 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 6% | Partly |
-| **Description + input schema** | **92.9 KB** | **73%** | **the recurring cost** |
+| **Description + input schema** | **93.1 KB** | **73%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -62,18 +62,18 @@ descriptions and input schemas are what each step pays for.
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 808 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1386 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1381 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
 | [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1117 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 553 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 337 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
-| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 748 |
+| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 755 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1722 |
+| [`find_records`](#find_records) | Find records | yes |  | 1738 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
@@ -94,7 +94,7 @@ descriptions and input schemas are what each step pays for.
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 393 |
 | [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 469 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1014 |
-| [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 620 |
+| [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 641 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
 
 ## Resources
@@ -1216,7 +1216,7 @@ arguments for relink, relink_many; requires passport scope "write".)
       "type": "string"
     },
     "links": {
-      "description": "log, task only: Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project marks the activity as commercial correspondence, so it is made by relinking the activity, which waits for the user's yes. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect.",
+      "description": "log, task only: Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES because filing there marks commercial correspondence. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect.",
       "items": {
         "additionalProperties": false,
         "properties": {
@@ -1247,6 +1247,13 @@ arguments for relink, relink_many; requires passport scope "write".)
       "description": "log only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
       "format": "date-time",
       "type": "string"
+    },
+    "occurred_precision": {
+      "description": "log only",
+      "enum": [
+        "instant",
+        "day"
+      ]
     },
     "replace_existing_of_type": {
       "default": false,
@@ -2434,19 +2441,19 @@ Creating a deal requires a pipeline_id and a stage_id, and the workspace's pipel
 yields them for a deal that does not exist yet. Only the fields the chosen record_type actually
 stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A
 CONTACT created here is visible to everyone in the workspace, the same as one a human types in. No
-occurred_at means now; for a past day with no time, ask. Search first when the record might already
-exist — a second copy of a contact or company is a problem that then needs resolve_duplicates to
-undo. A record that shares only a name, with a different email, phone or employer, is not proof of a
-duplicate. When the search finds a contact with the same name at the same employer, ask the human
-whether it is the same contact before you link anything to it; two colleagues can share a name.
-Giving a contact its employer by creating an employment relationship files any same-name contact at
-that employer for review: the result carries it as duplicate_candidates, and you report the pair as
-filed, unresolved until the reviewer decides. Several contacts, companies or leads at once — a
-pasted list, a CSV — go through preview_import, which checks every row and writes nothing;
-creating them one by one skips that check. The new record's id comes back in the result; keep it for
-anything that links to it. When the user says where they met the contact, pass that word as
-offer_tag: it only offers the tag, and change_tags still needs their yes. (Runs immediately;
-requires passport scope "write".)
+occurred_at means now; a past day with no time: its date, occurred_precision "day". Search first
+when the record might already exist — a second copy of a contact or company is a problem that then
+needs resolve_duplicates to undo. A record that shares only a name, with a different email, phone or
+employer, is not proof of a duplicate. When the search finds a contact with the same name at the
+same employer, ask the human whether it is the same contact before you link anything to it; two
+colleagues can share a name. Giving a contact its employer by creating an employment relationship
+files any same-name contact at that employer for review: the result carries it as
+duplicate_candidates, and you report the pair as filed, unresolved until the reviewer decides.
+Several contacts, companies or leads at once — a pasted list, a CSV — go through preview_import,
+which checks every row and writes nothing; creating them one by one skips that check. The new
+record's id comes back in the result; keep it for anything that links to it. When the user says
+where they met the contact, pass that word as offer_tag: it only offers the tag, and change_tags
+still needs their yes. (Runs immediately; requires passport scope "write".)
 ```
 
 Renders its result in [`ui://margince/create-followups.html`](#create_followups_view), visible to `model`.
@@ -3252,6 +3259,12 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
         "source_activity_id": {
           "type": "string"
         },
+        "source_id": {
+          "type": "string"
+        },
+        "source_system": {
+          "type": "string"
+        },
         "stage_id": {
           "type": "string"
         },
@@ -3721,6 +3734,9 @@ document register, filtered by category, contract or state. Keep next_cursor to 
                   },
                   "occurred_at": {
                     "format": "date-time",
+                    "type": "string"
+                  },
+                  "occurred_precision": {
                     "type": "string"
                   },
                   "sender_address": {
@@ -7071,10 +7087,11 @@ part is staged for a human and named in the result, and that part of the write h
 names the record by id; when a name matches two records, a human picks. owner_id is NOT neutral —
 ownership decides visibility, so reassigning moves the record onto someone else's book and can take
 it off the owner's. An activity moved to another day keeps its time of day unless the user names
-one. Use change_state with action=move_deal to move a deal between stages, and change_activities
-with action=relink to change what an activity is about; neither is a field edit. Send if_version
-with the version you read, and keep the staged approval id from the result if you intend to retry
-the same change once a human has released it. (Runs immediately; requires passport scope "write".)
+one; moving a date-only one, send occurred_precision "day" again, or it reads as a time. Use
+change_state with action=move_deal to move a deal between stages, and change_activities with
+action=relink to change what an activity is about; neither is a field edit. Send if_version with the
+version you read, and keep the staged approval id from the result if you intend to retry the same
+change once a human has released it. (Runs immediately; requires passport scope "write".)
 ```
 
 Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view), visible to `model`, `app`.

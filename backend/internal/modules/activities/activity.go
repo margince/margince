@@ -68,7 +68,10 @@ type LogActivityInput struct {
 	Subject         *string
 	Body            *string
 	OccurredAt      *time.Time
-	Direction       *string
+	// OccurredPrecision is PrecisionDay when OccurredAt is only a date's anchor;
+	// empty is an instant.
+	OccurredPrecision string
+	Direction         *string
 	// MeetingStatus is meaningful only for kind meeting; the mapping refuses
 	// it on any other kind. The lead status ladder reads booked/held as
 	// engagement, so a hand-logged meeting moves a lead the same as a synced
@@ -357,6 +360,7 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		in.ThreadKey, counterparty, in.CounterpartyOutboundAttested, origin,
 		in.SourceActivityID, in.Raw, in.DurationSeconds, loggedSenderIsMachine(in),
 	})
+	precisionCol, precisionHolder, args := precisionInsertFragment(in.OccurredPrecision, args)
 	cfCols, cfHolders, args, err := storekit.InsertFragments(in.customColumns, in.CustomFields, args)
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
@@ -368,9 +372,9 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
 		                       due_at, remind_at, assignee_id, host_user_id, claims_host_slot, booking_interval_exact, source_system, source_id, source, captured_by,
 		                       thread_key, counterparty_email, counterparty_outbound_attested, origin,
-		                       source_activity_id, raw, duration_seconds, sender_is_machine`+authorCols+cfCols+`)
+		                       source_activity_id, raw, duration_seconds, sender_is_machine`+authorCols+precisionCol+cfCols+`)
 		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, coalesce($6, now()), $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, NULLIF($18, ''),
-		         NULLIF($19, ''), $20, $21, $22, $23, $24, $25`+authorHolders+cfHolders+`) RETURNING occurred_at`,
+		         NULLIF($19, ''), $20, $21, $22, $23, $24, $25`+authorHolders+precisionHolder+cfHolders+`) RETURNING occurred_at`,
 		args...).Scan(&occurredAt)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {

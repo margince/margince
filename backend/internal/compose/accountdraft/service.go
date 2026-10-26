@@ -146,9 +146,10 @@ func (s *Service) envelopeFor(ctx context.Context, view crmcontracts.Company360,
 	// The account's own correspondence, already bounded and scoped by the view.
 	// No stored language: an account history is many messages, and the language
 	// of whichever one sorted first is not the language of the exchange.
+	zone := s.envelope.Zone(ctx)
 	return s.envelope.Resolve(ctx,
-		draftfloor.Written{Thread: languageEvidence(view, s.envelope.Now()), Rewrite: req.RewriteOf, Purpose: req.Intent},
-		ConversationState(view, s.envelope.Now()))
+		draftfloor.Written{Thread: languageEvidence(view, s.envelope.Now(), zone), Rewrite: req.RewriteOf, Purpose: req.Intent},
+		ConversationState(view, s.envelope.Now(), zone)).InZone(zone)
 }
 
 // NewService binds the draft to the composite read it is grounded in and the

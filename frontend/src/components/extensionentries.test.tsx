@@ -99,6 +99,35 @@ describe("ExtensionEntries", () => {
     expect(globalThis.location.hash).toBe("#/ext/visits");
   });
 
+  describe("a mark slot", () => {
+    const MARKED = unit("visits", [
+      {
+        slot: "record_mark.contact",
+        label: "extUnits.user.title",
+        icon: "map-pin",
+        target: "",
+        object: "ext_visits_report",
+      },
+    ]);
+
+    it("draws the note for a reader holding read on its object", () => {
+      renderEntries(
+        { ext_visits_report: ["read"] },
+        { slot: "record_mark.contact", registry: [MARKED] },
+      );
+      expect(screen.getByText(/\S/)).toBeTruthy();
+      expect(screen.queryByRole("button")).toBeNull();
+    });
+
+    it("draws no note for a reader without read on its object", () => {
+      const { container } = renderEntries(
+        { ext_visits_report: ["create"] },
+        { slot: "record_mark.contact", registry: [MARKED] },
+      );
+      expect(container.innerHTML).toBe("");
+    });
+  });
+
   it("draws nothing once the unit is no longer composed", () => {
     const { container } = renderEntries(
       { ext_visits_report: ["read"] },

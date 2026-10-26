@@ -13,7 +13,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useRoster } from "../../components/entityref";
 import { useSettledValue } from "../../design-system/debouncedsearch";
-import { formatDateTime } from "../../format/format";
+import { formatActivityWhen } from "../../format/activitywhen";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
@@ -132,7 +132,12 @@ function answeringLineOf(
   }
   const named = {
     subject: anchor.subject || t("email.noSubject"),
-    when: formatDateTime(anchor.occurred_at, locale, viewerZone()),
+    when: formatActivityWhen(
+      anchor.occurred_at,
+      anchor.occurred_precision,
+      locale,
+      viewerZone(),
+    ),
   };
   // Apart, so a narrow bar cuts the subject and still shows when it happened.
   if (!replying) {

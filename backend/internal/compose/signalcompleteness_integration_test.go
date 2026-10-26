@@ -48,13 +48,14 @@ func (b *askedBrain) Complete(_ context.Context, req model.Request) (model.Respo
 	return model.Response{Text: b.reply(prompt.String())}, nil
 }
 
-// timesShown is how many readings were shown the message.
-func (b *askedBrain) timesShown(message ids.UUID) int {
+// timesShown is how many readings were shown a message, found by its words: a
+// reading names each message by a label, never by its id.
+func (b *askedBrain) timesShown(words string) int {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	n := 0
 	for _, prompt := range b.asked {
-		if strings.Contains(prompt, message.String()) {
+		if strings.Contains(prompt, words) {
 			n++
 		}
 	}
@@ -96,7 +97,8 @@ func (o *owedEnv) runEventPass(t *testing.T, brain *askedBrain) {
 // than the cap holds cannot keep a readable conversation waiting for good.
 func TestConversationsNotReadInFullDoNotFillTheEventPass(t *testing.T) {
 	o := signalEnv(t)
-	readable := o.customerSays(t, "readable@customer.example", "", "We are happy with the service.", "", o.now.Add(-10*time.Hour))
+	const readable = "We are happy with the service."
+	o.customerSays(t, "readable@customer.example", "", readable, "", o.now.Add(-10*time.Hour))
 	for n := range extractThreadCap + 5 {
 		o.customerSays(t, fmt.Sprintf("blocked-%d@customer.example", n), "",
 			brokenAfter("We may change our plans."), "base64", o.now.Add(-time.Duration(n+1)*time.Minute))
@@ -152,9 +154,9 @@ func TestALaterMessageReadOnlyInPartKeepsAnOlderEventFromBeingRaised(t *testing.
 // assesses it, and not again while nothing changes.
 func TestAnAssessedConversationIsReadOnce(t *testing.T) {
 	o := signalEnv(t)
-	first := o.customerSays(t, "assess-1@customer.example", "", "Thanks for the call.", "", o.now.Add(-3*time.Hour))
-	second := o.customerSays(t, "assess-2@customer.example", "assess-1@customer.example",
-		"We would like to add ten seats.", "", o.now.Add(-2*time.Hour))
+	const first, more = "Thanks for the call.", "We would like to add ten seats."
+	o.customerSays(t, "assess-1@customer.example", "", first, "", o.now.Add(-3*time.Hour))
+	second := o.customerSays(t, "assess-2@customer.example", "assess-1@customer.example", more, "", o.now.Add(-2*time.Hour))
 	o.asLegacy(t, second, "")
 
 	brain := &askedBrain{}
@@ -164,11 +166,11 @@ func TestAnAssessedConversationIsReadOnce(t *testing.T) {
 	}
 	o.runMailBodyTask(t)
 	o.runEventPass(t, brain)
-	if got := brain.timesShown(second); got != 1 {
+	if got := brain.timesShown(more); got != 1 {
 		t.Fatalf("the assessed conversation was read %d times, want once", got)
 	}
 	o.runEventPass(t, brain)
-	if got := brain.timesShown(second); got != 1 {
+	if got := brain.timesShown(more); got != 1 {
 		t.Errorf("an unchanged conversation was read again: %d readings", got)
 	}
 }

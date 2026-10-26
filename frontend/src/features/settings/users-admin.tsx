@@ -238,10 +238,20 @@ function MemberIdentity({ member }: Readonly<{ member: User }>) {
           <span className="t-name">{member.display_name}</span>
           {/* The agent seat owns records, so it is listed; the badge keeps it
               from passing for a colleague. */}
-          {member.is_agent && <Badge tone="ai">{t("users.agentSeat")}</Badge>}
+          {member.service_extension ? (
+            <Badge>{t("users.serviceMember")}</Badge>
+          ) : (
+            member.is_agent && <Badge tone="ai">{t("users.agentSeat")}</Badge>
+          )}
           <MemberStatus status={member.status} />
         </span>
-        <span className="t-caption">{member.email}</span>
+        <span className="t-caption">
+          {member.service_extension
+            ? t("users.serviceMemberFor", {
+                extension: member.service_extension,
+              })
+            : member.email}
+        </span>
       </CellStack>
     </span>
   );

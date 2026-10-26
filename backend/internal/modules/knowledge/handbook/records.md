@@ -35,7 +35,7 @@ Margince asks for fewer links between records than most CRM products.
 | Link | Required? |
 |---|---|
 | Contact → Company | **Optional.** It is a job link, with a role and dates. |
-| Lead → Company | **There is none.** A lead holds a company *name* as free text. |
+| Lead → Company | **Optional.** A lead holds a company *name* as free text, and you may confirm a link to the company it names. |
 | Deal → Pipeline and stage | **Required.** |
 | Deal → Company | **Optional.** |
 | Deal → Contact | **Optional.** Contacts are on a deal as stakeholders. |
@@ -45,9 +45,9 @@ Margince asks for fewer links between records than most CRM products.
 
 Many users get two of these wrong.
 
-**A deal does not need a company.** Name, pipeline, stage and source are required. Value, company and expected close date are not. Value and currency go together: you cannot give one without the other. A deal with no value has no currency either. Qualifying a lead creates a deal with no company at all, because a lead has no company to link.
+**A deal does not need a company.** Name, pipeline, stage and source are required. Value, company and expected close date are not. Value and currency go together: you cannot give one without the other. A deal with no value has no currency either. Qualifying a lead creates a deal with no company, also for a lead linked to a company.
 
-**A lead has no company record behind it.** A lead's company is plain text, not a link to a company record, so imported leads do not create half-filled companies in your CRM.
+A lead's company is plain text until you link it, so imported leads do not create half-filled companies in your CRM. When only one company you can open has the name the lead names, the lead page offers **Link to** that company. Linking makes the company name on the lead open the company. If you later change the lead's company to a name that is not the linked company, the link is removed. Linking creates no contact, and the lead keeps its status: someone is a lead or a contact, never both. When you qualify the lead, the contact it becomes gets a job link to the linked company.
 
 ## Contacts
 
@@ -64,9 +64,9 @@ Also called: create a contact, add someone to the CRM, new customer contact.
 
 ### How do I add a contact quickly, or import contacts from vCards?
 To add a contact quickly in Margince, open **Contacts** and choose **Quick capture**. To add many from a card file, choose **Import vCards**.
-- **Quick capture** asks for **Full name** (required), **Title**, **Company**, **LinkedIn**, **Email** and **Phone**, and confirms with "{name} saved"; the form stays open.
+- **Quick capture** asks for **Full name** (required), **Title**, **Company**, **LinkedIn**, **Email** and **Phone**, and confirms with "{name} saved"; the form stays open. On a company's **Contacts** tab it files the contact under that company, without the **Company** box, if you may change the company.
 - The **Company** box in Quick capture lists the companies that match what you type: pick one to link it. A name you do not pick creates a new company.
-- **Import vCards** opens **Import business cards**: choose **Select file or photo** for a **vCard file or card photo**. Each card is Added, Missing fields added, Possible duplicate, Waiting for approval or Skipped. A model reads a photo of up to 20 cards, so every card from a photo waits for your approval. A photo card whose email is already a contact is Skipped.
+- **Import vCards** opens **Import business cards**: choose **Select file or photo** for a **vCard file or card photo**. Each card is Added, Updated, Possible duplicate, Waiting for approval or Skipped. A model reads a photo of up to 20 cards, so every card from a photo waits for your approval. A photo card whose email is already a contact is Skipped. Each field of a card from a file says Imported, "Replaced, old value can be restored", "Record value kept" or "Not in the card". **Next vCard** clears the file and the result for the next card.
 - A card photo must be a JPEG or PNG. An iPhone converts it automatically when you pick it. A photo in another format is refused until you save it as JPEG or PNG.
 Also called: import contacts, upload a .vcf, scan a business card, import cards from a photo.
 

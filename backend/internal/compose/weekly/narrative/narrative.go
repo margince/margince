@@ -64,8 +64,11 @@ type Counts struct {
 	// them a week spent answering new business and sitting in meetings — real
 	// work, and often the whole of an SDR's week — reached the narrator as a
 	// row of zeros, and it wrote that nothing happened.
-	LeadsRouted           int `json:"leads_routed"`
-	LeadsAnsweredInTarget int `json:"leads_answered_in_target"`
+	LeadsRouted int `json:"leads_routed"`
+	// First responses recorded by the week's close, late ones included. Named
+	// for what it counts: under its old name, "answered in target", the
+	// narrator was told a target was met that nothing here measures.
+	LeadsRespondedByClose int `json:"leads_first_responses_recorded_by_close"`
 	LeadsBreached         int `json:"leads_breached"`
 	MeetingsHeld          int `json:"meetings_held"`
 	MeetingsWithNextStep  int `json:"meetings_with_next_step"`
@@ -83,7 +86,7 @@ func (c Counts) quiet() bool {
 		c.DealsMoved == 0 && c.DealsWon == 0 && c.DealsLost == 0 &&
 		c.ProposalsAccepted == 0 && c.ProposalsRejected == 0 &&
 		c.BriefItemsActed == 0 && c.BriefItemsDismissed == 0 &&
-		c.LeadsRouted == 0 && c.LeadsAnsweredInTarget == 0 && c.LeadsBreached == 0 &&
+		c.LeadsRouted == 0 && c.LeadsRespondedByClose == 0 && c.LeadsBreached == 0 &&
 		c.MeetingsHeld == 0 && c.MeetingsWithNextStep == 0
 }
 
@@ -138,9 +141,8 @@ THIS WEEK WAS NOT QUIET: the counts below are not all zero. Never write that the
 
 // systemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 //
-// The review is read by the rep whose week it was, so it takes the
-// installation's shared language rather than the language a deal name happened
-// to be written in — which is what an unruled prompt would have followed.
+// The review is read by the rep whose week it was, so `lang` is that rep's
+// language. An unruled prompt would follow the language of a deal name.
 func systemFor(fence promptfence.Fence, lang string) string {
 	return narrativeSystem + "\n" + promptlang.Rule(lang) + "\n" +
 		fence.Rule("deal names from the week")

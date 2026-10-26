@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -26,6 +25,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -123,7 +123,7 @@ func (s *Sink) emitReply(ctx context.Context, tx pgx.Tx, auditID ids.UUID, id id
 		return nil
 	}
 	idempotencyKey := rec.NaturalKey.SourceSystem + ":" + rec.NaturalKey.SourceID
-	payload := engagementReplyPayload(matched, origin, fields.OccurredAt, idempotencyKey)
+	payload := engagementReplyPayload(matched, origin, occurredday.Moment{At: fields.OccurredAt, DateOnly: fields.DateOnly}, idempotencyKey)
 	return storekit.EmitEvent(ctx, tx, auditID, id.UUID, payload)
 }
 
@@ -241,11 +241,16 @@ func channelReplyContact(ctx context.Context, tx pgx.Tx, ci connector.ChannelIde
 // engagementReplyPayload builds the engagement.reply event from the origin the
 // switch above resolved — the reply's channel and, when the counterparty is
 // already a known contact, their id (absent, not null, otherwise).
-func engagementReplyPayload(matched ids.UUID, origin replyOrigin, occurredAt time.Time, idempotencyKey string) crmcontracts.PublicEventEngagementReply {
+func engagementReplyPayload(matched ids.UUID, origin replyOrigin, occurred occurredday.Moment, idempotencyKey string) crmcontracts.PublicEventEngagementReply {
+	precision := crmcontracts.ReplyTimeIsAnInstant
+	if occurred.DateOnly {
+		precision = crmcontracts.ReplyTimeIsADay
+	}
 	payload := crmcontracts.PublicEventEngagementReply{
 		MatchedOutboundActivityId: openapi_types.UUID(matched),
 		Channel:                   origin.channel,
-		OccurredAt:                occurredAt,
+		OccurredAt:                occurred.At,
+		OccurredPrecision:         &precision,
 		IdempotencyKey:            idempotencyKey,
 	}
 	if origin.contactID != nil {

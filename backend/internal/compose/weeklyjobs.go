@@ -235,7 +235,7 @@ func (w *weeklyGenerateWorker) narrate(ctx context.Context, review weekly.Review
 			// The scorecard reports these; without them a week of answering
 			// leads and holding meetings reaches the narrator as zeros.
 			LeadsRouted:           review.Counts.LeadsRouted,
-			LeadsAnsweredInTarget: review.Counts.LeadsAnsweredInTarget,
+			LeadsRespondedByClose: review.Counts.LeadsAnsweredInTarget,
 			LeadsBreached:         review.Counts.LeadsBreached,
 			MeetingsHeld:          review.Counts.MeetingsHeld,
 			MeetingsWithNextStep:  review.Counts.MeetingsWithNextStep,
@@ -247,7 +247,8 @@ func (w *weeklyGenerateWorker) narrate(ctx context.Context, review weekly.Review
 		})
 	}
 
-	lang := identity.BaseLanguageForPrompt(ctx, w.pool)
+	// The sentence is the rep's own week, read by them alone.
+	lang := recipientLanguage(ctx, w.pool)
 	// Bounded per rep. See narrateBudget: without this one wedged provider
 	// spends the whole workspace deadline on the first rep and every rep after
 	// them loses the review itself, not just the remark.

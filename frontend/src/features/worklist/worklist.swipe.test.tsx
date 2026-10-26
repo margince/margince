@@ -44,6 +44,7 @@ const MENU = rowMenuName(TITLE);
 
 function row(dispositions: readonly WorklistDisposition[]): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "01a05500-0000-7000-8000-0000000000a1",
     source: "customer_waiting",
     category: "customer_waiting",

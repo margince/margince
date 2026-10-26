@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -89,8 +90,7 @@ var firstResponseSQL = `
 	   AND inbound.direction = 'inbound'
 	   AND inbound.archived_at IS NULL
 	   AND reply.occurred_at IS NOT NULL
-	   AND inbound.occurred_at >= $1
-	   AND inbound.occurred_at < $2
+	   AND ` + occurredday.WithinSQL("inbound", "$1", "$2") + `
 	   AND %[1]s
 	   -- A COLLEAGUE's message is not a customer waiting, and this reading
 	   -- answers "how fast do we answer customers". Without the same exclusion

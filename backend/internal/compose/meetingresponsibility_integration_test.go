@@ -61,8 +61,8 @@ func bookHostedMeeting(t *testing.T, e *integration.Env, subject string, at time
 func myMeetingsToday(t *testing.T, e *integration.Env, reader ids.UUID) []string {
 	t.Helper()
 	lane := attentionMeetings{store: activities.NewStore(InstallationDB(e.Pool))}
-	rows, err := lane.Today(e.As(reader, nil, integration.AdminPerms), laneDay,
-		laneDay.Truncate(24*time.Hour).Add(24*time.Hour), 12, attention.TasksMine, ids.UUID{})
+	rows, err := lane.Today(e.As(reader, nil, integration.AdminPerms),
+		attention.MeetingWindow{From: laneDay, Until: laneDay.Truncate(24 * time.Hour).Add(24 * time.Hour)}, 12, attention.TasksMine, ids.UUID{})
 	if err != nil {
 		t.Fatalf("reading the meeting lane: %v", err)
 	}
@@ -276,7 +276,7 @@ func TestALegacyCalendarRowIsNobodysUntilItsOriginalIsReplayed(t *testing.T) {
 	until := starts.Add(24 * time.Hour)
 	lane := attentionMeetings{store: activities.NewStore(InstallationDB(e.Pool))}
 	read := func() int {
-		rows, err := lane.Today(e.As(e.AdminUser, nil, integration.AdminPerms), starts.Add(-time.Hour), until, 12, attention.TasksMine, ids.UUID{})
+		rows, err := lane.Today(e.As(e.AdminUser, nil, integration.AdminPerms), attention.MeetingWindow{From: starts.Add(-time.Hour), Until: until}, 12, attention.TasksMine, ids.UUID{})
 		if err != nil {
 			t.Fatal(err)
 		}

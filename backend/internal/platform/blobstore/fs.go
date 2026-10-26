@@ -39,8 +39,8 @@ const (
 )
 
 // Directory and file permissions. The store holds tenant attachment bytes on a
-// single machine — a desktop installation's own folder — so it is owner-only:
-// this is the provider whose objects are readable with a file browser.
+// single machine, so it is owner-only. Its objects are readable with a file
+// browser.
 const (
 	fsDirPerm  os.FileMode = 0o700
 	fsFilePerm os.FileMode = 0o600
@@ -49,13 +49,12 @@ const (
 // fsStore is the filesystem Store: object bytes in a directory tree under one
 // root, for an installation that has local disk and no object storage service.
 //
-// It exists because the desktop bundle ships no S3 server and cannot
-// reasonably bundle one (MinIO is AGPLv3, awkward inside a BUSL-1.1 product —
-// see explanation/desktop-distribution.md), so its attachment and logo paths
-// answered 501 with no configuration a user could supply that did not involve
-// running a separate service. Speaking S3 to a server on localhost so that
-// server can write to local disk is a hop this seam does not need: Store is
-// four bytes-level methods, and a directory satisfies them.
+// Without it, an installation with no S3 server has attachment and logo paths
+// that answer 501. No setting a user could supply would fix that short of
+// running a separate service. Bundling one is no answer: MinIO is AGPLv3,
+// awkward inside a BUSL-1.1 product. Speaking S3 to a localhost server that
+// writes to local disk is a hop this seam does not need. Store is four
+// bytes-level methods, and a directory satisfies them.
 //
 // It is deliberately not a distributed store: no replication, no versioning, no
 // signed URLs. An installation that outgrows one machine configures the S3

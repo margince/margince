@@ -17,6 +17,7 @@ type Activity = components["schemas"]["Activity"];
 type Company360 = components["schemas"]["Company360"];
 
 const email: Activity = {
+  occurred_precision: "instant",
   offers_email: false,
   id: "a-1",
   kind: "email",
@@ -31,6 +32,7 @@ const email: Activity = {
   email_summary: {
     activity_id: "a-1",
     occurred_at: "2026-08-01T12:15:00Z",
+    occurred_precision: "instant",
     version: 1,
     subject: "Re: retrofit timeline",
     preview: "Can we push the fleet retrofit review back a week?",

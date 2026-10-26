@@ -47,6 +47,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -332,7 +333,7 @@ func (t *StageEvidenceTrigger) onActivityUpdated(ctx context.Context, env events
 // reaching this point has already proven itself by a rule that does not
 // consult it; it rides along as the trail's account of who called the meeting.
 func (t *StageEvidenceTrigger) judgeActivity(ctx context.Context, activityID ids.UUID) error {
-	facts, err := t.activityFacts(ctx, activityID)
+	facts, zone, err := t.activityFacts(ctx, activityID)
 	if err != nil {
 		// An activity reaching no deal settles nothing.
 		if errors.Is(err, apperrors.ErrNotFound) {
@@ -357,7 +358,7 @@ func (t *StageEvidenceTrigger) judgeActivity(ctx context.Context, activityID ids
 	}
 	// A meeting in the future has not been held. The capture path records
 	// scheduled meetings too, and one settles event_held only once it happened.
-	if facts.OccurredAt.After(t.now()) {
+	if !occurredday.MeetingTookPlace(occurredday.Moment{At: facts.OccurredAt, DateOnly: facts.DateOnly}, t.now(), zone) {
 		return nil
 	}
 	proof := deals.MeetingWasHeld(
@@ -394,7 +395,8 @@ func (t *StageEvidenceTrigger) readPayload(ctx context.Context, env events.Envel
 	return true
 }
 
-// activityFacts reads what the meeting rules need about one activity.
+// activityFacts reads what the meeting rules need about one activity, and
+// the installation zone that says which date is today.
 //
 // The own-domain list is capture's and the judgement is deals', so the two
 // meet HERE — compose is where an edge between two modules is allowed to
@@ -402,14 +404,18 @@ func (t *StageEvidenceTrigger) readPayload(ctx context.Context, env events.Envel
 // the author side are the domains that counted the attendees.
 func (t *StageEvidenceTrigger) activityFacts(
 	ctx context.Context, activityID ids.UUID,
-) (deals.ActivityAuthorship, error) {
+) (deals.ActivityAuthorship, *time.Location, error) {
 	var out deals.ActivityAuthorship
+	var zone *time.Location
 	err := pgx.BeginFunc(ctx, t.pool, func(tx pgx.Tx) error {
 		var err error
-		out, err = deals.ReadActivityAuthorship(ctx, tx, activityID, t.own)
+		if out, err = deals.ReadActivityAuthorship(ctx, tx, activityID, t.own); err != nil {
+			return err
+		}
+		zone, err = identity.ZoneAppliedTx(ctx, tx)
 		return err
 	})
-	return out, err
+	return out, zone, err
 }
 
 // dealOfContract answers the deal a contract is bound to.

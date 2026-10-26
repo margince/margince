@@ -712,6 +712,21 @@ func (e AgentClientRegisteredBy) Valid() bool {
 	}
 }
 
+// Defines values for AgentContextItemOccurredPrecision.
+const (
+	AgentContextItemOccurredPrecisionDay AgentContextItemOccurredPrecision = "day"
+)
+
+// Valid indicates whether the value is a known member of the AgentContextItemOccurredPrecision enum.
+func (e AgentContextItemOccurredPrecision) Valid() bool {
+	switch e {
+	case AgentContextItemOccurredPrecisionDay:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AgentToolTier.
 const (
 	AgentToolTierAutoExecute          AgentToolTier = "auto_execute"
@@ -5761,6 +5776,27 @@ func (e CompanyHierarchyRollupScope) Valid() bool {
 	}
 }
 
+// Defines values for CompanyOfferedValueField.
+const (
+	CompanyOfferedValueFieldDescription CompanyOfferedValueField = "description"
+	CompanyOfferedValueFieldIndustry    CompanyOfferedValueField = "industry"
+	CompanyOfferedValueFieldLegalName   CompanyOfferedValueField = "legal_name"
+)
+
+// Valid indicates whether the value is a known member of the CompanyOfferedValueField enum.
+func (e CompanyOfferedValueField) Valid() bool {
+	switch e {
+	case CompanyOfferedValueFieldDescription:
+		return true
+	case CompanyOfferedValueFieldIndustry:
+		return true
+	case CompanyOfferedValueFieldLegalName:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CompanyProfileFieldField.
 const (
 	CompanyProfileFieldFieldBuyingCenter      CompanyProfileFieldField = "buying_center"
@@ -6970,6 +7006,66 @@ func (e ContactConsentGuardEntryPurposeClass) Valid() bool {
 	}
 }
 
+// Defines values for ContactConsentGuardEntryReasonCode.
+const (
+	ContactConsentGuardEntryReasonCodeConsentConfirmed             ContactConsentGuardEntryReasonCode = "consent_confirmed"
+	ContactConsentGuardEntryReasonCodeConsentWithdrawn             ContactConsentGuardEntryReasonCode = "consent_withdrawn"
+	ContactConsentGuardEntryReasonCodeContractNotice               ContactConsentGuardEntryReasonCode = "contract_notice"
+	ContactConsentGuardEntryReasonCodeNoCallPath                   ContactConsentGuardEntryReasonCode = "no_call_path"
+	ContactConsentGuardEntryReasonCodeNoConnection                 ContactConsentGuardEntryReasonCode = "no_connection"
+	ContactConsentGuardEntryReasonCodeNoConsent                    ContactConsentGuardEntryReasonCode = "no_consent"
+	ContactConsentGuardEntryReasonCodeNoConsentExceptionNotOffered ContactConsentGuardEntryReasonCode = "no_consent_exception_not_offered"
+	ContactConsentGuardEntryReasonCodeObjection                    ContactConsentGuardEntryReasonCode = "objection"
+	ContactConsentGuardEntryReasonCodeQualifyingEvent              ContactConsentGuardEntryReasonCode = "qualifying_event"
+	ContactConsentGuardEntryReasonCodeSaidWeMayWrite               ContactConsentGuardEntryReasonCode = "said_we_may_write"
+	ContactConsentGuardEntryReasonCodeSuppressed                   ContactConsentGuardEntryReasonCode = "suppressed"
+	ContactConsentGuardEntryReasonCodeSuppressedHardBounce         ContactConsentGuardEntryReasonCode = "suppressed_hard_bounce"
+	ContactConsentGuardEntryReasonCodeSuppressedObjection          ContactConsentGuardEntryReasonCode = "suppressed_objection"
+	ContactConsentGuardEntryReasonCodeSuppressedRestricted         ContactConsentGuardEntryReasonCode = "suppressed_restricted"
+	ContactConsentGuardEntryReasonCodeSuppressedSubjectRequest     ContactConsentGuardEntryReasonCode = "suppressed_subject_request"
+	ContactConsentGuardEntryReasonCodeUnconfirmedDoubleOptIn       ContactConsentGuardEntryReasonCode = "unconfirmed_double_opt_in"
+)
+
+// Valid indicates whether the value is a known member of the ContactConsentGuardEntryReasonCode enum.
+func (e ContactConsentGuardEntryReasonCode) Valid() bool {
+	switch e {
+	case ContactConsentGuardEntryReasonCodeConsentConfirmed:
+		return true
+	case ContactConsentGuardEntryReasonCodeConsentWithdrawn:
+		return true
+	case ContactConsentGuardEntryReasonCodeContractNotice:
+		return true
+	case ContactConsentGuardEntryReasonCodeNoCallPath:
+		return true
+	case ContactConsentGuardEntryReasonCodeNoConnection:
+		return true
+	case ContactConsentGuardEntryReasonCodeNoConsent:
+		return true
+	case ContactConsentGuardEntryReasonCodeNoConsentExceptionNotOffered:
+		return true
+	case ContactConsentGuardEntryReasonCodeObjection:
+		return true
+	case ContactConsentGuardEntryReasonCodeQualifyingEvent:
+		return true
+	case ContactConsentGuardEntryReasonCodeSaidWeMayWrite:
+		return true
+	case ContactConsentGuardEntryReasonCodeSuppressed:
+		return true
+	case ContactConsentGuardEntryReasonCodeSuppressedHardBounce:
+		return true
+	case ContactConsentGuardEntryReasonCodeSuppressedObjection:
+		return true
+	case ContactConsentGuardEntryReasonCodeSuppressedRestricted:
+		return true
+	case ContactConsentGuardEntryReasonCodeSuppressedSubjectRequest:
+		return true
+	case ContactConsentGuardEntryReasonCodeUnconfirmedDoubleOptIn:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ContactConsentGuardEntryVerdict.
 const (
 	ContactConsentGuardEntryVerdictAllowed ContactConsentGuardEntryVerdict = "allowed"
@@ -7553,6 +7649,8 @@ func (e ContactPhoneInputPhoneType) Valid() bool {
 const (
 	ContactProfileFieldFieldAddress     ContactProfileFieldField = "address"
 	ContactProfileFieldFieldCompanyName ContactProfileFieldField = "company_name"
+	ContactProfileFieldFieldFirstName   ContactProfileFieldField = "first_name"
+	ContactProfileFieldFieldLastName    ContactProfileFieldField = "last_name"
 	ContactProfileFieldFieldLinkedin    ContactProfileFieldField = "linkedin"
 	ContactProfileFieldFieldPhone       ContactProfileFieldField = "phone"
 	ContactProfileFieldFieldRole        ContactProfileFieldField = "role"
@@ -7566,6 +7664,10 @@ func (e ContactProfileFieldField) Valid() bool {
 	case ContactProfileFieldFieldAddress:
 		return true
 	case ContactProfileFieldFieldCompanyName:
+		return true
+	case ContactProfileFieldFieldFirstName:
+		return true
+	case ContactProfileFieldFieldLastName:
 		return true
 	case ContactProfileFieldFieldLinkedin:
 		return true
@@ -9634,6 +9736,24 @@ func (e DecideCommissionRequestDecision) Valid() bool {
 	}
 }
 
+// Defines values for DeclaredExtensionSettingKind.
+const (
+	DeclaredExtensionSettingKindSwitch DeclaredExtensionSettingKind = "switch"
+	DeclaredExtensionSettingKindText   DeclaredExtensionSettingKind = "text"
+)
+
+// Valid indicates whether the value is a known member of the DeclaredExtensionSettingKind enum.
+func (e DeclaredExtensionSettingKind) Valid() bool {
+	switch e {
+	case DeclaredExtensionSettingKindSwitch:
+		return true
+	case DeclaredExtensionSettingKindText:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DedupeCandidateEntityType.
 const (
 	DedupeCandidateEntityTypeCompany DedupeCandidateEntityType = "company"
@@ -11651,6 +11771,7 @@ const (
 	ImportReasonCodeNotAnAmount                  ImportReasonCode = "not_an_amount"
 	ImportReasonCodeNotAnEmail                   ImportReasonCode = "not_an_email"
 	ImportReasonCodeNotYesNo                     ImportReasonCode = "not_yes_no"
+	ImportReasonCodeNoteRepeated                 ImportReasonCode = "note_repeated"
 	ImportReasonCodeOccurredAtFuture             ImportReasonCode = "occurred_at_future"
 	ImportReasonCodeOccurredAtUnnamed            ImportReasonCode = "occurred_at_unnamed"
 	ImportReasonCodeOptionNotAllowed             ImportReasonCode = "option_not_allowed"
@@ -11854,6 +11975,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeNotAnEmail:
 		return true
 	case ImportReasonCodeNotYesNo:
+		return true
+	case ImportReasonCodeNoteRepeated:
 		return true
 	case ImportReasonCodeOccurredAtFuture:
 		return true
@@ -13693,6 +13816,30 @@ func (e MeetingPlanUnknownKind) Valid() bool {
 	}
 }
 
+// Defines values for MeetingResponse.
+const (
+	MeetingResponseAccepted    MeetingResponse = "accepted"
+	MeetingResponseDeclined    MeetingResponse = "declined"
+	MeetingResponseNeedsAction MeetingResponse = "needs_action"
+	MeetingResponseTentative   MeetingResponse = "tentative"
+)
+
+// Valid indicates whether the value is a known member of the MeetingResponse enum.
+func (e MeetingResponse) Valid() bool {
+	switch e {
+	case MeetingResponseAccepted:
+		return true
+	case MeetingResponseDeclined:
+		return true
+	case MeetingResponseNeedsAction:
+		return true
+	case MeetingResponseTentative:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MorningBriefFactorsOmitted.
 const (
 	MorningBriefFactorsOmittedWarmth MorningBriefFactorsOmitted = "warmth"
@@ -14038,6 +14185,24 @@ func (e NotificationDelivery) Valid() bool {
 	case NotificationDeliveryInApp:
 		return true
 	case NotificationDeliveryOff:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OccurredPrecision.
+const (
+	OccurredPrecisionOccurredPrecisionDay     OccurredPrecision = "day"
+	OccurredPrecisionOccurredPrecisionInstant OccurredPrecision = "instant"
+)
+
+// Valid indicates whether the value is a known member of the OccurredPrecision enum.
+func (e OccurredPrecision) Valid() bool {
+	switch e {
+	case OccurredPrecisionOccurredPrecisionDay:
+		return true
+	case OccurredPrecisionOccurredPrecisionInstant:
 		return true
 	default:
 		return false
@@ -19822,6 +19987,69 @@ func (e UserStatus) Valid() bool {
 	}
 }
 
+// Defines values for VCardImportFieldAction.
+const (
+	VCardImportFieldActionVCardImportFieldActionImported  VCardImportFieldAction = "imported"
+	VCardImportFieldActionVCardImportFieldActionKept      VCardImportFieldAction = "kept"
+	VCardImportFieldActionVCardImportFieldActionNotInCard VCardImportFieldAction = "not_in_card"
+	VCardImportFieldActionVCardImportFieldActionReplaced  VCardImportFieldAction = "replaced"
+)
+
+// Valid indicates whether the value is a known member of the VCardImportFieldAction enum.
+func (e VCardImportFieldAction) Valid() bool {
+	switch e {
+	case VCardImportFieldActionVCardImportFieldActionImported:
+		return true
+	case VCardImportFieldActionVCardImportFieldActionKept:
+		return true
+	case VCardImportFieldActionVCardImportFieldActionNotInCard:
+		return true
+	case VCardImportFieldActionVCardImportFieldActionReplaced:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for VCardImportFieldField.
+const (
+	VCardImportFieldFieldVCardImportFieldFieldAddress     VCardImportFieldField = "address"
+	VCardImportFieldFieldVCardImportFieldFieldCompanyName VCardImportFieldField = "company_name"
+	VCardImportFieldFieldVCardImportFieldFieldEmail       VCardImportFieldField = "email"
+	VCardImportFieldFieldVCardImportFieldFieldLinkedin    VCardImportFieldField = "linkedin"
+	VCardImportFieldFieldVCardImportFieldFieldMobilePhone VCardImportFieldField = "mobile_phone"
+	VCardImportFieldFieldVCardImportFieldFieldName        VCardImportFieldField = "name"
+	VCardImportFieldFieldVCardImportFieldFieldPhone       VCardImportFieldField = "phone"
+	VCardImportFieldFieldVCardImportFieldFieldTitle       VCardImportFieldField = "title"
+	VCardImportFieldFieldVCardImportFieldFieldWebsite     VCardImportFieldField = "website"
+)
+
+// Valid indicates whether the value is a known member of the VCardImportFieldField enum.
+func (e VCardImportFieldField) Valid() bool {
+	switch e {
+	case VCardImportFieldFieldVCardImportFieldFieldAddress:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldCompanyName:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldEmail:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldLinkedin:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldMobilePhone:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldName:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldPhone:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldTitle:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldWebsite:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for VCardImportResultOutcome.
 const (
 	VCardImportResultOutcomeVCardImportResultOutcomeCreated     VCardImportResultOutcome = "created"
@@ -21902,6 +22130,8 @@ func (e CapturedByKind) Valid() bool {
 const (
 	ContactProfileFieldKeyAddress     ContactProfileFieldKey = "address"
 	ContactProfileFieldKeyCompanyName ContactProfileFieldKey = "company_name"
+	ContactProfileFieldKeyFirstName   ContactProfileFieldKey = "first_name"
+	ContactProfileFieldKeyLastName    ContactProfileFieldKey = "last_name"
 	ContactProfileFieldKeyLinkedin    ContactProfileFieldKey = "linkedin"
 	ContactProfileFieldKeyPhone       ContactProfileFieldKey = "phone"
 	ContactProfileFieldKeyRole        ContactProfileFieldKey = "role"
@@ -21915,6 +22145,10 @@ func (e ContactProfileFieldKey) Valid() bool {
 	case ContactProfileFieldKeyAddress:
 		return true
 	case ContactProfileFieldKeyCompanyName:
+		return true
+	case ContactProfileFieldKeyFirstName:
+		return true
+	case ContactProfileFieldKeyLastName:
 		return true
 	case ContactProfileFieldKeyLinkedin:
 		return true
@@ -24967,6 +25201,9 @@ type Activity struct {
 	// AssigneeId Task only.
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 
+	// AttendeeResponses Meeting only: the answers the colleagues and the linked contacts you see gave the invitation, for those a calendar stated one for. A guest in `guests` carries their own `response`. Filled and withheld like `guests`.
+	AttendeeResponses *[]MeetingAttendeeResponse `json:"attendee_responses,omitempty"`
+
 	// Audience Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the workspace's own domains.
 	Audience *ActivityAudience `json:"audience,omitempty"`
 
@@ -25022,6 +25259,12 @@ type Activity struct {
 	// EmailSummary Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 
+	// Guests Meeting only: the guests who are not a colleague seat and whose contact is not among the `links` you see. That covers a guest who is not a contact yet, and one past the link ceiling or filed under a contact you may not read. `contact_id` is set only for a contact you may read. A colleague is in `colleague_ids`. Filled wherever one activity is answered whole; a list leaves it out. Withheld with the content, like `colleague_ids`.
+	Guests *[]MeetingGuest `json:"guests,omitempty"`
+
+	// GuestsLeftOut Meeting only: how many outside guests of a meeting past the party cap are not listed, because a crowded meeting keeps at most 200 by address. Filled and withheld like `guests`.
+	GuestsLeftOut *int `json:"guests_left_out,omitempty"`
+
 	// HostUserId Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
 	HostUserId *openapi_types.UUID `json:"host_user_id,omitempty"`
 	Id         openapi_types.UUID  `json:"id"`
@@ -25047,6 +25290,9 @@ type Activity struct {
 	// MeetingStatus Set only when kind=meeting.
 	MeetingStatus *ActivityMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    time.Time              `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, so a client draws the date without a time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
 	// OffersEmail Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, described on `ReplyRecipient`. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. A client offers Write email only when this is true, and reads the address from reply-recipient.
 	OffersEmail bool                    `json:"offers_email"`
@@ -25197,6 +25443,9 @@ type ActivityReference struct {
 	// Kind What KIND of activity it is, so a client dispatches on it: an email opens the drawer, a task opens the task detail, anything else opens the activity itself.
 	Kind       ActivityReferenceKind `json:"kind"`
 	OccurredAt time.Time             `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
 	// Subject The activity's own subject line. Null when it has none, and when the content is not this reader's — the two are told apart by `content_state`, never by this field being empty.
 	Subject *string `json:"subject,omitempty"`
@@ -25495,12 +25744,18 @@ type AgentContextHit struct {
 
 // AgentContextItem One record in an assembled picture, summarised, with the passages that put it there.
 type AgentContextItem struct {
-	Evidence   []AgentExcerpt     `json:"evidence"`
-	OccurredAt *string            `json:"occurred_at,omitempty"`
-	RecordId   openapi_types.UUID `json:"record_id"`
-	RecordType string             `json:"record_type"`
-	Summary    string             `json:"summary"`
+	Evidence   []AgentExcerpt `json:"evidence"`
+	OccurredAt *string        `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision Present when only the date of occurred_at is known: name its UTC date, unconverted, and no time.
+	OccurredPrecision *AgentContextItemOccurredPrecision `json:"occurred_precision,omitempty"`
+	RecordId          openapi_types.UUID                 `json:"record_id"`
+	RecordType        string                             `json:"record_type"`
+	Summary           string                             `json:"summary"`
 }
+
+// AgentContextItemOccurredPrecision Present when only the date of occurred_at is known: name its UTC date, unconverted, and no time.
+type AgentContextItemOccurredPrecision string
 
 // AgentContextSection One heading of an assembled picture: recent activity, open tasks, related records.
 type AgentContextSection struct {
@@ -28048,6 +28303,9 @@ type AttachmentOrigin struct {
 	// OccurredAt When the mail was sent or received.
 	OccurredAt time.Time `json:"occurred_at"`
 
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// Sender One address on a message, resolved to a contact or a seat when it is one.
 	Sender  *EmailParty `json:"sender,omitempty"`
 	Subject *string     `json:"subject,omitempty"`
@@ -28693,6 +28951,9 @@ type AttentionItem struct {
 
 	// OccurredAt When a done_for_you receipt actually happened.
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision How to read a meeting row's time (`due_at` or `occurred_at`). Absent means `instant`.
+	OccurredPrecision *OccurredPrecision `json:"occurred_precision,omitempty"`
 
 	// Overdue Past due at the read instant, resolved server-side so every surface agrees.
 	Overdue *bool `json:"overdue,omitempty"`
@@ -30852,6 +31113,9 @@ type CaptureSenderDecision struct {
 	// LastSeenAt When the newest of those messages was sent or received. Absent when there are none.
 	LastSeenAt *time.Time `json:"last_seen_at,omitempty"`
 
+	// LastSeenPrecision How to read `last_seen_at`, from the message it names. Absent when that is absent.
+	LastSeenPrecision *OccurredPrecision `json:"last_seen_precision,omitempty"`
+
 	// MessageCount How many messages stored from your mailbox have this address as their counterparty, sent
 	// or received. Archived mail is not counted.
 	MessageCount int `json:"message_count"`
@@ -31782,8 +32046,14 @@ type Company360 struct {
 	// LastInboundAt When one of the account's current contacts last wrote to us: the newest of their own last_inbound_at, over the activities the timeline walks. Mail a colleague sent, and activity filed on the account alone, does not move it. Null means none of them ever wrote, which is a fact about the account, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
 	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
 
+	// LastInboundPrecision How to read `last_inbound_at`, from the row it names. Absent when that is null or absent.
+	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+
 	// LastOutboundAt When we last wrote to one of the account's current contacts. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
 	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+
+	// LastOutboundPrecision How to read `last_outbound_at`, from the row it names. Absent when that is null or absent.
+	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
 
 	// ListMemberships The Shortlists this company is on that the caller may find. Absent while the installation has not switched lists on.
 	ListMemberships *[]List `json:"list_memberships,omitempty"`
@@ -32057,6 +32327,9 @@ type Company360Health struct {
 	DaysSinceLastInbound *int       `json:"days_since_last_inbound,omitempty"`
 	LastMeetingAt        *time.Time `json:"last_meeting_at,omitempty"`
 
+	// LastMeetingPrecision How to read `last_meeting_at`, from the row it names. Absent when that is null or absent.
+	LastMeetingPrecision *OccurredPrecision `json:"last_meeting_precision,omitempty"`
+
 	// OpenCommitments Commitments either side made with the contacts at this account, read out of conversations, still owed and not yet a task. Null when the caller cannot read contacts and activities.
 	OpenCommitments *int `json:"open_commitments,omitempty"`
 
@@ -32078,6 +32351,9 @@ type Company360LastContact struct {
 	ActivityId openapi_types.UUID        `json:"activity_id"`
 	At         time.Time                 `json:"at"`
 	Kind       Company360LastContactKind `json:"kind"`
+
+	// OccurredPrecision How to read `at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 }
 
 // Company360LastContactKind defines model for Company360LastContact.Kind.
@@ -32112,6 +32388,9 @@ type Company360NextMeeting struct {
 
 	// LinkedDealId The deal this meeting is filed against, when the caller may read it.
 	LinkedDealId *openapi_types.UUID `json:"linked_deal_id,omitempty"`
+
+	// OccurredPrecision How to read `starts_at`. `day` means only its date is known, and the meeting stays next for that whole date.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
 	// Participants The attendees on file, row-scoped. Empty is honest — a meeting can be booked before anyone is linked to it.
 	Participants []Company360MeetingParticipant `json:"participants"`
@@ -32258,8 +32537,14 @@ type Company360StateStrip struct {
 
 	// Engagement Null when the caller has no activity grant — not assessed, as distinct from never contacted.
 	Engagement *struct {
-		LastInboundAt  *time.Time `json:"last_inbound_at,omitempty"`
-		LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+		LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
+
+		// LastInboundPrecision How to read `last_inbound_at`, from the activity it names. Absent when that is null.
+		LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+		LastOutboundAt       *time.Time         `json:"last_outbound_at,omitempty"`
+
+		// LastOutboundPrecision How to read `last_outbound_at`, from the activity it names. Absent when that is null.
+		LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
 
 		// State PO-F-4, evaluated in the order the spec fixes so the states stay mutually exclusive. `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting.
 		State Company360StateStripEngagementState `json:"state"`
@@ -32337,6 +32622,9 @@ type Company360Suggestion struct {
 	// date moves on its own, so a dismissal keyed on one would expire without anything
 	// about the account changing.
 	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// DuePrecision How to read `due_at` where it is an activity's time, from that activity. Absent when `due_at` is null, and when it is when a deal last moved, a stored clock with no precision.
+	DuePrecision *OccurredPrecision `json:"due_precision,omitempty"`
 
 	// Evidence The records the rule fired on — always ones this reader can open.
 	Evidence []CompanyBriefEvidence `json:"evidence"`
@@ -32664,8 +32952,14 @@ type CompanyContact struct {
 	// `engagement` is what says whether it counts as current.
 	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
 
+	// LastInboundPrecision How to read `last_inbound_at`, from the activity it names. Absent when that is null.
+	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+
 	// LastOutboundAt When we last wrote to them, over all history. Read beside `last_inbound_at`, the pair says which way the conversation is owed.
 	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+
+	// LastOutboundPrecision How to read `last_outbound_at`, from the activity it names. Absent when that is null.
+	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
 
 	// Strength Deterministic relationship-strength (features/07 §4) — a transparent function over captured
 	// interaction features (recency, frequency, direction, reciprocity), NOT a trained model. A fixed
@@ -32807,7 +33101,10 @@ type CompanyCoverageRoute struct {
 	Engagement    ContactEngagement `json:"engagement"`
 	FullName      string            `json:"full_name"`
 	LastInboundAt *time.Time        `json:"last_inbound_at,omitempty"`
-	Title         *string           `json:"title,omitempty"`
+
+	// LastInboundPrecision How to read `last_inbound_at`, from the activity it names. Absent when that is null.
+	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+	Title                *string            `json:"title,omitempty"`
 }
 
 // CompanyCoverageSeat defines model for CompanyCoverageSeat.
@@ -33512,6 +33809,19 @@ type CompanyListResponse struct {
 	Page PageInfo  `json:"page"`
 }
 
+// CompanyOfferedValue The value one source last offered for one company field.
+type CompanyOfferedValue struct {
+	Field     CompanyOfferedValueField `json:"field"`
+	OfferedAt time.Time                `json:"offered_at"`
+
+	// SourceSystem The source that offered it, as named in the company's outside id.
+	SourceSystem string `json:"source_system"`
+	Value        string `json:"value"`
+}
+
+// CompanyOfferedValueField defines model for CompanyOfferedValue.Field.
+type CompanyOfferedValueField string
+
 // CompanyProfile The installation's own company. The flat properties remain compatibility aliases for the
 // existing form; `fields` and `facts` are the provenance-bearing source records used by new
 // clients and by CompanyContext. New onboarding considers the profile minimum-complete when
@@ -33713,11 +34023,15 @@ type CompanyScan struct {
 	// GeneratedBy Which writer produced the stored findings. Absent until a read has settled.
 	GeneratedBy *WrittenBy `json:"generated_by,omitempty"`
 
-	// Read What the last settled read took in, so the page can say "read 14 exchanges and
-	// 3 deals" rather than "done". Null until a read has settled.
+	// Read What the last settled read took in, so the page can say "read 14 exchanges in the
+	// last 180 days and 3 open deals" rather than "done". Null until a read has settled.
 	Read *struct {
+		// Deals The account's open deals the read took in.
 		Deals     int `json:"deals"`
 		Exchanges int `json:"exchanges"`
+
+		// WindowDays How many days back an exchange was read; older ones were not.
+		WindowDays int `json:"window_days"`
 	} `json:"read,omitempty"`
 
 	// ResumesAt When a read the AI budget deferred will try again. Null unless the scan is in
@@ -34790,14 +35104,26 @@ type Contact360 struct {
 	// LastContactAt The newest exchange in either direction, a meeting included: the moment "quiet for N days" counts from. Absent when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
 	LastContactAt *time.Time `json:"last_contact_at,omitempty"`
 
+	// LastContactPrecision How to read `last_contact_at`, from the row it names. Absent when that is null or absent.
+	LastContactPrecision *OccurredPrecision `json:"last_contact_precision,omitempty"`
+
 	// LastInboundAt When they last wrote to us. Null means nothing inbound was ever captured — a fact about the relationship, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
 	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
+
+	// LastInboundPrecision How to read `last_inbound_at`, from the row it names. Absent when that is null or absent.
+	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
 
 	// LastLiveInboundAt When they last wrote to us, leaving out email an import brought in as history. Equal to `last_inbound_at` when nothing imported is newer. The re-engaged suggestion reads this, because history that arrived by import is not a reply. Absent when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
 	LastLiveInboundAt *time.Time `json:"last_live_inbound_at,omitempty"`
 
+	// LastLiveInboundPrecision How to read `last_live_inbound_at`, from the row it names. Absent when that is null or absent.
+	LastLiveInboundPrecision *OccurredPrecision `json:"last_live_inbound_precision,omitempty"`
+
 	// LastOutboundAt When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question.
 	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+
+	// LastOutboundPrecision How to read `last_outbound_at`, from the row it names. Absent when that is null or absent.
+	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
 
 	// Moment The ONE thing this contact needs today, selected server-side by the fixed ladder in `ContactMoment.rule` (ADR-0096 D2). Exactly one primary moment wins: a page that offers five reasons has told the reader to choose, which is the work the ladder exists to do. Deterministic and computed at read from captured data. Absent when the caller lacks a grant the ladder needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence.
 	Moment *ContactMoment `json:"moment,omitempty"`
@@ -34958,6 +35284,9 @@ type Contact360NextMeeting struct {
 	ActivityId   openapi_types.UUID  `json:"activity_id"`
 	LinkedDealId *openapi_types.UUID `json:"linked_deal_id,omitempty"`
 
+	// OccurredPrecision How to read `starts_at`. `day` means only its date is known, and the meeting stays next for that whole date.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// Participants Who is in the room, so the reader knows whether they are single-threaded before they walk in.
 	Participants *[]struct {
 		ContactId openapi_types.UUID `json:"contact_id"`
@@ -35000,9 +35329,12 @@ type ContactCaptureGap struct {
 	DisplayName string `json:"display_name"`
 
 	// Invited True when the colleague has not signed in yet.
-	Invited        bool               `json:"invited"`
-	LastOnThreadAt time.Time          `json:"last_on_thread_at"`
-	UserId         openapi_types.UUID `json:"user_id"`
+	Invited        bool      `json:"invited"`
+	LastOnThreadAt time.Time `json:"last_on_thread_at"`
+
+	// LastOnThreadPrecision How to read `last_on_thread_at`, from the activity it names.
+	LastOnThreadPrecision *OccurredPrecision `json:"last_on_thread_precision,omitempty"`
+	UserId                openapi_types.UUID `json:"user_id"`
 }
 
 // ContactConsentGuard Whether an outbound message to this contact is allowed right now, per purpose and
@@ -35033,8 +35365,16 @@ type ContactConsentGuardEntry struct {
 	// QualifyingEvent The recorded event that flipped business correspondence to allowed, when one did.
 	QualifyingEvent *ConsentQualifyingEvent `json:"qualifying_event,omitempty"`
 
-	// Reason The answer in the reader's words — "she wrote to you on 2 May", "opt-out 12 Jul", "no consent recorded". A verdict a rep cannot explain to the contact is not usable.
+	// Reason The answer in English words — "she wrote to you on 2 May", "opt-out 12 Jul", "no consent recorded". A verdict a rep cannot explain to the contact is not usable.
 	Reason string `json:"reason"`
+
+	// ReasonAt When the objection behind an `objection` reason was recorded, when the record carries it.
+	ReasonAt *time.Time `json:"reason_at,omitempty"`
+
+	// ReasonCode `reason` as a code, so a screen says it in its reader's language. A
+	// `qualifying_event` reason is told from `qualifying_event`, and an `objection` from
+	// `reason_at` when the date is known.
+	ReasonCode ContactConsentGuardEntryReasonCode `json:"reason_code"`
 
 	// Verdict `allowed` proceeds. `blocked` refuses and `reason` says why. `unknown` means no decision is recorded — the offered action is to request consent, never a silent grant.
 	Verdict ContactConsentGuardEntryVerdict `json:"verdict"`
@@ -35049,6 +35389,11 @@ type ContactConsentGuardEntryChannel string
 // legally wrong. `marketing` needs express consent with double-opt-in proof; the §7(3)
 // existing-customer exception is not offered. `phone_outreach` is specced and dormant.
 type ContactConsentGuardEntryPurposeClass string
+
+// ContactConsentGuardEntryReasonCode `reason` as a code, so a screen says it in its reader's language. A
+// `qualifying_event` reason is told from `qualifying_event`, and an `objection` from
+// `reason_at` when the date is known.
+type ContactConsentGuardEntryReasonCode string
 
 // ContactConsentGuardEntryVerdict `allowed` proceeds. `blocked` refuses and `reason` says why. `unknown` means no decision is recorded — the offered action is to request consent, never a silent grant.
 type ContactConsentGuardEntryVerdict string
@@ -35173,11 +35518,13 @@ type ContactGraphGroupsOmitted string
 // ContactGraphEdge One corresponding pair, with the evidence the graph is allowed to disclose.
 type ContactGraphEdge struct {
 	// From A node id.
-	From            string     `json:"from"`
-	Inbound90d      *int       `json:"inbound_90d,omitempty"`
-	Interactions90d int        `json:"interactions_90d"`
-	LastAt          *time.Time `json:"last_at,omitempty"`
-	Outbound90d     *int       `json:"outbound_90d,omitempty"`
+	From            string `json:"from"`
+	Inbound90d      *int   `json:"inbound_90d,omitempty"`
+	Interactions90d int    `json:"interactions_90d"`
+
+	// LastAt The newest `occurred_at` among the activities the edge counts. A client orders edges by it.
+	LastAt      *time.Time `json:"last_at,omitempty"`
+	Outbound90d *int       `json:"outbound_90d,omitempty"`
 
 	// Receipts The actual messages behind this edge, each individually visibility-checked before it is named. Present on `direct` edges only: pooled counts are disclosable where the correspondence itself is not, so an `account` edge carries the numbers and no rows.
 	Receipts       *[]ContactGraphReceipt         `json:"receipts,omitempty"`
@@ -35230,7 +35577,10 @@ type ContactGraphReceipt struct {
 	// that drew every one of them as an email would tell a reader a meeting was one.
 	Kind       ContactGraphReceiptKind `json:"kind"`
 	OccurredAt time.Time               `json:"occurred_at"`
-	Subject    *string                 `json:"subject,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+	Subject           *string           `json:"subject,omitempty"`
 }
 
 // ContactGraphReceiptKind What the receipt is evidence OF. The graph counts attendees and organizers as well
@@ -35334,7 +35684,7 @@ type ContactMoment struct {
 	// EvidenceFingerprint A digest of the evidence this moment fired on. The dismissal is held against it, so a dismissed moment RE-ARMS when its evidence moves — the reader dismissed "she went quiet", a reply arrives, and the page must not stay silent about the thing that just changed. Keying a dismissal on the path alone is what gets that wrong.
 	EvidenceFingerprint string `json:"evidence_fingerprint"`
 
-	// FreshnessAt When the fact behind this moment happened, so a reader can judge its age themselves.
+	// FreshnessAt When the fact behind this moment happened, so a reader can judge its age themselves. It reads as an instant; for a day entry it is that date's noon UTC, and the evidence it is taken from says so in `observed_precision`.
 	FreshnessAt *time.Time `json:"freshness_at,omitempty"`
 
 	// Headline The reason in one line, written from the evidence — never a model's paraphrase of it.
@@ -35428,6 +35778,9 @@ type ContactMomentEvidence struct {
 	Label      string              `json:"label"`
 	ObservedAt *time.Time          `json:"observed_at,omitempty"`
 
+	// ObservedPrecision How to read `observed_at` when it is an activity's time, from the row it names. `day` means only its UTC date is known, so a reader takes no time from it. Absent with `observed_at`, and beside a promise's due date.
+	ObservedPrecision *OccurredPrecision `json:"observed_precision,omitempty"`
+
 	// Snippet A verbatim excerpt of the evidence, never a summary of it.
 	Snippet *string                   `json:"snippet,omitempty"`
 	Type    ContactMomentEvidenceType `json:"type"`
@@ -35449,7 +35802,9 @@ type ContactMomentMayBeDone struct {
 
 	// PromiseType `task` — an open task. `claim` — a `commitment_ours` claim with no task.
 	PromiseType ContactMomentMayBeDonePromiseType `json:"promise_type"`
-	WroteAt     time.Time                         `json:"wrote_at"`
+
+	// WroteAt When that email was sent, read as an instant. The same email in the moment's evidence carries `observed_precision`.
+	WroteAt time.Time `json:"wrote_at"`
 }
 
 // ContactMomentMayBeDonePromiseType `task` — an open task. `claim` — a `commitment_ours` claim with no task.
@@ -35829,9 +36184,12 @@ type ContextItem struct {
 	Evidence *[]ContextEvidence `json:"evidence,omitempty"`
 
 	// OccurredAt When an event item happened, null when the item is not an event. A reader states a date from THIS rather than from one written inside a summary's prose — a note recalling "October" for a September email is the reading that otherwise reaches the customer. It is an instant in UTC; render it in the reader's zone before naming a calendar day.
-	OccurredAt *time.Time       `json:"occurred_at,omitempty"`
-	Ref        ContextEntityRef `json:"ref"`
-	Summary    *string          `json:"summary,omitempty"`
+	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision `day` when only the date of `occurred_at` is known. It is stored at noon UTC of that date, so name its UTC date without converting it to a zone, and never its time. Absent on an instant.
+	OccurredPrecision *OccurredPrecision `json:"occurred_precision,omitempty"`
+	Ref               ContextEntityRef   `json:"ref"`
+	Summary           *string            `json:"summary,omitempty"`
 }
 
 // ContextResponse defines model for ContextResponse.
@@ -36007,9 +36365,12 @@ type ConversationClaim struct {
 	Kind ConversationClaimKind `json:"kind"`
 
 	// NeedsReview Contradictory evidence exists for this claim. The surface shows both sources and asks — newest-wins is not a resolution.
-	NeedsReview      bool               `json:"needs_review"`
-	OccurredAt       *time.Time         `json:"occurred_at,omitempty"`
-	SourceActivityId openapi_types.UUID `json:"source_activity_id"`
+	NeedsReview bool       `json:"needs_review"`
+	OccurredAt  *time.Time `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at`, the source activity's time. `day` means only its date is known, so a client draws no time. `instant` when `occurred_at` is absent.
+	OccurredPrecision OccurredPrecision  `json:"occurred_precision"`
+	SourceActivityId  openapi_types.UUID `json:"source_activity_id"`
 
 	// SourceLabel How to name the source in a chip — the thread subject or the meeting title.
 	SourceLabel *string `json:"source_label,omitempty"`
@@ -36083,6 +36444,9 @@ type ConversationMemoryEntry struct {
 	LinkedDealId *openapi_types.UUID `json:"linked_deal_id,omitempty"`
 	OccurredAt   time.Time           `json:"occurred_at"`
 
+	// OccurredPrecision How to read `occurred_at`, from the newest activity the entry folds. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// Status The state a reader acts on: `replied`, `unanswered`, `awaiting_them`, or null when the entry carries no such claim. Derived from direction and what followed it.
 	Status *ConversationMemoryEntryStatus `json:"status,omitempty"`
 
@@ -36148,6 +36512,9 @@ type CreateActivityRequest struct {
 	} `json:"links,omitempty"`
 	MeetingStatus *CreateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision `day` when only the date is known: the date `occurred_at` names in its own offset is stored at noon UTC of that date, and its date is the UTC date. Omitted means `instant`. `day` without `occurred_at` is refused with 422.
+	OccurredPrecision *OccurredPrecision `json:"occurred_precision,omitempty"`
 
 	// Participants The message's own address headers, for mail this installation never captured. Email only — any other kind returns `422 code: field_not_valid_for_kind` — and `direction` is required alongside it, because the counterparty is derived from the two together: an inbound message is with its sender, an outbound one with the first recipient who is not the sending mailbox. An inbound message whose `from` is the mail system itself (postmaster, mailer-daemon, a bounce address) is a delivery report and returns `422` on `participants.from`.
 	Participants *struct {
@@ -36275,6 +36642,9 @@ type CreateCompanyRequest struct {
 	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
 	SourceAuthorName *string `json:"source_author_name,omitempty"`
 
+	// SourceId The id this company has in source_system. Needs source_system, and the pair is unique: a second company with the same pair is 409. Look a company up by it with the `source_system` and `source_id` filters on `listCompanies`.
+	SourceId *string `json:"source_id,omitempty"`
+
 	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -36323,6 +36693,9 @@ type CreateContactRequest struct {
 
 	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
 	SourceAuthorName *string `json:"source_author_name,omitempty"`
+
+	// SourceId The id this contact has in source_system. Needs source_system, and the pair is unique: a second contact with the same pair is 409.
+	SourceId *string `json:"source_id,omitempty"`
 
 	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
@@ -36440,6 +36813,9 @@ type CreateDealRequest struct {
 
 	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
 	SourceAuthorName *string `json:"source_author_name,omitempty"`
+
+	// SourceId The id this deal has in source_system. Needs source_system, and the pair is unique: a second deal with the same pair is 409. Look a deal up by it with the `source_system` and `source_id` filters on `listDeals`.
+	SourceId *string `json:"source_id,omitempty"`
 
 	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
@@ -36890,6 +37266,9 @@ type CreateProjectRequest struct {
 
 	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
 	SourceAuthorName *string `json:"source_author_name,omitempty"`
+
+	// SourceId The id this project has in source_system. Needs source_system, and the pair is unique: a second project with the same pair is 409.
+	SourceId *string `json:"source_id,omitempty"`
 
 	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
@@ -37516,6 +37895,9 @@ type DealCommitment struct {
 	// OccurredAt When it was said.
 	OccurredAt time.Time `json:"occurred_at"`
 
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// SourceActivityId The captured activity it was read from.
 	SourceActivityId openapi_types.UUID `json:"source_activity_id"`
 
@@ -37621,7 +38003,10 @@ type DealDocumentOrigin struct {
 	// Kind The activity kind the file arrived with: email, message, meeting.
 	Kind       string    `json:"kind"`
 	OccurredAt time.Time `json:"occurred_at"`
-	Subject    *string   `json:"subject,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+	Subject           *string           `json:"subject,omitempty"`
 }
 
 // DealFollowUpDraft One drafted follow-up, the activity it was saved as, and why the deal is on the list.
@@ -37658,6 +38043,9 @@ type DealLastEmail struct {
 	// Direction Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
 	Direction  *DealLastEmailDirection `json:"direction"`
 	OccurredAt time.Time               `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 }
 
 // DealLastEmailDirection Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
@@ -37682,7 +38070,10 @@ type DealNextBestActionEvidence struct {
 	// Carried on this shape as well as on `CompanyBriefEvidence` because the deal card's basis is its own wire type, and a reader that could open a cited message on the brief but not on the move would be the same citation behaving differently on two pages. Same rules as there: withheld carries no words, absence proves nothing, never stored.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 	OccurredAt   *time.Time    `json:"occurred_at,omitempty"`
-	Text         string        `json:"text"`
+
+	// OccurredPrecision How to read `occurred_at`, from the activity it names. `day` means only its date is known, its UTC date, so a client draws no time. `instant` on a row with no such time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+	Text              string            `json:"text"`
 }
 
 // DealRoleProposalResult defines model for DealRoleProposalResult.
@@ -37874,13 +38265,19 @@ type DealRoomDocument struct {
 	// key never carries a display string. Not configurable, not AI-assigned — the
 	// contact adding the document picks. A plain string rather than an inline enum
 	// for the reason `DealRoomParticipantCapability` gives.
-	GroupKey  DealRoomDocumentGroup `json:"group_key"`
-	Id        openapi_types.UUID    `json:"id"`
-	Position  int                   `json:"position"`
-	RoomId    openapi_types.UUID    `json:"room_id"`
-	Source    string                `json:"source"`
-	Title     string                `json:"title"`
-	UpdatedAt time.Time             `json:"updated_at"`
+	GroupKey DealRoomDocumentGroup `json:"group_key"`
+	Id       openapi_types.UUID    `json:"id"`
+	Position int                   `json:"position"`
+
+	// ReachesBuyer Whether this entry's file is still in the deal's Files area. False once the file was
+	// deleted on the deal, hidden from it, or its message unlinked or narrowed; the entry
+	// stays in the room until the seller removes it. Whether the room itself is open to its
+	// buyer is the room's own state, not this field.
+	ReachesBuyer *bool              `json:"reaches_buyer,omitempty"`
+	RoomId       openapi_types.UUID `json:"room_id"`
+	Source       string             `json:"source"`
+	Title        string             `json:"title"`
+	UpdatedAt    time.Time          `json:"updated_at"`
 
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
@@ -38262,7 +38659,10 @@ type DealSuggestionEvidence struct {
 	AttachmentId *openapi_types.UUID        `json:"attachment_id,omitempty"`
 	Kind         DealSuggestionEvidenceKind `json:"kind"`
 	OccurredAt   time.Time                  `json:"occurred_at"`
-	SignalId     *openapi_types.UUID        `json:"signal_id,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at`, from the meeting, the document's message or, for a signal, the newest activity it cites. `day` means only its date is known, its UTC date, so a client draws no time. Absent when a signal's citations no longer resolve.
+	OccurredPrecision *OccurredPrecision  `json:"occurred_precision,omitempty"`
+	SignalId          *openapi_types.UUID `json:"signal_id,omitempty"`
 
 	// Title The meeting's subject, the signal's summary or the document's file name.
 	Title string `json:"title"`
@@ -38305,6 +38705,27 @@ type DecideLegalReviewRequest struct {
 	Comments *string            `json:"comments,omitempty"`
 	Outcome  LegalReviewOutcome `json:"outcome"`
 }
+
+// DeclaredExtensionSetting One setting a unit declares, drawn by the core.
+type DeclaredExtensionSetting struct {
+	// Hint One line saying what the setting does.
+	Hint *string `json:"hint,omitempty"`
+
+	// Key The setting's name inside the unit.
+	Key string `json:"key"`
+
+	// Kind The control the core draws.
+	Kind *DeclaredExtensionSettingKind `json:"kind,omitempty"`
+
+	// Label The name shown to the admin, as the unit wrote it.
+	Label *string `json:"label,omitempty"`
+
+	// Value The saved value. A switch holds `true` or `false`; a text setting holds one short line.
+	Value string `json:"value"`
+}
+
+// DeclaredExtensionSettingKind The control the core draws.
+type DeclaredExtensionSettingKind string
 
 // DedupeCandidate One DH-DDL-1 review-queue row: the canonical unordered pair, its confidence, and the detection-time evidence snapshot (DH-N-8).
 type DedupeCandidate struct {
@@ -38386,7 +38807,7 @@ type DemoteLeadResponse struct {
 	// ContactId The contact the promotion had produced or merged into.
 	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
 
-	// Lead A thin, segregated prospect. Mirrors the `lead` table. NO company FK.
+	// Lead A thin, segregated prospect. Mirrors the `lead` table.
 	Lead Lead `json:"lead"`
 
 	// Unwind `reversed` — the promotion had created a contact, which is now archived and the
@@ -38733,6 +39154,9 @@ type EmailPresentation struct {
 	Links      []ActivityLink `json:"links"`
 	OccurredAt time.Time      `json:"occurred_at"`
 
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// Summary One retained email, reduced to what a row shows without opening it. Present on an
 	// activity only when `kind=email`; every other kind carries none, and a reader that
 	// branches on this field is asking the one question that decides the canonical row.
@@ -38904,6 +39328,9 @@ type EmailSummary struct {
 	// the question cannot be answered honestly — an unanswerable move is not a claim.
 	Move       EmailSummaryMove `json:"move"`
 	OccurredAt time.Time        `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
 	// Preview One line of the sender's own text, signature and quoted history already removed.
 	// Null when withheld, and when the message has no text of its own.
@@ -39208,6 +39635,18 @@ type ExtensionIngestRefusal struct {
 // names the mapping to fix: "every record fails its participants" is a different
 // bug from "every record fails its key".
 type ExtensionIngestRefusalRefusal string
+
+// ExtensionSettings The governance settings of one composed extension unit.
+type ExtensionSettings struct {
+	// Declared The settings the unit declares as data, with their saved values. Only an admin gets them back, so the list is absent for anyone else. On a write, send the `key` and `value` of each setting to change; a setting left out keeps its value.
+	Declared *[]DeclaredExtensionSetting `json:"declared,omitempty"`
+
+	// LandsRecords True when the unit lands companies or deals. Only such a unit has a field a user can have edited, so the screen offers the overwrite switch for it and for no other unit. Ignored on a write.
+	LandsRecords *bool `json:"lands_records,omitempty"`
+
+	// OverwritesEditedFields True when the unit's feed may overwrite a company or deal field that a user last edited. False, the default, makes the feed leave such a field as it is and name it in `Result.Withheld`.
+	OverwritesEditedFields bool `json:"overwrites_edited_fields"`
+}
 
 // ExtensionUnitIngestHealth defines model for ExtensionUnitIngestHealth.
 type ExtensionUnitIngestHealth struct {
@@ -40115,10 +40554,13 @@ type HealthDimensionReasonCode string
 // HealthDimensionReasonParams The values the reason names. Each code lists which it reads.
 type HealthDimensionReasonParams struct {
 	// At An instant, so the client names its day in the record's own zone.
-	At    *time.Time `json:"at,omitempty"`
-	Count *int       `json:"count,omitempty"`
-	Days  *int       `json:"days,omitempty"`
-	Total *int       `json:"total,omitempty"`
+	At *time.Time `json:"at,omitempty"`
+
+	// AtPrecision How to read `at`, from the row it names. `day` means only its UTC date is known. Absent with `at`.
+	AtPrecision *OccurredPrecision `json:"at_precision,omitempty"`
+	Count       *int               `json:"count,omitempty"`
+	Days        *int               `json:"days,omitempty"`
+	Total       *int               `json:"total,omitempty"`
 }
 
 // HeldEntityType defines model for HeldEntityType.
@@ -40170,6 +40612,9 @@ type HeldThread struct {
 
 	// OccurredAt When that message arrived. Absent for the same reason `subject` can be.
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at`, present beside it. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision *OccurredPrecision `json:"occurred_precision,omitempty"`
 
 	// ParticipantCount How many addresses outside the workspace that message names, of which `participants`
 	// shows up to five. Absent when `participants` is.
@@ -42377,7 +42822,7 @@ type KnowledgeDocumentList struct {
 //   - `complete`: every live passage carries a vector under the model bound now.
 type KnowledgeEmbedState string
 
-// Lead A thin, segregated prospect. Mirrors the `lead` table. NO company FK.
+// Lead A thin, segregated prospect. Mirrors the `lead` table.
 type Lead struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
@@ -42391,7 +42836,13 @@ type Lead struct {
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
-	// CompanyName Free text; there is no foreign key to a company.
+	// CompanyId The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. Null until then, and null again when an edit of `company_name` no longer names the linked company. Withheld when the reader cannot open that company. The link adds no contact; converting the lead makes it a contact employed there.
+	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
+
+	// CompanyMatch A company the lead's `company_name` names exactly, offered for a human to confirm. Confirming sets `company_id` and creates no contact. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise.
+	CompanyMatch *LeadCompanyMatch `json:"company_match,omitempty"`
+
+	// CompanyName Free text, as captured or typed. It names the company until a human links one (`company_id`).
 	CompanyName    *string   `json:"company_name,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
 	DisqualifyNote *string   `json:"disqualify_note,omitempty"`
@@ -42418,6 +42869,9 @@ type Lead struct {
 
 	// LastActivityAt Most recent activity at or before now linked to this lead — the "last touch" a work queue row shows (ADR-0118). A task never counts, whoever filed it. Derived from activity_link, not stored on the lead.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
 
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
 	LegalHold *bool `json:"legal_hold,omitempty"`
@@ -42450,7 +42904,7 @@ type Lead struct {
 	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
 	Phone *string `json:"phone,omitempty"`
 
-	// ProjectId The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm and none can: a lead has no company_id, only candidate_company_key, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.
+	// ProjectId The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm: a lead's company_id is an optional link a human confirms, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.
 	ProjectId  *openapi_types.UUID `json:"project_id,omitempty"`
 	PromotedAt *time.Time          `json:"promoted_at,omitempty"`
 
@@ -42524,6 +42978,14 @@ type LeadStatus string
 
 // LeadStatusSetBy Who last placed the lead on its status: a human by hand (an agent acting for one counts as the human), or the system from captured activity. Null for a lead nobody has moved yet — one still on new, or one carried over from before the ladder existed.
 type LeadStatusSetBy string
+
+// LeadCompanyMatch A company the lead's `company_name` names exactly, offered for a human to confirm. Confirming sets `company_id` and creates no contact. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise.
+type LeadCompanyMatch struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Name The company's display name.
+	Name string `json:"name"`
+}
 
 // LeadDisqualifyReason defines model for LeadDisqualifyReason.
 type LeadDisqualifyReason struct {
@@ -42647,9 +43109,12 @@ type LeadQualification struct {
 // What the qualify dialog shows as the reason and sends back as `trigger`; null when the
 // lead has no such signal yet (a human may still qualify with `human_qualify`).
 type LeadQualificationEvidence struct {
-	ActivityId *openapi_types.UUID              `json:"activity_id,omitempty"`
-	OccurredAt *time.Time                       `json:"occurred_at,omitempty"`
-	Trigger    LeadQualificationEvidenceTrigger `json:"trigger"`
+	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
+	OccurredAt *time.Time          `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at`, present beside it. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision *OccurredPrecision               `json:"occurred_precision,omitempty"`
+	Trigger           LeadQualificationEvidenceTrigger `json:"trigger"`
 }
 
 // LeadQualificationEvidenceTrigger defines model for LeadQualificationEvidence.Trigger.
@@ -43210,9 +43675,12 @@ type LicenseHolder struct {
 
 // LifecyclePreviewEvidence Current readable source and scope supporting a company lifecycle review.
 type LifecyclePreviewEvidence struct {
-	OccurredAt time.Time                     `json:"occurred_at"`
-	Scope      LifecyclePreviewEvidenceScope `json:"scope"`
-	Workstream *string                       `json:"workstream,omitempty"`
+	OccurredAt time.Time `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision             `json:"occurred_precision"`
+	Scope             LifecyclePreviewEvidenceScope `json:"scope"`
+	Workstream        *string                       `json:"workstream,omitempty"`
 }
 
 // LifecyclePreviewEvidenceScope defines model for LifecyclePreviewEvidence.Scope.
@@ -43220,6 +43688,12 @@ type LifecyclePreviewEvidenceScope string
 
 // LinkFinanceSourceCustomerRequest defines model for LinkFinanceSourceCustomerRequest.
 type LinkFinanceSourceCustomerRequest struct {
+	CompanyId openapi_types.UUID `json:"company_id"`
+}
+
+// LinkLeadCompanyRequest defines model for LinkLeadCompanyRequest.
+type LinkLeadCompanyRequest struct {
+	// CompanyId The company to link. The caller must be able to open it.
 	CompanyId openapi_types.UUID `json:"company_id"`
 }
 
@@ -43722,6 +44196,9 @@ type MagicLine struct {
 	// Lane Which lane this line belongs to. Carried on the line as well as by the array it sits in, so a client that flattens the four for a preview does not lose which one a line came from.
 	Lane MagicLineLane `json:"lane"`
 
+	// Maintenance True when the line is a release correction repairing older records (a data task), not work done for the reader. One correction run is one line however many records it touched, and two runs are two lines. A reader shows these apart from business outcomes and never counts them as things that got done for a customer. Absent or false is an ordinary line.
+	Maintenance *bool `json:"maintenance,omitempty"`
+
 	// OccurredAt When the thing happened. On a `watching` line it is when the condition was OBSERVED instead, uniformly: a source that is off rather than failing has no beginning to report, and dating the observation as the outage would tell a reader a long-dead mailbox broke just now. Where a condition does have a start, it travels as the `failing_since` value on the summary.
 	OccurredAt time.Time `json:"occurred_at"`
 
@@ -44030,6 +44507,18 @@ type MeResponse struct {
 // MeResponsePassportScopes defines model for MeResponse.Passport.Scopes.
 type MeResponsePassportScopes string
 
+// MeetingAttendeeResponse The answer one colleague or linked contact on a meeting gave its invitation. Exactly one of `user_id` and `contact_id` is set.
+type MeetingAttendeeResponse struct {
+	// ContactId The contact, one of the contact `links` you see.
+	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
+
+	// Response A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
+	Response MeetingResponse `json:"response"`
+
+	// UserId The colleague, one of `colleague_ids` or the host.
+	UserId *openapi_types.UUID `json:"user_id,omitempty"`
+}
+
 // MeetingAvailability defines model for MeetingAvailability.
 type MeetingAvailability struct {
 	Slots []struct {
@@ -44140,6 +44629,21 @@ type MeetingBriefSection struct {
 // `talking_points` — each tied to a specific captured statement.
 // `company_context` — background, collapsed and last.
 type MeetingBriefSectionKind string
+
+// MeetingGuest One guest on a meeting who is not a colleague seat.
+type MeetingGuest struct {
+	// Address The address the invitation named them by. Absent when no row holds one.
+	Address *string `json:"address,omitempty"`
+
+	// ContactId The contact this guest is. Present only when you may read that contact.
+	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
+
+	// DisplayName The contact's name when you may read the contact, else the name the invitation gave, else empty.
+	DisplayName string `json:"display_name"`
+
+	// Response What the guest answered the invitation. Absent when no calendar stated an answer.
+	Response *MeetingResponse `json:"response,omitempty"`
+}
 
 // MeetingInvitation defines model for MeetingInvitation.
 type MeetingInvitation struct {
@@ -44451,6 +44955,9 @@ type MeetingProposalRequest struct {
 	// VideoCall Add a video call link when the guest books. Absent follows the host's profile setting.
 	VideoCall *bool `json:"video_call,omitempty"`
 }
+
+// MeetingResponse A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
+type MeetingResponse string
 
 // MergeTagsRequest defines model for MergeTagsRequest.
 type MergeTagsRequest struct {
@@ -45167,6 +45674,9 @@ type NotificationPreference struct {
 type NotificationPreferenceList struct {
 	Items []NotificationPreference `json:"items"`
 }
+
+// OccurredPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
+type OccurredPrecision string
 
 // Offer A versioned Angebot bound to one deal. Mirrors the `offer` table; totals are derived from the nested line items.
 type Offer struct {
@@ -46714,7 +47224,7 @@ type PromoteLeadRequest struct {
 	// Deal Open a deal in the same transaction as the promotion. Omit both ids to use the
 	// default pipeline's first open stage; a pipeline alone takes its first open stage; a
 	// stage alone is placed in its own pipeline. The deal's owner is the lead's owner
-	// and its company is left unset (a lead has no company). The deal's id lands
+	// and its company is left unset, also for a lead linked to a company. The deal's id lands
 	// on the lead as `qualified_deal_id`; a deal failure rolls the whole promotion back.
 	Deal *QualifyDealRequest `json:"deal,omitempty"`
 
@@ -47175,7 +47685,7 @@ type PutOnboardingStateRequestStep string
 // QualifyDealRequest Open a deal in the same transaction as the promotion. Omit both ids to use the
 // default pipeline's first open stage; a pipeline alone takes its first open stage; a
 // stage alone is placed in its own pipeline. The deal's owner is the lead's owner
-// and its company is left unset (a lead has no company). The deal's id lands
+// and its company is left unset, also for a lead linked to a company. The deal's id lands
 // on the lead as `qualified_deal_id`; a deal failure rolls the whole promotion back.
 type QualifyDealRequest struct {
 	AmountMinor *int64 `json:"amount_minor,omitempty"`
@@ -48608,14 +49118,17 @@ type ReportingEvidenceRef struct {
 
 // ReportingEvidenceRow defines model for ReportingEvidenceRow.
 type ReportingEvidenceRow struct {
-	Key        string              `json:"key"`
-	Label      string              `json:"label"`
-	OccurredAt *time.Time          `json:"occurred_at,omitempty"`
-	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
-	Restricted bool                `json:"restricted"`
-	SourceId   *openapi_types.UUID `json:"source_id,omitempty"`
-	SourceType *string             `json:"source_type,omitempty"`
-	Value      *float64            `json:"value"`
+	Key        string     `json:"key"`
+	Label      string     `json:"label"`
+	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at` on an activity's row. `day` means only its date is known, its UTC date, so a client draws no time. Absent on a row that is not an activity's, whose time is an instant.
+	OccurredPrecision *OccurredPrecision  `json:"occurred_precision,omitempty"`
+	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
+	Restricted        bool                `json:"restricted"`
+	SourceId          *openapi_types.UUID `json:"source_id,omitempty"`
+	SourceType        *string             `json:"source_type,omitempty"`
+	Value             *float64            `json:"value"`
 }
 
 // ReportingExecution defines model for ReportingExecution.
@@ -49119,6 +49632,9 @@ type RestrictedRecord struct {
 	// Kind The interaction kind (email, call, meeting, message).
 	Kind       string    `json:"kind"`
 	OccurredAt time.Time `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
 	// Projects Every project the record qualifies through, by name, on the same terms as `deals`. A project qualifies its correspondence by existing — it is a commercial engagement, so the mail filed under it is about an actual transaction whether or not a deal on it has closed. A record can qualify through both a deal and a project; neither list is a summary of the other.
 	Projects *[]struct {
@@ -50241,6 +50757,14 @@ type SendMessageRequest struct {
 // one could dress marketing as a security warning and reach somebody who has
 // objected, so naming one here is refused (422 `invalid`).
 type SendMessageRequestCommunicationContext string
+
+// ServiceMemberRequest A member for an extension's unattended feed. No password and no way in.
+type ServiceMemberRequest struct {
+	DisplayName string `json:"display_name"`
+
+	// Extension The extension unit the member serves, by its manifest name. Only that unit may act as the member. A name no installed unit carries is accepted and simply never used.
+	Extension string `json:"extension"`
+}
 
 // ServiceStatus The fixed answer of `GET /status`.
 type ServiceStatus struct {
@@ -51379,6 +51903,9 @@ type TagSuggestionEvidence struct {
 	Kind       string    `json:"kind"`
 	OccurredAt time.Time `json:"occurred_at"`
 
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// Subject Absent when the activity has none or it was redacted.
 	Subject *string `json:"subject,omitempty"`
 }
@@ -52112,6 +52639,9 @@ type UpdateActivityRequest struct {
 	// wrong outcome is fixed by sending the right one.
 	MeetingStatus *UpdateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at` from now on. A patch that sends `occurred_at` without this field sets `instant`, because a new time is a known time. `day` stores the date at noon UTC: the date `occurred_at` names in its own offset, or, sent alone, the date the stored instant falls on in the installation's zone. `instant` on a `day` activity needs `occurred_at` too, or the stored noon would read as a real 12:00, and is refused with 422.
+	OccurredPrecision *OccurredPrecision `json:"occurred_precision,omitempty"`
 
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt             *time.Time             `json:"remind_at,omitempty"`
@@ -52932,7 +53462,7 @@ type UpdateLeadRequest struct {
 	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
 	Phone *string `json:"phone,omitempty"`
 
-	// ProjectId The body of work this lead belongs to; carries no same-company guard (a lead has no company).
+	// ProjectId The body of work this lead belongs to; carries no same-company guard, also for a lead linked to a company.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 
 	// Score Manual human score override (formulas §3.1, AC-S1). Omit to keep the computed lead-local score. Setting it REQUIRES `score_override_reason`; passing null clears the override and resumes recompute.
@@ -53361,6 +53891,9 @@ type User struct {
 	// Roles This member's assigned system role keys. Present ONLY for an admin caller — the roster is readable by every authenticated member (it feeds the share/assignee pickers), and a rep has no business enumerating who holds `admin`. Normally exactly one key: `inviteUser` assigns one and `changeUserRole` replaces the whole set with one. Clients that render a single current role must still handle the empty and multi-key cases. Deliberately absent on `MeResponse.user`, whose sibling `MeResponse.roles` is the one authority for the caller's own roles — the same fact spelled twice could disagree.
 	Roles *[]string `json:"roles,omitempty"`
 
+	// ServiceExtension The extension unit this seat is the service member of: the identity that unit's scheduled feed runs as. Null for every other seat, including an AI agent seat, so a client tells the two apart by this field and not by `is_agent`. Present only for an admin caller, with `roles`.
+	ServiceExtension *string `json:"service_extension,omitempty"`
+
 	// Status `invited` is a seat that exists and has never been entered: the member holds a licensed seat and appears in the roster, but has set no password and can sign in by no method until they redeem their invitation link. Redeeming it makes them `active`, which is the only status that may sign in.
 	// An invited member counts against the licensed seat count, so an invitation that was sent to the wrong address is released by deactivating it.
 	Status UserStatus `json:"status"`
@@ -53425,6 +53958,40 @@ type UserSessionList struct {
 	Sessions []UserSession `json:"sessions"`
 }
 
+// VCardImportField One field of a card, and what the import did with it.
+type VCardImportField struct {
+	// Action `imported` — the record now holds the card's value. `replaced` — the card's value
+	// took the place of a different one, which is kept in `superseded_value` for the
+	// restore. `kept` — the card stated a value and the record kept its own: a human
+	// corrected the field, a newer statement already stands, the number could not be read,
+	// or it is a matched contact's name or an email address, which the import does not add
+	// to a contact who already exists. `not_in_card` — the card states nothing here.
+	Action VCardImportFieldAction `json:"action"`
+
+	// Field The field, named as `POST /contacts/{id}/profile-fields/{field}/restore` names it
+	// where that endpoint has one. `name` and `email` have no profile field. A mobile number
+	// reports as `mobile_phone` and every other number as `phone`; both restore as `phone`.
+	// A field appears once per value, so a card with two addresses reports two `email` rows.
+	Field VCardImportFieldField `json:"field"`
+
+	// Value The value the card stated. Absent for `not_in_card`.
+	Value *string `json:"value,omitempty"`
+}
+
+// VCardImportFieldAction `imported` — the record now holds the card's value. `replaced` — the card's value
+// took the place of a different one, which is kept in `superseded_value` for the
+// restore. `kept` — the card stated a value and the record kept its own: a human
+// corrected the field, a newer statement already stands, the number could not be read,
+// or it is a matched contact's name or an email address, which the import does not add
+// to a contact who already exists. `not_in_card` — the card states nothing here.
+type VCardImportFieldAction string
+
+// VCardImportFieldField The field, named as `POST /contacts/{id}/profile-fields/{field}/restore` names it
+// where that endpoint has one. `name` and `email` have no profile field. A mobile number
+// reports as `mobile_phone` and every other number as `phone`; both restore as `phone`.
+// A field appears once per value, so a card with two addresses reports two `email` rows.
+type VCardImportFieldField string
+
 // VCardImportReport One entry per card in the file, in the order the file listed them.
 type VCardImportReport struct {
 	Results []VCardImportResult `json:"results"`
@@ -53435,6 +54002,12 @@ type VCardImportResult struct {
 	// ContactId The contact created or updated, or — for `needs_review` — the candidate the card resembles.
 	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
 
+	// Fields What the import did with each field of this card, read from the writer's own
+	// decisions. Present for `created` and `updated`, and absent for every other outcome,
+	// since those write nothing. `importCardPhoto` shares this schema and never sends it:
+	// a card read from a photo is a proposal, and nothing is written.
+	Fields *[]VCardImportField `json:"fields,omitempty"`
+
 	// FullName The name the card stated, so a reader can find the row it came from.
 	FullName string `json:"full_name"`
 
@@ -53442,7 +54015,8 @@ type VCardImportResult struct {
 	Index int `json:"index"`
 
 	// Outcome `created` — nobody matched, so the card became a contact, their company and the edge
-	// between them. `updated` — an exact match, filled only where the record was empty.
+	// between them. `updated` — an exact match: what the card states replaces an older value, which
+	// stays in `superseded_value`, and a field a human corrected stands.
 	// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
 	// `proposed` — a card read from a photo that nobody matched, waiting on an approval.
 	// `skipped` — the card states no name, carries a sending system's address, or matches a
@@ -53454,7 +54028,8 @@ type VCardImportResult struct {
 }
 
 // VCardImportResultOutcome `created` — nobody matched, so the card became a contact, their company and the edge
-// between them. `updated` — an exact match, filled only where the record was empty.
+// between them. `updated` — an exact match: what the card states replaces an older value, which
+// stays in `superseded_value`, and a field a human corrected stands.
 // `needs_review` — a resemblance, written nowhere; open the candidate and decide.
 // `proposed` — a card read from a photo that nobody matched, waiting on an approval.
 // `skipped` — the card states no name, carries a sending system's address, or matches a
@@ -54119,7 +54694,8 @@ type WeeklyReview struct {
 	Prior *WeeklyReviewPrior `json:"prior,omitempty"`
 
 	// Scorecard How WELL the week went, as against what happened in it — the counts beside this say
-	// forty leads arrived, this says twelve were answered inside the target.
+	// forty leads arrived, this says twelve had a first response recorded by the close. It
+	// does not say a target was met.
 	//
 	// ABSENT on a review written before scorecards existed. Each of its two blocks is
 	// independently absent too, and absent is NOT zero: a rep who carried no leads did not
@@ -54454,8 +55030,19 @@ type WeeklyScorecardLeadBlock struct {
 
 	// AnsweredInTarget Leads arriving this week with a first response recorded before the week closed, including late responses. Breaches are counted separately. This is not an SLA success rate.
 	AnsweredInTarget int `json:"answered_in_target"`
-	Breached         int `json:"breached"`
-	Disqualified     int `json:"disqualified"`
+
+	// Arrived The week's lead cohort: leads that arrived in the window (dated by when they were
+	// routed, or created when nobody routed them), are not archived, and no import wrote.
+	// `answered_in_target` and `breached` are both counted from exactly these leads, so
+	// `arrived - answered_in_target` is the leads with no first response recorded by the
+	// close. Do not subtract `breached` too: a late answer is in both.
+	//
+	// Null, or absent from an older server, on a week frozen before the cohort was
+	// recorded. Such a week cannot say how many leads went unanswered, and a reader shows
+	// that as unknown, never as zero and never as every lead answered.
+	Arrived      *int `json:"arrived,omitempty"`
+	Breached     int  `json:"breached"`
+	Disqualified int  `json:"disqualified"`
 
 	// MeetingsBooked Meetings that BECAME booked this week, read from the meeting's transition history and
 	// never from its current status. A meeting booked Monday and held Friday counts in both
@@ -54973,8 +55560,14 @@ type WorklistContactTouch struct {
 	// LastInboundAt When they last wrote to us. Null means nothing inbound was ever captured.
 	LastInboundAt *time.Time `json:"last_inbound_at"`
 
+	// LastInboundPrecision How to read `last_inbound_at`, from the row it names. Absent when that is null.
+	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+
 	// LastOutboundAt When we last wrote to them. Null means we never have.
 	LastOutboundAt *time.Time `json:"last_outbound_at"`
+
+	// LastOutboundPrecision How to read `last_outbound_at`, from the row it names. Absent when that is null.
+	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
 }
 
 // WorklistCount What one CATEGORY of work held, and how much of it reached the page.
@@ -55436,6 +56029,9 @@ type WorklistItem struct {
 	// OccurredAt When the thing being reported happened.
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
 
+	// OccurredPrecision How to read the meeting or activity time on this row: `occurred_at`, or `due_at` on a `meeting` row, where it is the start. `day` means only the date is known. `instant` on every row whose time is a real moment, and on a row with no such time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// Overdue Past due at the read instant, resolved server-side so every surface agrees.
 	Overdue *bool `json:"overdue,omitempty"`
 
@@ -55632,9 +56228,12 @@ type WorklistItemSource string
 
 // WorklistLeadFacts The lead's contact context, without inventing an inbound request or response deadline.
 type WorklistLeadFacts struct {
-	CompanyName           *string    `json:"company_name,omitempty"`
-	LastActivityAt        *time.Time `json:"last_activity_at,omitempty"`
-	ResponseTargetTracked *bool      `json:"response_target_tracked,omitempty"`
+	CompanyName    *string    `json:"company_name,omitempty"`
+	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
+	ResponseTargetTracked *bool              `json:"response_target_tracked,omitempty"`
 
 	// Source The administered source label, absent for an unlabelled import or connector key.
 	Source *string `json:"source,omitempty"`
@@ -56402,7 +57001,7 @@ type ListActivitiesParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -56445,10 +57044,10 @@ type ListActivitiesParams struct {
 	// ThreadKey One provider conversation. The company view's timeline groups by thread client-side over the page it holds, so a group cut off by that page completes itself through this rather than by widening the page for every account that has no long thread.
 	ThreadKey *string `form:"thread_key,omitempty" json:"thread_key,omitempty"`
 
-	// OccurredAfter Only activities that occurred at or after this instant (inclusive). Pairs with `occurred_before` for a date range; either may stand alone.
+	// OccurredAfter Only activities that occurred at or after this instant (inclusive). A `day` entry is placed where its date begins in the installation's time zone. Pairs with `occurred_before` for a date range; either may stand alone.
 	OccurredAfter *time.Time `form:"occurred_after,omitempty" json:"occurred_after,omitempty"`
 
-	// OccurredBefore Only activities that occurred strictly before this instant (exclusive), so a day range is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`.
+	// OccurredBefore Only activities that occurred strictly before this instant (exclusive), a `day` entry placed where its date begins in the installation's time zone. So a day range is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`, both in that zone.
 	OccurredBefore *time.Time `form:"occurred_before,omitempty" json:"occurred_before,omitempty"`
 
 	// WaitingReply Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply.
@@ -56828,7 +57427,7 @@ type ListAiCallsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Task Filter to one task (capture_classify, enrich, …).
@@ -57056,7 +57655,7 @@ type ListReportRunsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -57094,7 +57693,7 @@ type ListApprovalsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// IncludeMuted Include the caller's muted pending proposals for explicit review; all existing visibility checks still apply. A filtered bundle can contain fewer members than its complete review.
@@ -57197,7 +57796,7 @@ type ListAttachmentsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit      *Limit                          `form:"limit,omitempty" json:"limit,omitempty"`
 	EntityType ListAttachmentsParamsEntityType `form:"entity_type" json:"entity_type"`
 	EntityId   openapi_types.UUID              `form:"entity_id" json:"entity_id"`
@@ -57230,7 +57829,7 @@ type ListAuditLogParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Actor Typed principal filter, e.g. human:<uuid> or agent:sdr.
@@ -57291,7 +57890,7 @@ type ListAutomationsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -57317,7 +57916,7 @@ type ListAutomationRunsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Outcome Filter by run outcome (matches automation_run.status, data-model §12.5).
@@ -57465,7 +58064,7 @@ type ListMyCaptureActivityParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -57481,7 +58080,7 @@ type ListWorkspaceCaptureActivityParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -57503,7 +58102,7 @@ type ListDomainQuestionsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -57560,7 +58159,7 @@ type ListCommissionEntriesParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// PartnerCompanyId The entries owed to one partner.
@@ -57605,7 +58204,7 @@ type ListCompaniesParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
@@ -57740,6 +58339,14 @@ type ListCompaniesParams struct {
 	// reads them in one request instead of one each. An id the caller cannot see, or that
 	// is archived without `include_archived`, is simply absent from the page.
 	Id *[]openapi_types.UUID `form:"id,omitempty" json:"id,omitempty"`
+
+	// SourceSystem Companies that came from this outside system, matched exactly. Send `source_id`
+	// too to find the one company holding that id there. A company the caller cannot
+	// see, or that is archived without `include_archived`, is simply absent from the page.
+	SourceSystem *string `form:"source_system,omitempty" json:"source_system,omitempty"`
+
+	// SourceId An id in an outside system, matched exactly. Send `source_system` with it, because the same id can mean different companies in different systems.
+	SourceId *string `form:"source_id,omitempty" json:"source_id,omitempty"`
 }
 
 // ListCompaniesParamsCapturedByKind defines parameters for ListCompanies.
@@ -57843,7 +58450,7 @@ type GetCompanyAccessParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -57910,7 +58517,7 @@ type ListCompanyContactsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -57929,7 +58536,7 @@ type ListCompanyContractsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit  *Limit                            `form:"limit,omitempty" json:"limit,omitempty"`
 	Status *ListCompanyContractsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
@@ -57952,7 +58559,7 @@ type ListCompanyDocumentsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit      *Limit                              `form:"limit,omitempty" json:"limit,omitempty"`
 	Category   *ListCompanyDocumentsParamsCategory `form:"category,omitempty" json:"category,omitempty"`
 	DocState   *ListCompanyDocumentsParamsDocState `form:"doc_state,omitempty" json:"doc_state,omitempty"`
@@ -58443,7 +59050,7 @@ type ListConfirmSubmissionsParams struct {
 	// Resolved false for the queue, true for what has been decided. Omit for both.
 	Resolved *bool `form:"resolved,omitempty" json:"resolved,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes all three parts of this queue's order — whether the row is resolved, its `submitted_at`, and its id — because two subjects can send in the same second and an id alone cannot continue an order it is only the tie-break of. Changing `contact_id` or `resolved` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when a filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`.
@@ -58486,7 +59093,7 @@ type ListContactsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
@@ -58736,7 +59343,7 @@ type GetContactAccessParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -59019,7 +59626,7 @@ type ListCustomFieldsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -59166,7 +59773,7 @@ type ListDataSubjectRequestsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -59220,7 +59827,7 @@ type ListDealRoomsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -59414,7 +60021,7 @@ type ListDealsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
@@ -59507,6 +60114,14 @@ type ListDealsParams struct {
 	//
 	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
 	TagMode *ListDealsParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
+
+	// SourceSystem Deals that came from this outside system, matched exactly. Send `source_id` too to
+	// find the one deal holding that id there. A deal that is archived without
+	// `include_archived` is simply absent from the page.
+	SourceSystem *string `form:"source_system,omitempty" json:"source_system,omitempty"`
+
+	// SourceId An id in an outside system, matched exactly. Send `source_system` with it, because the same id can mean different deals in different systems.
+	SourceId *string `form:"source_id,omitempty" json:"source_id,omitempty"`
 }
 
 // ListDealsParamsStatus defines parameters for ListDeals.
@@ -59683,7 +60298,7 @@ type ListDealDocumentsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit         *Limit                           `form:"limit,omitempty" json:"limit,omitempty"`
 	Category      *ListDealDocumentsParamsCategory `form:"category,omitempty" json:"category,omitempty"`
 	IncludeHidden *bool                            `form:"include_hidden,omitempty" json:"include_hidden,omitempty"`
@@ -59710,7 +60325,7 @@ type ListDealOffersParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit  *Limit                      `form:"limit,omitempty" json:"limit,omitempty"`
 	Status *ListDealOffersParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 }
@@ -59876,7 +60491,7 @@ type GetFieldHistoryParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit      *Limit                          `form:"limit,omitempty" json:"limit,omitempty"`
 	EntityType GetFieldHistoryParamsEntityType `form:"entity_type" json:"entity_type"`
 	EntityId   openapi_types.UUID              `form:"entity_id" json:"entity_id"`
@@ -59915,7 +60530,7 @@ type ListFinanceSourceCustomersParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -60080,7 +60695,7 @@ type ListAgentClientsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -60268,7 +60883,7 @@ type ListLeadsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
@@ -60572,7 +61187,7 @@ type ExplainLeadScoreParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -60675,7 +61290,7 @@ type ListListHistoryParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -60691,7 +61306,7 @@ type ListListMembersParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// EntityId Only these records, at most 200, answered in one page; a record that is not a member, or that this caller cannot see, is absent. Takes no cursor.
@@ -60752,7 +61367,7 @@ type ImportLinkedInConnectionsMultipartBody struct {
 
 // GetMyLinkedInReachParams defines parameters for GetMyLinkedInReach.
 type GetMyLinkedInReachParams struct {
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -60844,7 +61459,7 @@ type ListOfferTemplatesParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -61097,7 +61712,7 @@ type ListPartnersParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -61247,7 +61862,7 @@ type ListNoticeCasesParams struct {
 	// State Repeat to ask for several. Omitted means every unresolved state.
 	State *[]NoticeCaseState `form:"state,omitempty" json:"state,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes the last row's `due_at` and id — both, because the order is by both, and an id alone cannot continue it when two duties fall due in the same second. Changing `state` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when the filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`.
@@ -61266,7 +61881,7 @@ type ListProductsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -61347,7 +61962,7 @@ type ListProjectsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -61582,7 +62197,7 @@ type ListProjectHealthAssessmentsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -61882,7 +62497,7 @@ type ListRecordGrantsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -61992,7 +62607,7 @@ type GetRecordHistoryParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Action Return only the rows recording this verb. A caller that wants ONE event —
@@ -62059,7 +62674,7 @@ type ListRelationshipsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -62129,7 +62744,7 @@ type ListLegalHoldsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -62193,7 +62808,7 @@ type ListRestrictedActivitiesParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -62389,7 +63004,7 @@ type SearchParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -62408,7 +63023,7 @@ type ListSignalsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -62725,7 +63340,7 @@ type ListTeamsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Q Case-insensitive match over team name.
@@ -62744,7 +63359,7 @@ type ListUsersParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Q Case-insensitive match over display_name/email.
@@ -62926,7 +63541,7 @@ type ListVoiceProfileDeltasParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -63010,7 +63625,7 @@ type ListVoiceProfileVersionsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -63118,7 +63733,7 @@ type UpdateWebhookSubscriptionParams struct {
 
 // ListWebhookDeliveriesParams defines parameters for ListWebhookDeliveries.
 type ListWebhookDeliveriesParams struct {
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -63907,6 +64522,9 @@ type ResolveEntitiesJSONRequestBody = EntityResolutionRequest
 // CreateFilteredExportJSONRequestBody defines body for CreateFilteredExport for application/json ContentType.
 type CreateFilteredExportJSONRequestBody = FilteredExportRequest
 
+// UpdateExtensionSettingsJSONRequestBody defines body for UpdateExtensionSettings for application/json ContentType.
+type UpdateExtensionSettingsJSONRequestBody = ExtensionSettings
+
 // PreviewFilterJSONRequestBody defines body for PreviewFilter for application/json ContentType.
 type PreviewFilterJSONRequestBody = FilterPreviewRequest
 
@@ -64020,6 +64638,9 @@ type DemoteLeadJSONRequestBody = DemoteLeadRequest
 
 // DraftLeadEmailJSONRequestBody defines body for DraftLeadEmail for application/json ContentType.
 type DraftLeadEmailJSONRequestBody = DraftSteering
+
+// LinkLeadCompanyJSONRequestBody defines body for LinkLeadCompany for application/json ContentType.
+type LinkLeadCompanyJSONRequestBody = LinkLeadCompanyRequest
 
 // SetLeadManualSignalJSONRequestBody defines body for SetLeadManualSignal for application/json ContentType.
 type SetLeadManualSignalJSONRequestBody = SetLeadManualSignalRequest
@@ -64351,6 +64972,9 @@ type InviteUserJSONRequestBody = InviteUserRequest
 // CreateFormerMemberJSONRequestBody defines body for CreateFormerMember for application/json ContentType.
 type CreateFormerMemberJSONRequestBody = FormerMemberRequest
 
+// DeclareServiceMemberJSONRequestBody defines body for DeclareServiceMember for application/json ContentType.
+type DeclareServiceMemberJSONRequestBody = ServiceMemberRequest
+
 // DeactivateUserJSONRequestBody defines body for DeactivateUser for application/json ContentType.
 type DeactivateUserJSONRequestBody = DeactivateUserRequest
 
@@ -64465,6 +65089,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'assignee_id': %w", err)
 		}
 		delete(object, "assignee_id")
+	}
+
+	if raw, found := object["attendee_responses"]; found {
+		err = json.Unmarshal(raw, &a.AttendeeResponses)
+		if err != nil {
+			return fmt.Errorf("error reading 'attendee_responses': %w", err)
+		}
+		delete(object, "attendee_responses")
 	}
 
 	if raw, found := object["audience"]; found {
@@ -64619,6 +65251,22 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "email_summary")
 	}
 
+	if raw, found := object["guests"]; found {
+		err = json.Unmarshal(raw, &a.Guests)
+		if err != nil {
+			return fmt.Errorf("error reading 'guests': %w", err)
+		}
+		delete(object, "guests")
+	}
+
+	if raw, found := object["guests_left_out"]; found {
+		err = json.Unmarshal(raw, &a.GuestsLeftOut)
+		if err != nil {
+			return fmt.Errorf("error reading 'guests_left_out': %w", err)
+		}
+		delete(object, "guests_left_out")
+	}
+
 	if raw, found := object["host_user_id"]; found {
 		err = json.Unmarshal(raw, &a.HostUserId)
 		if err != nil {
@@ -64697,6 +65345,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'occurred_at': %w", err)
 		}
 		delete(object, "occurred_at")
+	}
+
+	if raw, found := object["occurred_precision"]; found {
+		err = json.Unmarshal(raw, &a.OccurredPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'occurred_precision': %w", err)
+		}
+		delete(object, "occurred_precision")
 	}
 
 	if raw, found := object["offers_email"]; found {
@@ -64836,6 +65492,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.AttendeeResponses != nil {
+		object["attendee_responses"], err = json.Marshal(a.AttendeeResponses)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'attendee_responses': %w", err)
+		}
+	}
+
 	if a.Audience != nil {
 		object["audience"], err = json.Marshal(a.Audience)
 		if err != nil {
@@ -64965,6 +65628,20 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Guests != nil {
+		object["guests"], err = json.Marshal(a.Guests)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'guests': %w", err)
+		}
+	}
+
+	if a.GuestsLeftOut != nil {
+		object["guests_left_out"], err = json.Marshal(a.GuestsLeftOut)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'guests_left_out': %w", err)
+		}
+	}
+
 	if a.HostUserId != nil {
 		object["host_user_id"], err = json.Marshal(a.HostUserId)
 		if err != nil {
@@ -65027,6 +65704,11 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 	object["occurred_at"], err = json.Marshal(a.OccurredAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'occurred_at': %w", err)
+	}
+
+	object["occurred_precision"], err = json.Marshal(a.OccurredPrecision)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'occurred_precision': %w", err)
 	}
 
 	object["offers_email"], err = json.Marshal(a.OffersEmail)
@@ -67071,6 +67753,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "occurred_at")
 	}
 
+	if raw, found := object["occurred_precision"]; found {
+		err = json.Unmarshal(raw, &a.OccurredPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'occurred_precision': %w", err)
+		}
+		delete(object, "occurred_precision")
+	}
+
 	if raw, found := object["participants"]; found {
 		err = json.Unmarshal(raw, &a.Participants)
 		if err != nil {
@@ -67297,6 +67987,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.OccurredPrecision != nil {
+		object["occurred_precision"], err = json.Marshal(a.OccurredPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'occurred_precision': %w", err)
+		}
+	}
+
 	if a.Participants != nil {
 		object["participants"], err = json.Marshal(a.Participants)
 		if err != nil {
@@ -67516,6 +68213,14 @@ func (a *CreateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source_author_name")
 	}
 
+	if raw, found := object["source_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_id': %w", err)
+		}
+		delete(object, "source_id")
+	}
+
 	if raw, found := object["source_system"]; found {
 		err = json.Unmarshal(raw, &a.SourceSystem)
 		if err != nil {
@@ -67620,6 +68325,13 @@ func (a CreateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
+	}
+
+	if a.SourceId != nil {
+		object["source_id"], err = json.Marshal(a.SourceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_id': %w", err)
 		}
 	}
 
@@ -67752,6 +68464,14 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source_author_name")
 	}
 
+	if raw, found := object["source_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_id': %w", err)
+		}
+		delete(object, "source_id")
+	}
+
 	if raw, found := object["source_system"]; found {
 		err = json.Unmarshal(raw, &a.SourceSystem)
 		if err != nil {
@@ -67857,6 +68577,13 @@ func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
+	}
+
+	if a.SourceId != nil {
+		object["source_id"], err = json.Marshal(a.SourceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_id': %w", err)
 		}
 	}
 
@@ -68341,6 +69068,14 @@ func (a *CreateDealRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source_author_name")
 	}
 
+	if raw, found := object["source_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_id': %w", err)
+		}
+		delete(object, "source_id")
+	}
+
 	if raw, found := object["source_system"]; found {
 		err = json.Unmarshal(raw, &a.SourceSystem)
 		if err != nil {
@@ -68493,6 +69228,13 @@ func (a CreateDealRequest) MarshalJSON() ([]byte, error) {
 		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
+	}
+
+	if a.SourceId != nil {
+		object["source_id"], err = json.Marshal(a.SourceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_id': %w", err)
 		}
 	}
 
@@ -68921,6 +69663,14 @@ func (a *CreateProjectRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source_author_name")
 	}
 
+	if raw, found := object["source_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_id': %w", err)
+		}
+		delete(object, "source_id")
+	}
+
 	if raw, found := object["source_system"]; found {
 		err = json.Unmarshal(raw, &a.SourceSystem)
 		if err != nil {
@@ -69004,6 +69754,13 @@ func (a CreateProjectRequest) MarshalJSON() ([]byte, error) {
 		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
+	}
+
+	if a.SourceId != nil {
+		object["source_id"], err = json.Marshal(a.SourceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_id': %w", err)
 		}
 	}
 
@@ -70114,6 +70871,14 @@ func (a *DealRoomDocument) UnmarshalJSON(b []byte) error {
 		delete(object, "position")
 	}
 
+	if raw, found := object["reaches_buyer"]; found {
+		err = json.Unmarshal(raw, &a.ReachesBuyer)
+		if err != nil {
+			return fmt.Errorf("error reading 'reaches_buyer': %w", err)
+		}
+		delete(object, "reaches_buyer")
+	}
+
 	if raw, found := object["room_id"]; found {
 		err = json.Unmarshal(raw, &a.RoomId)
 		if err != nil {
@@ -70229,6 +70994,11 @@ func (a DealRoomDocument) MarshalJSON() ([]byte, error) {
 	object["position"], err = json.Marshal(a.Position)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'position': %w", err)
+	}
+
+	object["reaches_buyer"], err = json.Marshal(a.ReachesBuyer)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'reaches_buyer': %w", err)
 	}
 
 	object["room_id"], err = json.Marshal(a.RoomId)
@@ -70625,6 +71395,22 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "captured_by")
 	}
 
+	if raw, found := object["company_id"]; found {
+		err = json.Unmarshal(raw, &a.CompanyId)
+		if err != nil {
+			return fmt.Errorf("error reading 'company_id': %w", err)
+		}
+		delete(object, "company_id")
+	}
+
+	if raw, found := object["company_match"]; found {
+		err = json.Unmarshal(raw, &a.CompanyMatch)
+		if err != nil {
+			return fmt.Errorf("error reading 'company_match': %w", err)
+		}
+		delete(object, "company_match")
+	}
+
 	if raw, found := object["company_name"]; found {
 		err = json.Unmarshal(raw, &a.CompanyName)
 		if err != nil {
@@ -70719,6 +71505,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'last_activity_at': %w", err)
 		}
 		delete(object, "last_activity_at")
+	}
+
+	if raw, found := object["last_activity_precision"]; found {
+		err = json.Unmarshal(raw, &a.LastActivityPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_activity_precision': %w", err)
+		}
+		delete(object, "last_activity_precision")
 	}
 
 	if raw, found := object["legal_hold"]; found {
@@ -71046,6 +71840,20 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		return nil, fmt.Errorf("error marshaling 'captured_by': %w", err)
 	}
 
+	if a.CompanyId != nil {
+		object["company_id"], err = json.Marshal(a.CompanyId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'company_id': %w", err)
+		}
+	}
+
+	if a.CompanyMatch != nil {
+		object["company_match"], err = json.Marshal(a.CompanyMatch)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'company_match': %w", err)
+		}
+	}
+
 	if a.CompanyName != nil {
 		object["company_name"], err = json.Marshal(a.CompanyName)
 		if err != nil {
@@ -71123,6 +71931,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LastActivityPrecision != nil {
+		object["last_activity_precision"], err = json.Marshal(a.LastActivityPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_activity_precision': %w", err)
 		}
 	}
 
@@ -72911,6 +73726,14 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "occurred_at")
 	}
 
+	if raw, found := object["occurred_precision"]; found {
+		err = json.Unmarshal(raw, &a.OccurredPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'occurred_precision': %w", err)
+		}
+		delete(object, "occurred_precision")
+	}
+
 	if raw, found := object["remind_at"]; found {
 		err = json.Unmarshal(raw, &a.RemindAt)
 		if err != nil {
@@ -72985,6 +73808,13 @@ func (a UpdateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["occurred_at"], err = json.Marshal(a.OccurredAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'occurred_at': %w", err)
+		}
+	}
+
+	if a.OccurredPrecision != nil {
+		object["occurred_precision"], err = json.Marshal(a.OccurredPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'occurred_precision': %w", err)
 		}
 	}
 
@@ -75986,6 +76816,9 @@ type ServerInterface interface {
 	// Merge this company into a target (non-lossy).
 	// (POST /companies/{id}/merge)
 	MergeCompany(w http.ResponseWriter, r *http.Request, id Id, params MergeCompanyParams)
+	// What each source last offered for the company's fields, to show beside the value on the record.
+	// (GET /companies/{id}/offered-values)
+	ListCompanyOfferedValues(w http.ResponseWriter, r *http.Request, id Id)
 	// Read the partner extension on a company (404 if the company is not a partner).
 	// (GET /companies/{id}/partner)
 	GetPartner(w http.ResponseWriter, r *http.Request, id Id)
@@ -76574,6 +77407,12 @@ type ServerInterface interface {
 	// List the composed extension units and what each contributes. Human-only, read-only; needs the extension_access read grant.
 	// (GET /extensions)
 	ListExtensions(w http.ResponseWriter, r *http.Request)
+	// Read what the core does with a unit's feed. Needs the extension_access read grant.
+	// (GET /extensions/{name}/settings)
+	GetExtensionSettings(w http.ResponseWriter, r *http.Request, name string)
+	// Set what the core does with a unit's feed. Admin only.
+	// (PUT /extensions/{name}/settings)
+	UpdateExtensionSettings(w http.ResponseWriter, r *http.Request, name string)
 	// Per-field change history for one record, projected from audit_log before/after diffs.
 	// (GET /field-history)
 	GetFieldHistory(w http.ResponseWriter, r *http.Request, params GetFieldHistoryParams)
@@ -76868,6 +77707,9 @@ type ServerInterface interface {
 	// Draft an email to this lead, grounded in their record.
 	// (POST /leads/{id}/draft-email)
 	DraftLeadEmail(w http.ResponseWriter, r *http.Request, id Id)
+	// Link a lead to a company.
+	// (POST /leads/{id}/link-company)
+	LinkLeadCompany(w http.ResponseWriter, r *http.Request, id Id)
 	// List current and superseded human-provided qualification signals.
 	// (GET /leads/{id}/manual-signals)
 	ListLeadManualSignals(w http.ResponseWriter, r *http.Request, id Id)
@@ -77678,6 +78520,12 @@ type ServerInterface interface {
 	// Name the colleagues behind a set of ids. Read-only.
 	// (GET /users/names)
 	NameSeats(w http.ResponseWriter, r *http.Request, params NameSeatsParams)
+	// Declare the member that owns an extension's unattended feed. Installation admin only, human only.
+	// (POST /users/service-members)
+	DeclareServiceMember(w http.ResponseWriter, r *http.Request)
+	// Retire a service member. Installation admin only, human only.
+	// (POST /users/service-members/{id}/archive)
+	ArchiveServiceMember(w http.ResponseWriter, r *http.Request, id Id)
 	// What this member sees and may do today, from their roles and teams.
 	// (GET /users/{id}/access)
 	GetUserAccess(w http.ResponseWriter, r *http.Request, id Id)
@@ -79535,6 +80383,12 @@ func (_ Unimplemented) MergeCompany(w http.ResponseWriter, r *http.Request, id I
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// What each source last offered for the company's fields, to show beside the value on the record.
+// (GET /companies/{id}/offered-values)
+func (_ Unimplemented) ListCompanyOfferedValues(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Read the partner extension on a company (404 if the company is not a partner).
 // (GET /companies/{id}/partner)
 func (_ Unimplemented) GetPartner(w http.ResponseWriter, r *http.Request, id Id) {
@@ -80711,6 +81565,18 @@ func (_ Unimplemented) ListExtensions(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Read what the core does with a unit's feed. Needs the extension_access read grant.
+// (GET /extensions/{name}/settings)
+func (_ Unimplemented) GetExtensionSettings(w http.ResponseWriter, r *http.Request, name string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set what the core does with a unit's feed. Admin only.
+// (PUT /extensions/{name}/settings)
+func (_ Unimplemented) UpdateExtensionSettings(w http.ResponseWriter, r *http.Request, name string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Per-field change history for one record, projected from audit_log before/after diffs.
 // (GET /field-history)
 func (_ Unimplemented) GetFieldHistory(w http.ResponseWriter, r *http.Request, params GetFieldHistoryParams) {
@@ -81296,6 +82162,12 @@ func (_ Unimplemented) DemoteLead(w http.ResponseWriter, r *http.Request, id Id,
 // Draft an email to this lead, grounded in their record.
 // (POST /leads/{id}/draft-email)
 func (_ Unimplemented) DraftLeadEmail(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Link a lead to a company.
+// (POST /leads/{id}/link-company)
+func (_ Unimplemented) LinkLeadCompany(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -82916,6 +83788,18 @@ func (_ Unimplemented) CreateFormerMember(w http.ResponseWriter, r *http.Request
 // Name the colleagues behind a set of ids. Read-only.
 // (GET /users/names)
 func (_ Unimplemented) NameSeats(w http.ResponseWriter, r *http.Request, params NameSeatsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Declare the member that owns an extension's unattended feed. Installation admin only, human only.
+// (POST /users/service-members)
+func (_ Unimplemented) DeclareServiceMember(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Retire a service member. Installation admin only, human only.
+// (POST /users/service-members/{id}/archive)
+func (_ Unimplemented) ArchiveServiceMember(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -93024,6 +93908,32 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// ------------- Optional query parameter "source_system" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "source_system", r.URL.Query(), &params.SourceSystem, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "source_system"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "source_system", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "source_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "source_id", r.URL.Query(), &params.SourceId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "source_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "source_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListCompanies(w, r, params)
 	}))
@@ -94933,6 +95843,38 @@ func (siw *ServerInterfaceWrapper) MergeCompany(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.MergeCompany(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCompanyOfferedValues operation middleware
+func (siw *ServerInterfaceWrapper) ListCompanyOfferedValues(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCompanyOfferedValues(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -101569,6 +102511,32 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// ------------- Optional query parameter "source_system" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "source_system", r.URL.Query(), &params.SourceSystem, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "source_system"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "source_system", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "source_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "source_id", r.URL.Query(), &params.SourceId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "source_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "source_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListDeals(w, r, params)
 	}))
@@ -103707,6 +104675,70 @@ func (siw *ServerInterfaceWrapper) ListExtensions(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListExtensions(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetExtensionSettings operation middleware
+func (siw *ServerInterfaceWrapper) GetExtensionSettings(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetExtensionSettings(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateExtensionSettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdateExtensionSettings(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateExtensionSettings(w, r, name)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -107184,6 +108216,38 @@ func (siw *ServerInterfaceWrapper) DraftLeadEmail(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DraftLeadEmail(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LinkLeadCompany operation middleware
+func (siw *ServerInterfaceWrapper) LinkLeadCompany(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LinkLeadCompany(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -118859,6 +119923,58 @@ func (siw *ServerInterfaceWrapper) NameSeats(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// DeclareServiceMember operation middleware
+func (siw *ServerInterfaceWrapper) DeclareServiceMember(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeclareServiceMember(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveServiceMember operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveServiceMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveServiceMember(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetUserAccess operation middleware
 func (siw *ServerInterfaceWrapper) GetUserAccess(w http.ResponseWriter, r *http.Request) {
 
@@ -122517,6 +123633,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/companies/{id}/merge", wrapper.MergeCompany)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/companies/{id}/offered-values", wrapper.ListCompanyOfferedValues)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies/{id}/partner", wrapper.GetPartner)
 	})
 	r.Group(func(r chi.Router) {
@@ -123105,6 +124224,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/extensions", wrapper.ListExtensions)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/extensions/{name}/settings", wrapper.GetExtensionSettings)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/extensions/{name}/settings", wrapper.UpdateExtensionSettings)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/field-history", wrapper.GetFieldHistory)
 	})
 	r.Group(func(r chi.Router) {
@@ -123397,6 +124522,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/leads/{id}/draft-email", wrapper.DraftLeadEmail)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/leads/{id}/link-company", wrapper.LinkLeadCompany)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads/{id}/manual-signals", wrapper.ListLeadManualSignals)
@@ -124207,6 +125335,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users/names", wrapper.NameSeats)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/users/service-members", wrapper.DeclareServiceMember)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/users/service-members/{id}/archive", wrapper.ArchiveServiceMember)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users/{id}/access", wrapper.GetUserAccess)

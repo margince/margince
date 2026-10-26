@@ -114,7 +114,6 @@ delivery
 demo
 denial
 design
-desktop
 develop
 disagree
 dismiss

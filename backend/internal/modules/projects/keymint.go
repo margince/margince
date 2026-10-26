@@ -258,7 +258,7 @@ func insertOnce(
 		}
 		return false, fmt.Errorf("bound the project-insert lock wait: %w", err)
 	}
-	authorCols, authorHolders, base := storekit.AuthorInsertFragments(in.Author, []any{
+	provenanceCols, provenanceHolders, base := storekit.ProvenanceInsertFragments(in.SourceID, in.Author, []any{
 		id, in.Name, key, in.CompanyID, in.OwnerID,
 		in.Description, in.StartedAt, in.TargetEndDate, in.Source, by,
 		in.SourceSystem,
@@ -267,11 +267,11 @@ func insertOnce(
 	if cfErr != nil {
 		return false, cfErr
 	}
-	_, insertErr := sp.Exec(ctx,
+	insertErr := storekit.ExecSourceInsert(ctx, sp, projectObject,
 		`INSERT INTO project (id, name, key, company_id, owner_id,
-		                      description, started_at, target_end_date, source, captured_by, source_system`+authorCols+cfCols+`)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11`+authorHolders+cfHolders+`)`,
-		args...)
+		                      description, started_at, target_end_date, source, captured_by, source_system`+provenanceCols+cfCols+`)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11`+provenanceHolders+cfHolders+`)`,
+		args)
 	if insertErr != nil {
 		if rbErr := sp.Rollback(ctx); rbErr != nil {
 			return false, fmt.Errorf("roll the project-insert savepoint back after %v: %w", insertErr, rbErr)

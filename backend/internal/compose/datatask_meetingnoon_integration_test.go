@@ -65,6 +65,30 @@ func (f noonFixture) book(start time.Time, contact ids.ContactID) ids.ActivityID
 	return ids.From[ids.ActivityKind](ids.UUID(meeting.Id))
 }
 
+// bookDay logs a booked meeting that has a date and no hour.
+func (f noonFixture) bookDay(date time.Time, contact ids.ContactID) ids.ActivityID {
+	f.t.Helper()
+	subject, booked := "Noon fixture", string(crmcontracts.ActivityMeetingStatusBooked)
+	meeting, _, err := f.e.Activities.LogActivity(f.e.Admin(), activities.LogActivityInput{
+		Kind: string(crmcontracts.ActivityKindMeeting), Subject: &subject, OccurredAt: &date, Source: "manual",
+		OccurredPrecision: activities.PrecisionDay, MeetingStatus: &booked,
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact.UUID}},
+	})
+	if err != nil {
+		f.t.Fatalf("logging the day meeting: %v", err)
+	}
+	return ids.From[ids.ActivityKind](ids.UUID(meeting.Id))
+}
+
+// cutoffNow marks the cutoff migration as run now, after the saves before it.
+func (f noonFixture) cutoffNow() {
+	f.t.Helper()
+	if _, err := integration.OwnerConn(f.t).Exec(context.Background(), `UPDATE schema_migrations_core SET applied_at = now() WHERE version = $1`,
+		activities.MeetingNoonCutoffMigration); err != nil {
+		f.t.Fatalf("setting the cutoff: %v", err)
+	}
+}
+
 // save is the outcome save the old dialog made: the status and a new start in one update.
 func (f noonFixture) save(id ids.ActivityID, start time.Time) {
 	f.t.Helper()
@@ -123,15 +147,14 @@ func TestTheNoonTaskRestoresOnlyStartsAnOutcomeSaveMovedBeforeTheCutoff(t *testi
 	f.move(e.Admin(), backToNoon, berlinNoon, nil)
 	bySystem := f.book(bookedAtMorning, shared)
 	f.move(ctx, bySystem, berlinNoon, &held)
+	// Its stored noon UTC is 14:00 in Berlin, but a day meeting has no start to put back.
+	fromADay := f.bookDay(time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC), shared)
+	f.save(fromADay, berlinNoon)
 	if got := f.historyStart(damaged); got != "2026-07-15T10:00:00.000Z" {
 		t.Fatalf("the history start before the repair = %s, want the noon of the save", got)
 	}
 
-	owner := integration.OwnerConn(t)
-	if _, err := owner.Exec(context.Background(), `UPDATE schema_migrations_core SET applied_at = now() WHERE version = $1`,
-		activities.MeetingNoonCutoffMigration); err != nil {
-		t.Fatalf("setting the cutoff: %v", err)
-	}
+	f.cutoffNow()
 	afterCutoff := f.book(bookedAtMorning, shared)
 	f.save(afterCutoff, berlinNoon)
 
@@ -158,7 +181,7 @@ func TestTheNoonTaskRestoresOnlyStartsAnOutcomeSaveMovedBeforeTheCutoff(t *testi
 	for name, id := range map[string]ids.ActivityID{
 		"a meeting booked at noon": reallyAtNoon, "a meeting after the cutoff": afterCutoff,
 		"a noon move without an outcome": noStatusChange, "a colleague's later move back to noon": backToNoon,
-		"a noon save by the system": bySystem,
+		"a noon save by the system": bySystem, "a day meeting given a time": fromADay,
 	} {
 		if got := f.start(id); got != "2026-07-15T10:00:00.000Z" {
 			t.Errorf("%s was moved to %s", name, got)
@@ -178,5 +201,38 @@ func TestTheNoonTaskRestoresOnlyStartsAnOutcomeSaveMovedBeforeTheCutoff(t *testi
 	runMachineAddressTask(ctx, t, e, meetingNoonStartsDataTask())
 	if got := f.version(damaged); got != versions {
 		t.Errorf("a second run changed the restored meeting to version %d", got)
+	}
+}
+
+// A day meeting is stored at noon UTC. In a UTC installation, an outcome save
+// that made a timed meeting a day meeting looks like the old dialog's noon
+// move. The task must leave it alone.
+func TestTheNoonTaskLeavesADayMeetingAtItsNoon(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	e.WsExec(t, `UPDATE setting SET value = to_jsonb('UTC'::text) WHERE key = 'installation.timezone'`)
+	f := noonFixture{t: t, e: e}
+	anchor := time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC)
+
+	madeADay := f.book(bookedAtMorning, f.contact("Day Contact"))
+	held, day := string(crmcontracts.ActivityMeetingStatusHeld), activities.PrecisionDay
+	if _, err := e.Activities.UpdateActivity(e.Admin(), madeADay, activities.UpdateActivityInput{
+		MeetingStatus: &held, OccurredAt: &anchor, OccurredPrecision: &day,
+	}); err != nil {
+		t.Fatalf("saving the outcome as a day: %v", err)
+	}
+	f.cutoffNow()
+	version := f.version(madeADay)
+
+	runMachineAddressTask(ctx, t, e, meetingNoonStartsDataTask())
+
+	if got := f.start(madeADay); got != "2026-07-15T12:00:00.000Z" {
+		t.Errorf("the day meeting was moved to %s", got)
+	}
+	if got := e.WsScalar(t, `SELECT occurred_precision FROM activity WHERE id = $1`, madeADay.UUID); got != day {
+		t.Errorf("the day meeting's precision became %s", got)
+	}
+	if got := f.version(madeADay); got != version {
+		t.Errorf("the day meeting changed version to %d", got)
 	}
 }

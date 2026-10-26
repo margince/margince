@@ -162,6 +162,9 @@ func documentOrigin(origin *crmcontracts.AttachmentOrigin) *agents.DocumentOrigi
 		Subject:    orZero(origin.Subject),
 		OccurredAt: origin.OccurredAt,
 	}
+	if origin.OccurredPrecision == crmcontracts.OccurredPrecisionOccurredPrecisionDay {
+		out.OccurredPrecision = string(origin.OccurredPrecision)
+	}
 	if origin.Sender != nil {
 		out.SenderName = orZero(origin.Sender.DisplayName)
 		out.SenderAddress = origin.Sender.Address

@@ -77,6 +77,8 @@ type CreateContactInput struct {
 	// SourceSystem names the system an import took this contact from; nil
 	// for one created here, which is what makes it unattributable.
 	SourceSystem *string
+	// SourceID is this contact's id in SourceSystem; the pair is unique.
+	SourceID *string
 	// Author is who wrote it in the system it came from; zero when unknown.
 	Author storekit.SourceAuthorInput
 	// CustomFields carries the request body's cf_* keys. A key no active catalog
@@ -195,6 +197,7 @@ func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateConta
 		Phones:       in.Phones,
 		Source:       in.Source,
 		SourceSystem: in.SourceSystem,
+		SourceID:     in.SourceID,
 		Author:       in.Author,
 		CapturedBy:   by,
 		CustomFields: in.CustomFields,

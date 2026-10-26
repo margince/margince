@@ -56,6 +56,7 @@ const contact: components["schemas"]["Contact"] = {
 
 function inboundEmail(): Activity {
   return {
+    occurred_precision: "instant",
     offers_email: false,
     id: "a-1",
     kind: "email",
@@ -118,6 +119,7 @@ const granted: Contact360 = {
   next_meeting: {
     activity_id: "a-2",
     starts_at: daysAgo(-2),
+    occurred_precision: "instant",
     subject: "Fleet retrofit walkthrough",
   },
 };
@@ -775,7 +777,8 @@ describe("the consent rail's transport row", () => {
         purpose_class: "marketing",
         channel: "email",
         verdict: "allowed",
-        reason: "They opted in on 3 March.",
+        reason: "they gave consent, with the confirmation on file",
+        reason_code: "consent_confirmed",
       },
     ],
   };

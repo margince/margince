@@ -91,6 +91,22 @@ export const Removed: Story = { args: { entry: REMOVED } };
 
 export const LongValues: Story = { args: { entry: LONG } };
 
+// A day entry moved to another date reads as two dates, with no clock.
+export const DayMoved: Story = {
+  args: {
+    entry: {
+      ...UPDATE,
+      entity_type: "activity",
+      entity_label: "Call with Demo GmbH",
+      before: {
+        occurred_at: "2026-10-22T12:00:00Z",
+        occurred_precision: "day",
+      },
+      after: { occurred_at: "2026-10-20T12:00:00Z", occurred_precision: "day" },
+    },
+  },
+};
+
 export const UnknownRule: Story = {
   args: { entry: { ...UPDATE, authorization_rule: "role:admin" } },
 };

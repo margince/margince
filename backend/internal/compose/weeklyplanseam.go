@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 type weeklyPlanOutcome struct{ store *weeklyplan.Store }
@@ -116,7 +117,7 @@ func (c weeklyPlanCapacity) ForWeek(
 			      -- weekly review read: a meeting this rep hosts, attends or
 			      -- booked is their time. Filing or importing a copy is not.
 			      AND `+storekit.MeetingResponsibilitySQL("m", "$3")+`
-			      AND m.occurred_at >= $1 AND m.occurred_at < $2),
+			      AND `+occurredday.WithinSQL("m", "$1", "$2")+`),
 			  (SELECT count(*) FROM activity t
 			    WHERE t.kind = 'task' AND t.archived_at IS NULL
 			      AND NOT t.is_done AND t.assignee_id = $3 AND `+current+`

@@ -108,6 +108,24 @@ func (e PublicEventActivityChangedFieldsMeetingStatus) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventActivityChangedFieldsOccurredPrecision.
+const (
+	ActivityTimeIsADay      PublicEventActivityChangedFieldsOccurredPrecision = "day"
+	ActivityTimeIsAnInstant PublicEventActivityChangedFieldsOccurredPrecision = "instant"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventActivityChangedFieldsOccurredPrecision enum.
+func (e PublicEventActivityChangedFieldsOccurredPrecision) Valid() bool {
+	switch e {
+	case ActivityTimeIsADay:
+		return true
+	case ActivityTimeIsAnInstant:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventActivityDispositionRecordedDisposition.
 const (
 	NotMine    PublicEventActivityDispositionRecordedDisposition = "not_mine"
@@ -168,6 +186,24 @@ func (e PublicEventCommsDeliveryBouncedKind) Valid() bool {
 	case Hard:
 		return true
 	case Soft:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicEventEngagementReplyOccurredPrecision.
+const (
+	ReplyTimeIsADay      PublicEventEngagementReplyOccurredPrecision = "day"
+	ReplyTimeIsAnInstant PublicEventEngagementReplyOccurredPrecision = "instant"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventEngagementReplyOccurredPrecision enum.
+func (e PublicEventEngagementReplyOccurredPrecision) Valid() bool {
+	switch e {
+	case ReplyTimeIsADay:
+		return true
+	case ReplyTimeIsAnInstant:
 		return true
 	default:
 		return false
@@ -506,6 +542,7 @@ const (
 	CommsDeliveryBounced                  SubscribableEventType = "comms.delivery_bounced"
 	CompanyArchived                       SubscribableEventType = "company.archived"
 	CompanyCreated                        SubscribableEventType = "company.created"
+	CompanyErased                         SubscribableEventType = "company.erased"
 	CompanyMerged                         SubscribableEventType = "company.merged"
 	CompanyRestored                       SubscribableEventType = "company.restored"
 	CompanyUpdated                        SubscribableEventType = "company.updated"
@@ -527,6 +564,8 @@ const (
 	ConversationClaimChanged              SubscribableEventType = "conversation_claim.changed"
 	DealArchived                          SubscribableEventType = "deal.archived"
 	DealCreated                           SubscribableEventType = "deal.created"
+	DealErased                            SubscribableEventType = "deal.erased"
+	DealMerged                            SubscribableEventType = "deal.merged"
 	DealOwnerChanged                      SubscribableEventType = "deal.owner_changed"
 	DealRestored                          SubscribableEventType = "deal.restored"
 	DealRoomArchived                      SubscribableEventType = "deal_room.archived"
@@ -669,6 +708,8 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case CompanyCreated:
 		return true
+	case CompanyErased:
+		return true
 	case CompanyMerged:
 		return true
 	case CompanyRestored:
@@ -710,6 +751,10 @@ func (e SubscribableEventType) Valid() bool {
 	case DealArchived:
 		return true
 	case DealCreated:
+		return true
+	case DealErased:
+		return true
+	case DealMerged:
 		return true
 	case DealOwnerChanged:
 		return true
@@ -983,6 +1028,9 @@ type PublicEventActivityChangedFields struct {
 	// OccurredAt The activity's new occurred_at (absent when this update did not touch it).
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
 
+	// OccurredPrecision How to read the activity's occurred_at from now on: `day` when only its date is known, its UTC date. Carried whenever this update names occurred_at, and when it changed the precision alone.
+	OccurredPrecision *PublicEventActivityChangedFieldsOccurredPrecision `json:"occurred_precision,omitempty"`
+
 	// OutboundAttested True when the sender's own provider filing attested the message as their outbound mail, whether it was stored as received or as unattested outbound (absent otherwise).
 	OutboundAttested *bool `json:"outbound_attested,omitempty"`
 
@@ -1013,6 +1061,9 @@ type PublicEventActivityChangedFieldsDirection string
 
 // PublicEventActivityChangedFieldsMeetingStatus How the meeting went, once somebody recorded it (absent when this update did not touch it). Meeting rows only; the update refuses the field on any other kind.
 type PublicEventActivityChangedFieldsMeetingStatus string
+
+// PublicEventActivityChangedFieldsOccurredPrecision How to read the activity's occurred_at from now on: `day` when only its date is known, its UTC date. Carried whenever this update names occurred_at, and when it changed the precision alone.
+type PublicEventActivityChangedFieldsOccurredPrecision string
 
 // PublicEventActivityDispositionRecorded Payload for activity.disposition_recorded. Somebody decided what to do about a waiting message, and the Worklist stopped showing it (activities/disposition.go). Who it stopped showing it to is not on the wire. `not_sales` settles what the message is and holds for everybody. `snoozed` and `not_mine` belong to the one reader who set them. A reader marking a message done is announced as activity.marked_handled, since this enum is closed at v1. A consumer reading this as a workspace-wide fact would report a colleague's private set-aside as the thread's own state. The reader stays on the row, for a caller entitled to it.
 type PublicEventActivityDispositionRecorded struct {
@@ -1273,6 +1324,9 @@ type PublicEventCompanyCreated struct {
 	SourceUrl *string `json:"source_url,omitempty"`
 }
 
+// PublicEventCompanyErased Payload for company.erased: a company was erased for good, not archived. The event's entity is the erased company. Carries no data, so no name or other personal field travels with it.
+type PublicEventCompanyErased struct{}
+
 // PublicEventCompanyMerged Payload for company.merged — two company records collapsed into one (the §1.3 merge); neither company.updated nor company.archived can say this, so it is its own verb.
 type PublicEventCompanyMerged struct {
 	// MergedFromId The merged-away (source) company, retired but still fetchable by id.
@@ -1474,6 +1528,18 @@ type PublicEventDealCreated struct {
 
 	// Name The deal's name at creation.
 	Name string `json:"name"`
+}
+
+// PublicEventDealErased Payload for deal.erased: a deal was erased for good, not archived. The event's entity is the erased deal. Carries no data, so no name or other personal field travels with it.
+type PublicEventDealErased struct{}
+
+// PublicEventDealMerged Payload for deal.merged: two deals collapsed into one. Neither deal.updated nor deal.archived can say this, so it is its own verb. The event's entity is the merged-away deal. References only.
+type PublicEventDealMerged struct {
+	// MergedFromId The merged-away (source) deal, retired but still fetchable by id.
+	MergedFromId openapi_types.UUID `json:"merged_from_id"`
+
+	// MergedIntoId The surviving (target) deal.
+	MergedIntoId openapi_types.UUID `json:"merged_into_id"`
 }
 
 // PublicEventDealOwnerChanged Payload for deal.owner_changed — the deal's owner was reassigned. Emitted instead of (never alongside) deal.updated for the owner_id field (events.md §5.3).
@@ -1716,7 +1782,13 @@ type PublicEventEngagementReply struct {
 
 	// OccurredAt When the reply activity occurred.
 	OccurredAt time.Time `json:"occurred_at"`
+
+	// OccurredPrecision How to read occurred_at: `day` when only the reply's date is known, its UTC date.
+	OccurredPrecision *PublicEventEngagementReplyOccurredPrecision `json:"occurred_precision,omitempty"`
 }
+
+// PublicEventEngagementReplyOccurredPrecision How to read occurred_at: `day` when only the reply's date is known, its UTC date.
+type PublicEventEngagementReplyOccurredPrecision string
 
 // PublicEventEntityRef The primary entity the event concerns.
 type PublicEventEntityRef struct {
@@ -2789,6 +2861,10 @@ func (PublicEventCompanyCreated) EventType() string { return "company.created" }
 
 func (PublicEventCompanyCreated) EntityType() string { return "company" }
 
+func (PublicEventCompanyErased) EventType() string { return "company.erased" }
+
+func (PublicEventCompanyErased) EntityType() string { return "company" }
+
 func (PublicEventCompanyMerged) EventType() string { return "company.merged" }
 
 func (PublicEventCompanyMerged) EntityType() string { return "company" }
@@ -2872,6 +2948,14 @@ func (PublicEventDealArchived) EntityType() string { return "deal" }
 func (PublicEventDealCreated) EventType() string { return "deal.created" }
 
 func (PublicEventDealCreated) EntityType() string { return "deal" }
+
+func (PublicEventDealErased) EventType() string { return "deal.erased" }
+
+func (PublicEventDealErased) EntityType() string { return "deal" }
+
+func (PublicEventDealMerged) EventType() string { return "deal.merged" }
+
+func (PublicEventDealMerged) EntityType() string { return "deal" }
 
 func (PublicEventDealOwnerChanged) EventType() string { return "deal.owner_changed" }
 
@@ -3290,6 +3374,7 @@ var PublicEventVersions = map[string]int{
 	"comms.delivery_bounced":                    1,
 	"company.archived":                          1,
 	"company.created":                           1,
+	"company.erased":                            1,
 	"company.merged":                            1,
 	"company.restored":                          1,
 	"company.updated":                           1,
@@ -3311,6 +3396,8 @@ var PublicEventVersions = map[string]int{
 	"conversation_claim.changed":                1,
 	"deal.archived":                             1,
 	"deal.created":                              1,
+	"deal.erased":                               1,
+	"deal.merged":                               1,
 	"deal.owner_changed":                        1,
 	"deal.restored":                             1,
 	"deal.stage_changed":                        1,
@@ -3415,7 +3502,7 @@ var PublicEventSamples = map[string]string{
 	"activity.captured":                         "{\"channel_provider\":\"Sample channel provider\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"kind\":\"Sample kind\",\"source_system\":\"Sample source system\"}",
 	"activity.disposition_recorded":             "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"disposition\":\"not_sales\"}",
 	"activity.marked_handled":                   "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
-	"activity.updated":                          "{\"changed_fields\":{\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"body\":true,\"calendar_method\":\"PUBLISH\",\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"is_done\":true,\"meeting_status\":\"booked\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"restored\":true,\"subject\":\"Sample subject\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
+	"activity.updated":                          "{\"changed_fields\":{\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"body\":true,\"calendar_method\":\"PUBLISH\",\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"is_done\":true,\"meeting_status\":\"booked\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"restored\":true,\"subject\":\"Sample subject\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"approval.decided":                          "{\"decided_by\":\"0190a7f2-0000-7000-8000-000000000010\",\"decided_by_system\":true,\"diff_hash\":\"Sample diff hash\",\"edited\":true,\"edited_change\":{},\"kind\":\"Sample kind\",\"verdict\":\"approved\"}",
 	"approval.failure_acknowledged":             "{\"failed_at\":\"2026-10-14T09:12:00Z\",\"kind\":\"Sample kind\"}",
 	"approval.preference_changed":               "{\"kind\":\"Sample kind\"}",
@@ -3432,6 +3519,7 @@ var PublicEventSamples = map[string]string{
 	"comms.delivery_bounced":                    "{\"kind\":\"hard\",\"message_id\":\"Sample message id\",\"reason\":\"Sample reason\"}",
 	"company.archived":                          "{}",
 	"company.created":                           "{\"anchor\":true,\"captured_by\":\"Sample captured by\",\"delta\":{},\"display_name\":\"Sample display name\",\"primary_domain\":\"Sample primary domain\",\"site_read_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"source\":\"Sample source\",\"source_url\":\"Sample source url\"}",
+	"company.erased":                            "{}",
 	"company.merged":                            "{\"merged_from_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"merged_into_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"company.restored":                          "{}",
 	"company.updated":                           "{\"changed_fields\":{}}",
@@ -3453,6 +3541,8 @@ var PublicEventSamples = map[string]string{
 	"conversation_claim.changed":                "{\"claim_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"status\":\"Sample status\"}",
 	"deal.archived":                             "{\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"deal.created":                              "{\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"name\":\"Sample name\"}",
+	"deal.erased":                               "{}",
+	"deal.merged":                               "{\"merged_from_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"merged_into_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"deal.owner_changed":                        "{\"from_owner_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"to_owner_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"deal.restored":                             "{\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"deal.stage_changed":                        "{\"amount_minor_at_change\":1,\"currency_at_change\":\"Sample currency at change\",\"deal_name\":\"Sample deal name\",\"from_stage_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"from_stage_name\":\"Sample from stage name\",\"from_status\":\"Sample from status\",\"fx_rate_to_base\":\"Sample fx rate to base\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"partner_attribution\":\"Sample partner attribution\",\"partner_company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_stage_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_stage_name\":\"Sample to stage name\",\"to_status\":\"Sample to status\",\"win_probability\":1}",
@@ -3470,7 +3560,7 @@ var PublicEventSamples = map[string]string{
 	"deal_room.thread_resolved":                 "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"document_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"thread_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"deal_room.updated":                         "{\"changed_fields\":[\"Sample changed fields\"],\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"email_signature.changed":                   "{\"has_signature\":true}",
-	"engagement.reply":                          "{\"channel\":\"Sample channel\",\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"idempotency_key\":\"Sample idempotency key\",\"matched_outbound_activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"occurred_at\":\"2026-10-14T09:12:00Z\"}",
+	"engagement.reply":                          "{\"channel\":\"Sample channel\",\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"idempotency_key\":\"Sample idempotency key\",\"matched_outbound_activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\"}",
 	"forecast.assurance_created":                "{\"eligible_deals\":1,\"eligible_signals\":1,\"readiness\":\"ready\",\"run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"status\":\"complete\"}",
 	"forecast.created":                          "{\"amount_minor\":1,\"author_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"call_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"currency\":\"Sample currency\",\"period_end\":\"2026-10-14\",\"period_start\":\"2026-10-14\",\"supersedes_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"forecast.exception_resolved":               "{\"actor_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"exception_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"expires_at\":\"2026-10-14T09:12:00Z\",\"outcome\":\"fixed_record\"}",

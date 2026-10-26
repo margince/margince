@@ -15,9 +15,11 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -63,6 +65,10 @@ type ListCompaniesInput struct {
 	// Industry is free text on the record; SizeBand is the contract's enum.
 	Industry *string
 	SizeBand *string
+	// SourceSystem and SourceID narrow, together, to the company holding that
+	// id in the outside system.
+	SourceSystem *string
+	SourceID     *string
 	// Domain narrows to the account that lists one domain — the
 	// employer-inference lookup, spelled as a filter over the same
 	// company_domain rows the page attaches.
@@ -187,8 +193,26 @@ func companyCommonFilters(in ListCompaniesInput) listFilters {
 // ListCompanies answers one page of accounts under the caller's row scope,
 // filtered by the dials the contract declares and ordered by the shared sort.
 func (s *Store) ListCompanies(ctx context.Context, in ListCompaniesInput) ([]crmcontracts.Company, storekit.Page, error) {
+	return listPage(ctx, s, in.Sort, in.Limit, companyListSpec(in))
+}
+
+// ListCompaniesTx is ListCompanies inside a caller-opened transaction. Same
+// gate, filters and row scope; the catalog answer is threaded in because a
+// caller-opened read cannot fetch it without a second connection.
+func (s *Store) ListCompaniesTx(ctx context.Context, tx pgx.Tx, in ListCompaniesInput, active CustomColumns) ([]crmcontracts.Company, storekit.Page, error) {
+	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	recs, page, err := listPageTx(ctx, tx, in.Sort, storekit.ClampLimit(in.Limit), active.cols, companyListSpec(in))
+	if recs == nil {
+		recs = []crmcontracts.Company{}
+	}
+	return recs, page, err
+}
+
+func companyListSpec(in ListCompaniesInput) listPageSpec[crmcontracts.Company] {
 	shared := companyCommonFilters(in)
-	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Company]{
+	return listPageSpec[crmcontracts.Company]{
 		entity:  companyEntity,
 		columns: func(context.Context, func(any) int) (string, error) { return companyColumns, nil },
 		fields:  companyListFields,
@@ -212,58 +236,13 @@ func (s *Store) ListCompanies(ctx context.Context, in ListCompaniesInput) ([]crm
 			if len(in.IDs) > 0 {
 				where = append(where, storekit.SQLf("company.id = ANY($%d)", arg(in.IDs)))
 			}
+			sourceKey, err := storekit.SourceKeyClauses(in.SourceSystem, in.SourceID, arg)
+			if err != nil {
+				return nil, err
+			}
+			where = append(where, sourceKey...)
 			where = appendCompanyLinkClauses(ctx, where, in, arg)
-			// A value outside the enum is a client mistake, not a selection
-			// that happens to match nothing: answering 200 with an empty page
-			// tells the reader this account list is empty when the question
-			// was never one the contract accepts. Validated HERE, inside the
-			// store, so it lands after listPage's auth.Require rather than
-			// before it.
-			//
-			// The query-enum middleware refuses these over HTTP. This arm
-			// answers the caller that does not go through it. The datasource
-			// provider builds the same input from a saved filter set rather
-			// than a generated query type.
-			if in.Lifecycle != nil {
-				if !crmcontracts.ListCompaniesParamsLifecycle(*in.Lifecycle).Valid() {
-					return nil, httperr.Validation("lifecycle", "not_a_known_value",
-						"filter by one of the account stages the contract defines, or leave the parameter off")
-				}
-				where = append(where, storekit.SQLf("lifecycle = $%d", arg(*in.Lifecycle)))
-			}
-			if in.Industry != nil {
-				if !crmcontracts.ListCompaniesParamsIndustry(*in.Industry).Valid() {
-					return nil, httperr.Validation("industry", "not_a_known_value",
-						"filter by one of the industries the contract defines, or leave the parameter off")
-				}
-				where = append(where, storekit.SQLf("industry = $%d", arg(*in.Industry)))
-			}
-			if in.SizeBand != nil {
-				// Checked against the generated enum for the same reason
-				// lifecycle is: an unknown band would answer an empty page,
-				// and empty reads as "no accounts that size" rather than as
-				// "that is not a size".
-				if !crmcontracts.ListCompaniesParamsSizeBand(*in.SizeBand).Valid() {
-					return nil, httperr.Validation("size_band", "not_a_known_value",
-						"filter by one of the size bands the contract defines, or leave the parameter off")
-				}
-				where = append(where, storekit.SQLf("size_band = $%d", arg(*in.SizeBand)))
-			}
-			if in.RelationshipType != nil {
-				if !crmcontracts.ListCompaniesParamsRelationshipType(*in.RelationshipType).Valid() {
-					return nil, httperr.Validation("relationship_type", "not_a_known_value",
-						"filter by one of the relationship types the contract defines, or leave the parameter off")
-				}
-				// EXISTS, not a join: an account carries several types and a
-				// join would return it once per matching row, which the keyset
-				// cursor would then page over as if they were distinct records.
-				where = append(where, storekit.SQLf(`EXISTS (
-					SELECT 1 FROM company_relationship_type rt
-					WHERE rt.company_id = company.id
-					  AND rt.relationship_type = $%d AND rt.archived_at IS NULL)`,
-					arg(*in.RelationshipType)))
-			}
-			return where, nil
+			return appendCompanyEnumClauses(where, in, arg)
 		},
 		scan: scanCompanyPage,
 		attach: func(ctx context.Context, tx pgx.Tx, companies []crmcontracts.Company) error {
@@ -285,7 +264,52 @@ func (s *Store) ListCompanies(ctx context.Context, in ListCompaniesInput) ([]crm
 		cursorKey: func(last crmcontracts.Company) (time.Time, ids.UUID) {
 			return last.CreatedAt, ids.UUID(last.Id)
 		},
-	})
+	}
+}
+
+// appendCompanyEnumClauses adds the narrowings on a closed vocabulary or free
+// text column.
+//
+// A value outside an enum is a client mistake, not a selection that matches
+// nothing. An empty 200 page would tell the reader the account list is empty
+// when the contract never accepted the question. The check runs here, inside
+// the store, so it lands after listPage's auth.Require.
+func appendCompanyEnumClauses(where []string, in ListCompaniesInput, arg func(any) int) ([]string, error) {
+	if in.Lifecycle != nil {
+		if !crmcontracts.ListCompaniesParamsLifecycle(*in.Lifecycle).Valid() {
+			return nil, httperr.Validation("lifecycle", "not_a_known_value",
+				"filter by one of the account stages the contract defines, or leave the parameter off")
+		}
+		where = append(where, storekit.SQLf("lifecycle = $%d", arg(*in.Lifecycle)))
+	}
+	if in.Industry != nil {
+		if !crmcontracts.ListCompaniesParamsIndustry(*in.Industry).Valid() {
+			return nil, httperr.Validation("industry", "not_a_known_value",
+				"filter by one of the industries the contract defines, or leave the parameter off")
+		}
+		where = append(where, storekit.SQLf("industry = $%d", arg(*in.Industry)))
+	}
+	if in.SizeBand != nil {
+		if !crmcontracts.ListCompaniesParamsSizeBand(*in.SizeBand).Valid() {
+			return nil, httperr.Validation("size_band", "not_a_known_value",
+				"filter by one of the size bands the contract defines, or leave the parameter off")
+		}
+		where = append(where, storekit.SQLf("size_band = $%d", arg(*in.SizeBand)))
+	}
+	if in.RelationshipType != nil {
+		if !crmcontracts.ListCompaniesParamsRelationshipType(*in.RelationshipType).Valid() {
+			return nil, httperr.Validation("relationship_type", "not_a_known_value",
+				"filter by one of the relationship types the contract defines, or leave the parameter off")
+		}
+		// EXISTS, not a join: an account carries several types, and a join
+		// would return it once per row for the keyset cursor to page over.
+		where = append(where, storekit.SQLf(`EXISTS (
+			SELECT 1 FROM company_relationship_type rt
+			WHERE rt.company_id = company.id
+			  AND rt.relationship_type = $%d AND rt.archived_at IS NULL)`,
+			arg(*in.RelationshipType)))
+	}
+	return where, nil
 }
 
 // scanCompanyPage drains one list query's rows: each company

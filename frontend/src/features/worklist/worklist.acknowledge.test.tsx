@@ -27,6 +27,7 @@ function jsonResponse(body: unknown): Response {
 
 function noticeRow(): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "n1",
     source: "notice",
     category: "tasks",

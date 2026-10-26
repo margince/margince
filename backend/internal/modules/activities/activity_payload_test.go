@@ -128,7 +128,7 @@ func TestActivityUpdatedChangedFields_FieldPatch(t *testing.T) {
 		IsDone:     &isDone,
 	}
 
-	fields := activityUpdatedChangedFields(in)
+	fields := activityUpdatedChangedFields(in, crmcontracts.Activity{})
 	if fields.Subject == nil {
 		t.Fatalf("expected non-nil value")
 	}
@@ -190,7 +190,7 @@ func TestActivityUpdatedChangedFields_BodyIsPresenceOnly(t *testing.T) {
 	body := "a very long email body that must never be echoed onto the wire"
 	in := UpdateActivityInput{Body: &body}
 
-	fields := activityUpdatedChangedFields(in)
+	fields := activityUpdatedChangedFields(in, crmcontracts.Activity{})
 	if fields.Body == nil {
 		t.Fatalf("expected non-nil value")
 	}
@@ -248,7 +248,7 @@ func TestRelinkedChangedFields(t *testing.T) {
 // the subscriber is told the fields it already knew about.
 func TestActivityUpdatedChangedFields_MeetingStatus(t *testing.T) {
 	held := "held"
-	fields := activityUpdatedChangedFields(UpdateActivityInput{MeetingStatus: &held})
+	fields := activityUpdatedChangedFields(UpdateActivityInput{MeetingStatus: &held}, crmcontracts.Activity{})
 
 	if fields.MeetingStatus == nil {
 		t.Fatal("recording how a meeting went reached no subscriber")
@@ -266,7 +266,7 @@ func TestActivityUpdatedChangedFields_MeetingStatus(t *testing.T) {
 // And an update that says nothing about it carries nothing.
 func TestActivityUpdatedChangedFields_MeetingStatusUntouched(t *testing.T) {
 	subject := "Renamed"
-	fields := activityUpdatedChangedFields(UpdateActivityInput{Subject: &subject})
+	fields := activityUpdatedChangedFields(UpdateActivityInput{Subject: &subject}, crmcontracts.Activity{})
 
 	if fields.MeetingStatus != nil {
 		t.Errorf("a rename told subscribers the meeting outcome changed: %v",

@@ -4,6 +4,7 @@
 import type { components } from "../../api/schema";
 import { StatCard } from "../../design-system/atoms";
 import { omitted } from "../../design-system/surfacestate";
+import { activityDay, activityIsAhead } from "../../format/activitywhen";
 import { formatDayMonth } from "../../format/format.dates";
 import type { Locale, useT } from "../../i18n";
 import { WITHHELD_READING } from "./company360health";
@@ -18,9 +19,16 @@ type Company360 = components["schemas"]["Company360"];
  */
 export function upcomingMeeting(
   view: Company360,
+  record: string,
 ): NonNullable<Company360["next_meeting"]> | undefined {
   const meeting = view.next_meeting;
-  return meeting && Date.parse(meeting.starts_at) > Date.parse(view.as_of)
+  return meeting &&
+    activityIsAhead(
+      meeting.starts_at,
+      meeting.occurred_precision,
+      Date.parse(view.as_of),
+      record,
+    )
     ? meeting
     : undefined;
 }
@@ -43,7 +51,7 @@ export function NextMeetingStat({
   if (omitted(view, "next_meeting")) {
     return <StatCard onOpen={onOpen} {...slot} value={t(WITHHELD_READING)} />;
   }
-  const meeting = upcomingMeeting(view);
+  const meeting = upcomingMeeting(view, recordZone);
   if (!meeting) {
     return (
       <StatCard onOpen={onOpen} {...slot} value={t("co.strip.next.none")} />
@@ -53,7 +61,13 @@ export function NextMeetingStat({
     <StatCard
       onOpen={onOpen}
       {...slot}
-      value={formatDayMonth(meeting.starts_at, locale, recordZone)}
+      value={activityDay(
+        meeting.starts_at,
+        meeting.occurred_precision,
+        locale,
+        recordZone,
+        formatDayMonth,
+      )}
       detail={meeting.subject}
     />
   );

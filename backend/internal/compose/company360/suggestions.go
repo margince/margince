@@ -30,12 +30,13 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/lifecyclereview"
 	"github.com/margince/margince/backend/internal/compose/receiptcopy"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // noReplyDays is how long an unanswered outbound message waits before it is
@@ -276,10 +277,9 @@ func (said suggestionCopy) staleThread(
 	waited := now.Sub(newest.At)
 	// The THRESHOLD stays a duration — it asks whether enough time has passed,
 	// which is a question about elapsed time. The figure PRINTED below is a
-	// day count a reader compares against dates on their screen, so it is
-	// counted the way they count: shared/kernel/elapsed, same as every other
-	// day count a reader reads.
-	waitedDays := elapsed.Days(newest.At, now, loc)
+	// day count a reader checks against dates on screen. So it counts from the
+	// date the message names, as every other day count a reader reads.
+	waitedDays := occurredday.DaysSince(occurredday.Moment{At: newest.At, DateOnly: newest.DateOnly}, now, loc)
 	if waited < noReplyDays*24*time.Hour {
 		return nil
 	}
@@ -307,6 +307,7 @@ func (said suggestionCopy) staleThread(
 	// went quiet. Neither reaches the fingerprint above (PO-AC-N-14).
 	out.Title = new(fmt.Sprintf(said.Say(suggestionWords.NoReplyTitle), waitedDays))
 	out.DueAt = new(newest.At)
+	out.DuePrecision = activitywhen.PrecisionOf(occurredday.Moment{At: newest.At, DateOnly: newest.DateOnly})
 	setDraftReply(out, newest.ID)
 	return out
 }

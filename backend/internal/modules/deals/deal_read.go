@@ -31,13 +31,26 @@ func (s *Store) GetDeal(ctx context.Context, id ids.DealID, archived storekit.Ar
 	}
 	var out crmcontracts.Deal
 	err = s.Tx(ctx, func(tx pgx.Tx) (err error) {
-		if err := auth.EnsureVisible(ctx, tx, dealTable, id.UUID); err != nil {
-			return err
-		}
-		out, err = readDealForCaller(ctx, tx, id, archived, active)
+		out, err = getDealInTx(ctx, tx, id, archived, active)
 		return err
 	})
 	return out, err
+}
+
+// GetDealTx is GetDeal inside a caller-opened transaction, with the catalog
+// answer threaded in as ListDealsTx takes it.
+func (s *Store) GetDealTx(ctx context.Context, tx pgx.Tx, id ids.DealID, archived storekit.ArchivedFilter, active CustomColumns) (crmcontracts.Deal, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return crmcontracts.Deal{}, err
+	}
+	return getDealInTx(ctx, tx, id, archived, active.cols)
+}
+
+func getDealInTx(ctx context.Context, tx pgx.Tx, id ids.DealID, archived storekit.ArchivedFilter, active []fieldcatalog.Column) (crmcontracts.Deal, error) {
+	if err := auth.EnsureVisible(ctx, tx, dealTable, id.UUID); err != nil {
+		return crmcontracts.Deal{}, err
+	}
+	return readDealForCaller(ctx, tx, id, archived, active)
 }
 
 // readDealForCaller reads one deal and masks it — the spelling EVERY entry
@@ -105,7 +118,11 @@ type ListDealsInput struct {
 	CommercialMotion  *string
 	Priority          *string
 	AcquisitionSource *string
-	Stalled           *bool
+	// SourceSystem and SourceID narrow, together, to the deal holding that id
+	// in the outside system.
+	SourceSystem *string
+	SourceID     *string
+	Stalled      *bool
 	// QuietForDays narrows to open deals idle at least this long, which is the
 	// stalled rule at a caller-named window (QuietSQL). Separate from Stalled
 	// because they answer different questions: Stalled is the product-wide
@@ -368,7 +385,11 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 		where = append(where, storekit.SQLf("expected_close_date < $%d", arg(in.CloseBefore.Format(time.DateOnly))))
 	}
 	where = appendCommercialFilters(where, in, arg)
-	return appendIdleFilters(where, in), nil
+	sourceKey, err := storekit.SourceKeyClauses(in.SourceSystem, in.SourceID, arg)
+	if err != nil {
+		return nil, err
+	}
+	return appendIdleFilters(append(where, sourceKey...), in), nil
 }
 
 // appendIdleFilters adds the two activity-clock filters: the product-wide

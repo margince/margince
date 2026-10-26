@@ -17,18 +17,19 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// RecordComposition writes the boot facts of the composed set: its inventory,
-// the channel vocabulary its units declare and their starting role grants.
+// RecordComposition writes the boot facts of the composed set. They are its
+// inventory, the channel vocabulary its units declare, their starting role
+// grants, and the service member of each unit that lands records.
 //
-// One function because the ordering between them is not a caller's to choose —
-// the reconcile reads ComposedExtensions() and refuses a unit that shadows a
+// One function because the ordering between them is not a caller's to choose.
+// The reconcile reads ComposedExtensions() and refuses a unit that shadows a
 // core transport, so it belongs after the set is observed and before anything
 // serves. A role that wired only the inventory would boot with units installed
-// and their transports unregistered, which is the state this step exists to
-// make unreachable.
+// and their transports unregistered. This step exists to make that state
+// unreachable.
 //
 // Every process role calls it, after RegisterExtensions and before it assembles
-// anything: server assembly loads the transport directory FROM the rows written
+// anything. Server assembly loads the transport directory from the rows written
 // here.
 func RecordComposition(
 	ctx context.Context, pool *pgxpool.Pool, log *slog.Logger, exts []extension.Extension,
@@ -41,6 +42,9 @@ func RecordComposition(
 	}
 	if err := FillExtensionRbacDefaults(ctx, pool, log); err != nil {
 		return fmt.Errorf("compose: filling the units' default role grants: %w", err)
+	}
+	if err := EnsureExtensionServiceMembers(ctx, pool, log, exts); err != nil {
+		return fmt.Errorf("compose: making the units' service members: %w", err)
 	}
 	return nil
 }

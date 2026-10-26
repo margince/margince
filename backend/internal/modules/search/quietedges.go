@@ -43,7 +43,12 @@ type QuietRead struct {
 	QuietBefore time.Time
 	// TouchedAfter is the silence ceiling: the newest live touch must be later.
 	TouchedAfter time.Time
-	Limit        int
+	// AsOf is the instant the read is made at. An exchange dated after it has
+	// not happened yet: a booked meeting is not a touch. The window above is
+	// measured from the same instant, so the read has one clock. Zero reads
+	// the database's own now().
+	AsOf  time.Time
+	Limit int
 	// Offset skips candidates an earlier page of the same read already gave.
 	Offset  int
 	Exclude ExcludeEdges
@@ -60,16 +65,17 @@ type QuietContact struct {
 // candidate contact. It reads the activities, not the edge's last_at. A
 // colleague's message on a thread the contact only belongs to then cannot hide
 // a quiet relationship, and the same colleague's older exchange still counts.
-func liveExchangeClock() string {
+func liveExchangeClock(asOf string) string {
 	return fmt.Sprintf(`SELECT max(a.occurred_at) AS touched
 		      FROM activity_participant cp
 		      JOIN activity a ON a.id = cp.activity_id AND a.archived_at IS NULL%s
 		       AND %s
 		      JOIN activity_participant up ON up.activity_id = a.id AND up.role IN %s
+		       AND %s
 		      JOIN app_user lu ON lu.id = up.user_id AND %s
 		     WHERE cp.contact_id = e.contact_id AND cp.role IN %s`,
-		audienceWorkspaceOnly, relstrength.ContactExchangeSQL("a", "e.contact_id", "now()"),
-		interactionRoles, workforce.LiveMemberSQL("lu"), interactionRoles)
+		audienceWorkspaceOnly, relstrength.ContactExchangeSQL("a", "e.contact_id", asOf),
+		interactionRoles, auth.ParticipantStandsSQL("up", "a"), workforce.LiveMemberSQL("lu"), interactionRoles)
 }
 
 // QuietContacts answers "which relationships have gone silent", most exchanged
@@ -97,6 +103,10 @@ func QuietContacts(ctx context.Context, tx pgx.Tx, read QuietRead) ([]QuietConta
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	beforePos := arg(read.QuietBefore)
 	afterPos := arg(read.TouchedAfter)
+	asOf := "now()"
+	if !read.AsOf.IsZero() {
+		asOf = fmt.Sprintf("$%d::timestamptz", arg(read.AsOf))
+	}
 	scope, err := auth.ScopeClauseFor(ctx, "contact", "p", arg)
 	if err != nil {
 		return nil, err
@@ -137,7 +147,7 @@ func QuietContacts(ctx context.Context, tx pgx.Tx, read QuietRead) ([]QuietConta
 		     ORDER BY e.contact_id, e.count_total DESC, x.touched DESC, e.user_id
 		  ) q
 		 ORDER BY q.count_total DESC, q.touched_at ASC, q.contact_id
-		 LIMIT $%d OFFSET $%d`, liveMemberJoin, liveExchangeClock(), beforePos, afterPos, workforce.LiveMemberSQL("o"),
+		 LIMIT $%d OFFSET $%d`, liveMemberJoin, liveExchangeClock(asOf), beforePos, afterPos, workforce.LiveMemberSQL("o"),
 		exchangedPos,
 		owned, scope, excluded, limitPos, offsetPos), args...)
 	if err != nil {

@@ -34,9 +34,13 @@ func (s answeringSink) CancelMeeting(context.Context, connector.NaturalKey, time
 	return s.err
 }
 
-func (s answeringSink) MoveMeeting(context.Context, connector.NaturalKey, time.Time, *int) error {
+func (s answeringSink) MoveMeeting(context.Context, connector.NaturalKey, connector.MeetingSlot) error {
 	return s.err
 }
+
+// A verb whose signature drifts from the port would leave the fixture a plain
+// sink, and every move would count as unsupported.
+var _ connector.MeetingMover = answeringSink{}
 
 // upsertOnly hides every verb but Upsert.
 type upsertOnly struct{ connector.Sink }

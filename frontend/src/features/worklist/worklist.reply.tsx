@@ -188,6 +188,7 @@ function MeetingFollowUp({ item }: Readonly<{ item: WorklistItem }>) {
             t("contact.composer.intentFollowUp"),
             item.title ?? undefined,
           )}
+          draftOnOpen
           open
           onClose={() => setOpen(null)}
           onSent={() =>

@@ -114,7 +114,7 @@ func localeKeyPrefix(unit string) string {
 // coreCopyNamespaces are en.ts's own prefixes a unit name can derive (access maps
 // to extAccess.). Core wins a lookup, so that unit's copy would render core's
 // strings. Held by TestCoreCopyNamespacesMatchTheCatalogue.
-var coreCopyNamespaces = []string{"extAccess.", "extIngest.", "extUnits."}
+var coreCopyNamespaces = []string{"extAccess.", "extGovernance.", "extIngest.", "extUnits."}
 
 // unitTitleKey is the copy key naming the unit, or "" when its copy does not
 // carry one in every locale the installation ships.

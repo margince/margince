@@ -169,6 +169,7 @@ export const OpenTask: Story = {
       next_steps: {
         data: [
           {
+            occurred_precision: "instant",
             offers_email: false,
             id: "a-1",
             kind: "task",
@@ -328,6 +329,7 @@ const promised: View = {
       kind: "commitment_ours",
       body: "Send the updated retrofit quote",
       source_activity_id: "a-1",
+      occurred_precision: "instant",
       source_quote: "We will send the updated quote by the 8th.",
       status: "open",
       needs_review: false,
@@ -337,6 +339,7 @@ const promised: View = {
   next_meeting: {
     activity_id: "m-2",
     starts_at: "2026-08-20T09:00:00Z",
+    occurred_precision: "instant",
     subject: "Walkthrough",
   },
   moment: {

@@ -161,6 +161,7 @@ func TestSchema_companyOpenPipelineRollupIsSecurityInvoker(t *testing.T) {
 // naming a row-scoped business record. Values are prose for the reader;
 // the map's completeness is the invariant.
 var rowScopedFKDecisions = gatekit.Waive(map[string]string{
+	"company_offered_value.company_id": "child row: what a feed offered for a company, written by contacts.RecordOfferedValues from an extension landing under the service member's own update right on the company and auth.EnsureWritableLive, never from a request body, and read only through contacts.ListOfferedValues, which gates the company with auth.EnsureReadable and answers 404 for an archived one. ON DELETE CASCADE, and the erasure path deletes a row by statement",
 	// Client-supplied references — visibility-gated at the store:
 	"site_read.company_id":                 "gated: auth.EnsureVisible in StartSiteRead (the one human entry point); Begin/Finish only re-address a row Start created, and GetSiteRead re-checks EnsureVisible on every read",
 	"deal.company_id":                      "gated: auth.EnsureLinkTarget in CreateDeal/UpdateDeal (H1)",
@@ -207,6 +208,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"contract.deal_id":                    "gated: auth.EnsureLinkTarget via ensureLinksVisible in createContractTx AND UpdateContract, plus ensureLinksShareCompany (ADR-0109 §8)",
 	"contract.project_id":                 "gated: the same pair as contract.deal_id — ensureLinksVisible then ensureLinksShareCompany, on create and on patch",
 	"lead.project_id":                     "gated: auth.EnsureLinkTarget in CreateLead/UpdateLead (H1)",
+	"lead.company_id":                     "gated: auth.EnsureLinkTarget in LinkLeadCompany, the one writer that names a company; UpdateLead only clears it",
 	"suggestion_dismissal.company_id":     "gated: auth.EnsureVisible in company360.Service.DismissSuggestion, inside the same transaction as the insert — dismissing advice about an account the caller cannot read would confirm it exists",
 	"company_dossier.company_id":          "gated: the dossier is assembled only after companydossier.Service.Get runs the caller's OWN sidecar reads, and contacts.ListCompanyProfileFields opens with auth.Require + ensureCompanyReadable — a company the caller cannot read has no dossier written for it, and the row is keyed on that same caller",
 	"company_growth_fit.company_id":       "gated: same path as company_dossier — the assessment is written only after the caller's own gated sidecar reads succeed, and the row is keyed on that caller",

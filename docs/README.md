@@ -136,10 +136,18 @@ ready before we need it, because the first date comes 24 hours after we learn of
   (`make bench-daily`).
 - [register-a-webhook.md](how-to/register-a-webhook.md): send events to your own HTTPS endpoint.
 - [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`.
+- [declare-a-service-member.md](how-to/declare-a-service-member.md): make the account that a timed job
+  of an extension runs as.
+- [land-companies-and-deals-from-an-extension.md](how-to/land-companies-and-deals-from-an-extension.md): hand the
+  core a company or a deal with the id it has in its own system.
+- [read-core-records-from-an-extension.md](how-to/read-core-records-from-an-extension.md): read deals, companies
+  and other core records from an extension, under the rights of the user.
+- [react-to-record-lifecycle-events.md](how-to/react-to-record-lifecycle-events.md): learn when a company or
+  deal is erased, or a deal is merged.
+- [send-a-notice-from-an-extension.md](how-to/send-a-notice-from-an-extension.md): tell a user or a role about
+  a record from an extension.
 - [debug-an-ai-task.md](how-to/debug-an-ai-task.md): run one AI task on your own input
   (`make ai-probe`).
-- [build-the-desktop-app.md](how-to/build-the-desktop-app.md): build the desktop app for macOS or
-  Windows.
 - [update-the-handbook.md](how-to/update-the-handbook.md): change the handbook so **Ask your documents** can answer
   from it.
 - [cut-a-release.md](how-to/cut-a-release.md): push a `v*` tag to make a GitHub release.
@@ -177,6 +185,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   write one.
 - [gate-inventory.md](reference/gate-inventory.md): every check in `backend/`, by kind. Generated.
 - [configuration.md](reference/configuration.md): every setting of each program.
+- [extension-doors-for-core-data.md](reference/extension-doors-for-core-data.md): what an extension can read
+  and write in core records, one row for each feature, and which are built.
 - [rest-api.md](reference/rest-api.md): the rules every REST call follows, and where its OpenAPI document is.
 - [ai-provider-key-test.md](reference/ai-provider-key-test.md): what the Test button on the Models page
   checks.
@@ -219,6 +229,8 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 
 - [backend-onboarding.md](explanation/backend-onboarding.md): start here. A map of the backend, and the
   order to read it in.
+- [outside-ids.md](explanation/outside-ids.md): where a record keeps its id in an outside system,
+  and why it has no table of its own.
 - [architecture.md](explanation/architecture.md): how the modules work together.
 - [contract-first.md](explanation/contract-first.md): how code is built from `crm.yaml`.
 - [authorization.md](explanation/authorization.md): where the code checks rights, and what a passport
@@ -308,8 +320,6 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 - [self-hosting.md](explanation/self-hosting.md): why it runs the way it does, and what it does when
   something fails.
 - [deployment.md](deployment.md): the old page, now a pointer to the two above.
-- [desktop-distribution.md](explanation/desktop-distribution.md): the one folder that runs Margince on
-  macOS or Windows, with no Docker.
 
 ### Kept records: not how it works today
 

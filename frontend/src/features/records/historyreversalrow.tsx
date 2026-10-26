@@ -4,11 +4,11 @@ import { formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
+import { historyValue } from "../../lib/historyvalues";
 import { useRecordZone } from "../../lib/recordzone";
 import { entryFieldChanges } from "./history.logic";
 import { HistoryFieldDiff } from "./historyfielddiff";
 import { netChanges, type PairRow } from "./historyreversal";
-import { historyValue } from "./historyvalues";
 import "./history.css";
 
 // The reversal and the change it reversed, drawn as ONE line the reader can
@@ -70,8 +70,12 @@ function SettledFace({
           <li key={change.field} className="entry-field">
             <span>{historyFieldLabel(change.field, t)}</span>
             <span>
-              {historyValue(change.field, change.newValue, values) ??
-                t("history.cleared")}
+              {historyValue(
+                change.field,
+                change.newValue,
+                values,
+                change.newPrecision,
+              ) ?? t("history.cleared")}
             </span>
           </li>
         ))}
@@ -105,6 +109,8 @@ function ResidualFace({
               field={change.field}
               oldValue={change.oldValue}
               newValue={change.newValue}
+              oldPrecision={change.oldPrecision}
+              newPrecision={change.newPrecision}
               values={values}
             />
           </li>

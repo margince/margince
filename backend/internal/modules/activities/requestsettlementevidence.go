@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // RequestSettlementActor is the principal the settlement pass writes as. A
@@ -96,7 +97,7 @@ func reopenSettledReminder(ctx context.Context, tx pgx.Tx, in RequestSettlementI
 		return err
 	}
 	var current bool
-	if err := tx.QueryRow(ctx, `SELECT occurred_at >= $2 FROM activity WHERE id = $1`,
+	if err := tx.QueryRow(ctx, `SELECT `+occurredday.FromSQL("a", "$2")+` FROM activity a WHERE a.id = $1`,
 		in.Request.RequestID, cutoff).Scan(&current); err != nil {
 		return fmt.Errorf("activities: reading the request's age before reopening: %w", err)
 	}

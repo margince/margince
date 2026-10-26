@@ -73,6 +73,7 @@ export const Rail: Story = {
                   channel: "email",
                   verdict: "allowed",
                   reason: "She wrote to you on 1 Aug 2026.",
+                  reason_code: "qualifying_event",
                 },
                 {
                   purpose_key: "phone_outreach",
@@ -80,6 +81,7 @@ export const Rail: Story = {
                   channel: "phone",
                   verdict: "unknown",
                   reason: "No consent recorded.",
+                  reason_code: "no_consent",
                 },
               ],
             }}
@@ -165,6 +167,8 @@ export const RailConsentBlocked: Story = {
                   verdict: "blocked",
                   reason:
                     "She opted out of business correspondence on 3 Aug 2026.",
+                  reason_code: "objection",
+                  reason_at: "2026-08-03T00:00:00Z",
                 },
                 {
                   purpose_key: "phone_outreach",
@@ -172,6 +176,7 @@ export const RailConsentBlocked: Story = {
                   channel: "phone",
                   verdict: "unknown",
                   reason: "No consent recorded.",
+                  reason_code: "no_consent",
                 },
               ],
             }}
@@ -222,6 +227,7 @@ export const RailChannelReached: Story = {
                   channel: "email",
                   verdict: "allowed",
                   reason: "She wrote to you on 1 Aug 2026.",
+                  reason_code: "qualifying_event",
                 },
                 {
                   purpose_key: "phone_outreach",
@@ -229,6 +235,7 @@ export const RailChannelReached: Story = {
                   channel: "phone",
                   verdict: "unknown",
                   reason: "No consent recorded.",
+                  reason_code: "no_consent",
                 },
               ],
             }}

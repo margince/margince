@@ -107,13 +107,23 @@ describe("ProvenanceTag", () => {
     expect(claimsAModel("Source not recorded")).toBe(false);
   });
 
-  // A connector copies what a mailbox already held; no model decided it, so
-  // the badge names the connector without the AI tone.
+  // A connector copies what a mailbox already held, and no model decided it.
+  // The badge names the connector as a reader knows it, without the AI tone.
   it("names the connector a record was imported through", () => {
     render(
       <ProvenanceTag provenance={{ kind: "connector", connector: "gmail" }} />,
     );
-    expect(claimsAModel("Via gmail")).toBe(false);
+    expect(claimsAModel("Via Gmail")).toBe(false);
+  });
+
+  // A provider this build cannot name is quoted as sent, never dropped.
+  it("quotes a connector this build has no name for", () => {
+    render(
+      <ProvenanceTag
+        provenance={{ kind: "connector", connector: "hubspot" }}
+      />,
+    );
+    expect(screen.getByText("Via hubspot")).toBeTruthy();
   });
 
   // A background job and an AI agent are different answers to "who do I ask",

@@ -33,9 +33,7 @@ const namespace = "MARGINCE_"
 //   - the container entrypoint writes the bootstrap credential from
 //     MARGINCE_ADMIN_PASSWORD before the api starts (ADR-0061 §2);
 //   - the build stamps MARGINCE_BUILD_REVISION and MARGINCE_COMPOSITION_FRONTEND
-//     into the image, and they outlive the build inside it;
-//   - the desktop launcher takes its web port from MARGINCE_PORT in the
-//     margince.env it also hands the roles as --env-file.
+//     into the image, and they outlive the build inside it.
 //
 // MARGINCE_ADMIN_PASSWORD_FILE is deliberately NOT here. The entrypoint records
 // that it was retired and its path hardcoded, so an operator still setting it is
@@ -49,7 +47,6 @@ var consumedByTheContainerNotTheProcess = map[string]bool{
 	namespace + "ADMIN_PASSWORD":       true,
 	namespace + "BUILD_REVISION":       true,
 	namespace + "COMPOSITION_FRONTEND": true,
-	namespace + "PORT":                 true,
 }
 
 // reportable is whether a variable is one the typo report may name at all,

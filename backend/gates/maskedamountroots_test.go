@@ -182,7 +182,7 @@ func moduleRootsBesideInternal(t *testing.T) []string {
 	// The trees outside the module that ship Go the same way, named relative to
 	// it. An extension unit reaches core data through the published seam, so a
 	// deal-amount statement in one is the shape this gate most wants to catch.
-	for _, beside := range []string{"../extensions", "../fixtures", "../desktop"} {
+	for _, beside := range []string{"../extensions", "../fixtures"} {
 		if _, err := os.Stat(beside); err == nil {
 			roots = append(roots, beside)
 		}

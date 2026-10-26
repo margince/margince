@@ -82,6 +82,7 @@ var referencesByTable = map[string][]exportedReference{
 		{column: refColProject, target: tableProject},
 	},
 	tableLead: {
+		{column: refColCompany, target: tableCompany},
 		{column: refColFromContact, target: tableContact},
 		{column: refColMergedInto, target: tableLead},
 		{column: refColProject, target: tableProject},

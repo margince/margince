@@ -25,7 +25,7 @@ import { Eyebrow } from "../../design-system/eyebrow";
 import type { ListColumn } from "../../design-system/listtable";
 import type { BoardDeal } from "../../design-system/pipelineboard";
 import { QueryStates } from "../../design-system/querystates";
-import { formatElapsed } from "../../format/now";
+import { activityAgo } from "../../format/activitywhen";
 import { type Translator, useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
@@ -77,16 +77,19 @@ export function DealMailAside({
   const query = useDealMail(dealId);
   const now = useNow(60_000);
   const when = (mail: Activity) => {
-    const ago = formatElapsed(
-      now - new Date(mail.occurred_at).getTime(),
-      t,
-      locale,
-    );
+    const moment = { at: mail.occurred_at, precision: mail.occurred_precision };
+    const ago = activityAgo(moment, now, t, locale);
+    // A `day` entry names its date, which reads "on" a day, not as an age.
+    const dated = mail.occurred_precision === "day";
     if (mail.direction === "outbound") {
-      return t("deal.mail.sent", { ago });
+      return dated
+        ? t("deal.mail.sentOn", { date: ago })
+        : t("deal.mail.sent", { ago });
     }
     if (mail.direction === "inbound") {
-      return t("deal.mail.received", { ago });
+      return dated
+        ? t("deal.mail.receivedOn", { date: ago })
+        : t("deal.mail.received", { ago });
     }
     return ago;
   };

@@ -10,11 +10,13 @@ package activities
 // (backend/gates/answerwalk_test.go)
 
 import (
+	"fmt"
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -58,9 +60,10 @@ func answerArms(inbound, until string) []answerArm {
 // answerLater is a row that is live and happened strictly after the inbound
 // row and no later than until.
 func answerLater(row, inbound, until string) string {
-	return row + `.archived_at IS NULL
-	    AND ` + row + `.occurred_at <= ` + until + `
-	    AND ` + row + `.occurred_at > ` + inbound + `.occurred_at`
+	return fmt.Sprintf(`%[1]s.archived_at IS NULL
+	    AND %[3]s
+	    AND %[1]s.occurred_at > %[2]s.occurred_at -- occurred_at raw: strictly after the inbound row, an ordering of rows
+	`, row, inbound, occurredday.BegunSQL(row, until))
 }
 
 // offThreadAnswerArms are the answers of answerArms that sit outside the
@@ -138,7 +141,7 @@ func offThreadAnswerArms(inbound, until string) []answerArm {
 const answerMailColumns = `answer_mail.id, answer_mail.kind, answer_mail.channel_provider,
 	answer_mail.direction, answer_mail.counterparty_outbound_attested, answer_mail.restricted_at,
 	answer_mail.audience, answer_mail.source_activity_id, answer_mail.archived_at,
-	answer_mail.occurred_at, answer_mail.subject`
+	answer_mail.occurred_at, answer_mail.occurred_precision, answer_mail.subject`
 
 // touchAnswerArm is a logged call or held meeting among the activities walk
 // names for the sender's contact.
@@ -294,7 +297,7 @@ func owedSQL(asOf, dismissedStillOwed, informsStillOwed, unjudgedResponseStillOw
 	           AND newer.channel_provider IS NOT DISTINCT FROM a.channel_provider
 	           AND newer.direction = 'inbound'
 	           AND newer.archived_at IS NULL
-	           AND newer.occurred_at <= ` + asOf + `
+	           AND ` + occurredday.BegunSQL("newer", asOf) + `
 	           AND (newer.occurred_at, newer.id) > (a.occurred_at, a.id))
 	       AND NOT ` + answeredSQL("a", asOf) + `)))`
 }

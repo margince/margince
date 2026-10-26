@@ -118,6 +118,7 @@ function momentLine(): HTMLElement | null {
 
 function meetingAt(dueAt: string): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "m1",
     source: "meeting",
     category: "meetings",
@@ -132,6 +133,7 @@ function meetingAt(dueAt: string): WorklistItem {
 
 function taskDue(dueAt: string, overdue: boolean): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "t1",
     source: "task",
     category: "tasks",
@@ -210,6 +212,7 @@ describe("rows whose date is not a clock the reader owes", () => {
   it("says nothing about an approval's lapse moment", async () => {
     draw([
       {
+        occurred_precision: "instant",
         id: "a1",
         source: "approval",
         category: "decisions",

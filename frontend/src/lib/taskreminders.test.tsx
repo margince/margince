@@ -24,6 +24,7 @@ const REMINDER: Activity = {
   subject: "Call back about the renewal",
   remind_at: "2026-10-20T09:00:00Z",
   occurred_at: "2026-10-01T09:00:00Z",
+  occurred_precision: "instant",
   is_done: false,
   source: "manual",
   captured_by: "human:u1",

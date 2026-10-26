@@ -28,6 +28,14 @@
       ]
     }
   ],
+  "settings": [
+    {
+      "key": "greeting",
+      "label": "Greeting",
+      "hint": "A line the smoke fixture keeps.",
+      "kind": "text"
+    }
+  ],
   "panels": [
     {
       "slot": "record_panel.deal",

@@ -125,7 +125,7 @@ func openingFor(in Input, typ MeetingType) *Sentence {
 		return &Sentence{
 			Text: fmt.Sprintf(
 				said.Say(objectiveWords.Prior),
-				prior.Subject, prior.StartsAt.UTC().Format(time.DateOnly)),
+				prior.Subject, prior.StartsAt.date(in.Zone).Format(time.DateOnly)),
 			Nature:   natureRecommendation,
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: prior.ID}},
 		}

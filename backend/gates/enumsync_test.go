@@ -65,6 +65,9 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// so a value the contract admits and the CHECK refuses would be a save that
 	// fails with a constraint error instead of a validation answer.
 	"mail_draft.anchor_type": {"internal/contracts", "MailDraftAnchorType"},
+	// How to read an activity's time. A precision the contract admits and the
+	// CHECK refuses would be a 500 on a valid create.
+	"activity.occurred_precision": {"internal/contracts", "OccurredPrecision"},
 
 	"activity_link.entity_type": {"internal/shared/ports/datasource", "RecordType"},
 	"list.entity_type":          {"internal/shared/ports/datasource", "RecordType"},

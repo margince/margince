@@ -135,13 +135,15 @@ func parseChecked(s Any, text string) (any, error) {
 }
 
 // undeclared names the variables no program reads, from the environment and
-// the .env file alike, each with the name it likely meant. Values never leave
-// this function.
+// the .env file alike, each with the name it likely meant. A variable that a
+// ${env:NAME} reference reads is consumed, so it is not reported. Values never
+// leave this function.
 func undeclared(names known, layers []layer) []string {
+	referenced := envReferenced(layers)
 	seen := map[string]bool{}
 	for _, l := range layers {
 		for name, value := range l.vars {
-			if !reportable(name, value) || reserved[name] || names.envs[name] {
+			if !reportable(name, value) || reserved[name] || names.envs[name] || referenced[name] {
 				continue
 			}
 			if near := names.nearEnv(name); near != "" {
@@ -151,4 +153,47 @@ func undeclared(names known, layers []layer) []string {
 		}
 	}
 	return slices.Sorted(maps.Keys(seen))
+}
+
+// readElsewhere names the settings the sources set that only a sibling program
+// reads. This program never parses their values, so its check cannot vouch for
+// them, and says so instead of calling the file valid.
+func readElsewhere(reg *Registry, names known, layers []layer) []string {
+	seen := map[string]bool{}
+	for _, l := range layers {
+		where := string(l.source)
+		if l.file != "" {
+			where += " " + l.file
+		}
+		for key := range l.nodes {
+			if _, own := reg.byKey[key]; !own {
+				seen[key+" ("+where+")"] = true
+			}
+		}
+		for name, value := range l.vars {
+			if _, own := reg.byEnv[name]; value != "" && !own && names.envs[name] {
+				seen[name+" ("+where+")"] = true
+			}
+		}
+	}
+	return slices.Sorted(maps.Keys(seen))
+}
+
+// envReferenced collects the variables ${env:NAME} references read, from a
+// YAML file, a flag, the environment or the .env file.
+func envReferenced(layers []layer) map[string]bool {
+	out := map[string]bool{}
+	for _, l := range layers {
+		for _, name := range l.envRefs {
+			out[name] = true
+		}
+		for _, values := range []map[string]string{l.text, l.vars} {
+			for _, value := range values {
+				if name, ok := envRefName(value); ok {
+					out[name] = true
+				}
+			}
+		}
+	}
+	return out
 }

@@ -43,6 +43,7 @@ describe("itemTitle — a deal named by its company and stage", () => {
     const named = "Acme Logistics · Negotiation";
     const deal = "0199a0e8-617c-74ec-a4da-b41010b2a5b0";
     const item: WorklistItem = {
+      occurred_precision: "instant",
       id: deal,
       source: "deal_at_risk",
       category: "deals_at_risk",

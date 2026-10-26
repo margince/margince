@@ -12,6 +12,7 @@ import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
 import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import { roomBriefKey } from "./dealroombrief.key";
+import { roomDocumentsKey } from "./dealroomdocuments.key";
 import "./dealroomdocuments.css";
 
 // The seller's verbs on a Deal Room's documents: which of the deal's files the
@@ -44,7 +45,7 @@ export const DOCUMENT_GROUPS: readonly {
 
 export function useRoomDocuments(roomId: string) {
   return useQuery({
-    queryKey: ["deal-room-documents", roomId],
+    queryKey: roomDocumentsKey(roomId),
     queryFn: async () => {
       return unwrap(
         await api.GET("/deal-rooms/{id}/documents", {
@@ -169,7 +170,7 @@ function useAddDocument(roomId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["deal-room-documents", roomId],
+        queryKey: roomDocumentsKey(roomId),
       });
       queryClient.invalidateQueries({ queryKey: roomBriefKey(roomId) });
     },
@@ -197,7 +198,7 @@ export function useRemoveDocument(roomId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["deal-room-documents", roomId],
+        queryKey: roomDocumentsKey(roomId),
       });
       queryClient.invalidateQueries({ queryKey: roomBriefKey(roomId) });
     },

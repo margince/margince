@@ -142,7 +142,7 @@ A unit may import only `backend/pkg/**`, and only the packages that carry the ma
 - **`pkg/extension/jurisdiction`**: the jurisdiction pack contract (`Pack`, `Retention`,
   `RetentionClass`, the closed lists of values a pack may use, the calendar `Period`).
 - **`pkg/extension/crm`**: the shapes a unit passes to `tx.Core()` and gets back from it. `tx.Core()` is
-  the governed way onto core records.
+  the governed way onto core records, for writes and for reads.
 - **`pkg/extension/messaging`**: the outbound messaging rules a pack supplies. They say how long a reply
   stays a reply, and what exceptions hold for a customer who already buys. They also say what a first
   message must say, and the limits on sales messages. The core engine that approves a send reads them as
@@ -400,13 +400,18 @@ checked against the full budget for names, so a name a unit takes today stays go
   The unit builds no timeline entry, and could not: it hands over a record and the core decides what
   becomes of it.
 
+  A record can also be a company or a deal, matched by the provider's id and written through the
+  product's own stores. See [land-companies-and-deals-from-an-extension.md](../how-to/land-companies-and-deals-from-an-extension.md).
+
   It sits on `Runtime` instead of `Tx`, the other way from where the core port sits, because the pipeline
   opens its own transaction. To call it from inside a transaction of the unit would take a second
   connection while it holds one. On a small pool that waits with no end instead of failing
   (`ErrNestedIngest` turns the wait into an error). The core sets the source on the row from the unit and
   the source it declared (`Ingress`, which derives into `manifest.generated.json`). So a unit can put
-  nothing under the name of another unit or of a core connector. The `captured_by` of a landed row also
-  names the member behind it.
+  nothing under the name of another unit or of a core connector.
+
+  The `captured_by` of a landed row also names the member behind it. That member may also be a
+  [service member](../how-to/declare-a-service-member.md), which nobody signs in as.
 
   A source also declares the **identity keys it stands behind** (`Merges`, empty by default). A unit
   supplies every field its provider gives it and decides nothing about identity. The declaration says

@@ -32,6 +32,12 @@ func (w *csvWriters) createActivity(ctx context.Context, row migration.Row, type
 	if why.Code != "" {
 		return skippedFor(why), nil
 	}
+	twin := noteTwinKey(w.runID, in, "")
+	if kept, found, err := w.filedNoteTwin(ctx, twin); err != nil {
+		return migration.EnsureResult{}, err
+	} else if found {
+		return w.collapseOntoNote(ctx, row, kept)
+	}
 	err := w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
 		// The seat the owner names wins over the seat an author address resolves
 		// to, and an author cell that names no seat stands as written.
@@ -46,7 +52,8 @@ func (w *csvWriters) createActivity(ctx context.Context, row migration.Row, type
 		if err != nil {
 			return ids.UUID{}, fmt.Errorf("import: creating activity %s: %w", row.ExternalID, err)
 		}
-		return ids.UUID(activity.Id), nil
+		filed := ids.UUID(activity.Id)
+		return filed, w.recordNoteTwinTx(ctx, tx, twin, filed)
 	})
 	if why, refused := activityRefusalOf(err, textFields(row.Fields)); refused {
 		return skippedFor(why), nil
@@ -83,6 +90,9 @@ func (w *csvWriters) predictActivityCreate(ctx context.Context, row migration.Ro
 	err := w.activities.ProbeLinkWrites(ctx, in.Links)
 	if why, refused := activityRefusalOf(err, textFields(row.Fields)); refused {
 		return predictUnwritable, why, nil
+	}
+	if err == nil && w.predictedNoteTwin(noteTwinKey(w.runID, in, textFields(row.Fields)[activityTargetLinks])) {
+		return predictUnwritable, migration.Why(migration.ReasonNoteRepeated), nil
 	}
 	return predictCreate, migration.Reason{}, err
 }

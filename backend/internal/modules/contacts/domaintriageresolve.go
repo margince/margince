@@ -9,10 +9,9 @@ package contacts
 // rather than from the raw domain label, with an employment edge for every
 // contact who has accumulated on that domain while the question was open.
 //
-// One transaction: the verdict, the company, its domain, the edges, the
-// dossier's findings and the dossier binding all commit together or not at all.
-// A ledger row reading 'company' beside no company would be a lie the
-// ensure ladder then acts on.
+// One transaction: verdict, company, domain, edges, findings and dossier binding
+// commit together. A ledger row reading 'company' beside no company is a lie
+// the ensure ladder then acts on.
 
 import (
 	"context"
@@ -89,14 +88,9 @@ func (s *Store) ResolveDomainTriage(ctx context.Context, in ResolveDomainTriageI
 //
 // A domain that is somebody's name is theirs, and that settles.
 //
-// Anything else is WITHHELD, not created. It used to get "the company it
-// would have got before triage existed" on the reasoning that a real business
-// whose site is down must not lose its record over an outage — but the record
-// it got was a title-cased domain label with every field empty, and the
-// disposition settled so nothing ever asked again. That produced 40 of 108
-// companies in a real import, "Pwc" and "Mckinsey" among them, each frozen
-// as a shell. A withheld domain stays PENDING with its reason recorded, so the
-// site can be read again later and a human can decide meanwhile.
+// Anything else is WITHHELD, not created. A company named from the domain
+// label with every field empty is a shell nothing would ask about again. A
+// withheld domain stays PENDING with its reason, so the site can be read later.
 func (s *Store) ResolveUnreadableDomainTriage(ctx context.Context, in ResolveDomainTriageInput) (ResolveDomainTriageResult, error) {
 	var res ResolveDomainTriageResult
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -154,6 +148,11 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 	if in.Status == DomainCompany && prior.Suppressed() {
 		return ResolveDomainTriageResult{}, nil
 	}
+	// Today's site does not speak for contacts who wrote years ago, so old
+	// evidence goes to a human before any automatic verdict settles the domain.
+	if stale, err := withholdForStaleEvidence(ctx, tx, in, prior); err != nil || stale {
+		return ResolveDomainTriageResult{}, err
+	}
 	if in.Status != DomainCompany {
 		return ResolveDomainTriageResult{}, settleDisposition(ctx, tx, in, nil)
 	}
@@ -164,13 +163,13 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 		}
 		return ResolveDomainTriageResult{}, withholdDomainTx(ctx, tx, in.Domain, PendingForwardedIdentity, string(evidence), in.ReadID)
 	}
-	// The crawl read the site as it stands TODAY. Evidence older than the
-	// threshold does not argue that this company is there now, so the question
-	// is handed to a human instead of answered from a decade-old thread. The
-	// contacts keep their mail and gain no employer, which is the same state
-	// they were already in.
-	if stale, err := withholdForStaleEvidence(ctx, tx, in, prior); err != nil || stale {
-		return ResolveDomainTriageResult{}, err
+	// An employer on a personal page and a founder's brand read the same, so a
+	// human answers which one this is.
+	if offDomain, err := siteNameIsOffTheSendersDomain(ctx, tx, in); err != nil || offDomain {
+		if err != nil {
+			return ResolveDomainTriageResult{}, err
+		}
+		return ResolveDomainTriageResult{}, withholdDomainTx(ctx, tx, in.Domain, PendingUnevidenced, in.Evidence, in.ReadID)
 	}
 
 	res, err := s.adoptOrCreateTriagedCompany(ctx, tx, in, prior)

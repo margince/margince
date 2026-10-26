@@ -45,6 +45,7 @@ function claim(over: Partial<ConversationClaim> = {}): ConversationClaim {
     kind: "commitment_ours",
     body: "Send the pilot quote",
     source_activity_id: "a-1",
+    occurred_precision: "instant",
     source_quote: "I'll send the quote on Monday.",
     status: "open",
     needs_review: false,
@@ -184,6 +185,7 @@ describe("the Commitments card's rows", () => {
     view.next_steps = {
       data: [
         {
+          occurred_precision: "instant",
           offers_email: false,
           id: "t-1",
           kind: "task",

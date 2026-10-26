@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // Reconcile keeps ongoing agreements and delivery from becoming account endings.
@@ -32,17 +33,20 @@ func ReconcileForDecision(ctx context.Context, tx pgx.Tx, company ids.CompanyID,
 
 func reconcileContinuity(ctx context.Context, tx pgx.Tx, company ids.CompanyID, now time.Time, lock bool) (Finding, error) {
 	finding, err := latest(ctx, tx, company, lock)
-	if finding.OccurredAt.After(now) {
-		finding.Incomplete = true
-	}
-	if err != nil || !Actionable(finding) {
+	if err != nil {
 		return finding, err
 	}
-	location, err := identity.ZoneAppliedTx(ctx, tx)
+	zone, err := identity.ZoneAppliedTx(ctx, tx)
 	if err != nil {
-		return Finding{}, err
+		return finding, err
 	}
-	active, complete, err := contracts.CompanyContinuityTx(ctx, tx, company, storekit.WorkspaceDay(now, location), lock)
+	if !occurredday.Begun(occurredday.Moment{At: finding.OccurredAt, DateOnly: finding.DateOnly}, now, zone) {
+		finding.Incomplete = true
+	}
+	if !Actionable(finding) {
+		return finding, nil
+	}
+	active, complete, err := contracts.CompanyContinuityTx(ctx, tx, company, storekit.WorkspaceDay(now, zone), lock)
 	if err != nil {
 		return Finding{}, err
 	}

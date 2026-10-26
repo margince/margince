@@ -71,8 +71,8 @@ func TestFromConfigRefusesAConfiguredStoreWithNoRegion(t *testing.T) {
 }
 
 // The filesystem provider is chosen by MARGINCE_BLOBSTORE_PATH, which exists so
-// that an installation with local disk and no object storage service — the
-// desktop bundle — has attachments at all. Without it those endpoints answer
+// that an installation with local disk and no object storage service has
+// attachments at all. Without it those endpoints answer
 // 501 and no configuration a user can supply changes that without running a
 // separate service.
 func TestFromConfigWithAPathReturnsAConfiguredStore(t *testing.T) {

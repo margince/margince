@@ -2,9 +2,9 @@
 # golangci-lint over the Go modules the backend lint lane cannot reach.
 #
 # `make -C backend lint` runs `golangci-lint run ./...` from backend/, and
-# `./...` stops at the module boundary. The repo has eleven Go modules; that
-# pattern covers exactly one. The other ten — backend/tools, composition, the
-# units under extensions/, desktop/launcher, and the deliberately-broken
+# `./...` stops at the module boundary, and the repo has a dozen Go modules;
+# that pattern covers exactly one. The others — backend/tools, composition,
+# tools/, the units under extensions/, and the deliberately-broken
 # fixtures/extensions/ — were linted by nothing. Not by CI and not by `make check`,
 # which saw only the craft gate there. That is how an
 # unformatted file reached main with every gate green (extjobs.go), and the

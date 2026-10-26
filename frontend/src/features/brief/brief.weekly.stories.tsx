@@ -306,7 +306,7 @@ export const OutlookWithoutACurrency: Story = {
 export const Scorecard: Story = {
   render: frozen(
     <InTheWeeksPanel>
-      <ScorecardPanel scorecard={weeklyScorecard} />
+      <ScorecardPanel scorecard={weeklyScorecard} weekStart="2026-06-01" />
     </InTheWeeksPanel>,
   ),
 };
@@ -317,7 +317,10 @@ export const Scorecard: Story = {
 export const ScorecardDealsOnly: Story = {
   render: frozen(
     <InTheWeeksPanel>
-      <ScorecardPanel scorecard={{ deal: weeklyScorecard.deal }} />
+      <ScorecardPanel
+        scorecard={{ deal: weeklyScorecard.deal }}
+        weekStart="2026-06-01"
+      />
     </InTheWeeksPanel>,
   ),
 };
@@ -333,19 +336,21 @@ function bothBlocks() {
   return { lead, deal };
 }
 
-// A CLEAN WEEK AND AN EMPTY ONE, in the two places the scorecard has to tell
-// them apart. No lead breached its target, so the card that LEADS with breaches
-// reads zero over "all answered in target" rather than counting exceptions that
-// were not there; and no deal was open, so the three coverage cards have no
-// denominator — "0 of 0 open deals" would be a rate nobody could have scored,
-// and the bars under it a share of nothing. One arm for all three, because the
-// strip is read across and three spellings of one absence read as three weeks.
+// A clean week and an empty one. Every lead that arrived got a recorded first
+// response and none breached; the row says so and claims no target met. No
+// deal was open, so the three coverage cards have no denominator. One arm for
+// all three, because three spellings of one absence read as three weeks.
 export const ScorecardNothingToCover: Story = {
   render: frozen(
     <InTheWeeksPanel>
       <ScorecardPanel
         scorecard={{
-          lead: { ...bothBlocks().lead, breached: 0 },
+          lead: {
+            ...bothBlocks().lead,
+            arrived: 9,
+            answered_in_target: 9,
+            breached: 0,
+          },
           deal: {
             ...bothBlocks().deal,
             open: 0,
@@ -354,6 +359,7 @@ export const ScorecardNothingToCover: Story = {
             close_date_sound: 0,
           },
         }}
+        weekStart="2026-06-01"
       />
     </InTheWeeksPanel>,
   ),

@@ -137,12 +137,12 @@ func TestEveryOutboundRequestSaysWhoIsCallingOrRegistersWhyNot(t *testing.T) {
 // this walks the module root — and a superset of it, which is the safe
 // direction for a census whose finding is an absence.
 //
-// Past this module on purpose. A request built in an extension, in the CLI or
-// on the desktop leaves the same installation and reaches the same operator,
-// and a census that stopped at the backend's edge would have claimed "every
-// outbound request" over trees it never read.
+// Past this module by design. A request built in an extension or in the CLI
+// leaves the same installation and reaches the same operator. A census that
+// stopped at the backend's edge would claim "every outbound request" over
+// trees it never read.
 var outboundSurfaceRoots = []string{
-	".", "../extensions", "../desktop", "../fixtures",
+	".", "../extensions", "../fixtures",
 }
 
 // outboundBuilderFloor is what the walk found when this census landed.

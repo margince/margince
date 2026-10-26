@@ -360,7 +360,7 @@ func restoreTheStrictTrigger(t *testing.T) {
 func theRepairsOwnTrigger(t *testing.T) string {
 	t.Helper()
 	const migration = "../../migrations/core/" +
-		"1792990894_the_credential_repair_may_rewrite_an_audit_image.up.sql"
+		"1793020774_the_credential_repair_may_rewrite_an_audit_image.up.sql"
 	body, err := os.ReadFile(migration)
 	if err != nil {
 		t.Fatalf("reading the trigger's own migration: %v", err)

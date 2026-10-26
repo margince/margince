@@ -6,6 +6,7 @@ package compose
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -18,9 +19,9 @@ func validateExtractEnvelope(payload extractPayload, thread settledThread) strin
 		return "the reply carries no events key, so it did not answer the question"
 	}
 	events := payload.events()
-	if len(events) > extractMaxEvents {
+	if len(events) > thread.eventCap() {
 		return fmt.Sprintf("the conversation yielded %d events, and at most %d may be reported",
-			len(events), extractMaxEvents)
+			len(events), thread.eventCap())
 	}
 	supplied := map[string]bool{}
 	for _, message := range thread.Messages {
@@ -58,18 +59,22 @@ func validateExtractPayload(payload extractPayload, thread settledThread) string
 }
 
 // extractSchema is the generation-time shape guardrail.
-func extractSchema() json.RawMessage {
+func extractSchema(thread settledThread) json.RawMessage {
+	sent := make([]string, len(thread.Messages))
+	for i, message := range thread.Messages {
+		sent[i] = thread.messageLabel(message.ID.String())
+	}
 	return schema.Must(schema.Object(
 		map[string]schema.Node{
 			"events": schema.Array(schema.Object(
 				map[string]schema.Node{
 					commitmentMeaningField:  commitmentMeaningSchema(),
 					paramKind:               schema.Enum("contract_ended", extractKindOpportunity, "commitment_made"),
-					"message_id":            schema.String(),
+					"message_id":            requestedIDNode(sent),
 					"summary":               schema.String(),
 					claimQuoteKey:           schema.String(),
 					"due_date":              schema.String(),
-					"restated_message_id":   schema.String(),
+					"restated_message_id":   requestedIDNode(append(slices.Clone(sent), "")),
 					"restated_quote":        schema.String(),
 					"promiser_ref":          schema.String(),
 					commitmentRecipientsKey: schema.Array(schema.String()),
@@ -84,6 +89,7 @@ func extractSchema() json.RawMessage {
 					extractionConfidenceKey: schema.Number(),
 				},
 				paramKind, "message_id", "summary", claimQuoteKey, "due_date", "promiser_ref", extractionConfidenceKey,
+				commitmentMeaningField,
 			)),
 		},
 		"events",

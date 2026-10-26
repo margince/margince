@@ -69,6 +69,7 @@ var tableOwners = map[string]string{
 	"conversation_claim":        "internal/modules/contacts",
 	"company":                   "internal/modules/contacts",
 	"company_domain":            "internal/modules/contacts",
+	"company_offered_value":     "internal/modules/contacts",
 	"company_relationship_type": "internal/modules/contacts",
 	"signal_thread_scan":        "internal/compose",
 	// One reader's frozen walk through their worklist. Owned by the compose
@@ -457,7 +458,9 @@ var tableOwners = map[string]string{
 	// class per day. compose owns it because the refusal happens at the
 	// extension port, before any module is reached.
 	"extension_ingest_refusal": "internal/compose",
-	"idempotency_key":          "internal/compose",
+	// Where a unit's bulk load stopped, written by the extension port.
+	"extension_ingest_position": "internal/compose",
+	"idempotency_key":           "internal/compose",
 	// A bulk change and the user's confirmation of one. compose owns both
 	// because the change spans three record types in two modules, and the
 	// engine that writes them is the composition layer's (bulkchange.go).

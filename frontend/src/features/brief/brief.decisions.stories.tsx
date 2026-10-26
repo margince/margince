@@ -177,3 +177,26 @@ export const CommercialDecisionDeck: Story = {
   args: { ...BASE, items: deckItems([commercialApproval()]) },
   play: Deck.play,
 };
+
+// A decision whose preview cites a source logged for its date alone: the
+// source date is that date on the record's clock, with no time.
+const dayLifecycleApproval = commercialApproval();
+export const DayLifecycleSource: Story = {
+  args: {
+    ...BASE,
+    items: deckItems([
+      {
+        ...dayLifecycleApproval,
+        preview: dayLifecycleApproval.preview && {
+          ...dayLifecycleApproval.preview,
+          lifecycle_evidence: {
+            scope: "company",
+            occurred_at: "2026-07-31T12:00:00Z",
+            occurred_precision: "day",
+          },
+        },
+      },
+    ]),
+  },
+  play: RowOpen.play,
+};

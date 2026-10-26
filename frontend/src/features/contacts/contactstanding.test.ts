@@ -67,6 +67,7 @@ function promise(id: string, due: string | null): Claim {
     kind: "commitment_ours",
     body: `Promise ${id}`,
     source_activity_id: "a-1",
+    occurred_precision: "instant",
     source_quote: "We will send it",
     status: "open",
     needs_review: false,
@@ -266,6 +267,7 @@ describe("contactFigures", () => {
         activities: {
           data: [
             {
+              occurred_precision: "instant",
               offers_email: false,
               id: "a-1",
               kind: "email",
@@ -279,6 +281,7 @@ describe("contactFigures", () => {
               email_summary: {
                 activity_id: "a-1",
                 occurred_at: "2026-08-01T09:00:00Z",
+                occurred_precision: "instant",
                 version: 1,
                 direction: "inbound",
                 display_status: "team",
@@ -331,6 +334,7 @@ describe("the timeline", () => {
         next_meeting: {
           activity_id: "m-2",
           starts_at: "2026-08-20T09:00:00Z",
+          occurred_precision: "instant",
           subject: "Walkthrough",
         },
       },

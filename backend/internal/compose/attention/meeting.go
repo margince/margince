@@ -15,6 +15,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // meetingItem renders one appointment still ahead today.
@@ -55,6 +56,8 @@ func meetingItem(meeting Meeting) crmcontracts.AttentionItem {
 		Subject: subjectOf("activity", meeting.ID),
 		DueAt:   &starts,
 		Actions: []crmcontracts.AttentionItemActions{},
+		// The start is the row's time, so its precision travels with it.
+		OccurredPrecision: dayOnly(meeting.Precision),
 	}
 	// Only where a contact is named. A meeting with no attendee this reader may
 	// see has no page to read the brief on, so the field stays absent and the
@@ -116,11 +119,13 @@ const (
 const meetingKindUnprepared = "unprepared"
 
 // classifyMeeting: a meeting starting within the horizon is the most urgent
-// thing on the page, because it happens whether or not the reader acts.
+// thing on the page, because it happens whether or not the reader acts. A day
+// meeting has no start to be near, so it is never one.
 func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	level := levelAgreed
 	reasons := []crmcontracts.WorklistReason{}
-	if item.DueAt != nil && item.DueAt.Sub(asOf) <= meetingHorizon {
+	day := occurredday.IsStatedDay(item.OccurredPrecision)
+	if !day && item.DueAt != nil && item.DueAt.Sub(asOf) <= meetingHorizon {
 		level = levelWaiting
 		reasons = append(reasons, reason("meeting_soon", nil))
 	}
@@ -150,8 +155,11 @@ func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		}
 	}
 	// A meeting's start time IS a deadline the reader is racing, so it counts
-	// as work due — unlike a proposal's expiry, which merely lapses.
-	stampDeadline(&row, item.DueAt, asOf)
+	// as work due, unlike a proposal's expiry, which merely lapses. A day
+	// meeting's stored noon is no start, so it is never late.
+	if !day {
+		stampDeadline(&row, item.DueAt, asOf)
+	}
 	row.Because = reasons
 	row.Host = hostOnTheWire(item)
 	return ranked{
@@ -212,6 +220,8 @@ func meetingAwaitingOutcomeItem(meeting MeetingAwaitingOutcome) crmcontracts.Att
 			crmcontracts.AttentionItemActionsDecide,
 		},
 		Version: meeting.Version,
+		// Read with the time it describes: a day meeting has no start hour.
+		OccurredPrecision: dayOnly(meeting.Precision),
 	}
 	// The same owner the forward lane names, for the same reason: a row that
 	// says whose meeting it was is one a manager can read a team's day from.

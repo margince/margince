@@ -124,7 +124,9 @@ func decodeEvent(raw []byte, owner string) (meetingmap.Event, error) {
 func decode(ev rawEvent, owner string) meetingmap.Event {
 	attendees := make([]meetingmap.Actor, 0, len(ev.Attendees))
 	for _, a := range ev.Attendees {
-		attendees = append(attendees, meetingmap.Actor{Email: a.Email, Name: a.DisplayName, Room: a.isRoom()})
+		attendees = append(attendees, meetingmap.Actor{
+			Email: a.Email, Name: a.DisplayName, Room: a.isRoom(), Response: guestResponse(a.ResponseStatus),
+		})
 	}
 	return meetingmap.Event{
 		ID:            ev.ID,
@@ -140,6 +142,19 @@ func decode(ev rawEvent, owner string) meetingmap.Event {
 		Attendees:     attendees,
 		PartiesHidden: ev.partiesHidden(),
 	}
+}
+
+// guestResponses maps Google's responseStatus onto the connector's answers. A
+// value Google adds later reads as no stated answer rather than a wrong one.
+var guestResponses = map[string]string{
+	"accepted":    connector.ResponseAccepted,
+	"declined":    connector.ResponseDeclined,
+	"tentative":   connector.ResponseTentative,
+	"needsaction": connector.ResponseNeedsAction,
+}
+
+func guestResponse(status string) string {
+	return guestResponses[strings.ToLower(strings.TrimSpace(status))]
 }
 
 // ownerDeclined reports that the connected account answered NO to this
@@ -192,6 +207,34 @@ func ownerAttendee(attendees []eventActor, owner string) (eventActor, bool) {
 // participants were recorded.
 func ParticipantsOf(raw []byte, owner string) (connector.Parties, error) {
 	return meetingmap.ParticipantsOf(raw, owner, decodeEvent)
+}
+
+// RecordOf maps one stored event resource to the record live capture writes
+// for owner, refusing with connector.ErrSkip what live capture drops.
+func RecordOf(raw []byte, owner string) (connector.NormalizedRecord, error) {
+	recs, err := meetingmap.NormalizeOne(raw, owner, connectorName, decodeEvent)
+	if err != nil {
+		return connector.NormalizedRecord{}, err
+	}
+	return recs[0], nil
+}
+
+// SelfAddress is the address of the calendar a stored event was read from:
+// the entry Google marked `self`, or "" when none is.
+func SelfAddress(raw []byte) (string, error) {
+	var ev rawEvent
+	if err := json.Unmarshal(raw, &ev); err != nil {
+		return "", fmt.Errorf("gcal: parsing calendar event: %w", err)
+	}
+	if ev.Organizer.Self {
+		return strings.ToLower(strings.TrimSpace(ev.Organizer.Email)), nil
+	}
+	for _, a := range ev.Attendees {
+		if a.Self {
+			return strings.ToLower(strings.TrimSpace(a.Email)), nil
+		}
+	}
+	return "", nil
 }
 
 // SettlementOf answers what one stored event resource settles as, for the

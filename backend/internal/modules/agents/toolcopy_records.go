@@ -97,7 +97,8 @@ var updateRecordCopy = toolCopy{
 		"of the write has not happened. It names the record by id; when a name matches " +
 		"two records, a human picks. owner_id is NOT neutral — ownership decides visibility, so " +
 		"reassigning moves the record onto someone else's book and can take it off the owner's. " +
-		"An activity moved to another day keeps its time of day unless the user names one.",
+		"An activity moved to another day keeps its time of day unless the user names one; " +
+		`moving a date-only one, send occurred_precision "day" again, or it reads as a time.`,
 	Instead: "Use progress_deal to move a deal between stages, and relink_activity " +
 		"to change what an activity is about; neither is a field edit.",
 	Retain: "Send if_version with the version you read, and keep the staged approval id from the " +

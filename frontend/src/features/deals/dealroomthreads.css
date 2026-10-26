@@ -87,6 +87,12 @@
   border-bottom: 1px solid var(--borderSubtle);
 }
 
+/* A file the buyer no longer gets: its paper recedes, so the tile does not
+   read as one still shared. */
+.board-doc-lapsed .board-doc-stage {
+  opacity: 0.6;
+}
+
 .board-doc-page {
   display: flex;
   flex-direction: column;

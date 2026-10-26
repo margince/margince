@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -93,9 +94,17 @@ func storedAsThisSeatsTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, dire
 		return ownAddressHeldAloneTx(ctx, tx, seat, stored)
 	case direction == connector.DirectionOutbound && foldAddress(stored) == foldAddress(recipient):
 		var sentBySeat bool
+		// The participant row has to stand for the seat being on the message.
+		// A row naming only a seat, on mail whose connector stamp names no
+		// mailbox, records a guessed owner.
+		//
+		// Standing to rewrite another mailbox's row is not a guess's to give.
 		err := tx.QueryRow(ctx, `
-			SELECT EXISTS (SELECT 1 FROM activity_participant
-			  WHERE activity_id = $1 AND role = 'from' AND user_id = $2)`, id, seat).Scan(&sentBySeat)
+			SELECT EXISTS (
+			  SELECT 1 FROM activity_participant p
+			    JOIN activity a ON a.id = p.activity_id
+			   WHERE p.activity_id = $1 AND p.role = 'from' AND p.user_id = $2
+			     AND `+auth.ParticipantStandsSQL("p", "a")+`)`, id, seat).Scan(&sentBySeat)
 		if err != nil {
 			return false, fmt.Errorf("capture: reading who sent %s: %w", id, err)
 		}

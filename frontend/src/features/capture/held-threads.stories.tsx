@@ -92,7 +92,9 @@ const MIXED: HeldThread[] = [
     attempts: 1,
     has_message: true,
     kind: "personnel",
-    occurred_at: "2026-08-28T08:15:00Z",
+    // A message known only by its date shows that date and no time.
+    occurred_at: "2026-08-28T12:00:00Z",
+    occurred_precision: "day",
   },
   // The verdict outlives its evidence: an erasure inside the window nulls the
   // activity and the hold stands. The row says the message is gone rather than

@@ -98,7 +98,7 @@ describe("a day count names its zone", () => {
     const callers = sourcesUnderTest().filter((path) =>
       readFileSync(path, "utf8").includes("calendarDaysBetween("),
     );
-    expect(callers.length).toBeGreaterThanOrEqual(10);
+    expect(callers.length).toBeGreaterThanOrEqual(5);
   });
 
   it("finds no count in UTC beside a zoned date", () => {

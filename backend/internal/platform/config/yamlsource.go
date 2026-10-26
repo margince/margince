@@ -15,8 +15,10 @@ import (
 )
 
 type yamlLayer struct {
-	path   string
-	values map[string]*yaml.Node
+	path     string
+	values   map[string]*yaml.Node
+	repeated []error
+	envRefs  []string
 }
 
 // unknownKey is a key no program reads, and the line that writes it.
@@ -48,6 +50,8 @@ func readYAML(path string, names known) (yamlLayer, []unknownKey, error) {
 	if root.Kind != yaml.MappingNode {
 		return layer, nil, fmt.Errorf("%s: the top level must be a mapping", path)
 	}
+	layer.repeated = repeatedKeys(path, "", root)
+	layer.envRefs = envRefsIn(root)
 	var unknown []unknownKey
 	for i := 0; i+1 < len(root.Content); i += 2 {
 		name := root.Content[i].Value
@@ -58,6 +62,52 @@ func readYAML(path string, names known) (yamlLayer, []unknownKey, error) {
 	}
 	slices.SortFunc(unknown, func(a, b unknownKey) int { return strings.Compare(a.key, b.key) })
 	return layer, unknown, nil
+}
+
+// repeatedKeys finds a key written twice in one mapping, anywhere in the file,
+// bootstrap sections included. The parser keeps the last one silently, so an
+// operator who pasted a block below an older copy cannot tell which one wins.
+func repeatedKeys(path, prefix string, n *yaml.Node) []error {
+	var faults []error
+	switch n.Kind {
+	case yaml.MappingNode:
+		firstLine := map[string]int{}
+		for i := 0; i+1 < len(n.Content); i += 2 {
+			keyNode := n.Content[i]
+			key := keyNode.Value
+			if prefix != "" {
+				key = prefix + "." + key
+			}
+			if line, seen := firstLine[keyNode.Value]; seen {
+				faults = append(faults, fmt.Errorf("%s: %s appears on lines %d and %d; keep one", path, key, line, keyNode.Line))
+			} else {
+				firstLine[keyNode.Value] = keyNode.Line
+			}
+			faults = append(faults, repeatedKeys(path, key, n.Content[i+1])...)
+		}
+	case yaml.SequenceNode:
+		for _, item := range n.Content {
+			faults = append(faults, repeatedKeys(path, prefix, item)...)
+		}
+	}
+	return faults
+}
+
+// envRefsIn names every variable a ${env:NAME} value in the document reads, in
+// any section. A reference under a bootstrap root or another program's setting
+// still consumes its variable.
+func envRefsIn(n *yaml.Node) []string {
+	if n.Kind == yaml.ScalarNode {
+		if name, ok := envRefName(n.Value); ok {
+			return []string{name}
+		}
+		return nil
+	}
+	var names []string
+	for _, child := range n.Content {
+		names = append(names, envRefsIn(child)...)
+	}
+	return names
 }
 
 // walk skips a null: `key:` with nothing after it, or `key: null`, is how an

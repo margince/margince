@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -116,19 +117,33 @@ func TestTheWordingChangesOnlyWhenTheCacheKeyDoes(t *testing.T) {
 	// nothing able to notice.
 	contact := time.Date(2026, 8, 20, 14, 0, 0, 0, time.UTC)
 	sameDay := time.Date(2026, 8, 20, 23, 30, 0, 0, time.UTC)
-	if got := statusCopyFor("en").since(sameDay, contact, time.UTC); got != "today" {
+	if got := statusCopyFor("en").since(sameDay, occurredday.Moment{At: contact}, time.UTC); got != "today" {
 		t.Fatalf("late on the same day = %q, want today", got)
 	}
 	// 24 hours have NOT elapsed, but the calendar day has turned — and so has
 	// the cache key, so the wording must turn with it.
 	justAfterMidnight := time.Date(2026, 8, 21, 0, 30, 0, 0, time.UTC)
-	if got := statusCopyFor("en").since(justAfterMidnight, contact, time.UTC); got != "yesterday" {
+	if got := statusCopyFor("en").since(justAfterMidnight, occurredday.Moment{At: contact}, time.UTC); got != "yesterday" {
 		t.Fatalf("just after midnight = %q, want yesterday", got)
 	}
 	// The reverse: 24 hours HAVE elapsed but the day has not turned again.
 	sameDayNextAfternoon := time.Date(2026, 8, 21, 15, 0, 0, 0, time.UTC)
-	if got := statusCopyFor("en").since(sameDayNextAfternoon, contact, time.UTC); got != "yesterday" {
+	if got := statusCopyFor("en").since(sameDayNextAfternoon, occurredday.Moment{At: contact}, time.UTC); got != "yesterday" {
 		t.Fatalf("a day later in the afternoon = %q, want yesterday — the key has not moved again", got)
+	}
+}
+
+// A day entry counts from its own date. Its stored noon UTC is already the
+// next morning in Kiritimati, so counting that instant there says today.
+func TestADayContactCountsFromItsOwnDate(t *testing.T) {
+	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatal(err)
+	}
+	logged := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	morningAfter := time.Date(2026, 8, 21, 9, 0, 0, 0, kiritimati)
+	if got := statusCopyFor("en").since(morningAfter, occurredday.Moment{At: logged, DateOnly: true}, kiritimati); got != "yesterday" {
+		t.Fatalf("a day contact dated yesterday = %q, want yesterday", got)
 	}
 }
 

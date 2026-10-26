@@ -72,7 +72,7 @@ func mailOrigins(ctx context.Context, tx pgx.Tx, mails []ids.UUID) (map[ids.UUID
 	if err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, sprintf(`SELECT a.id, a.kind, a.subject, a.occurred_at FROM activity a
+	rows, err := tx.Query(ctx, sprintf(`SELECT a.id, a.kind, a.subject, a.occurred_at, a.occurred_precision FROM activity a
 		 WHERE a.id = ANY($%d) AND a.kind IN ('%s', '%s') AND a.archived_at IS NULL AND %s`,
 		set, crmcontracts.ActivityKindEmail, crmcontracts.ActivityKindMessage, orUnbounded(content)), args...)
 	if err != nil {
@@ -83,7 +83,7 @@ func mailOrigins(ctx context.Context, tx pgx.Tx, mails []ids.UUID) (map[ids.UUID
 	for rows.Next() {
 		var mail ids.UUID
 		origin := &crmcontracts.AttachmentOrigin{}
-		if err := rows.Scan(&mail, &origin.Kind, &origin.Subject, &origin.OccurredAt); err != nil {
+		if err := rows.Scan(&mail, &origin.Kind, &origin.Subject, &origin.OccurredAt, &origin.OccurredPrecision); err != nil {
 			return nil, fmt.Errorf("activities: reading where the files came from: %w", err)
 		}
 		origin.ActivityId = openapi_types.UUID(mail)

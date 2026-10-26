@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -31,6 +32,9 @@ import (
 type LastTouch struct {
 	InboundAt  *time.Time
 	OutboundAt *time.Time
+	// The precisions of the rows behind InboundAt and OutboundAt: "day" when
+	// that row names only a date, empty when there is no row.
+	InboundPrecision, OutboundPrecision string
 	// Contact is the newest exchange of any direction that counts as contact
 	// (relstrength.InteractionCountsSQL): a note is not contact, and neither is
 	// a meeting called off. Nil when there was none.
@@ -43,6 +47,8 @@ type LastContact struct {
 	At         time.Time
 	Kind       string
 	ActivityID ids.ActivityID
+	// Precision is "day" when At is only a date's anchor.
+	Precision string
 }
 
 // lastTouchCompanyAlias is the company alias LastTouchFor's statement and its
@@ -63,8 +69,8 @@ const lastTouchCompanyAlias = "co"
 // form, so the header can never disagree with the list under it. It carries the
 // caller's activity row scope, so a rep sees the last message THEY may read
 // rather than the account's true last one.
-// A message dated after now has not been sent yet, so it is neither side's last
-// word: a scheduled send must not hide the real last one.
+// A message that has not happened yet (occurredday.BegunSQL) is neither side's
+// last word: a scheduled send must not hide the real last one.
 func LastTouchFor(
 	ctx context.Context, tx pgx.Tx, companyIDs []ids.CompanyID, now time.Time, opts AssembleOptions,
 ) (map[ids.CompanyID]LastTouch, error) {
@@ -97,7 +103,7 @@ func LastTouchFor(
 		touched += " AND " + scope
 	}
 	touched += opts.projectScope(arg)
-	touched += fmt.Sprintf(" AND a.occurred_at <= $%d", arg(now))
+	touched += " AND " + occurredday.HappenedSQL("a", fmt.Sprintf("$%d", arg(now)))
 	roster, err := employeeRoster(ctx, arg)
 	if err != nil {
 		return nil, err
@@ -108,21 +114,25 @@ func LastTouchFor(
 	// and, like the contact page, read only what the whole workspace may see.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH touched AS (
-		  SELECT reach.company_id, a.id, a.occurred_at, a.kind,
+		  SELECT reach.company_id, a.id, a.occurred_at, a.occurred_precision, a.kind,
 		         %[5]s AND %[7]s AS they_wrote, %[5]s AND %[8]s AS we_wrote,
 		         %[6]s AS is_interaction
 		  %[2]s
 		), clocks AS (
 		  SELECT company_id,
 		         max(occurred_at) FILTER (WHERE they_wrote) AS inbound_at,
-		         max(occurred_at) FILTER (WHERE we_wrote) AS outbound_at
+		         max(occurred_at) FILTER (WHERE we_wrote) AS outbound_at,
+		         %[9]s AS inbound_precision,
+		         %[10]s AS outbound_precision
 		  FROM touched GROUP BY company_id
 		), last_contact AS (
-		  SELECT DISTINCT ON (company_id) company_id, id, occurred_at, kind
+		  SELECT DISTINCT ON (company_id) company_id, id, occurred_at, occurred_precision, kind
 		  FROM touched WHERE is_interaction
 		  ORDER BY company_id, occurred_at DESC, id DESC
 		)
-		SELECT %[1]s.id, clocks.inbound_at, clocks.outbound_at, lc.id, lc.occurred_at, lc.kind
+		SELECT %[1]s.id, clocks.inbound_at, clocks.outbound_at,
+		       coalesce(clocks.inbound_precision, ''), coalesce(clocks.outbound_precision, ''),
+		       lc.id, lc.occurred_at, lc.kind, coalesce(lc.occurred_precision, '')
 		FROM company %[1]s
 		LEFT JOIN clocks ON clocks.company_id = %[1]s.id
 		LEFT JOIN last_contact lc ON lc.company_id = %[1]s.id
@@ -130,10 +140,16 @@ func LastTouchFor(
 		lastTouchCompanyAlias, touched, wantedPos, visible,
 		relstrength.DirectionClockSQL("a")+" AND "+relstrength.WorkspaceAudienceSQL("a"), relstrength.InteractionCountsSQL("a"),
 		employeeSQL(roster, relstrength.TheyWroteSQL("emp.contact_id", "a")),
-		employeeSQL(roster, relstrength.WeWroteSQL("a")+" AND "+employeeReachedSQL)), args...)
+		employeeSQL(roster, relstrength.WeWroteSQL("a")+" AND "+employeeReachedSQL),
+		occurredday.LatestPrecisionSQL("", "they_wrote"), occurredday.LatestPrecisionSQL("", "we_wrote")), args...)
 	if err != nil {
 		return nil, err
 	}
+	return scanLastTouches(rows, out)
+}
+
+// scanLastTouches reads LastTouchFor's rows into out, one company each.
+func scanLastTouches(rows pgx.Rows, out map[ids.CompanyID]LastTouch) (map[ids.CompanyID]LastTouch, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var companyID ids.CompanyID
@@ -141,12 +157,14 @@ func LastTouchFor(
 		var contactID *ids.ActivityID
 		var contactAt *time.Time
 		var contactKind *string
+		var contactPrecision string
 		if err := rows.Scan(&companyID, &touch.InboundAt, &touch.OutboundAt,
-			&contactID, &contactAt, &contactKind); err != nil {
+			&touch.InboundPrecision, &touch.OutboundPrecision,
+			&contactID, &contactAt, &contactKind, &contactPrecision); err != nil {
 			return nil, err
 		}
 		if contactID != nil && contactAt != nil && contactKind != nil {
-			touch.Contact = &LastContact{At: *contactAt, Kind: *contactKind, ActivityID: *contactID}
+			touch.Contact = &LastContact{At: *contactAt, Kind: *contactKind, ActivityID: *contactID, Precision: contactPrecision}
 		}
 		out[companyID] = touch
 	}

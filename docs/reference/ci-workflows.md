@@ -20,7 +20,6 @@ workflow is outside the gate:
 | `sbom.yml` | manual dispatch only | No |
 | `release.yml` | manual dispatch only | No |
 | `release-tag.yml` | `v*` tag push | No (runs on a tag, after every merge) |
-| `desktop-macos.yml` / `desktop-windows.yml` | `desktop/**` pull requests, dispatch, `workflow_call`; macOS also on a `desktop/**` push to `main` | No (not required checks) |
 
 The merge queue rule is off, so the `merge_group` trigger in `ci.yml` does not run.
 `main-health.yml` is the only workflow that publishes the SonarCloud analysis of `main`.
@@ -301,7 +300,7 @@ Manual dispatch only. It cuts a margince-constellation release with the version 
 the dist service of the constellation deployment at `test.margince.com`. The year is pinned to 1970
 while this is a PoC, so these releases sort below any real dated release. The build is the
 workflow run number. A constellation release is a server deployment, which GitHub does not host.
-The GitHub release and the desktop bundles belong to `release-tag.yml`, which owns the
+The GitHub release belongs to `release-tag.yml`, which owns the
 `github-release` job.
 
 A release is a decision someone makes; there is no push trigger. So the role images have no other
@@ -355,7 +354,7 @@ The tag is the version, read and checked by
 [`scripts/release-tag-version.sh`](../../scripts/release-tag-version.sh)
 (`make test-release-tag-version`). A plain `v1.0.0` becomes the download the page offers by
 default; a tag with an ending, such as `v1.0.0-rc.1`, becomes a `pre-release`. A tag the script cannot
-read is refused in seconds, before either bundle compiles PostgreSQL from source.
+read is refused in seconds, before anything is published.
 
 More checks share that first job. The tag points at a commit on `main`. `LICENSE` carries the
 release's Change Date and version, checked by
@@ -370,31 +369,14 @@ That last check picks releases, and does not gate merges.
 To merge past `ci` is a standing decision here, so a missing result passes. A result that exists
 but is not done yet refuses.
 
-`desktop-macos` and `desktop-windows` are then called (not copied). They are the same shared
-workflows the pull request check runs, so a release bundle cannot differ from the bundle CI
-approved.
-
-The release job renames the macOS tarball after the version. It runs `zip` again on the Windows
-tree that `download-artifact` opened. It publishes the draft with both added, or creates the release
-for a pre-release that has no draft.
+The release job publishes the draft, or creates the release for a pre-release that has no draft.
+It ships no files: the notes end with a link to the install steps in
+[deploy-margince.md](../how-to/deploy-margince.md).
 
 Under the draft's text it lists the pull requests merged since
 the last plain release. A release body holds at most 125,000 characters, and the list gets what the
 draft leaves. The list comes from
 [`scripts/release-notes.sh`](../../scripts/release-notes.sh) (`make test-release-notes`).
 
-The release job queues and does not cancel. By that job the lane is making a release and uploading files, and a stopped run would
+The release job queues and does not cancel. By that job the lane is making a release and writing its notes, and a stopped run would
 leave that half done. How to drive it is in [cut-a-release.md](../how-to/cut-a-release.md).
-
-## `desktop-macos.yml` / `desktop-windows.yml`
-
-Each builds the desktop folder, with all it needs, for its own system. That is the only system
-it can be built on. pgvector has no build system but `nmake` against MSVC, and the event bus needs
-`MSYS2`. The macOS half changes every `Mach-O` load command to `@rpath`, and signs each changed file
-again.
-
-Each runs on pull requests only for `desktop/**`, so a normal change never costs a Postgres
-compile. Each also runs on manual dispatch, and on `workflow_call` from `release-tag.yml`. The macOS
-lane also runs on a `desktop/**` push to `main`, so the merged tree is built once more; the Windows
-lane does not. The macOS lane uploads a tarball, because `upload-artifact` does not keep the
-bit that lets a file run. The Windows lane has no such bit, and uploads the folder.

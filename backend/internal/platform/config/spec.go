@@ -6,6 +6,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"gopkg.in/yaml.v3"
@@ -22,6 +23,16 @@ const (
 	RoleWorker  Role = "worker"
 	RoleMigrate Role = "migrate"
 )
+
+// Refusal is the line a program prints when it stops on err. Most of its errors
+// already open with the program's name, so the name is added only when missing.
+func (r Role) Refusal(err error) string {
+	msg := err.Error()
+	if strings.HasPrefix(msg, string(r)+": ") {
+		return msg
+	}
+	return string(r) + ": " + msg
+}
 
 // Spec declares a setting: its names, type, default, bounds and doc.
 type Spec[T any] struct {

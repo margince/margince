@@ -213,3 +213,16 @@
   padding: 0;
   list-style: none;
 }
+
+/* The lead card's opener is a button stretched over the card, so it sheds the
+   button's own box and reads as the card's title. */
+.lead-card-open {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}

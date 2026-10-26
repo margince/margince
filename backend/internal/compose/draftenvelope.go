@@ -8,6 +8,7 @@ package compose
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -39,6 +40,9 @@ func draftEnvelope(pool *pgxpool.Pool, log *slog.Logger) *draftfloor.Resolver {
 		}).
 		WithBaseLanguage(func(ctx context.Context) string {
 			return identity.BaseLanguageForPrompt(ctx, pool)
+		}).
+		WithZone(func(ctx context.Context) (*time.Location, error) {
+			return installationZone(ctx, pool)
 		}).
 		WithLogger(log)
 }

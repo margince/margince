@@ -70,17 +70,25 @@ func (w *pastActivityClockWorker) Work(ctx context.Context, _ *river.Job[PastAct
 // RefoldPastActivityClocks walks the activities whose time has come since the
 // stored mark, batch by batch, and answers how many it refolded. Each batch
 // refolds its records and advances the mark in one transaction, so a crash
-// costs at most one batch done twice.
+// costs at most one batch done twice. The day entries the walk cannot time go
+// first, read against the same mark.
 func RefoldPastActivityClocks(ctx context.Context, db *database.DB) (int, error) {
 	var mark activities.ClockRefoldMark
 	var asOf time.Time
+	var zone *time.Location
 	if err := db.Tx(ctx, func(tx pgx.Tx) (err error) {
-		mark, asOf, err = activities.ClockRefoldStartTx(ctx, tx)
+		if mark, asOf, err = activities.ClockRefoldStartTx(ctx, tx); err != nil {
+			return err
+		}
+		zone, err = identity.ZoneAppliedTx(ctx, tx)
 		return err
 	}); err != nil {
 		return 0, err
 	}
-	refolded := 0
+	refolded, err := refoldDayActivities(ctx, db, mark, asOf, zone)
+	if err != nil {
+		return refolded, err
+	}
 	for {
 		var batch activities.PassedActivities
 		err := db.Tx(ctx, func(tx pgx.Tx) (err error) {
@@ -101,6 +109,31 @@ func RefoldPastActivityClocks(ctx context.Context, db *database.DB) (int, error)
 			return refolded, nil
 		}
 		mark = batch.Through
+	}
+}
+
+// refoldDayActivities refolds the day entries whose moment came since the mark,
+// a batch to a transaction. They move no mark, so a crash repeats them all.
+func refoldDayActivities(ctx context.Context, db *database.DB, mark activities.ClockRefoldMark, asOf time.Time, zone *time.Location) (int, error) {
+	refolded := 0
+	var after activities.ClockRefoldMark
+	for {
+		var days activities.PassedActivities
+		err := db.Tx(ctx, func(tx pgx.Tx) (err error) {
+			days, err = activities.DayActivitiesComeTx(ctx, tx, mark, asOf, zone, after, pastActivityClockBatch)
+			if err != nil || days.Count == 0 {
+				return err
+			}
+			return refoldClocksTx(ctx, tx, days.Targets)
+		})
+		if err != nil {
+			return refolded, err
+		}
+		refolded += days.Count
+		if days.Count < pastActivityClockBatch {
+			return refolded, nil
+		}
+		after = days.Through
 	}
 }
 

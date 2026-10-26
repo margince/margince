@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { formatDate } from "../../format/format";
+import { activityDay } from "../../format/activitywhen";
 import type { Locale, Translator } from "../../i18n";
 import type { WorklistItem } from "./worklist.queries";
 
@@ -34,7 +34,12 @@ export function leadFactsText(
   if (lead.last_activity_at)
     parts.push(
       t("worklist.lead.lastTouch", {
-        date: formatDate(lead.last_activity_at, locale, zone),
+        date: activityDay(
+          lead.last_activity_at,
+          lead.last_activity_precision ?? "instant",
+          locale,
+          zone,
+        ),
       }),
     );
   if (lead.response_target_tracked === false)

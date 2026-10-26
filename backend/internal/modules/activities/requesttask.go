@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -40,7 +41,7 @@ func (s *Store) takeEmailRequest(ctx context.Context, tx pgx.Tx, in LogActivityI
 	args = append(args, s.now())
 	instant := fmt.Sprintf("$%d", len(args))
 	var pending bool
-	if err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT coalesce((%s) AND a.occurred_at <= %s, false) FROM activity a WHERE a.id = $%d`, reviewableRequestSQL(instant), instant, idPos), args...).Scan(&pending); err != nil {
+	if err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT coalesce((%s) AND %s, false) FROM activity a WHERE a.id = $%d`, reviewableRequestSQL(instant), occurredday.BegunSQL("a", instant), idPos), args...).Scan(&pending); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 	source, err := readActivityContent(ctx, tx, ids.From[ids.ActivityKind](id), storekit.LiveOnly)

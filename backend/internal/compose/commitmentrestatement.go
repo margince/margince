@@ -41,7 +41,9 @@ func validateRestatedEvidence(event extractedEvent, thread settledThread) string
 }
 
 func (x *SignalExtractor) withRestatedCommitment(ctx context.Context, tx pgx.Tx, thread settledThread, event extractedEvent, commitment Commitment) (Commitment, bool, error) {
-	if event.RestatedMessageID == "" {
+	if event.RestatedMessageID == "" || commitment.absentColleague {
+		// A promise kept for an absent colleague has no promiser to renew it.
+		// It is recorded as it was first made.
 		return commitment, true, nil
 	}
 	id, err := ids.Parse(event.RestatedMessageID)
@@ -52,12 +54,25 @@ func (x *SignalExtractor) withRestatedCommitment(ctx context.Context, tx pgx.Tx,
 	if err != nil {
 		return Commitment{}, false, err
 	}
-	if !samePromiser(commitment, verifiedCommitmentParties(parties)) {
+	verified := verifiedCommitmentParties(parties)
+	if !samePromiser(commitment, verified) {
 		return Commitment{}, false, errRefusedReading
 	}
 	message, found := citedMessage(thread, id)
 	if !found {
 		return Commitment{}, false, nil
+	}
+	if commitment.Seat != nil {
+		// The renewal must be the sender's own words too. A later "Robin will
+		// send it Friday" does not renew the sender's promise.
+		span, _ := evidenceSpan(textlang.CurrentMessage(message.Body), event.RestatedQuote)
+		absent, err := senderOwesAnAbsentColleaguesWork(ctx, tx, "seat:"+commitment.Seat.String(), span, verified)
+		if err != nil {
+			return Commitment{}, false, err
+		}
+		if absent {
+			return commitment, true, nil
+		}
 	}
 	if promisedOnAnothersPrivateThread(commitment) {
 		// A renewal is shown with its message's words, and the task is withheld

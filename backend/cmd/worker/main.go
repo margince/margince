@@ -49,7 +49,7 @@ func main() {
 	defer stop()
 
 	if err := run(ctx, os.Args[1:], os.Stdout); err != nil {
-		fmt.Fprintln(os.Stderr, "worker:", err)
+		fmt.Fprintln(os.Stderr, config.RoleWorker.Refusal(err))
 		os.Exit(1)
 	}
 }

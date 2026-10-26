@@ -81,6 +81,7 @@ func promoteParticipantsToContact(
 		   AND ap.contact_id IS NULL
 		   AND ap.user_id IS NULL
 		   AND ap.address IS NOT NULL
+		   AND NOT ap.past_party_cap
 		   AND EXISTS (
 		       SELECT 1 FROM contact_email pe
 		        WHERE pe.contact_id = $2 AND pe.archived_at IS NULL
@@ -94,7 +95,7 @@ func promoteParticipantsToContact(
 		       SELECT sub.id FROM activity_participant sub
 		        WHERE ($1::uuid IS NULL OR sub.activity_id = $1)
 		          AND sub.contact_id IS NULL AND sub.user_id IS NULL
-		          AND sub.address IS NOT NULL
+		          AND sub.address IS NOT NULL AND NOT sub.past_party_cap
 		          -- Correlated to THIS contact. A bound that picked the first N
 		          -- address-only rows in the workspace would let somebody else's
 		          -- backlog fill it: this contact stays selected by the sweep,

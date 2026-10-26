@@ -248,7 +248,7 @@ export function moveOpensComposer(item: WorklistItem): boolean {
   const move = item.move;
   return (
     move !== undefined &&
-    NAVIGABLE_MOVES.has(move.action) &&
+    (move.action === "draft_reply" || move.action === "draft_email") &&
     moveIsComplete(move) &&
     item.subject?.type === "contact"
   );

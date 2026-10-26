@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -88,7 +89,7 @@ func ownWords(
 		         JOIN activity_participant ap
 		           ON ap.activity_id = a.id AND ap.role = 'from' AND ap.contact_id = who.id
 		        WHERE a.direction = 'inbound' AND a.archived_at IS NULL
-		          AND a.occurred_at >= $%d AND (%s)
+		          AND %s AND (%s)
 		          AND EXISTS (
 		              SELECT 1 FROM activity_link tie
 		               WHERE tie.activity_id = a.id
@@ -97,7 +98,7 @@ func ownWords(
 		                                          WHERE company_id = $%d)))
 		        ORDER BY a.occurred_at DESC, a.id DESC
 		        LIMIT $%d) AS said ON TRUE`,
-		contactsPos, sincePos, scope, companyPos, companyPos, capPos), args...)
+		contactsPos, occurredday.FromSQL("a", fmt.Sprintf("$%d", sincePos)), scope, companyPos, companyPos, capPos), args...)
 	if err != nil {
 		return nil, fmt.Errorf("company360: reading what the contacts wrote: %w", err)
 	}

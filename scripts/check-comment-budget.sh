@@ -40,7 +40,7 @@ fi
 # and this gate runs inside ROOT_SCRIPT_GATES where a failure to open it would
 # fail `make check-backend` rather than this check.
 counts="$(
-	git diff --unified=0 "$base"...HEAD -- backend extensions fixtures desktop frontend \
+	git diff --unified=0 "$base"...HEAD -- backend extensions fixtures frontend \
 	| awk -f "$lib/lib-commentscan.awk" -f "$lib/lib-commentcount.awk" -v MODE=diff
 )"
 code="${counts%% *}"

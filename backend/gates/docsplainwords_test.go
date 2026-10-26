@@ -240,16 +240,16 @@ var plainPools = []struct{ prefix, list string }{
 // must equal its list's size, so a list that shrinks pins its cap lower with it.
 var plainCaps = map[string]int{
 	plainWordsFile:                     plainWordCap,
-	"docs/how-to/plain-words.txt":      1385,
-	"docs/explanation/plain-words.txt": 1657,
+	"docs/how-to/plain-words.txt":      1378,
+	"docs/explanation/plain-words.txt": 1644,
 	"docs/handbook/plain-words.txt":    1395,
-	"docs/reference/plain-words.txt":   1754,
-	plainProjectFile:                   1801,
+	"docs/reference/plain-words.txt":   1726,
+	plainProjectFile:                   1780,
 }
 
 // glossaryLegacyMax is how many names may still lack a meaning: the names pages
 // used before they joined the bar. It must equal that count, so it only goes down.
-const glossaryLegacyMax = 439
+const glossaryLegacyMax = 413
 
 const glossaryLegacyHeading = "## Names without a meaning yet"
 

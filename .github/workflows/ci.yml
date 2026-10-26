@@ -190,13 +190,12 @@ jobs:
               - 'AGENTS.md'
               - 'CLAUDE.md'
               - 'docs/**'
-              # The SPA and the launcher, because 48 gates under backend/gates/
-              # READ them: the vocabulary gate reads frontend comments, the
-              # design-system gates read its components, and the launcher's
-              # platform files are walked for build tags. Listed as whole trees
-              # rather than as the files those gates happen to name today — a
-              # scope that lists individual files stops covering the next one,
-              # which is how one frontend path came to sit in backend_db alone.
+              # The SPA, because 48 gates under backend/gates/ READ it: the
+              # vocabulary gate reads frontend comments and the design-system
+              # gates read its components. Listed as a whole tree rather than as
+              # the files those gates happen to name today — a scope that lists
+              # individual files stops covering the next one, which is how one
+              # frontend path came to sit in backend_db alone.
               #
               # A gate must RUN in a lane every path it reads can trigger. It
               # did not: a frontend-only PR broke the vocabulary gate and merged
@@ -210,7 +209,6 @@ jobs:
               # tests, so a frontend edit runs them and still boots no Postgres
               # shard — the cut this split exists to make.
               - 'frontend/**'
-              - 'desktop/**'
               # And everything else a gate opens. This list is DERIVED, not
               # remembered: gatelanetrigger_test.go resolves every path literal
               # in the suite against the tree and fails on one no pattern here
@@ -341,6 +339,13 @@ jobs:
               # alone has to re-run the lane that trusts its verdict.
               - 'scripts/sbom-license-parity.sh'
               - 'scripts/test-sbom-license-parity.sh'
+              # The embedded-binary declarations and the check that reads them.
+              # Its corpus is the build's own package list, so a dependency
+              # change can add a binary without either file being touched; the
+              # `deps` filter below covers that side.
+              - 'embedded-binaries.txt'
+              - 'scripts/embedded-binary-licenses.sh'
+              - 'scripts/test-embedded-binary-licenses.sh'
               # EVERY workflow, not just this one. syft catalogs a `uses:` as a
               # package, so any workflow that gains a reference changes what the
               # license gate judges — a pinned remote action brings its license,
@@ -470,26 +475,6 @@ jobs:
       - name: Unit-test time budget per package
         working-directory: .
         run: make test-budget LOG="$RUNNER_TEMP/check-backend.log"
-      # The launcher's own coverage profile, from the lane `make check-backend`
-      # just ran. It is a SECOND run of that module's suite — under a second
-      # and about a hundred tests — rather than a flag on the gate itself,
-      # because the gate must fail on the test result and not on whether a
-      # profile could be written.
-      #
-      # The product profile cannot contain a launcher line: that one is
-      # `go test -coverpkg=./...` over the backend module, and this module sits
-      # outside go.work on purpose. So without this the figure for shipped code
-      # a user runs is 0% however thoroughly it is tested, which is why it was
-      # excluded from the measurement rather than measured.
-      - name: Launcher coverage
-        working-directory: .
-        run: make test-desktop-launcher LAUNCHER_COVER_OUT=desktop/launcher/coverage.out
-      - name: Upload launcher coverage
-        uses: ./.github/actions/upload-artifact-retried
-        with:
-          name: go-coverage-launcher
-          path: desktop/launcher/coverage.out
-          if-no-files-found: ignore
 
   # The static half of the backend gate (`make check-static`: lint, vet,
   # arch-lint), beside deterministic-gates rather than inside it. On one runner
@@ -883,6 +868,14 @@ jobs:
       # review. Planted documents prove each way the three can disagree.
       - name: the licence comparison still catches a disagreement
         run: make test-sbom-license-parity
+      # An embedded binary carries a license the SBOM cannot see, because a
+      # `.wasm` is a build output and syft reads the module that ships it. The
+      # declarations are checked here rather than in the Go gates: the scan
+      # needs the module cache the license-gate job already has warm.
+      - name: every embedded binary declares what it was built from
+        run: make embedded-binary-licenses
+      - name: the embedded-binary check still refuses each way
+        run: make test-embedded-binary-licenses
       # syft and grant run through digest-pinned Docker images (see the Makefile),
       # so the runner needs only Docker — pre-installed on ubuntu-latest.
       # One step, because the retry has to wrap BOTH: `.syft.yaml` sets
@@ -992,7 +985,7 @@ jobs:
       # skipped area uploaded nothing); if-no-files-found tolerates the gap so
       # the scan still posts. The paths match sonar-project.properties
       # (backend/coverage.out, backend/coverage-extensions.out,
-      # desktop/launcher/coverage.out, frontend/coverage/lcov.info).
+      # frontend/coverage/lcov.info).
       - name: Download Go coverage
         if: ${{ env.SONAR_TOKEN != '' && needs.integration.result == 'success' }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -1005,12 +998,6 @@ jobs:
         with:
           name: go-coverage-extensions
           path: backend
-      - name: Download launcher coverage
-        if: ${{ env.SONAR_TOKEN != '' && needs.deterministic-gates.result == 'success' }}
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: go-coverage-launcher
-          path: desktop/launcher
       - name: Download FE coverage
         if: ${{ env.SONAR_TOKEN != '' && needs.frontend.result == 'success' }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2

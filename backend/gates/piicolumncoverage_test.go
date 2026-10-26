@@ -142,6 +142,8 @@ var erasureColumnBaseline = map[string][]string{
 		// subject wrote nor anything written about them — it is a reading OF the
 		// text, and the text itself is cleared on its own terms.
 		"owed_verdict",
+		// instant or day: how to read occurred_at, which the redaction keeps.
+		"occurred_precision",
 		// One of the eight iCalendar method words RFC 5546 defines, enforced by
 		// a CHECK. Nothing the subject wrote beyond which scheduling act it was.
 		"calendar_method",
@@ -171,6 +173,7 @@ var erasureColumnBaseline = map[string][]string{
 		"source_system",
 	},
 	"activity_participant": {
+		"response",
 		"role",
 	},
 	"approval": {
@@ -247,6 +250,10 @@ var erasureColumnBaseline = map[string][]string{
 		// it, source_author_name, which is a human's name. `lead` carries the
 		// same column and the same reading, a few entries up.
 		"source_system",
+		// The id the other system issued for this record: an opaque key that
+		// system chose, kept so a re-import finds the row. `lead` carries the
+		// same column and the same reading.
+		"source_id",
 		"visibility",
 		// Why an owner-scoped contact is its owner's: one of five values the
 		// column's CHECK closes, none of them anything about the subject.

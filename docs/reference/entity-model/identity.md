@@ -6,7 +6,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-31 columns · primary key `(id)` · referenced by 142 foreign keys
+32 columns · primary key `(id)` · referenced by 143 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -31,6 +31,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `routine_mail_scope` | `text` |  | One of `personal`, `team`, `combined`. |
 | `routine_mail_team_id` | `uuid` |  | Points at `team.id`. |
 | `seat_type` | `text`, default `'full'::text` | yes | One of `read`, `full`. |
+| `service_extension` | `text` |  |  |
 | `status` | `text`, default `'active'::text` | yes | One of `invited`, `active`, `suspended`, `deactivated`. |
 | `timezone` | `text` |  |  |
 | `weekly_delivery` | `text` |  |  |
@@ -61,6 +62,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `app_user_routine_delivery_time_check`: `CHECK ((routine_delivery_time ~ '^(working|([01][0-9]|2[0-3]):00)$'))`
 - `app_user_routine_mail_scope_check`: `CHECK ((routine_mail_scope = ANY (ARRAY['personal', 'team', 'combined'])))`
 - `app_user_seat_type_check`: `CHECK ((seat_type = ANY (ARRAY['read', 'full'])))`
+- `app_user_service_is_a_passwordless_agent`: `CHECK (((service_extension IS NULL) OR (is_agent AND (password_hash IS NULL) AND (service_extension <> ''))))`
 - `app_user_status_check`: `CHECK ((status = ANY (ARRAY['invited', 'active', 'suspended', 'deactivated'])))`
 - `app_user_weekly_delivery_check`: `CHECK (((weekly_delivery IS NULL) OR (weekly_delivery = ANY (ARRAY['none', 'email']))))`
 - `app_user_weekly_delivery_day_check`: `CHECK (((weekly_delivery_day >= 1) AND (weekly_delivery_day <= 7)))`
@@ -78,6 +80,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `app_user_forget_weekly_plan_responses`: `BEFORE DELETE FOR EACH ROW EXECUTE FUNCTION weekly_plan_commitment_forget_manager()`
+- `app_user_service_never_deleted`: `BEFORE DELETE FOR EACH ROW EXECUTE FUNCTION refuse_service_member_delete()`
 - `report_authority_user_change`: `BEFORE UPDATE OF status, archived_at, seat_type, is_agent FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
 - `report_authority_user_delete`: `BEFORE DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
 - `trg_app_user_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`

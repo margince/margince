@@ -8,14 +8,23 @@ import type { PeekContent } from "../../design-system/peek";
 import type { ReadingTone } from "../../design-system/readingtone";
 import type { StandingDim } from "../../design-system/standingdims";
 import {
+  type ActivityMoment,
+  activityDay,
+  activityDaysAway,
+  activityHasBegun,
+  activityIsAhead,
+  type OccurredPrecision,
+} from "../../format/activitywhen";
+import {
+  daysAgoText,
   formatDayMonth,
   formatDuration,
   formatNumber,
   formatSignedNumber,
-  relativeDays,
 } from "../../format/format";
 import { daysPast } from "../../format/lateness";
 import type { Locale, Translator } from "../../i18n";
+import { routeHash } from "../../lib/router";
 import { movesLastActivity } from "./lastactivity";
 import { promoteEligible, scoreFactorLabel } from "./leadpresentation";
 import { scoreTone } from "./leadpresentation.board";
@@ -34,6 +43,8 @@ export type ReadingContext = Readonly<{
   t: Translator;
   locale: Locale;
   zone: string;
+  // The record zone, which a date-only activity is read in.
+  record: string;
   // The instant the page read the lead at.
   asOf: string;
 }>;
@@ -72,33 +83,50 @@ export function ladderDates(
   const top = reached < 0 ? LADDER.length - 1 : reached;
   const dates: Partial<Record<LadderOpenStep, string>> = {};
   LADDER.slice(0, top + 1).forEach((step) => {
-    const at = enteredAt(lead, step, changes);
-    if (!at) {
+    const entered = enteredAt(lead, step, changes, ctx);
+    if (!entered) {
       return;
     }
-    const day = formatDayMonth(at, ctx.locale, ctx.zone);
+    const day = activityDay(
+      entered.at,
+      entered.precision,
+      ctx.locale,
+      entered.zone,
+      formatDayMonth,
+    );
     dates[step] =
       step === lead.status ? ctx.t("lead.ladder.enteredNow", { at: day }) : day;
   });
   return dates;
 }
 
+// A rung's date, the zone it is read in and its precision. The signal that
+// engaged the lead is read on the record's clock, a day entry by its own date.
 function enteredAt(
   lead: Lead,
   step: LadderOpenStep,
   changes: readonly StatusChange[],
-): string | undefined {
+  { zone, record }: ReadingContext,
+):
+  | Readonly<{ at: string; zone: string; precision: OccurredPrecision }>
+  | undefined {
   if (step === "new") {
-    return lead.created_at;
+    return { at: lead.created_at, zone, precision: "instant" };
   }
   const newest = changes
     .filter((change) => change.new_value === step)
     .sort((a, b) => Date.parse(b.changed_at) - Date.parse(a.changed_at))[0];
   if (newest) {
-    return newest.changed_at;
+    return { at: newest.changed_at, zone, precision: "instant" };
   }
-  return step === "engaged" && lead.status_set_by === "system"
-    ? (lead.qualification_evidence?.occurred_at ?? undefined)
+  const evidence = lead.qualification_evidence;
+  const signal = evidence?.occurred_at;
+  return step === "engaged" && lead.status_set_by === "system" && signal
+    ? {
+        at: signal,
+        zone: record,
+        precision: evidence?.occurred_precision ?? "instant",
+      }
     : undefined;
 }
 
@@ -212,7 +240,26 @@ export type LeadFigure = Readonly<{
   value: string;
   detail?: string;
   tone?: ReadingTone;
+  // The record the figure names, when it names one.
+  href?: string;
 }>;
+
+// The company figure opens the company once a human linked it, and says it is
+// not linked while the name is only typed.
+function companyFigureLink(
+  lead: Lead,
+  t: Translator,
+): Pick<LeadFigure, "detail" | "href"> {
+  if (lead.company_id) {
+    return {
+      detail: t("lead.figure.linked"),
+      href: routeHash({ screen: "companies", id: lead.company_id }),
+    };
+  }
+  return lead.company_name?.trim()
+    ? { detail: t("lead.figure.notLinked") }
+    : {};
+}
 
 /** The four cells under the timeline: first response, last touch, the next
  *  booked meeting, and the company the lead named. */
@@ -222,20 +269,22 @@ export function leadFigures(
   ctx: ReadingContext,
   // True once the page holds the lead's whole history.
   wholeHistory = false,
+  // The linked company's own name, which a rename may have moved from the typed one.
+  companyName: string | null | undefined = lead.company_name,
 ): LeadFigure[] {
   const { t } = ctx;
   return [
     firstResponseFigure(lead, ctx),
-    lastTouchFigure(lastTouchAt(lead, activities, ctx.asOf, wholeHistory), ctx),
-    meetingFigure(nextBookedMeeting(activities, ctx.asOf), ctx),
+    lastTouchFigure(
+      lastTouchAt(lead, activities, ctx.asOf, ctx.record, wholeHistory),
+      ctx,
+    ),
+    meetingFigure(nextBookedMeeting(activities, ctx.asOf, ctx.record), ctx),
     {
       key: "company",
       label: t("lead.readings.company"),
-      value: lead.company_name?.trim() || t("lead.readings.noCompany"),
-      // Free text on the lead, never a link: a lead has no company record.
-      detail: lead.company_name?.trim()
-        ? t("lead.figure.notLinked")
-        : undefined,
+      value: companyName?.trim() || t("lead.readings.noCompany"),
+      ...companyFigureLink(lead, t),
     },
   ];
 }
@@ -243,37 +292,54 @@ export function leadFigures(
 /**
  * When the lead was last touched, as of `asOf`: the newest row that moves last
  * activity by then. The stored field stands in only for a cut page with no
- * such row.
+ * such row. It names no kind, so it stands once it has begun in `record`.
  */
 function lastTouchAt(
   lead: Lead,
   activities: readonly Activity[],
   asOf: string,
+  record: string,
   wholeHistory: boolean,
-): string | undefined {
+): ActivityMoment | undefined {
   const now = Date.parse(asOf);
   const happened = activities
-    .filter((row) => movesLastActivity(row, now))
+    .filter((row) => movesLastActivity(row, now, record))
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))[0];
-  if (happened || wholeHistory) {
-    return happened?.occurred_at;
+  if (happened) {
+    return { at: happened.occurred_at, precision: happened.occurred_precision };
   }
   const stored = lead.last_activity_at;
-  return stored && Date.parse(stored) <= now ? stored : undefined;
+  const precision = lead.last_activity_precision ?? "instant";
+  return !wholeHistory &&
+    stored &&
+    activityHasBegun(stored, precision, now, record)
+    ? { at: stored, precision }
+    : undefined;
 }
 
 function lastTouchFigure(
-  at: string | undefined,
+  touch: ActivityMoment | undefined,
   ctx: ReadingContext,
 ): LeadFigure {
-  const { t, locale, zone } = ctx;
+  const { t, locale, zone, record } = ctx;
+  if (touch === undefined) {
+    return {
+      key: "last-touch",
+      label: t("lead.figure.lastTouch"),
+      value: t("standing.noneYet"),
+    };
+  }
+  const { at, precision } = touch;
+  const now = Date.parse(ctx.asOf);
   return {
     key: "last-touch",
     label: t("lead.figure.lastTouch"),
-    value: at ? formatDayMonth(at, locale, zone) : t("standing.noneYet"),
-    detail: at
-      ? relativeDays(at, t, locale, zone, new Date(ctx.asOf))
-      : undefined,
+    value: activityDay(at, precision, locale, zone, formatDayMonth),
+    detail: daysAgoText(
+      -activityDaysAway(at, precision, now, zone, record),
+      t,
+      locale,
+    ),
   };
 }
 
@@ -328,7 +394,13 @@ function meetingFigure(
   return {
     key: "meeting",
     label,
-    value: formatDayMonth(meeting.occurred_at, locale, zone),
+    value: activityDay(
+      meeting.occurred_at,
+      meeting.occurred_precision,
+      locale,
+      zone,
+      formatDayMonth,
+    ),
     detail: meeting.subject?.trim() || t("lead.figure.booked"),
     tone: "success",
   };
@@ -338,6 +410,7 @@ function meetingFigure(
 export function nextBookedMeeting(
   activities: readonly Activity[],
   asOf: string,
+  record: string,
 ): Activity | undefined {
   const now = Date.parse(asOf);
   return activities
@@ -345,7 +418,7 @@ export function nextBookedMeeting(
       (row) =>
         row.kind === "meeting" &&
         row.meeting_status === "booked" &&
-        Date.parse(row.occurred_at) > now,
+        activityIsAhead(row.occurred_at, row.occurred_precision, now, record),
     )
     .sort((a, b) => Date.parse(a.occurred_at) - Date.parse(b.occurred_at))[0];
 }

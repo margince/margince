@@ -40,9 +40,10 @@ type HeldThread struct {
 	// personnel, financial_corporate and the rest — empty while pending.
 	Kind string
 	// Subject and OccurredAt come from the message that opened the thread, so
-	// a reader can tell one held thread from another.
+	// a reader can tell one held thread from another. Precision rides beside OccurredAt.
 	Subject    string
 	OccurredAt *time.Time
+	Precision  *string
 	// HasActivity is whether the message this hold was raised about still
 	// exists — read WITHOUT the content clause, because existence and
 	// readability are different questions.
@@ -144,6 +145,7 @@ func HeldThreadsFor(ctx context.Context, db *database.DB) ([]HeldThread, error) 
 			       a.id                    AS activity_id,
 			       a.subject,
 			       a.occurred_at,
+			       a.occurred_precision,
 			       v.attempts,
 			       present.id IS NOT NULL  AS has_activity
 			  FROM capture_thread_verdict v
@@ -167,7 +169,7 @@ func HeldThreadsFor(ctx context.Context, db *database.DB) ([]HeldThread, error) 
 			var t HeldThread
 			var subject *string
 			if err := rows.Scan(&t.ThreadKey, &t.Status, &t.Kind, &t.ActivityID,
-				&subject, &t.OccurredAt, &t.Attempts, &t.HasActivity); err != nil {
+				&subject, &t.OccurredAt, &t.Precision, &t.Attempts, &t.HasActivity); err != nil {
 				return fmt.Errorf("capture: listing a seat's held threads: %w", err)
 			}
 			// The subject stays gated, and its own NULL still means only "no

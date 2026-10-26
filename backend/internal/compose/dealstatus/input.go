@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -21,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -29,7 +31,7 @@ import (
 // are rendered into, which is Go code and so the half a digest cannot reach. It
 // rides the fingerprint so a card built from the old shape is rewritten rather
 // than served forever.
-const projectionVersion = "deal-status-projection-6"
+const projectionVersion = "deal-status-projection-7"
 
 // promptVersion is DERIVED from the prompt as it is SENT — boundary rule
 // included — so rewording it rewrites the cards whether or not anybody
@@ -133,7 +135,7 @@ func project(f facts, move crmcontracts.DealStatusCardMove) StatusInput {
 		if unfinishedTask(a) {
 			continue
 		}
-		in.Timeline = append(in.Timeline, actIn(a, f.now))
+		in.Timeline = append(in.Timeline, actIn(a, f.now, f.loc))
 	}
 	for _, t := range f.openTasks {
 		in.OpenTasks = append(in.OpenTasks, taskIn(t, f.now))
@@ -149,7 +151,7 @@ func project(f facts, move crmcontracts.DealStatusCardMove) StatusInput {
 			if len(in.Timeline) >= maxTimelineRows {
 				in.Timeline = in.Timeline[:maxTimelineRows-1]
 			}
-			in.Timeline = append(in.Timeline, actIn(inbound, f.now))
+			in.Timeline = append(in.Timeline, actIn(inbound, f.now, f.loc))
 		}
 	}
 	return in
@@ -171,10 +173,12 @@ func healthIn(h *deals.DealHealth) []FactorIn {
 	}
 }
 
-func actIn(a crmcontracts.Activity, now time.Time) ActIn {
+// actIn dates an activity: a day entry by its own date, an instant by the date
+// it falls on in the installation zone.
+func actIn(a crmcontracts.Activity, now time.Time, loc *time.Location) ActIn {
 	out := ActIn{
 		ID: a.Id.String(), Kind: string(a.Kind),
-		At: a.OccurredAt.Format("2006-01-02"), When: whenOf(a, now),
+		At: occurredday.DateIn(activitywhen.MomentOf(a), loc).Format(time.DateOnly), When: whenOf(a, now, loc),
 	}
 	if a.Direction != nil {
 		out.Direction = string(*a.Direction)
@@ -206,8 +210,15 @@ func unfinishedTask(a crmcontracts.Activity) bool {
 }
 
 // whenOf says whether a row has happened. The deal's timeline holds booked
-// meetings alongside past contact, and only this tells them apart.
-func whenOf(a crmcontracts.Activity, now time.Time) string {
+// meetings alongside past contact, and only this tells them apart. A day entry
+// is scheduled until its date is over in the installation zone.
+func whenOf(a crmcontracts.Activity, now time.Time, loc *time.Location) string {
+	if occurredday.IsDay(a.OccurredPrecision) {
+		if !occurredday.Ended(a.OccurredAt, now, loc) {
+			return "scheduled"
+		}
+		return "past"
+	}
 	if a.OccurredAt.After(now) {
 		return "scheduled"
 	}

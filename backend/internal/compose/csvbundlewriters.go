@@ -9,6 +9,8 @@ import (
 	"slices"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -89,19 +91,34 @@ func newBundleWriters(
 	if err != nil {
 		return nil, err
 	}
+	zone, err := runInstallationZone(ctx, db)
+	if err != nil {
+		return nil, err
+	}
 	for _, part := range parts {
 		cols, err := readImportColumns(ctx, db, part.Object)
 		if err != nil {
 			return nil, err
 		}
 		w := newCSVWriters(db, runID, part, options, b.links, cols)
-		w.owners, w.tagNames, w.dealStages = b.owners, b.tags, stages
+		w.owners, w.tagNames, w.dealStages, w.zone = b.owners, b.tags, stages, zone
 		b.parts[part.Object] = w
 		if b.fallback == nil {
 			b.fallback = w
 		}
 	}
 	return b, nil
+}
+
+// runInstallationZone reads the zone that says which date is today for a run.
+func runInstallationZone(ctx context.Context, db *database.DB) (*time.Location, error) {
+	var zone *time.Location
+	err := db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		zone, err = installationZoneTx(ctx, tx)
+		return err
+	})
+	return zone, err
 }
 
 // runDealStages reads the pipelines a run's deal rows are checked against. An

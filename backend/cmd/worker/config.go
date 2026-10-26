@@ -44,9 +44,7 @@ type workerConfig struct {
 	redisAddr    string
 	// redisPassword is the bus credential, empty where the instance requires
 	// none. The bus carries job payloads and therefore CRM data, so an
-	// instance reachable by anything but this deployment has to require one —
-	// the desktop bundle's loopback bus does, and generates it per
-	// installation.
+	// instance reachable by anything but this deployment has to require one.
 	redisPassword     string
 	routingPath       string
 	fakeBrain         bool

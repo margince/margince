@@ -33,6 +33,7 @@ const zone = viewerZone();
 
 function replyRow(subject: WorklistItem["subject"]): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "r1",
     source: "customer_waiting",
     level: 1,
@@ -307,6 +308,7 @@ describe("itemTitle — an incident names what broke, never an internal id", () 
     cause?: string;
     label?: string;
   }): WorklistItem => ({
+    occurred_precision: "instant",
     id: "i-1",
     source: "automation_run",
     level: 3,
@@ -358,6 +360,7 @@ describe("itemTitle — an incident names what broke, never an internal id", () 
 
 describe("itemTitle — a capture connection says which kind it is", () => {
   const health = (over: Partial<WorklistItem>): WorklistItem => ({
+    occurred_precision: "instant",
     id: "c-1",
     source: "capture_health",
     level: 3,
@@ -405,6 +408,7 @@ describe("itemTitle — a group counts in the reader's plural", () => {
     key: NonNullable<WorklistItem["batch"]>["key"],
     count: number,
   ): WorklistItem => ({
+    occurred_precision: "instant",
     id: "g-1",
     source: "automation_run",
     level: 3,
@@ -567,6 +571,7 @@ describe("the open_meeting_brief move", () => {
 
 function briefRow(withContact: string | undefined): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "m1",
     source: "meeting",
     level: 2,
@@ -596,6 +601,7 @@ describe("moveHref — the reconnect move", () => {
     // hiding all three — `relationship_cools` is not a consequence the contract
     // has ever held.
     const row: WorklistItem = {
+      occurred_precision: "instant",
       id: "p-9",
       source: "relationship_decay",
       category: "system",

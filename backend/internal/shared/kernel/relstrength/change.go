@@ -28,7 +28,7 @@ package relstrength
 import (
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // The thresholds a change clears before it is worth putting in front of
@@ -85,11 +85,11 @@ type Change struct {
 // module cannot import the compose package that reads them.
 type Touches struct {
 	// LastTouch is the newest exchange of any direction.
-	LastTouch *time.Time
+	LastTouch *occurredday.Moment
 	// LatestInbound is when they last wrote.
-	LatestInbound *time.Time
+	LatestInbound *occurredday.Moment
 	// Preceding is the newest exchange strictly before LatestInbound.
-	Preceding *time.Time
+	Preceding *occurredday.Moment
 }
 
 // ChangeInputs are the counted facts the derivation needs. As with Inputs, the
@@ -104,18 +104,18 @@ type ChangeInputs struct {
 	// no band ever appears to move.
 	Previous Inputs
 	// LatestInbound is when they last wrote to us; nil if they never have.
-	LatestInbound *time.Time
+	LatestInbound *occurredday.Moment
 	// LastTouch is the newest interaction of any direction, the moment a
 	// quiet relationship is counted from. The caller reads it from the same
 	// statement that names the sent and received dates a surface prints.
-	LastTouch *time.Time
+	LastTouch *occurredday.Moment
 	// Zone is the calendar every day count here is drawn in. Nil means UTC.
 	Zone *time.Location
 	// PrecedingInteraction is the last interaction of any direction strictly
 	// before LatestInbound — the far side of the silence that reply broke.
 	// Nil when their reply is the first interaction on record, which is a
 	// first contact rather than a return.
-	PrecedingInteraction *time.Time
+	PrecedingInteraction *occurredday.Moment
 }
 
 // Changes returns what has happened to this relationship, most consequential
@@ -146,20 +146,21 @@ func Changes(in ChangeInputs, now time.Time) []Change {
 // itself: what makes it news is the silence it broke, and a reply two months
 // ago that ended a two-day lull is not news however old it is.
 func repliedAfterGap(in ChangeInputs, now time.Time) (Change, bool) {
-	if in.LatestInbound == nil || in.PrecedingInteraction == nil {
+	inbound, preceding := in.LatestInbound, in.PrecedingInteraction
+	if inbound == nil || preceding == nil {
 		return Change{}, false
 	}
-	gap := elapsed.Days(*in.PrecedingInteraction, *in.LatestInbound, in.Zone)
+	gap := occurredday.DaysBetween(*preceding, *inbound, in.Zone)
 	if gap < ReplyGapDays {
 		return Change{}, false
 	}
 	// A reply that itself went quiet afterwards is not the headline any more —
 	// the silence since is. Bounding it by the same window the score folds
 	// keeps the two telling one story.
-	if elapsed.Days(*in.LatestInbound, now, in.Zone) > WindowDays {
+	if occurredday.DaysSince(*inbound, now, in.Zone) > WindowDays {
 		return Change{}, false
 	}
-	return Change{Kind: ChangeRepliedAfterGap, At: *in.LatestInbound, Days: gap}, true
+	return Change{Kind: ChangeRepliedAfterGap, At: inbound.At, Days: gap}, true
 }
 
 // wentQuiet reports an established relationship that has stopped.
@@ -167,15 +168,15 @@ func repliedAfterGap(in ChangeInputs, now time.Time) (Change, bool) {
 // "Established" is doing the work: a contact nobody has ever spoken to has not
 // gone quiet, they were never loud, and saying otherwise turns every dormant
 // record into an alert.
-func wentQuiet(lastInteraction *time.Time, now time.Time, zone *time.Location) (Change, bool) {
+func wentQuiet(lastInteraction *occurredday.Moment, now time.Time, zone *time.Location) (Change, bool) {
 	if lastInteraction == nil {
 		return Change{}, false
 	}
-	days := elapsed.Days(*lastInteraction, now, zone)
+	days := occurredday.DaysSince(*lastInteraction, now, zone)
 	if days < QuietDays {
 		return Change{}, false
 	}
-	return Change{Kind: ChangeWentQuiet, At: *lastInteraction, Days: days}, true
+	return Change{Kind: ChangeWentQuiet, At: lastInteraction.At, Days: days}, true
 }
 
 // bandMoved reports the §4 band crossing between the comparison window and

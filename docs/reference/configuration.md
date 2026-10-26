@@ -51,6 +51,8 @@ stops on any of these:
 - a value that fails the check of its setting or seed;
 - a required value that no source sets;
 - a `--config-file` that does not exist;
+- a key written twice in one mapping of a YAML file, named with both lines:
+  `config/margince.yaml: log_level appears on lines 5 and 40; keep one`;
 - an old posture file beside the base file, such as `margince.dev.yaml` beside `margince.yaml`,
   unless `--config-file` names that same file.
 
@@ -70,6 +72,10 @@ came from. A secret shows `<secret>` in place of its value.
 does, then stops. It prints the trace and the variables no program reads to stdout and every fault
 to stderr. It exits 0 when the configuration is valid and 1 when it is not, and it needs no database
 or network. A stored setting with no boot source shows as unset, since the database is not read.
+
+Each program checks only the settings it reads. A setting that only the other program reads is
+listed as `not checked here`, and the last line says how many there are. `make check-config` runs
+the check on both programs.
 
 **The Configuration page.** Settings → Configuration lists each setting with its value and its
 source. `GET /v1/installation/configuration` returns the same list, with `value: null` and
@@ -108,7 +114,8 @@ plain secret, and takes one of these references, which also work in the other so
 
 - `${file:/path}` reads the file and removes one line break at its end. The source names the path. A
   file that cannot be read stops the boot and names the path, and so does one over 64 KiB.
-- `${env:NAME}` reads the variable `NAME` from the environment. An unset `NAME` stops the boot.
+- `${env:NAME}` reads the variable `NAME` from the environment, never from the `.env` file. An unset
+  `NAME` stops the boot. The report of variables no program reads never names `NAME`.
 - `${none}` says the secret is absent. Only `email.smtp.password` takes it; see
   [The vault may hold copies of the two deployment credentials](#the-vault-may-hold-copies-of-the-two-deployment-credentials).
 
@@ -1244,9 +1251,8 @@ use 0 then would put the process on a bus it was set up to stay off. A UNIX sock
 (`/var/run/redis.sock`) is an address, not a host with an ending, and is passed through whole.
 
 `--redis-password` is the bus credential, where the Redis server needs one. Empty is the normal case
-on a network the deployment controls. Set it when anything else can reach the bus; the desktop
-bundle makes one for each installation, because its bus listens on loopback. Set it through the
-environment, because every process on the machine can read argv.
+on a network the deployment controls. Set it when anything else can reach the bus. Set it through
+the environment, because every process on the machine can read argv.
 
 **Why it exists.** The stream names and consumer groups are constants (`gw:events:crm:*`, `cg:*`).
 So two installations pointed at one Redis database share one consumer group per name.
@@ -1365,8 +1371,7 @@ the endpoint wins, because it may already hold objects this installation wrote. 
 local folder in its place would make the attachments that are already there go missing.
 
 - **The path provider** is for an installation with local storage and no object storage service.
-  That is a deployment on one machine, and the desktop bundle, whose launcher sets it by default to
-  `data/blobs` inside the installation folder.
+  That is a deployment on one machine.
 - Attachments, company logos and CSV import bodies all go through the same `Store` seam, so all of
   them work on both providers.
 - The path provider is not a store shared by many machines. It keeps no copies, no versions and no
@@ -1573,10 +1578,19 @@ unset. For the database verbs, the DSN must name another database, such as `post
 The image entrypoint scripts in `scripts/deploy/` read these before they start a binary. The binaries then
 resolve their other flags from the `MARGINCE_*` values above. A file mounted at `/.env` is passed to
 `margince-migrate`, the api and the worker as `--env-file /.env`, so it ranks below the environment
-the container gets. The scripts read the values below from it too, without exporting it. Put
-`MARGINCE_ENV` in the environment, never in `/.env`: a value there stops the boot. The steps that use them are in
-[how-to/deploy-margince.md](../how-to/deploy-margince.md), and the template with notes is
-[`.env.example`](../../.env.example).
+the container gets. The scripts read the values below from it too, without exporting it. The steps
+that use them are in [how-to/deploy-margince.md](../how-to/deploy-margince.md), and the template with
+notes is [`.env.example`](../../.env.example).
+
+Because `/.env` is a file the programs read, not one the shell loads, three kinds of value belong in
+the environment the container gets:
+
+- `MARGINCE_ENV`, `MARGINCE_CONFIG`, `MARGINCE_CONFIG_FILE`, `MARGINCE_ENV_FILE` and
+  `MARGINCE_CONFIG_TRACE`: they choose the files, so a value in `/.env` stops the boot.
+- The variable a `${env:NAME}` reference reads: a reference reads the environment only, so a value in
+  `/.env` stops the boot with `references NAME, which is not set`.
+- A variable that Margince's settings do not read reaches no process from `/.env`. The Go runtime's
+  `GOMEMLIMIT`, `GOGC` and `GODEBUG` are such variables.
 
 | Env | Read by | Required | Meaning |
 |---|---|---|---|
@@ -1611,7 +1625,6 @@ the container gets. The scripts read the values below from it too, without expor
 | `MARGINCE_BENCH_TIER` | — | `make bench-perf` | the PERF-3/PERF-7 seed tier the perfbench suite builds: `smb` (default) or `mid_market`. A value it does not know fails the bench with a clear error. |
 | `MARGINCE_BENCH_RECORD` | — | `make bench-perf` | set to `1` to let the PERF-3/PERF-7 tier harness write its record into `docs/reference/perfbench/`, which `make perfdoc` turns into the published budgets page. Off by default, because the standing integration lane runs the same suite and must not write into the tree. `make bench-perf-check` clears it. The weekly scheduled job sets it through `make bench-perf` and offers the record as a pull request. `make bench-mobile` sets it for `perf-mobile.spec.ts` too. The `bench-record`/`bench-capture` targets need no switch, since running one means recording. |
 | `MARGINCE_BENCH_DAILY_SCALE` | `1` | `make bench-daily` | multiplies every count in the daily-use test data. It is a positive number; `0.05` suits a development run. A value other than `1` writes the record to the git-ignored `docs/reference/perfbench/dev/`, marked `development scale N`. `make perfdoc` never reads that folder, so the record never passes as the mid-market tier. A value that is not a positive number fails the bench. |
-| `MARGINCE_HOME` | — | desktop launcher | sets the installation folder the launcher works from. Unset, it uses the folder of the running program, which is where the launcher sits inside a shipped folder. To set it lets a dev stack run from a staging tree that is not shipped. Everything else the launcher touches comes from it: `data/` with the database and the blobs, `margince.yaml`, `margince.env`, and the `runtime/` that can be replaced. |
 
 ### Broker upstream preferences
 

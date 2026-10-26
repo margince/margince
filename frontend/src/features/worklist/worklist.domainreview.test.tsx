@@ -297,6 +297,7 @@ it("opens review from a forwarded row without implicit company creation", async 
   const user = userEvent.setup();
   transport(() => response({ data: [forwarded], page: { has_more: false } }));
   const item: WorklistItem = {
+    occurred_precision: "instant",
     id: forwarded.domain,
     source: "domain_question",
     category: "decisions",
@@ -325,6 +326,7 @@ it("keeps ordinary row decisions separate from forwarded review", async () => {
     return response(null, 202);
   });
   const item: WorklistItem = {
+    occurred_precision: "instant",
     id: undecided.domain,
     source: "domain_question",
     category: "decisions",
@@ -371,6 +373,7 @@ it("answers a vendor question from the row with create company or keep as vendor
       : response(null, 202);
   });
   const item: WorklistItem = {
+    occurred_precision: "instant",
     id: vendor.domain,
     source: "domain_question",
     category: "decisions",
@@ -403,6 +406,7 @@ it("answers a vendor question from the row with create company or keep as vendor
 it("offers no keep as vendor on a question that is not a vendor question", () => {
   transport(() => response(null, 202));
   const item: WorklistItem = {
+    occurred_precision: "instant",
     id: undecided.domain,
     source: "domain_question",
     category: "decisions",

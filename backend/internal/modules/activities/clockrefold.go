@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // clockRefoldSettle holds the window back from now, so a write that started
@@ -82,21 +83,63 @@ func PassedActivitiesTx(ctx context.Context, tx pgx.Tx, after ClockRefoldMark, a
 	if err := auth.RequireSystem(ctx); err != nil {
 		return PassedActivities{}, err
 	}
-	rows, err := tx.Query(ctx, `
-		WITH passed AS (
+	out, err := refoldTargetsTx(ctx, tx, `
 		  SELECT a.id, a.occurred_at FROM activity a
-		   WHERE a.archived_at IS NULL AND a.created_at < a.occurred_at
-		     AND (a.occurred_at, a.id) > ($1, $2) AND a.occurred_at <= $3
+		   WHERE a.archived_at IS NULL
+		     AND a.created_at < a.occurred_at -- occurred_at raw: written ahead of its time, a row the refold re-reads
+		     AND (a.occurred_at, a.id) > ($1, $2)
+		     AND a.occurred_at <= $3 -- occurred_at raw: the keyset bound of the walk; DayActivitiesComeTx reads day entries
 		   ORDER BY a.occurred_at, a.id
-		   LIMIT $4)
+		   LIMIT $4`, after.At, after.ID, asOf, limit)
+	if err != nil {
+		return PassedActivities{}, err
+	}
+	if out.Count < limit {
+		out.Through = ClockRefoldMark{At: asOf, ID: clockRefoldEnd}
+	}
+	return out, nil
+}
+
+// DayActivitiesComeTx reads the next batch of day entries the (occurred_at, id)
+// walk cannot time, after the given key. A day's moment is its date in zone,
+// not its stored noon. Another kind has begun from its date's start, which in
+// every zone east of UTC-12 is before the noon the walk waits for. So the run its
+// date begins reads it. A meeting takes place when its date ends, before its
+// noon east of UTC+12 and after it elsewhere. So the arm reads every meeting
+// whose date ended since the mark, and a refold the walk repeats changes nothing.
+// A batch shorter than limit is the last.
+func DayActivitiesComeTx(
+	ctx context.Context, tx pgx.Tx, mark ClockRefoldMark, asOf time.Time, zone *time.Location, after ClockRefoldMark, limit int,
+) (PassedActivities, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return PassedActivities{}, err
+	}
+	today, markDay := occurredday.AnchorIn(asOf, zone), occurredday.AnchorIn(mark.At, zone)
+	return refoldTargetsTx(ctx, tx, `
+		SELECT a.id, a.occurred_at FROM activity a
+		 WHERE a.archived_at IS NULL AND a.occurred_precision = 'day'
+		   AND ((a.kind <> $1 AND a.occurred_at = $2 AND $4 < $2
+		         AND a.created_at < a.occurred_at -- occurred_at raw: written ahead of its time, a row the refold re-reads
+		         AND a.occurred_at > $3) -- occurred_at raw: past the bound of the walk, at the anchor of today in zone
+		     OR (a.kind = $1 AND `+occurredday.DatesSQL("a", "$4", "$2")+`))
+		   AND (a.occurred_at, a.id) > ($5, $6)
+		 ORDER BY a.occurred_at, a.id
+		 LIMIT $7`,
+		KindMeeting, today, asOf, markDay, after.At, after.ID, limit)
+}
+
+// refoldTargetsTx reads the records the activities passed selects are filed
+// under. passed is a SELECT of id and occurred_at; Through is the last of them.
+func refoldTargetsTx(ctx context.Context, tx pgx.Tx, passed string, args ...any) (PassedActivities, error) {
+	rows, err := tx.Query(ctx, `WITH passed AS (`+passed+`)
 		SELECT p.id, p.occurred_at, l.contact_id, l.deal_id, l.company_id, l.project_id
 		  FROM passed p LEFT JOIN activity_link l ON l.activity_id = p.id
-		 ORDER BY p.occurred_at, p.id`, after.At, after.ID, asOf, limit)
+		 ORDER BY p.occurred_at, p.id`, args...)
 	if err != nil {
 		return PassedActivities{}, fmt.Errorf("activities: reading activities whose time has come: %w", err)
 	}
 	defer rows.Close()
-	out := PassedActivities{Through: ClockRefoldMark{At: asOf, ID: clockRefoldEnd}}
+	var out PassedActivities
 	var last ids.UUID
 	for rows.Next() {
 		var id ids.UUID
@@ -117,9 +160,6 @@ func PassedActivitiesTx(ctx context.Context, tx pgx.Tx, after ClockRefoldMark, a
 	}
 	if err := rows.Err(); err != nil {
 		return PassedActivities{}, fmt.Errorf("activities: reading activities whose time has come: %w", err)
-	}
-	if out.Count < limit {
-		out.Through = ClockRefoldMark{At: asOf, ID: clockRefoldEnd}
 	}
 	return out, nil
 }

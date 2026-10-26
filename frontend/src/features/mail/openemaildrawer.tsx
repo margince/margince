@@ -6,7 +6,10 @@ import type { components } from "../../api/schema";
 import { CommitmentReview } from "../../design-system/commitmentreview";
 import { EmailDetail } from "../../design-system/emaildetail";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { formatDateTime } from "../../format/format";
+import {
+  type ActivityWhenFormatter,
+  formatActivityWhen,
+} from "../../format/activitywhen";
 import { useLocale, useT } from "../../i18n";
 import { useActivity } from "../../lib/activityread";
 import { EmailAccessEditor } from "../capture/emailaccesseditor";
@@ -67,7 +70,8 @@ export function OpenEmailDrawer({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const formatWhen = (iso: string) => formatDateTime(iso, locale, zone);
+  const formatWhen: ActivityWhenFormatter = (at, precision) =>
+    formatActivityWhen(at, precision, locale, zone);
   // What the reader started from the drawer: a reply or a forward, in the
   // docked composer. The drawer steps aside while it is open, so the page and
   // the composer are both in view, and comes back when it closes.
@@ -159,7 +163,7 @@ function DrawerComposer({
   onSent,
 }: Readonly<{
   writing: Writing;
-  formatWhen: (iso: string) => string;
+  formatWhen: ActivityWhenFormatter;
   onClose: () => void;
   onSent: () => void;
 }>) {
@@ -205,7 +209,7 @@ function DrawerComposer({
 // a mail client puts above it. Its files stay with the original.
 export function forwardedText(
   presentation: EmailPresentation,
-  formatWhen: (iso: string) => string,
+  formatWhen: ActivityWhenFormatter,
   t: ReturnType<typeof useT>,
 ): string {
   const names = (parties: EmailPresentation["to"]) =>
@@ -220,7 +224,7 @@ export function forwardedText(
     "",
     `---------- ${t("email.forwardHeader")} ----------`,
     `${t("email.detail.from")}: ${names(presentation.from)}`,
-    `${t("email.detail.when")}: ${formatWhen(presentation.occurred_at)}`,
+    `${t("email.detail.when")}: ${formatWhen(presentation.occurred_at, presentation.occurred_precision)}`,
     `${t("compose.subject")}: ${presentation.summary.subject ?? ""}`,
     `${t("email.detail.to")}: ${names(presentation.to)}`,
   ];

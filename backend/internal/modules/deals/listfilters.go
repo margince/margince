@@ -42,6 +42,8 @@ const (
 	filterIncludeArchived    = "include_archived"
 	filterSort               = "sort"
 	filterListID             = "list_id"
+	filterSourceSystem       = "source_system"
+	filterSourceID           = "source_id"
 )
 
 // dealListEntity is the record type a list of deals holds, as the list module
@@ -92,6 +94,8 @@ var dealListFilters = storekit.FilterSet[ListDealsInput]{
 	filterPriority: storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Priority = v }),
 	filterAcquisitionSource: storekit.FilterWord(
 		func(in *ListDealsInput, v *string) { in.AcquisitionSource = v }),
+	filterSourceSystem: storekit.FilterWord(func(in *ListDealsInput, v *string) { in.SourceSystem = v }),
+	filterSourceID:     storekit.FilterWord(func(in *ListDealsInput, v *string) { in.SourceID = v }),
 }
 
 // ListFilters names what SearchEntity can narrow one entity type by.

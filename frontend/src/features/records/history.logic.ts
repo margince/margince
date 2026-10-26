@@ -1,7 +1,9 @@
 import type { components } from "../../api/schema";
 import { provenanceOf } from "../../design-system/provenanceof";
 import type { Provenance } from "../../design-system/trust";
+import type { OccurredPrecision } from "../../format/activitywhen";
 import { stable } from "../../format/collate";
+import { precisionOf } from "../../lib/historyvalues";
 
 type AuditHistoryEntry = components["schemas"]["AuditHistoryEntry"];
 type FieldHistoryEntry = components["schemas"]["FieldHistoryEntry"];
@@ -97,6 +99,9 @@ export type EntryFieldChange = {
   field: string;
   oldValue: string | null;
   newValue: string | null;
+  // How precisely each side's activity time is known, from that side's image.
+  oldPrecision?: OccurredPrecision;
+  newPrecision?: OccurredPrecision;
 };
 
 // The fields ONE audit row touched.
@@ -144,11 +149,15 @@ export function entryFieldChanges(
   }
   return fields
     .filter((field) => !DERIVED_COLUMNS.has(field))
-    .map((field) => ({
-      field,
-      oldValue: imageValue(before[field]),
-      newValue: imageValue(after[field]),
-    }))
+    .map(
+      (field): EntryFieldChange => ({
+        field,
+        oldValue: imageValue(before[field]),
+        newValue: imageValue(after[field]),
+        oldPrecision: precisionOf(before, field),
+        newPrecision: precisionOf(after, field),
+      }),
+    )
     .filter((change) => change.oldValue !== change.newValue);
 }
 
