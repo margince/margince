@@ -1,13 +1,13 @@
 {
   "target": "bench-mobile",
-  "measured_on": "2026-09-11",
+  "measured_on": "2026-10-26",
   "machine": {
-    "os": "darwin",
-    "arch": "arm64",
-    "cpu": "Apple M1 Pro",
-    "cores": 8,
+    "os": "linux",
+    "arch": "x64",
+    "cpu": "AMD EPYC 7763 64-Core Processor",
+    "cores": 4,
     "memory_gib": 16,
-    "toolchain": "node 24.19.0",
+    "toolchain": "node 24.21.0",
     "network": "throttled Fast-3G (MOBILE-PARAM-2)",
     "viewport": "390x844"
   },
@@ -15,9 +15,9 @@
     {
       "id": "MOBILE-AC-2",
       "name": "record_open_perceived",
-      "p50_ms": 48,
-      "p95_ms": 61,
-      "p99_ms": 65,
+      "p50_ms": 115,
+      "p95_ms": 170,
+      "p99_ms": 171,
       "budget_ms": 300,
       "samples": 20
     }

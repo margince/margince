@@ -26,17 +26,17 @@ records, so a row changes only when a maintainer merges it.
 |---|---|---|---|---|---|
 | `PERF-1` | Record open (contact/company/deal) | < 100 ms server | 79.7 ms | within budget | 2026-10-13 |
 | `PERF-2` | List/table view (50 rows, filtered) | < 150 ms server | 115 ms | within budget | 2026-10-13 |
-| `PERF-3` | Search (full-text) | < 200 ms | 140 ms | within budget | 2026-10-07 |
+| `PERF-3` | Search (full-text) | < 200 ms | 37.2 ms | within budget | 2026-10-26 |
 | `PERF-4` | Save/mutation | < 150 ms server | 60.6 ms | within budget | 2026-10-07 |
 | `PERF-5` | AI baseline action (summary/draft) | first token < 1.5 s |  | **not measured** |  |
 | `PERF-6` | Cold start (single binary) | < 2 s |  | **not measured** |  |
-| `PERF-7` | Context-graph assembly | < 300 ms at mid-market | 223 ms | within budget | 2026-10-13 |
+| `PERF-7` | Context-graph assembly | < 300 ms at mid-market | 48.7 ms | inconclusive: measured on the smb tier; the SLO binds at mid_market | 2026-10-26 |
 | `PERF-8` | Worklist and Home, as the screen calls them | < 1 s | 1613 ms | over budget (#4912) | 2026-10-13 |
 | `PERF-9` | Analytics screen | < 300 ms | 246 ms | within budget | 2026-10-13 |
 | `PERF-10` | Search as the screen calls it | < 1 s | 373 ms | within budget | 2026-10-13 |
 | `LOAD-1` | A cheap request while the team starts at once | < 150 ms | 525 ms | over budget (#7068) | 2026-10-13 |
 | `CAP-PARAM-1` | Capture to timeline | 60 s p95 | 39.2 ms | within budget | 2026-08-15 |
-| `MOBILE-AC-2` | Record open, perceived, Fast-3G | < 300 ms perceived | 61.0 ms | within budget | 2026-09-11 |
+| `MOBILE-AC-2` | Record open, perceived, Fast-3G | < 300 ms perceived | 170 ms | within budget | 2026-10-26 |
 
 ### Still unmeasured
 
@@ -187,35 +187,35 @@ A latency is only true of the machine that produced it.
 
 Its rows are listed per seat under [Daily use](#daily-use-make-bench-daily).
 
-### `make bench-mobile` · measured 2026-09-11
+### `make bench-mobile` · measured 2026-10-26
 
 | | |
 |---|---|
-| os / arch | darwin / arm64 |
-| cpu | Apple M1 Pro (8 cores) |
+| os / arch | linux / x64 |
+| cpu | AMD EPYC 7763 64-Core Processor (4 cores) |
 | memory | 16 GiB |
-| toolchain | node 24.19.0 |
+| toolchain | node 24.21.0 |
 | network | throttled Fast-3G (MOBILE-PARAM-2) |
 | viewport | 390x844 |
 
 | measurement | p50 | p95 | p99 | budget | samples |
 |---|---|---|---|---|---|
-| `record_open_perceived` | 48.0 ms | 61.0 ms | 65.0 ms | 300 ms | 20 |
+| `record_open_perceived` | 115 ms | 170 ms | 171 ms | 300 ms | 20 |
 
-### `make bench-perf` · measured 2026-10-07
+### `make bench-perf` · measured 2026-10-26
 
 | | |
 |---|---|
-| os / arch | darwin / arm64 |
-| cpu | Apple M1 Pro (8 cores) |
-| memory | 16 GiB |
-| toolchain | go1.27.1 |
-| postgres | 16.14 |
+| os / arch | linux / amd64 |
+| cpu | AMD EPYC 9V74 80-Core Processor (4 cores) |
+| memory | 15 GiB |
+| toolchain | go1.27.3 |
+| postgres | 16.15 |
 
 | measurement | p50 | p95 | p99 | budget | samples |
 |---|---|---|---|---|---|
-| `search_fts (mid_market tier)` | 134 ms | 140 ms | 140 ms | 200 ms | 20 |
-| `context_graph (mid_market tier)` | 94.3 ms | 98.2 ms | 98.3 ms | 300 ms | 20 |
+| `search_fts (smb tier)` | 35.9 ms | 37.2 ms | 40.4 ms | 200 ms | 20 |
+| `context_graph (smb tier)` | 47.5 ms | 48.7 ms | 52.9 ms | 300 ms | 20 |
 
 ### `make bench-record` · measured 2026-10-07
 
