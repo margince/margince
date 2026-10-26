@@ -44166,6 +44166,9 @@ type MagicLine struct {
 	// Lane Which lane this line belongs to. Carried on the line as well as by the array it sits in, so a client that flattens the four for a preview does not lose which one a line came from.
 	Lane MagicLineLane `json:"lane"`
 
+	// Maintenance True when the line is a release correction repairing older records (a data task), not work done for the reader. One correction run is one line however many records it touched, and two runs are two lines. A reader shows these apart from business outcomes and never counts them as things that got done for a customer. Absent or false is an ordinary line.
+	Maintenance *bool `json:"maintenance,omitempty"`
+
 	// OccurredAt When the thing happened. On a `watching` line it is when the condition was OBSERVED instead, uniformly: a source that is off rather than failing has no beginning to report, and dating the observation as the outage would tell a reader a long-dead mailbox broke just now. Where a condition does have a start, it travels as the `failing_since` value on the summary.
 	OccurredAt time.Time `json:"occurred_at"`
 

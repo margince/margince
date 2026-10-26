@@ -66017,6 +66017,14 @@ components:
             over more records than the cap reports the cap. Absent or false means the
             count is exact. A reader deciding whether a machine went too far needs to
             know which of the two they are looking at.
+        maintenance:
+          type: boolean
+          description: >-
+            True when the line is a release correction repairing older records (a data
+            task), not work done for the reader. One correction run is one line however
+            many records it touched, and two runs are two lines. A reader shows these apart
+            from business outcomes and never counts them as things that got done for a
+            customer. Absent or false is an ordinary line.
 
     MagicSentence:
       type: object

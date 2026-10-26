@@ -87,7 +87,7 @@ func linesOf(mask imageMask, entries []entry, capped map[string]bool, limit int)
 // or generic sentence: "A record was updated" about no named record is noise,
 // and noise on this page hides the lines that matter.
 func lineOf(mask imageMask, e entry) (crmcontracts.MagicLine, string, bool) {
-	d, ok := describe(e)
+	d, ok := describeEntry(e)
 	if !ok {
 		return crmcontracts.MagicLine{}, "", false
 	}
@@ -115,6 +115,10 @@ func lineOf(mask imageMask, e entry) (crmcontracts.MagicLine, string, bool) {
 		consequence := meaning.consequence
 		line.Consequence = &consequence
 	}
+	if isDataCorrection(e) {
+		maintenance := true
+		line.Maintenance = &maintenance
+	}
 	if e.OnBehalfOf != nil {
 		// WHOSE authority it bound. The auto-apply sweep acts under a rep's own
 		// standing decision, and a receipt saying only "agent" would hide which
@@ -135,17 +139,28 @@ func lineOf(mask imageMask, e entry) (crmcontracts.MagicLine, string, bool) {
 // the line: the members read wants the key and nothing else, and a line it
 // discards would need a reader's mask to be built at all.
 func groupKeyOf(e entry) (string, bool) {
-	d, ok := describe(e)
+	d, ok := describeEntry(e)
 	if !ok {
 		return "", false
 	}
 	return groupKey(e, d), true
 }
 
+// describeEntry is describe plus the one reason a data correction carries
+// when its own sentence names none: that it repaired an older record. Both
+// the line and its members read through here, so they group alike.
+func describeEntry(e entry) (description, bool) {
+	d, ok := describe(e)
+	if ok && d.reason == nil && isDataCorrection(e) {
+		d.reason = &crmcontracts.MagicSentence{Key: whyDataCorrection}
+	}
+	return d, ok
+}
+
 // groupKey is what two lines must share to be one line with a count: the same
 // job, doing the same thing, for the same reason, to the same kind of record.
 func groupKey(e entry, d description) string {
-	parts := []string{e.ActorID, e.Action, e.EntityType, sentenceKey(d.summary), "", "", ""}
+	parts := []string{e.ActorID, e.Action, e.EntityType, sentenceKey(d.summary), "", "", "", ""}
 	if d.reason != nil {
 		parts[4] = sentenceKey(*d.reason)
 		if many, perRecord := manyReasons[d.reason.Key]; perRecord {
@@ -162,6 +177,12 @@ func groupKey(e entry, d description) string {
 	// day it happened, and an import that ran over a week reads as seven.
 	if bulkActions[e.Action] {
 		parts[6] = e.OccurredAt.UTC().Format(time.DateOnly)
+	}
+	// One correction run is one operation. Two runs of the same task (a
+	// version restart, a manual rerun) are two, so their counts do not merge.
+	// A row with no batch keeps the grouping it always had.
+	if isDataCorrection(e) && e.BatchID != nil {
+		parts[7] = e.BatchID.String()
 	}
 	return strings.Join(parts, "\x00")
 }

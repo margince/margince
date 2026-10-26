@@ -58,6 +58,10 @@ type entry struct {
 	// Evidence is the audit row's own account of why: the policy behind a
 	// retention action, the page a fact was read from.
 	Evidence []byte
+	// BatchID is the bulk change the row belongs to. A data task stamps its
+	// step's run id here (datatask.Execute), so two runs of one correction are
+	// told apart. Nil on rows no batch wrote.
+	BatchID *ids.UUID
 }
 
 // recordLabels is the name column of each placed record, the expression the
@@ -251,7 +255,7 @@ func doneForType(
 	query := fmt.Sprintf(`
 		SELECT a.id, a.occurred_at, a.action, a.entity_type, a.entity_id,
 		       a.actor_type, a.actor_id, a.on_behalf_of, a.before, a.after,
-		       NULLIF(%s, ''), a.evidence
+		       NULLIF(%s, ''), a.evidence, a.batch_id
 		  FROM audit_log a
 		  JOIN %s e ON e.id = a.entity_id
 		 WHERE %s
@@ -305,7 +309,7 @@ func doneForActivities(
 	query := fmt.Sprintf(`
 		SELECT a.id, a.occurred_at, a.action, a.entity_type, a.entity_id,
 		       a.actor_type, a.actor_id, a.on_behalf_of, a.before, a.after,
-		       NULLIF(%s, ''), a.evidence
+		       NULLIF(%s, ''), a.evidence, a.batch_id
 		  FROM audit_log a
 		  JOIN activity e ON e.id = a.entity_id
 		 WHERE %s
@@ -327,7 +331,7 @@ func scanEntries(ctx context.Context, tx pgx.Tx, query string, args []any) ([]en
 		if err := rows.Scan(
 			&e.ID, &e.OccurredAt, &e.Action, &e.EntityType, &e.EntityID,
 			&e.ActorType, &e.ActorID, &e.OnBehalfOf, &e.Before, &e.After,
-			&e.Label, &e.Evidence,
+			&e.Label, &e.Evidence, &e.BatchID,
 		); err != nil {
 			return nil, fmt.Errorf("read a machine action: %w", err)
 		}

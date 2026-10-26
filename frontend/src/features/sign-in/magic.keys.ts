@@ -78,6 +78,7 @@ export const MAGIC_WHY_KEYS = [
   "magic.why.forecast_date",
   "magic.why.forecast_date_basis",
   "magic.why.mail_filed",
+  "magic.why.data_correction",
   "magic.why.public_records",
   "magic.why.site_read",
   "magic.why.site_read_unnamed",
@@ -101,6 +102,7 @@ export const MAGIC_BY_KEYS = [
   "magic.by.mailbox",
   "magic.by.agent",
   "magic.by.system",
+  "magic.by.data_correction",
 ] as const satisfies readonly MessageKey[];
 
 /** Every consequence `/magic` can send for a line. */

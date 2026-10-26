@@ -17122,6 +17122,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.archive_project": "Projekt archiviert:",
   "magic.action.archive_activity": "E-Mail oder Termin archiviert:",
   "magic.why.mail_filed": "Die Absendeadresse gehört zu diesem Kontakt.",
+  "magic.why.data_correction": "Ein Update hat ältere Datensätze korrigiert.",
   "magic.why.public_records":
     "Aus der öffentlichen Website und den DNS-Einträgen des Unternehmens.",
   "magic.why.site_read": "Aus der Analyse von {site}.",
@@ -17143,6 +17144,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.by.mailbox": "Postfach-Synchronisierung",
   "magic.by.agent": "Ein Agent",
   "magic.by.system": "Margince",
+  "magic.by.data_correction": "Datenkorrektur",
   "magic.failingSince": "Fehlerhaft seit {when}",
   "magic.noRecord": "Kein Datensatz genannt",
   "magic.undo.action": "Rückgängig",

@@ -49516,6 +49516,8 @@ export interface components {
             count?: number;
             /** @description True when the line's records were counted from a read that was cut short, so `count` is a lower bound and the job touched at least that many. Lines are grouped from the audit rows one read returns, and that read is capped; a job over more records than the cap reports the cap. Absent or false means the count is exact. A reader deciding whether a machine went too far needs to know which of the two they are looking at. */
             count_is_floor?: boolean;
+            /** @description True when the line is a release correction repairing older records (a data task), not work done for the reader. One correction run is one line however many records it touched, and two runs are two lines. A reader shows these apart from business outcomes and never counts them as things that got done for a customer. Absent or false is an ordinary line. */
+            maintenance?: boolean;
         };
         /**
          * @description What happened, as a key and the values to fill it with.

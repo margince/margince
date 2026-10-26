@@ -16625,6 +16625,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.action.archive_activity":
     "Đã chuyển email hoặc cuộc họp vào kho lưu trữ",
   "magic.why.mail_filed": "Địa chỉ bên gửi thuộc về liên hệ này.",
+  "magic.why.data_correction": "Một bản cập nhật đã hiệu chỉnh các bản ghi cũ.",
   "magic.why.public_records":
     "Từ trang web công khai và bản ghi DNS của công ty.",
   "magic.why.site_read": "Đọc trên {site}.",
@@ -16645,6 +16646,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.by.mailbox": "Đồng bộ hộp thư",
   "magic.by.agent": "Một trợ lý AI",
   "magic.by.system": "Margince",
+  "magic.by.data_correction": "Hiệu chỉnh dữ liệu",
   "magic.failingSince": "Bị lỗi từ {when}",
   "magic.noRecord": "Không nêu hồ sơ nào",
   "magic.undo.action": "Hoàn tác",

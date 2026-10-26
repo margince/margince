@@ -17043,6 +17043,7 @@ export const en = {
   "magic.action.archive_project": "Archived project",
   "magic.action.archive_activity": "Archived email or meeting",
   "magic.why.mail_filed": "The sender’s address belongs to this contact.",
+  "magic.why.data_correction": "An update corrected older records.",
   "magic.why.public_records":
     "From the company’s public website and DNS records.",
   "magic.why.site_read": "Read on {site}.",
@@ -17063,6 +17064,7 @@ export const en = {
   "magic.by.mailbox": "Mailbox sync",
   "magic.by.agent": "An agent",
   "magic.by.system": "Margince",
+  "magic.by.data_correction": "Data correction",
   "magic.failingSince": "Failing since {when}",
   "magic.noRecord": "No record named",
   "magic.undo.action": "Undo",
