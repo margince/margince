@@ -265,7 +265,10 @@ function reportSections(
             <FiguresTable review={review} figures={numeric.figures} />
           </Panel>
           <WeeklyWorkings counts={review.counts} figures={numeric.figures} />
-          <ScorecardPanel scorecard={review.scorecard} />
+          <ScorecardPanel
+            scorecard={review.scorecard}
+            weekStart={review.local_week_start}
+          />
           <FiguresFootnote partial={numeric.partial} basis={numeric.basis} />
         </>
       ),

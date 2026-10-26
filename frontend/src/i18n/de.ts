@@ -1507,15 +1507,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro Million Tokens",
 
   "brief.weekly.tasksCompleted": "Aufgaben erledigt",
-  "brief.weekly.noMeetings": "Keine erfasst",
+  "brief.weekly.noMeetings": "Keine Termine",
   "brief.weekly.noLeads": "Keine eingegangen",
   "brief.weekly.noCommitments": "Keine fällig",
   "brief.weekly.basis":
     "Erfasste CRM-Arbeit dieser abgeschlossenen Woche. Fehlende Datensätze belegen keine Inaktivität.",
   "brief.weekly.notRecorded": "Nicht erfasst",
   "brief.weekly.recordedFrom": "Erfasst ab {date}",
-  "brief.weekly.noRecords":
-    "Für diesen Teil der Auswertung liegen keine Angaben vor",
+  "brief.weekly.noneRecorded.deals":
+    "Im betrachteten Bereich gibt es keinen Deal. Diese Zahl ist daher kein Messergebnis.",
+  "brief.weekly.noneRecorded.tasks":
+    "Im betrachteten Bereich gibt es keine Aufgabe. Diese Zahl ist daher kein Messergebnis.",
+  "brief.weekly.noneRecorded.meetings":
+    "Im betrachteten Bereich gibt es keinen Termin. Diese Zahl ist daher kein Messergebnis.",
+  "brief.weekly.noneRecorded.leads":
+    "Im betrachteten Bereich gibt es keinen eingehenden Lead. Diese Zahl ist daher kein Messergebnis.",
+  "brief.weekly.noneRecorded.commitments":
+    "Im betrachteten Bereich gibt es keinen Wochenplan. Diese Zahl ist daher kein Messergebnis.",
   "brief.weekly.partialFrom":
     "Die Auswertung umfasst nur den Zeitraum ab {date}",
   "brief.weekly.partialValue": "{value} (teilweise)",
@@ -5192,10 +5200,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.learnings.insufficient":
     "Nicht genug erfasste Belege für aussagekräftige Beobachtungen.",
   "brief.weekly.scorecard.title": "Wochenbilanz",
-  "brief.weekly.scorecard.basis": "Grundlage",
-  "brief.weekly.scorecard.advanced": "Lead-Fortschritte",
-  "brief.weekly.scorecard.advancedBasis": "Je Schritt · nicht je Lead",
-  "brief.weekly.scorecard.answeredInTarget": "Zielzeit überschritten",
+  "brief.weekly.scorecard.basis": "Zählweise",
+  "brief.weekly.scorecard.advanced": "Phasenwechsel von Leads",
+  "brief.weekly.scorecard.advancedBasis":
+    "Jeder Wechsel zählt: ein Lead mit zwei Phasenwechseln zählt doppelt",
+  "brief.weekly.scorecard.answeredInTarget": "Antworten nach der Zielzeit",
   "brief.weekly.scorecard.answeredDetail":
     "In der Zielzeit beantwortet: {count}",
   "brief.weekly.scorecard.allInTarget": "Alle in der Zielzeit beantwortet",
@@ -5224,7 +5233,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Von einer Löschung betroffen · Zahlen sind Mindestwerte",
   // Die kommende Woche. Der eingefrorene Rückblick sagt, was war; dies ist der
   // einzige Teil dieser Seite, den noch jemand ändern kann.
-  "plan.title": "Zusagen dieser Woche",
+  "plan.title": "Plan für KW {week}",
+  "plan.titleThisWeek": "Plan für diese Woche",
   // Die zwei Regler des Briefings: welches, und für wen.
   "brief.view.label": "Home-Ansicht",
   "brief.view.morning": "Heute",
@@ -5291,9 +5301,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "plan.contract.risks": "Risiken",
   "plan.contract.risksHint":
     "Was aus deiner Sicht schiefgehen könnte, in eigenen Worten",
-  "plan.contract.capacityNote": "Verfügbare Kapazität",
+  "plan.contract.capacityNote": "Nicht im Kalender",
   "plan.contract.capacityNoteHint":
-    "Alles, was der Kalender nicht zeigt, zum Beispiel Urlaub, Reisen oder ein Launch",
+    "Urlaub, Reisen, Launches: alles, was dein Kalender nicht zeigt",
   "plan.contract.unwritten": "Noch nicht geschrieben",
   "plan.contract.nothingToName": "Nichts zu nennen",
   "plan.contract.edit": "Bearbeiten",
@@ -5318,7 +5328,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.outlook.month": "Dieser Monat",
   "brief.weekly.outlook.quarter": "Dieses Quartal",
   "brief.weekly.outlook.none":
-    "Für diese Woche ist kein Prognose-Snapshot verfügbar.",
+    "Für diesen Zeitraum ist kein Prognose-Snapshot verfügbar.",
   "brief.weekly.outlook.won": "Gewonnener Wert",
   "brief.weekly.outlook.commit": "Verbleibender Commit",
   "brief.weekly.outlook.bestCase": "Best Case",
@@ -5363,15 +5373,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.report.earlier": "Frühere Woche öffnen",
   "brief.report.later": "Spätere Woche öffnen",
   "brief.report.col.figure": "Kennzahl",
-  "brief.report.col.week": "Diese Woche",
-  "brief.report.col.prior": "Vorwoche",
+  "brief.report.col.week": "KW {week}",
+  "brief.report.col.prior": "KW {week}",
   "brief.report.col.change": "Veränderung",
   "brief.weekly.none":
     "Noch kein Wochenrückblick. Der erste wird am Montag nach deiner ersten vollen Woche erstellt.",
   "brief.weekly.tasksDelivered": "Fällige Aufgaben erledigt",
   "brief.weekly.ofDue": "{done} von {due}",
   "brief.weekly.dealsWon": "Gewonnene Deals",
-  "brief.weekly.dealsLost": "Verlorene Deals",
   "brief.weekly.dealsMoved": "Deals mit Phasenwechsel",
   "brief.weekly.decided": "Entschiedene Vorschläge",
   "brief.weekly.acceptedRejected":

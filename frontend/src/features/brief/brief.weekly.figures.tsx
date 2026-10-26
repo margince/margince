@@ -4,7 +4,7 @@
 import { Badge } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Panel } from "../../design-system/panel";
-import { isoWeekOf } from "../../format/calendarday";
+import { isoWeekBefore, isoWeekOf } from "../../format/calendarday";
 import {
   formatDayRange,
   formatMoney,
@@ -377,13 +377,17 @@ export function FiguresTable({
         },
         {
           key: "week",
-          header: t("brief.report.col.week"),
+          header: t("brief.report.col.week", {
+            week: formatNumber(isoWeekOf(review.local_week_start), locale),
+          }),
           align: "end",
           render: (row) => row.week,
         },
         {
           key: "prior",
-          header: t("brief.report.col.prior"),
+          header: t("brief.report.col.prior", {
+            week: formatNumber(isoWeekBefore(review.local_week_start), locale),
+          }),
           align: "end",
           render: (row) => row.prior,
         },

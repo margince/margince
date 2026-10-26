@@ -2,7 +2,7 @@
 <!-- describes: frontend/src/features/worklist frontend/src/features/brief backend/internal/compose/attention backend/internal/compose/briefs backend/internal/compose/worklistsnap backend/internal/compose/morningmailview.go -->
 # Your day
 
-**Home** is where a day starts in Margince. It has two views, **Morning** and **Weekly**. The week,
+**Home** is where a day starts in Margince. It has two views, **Today** and **Weekly**. The week,
 its review and its plan are in [Your week](your-week.md).
 
 The Worklist is the ranked to-do list in Margince: one list of everything waiting on you, in the
@@ -140,10 +140,10 @@ it again. Before your first full week it says "No weekly review yet. The first o
 Monday after your first full week."
 Also called: weekly report, week in review, weekly summary.
 
-## Morning
+## Today
 
-### What is on Morning?
-**Morning**, on **Home**, shows the kinds of work that need attention when the list is complete.
+### What is on Today?
+**Today**, on **Home**, shows the kinds of work that need attention when the list is complete.
 Each item names its record and shows the facts that call for action. A badge says when Margince made the brief.
 - **First**: the first thing to do on one card, the rest as **Then**; at most 6 in all, in Worklist
   order. Press a row to bring it onto the card. Its reason stays visible beside the record.
@@ -160,8 +160,8 @@ motion off. It shows the date, the emails synced overnight, and how many items w
 urgent and how many meetings you have. Press any key or click to go on.
 Also called: morning brief, daily brief, today, priorities, top cards, welcome screen.
 
-### What comes first on Morning?
-A customer who waits for your reply, and a reply deadline that comes close, come first on Morning
+### What comes first on Today?
+A customer who waits for your reply, and a reply deadline that comes close, come first on Today
 and in the Worklist.
 - A message that waited more than 14 days is old work to recover, not today's. On an open deal, it
   keeps the rank of a deal at real risk.
@@ -177,8 +177,8 @@ and in the Worklist.
 - A close date Margince set for now asks you to confirm the forecast; it is not a customer promise.
   See [Close dates Margince sets](the-pipeline.md#close-dates-margince-sets).
 
-### How complete is Morning?
-Morning names each source it could not read, with **Refresh brief**, and never shows it as a zero.
+### How complete is Today?
+Today names each source it could not read, with **Refresh brief**, and never shows it as a zero.
 - **Flagged pipeline value** adds up deal value without the deals that have no price, and says how many those are.
 - That value is the full deal amount, not the amount you expect to lose. It may not be complete, and it is not a forecast.
 - Meetings count calendar entries still to come. Margince does not say you are prepared unless the source says so.
@@ -188,7 +188,7 @@ The work counts come from the current Worklist read. The greeting's email count 
 **Since your last brief** says when some activity could not be counted. Its count then says how much it could count, and an empty list does not mean nothing happened.
 
 ### Check applied changes
-**Check applied changes**, on **Morning**, lists deal changes you can still keep or undo. Each names the deal, what changed and when. Date estimates show their sales history when available. An undone or accepted change leaves this list.
+**Check applied changes**, on **Today**, lists deal changes you can still keep or undo. Each names the deal, what changed and when. Date estimates show their sales history when available. An undone or accepted change leaves this list.
 
 **Keep date** keeps a date estimate; **Accept** keeps a stage change. Neither runs the change again or makes an estimate a customer promise. **Undo** puts the deal back. Past changes remain under **Change history** on the Worklist.
 

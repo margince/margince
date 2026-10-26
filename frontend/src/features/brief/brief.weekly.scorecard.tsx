@@ -4,6 +4,7 @@
 import { DataTable } from "../../design-system/datatable";
 import { Heading } from "../../design-system/heading";
 import { Panel } from "../../design-system/panel";
+import { isoWeekOf } from "../../format/calendarday";
 import { formatNumber } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { WeeklyReview } from "./brief.queries";
@@ -29,7 +30,8 @@ type ScoreRow = Readonly<{
 
 export function ScorecardPanel({
   scorecard,
-}: Readonly<{ scorecard: Scorecard | undefined }>) {
+  weekStart,
+}: Readonly<{ scorecard: Scorecard | undefined; weekStart: string }>) {
   const t = useT();
   const { locale } = useLocale();
   // A review written before scorecards existed carries none, and draws none.
@@ -60,7 +62,9 @@ export function ScorecardPanel({
             },
             {
               key: "value",
-              header: t("brief.report.col.week"),
+              header: t("brief.report.col.week", {
+                week: n(isoWeekOf(weekStart)),
+              }),
               align: "end",
               render: (row) => row.value,
             },

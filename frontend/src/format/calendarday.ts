@@ -232,3 +232,12 @@ export function isoWeekOf(day: string): number {
   const first = thursday(Date.UTC(new Date(own).getUTCFullYear(), 0, 4));
   return 1 + Math.round((own - first) / (7 * DAY_MS));
 }
+
+/** The ISO 8601 week number of the week before the one holding `day`. */
+export function isoWeekBefore(day: string): number {
+  const before = new Date(Date.parse(`${day}T00:00:00Z`) - 7 * DAY_MS);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return isoWeekOf(
+    `${before.getUTCFullYear()}-${pad(before.getUTCMonth() + 1)}-${pad(before.getUTCDate())}`,
+  );
+}

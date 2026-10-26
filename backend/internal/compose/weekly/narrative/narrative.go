@@ -138,9 +138,8 @@ THIS WEEK WAS NOT QUIET: the counts below are not all zero. Never write that the
 
 // systemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 //
-// The review is read by the rep whose week it was, so it takes the
-// installation's shared language rather than the language a deal name happened
-// to be written in — which is what an unruled prompt would have followed.
+// The review is read by the rep whose week it was, so `lang` is that rep's
+// language. An unruled prompt would follow the language of a deal name.
 func systemFor(fence promptfence.Fence, lang string) string {
 	return narrativeSystem + "\n" + promptlang.Rule(lang) + "\n" +
 		fence.Rule("deal names from the week")

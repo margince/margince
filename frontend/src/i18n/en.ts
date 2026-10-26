@@ -1458,15 +1458,23 @@ export const en = {
   "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",
 
   "brief.weekly.tasksCompleted": "Tasks completed",
-  "brief.weekly.noMeetings": "None recorded",
+  "brief.weekly.noMeetings": "No meetings held",
   "brief.weekly.noLeads": "None received",
   "brief.weekly.noCommitments": "None due",
   "brief.weekly.basis":
     "Recorded CRM work for this closed week. Missing records do not establish inactivity.",
   "brief.weekly.notRecorded": "Not recorded",
   "brief.weekly.recordedFrom": "Recorded from {date}",
-  "brief.weekly.noRecords":
-    "No information recorded for this part of the report",
+  "brief.weekly.noneRecorded.deals":
+    "No deal was recorded in this scope, so this figure is not a measurement.",
+  "brief.weekly.noneRecorded.tasks":
+    "No task was recorded in this scope, so this figure is not a measurement.",
+  "brief.weekly.noneRecorded.meetings":
+    "No meeting was recorded in this scope, so this figure is not a measurement.",
+  "brief.weekly.noneRecorded.leads":
+    "No inbound lead was recorded in this scope, so this figure is not a measurement.",
+  "brief.weekly.noneRecorded.commitments":
+    "No weekly plan was recorded in this scope, so this figure is not a measurement.",
   "brief.weekly.partialFrom": "Figures cover the period from {date} only",
   "brief.weekly.partialValue": "{value} (partial)",
   "brief.week.beforeHistory":
@@ -5222,13 +5230,14 @@ export const en = {
   // the funnel, and an empty row would read as failure at something nobody
   // asked of them.
   "brief.weekly.scorecard.title": "Weekly scorecard",
-  "brief.weekly.scorecard.basis": "Basis",
-  "brief.weekly.scorecard.advanced": "Lead advances",
-  "brief.weekly.scorecard.advancedBasis": "Per step · not per lead",
-  "brief.weekly.scorecard.answeredInTarget": "Target breaches",
+  "brief.weekly.scorecard.basis": "How it is counted",
+  "brief.weekly.scorecard.advanced": "Lead stage moves",
+  "brief.weekly.scorecard.advancedBasis":
+    "Each move counts: a lead that moves two stages counts twice",
+  "brief.weekly.scorecard.answeredInTarget": "Replies past target time",
   "brief.weekly.scorecard.answeredDetail": "{count} answered in target",
   "brief.weekly.scorecard.allInTarget": "All answered in target",
-  "brief.weekly.scorecard.meetingsHeld": "Held-status changes",
+  "brief.weekly.scorecard.meetingsHeld": "Meetings marked held",
   "brief.weekly.scorecard.meetingsBasis": "{booked} booked · {noShow} no-show",
   "brief.weekly.scorecard.partialHistory": "Meetings without history",
   "brief.weekly.scorecard.partialHistoryBasis":
@@ -5251,10 +5260,11 @@ export const en = {
     "Affected by an erasure · counts are minimums",
   // The week ahead. The frozen review says what happened; this is the only part
   // of that page anybody can still change.
-  "plan.title": "This week’s commitments",
+  "plan.title": "Plan for week {week}",
+  "plan.titleThisWeek": "Plan for this week",
   // The Brief's two dials. Which brief, and whose.
   "brief.view.label": "Home view",
-  "brief.view.morning": "Morning",
+  "brief.view.morning": "Today",
   "brief.view.weekly": "Weekly",
   // The Brief's opening sentence, composed from the rows the page is showing —
   // never model-written, so it cannot say what the rows contradict.
@@ -5324,9 +5334,9 @@ export const en = {
   "plan.contract.risks": "Risks",
   "plan.contract.risksHint":
     "What you expect could go wrong, in your own words",
-  "plan.contract.capacityNote": "Available capacity",
+  "plan.contract.capacityNote": "Not on your calendar",
   "plan.contract.capacityNoteHint":
-    "Anything the calendar does not show, such as leave, travel or a launch",
+    "Leave, travel, launches: anything your calendar does not show",
   "plan.contract.unwritten": "Not written yet",
   "plan.contract.nothingToName": "Nothing to name",
   "plan.contract.edit": "Edit",
@@ -5351,7 +5361,7 @@ export const en = {
   "brief.weekly.outlook.month": "This month",
   "brief.weekly.outlook.quarter": "This quarter",
   "brief.weekly.outlook.none":
-    "No forecast snapshot is available for this week.",
+    "No forecast snapshot is available for this period.",
   "brief.weekly.outlook.won": "Won value",
   "brief.weekly.outlook.commit": "Commit remaining",
   "brief.weekly.outlook.bestCase": "Best case",
@@ -5395,15 +5405,14 @@ export const en = {
   "brief.report.earlier": "Earlier week",
   "brief.report.later": "Later week",
   "brief.report.col.figure": "Figure",
-  "brief.report.col.week": "This week",
-  "brief.report.col.prior": "Week before",
+  "brief.report.col.week": "Week {week}",
+  "brief.report.col.prior": "Week {week}",
   "brief.report.col.change": "Change",
   "brief.weekly.none":
     "No weekly review yet. The first one is created on the Monday after your first full week.",
   "brief.weekly.tasksDelivered": "Due tasks completed",
   "brief.weekly.ofDue": "{done} of {due}",
   "brief.weekly.dealsWon": "Deals won",
-  "brief.weekly.dealsLost": "Deals lost",
   "brief.weekly.dealsMoved": "Deals with stage changes",
   "brief.weekly.decided": "Proposals decided",
   "brief.weekly.acceptedRejected": "{accepted} accepted · {rejected} rejected",
