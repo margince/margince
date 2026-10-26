@@ -18,9 +18,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// A built-in question keeps its catalog key through a save that leaves its
-// wording alone, loses it while reworded and gets it back with the shipped
-// words. A later review freezes the key.
+// A built-in question keeps its catalog key while it reads as shipped. A
+// reword hides the key, the shipped words bring it back, and a review freezes it.
 func TestAReviewQuestionNamesItsCatalogKeyWhileItReadsAsShipped(t *testing.T) {
 	e := Setup(t)
 	perms := AdminPerms
