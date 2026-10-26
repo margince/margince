@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { api } from "../../api/client";
 import { usePageName } from "../../app/pagemeta";
 import { searchCompanyTargets } from "../../components/companyform";
@@ -10,6 +10,7 @@ import {
 } from "../../components/customfields.form";
 import { useAppliedCompanyName } from "../../components/dealdials";
 import {
+  type FilterSpec,
   type ListState,
   ListTable,
   useTagChips,
@@ -17,11 +18,13 @@ import {
 import { useOwnerChips } from "../../components/ownerdials";
 import { mineEmptyNote, standardViews } from "../../components/recordlist";
 import { ErrorLine } from "../../design-system/errorline";
+import type { ListChip } from "../../design-system/listsurface";
 import { currencyOptions } from "../../format/currencychoices";
 import { formatNumber } from "../../format/format";
 import { translatePlural, useLocale, useT } from "../../i18n";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
-import { withheldRangeDials } from "../../lib/dealranges";
+import { useCan } from "../../lib/capability";
+import { maskRefusedDialOf } from "../../lib/dealranges";
 import {
   totalsRefusedBecause,
   totalsWithheldBecause,
@@ -216,7 +219,8 @@ export function DealsScreen({
   const {
     query,
     setQuery,
-    reach,
+    baseCurrency,
+    withheld,
     setPipelineId,
     effectivePipeline,
     dealFilters,
@@ -224,6 +228,15 @@ export function DealsScreen({
     setView,
   } = useDealScreenDials({ pipelines: pipelinesQuery.data });
   const dealsQuery = useDeals(dealFilters);
+  // A dial the role's mask refused, which a current snapshot would have
+  // withheld. Reading /me again withholds it and the list reloads without it.
+  const maskRefused = maskRefusedDialOf(dealsQuery.error);
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (maskRefused) {
+      queryClient.invalidateQueries({ queryKey: ["me"] });
+    }
+  }, [maskRefused, queryClient]);
   // The board's column totals: a per-stage server aggregate over every
   // matching deal, not only the capped page useDeals fetches. Built from the
   // same filter dials, so cards and totals agree on which deals are in view.
@@ -274,8 +287,12 @@ export function DealsScreen({
     },
   };
 
+  // The board names its cards' companies from this page, and a reader without
+  // company.read is refused it.
+  const readsCompanies = useCan("company", "read");
   const companiesQuery = useQuery({
     queryKey: ["companies"],
+    enabled: readsCompanies,
     queryFn: async () => {
       return unwrap(
         await api.GET("/companies", {
@@ -333,20 +350,30 @@ export function DealsScreen({
     />
   );
   const companyName = useAppliedCompanyName(query.filters.company_id);
-  const dealChips = dealFilterChips(stages, t, companyName);
   const leading = useLeadingCurrencies();
-  // A loaded deal's mask only hides a chip. The list loaded, so the server
-  // refused no masked dial, and none is applied.
+  const offered = (chip: { key: string }) => !withheld.has(chip.key);
+  const dealChips = dealFilterChips(stages, t, companyName).filter(offered);
   const rangeChips = dealRangeChips({
     words: { t, locale, zone: recordZone },
     filters: query.filters,
-    baseCurrency: reach.baseCurrency,
-    withheld: withheldRangeDials({
-      ...reach,
-      masked: loadedDeals.flatMap((deal) => deal.masked_fields ?? []),
-    }),
+    baseCurrency,
+    withheld,
     leading,
   });
+  const surfaceChips = dealSurfaceChips({
+    partnerOptions,
+    partnerApplied: query.filters.partner_company_id,
+    acquisitionSources,
+    retiredSuffix: t("deal.acquisitionRetired"),
+  }).filter(offered);
+  const refusedLabel = maskRefusedLabel(maskRefused, {
+    dataChips: [...dealChips, ...rangeChips],
+    chips: surfaceChips,
+    t,
+  });
+  const listState: ListState<Deal> = refusedLabel
+    ? { ...dealsListState, rows: [], isError: false, hasMore: false }
+    : dealsListState;
   const tagChips = useTagChips();
   const rowSelection = dealRowSelection({
     view,
@@ -368,7 +395,7 @@ export function DealsScreen({
   // the surface's head (`bodyCount`). A reader looks for how much is here beside
   // the page's name; under the toolbar it would read as a caption on the dials.
   const boardBody =
-    view === "board" ? (
+    view === "board" && !refusedLabel ? (
       <DealBoardBody
         dealsQuery={dealsQuery}
         pipelinesQuery={pipelinesQuery}
@@ -389,7 +416,7 @@ export function DealsScreen({
     <div className="wrap">
       <ListTable
         title={pageName}
-        state={dealsListState}
+        state={listState}
         unit="deals.unit"
         columns={dealColumns(t, locale, recordZone, stageName)}
         rowKey={(deal) => deal.id}
@@ -403,7 +430,7 @@ export function DealsScreen({
         tools={tools}
         saveView={saveView}
         body={boardBody}
-        bodyOwnsPaging={view === "board"}
+        bodyOwnsPaging={boardBody !== undefined}
         bodyCount={
           view === "board" &&
           dealsQuery.data &&
@@ -418,19 +445,18 @@ export function DealsScreen({
         dataChips={[...ownerChips, ...dealChips, ...tagChips, ...rangeChips]}
         dataViews={savedViews}
         selection={rowSelection}
-        chips={dealSurfaceChips({
-          partnerOptions,
-          partnerApplied: query.filters.partner_company_id,
-          acquisitionSources,
-          retiredSuffix: t("deal.acquisitionRetired"),
-        })}
+        chips={surfaceChips}
         views={[...standardViews(viewerId, { sort: "" })]}
-        emptyNote={mineEmptyNote({
-          t,
-          state: dealsListState,
-          viewerId,
-          unit: "unit.deals",
-        })}
+        emptyNote={
+          refusedLabel
+            ? t("deals.filterRefused", { dial: refusedLabel })
+            : mineEmptyNote({
+                t,
+                state: dealsListState,
+                viewerId,
+                unit: "unit.deals",
+              })
+        }
       />
       <ErrorLine error={advanceErrorBehind(advance.error, pending !== null)} />
       <ConfirmAdvanceModal
@@ -445,4 +471,25 @@ export function DealsScreen({
       <CloseReviewOffer closed={closed} onDismiss={() => setClosed(null)} />
     </div>
   );
+}
+
+// The name of the dial a mask refused, as its chip shows it. No name means no
+// chip sent it, and the list's own failure says what happened instead.
+function maskRefusedLabel(
+  dial: string | undefined,
+  {
+    dataChips,
+    chips,
+    t,
+  }: Readonly<{
+    dataChips: readonly ListChip[];
+    chips: readonly FilterSpec[];
+    t: ReturnType<typeof useT>;
+  }>,
+): string | undefined {
+  if (!dial) return undefined;
+  const named = dataChips.find((chip) => chip.key === dial);
+  if (named) return named.label;
+  const spec = chips.find((chip) => chip.key === dial);
+  return spec && t(spec.label);
 }

@@ -199,7 +199,11 @@ function stubBackend(opts: {
         roles: ["rep"],
         teams: [],
         authorization: meFixture({
-          allow: { deal: ["read", "create", "update"], project: ["read"] },
+          allow: {
+            deal: ["read", "create", "update"],
+            project: ["read"],
+            company: ["read"],
+          },
         }).authorization,
       });
     }

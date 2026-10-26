@@ -6,7 +6,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { ListSurface } from "../../design-system/listsurface";
 import { type Locale, LocaleProvider, useLocale, useT } from "../../i18n";
-import { withheldRangeDials } from "../../lib/dealranges";
+import { withheldDealDials } from "../../lib/dealranges";
 import { useRecordZone } from "../../lib/recordzone";
 import { dealRangeChips } from "./deals.rangefilters";
 
@@ -19,14 +19,12 @@ afterEach(cleanup);
 function Bar({
   initial = {},
   baseCurrency = "EUR",
-  readsCompanies = true,
-  masked = [],
+  refused = [],
   seen,
 }: Readonly<{
   initial?: Record<string, string>;
   baseCurrency?: string;
-  readsCompanies?: boolean;
-  masked?: readonly string[];
+  refused?: readonly string[];
   seen?: (filters: Record<string, string>) => void;
 }>) {
   const t = useT();
@@ -39,7 +37,11 @@ function Bar({
         words: { t, locale, zone },
         filters: chosen,
         baseCurrency,
-        withheld: withheldRangeDials({ baseCurrency, readsCompanies, masked }),
+        withheld: withheldDealDials({
+          baseCurrency,
+          readsCompanies: true,
+          refused,
+        }),
         leading: ["EUR", "USD"],
       })}
       chosen={chosen}
@@ -152,16 +154,15 @@ describe("the deal list's commercial filters", () => {
 
   it.each([
     {
-      masked: ["amount_minor"],
-      gone: ["Value"],
-      kept: ["Currency", "Country"],
+      refused: ["value_min", "value_max", "currency"],
+      gone: ["Value", "Currency"],
+      kept: ["Country"],
     },
-    { masked: ["currency"], gone: ["Value", "Currency"], kept: ["Country"] },
-    { masked: ["company_id"], gone: ["Country"], kept: ["Value", "Currency"] },
+    { refused: ["country"], gone: ["Country"], kept: ["Value", "Currency"] },
   ])(
-    "offers no dial over a field the role masks: $masked",
-    async ({ masked, gone, kept }) => {
-      renderBar({ masked });
+    "offers no dial the server refuses this role: $refused",
+    async ({ refused, gone, kept }) => {
+      renderBar({ refused });
       const user = userEvent.setup();
       await user.click(screen.getByRole("button", { name: "Filter" }));
       for (const name of gone) {
@@ -172,12 +173,4 @@ describe("the deal list's commercial filters", () => {
       }
     },
   );
-
-  it("offers no country dial to a reader who cannot read companies", async () => {
-    renderBar({ readsCompanies: false });
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Filter" }));
-    expect(screen.queryByRole("button", { name: "Country" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Value" })).toBeTruthy();
-  });
 });

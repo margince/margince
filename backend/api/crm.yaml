@@ -54907,6 +54907,18 @@ components:
             This does not let a client decide which rows it gets — the server's scope clauses
             do that on every query. It is what a client needs to EXPLAIN the answer it got, and
             to label a setting as reaching only the reader, their team, or the company.
+        refused_deal_filters:
+          type: array
+          items: { type: string }
+          description: >
+            The `listDeals` query parameters this caller is refused whatever their value: `422`
+            `field_masked` where the role masks the column on any deal, `403` where a grant the
+            filter reads is missing. Computed by the clauses the list runs, so a client withholds
+            exactly the dials the list would refuse.
+
+            A mask that withholds a reference only on some rows, such as a deal's private
+            company, refuses no filter and is not listed. Absent from a server that does not
+            compute it, and empty when nothing is refused.
 
     InstallationBrand:
       type: object

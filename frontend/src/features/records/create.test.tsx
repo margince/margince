@@ -28,6 +28,7 @@ import {
 import { pickOption, toggleOptions } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { meFixture } from "../../testing/mefixture";
 import { CompaniesScreen } from "../companies/companies";
 import { ContactsScreen } from "../contacts/contacts";
 import { DealsScreen } from "../deals/deals";
@@ -672,6 +673,9 @@ describe("a field that depends on another", () => {
 // asked a partner question.
 describe("the deal form's partner fields", () => {
   const partnerRoutes = {
+    // A partner is a company, so only a reader of companies is offered one.
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { deal: ["read"], company: ["read"] } })),
     "GET /pipelines": () =>
       jsonResponse({ data: [pipeline], page: { next_cursor: null } }),
     "GET /companies": () =>

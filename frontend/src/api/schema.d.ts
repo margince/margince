@@ -40087,6 +40087,11 @@ export interface components {
              * @enum {string}
              */
             row_scope: "own" | "team" | "all";
+            /**
+             * @description The `listDeals` query parameters this caller is refused whatever their value: `422` `field_masked` where the role masks the column on any deal, `403` where a grant the filter reads is missing. Computed by the clauses the list runs, so a client withholds exactly the dials the list would refuse.
+             *     A mask that withholds a reference only on some rows, such as a deal's private company, refuses no filter and is not listed. Absent from a server that does not compute it, and empty when nothing is refused.
+             */
+            refused_deal_filters?: string[];
         };
         /** @description The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it. */
         InstallationBrand: {

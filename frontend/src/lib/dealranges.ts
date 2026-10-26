@@ -3,6 +3,7 @@
 
 import { isRealCalendarDay } from "../format/calendarday";
 import { fiscalQuarter } from "./fiscalquarter";
+import { problemFieldErrorsOf } from "./problem";
 
 // The deals list's range dials, as the address and a saved view hold them.
 //
@@ -111,36 +112,51 @@ export function rangeQueryParams(
   };
 }
 
-/** What the reader's grants let a range dial read, as the screen knows them. */
-export type RangeReach = Readonly<{
+/** What the reader's grants let a deal dial read, as the screen knows them. */
+export type DialReach = Readonly<{
   baseCurrency: string | undefined;
+  /** Whether a company can be searched for, which the company dial needs. */
   readsCompanies: boolean;
-  /** Every field a loaded deal names in `masked_fields`. */
-  masked?: readonly string[];
+  /** The list filters `/me` says this reader's role is refused. */
+  refused: readonly string[];
 }>;
 
-// The deal fields each dial reads, which a role's mask withholds; the server
-// refuses the dial with field_masked when one is masked on any deal.
-const DIAL_INPUTS: Readonly<Record<string, readonly string[]>> = {
-  [VALUE_DIAL]: ["amount_minor", "currency"],
-  currency: ["currency"],
-  country: ["company_id"],
+// The dials whose wire parameters carry another name: each range sends a pair
+// of bounds. Every other dial is sent under its own key.
+const DIAL_OF_PARAMETER: Readonly<Record<string, string>> = {
+  close_from: CLOSE_DAY_DIAL,
+  close_to: CLOSE_DAY_DIAL,
+  value_min: VALUE_DIAL,
+  value_max: VALUE_DIAL,
 };
 
+/** The dial that sends a deal list parameter. */
+export function dialOfParameter(parameter: string): string {
+  return DIAL_OF_PARAMETER[parameter] ?? parameter;
+}
+
 /**
- * The range dials this reader cannot narrow by. The value is typed in the base
- * currency, and a country is read off a company, which needs company.read.
+ * The deal dials this reader cannot narrow by. The value is typed in the base
+ * currency, a company is picked by searching companies, and the rest the server
+ * names.
  */
-export function withheldRangeDials(reach: RangeReach): ReadonlySet<string> {
-  const withheld = new Set<string>();
+export function withheldDealDials(reach: DialReach): ReadonlySet<string> {
+  const withheld = new Set(reach.refused.map(dialOfParameter));
   if (!reach.baseCurrency) withheld.add(VALUE_DIAL);
-  if (!reach.readsCompanies) withheld.add("country");
-  for (const [dial, inputs] of Object.entries(DIAL_INPUTS)) {
-    if (inputs.some((field) => reach.masked?.includes(field))) {
-      withheld.add(dial);
-    }
-  }
+  if (!reach.readsCompanies) withheld.add("company_id");
   return withheld;
+}
+
+/**
+ * The dial a deal list request was refused because the reader's role masks
+ * what it reads. Only a snapshot older than the role, or a server older than
+ * this client, sends one.
+ */
+export function maskRefusedDialOf(error: unknown): string | undefined {
+  const fault = problemFieldErrorsOf(error).find(
+    (each) => each.code === "field_masked",
+  );
+  return fault && dialOfParameter(fault.field);
 }
 
 /**

@@ -9,6 +9,7 @@ import {
 } from "../../format/currencychoices";
 import type { MessageKey } from "../../i18n/en";
 import type { AcquisitionSource } from "../../lib/acquisitionsources.queries";
+import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import type { Project } from "../projects/projects.form";
 import {
@@ -50,12 +51,17 @@ const ATTRIBUTION_OPTIONS: { value: string; label: MessageKey }[] = [
  * An empty list also answers "is there a partner programme here". An
  * installation that never made a company a partner has no partner question to
  * ask. The two fields stay off the form entirely.
+ *
+ * A partner is a company, so a reader without company.read is offered none and
+ * nothing is asked of a server that would refuse it.
  */
 export function usePartnerOptions(
   companies: { id: string; display_name: string }[],
 ): { value: string; label: string }[] {
+  const readsCompanies = useCan("company", "read");
   const partners = useQuery({
     queryKey: ["partners", "options"],
+    enabled: readsCompanies,
     queryFn: async () => {
       const data = unwrap(
         await api.GET("/partners", {
@@ -77,6 +83,7 @@ export function usePartnerOptions(
   // narrow by.
   const names = useQuery({
     queryKey: ["partners", "names"],
+    enabled: readsCompanies,
     staleTime: 60_000,
     queryFn: async () => {
       // relationship_type=partner reads the same set from the other side, so

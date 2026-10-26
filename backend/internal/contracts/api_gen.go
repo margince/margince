@@ -29268,6 +29268,10 @@ type Authorization struct {
 	// Objects Effective grants keyed by RbacObject. An absent key denies — the server resolves an unknown object to the zero grant, and a client must do the same rather than treat a missing entry as unrestricted.
 	Objects map[string]RbacObjectGrant `json:"objects"`
 
+	// RefusedDealFilters The `listDeals` query parameters this caller is refused whatever their value: `422` `field_masked` where the role masks the column on any deal, `403` where a grant the filter reads is missing. Computed by the clauses the list runs, so a client withholds exactly the dials the list would refuse.
+	// A mask that withholds a reference only on some rows, such as a deal's private company, refuses no filter and is not listed. Absent from a server that does not compute it, and empty when nothing is refused.
+	RefusedDealFilters *[]string `json:"refused_deal_filters,omitempty"`
+
 	// RowScope How far the grants above reach: the caller's own rows, every row belonging to a live team they share, or every row in the workspace. Widened to the maximum any of the caller's roles holds, the same union the server applies.
 	// It is a THIRD axis, independent of the seat ceiling and the object grants, and a client that ignores it will describe a team lead's reach as if it were an admin's.
 	// The server never sends a value outside this enum: an unresolved scope is narrowed to `own` before it reaches the wire, so a client reading a value it does not recognize is reading a newer server and should narrow it the same way.

@@ -5021,6 +5021,8 @@ export const en = {
   "deals.filterCurrencyAll": "Any currency",
   "deals.filterCountry": "Country",
   "deals.filterCountryAll": "Any country",
+  "deals.filterRefused":
+    "Your role cannot narrow deals by {dial}. Remove that filter to see the list.",
   "deals.rangeFrom": "From {value}",
   "deals.rangeTo": "Up to {value}",
   "deals.valueAtLeast": "At least ({currency})",

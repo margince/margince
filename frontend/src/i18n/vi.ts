@@ -4857,6 +4857,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.filterCurrencyAll": "Mọi loại tiền",
   "deals.filterCountry": "Quốc gia",
   "deals.filterCountryAll": "Mọi quốc gia",
+  "deals.filterRefused":
+    "Vai trò hiện tại không lọc được deal theo {dial}. Bỏ bộ lọc này để xem danh sách.",
   "deals.rangeFrom": "Từ {value}",
   "deals.rangeTo": "Đến {value}",
   "deals.valueAtLeast": "Tối thiểu ({currency})",

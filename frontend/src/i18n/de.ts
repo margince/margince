@@ -5001,6 +5001,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.filterCurrencyAll": "Jede Währung",
   "deals.filterCountry": "Land",
   "deals.filterCountryAll": "Jedes Land",
+  "deals.filterRefused":
+    "Deine Rolle kann Deals nicht nach {dial} eingrenzen. Entferne diesen Filter, um die Liste zu sehen.",
   "deals.rangeFrom": "Ab {value}",
   "deals.rangeTo": "Bis {value}",
   "deals.valueAtLeast": "Mindestens ({currency})",
