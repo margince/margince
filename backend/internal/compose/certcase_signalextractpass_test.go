@@ -79,7 +79,10 @@ func TestACertifiedReadingRunsTheWholePassTheProductRuns(t *testing.T) {
 		},
 		"a fixture that is already the second reading makes one call": {
 			strings.Replace(promiseThenNeedFixture, "%s", extractKindOpportunity, 1),
-			[]func(*signalExtractCase) string{promiseOn(1)}, 1, []int{1}, false,
+			[]func(*signalExtractCase) string{promiseOn(1)},
+			1,
+			[]int{1},
+			false,
 		},
 		"an unusable first reply makes no second call": {
 			unreported, []func(*signalExtractCase) string{fixedExtractReply(`{"answer":"none"}`)}, 1, nil, true,
@@ -91,7 +94,6 @@ func TestACertifiedReadingRunsTheWholePassTheProductRuns(t *testing.T) {
 			brain := &queuedCompleter{replies: tc.replies, c: c}
 
 			trace, err := c.Run(context.Background(), brain)
-
 			if err != nil {
 				t.Fatal(err)
 			}
