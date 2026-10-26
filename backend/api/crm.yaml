@@ -63916,6 +63916,21 @@ components:
         on_behalf_of: { type: string, format: uuid }
         on_behalf_of_name: { type: string }
         occurred_at: { type: string, format: date-time }
+    WorklistMayBeDone:
+      type: object
+      description: |
+        The question whether a promise task is done, asked because we wrote to a recipient on its thread after the promise.
+        The contact page asks the same question under the same `claim_key`. Not yet is answered by
+        `POST /contacts/{contact_id}/moment/dismiss` with `claim_key` and `evidence_fingerprint`, and holds on both surfaces until we write again.
+      required: [contact_id, email_activity_id, wrote_at, wrote_precision, claim_key, evidence_fingerprint]
+      properties:
+        contact_id: { type: string, format: uuid, description: The recipient the mail was written to. }
+        email_activity_id: { type: string, format: uuid, description: The mail that may have kept the promise. }
+        wrote_at: { type: string, format: date-time }
+        wrote_precision: { $ref: '#/components/schemas/OccurredPrecision' }
+        claim_key: { type: string }
+        evidence_fingerprint: { type: string }
+
     WorklistPromiseRecipient:
       type: object
       description: A visible recipient's own claim on a shared deliverable. Other recipients may be outside the reader's scope.
@@ -63940,6 +63955,9 @@ components:
           description: >-
             Sent as true on a task whose reminder is due for the reader, who is its assignee and
             reads their own work. Absent otherwise.
+        may_be_done:
+          allOf: [{ $ref: '#/components/schemas/WorklistMayBeDone' }]
+          description: Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail.
         promise_recipients:
           type: array
           description: Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable.
@@ -65544,6 +65562,9 @@ components:
         browser does not.
       required: [id, source, category, level, actions, because, consequence, occurred_precision]
       properties:
+        may_be_done:
+          allOf: [{ $ref: '#/components/schemas/WorklistMayBeDone' }]
+          description: Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail.
         promise_recipients:
           type: array
           description: Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable.

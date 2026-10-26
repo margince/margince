@@ -36,6 +36,7 @@ import {
   readerTask,
   sharedResponsibility,
 } from "./worklist.reader";
+import { WorklistMayBeDone } from "./worklist.maybedone";
 import { PromiseRecipients } from "./worklist.recipients";
 import { useDrawerDials, withWorklistReturn } from "./worklist.return";
 import { aboutRecord, shapedReadings, touchOf } from "./worklist.row.captions";
@@ -289,6 +290,7 @@ export function WorklistRow({
           {responsibility && <p className="t-caption">{responsibility}</p>}
           <DepartedOwnerCaption owner={item.owner} />
           <PromiseRecipients recipients={item.promise_recipients} />
+          <WorklistMayBeDone item={item} />
         </div>
         {/* Every verb on one right-aligned line, the row's menu last. Under the
             work where the card has no column to spare for it, beside the work

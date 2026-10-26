@@ -28946,6 +28946,9 @@ type AttentionItem struct {
 	// Kind The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.
 	Kind *string `json:"kind,omitempty"`
 
+	// MayBeDone Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail.
+	MayBeDone *WorklistMayBeDone `json:"may_be_done,omitempty"`
+
 	// NoticeOrigin The original change behind a notification, distinct from the automation delivering it. Historical origins are recovered only through an exact event causation link.
 	NoticeOrigin *NoticeOrigin `json:"notice_origin,omitempty"`
 
@@ -56007,6 +56010,9 @@ type WorklistItem struct {
 	// hygiene. Levels are never mixed by a score.
 	Level int `json:"level"`
 
+	// MayBeDone Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail.
+	MayBeDone *WorklistMayBeDone `json:"may_be_done,omitempty"`
+
 	// Move The next step this row suggests, and what it would act on.
 	//
 	// The concept's clearest complaint about the surface this replaces: the product
@@ -56247,6 +56253,24 @@ type WorklistLeadFacts struct {
 	// Source The administered source label, absent for an unlabelled import or connector key.
 	Source *string `json:"source,omitempty"`
 	Status *string `json:"status,omitempty"`
+}
+
+// WorklistMayBeDone The question whether a promise task is done, asked because we wrote to a recipient on its thread after the promise.
+// The contact page asks the same question under the same `claim_key`. Not yet is answered by
+// `POST /contacts/{contact_id}/moment/dismiss` with `claim_key` and `evidence_fingerprint`, and holds on both surfaces until we write again.
+type WorklistMayBeDone struct {
+	ClaimKey string `json:"claim_key"`
+
+	// ContactId The recipient the mail was written to.
+	ContactId openapi_types.UUID `json:"contact_id"`
+
+	// EmailActivityId The mail that may have kept the promise.
+	EmailActivityId     openapi_types.UUID `json:"email_activity_id"`
+	EvidenceFingerprint string             `json:"evidence_fingerprint"`
+	WroteAt             time.Time          `json:"wrote_at"`
+
+	// WrotePrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
+	WrotePrecision OccurredPrecision `json:"wrote_precision"`
 }
 
 // WorklistMove The next step this row suggests, and what it would act on.

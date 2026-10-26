@@ -13,12 +13,15 @@ import (
 	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -29,6 +32,8 @@ import (
 type attentionTasks struct {
 	store  *activities.Store
 	claims *contacts.Store
+	// db reads the may-be-done question. Nil asks none.
+	db *database.DB
 }
 
 // openTasksDueBy is the ONE narrowing the lane's page and its count share.
@@ -100,7 +105,7 @@ func (t attentionTasks) OpenForViewer(
 	for _, row := range rows {
 		open = append(open, taskFromActivity(row, reader, asOf))
 	}
-	return t.markReadOnly(ctx, open)
+	return t.markReadOnly(ctx, open, asOf)
 }
 
 // UpcomingForViewer reads the work due after the day's end, to a horizon.
@@ -127,7 +132,7 @@ func (t attentionTasks) UpcomingForViewer(
 	for _, row := range rows {
 		upcoming = append(upcoming, taskFromActivity(row, reader, asOf))
 	}
-	return t.markReadOnly(ctx, upcoming)
+	return t.markReadOnly(ctx, upcoming, asOf)
 }
 
 // RemindersForViewer reads every due reminder of the reader's through the
@@ -150,7 +155,7 @@ func (t attentionTasks) RemindersForViewer(ctx context.Context, asOf time.Time) 
 			due = append(due, taskFromActivity(row, reader, asOf))
 		}
 		if !next.HasMore {
-			return t.markReadOnly(ctx, due)
+			return t.markReadOnly(ctx, due, asOf)
 		}
 		in.Cursor = &next.NextCursor
 	}
@@ -171,7 +176,7 @@ func reminderReaderFor(ctx context.Context, scope attention.TaskScope) ids.UUID 
 
 // markReadOnly flags the tasks the reader may see and not change, asked of the
 // whole page in one read.
-func (t attentionTasks) markReadOnly(ctx context.Context, tasks []attention.Task) ([]attention.Task, error) {
+func (t attentionTasks) markReadOnly(ctx context.Context, tasks []attention.Task, asOf time.Time) ([]attention.Task, error) {
 	named := make([]ids.UUID, len(tasks))
 	for i, task := range tasks {
 		named[i] = task.ID
@@ -183,7 +188,11 @@ func (t attentionTasks) markReadOnly(ctx context.Context, tasks []attention.Task
 	for i := range tasks {
 		tasks[i].ReadOnly = !writable[tasks[i].ID]
 	}
-	return t.withRecipients(ctx, tasks, named)
+	tasks, err = t.withRecipients(ctx, tasks, named)
+	if err != nil {
+		return nil, err
+	}
+	return t.withMayBeDone(ctx, tasks, asOf)
 }
 
 func (t attentionTasks) withRecipients(ctx context.Context, tasks []attention.Task, named []ids.UUID) ([]attention.Task, error) {
@@ -209,6 +218,81 @@ func (t attentionTasks) withRecipients(ctx context.Context, tasks []attention.Ta
 	}
 	for i := range tasks {
 		tasks[i].Recipients = recipients[tasks[i].ID]
+	}
+	return tasks, nil
+}
+
+// withMayBeDone asks of each promise task whether our later mail on its thread
+// to a recipient kept it. It reads the follow-up rule the contact page reads
+// (activities.PromiseFollowUpsTx), and the newest such mail asks. A Not yet the
+// reader gave to that mail, on either surface, keeps the plain row.
+func (t attentionTasks) withMayBeDone(ctx context.Context, tasks []attention.Task, asOf time.Time) ([]attention.Task, error) {
+	if t.db == nil {
+		return tasks, nil
+	}
+	var bases []activities.PromiseBasis
+	byBasis := map[ids.UUID]struct{ task, contact ids.UUID }{}
+	var keys []string
+	for _, task := range tasks {
+		if !task.Commitment || task.SourceActivityID == nil {
+			continue
+		}
+		keys = append(keys, momentaction.DoneKey(openapi_types.UUID(task.ID)))
+		for _, recipient := range task.Recipients {
+			if recipient.Status != crmcontracts.WorklistPromiseRecipientStatusOpen {
+				continue
+			}
+			basis := ids.NewV7()
+			byBasis[basis] = struct{ task, contact ids.UUID }{task.ID, ids.UUID(recipient.ContactId)}
+			bases = append(bases, activities.PromiseBasis{PromiseID: basis, SourceActivityID: *task.SourceActivityID, RecipientContactID: ids.UUID(recipient.ContactId)})
+		}
+	}
+	if len(bases) == 0 {
+		return tasks, nil
+	}
+	var followUps map[ids.UUID]activities.PromiseFollowUp
+	var setAside map[momentaction.DoneSetAside]bool
+	err := t.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		if followUps, err = activities.PromiseFollowUpsTx(ctx, tx, bases, asOf); err != nil {
+			return err
+		}
+		setAside, err = momentaction.DoneSetAsidesTx(ctx, tx, keys)
+		return err
+	})
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return tasks, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	type asked struct {
+		contact ids.UUID
+		sent    activities.PromiseFollowUp
+	}
+	newest := map[ids.UUID]asked{}
+	for basis, sent := range followUps {
+		owner := byBasis[basis]
+		if current, ok := newest[owner.task]; !ok || sent.At.After(current.sent.At) {
+			newest[owner.task] = asked{contact: owner.contact, sent: sent}
+		}
+	}
+	for i := range tasks {
+		found, ok := newest[tasks[i].ID]
+		if !ok {
+			continue
+		}
+		promise := openapi_types.UUID(tasks[i].ID)
+		key := momentaction.DoneKey(promise)
+		fingerprint := momentaction.DoneFingerprint(promise, found.sent, momentaction.HeldMarker(ctx, tasks[i].AssigneeID))
+		if setAside[momentaction.DoneSetAside{Contact: found.contact, Key: key, Fingerprint: fingerprint}] {
+			continue
+		}
+		tasks[i].MayBeDone = &crmcontracts.WorklistMayBeDone{
+			ContactId: openapi_types.UUID(found.contact), EmailActivityId: openapi_types.UUID(found.sent.EmailID),
+			WroteAt: found.sent.At, WrotePrecision: crmcontracts.OccurredPrecision(found.sent.Precision),
+			ClaimKey: key, EvidenceFingerprint: fingerprint,
+		}
 	}
 	return tasks, nil
 }

@@ -390,13 +390,13 @@ func (f attentionDealFacts) Figures(
 func taskFromActivity(row crmcontracts.Activity, reader ids.UUID, asOf time.Time) attention.Task {
 	linkType, linkID := primaryLink(row)
 	task := attention.Task{
-		LeadResponseEscalation: row.SourceSystem != nil && *row.SourceSystem == leadSLATaskSource,
-		ID:                     ids.UUID(row.Id),
-		Subject:                subjectOfActivity(row),
-		DueAt:                  row.DueAt,
-		LinkType:               linkType,
-		LinkID:                 linkID,
-		ReminderDue:            contentReadable(row) && activities.ReminderDueFor(row, reader, asOf),
+		LeadResponseEscalation: row.SourceSystem != nil && *row.SourceSystem == leadSLATaskSource, Commitment: row.SourceSystem != nil && *row.SourceSystem == activities.CommitmentTaskSource,
+		ID:          ids.UUID(row.Id),
+		Subject:     subjectOfActivity(row),
+		DueAt:       row.DueAt,
+		LinkType:    linkType,
+		LinkID:      linkID,
+		ReminderDue: contentReadable(row) && activities.ReminderDueFor(row, reader, asOf),
 	}
 	if row.SourceActivityId != nil {
 		task.SourceActivityID = new(ids.UUID(*row.SourceActivityId))
