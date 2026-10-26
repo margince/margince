@@ -270,3 +270,24 @@ func TestTwoRunsOfOneDocumentEmbedItsPassagesOnce(t *testing.T) {
 	}
 	release()
 }
+
+// A run that cannot take a connection for its lock reports a fault, and leaves
+// the document as it was for the retry.
+func TestAnIngestThatCannotTakeItsLockFailsAndLeavesTheDocument(t *testing.T) {
+	o := newOrphanIngest(t, &gatedEmbedder{})
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, held, err := holdIngest(cancelled, o.e.Pool, o.doc, slog.Default()); err == nil || held {
+		t.Fatalf("holdIngest on a cancelled context = held %v, err %v; want a refusal", held, err)
+	}
+	err := o.worker.Work(cancelled, &river.Job[KnowledgeIngestArgs]{
+		JobRow: &rivertype.JobRow{CreatedAt: clocktest.Now(t), Attempt: 1},
+		Args:   KnowledgeIngestArgs{Workspace: o.e.WS, DocumentID: o.doc},
+	})
+	if err == nil {
+		t.Fatal("a run that could not take its lock reported success")
+	}
+	if status, _ := o.state(t); status == "ready" {
+		t.Fatalf("the document reads %q after a run that never started", status)
+	}
+}
