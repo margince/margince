@@ -263,6 +263,9 @@ var waitingRepliesSQL = `
 	       AND request_task.source_activity_id = a.id
        AND (request_task.is_done OR (request_task.archived_at IS NULL
          AND (request_task.assignee_id = $%[9]d OR $%[9]d = '00000000-0000-0000-0000-000000000000'::uuid
+          -- A reminder with the mail's whole reach is read wherever the mail
+          -- is, so the reader sees who holds it instead of the mail (#9178).
+          OR (request_task.audience = 'workspace' AND request_task.restricted_at IS NULL)
           OR ` + storekit.HumanWroteActivityClause("request_task") + `))))
 	   AND ` + withinWaitingHorizonSQL("$%[1]d", "%[5]d") + `
 	   -- A SALES link, or it is not this queue's business.

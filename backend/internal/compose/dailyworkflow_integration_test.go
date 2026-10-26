@@ -142,8 +142,9 @@ func TestADayPassingMovesTheSameTaskToOverdue(t *testing.T) {
 }
 
 // A buyer's request captured from the rep's mailbox becomes the rep's task.
-// Their colleague's day neither holds it nor carries its words. Capturing the
-// same message again changes nothing.
+// Their colleague's day neither holds it nor carries its words. The manager's
+// team day holds the same task, not the mail as if nobody were on it (#9178).
+// Capturing the same message again changes nothing.
 func TestACapturedRequestIsTheOwnersAndSurvivesAReplay(t *testing.T) {
 	o := setupOwed(t)
 	readers := o.day(t)
@@ -184,8 +185,13 @@ func TestACapturedRequestIsTheOwnersAndSurvivesAReplay(t *testing.T) {
 	if words, err := json.Marshal(colleague); err != nil || strings.Contains(string(words), subject) {
 		t.Errorf("the colleague's day carries the request's subject (err %v)", err)
 	}
-	// The manager's team day is not asserted. It shows the mail itself as
-	// waiting, because the request task is readable by its assignee alone.
+	team := o.page(readers.manager, t, "team", o.now)
+	if _, ok := rowOf(team, request); !ok {
+		t.Errorf("the manager's team day holds %v, want the rep's request task %s", rowIDs(team), request)
+	}
+	if _, ok := rowOf(team, message.String()); ok {
+		t.Error("the manager's team day shows the mail as waiting while the rep holds its task")
+	}
 
 	o.capture(t, mail)
 	runOwedWorker(t, o.e, &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: .99})
