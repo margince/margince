@@ -87,6 +87,22 @@ func (e *tagScoutEnv) pass(t *testing.T, now time.Time) TagScoutPass {
 	return pass
 }
 
+// decidedAt is when the database stamped a decision on the suggestion. The
+// floor newer evidence must pass is that instant.
+//
+// So a test reads it from here rather than from its own clock. The two drift
+// apart under load, and a note stamped the later way can land below the floor.
+func (e *tagScoutEnv) decidedAt(t *testing.T, id ids.UUID) time.Time {
+	t.Helper()
+	var at time.Time
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(e.Admin(), `SELECT decided_at FROM tag_suggestion WHERE id = $1`, id).Scan(&at)
+	}); err != nil {
+		t.Fatalf("reading when the suggestion was decided: %v", err)
+	}
+	return at
+}
+
 func (e *tagScoutEnv) rep(user, team ids.UUID) context.Context {
 	return e.As(user, []ids.UUID{team}, integration.AccountRepPerms)
 }
@@ -165,8 +181,9 @@ func TestADismissedTagSuggestionReturnsOnlyOnNewerEvidence(t *testing.T) {
 		t.Fatalf("the dismissed evidence raised %d suggestions again", pass.Raised)
 	}
 
-	fresh := e.note(e.Admin(), t, "meeting", "Wants Product X pricing for 40 seats.", dana, time.Now())
-	if pass := e.pass(t, time.Now().Add(time.Minute)); pass.Raised != 1 {
+	floor := e.decidedAt(t, open[0].ID)
+	fresh := e.note(e.Admin(), t, "meeting", "Wants Product X pricing for 40 seats.", dana, floor.Add(time.Minute))
+	if pass := e.pass(t, floor.Add(2*time.Minute)); pass.Raised != 1 {
 		t.Fatalf("newer evidence raised %d suggestions, want 1", pass.Raised)
 	}
 	again, err := e.tags.OpenTagSuggestions(rep1, 10)
