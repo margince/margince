@@ -272,3 +272,61 @@ func TestAStopReadsBackPerReaderAndClearsOnResume(t *testing.T) {
 		t.Fatalf("after resume the reader's state = %+v, %v, want following", got, err)
 	}
 }
+
+// The decided rule: a relationship silent for longer than 180 days leaves the
+// Worklist. A silence of exactly 180 days is still a suggestion; 181 is not.
+func TestTheQuietCeilingKeepsDayOneHundredEightyAndDropsTheDayAfter(t *testing.T) {
+	e := integration.Setup(t)
+	atCeiling := e.SeedContact(t, "Silent 180 Days", &e.Rep1)
+	past := e.SeedContact(t, "Silent 181 Days", &e.Rep1)
+	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, atCeiling, 180)
+	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, past, 181)
+
+	got := quietLaneFor(t, e, e.Rep1, attention.TasksMine, ids.UUID{})
+	if len(got) != 1 || got[0].ContactID != atCeiling {
+		t.Fatalf("the lane = %+v, want only the relationship silent for exactly 180 days", got)
+	}
+}
+
+// A meeting on the calendar has not happened. It must not count as the
+// contact having been heard from, or a relationship silent for months reads
+// as fresh because somebody scheduled something.
+func TestAFutureMeetingIsNotATouch(t *testing.T) {
+	e := integration.Setup(t)
+	contact := e.SeedContact(t, "Booked But Silent", &e.Rep1)
+	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, contact, 60)
+	owner := integration.OwnerConn(t)
+	defer func() {
+		if err := owner.Close(context.Background()); err != nil {
+			t.Errorf("closing fixture connection: %v", err)
+		}
+	}()
+	meeting := ids.NewV7()
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'meeting', 'next review', $2, 'manual', 'human:x')`, meeting, quietLaneNow.AddDate(0, 0, 10)); err != nil {
+		t.Fatal(err)
+	}
+	integration.LinkActivity(t, owner, meeting, "contact", contact)
+	for _, party := range []struct {
+		column string
+		id     ids.UUID
+		role   string
+	}{{"user_id", e.Rep1, "organizer"}, {"contact_id", contact, "attendee"}} {
+		if _, err := owner.Exec(context.Background(), `INSERT INTO activity_participant (activity_id, `+party.column+`, role) VALUES ($1, $2, $3)`,
+			meeting, party.id, party.role); err != nil {
+			t.Fatal(err)
+		}
+	}
+	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
+		return search.RecomputeEdgesForActivities(wsCtx, tx, []ids.UUID{meeting})
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	got := quietLaneFor(t, e, e.Rep1, attention.TasksMine, ids.UUID{})
+	if len(got) != 1 || got[0].ContactID != contact {
+		t.Fatalf("the lane = %+v, want the contact still quiet: a future meeting is not a touch", got)
+	}
+}

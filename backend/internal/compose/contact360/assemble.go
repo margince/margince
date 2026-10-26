@@ -113,6 +113,11 @@ type AssembleOptions struct {
 	// (relstrength.WrittenByHumanSQL) before its cap, for the briefs and
 	// drafts. The page itself keeps every record.
 	WrittenByHumanOnly bool
+	// AsOf is the instant LastTouchFor measures from: an activity dated after
+	// it has not happened yet. Zero reads the database's own now(), which is
+	// what the page wants. A reader with its own clock, the quiet lane, passes
+	// that clock so its window and its touches agree.
+	AsOf time.Time
 }
 
 // Assemble reads the whole contact page inside ONE workspace transaction.

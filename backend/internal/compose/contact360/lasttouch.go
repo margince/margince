@@ -124,10 +124,14 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 		WHERE a.archived_at IS NULL AND %s AND (%s)%s%s`,
 		fmt.Sprintf(contactReachesActivity, "c.id"), scope, projectScope(opts, arg),
 		auth.AudienceWorkspaceOnly("a"))
-	humanClock := relstrength.LastActivityCountsSQL("a", "now()") + " AND " + relstrength.WrittenByHumanSQL("a")
+	asOf := "now()"
+	if !opts.AsOf.IsZero() {
+		asOf = fmt.Sprintf("$%d::timestamptz", arg(opts.AsOf))
+	}
+	humanClock := relstrength.LastActivityCountsSQL("a", asOf) + " AND " + relstrength.WrittenByHumanSQL("a")
 	inbound := relstrength.TheyWroteSQL("c.id", "a") + " AND " + humanClock
 	outbound := relstrength.WeWroteSQL("a") + " AND " + humanClock
-	exchange := relstrength.ContactExchangeSQL("a", "c.id", "now()")
+	exchange := relstrength.ContactExchangeSQL("a", "c.id", asOf)
 	// One newest row per direction carries its time and its precision together.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id, inbound.touched_at, outbound.touched_at, live.touched_at, exchange.touched_at, preceding.touched_at,
