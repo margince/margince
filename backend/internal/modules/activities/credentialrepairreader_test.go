@@ -32,7 +32,7 @@ func systemCtx() context.Context {
 // Reporting it would fail a run over state that is already correct.
 func TestARowTheRepairCannotReadAnyMoreIsSkipped(t *testing.T) {
 	got, err := MaskStoredMailTextTx(systemCtx(),
-		unreachableTx{err: pgx.ErrNoRows}, []ids.ActivityID{ids.ActivityID{UUID: ids.NewV7()}})
+		unreachableTx{err: pgx.ErrNoRows}, []ids.ActivityID{{UUID: ids.NewV7()}})
 	if err != nil {
 		t.Fatalf("a vanished row was reported: %v", err)
 	}
@@ -48,7 +48,7 @@ func TestARowTheRepairCannotReadAnyMoreIsSkipped(t *testing.T) {
 func TestAFailedReadStopsTheRepair(t *testing.T) {
 	refused := errors.New("the connection went away")
 	_, err := MaskStoredMailTextTx(systemCtx(),
-		unreachableTx{err: refused}, []ids.ActivityID{ids.ActivityID{UUID: ids.NewV7()}})
+		unreachableTx{err: refused}, []ids.ActivityID{{UUID: ids.NewV7()}})
 	if !errors.Is(err, refused) {
 		t.Fatalf("the failure was not reported: %v", err)
 	}
@@ -64,7 +64,7 @@ func TestOnlyTheSystemRunsTheRepair(t *testing.T) {
 		principal.Principal{Type: principal.PrincipalHuman, ID: "user:a-seat"})
 	if _, err := MaskStoredMailTextTx(seat,
 		unreachableTx{err: pgx.ErrNoRows},
-		[]ids.ActivityID{ids.ActivityID{UUID: ids.NewV7()}}); err == nil {
+		[]ids.ActivityID{{UUID: ids.NewV7()}}); err == nil {
 		t.Fatal("a human seat ran the stored-text repair")
 	}
 }
