@@ -101,14 +101,19 @@ func maskRowTextTx(
 	}
 	// The same event an edit emits, because the embeddings are rebuilt from it.
 	// `search_tsv` is generated, so the index follows the row without being
-	// told. The subject it carries is the masked one.
-	bodyChanged := true
+	// told.
+	//
+	// Only the columns that moved are named. A subscriber acting on a field
+	// this pass left alone would rebuild from a change that did not happen.
+	changed := crmcontracts.PublicEventActivityChangedFields{}
+	if !same(subject, maskedSubject) {
+		changed.Subject = maskedSubject
+	}
+	if bodyChanged := !same(body, maskedBody); bodyChanged {
+		changed.Body = &bodyChanged
+	}
 	return true, storekit.EmitEvent(ctx, tx, auditID, id.UUID,
-		crmcontracts.PublicEventActivityUpdated{
-			ChangedFields: crmcontracts.PublicEventActivityChangedFields{
-				Subject: maskedSubject, Body: &bodyChanged,
-			},
-		})
+		crmcontracts.PublicEventActivityUpdated{ChangedFields: changed})
 }
 
 // maskedPtr is text with its credentials masked, keeping a nil as a nil: an

@@ -105,13 +105,24 @@ func seedAMailWithACredentialInItsAuditImage(
 	e.WsExec(t, `INSERT INTO activity (id, kind, body, occurred_at, source, captured_by)
 		VALUES ($1, 'email', $2, now(), 'gmail:cred-2', 'connector:gmail')`,
 		mail, "Passwort: "+seededCredential)
+	return mail, seedAnAuditImageOfAnEditTo(t, e, mail)
+}
+
+// seedAnAuditImageOfAnEditTo writes the audit row of an edit to one mail, with
+// the credential in both images.
+//
+// Apart from the activity's own seed, because a held mail is written held: the
+// restriction columns carry constraints an UPDATE cannot satisfy on its own.
+func seedAnAuditImageOfAnEditTo(t *testing.T, e *integration.Env, mail ids.UUID) ids.UUID {
+	t.Helper()
+	auditRow := ids.NewV7()
 	e.WsExec(t, `
 		INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, before, after)
 		VALUES ($1, 'human', 'rep', 'update', 'activity', $2, $3, $4)`,
 		auditRow, mail,
 		[]byte(`{"body":"Passwort: `+seededCredential+`"}`),
 		[]byte(`{"body":"Passwort: `+seededCredential+` (korrigiert)"}`))
-	return mail, auditRow
+	return auditRow
 }
 
 // The trigger admits it while the repair's setting is on and refuses it
@@ -160,7 +171,7 @@ func TestTheRepairMasksAnAuditImageOnlyUnderItsOwnSetting(t *testing.T) {
 	note := e.WsScalar(t, `SELECT coalesce(before::text, '') || coalesce(after::text, '')
 			|| ' evidence=' || evidence::text
 		   FROM audit_log
-		  WHERE entity_id = $1 AND action = 'erase'
+		  WHERE entity_id = $1 AND action = 'update'
 		    AND evidence ? $2`, mail, storekit.EvidenceKeyMaskedAuditImages)
 	if !strings.Contains(note, "true") {
 		t.Errorf("the repair left no row saying it masked this mail's trail: %q", note)
@@ -331,7 +342,7 @@ func restoreTheStrictTrigger(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		if _, err := owner.Exec(ctx, permissiveAuditTrigger); err != nil {
+		if _, err := owner.Exec(ctx, theRepairsOwnTrigger(t)); err != nil {
 			t.Errorf("restoring the repair's own trigger: %v", err)
 		}
 		if err := owner.Close(ctx); err != nil {
@@ -343,19 +354,19 @@ func restoreTheStrictTrigger(t *testing.T) {
 	}
 }
 
-// permissiveAuditTrigger is the function this task's migration installs, kept
-// here so the test above can put back what it replaced.
-const permissiveAuditTrigger = `
-CREATE OR REPLACE FUNCTION audit_log_immutable() RETURNS trigger
-    LANGUAGE plpgsql AS $$
-BEGIN
-  IF TG_OP = 'UPDATE'
-     AND current_setting('margince.audit_credential_repair', true) = 'on'
-     AND (to_jsonb(NEW) - 'before' - 'after') = (to_jsonb(OLD) - 'before' - 'after')
-  THEN RETURN NEW; END IF;
-  RAISE EXCEPTION 'audit_log is append-only (attempted % on row %)', TG_OP, OLD.id
-    USING ERRCODE = 'check_violation';
-END; $$;`
+// theRepairsOwnTrigger is the function this task's migration installs, read
+// from the migration itself. Copying its body here would leave a second
+// version to drift from the one that ships.
+func theRepairsOwnTrigger(t *testing.T) string {
+	t.Helper()
+	const migration = "../../migrations/core/" +
+		"1792971667_the_credential_repair_may_rewrite_an_audit_image.up.sql"
+	body, err := os.ReadFile(migration)
+	if err != nil {
+		t.Fatalf("reading the trigger's own migration: %v", err)
+	}
+	return string(body)
+}
 
 // An installation that restored the strict trigger still gets its rows masked.
 //
@@ -422,7 +433,7 @@ func TestTheAuditExceptionRefusesAChangeToWhatTheRowSaysHappened(t *testing.T) {
 			ws := principal.WithWorkspaceID(context.Background(), e.WS)
 			err := database.WithWorkspaceTx(ws, e.Pool, func(tx pgx.Tx) error {
 				if _, err := tx.Exec(ws,
-					`SELECT set_config('margince.audit_credential_repair', 'on', true)`); err != nil {
+					`SELECT set_config('margince.audit_credential_mask', 'on', true)`); err != nil {
 					return err
 				}
 				_, err := tx.Exec(ws,
@@ -479,9 +490,96 @@ func ownerUpdateUnderTheRepairSetting(t *testing.T, set string, auditRow ids.UUI
 		}
 	}()
 	if _, err := tx.Exec(ctx,
-		`SELECT set_config('margince.audit_credential_repair', 'on', true)`); err != nil {
+		`SELECT set_config('margince.audit_credential_mask', 'on', true)`); err != nil {
 		t.Fatal(err)
 	}
 	_, err = tx.Exec(ctx, `UPDATE audit_log SET `+set+` WHERE id = $1`, auditRow)
 	return err
+}
+
+// A hold reaches the trail as well as the row.
+//
+// An audit image of an edit to a held mail quotes the text the row holds.
+// Rewriting it would alter the record the hold protects.
+//
+// The step that masks the row already refuses a held mail, and this is its
+// sibling query.
+func TestTheRepairLeavesTheAuditImagesOfAHeldMailAlone(t *testing.T) {
+	e := integration.Setup(t)
+	system := principal.WithActor(e.Admin(),
+		principal.Principal{Type: principal.PrincipalSystem, ID: "system:credential-repair"})
+
+	held := ids.NewV7()
+	e.WsExec(t, `INSERT INTO activity
+			(id, kind, body, occurred_at, source, captured_by,
+			 archived_at, restricted_at, restricted_reason, restricted_until,
+			 retention_class, retention_class_at)
+		VALUES ($1, 'email', $2, now(), 'gmail:held-trail', 'connector:gmail',
+			now(), now(), 'a tax audit of the quarter', now() + interval '2 years',
+			'commercial_correspondence', now())`, held, "Passwort: "+seededCredential)
+	auditRow := seedAnAuditImageOfAnEditTo(t, e, held)
+
+	var changed int
+	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+		out, err := maskStoredCredentialsDataTask(e.Pool).Steps[1].Batch(
+			system, tx, datatask.BatchIn{Limit: 50})
+		changed = out.Changed
+		return err
+	}); err != nil {
+		t.Fatalf("the audit step: %v", err)
+	}
+	if changed != 0 {
+		t.Errorf("the repair rewrote %d held mails' images", changed)
+	}
+	if got := e.WsScalar(t, `SELECT after::text FROM audit_log WHERE id = $1`, auditRow); !strings.Contains(got, seededCredential) {
+		t.Errorf("a held mail's audit image was rewritten: %s", got)
+	}
+}
+
+// The exception admits a masked image and nothing else.
+//
+// Without this the setting would buy a rewrite of an image to any content.
+// That is a way to put words into a record's history, rather than to take a
+// credential out of it.
+func TestTheAuditExceptionRefusesAnImageThatIsNotMasked(t *testing.T) {
+	e := integration.Setup(t)
+	_, auditRow := seedAMailWithACredentialInItsAuditImage(t, e)
+
+	// A row whose before image is NULL, so a write to it is an image conjured
+	// where the trail quoted nothing. AuditEvent writes rows of this shape.
+	noBefore := ids.NewV7()
+	e.WsExec(t, `
+		INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, after)
+		VALUES ($1, 'human', 'rep', 'export', 'activity', $2, $3)`,
+		noBefore, ids.NewV7(), []byte(`{"body":"nothing secret"}`))
+
+	for _, c := range []struct {
+		name, image string
+		onRow       ids.UUID
+		refused     bool
+	}{
+		{"content with no mask", `{"body":"a sentence nobody wrote"}`, auditRow, true},
+		{"an image where the row held none", `{"body":"[masked]"}`, noBefore, true},
+		{"a masked image", `{"body":"Passwort: [masked]"}`, auditRow, false},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			const column = "before"
+			ws := principal.WithWorkspaceID(context.Background(), e.WS)
+			err := database.WithWorkspaceTx(ws, e.Pool, func(tx pgx.Tx) error {
+				if _, err := tx.Exec(ws,
+					`SELECT set_config('margince.audit_credential_mask', 'on', true)`); err != nil {
+					return err
+				}
+				_, err := tx.Exec(ws,
+					`UPDATE audit_log SET `+column+` = $2::jsonb WHERE id = $1`, c.onRow, c.image)
+				return err
+			})
+			if c.refused && err == nil {
+				t.Errorf("%s was accepted", c.name)
+			}
+			if !c.refused && err != nil {
+				t.Errorf("%s was refused: %v", c.name, err)
+			}
+		})
+	}
 }

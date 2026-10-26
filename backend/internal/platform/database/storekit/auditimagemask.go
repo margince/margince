@@ -107,7 +107,7 @@ type AuditImageRow struct {
 
 // AuditRepairSetting is the GUC the append-only trigger reads to admit a
 // rewrite of the images, and the one this package sets.
-const AuditRepairSetting = "margince.audit_credential_repair"
+const AuditRepairSetting = "margince.audit_credential_mask"
 
 // EvidenceKeyMaskedAuditImages names the evidence flag on a row recording that
 // an entity's audit images were masked.

@@ -141,8 +141,12 @@ func maskMailTextBatch(
 // auditImagesWithStoredText is the audit trail of a mail edit. Only the record
 // types whose images carry mail text are candidates, and storekit owns that
 // list: a type added there must not need remembering here.
+// The hold reaches the trail as well as the row. A held mail keeps its text,
+// and an image of an edit to it is the same text under another name.
 const auditImagesWithStoredText = `FROM audit_log l
- WHERE l.entity_type = 'activity' AND (l.before IS NOT NULL OR l.after IS NOT NULL)`
+  JOIN activity a ON a.id = l.entity_id
+ WHERE l.entity_type = 'activity' AND a.restricted_at IS NULL
+   AND (l.before IS NOT NULL OR l.after IS NOT NULL)`
 
 func estimateMaskableAuditImages(
 	ctx context.Context, q datatask.Querier, maximum int64,
@@ -211,16 +215,17 @@ func maskAuditImagesBatch(
 	// One row per entity rather than per image. The trail records that the
 	// repair reached this mail, and twenty images of edits are one repair.
 	//
-	// Shaped like the erasure tombstone it is. Empty images, because a row
-	// certifying a credential gone must not re-store it.
+	// Empty images, because a row certifying a credential gone must not
+	// re-store it, and the context rides evidence.
 	//
-	// The context rides evidence, which the History tab does not project as a
-	// field change.
+	// The verb is `update` and not a scrub verb. `erase`, `anonymize` and
+	// `restrict` each set the record's scrub boundary, and the history
+	// projections then hide everything at or before it.
 	reached := slices.SortedFunc(maps.Keys(masked), func(a, b ids.UUID) int {
 		return bytes.Compare(a[:], b[:])
 	})
 	for _, entity := range reached {
-		if _, err := storekit.AuditEventWithEvidence(ctx, tx, "erase", activityEntityType, entity,
+		if _, err := storekit.AuditEventWithEvidence(ctx, tx, "update", activityEntityType, entity,
 			nil, map[string]any{storekit.EvidenceKeyMaskedAuditImages: true}); err != nil {
 			return datatask.BatchOut{}, err
 		}

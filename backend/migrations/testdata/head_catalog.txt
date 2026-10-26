@@ -1465,8 +1465,12 @@ public.audit_log.trg_audit_no_mutate CREATE TRIGGER trg_audit_no_mutate BEFORE D
 public.audit_log_immutable() secdef=false cfg=- acl=- 
 BEGIN
   IF TG_OP = 'UPDATE'
-     AND current_setting('margince.audit_credential_repair', true) = 'on'
+     AND current_setting('margince.audit_credential_mask', true) = 'on'
      AND (to_jsonb(NEW) - 'before' - 'after') = (to_jsonb(OLD) - 'before' - 'after')
+     AND (NEW.before IS NOT DISTINCT FROM OLD.before
+          OR (OLD.before IS NOT NULL AND NEW.before::text LIKE '%[masked]%'))
+     AND (NEW.after IS NOT DISTINCT FROM OLD.after
+          OR (OLD.after IS NOT NULL AND NEW.after::text LIKE '%[masked]%'))
   THEN
     RETURN NEW;
   END IF;
