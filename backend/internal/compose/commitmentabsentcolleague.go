@@ -34,7 +34,7 @@ func senderOwesAnAbsentColleaguesWork(
 			present[*party.Seat] = true
 		}
 	}
-	rows, err := tx.Query(ctx, `SELECT id, display_name, coalesce(greeting_name, '') FROM app_user WHERE `+identity.LiveMemberSQL(""))
+	rows, err := tx.Query(ctx, `SELECT id, display_name, coalesce(greeting_name, '') FROM app_user WHERE NOT is_agent AND `+identity.LiveMemberSQL(""))
 	if err != nil {
 		return false, fmt.Errorf("reading the colleagues a promise may name: %w", err)
 	}
