@@ -140,8 +140,8 @@ type DealCoverage struct {
 	// and carried as ids so the fold stays pure.
 	DepartedContactIDs []ids.UUID
 	Stakeholders       []deals.DealStakeholder
-	// SeatsInbound dates each seat's last message to us. Nil for a caller
-	// without the activity grant.
+	// SeatsInbound dates each seat's last message to us. Only the coverage
+	// endpoint reads it, so it is nil from CoverageFor and for a caller without the grants.
 	SeatsInbound map[ids.UUID]SeatInbound
 	// OurSide is the colleagues with recorded interaction with the deal's
 	// stakeholders, one edge per colleague and contact, warmest first.
@@ -241,9 +241,6 @@ func CoverageFor(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now time.Tim
 	}
 	out.DepartedContactIDs, err = readDeparted(ctx, tx, facts.companyID, contacts)
 	if err != nil {
-		return out, err
-	}
-	if out.SeatsInbound, err = readSeatsInbound(ctx, tx, contacts, now); err != nil {
 		return out, err
 	}
 	edges, err := search.EdgesForContacts(ctx, tx, contacts)

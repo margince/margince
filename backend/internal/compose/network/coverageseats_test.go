@@ -117,3 +117,13 @@ func TestASeatGoesOutWithWhenTheContactLastWrote(t *testing.T) {
 		t.Errorf("a seat with no message went out dated: %+v", second)
 	}
 }
+
+// A reader without the activity grant learns nothing about when a seat wrote.
+// The answer is nil, as the coverage view's field says, and no statement runs.
+func TestASeatDateForAReaderWithoutActivitiesIsNil(t *testing.T) {
+	seats := []deals.DealStakeholder{{ContactID: ids.NewV7(), Role: "champion"}}
+	inbound, err := readSeatsInbound(coverageReaderWithoutTheEdgeGrant(), nil, seats, time.Now().UTC())
+	if err != nil || inbound != nil {
+		t.Errorf("seat dates for a reader without activity.read = %#v (%v), want nil", inbound, err)
+	}
+}

@@ -166,6 +166,11 @@ func (h Reads) GetDealCoverage(w http.ResponseWriter, r *http.Request, id crmcon
 		if err != nil {
 			return err
 		}
+		// Only this page shows when a seat last wrote. So the status card, the
+		// assistant and the intro paths neither pay for that read nor fail on it.
+		if coverage.SeatsInbound, err = readSeatsInbound(ctx, tx, coverage.Stakeholders, now); err != nil {
+			return err
+		}
 		names, err := UserNames(ctx, tx, coverageUsers(coverage))
 		if err != nil {
 			return err

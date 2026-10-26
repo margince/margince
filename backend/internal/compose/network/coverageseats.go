@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -47,24 +48,23 @@ func OurColleagues(edges []ColleagueEdge) []ColleagueEdge {
 
 // readSeatsInbound dates each seat's last message to us through the contact
 // strength fold, the one the contact page reads. A caller without the activity
-// or contact grant gets no dates: an absent date says nothing about the seat.
+// or contact grant gets nil: an absent date says nothing about the seat.
 func readSeatsInbound(
-	ctx context.Context, tx pgx.Tx, seats []ids.UUID, now time.Time,
+	ctx context.Context, tx pgx.Tx, seats []deals.DealStakeholder, now time.Time,
 ) (map[ids.UUID]SeatInbound, error) {
-	none := map[ids.UUID]SeatInbound{}
 	if len(seats) == 0 {
-		return none, nil
+		return nil, nil
 	}
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
-		return none, deniedAsNone(err)
+		return nil, deniedAsNone(err)
 	}
 	contactIDs := make([]ids.ContactID, 0, len(seats))
 	for _, seat := range seats {
-		contactIDs = append(contactIDs, ids.From[ids.ContactKind](seat))
+		contactIDs = append(contactIDs, ids.From[ids.ContactKind](seat.ContactID))
 	}
 	strengths, err := contacts.StrengthForContacts(ctx, tx, contactIDs, now)
 	if err != nil {
-		return none, deniedAsNone(err)
+		return nil, deniedAsNone(err)
 	}
 	out := make(map[ids.UUID]SeatInbound, len(strengths))
 	for _, seat := range strengths {
