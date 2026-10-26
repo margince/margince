@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -38,6 +39,47 @@ func TestAGhostedSignalCountsCalendarDaysInTheInstallationZone(t *testing.T) {
 	contact := employedAt(t, e, company, "Zoe Ghost")
 	logMail(t, e, contact, "inbound", wrote.AddDate(0, 0, -5))
 	logMail(t, e, contact, "outbound", wrote)
+
+	ctx := principal.SystemActing(e.Admin(), signalScanActor)
+	var summary string
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if _, err := WriteGhostedSignals(ctx, tx, now); err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx, `SELECT summary FROM signal WHERE entity_id = $1 AND kind = $2`,
+			company, kindGhostedThread).Scan(&summary)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if want := fmt.Sprintf(signalSummaryCopyFor(textlang.English).ghostedThread, 15); summary != want {
+		t.Errorf("summary = %q, want %q", summary, want)
+	}
+}
+
+// A day mail counts from its date. In Auckland its stored noon UTC is already
+// the next local day, so counting the stored instant would say 14.
+func TestAGhostedSignalCountsADayMailFromItsDate(t *testing.T) {
+	e := integration.Setup(t)
+	e.WsExec(t, `UPDATE setting SET value = '"Pacific/Auckland"'::jsonb WHERE key = 'installation.timezone'`)
+	zone, err := time.LoadLocation("Pacific/Auckland")
+	if err != nil {
+		t.Fatalf("load zone: %v", err)
+	}
+	dated := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	now := time.Date(2026, 9, 16, 9, 0, 0, 0, zone)
+
+	company := e.SeedCompany(t, "Day Ghost Co", nil)
+	e.WsExec(t, `UPDATE company SET lifecycle = 'opportunity' WHERE id = $1`, company)
+	contact := employedAt(t, e, company, "Dana Ghost")
+	logMail(t, e, contact, "inbound", dated.AddDate(0, 0, -5))
+	subject, outbound := "Proposal", "outbound"
+	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "email", Subject: &subject, Direction: &outbound, OccurredAt: &dated,
+		OccurredPrecision: activities.PrecisionDay, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
+	}); err != nil {
+		t.Fatalf("logging the day mail: %v", err)
+	}
 
 	ctx := principal.SystemActing(e.Admin(), signalScanActor)
 	var summary string

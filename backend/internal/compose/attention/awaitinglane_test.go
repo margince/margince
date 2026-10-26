@@ -263,3 +263,28 @@ func TestAMeetingFollowUpCountsCalendarDaysInTheInstallationZone(t *testing.T) {
 		}
 	}
 }
+
+// A day meeting counts from its date. In Auckland its stored noon UTC is already
+// the next local morning, so the stored instant would count one day short.
+func TestADayMeetingFollowUpCountsFromItsDate(t *testing.T) {
+	t.Parallel()
+	auckland, err := time.LoadLocation("Pacific/Auckland")
+	if err != nil {
+		t.Fatalf("load zone: %v", err)
+	}
+	met := AwaitedReply{
+		ActivityID: ids.NewV7(), SentAt: time.Date(2026, 9, 6, 12, 0, 0, 0, time.UTC), DealID: ids.NewV7(),
+		Precision: crmcontracts.OccurredPrecisionOccurredPrecisionDay,
+	}
+	asOf := time.Date(2026, 9, 7, 9, 0, 0, 0, auckland)
+	ranked, actionable := classifyMeetingFollowUp(met, asOf, auckland)
+	if !actionable {
+		t.Fatal("no row")
+	}
+	if got := metDaysOf(t, ranked.item); got != 1 || ranked.waitingDays != 1 {
+		t.Errorf("row says %d, ranks on %d, want 1 day since 6 September", got, ranked.waitingDays)
+	}
+	if got := classifyAwaiting(met, asOf, auckland).waitingDays; got != 1 {
+		t.Errorf("a day email ranks on %d days, want 1", got)
+	}
+}

@@ -18,6 +18,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 const (
@@ -49,6 +50,11 @@ type AwaitedReply struct {
 	// Present when the reader may read the message, which is what the
 	// composer drafts the follow-up from.
 	EmailSummary *crmcontracts.EmailSummary
+}
+
+// sent is SentAt read by its precision, which is what a day count needs.
+func (a AwaitedReply) sent() occurredday.Moment {
+	return occurredday.Moment{At: a.SentAt, DateOnly: occurredday.IsDay(a.Precision)}
 }
 
 // followUpRead is the reader's follow-ups, read per request like planRows:
@@ -133,7 +139,7 @@ func (s *Service) readFollowUps(
 // keep the conversation going, so it ranks with promises, below a customer
 // who is waiting on them.
 func classifyAwaiting(awaited AwaitedReply, asOf time.Time, loc *time.Location) ranked {
-	days := calendarDaysSince(awaited.SentAt, asOf, loc)
+	days := calendarDaysSince(awaited.sent(), asOf, loc)
 	row := crmcontracts.WorklistItem{
 		Id:           awaited.ActivityID.String(),
 		Source:       sourceAwaitingReply,
@@ -180,7 +186,7 @@ func classifyAwaiting(awaited AwaitedReply, asOf time.Time, loc *time.Location) 
 // to everyone it was with. With nobody on file the row opens the deal or the
 // company instead; with neither there is nothing to act on, and no row.
 func classifyMeetingFollowUp(met AwaitedReply, asOf time.Time, loc *time.Location) (ranked, bool) {
-	days := calendarDaysSince(met.SentAt, asOf, loc)
+	days := calendarDaysSince(met.sent(), asOf, loc)
 	row := crmcontracts.WorklistItem{
 		Id:           met.ActivityID.String(),
 		Source:       sourceMeetingFollowUp,
