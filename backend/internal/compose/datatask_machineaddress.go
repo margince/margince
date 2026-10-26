@@ -20,7 +20,7 @@ import (
 // is archived or deleted by the task.
 const machineAddressTag = "machine-address"
 
-// machineAddressTaggedBy keys the run id on each tagging's audit row.
+// machineAddressTaggedBy keys the run id on each audit row a data task writes.
 const machineAddressTaggedBy = "data_task_run"
 
 func machineAddressDataTask() datatask.Task {

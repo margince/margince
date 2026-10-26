@@ -7,6 +7,7 @@ package capture
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -17,7 +18,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -180,14 +180,15 @@ func meetingLinkedTo(t *testing.T, e *integration.SearchEnv, meeting ids.UUID, c
 		`' AND contact_id = '`+contact.String()+`'`) == 1
 }
 
-func gcalMeeting(t *testing.T, e *integration.SearchEnv, sourceID string) ids.UUID {
+// gcalMeeting is the meeting captured from the event every test here calls "review".
+func gcalMeeting(t *testing.T, e *integration.SearchEnv) ids.UUID {
 	t.Helper()
 	var id ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT id FROM activity WHERE source_system = 'gcal' AND source_id = $1`, sourceID).Scan(&id)
+			`SELECT id FROM activity WHERE source_system = 'gcal' AND source_id = 'review'`).Scan(&id)
 	}); err != nil {
-		t.Fatalf("the meeting %s was not captured: %v", sourceID, err)
+		t.Fatalf("the meeting was not captured: %v", err)
 	}
 	return id
 }
@@ -204,7 +205,7 @@ func TestEveryGuestOnAnInvitationIsOnTheMeeting(t *testing.T) {
 	sync := connectFeed(t, env, feed)
 
 	sync()
-	meeting := gcalMeeting(t, e, "review")
+	meeting := gcalMeeting(t, e)
 	rows := guestRows(t, e, meeting)
 	for address, seat := range map[string]ids.UUID{guestColleagueA: colleagueA, guestColleagueB: colleagueB} {
 		if len(rows[address]) != 1 || rows[address][0].userID == nil || *rows[address][0].userID != seat {
@@ -260,7 +261,7 @@ func TestAGuestAddedToAnEventJoinsTheMeetingOnce(t *testing.T) {
 	feed.set(lateGuestEvent("review", "confirmed", start, guestColleagueA, guestList()...))
 	sync := connectFeed(t, env, feed)
 	sync()
-	meeting := gcalMeeting(t, e, "review")
+	meeting := gcalMeeting(t, e)
 	added := ensureGuestContact(t, e, guestAddedLater)
 	ensureGuestContact(t, e, guestUnread)
 	elsewhere := ensureGuestContact(t, e, "elsewhere@other-co.example")
@@ -349,10 +350,10 @@ func importMeetingFor(t *testing.T, e *integration.SearchEnv, contact ids.Contac
 		IcalUid:      &uid,
 		IcalInstance: &instance,
 	}
-	req.Links = &[]struct {
-		EntityId   openapi_types.UUID                                `json:"entity_id"`
-		EntityType crmcontracts.CreateActivityRequestLinksEntityType `json:"entity_type"`
-	}{{EntityId: openapi_types.UUID(contact.UUID), EntityType: "contact"}}
+	// The link list is an anonymous contract struct, so it is filled the way a client sends it.
+	if err := json.Unmarshal([]byte(`[{"entity_type":"contact","entity_id":"`+contact.String()+`"}]`), &req.Links); err != nil {
+		t.Fatal(err)
+	}
 	in, err := activities.LogActivityInputFrom(req)
 	if err != nil {
 		t.Fatalf("mapping the import: %v", err)
@@ -432,7 +433,7 @@ func TestADeclinedColleagueIsShownAndGrantedNothing(t *testing.T) {
 	feed.set(lateGuestEvent("review", "confirmed", captureNow.AddDate(0, 0, -3), guestUnread,
 		ownerEntry("accepted"), guestEntry(guestColleagueA, "declined"), guestEntry(guestUnread, "accepted")))
 	connectFeed(t, env, feed)()
-	meeting := gcalMeeting(t, e, "review")
+	meeting := gcalMeeting(t, e)
 
 	rows := guestRows(t, e, meeting)
 	if len(rows[guestColleagueA]) != 1 || rows[guestColleagueA][0].userID != nil {
@@ -454,7 +455,7 @@ func TestAColleagueRemovedFromTheEventLosesTheMeeting(t *testing.T) {
 		ownerEntry("accepted"), guestEntry(guestColleagueA, "accepted"), guestEntry(guestUnread, "accepted")))
 	sync := connectFeed(t, env, feed)
 	sync()
-	meeting := gcalMeeting(t, e, "review")
+	meeting := gcalMeeting(t, e)
 	if !seatReads(t, e, colleague, meeting) {
 		t.Fatal("the invited colleague cannot read the meeting")
 	}
@@ -513,7 +514,7 @@ func TestAGuestNoVisibleLinkShowsIsStillListed(t *testing.T) {
 	feed := &calendarFeed{}
 	feed.set(lateGuestEvent("review", "confirmed", captureNow.AddDate(0, 0, -3), "guest00@client-co.example", guests...))
 	connectFeed(t, env, feed)()
-	meeting := gcalMeeting(t, e, "review")
+	meeting := gcalMeeting(t, e)
 	store := activities.NewStore(e.DB())
 	// The contacts a mailbox sync invents stay their capturing seat's alone.
 	if _, err := e.Owner.Exec(context.Background(),

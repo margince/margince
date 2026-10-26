@@ -278,17 +278,7 @@ func stampParties(
 		if address == "" && account == "" {
 			continue
 		}
-		// Which row already speaks for this party, if any. An account names one
-		// first; an entry carrying none falls back to its address, because a
-		// party described once with an account and once without is still one
-		// human.
-		at, already := -1, false
-		if account != "" {
-			at, already = rowOf[account]
-		} else if address != "" {
-			at, already = rowOfAddress[address]
-		}
-		if already {
+		if at, already := rowSpeakingFor(rowOf, rowOfAddress, account, address); already {
 			// Only an EMPTY field is filled: the first description of a party
 			// stands, and a second spelling of something they already gave is
 			// not a correction.

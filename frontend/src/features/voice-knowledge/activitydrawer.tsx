@@ -34,6 +34,8 @@ import { worklistKey } from "../worklist/worklist.queries";
 import "../../design-system/emaildetail.css";
 
 type Activity = components["schemas"]["Activity"];
+type ActivityLink = components["schemas"]["ActivityLink"];
+type MeetingGuest = components["schemas"]["MeetingGuest"];
 
 // The kinds whose linked contacts were in the room. On a note or a task a
 // linked contact is what the entry is about, so it is filed, not attending.
@@ -186,23 +188,7 @@ function ActivityBody({
             <Badge tone="success">{t("tasks.isDone")}</Badge>
           )}
         </PartyLine>
-        {attendees.length + guests.length > 0 && (
-          <PartyLine label={t("activity.detail.attendees")}>
-            <RecordLinks links={attendees} newTab />
-            {guests.map((guest, index) => (
-              <Fragment key={guest.contact_id ?? guest.address}>
-                {attendees.length + index > 0 && ", "}
-                {guest.contact_id ? (
-                  <EntityRef kind="contact" id={guest.contact_id} newTab />
-                ) : (
-                  <span title={guest.address}>
-                    {guest.display_name || guest.address}
-                  </span>
-                )}
-              </Fragment>
-            ))}
-          </PartyLine>
-        )}
+        <AttendeesLine attendees={attendees} guests={guests} />
         {colleagues.length > 0 && (
           <PartyLine label={t("activity.detail.colleagues")}>
             {colleagues.map((id, index) => (
@@ -276,6 +262,37 @@ function CustomFieldLines({ activity }: Readonly<{ activity: Activity }>) {
 }
 
 // The host first, then every other colleague the read names, each once.
+// The contacts a meeting is filed under, then the guests no visible link shows.
+function AttendeesLine({
+  attendees,
+  guests,
+}: Readonly<{
+  attendees: readonly ActivityLink[];
+  guests: readonly MeetingGuest[];
+}>) {
+  const t = useT();
+  if (attendees.length + guests.length === 0) {
+    return null;
+  }
+  return (
+    <PartyLine label={t("activity.detail.attendees")}>
+      <RecordLinks links={attendees} newTab />
+      {guests.map((guest, index) => (
+        <Fragment key={guest.contact_id ?? guest.address}>
+          {attendees.length + index > 0 && ", "}
+          {guest.contact_id ? (
+            <EntityRef kind="contact" id={guest.contact_id} newTab />
+          ) : (
+            <span title={guest.address}>
+              {guest.display_name || guest.address}
+            </span>
+          )}
+        </Fragment>
+      ))}
+    </PartyLine>
+  );
+}
+
 function colleaguesOf(activity: Activity): string[] {
   const seats = [activity.host_user_id, ...(activity.colleague_ids ?? [])];
   return [...new Set(seats.filter((id): id is string => Boolean(id)))];

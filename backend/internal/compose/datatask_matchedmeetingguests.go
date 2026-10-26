@@ -121,12 +121,12 @@ func addGuestsFromOriginal(ctx context.Context, tx pgx.Tx, authority authz.Resol
 	if err != nil || !found {
 		return false, err
 	}
-	seat, err := stampingCalendarSeat(ctx, tx, meeting, calendar)
-	if err != nil || seat == nil {
+	seat, stamps, err := stampingCalendarSeat(ctx, tx, meeting, calendar)
+	if err != nil || !stamps {
 		return false, err
 	}
-	added, err := capture.SettleStoredMeetingRosterTx(ctx, tx, authority, sourceGCal, meeting, *seat, rec,
-		map[string]any{"data_task_run": run.String()})
+	added, err := capture.SettleStoredMeetingRosterTx(ctx, tx, authority, sourceGCal, meeting, seat, rec,
+		map[string]any{machineAddressTaggedBy: run.String()})
 	if err != nil || added.Added == 0 {
 		return added.Changed(), err
 	}
@@ -135,7 +135,7 @@ func addGuestsFromOriginal(ctx context.Context, tx pgx.Tx, authority authz.Resol
 
 // stampingCalendarSeat answers the seat whose Google Calendar stamps the live
 // meeting, and only when that calendar is the one the stored event came from.
-func stampingCalendarSeat(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID, calendar string) (*ids.UUID, error) {
+func stampingCalendarSeat(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID, calendar string) (ids.UUID, bool, error) {
 	var seat *ids.UUID
 	var label string
 	err := tx.QueryRow(ctx, `
@@ -147,15 +147,15 @@ func stampingCalendarSeat(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID
 		   AND split_part(a.captured_by, ':', 2) = $2
 		 LIMIT 1`, meeting, sourceGCal).Scan(&seat, &label)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
+		return ids.Nil, false, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("compose: reading the calendar that stamps a matched meeting: %w", err)
+		return ids.Nil, false, fmt.Errorf("compose: reading the calendar that stamps a matched meeting: %w", err)
 	}
-	if !strings.EqualFold(strings.TrimSpace(label), calendar) {
-		return nil, nil
+	if seat == nil || !strings.EqualFold(strings.TrimSpace(label), calendar) {
+		return ids.Nil, false, nil
 	}
-	return seat, nil
+	return *seat, true, nil
 }
 
 func estimateMatchedMeetingOriginals(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {

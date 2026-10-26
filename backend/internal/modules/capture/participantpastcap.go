@@ -89,6 +89,21 @@ func stampSeatsPastCap(
 	return int(tag.RowsAffected()), nil
 }
 
+// rowSpeakingFor answers which row already speaks for a party, if any. An
+// account names one first; an entry carrying none falls back to its address,
+// because a party described once with an account and once without is one human.
+func rowSpeakingFor(rowOf, rowOfAddress map[string]int, account, address string) (int, bool) {
+	if account != "" {
+		at, ok := rowOf[account]
+		return at, ok
+	}
+	if address != "" {
+		at, ok := rowOfAddress[address]
+		return at, ok
+	}
+	return -1, false
+}
+
 // storedDomainsOf is owndomain.StoredOfAddress for each address, in order, for
 // a set-based INSERT that writes the folded domain beside each address.
 func storedDomainsOf(addresses []string) []*string {
