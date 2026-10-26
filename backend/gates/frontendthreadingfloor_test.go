@@ -5,9 +5,9 @@
 
 package gates
 
-// The deal page names the seat a single-threaded deal is missing: a second
-// contact while it seats fewer than the floor, a second engaged one past it.
-// The server fires the finding below that same floor. If the two disagree,
+// The deal page names the seat a single-threaded deal is missing. Below the
+// floor in seats it asks for a second contact, and past it for a second engaged
+// one. The server fires the finding below that same floor. If the two disagree,
 // the card asks for a contact the deal already has.
 
 import (
