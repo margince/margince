@@ -20,7 +20,7 @@ Editing identity, choosing the default address and resolving where the contact w
 
 The sidebar answers permission per purpose and reach per channel, through the existing consent guard. A reader who decides whether to write needs both answers, and they come from different records. An answer that is still loading, one that failed, and one that loaded but is unknown each look different. Each message still passes its own send check, which decides.
 
-The guard sends each reason twice: `reason` is an English sentence for an agent, and `reason_code` (with `reason_at` for a dated objection) is what the panel says in the reader's language (`consentreason.ts`). A seeded purpose is named from the catalog too; an operator's own purpose keeps its label. A code the client does not know yet shows the server's sentence.
+The guard sends each reason twice. `reason` is an English sentence for an agent. `reason_code` is what the panel says in the reader's language (`consentreason.ts`), with `reason_at` for a dated objection. A seeded purpose is named from the catalog too; an operator's own purpose keeps its label. A code the client does not know yet shows the server's sentence.
 
 `Manage consent & proof history` opens the existing consent ledger. A recorded grant and send permission are different things: other recorded legal reasons can change what the guard says. Recording or taking back consent loads the ledger, the guard, the contact read and the message review again. When only the subject confirmed, it stays recorded as subject-only.
 

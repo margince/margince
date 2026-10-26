@@ -33,7 +33,7 @@ const (
 	ReasonNoConsent                    = "no_consent"
 )
 
-// said fills a verdict's sentence from its code, so the two cannot disagree.
+// said fills a verdict's sentence from its code.
 func said(v Verdict) Verdict {
 	v.Reason = reasonSentence(v)
 	return v
