@@ -68,7 +68,7 @@ const WITHHELD: Activity = {
 
 function Frame({ activity }: Readonly<{ activity: Activity }>) {
   installFetchStub({
-    "GET /me": meRoute({}),
+    "GET /me": meRoute({ activity: ["update"] }),
   });
   return (
     <StoryProviders>
