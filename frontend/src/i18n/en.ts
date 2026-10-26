@@ -3681,9 +3681,6 @@ export const en = {
   "co.deals.col.value": "Value",
   "co.deals.col.close": "Close",
   "co.deals.col.status": "Status",
-  "co.deals.status.open": "Open",
-  "co.deals.status.won": "Won",
-  "co.deals.status.lost": "Lost",
   "co.rail.contacts.empty": "No contacts yet.",
   "co.rail.contacts.add": "Add contact",
 

@@ -1,5 +1,6 @@
 import type { PeekContent } from "../../design-system/peek";
 import type { StandingPeek } from "../../design-system/standingdims";
+import { DEAL_STATUS_LABEL } from "../../format/dealstatus";
 import { formatMoney } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
 import { routeHash } from "../../lib/router";
@@ -147,13 +148,10 @@ function dealStanding(
   deal: Deal,
   { t, locale, zone }: Pick<PeekWords, "t" | "locale" | "zone">,
 ): string {
-  if (deal.status === "open") {
-    return t("co.deals.status.open");
+  if (deal.status === "open" || !deal.closed_at) {
+    return t(DEAL_STATUS_LABEL[deal.status]);
   }
   const won = deal.status === "won";
-  if (!deal.closed_at) {
-    return t(won ? "co.deals.status.won" : "co.deals.status.lost");
-  }
   return t(won ? "project.deals.wonOn" : "project.deals.lostOn", {
     date: formatDayMonth(deal.closed_at, locale, zone),
   });

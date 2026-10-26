@@ -8,7 +8,7 @@ export {
   dealsQueryParams,
   type StageTotals,
 } from "../../lib/deals.queries";
-export { buildColumns, dealStatusTone } from "./deals.columns";
+export { buildColumns } from "./deals.columns";
 export { DealScreen, useDeal } from "./deals.detail";
 export { DealDetails } from "./deals.details";
 export { dealEditFields, usePartnerOptions } from "./deals.fields";

@@ -3580,9 +3580,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.deals.col.value": "Giá trị",
   "co.deals.col.close": "Chốt",
   "co.deals.col.status": "Trạng thái",
-  "co.deals.status.open": "Đang mở",
-  "co.deals.status.won": "Thắng",
-  "co.deals.status.lost": "Thua",
   "co.rail.contacts.empty": "Chưa có liên hệ nào.",
   "co.rail.contacts.add": "Thêm liên hệ",
 

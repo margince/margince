@@ -320,7 +320,6 @@ reach features/privacy/unsubscribe.tsx features/settings/preferences.css
 reach features/privacy/unsubscribe.tsx features/settings/preferences.tsx
 reach features/projects/billingcontacts.test.tsx features/contacts/contactbillingroles.tsx
 reach features/projects/contractpaperchip.stories.tsx features/companies/company360.css
-reach features/projects/partnerdeals.tsx features/deals/deals.tsx
 reach features/projects/partners.tsx app/pagemeta.ts
 reach features/projects/project360.chronology.tsx features/mail/openemaildrawer.tsx
 reach features/projects/project360.chronology.tsx features/records/recordchronology.tsx

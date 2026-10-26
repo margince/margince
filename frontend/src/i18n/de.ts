@@ -3681,9 +3681,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.deals.col.value": "Wert",
   "co.deals.col.close": "Abschluss",
   "co.deals.col.status": "Status",
-  "co.deals.status.open": "Offen",
-  "co.deals.status.won": "Gewonnen",
-  "co.deals.status.lost": "Verloren",
   "co.rail.contacts.empty": "Noch keine Kontakte.",
   "co.rail.contacts.add": "Kontakt hinzufügen",
 

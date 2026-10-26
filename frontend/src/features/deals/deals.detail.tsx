@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../../api/client";
+import { DealStatusBadge } from "../../components/dealstatusbadge";
 import { Badge } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { QueryGate } from "../../design-system/querystates";
@@ -10,7 +11,6 @@ import {
   useRecordTimeline,
 } from "../../design-system/recordtimeline";
 import { RecordView } from "../../design-system/recordview";
-import { dealStatusLabel } from "../../format/dealstatus";
 import { useLocale, useT } from "../../i18n";
 import { usePendingApprovals } from "../../lib/approvals.queries";
 import { useRecordWriteRefusal } from "../../lib/capability";
@@ -46,7 +46,6 @@ import { DealFiles } from "./dealfiles";
 import { DealProjectLine } from "./dealproject";
 import type { Deal, Offer, Stage } from "./deals";
 import { useAdvanceDeal } from "./deals.board";
-import { dealStatusTone } from "./deals.columns";
 import { DealDetailsDrawer } from "./deals.details";
 import { DealOverviewPane } from "./deals.overview";
 import { useDealStatusCard } from "./dealstatus";
@@ -122,8 +121,6 @@ function DealPulsePills({
   yourMove,
 }: Readonly<{ status: Deal["status"]; yourMove: boolean }>) {
   const t = useT();
-  // A status this build has no word for reads as itself.
-  const statusKey = dealStatusLabel(status);
   return (
     <>
       {yourMove && (
@@ -131,9 +128,7 @@ function DealPulsePills({
           {t("standing.yourMove")}
         </Badge>
       )}
-      <Badge tone={dealStatusTone(status)}>
-        {statusKey ? t(statusKey) : status}
-      </Badge>
+      <DealStatusBadge status={status} />
     </>
   );
 }
