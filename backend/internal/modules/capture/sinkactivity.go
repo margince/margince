@@ -121,7 +121,8 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		// vetted the seat.
 		//
 		//   - alreadyFiled: the id came from the identity resolve, which answers
-		//     only for a row the SAME SEAT captured. Theirs to take over.
+		//     only for a row the SAME SEAT captured, or an import or meeting that
+		//     names an address this seat proved. Theirs to take over.
 		//   - otherwise: the id came from upsertActivity's ON CONFLICT on the
 		//     natural key, gated only by EnsureActivityVisible — a DISCOVER
 		//     check that admits any row this seat can merely see. An outbound
@@ -156,7 +157,7 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 			}
 			return ref, false, counterpartyDecision{}, nil
 		}
-		same, err := replayClaimIsProvenTx(ctx, tx, id, fields, rec.Parts)
+		same, err := arrivalIsProvenTx(ctx, tx, id, fields, rec.Parts, alreadyFiled)
 		if err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}
