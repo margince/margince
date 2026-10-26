@@ -53,7 +53,7 @@ func readSeatsInbound(
 	ctx context.Context, tx pgx.Tx, seats []deals.DealStakeholder, now time.Time,
 ) (map[ids.UUID]SeatInbound, error) {
 	if len(seats) == 0 {
-		return nil, nil
+		return nil, nil //nolint:nilnil // no seats is no dates to give, which the wire reads as absent
 	}
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, deniedAsNone(err)
