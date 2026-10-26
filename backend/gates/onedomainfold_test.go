@@ -26,7 +26,6 @@ var idnaReadersAdmitted = gatekit.Waive(map[string]string{
 	"internal/platform/owndomain/owndomain.go":   "is the fold itself, and the Spellings that a SQL comparison against stored header addresses needs because Postgres cannot fold IDNA. Cost: none, every other domain fold delegates here",
 	"internal/modules/capture/owndomainstore.go": "validates an own domain before it is stored and refuses one IDNA cannot read, where Fold keeps it. It stores the same ASCII form Fold gives a readable domain. Cost: a second IDNA call, kept so a typo is refused rather than stored as protection that never fires",
 	"internal/platform/freemail/displayname.go":  "renders a domain for display with idna.ToUnicode; it never compares. Cost: none for matching, a display-only conversion",
-	"internal/modules/capture/strangermail.go":   "renders a stranger's domain in Unicode for the review text; it never compares. Cost: none for matching, a display-only conversion",
 })
 
 func TestOnlyTheSharedFoldReadsIDNA(t *testing.T) {

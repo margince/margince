@@ -11,14 +11,13 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"golang.org/x/net/idna"
 
 	"github.com/margince/margince/backend/internal/platform/captureorigin"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -130,12 +129,16 @@ func senderWasStrangerTx(ctx context.Context, tx pgx.Tx, sender string, before t
 	return !corresponded, err
 }
 
-// addressSpellings is an address as stored columns may hold it: lowercased,
-// and with its domain in IDNA form too. A unicode domain may be stored either way.
+// addressSpellings is an address as stored columns may hold it: lowercased as
+// typed, and every spelling of its domain mailidentity.AddressSpellings gives
+// (the IDNA form and the Unicode form). A unicode domain may be stored either
+// way, and a punycode one too.
 func addressSpellings(address string) []string {
 	spellings := []string{correspondence.Fold(address)}
-	if canonical := foldAddress(address); !slices.Contains(spellings, canonical) {
-		spellings = append(spellings, canonical)
+	for _, spelling := range mailidentity.AddressSpellings(address) {
+		if !slices.Contains(spellings, spelling) {
+			spellings = append(spellings, spelling)
+		}
 	}
 	return spellings
 }
@@ -167,19 +170,6 @@ func repairStrangerFactsTx(ctx context.Context, tx pgx.Tx, recipient string) err
 	return nil
 }
 
-// storedSpellings adds to addressSpellings the address with its domain in
-// unicode. Mail from one sender may store its counterparty_email in either
-// form.
-func storedSpellings(address string) []string {
-	spellings := addressSpellings(address)
-	canonical := foldAddress(address)
-	at := strings.LastIndex(canonical, "@")
-	if at < 0 {
-		return spellings
-	}
-	unicode, err := idna.Lookup.ToUnicode(canonical[at+1:])
-	if err == nil && !slices.Contains(spellings, canonical[:at+1]+unicode) {
-		spellings = append(spellings, canonical[:at+1]+unicode)
-	}
-	return spellings
-}
+// storedSpellings is every form counterparty_email may hold for one sender:
+// addressSpellings, which already carries the Unicode and IDNA forms.
+func storedSpellings(address string) []string { return addressSpellings(address) }
