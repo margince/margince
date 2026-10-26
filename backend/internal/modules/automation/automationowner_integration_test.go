@@ -15,8 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// A rule whose owner left is dead until someone else owns it: the owner change
-// has to move the owner, count as a change of the rule, and refuse a seat the
+// A rule whose owner left is dead until someone else owns it. The owner change
+// moves the owner and counts as a change of the rule. It refuses a seat the
 // caller could not make an owner.
 func TestAnAutomationCanBeHandedToAnotherMember(t *testing.T) {
 	fx := setupAutomationDB(t)
