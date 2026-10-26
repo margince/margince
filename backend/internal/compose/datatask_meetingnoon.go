@@ -19,11 +19,16 @@ import (
 )
 
 // meetingNoonStartsDataTask puts back the start of a meeting the old outcome
-// dialog moved to noon. Each restore is the activity update, so it is audited
-// per record, and a restored meeting leaves the selection.
+// dialog moved to noon. Each restore is audited per record, and a restored
+// meeting leaves the selection. Version 2 also restores a meeting archived
+// after the damage.
+//
+// Two cases stay unrepaired, as #8671 accepted. A save after the cutoff has no
+// evidence that the old dialog wrote it. A start read in a zone changed since
+// may no longer read as noon. Neither start is guessed.
 func meetingNoonStartsDataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1792912000_meeting_noon_starts", Version: 1,
+		ID: "core/1792912000_meeting_noon_starts", Version: 2,
 		Title: "Restore meeting times an old outcome save moved to noon",
 		// The selection also reads occurred_precision, which core/1792983858 adds.
 		Requires: []string{"core/" + activities.MeetingNoonCutoffMigration, "core/1792983858"},

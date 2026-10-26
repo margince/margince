@@ -13,10 +13,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -234,5 +238,89 @@ func TestTheNoonTaskLeavesADayMeetingAtItsNoon(t *testing.T) {
 	}
 	if got := f.version(madeADay); got != version {
 		t.Errorf("the day meeting changed version to %d", got)
+	}
+}
+
+// A meeting damaged while live and archived later is restored too, so a later
+// restore of the record shows the meeting when it was. It stays archived.
+func TestTheNoonTaskRestoresAMeetingArchivedAfterTheDamage(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	e.WsExec(t, `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, noonZone)
+	f := noonFixture{t: t, e: e}
+	archived := f.book(bookedAtMorning, f.contact("Archived Contact"))
+	f.save(archived, berlinNoon)
+	if _, err := e.Activities.ArchiveActivity(e.Admin(), archived, nil); err != nil {
+		t.Fatalf("archiving the meeting: %v", err)
+	}
+	f.cutoffNow()
+
+	runMachineAddressTask(ctx, t, e, meetingNoonStartsDataTask())
+
+	if got, want := f.start(archived), "2026-07-15T07:00:00.123Z"; got != want {
+		t.Errorf("the archived meeting starts at %s, want %s", got, want)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND archived_at IS NOT NULL`, archived.UUID); got != 1 {
+		t.Error("the restore brought the archived meeting back")
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'activity' AND entity_id = $1 AND action = 'update'
+		AND (after ->> 'occurred_at')::timestamptz = $2 AND actor_type = 'system'`, archived.UUID, bookedAtMorning); got != 1 {
+		t.Errorf("system restore audit rows = %d, want 1", got)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM event_outbox o
+		JOIN audit_log a ON a.id = (o.envelope->'trace'->>'audit_log_id')::uuid
+		WHERE o.envelope->>'type' = 'activity.updated' AND o.envelope->'entity'->>'id' = $1
+		  AND a.actor_type = 'system'`, archived.String()); got != 1 {
+		t.Errorf("activity.updated events riding the restore's audit row = %d, want 1", got)
+	}
+	if got := f.historyStart(archived); got != "2026-07-15T07:00:00.123Z" {
+		t.Errorf("the history start after the repair = %s, want the restored start", got)
+	}
+}
+
+// The batch itself pages, replays from a nil cursor without writing again, and
+// refuses a cursor it cannot read.
+func TestTheNoonBatchPagesReplaysAndRefusesAMalformedCursor(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	e.WsExec(t, `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, noonZone)
+	f := noonFixture{t: t, e: e}
+	contact := f.contact("Paging Contact")
+	for range 3 {
+		f.save(f.book(bookedAtMorning, contact), berlinNoon)
+	}
+	f.cutoffNow()
+	step := meetingNoonStartsDataTask().Steps[0]
+	pass := func() (changed, pages int) {
+		t.Helper()
+		in := datatask.BatchIn{Limit: 1, RunID: ids.NewV7()}
+		for {
+			var out datatask.BatchOut
+			if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+				var err error
+				out, err = step.Batch(ctx, tx, in)
+				return err
+			}); err != nil {
+				t.Fatal(err)
+			}
+			changed += out.Changed
+			pages++
+			if out.Done {
+				return changed, pages
+			}
+			in.Cursor = out.Cursor
+		}
+	}
+	if changed, pages := pass(); changed != 3 || pages < 3 {
+		t.Fatalf("the first pass restored %d meetings over %d pages, want 3 over at least 3", changed, pages)
+	}
+	if changed, _ := pass(); changed != 0 {
+		t.Errorf("a replay from a nil cursor restored %d more meetings", changed)
+	}
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		_, err := step.Batch(ctx, tx, datatask.BatchIn{Cursor: []byte(`"not an id"`), Limit: 10})
+		return err
+	}); err == nil {
+		t.Error("a malformed cursor was accepted")
 	}
 }
