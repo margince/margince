@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
 func TestTheRefreshPassLeavesColleaguesMailOutOfTheSpread(t *testing.T) {
@@ -59,5 +60,19 @@ func TestTheRefreshPassLeavesColleaguesMailOutOfTheSpread(t *testing.T) {
 	})
 	if err != nil || days != 30 {
 		t.Fatalf("the stored horizon is (%d, %v), want the 30-day ceiling from the customers' answers alone", days, err)
+	}
+}
+
+// The measurement is a year of mail, so its budget must outlast the general
+// ceiling and still end inside the job's own timeout.
+func TestTheRefreshPassBudgetOutlastsTheStatementCeilingAndFitsTheJob(t *testing.T) {
+	budget := waitingHorizonStatementBudget()
+	spec, ok := jobs.SpecFor(WaitingHorizonRefreshArgs{}.Kind())
+	if !ok {
+		t.Fatal("waiting_horizon_refresh declares no job spec")
+	}
+	if budget <= database.StatementCeiling || budget >= spec.Timeout.Duration() {
+		t.Fatalf("budget %s must sit between the %s ceiling and the job's %s timeout",
+			budget, database.StatementCeiling, spec.Timeout.Duration())
 	}
 }

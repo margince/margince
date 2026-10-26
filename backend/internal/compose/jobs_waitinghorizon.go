@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
@@ -50,6 +51,19 @@ func newWaitingHorizonRefreshWorker(pool *pgxpool.Pool, log *slog.Logger) *waiti
 	}
 }
 
+// waitingHorizonStatementBudget is the job's declared timeout less a margin for
+// the own-domain read and the store. Postgres then cuts the statement with a
+// clean error before River abandons the attempt.
+func waitingHorizonStatementBudget() time.Duration {
+	spec, ok := jobs.SpecFor(WaitingHorizonRefreshArgs{}.Kind())
+	if !ok {
+		panic("compose: waiting_horizon_refresh has no declared job spec")
+	}
+	return spec.Timeout.Duration() - waitingHorizonBudgetMargin
+}
+
+const waitingHorizonBudgetMargin = 30 * time.Second
+
 type waitingHorizonRefreshWorker struct {
 	activities *activities.Store
 	identity   *identity.Service
@@ -61,7 +75,8 @@ func (w *waitingHorizonRefreshWorker) Work(ctx context.Context, _ *river.Job[Wai
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	days, err := w.activities.RefreshWaitingHorizon(principal.SystemActing(wsCtx, waitingHorizonRefreshActor))
+	days, err := w.activities.RefreshWaitingHorizon(
+		principal.SystemActing(wsCtx, waitingHorizonRefreshActor), waitingHorizonStatementBudget())
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
