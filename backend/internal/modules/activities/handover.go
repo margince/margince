@@ -34,10 +34,7 @@ func (s *Store) OpenTasksAssignedTo(ctx context.Context, tx pgx.Tx, from ids.Use
 // not an agent.
 func (s *Store) HandOverOpenTasksTx(ctx context.Context, tx pgx.Tx, from, to ids.UserID) (int, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
-		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return 0, nil
-		}
-		return 0, err
+		return 0, nilIfDenied(err)
 	}
 	candidates, err := openTasksAssignedTo(ctx, tx, from)
 	if err != nil {
@@ -59,14 +56,20 @@ func (s *Store) HandOverOpenTasksTx(ctx context.Context, tx pgx.Tx, from, to ids
 	return moved, nil
 }
 
+// nilIfDenied reads a missing grant as nothing to hand over, and passes any
+// other failure on.
+func nilIfDenied(err error) error {
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return nil
+	}
+	return err
+}
+
 // openTasksAssignedTo selects the live, undone tasks assigned to from that the
 // caller may read.
 func openTasksAssignedTo(ctx context.Context, tx pgx.Tx, from ids.UserID) ([]ids.UUID, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
-		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return nil, nil
-		}
-		return nil, err
+		return nil, nilIfDenied(err)
 	}
 	args := []any{from}
 	arg := func(v any) int { args = append(args, v); return len(args) }

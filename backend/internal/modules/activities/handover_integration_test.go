@@ -33,6 +33,17 @@ func TestHandingOverTasksNeedsTheUpdateGrantAndASoundConnection(t *testing.T) {
 		t.Fatalf("a caller without the update grant moved %d tasks, err %v; want none moved and no refusal", moved, err)
 	}
 
+	err = database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)).Tx(noReadGrant(e), func(tx pgx.Tx) error {
+		counted, err := store.OpenTasksAssignedTo(noReadGrant(e), tx, from)
+		if err != nil || counted != 0 {
+			t.Errorf("a caller who may not read activities counted %d tasks, err %v; want none", counted, err)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	cancelled, cancel := context.WithCancel(e.asEditor())
 	err = database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)).Tx(e.asEditor(), func(tx pgx.Tx) error {
 		cancel()
@@ -77,4 +88,11 @@ func TestAWorkspaceWideReaderCountsAMembersOpenTasks(t *testing.T) {
 	if err != nil || counted != 1 {
 		t.Fatalf("open tasks counted = %d, err %v; want 1", counted, err)
 	}
+}
+
+func noReadGrant(e *promiseEnv) context.Context {
+	ctx := e.asEditor()
+	actor, _ := principal.Actor(ctx)
+	actor.Permissions.Objects["activity"] = principal.ObjectGrant{}
+	return principal.WithActor(ctx, actor)
 }
