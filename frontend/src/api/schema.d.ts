@@ -38827,6 +38827,8 @@ export interface components {
             base_points?: number | null;
             /** @description The activities behind a behavioral factor, re-read through the CALLER's scope (ADR-0105 §3). */
             source_activity_ids?: string[];
+            /** @description The same receipts, named. In the order they were counted, and omitting an id this reader cannot discover at all — so the list can be SHORTER than `source_activity_ids`, which stays the count. A number that shrank to what one reader may open would tell two readers different things about one score. */
+            readonly source_activities?: components["schemas"]["ActivityReference"][];
             /**
              * Format: uuid
              * @description The human who supplied a manual factor. Null for machine factors.

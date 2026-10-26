@@ -4884,6 +4884,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.scoreLoading": "Score-Faktoren werden geladen…",
   "lead.scoreNoFactors": "Bisher fließen keine Faktoren in diesen Score ein.",
   "lead.scoreSources": "Aktivitäten: {count}",
+  "lead.scoreSourcesHead": "Aktivitäten hinter diesem Faktor",
+  "lead.scoreSourceNoSubject": "Kein Betreff",
   "lead.factor.decision_maker_title": "Titel des Entscheidungstragenden",
   "lead.factor.reply": "Lead hat geantwortet",
   "lead.factor.meeting_held": "Termin stattgefunden",
