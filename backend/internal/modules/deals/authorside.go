@@ -289,7 +289,8 @@ func SettlesBuyerMilestone(kind CriterionKind, side AuthorSide) bool {
 	return side == AuthorBuyer
 }
 
-// allCriterionKinds lists the criterion kinds ParseCriterionKind admits.
+// allCriterionKinds lists the criterion kinds. ParseCriterionKind admits these
+// and no other, and SettlingEvidenceSQL reads its buyer kinds from them.
 var allCriterionKinds = []CriterionKind{
 	CriterionBuyerConfirmed, CriterionEventHeld, CriterionDocumentSigned,
 	CriterionRoleIdentified, CriterionTermsAccepted, CriterionCustom, CriterionLegalReviewed,

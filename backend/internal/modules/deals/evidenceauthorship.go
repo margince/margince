@@ -133,7 +133,7 @@ func reconcileEvidenceAuthorshipTx(
 
 // judgeActivityAuthor is AuthorSideOf over the activity as stored, archived
 // or not and linked or not: the stage policy reads the evidence either way.
-// found is false when the activity no longer exists.
+// found is false when the activity no longer exists or names no author.
 func judgeActivityAuthor(ctx context.Context, tx pgx.Tx, activityID ids.UUID, domains []string) (AuthorSide, bool, error) {
 	var direction *string
 	err := tx.QueryRow(ctx, `SELECT direction FROM activity WHERE id = $1`, activityID).Scan(&direction)
@@ -150,6 +150,11 @@ func judgeActivityAuthor(ctx context.Context, tx pgx.Tx, activityID ids.UUID, do
 	var dir string
 	if direction != nil {
 		dir = *direction
+	}
+	if _, identified := authorOf(participants); !identified && dir != directionOutbound {
+		// Nobody on the activity names its author now. The side judged at the
+		// write stands, since no own domain can have moved it.
+		return "", false, nil
 	}
 	return AuthorSideOf(dir, participants, domains), true, nil
 }

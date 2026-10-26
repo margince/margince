@@ -311,3 +311,29 @@ func TestAnAdminDomainChangeCorrectsEvidenceAtOnceAndStalesTheCard(t *testing.T)
 		t.Errorf("the card on restored buyer evidence is refused: %v", err)
 	}
 }
+
+func TestACardIsJudgedAgainstTheDomainsAsTheyStandEvenBeforeThePass(t *testing.T) {
+	f := newAuthorshipFixture(t)
+	fromBuyer := f.inboundMail("cfo@buyer-corp.test")
+	budget := f.claim(fromBuyer, "budget")
+	card := f.budgetCard()
+	checked := deals.NewStore(f.DB(), DealsInstallation()).WithOwnDomains(ownDomainReader{store: f.own})
+	stands := func() error {
+		return database.WithWorkspaceTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
+			return checked.ValidateProgressionCriteriaTx(f.Admin(), tx, card)
+		})
+	}
+	if err := stands(); err != nil {
+		t.Fatalf("the card on buyer evidence is refused before any change: %v", err)
+	}
+	// The domain changes and no pass runs: the stored side is still buyer.
+	if _, err := f.own.Add(f.Admin(), "buyer-corp.test"); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.stored(budget); got != string(deals.AuthorBuyer) {
+		t.Fatalf("the claim changed to %s without a pass", got)
+	}
+	if err := stands(); !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Errorf("a card resting on mail from a domain now ours still stands: %v", err)
+	}
+}
