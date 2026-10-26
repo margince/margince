@@ -10,7 +10,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func voiceTestParty(address string, contact, seat *ids.UUID, name string) crmcontracts.EmailParty {
@@ -49,7 +48,7 @@ func TestTheAuthorIsTheRecordedFromPartyNeverTheDirection(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
-			got := authorOf(c.mail, emailParties{from: []crmcontracts.EmailParty{c.from}}, nil)
+			got := authorOf(c.mail, emailParties{from: []crmcontracts.EmailParty{c.from}})
 			if got == nil || got.Kind != c.want {
 				t.Fatalf("author = %+v, want kind %q", got, c.want)
 			}
@@ -62,7 +61,7 @@ func TestTheAuthorIsTheRecordedFromPartyNeverTheDirection(t *testing.T) {
 func TestASeatsAddressWithoutTheStampIsNotAColleague(t *testing.T) {
 	t.Parallel()
 	mail := crmcontracts.Activity{Kind: crmcontracts.ActivityKindEmail}
-	got := authorOf(mail, emailParties{from: []crmcontracts.EmailParty{voiceTestParty("sam@acme.example", nil, nil, "")}}, nil)
+	got := authorOf(mail, emailParties{from: []crmcontracts.EmailParty{voiceTestParty("sam@acme.example", nil, nil, "")}})
 	if got == nil || got.Kind == crmcontracts.ActivityAuthorKindColleague {
 		t.Fatalf("author = %+v; an unstamped address was credited to a colleague", got)
 	}
@@ -72,56 +71,60 @@ func TestAMessageWithNoFromPartyHasNoAuthor(t *testing.T) {
 	t.Parallel()
 	inbound := crmcontracts.ActivityDirectionInbound
 	mail := crmcontracts.Activity{Kind: crmcontracts.ActivityKindEmail, Direction: &inbound}
-	if got := authorOf(mail, emailParties{}, nil); got != nil {
+	if got := authorOf(mail, emailParties{}); got != nil {
 		t.Fatalf("author = %+v, want none: a direction names nobody", got)
 	}
 }
 
 func TestANoteIsWrittenByTheSeatThatLoggedItOrTheImportedAuthor(t *testing.T) {
 	t.Parallel()
-	seat := ids.NewV7()
-	captured := principal.HumanIDPrefix + seat.String()
-	note := crmcontracts.Activity{Kind: crmcontracts.ActivityKindNote, CapturedBy: &captured}
-	got := authorOf(note, emailParties{}, map[ids.UUID]seatName{seat: {name: "Carla", email: "carla@acme.example"}})
+	seat, name := ids.NewV7(), "Carla"
+	note := crmcontracts.Activity{Kind: crmcontracts.ActivityKindNote, Voice: writerSeatVoice(&seat, &name, nil)}
+	got := authorOf(note, emailParties{})
 	if got == nil || got.Kind != crmcontracts.ActivityAuthorKindColleague || got.DisplayName == nil || *got.DisplayName != "Carla" {
 		t.Fatalf("author = %+v, want the colleague Carla", got)
 	}
 	note.Author = &crmcontracts.SourceAuthor{DisplayName: "Old CRM user"}
-	got = authorOf(note, emailParties{}, nil)
+	got = authorOf(note, emailParties{})
 	if got == nil || got.Kind != crmcontracts.ActivityAuthorKindUnresolved || *got.DisplayName != "Old CRM user" {
 		t.Fatalf("author = %+v, want the imported author", got)
 	}
-	connector := "connector:gmail"
-	if got := authorOf(crmcontracts.Activity{Kind: crmcontracts.ActivityKindNote, CapturedBy: &connector}, emailParties{}, nil); got != nil {
-		t.Fatalf("author = %+v, want none: a connector names no human", got)
+	if got := authorOf(crmcontracts.Activity{Kind: crmcontracts.ActivityKindNote}, emailParties{}); got != nil {
+		t.Fatalf("author = %+v, want none: a row that records no writer names nobody", got)
 	}
 }
 
 func TestAMeetingIsWrittenByItsOrganizer(t *testing.T) {
 	t.Parallel()
 	host, organizer := ids.NewV7(), ids.NewV7()
-	hostID := openapi_types.UUID(host)
-	meeting := crmcontracts.Activity{Kind: crmcontracts.ActivityKindMeeting, HostUserId: &hostID}
-	got := authorOf(meeting, emailParties{organizers: []crmcontracts.EmailParty{voiceTestParty("o@acme.example", nil, &organizer, "")}}, nil)
+	meeting := crmcontracts.Activity{Kind: crmcontracts.ActivityKindMeeting, Voice: writerSeatVoice(&host, nil, nil)}
+	got := authorOf(meeting, emailParties{organizers: []crmcontracts.EmailParty{voiceTestParty("o@acme.example", nil, &organizer, "")}})
 	if got == nil || got.UserId == nil || ids.UUID(*got.UserId) != organizer {
 		t.Fatalf("author = %+v, want the organizer", got)
 	}
-	got = authorOf(meeting, emailParties{}, nil)
+	got = authorOf(meeting, emailParties{})
 	if got == nil || got.UserId == nil || ids.UUID(*got.UserId) != host {
 		t.Fatalf("author = %+v, want the host when no organizer is recorded", got)
+	}
+}
+
+// The seat capture recorded as an invitation's sender wins over the From
+// party the header states.
+func TestAnInvitationIsWrittenByTheSeatCaptureRecorded(t *testing.T) {
+	t.Parallel()
+	seat := ids.NewV7()
+	invite := crmcontracts.Activity{Kind: crmcontracts.ActivityKindEmail, Voice: writerSeatVoice(&seat, nil, nil)}
+	got := authorOf(invite, emailParties{from: []crmcontracts.EmailParty{voiceTestParty("sam@acme.example", nil, nil, "")}})
+	if got == nil || got.Kind != crmcontracts.ActivityAuthorKindColleague || ids.UUID(*got.UserId) != seat {
+		t.Fatalf("author = %+v, want the recorded seat", got)
 	}
 }
 
 func TestAWithheldRowIsNotReadForAnAuthor(t *testing.T) {
 	t.Parallel()
 	withheld := crmcontracts.ActivityContentStateWithheld
-	page := []crmcontracts.Activity{
-		{Id: openapi_types.UUID(ids.NewV7()), ContentState: &withheld},
-		{Id: openapi_types.UUID(ids.NewV7())},
-	}
-	got := readableIDsOf(page)
-	if len(got) != 1 || got[0] != ids.UUID(page[1].Id) {
-		t.Fatalf("readable = %v, want only the available row", got)
+	if contentReadable(crmcontracts.Activity{ContentState: &withheld}) || !contentReadable(crmcontracts.Activity{}) {
+		t.Fatal("a withheld row must not be read for an author, and an available one must")
 	}
 }
 
@@ -171,7 +174,7 @@ func TestAnIdentifiedFromPartyWinsOverItsBareHeaderAddress(t *testing.T) {
 		voiceTestParty("p@client.example", nil, nil, ""),
 		voiceTestParty("p@client.example", &contact, nil, "Pia"),
 	}
-	got := authorOf(mail, emailParties{from: from}, nil)
+	got := authorOf(mail, emailParties{from: from})
 	if got == nil || got.ContactId == nil || ids.UUID(*got.ContactId) != contact {
 		t.Fatalf("author = %+v, want the contact the header resolved to", got)
 	}
