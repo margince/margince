@@ -311,7 +311,8 @@ const canonicalID = "per-call-id"
 // swept from the whole material: a marker's nonce would fall to that sweep as
 // well, but only because a marker happens to carry a UUID today, and the
 // boundary's own canonicalisation is promptfence's to define, not this file's to
-// infer from its spelling.
+// infer from its spelling. A marker quoted from ANOTHER request (a judge shown
+// the prompt it grades) is not the declared one, so promptfence sweeps those too.
 func canonicalRequestDigest(req model.Request) (string, error) {
 	declaring := req.System
 	messages := make([]model.Message, len(req.Messages))
@@ -335,6 +336,6 @@ func canonicalRequestDigest(req model.Request) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("aicert: stamp: the built request cannot be digested: %w", err)
 	}
-	sum := sha256.Sum256(perCallID.ReplaceAll(material, []byte(canonicalID)))
+	sum := sha256.Sum256([]byte(promptfence.ReplaceNonces(string(perCallID.ReplaceAll(material, []byte(canonicalID))), canonicalID)))
 	return hex.EncodeToString(sum[:]), nil
 }

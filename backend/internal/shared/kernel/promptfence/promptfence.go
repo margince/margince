@@ -27,13 +27,12 @@
 package promptfence
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
 	"strings"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // markerPrefix names what the marker is, in front of the nonce that makes it
@@ -65,9 +64,18 @@ const markerPrefix = "untrusted-"
 // JSON codec are the deliberate exceptions — they exist to recognise that state.
 type Fence struct{ nonce string }
 
-// New mints a fresh boundary. The nonce is a UUIDv7, whose low bytes come from
-// crypto/rand — unpredictable to anyone who has not been shown the prompt.
-func New() Fence { return Fence{nonce: markerPrefix + ids.NewV7().String()} }
+// nonceBody is the shape of a nonce: 128 random bits as 26 lowercase base32
+// characters. It is deliberately NOT id-shaped. A prompt that fences a message
+// and also carries that message's id (a UUID) invites the model to cite the tag
+// name in place of the id when the two look alike, so the nonce shares no
+// alphabet-and-dash shape with any id the product mints.
+const nonceBody = `[a-z2-7]{26}`
+
+var nonceShape = regexp.MustCompile(`^` + nonceBody + `$`)
+
+// New mints a fresh boundary from crypto/rand — unpredictable to anyone who has
+// not been shown the prompt.
+func New() Fence { return Fence{nonce: markerPrefix + strings.ToLower(rand.Text())} }
 
 // Minted reports whether this fence came from [New]. It is the check a caller
 // makes when a fence arrives from storage rather than from code — a prompt
@@ -116,14 +124,14 @@ func (f Fence) WrapAttr(attr, value, data string) string {
 // difference is that the alphabet here is CLOSED. Recognising a forgery is a
 // losing game because a sender picks from the whole of Unicode and need only
 // find what a matcher misses. This marker's own alphabet is fixed and known —
-// a lowercase ASCII prefix and a canonical UUID — so the renderings of it are
+// a lowercase ASCII prefix and a base32 nonce — so the renderings of it are
 // enumerable rather than open-ended, and removal can cover all of them.
 //
 // The consumer, though, is a model, which is the one component that does not do
-// byte equality. Exact removal is therefore not enough: the nonce is hex, so
-// </UNTRUSTED-0198ABCD-…> survives an exact-match pass while reading, to a model
+// byte equality. Exact removal is therefore not enough: the nonce is letters, so
+// </UNTRUSTED-ABCD…> survives an exact-match pass while reading, to a model
 // that was shown the marker one turn earlier, as the boundary it was told about
-// — and markerPattern already treats [0-9a-fA-F-] as marker-shaped. So removal
+// — and markerPattern already treats upper case as marker-shaped. So removal
 // folds ASCII case. That is complete over the case renderings of a marker whose
 // characters are all ASCII, which is the claim; it is NOT a promise about every
 // string a model might read as equivalent, and no blocklist could be.
@@ -211,10 +219,16 @@ func (f Fence) Rule(kind string) string {
 		f.name(), kind)
 }
 
-// markerPattern matches a marker of this package's shape. It reads a prompt to
+// markerPattern matches a marker of this package's shape, upper case included:
+// a prompt that declares a marker [FromMarker] refuses is still declaring a
+// boundary, and callers must see that rather than read it as none. It reads a prompt to
 // find the boundary that prompt DECLARES; it never decides whether text is a
 // boundary, which is the mistake this package exists to avoid.
-var markerPattern = regexp.MustCompile(`<(` + markerPrefix + `[0-9a-fA-F-]{36})>`)
+var markerPattern = regexp.MustCompile(`<(` + markerPrefix + `[a-zA-Z2-7]{26})>`)
+
+// markerNamePattern matches a marker's name wherever it appears: in an opening
+// tag, a closing tag or prose.
+var markerNamePattern = regexp.MustCompile(markerPrefix + `[a-zA-Z2-7]{26}`)
 
 // MarkerIn returns the marker a system prompt declares, if it declares one.
 //
@@ -243,7 +257,7 @@ func MarkerIn(system string) (string, bool) {
 // then fail closed rather than fall back to a fixed container. This is also the
 // shape check on a marker read back from storage.
 //
-// The check is SHAPE, not authenticity: any canonical UUID with the prefix is
+// The check is SHAPE, not authenticity: any well-formed nonce with the prefix is
 // accepted, so a marker somebody planted in agent_run.pending would be honoured.
 // That is the right boundary rather than a gap to close with a signature. The
 // only writer of that column is the runner's own store, inside the workspace's
@@ -256,7 +270,7 @@ func FromMarker(marker string) (Fence, bool) {
 	if !hasPrefix {
 		return Fence{}, false
 	}
-	if _, err := ids.Parse(nonce); err != nil {
+	if !nonceShape.MatchString(nonce) {
 		return Fence{}, false
 	}
 	return Fence{nonce: marker}, true
@@ -267,7 +281,7 @@ func FromMarker(marker string) (Fence, bool) {
 // key, a certification stamp) via [Canonicalize], and a marker removed from text
 // whose author was shown it via [Fence.WrapAuthored].
 //
-// It is deliberately not marker-shaped for the second use: [MarkerIn] needs 36
+// It is deliberately not marker-shaped for the second use: [MarkerIn] needs 26
 // characters where this has five, so a placeholder left in a prompt that IS sent
 // can never be read back as a boundary.
 const canonicalMarker = "untrusted-fence"
@@ -284,6 +298,17 @@ func Canonicalize(declaringPrompt, text string) string {
 		return text
 	}
 	return strings.ReplaceAll(text, marker, canonicalMarker)
+}
+
+// ReplaceNonces replaces the nonce of every marker-shaped name in text with
+// placeholder, whichever call minted it, and keeps the prefix. [Canonicalize]
+// covers the one boundary a prompt declares; a prompt that QUOTES another
+// request (a judge shown the prompt it grades) carries that request's marker
+// too, and a per-call nonce left in hashed material makes two renderings of the
+// same prompt hash apart. It is for hashing only: it edits the text, so its
+// output is never sent to a model.
+func ReplaceNonces(text, placeholder string) string {
+	return markerNamePattern.ReplaceAllString(text, markerPrefix+placeholder)
 }
 
 // MarshalJSON carries the marker with a prompt that outlives the process — a

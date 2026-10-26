@@ -207,7 +207,7 @@ func renderCompanyContext(companyContext contacts.CompanyContext, tokenBudget in
 
 	// The caller's fence markers wrap this block, so the budget has to account
 	// for them: two nonce markers plus their newlines.
-	const wrapperBytes = 2*len("<untrusted-0198c0de-0000-7000-8000-000000000000>") + 3
+	const wrapperBytes = 2*len("<untrusted-abcdefghijklmnopqrstuvwxyz>") + 3
 	maxBytes := tokenBudget * 4
 	if _, err := marshalCompanyContextBlock(payload, maxBytes, wrapperBytes); err != nil {
 		return "", err

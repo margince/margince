@@ -227,7 +227,7 @@ diff <(sed -E "$nonce" .tmp/aitask/before/*.request.json) \
      <(sed -E "$nonce" .tmp/aitask/after/*.request.json)
 ```
 
-**You must replace the nonce.** Every call makes a new `untrusted-<uuid>` mark on each side of the text
+**You must replace the nonce.** Every call makes a new `untrusted-<nonce>` mark on each side of the text
 that Margince does not trust. It names that mark in both the system prompt and the payload. The mark makes a fake mark inside
 a fetched page do nothing, so it must be different for each call. So two runs of the same prompt always
 differ in two places. The files stay right about what was sent; the change happens in the diff.
