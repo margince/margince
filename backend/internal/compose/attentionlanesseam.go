@@ -145,10 +145,10 @@ type attentionDecay struct {
 // the contact's page still shows it. Day 180 stays, day 181 leaves.
 const quietSuggestionCeilingDays = 180
 
-// quietCeilingFrom is the candidate read's prefilter, one day loose so no day
-// 180 is lost to the time of day. quietSurvivors decides from the day count.
+// quietCeilingFrom is the candidate prefilter, two days loose for time of day
+// and DST; quietSurvivors decides from the calendar day count.
 func quietCeilingFrom(now time.Time) time.Time {
-	return now.AddDate(0, 0, -(quietSuggestionCeilingDays + 1))
+	return now.AddDate(0, 0, -(quietSuggestionCeilingDays + 2))
 }
 
 func (d attentionDecay) Lapsed(

@@ -40,8 +40,13 @@ func seedQuietExchange(t *testing.T, e *integration.Env, sender, copied, contact
 			t.Errorf("closing fixture connection: %v", err)
 		}
 	}()
+	seedQuietExchangeAt(t, e, owner, sender, copied, contact, quietLaneNow.AddDate(0, 0, -daysAgo))
+}
+
+// seedQuietExchangeAt is seedQuietExchange with the last mail at an instant.
+func seedQuietExchangeAt(t *testing.T, e *integration.Env, owner *pgx.Conn, sender, copied, contact ids.UUID, last time.Time) {
+	t.Helper()
 	ctx := context.Background()
-	last := quietLaneNow.AddDate(0, 0, -daysAgo)
 	var folded []ids.UUID
 	for _, at := range []time.Time{last.AddDate(0, 0, -1), last} {
 		activity := ids.NewV7()
@@ -355,5 +360,32 @@ func TestTheQuietCeilingCountsCalendarDaysNotHours(t *testing.T) {
 	}
 	if got := quietLaneFor(t, e, e.Rep1, attention.TasksMine, ids.UUID{}); len(got) != 0 {
 		t.Fatalf("the lane = %+v, want nothing: 181 calendar days is longer than 180", got)
+	}
+}
+
+// Day 180 holds across a DST change. In New York, a last touch at 00:00 EDT on
+// 19 July 2025 read at 23:30 EST on 15 January 2026 is 180 calendar days, but
+// more than 181 x 24 hours. The relationship is still a suggestion.
+func TestDayOneHundredEightyHoldsAcrossADaylightSavingChange(t *testing.T) {
+	e := integration.Setup(t)
+	e.WsExec(t, `UPDATE setting SET value = '"America/New_York"'::jsonb WHERE key = 'installation.timezone'`)
+	zone, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		t.Fatal(err)
+	}
+	contact := e.SeedContact(t, "Quiet Since July", &e.Rep1)
+	owner := integration.OwnerConn(t)
+	defer func() {
+		if err := owner.Close(context.Background()); err != nil {
+			t.Errorf("closing fixture connection: %v", err)
+		}
+	}()
+	seedQuietExchangeAt(t, e, owner, e.Rep1, ids.UUID{}, contact, time.Date(2025, time.July, 19, 0, 0, 0, 0, zone))
+	// In UTC, as the server clock hands it to the lane.
+	read := time.Date(2026, time.January, 15, 23, 30, 0, 0, zone).UTC()
+
+	got := quietLaneAt(t, e, read, e.Rep1, attention.TasksMine, ids.UUID{})
+	if len(got) != 1 || got[0].ContactID != contact || got[0].QuietDays != quietSuggestionCeilingDays {
+		t.Fatalf("the lane = %+v, want the contact at %d quiet days", got, quietSuggestionCeilingDays)
 	}
 }
