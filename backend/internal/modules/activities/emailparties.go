@@ -107,6 +107,7 @@ func readEmailPartiesOf(ctx context.Context, tx pgx.Tx, messages []ids.UUID) (ma
 		       coalesce(u.email, '') AS seat_email, coalesce(stated_pe.email, own_pe.email, '') AS contact_email,
 		       ap.created_at, ap.id
 		  FROM activity_participant ap
+		  JOIN activity act ON act.id = ap.activity_id
 		  `+contactJoin+`
 		  LEFT JOIN app_user u ON u.id = ap.user_id
 		  LEFT JOIN LATERAL (
@@ -124,6 +125,8 @@ func readEmailPartiesOf(ctx context.Context, tx pgx.Tx, messages []ids.UUID) (ma
 		 WHERE ap.activity_id = ANY($1)
 		   AND ap.role IN ('from', 'to', 'cc', 'bcc', 'organizer', 'attendee')
 		   AND NOT `+unstatedContactSQL("ap")+`
+		   -- A seat row the legacy backfill guessed for bare mail is no party.
+		   AND `+auth.ParticipantStandsSQL("ap", "act")+`
 		UNION ALL
 		`+receivedFromSQL()+`) parties
 		 ORDER BY CASE role

@@ -299,3 +299,84 @@ func TestADismissedContactDoesNotSpendACandidateSlot(t *testing.T) {
 			quiet[0].Edge.ContactID, standing)
 	}
 }
+
+// seedConnectorMailFrom files a recent mail the contact wrote to a colleague,
+// as a connector captured it. Its only seat row names the colleague by user_id
+// alone. With made set, the connector's create audit says it captured the mail
+// on that colleague's behalf, and the row stands. Without it, the row is the
+// shape the legacy backfill guessed, and auth.ParticipantStandsSQL refuses it.
+func seedConnectorMailFrom(t *testing.T, e *Env, contact, colleague ids.UUID, made bool) {
+	t.Helper()
+	owner := OwnerConn(t)
+	ctx := context.Background()
+	activity := ids.NewV7()
+	if _, err := owner.Exec(ctx, `
+		INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by)
+		VALUES ($1, 'email', 'a new message', $2, 'inbound', 'gmail:x', 'connector:gmail')`,
+		activity, clocktest.Now(t).UTC().AddDate(0, 0, -2)); err != nil {
+		t.Fatal(err)
+	}
+	LinkActivity(t, owner, activity, "contact", contact)
+	for _, p := range []struct {
+		column string
+		id     ids.UUID
+		role   string
+	}{{"user_id", colleague, "to"}, {"contact_id", contact, "from"}} {
+		if _, err := owner.Exec(ctx, `
+			INSERT INTO activity_participant (activity_id, `+p.column+`, role) VALUES ($1, $2, $3)`,
+			activity, p.id, p.role); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if made {
+		if _, err := owner.Exec(ctx, `
+			INSERT INTO audit_log (id, actor_type, actor_id, on_behalf_of, action, entity_type, entity_id)
+			VALUES ($1, 'connector', 'connector:gmail', $2, 'create', 'activity', $3)`,
+			ids.NewV7(), colleague, activity); err != nil {
+			t.Fatal(err)
+		}
+	}
+	wsCtx := principal.WithWorkspaceID(ctx, e.WS)
+	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
+		return search.RecomputeEdgesForActivities(wsCtx, tx, []ids.UUID{activity})
+	}); err != nil {
+		t.Fatalf("folding the connector mail: %v", err)
+	}
+}
+
+// A guessed seat row does not end a silence. The contact's new mail reached a
+// mailbox nobody can name, so no live colleague has heard from them, and the
+// relationship stays quiet. The same mail captured for the colleague ends it.
+func TestAGuessedSeatRowDoesNotResetTheQuietClock(t *testing.T) {
+	e := Setup(t)
+	guessed := e.SeedContact(t, "Wrote To A Guessed Seat", &e.Rep1)
+	real := e.SeedContact(t, "Wrote To Rep One", &e.Rep1)
+	seedLapsedPair(t, e, e.Rep1, guessed, "the lapsed thread")
+	seedLapsedPair(t, e, e.Rep1, real, "the other lapsed thread")
+	seedConnectorMailFrom(t, e, guessed, e.Rep1, false)
+	seedConnectorMailFrom(t, e, real, e.Rep1, true)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, graphPerms)
+	now := clocktest.Now(t).UTC()
+	var quiet []search.QuietContact
+	err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
+		var err error
+		quiet, err = search.QuietContacts(rep, tx, search.QuietRead{
+			QuietBefore: now.AddDate(0, 0, -relstrength.QuietDays), TouchedAfter: now.AddDate(0, 0, -180), Limit: 10,
+		})
+		return err
+	})
+	if err != nil {
+		t.Fatalf("reading quiet candidates: %v", err)
+	}
+	got := map[ids.UUID]bool{}
+	for _, candidate := range quiet {
+		got[candidate.Edge.ContactID] = true
+	}
+	if !got[guessed] {
+		t.Error("a guessed seat row reset the quiet clock of a relationship nobody answered")
+	}
+	if got[real] {
+		t.Error("mail captured for the colleague did not end the silence")
+	}
+}
