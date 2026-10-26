@@ -150,7 +150,7 @@
 /* A way OUT stands off from the run of open stages: won and lost are
    alternatives to each other rather than two more rungs of one ladder. */
 .stage-ladder-step.is-terminal {
-  margin-left: var(--space-2);
+  margin-inline-start: var(--space-2);
 }
 
 /* What the row is about, beside the rungs rather than under them: how the
@@ -178,7 +178,7 @@
     flex-basis: 100%;
   }
   .stage-ladder-exits > .stage-ladder-step:first-child {
-    margin-left: 0;
+    margin-inline-start: 0;
   }
   .stage-ladder-exits > .stage-ladder-step:first-child > .stage-ladder-sep {
     display: none;
@@ -190,17 +190,22 @@
    script that knows which ends are clipped sets the classes, so the fade is
    still and needs no motion. */
 .stage-ladder-run {
+  /* A gradient takes no logical direction, so its start follows the run's. */
+  --stage-ladder-fade-from: 90deg;
   --stage-ladder-clear-start: 0px;
   --stage-ladder-solid-start: 0px;
   --stage-ladder-clear-end: 0px;
   --stage-ladder-solid-end: 0px;
   mask-image: linear-gradient(
-    to right,
+    var(--stage-ladder-fade-from),
     transparent var(--stage-ladder-clear-start),
     black var(--stage-ladder-solid-start),
     black calc(100% - var(--stage-ladder-solid-end)),
     transparent calc(100% - var(--stage-ladder-clear-end))
   );
+}
+.stage-ladder-run:dir(rtl) {
+  --stage-ladder-fade-from: 270deg;
 }
 .stage-ladder-run:not(.is-clipped-start, .is-clipped-end) {
   mask-image: none;
@@ -243,6 +248,10 @@
 .stage-ladder-page.is-end {
   inset-inline-end: 0;
 }
+/* The chevrons point the way their page goes, which a right-to-left run flips. */
+.stage-ladder-page:dir(rtl) svg {
+  transform: scaleX(-1);
+}
 
 /* A fixed list the reader must see whole: the run wraps instead of scrolling,
    and drops its scroller's clipping with it. */
@@ -283,7 +292,7 @@
   gap: var(--space-2);
 }
 .stage-ladder.is-bars .stage-ladder-step.is-terminal {
-  margin-left: 0;
+  margin-inline-start: 0;
 }
 /* A way out not yet taken is dashed: a door, not a rung. */
 .stage-ladder-exit.btn {

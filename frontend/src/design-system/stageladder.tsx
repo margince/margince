@@ -261,9 +261,12 @@ function RunPager({
       return;
     }
     pressed.current = side;
+    // scrollLeft grows rightward, toward the start of a right-to-left run.
+    const rightward =
+      (side === "end") === (getComputedStyle(scroller).direction !== "rtl");
     const step = scroller.clientWidth * PAGE_SHARE;
     scroller.scrollBy({
-      left: side === "start" ? -step : step,
+      left: rightward ? step : -step,
       behavior: reduced ? "auto" : "smooth",
     });
   };

@@ -243,6 +243,24 @@ describe("the buttons at a clipped end", () => {
     ]);
   });
 
+  it("pages toward each end of a right-to-left run", () => {
+    overflowing();
+    // happy-dom computes direction from a style, never from `dir`.
+    render(
+      <div dir="rtl" style={{ direction: "rtl" }}>
+        <StageLadder label="Stage" steps={pipeline("Negotiation")} />
+      </div>,
+    );
+
+    fireEvent.click(screen.getByRole("button", LATER));
+    fireEvent.click(screen.getByRole("button", EARLIER));
+
+    expect(scrollBy.mock.calls).toEqual([
+      [{ left: -RUN_WIDTH * 0.75, behavior: "smooth" }],
+      [{ left: RUN_WIDTH * 0.75, behavior: "smooth" }],
+    ]);
+  });
+
   it("jumps instead of gliding for a reader who asked for less motion", () => {
     vi.stubGlobal("matchMedia", (query: string) => ({
       matches: query.includes("prefers-reduced-motion"),
