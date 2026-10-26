@@ -69,6 +69,7 @@ var precisionlessTimes = gatekit.Waive(map[string]string{
 	"api/crm.yaml CaptureTraceEntry.occurred_at":             "when capture logged a step, the trace row's own instant",
 	"api/crm.yaml ClaimEvidence.last_verified_at":            "when a human last confirmed a claim, that act's own instant",
 	"api/crm.yaml CompanyFinanceSummary.last_synced_at":      "when a finance sync last finished, the sync's own instant",
+	"api/crm.yaml CompanyOfferedValue.offered_at":            "when a source last offered the value, the offer's own instant",
 	"api/crm.yaml ConsentEvent.occurred_at":                  "when consent changed, the ledger row's own instant",
 	"api/crm.yaml DataTaskProgress.last_progress_at":         "when a data task last moved, the task's own instant",
 	"api/crm.yaml DealRoomParticipant.last_seen_at":          "when a buyer last made a request to the deal room, a request's own instant",
