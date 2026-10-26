@@ -50,11 +50,14 @@ export function ReviewTemplateEditor({
   const t = useT();
   const qc = useQueryClient();
   const titleId = useId();
-  // The editor shows a built-in question in the reader's language.
-  const shown = template.questions.map((question) => ({
-    ...question,
-    label: shippedLabel(question, t),
-  }));
+  // The editor shows a built-in question in the reader's language, as it was
+  // when the drawer opened. A language switch then neither edits nor rewords it.
+  const [shown] = useState(() =>
+    template.questions.map((question) => ({
+      ...question,
+      label: shippedLabel(question, t),
+    })),
+  );
   const [questions, setQuestions] = useState<ReviewQuestion[]>(shown);
   const save = useMutation({
     mutationFn: async (submitted: {

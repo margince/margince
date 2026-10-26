@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type Locale, translate } from "../../i18n";
+import { type Locale, translate, useLocale } from "../../i18n";
 import {
   installFetchStub,
   jsonResponse,
@@ -154,6 +154,52 @@ describe("editing a review's questions", () => {
       "Why did we lose?",
       "Bên nào thắng?",
     ]);
+  });
+
+  // The words were shown in the language the drawer opened in. A switch with
+  // the drawer open is no edit, so the built-in question keeps its key.
+  it("keeps a built-in question's stored words when the language changes with the drawer open", async () => {
+    const onPatch = vi.fn();
+    let switchTo: (locale: Locale) => void = () => {};
+    function LanguageSwitch() {
+      switchTo = useLocale().setLocale;
+      return null;
+    }
+    installFetchStub({
+      "GET /me": meRoute({ custom_field: ["read", "update"] }),
+      "PATCH /activity-review-templates/loss": (body) => {
+        onPatch(body);
+        return jsonResponse(template());
+      },
+    });
+    render(
+      <StoryProviders locale="en">
+        <LanguageSwitch />
+        <ReviewTemplateEditor
+          template={template({
+            questions: [
+              {
+                ...WHY,
+                label_key: "reviewTemplates.builtin.question.why_we_lost",
+              },
+            ],
+          })}
+          onClose={vi.fn()}
+        />
+      </StoryProviders>,
+    );
+    act(() => switchTo("de"));
+    expect(
+      screen.queryByText(translate("de", "reviewTemplates.unsaved")),
+    ).toBeNull();
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: translate("de", "reviewTemplates.saveQuestions"),
+      }),
+    );
+    await vi.waitFor(() => expect(onPatch).toHaveBeenCalled());
+    const [body] = onPatch.mock.calls[0] ?? [];
+    expect(body.questions[0].label).toBe("Why did we lose?");
   });
 
   it("holds Save while a question has no label", async () => {
