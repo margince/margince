@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/capture/htmltext"
+	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // htmlTag matches a real element (a known name, opening or closing) or a
@@ -25,4 +27,22 @@ func descriptionText(desc string) string {
 		desc, _ = htmltext.Render(desc)
 	}
 	return strings.TrimSpace(desc)
+}
+
+// RerenderStoredBody returns the body capture stores today for a calendar
+// meeting body stored before descriptions were rendered. The organizer and
+// attendee header stays as stored. A description with HTML tags is rendered
+// as descriptionText does, then masked and cut as buildBody does. changed is
+// false when the stored description has no tags or renders to itself.
+func RerenderStoredBody(stored string) (body string, changed bool) {
+	header, desc, found := strings.Cut(stored, "\n\n")
+	if !found || !htmlTag.MatchString(desc) {
+		return stored, false
+	}
+	body = header
+	if text := descriptionText(desc); text != "" {
+		body = header + "\n\n" + text
+	}
+	body = textcut.BytesMarked(credentialmask.MaskText(body), MaxBodyLen, "…")
+	return body, body != stored
 }
