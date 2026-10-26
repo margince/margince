@@ -209,11 +209,19 @@ func (x *SignalExtractor) emailCommitment(
 		c.PrivateTo = &owner
 	}
 	verified := verifiedCommitmentParties(parties)
-	kind, party := attributeCommitment(&c, event.PromiserRef, verified)
+	promiser := event.PromiserRef
+	// The reply's promiser is the model's reading. The sentence and the seat
+	// roster can still show the work is a colleague's who is not on the mail.
+	if absent, err := senderOwesAnAbsentColleaguesWork(ctx, tx, promiser, span, verified); err != nil {
+		return Commitment{}, false, err
+	} else if absent {
+		promiser = ""
+	}
+	kind, party := attributeCommitment(&c, promiser, verified)
 	if err := attributeCommitmentRecipients(&c, event.RecipientRefs, verified); err != nil {
 		return Commitment{}, false, err
 	}
-	c.NeedsConfirmation = message.Direction != connector.DirectionOutbound || !commitmentPartyHasRole(verified, event.PromiserRef, commitmentSenderRole)
+	c.NeedsConfirmation = message.Direction != connector.DirectionOutbound || !commitmentPartyHasRole(verified, promiser, commitmentSenderRole)
 	c.Body = fmt.Sprintf("Promiser: %s. Commitment in the email %q, sent %s.", c.Party, message.Subject, message.At.Format(time.DateOnly))
 	c.Span = span
 	c.Locator = commitmentLocator(cited, kind, party, span)
