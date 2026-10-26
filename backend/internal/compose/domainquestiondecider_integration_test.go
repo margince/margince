@@ -139,4 +139,13 @@ func TestNewerMailReturnsADeferredQuestionToADeciderWithNoReaderRow(t *testing.T
 	if !open() {
 		t.Error("newer mail did not bring the set-aside question back")
 	}
+	questions, err := e.Contacts.OpenDomainQuestionsForOwner(rep1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, q := range questions {
+		if q.Domain == domain && (q.EvidenceAt == nil || !q.EvidenceAt.Equal(now.Add(-time.Hour))) {
+			t.Errorf("the question's evidence time = %v, want the newer mail's %v", q.EvidenceAt, now.Add(-time.Hour))
+		}
+	}
 }

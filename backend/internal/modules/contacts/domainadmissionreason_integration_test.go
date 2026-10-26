@@ -19,8 +19,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// releaseQuestion clears an open question's owner, which is what puts it on
-// the operator's list rather than on a colleague's queue.
+// releaseQuestion clears an open question's owner. The question stays on the
+// operator's list, where every open question is.
 func (e *dedupeEnv) releaseQuestion(ctx context.Context, t *testing.T, domain string) {
 	t.Helper()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {

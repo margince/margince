@@ -7,10 +7,10 @@ package contacts
 
 // One colleague's open domain questions, over a real Postgres.
 //
-// The read is small and its WHERE carries the whole feature: a question belongs
-// to the mailbox owner it was opened for, and it leaves that owner's queue when
-// they answer it — including when the answer was "not for me", which is recorded
-// as a capture exclusion rather than as a verdict about what the domain IS.
+// The read is small and its `WHERE` carries the whole feature. A question
+// belongs to its decider, the sole direct recipient of current mail they may
+// read. It leaves their queue when they answer it. "Not for me" counts too; it
+// is recorded as a capture exclusion, not a verdict about the domain.
 //
 // That last part is why these tests exist over a database rather than as a unit
 // test with a fake. The answer and the question live in two tables, and nothing
@@ -63,12 +63,9 @@ func (e *dedupeEnv) openQuestionDomains(ctx context.Context, t *testing.T) []str
 	return out
 }
 
-// TestAnOpenQuestionReachesTheOwnerWhoseMailRaisedIt is the lane's premise.
-//
-// The disposition records the mailbox owner at the moment the question opens,
-// and this read is the only thing that turns that column into somebody's
-// backlog. Without it the fourteen questions a real import produced sat on an
-// admin screen addressed to nobody.
+// TestAnOpenQuestionReachesTheOwnerWhoseMailRaisedIt is the lane's premise:
+// the rep the mail was addressed to is asked. Without this read an open
+// question sits on an admin screen addressed to nobody.
 func TestAnOpenQuestionReachesTheOwnerWhoseMailRaisedIt(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
@@ -246,7 +243,11 @@ func TestDomainQuestionsContinueBeyondTheAttentionWindow(t *testing.T) {
 	}
 }
 
-func TestDomainQuestionBelongsToEveryReaderWhoseMailRaisedIt(t *testing.T) {
+// A domain question is asked of the mail's sole direct recipient, not of every
+// seat whose mailbox held mail from the domain. Both mails here are addressed
+// to the rep. The second sat in the other rep's mailbox, which earns that seat
+// no question.
+func TestADomainQuestionIsAskedOfItsRecipientNotOfEveryMailboxThatHeldIt(t *testing.T) {
 	e := setupDedupe(t)
 	first, second := e.as(), e.asOther()
 	e.openTriageFirst(first, t, "first@shared-question.test", "First Sender", "shared-question.test")
@@ -258,17 +259,15 @@ func TestDomainQuestionBelongsToEveryReaderWhoseMailRaisedIt(t *testing.T) {
 	if _, err := e.store.ResolveUnreadableDomainTriage(first, ResolveDomainTriageInput{Domain: "shared-question.test"}); err != nil {
 		t.Fatal(err)
 	}
-	for _, ctx := range []context.Context{first, second} {
-		if got := e.openQuestionDomains(ctx, t); !contains(got, "shared-question.test") {
-			t.Fatalf("reader's questions = %v", got)
-		}
+	if got := e.openQuestionDomains(first, t); !contains(got, "shared-question.test") {
+		t.Fatalf("the recipient's questions = %v, want shared-question.test", got)
+	}
+	if got := e.openQuestionDomains(second, t); contains(got, "shared-question.test") {
+		t.Fatalf("the other mailbox's reader was asked too: %v", got)
 	}
 	e.excludeDomain(first, t, "user", "shared-question.test", &e.rep)
 	if got := e.openQuestionDomains(first, t); contains(got, "shared-question.test") {
 		t.Fatalf("excluded question remains: %v", got)
-	}
-	if got := e.openQuestionDomains(second, t); !contains(got, "shared-question.test") {
-		t.Fatalf("another reader's question disappeared: %v", got)
 	}
 }
 

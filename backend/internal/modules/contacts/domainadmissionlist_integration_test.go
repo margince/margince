@@ -7,11 +7,10 @@ package contacts
 
 // What the OPERATOR's list carries, over a real Postgres.
 //
-// The list answers one question nothing else can: a company that never appeared
-// — was it refused, and by whom? Its rows are therefore every decision, plus the
-// open questions that have nobody to ask. An open question WITH an owner is not
-// here: it reaches that colleague's own queue (domainquestionlist.go), which is
-// the only surface carrying the verbs that answer it.
+// The list answers one question nothing else can: a company that never appeared,
+// was it refused, and by whom? Its rows are therefore every decision and
+// every open question. An open question also reaches its decider's own queue
+// (domainquestionlist.go): the sole direct recipient of current mail.
 //
 // These live over a database rather than behind a fake because the whole subject
 // is one WHERE clause, and nothing but SQL decides which rows clear it.
@@ -50,15 +49,9 @@ func (e *dedupeEnv) listedDomains(ctx context.Context, t *testing.T) []string {
 	return out
 }
 
-// An OWNERLESS open question reaches the operator's list, because no other
-// surface can carry it.
-//
-// A question is addressed to the mailbox owner whose mail raised it, and that
-// colleague answers it on their own queue. This row has no such owner — the
-// column is nullable, and it is cleared outright when the owner's account is
-// deleted — so the per-owner read, which matches `owner_id = $1`, matches it for
-// nobody. Without this list it would be a company held out of the CRM that no
-// screen admits exists.
+// An ownerless open question reaches the operator's list. No personal queue
+// may carry it, and without this list it would be a company held out of the
+// CRM that no screen admits exists.
 func TestTheDomainListCarriesTheQuestionsNobodyOwns(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
@@ -96,8 +89,8 @@ func TestTheDomainListCarriesTheQuestionsNobodyOwns(t *testing.T) {
 	}
 }
 
-// A DEACTIVATED owner's open question reaches this list, because deactivation
-// takes away the one surface that was carrying it.
+// A deactivated owner's open question stays on this list. Deactivation takes
+// away the personal queue that was also carrying it.
 //
 // This is the case the column alone cannot see. Deactivating a seat keeps the
 // app_user row and revokes its sessions, so owner_id still names somebody and

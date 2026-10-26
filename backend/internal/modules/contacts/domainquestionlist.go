@@ -65,14 +65,17 @@ func (s *Store) listReaderDomainQuestions(ctx context.Context, cursor string, li
 		if err != nil {
 			return err
 		}
-		open, err := openQuestionForReaderSQL(ctx, "d.domain", ownerArg, identities, s.clock(), bind)
+		// One instant for the whole read, so the decider and the freshness
+		// below agree on which mail is inside the horizon.
+		asOf := s.clock()
+		open, err := openQuestionForReaderSQL(ctx, "d.domain", ownerArg, identities, asOf, bind)
 		if err != nil {
 			return err
 		}
 		// The question's freshness is the newest mail the decider reads, not a
 		// reader row. The sole direct recipient may hold no row at all.
 		latest := `(SELECT max(question_mail.occurred_at) FROM activity question_mail WHERE ` +
-			vendorMailSQL("question_mail", "d.domain", s.clock(), bind) + `)`
+			vendorMailSQL("question_mail", "d.domain", asOf, bind) + `)`
 		deferred := `EXISTS (SELECT 1 FROM worklist_done wd WHERE wd.reader_id = ` + ownerArg + ` AND wd.source = 'domain_question' AND wd.row_id = d.domain AND (` + latest + ` IS NULL OR ` + latest + ` <= wd.done_at))`
 		where := `d.pending_reason <> ` + arg(PendingReservedDomain) + ` AND ` + open + `
 	  AND NOT EXISTS (SELECT 1 FROM capture_exclusion e WHERE e.kind = 'domain' AND e.value = d.domain
