@@ -78,7 +78,7 @@ To filter deals by company or stage in Margince, open **Deals**, press **Filter*
 2. For **Stage**, pick a stage of the pipeline shown. The **Pipeline** picker next to **Table** / **Board** decides which stages you can pick. Changing the pipeline clears the stage filter.
 3. **Stalled only** shows open deals with no activity for more than 60 days.
 4. **Value** takes a lowest and a highest amount, or one of them, in your company's main currency. A deal in another currency counts at today's rate. A deal with no value, or with no rate for its currency, is left out.
-5. **Currency** shows deals priced in one currency. **Country** shows deals whose company's address is in that country; a deal with no company is left out.
+5. **Currency** shows deals priced in one currency. **Country** shows deals whose company has its address there; a deal with no company is left out.
 A company's own **Deals and projects** tab also lists its deals.
 Also called: deals for a customer, deals for an account, deals in a stage.
 

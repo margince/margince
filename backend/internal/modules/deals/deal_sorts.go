@@ -92,13 +92,13 @@ func orderByReadableCompanyName(column string) func(context.Context, func(any) i
 // answers NULL and sits in the tail with the deals that carry no amount.
 func orderByBaseValue(v dealValuation) func(context.Context, func(any) int) (string, error) {
 	return func(_ context.Context, arg func(any) int) (string, error) {
-		return baseValueSQL(v, arg), nil
+		return valueInBaseSQL(v, arg), nil
 	}
 }
 
-// baseValueSQL is the deal's base-currency value on the valuation day, the one
+// valueInBaseSQL is the deal's base-currency value on the valuation day, the one
 // expression the Value sort and the value filter both read.
-func baseValueSQL(v dealValuation, arg func(any) int) string {
+func valueInBaseSQL(v dealValuation, arg func(any) int) string {
 	return BaseValueSQL(storekit.SQLf("$%d::date", arg(v.day)), storekit.SQLf("$%d::text", arg(v.base)), dealTable)
 }
 

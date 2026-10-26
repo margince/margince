@@ -190,6 +190,6 @@ func filterDeals(t *testing.T, p principal.Principal, name string) ([]string, er
 		t.Fatalf("applying %s=%s: %v", name, operand, err)
 	}
 	var args []any
-	return appendDealFilters(principal.WithActor(context.Background(), p), nil, in, dealValuation{},
+	return appendDealFilters(principal.WithActor(context.Background(), p), nil, in,
 		func(v any) int { args = append(args, v); return len(args) })
 }

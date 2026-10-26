@@ -44,6 +44,9 @@ type RangeFilters struct {
 	Currency *string
 	// Country is the ISO-3166 alpha-2 code on the deal's company address.
 	Country *string
+	// valuation is the base currency, rate day and zone, read by the store
+	// itself when readsValuation says a dial needs them.
+	valuation dealValuation
 }
 
 // widenMinor and upperCode turn a seam operand into the field's own shape.
@@ -63,21 +66,20 @@ func (f RangeFilters) readsValuation() bool {
 	return f.CloseFrom != nil || f.CloseTo != nil || f.ValueMin != nil || f.ValueMax != nil
 }
 
-// appendRangeFilters adds the commercial dials to a deal list's clauses. v is
-// read only when readsValuation says a dial needs it.
-func appendRangeFilters(ctx context.Context, where []string, f RangeFilters, v dealValuation, arg func(any) int) ([]string, error) {
+// appendRangeFilters adds the commercial dials to a deal list's clauses.
+func appendRangeFilters(ctx context.Context, where []string, f RangeFilters, arg func(any) int) ([]string, error) {
 	if err := refuseInvertedRanges(f); err != nil {
 		return nil, err
 	}
 	if f.CloseFrom != nil || f.CloseTo != nil {
-		day := closeDaySQL(arg(v.zone))
+		day := closeDaySQL(arg(f.valuation.zone))
 		where = appendBounds(where, day, "date", calendarDay(f.CloseFrom), calendarDay(f.CloseTo), arg)
 	}
 	if f.ValueMin != nil || f.ValueMax != nil {
 		if err := refuseMaskedValue(ctx, f); err != nil {
 			return nil, err
 		}
-		where = appendBounds(where, baseValueSQL(v, arg), "bigint", f.ValueMin, f.ValueMax, arg)
+		where = appendBounds(where, valueInBaseSQL(f.valuation, arg), "bigint", f.ValueMin, f.ValueMax, arg)
 	}
 	if f.Currency != nil {
 		if err := auth.RefuseMaskedFilter(ctx, maskObject, filterCurrency, fieldmask.DealCurrency); err != nil {
@@ -120,12 +122,16 @@ func calendarDay(day *time.Time) *string {
 // selects nothing, and an empty page would read as no deals rather than a typo.
 func refuseInvertedRanges(f RangeFilters) error {
 	if f.CloseFrom != nil && f.CloseTo != nil && f.CloseFrom.After(*f.CloseTo) {
-		return &values.ParseError{Field: filterCloseFrom, Code: "range_inverted",
-			Message: "close_from must be on or before close_to"}
+		return &values.ParseError{
+			Field: filterCloseFrom, Code: "range_inverted",
+			Message: "close_from must be on or before close_to",
+		}
 	}
 	if f.ValueMin != nil && f.ValueMax != nil && *f.ValueMin > *f.ValueMax {
-		return &values.ParseError{Field: filterValueMin, Code: "range_inverted",
-			Message: "value_min must not be above value_max"}
+		return &values.ParseError{
+			Field: filterValueMin, Code: "range_inverted",
+			Message: "value_min must not be above value_max",
+		}
 	}
 	return nil
 }

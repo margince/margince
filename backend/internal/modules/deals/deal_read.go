@@ -242,20 +242,20 @@ func (s *Store) dealListQuery(ctx context.Context, tx pgx.Tx, in ListDealsInput,
 		return nil, nil, err
 	}
 	vocab := dealListFields
-	var valuation dealValuation
 	if sortsByValue(in.Sort) || sortsByCloseDay(in.Sort) || in.readsValuation() {
-		var err error
-		if valuation, err = s.valuationTx(ctx, tx); err != nil {
+		valuation, err := s.valuationTx(ctx, tx)
+		if err != nil {
 			return nil, nil, err
 		}
 		vocab = dealListVocabulary(valuation)
+		in.valuation = valuation
 	}
 	pre, err := storekit.BuildListPrelude(ctx, "deal", vocab, active,
 		in.Sort, in.Limit, in.Cursor, in.CustomFilters)
 	if err != nil {
 		return nil, nil, err
 	}
-	where, err := appendDealFilters(ctx, pre.Where(), in, valuation, pre.Arg)
+	where, err := appendDealFilters(ctx, pre.Where(), in, pre.Arg)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -291,7 +291,7 @@ func scanDealPage(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.
 // visibility, full-text query, the column equality filters, and the
 // stalled predicate — into WHERE clauses (the cf_ filters and the keyset
 // cursor, which depends on the validated sort, stay in ListDeals).
-func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, v dealValuation, arg func(any) int) ([]string, error) {
+func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, arg func(any) int) ([]string, error) {
 	if !in.IncludeArchived {
 		where = append(where, "archived_at IS NULL")
 	}
@@ -371,11 +371,7 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, v
 		where = append(where, storekit.SQLf("expected_close_date < $%d", arg(in.CloseBefore.Format(time.DateOnly))))
 	}
 	where = appendCommercialFilters(where, in, arg)
-	where, err = appendRangeFilters(ctx, where, in.RangeFilters, v, arg)
-	if err != nil {
-		return nil, err
-	}
-	return appendIdleFilters(where, in), nil
+	return appendRangeFilters(ctx, appendIdleFilters(where, in), in.RangeFilters, arg)
 }
 
 // appendIdleFilters adds the two activity-clock filters: the product-wide

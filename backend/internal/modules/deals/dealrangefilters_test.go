@@ -17,11 +17,11 @@ import (
 
 // rangeClauses renders the commercial dials for the system principal, which
 // reads every company, and answers the clauses with their bound operands.
-func rangeClauses(t *testing.T, ctx context.Context, f RangeFilters) ([]string, []any, error) {
+func rangeClauses(ctx context.Context, t *testing.T, f RangeFilters) ([]string, []any, error) {
 	t.Helper()
 	var args []any
-	clauses, err := appendRangeFilters(ctx, nil, f, dealValuation{base: "EUR", day: "2026-10-26", zone: "Europe/Berlin"},
-		func(v any) int { args = append(args, v); return len(args) })
+	f.valuation = dealValuation{base: "EUR", day: "2026-10-26", zone: "Europe/Berlin"}
+	clauses, err := appendRangeFilters(ctx, nil, f, func(v any) int { args = append(args, v); return len(args) })
 	return clauses, args, err
 }
 
@@ -39,7 +39,7 @@ func TestAnInvertedRangeIsRefusedByName(t *testing.T) {
 		{"values", RangeFilters{ValueMin: &low, ValueMax: &high}, filterValueMin},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, _, err := rangeClauses(t, systemFilterCtx(), tc.in)
+			_, _, err := rangeClauses(systemFilterCtx(), t, tc.in)
 			var refused *values.ParseError
 			if !errors.As(err, &refused) || refused.Field != tc.field || refused.Code != "range_inverted" {
 				t.Errorf("an inverted range → %v, want range_inverted on %s", err, tc.field)
@@ -52,7 +52,7 @@ func TestAnInvertedRangeIsRefusedByName(t *testing.T) {
 // side that was given, and a nil bound never reaches SQL as a NULL operand.
 func TestAnOpenEndedRangeBindsOnlyItsOwnBound(t *testing.T) {
 	from := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
-	clauses, args, err := rangeClauses(t, systemFilterCtx(), RangeFilters{CloseFrom: &from})
+	clauses, args, err := rangeClauses(systemFilterCtx(), t, RangeFilters{CloseFrom: &from})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +75,7 @@ func TestTheCountryFilterNeedsCompanyRead(t *testing.T) {
 		},
 	})
 	country := "DE"
-	if _, _, err := rangeClauses(t, dealsOnly, RangeFilters{Country: &country}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, _, err := rangeClauses(dealsOnly, t, RangeFilters{Country: &country}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("country for a seat without company.read → %v, want permission denied", err)
 	}
 }

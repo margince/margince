@@ -69,7 +69,7 @@ func TestAppendDealFiltersPartnerAttribution(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var args []any
 			arg := func(v any) int { args = append(args, v); return len(args) }
-			got, err := appendDealFilters(systemFilterCtx(), nil, tc.in, dealValuation{}, arg)
+			got, err := appendDealFilters(systemFilterCtx(), nil, tc.in, arg)
 			if err != nil {
 				t.Fatalf("appendDealFilters: %v", err)
 			}
@@ -99,7 +99,7 @@ func TestAppendDealFiltersPartnerBeforeCursorKeepsPlaceholderOrder(t *testing.T)
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	got, err := appendDealFilters(systemFilterCtx(), nil, ListDealsInput{PartnerCompanyID: &partnerCompany}, dealValuation{}, arg)
+	got, err := appendDealFilters(systemFilterCtx(), nil, ListDealsInput{PartnerCompanyID: &partnerCompany}, arg)
 	if err != nil {
 		t.Fatalf("appendDealFilters: %v", err)
 	}
@@ -145,7 +145,7 @@ func TestAReferenceFilterIsNarrowedToTargetsTheCallerReads(t *testing.T) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	got, err := appendDealFilters(bounded, nil,
-		ListDealsInput{CompanyID: &company, ProjectID: &project, PartnerCompanyID: &company}, dealValuation{}, arg)
+		ListDealsInput{CompanyID: &company, ProjectID: &project, PartnerCompanyID: &company}, arg)
 	if err != nil {
 		t.Fatalf("appendDealFilters: %v", err)
 	}
