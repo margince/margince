@@ -4582,7 +4582,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.ownerMe": "Giao cho tôi",
   "deal.ownerUnassign": "Hủy giao",
   "deal.partnerCompany": "Đối tác giới thiệu",
-  "deal.recordedBy": "Nguồn ghi nhận",
+  "deal.recordedBy": "Bên ghi nhận",
   "deal.companyWithheld": "Công ty bị ẩn",
   "deal.partnerWithheld": "Đối tác bị ẩn",
   "deal.forecastCategory": "Danh mục dự báo",

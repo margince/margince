@@ -99,7 +99,7 @@ export const RecordedElsewhereInVietnamese: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(await canvas.findByText("Nguồn ghi nhận")).toBeVisible();
+    await expect(await canvas.findByText("Bên ghi nhận")).toBeVisible();
     await expect(
       canvas.getByText("Mutaz Suleiman đã ghi nhận trong HubSpot"),
     ).toBeVisible();

@@ -341,8 +341,9 @@ describe("the details rows say where a deal stands and how it closed", () => {
       </FieldGrid>,
       "vi",
     );
-    expect(screen.getByText("Nguồn ghi nhận")).toBeInTheDocument();
-    expect(screen.queryByText("Nguồn")).not.toBeInTheDocument();
+    // "Nguồn" is Source's word, and "bởi" a passive no reader says.
+    expect(screen.getByText("Bên ghi nhận")).toBeInTheDocument();
+    expect(screen.queryByText(/Nguồn|bởi/)).not.toBeInTheDocument();
     expect(
       screen.getByText("Mutaz Suleiman đã ghi nhận trong HubSpot"),
     ).toBeInTheDocument();
