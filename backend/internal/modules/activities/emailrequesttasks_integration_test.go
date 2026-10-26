@@ -69,7 +69,7 @@ func seedEmailRequestFiledUnder(t *testing.T, e *loadEnv, subject, label, verdic
 }
 
 // A request in mail the workspace may read keeps that reach, so a manager
-// reads the task a teammate holds for it (#9178).
+// reads the task a teammate holds for it.
 func TestEmailRequestCreatesOneUndatedTaskThatReachesWhoMayReadItsMail(t *testing.T) {
 	e := setupLoad(t)
 	source := seedEmailRequest(t, e, "Product report", "commitment", OwedVerdictAsksUs)
@@ -310,5 +310,43 @@ func TestReassignedEmailReminderRequiresReadableSource(t *testing.T) {
 	}
 	if got.Subject != nil {
 		t.Fatal("reassignment granted access to revoked source evidence")
+	}
+}
+
+// A colleague copied on the mail finds its reminder through the mail. That
+// holds even when the reminder is filed only under a contact they cannot reach.
+// So the reminder stands in for the mail on their waiting queue.
+func TestACopiedColleagueFindsTheWorkspaceReminderInPlaceOfTheMail(t *testing.T) {
+	e := setupLoad(t)
+	source := seedEmailRequest(t, e, "Product sheet", "commitment", OwedVerdictAsksUs)
+	store := storeKnowing(e)
+	if err := store.CaptureEmailRequests(asClassifier(e), requestInstant.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	e.exec(t, `INSERT INTO activity_participant (activity_id, role, address, user_id) VALUES ($1, 'cc', $2, $3)`,
+		source, seatAddress(e.other), e.other)
+	actor, ok := principal.Actor(e.as())
+	if !ok {
+		t.Fatal("missing reader")
+	}
+	actor.UserID, actor.ID = e.other, "human:"+e.other.String()
+	actor.Permissions.RowScope = principal.RowScopeOwn
+	actor.Permissions.RoleKeys = nil
+	colleague := principal.WithActor(e.as(), actor)
+	var task ids.UUID
+	if err := e.owner.QueryRow(e.as(), `SELECT id FROM activity WHERE source_system = 'email_request' AND source_activity_id = $1`, source).Scan(&task); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.GetActivity(colleague, ids.From[ids.ActivityKind](task), storekit.LiveOnly); err != nil {
+		t.Fatalf("the copied colleague cannot find the reminder: %v", err)
+	}
+	rows, err := store.WaitingReplies(colleague, requestInstant.Add(2*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range rows {
+		if row.ActivityID == source {
+			t.Fatal("the mail is still waiting for the colleague while its reminder stands in for it")
+		}
 	}
 }

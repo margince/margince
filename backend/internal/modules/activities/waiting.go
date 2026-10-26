@@ -317,6 +317,10 @@ func (s *Store) scanWaitingReplies(ctx context.Context, asOf time.Time, before W
 		if err != nil {
 			return err
 		}
+		requestTaskDiscover, err := requestTaskDiscoverClause(ctx, arg)
+		if err != nil {
+			return err
+		}
 		identities, err := s.mailSeatIdentitiesSQL(ctx, tx, arg)
 		if err != nil {
 			return err
@@ -336,7 +340,7 @@ func (s *Store) scanWaitingReplies(ctx context.Context, asOf time.Time, before W
 				storekit.MailSeatAddressesSQL(identities, fmt.Sprintf("$%d::uuid", reader)),
 				neverRelaxed,
 				olderThan(before, arg), bookedDiscover,
-				neverRelaxed, neverRelaxed)+") waiting JOIN activity a ON a.id = waiting.id ORDER BY waiting.occurred_at DESC, waiting.id DESC", planEachBind(args)...)
+				neverRelaxed, neverRelaxed, requestTaskDiscover)+") waiting JOIN activity a ON a.id = waiting.id ORDER BY waiting.occurred_at DESC, waiting.id DESC", planEachBind(args)...)
 		if err != nil {
 			return err
 		}

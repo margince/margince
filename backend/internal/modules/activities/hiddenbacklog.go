@@ -311,6 +311,10 @@ func (s *Store) waitingStatement(
 	if err != nil {
 		return "", err
 	}
+	requestTaskDiscover, err := requestTaskDiscoverClause(ctx, arg)
+	if err != nil {
+		return "", err
+	}
 	identities, err := s.mailSeatIdentitiesSQL(ctx, tx, arg)
 	if err != nil {
 		return "", err
@@ -329,7 +333,7 @@ func (s *Store) waitingStatement(
 		mailSeatAddressesSQL(identities, fmt.Sprintf("$%d::uuid", arg(relax.reader))),
 		informsUs,
 		noKeyset, bookedDiscover,
-		setAside, neverRelaxed), nil
+		setAside, neverRelaxed, requestTaskDiscover), nil
 }
 
 // countWaiting is the statement above asked for how many.

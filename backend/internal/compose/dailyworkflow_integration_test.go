@@ -143,7 +143,7 @@ func TestADayPassingMovesTheSameTaskToOverdue(t *testing.T) {
 
 // A buyer's request captured from the rep's mailbox becomes the rep's task.
 // Their colleague's day neither holds it nor carries its words. The manager's
-// team day holds the same task, not the mail as if nobody were on it (#9178).
+// team day holds the same task, not the mail as if nobody were on it.
 // Capturing the same message again changes nothing.
 func TestACapturedRequestIsTheOwnersAndSurvivesAReplay(t *testing.T) {
 	o := setupOwed(t)

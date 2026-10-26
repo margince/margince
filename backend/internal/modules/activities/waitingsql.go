@@ -16,7 +16,6 @@ package activities
 // waiting.go holds what READS it; this holds what it says.
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -263,9 +262,9 @@ var waitingRepliesSQL = `
 	       AND request_task.source_activity_id = a.id
        AND (request_task.is_done OR (request_task.archived_at IS NULL
          AND (request_task.assignee_id = $%[9]d OR $%[9]d = '00000000-0000-0000-0000-000000000000'::uuid
-          -- A reminder with the mail's whole reach is read wherever the mail
-          -- is, so the reader sees who holds it instead of the mail (#9178).
-          OR (request_task.audience = 'workspace' AND request_task.restricted_at IS NULL)
+          -- A reminder with the mail's whole reach that this reader can find
+          -- stands in for the mail: they see who holds it instead.
+          OR (request_task.audience = 'workspace' AND request_task.restricted_at IS NULL AND (%[22]s))
           OR ` + storekit.HumanWroteActivityClause("request_task") + `))))
 	   AND ` + withinWaitingHorizonSQL("$%[1]d", "%[5]d") + `
 	   -- A SALES link, or it is not this queue's business.
@@ -487,13 +486,4 @@ func bookedMeetingSQL(asOf, discover string) string {
 	        OFFSET 0) booked
 	  WHERE booked_asker.activity_id = a.id AND booked_asker.role = 'from'
 	    AND booked_asker.contact_id IS NOT NULL)`
-}
-
-// bookedDiscoverClause renders the reader's own discover gate for the booked
-// meeting's alias — the fence on what a waiting row may SHOW, while every
-// eligibility clause beside it stays reader-independent. One helper for the
-// three statements that render waitingRepliesSQL, each of which composes it
-// beside its own argument list.
-func bookedDiscoverClause(ctx context.Context, arg func(any) int) (string, error) {
-	return auth.ActivityDiscoverClause(ctx, "booked", arg)
 }

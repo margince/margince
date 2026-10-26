@@ -101,6 +101,10 @@ func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.
 	if err != nil {
 		return "", err
 	}
+	requestTaskDiscover, err := requestTaskDiscoverClause(ctx, arg)
+	if err != nil {
+		return "", err
+	}
 	reader := arg(readerOrNobody(ctx))
 	return "a.id IN (SELECT id FROM (" +
 		fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
@@ -116,7 +120,7 @@ func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.
 			fmt.Sprintf("$%d", arg(readerAddresses)),
 			neverRelaxed,
 			noKeyset, bookedDiscover,
-			neverRelaxed, unjudgedResponses) +
+			neverRelaxed, unjudgedResponses, requestTaskDiscover) +
 		") waiting_thread)", nil
 }
 
