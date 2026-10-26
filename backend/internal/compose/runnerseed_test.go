@@ -71,7 +71,6 @@ func TestASpecWithoutASeedQueryDoesNotSearch(t *testing.T) {
 	}
 }
 
-// foundRetriever answers every search with one fixed hit.
 type foundRetriever struct {
 	retrieval.Retriever
 	found retrieval.Result
