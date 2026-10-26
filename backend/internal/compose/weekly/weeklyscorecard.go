@@ -7,9 +7,9 @@ package weekly
 //
 // The counts beside this say a rep was sent 40 leads and held 6 meetings. This
 // says 12 of those leads had a first response recorded by the close, and 4 of
-// those meetings left a next step behind. The two are different questions and a reader wants both, but
-// only this one is a judgement, so only this one has to be careful about what
-// it does when there is nothing to judge.
+// those meetings left a next step behind. A reader wants both. Only this one
+// is a judgement, so only this one has to be careful when there is nothing to
+// judge.
 //
 // A BLOCK IS PRESENT OR ABSENT, NEVER ZEROED. A rep who carried no leads at all
 // did not score zero on the funnel — the funnel was not their work that week,
