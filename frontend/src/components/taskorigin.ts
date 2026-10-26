@@ -27,7 +27,7 @@ export const TASK_ORIGINS: Readonly<Record<string, MessageKey>> = {
 };
 
 /**
- * The sentence saying what made this task, or null for one a person or an
+ * The sentence saying what made this task, or null for one a colleague or an
  * agent wrote. An automation with no family of its own still says it was one.
  */
 export function taskOriginKey(task: Activity): MessageKey | null {
