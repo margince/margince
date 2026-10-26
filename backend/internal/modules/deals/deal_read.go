@@ -112,7 +112,9 @@ type ListDealsInput struct {
 	// status, this is "notice it earlier". Set both and both apply.
 	QuietForDays *int
 	// CloseBefore filters calendar dates before the bound, before pagination.
-	CloseBefore     *time.Time
+	CloseBefore *time.Time
+	// RangeFilters are the close-day, value, currency and country dials.
+	RangeFilters
 	IncludeArchived bool
 	// Sort is the contract's sort spec, validated against the core
 	// vocabulary below plus the workspace's active cf_ columns.
@@ -234,15 +236,16 @@ func (s *Store) ListDealsTx(ctx context.Context, tx pgx.Tx, in ListDealsInput, a
 
 // dealListQuery is the half of a deal list both entry points share: the sort
 // refusal, the shared prelude and the deal's own filters. The valuation is
-// read in the list's own transaction, and only when the request sorts by Value or close day.
+// read in the list's own transaction, and only when the request sorts or filters by Value or close day.
 func (s *Store) dealListQuery(ctx context.Context, tx pgx.Tx, in ListDealsInput, active []fieldcatalog.Column) (*storekit.ListPrelude, []string, error) {
 	if err := refuseMaskedSort(ctx, in.Sort); err != nil {
 		return nil, nil, err
 	}
 	vocab := dealListFields
-	if sortsByValue(in.Sort) || sortsByCloseDay(in.Sort) {
-		valuation, err := s.valuationTx(ctx, tx)
-		if err != nil {
+	var valuation dealValuation
+	if sortsByValue(in.Sort) || sortsByCloseDay(in.Sort) || in.readsValuation() {
+		var err error
+		if valuation, err = s.valuationTx(ctx, tx); err != nil {
 			return nil, nil, err
 		}
 		vocab = dealListVocabulary(valuation)
@@ -252,7 +255,7 @@ func (s *Store) dealListQuery(ctx context.Context, tx pgx.Tx, in ListDealsInput,
 	if err != nil {
 		return nil, nil, err
 	}
-	where, err := appendDealFilters(ctx, pre.Where(), in, pre.Arg)
+	where, err := appendDealFilters(ctx, pre.Where(), in, valuation, pre.Arg)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -288,7 +291,7 @@ func scanDealPage(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.
 // visibility, full-text query, the column equality filters, and the
 // stalled predicate — into WHERE clauses (the cf_ filters and the keyset
 // cursor, which depends on the validated sort, stay in ListDeals).
-func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, arg func(any) int) ([]string, error) {
+func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, v dealValuation, arg func(any) int) ([]string, error) {
 	if !in.IncludeArchived {
 		where = append(where, "archived_at IS NULL")
 	}
@@ -368,6 +371,10 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 		where = append(where, storekit.SQLf("expected_close_date < $%d", arg(in.CloseBefore.Format(time.DateOnly))))
 	}
 	where = appendCommercialFilters(where, in, arg)
+	where, err = appendRangeFilters(ctx, where, in.RangeFilters, v, arg)
+	if err != nil {
+		return nil, err
+	}
 	return appendIdleFilters(where, in), nil
 }
 

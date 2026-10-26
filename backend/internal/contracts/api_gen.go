@@ -59706,6 +59706,35 @@ type ListDealsParams struct {
 	//
 	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
 	TagMode *ListDealsParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
+
+	// CloseFrom Deals whose close day is on or after this calendar day. The close day is the one the
+	// list's Close column shows and `sort=close_day` orders by: the day a won or lost deal
+	// closed, read in the installation's time zone, or an open deal's expected close date.
+	// A deal with no close day is outside every range. A `close_from` after `close_to` is
+	// `422`.
+	CloseFrom *openapi_types.Date `form:"close_from,omitempty" json:"close_from,omitempty"`
+
+	// CloseTo Deals whose close day is on or before this calendar day (inclusive). See `close_from`.
+	CloseTo *openapi_types.Date `form:"close_to,omitempty" json:"close_to,omitempty"`
+
+	// ValueMin Deals worth at least this much, in minor units of the installation's base currency.
+	// The value is the one `sort=amount_minor` orders by: the deal's amount converted on
+	// today's rate, or the amount frozen at close. A deal with no amount, or one in a currency
+	// with no rate, is outside every range. A role that withholds the amount or the currency
+	// is refused with `422` `field_masked`. A `value_min` above `value_max` is `422`.
+	ValueMin *int64 `form:"value_min,omitempty" json:"value_min,omitempty"`
+
+	// ValueMax Deals worth at most this much (inclusive), in minor units of the base currency. See `value_min`.
+	ValueMax *int64 `form:"value_max,omitempty" json:"value_max,omitempty"`
+
+	// Currency Deals priced in this ISO-4217 currency. A role that withholds the currency is refused with `422` `field_masked`.
+	Currency *string `form:"currency,omitempty" json:"currency,omitempty"`
+
+	// Country Deals whose company's address is in this ISO-3166 alpha-2 country. A deal naming no
+	// company, or a company outside the caller's row scope, is not returned. A seat that may
+	// not read companies is refused with `403`, and a role that withholds the deal's company
+	// with `422` `field_masked`.
+	Country *string `form:"country,omitempty" json:"country,omitempty"`
 }
 
 // ListDealsParamsStatus defines parameters for ListDeals.
@@ -101835,6 +101864,84 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_mode"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_mode", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "close_from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "close_from", r.URL.Query(), &params.CloseFrom, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "close_from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "close_from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "close_to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "close_to", r.URL.Query(), &params.CloseTo, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "close_to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "close_to", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "value_min" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "value_min", r.URL.Query(), &params.ValueMin, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "value_min"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "value_min", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "value_max" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "value_max", r.URL.Query(), &params.ValueMax, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "value_max"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "value_max", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "currency" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "currency", r.URL.Query(), &params.Currency, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "currency"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "currency", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "country" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "country", r.URL.Query(), &params.Country, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "country"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "country", Err: err})
 		}
 		return
 	}

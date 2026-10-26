@@ -24,7 +24,8 @@ import (
 
 // dealSeatMasking is a seat whose role withholds the given deal fields. Row
 // scope team and not all, deliberately: a principal reading every row is
-// withheld nothing, so a fixture on that scope would assert nothing.
+// withheld nothing, so a fixture on that scope would assert nothing. It reads
+// companies too, so the country filter renders rather than being refused.
 func dealSeatMasking(fields ...string) principal.Principal {
 	masks := make([]principal.FieldMask, 0, len(fields))
 	for _, field := range fields {
@@ -36,7 +37,7 @@ func dealSeatMasking(fields ...string) principal.Principal {
 		Type: principal.PrincipalHuman,
 		Permissions: principal.Permissions{
 			RowScope:   principal.RowScopeTeam,
-			Objects:    map[string]principal.ObjectGrant{maskObject: {Read: true}},
+			Objects:    map[string]principal.ObjectGrant{maskObject: {Read: true}, "company": {Read: true}},
 			FieldMasks: masks,
 		},
 	}
@@ -189,6 +190,6 @@ func filterDeals(t *testing.T, p principal.Principal, name string) ([]string, er
 		t.Fatalf("applying %s=%s: %v", name, operand, err)
 	}
 	var args []any
-	return appendDealFilters(principal.WithActor(context.Background(), p), nil, in,
+	return appendDealFilters(principal.WithActor(context.Background(), p), nil, in, dealValuation{},
 		func(v any) int { args = append(args, v); return len(args) })
 }

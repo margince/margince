@@ -5,6 +5,7 @@ package deals
 
 import (
 	"net/http"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -29,6 +30,14 @@ func uuidArgs(in *[]openapi_types.UUID) []ids.UUID {
 		out = append(out, ids.UUID(v))
 	}
 	return out
+}
+
+// dayArg widens an optional contract date to the store's calendar day.
+func dayArg(day *openapi_types.Date) *time.Time {
+	if day == nil {
+		return nil
+	}
+	return &day.Time
 }
 
 func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmcontracts.ListDealsParams) {
@@ -78,6 +87,11 @@ func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmco
 		in.Priority = &priority
 	}
 	in.AcquisitionSource = params.AcquisitionSource
+	in.RangeFilters = RangeFilters{
+		CloseFrom: dayArg(params.CloseFrom), CloseTo: dayArg(params.CloseTo),
+		ValueMin: params.ValueMin, ValueMax: params.ValueMax,
+		Currency: params.Currency, Country: params.Country,
+	}
 	if params.ListId != nil {
 		if in.Membership, err = h.memberFilter(r.Context(), *params.ListId); err != nil {
 			writeStoreErr(w, r, err)

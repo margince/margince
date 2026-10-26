@@ -32,6 +32,7 @@ import { usePipelines } from "../../lib/pipelines.queries";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
+import { useInstallationSettings } from "../../lib/uploadlimit";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import { LegalReviewQueueLink } from "../privacy/legalreviews";
 import { useOwnerPicker } from "../records/recordreferences";
@@ -66,6 +67,7 @@ import {
   savableDealQuery,
   useDealScreenDials,
 } from "./deals.listtools";
+import { dealRangeChips } from "./deals.rangefilters";
 import { mapDealCreate } from "./deals.write";
 
 // The create form, with the one question it has to ask the server: which
@@ -331,6 +333,14 @@ export function DealsScreen({
   );
   const companyName = useAppliedCompanyName(query.filters.company_id);
   const dealChips = dealFilterChips(stages, t, companyName);
+  const baseCurrency = useInstallationSettings().data?.base_currency;
+  const leading = useLeadingCurrencies();
+  const rangeChips = dealRangeChips({
+    words: { t, locale, zone: recordZone },
+    filters: query.filters,
+    baseCurrency,
+    leading,
+  });
   const tagChips = useTagChips();
   const rowSelection = dealRowSelection({
     view,
@@ -399,7 +409,7 @@ export function DealsScreen({
         // changes every row without touching `filters`. Naming it here is
         // what puts the reader back on page 1.
         scopeKey={effectivePipeline?.id ?? ""}
-        dataChips={[...ownerChips, ...dealChips, ...tagChips]}
+        dataChips={[...ownerChips, ...dealChips, ...tagChips, ...rangeChips]}
         dataViews={savedViews}
         selection={rowSelection}
         chips={dealSurfaceChips({

@@ -25,6 +25,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -180,6 +181,19 @@ func FilterNumber[I any](set func(*I, *int)) FilterBinding[I] {
 			return operandShape("a whole number, spelled as JSON spells one")
 		}
 		set(in, &n)
+		return nil
+	}
+}
+
+// FilterDate binds a calendar-day operand, spelled YYYY-MM-DD as the contract's
+// `format: date` spells it, and as no other layout.
+func FilterDate[I any](set func(*I, *time.Time)) FilterBinding[I] {
+	return func(in *I, value string) error {
+		day, err := time.Parse(time.DateOnly, value)
+		if err != nil {
+			return operandShape("a calendar day, spelled YYYY-MM-DD")
+		}
+		set(in, &day)
 		return nil
 	}
 }

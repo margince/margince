@@ -344,6 +344,15 @@
   color: var(--dangerText);
 }
 
+/* A value step the reader types into (a chip's `editor`): its fields stacked
+ * under the options, the verb that applies them last. */
+.lt-frange {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+}
+
 /* ---- popover menus ---- */
 
 .lt-menu-wrap {

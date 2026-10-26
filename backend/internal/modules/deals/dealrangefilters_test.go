@@ -1,0 +1,81 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package deals
+
+import (
+	"context"
+	"errors"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+)
+
+// rangeClauses renders the commercial dials for the system principal, which
+// reads every company, and answers the clauses with their bound operands.
+func rangeClauses(t *testing.T, ctx context.Context, f RangeFilters) ([]string, []any, error) {
+	t.Helper()
+	var args []any
+	clauses, err := appendRangeFilters(ctx, nil, f, dealValuation{base: "EUR", day: "2026-10-26", zone: "Europe/Berlin"},
+		func(v any) int { args = append(args, v); return len(args) })
+	return clauses, args, err
+}
+
+// A lower bound above its upper one selects nothing, and an empty page would
+// read as "no deals". So the list refuses it and names the lower bound.
+func TestAnInvertedRangeIsRefusedByName(t *testing.T) {
+	from, to := time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	low, high := int64(500), int64(100)
+	for _, tc := range []struct {
+		name  string
+		in    RangeFilters
+		field string
+	}{
+		{"close days", RangeFilters{CloseFrom: &from, CloseTo: &to}, filterCloseFrom},
+		{"values", RangeFilters{ValueMin: &low, ValueMax: &high}, filterValueMin},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, _, err := rangeClauses(t, systemFilterCtx(), tc.in)
+			var refused *values.ParseError
+			if !errors.As(err, &refused) || refused.Field != tc.field || refused.Code != "range_inverted" {
+				t.Errorf("an inverted range → %v, want range_inverted on %s", err, tc.field)
+			}
+		})
+	}
+}
+
+// One bound is a range open at the other end. The clause compares only the
+// side that was given, and a nil bound never reaches SQL as a NULL operand.
+func TestAnOpenEndedRangeBindsOnlyItsOwnBound(t *testing.T) {
+	from := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	clauses, args, err := rangeClauses(t, systemFilterCtx(), RangeFilters{CloseFrom: &from})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(clauses) != 1 || !strings.Contains(clauses[0], ">=") {
+		t.Fatalf("close_from alone rendered %q, want one lower bound", clauses)
+	}
+	if args[len(args)-1] != "2026-10-01" {
+		t.Errorf("the lower bound bound %v, want the calendar day 2026-10-01", args[len(args)-1])
+	}
+}
+
+// The country belongs to the company. A seat that reads deals and not
+// companies is refused, not told where a company it cannot open is.
+func TestTheCountryFilterNeedsCompanyRead(t *testing.T) {
+	dealsOnly := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman,
+		Permissions: principal.Permissions{
+			RowScope: principal.RowScopeAll,
+			Objects:  map[string]principal.ObjectGrant{maskObject: {Read: true}},
+		},
+	})
+	country := "DE"
+	if _, _, err := rangeClauses(t, dealsOnly, RangeFilters{Country: &country}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("country for a seat without company.read → %v, want permission denied", err)
+	}
+}

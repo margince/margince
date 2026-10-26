@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useLayoutEffect, useRef } from "react";
+import { expect, within } from "storybook/test";
 import { lastEmailAgo } from "../testing/dealmail";
 import { Button, SegmentedControl } from "./atoms";
 import { ListSurface } from "./listsurface";
@@ -428,6 +429,32 @@ function StageMidScroll() {
 
 export const WithAScrolledStage: Story = {
   render: () => <StageMidScroll />,
+};
+
+// A search whose only match sits in the last stage, in a frame too narrow to
+// show it. The board says where the match is and scrolls that stage in.
+const offScreenMatchColumns: BoardMoneyColumn[] = boardColumns.map(
+  (column) => ({
+    ...column,
+    deals: column.stage === "won" ? column.deals : [],
+  }),
+);
+
+export const SearchMatchesOffScreen: Story = {
+  render: () => (
+    <div style={{ inlineSize: 640 }}>
+      <PipelineBoard
+        columns={offScreenMatchColumns}
+        cardHref={(d) => `#/deals/${d.id}`}
+        zone="Europe/Berlin"
+        revealKey="umbrella"
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const hint = await within(canvasElement).findByRole("status");
+    await expect(hint.textContent).toContain("1 result in Closed Won");
+  },
 };
 
 // `uat-phone` drives the capture gate to 390px, which Storybook's own viewport

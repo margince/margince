@@ -77,6 +77,8 @@ To filter deals by company or stage in Margince, open **Deals**, press **Filter*
 1. For **Company**, type part of the company's name and pick it.
 2. For **Stage**, pick a stage of the pipeline shown. The **Pipeline** picker next to **Table** / **Board** decides which stages you can pick. Changing the pipeline clears the stage filter.
 3. **Stalled only** shows open deals with no activity for more than 60 days.
+4. **Value** takes a lowest and a highest amount, or one of them, in your company's main currency. A deal in another currency counts at today's rate. A deal with no value, or with no rate for its currency, is left out.
+5. **Currency** shows deals priced in one currency. **Country** shows deals whose company's address is in that country; a deal with no company is left out.
 A company's own **Deals and projects** tab also lists its deals.
 Also called: deals for a customer, deals for an account, deals in a stage.
 
@@ -95,7 +97,7 @@ Margince tags a contact `machine-address` when its email belongs to a sending sy
 Also called: contacts made from notification mail, automatic senders.
 
 ### How do I filter by date?
-The list screens in Margince have no date filter. To put a list in date order, sort it. **Contacts**, **Companies** and **Leads** sort by **Created** and **Last activity**; **Deals** by **Expected close** and **Last signal**; **Projects** by **Last activity**.
+**Deals** has a **Close date** filter; see the next question. The other list screens have no date filter. To put a list in date order, sort it. **Contacts**, **Companies** and **Leads** sort by **Created** and **Last activity**; **Deals** by **Expected close** and **Last signal**; **Projects** by **Last activity**.
 
 Last activity is the date of the newest email, chat message, meeting, call or note. A task never changes it, whoever made the task.
 
@@ -104,10 +106,11 @@ On **Filters and views**, there are the date choices **is after**, **is on or af
 Also called: created this month, filter by created date, date range.
 
 ### How do I find deals closing this month?
-Margince has no filter on a deal's expected close date. To see the deals that close soonest, open **Deals**, switch to **Table**, and sort by **Expected close**. The earliest date comes first, and an open deal cannot have a date in the past.
-1. Make it shorter with **Filter** → **Forecast** or **Stage**.
-2. To see what this month or quarter will bring in, open **Analytics** → **Forecast** and pick the **Period**.
-Choose **Month**, **Quarter** or **Week**. It counts open deals whose expected close is in that time, but does not list them.
+To find deals closing in a time in Margince, open **Deals** and press **Filter** → **Close date**.
+1. Pick **This fiscal quarter**, or type a **From** and a **Through** date and press **Apply**. One of the two dates is enough.
+2. An open deal counts by its expected close, and a won or lost deal by the day it closed.
+3. A view saved on **This fiscal quarter** moves on to the next quarter by itself.
+To see the deals that close soonest, switch to **Table** and sort by **Expected close**. To see what a month or quarter will bring in, open **Analytics** → **Forecast** and pick the **Period**.
 Also called: closing this quarter, filter by close date, deals due to close, expected close date.
 
 ## Sorting a list and choosing columns
@@ -134,7 +137,7 @@ Also called: sort options, order by column.
 To switch between table and board in Margince, open **Deals** or **Leads** and press **Table** or **Board** in the toolbar.
 - **Deals** opens on **Board**: one column for each stage of the pipeline shown, and you drag a card to move the deal. See [The pipeline](the-pipeline.md).
 - **Leads** opens on **Table**. Its **Board** has a column for each status, and you drag a card between New, Contacted and Engaged.
-Filters and search still work on the board. Ticking many rows, **Display** and **Save view** are on the table only.
+Filters and search still work on the board. When every match of a search is in a column off screen, the board names those columns and moves to the first one. Ticking many rows, **Display** and **Save view** are on the table only.
 Also called: kanban, pipeline view, list view, card view.
 
 ### How do I hide columns or make the table more compact?

@@ -92,8 +92,14 @@ func orderByReadableCompanyName(column string) func(context.Context, func(any) i
 // answers NULL and sits in the tail with the deals that carry no amount.
 func orderByBaseValue(v dealValuation) func(context.Context, func(any) int) (string, error) {
 	return func(_ context.Context, arg func(any) int) (string, error) {
-		return BaseValueSQL(storekit.SQLf("$%d::date", arg(v.day)), storekit.SQLf("$%d::text", arg(v.base)), dealTable), nil
+		return baseValueSQL(v, arg), nil
 	}
+}
+
+// baseValueSQL is the deal's base-currency value on the valuation day, the one
+// expression the Value sort and the value filter both read.
+func baseValueSQL(v dealValuation, arg func(any) int) string {
+	return BaseValueSQL(storekit.SQLf("$%d::date", arg(v.day)), storekit.SQLf("$%d::text", arg(v.base)), dealTable)
 }
 
 // closeDayField sorts by the "Close" column: the day a deal closed, or for an
@@ -105,10 +111,16 @@ const closeDayField = "close_day"
 // A closed deal with no closed_at sits in the tail, as its column cell is empty.
 func orderByCloseDay(zone string) func(context.Context, func(any) int) (string, error) {
 	return func(_ context.Context, arg func(any) int) (string, error) {
-		return storekit.SQLf(
-			"(CASE WHEN deal.status IN ('won', 'lost') THEN (deal.closed_at AT TIME ZONE $%d::text)::date ELSE deal.expected_close_date END)",
-			arg(zone)), nil
+		return closeDaySQL(arg(zone)), nil
 	}
+}
+
+// closeDaySQL is the Close column's day, cut in the zone bound at zonePos. The
+// close-day sort and the close-date filter both read it.
+func closeDaySQL(zonePos int) string {
+	return storekit.SQLf(
+		"(CASE WHEN deal.status IN ('won', 'lost') THEN (deal.closed_at AT TIME ZONE $%d::text)::date ELSE deal.expected_close_date END)",
+		zonePos)
 }
 
 // dealListVocabulary is dealListFields with the sorts that need the
