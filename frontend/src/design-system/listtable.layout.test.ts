@@ -77,4 +77,23 @@ describe("columnLayout", () => {
     expect(layout.widthOf(catalogue[0])).toBe("300px");
     expect(layout.floor).toBeCloseTo(1000);
   });
+
+  // "₫450,000,000,000" is wider than a numeric column's share; cut short, it
+  // reads as a different number.
+  it("never sets a numeric column narrower than the widest figure it holds", () => {
+    const layout = columnLayout(catalogue, {}, 400, { price: 150 });
+    expect(px(layout.widthOf(catalogue[1]))).toBe(150);
+    expect(layout.floor).toBe(666);
+  });
+
+  it("lets a figure wider than the numeric cap widen its column past it", () => {
+    const layout = columnLayout(catalogue, {}, 1800, { price: 260 });
+    expect(px(layout.widthOf(catalogue[1]))).toBe(260);
+    expect(layout.floor).toBeCloseTo(1800);
+  });
+
+  it("holds a dragged numeric column at its figure, not under it", () => {
+    const layout = columnLayout(catalogue, { price: 90 }, 1000, { price: 150 });
+    expect(layout.widthOf(catalogue[1])).toBe("150px");
+  });
 });
