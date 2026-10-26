@@ -1,0 +1,156 @@
+# SPDX-License-Identifier: BUSL-1.1
+# SPDX-FileCopyrightText: 2026 Gradion
+#
+# billing-demo's contract fragment: three human-only operations that drive the
+# demonstration. They hold the object ext_billing_demo_feed, which only an admin
+# holds by default.
+overlay: 1.0.0
+info:
+  title: billing-demo
+  version: "1.0.0"
+actions:
+  - target: $.paths['/ext/billing-demo/connection']
+    update:
+      put:
+        operationId: billingDemoConnect
+        summary: Connect the demonstration billing feed to a service member and a pipeline.
+        tags: [Extensions]
+        x-rbac-object: ext_billing_demo_feed
+        x-rbac-action: create
+        x-rbac-defaults:
+          admin: [read, create, update, delete]
+        x-agent-access:
+          access: human-only
+          verb: billing_demo_connect
+          version: 1.0.0
+          title: Connect the demonstration billing feed
+          description: >-
+            Name the service member the feed lands deals as, and the pipeline and
+            the open and won stages its deals use. It adds three sample invoices,
+            files the feed secret under the member and asks for a sync, so the
+            invoices appear as deals. Calling it again re-points the connection
+            and adds nothing twice.
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [member_id, pipeline_id, open_stage_id, won_stage_id]
+                properties:
+                  member_id: { type: string, format: uuid, pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', description: The service member of this unit. }
+                  pipeline_id: { type: string, format: uuid, pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', description: The pipeline the deals are born in. }
+                  open_stage_id: { type: string, format: uuid, pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', description: The stage of a deal whose invoice is unpaid. }
+                  won_stage_id: { type: string, format: uuid, pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', description: The stage a deal moves to when its invoice is paid. }
+        responses:
+          '200':
+            description: The connection was saved.
+            content:
+              application/json:
+                schema:
+                  type: object
+                  additionalProperties: false
+                  required: [connected, invoices]
+                  properties:
+                    connected: { type: boolean }
+                    invoices: { type: integer, format: int64, description: How many sample invoices the feed holds. }
+          '401': { $ref: '#/components/responses/Unauthorized' }
+          '403': { $ref: '#/components/responses/Forbidden' }
+
+  - target: $.paths['/ext/billing-demo/invoice-update']
+    update:
+      post:
+        operationId: billingDemoUpdateInvoice
+        summary: Pay an invoice or revise its amount in the demonstration billing system.
+        tags: [Extensions]
+        x-rbac-object: ext_billing_demo_feed
+        x-rbac-action: update
+        x-rbac-defaults:
+          admin: [read, create, update, delete]
+        x-agent-access:
+          access: human-only
+          verb: billing_demo_update_invoice
+          version: 1.0.0
+          title: Pay or revise a demonstration invoice
+          description: >-
+            Mark an invoice paid, or change its amount, as the billing system
+            would. The next sync offers the change to the core: a paid invoice
+            moves its deal to the won stage, and a new amount is written unless a
+            member edited the deal's amount, in which case the core keeps it.
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [erp_id]
+                properties:
+                  erp_id: { type: string, minLength: 1, maxLength: 64, description: "The invoice id, such as INV-1001." }
+                  paid: { type: boolean, description: Whether the invoice is paid. }
+                  amount_minor: { type: integer, format: int64, minimum: 0, description: The invoice amount in the smallest unit of its currency. }
+        responses:
+          '200':
+            description: The invoice was updated.
+            content:
+              application/json:
+                schema:
+                  type: object
+                  additionalProperties: false
+                  required: [updated]
+                  properties:
+                    updated: { type: boolean }
+          '401': { $ref: '#/components/responses/Unauthorized' }
+          '403': { $ref: '#/components/responses/Forbidden' }
+          '404': { $ref: '#/components/responses/NotFound' }
+
+  - target: $.paths['/ext/billing-demo/status']
+    update:
+      get:
+        operationId: billingDemoStatus
+        summary: List the demonstration invoices and the deals they became.
+        tags: [Extensions]
+        x-rbac-object: ext_billing_demo_feed
+        x-rbac-action: read
+        x-rbac-defaults:
+          admin: [read, create, update, delete]
+        x-agent-access:
+          access: human-only
+          verb: billing_demo_status
+          version: 1.0.0
+          title: Read the demonstration billing feed
+          description: >-
+            List each invoice with its amount, whether it is paid, whether the
+            core has the latest offer, the deal it became and the fields the core
+            left as a member edited them.
+        responses:
+          '200':
+            description: The invoices.
+            content:
+              application/json:
+                schema:
+                  type: object
+                  additionalProperties: false
+                  required: [invoices]
+                  properties:
+                    invoices:
+                      type: array
+                      items:
+                        type: object
+                        additionalProperties: false
+                        required: [erp_id, name, currency, amount_minor, paid, synced, deal_id, withheld]
+                        properties:
+                          erp_id: { type: string }
+                          name: { type: string }
+                          currency: { type: string }
+                          amount_minor: { type: integer, format: int64 }
+                          paid: { type: boolean }
+                          synced: { type: boolean }
+                          deal_id: { type: string, description: "The deal the invoice became. Empty before the first sync." }
+                          withheld:
+                            type: array
+                            items: { type: string }
+                            description: Fields the core left as they were because a member edited them.
+          '401': { $ref: '#/components/responses/Unauthorized' }
+          '403': { $ref: '#/components/responses/Forbidden' }

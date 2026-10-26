@@ -265,12 +265,19 @@ func TestExactlyFiveSeededRolesAreUnbounded(t *testing.T) {
 	}
 }
 
-// A service member lands records and does nothing else. It never deletes, and
-// it holds nothing outside the activity, contact, company and deal of a landing.
+// A service member lands records and does nothing else. It never deletes.
+// It holds the activity, contact, company and deal of a landing, and the read of
+// installation settings that pricing a deal needs.
 func TestTheServiceIngestRoleGrantsOnlyTheLandingWrites(t *testing.T) {
 	landing := map[string]bool{"activity": true, "contact": true, "company": true, "deal": true}
 	for _, object := range coreObjects {
 		g := defaults["service_ingest"].Objects[object]
+		if object == objInstallationSettings {
+			if g != readOnly {
+				t.Errorf("service_ingest on %q = %+v, want read only", object, g)
+			}
+			continue
+		}
 		if landing[object] {
 			if !g.Create || !g.Read || !g.Update || g.Delete {
 				t.Errorf("service_ingest on %q = %+v, want create, read and update without delete", object, g)

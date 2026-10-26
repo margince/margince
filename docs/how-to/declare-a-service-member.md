@@ -17,7 +17,7 @@ A service member has neither problem. It is not a human, so there is nobody to o
 |---|---|
 | Login | None. It has no password, and the sign-in route refuses it. |
 | Seat | A full seat type, but free of the licence seat limit. It is not counted, and declaring one never fails on the seat limit. |
-| Role | `service_ingest`: create, read and update on activities, contacts, companies and deals, and nothing else. No delete anywhere. A role seeded before deals were landable gets the deal grant from a migration, unless an admin edited it by hand. See [land-companies-and-deals-from-an-extension.md](land-companies-and-deals-from-an-extension.md). |
+| Role | `service_ingest`: create, read and update on activities, contacts, companies and deals, plus the read of installation settings that pricing a deal needs. No delete anywhere. A role seeded before deals were landable gets the deal grant from a migration, unless an admin edited it by hand. See [land-companies-and-deals-from-an-extension.md](land-companies-and-deals-from-an-extension.md). |
 | Lifetime | Archived by an admin, never deleted. The database refuses a delete. |
 | Who may use it | Only the extension it was declared for. Any other extension is refused. |
 | Who may change it | Only an installation admin. A delegated member administrator cannot deactivate, re-role or archive it. |

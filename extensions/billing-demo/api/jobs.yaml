@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: BUSL-1.1
+# SPDX-FileCopyrightText: 2026 Gradion
+overlay: 1.0.0
+info:
+  title: billing-demo
+  version: "1.0.0"
+actions:
+  - target: $.kinds['ext_billing_demo_sync']
+    update:
+      job: sync
+      role: dispatcher
+      queue: default
+      cadence: 60s
+      timeout: 30s
+      tier: auto_execute
+      scope: write
+
+  - target: $.kinds['ext_billing_demo_sync_ws']
+    update:
+      job: sync
+      role: worker
+      queue: default
+      timeout: 120s
+      max_attempts: 3
+
