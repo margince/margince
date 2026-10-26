@@ -348,3 +348,41 @@ func TestTheWeekClosingKeepsTheWorkAndItsReaders(t *testing.T) {
 		t.Errorf("the manager's team day holds %v, want the carried task %s", rowIDs(team), task)
 	}
 }
+
+// Work read out of a message does not outlive the message.
+//
+// Archiving the mail a request was read from takes the task off the day. The
+// alternative is a row whose evidence a reader can no longer reach.
+func TestArchivingTheSourceTakesItsDerivedWorkAway(t *testing.T) {
+	o := setupOwed(t)
+	readers := o.day(t)
+	o.contact(t, "Buyer", "buyer@customer.example")
+	message := o.capture(t, owedMail{
+		from: "buyer@customer.example", to: o.seat, subject: "Proposal for the integration project",
+		body: "Please send the proposal for our integration project.", at: o.now.Add(-time.Hour),
+		messageID: ids.NewV7().String() + "@customer.example",
+	})
+	if _, err := o.e.Activities.SetCaptureLabel(o.judge(), message, "commitment"); err != nil {
+		t.Fatal(err)
+	}
+	runOwedWorker(t, o.e, &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: .99})
+	request := o.e.WsScalar(t, `SELECT id::text FROM activity WHERE source_system = $1
+		AND source_activity_id = $2`, activities.EmailRequestTaskSource, message)
+	if _, ok := rowOf(o.page(readers.rep1, t, "mine", o.now), request); !ok {
+		t.Fatalf("the request is not on its owner's day, so archiving below proves nothing")
+	}
+
+	if _, err := o.e.Activities.ArchiveActivity(o.e.Admin(),
+		ids.From[ids.ActivityKind](message), nil); err != nil {
+		t.Fatalf("archiving the mail the request was read from: %v", err)
+	}
+
+	page := o.page(readers.rep1, t, "mine", o.now)
+	if _, ok := rowOf(page, request); ok {
+		t.Errorf("the day still holds %v after its source was archived", rowIDs(page))
+	}
+	team := o.page(readers.manager, t, "team", o.now)
+	if _, ok := rowOf(team, request); ok {
+		t.Errorf("the manager's team day still holds %v after the source was archived", rowIDs(team))
+	}
+}
