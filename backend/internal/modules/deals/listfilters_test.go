@@ -51,6 +51,8 @@ var dealFilterOperands = map[string]string{
 	filterValueMax:           "5000000",
 	filterCurrency:           "eur",
 	filterCountry:            "de",
+	filterSourceSystem:       "acme-erp",
+	filterSourceID:           "D-1",
 }
 
 // Every filter this module declares narrows something — the deal half of the
@@ -75,8 +77,8 @@ func TestEachDealsEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 			"acquisition_source", "close_from", "close_to", "commercial_motion", "company_id", "country",
 			"currency", "forecast_category", "include_archived", "list_id", "owner_id", "owner_team_id",
 			"partner_attribution", "partner_company_id", "partner_sourced", "pipeline_id", "priority",
-			"project_id", "sort", "stage_id", "stalled", "status", "tag_id", "tag_mode", "unassigned",
-			"value_max", "value_min",
+			"project_id", "sort", "source_id", "source_system", "stage_id", "stalled", "status", "tag_id",
+			"tag_mode", "unassigned", "value_max", "value_min",
 		}},
 	} {
 		if got := p.ListFilters(tc.entity); !slices.Equal(got, tc.want) {

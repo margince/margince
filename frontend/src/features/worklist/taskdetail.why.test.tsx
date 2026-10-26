@@ -113,9 +113,9 @@ test("a task opened from a record page has no list to explain it", async () => {
   expect(screen.queryByText(en["worklist.why.title"])).toBeNull();
 });
 
-test("a row with nothing to say draws no empty panel", async () => {
+test("a row with no reasons still says what it asks", async () => {
   openTask(QUIET_REMINDER, { ...ROW, because: [], consequence: "none" });
 
-  await screen.findByText(en["tasks.origin.no_activity_reminder"]);
-  expect(screen.queryByText(en["worklist.why.title"])).toBeNull();
+  expect(await screen.findByText(en["worklist.ask.task"])).toBeTruthy();
+  expect(screen.queryByText(en["worklist.why.reasons"])).toBeNull();
 });

@@ -45,6 +45,19 @@ func (s *Store) GetActivity(ctx context.Context, id ids.ActivityID, archived sto
 	return out, s.attachCustomValues(ctx, &out)
 }
 
+// GetActivityTx is GetActivity inside a caller-opened transaction, with the
+// catalog answer threaded in.
+func (s *Store) GetActivityTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter, active CustomColumns) (crmcontracts.Activity, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	out, err := readActivity(ctx, tx, id, archived)
+	if err != nil {
+		return out, err
+	}
+	return out, withCustomValuesOf(ctx, tx, active.cols, &out)
+}
+
 // activitySortFields is what a caller may order the timeline by: the five
 // instants an activity carries, and nothing else.
 //
@@ -156,33 +169,43 @@ func (s *Store) ListActivities(ctx context.Context, in ListActivitiesInput) ([]c
 		return nil, storekit.Page{}, err
 	}
 	err = s.tx(ctx, func(tx pgx.Tx) (err error) {
-		// The colleague-domain snapshot for THIS read, taken beside the rows it
-		// judges. ListActivitiesTx cannot take it itself: it is a free function
-		// for a caller that already holds a transaction, so it has no seam to
-		// ask — and a composite record read that carries none simply excludes
-		// no sender, which is the same open default WithOwnDomains documents.
-		if in.readerAddresses, err = s.readerAddressList(ctx, tx, readerOrNobody(ctx)); err != nil {
-			return err
-		}
-		if in.ownDomains, err = s.ownDomainList(ctx, tx); err != nil {
-			return err
-		}
-		if in.WaitingReply && in.WaitingReplyAsOf == nil {
-			asOf := s.now()
-			in.WaitingReplyAsOf = &asOf
-		}
-		// Measured only when the waiting filter is actually asked for. Every
-		// activity list runs through here, and the spread is a percentile over
-		// a year — a scan no read that never mentions waiting should pay for.
-		if in.WaitingReplyAsOf != nil {
-			if in.horizonDays, err = s.waitingHorizonFor(ctx, tx); err != nil {
-				return err
-			}
-		}
-		activities, page, err = ListActivitiesTx(ctx, tx, in)
+		activities, page, err = s.ListActivitiesIn(ctx, tx, in)
 		return err
 	})
 	return activities, page, err
+}
+
+// ListActivitiesIn is ListActivities inside a caller-opened transaction. in.Columns
+// is the caller's to fill, from a catalog it reads on that transaction.
+func (s *Store) ListActivitiesIn(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) (activities []crmcontracts.Activity, page storekit.Page, err error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	if in.TaskAsOf == nil {
+		in.TaskAsOf = new(s.now())
+	}
+	// The colleague-domain snapshot for this read, taken beside the rows it
+	// judges. ListActivitiesTx is a free function with no store to ask. A
+	// composite record read that carries none excludes no sender, the open
+	// default WithOwnDomains documents.
+	if in.readerAddresses, err = s.readerAddressList(ctx, tx, readerOrNobody(ctx)); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	if in.ownDomains, err = s.ownDomainList(ctx, tx); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	if in.WaitingReply && in.WaitingReplyAsOf == nil {
+		asOf := s.now()
+		in.WaitingReplyAsOf = &asOf
+	}
+	// Measured only when the waiting filter is asked for. The spread is a
+	// percentile over a year, a scan no other list should pay for.
+	if in.WaitingReplyAsOf != nil {
+		if in.horizonDays, err = s.waitingHorizonFor(ctx, tx); err != nil {
+			return nil, storekit.Page{}, err
+		}
+	}
+	return ListActivitiesTx(ctx, tx, in)
 }
 
 // readActivity is the module's ONE single-row activity read, and it
@@ -227,10 +250,19 @@ func readHeldActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archive
 func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter) (crmcontracts.Activity, error) {
 	args := []any{id}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	content, err := auth.ActivityAudienceArm(ctx, "a", arg)
+	audience, err := auth.ActivityAudienceArm(ctx, "a", arg)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
+	// Content answers to availability as well as audience. readActivity's own
+	// DISCOVER gate folds restricted_at in, so this adds nothing there.
+	//
+	// readHeldActivity skips that gate, so this term is what withholds there.
+	// Without it, write authority over a held row's audience reads that row's
+	// text back from a write.
+	//
+	// The hold says no principal reads restricted content.
+	content := "(" + audience + ") AND " + auth.ActivityAvailableClause("a")
 	q := `SELECT ` + activityColumns(content) + ` FROM activity a WHERE a.id = $1`
 	if archived == storekit.LiveOnly {
 		q += ` AND a.archived_at IS NULL`

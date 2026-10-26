@@ -34,6 +34,8 @@ components:
         - deal.archived
         - deal.updated
         - deal.restored
+        - deal.merged
+        - deal.erased
         - project.created
         - project.updated
         - project.phase_changed
@@ -86,6 +88,7 @@ components:
         - company.merged
         - company.updated
         - company.restored
+        - company.erased
         - lead.created
         - lead.disqualified
         - lead.promoted
@@ -1079,6 +1082,40 @@ components:
           description: The import run that wrote the event. Present when `imported` is true.
       additionalProperties: false
 
+    PublicEventDealMerged:
+      type: object
+      x-event-type: deal.merged
+      x-entity-type: deal
+      x-version: 1
+      description: >-
+        Payload for deal.merged: two deals collapsed into one. Neither
+        deal.updated nor deal.archived can say this, so it is its own verb.
+        The event's entity is the merged-away deal. References only.
+      required:
+        - merged_from_id
+        - merged_into_id
+      properties:
+        merged_from_id:
+          type: string
+          format: uuid
+          description: The merged-away (source) deal, retired but still fetchable by id.
+        merged_into_id:
+          type: string
+          format: uuid
+          description: The surviving (target) deal.
+      additionalProperties: false
+
+    PublicEventDealErased:
+      type: object
+      x-event-type: deal.erased
+      x-entity-type: deal
+      x-version: 1
+      description: >-
+        Payload for deal.erased: a deal was erased for good, not archived. The
+        event's entity is the erased deal. Carries no data, so no name or
+        other personal field travels with it.
+      additionalProperties: false
+
     PublicEventDealRestored:
       type: object
       x-event-type: deal.restored
@@ -1662,6 +1699,17 @@ components:
         with the domains, relationship types, partner programme,
         relationships, list memberships and tags its archive took down where
         they can still come back. Carries no data.
+      additionalProperties: false
+
+    PublicEventCompanyErased:
+      type: object
+      x-event-type: company.erased
+      x-entity-type: company
+      x-version: 1
+      description: >-
+        Payload for company.erased: a company was erased for good, not
+        archived. The event's entity is the erased company. Carries no data,
+        so no name or other personal field travels with it.
       additionalProperties: false
 
     PublicEventCompanyMerged:

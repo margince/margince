@@ -74,6 +74,7 @@ func (s *Service) readLastSpoke(ctx context.Context, tx pgx.Tx, room meeting, pr
 		SELECT a.occurred_at, a.occurred_precision = 'day'
 		  FROM activity a
 		  JOIN activity_participant ap ON ap.activity_id = a.id AND ap.user_id = $%d
+		   AND `+auth.ParticipantStandsSQL("ap", "a")+`
 		 WHERE a.id <> $%d AND a.archived_at IS NULL
 		   AND %s
 		   AND %s

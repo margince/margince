@@ -133,6 +133,7 @@ type Server struct {
 	exportBundleHandlers
 	agentBundleHandlers
 	companyRollupHandlers
+	companyOfferedHandlers
 	strengthHandlers
 	recordAccessHandlers
 	customfieldsHandlers
@@ -148,10 +149,9 @@ type Server struct {
 	extensionIngestHealthHandlers
 	recoveryHealthHandlers
 	automaticWorkHandlers
-	// The composed-extension inventory (handlers_extensions.go): stateless, it reads
-	// boot-written accessors, so it is embedded as the zero value.
+	// Extension inventory, settings, transports: stateless, embedded as the zero value.
 	extensionsHandlers
-	// The transport directory (handlers_channelproviders.go): stateless, embedded the same way.
+	extensionSettingsHandlers
 	channelProvidersHandlers
 	company360Handlers
 	contact360Handlers

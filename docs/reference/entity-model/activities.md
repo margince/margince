@@ -413,7 +413,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_participant
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+11 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -425,6 +425,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
 | `display_name` | `text` |  |  |
 | `role` | `text` | yes | One of `from`, `to`, `cc`, `bcc`, `attendee`, `organizer`. |
+| `roster_seat` | `uuid` |  | Points at `app_user.id`. |
 | `user_id` | `uuid` |  | Points at `app_user.id`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
@@ -434,6 +435,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 |---|---|---|
 | `activity_id` | `activity` | deleting the parent deletes this row |
 | `contact_id` | `contact` | deleting the parent deletes this row |
+| `roster_seat` | `app_user` | deleting the parent keeps this row and clears the link |
 | `user_id` | `app_user` | deleting the parent deletes this row |
 
 **Rules**

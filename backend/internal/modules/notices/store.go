@@ -145,13 +145,20 @@ func (s *Store) Create(ctx context.Context, in NewNotice) (ids.UUID, error) {
 // ClassFor does not place would otherwise land a line in a centre whose
 // settings page has no row governing it, and no reader could ever route it.
 func (s *Store) CreateTx(ctx context.Context, tx pgx.Tx, in NewNotice) (ids.UUID, error) {
+	id, _, err := s.CreateTxNew(ctx, tx, in)
+	return id, err
+}
+
+// CreateTxNew is CreateTx that also says whether this call wrote the notice, so
+// a caller counting who was told does not count a dedupe replay.
+func (s *Store) CreateTxNew(ctx context.Context, tx pgx.Tx, in NewNotice) (ids.UUID, bool, error) {
 	if _, err := ClassFor(in.Kind); err != nil {
-		return ids.Nil, err
+		return ids.Nil, false, err
 	}
 	// No evidence: a system flow's authority is the engine's own, which the
 	// audit row's actor already states.
-	row, err := s.insertNoticeTx(ctx, tx, in, nil)
-	return row.ID, err
+	row, written, err := s.insertNoticeTx(ctx, tx, in, nil)
+	return row.ID, written, err
 }
 
 // insertNotice is the write in a transaction of its own — the coaching path,
@@ -164,7 +171,7 @@ func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[str
 	var written Notice
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var txErr error
-		written, txErr = s.insertNoticeTx(ctx, tx, in, evidence)
+		written, _, txErr = s.insertNoticeTx(ctx, tx, in, evidence)
 		return txErr
 	}); err != nil {
 		return Notice{}, err
@@ -178,13 +185,13 @@ func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[str
 // wants nothing else, and widening it would make four call sites carry a value
 // none of them reads. The coach path does read it: it answers 201 with the
 // notice, and the created_at on that answer has to be the row's own.
-func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evidence map[string]any) (Notice, error) {
+func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evidence map[string]any) (Notice, bool, error) {
 	if in.Kind == "" || in.Subject == "" {
-		return Notice{}, errors.New("notices: a notice names its kind and its subject")
+		return Notice{}, false, errors.New("notices: a notice names its kind and its subject")
 	}
 	capturedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
-		return Notice{}, err
+		return Notice{}, false, err
 	}
 	subject := textcut.Runes(in.Subject, subjectBound)
 	body := textcut.Runes(in.Body, bodyBound)
@@ -226,14 +233,15 @@ func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evi
 		args...)
 	switch scanErr := row.Scan(&createdAt); {
 	case errors.Is(scanErr, pgx.ErrNoRows):
-		return storedNotice(ctx, tx, in.Recipient, in.DedupeKey)
+		stored, err := storedNotice(ctx, tx, in.Recipient, in.DedupeKey)
+		return stored, false, err
 	case scanErr != nil:
-		return Notice{}, fmt.Errorf("notices: recording the notice: %w", scanErr)
+		return Notice{}, false, fmt.Errorf("notices: recording the notice: %w", scanErr)
 	}
 	auditID, err := storekit.AuditEventWithEvidence(ctx, tx, "create", "notice", id,
 		map[string]any{"kind": in.Kind, "recipient_user_id": in.Recipient.String()}, evidence)
 	if err != nil {
-		return Notice{}, err
+		return Notice{}, false, err
 	}
 	recipientID := in.Recipient.UUID
 	if err := storekit.EmitEvent(ctx, tx, auditID, recipientID, crmcontracts.PublicEventNoticeCreated{
@@ -241,12 +249,12 @@ func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evi
 		RecipientUserId: openapi_types.UUID(recipientID),
 		Kind:            in.Kind,
 	}); err != nil {
-		return Notice{}, err
+		return Notice{}, false, err
 	}
 	return Notice{
 		ID: id, Kind: in.Kind, Subject: subject, Body: body,
 		Target: in.Target, CreatedAt: createdAt, Origin: in.Origin,
-	}, nil
+	}, true, nil
 }
 
 // storedNotice answers the notice a repeat delivery collided with — ALL of it,

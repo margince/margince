@@ -184,9 +184,9 @@ function nameInRows(rows: readonly unknown[], id: string): string | null {
  */
 function lineFor(
   client: QueryClient,
+  t: Translator,
   key: readonly unknown[],
   settled: unknown,
-  t: Translator,
 ): string | null {
   const head = headOf(key);
   if (head === null) {
@@ -218,8 +218,8 @@ function lineFor(
  */
 function wroteFor(
   client: QueryClient,
-  key: readonly unknown[] | undefined,
   t: Translator,
+  key: readonly unknown[] | undefined,
 ): string | null {
   if (key === undefined) {
     return null;
@@ -252,8 +252,6 @@ export function useAgentTicker(): readonly TickerLine[] {
   const [lines, setLines] = useState<readonly TickerLine[]>([]);
 
   useEffect(() => {
-    // Keyed on the locale, not a translator: `useT` answers a new function
-    // every render, which would resubscribe and cancel each line's expiry.
     const t: Translator = (key, params) => translate(locale, key, params);
     let next = 0;
     const timers = new Set<ReturnType<typeof setTimeout>>();
@@ -301,7 +299,7 @@ export function useAgentTicker(): readonly TickerLine[] {
         return;
       }
       const key = event.query.queryKey;
-      const said = lineFor(client, key, settled, t);
+      const said = lineFor(client, t, key, settled);
       if (said !== null) {
         sayOnce(said, key);
       }
@@ -322,7 +320,7 @@ export function useAgentTicker(): readonly TickerLine[] {
       // pending, so one write that retries would otherwise announce itself
       // several times over.
       const key = event.mutation.options.mutationKey;
-      const said = wroteFor(client, key, t);
+      const said = wroteFor(client, t, key);
       if (said !== null && key !== undefined) {
         sayOnce(said, key);
       }
@@ -330,6 +328,7 @@ export function useAgentTicker(): readonly TickerLine[] {
 
     return () => {
       announced.clear();
+      setLines([]);
       stop();
       stopWrites();
       for (const timer of timers) {

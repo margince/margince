@@ -320,6 +320,9 @@ func deleteIdentifyingSatellites(ctx context.Context, tx pgx.Tx, id ids.UUID) er
 		_, err = tx.Exec(ctx, `DELETE FROM contact_profile_field WHERE contact_id = $1`, id)
 	}
 	if err == nil {
+		err = purgeEmployerOffers(ctx, tx, []ids.UUID{id})
+	}
+	if err == nil {
 		// A resolution key: left behind it keeps binding inbound mail here.
 		_, err = tx.Exec(ctx, `DELETE FROM contact_channel_identity WHERE contact_id = $1`, id)
 	}

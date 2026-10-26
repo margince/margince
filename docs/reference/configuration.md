@@ -51,6 +51,8 @@ stops on any of these:
 - a value that fails the check of its setting or seed;
 - a required value that no source sets;
 - a `--config-file` that does not exist;
+- a key written twice in one mapping of a YAML file, named with both lines:
+  `config/margince.yaml: log_level appears on lines 5 and 40; keep one`;
 - an old posture file beside the base file, such as `margince.dev.yaml` beside `margince.yaml`,
   unless `--config-file` names that same file.
 
@@ -70,6 +72,10 @@ came from. A secret shows `<secret>` in place of its value.
 does, then stops. It prints the trace and the variables no program reads to stdout and every fault
 to stderr. It exits 0 when the configuration is valid and 1 when it is not, and it needs no database
 or network. A stored setting with no boot source shows as unset, since the database is not read.
+
+Each program checks only the settings it reads. A setting that only the other program reads is
+listed as `not checked here`, and the last line says how many there are. `make check-config` runs
+the check on both programs.
 
 **The Configuration page.** Settings → Configuration lists each setting with its value and its
 source. `GET /v1/installation/configuration` returns the same list, with `value: null` and
@@ -108,7 +114,8 @@ plain secret, and takes one of these references, which also work in the other so
 
 - `${file:/path}` reads the file and removes one line break at its end. The source names the path. A
   file that cannot be read stops the boot and names the path, and so does one over 64 KiB.
-- `${env:NAME}` reads the variable `NAME` from the environment. An unset `NAME` stops the boot.
+- `${env:NAME}` reads the variable `NAME` from the environment, never from the `.env` file. An unset
+  `NAME` stops the boot. The report of variables no program reads never names `NAME`.
 - `${none}` says the secret is absent. Only `email.smtp.password` takes it; see
   [The vault may hold copies of the two deployment credentials](#the-vault-may-hold-copies-of-the-two-deployment-credentials).
 
@@ -1571,10 +1578,19 @@ unset. For the database verbs, the DSN must name another database, such as `post
 The image entrypoint scripts in `scripts/deploy/` read these before they start a binary. The binaries then
 resolve their other flags from the `MARGINCE_*` values above. A file mounted at `/.env` is passed to
 `margince-migrate`, the api and the worker as `--env-file /.env`, so it ranks below the environment
-the container gets. The scripts read the values below from it too, without exporting it. Put
-`MARGINCE_ENV` in the environment, never in `/.env`: a value there stops the boot. The steps that use them are in
-[how-to/deploy-margince.md](../how-to/deploy-margince.md), and the template with notes is
-[`.env.example`](../../.env.example).
+the container gets. The scripts read the values below from it too, without exporting it. The steps
+that use them are in [how-to/deploy-margince.md](../how-to/deploy-margince.md), and the template with
+notes is [`.env.example`](../../.env.example).
+
+Because `/.env` is a file the programs read, not one the shell loads, three kinds of value belong in
+the environment the container gets:
+
+- `MARGINCE_ENV`, `MARGINCE_CONFIG`, `MARGINCE_CONFIG_FILE`, `MARGINCE_ENV_FILE` and
+  `MARGINCE_CONFIG_TRACE`: they choose the files, so a value in `/.env` stops the boot.
+- The variable a `${env:NAME}` reference reads: a reference reads the environment only, so a value in
+  `/.env` stops the boot with `references NAME, which is not set`.
+- A variable that Margince's settings do not read reaches no process from `/.env`. The Go runtime's
+  `GOMEMLIMIT`, `GOGC` and `GODEBUG` are such variables.
 
 | Env | Read by | Required | Meaning |
 |---|---|---|---|

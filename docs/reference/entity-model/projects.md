@@ -6,7 +6,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 
 ## project
 
-23 columns · primary key `(id)` · referenced by 12 foreign keys
+24 columns · primary key `(id)` · referenced by 12 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -22,6 +22,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 | `phase` | `text`, default `'initiative'::text` | yes | Read-only here: transitions go through advanceProjectPhase so the history row and project.phase_changed are written from one transaction. |
 | `source_author_id` | `uuid` |  | Points at `app_user.id`. |
 | `source_author_name` | `text` |  |  |
+| `source_id` | `text` |  | At most 128 characters. |
 | `started_at` | `date` |  |  |
 | `target_end_date` | `date` |  |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
@@ -49,6 +50,8 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 - `project_key_shape`: `CHECK (((key IS NULL) OR (key ~ '^[A-Za-z][A-Za-z0-9_-]{1,23}$')))`
 - `project_phase_check`: `CHECK ((phase = ANY (ARRAY['initiative', 'pursuing', 'delivering', 'closed'])))`
 - `project_source_author_needs_a_source`: `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
+- `project_source_id_length`: `CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128))))`
+- `project_source_id_needs_a_source`: `CHECK (((source_id IS NULL) OR (source_system IS NOT NULL)))`
 - `project_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
@@ -60,6 +63,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 - `idx_project_search`: `gin (search_tsv)`
 - `project_pkey`: `unique, btree (id)`
 - `uq_project_key`: `unique, btree (lower(key)) WHERE ((key IS NOT NULL) AND (archived_at IS NULL))`
+- `uq_project_source`: `unique, btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))`
 
 **Triggers**
 

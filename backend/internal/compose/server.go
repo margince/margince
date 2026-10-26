@@ -203,6 +203,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		captureHealthHandlers:         captureHealthHandlers{pool: pool, now: utcNow},
 		extensionIngestHealthHandlers: extensionIngestHealthHandlers{pool: pool, now: utcNow},
 		automaticWorkHandlers:         automaticWorkHandlers{pool: pool, now: utcNow},
+		extensionSettingsHandlers:     extensionSettingsHandlers{store: NewSettingsStore(pool)},
 		recoveryHealthHandlers: recoveryHealthHandlers{
 			ledger: continuity.NewStore(InstallationDB(pool)),
 			now:    func() time.Time { return time.Now().UTC() },
@@ -285,8 +286,9 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// tab greys out a route the duplicate guard would refuse, so the rep
 		// learns the door is taken before writing the ask rather than from the
 		// 409 after it.
-		Reads:                 NewContactGraphReads(pool, InstallationDB(pool)),
-		companyRollupHandlers: companyRollupHandlers{pool: pool, now: time.Now},
+		Reads:                  NewContactGraphReads(pool, InstallationDB(pool)),
+		companyRollupHandlers:  companyRollupHandlers{pool: pool, now: time.Now},
+		companyOfferedHandlers: companyOfferedHandlers{store: contacts.NewStore(InstallationDB(pool))},
 		strengthHandlers: strengthHandlers{
 			contacts: contacts.NewStore(InstallationDB(pool)), pool: pool, now: time.Now,
 		},

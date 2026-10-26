@@ -345,9 +345,15 @@ export function ThreadRow({
       <div className="tl-body">
         <div className="tl-thread">
           <span className="tl-head">
-            <Eyebrow>{t("timeline.group.kind")}</Eyebrow>
-            <span>{groupCountLabel(group, locale)}</span>
-            {participants && <span>{participants}</span>}
+            <Eyebrow className="tl-head-part">
+              {t("timeline.group.kind")}
+            </Eyebrow>
+            <span className="tl-head-part">
+              {groupCountLabel(group, locale)}
+            </span>
+            {participants && (
+              <span className="tl-head-part">{participants}</span>
+            )}
             {/* Whose move the conversation waits on, read off its newest
                 message. It goes on the card that stands for it, never on the
                 members inside. */}

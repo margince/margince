@@ -151,10 +151,7 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 			if err != nil {
 				return datasource.EntityRef{}, false, counterpartyDecision{}, err
 			}
-			if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
-				return datasource.EntityRef{}, false, counterpartyDecision{}, err
-			}
-			if err := s.joinThread(ctx, tx, id, rec, false); err != nil {
+			if err := s.finishTakeOver(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
 				return datasource.EntityRef{}, false, counterpartyDecision{}, err
 			}
 			return ref, false, counterpartyDecision{}, nil
@@ -201,6 +198,21 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
 	return ref, true, decision, nil
+}
+
+// finishTakeOver is what a row this capture took over from an import still owes:
+// this seat's import, its thread, and the guests the calendar lists.
+func (s *Sink) finishTakeOver(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID,
+	rec connector.NormalizedRecord, fields ActivityFields, birth birthDecision, memberBound bool,
+) error {
+	if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
+		return err
+	}
+	if err := s.joinThread(ctx, tx, id, rec, false); err != nil {
+		return err
+	}
+	return s.stampLaterGuests(ctx, tx, id, rec)
 }
 
 // finishNewActivity completes an activity row this capture just minted. It runs
@@ -250,12 +262,7 @@ func (s *Sink) finishNewActivity(
 	// The party list is OURS to trust only when the PROVIDER stated it — our own
 	// mailbox owner attested as the sender, or a calendar enumerating its
 	// attendees. On anything inbound it is the sender's text.
-	if err := StampFurtherParticipants(ctx, tx, id, fields.Kind, fields.ChannelProvider,
-		ParticipantListAttested(rec), rec.Participants); err != nil {
-		return counterpartyDecision{}, err
-	}
-	if err := StampSeatsPastTheCap(ctx, tx, id, fields.Kind,
-		ParticipantListAttested(rec), rec.WithheldParties); err != nil {
+	if err := stampBirthParties(ctx, tx, id, rec, fields); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// And the names those rows just recorded, for an attendee who is ALREADY a

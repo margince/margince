@@ -222,6 +222,8 @@ newly closed week. Existing review and mail claims keep repeated ticks from send
 Model text and mail come after, because a stalled relay must not cost a member the review itself. One
 member's failure does not stop the others; the job fails at the end with all of them joined, and retries.
 `narrateBudget` (40 seconds) bounds the model call for one member.
+The sentence is asked for in the member's saved language, else the installation's;
+`recipientLanguage` in `maillanguage.go` answers that for the weekly mail too.
 
 `snapshotTeams` in `weeklyteamjobs.go` skips a team while any of its members failed on this run, so a team
 total never stands on a missing member. It reads the team as a member who has the rights to open it, trying each in turn. Not every member may read a team's week. A team with no live members gets no

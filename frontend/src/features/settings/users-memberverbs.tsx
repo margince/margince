@@ -17,6 +17,16 @@ import {
 } from "./users-members";
 import { PasswordLinkModal, usePasswordLink } from "./users-password-link";
 
+// Order matters: a service member is also an agent row.
+function deactivateBodyKey(member: User) {
+  if (member.service_extension) {
+    return "users.deactivateServiceMemberBody";
+  }
+  return member.is_agent
+    ? "users.deactivateAgentConfirmBody"
+    : "users.deactivateConfirmBody";
+}
+
 // A member's verbs behind one menu. Nothing to offer draws nothing: a trigger
 // over an empty panel is a promise the row cannot keep.
 export function MemberVerbs({ member }: Readonly<{ member: User }>) {
@@ -169,13 +179,7 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
       >
         {/* Scheduled extension jobs act as themselves, so the agent body says
             what does not stop. */}
-        <p>
-          {t(
-            member.is_agent
-              ? "users.deactivateAgentConfirmBody"
-              : "users.deactivateConfirmBody",
-          )}
-        </p>
+        <p>{t(deactivateBodyKey(member))}</p>
         <HandoverSummary member={member} enabled={confirmOff && canHandOver} />
       </ConfirmModal>
       {handoverOpen && (

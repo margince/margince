@@ -2175,6 +2175,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/companies/{id}/offered-values": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * What each source last offered for the company's fields, to show beside the value on the record.
+         * @description One entry per source and field, for the fields a source offered through its feed. The
+         *     offered value is kept whether the record took it or kept a user's edit, so the two
+         *     can be compared. Needs read on companies and row visibility of the company. An archived
+         *     company answers 404.
+         */
+        get: operations["listCompanyOfferedValues"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/companies/{id}/logo": {
         parameters: {
             query?: never;
@@ -7152,7 +7178,8 @@ export interface paths {
         /**
          * Create a lead.
          * @description With name + email returns 201 + stable UUID; round-trips on GET (features/01 §6.1).
-         *     `company_name` is FREE TEXT — a lead has NO company FK. Lead-internal exact-email
+         *     `company_name` is FREE TEXT; a company link (`company_id`) is set only by a human through
+         *     `POST /leads/{id}/link-company`, never on create. Lead-internal exact-email
          *     dedupe → 409 with existing lead id. Bulk/connector sourcing uses (source_system, source_id)
          *     for idempotent re-import. A `project_id` that names no project the caller can read
          *     answers 422 naming `project_id`, the same for a missing project and for one hidden by row scope.
@@ -7328,6 +7355,46 @@ export interface paths {
          *     floor on `promote_lead`.
          */
         post: operations["promoteLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leads/{id}/link-company": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Link a lead to a company, and add the lead as a contact there.
+         * @description The confirm action behind `company_match`: a human says this lead belongs to this
+         *     company. One transaction sets `company_id`, makes sure the lead has a contact, and makes
+         *     sure that contact has a current employment at the company.
+         *
+         *     The contact is found the way promotion finds it: a live contact holding the lead's email
+         *     is used, otherwise one is created from the lead, and either way its
+         *     `converted_from_lead_id` names this lead when it named none. The lead is NOT promoted:
+         *     its status, owner and place on the lead list stay as they were, and a later promotion
+         *     lands on the same contact. An employment that already exists is kept, not duplicated.
+         *
+         *     The caller needs `lead:update`, `contact:create`, `contact:update`, `company:read` and
+         *     `relationship:create`; a missing grant answers `403` before anything is read. A company
+         *     the caller cannot open answers `404`, as a missing one does. A company that is not the
+         *     lead's current `company_match` answers `422` naming `company_id` with code
+         *     `not_the_lead_match`: the lead's company name changed, a second company of that name
+         *     appeared, or the id was never offered. Repeating a link that already holds changes
+         *     nothing and answers the lead as it is. A lead with neither name nor email answers
+         *     `422` with code `identity_required`; one that is promoted or disqualified answers `404`.
+         */
+        post: operations["linkLeadCompany"];
         delete?: never;
         options?: never;
         head?: never;
@@ -15996,6 +16063,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/service-members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Declare the member that owns an extension's unattended feed. Installation admin only, human only.
+         * @description Creates a member for a scheduled feed to run as, so the feed does not depend on a
+         *     colleague who may one day leave. The extension lands records as this member, and the
+         *     feed's secret is filed under it.
+         *
+         *     It has no login: there is no password and nobody can sign in as it. It has a full seat
+         *     type but is free of the licence seat limit: it is not counted, and declaring one never
+         *     fails on the seat limit. It holds one role, `service_ingest`,
+         *     which can create and update activities, contacts and companies and nothing else.
+         *
+         *     The member serves the one extension named in `extension`. Any other extension asking
+         *     to act as it is refused, so a member declared for one feed cannot be borrowed by
+         *     another.
+         *
+         *     It is archived, never deleted: see `POST /users/service-members/{id}/archive`.
+         *
+         *     Installation admin only (`role: admin`); an agent may never declare one.
+         */
+        post: operations["declareServiceMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/service-members/{id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retire a service member. Installation admin only, human only.
+         * @description Deactivates and archives the member, which stops the feed that runs as it. The row stays, so the audit trail and the secret filed under it keep
+         *     naming something real; nothing deletes a service member.
+         *
+         *     Offboarding a colleague never does this. A feed stops only when somebody archives its
+         *     member. Publishes `user.deactivated`.
+         *
+         *     Answers 404 for an id that is not a live service member, including one already archived.
+         */
+        post: operations["archiveServiceMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/names": {
         parameters: {
             query?: never;
@@ -16522,6 +16653,34 @@ export interface paths {
          */
         get: operations["listExtensions"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/extensions/{name}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read what the core does with a unit's feed. Needs the extension_access read grant. */
+        get: operations["getExtensionSettings"];
+        /**
+         * Set what the core does with a unit's feed. Admin only.
+         * @description Saves the settings of one composed unit. `declared` changes the settings the unit
+         *     declares as data; a key the unit did not declare, or a value its kind cannot hold, is
+         *     a 422. `overwrites_edited_fields` says
+         *     whether the unit's feed may overwrite a field of a company or deal that a user last
+         *     edited. It is off until an admin turns it on, so the feed leaves such a field as it is
+         *     and names it in `Result.Withheld`. The change is audited like any installation setting.
+         *
+         *     Admin only, human session only. An unknown unit name answers 404.
+         */
+        put: operations["updateExtensionSettings"];
         post?: never;
         delete?: never;
         options?: never;
@@ -27397,6 +27556,8 @@ export interface components {
             emails?: components["schemas"]["ContactEmailInput"][];
             phones?: components["schemas"]["ContactPhoneInput"][];
             source: string;
+            /** @description The id this contact has in source_system. Needs source_system, and the pair is unique: a second contact with the same pair is 409. */
+            source_id?: string | null;
             /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
             /**
@@ -27461,7 +27622,8 @@ export interface components {
             full_name: string;
             /**
              * @description `created` — nobody matched, so the card became a contact, their company and the edge
-             *     between them. `updated` — an exact match, filled only where the record was empty.
+             *     between them. `updated` — an exact match: what the card states replaces an older value, which
+             *     stays in `superseded_value`, and a field a human corrected stands.
              *     `needs_review` — a resemblance, written nowhere; open the candidate and decide.
              *     `proposed` — a card read from a photo that nobody matched, waiting on an approval.
              *     `skipped` — the card states no name, carries a sending system's address, or matches a
@@ -27476,6 +27638,36 @@ export interface components {
             contact_id?: string | null;
             /** @description Why a card was skipped, in words a reader can act on. */
             reason?: string | null;
+            /**
+             * @description What the import did with each field of this card, read from the writer's own
+             *     decisions. Present for `created` and `updated`, and absent for every other outcome,
+             *     since those write nothing. `importCardPhoto` shares this schema and never sends it:
+             *     a card read from a photo is a proposal, and nothing is written.
+             */
+            fields?: components["schemas"]["VCardImportField"][];
+        };
+        /** @description One field of a card, and what the import did with it. */
+        VCardImportField: {
+            /**
+             * @description The field, named as `POST /contacts/{id}/profile-fields/{field}/restore` names it
+             *     where that endpoint has one. `name` and `email` have no profile field. A mobile number
+             *     reports as `mobile_phone` and every other number as `phone`; both restore as `phone`.
+             *     A field appears once per value, so a card with two addresses reports two `email` rows.
+             * @enum {string}
+             */
+            field: "name" | "email" | "phone" | "mobile_phone" | "title" | "company_name" | "address" | "linkedin" | "website";
+            /** @description The value the card stated. Absent for `not_in_card`. */
+            value?: string;
+            /**
+             * @description `imported` — the record now holds the card's value. `replaced` — the card's value
+             *     took the place of a different one, which is kept in `superseded_value` for the
+             *     restore. `kept` — the card stated a value and the record kept its own: a human
+             *     corrected the field, a newer statement already stands, the number could not be read,
+             *     or it is a matched contact's name or an email address, which the import does not add
+             *     to a contact who already exists. `not_in_card` — the card states nothing here.
+             * @enum {string}
+             */
+            action: "imported" | "replaced" | "kept" | "not_in_card";
         };
         /**
          * @description One address on a contact, as a writer supplies it. One schema for create and update,
@@ -27768,6 +27960,8 @@ export interface components {
             source: string;
             /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
+            /** @description The id this company has in source_system. Needs source_system, and the pair is unique: a second company with the same pair is 409. Look a company up by it with the `source_system` and `source_id` filters on `listCompanies`. */
+            source_id?: string | null;
             /**
              * Format: uuid
              * @description Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
@@ -27839,6 +28033,16 @@ export interface components {
         CompanyListResponse: {
             data: components["schemas"]["Company"][];
             page: components["schemas"]["PageInfo"];
+        };
+        /** @description The value one source last offered for one company field. */
+        CompanyOfferedValue: {
+            /** @description The source that offered it, as named in the company's outside id. */
+            source_system: string;
+            /** @enum {string} */
+            field: "legal_name" | "industry" | "description";
+            value: string;
+            /** Format: date-time */
+            offered_at: string;
         };
         /**
          * @description The account-tree roll-up over company.parent_company_id. A server read only,
@@ -27942,12 +28146,15 @@ export interface components {
             /** @description Why the read finished below the model: server-authored, in the reader's terms, never a provider's message. Null when the model wrote the findings. */
             degrade_reason?: string | null;
             /**
-             * @description What the last settled read took in, so the page can say "read 14 exchanges and
-             *     3 deals" rather than "done". Null until a read has settled.
+             * @description What the last settled read took in, so the page can say "read 14 exchanges in the
+             *     last 180 days and 3 open deals" rather than "done". Null until a read has settled.
              */
             read?: {
                 exchanges: number;
+                /** @description The account's open deals the read took in. */
                 deals: number;
+                /** @description How many days back an exchange was read; older ones were not. */
+                window_days: number;
             } | null;
             /**
              * @description The merged advice, in priority order: the rules' own rows first in their own
@@ -29302,7 +29509,7 @@ export interface components {
          */
         ContactProfileField: {
             /** @enum {string} */
-            field: "title" | "phone" | "role" | "linkedin" | "company_name" | "address" | "website";
+            field: "first_name" | "last_name" | "title" | "phone" | "role" | "linkedin" | "company_name" | "address" | "website";
             value: string;
             /**
              * @description What tells two rows of one field apart: the E.164 number for a `phone` row, empty
@@ -30130,8 +30337,20 @@ export interface components {
              * @enum {string}
              */
             verdict: "allowed" | "blocked" | "unknown";
-            /** @description The answer in the reader's words — "she wrote to you on 2 May", "opt-out 12 Jul", "no consent recorded". A verdict a rep cannot explain to the contact is not usable. */
+            /** @description The answer in English words — "she wrote to you on 2 May", "opt-out 12 Jul", "no consent recorded". A verdict a rep cannot explain to the contact is not usable. */
             reason: string;
+            /**
+             * @description `reason` as a code, so a screen says it in its reader's language. A
+             *     `qualifying_event` reason is told from `qualifying_event`, and an `objection` from
+             *     `reason_at` when the date is known.
+             * @enum {string}
+             */
+            reason_code: "objection" | "suppressed_objection" | "suppressed_restricted" | "suppressed_subject_request" | "suppressed_hard_bounce" | "suppressed" | "contract_notice" | "no_call_path" | "said_we_may_write" | "unconfirmed_double_opt_in" | "no_connection" | "qualifying_event" | "consent_confirmed" | "consent_withdrawn" | "no_consent_exception_not_offered" | "no_consent";
+            /**
+             * Format: date-time
+             * @description When the objection behind an `objection` reason was recorded, when the record carries it.
+             */
+            reason_at?: string | null;
             /** @description The recorded event that flipped business correspondence to allowed, when one did. */
             qualifying_event?: components["schemas"]["ConsentQualifyingEvent"];
         };
@@ -32556,6 +32775,8 @@ export interface components {
             source: string;
             /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
+            /** @description The id this deal has in source_system. Needs source_system, and the pair is unique: a second deal with the same pair is 409. Look a deal up by it with the `source_system` and `source_id` filters on `listDeals`. */
+            source_id?: string | null;
             /**
              * Format: uuid
              * @description Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
@@ -33340,6 +33561,8 @@ export interface components {
             /** Format: date */
             target_end_date?: string | null;
             source: string;
+            /** @description The id this project has in source_system. Needs source_system, and the pair is unique: a second project with the same pair is 409. */
+            source_id?: string | null;
             /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
             /**
@@ -34518,6 +34741,18 @@ export interface components {
              */
             renewed_at?: string;
         };
+        /** @description One guest on a meeting who is not a colleague seat. */
+        MeetingGuest: {
+            /** @description The address the invitation named them by. Absent when no row holds one. */
+            address?: string;
+            /** @description The contact's name when you may read the contact, else the name the invitation gave, else empty. */
+            display_name: string;
+            /**
+             * Format: uuid
+             * @description The contact this guest is. Present only when you may read that contact.
+             */
+            contact_id?: string;
+        };
         /**
          * @description A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
          *     **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
@@ -34591,6 +34826,8 @@ export interface components {
             readonly host_user_id?: string | null;
             /** @description The colleagues recorded as taking part: the one who logged a call or meeting, the ones named as attending, and the seats capture stamped on a captured one, never a blind copy. Filled wherever one activity is answered whole (its read, its update); a list leaves it out. Withheld with the content, so it is absent whenever `content_state` is `withheld`. */
             readonly colleague_ids?: string[];
+            /** @description Meeting only: the guests who are not a colleague seat and whose contact is not among the `links` you see. That covers a guest who is not a contact yet, and one past the link ceiling or filed under a contact you may not read. `contact_id` is set only for a contact you may read. A colleague is in `colleague_ids`. Filled wherever one activity is answered whole; a list leaves it out. Withheld with the content, like `colleague_ids`. */
+            readonly guests?: components["schemas"]["MeetingGuest"][];
             /**
              * @description inbound/outbound for email/call; null for note/task.
              * @enum {string|null}
@@ -36251,7 +36488,7 @@ export interface components {
              */
             attachment_ids?: string[];
         };
-        /** @description A thin, segregated prospect. Mirrors the `lead` table. NO company FK. */
+        /** @description A thin, segregated prospect. Mirrors the `lead` table. */
         Lead: {
             /** @description True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit. */
             readonly legal_hold?: boolean;
@@ -36269,13 +36506,19 @@ export interface components {
             /** @description Normalized LinkedIn profile URL; the exact-match dedupe key. */
             linkedin_url?: string | null;
             title?: string | null;
-            /** @description Free text; there is no foreign key to a company. */
+            /** @description Free text, as captured or typed. It names the company until a human links one (`company_id`). */
             company_name?: string | null;
+            /**
+             * Format: uuid
+             * @description The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. Null until then, and null again when an edit of `company_name` no longer names the linked company. Withheld when the reader cannot open that company.
+             */
+            readonly company_id?: string | null;
+            company_match?: components["schemas"]["LeadCompanyMatch"];
             /** @description Loose key for ABM routing without creating a company. */
             candidate_company_key?: string | null;
             /**
              * Format: uuid
-             * @description The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm and none can: a lead has no company_id, only candidate_company_key, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.
+             * @description The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm: a lead's company_id is an optional link a human confirms, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.
              */
             project_id?: string | null;
             /**
@@ -36467,7 +36710,7 @@ export interface components {
             candidate_company_key?: string | null;
             /**
              * Format: uuid
-             * @description The body of work this lead belongs to; carries no same-company guard (a lead has no company).
+             * @description The body of work this lead belongs to; carries no same-company guard, also for a lead linked to a company.
              */
             project_id?: string | null;
             /**
@@ -36505,6 +36748,20 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** @description A company the lead's `company_name` names exactly, offered for a human to confirm. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise. */
+        LeadCompanyMatch: {
+            /** Format: uuid */
+            id: string;
+            /** @description The company's display name. */
+            name: string;
+        };
+        LinkLeadCompanyRequest: {
+            /**
+             * Format: uuid
+             * @description The company to link. The caller must be able to open it.
+             */
+            company_id: string;
+        };
         PromoteLeadRequest: {
             /**
              * @description The genuine-engagement trigger. cold_outbound_no_reply is NOT permitted and is
@@ -36524,7 +36781,7 @@ export interface components {
          * @description Open a deal in the same transaction as the promotion. Omit both ids to use the
          *     default pipeline's first open stage; a pipeline alone takes its first open stage; a
          *     stage alone is placed in its own pipeline. The deal's owner is the lead's owner
-         *     and its company is left unset (a lead has no company). The deal's id lands
+         *     and its company is left unset, also for a lead linked to a company. The deal's id lands
          *     on the lead as `qualified_deal_id`; a deal failure rolls the whole promotion back.
          */
         QualifyDealRequest: {
@@ -38841,6 +39098,8 @@ export interface components {
              * @default false
              */
             is_agent: boolean;
+            /** @description The extension unit this seat is the service member of: the identity that unit's scheduled feed runs as. Null for every other seat, including an AI agent seat, so a client tells the two apart by this field and not by `is_agent`. Present only for an admin caller, with `roles`. */
+            service_extension?: string | null;
             /** @description Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind. */
             assignable?: boolean;
             /** @description This member's assigned system role keys. Present ONLY for an admin caller — the roster is readable by every authenticated member (it feeds the share/assignee pickers), and a rep has no business enumerating who holds `admin`. Normally exactly one key: `inviteUser` assigns one and `changeUserRole` replaces the whole set with one. Clients that render a single current role must still handle the empty and multi-key cases. Deliberately absent on `MeResponse.user`, whose sibling `MeResponse.roles` is the one authority for the caller's own roles — the same fact spelled twice could disagree. */
@@ -38872,6 +39131,12 @@ export interface components {
         };
         SeatNameListResponse: {
             data: components["schemas"]["SeatName"][];
+        };
+        /** @description A member for an extension's unattended feed. No password and no way in. */
+        ServiceMemberRequest: {
+            /** @description The extension unit the member serves, by its manifest name. Only that unit may act as the member. A name no installed unit carries is accepted and simply never used. */
+            extension: string;
+            display_name: string;
         };
         /** @description A colleague who already left, recorded so imported history can name them. No password and no invitation: this creates a seat that cannot be signed into. */
         FormerMemberRequest: {
@@ -40194,6 +40459,31 @@ export interface components {
             routes: components["schemas"]["ComposedExtensionRoute"][];
             /** @description The scheduled jobs this boot actually RUNS for the unit — a job the unit declared with no handler ticks nothing and is deliberately absent, because an operator reading this list is asking what runs, not what was written down. Sorted. */
             jobs: string[];
+        };
+        /** @description The governance settings of one composed extension unit. */
+        ExtensionSettings: {
+            /** @description True when the unit's feed may overwrite a company or deal field that a user last edited. False, the default, makes the feed leave such a field as it is and name it in `Result.Withheld`. */
+            overwrites_edited_fields: boolean;
+            /** @description True when the unit lands companies or deals. Only such a unit has a field a user can have edited, so the screen offers the overwrite switch for it and for no other unit. Ignored on a write. */
+            readonly lands_records?: boolean;
+            /** @description The settings the unit declares as data, with their saved values. Only an admin gets them back, so the list is absent for anyone else. On a write, send the `key` and `value` of each setting to change; a setting left out keeps its value. */
+            declared?: components["schemas"]["DeclaredExtensionSetting"][];
+        };
+        /** @description One setting a unit declares, drawn by the core. */
+        DeclaredExtensionSetting: {
+            /** @description The setting's name inside the unit. */
+            key: string;
+            /** @description The name shown to the admin, as the unit wrote it. */
+            readonly label?: string;
+            /** @description One line saying what the setting does. */
+            readonly hint?: string;
+            /**
+             * @description The control the core draws.
+             * @enum {string}
+             */
+            readonly kind?: "switch" | "text";
+            /** @description The saved value. A switch holds `true` or `false`; a text setting holds one short line. */
+            value: string;
         };
         /** @description One published extension operation. */
         ComposedExtensionRoute: {
@@ -49253,6 +49543,8 @@ export interface components {
             count?: number;
             /** @description True when the line's records were counted from a read that was cut short, so `count` is a lower bound and the job touched at least that many. Lines are grouped from the audit rows one read returns, and that read is capped; a job over more records than the cap reports the cap. Absent or false means the count is exact. A reader deciding whether a machine went too far needs to know which of the two they are looking at. */
             count_is_floor?: boolean;
+            /** @description True when the line is a release correction repairing older records (a data task), not work done for the reader. One correction run is one line however many records it touched, and two runs are two lines. A reader shows these apart from business outcomes and never counts them as things that got done for a customer. Absent or false is an ordinary line. */
+            maintenance?: boolean;
         };
         /**
          * @description What happened, as a key and the values to fill it with.
@@ -50099,7 +50391,7 @@ export interface components {
         /** @description Narrow the brief to one body of work: it is written from the 360 scoped to that project — activity filed under another project drops out, activity filed under none stays — and the response's `scope` says so. The cache fingerprint carries the project, so a scoped and an unscoped brief never serve each other. Must be a live project the caller can read; an invisible or archived one is `404`. */
         BriefProjectId: string;
         /** @description The profile field's key — the same closed vocabulary `ContactProfileField.field` carries. */
-        ContactProfileFieldKey: "title" | "phone" | "role" | "linkedin" | "company_name" | "address" | "website";
+        ContactProfileFieldKey: "first_name" | "last_name" | "title" | "phone" | "role" | "linkedin" | "company_name" | "address" | "website";
         /** @description The profile field's key — the same closed vocabulary `CompanyProfileField.field` carries. */
         ProfileFieldKey: "display_name" | "offer_summary" | "icp" | "value_proposition" | "usp" | "customer_pains" | "desired_outcomes" | "buying_center" | "buying_intents" | "common_objections" | "sales_motion" | "legal_name" | "registered_address" | "register_vat" | "industry" | "history" | "legal_form" | "register_court" | "register_number";
         /**
@@ -50144,7 +50436,7 @@ export interface components {
          *     remaining pages see, so re-issue the query without the cursor when changing filters.
          */
         Cursor: string;
-        /** @description Max items in the page. */
+        /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
         Limit: number;
         /**
          * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -51355,7 +51647,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
@@ -52774,7 +53066,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -53155,7 +53447,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
@@ -53296,6 +53588,14 @@ export interface operations {
                  *     is archived without `include_archived`, is simply absent from the page.
                  */
                 id?: string[];
+                /**
+                 * @description Companies that came from this outside system, matched exactly. Send `source_id`
+                 *     too to find the one company holding that id there. A company the caller cannot
+                 *     see, or that is archived without `include_archived`, is simply absent from the page.
+                 */
+                source_system?: string;
+                /** @description An id in an outside system, matched exactly. Send `source_system` with it, because the same id can mean different companies in different systems. */
+                source_id?: string;
             };
             header?: never;
             path?: never;
@@ -53675,6 +53975,32 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listCompanyOfferedValues: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The offered values, ordered by source and field; empty when no source offered any. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyOfferedValue"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     getCompanyLogo: {
         parameters: {
             query?: never;
@@ -53939,7 +54265,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -54808,7 +55134,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -55003,7 +55329,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -55252,7 +55578,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -55306,7 +55632,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description The entries owed to one partner. */
                 partner_company_id?: string;
@@ -55831,7 +56157,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
@@ -55950,6 +56276,14 @@ export interface operations {
                  *     with `422` `field_masked`.
                  */
                 country?: string;
+                /**
+                 * @description Deals that came from this outside system, matched exactly. Send `source_id` too to
+                 *     find the one deal holding that id there. A deal that is archived without
+                 *     `include_archived` is simply absent from the page.
+                 */
+                source_system?: string;
+                /** @description An id in an outside system, matched exactly. Send `source_system` with it, because the same id can mean different deals in different systems. */
+                source_id?: string;
             };
             header?: never;
             path?: never;
@@ -56449,7 +56783,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -57118,7 +57452,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -58508,7 +58842,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -61516,7 +61850,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -61691,7 +62025,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Filter by run outcome (matches automation_run.status, data-model §12.5). */
                 outcome?: "fired" | "failed" | "blocked" | "skipped" | "queued_for_approval";
@@ -61763,7 +62097,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
@@ -62349,6 +62683,38 @@ export interface operations {
             };
         };
     };
+    linkLeadCompany: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkLeadCompanyRequest"];
+            };
+        };
+        responses: {
+            /** @description The lead as linked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Lead"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     qualifyLead: {
         parameters: {
             query?: never;
@@ -62574,7 +62940,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -63636,7 +64002,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
@@ -63948,7 +64314,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Only these records, at most 200, answered in one page; a record that is not a member, or that this caller cannot see, is absent. Takes no cursor. */
                 entity_id?: string[];
@@ -64154,7 +64520,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -65914,7 +66280,7 @@ export interface operations {
     listWebhookDeliveries: {
         parameters: {
             query?: {
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -66758,7 +67124,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -69740,7 +70106,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -70242,7 +70608,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -70277,7 +70643,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -70487,7 +70853,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -71328,7 +71694,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Filter to one task (capture_classify, enrich, …). */
                 task?: string;
@@ -71678,7 +72044,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Include the caller's muted pending proposals for explicit review; all existing visibility checks still apply. A filtered bundle can contain fewer members than its complete review. */
                 include_muted?: boolean;
@@ -71976,7 +72342,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -72123,7 +72489,7 @@ export interface operations {
             query?: {
                 /** @description Repeat to ask for several. Omitted means every unresolved state. */
                 state?: components["schemas"]["NoticeCaseState"][];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes the last row's `due_at` and id — both, because the order is by both, and an id alone cannot continue it when two duties fall due in the same second. Changing `state` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when the filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`. */
                 cursor?: string;
@@ -72352,7 +72718,7 @@ export interface operations {
                 contact_id?: string;
                 /** @description false for the queue, true for what has been decided. Omit for both. */
                 resolved?: boolean;
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes all three parts of this queue's order — whether the row is resolved, its `submitted_at`, and its id — because two subjects can send in the same second and an id alone cannot continue an order it is only the tie-break of. Changing `contact_id` or `resolved` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when a filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`. */
                 cursor?: string;
@@ -72456,7 +72822,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Typed principal filter, e.g. human:<uuid> or agent:sdr. */
                 actor?: string;
@@ -72505,7 +72871,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Return only the rows recording this verb. A caller that wants ONE event —
@@ -72632,7 +72998,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 entity_type: "contact" | "company" | "deal" | "lead" | "project" | "activity";
                 entity_id: string;
@@ -72676,7 +73042,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -73148,7 +73514,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -73303,7 +73669,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -74029,7 +74395,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -74164,7 +74530,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Case-insensitive match over display_name/email. */
                 q?: string;
@@ -74375,6 +74741,74 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    declareServiceMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description The service member. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Refused: `permission_denied` — the caller is not an installation admin, or is an agent. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Refused: `company_not_described` — this installation has not yet saved its own company through `PUT /company`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    archiveServiceMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The member is archived. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     nameSeats: {
@@ -75035,6 +75469,63 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    getExtensionSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The unit name, as listed by `GET /extensions`. */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The unit's settings; a unit nobody has configured reads the defaults. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtensionSettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateExtensionSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The unit name, as listed by `GET /extensions`. */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExtensionSettings"];
+            };
+        };
+        responses: {
+            /** @description The saved settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtensionSettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listTeams: {
         parameters: {
             query?: {
@@ -75049,7 +75540,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Case-insensitive match over team name. */
                 q?: string;
@@ -75716,7 +76207,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -75923,7 +76414,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -76039,7 +76530,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -76245,7 +76736,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -77043,7 +77534,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -77389,7 +77880,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 status?: "draft" | "sent" | "accepted" | "rejected" | "expired" | "superseded";
             };
@@ -77943,7 +78434,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
@@ -79025,7 +79516,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -79831,7 +80322,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 entity_type: "contact" | "company" | "deal" | "activity" | "lead" | "project";
                 entity_id: string;
@@ -79936,7 +80427,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other" | "link";
                 include_hidden?: boolean;
@@ -80255,7 +80746,7 @@ export interface operations {
     getMyLinkedInReach: {
         parameters: {
             query?: {
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -80815,7 +81306,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 status?: "draft" | "active" | "expired" | "cancelled" | "superseded";
                 /** @description Restrict to contracts under contract as of today (CONTRACT-FORM-1). */
@@ -81121,7 +81612,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other" | "link";
                 doc_state?: "draft" | "current" | "final" | "superseded";

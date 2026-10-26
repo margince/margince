@@ -19,7 +19,7 @@ const (
 	bootFieldsApart = "its boot source is several per-field settings one stored setting cannot carry; compose locks it while they set it"
 	// keyedByUnit is a map whose keys the composed units decide, which no
 	// boot setting can name.
-	keyedByUnit = "one entry per composed unit's OAuth app, keyed by unit and provider; a boot setting cannot name keys the build decides"
+	keyedByUnit = "one entry per composed unit, keyed by the unit's name; a boot setting cannot name keys the build decides"
 )
 
 // gatekit:fixture the settings.Define keys a module may still declare, and why: expected exceptions, not a waived cost
@@ -32,6 +32,9 @@ var settingsDefineExceptions = map[string]string{
 	"capture.google_app":    bootFieldsApart,
 	"capture.microsoft_app": bootFieldsApart,
 	"capture.unit_apps":     keyedByUnit,
+
+	"identity.extension_overwrites_edited_fields": keyedByUnit,
+	"identity.extension_setting_values":           keyedByUnit,
 
 	"ai.price_sync_last_run":         productState,
 	"privacy.retention_floor_carry":  productState,

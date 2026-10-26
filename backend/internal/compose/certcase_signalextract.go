@@ -53,6 +53,10 @@ type signalExtractMessage struct {
 	// Sent is the day the message went, YYYY-MM-DD. A relative deadline is
 	// resolved against it, so a scenario that dates a promise names its day.
 	Sent string `json:"sent,omitempty"`
+	// Reported is the kind of event the first reading of the pass cited on this
+	// message. A fixture with one is the second reading, built as the extractor
+	// builds it; a fixture with none is the ordinary reading.
+	Reported string `json:"reported,omitempty"`
 }
 
 // certSentDefault dates a message whose scenario does not, so every prompt
@@ -116,6 +120,7 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 	thread := settledThread{Key: "cert-thread", CompanyID: ids.NewV7()}
 	identities := map[string]ids.UUID{}
 	references := make([]map[string]string, len(messages))
+	var firstReading []extractedEvent
 	for i, message := range messages {
 		parties, refs, err := prepareCommitmentParties(message.Participants, identities)
 		if err != nil {
@@ -131,8 +136,12 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 			return nil, fmt.Errorf("signal_extract/thread_events: message %d is sent on %q, which is not a day: %w",
 				i+1, sent, err)
 		}
+		id := ids.NewV7()
+		if message.Reported != "" {
+			firstReading = append(firstReading, extractedEvent{Kind: message.Reported, MessageID: id.String()})
+		}
 		thread.Messages = append(thread.Messages, threadMessage{
-			ID:        ids.NewV7(),
+			ID:        id,
 			Parties:   parties,
 			Direction: message.Direction,
 			Subject:   message.Subject,
@@ -140,12 +149,21 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 			At:        at,
 		})
 	}
+	numbered := thread.Messages
+	if len(firstReading) > 0 {
+		focused, ok := focusedReading(thread, firstReading)
+		if !ok {
+			return nil, errors.New(
+				"signal_extract/thread_events: the fixture's first reading leaves nothing for a second one to read")
+		}
+		thread = focused
+	}
 	for i := range want {
 		due := ""
 		if want[i].DueDate != nil {
 			due = *want[i].DueDate
 		}
-		if err := validateExpectedMeaning(want[i].Optional, want[i].Meaning, due, thread.Messages[want[i].Message-1].Body); err != nil {
+		if err := validateExpectedMeaning(want[i].Optional, want[i].Meaning, due, numbered[want[i].Message-1].Body); err != nil {
 			return nil, err
 		}
 		if err := validateExpectedRecipients(want[i].Recipients, references[want[i].Message-1]); err != nil {
@@ -160,7 +178,9 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 			}
 		}
 	}
-	return &signalExtractCase{thread: thread, expected: want, promiserKeys: certPromiserKeys(references...)}, nil
+	return &signalExtractCase{
+		thread: thread, numbered: numbered, expected: want, promiserKeys: certPromiserKeys(references...),
+	}, nil
 }
 
 // refuseUnreadableThread names a conversation the thread read could never have
@@ -223,12 +243,15 @@ func refuseUnreachableEvents(want []signalExtractExpectation, messages int) erro
 type signalExtractCase struct {
 	promiserKeys map[string]string
 	thread       settledThread
-	expected     []signalExtractExpectation
+	// numbered is the fixture's conversation, which the expected events count
+	// in. A second reading sends fewer messages than it holds.
+	numbered []threadMessage
+	expected []signalExtractExpectation
 }
 
-// Run issues the one request this site sends, bare: production wraps the same
-// request in the shape-retry when the brain supports one, and a case that did
-// too would certify the answer a model gives after being told to try again.
+// Run issues the requests one pass sends, bare. Production wraps each in the
+// shape-retry when the brain supports one. A case that did too would certify
+// the answer a model gives after being told to try again.
 func (c *signalExtractCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
 	// English, pinned, rather than the installation's base language: a
 	// certification record grades a fixed corpus, and a score that moved with a
@@ -243,7 +266,62 @@ func (c *signalExtractCase) Run(ctx context.Context, completer aitasks.Completer
 		return trace, fmt.Errorf("signal_extract/thread_events: %w", err)
 	}
 	trace.Output = resp.Text
+	if len(c.thread.Focus) > 0 {
+		// The fixture is already a second reading, and a pass makes no third.
+		return trace, nil
+	}
+	return c.secondReading(ctx, completer, trace)
+}
+
+// secondReading finishes the pass the way readThread does, so the graded
+// answer is the one the product files. A first reply the engine refuses is
+// graded as it is. A refused second reply leaves the first reading's events,
+// as keepFirstReading does.
+func (c *signalExtractCase) secondReading(
+	ctx context.Context, completer aitasks.Completer, trace aitasks.Trace,
+) (aitasks.Trace, error) {
+	first, ok := readableReply(trace.Output, c.thread)
+	if !ok {
+		return trace, nil
+	}
+	focused, more := focusedReading(c.thread, first.events())
+	if !more {
+		return trace, nil
+	}
+	req := extractRequest(focused, string(textlang.English))
+	trace.Requests = append(trace.Requests, req)
+	resp, err := completer.Complete(ctx, req)
+	if err != nil {
+		return trace, fmt.Errorf("signal_extract/thread_events: the second reading: %w", err)
+	}
+	second, answered := readableReply(resp.Text, focused)
+	if !answered {
+		return trace, nil
+	}
+	// The joined answer cites messages by label, as the model's own replies do.
+	// The judge reads it beside a prompt that names no message by its id.
+	both := append(first.events(), second.events()...)
+	for i := range both {
+		both[i].MessageID = c.thread.messageLabel(both[i].MessageID)
+		both[i].RestatedMessageID = c.thread.messageLabel(both[i].RestatedMessageID)
+	}
+	served, err := json.Marshal(extractPayload{Events: &both})
+	if err != nil {
+		return trace, fmt.Errorf("signal_extract/thread_events: the two readings cannot be joined: %w", err)
+	}
+	trace.Output = string(served)
 	return trace, nil
+}
+
+// readableReply is a reply read as the engine reads it, and whether the engine
+// would accept it.
+func readableReply(text string, thread settledThread) (extractPayload, bool) {
+	var payload extractPayload
+	if json.Unmarshal([]byte(ai.Unfence(text)), &payload) != nil {
+		return payload, false
+	}
+	payload = payload.asRead(thread)
+	return payload, validateExtractEnvelope(payload, thread) == ""
 }
 
 // Evaluate applies the engine's own checks in the engine's own order — parse,
@@ -263,6 +341,7 @@ func (c *signalExtractCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 			Detail: fmt.Sprintf("unparseable model output: %v", err),
 		}
 	}
+	payload = payload.asRead(c.thread)
 	if msg := validateExtractPayload(payload, c.thread); msg != "" {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
 	}
@@ -279,6 +358,7 @@ func (c *signalExtractCase) AnswerConfidence(trace aitasks.Trace) (low, high flo
 	if err := json.Unmarshal([]byte(ai.Unfence(trace.Output)), &payload); err != nil {
 		return 0, 0, false
 	}
+	payload = payload.asRead(c.thread)
 	var confidences []float64
 	for _, event := range payload.events() {
 		if event.Kind == extractKindCommitment && event.Meaning.withheldOutcome() == "" {
@@ -306,8 +386,8 @@ func spanOf(confidences []float64) (low, high float64, ok bool) {
 // author could look up, and the mail's own text has no business being echoed
 // into a record.
 func (c *signalExtractCase) disagreements(payload extractPayload) []string {
-	position := make(map[string]int, len(c.thread.Messages))
-	for i, message := range c.thread.Messages {
+	position := make(map[string]int, len(c.numbered))
+	for i, message := range c.numbered {
 		position[message.ID.String()] = i + 1
 	}
 	reported := map[string]bool{}

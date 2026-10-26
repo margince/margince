@@ -28,12 +28,11 @@ var (
 // resolveRef turns ${file:p} or ${env:N} into the value; any other text is the
 // literal. The path, never the value, goes into the origin and any error.
 func resolveRef(text string, readFile func(string) ([]byte, error), getenv func(string) (string, bool)) (value, file string, isRef bool, err error) {
-	inner, ok := strings.CutPrefix(text, "${")
-	if !ok || !strings.HasSuffix(inner, "}") {
+	kind, arg, ok := parseRef(text)
+	if !ok {
 		return text, "", false, nil
 	}
-	inner = strings.TrimSuffix(inner, "}")
-	switch kind, arg, _ := strings.Cut(inner, ":"); kind {
+	switch kind {
 	case "file":
 		raw, err := readFile(arg)
 		if err != nil {
@@ -51,6 +50,22 @@ func resolveRef(text string, readFile func(string) ([]byte, error), getenv func(
 		return refused(v, "")
 	}
 	return text, "", false, nil
+}
+
+// parseRef splits ${kind:arg}. Text of any other shape is no reference.
+func parseRef(text string) (kind, arg string, ok bool) {
+	inner, ok := strings.CutPrefix(text, "${")
+	if !ok || !strings.HasSuffix(inner, "}") {
+		return "", "", false
+	}
+	kind, arg, _ = strings.Cut(strings.TrimSuffix(inner, "}"), ":")
+	return kind, arg, true
+}
+
+// envRefName is the variable a ${env:NAME} reference reads.
+func envRefName(text string) (string, bool) {
+	kind, arg, ok := parseRef(text)
+	return arg, ok && kind == refEnv && arg != ""
 }
 
 // refused stops a source that holds the absence marker. Whether it means a

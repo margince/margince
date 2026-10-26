@@ -146,7 +146,7 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	                    THEN (factor.value->>'points')::numeric END) DESC,
 	           factor.position
 	  LIMIT 1),
-	legal_hold, ` + leadHasInboundSQL, nil
+	legal_hold, ` + leadHasInboundSQL + `, company_id`, nil
 }
 
 // readLead resolves one lead row; active names the custom-field columns
@@ -183,10 +183,19 @@ func readLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, archived storekit.A
 		return crmcontracts.Lead{}, err
 	}
 	one := []crmcontracts.Lead{l}
-	if err := withholdUnreadableSourceContacts(ctx, tx, one); err != nil {
+	if err := withholdUnreadableLinks(ctx, tx, one); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	return one[0], nil
+}
+
+// withholdUnreadableLinks blanks each record id on a lead its reader cannot
+// open. Those are the contact it was worked from and its linked company.
+func withholdUnreadableLinks(ctx context.Context, tx pgx.Tx, leads []crmcontracts.Lead) error {
+	if err := withholdUnreadableSourceContacts(ctx, tx, leads); err != nil {
+		return err
+	}
+	return withholdUnreadableCompanies(ctx, tx, leads)
 }
 
 // withholdUnreadableSourceContacts blanks from_contact_id on every lead whose
@@ -220,7 +229,7 @@ func withholdUnreadableSourceContacts(ctx context.Context, tx pgx.Tx, leads []cr
 func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, extra ...any) (crmcontracts.Lead, error) {
 	var l crmcontracts.Lead
 	var id ids.UUID
-	var ownerID, projectID, promotedContact, mergedInto, fromContact, disqualifyReason, qualifiedDeal *ids.UUID
+	var ownerID, projectID, promotedContact, mergedInto, fromContact, disqualifyReason, qualifiedDeal, companyID *ids.UUID
 	var statusSetBy *string
 	var evidence []byte
 	var email *string
@@ -241,7 +250,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 		&l.RoutedAt, &l.FirstResponseAt, &l.SourceLabel, &l.Origin, &l.OriginDetail, &l.OriginLabel, &disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
 		&statusSetBy, &qualifiedDeal, &evidence,
 		&l.LastActivityAt, &lastActivityPrecision, &openTasks,
-		&l.NextTaskSubject, &l.NextTaskDueAt, &l.ScoreReason, &l.LegalHold, &hasInbound,
+		&l.NextTaskSubject, &l.NextTaskDueAt, &l.ScoreReason, &l.LegalHold, &hasInbound, &companyID,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {
@@ -261,6 +270,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	// which claims a human judged the lead not worth pursuing.
 	l.MergedIntoId = uuidPtr(mergedInto)
 	l.FromContactId = uuidPtr(fromContact)
+	l.CompanyId = uuidPtr(companyID)
 	l.DisqualifyReasonId = uuidPtr(disqualifyReason)
 	l.QualifiedDealId = uuidPtr(qualifiedDeal)
 	if statusSetBy != nil {

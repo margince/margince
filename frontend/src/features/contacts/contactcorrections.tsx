@@ -8,7 +8,8 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { Row } from "../../design-system/stack";
 import { formatDate } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { type Translator, useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { useCanWriteRecord } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
@@ -16,6 +17,21 @@ import "./contactcorrections.css";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ProfileField = components["schemas"]["ContactProfileField"];
+
+// The channels that write a contact profile field, named as the thing a reader
+// would say the value was read from. A channel added on the server reads as
+// the generic phrase until it is named here, never as its id.
+const SOURCE_PHRASE: Readonly<Record<string, MessageKey>> = {
+  capture_enrich: "contact.enriched.source.capture_enrich",
+  site_read: "contact.enriched.source.site_read",
+  vcard_import: "contact.enriched.source.vcard_import",
+  contact_research: "contact.enriched.source.contact_research",
+  human_restore: "contact.enriched.source.human_restore",
+};
+
+function sourcePhrase(source: string, t: Translator): string {
+  return t(SOURCE_PHRASE[source] ?? "contact.enriched.source.other");
+}
 
 /**
  * EnrichedFields is where the page stops asserting and starts asking.
@@ -192,7 +208,7 @@ function EnrichedField({
           what the machine read is the reason the correction was needed. */}
         <p className="t-sub corrections-note">
           {t("contact.enriched.readFrom", {
-            source: field.source,
+            source: sourcePhrase(field.source, t),
             // The record's zone: when the machine read this is a fact about the
             // record, and the correction beside it is judged against that day.
             when: formatDate(field.captured_at, locale, recordZone),

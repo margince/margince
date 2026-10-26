@@ -555,6 +555,17 @@ paths:
             A screen that names many companies it did not list itself, such as the deals board,
             reads them in one request instead of one each. An id the caller cannot see, or that
             is archived without `include_archived`, is simply absent from the page.
+        - name: source_system
+          in: query
+          schema: {type: string, maxLength: 128}
+          description: |-
+            Companies that came from this outside system, matched exactly. Send `source_id`
+            too to find the one company holding that id there. A company the caller cannot
+            see, or that is archived without `include_archived`, is simply absent from the page.
+        - name: source_id
+          in: query
+          schema: {type: string, maxLength: 128}
+          description: An id in an outside system, matched exactly. Send `source_system` with it, because the same id can mean different companies in different systems.
       responses:
         '200':
           description: A page of companies.
@@ -1490,6 +1501,17 @@ paths:
             company, or a company outside the caller's row scope, is not returned. A seat that may
             not read companies is refused with `403`, and a role that withholds the deal's company
             with `422` `field_masked`.
+        - name: source_system
+          in: query
+          schema: {type: string, maxLength: 128}
+          description: |-
+            Deals that came from this outside system, matched exactly. Send `source_id` too to
+            find the one deal holding that id there. A deal that is archived without
+            `include_archived` is simply absent from the page.
+        - name: source_id
+          in: query
+          schema: {type: string, maxLength: 128}
+          description: An id in an outside system, matched exactly. Send `source_system` with it, because the same id can mean different deals in different systems.
       responses:
         '200':
           description: A page of deals.
@@ -3471,7 +3493,8 @@ paths:
       summary: Create a lead.
       description: |-
         With name + email returns 201 + stable UUID; round-trips on GET.
-        `company_name` is FREE TEXT — a lead has NO company FK. Lead-internal exact-email
+        `company_name` is FREE TEXT; a company link (`company_id`) is set only by a human through
+        `POST /leads/{id}/link-company`, never on create. Lead-internal exact-email
         dedupe → 409 with existing lead id. Bulk/connector sourcing uses (source_system, source_id)
         for idempotent re-import. A `project_id` that names no project the caller can read
         answers 422 naming `project_id`, the same for a missing project and for one hidden by row scope.
@@ -8116,7 +8139,8 @@ components:
       name: limit
       in: query
       schema: {type: integer, minimum: 1, maximum: 200, default: 50}
-      description: Max items in the page.
+      description: >-
+        Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
     Sort:
       name: sort
       in: query
@@ -9836,7 +9860,8 @@ components:
           type: array
           items: {$ref: '#/components/schemas/ContactPhoneInput'}
         source: {type: string}
-        source_system: {type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it.'}
+        source_id: {type: [string, 'null'], maxLength: 128, description: 'The id this contact has in source_system. Needs source_system, and the pair is unique: a second contact with the same pair is 409.'}
+        source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
       additionalProperties: true
@@ -10117,7 +10142,8 @@ components:
           type: array
           items: {$ref: '#/components/schemas/CompanyDomainInput'}
         source: {type: string}
-        source_system: {type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it.'}
+        source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
+        source_id: {type: [string, 'null'], maxLength: 128, description: 'The id this company has in source_system. Needs source_system, and the pair is unique: a second company with the same pair is 409. Look a company up by it with the `source_system` and `source_id` filters on `listCompanies`.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
       additionalProperties: true
@@ -11158,7 +11184,7 @@ components:
         most one row.
       required: [field, value, evidence_snippet, source, captured_by, captured_at]
       properties:
-        field: {type: string, enum: [title, phone, role, linkedin, company_name, address, website]}
+        field: {type: string, enum: [first_name, last_name, title, phone, role, linkedin, company_name, address, website]}
         value: {type: string}
         value_key:
           type: string
@@ -13712,7 +13738,8 @@ components:
         owner_id: {type: [string, 'null'], format: uuid}
         expected_close_date: {type: [string, 'null'], format: date, description: 'Deals are born open, so a date before today is rejected 422.'}
         source: {type: string}
-        source_system: {type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it.'}
+        source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
+        source_id: {type: [string, 'null'], maxLength: 128, description: 'The id this deal has in source_system. Needs source_system, and the pair is unique: a second deal with the same pair is 409. Look a deal up by it with the `source_system` and `source_id` filters on `listDeals`.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
       additionalProperties: true
@@ -14290,7 +14317,8 @@ components:
         started_at: {type: [string, 'null'], format: date}
         target_end_date: {type: [string, 'null'], format: date}
         source: {type: string}
-        source_system: {type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it.'}
+        source_id: {type: [string, 'null'], maxLength: 128, description: 'The id this project has in source_system. Needs source_system, and the pair is unique: a second project with the same pair is 409.'}
+        source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
       additionalProperties: true
@@ -15049,6 +15077,14 @@ components:
           type: string
           format: date-time
           description: The renewing message's source time when the decision was recorded.
+    MeetingGuest:
+      type: object
+      description: One guest on a meeting who is not a colleague seat.
+      required: [display_name]
+      properties:
+        address: {type: string, description: 'The address the invitation named them by. Absent when no row holds one.'}
+        display_name: {type: string, description: "The contact's name when you may read the contact, else the name the invitation gave, else empty."}
+        contact_id: {type: string, format: uuid, description: 'The contact this guest is. Present only when you may read that contact.'}
     Activity:
       type: object
       description: |-
@@ -15111,6 +15147,12 @@ components:
           items: {type: string, format: uuid}
           description: >-
             The colleagues recorded as taking part: the one who logged a call or meeting, the ones named as attending, and the seats capture stamped on a captured one, never a blind copy. Filled wherever one activity is answered whole (its read, its update); a list leaves it out. Withheld with the content, so it is absent whenever `content_state` is `withheld`.
+        guests:
+          type: array
+          readOnly: true
+          items: {$ref: '#/components/schemas/MeetingGuest'}
+          description: >-
+            Meeting only: the guests who are not a colleague seat and whose contact is not among the `links` you see. That covers a guest who is not a contact yet, and one past the link ceiling or filed under a contact you may not read. `contact_id` is set only for a contact you may read. A colleague is in `colleague_ids`. Filled wherever one activity is answered whole; a list leaves it out. Withheld with the content, like `colleague_ids`.
         direction: {type: [string, 'null'], enum: [null, inbound, outbound], description: 'inbound/outbound for email/call; null for note/task.'}
         email_summary:
           allOf: [{$ref: '#/components/schemas/EmailSummary'}]
@@ -16113,7 +16155,7 @@ components:
             sent message carried.
     Lead:
       type: object
-      description: A thin, segregated prospect. Mirrors the `lead` table. NO company FK.
+      description: A thin, segregated prospect. Mirrors the `lead` table.
       required: [id, status, score, source, captured_by, created_at, updated_at]
       properties:
         legal_hold:
@@ -16128,9 +16170,16 @@ components:
         phone: {type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes."}
         linkedin_url: {type: [string, 'null'], description: 'Normalized LinkedIn profile URL; the exact-match dedupe key.'}
         title: {type: [string, 'null']}
-        company_name: {type: [string, 'null'], description: Free text; there is no foreign key to a company.}
+        company_name: {type: [string, 'null'], description: 'Free text, as captured or typed. It names the company until a human links one (`company_id`).'}
+        company_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. Null until then, and null again when an edit of `company_name` no longer names the linked company. Withheld when the reader cannot open that company.
+        company_match: {$ref: '#/components/schemas/LeadCompanyMatch'}
         candidate_company_key: {type: [string, 'null'], description: Loose key for ABM routing without creating a company.}
-        project_id: {type: [string, 'null'], format: uuid, description: 'The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm and none can: a lead has no company_id, only candidate_company_key, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.'}
+        project_id: {type: [string, 'null'], format: uuid, description: 'The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm: a lead''s company_id is an optional link a human confirms, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.'}
         status: {type: string, enum: [new, contacted, engaged, promoted, disqualified], default: new, description: 'The activity-driven ladder: new → contacted (we reached out) → engaged (they answered or a meeting is booked/held) → promoted (qualified: a contact exists) | disqualified. contacted and engaged are set by the system from captured activity and may be set by hand.'}
         score: {type: integer, default: 0, description: 'Lead-local scoring; never reads the contact graph. While an override is in force this is the human-set value (see score_override_reason).'}
         score_override_reason: {type: [string, 'null'], readOnly: true, description: 'Non-null ⇒ `score` is a human Commercial-Judgement override and recompute is suppressed; the machine value is retained in `score_computed`.'}
@@ -16248,7 +16297,7 @@ components:
         title: {type: [string, 'null']}
         company_name: {type: [string, 'null']}
         candidate_company_key: {type: [string, 'null'], description: 'Loose ABM routing key. Format: lowercased registrable domain when known (`acme.com`), else a slug of company_name. Never a company FK.'}
-        project_id: {type: [string, 'null'], format: uuid, description: 'The body of work this lead belongs to; carries no same-company guard (a lead has no company).'}
+        project_id: {type: [string, 'null'], format: uuid, description: 'The body of work this lead belongs to; carries no same-company guard, also for a lead linked to a company.'}
         status: {type: string, enum: [new, contacted, engaged], description: 'A human may place an open lead on any open step, forwards or back; the system only ever moves forwards.'}
         source: {type: string, minLength: 1, deprecated: true, description: 'Deprecated and read-only. How the row reached Margince, which Margince writes. Sending the stored value is accepted; any other value is 422 on `source`. Set `origin` to say where the lead came from.'}
         origin: {type: [string, 'null'], description: 'Where the lead came from: an ACTIVE key from `/lead-origins`, or the key the lead already carries (a retired key is 422 only for a new value). Changing it recomputes the score. Null clears it, and the lead scores neutral.'}
@@ -16264,6 +16313,15 @@ components:
             row scope — else `422 owner_not_assignable`, which names no more than that so the
             refusal does not disclose the roster or the team graph.
       additionalProperties: true
+    LeadCompanyMatch:
+      type: object
+      readOnly: true
+      description: >-
+        A company the lead's `company_name` names exactly, offered for a human to confirm. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise.
+      required: [id, name]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string, description: The company's display name.}
     PromoteLeadRequest:
       type: object
       required: [trigger]
@@ -16288,7 +16346,7 @@ components:
         Open a deal in the same transaction as the promotion. Omit both ids to use the
         default pipeline's first open stage; a pipeline alone takes its first open stage; a
         stage alone is placed in its own pipeline. The deal's owner is the lead's owner
-        and its company is left unset (a lead has no company). The deal's id lands
+        and its company is left unset, also for a lead linked to a company. The deal's id lands
         on the lead as `qualified_deal_id`; a deal failure rolls the whole promotion back.
       properties:
         pipeline_id: {type: [string, 'null'], format: uuid}
@@ -18432,6 +18490,10 @@ components:
           description: >-
             `invited` is a seat that exists and has never been entered: the member holds a licensed seat and appears in the roster, but has set no password and can sign in by no method until they redeem their invitation link. Redeeming it makes them `active`, which is the only status that may sign in.
         is_agent: {type: boolean, default: false, description: First-party Agent Runner identity vs a human seat.}
+        service_extension:
+          type: [string, 'null']
+          description: >-
+            The extension unit this seat is the service member of: the identity that unit's scheduled feed runs as. Null for every other seat, including an AI agent seat, so a client tells the two apart by this field and not by `is_agent`. Present only for an admin caller, with `roles`.
         assignable:
           type: boolean
           description: >-

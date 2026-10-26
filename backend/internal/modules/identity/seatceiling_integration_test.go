@@ -263,3 +263,22 @@ func TestSeatCeilingAdmitsEverySeatWhenNothingCapsThem(t *testing.T) {
 		})
 	}
 }
+
+// A service member is a virtual seat. Declaring one at the ceiling is admitted
+// and leaves the count alone, so a feed never costs a licensed seat.
+func TestAServiceMemberTakesNoLicensedSeat(t *testing.T) {
+	e := setupRevocationEnv(t, "seat-ceiling-service")
+	used := seatsInUse(t, e)
+	licenseFor(t, e, licensedSeats(used))
+
+	if _, err := e.svc.DeclareServiceMember(escalationCtx(e.admin), e.admin,
+		ServiceMemberInput{Extension: "seatless", DisplayName: "Seatless feed"}); err != nil {
+		t.Fatalf("declaring a service member with every licensed seat in use: %v", err)
+	}
+	if got := seatsInUse(t, e); got != used {
+		t.Errorf("seats in use after declaring a service member = %d, want %d", got, used)
+	}
+	if err := inviteOneMore(t, e, "still-full"); !errors.Is(err, apperrors.ErrSeatLimitReached) {
+		t.Errorf("an invitation at the ceiling: err = %v, want %v", err, apperrors.ErrSeatLimitReached)
+	}
+}

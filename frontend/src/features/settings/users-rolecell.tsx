@@ -127,7 +127,15 @@ export function MemberRole({
     },
   });
   if (member.is_agent) {
-    return <span className="t-caption">{t("users.agentSeatRole")}</span>;
+    return (
+      <span className="t-caption">
+        {t(
+          member.service_extension
+            ? "users.serviceMemberRole"
+            : "users.agentSeatRole",
+        )}
+      </span>
+    );
   }
   const held = member.roles ?? [];
   const names = held

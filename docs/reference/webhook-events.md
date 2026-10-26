@@ -62,6 +62,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`comms.delivery_bounced`](#commsdelivery_bounced) | activity | 1 |
 | [`company.archived`](#companyarchived) | company | 1 |
 | [`company.created`](#companycreated) | company | 1 |
+| [`company.erased`](#companyerased) | company | 1 |
 | [`company.merged`](#companymerged) | company | 1 |
 | [`company.restored`](#companyrestored) | company | 1 |
 | [`company.updated`](#companyupdated) | company | 1 |
@@ -83,6 +84,8 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`conversation_claim.changed`](#conversation_claimchanged) | contact | 1 |
 | [`deal.archived`](#dealarchived) | deal | 1 |
 | [`deal.created`](#dealcreated) | deal | 1 |
+| [`deal.erased`](#dealerased) | deal | 1 |
+| [`deal.merged`](#dealmerged) | deal | 1 |
 | [`deal.owner_changed`](#dealowner_changed) | deal | 1 |
 | [`deal.restored`](#dealrestored) | deal | 1 |
 | [`deal.stage_changed`](#dealstage_changed) | deal | 1 |
@@ -433,6 +436,14 @@ Payload for company.created, a union across five emit sites. They are a direct c
 | `data.source` | string | no | Where this company originated (e.g. human, site_read). |
 | `data.source_url` | string | no | The source page this company was read from (site-read confirmation only). |
 
+### `company.erased`
+
+Record: `company` · version 1
+
+Payload for company.erased: a company was erased for good, not archived. The event's entity is the erased company. Carries no data, so no name or other personal field travels with it.
+
+`data` is an empty object.
+
 ### `company.merged`
 
 Record: `company` · version 1
@@ -663,6 +674,25 @@ Payload for deal.created, a deal was opened.
 | `data.import_run_id` | string (uuid) | no | The import run that wrote the event. Present when `imported` is true. |
 | `data.imported` | boolean | no | True when a data import wrote the event. An outside system can tell a deal brought in from another system from one a rep worked in Margince. Absent otherwise. |
 | `data.name` | string | yes | The deal's name at creation. |
+
+### `deal.erased`
+
+Record: `deal` · version 1
+
+Payload for deal.erased: a deal was erased for good, not archived. The event's entity is the erased deal. Carries no data, so no name or other personal field travels with it.
+
+`data` is an empty object.
+
+### `deal.merged`
+
+Record: `deal` · version 1
+
+Payload for deal.merged: two deals collapsed into one. Neither deal.updated nor deal.archived can say this, so it is its own verb. The event's entity is the merged-away deal. References only.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.merged_from_id` | string (uuid) | yes | The merged-away (source) deal, retired but still fetchable by id. |
+| `data.merged_into_id` | string (uuid) | yes | The surviving (target) deal. |
 
 ### `deal.owner_changed`
 

@@ -228,6 +228,9 @@ func projectCreateInputAdmitting(req crmcontracts.CreateProjectRequest, importer
 	if err != nil {
 		return CreateProjectInput{}, err
 	}
+	if err := provenance.AdmitSourceID(req.SourceSystem, req.SourceId); err != nil {
+		return CreateProjectInput{}, err
+	}
 	in := CreateProjectInput{
 		Name:         name,
 		CompanyID:    pathID[ids.CompanyKind](req.CompanyId),
@@ -235,6 +238,7 @@ func projectCreateInputAdmitting(req crmcontracts.CreateProjectRequest, importer
 		Description:  req.Description,
 		Source:       req.Source,
 		SourceSystem: req.SourceSystem,
+		SourceID:     req.SourceId,
 		Author:       author,
 		CustomFields: req.AdditionalProperties,
 	}

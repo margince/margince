@@ -62,6 +62,12 @@ const (
 
 	KindApprovalPending  = "approval_pending"
 	ClassApprovalPending = KindApprovalPending
+
+	// KindExtension is a notice an extension raised. It rides the system class,
+	// which is delivered in the app and can be switched off. A unit's notice is
+	// housekeeping a reader may mute. A class of its own would need a row on
+	// every settings screen before any unit had earned one.
+	KindExtension = "extension_notice"
 )
 
 // noticeClasses is the closed set a seat is offered, in the order a settings
@@ -84,6 +90,7 @@ var classByKind = map[string]string{
 	"capture_backlog_stalled": classCapture,
 	"vcard_staging_failed":    classSystem,
 	KindApprovalPending:       ClassApprovalPending,
+	KindExtension:             classSystem,
 }
 
 // ClassFor answers which class a notice kind is decided about under.

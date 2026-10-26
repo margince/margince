@@ -420,7 +420,7 @@ func purgeContactDerivedRows(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 		`DELETE FROM ai_feedback WHERE subject_type = 'contact' AND subject_id = $1`, contactID); err != nil {
 		return err
 	}
-	return purgeProviderPurchases(ctx, tx, subjects)
+	return purgeProvidedValues(ctx, tx, subjects)
 }
 
 // deleteSubjectIdentifierRows drops every row that stores an identifier the

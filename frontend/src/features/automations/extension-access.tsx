@@ -50,6 +50,7 @@ import {
   type GrantMatrixSection,
   grantOf,
 } from "../settings/grantmatrix";
+import { UnitGovernance } from "./extension-governance";
 
 // Extension access (settings → Extensions): what the composed extension tier
 // brought into this installation, and who may use it.
@@ -330,6 +331,7 @@ function UnitCard({
           canManage={canManage}
         />
       ) : null}
+      <UnitGovernance unit={unit.name} canManage={canManage} />
       {/* Reference, not a decision: an operator opens it to check which
           object gates the route they care about. */}
       {brings > 0 ? (

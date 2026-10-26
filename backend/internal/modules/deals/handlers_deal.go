@@ -92,6 +92,7 @@ func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmco
 		ValueMin: params.ValueMin, ValueMax: params.ValueMax,
 		Currency: params.Currency, Country: params.Country,
 	}
+	in.SourceSystem, in.SourceID = params.SourceSystem, params.SourceId
 	if params.ListId != nil {
 		if in.Membership, err = h.memberFilter(r.Context(), *params.ListId); err != nil {
 			writeStoreErr(w, r, err)

@@ -20,12 +20,13 @@ import (
 // variable, a node from YAML. names holds what the operator wrote, and vars
 // every variable an environment source held, for the typo report.
 type layer struct {
-	source Source
-	file   string
-	text   map[string]string
-	nodes  map[string]*yaml.Node
-	names  map[string]string
-	vars   map[string]string
+	source  Source
+	file    string
+	text    map[string]string
+	nodes   map[string]*yaml.Node
+	names   map[string]string
+	vars    map[string]string
+	envRefs []string
 }
 
 func locate(flags flagValues, env map[string]string) (Files, bool, error) {
@@ -151,7 +152,7 @@ func yamlFileLayer(source Source, path string, names known) (layer, []error) {
 	if err != nil {
 		return empty, []error{err}
 	}
-	var faults []error
+	faults := parsed.repeated
 	reported := map[string]bool{}
 	for _, u := range unknown {
 		root, _, _ := strings.Cut(u.key, ".")
@@ -164,7 +165,7 @@ func yamlFileLayer(source Source, path string, names known) (layer, []error) {
 			faults = append(faults, fault)
 		}
 	}
-	l := layer{source: source, file: path, nodes: parsed.values, names: map[string]string{}}
+	l := layer{source: source, file: path, nodes: parsed.values, names: map[string]string{}, envRefs: parsed.envRefs}
 	for key := range parsed.values {
 		l.names[key] = key
 	}

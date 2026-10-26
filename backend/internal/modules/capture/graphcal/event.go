@@ -77,7 +77,11 @@ type graphTime struct {
 // down and states an attendee's KIND separately — "resource" is a booked room
 // or device rather than a contact.
 type graphActor struct {
-	Type         string `json:"type"`
+	Type string `json:"type"`
+	// Status is this attendee's own answer; "declined" is the one that matters.
+	Status struct {
+		Response string `json:"response"`
+	} `json:"status"`
 	EmailAddress struct {
 		Address string `json:"address"`
 		// Name is what the organizer typed for this party. Carried for the
@@ -106,9 +110,10 @@ func decode(ev rawEvent) meetingmap.Event {
 	attendees := make([]meetingmap.Actor, 0, len(ev.Attendees))
 	for _, a := range ev.Attendees {
 		attendees = append(attendees, meetingmap.Actor{
-			Email: a.EmailAddress.Address,
-			Name:  a.EmailAddress.Name,
-			Room:  strings.EqualFold(strings.TrimSpace(a.Type), "resource"),
+			Email:    a.EmailAddress.Address,
+			Name:     a.EmailAddress.Name,
+			Room:     strings.EqualFold(strings.TrimSpace(a.Type), "resource"),
+			Declined: strings.EqualFold(strings.TrimSpace(a.Status.Response), "declined"),
 		})
 	}
 	return meetingmap.Event{

@@ -1507,15 +1507,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro Million Tokens",
 
   "brief.weekly.tasksCompleted": "Aufgaben erledigt",
-  "brief.weekly.noMeetings": "Keine erfasst",
+  "brief.weekly.noMeetings": "Keine Termine",
   "brief.weekly.noLeads": "Keine eingegangen",
   "brief.weekly.noCommitments": "Keine fällig",
   "brief.weekly.basis":
     "Erfasste CRM-Arbeit dieser abgeschlossenen Woche. Fehlende Datensätze belegen keine Inaktivität.",
   "brief.weekly.notRecorded": "Nicht erfasst",
   "brief.weekly.recordedFrom": "Erfasst ab {date}",
-  "brief.weekly.noRecords":
-    "Für diesen Teil der Auswertung liegen keine Angaben vor",
+  "brief.weekly.noneRecorded.deals":
+    "Im betrachteten Bereich gibt es keinen Deal. Diese Zahl ist daher kein Messergebnis.",
+  "brief.weekly.noneRecorded.tasks":
+    "Im betrachteten Bereich gibt es keine Aufgabe. Diese Zahl ist daher kein Messergebnis.",
+  "brief.weekly.noneRecorded.meetings":
+    "Im betrachteten Bereich gibt es keinen Termin. Diese Zahl ist daher kein Messergebnis.",
+  "brief.weekly.noneRecorded.leads":
+    "Im betrachteten Bereich gibt es keinen eingehenden Lead. Diese Zahl ist daher kein Messergebnis.",
+  "brief.weekly.noneRecorded.commitments":
+    "Im betrachteten Bereich gibt es keinen Wochenplan. Diese Zahl ist daher kein Messergebnis.",
   "brief.weekly.partialFrom":
     "Die Auswertung umfasst nur den Zeitraum ab {date}",
   "brief.weekly.partialValue": "{value} (teilweise)",
@@ -1825,6 +1833,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.risk_verdict": "Prüfung des Deal-Risikos",
   "systemJob.routing_seed": "Einrichtung der Zuweisung",
   "systemJob.schedule_read": "Lesen des Zeitplans",
+  "systemJob.service_members": "Dienstmitglieder angelegt",
   "systemJob.setup_token": "Einrichtungs-Token",
   "systemJob.sign_in_policy_read": "Lesen der Anmelderichtlinie",
   "systemJob.stage_evidence": "Phasenbelege",
@@ -2052,6 +2061,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.merged_from_id": "Zusammengeführt aus",
   "history.field.merged_into_id": "Zusammengeführt in",
   "history.field.filled": "Ergänzte Felder",
+  "history.field.guests_added": "Gäste aus dem Kalender ergänzt",
+  "history.field.guest_links_added": "Gäste aus dem Kalender verknüpft",
+  "history.field.guests_retired": "Gäste vom Kalender entfernt",
   "history.field.relinked_emails": "E-Mail-Adressen übernommen",
   "history.field.relinked_phones": "Telefonnummern übernommen",
   "history.field.relinked_relationships": "Beziehungen übernommen",
@@ -2820,6 +2832,46 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.actorUnknown": "Akteur nicht erfasst",
   "consent.purposesUnavailable":
     "Die Double-Opt-in-Anforderungen können nicht angezeigt werden, da der Katalog der Einwilligungszwecke nicht geladen werden konnte.",
+  "consent.purposeName.business_correspondence": "Geschäftliche Korrespondenz",
+  "consent.purposeName.transactional": "Transaktions-E-Mail",
+  "consent.purposeName.marketing_email": "Marketing-E-Mail",
+  "consent.reason.objection":
+    "Widerspruch eingelegt; ein Widerspruch geht jeder anderen Grundlage vor",
+  "consent.reason.objectionOn":
+    "Widerspruch am {date}; ein Widerspruch geht jeder anderen Grundlage vor",
+  "consent.reason.suppressed_objection":
+    "Widerspruch gegen Werbung; ein Widerspruch geht jeder anderen Grundlage vor",
+  "consent.reason.suppressed_restricted":
+    "Eine gesetzliche Einschränkung verbietet, ihnen zu schreiben",
+  "consent.reason.suppressed_subject_request":
+    "Der Kontakt hat gebeten, nicht mehr angeschrieben zu werden, und das ist erfasst",
+  "consent.reason.suppressed_hard_bounce": "Die Adresse nimmt keine E-Mails an",
+  "consent.reason.suppressed": "Eine Sperre verbietet, ihnen zu schreiben",
+  "consent.reason.contract_notice":
+    "Konto- und Vertragsmitteilungen brauchen keine Einwilligung",
+  "consent.reason.no_call_path": "Kein Anrufweg eingerichtet",
+  "consent.reason.said_we_may_write":
+    "Der Kontakt hat erlaubt, angeschrieben zu werden",
+  "consent.reason.unconfirmed_double_opt_in":
+    "Einwilligung erfasst, aber nie per Double-Opt-in bestätigt",
+  "consent.reason.no_connection":
+    "Der Kontakt hat dir nie geschrieben, und kein Deal und keine Anfrage verbindet euch",
+  "consent.reason.qualifying_event": "Ein erfasster Austausch verbindet euch",
+  "consent.reason.consent_confirmed": "Einwilligung erteilt, mit Bestätigung",
+  "consent.reason.consent_withdrawn":
+    "Einwilligung für diesen Zweck widerrufen",
+  "consent.reason.no_consent_exception_not_offered":
+    "Keine Einwilligung erfasst; die Bestandskundenausnahme wird nicht angeboten",
+  "consent.reason.no_consent": "Keine Einwilligung erfasst",
+  "consent.reason.qualifying.inbound_message":
+    "Der Kontakt hat dir am {date} geschrieben",
+  "consent.reason.qualifying.inquiry": "Der Kontakt hat am {date} angefragt",
+  "consent.reason.qualifying.active_deal": "Ein offener Deal verbindet euch",
+  "consent.reason.qualifying.in_person":
+    "Ein erfasster Austausch am {date}: {note}",
+  "consent.reason.qualifying.meeting": "Ein Termin am {date} verbindet euch",
+  "consent.reason.qualifying.requested_by_subject":
+    "Der Kontakt hat am {date} gebeten, angeschrieben zu werden: {note}",
 
   "company.reject": "Kein Unternehmen",
   "company.rejectConfirm":
@@ -5267,10 +5319,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.learnings.insufficient":
     "Nicht genug erfasste Belege für aussagekräftige Beobachtungen.",
   "brief.weekly.scorecard.title": "Wochenbilanz",
-  "brief.weekly.scorecard.basis": "Grundlage",
-  "brief.weekly.scorecard.advanced": "Lead-Fortschritte",
-  "brief.weekly.scorecard.advancedBasis": "Je Schritt · nicht je Lead",
-  "brief.weekly.scorecard.answeredInTarget": "Zielzeit überschritten",
+  "brief.weekly.scorecard.basis": "Zählweise",
+  "brief.weekly.scorecard.advanced": "Phasenwechsel von Leads",
+  "brief.weekly.scorecard.advancedBasis":
+    "Jeder Wechsel zählt: ein Lead mit zwei Phasenwechseln zählt doppelt",
+  "brief.weekly.scorecard.answeredInTarget": "Antworten nach der Zielzeit",
   "brief.weekly.scorecard.answeredDetail":
     "In der Zielzeit beantwortet: {count}",
   "brief.weekly.scorecard.allInTarget": "Alle in der Zielzeit beantwortet",
@@ -5299,7 +5352,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Von einer Löschung betroffen · Zahlen sind Mindestwerte",
   // Die kommende Woche. Der eingefrorene Rückblick sagt, was war; dies ist der
   // einzige Teil dieser Seite, den noch jemand ändern kann.
-  "plan.title": "Zusagen dieser Woche",
+  "plan.title": "Plan für KW {week}",
+  "plan.titleThisWeek": "Plan für diese Woche",
   // Die zwei Regler des Briefings: welches, und für wen.
   "brief.view.label": "Home-Ansicht",
   "brief.view.morning": "Heute",
@@ -5366,9 +5420,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "plan.contract.risks": "Risiken",
   "plan.contract.risksHint":
     "Was aus deiner Sicht schiefgehen könnte, in eigenen Worten",
-  "plan.contract.capacityNote": "Verfügbare Kapazität",
+  "plan.contract.capacityNote": "Nicht im Kalender",
   "plan.contract.capacityNoteHint":
-    "Alles, was der Kalender nicht zeigt, zum Beispiel Urlaub, Reisen oder ein Launch",
+    "Urlaub, Reisen, Launches: alles, was dein Kalender nicht zeigt",
   "plan.contract.unwritten": "Noch nicht geschrieben",
   "plan.contract.nothingToName": "Nichts zu nennen",
   "plan.contract.edit": "Bearbeiten",
@@ -5393,7 +5447,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.outlook.month": "Dieser Monat",
   "brief.weekly.outlook.quarter": "Dieses Quartal",
   "brief.weekly.outlook.none":
-    "Für diese Woche ist kein Prognose-Snapshot verfügbar.",
+    "Für diesen Zeitraum ist kein Prognose-Snapshot verfügbar.",
   "brief.weekly.outlook.won": "Gewonnener Wert",
   "brief.weekly.outlook.commit": "Verbleibender Commit",
   "brief.weekly.outlook.bestCase": "Best Case",
@@ -5438,15 +5492,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.report.earlier": "Frühere Woche öffnen",
   "brief.report.later": "Spätere Woche öffnen",
   "brief.report.col.figure": "Kennzahl",
-  "brief.report.col.week": "Diese Woche",
-  "brief.report.col.prior": "Vorwoche",
+  "brief.report.col.week": "KW {week}",
+  "brief.report.col.prior": "KW {week}",
   "brief.report.col.change": "Veränderung",
   "brief.weekly.none":
     "Noch kein Wochenrückblick. Der erste wird am Montag nach deiner ersten vollen Woche erstellt.",
   "brief.weekly.tasksDelivered": "Fällige Aufgaben erledigt",
   "brief.weekly.ofDue": "{done} von {due}",
   "brief.weekly.dealsWon": "Gewonnene Deals",
-  "brief.weekly.dealsLost": "Verlorene Deals",
   "brief.weekly.dealsMoved": "Deals mit Phasenwechsel",
   "brief.weekly.decided": "Entschiedene Vorschläge",
   "brief.weekly.acceptedRejected":
@@ -5660,10 +5713,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "vcardImport.failed":
     "Die Karten konnten nicht importiert werden. Bitte versuche es erneut.",
   "vcardImport.outcome.created": "Hinzugefügt",
-  "vcardImport.outcome.updated": "Fehlende Felder ergänzt",
+  "vcardImport.outcome.updated": "Aktualisiert",
   "vcardImport.outcome.needsReview": "Mögliches Duplikat",
   "vcardImport.outcome.proposed": "Wartet auf Freigabe",
   "vcardImport.outcome.skipped": "Übersprungen",
+  "vcardImport.field.imported": "Übernommen",
+  "vcardImport.field.replaced": "Ersetzt, alter Wert wiederherstellbar",
+  "vcardImport.field.kept": "Wert im Datensatz behalten",
+  "vcardImport.field.notInCard": "Nicht auf der Karte",
+  "vcardImport.next": "Nächste vCard",
   "create.quickCapture": "Schnellerfassung",
   "create.quickCaptureSaved": "{name} gespeichert",
   "create.company": "Neues Unternehmen",
@@ -7216,64 +7274,64 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agent.tip.ask": "Frage den Agenten mit {chord}.",
   "agent.tip.recap": "Öffne den Agentenbereich für die heutige Aktivität.",
   "agent.tip.edge": "Der Bildschirmrand leuchtet, während der Agent arbeitet.",
-  "agent.ticker.wrote.activityLog": "Aktivität zu {name} wird erfasst",
-  "agent.ticker.wrote.activityLogPlain": "Aktivität wird erfasst",
-  "agent.ticker.wrote.companyEdit": "{name} wird bearbeitet",
-  "agent.ticker.wrote.companyEditPlain": "Unternehmen wird bearbeitet",
-  "agent.ticker.wrote.companyNew": "{name} wird angelegt",
-  "agent.ticker.wrote.companyNewPlain": "Unternehmen wird angelegt",
-  "agent.ticker.wrote.contactEdit": "{name} wird bearbeitet",
-  "agent.ticker.wrote.contactEditPlain": "Kontakt wird bearbeitet",
-  "agent.ticker.wrote.contactNew": "{name} wird angelegt",
-  "agent.ticker.wrote.contactNewPlain": "Kontakt wird angelegt",
-  "agent.ticker.wrote.dealEdit": "Deal {name} wird bearbeitet",
-  "agent.ticker.wrote.dealEditPlain": "Deal wird bearbeitet",
-  "agent.ticker.wrote.dealNew": "Deal für {name} wird angelegt",
-  "agent.ticker.wrote.dealNewPlain": "Deal wird angelegt",
-  "agent.ticker.wrote.dedupe": "Dublette von {name} wird aufgelöst",
-  "agent.ticker.wrote.dedupePlain": "Dublette wird aufgelöst",
-  "agent.ticker.wrote.email": "E-Mail an {name} wird gesendet",
-  "agent.ticker.wrote.emailPlain": "E-Mail wird gesendet",
-  "agent.ticker.wrote.enrich": "{name} wird angereichert",
-  "agent.ticker.wrote.enrichPlain": "Kontakt wird angereichert",
-  "agent.ticker.wrote.ingest": "{name} wird importiert",
-  "agent.ticker.wrote.ingestPlain": "Daten werden importiert",
-  "agent.ticker.wrote.leadEdit": "{name} wird bearbeitet",
-  "agent.ticker.wrote.leadEditPlain": "Lead wird bearbeitet",
-  "agent.ticker.wrote.siteRead": "Website von {name} wird gelesen",
-  "agent.ticker.wrote.siteReadPlain": "Website wird gelesen",
-  "agent.ticker.wrote.taskNew": "Aufgabe für {name} wird angelegt",
-  "agent.ticker.wrote.taskNewPlain": "Aufgabe wird angelegt",
-  "agent.ticker.named.deal": "Deal {name} wird geladen",
-  "agent.ticker.named.lead": "{name} wird geladen",
-  "agent.ticker.named.company": "{name} wird geladen",
-  "agent.ticker.named.company360": "Überblick zu {name} wird geladen",
-  "agent.ticker.named.contact": "{name} wird geladen",
-  "agent.ticker.named.contact360": "Überblick zu {name} wird geladen",
-  "agent.ticker.named.contactBrief": "{name} wird zusammengefasst",
-  "agent.ticker.said.activities": "Aktivitäten werden geladen",
-  "agent.ticker.said.approvals": "Freigaben werden geladen",
-  "agent.ticker.said.aiCalls": "KI-Aufrufprotokoll wird geladen",
-  "agent.ticker.said.aiUsage": "KI-Nutzung wird geladen",
-  "agent.ticker.said.companies": "Unternehmen werden geladen",
-  "agent.ticker.said.company": "Unternehmen wird geladen",
-  "agent.ticker.said.company360": "Unternehmensüberblick wird geladen",
-  "agent.ticker.said.connectors": "Verbindungen werden geladen",
-  "agent.ticker.said.deal": "Deal wird geladen",
-  "agent.ticker.said.dealOffers": "Angebote zum Deal werden geladen",
-  "agent.ticker.said.deals": "Pipeline wird geladen",
-  "agent.ticker.said.dsrs": "Datenschutzanfragen werden geladen",
-  "agent.ticker.said.lead": "Lead wird geladen",
-  "agent.ticker.said.leads": "Leads werden geladen",
-  "agent.ticker.said.contacts": "Kontakte werden geladen",
-  "agent.ticker.said.contact": "Kontakt wird geladen",
-  "agent.ticker.said.contact360": "Kontaktüberblick wird geladen",
-  "agent.ticker.said.contactBrief": "Kontakt wird zusammengefasst",
-  "agent.ticker.said.pipelines": "Pipelines werden geladen",
-  "agent.ticker.said.meetingBrief": "Terminvorbereitung wird erstellt",
-  "agent.ticker.said.recordHistory": "Verlauf wird geladen",
-  "agent.ticker.said.tasks": "Aufgaben werden geladen",
-  "agent.ticker.said.teams": "Teams werden geladen",
+  "agent.ticker.read.activities": "Aktivitäten werden geladen",
+  "agent.ticker.read.approvals": "Freigaben werden geladen",
+  "agent.ticker.read.aiCalls": "KI-Aufrufprotokoll wird geladen",
+  "agent.ticker.read.aiUsage": "KI-Nutzung wird geladen",
+  "agent.ticker.read.companies": "Unternehmen werden geladen",
+  "agent.ticker.read.company": "Unternehmen wird geladen",
+  "agent.ticker.read.company360": "Unternehmensübersicht wird geladen",
+  "agent.ticker.read.connectors": "Connectors werden geladen",
+  "agent.ticker.read.deal": "Deal wird geladen",
+  "agent.ticker.read.dealOffers": "Angebote werden geladen",
+  "agent.ticker.read.deals": "Pipeline wird geladen",
+  "agent.ticker.read.dsrs": "Datenschutzanfragen werden geladen",
+  "agent.ticker.read.lead": "Lead wird geladen",
+  "agent.ticker.read.leads": "Leads werden geladen",
+  "agent.ticker.read.contacts": "Kontakte werden geladen",
+  "agent.ticker.read.contact": "Kontakt wird geladen",
+  "agent.ticker.read.contact360": "Kontaktübersicht wird geladen",
+  "agent.ticker.read.contactBrief": "Kontakt wird zusammengefasst",
+  "agent.ticker.read.pipelines": "Pipelines werden geladen",
+  "agent.ticker.read.meetingBrief": "Terminvorbereitung wird erstellt",
+  "agent.ticker.read.recordHistory": "Verlauf wird geladen",
+  "agent.ticker.read.tasks": "Aufgaben werden geladen",
+  "agent.ticker.read.teams": "Teams werden geladen",
+  "agent.ticker.readNamed.deal": "Deal {name} wird geladen",
+  "agent.ticker.readNamed.lead": "{name} wird geladen",
+  "agent.ticker.readNamed.company": "{name} wird geladen",
+  "agent.ticker.readNamed.company360": "Übersicht zu {name} wird geladen",
+  "agent.ticker.readNamed.contact": "{name} wird geladen",
+  "agent.ticker.readNamed.contact360": "Übersicht zu {name} wird geladen",
+  "agent.ticker.readNamed.contactBrief": "{name} wird zusammengefasst",
+  "agent.ticker.write.activityLog": "Aktivität wird erfasst",
+  "agent.ticker.writeNamed.activityLog": "Aktivität zu {name} wird erfasst",
+  "agent.ticker.write.companyEdit": "Unternehmen wird bearbeitet",
+  "agent.ticker.writeNamed.companyEdit": "{name} wird bearbeitet",
+  "agent.ticker.write.companyNew": "Unternehmen wird erstellt",
+  "agent.ticker.writeNamed.companyNew": "{name} wird erstellt",
+  "agent.ticker.write.contactEdit": "Kontakt wird bearbeitet",
+  "agent.ticker.writeNamed.contactEdit": "{name} wird bearbeitet",
+  "agent.ticker.write.contactNew": "Kontakt wird erstellt",
+  "agent.ticker.writeNamed.contactNew": "{name} wird erstellt",
+  "agent.ticker.write.dealEdit": "Deal wird bearbeitet",
+  "agent.ticker.writeNamed.dealEdit": "Deal {name} wird bearbeitet",
+  "agent.ticker.write.dealNew": "Deal wird erstellt",
+  "agent.ticker.writeNamed.dealNew": "Deal für {name} wird erstellt",
+  "agent.ticker.write.dedupe": "Dublette wird aufgelöst",
+  "agent.ticker.writeNamed.dedupe": "Dublette von {name} wird aufgelöst",
+  "agent.ticker.write.email": "E-Mail wird gesendet",
+  "agent.ticker.writeNamed.email": "E-Mail an {name} wird gesendet",
+  "agent.ticker.write.enrich": "Kontakt wird angereichert",
+  "agent.ticker.writeNamed.enrich": "{name} wird angereichert",
+  "agent.ticker.write.ingest": "Daten werden importiert",
+  "agent.ticker.writeNamed.ingest": "{name} wird importiert",
+  "agent.ticker.write.leadEdit": "Lead wird bearbeitet",
+  "agent.ticker.writeNamed.leadEdit": "{name} wird bearbeitet",
+  "agent.ticker.write.siteRead": "Website wird gelesen",
+  "agent.ticker.writeNamed.siteRead": "Website von {name} wird gelesen",
+  "agent.ticker.write.taskNew": "Aufgabe wird erstellt",
+  "agent.ticker.writeNamed.taskNew": "Aufgabe für {name} wird erstellt",
 
   "agents.connected": "Deine Verbindungen",
   "agents.connectedSub":
@@ -12007,6 +12065,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "extAccess.nobodyReads":
     "Jedes Mitglied sieht für diese Erweiterung eine leere Ansicht, da keine Rolle Lesezugriff auf {object} hat. Vergib unten mindestens einer Rolle das Leserecht.",
   "extAccess.matrixName": "Rollenzugriff auf {unit}",
+  "extGovernance.overwrite": "Von Mitgliedern bearbeitete Felder überschreiben",
+  "extGovernance.overwriteHint":
+    "Aus: Diese Erweiterung lässt ein Feld eines Unternehmens oder Deals, das zuletzt ein Mitglied bearbeitet hat, unverändert und meldet es als zurückgehalten. An: Die Erweiterung ersetzt das Feld.",
+  "extGovernance.readOnly": "Diese Einstellung ändert ein Admin.",
+  "extGovernance.notSaved": "Einstellung wurde nicht gespeichert.",
   "users.empty": "Noch keine Mitglieder.",
   "users.inviteTitle": "Mitglied einladen",
   "users.teamsLabel": "Teams",
@@ -12095,6 +12158,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das ist die Agentenidentität des Unternehmens. Diese Identität meldet sich nirgends an, daher verliert niemand den Zugriff. Geplante Jobs von Erweiterungen laufen weiter. Jeder Job handelt unter seiner eigenen Identität und erfasst unter der Berechtigung des Mitglieds, dessen Verbindung den Datensatz erzeugt hat.",
   "users.agentSeat": "Agent",
   "users.agentSeatRole": "Handelt über einen Passport, nicht über eine Rolle",
+  "users.serviceMember": "Dienstmitglied",
+  "users.serviceMemberFor": "Feed von {extension}",
+  "users.serviceMemberRole": "Feste Rolle: Feed-Annahme",
+  "users.deactivateServiceMemberBody":
+    "Das ist die Identität, unter der der geplante Feed einer Erweiterung läuft. Diese Identität meldet sich nirgends an, daher verliert niemand den Zugriff. Deaktivierst du sie, hält der Feed an, bis du sie wieder aktivierst.",
   "users.roleLabel": "Rolle",
   "users.inviteOpen": "Mitglied einladen",
   "users.invite": "Einladen",
@@ -13927,6 +13995,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.deal.restored.label": "Deal wiederhergestellt",
   "webhooks.event.deal.restored.when":
     "Ein archivierter Deal wird wiederhergestellt.",
+  "webhooks.event.deal.merged.label": "Deals zusammengeführt",
+  "webhooks.event.deal.merged.when":
+    "Zwei Deals werden zu einem zusammengeführt.",
+  "webhooks.event.deal.erased.label": "Deal gelöscht",
+  "webhooks.event.deal.erased.when": "Ein Deal wird endgültig gelöscht.",
   "webhooks.eventGroup.offers": "Angebote",
   "webhooks.event.offer.created.label": "Angebotsrevision erstellt",
   "webhooks.event.offer.created.when":
@@ -14004,6 +14077,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.company.restored.label": "Unternehmen wiederhergestellt",
   "webhooks.event.company.restored.when":
     "Ein archiviertes Unternehmen wird wiederhergestellt.",
+  "webhooks.event.company.erased.label": "Unternehmen gelöscht",
+  "webhooks.event.company.erased.when":
+    "Ein Unternehmen wird endgültig gelöscht.",
   "webhooks.eventGroup.leads": "Leads",
   "webhooks.event.lead.created.label": "Lead erstellt",
   "webhooks.event.lead.created.when":
@@ -14451,6 +14527,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.confirm.review": "Prüfen",
   "contact.enriched.sub":
     "Jeder Wert mit dem Text, aus dem er gelesen wurde. Ein korrigierter Wert bleibt erhalten.",
+  "contact.enriched.field.first_name": "Vorname",
+  "contact.enriched.field.last_name": "Nachname",
   "contact.enriched.field.title": "Jobtitel",
   "contact.enriched.field.phone": "Telefon",
   "contact.enriched.field.role": "Rolle",
@@ -14459,6 +14537,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.enriched.field.address": "Adresse",
   "contact.enriched.field.website": "Website",
   "contact.enriched.readFrom": "Am {when} aus {source} gelesen",
+  "contact.enriched.source.capture_enrich": "der E-Mail-Signatur",
+  "contact.enriched.source.site_read": "der Unternehmenswebsite",
+  "contact.enriched.source.vcard_import": "einer importierten vCard",
+  "contact.enriched.source.contact_research": "einer übernommenen Recherche",
+  "contact.enriched.source.human_restore": "einem wiederhergestellten Wert",
+  "contact.enriched.source.other": "einer erfassten Quelle",
   "contact.enriched.undo": "Rückgängig",
   "contact.enriched.replaced": "Bisheriger Wert „{was}“ ersetzt",
   "contact.enriched.correctedByYou": "Von dir korrigiert",
@@ -15014,11 +15098,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "today.scan.queued": "Margince analysiert dieses Unternehmen in Kürze.",
   "today.scan.reading":
     "Margince analysiert die Kommunikation und die Deals dieses Unternehmens.",
-  "today.scan.read": "Analysiert: {exchanges} und {deals}",
+  "today.scan.read":
+    "Analysiert: {exchanges} der letzten {days} Tage und {deals}",
   "today.scan.readExchanges_one": "{count} Nachricht",
   "today.scan.readExchanges_other": "{count} Nachrichten",
-  "today.scan.readDeals_one": "{count} Deal",
-  "today.scan.readDeals_other": "{count} Deals",
+  "today.scan.readDeals_one": "{count} offener Deal",
+  "today.scan.readDeals_other": "{count} offene Deals",
   "today.scan.stale":
     "Das Unternehmen hat sich seitdem geändert. Das Unternehmen wird innerhalb einer Stunde erneut analysiert.",
   "today.scan.providerResumes":
@@ -16057,6 +16142,62 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.why.reasons": "Gründe",
   "worklist.why.consequence": "Wenn nichts passiert",
   "worklist.why.detail": "Detail",
+  "worklist.ask.approval":
+    "Ein Agent hat eine Änderung vorgeschlagen und wartet auf eine Entscheidung. Gib sie frei oder lehne sie ab.",
+  "worklist.ask.dedupe_candidate":
+    "Diese beiden Datensätze sehen nach demselben aus. Führe sie zusammen oder behalte beide.",
+  "worklist.ask.deal_suggestion":
+    "Ein Gespräch sieht nach einem neuen Deal aus. Lege den Deal an oder verwirf den Vorschlag.",
+  "worklist.ask.tag_suggestion":
+    "Für diesen Datensatz wurde ein Tag vorgeschlagen. Übernimm ihn oder verwirf den Vorschlag.",
+  "worklist.ask.task":
+    "Diese Aufgabe ist offen. Erledige sie und markiere sie als erledigt, oder verschiebe sie auf einen anderen Tag.",
+  "worklist.ask.brief_item":
+    "Die nächtliche Prüfung hat diesen Deal markiert. Reagiere darauf, stelle ihn zurück oder verwirf ihn.",
+  "worklist.ask.conversation_claim":
+    "Du hast das in einem Gespräch zugesagt. Erledige es und markiere es dann als erledigt.",
+  "worklist.ask.customer_waiting":
+    "Ein Kunde hat geschrieben, und noch niemand hat geantwortet. Beantworte die Nachricht.",
+  "worklist.ask.lead_response":
+    "Dieser Lead wartet auf eine erste Antwort. Melde dich, bevor seine Antwortfrist abläuft.",
+  "worklist.ask.deal_at_risk":
+    "Dieser Deal zeigt Anzeichen, dass er abrutscht. Öffne ihn und plane den nächsten Schritt.",
+  "worklist.ask.meeting":
+    "Dieser Termin steht bevor. Öffne ihn, um dich vorzubereiten.",
+  "worklist.ask.relationship_decay":
+    "Mit diesem Kontakt gab es länger keinen Austausch. Melde dich oder stelle ihn für einen Monat zurück.",
+  "worklist.ask.failed_approval":
+    "Eine Aktion, die du freigegeben hast, wurde nicht ausgeführt. Prüfe, was passiert ist, und bestätige es dann.",
+  "worklist.ask.dsr":
+    "Eine Datenschutzanfrage hat eine gesetzliche Frist. Öffne sie und beantworte sie rechtzeitig.",
+  "worklist.ask.notice_case":
+    "Diesem Kontakt steht ein Datenschutzhinweis zu. Sende ihn, fordere eine Bestätigung der Daten an oder beende die Pflicht.",
+  "worklist.ask.capture_health":
+    "Ein Postfach erfasst keine E-Mails mehr. Verbinde es neu, damit seine E-Mails wieder erfasst werden.",
+  "worklist.ask.domain_question":
+    "Margince kann diese Domain nicht zuordnen. Lege ein Unternehmen dafür an, behalte sie als Lieferant oder schließe sie aus.",
+  "worklist.ask.ai_work_health":
+    "Eine KI-Aufgabe schlägt wiederholt fehl. Prüfe ihren KI-Anbieter in den Einstellungen.",
+  "worklist.ask.bounce":
+    "Eine E-Mail konnte nicht zugestellt werden. Prüfe die Adresse und sende sie dann erneut.",
+  "worklist.ask.undelivered":
+    "Eine E-Mail wurde nicht gesendet. Öffne sie, um den Grund zu sehen, und sende sie dann erneut.",
+  "worklist.ask.automation_run":
+    "Eine Automatisierung ist fehlgeschlagen. Prüfe die Ursache und führe sie dann erneut aus.",
+  "worklist.ask.notice":
+    "Etwas hat sich geändert, das du wissen solltest. Lies es und bestätige es dann.",
+  "worklist.ask.introduction_request":
+    "Ein Teammitglied bittet dich, es einem Kontakt vorzustellen. Nimm die Anfrage an oder lehne sie ab.",
+  "worklist.ask.meeting_outcome":
+    "Dieser Termin ist vorbei, und nichts hält fest, wie er gelaufen ist. Halte das Ergebnis fest oder markiere ihn als abgesagt, wenn er nicht stattfand.",
+  "worklist.ask.weekly_commitment":
+    "Du hast das für diese Woche geplant. Erledige es oder verschiebe es in deinem Wochenplan.",
+  "worklist.ask.awaiting_reply":
+    "Du hast zuletzt geschrieben, und niemand hat geantwortet. Sende eine Nachfrage.",
+  "worklist.ask.meeting_follow_up":
+    "Nach diesem Termin wurde nichts gesendet. Sende den Teilnehmenden ein Follow-up.",
+  "worklist.ask.batch":
+    "Hier sind mehrere ähnliche Routineentscheidungen gebündelt. Prüfe sie gemeinsam.",
   "worklist.consequence.buyer_waits": "Die Käuferseite wartet weiter.",
   "worklist.consequence.promise_breaks": "Eine Zusage wird nicht eingehalten.",
   "worklist.consequence.deal_drifts": "Der Deal gerät weiter ins Stocken.",
@@ -16888,6 +17029,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.figure.booked": "Gebucht",
   "lead.figure.respondedIn": "In {span}",
   "lead.figure.notLinked": "Mit keinem Unternehmen verknüpft",
+  "lead.figure.linked": "Verknüpftes Unternehmen",
+  "lead.company.linkOffer": "Mit {name} verknüpfen",
+  "lead.company.linkTitle": "Diesen Lead mit {name} verknüpfen?",
+  "lead.company.linkConfirm": "Unternehmen verknüpfen",
+  "lead.company.linkOpens":
+    "Der Unternehmensname dieses Leads öffnet dann {name}.",
+  "lead.company.linkContact":
+    "Dieser Lead wird als Kontakt bei {name} angelegt. Sein Status ändert sich nicht.",
   "lead.timeline.received": "{at} · eingegangen",
   "lead.timeline.weReplied": "Du hast geantwortet",
   "lead.timeline.repliedIn": "{at} · in {span}",
@@ -17056,6 +17205,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.archive_project": "Projekt archiviert:",
   "magic.action.archive_activity": "E-Mail oder Termin archiviert:",
   "magic.why.mail_filed": "Die Absendeadresse gehört zu diesem Kontakt.",
+  "magic.why.data_correction": "Ein Update hat ältere Datensätze korrigiert.",
   "magic.why.public_records":
     "Aus der öffentlichen Website und den DNS-Einträgen des Unternehmens.",
   "magic.why.site_read": "Aus der Analyse von {site}.",
@@ -17077,6 +17227,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.by.mailbox": "Postfach-Synchronisierung",
   "magic.by.agent": "Ein Agent",
   "magic.by.system": "Margince",
+  "magic.by.data_correction": "Datenkorrektur",
   "magic.failingSince": "Fehlerhaft seit {when}",
   "magic.noRecord": "Kein Datensatz genannt",
   "magic.undo.action": "Rückgängig",

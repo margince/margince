@@ -301,11 +301,14 @@ export function TimelineRow({
             which way it went — one line above the headline, because both
             qualify it and set inline they read as the subject's first words. */}
         <span className="tl-head">
-          <Eyebrow>{t(TIMELINE_KIND_LABEL[entry.kind])}</Eyebrow>
-          <TaskStateFlag entry={entry} />
+          <Eyebrow className="tl-head-part">
+            {t(TIMELINE_KIND_LABEL[entry.kind])}
+          </Eyebrow>
           {/* What the record DID, for a row that is not an exchange: the kind
               says this is a record entry, and this says what happened to it. */}
-          {entry.qualifier && <span>{entry.qualifier}</span>}
+          {entry.qualifier && (
+            <span className="tl-head-part">{entry.qualifier}</span>
+          )}
           {/* Which way it went and who was at the other end, as one phrase.
               The direction alone is a fact about us; with the name it is a
               fact about the relationship, which is what the row is for.
@@ -314,7 +317,7 @@ export function TimelineRow({
               still says who this record is talking to, which is the thing the
               audience limited. */}
           {(entry.direction || entry.counterparts) && (
-            <span>
+            <span className="tl-head-part">
               {directionPhrase(
                 entry.withheld ? { ...entry, counterparts: undefined } : entry,
                 t,
@@ -322,6 +325,7 @@ export function TimelineRow({
             </span>
           )}
           {entry.via}
+          <TaskStateFlag entry={entry} />
           {/* Who may read it, when that is worth a mark: sealed rows and
               withheld ones. Withheld first, because a held row's `audience`
               is not the reader's to see and the mark must not claim one. */}

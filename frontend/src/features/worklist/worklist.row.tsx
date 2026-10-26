@@ -8,6 +8,7 @@ import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
+import { askKey } from "./worklist.ask";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import {
   briefContextTitle,
@@ -284,6 +285,7 @@ export function WorklistRow({
               badged={badged}
             />
           )}
+          <RowAsk item={item} framed={framed} />
           {responsibility && <p className="t-caption">{responsibility}</p>}
           <DepartedOwnerCaption owner={item.owner} />
           <PromiseRecipients recipients={item.promise_recipients} />
@@ -332,4 +334,14 @@ function framedName(
     heading: subject !== undefined,
     supportingTitle: subject ? briefContextTitle(item) : undefined,
   };
+}
+
+// The card is read on its own, so it says what the row asks. A queue row leaves
+// that to the details its reader opens.
+function RowAsk({
+  item,
+  framed,
+}: Readonly<{ item: WorklistItem; framed: boolean }>) {
+  const t = useT();
+  return framed ? <p className="t-body">{t(askKey(item))}</p> : null;
 }

@@ -542,6 +542,7 @@ const (
 	CommsDeliveryBounced                  SubscribableEventType = "comms.delivery_bounced"
 	CompanyArchived                       SubscribableEventType = "company.archived"
 	CompanyCreated                        SubscribableEventType = "company.created"
+	CompanyErased                         SubscribableEventType = "company.erased"
 	CompanyMerged                         SubscribableEventType = "company.merged"
 	CompanyRestored                       SubscribableEventType = "company.restored"
 	CompanyUpdated                        SubscribableEventType = "company.updated"
@@ -563,6 +564,8 @@ const (
 	ConversationClaimChanged              SubscribableEventType = "conversation_claim.changed"
 	DealArchived                          SubscribableEventType = "deal.archived"
 	DealCreated                           SubscribableEventType = "deal.created"
+	DealErased                            SubscribableEventType = "deal.erased"
+	DealMerged                            SubscribableEventType = "deal.merged"
 	DealOwnerChanged                      SubscribableEventType = "deal.owner_changed"
 	DealRestored                          SubscribableEventType = "deal.restored"
 	DealRoomArchived                      SubscribableEventType = "deal_room.archived"
@@ -705,6 +708,8 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case CompanyCreated:
 		return true
+	case CompanyErased:
+		return true
 	case CompanyMerged:
 		return true
 	case CompanyRestored:
@@ -746,6 +751,10 @@ func (e SubscribableEventType) Valid() bool {
 	case DealArchived:
 		return true
 	case DealCreated:
+		return true
+	case DealErased:
+		return true
+	case DealMerged:
 		return true
 	case DealOwnerChanged:
 		return true
@@ -1315,6 +1324,9 @@ type PublicEventCompanyCreated struct {
 	SourceUrl *string `json:"source_url,omitempty"`
 }
 
+// PublicEventCompanyErased Payload for company.erased: a company was erased for good, not archived. The event's entity is the erased company. Carries no data, so no name or other personal field travels with it.
+type PublicEventCompanyErased struct{}
+
 // PublicEventCompanyMerged Payload for company.merged — two company records collapsed into one (the §1.3 merge); neither company.updated nor company.archived can say this, so it is its own verb.
 type PublicEventCompanyMerged struct {
 	// MergedFromId The merged-away (source) company, retired but still fetchable by id.
@@ -1516,6 +1528,18 @@ type PublicEventDealCreated struct {
 
 	// Name The deal's name at creation.
 	Name string `json:"name"`
+}
+
+// PublicEventDealErased Payload for deal.erased: a deal was erased for good, not archived. The event's entity is the erased deal. Carries no data, so no name or other personal field travels with it.
+type PublicEventDealErased struct{}
+
+// PublicEventDealMerged Payload for deal.merged: two deals collapsed into one. Neither deal.updated nor deal.archived can say this, so it is its own verb. The event's entity is the merged-away deal. References only.
+type PublicEventDealMerged struct {
+	// MergedFromId The merged-away (source) deal, retired but still fetchable by id.
+	MergedFromId openapi_types.UUID `json:"merged_from_id"`
+
+	// MergedIntoId The surviving (target) deal.
+	MergedIntoId openapi_types.UUID `json:"merged_into_id"`
 }
 
 // PublicEventDealOwnerChanged Payload for deal.owner_changed — the deal's owner was reassigned. Emitted instead of (never alongside) deal.updated for the owner_id field (events.md §5.3).
@@ -2837,6 +2861,10 @@ func (PublicEventCompanyCreated) EventType() string { return "company.created" }
 
 func (PublicEventCompanyCreated) EntityType() string { return "company" }
 
+func (PublicEventCompanyErased) EventType() string { return "company.erased" }
+
+func (PublicEventCompanyErased) EntityType() string { return "company" }
+
 func (PublicEventCompanyMerged) EventType() string { return "company.merged" }
 
 func (PublicEventCompanyMerged) EntityType() string { return "company" }
@@ -2920,6 +2948,14 @@ func (PublicEventDealArchived) EntityType() string { return "deal" }
 func (PublicEventDealCreated) EventType() string { return "deal.created" }
 
 func (PublicEventDealCreated) EntityType() string { return "deal" }
+
+func (PublicEventDealErased) EventType() string { return "deal.erased" }
+
+func (PublicEventDealErased) EntityType() string { return "deal" }
+
+func (PublicEventDealMerged) EventType() string { return "deal.merged" }
+
+func (PublicEventDealMerged) EntityType() string { return "deal" }
 
 func (PublicEventDealOwnerChanged) EventType() string { return "deal.owner_changed" }
 
@@ -3338,6 +3374,7 @@ var PublicEventVersions = map[string]int{
 	"comms.delivery_bounced":                    1,
 	"company.archived":                          1,
 	"company.created":                           1,
+	"company.erased":                            1,
 	"company.merged":                            1,
 	"company.restored":                          1,
 	"company.updated":                           1,
@@ -3359,6 +3396,8 @@ var PublicEventVersions = map[string]int{
 	"conversation_claim.changed":                1,
 	"deal.archived":                             1,
 	"deal.created":                              1,
+	"deal.erased":                               1,
+	"deal.merged":                               1,
 	"deal.owner_changed":                        1,
 	"deal.restored":                             1,
 	"deal.stage_changed":                        1,
@@ -3480,6 +3519,7 @@ var PublicEventSamples = map[string]string{
 	"comms.delivery_bounced":                    "{\"kind\":\"hard\",\"message_id\":\"Sample message id\",\"reason\":\"Sample reason\"}",
 	"company.archived":                          "{}",
 	"company.created":                           "{\"anchor\":true,\"captured_by\":\"Sample captured by\",\"delta\":{},\"display_name\":\"Sample display name\",\"primary_domain\":\"Sample primary domain\",\"site_read_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"source\":\"Sample source\",\"source_url\":\"Sample source url\"}",
+	"company.erased":                            "{}",
 	"company.merged":                            "{\"merged_from_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"merged_into_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"company.restored":                          "{}",
 	"company.updated":                           "{\"changed_fields\":{}}",
@@ -3501,6 +3541,8 @@ var PublicEventSamples = map[string]string{
 	"conversation_claim.changed":                "{\"claim_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"status\":\"Sample status\"}",
 	"deal.archived":                             "{\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"deal.created":                              "{\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"name\":\"Sample name\"}",
+	"deal.erased":                               "{}",
+	"deal.merged":                               "{\"merged_from_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"merged_into_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"deal.owner_changed":                        "{\"from_owner_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"to_owner_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"deal.restored":                             "{\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"deal.stage_changed":                        "{\"amount_minor_at_change\":1,\"currency_at_change\":\"Sample currency at change\",\"deal_name\":\"Sample deal name\",\"from_stage_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"from_stage_name\":\"Sample from stage name\",\"from_status\":\"Sample from status\",\"fx_rate_to_base\":\"Sample fx rate to base\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"partner_attribution\":\"Sample partner attribution\",\"partner_company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_stage_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_stage_name\":\"Sample to stage name\",\"to_status\":\"Sample to status\",\"win_probability\":1}",

@@ -69,6 +69,8 @@ var taskSourceWriters = map[string][]string{
 	"modules/activities/activity.go:logActivityInTx":                      {writesForItsCaller},
 	"modules/activities/activityinitialaudience.go:recordInitialActivity": {writesForItsCaller},
 	"compose/csvcontactfields.go:contactCreateFrom":                       {writesNoTask},
+	"modules/contacts/handlers_company.go:ListCompanies":                  {writesNoTask},
+	"modules/deals/handlers_deal.go:ListDeals":                            {writesNoTask},
 	"compose/dealroomtimeline.go:write":                                   {writesNoTask},
 	"compose/assurancebundletask.go:writeBundleTask":                      {provenance.AssuranceTaskSource},
 	"compose/leadqualify.go:logQualifyReminder":                           {provenance.LeadQualifyTaskSource},

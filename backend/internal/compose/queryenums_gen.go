@@ -228,3 +228,247 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "scope", Values: []string{"mine", "unassigned", "team", "all"}, Array: false, Explode: true},
 	},
 }
+
+// queryMinimumTable maps "METHOD /v1/path" to the integer query parameters
+// the contract gives a minimum, with that minimum.
+var queryMinimumTable = map[string][]queryMinimum{
+	"GET /v1/activities": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/admin/automatic-work-health": {
+		{Name: "days", Minimum: 1},
+	},
+	"GET /v1/ai/available-models/{provider}": {
+		{Name: "top", Minimum: 1},
+	},
+	"GET /v1/ai/calls": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/analytics/editions/{id}/evidence": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/analytics/evidence": {
+		{Name: "framework_revision", Minimum: 0},
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/analytics/reports": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/analytics/reports/{id}/editions": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/analytics/reports/{id}/evaluation": {
+		{Name: "revision", Minimum: 1},
+	},
+	"GET /v1/analytics/reports/{id}/executions": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/analytics/reports/{id}/reader-preview": {
+		{Name: "revision", Minimum: 1},
+	},
+	"GET /v1/analytics/runs": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/analytics/targets": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/approvals": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/attachments": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/audit-log": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/automations": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/automations/{id}/runs": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/capture/activity": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/capture/activity/workspace": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/capture/domain-questions": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/catch-up": {
+		{Name: "max_items", Minimum: 1},
+	},
+	"GET /v1/commissions": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/commitments": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/companies": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/companies/{id}/access": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/companies/{id}/contacts": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/companies/{id}/contracts": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/companies/{id}/documents": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/confirm-submissions": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/contacts": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/contacts/{id}/access": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/context-search": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/custom-fields": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/data-subject-requests": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/deal-rooms": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/deal-suggestions": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/deals": {
+		{Name: "limit", Minimum: 1},
+		{Name: "value_max", Minimum: 0},
+		{Name: "value_min", Minimum: 0},
+	},
+	"GET /v1/deals/slipping": {
+		{Name: "limit", Minimum: 1},
+		{Name: "quiet_days", Minimum: 1},
+	},
+	"GET /v1/deals/{id}/documents": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/deals/{id}/offers": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/dedupe/candidates": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/field-history": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/finance/source/customers": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/imports": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/installation/agent-clients": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/leads": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/leads/{id}/score": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/legal-reviews": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/lists/{id}/history": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/lists/{id}/members": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/magic": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/magic/lines/{id}/records": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/me/linkedin-reach": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/meeting-prep": {
+		{Name: "max_items", Minimum: 1},
+	},
+	"GET /v1/notices": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/offer-templates": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/partners": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/privacy/notice-cases": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/products": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/projects": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/projects/{id}/health-assessments": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/record-grants": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/records/{entity_type}/{id}/context": {
+		{Name: "max_items", Minimum: 1},
+	},
+	"GET /v1/records/{entity_type}/{id}/history": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/relationships": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/retention/legal-holds": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/retention/restrictions": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/search": {
+		{Name: "limit", Minimum: 1},
+		{Name: "per_type", Minimum: 1},
+	},
+	"GET /v1/signals": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/stage-automation/report": {
+		{Name: "window_days", Minimum: 1},
+	},
+	"GET /v1/teams": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/users": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/voice-profiles/{id}/deltas": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/voice-profiles/{id}/versions": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/webhook-subscriptions/{id}/deliveries": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/worklist": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/worklist/response": {
+		{Name: "days", Minimum: 1},
+	},
+}

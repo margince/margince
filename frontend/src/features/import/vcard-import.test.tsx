@@ -2,7 +2,12 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -173,6 +178,86 @@ describe("VCardImport", () => {
     expect(
       screen.getByText("the card carried no usable name"),
     ).toBeInTheDocument();
+  });
+
+  it("shows under each card what the import did with every field", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          results: [
+            {
+              index: 0,
+              full_name: "Grace Hopper",
+              outcome: "updated",
+              fields: [
+                { field: "phone", value: "+49301234567", action: "imported" },
+                { field: "title", value: "VP Finance", action: "replaced" },
+                { field: "address", value: "Hauptstr. 1", action: "kept" },
+                { field: "mobile_phone", action: "not_in_card" },
+                { field: "website", action: "not_in_card" },
+              ],
+            },
+          ],
+        }),
+      ),
+    );
+
+    render(<VCardImportPage />);
+    await upload(user);
+
+    const fields = await screen.findByTestId("vcard-import-fields");
+    const row = (value: string) => {
+      const item = within(fields).getByText(value).closest("li");
+      if (!(item instanceof HTMLElement)) {
+        throw new Error(`no field row holds ${value}`);
+      }
+      return item;
+    };
+    expect(row("+49301234567")).toHaveTextContent("Phone");
+    expect(row("+49301234567")).toHaveTextContent("Imported");
+    expect(row("VP Finance")).toHaveTextContent("Title");
+    expect(row("VP Finance")).toHaveTextContent(
+      "Replaced, old value can be restored",
+    );
+    expect(row("Hauptstr. 1")).toHaveTextContent("Address");
+    expect(row("Hauptstr. 1")).toHaveTextContent("Record value kept");
+    // What the card left out is one muted group, named field by field.
+    const absent = screen.getByTestId("vcard-import-absent");
+    expect(absent).toHaveTextContent("Not in the card");
+    expect(within(absent).getByText("Mobile")).toBeInTheDocument();
+    expect(within(absent).getByText("Website")).toBeInTheDocument();
+  });
+
+  it("empties the page for the next card and puts focus on the file field", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          results: [
+            { index: 0, full_name: "Ada Lovelace", outcome: "created" },
+          ],
+        }),
+      ),
+    );
+
+    render(<VCardImportPage />);
+    await upload(user);
+    expect(await screen.findByTestId("vcard-import-report")).toBeVisible();
+    expect(screen.getByTestId("vcard-import-file")).toHaveTextContent(
+      "cards.vcf",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Next vCard" }));
+
+    expect(screen.queryByTestId("vcard-import-report")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Next vCard" })).toBeNull();
+    const field = screen.getByTestId("vcard-import-file");
+    expect(field).not.toHaveTextContent("cards.vcf");
+    expect(field).toHaveTextContent("Select file or photo");
+    expect(field.querySelector("input[type=file]")).toHaveFocus();
   });
 
   it("sends the file as the part the endpoint takes", async () => {

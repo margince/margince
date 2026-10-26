@@ -47,11 +47,13 @@ func TestRestatementMustBeLaterQuotedEvidenceFromTheSameConversationSide(t *test
 func TestRenewalCertificationRejectsMissingEvidenceAndTheOldDeadline(t *testing.T) {
 	original, renewed := ids.NewV7(), ids.NewV7()
 	at := time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)
+	messages := []threadMessage{
+		{ID: original, Direction: "outbound", At: at, Body: "I will send pricing."},
+		{ID: renewed, Direction: "outbound", At: at.Add(48 * time.Hour), Body: "I will send pricing by Friday."},
+	}
 	c := signalExtractCase{
-		thread: settledThread{Messages: []threadMessage{
-			{ID: original, Direction: "outbound", At: at, Body: "I will send pricing."},
-			{ID: renewed, Direction: "outbound", At: at.Add(48 * time.Hour), Body: "I will send pricing by Friday."},
-		}},
+		thread:   settledThread{Messages: messages},
+		numbered: messages,
 		expected: []signalExtractExpectation{{Kind: extractKindCommitment, Message: 1, RestatedMessage: 2, DueDate: new("2026-09-11")}},
 	}
 	for _, name := range []string{"valid", "missing renewal", "old deadline"} {

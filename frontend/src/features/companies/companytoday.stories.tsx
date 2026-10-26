@@ -263,7 +263,7 @@ export const Scanned: Story = {
         state: "done",
         generated_at: "2026-08-07T08:58:00Z",
         generated_by: "model",
-        read: { exchanges: 14, deals: 2 },
+        read: { exchanges: 14, deals: 2, window_days: 180 },
         findings: [
           ...(populated.suggestions ?? []),
           {

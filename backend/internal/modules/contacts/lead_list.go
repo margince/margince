@@ -206,7 +206,7 @@ func attachLeadRows(ctx context.Context, tx pgx.Tx, leads []crmcontracts.Lead) e
 	if err := stampLeadsWritable(ctx, tx, leads); err != nil {
 		return err
 	}
-	if err := withholdUnreadableSourceContacts(ctx, tx, leads); err != nil {
+	if err := withholdUnreadableLinks(ctx, tx, leads); err != nil {
 		return err
 	}
 	return storekit.AttachRowTags(ctx, tx, leadEntity, leads,

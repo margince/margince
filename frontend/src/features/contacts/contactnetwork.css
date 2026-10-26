@@ -114,9 +114,10 @@
   font-family: var(--fontFamilyHeading);
   font-variant-numeric: tabular-nums;
 }
+/* The gap is a real space in the text, so a screen reader and a copy read
+   "4 in 90 days" rather than "4in 90 days". */
 .pn-reading b small {
   font-family: var(--fontFamilyBody);
-  margin-left: var(--space-1);
 }
 /* Who sent what: the target's share in full accent, the colleague's in the
    lighter one, and the counts in words under it. */

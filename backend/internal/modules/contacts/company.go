@@ -38,6 +38,8 @@ type CreateCompanyInput struct {
 	// SourceSystem names the system an import took this company from; nil
 	// for one created here, which is what makes it unattributable.
 	SourceSystem *string
+	// SourceID is this company's id in SourceSystem; the pair is unique.
+	SourceID *string
 	// Author is who wrote it in the system it came from; zero when unknown.
 	Author storekit.SourceAuthorInput
 	// CustomFields carries the request body's cf_* keys. A key no active catalog
@@ -182,6 +184,7 @@ func createCompanyInTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput, by
 		LinkedInURL:     in.LinkedInURL,
 		Source:          in.Source,
 		SourceSystem:    in.SourceSystem,
+		SourceID:        in.SourceID,
 		Author:          in.Author,
 		CapturedBy:      by,
 		CustomFields:    in.CustomFields,

@@ -30,6 +30,9 @@ const (
 	byMailReader    = "magic.by.mail_reader"
 	byMailFiling    = "magic.by.mail_filing"
 	byAutomation    = "magic.by.automation"
+	// A release correction repairing older records.
+	byDataCorrection  = "magic.by.data_correction"
+	whyDataCorrection = "magic.why.data_correction"
 
 	whySiteUnnamed = "magic.why.site_read_unnamed"
 )
@@ -213,6 +216,18 @@ func siteOf(evidence, after map[string]any) string {
 	return strings.TrimPrefix(u.Host, "www.")
 }
 
+// dataTaskActorPrefix is the actor every data-task batch writes under
+// (datatask.Acting): one release correction, named by its task id.
+const dataTaskActorPrefix = "system:datatask:"
+
+// isDataCorrection says the row is a release correction repairing older
+// records, not business work done for the reader. Its lines are maintenance:
+// one run over thousands of records is one operation, not thousands of
+// outcomes.
+func isDataCorrection(e entry) bool {
+	return strings.HasPrefix(e.ActorID, dataTaskActorPrefix)
+}
+
 // actorLabel names who acted, as a reader would call them.
 //
 // The ledger's actor ids are internal names (`link-reconcile`,
@@ -227,6 +242,8 @@ func actorLabel(e entry) crmcontracts.MagicSentence {
 		return crmcontracts.MagicSentence{Key: key}
 	}
 	switch {
+	case isDataCorrection(e):
+		return crmcontracts.MagicSentence{Key: byDataCorrection}
 	case strings.HasPrefix(e.ActorID, "connector:"):
 		return crmcontracts.MagicSentence{Key: "magic.by.mailbox"}
 	case strings.HasPrefix(e.ActorID, "automation:"):

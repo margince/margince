@@ -66,6 +66,8 @@ type CreateDealInput struct {
 	// SourceSystem names the system an import took this deal from; nil for
 	// one created here, which is what makes it unattributable.
 	SourceSystem *string
+	// SourceID is this deal's id in SourceSystem; the pair is unique.
+	SourceID *string
 	// Author is who wrote it in the system it came from; zero when unknown.
 	Author storekit.SourceAuthorInput
 	// Description is the human-authored brief. Distinct from the GENERATED
@@ -355,7 +357,7 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 	}
 
 	id := ids.New[ids.DealKind]()
-	authorCols, authorHolders, base := storekit.AuthorInsertFragments(in.Author, []any{
+	provenanceCols, provenanceHolders, base := storekit.ProvenanceInsertFragments(in.SourceID, in.Author, []any{
 		id, in.Name, in.AmountMinor, in.Currency, in.PipelineID, in.StageID,
 		in.CompanyID, in.PartnerCompanyID, born.attribution,
 		in.ProjectID, in.OwnerID, in.ExpectedClose, in.Source, born.by,
@@ -366,15 +368,15 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 	if err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	_, err = tx.Exec(ctx,
+	err = storekit.ExecSourceInsert(ctx, tx, dealTable,
 		`INSERT INTO deal (id, name, amount_minor, currency, pipeline_id, stage_id,
 		                   company_id, partner_company_id, partner_attribution,
 		                   project_id, owner_id, expected_close_date, source, captured_by,
 		                   description, commercial_motion, priority, acquisition_source,
-		                   expected_arr_minor, source_system, close_date_provisional`+authorCols+cfCols+`)
+		                   expected_arr_minor, source_system, close_date_provisional`+provenanceCols+cfCols+`)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-		         $15, $16, $17, $18, $19, $20, $21`+authorHolders+cfHolders+`)`,
-		args...)
+		         $15, $16, $17, $18, $19, $20, $21`+provenanceHolders+cfHolders+`)`,
+		args)
 	if err != nil {
 		// Covers the remaining FKs (pipeline, owner); the stage/pipeline
 		// pairing and the company target were pre-checked above.

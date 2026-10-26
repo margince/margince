@@ -94,9 +94,10 @@ func (s *Service) wire(
 	}
 	if r.ReadExchanges != nil && r.ReadDeals != nil {
 		out.Read = &struct {
-			Deals     int `json:"deals"`
-			Exchanges int `json:"exchanges"`
-		}{Deals: *r.ReadDeals, Exchanges: *r.ReadExchanges}
+			Deals      int `json:"deals"`
+			Exchanges  int `json:"exchanges"`
+			WindowDays int `json:"window_days"`
+		}{Deals: *r.ReadDeals, Exchanges: *r.ReadExchanges, WindowDays: scanWindowDays}
 	}
 	return out, nil
 }

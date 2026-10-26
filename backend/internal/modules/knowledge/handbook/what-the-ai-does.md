@@ -112,7 +112,7 @@ Where Margince can say who put a value there, it does. The trust marks are:
   This is the installation's own work, such as a planned sweep or a run that
   makes up for lost time. It has a different name from an agent, so you know whether a model
   decided something or Margince did routine work.
-- "Via {connector}": it came from a connected mailbox
+- "Via {connector}": it came from a connected mailbox, named as you know it, such as "Via Gmail"
 - "Imported from {upload}": a CSV import created the company, contact or lead,
   and {upload} is the name you set for the upload. It reads plain "Imported"
   when the upload has no name.

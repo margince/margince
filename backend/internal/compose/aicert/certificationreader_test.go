@@ -317,6 +317,9 @@ func aiCertGradeCell(row aiCertPresetTask) string {
 // model a failed call falls to with that model's own grade on the feature.
 func aiCertRouteLine(row aiCertPresetTask) string {
 	line := aiCertShortModel(row.Model.Model) + " · " + row.Tier
+	if row.MeasuredOn != nil {
+		line += ", measured on `" + row.MeasuredOn.Provider + "`"
+	}
 	fallback := row.Fallback
 	switch {
 	case fallback == nil:

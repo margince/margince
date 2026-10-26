@@ -11,9 +11,9 @@
 // sentence travels to the unit, which already holds the record, and only the
 // class is written down.
 //
-// Six, one per check Validate runs, which is the granularity an operator
-// actually acts on: "every record this connector sends is failing its
-// participants" names the mapping to fix. A seventh would mean a seventh check.
+// Six, one per check Validate runs. That is the granularity an operator acts
+// on: "every record this connector sends is failing its participants" names
+// the mapping to fix. A seventh would mean a seventh check.
 //
 //margince:extension-surface
 
@@ -28,8 +28,9 @@ const (
 	// RefusalKey is the ingress system or the idempotency key: absent, blank
 	// or over its cap.
 	RefusalKey RecordRefusal = "key"
-	// RefusalActivity is the activity itself — no kind, no occurred-at, an
-	// over-long subject or body, an unknown direction.
+	// RefusalActivity is the record's own payload. For an activity that is no
+	// kind, no occurred-at, an over-long subject or body or an unknown
+	// direction. A company or deal that breaks its own rules lands here too.
 	RefusalActivity RecordRefusal = "activity"
 	// RefusalAddresses is the address set the internal-message gate reads
 	// every party from.

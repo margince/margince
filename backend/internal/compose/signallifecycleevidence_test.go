@@ -54,24 +54,15 @@ func TestRecordedLifecycleEvidenceKeepsSourceProofAndScope(t *testing.T) {
 	}
 }
 
-func TestUnscopedEventsCarryNoLifecycleClaim(t *testing.T) {
-	for _, scope := range []string{"", lifecycleScopeUnknown} {
-		event := extractedEvent{Kind: extractKindCommitment, LifecycleScope: scope}
+func TestAStrayScopeOnAnotherKindIsDroppedNotRefused(t *testing.T) {
+	for _, scope := range []string{"", lifecycleScopeUnknown, lifecycleScopeCompany, lifecycleScopeWorkstream} {
+		event := extractedEvent{Kind: extractKindCommitment, LifecycleScope: scope, Workstream: "invented engagement"}
 		if reason := validateLifecycleEvidence(event, settledThread{}); reason != "" {
-			t.Fatalf("neutral scope refused: %s", reason)
+			t.Fatalf("scope %q refused a commitment: %s", scope, reason)
 		}
 		evidence := eventSignalEvidence(event, ids.NewV7(), settledThread{})
 		if evidence.LifecycleScope != "" || evidence.Workstream != "" || evidence.SourceQuote != nil {
-			t.Fatalf("neutral scope persisted: %+v", evidence)
-		}
-		event.Workstream = "invented engagement"
-		if reason := validateLifecycleEvidence(event, settledThread{}); reason == "" {
-			t.Fatal("unscoped engagement admitted")
-		}
-	}
-	for _, scope := range []string{lifecycleScopeCompany, lifecycleScopeWorkstream} {
-		if reason := validateLifecycleEvidence(extractedEvent{Kind: extractKindCommitment, LifecycleScope: scope}, settledThread{}); reason == "" {
-			t.Fatalf("substantive non-lifecycle scope admitted: %s", scope)
+			t.Fatalf("scope %q persisted on a commitment: %+v", scope, evidence)
 		}
 	}
 }

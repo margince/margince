@@ -47,12 +47,27 @@ function rowOf(label: string): string[] {
 
 describe("the weekly scorecard", () => {
   it("draws nothing at all when the review carries no scorecard", () => {
-    const { container } = render(<ScorecardPanel scorecard={undefined} />);
+    const { container } = render(
+      <ScorecardPanel scorecard={undefined} weekStart="2026-06-01" />,
+    );
     expect(container.innerHTML).toBe("");
   });
 
+  it("names the reviewed week by its number, not as this week", () => {
+    render(
+      <ScorecardPanel scorecard={{ deal: dealBlock }} weekStart="2026-06-01" />,
+    );
+    expect(
+      screen.getByRole("columnheader", {
+        name: en["brief.report.col.week"].replace("{week}", "23"),
+      }),
+    ).toBeTruthy();
+  });
+
   it("omits the lead block rather than drawing a rep zeros they did not earn", () => {
-    render(<ScorecardPanel scorecard={{ deal: dealBlock }} />);
+    render(
+      <ScorecardPanel scorecard={{ deal: dealBlock }} weekStart="2026-06-01" />,
+    );
     expect(
       screen.queryByText(en["brief.weekly.scorecard.advanced"]),
     ).toBeNull();
@@ -63,7 +78,9 @@ describe("the weekly scorecard", () => {
   });
 
   it("omits the deal block on its own terms too", () => {
-    render(<ScorecardPanel scorecard={{ lead: leadBlock }} />);
+    render(
+      <ScorecardPanel scorecard={{ lead: leadBlock }} weekStart="2026-06-01" />,
+    );
     expect(
       screen.queryByText(en["brief.weekly.scorecard.advances"]),
     ).toBeNull();
@@ -78,6 +95,7 @@ describe("the weekly scorecard", () => {
         scorecard={{
           lead: { ...leadBlock, advanced: 0, answered_in_target: 0 },
         }}
+        weekStart="2026-06-01"
       />,
     );
     // Present and zero: the rep HAD leads and moved none, which the panel must
@@ -91,6 +109,7 @@ describe("the weekly scorecard", () => {
     render(
       <ScorecardPanel
         scorecard={{ deal: { ...dealBlock, median_days_in_stage: null } }}
+        weekStart="2026-06-01"
       />,
     );
     expect(
@@ -99,14 +118,18 @@ describe("the weekly scorecard", () => {
   });
 
   it("draws the median when there is one", () => {
-    render(<ScorecardPanel scorecard={{ deal: dealBlock }} />);
+    render(
+      <ScorecardPanel scorecard={{ deal: dealBlock }} weekStart="2026-06-01" />,
+    );
     expect(
       screen.getByText(en["brief.weekly.scorecard.medianDaysInStage"]),
     ).toBeTruthy();
   });
 
   it("names the open-deal denominator beside each coverage count", () => {
-    render(<ScorecardPanel scorecard={{ deal: dealBlock }} />);
+    render(
+      <ScorecardPanel scorecard={{ deal: dealBlock }} weekStart="2026-06-01" />,
+    );
     // "3 of 5 open deals" — the count is only judgeable against its
     // denominator, which is why the server sends counts and not a rate.
     expect(
@@ -131,6 +154,7 @@ describe("the weekly scorecard", () => {
             close_date_sound: 0,
           },
         }}
+        weekStart="2026-06-01"
       />,
     );
 
@@ -149,7 +173,9 @@ describe("the weekly scorecard", () => {
   // The breach is the reading. Leading with the leads answered in target put
   // the reassurance in the figure and the actionable number in a footnote.
   it("leads the target row with the breaches, not with the answers", () => {
-    render(<ScorecardPanel scorecard={{ lead: leadBlock }} />);
+    render(
+      <ScorecardPanel scorecard={{ lead: leadBlock }} weekStart="2026-06-01" />,
+    );
 
     expect(rowOf(en["brief.weekly.scorecard.answeredInTarget"])).toEqual([
       en["brief.weekly.scorecard.answeredInTarget"],
@@ -163,7 +189,10 @@ describe("the weekly scorecard", () => {
   // than count the exceptions that were not there.
   it("says every lead was answered in target when none breached", () => {
     render(
-      <ScorecardPanel scorecard={{ lead: { ...leadBlock, breached: 0 } }} />,
+      <ScorecardPanel
+        scorecard={{ lead: { ...leadBlock, breached: 0 } }}
+        weekStart="2026-06-01"
+      />,
     );
 
     expect(rowOf(en["brief.weekly.scorecard.answeredInTarget"])).toEqual([
@@ -174,7 +203,9 @@ describe("the weekly scorecard", () => {
   });
 
   it("says the meeting counts are a floor only when history is actually missing", () => {
-    render(<ScorecardPanel scorecard={{ lead: leadBlock }} />);
+    render(
+      <ScorecardPanel scorecard={{ lead: leadBlock }} weekStart="2026-06-01" />,
+    );
     expect(
       screen.queryByText(en["brief.weekly.scorecard.partialHistory"]),
     ).toBeNull();
@@ -183,6 +214,7 @@ describe("the weekly scorecard", () => {
     render(
       <ScorecardPanel
         scorecard={{ lead: { ...leadBlock, meetings_partial_history: 2 } }}
+        weekStart="2026-06-01"
       />,
     );
     expect(
@@ -198,6 +230,7 @@ describe("the weekly scorecard", () => {
     render(
       <ScorecardPanel
         scorecard={{ deal: { ...dealBlock, unreconstructible: 0 } }}
+        weekStart="2026-06-01"
       />,
     );
     expect(
@@ -207,7 +240,9 @@ describe("the weekly scorecard", () => {
     cleanup();
     // A week scored before the reconstruction existed sends no field at all.
     // It must read like the zero case rather than throwing or drawing "0".
-    render(<ScorecardPanel scorecard={{ deal: dealBlock }} />);
+    render(
+      <ScorecardPanel scorecard={{ deal: dealBlock }} weekStart="2026-06-01" />,
+    );
     expect(
       screen.queryByText(en["brief.weekly.scorecard.unreconstructible"]),
     ).toBeNull();
@@ -216,6 +251,7 @@ describe("the weekly scorecard", () => {
     render(
       <ScorecardPanel
         scorecard={{ deal: { ...dealBlock, unreconstructible: 2 } }}
+        weekStart="2026-06-01"
       />,
     );
     expect(

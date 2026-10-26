@@ -114,7 +114,7 @@ describe("the caption-table finder, over planted modules", () => {
       captionsIn(
         "/app/src/copy.ts",
         [
-          `const SAID = { deals: "agent.ticker.said.deals" };`,
+          `const SAID = { deals: "agent.ticker.read.deals" };`,
           `const NAMES = { meet: "Google Meet", teams: "Microsoft Teams", crm: "Salesforce" };`,
           `const KEYS = { field: "Title", path: "{base}/deals", count: "{count}" };`,
           `function f() { return { x: "Loading pipeline" }; }`,

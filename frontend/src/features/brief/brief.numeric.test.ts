@@ -46,17 +46,16 @@ it("withholds an unreadable source and keeps a partial one's figure", () => {
   const { partial, figures } = weeklyNumericStatus(unavailableWeeklyNumbers);
   expect(partial).toBe(true);
   expect(figures.won.kind).toBe("unavailable");
-  expect(figures.meetings).toEqual({
-    kind: "partial",
-    reason: "Some meeting history predates confirmed outcomes.",
-  });
+  // The server's English sentence never reaches the reader: the qualifier is
+  // said from the status, in the reader's language.
+  expect(figures.meetings).toEqual({ kind: "partial" });
   expect(figureShown(figures.won)).toBe(false);
   expect(figureShown(figures.meetings)).toBe(true);
   expect(
     figureReading(figures.meetings, { value: "3 of 5", detail: "+1" }, place),
   ).toEqual({
     value: "3 of 5",
-    detail: "+1 · Some meeting history predates confirmed outcomes.",
+    detail: `+1 · ${en["reporting.status.partial"]}`,
   });
 });
 
@@ -105,7 +104,24 @@ it("keeps a partly recorded figure's number with its start date", () => {
   expect(figureValue(figures.moved, "3", t)).toBe("3 (partial)");
   expect(figureReading(figures.leads, { value: "7 of 9" }, place)).toEqual({
     value: "Not recorded",
-    detail: "No lead source in scope.",
+    detail:
+      "No inbound lead was recorded in this scope, so this figure is not a measurement.",
   });
   expect(figures.commitments).toEqual({ kind: "measured" });
+});
+
+it("says why an unreadable figure is missing from its status", () => {
+  const withheld = weeklyNumericStatus(unavailableWeeklyNumbers).figures.won;
+  expect(figureReading(withheld, { value: "0" }, place)).toEqual({
+    value: en["reporting.unavailable"],
+    detail: en["reporting.withheld"],
+  });
+  const failed = weeklyNumericStatus({
+    ...unavailableWeeklyNumbers,
+    bookings_coverage: { status: "failed", withheld: false, reason: "x" },
+  }).figures.won;
+  expect(figureReading(failed, { value: "0" }, place)).toEqual({
+    value: en["reporting.unavailable"],
+    detail: en["reporting.status.failed"],
+  });
 });

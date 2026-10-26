@@ -69,6 +69,14 @@ var unreachableChecks = gatekit.Waive(map[string]string{
 		"precondition storekit.Patch puts in its WHERE — never as a value to store. So " +
 		"the only way past the bound is 2^53 successful writes to one row, and a refusal " +
 		"naming a field would be naming a field no caller sent",
+	"project_source_id_needs_a_source": "the violating combination cannot be written. " +
+		"The only door that writes project.source_id is the create wire, whose mapper " +
+		"runs provenance.AdmitSourceID and refuses an id beside a null or empty " +
+		"source_system before the store is reached, and no update path names the column",
+	"project_source_id_length": "the violating value cannot be written. The only door " +
+		"that writes project.source_id is the create wire, whose mapper runs " +
+		"provenance.AdmitSourceID and refuses an empty id or one past 128 characters " +
+		"before the store is reached, and no update path names the column",
 	"project_source_author_needs_a_source": "the violating combination cannot be " +
 		"written. The CHECK refuses an author on a row naming no source_system, and " +
 		"the ONLY door that writes those two columns is the importer's create, and " +

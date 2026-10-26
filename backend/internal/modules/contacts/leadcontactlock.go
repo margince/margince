@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // promoteAttempts bounds how often a promotion starts again after its match
@@ -49,6 +50,39 @@ func lockContactThenLead(
 		return err
 	}
 	return nil
+}
+
+// lockLeadForContact takes the locks of a write that lands a lead on a contact,
+// in the order lockorder.go and lockContactThenLead fix. Consent's stop locks
+// come before any row. Then come the last-activity clocks an employment at the
+// company moves, the candidate contact, its lanes, and the lead. A zero
+// candidate names no contact; a nil company moves no clock.
+func (s *Store) lockLeadForContact(ctx context.Context, tx pgx.Tx, id ids.LeadID, candidate ids.ContactID, company *ids.CompanyID) (ContactCandidate, error) {
+	if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
+		return ContactCandidate{}, err
+	}
+	subjects := []commsauthz.StopSubject{commsauthz.LeadStopSubject(id)}
+	var clocks storekit.LastActivityTargets
+	if !candidate.IsZero() {
+		subjects = append(subjects, commsauthz.ContactStopSubject(candidate))
+		clocks.Contacts = []ids.UUID{candidate.UUID}
+	}
+	if err := lockStopsOrSkip(ctx, tx, s.stopCarrier, subjects...); err != nil {
+		return ContactCandidate{}, err
+	}
+	if company != nil {
+		clocks.Companies = []ids.UUID{company.UUID}
+		if err := storekit.LockLastActivityTargets(ctx, tx, clocks); err != nil {
+			return ContactCandidate{}, err
+		}
+	}
+	var lanes ContactCandidate
+	err := lockContactThenLead(ctx, tx, candidate, storekit.IncludeArchived, id, func() error {
+		var err error
+		lanes, err = s.lockLeadLanes(ctx, tx, id)
+		return err
+	})
+	return lanes, err
 }
 
 // promoteTargetMovedError says the contact a promotion locked is no longer the

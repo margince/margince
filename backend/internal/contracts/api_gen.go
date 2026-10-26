@@ -5776,6 +5776,27 @@ func (e CompanyHierarchyRollupScope) Valid() bool {
 	}
 }
 
+// Defines values for CompanyOfferedValueField.
+const (
+	CompanyOfferedValueFieldDescription CompanyOfferedValueField = "description"
+	CompanyOfferedValueFieldIndustry    CompanyOfferedValueField = "industry"
+	CompanyOfferedValueFieldLegalName   CompanyOfferedValueField = "legal_name"
+)
+
+// Valid indicates whether the value is a known member of the CompanyOfferedValueField enum.
+func (e CompanyOfferedValueField) Valid() bool {
+	switch e {
+	case CompanyOfferedValueFieldDescription:
+		return true
+	case CompanyOfferedValueFieldIndustry:
+		return true
+	case CompanyOfferedValueFieldLegalName:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CompanyProfileFieldField.
 const (
 	CompanyProfileFieldFieldBuyingCenter      CompanyProfileFieldField = "buying_center"
@@ -6985,6 +7006,66 @@ func (e ContactConsentGuardEntryPurposeClass) Valid() bool {
 	}
 }
 
+// Defines values for ContactConsentGuardEntryReasonCode.
+const (
+	ContactConsentGuardEntryReasonCodeConsentConfirmed             ContactConsentGuardEntryReasonCode = "consent_confirmed"
+	ContactConsentGuardEntryReasonCodeConsentWithdrawn             ContactConsentGuardEntryReasonCode = "consent_withdrawn"
+	ContactConsentGuardEntryReasonCodeContractNotice               ContactConsentGuardEntryReasonCode = "contract_notice"
+	ContactConsentGuardEntryReasonCodeNoCallPath                   ContactConsentGuardEntryReasonCode = "no_call_path"
+	ContactConsentGuardEntryReasonCodeNoConnection                 ContactConsentGuardEntryReasonCode = "no_connection"
+	ContactConsentGuardEntryReasonCodeNoConsent                    ContactConsentGuardEntryReasonCode = "no_consent"
+	ContactConsentGuardEntryReasonCodeNoConsentExceptionNotOffered ContactConsentGuardEntryReasonCode = "no_consent_exception_not_offered"
+	ContactConsentGuardEntryReasonCodeObjection                    ContactConsentGuardEntryReasonCode = "objection"
+	ContactConsentGuardEntryReasonCodeQualifyingEvent              ContactConsentGuardEntryReasonCode = "qualifying_event"
+	ContactConsentGuardEntryReasonCodeSaidWeMayWrite               ContactConsentGuardEntryReasonCode = "said_we_may_write"
+	ContactConsentGuardEntryReasonCodeSuppressed                   ContactConsentGuardEntryReasonCode = "suppressed"
+	ContactConsentGuardEntryReasonCodeSuppressedHardBounce         ContactConsentGuardEntryReasonCode = "suppressed_hard_bounce"
+	ContactConsentGuardEntryReasonCodeSuppressedObjection          ContactConsentGuardEntryReasonCode = "suppressed_objection"
+	ContactConsentGuardEntryReasonCodeSuppressedRestricted         ContactConsentGuardEntryReasonCode = "suppressed_restricted"
+	ContactConsentGuardEntryReasonCodeSuppressedSubjectRequest     ContactConsentGuardEntryReasonCode = "suppressed_subject_request"
+	ContactConsentGuardEntryReasonCodeUnconfirmedDoubleOptIn       ContactConsentGuardEntryReasonCode = "unconfirmed_double_opt_in"
+)
+
+// Valid indicates whether the value is a known member of the ContactConsentGuardEntryReasonCode enum.
+func (e ContactConsentGuardEntryReasonCode) Valid() bool {
+	switch e {
+	case ContactConsentGuardEntryReasonCodeConsentConfirmed:
+		return true
+	case ContactConsentGuardEntryReasonCodeConsentWithdrawn:
+		return true
+	case ContactConsentGuardEntryReasonCodeContractNotice:
+		return true
+	case ContactConsentGuardEntryReasonCodeNoCallPath:
+		return true
+	case ContactConsentGuardEntryReasonCodeNoConnection:
+		return true
+	case ContactConsentGuardEntryReasonCodeNoConsent:
+		return true
+	case ContactConsentGuardEntryReasonCodeNoConsentExceptionNotOffered:
+		return true
+	case ContactConsentGuardEntryReasonCodeObjection:
+		return true
+	case ContactConsentGuardEntryReasonCodeQualifyingEvent:
+		return true
+	case ContactConsentGuardEntryReasonCodeSaidWeMayWrite:
+		return true
+	case ContactConsentGuardEntryReasonCodeSuppressed:
+		return true
+	case ContactConsentGuardEntryReasonCodeSuppressedHardBounce:
+		return true
+	case ContactConsentGuardEntryReasonCodeSuppressedObjection:
+		return true
+	case ContactConsentGuardEntryReasonCodeSuppressedRestricted:
+		return true
+	case ContactConsentGuardEntryReasonCodeSuppressedSubjectRequest:
+		return true
+	case ContactConsentGuardEntryReasonCodeUnconfirmedDoubleOptIn:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ContactConsentGuardEntryVerdict.
 const (
 	ContactConsentGuardEntryVerdictAllowed ContactConsentGuardEntryVerdict = "allowed"
@@ -7568,6 +7649,8 @@ func (e ContactPhoneInputPhoneType) Valid() bool {
 const (
 	ContactProfileFieldFieldAddress     ContactProfileFieldField = "address"
 	ContactProfileFieldFieldCompanyName ContactProfileFieldField = "company_name"
+	ContactProfileFieldFieldFirstName   ContactProfileFieldField = "first_name"
+	ContactProfileFieldFieldLastName    ContactProfileFieldField = "last_name"
 	ContactProfileFieldFieldLinkedin    ContactProfileFieldField = "linkedin"
 	ContactProfileFieldFieldPhone       ContactProfileFieldField = "phone"
 	ContactProfileFieldFieldRole        ContactProfileFieldField = "role"
@@ -7581,6 +7664,10 @@ func (e ContactProfileFieldField) Valid() bool {
 	case ContactProfileFieldFieldAddress:
 		return true
 	case ContactProfileFieldFieldCompanyName:
+		return true
+	case ContactProfileFieldFieldFirstName:
+		return true
+	case ContactProfileFieldFieldLastName:
 		return true
 	case ContactProfileFieldFieldLinkedin:
 		return true
@@ -9643,6 +9730,24 @@ func (e DecideCommissionRequestDecision) Valid() bool {
 	case DecideCommissionRequestDecisionPay:
 		return true
 	case DecideCommissionRequestDecisionVoid:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DeclaredExtensionSettingKind.
+const (
+	DeclaredExtensionSettingKindSwitch DeclaredExtensionSettingKind = "switch"
+	DeclaredExtensionSettingKindText   DeclaredExtensionSettingKind = "text"
+)
+
+// Valid indicates whether the value is a known member of the DeclaredExtensionSettingKind enum.
+func (e DeclaredExtensionSettingKind) Valid() bool {
+	switch e {
+	case DeclaredExtensionSettingKindSwitch:
+		return true
+	case DeclaredExtensionSettingKindText:
 		return true
 	default:
 		return false
@@ -19858,6 +19963,69 @@ func (e UserStatus) Valid() bool {
 	}
 }
 
+// Defines values for VCardImportFieldAction.
+const (
+	VCardImportFieldActionVCardImportFieldActionImported  VCardImportFieldAction = "imported"
+	VCardImportFieldActionVCardImportFieldActionKept      VCardImportFieldAction = "kept"
+	VCardImportFieldActionVCardImportFieldActionNotInCard VCardImportFieldAction = "not_in_card"
+	VCardImportFieldActionVCardImportFieldActionReplaced  VCardImportFieldAction = "replaced"
+)
+
+// Valid indicates whether the value is a known member of the VCardImportFieldAction enum.
+func (e VCardImportFieldAction) Valid() bool {
+	switch e {
+	case VCardImportFieldActionVCardImportFieldActionImported:
+		return true
+	case VCardImportFieldActionVCardImportFieldActionKept:
+		return true
+	case VCardImportFieldActionVCardImportFieldActionNotInCard:
+		return true
+	case VCardImportFieldActionVCardImportFieldActionReplaced:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for VCardImportFieldField.
+const (
+	VCardImportFieldFieldVCardImportFieldFieldAddress     VCardImportFieldField = "address"
+	VCardImportFieldFieldVCardImportFieldFieldCompanyName VCardImportFieldField = "company_name"
+	VCardImportFieldFieldVCardImportFieldFieldEmail       VCardImportFieldField = "email"
+	VCardImportFieldFieldVCardImportFieldFieldLinkedin    VCardImportFieldField = "linkedin"
+	VCardImportFieldFieldVCardImportFieldFieldMobilePhone VCardImportFieldField = "mobile_phone"
+	VCardImportFieldFieldVCardImportFieldFieldName        VCardImportFieldField = "name"
+	VCardImportFieldFieldVCardImportFieldFieldPhone       VCardImportFieldField = "phone"
+	VCardImportFieldFieldVCardImportFieldFieldTitle       VCardImportFieldField = "title"
+	VCardImportFieldFieldVCardImportFieldFieldWebsite     VCardImportFieldField = "website"
+)
+
+// Valid indicates whether the value is a known member of the VCardImportFieldField enum.
+func (e VCardImportFieldField) Valid() bool {
+	switch e {
+	case VCardImportFieldFieldVCardImportFieldFieldAddress:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldCompanyName:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldEmail:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldLinkedin:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldMobilePhone:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldName:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldPhone:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldTitle:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldWebsite:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for VCardImportResultOutcome.
 const (
 	VCardImportResultOutcomeVCardImportResultOutcomeCreated     VCardImportResultOutcome = "created"
@@ -21938,6 +22106,8 @@ func (e CapturedByKind) Valid() bool {
 const (
 	ContactProfileFieldKeyAddress     ContactProfileFieldKey = "address"
 	ContactProfileFieldKeyCompanyName ContactProfileFieldKey = "company_name"
+	ContactProfileFieldKeyFirstName   ContactProfileFieldKey = "first_name"
+	ContactProfileFieldKeyLastName    ContactProfileFieldKey = "last_name"
 	ContactProfileFieldKeyLinkedin    ContactProfileFieldKey = "linkedin"
 	ContactProfileFieldKeyPhone       ContactProfileFieldKey = "phone"
 	ContactProfileFieldKeyRole        ContactProfileFieldKey = "role"
@@ -21951,6 +22121,10 @@ func (e ContactProfileFieldKey) Valid() bool {
 	case ContactProfileFieldKeyAddress:
 		return true
 	case ContactProfileFieldKeyCompanyName:
+		return true
+	case ContactProfileFieldKeyFirstName:
+		return true
+	case ContactProfileFieldKeyLastName:
 		return true
 	case ContactProfileFieldKeyLinkedin:
 		return true
@@ -25060,6 +25234,9 @@ type Activity struct {
 
 	// EmailSummary Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
+
+	// Guests Meeting only: the guests who are not a colleague seat and whose contact is not among the `links` you see. That covers a guest who is not a contact yet, and one past the link ceiling or filed under a contact you may not read. `contact_id` is set only for a contact you may read. A colleague is in `colleague_ids`. Filled wherever one activity is answered whole; a list leaves it out. Withheld with the content, like `colleague_ids`.
+	Guests *[]MeetingGuest `json:"guests,omitempty"`
 
 	// HostUserId Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
 	HostUserId *openapi_types.UUID `json:"host_user_id,omitempty"`
@@ -33612,6 +33789,19 @@ type CompanyListResponse struct {
 	Page PageInfo  `json:"page"`
 }
 
+// CompanyOfferedValue The value one source last offered for one company field.
+type CompanyOfferedValue struct {
+	Field     CompanyOfferedValueField `json:"field"`
+	OfferedAt time.Time                `json:"offered_at"`
+
+	// SourceSystem The source that offered it, as named in the company's outside id.
+	SourceSystem string `json:"source_system"`
+	Value        string `json:"value"`
+}
+
+// CompanyOfferedValueField defines model for CompanyOfferedValue.Field.
+type CompanyOfferedValueField string
+
 // CompanyProfile The installation's own company. The flat properties remain compatibility aliases for the
 // existing form; `fields` and `facts` are the provenance-bearing source records used by new
 // clients and by CompanyContext. New onboarding considers the profile minimum-complete when
@@ -33813,11 +34003,15 @@ type CompanyScan struct {
 	// GeneratedBy Which writer produced the stored findings. Absent until a read has settled.
 	GeneratedBy *WrittenBy `json:"generated_by,omitempty"`
 
-	// Read What the last settled read took in, so the page can say "read 14 exchanges and
-	// 3 deals" rather than "done". Null until a read has settled.
+	// Read What the last settled read took in, so the page can say "read 14 exchanges in the
+	// last 180 days and 3 open deals" rather than "done". Null until a read has settled.
 	Read *struct {
+		// Deals The account's open deals the read took in.
 		Deals     int `json:"deals"`
 		Exchanges int `json:"exchanges"`
+
+		// WindowDays How many days back an exchange was read; older ones were not.
+		WindowDays int `json:"window_days"`
 	} `json:"read,omitempty"`
 
 	// ResumesAt When a read the AI budget deferred will try again. Null unless the scan is in
@@ -35151,8 +35345,16 @@ type ContactConsentGuardEntry struct {
 	// QualifyingEvent The recorded event that flipped business correspondence to allowed, when one did.
 	QualifyingEvent *ConsentQualifyingEvent `json:"qualifying_event,omitempty"`
 
-	// Reason The answer in the reader's words — "she wrote to you on 2 May", "opt-out 12 Jul", "no consent recorded". A verdict a rep cannot explain to the contact is not usable.
+	// Reason The answer in English words — "she wrote to you on 2 May", "opt-out 12 Jul", "no consent recorded". A verdict a rep cannot explain to the contact is not usable.
 	Reason string `json:"reason"`
+
+	// ReasonAt When the objection behind an `objection` reason was recorded, when the record carries it.
+	ReasonAt *time.Time `json:"reason_at,omitempty"`
+
+	// ReasonCode `reason` as a code, so a screen says it in its reader's language. A
+	// `qualifying_event` reason is told from `qualifying_event`, and an `objection` from
+	// `reason_at` when the date is known.
+	ReasonCode ContactConsentGuardEntryReasonCode `json:"reason_code"`
 
 	// Verdict `allowed` proceeds. `blocked` refuses and `reason` says why. `unknown` means no decision is recorded — the offered action is to request consent, never a silent grant.
 	Verdict ContactConsentGuardEntryVerdict `json:"verdict"`
@@ -35167,6 +35369,11 @@ type ContactConsentGuardEntryChannel string
 // legally wrong. `marketing` needs express consent with double-opt-in proof; the §7(3)
 // existing-customer exception is not offered. `phone_outreach` is specced and dormant.
 type ContactConsentGuardEntryPurposeClass string
+
+// ContactConsentGuardEntryReasonCode `reason` as a code, so a screen says it in its reader's language. A
+// `qualifying_event` reason is told from `qualifying_event`, and an `objection` from
+// `reason_at` when the date is known.
+type ContactConsentGuardEntryReasonCode string
 
 // ContactConsentGuardEntryVerdict `allowed` proceeds. `blocked` refuses and `reason` says why. `unknown` means no decision is recorded — the offered action is to request consent, never a silent grant.
 type ContactConsentGuardEntryVerdict string
@@ -36415,6 +36622,9 @@ type CreateCompanyRequest struct {
 	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
 	SourceAuthorName *string `json:"source_author_name,omitempty"`
 
+	// SourceId The id this company has in source_system. Needs source_system, and the pair is unique: a second company with the same pair is 409. Look a company up by it with the `source_system` and `source_id` filters on `listCompanies`.
+	SourceId *string `json:"source_id,omitempty"`
+
 	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -36463,6 +36673,9 @@ type CreateContactRequest struct {
 
 	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
 	SourceAuthorName *string `json:"source_author_name,omitempty"`
+
+	// SourceId The id this contact has in source_system. Needs source_system, and the pair is unique: a second contact with the same pair is 409.
+	SourceId *string `json:"source_id,omitempty"`
 
 	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
@@ -36580,6 +36793,9 @@ type CreateDealRequest struct {
 
 	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
 	SourceAuthorName *string `json:"source_author_name,omitempty"`
+
+	// SourceId The id this deal has in source_system. Needs source_system, and the pair is unique: a second deal with the same pair is 409. Look a deal up by it with the `source_system` and `source_id` filters on `listDeals`.
+	SourceId *string `json:"source_id,omitempty"`
 
 	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
@@ -37030,6 +37246,9 @@ type CreateProjectRequest struct {
 
 	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
 	SourceAuthorName *string `json:"source_author_name,omitempty"`
+
+	// SourceId The id this project has in source_system. Needs source_system, and the pair is unique: a second project with the same pair is 409.
+	SourceId *string `json:"source_id,omitempty"`
 
 	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
@@ -38478,6 +38697,27 @@ type DecideLegalReviewRequest struct {
 	Outcome  LegalReviewOutcome `json:"outcome"`
 }
 
+// DeclaredExtensionSetting One setting a unit declares, drawn by the core.
+type DeclaredExtensionSetting struct {
+	// Hint One line saying what the setting does.
+	Hint *string `json:"hint,omitempty"`
+
+	// Key The setting's name inside the unit.
+	Key string `json:"key"`
+
+	// Kind The control the core draws.
+	Kind *DeclaredExtensionSettingKind `json:"kind,omitempty"`
+
+	// Label The name shown to the admin, as the unit wrote it.
+	Label *string `json:"label,omitempty"`
+
+	// Value The saved value. A switch holds `true` or `false`; a text setting holds one short line.
+	Value string `json:"value"`
+}
+
+// DeclaredExtensionSettingKind The control the core draws.
+type DeclaredExtensionSettingKind string
+
 // DedupeCandidate One DH-DDL-1 review-queue row: the canonical unordered pair, its confidence, and the detection-time evidence snapshot (DH-N-8).
 type DedupeCandidate struct {
 	// CanDecide Whether THIS caller could dispose of the pair — merge it, dismiss it,
@@ -38558,7 +38798,7 @@ type DemoteLeadResponse struct {
 	// ContactId The contact the promotion had produced or merged into.
 	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
 
-	// Lead A thin, segregated prospect. Mirrors the `lead` table. NO company FK.
+	// Lead A thin, segregated prospect. Mirrors the `lead` table.
 	Lead Lead `json:"lead"`
 
 	// Unwind `reversed` — the promotion had created a contact, which is now archived and the
@@ -39386,6 +39626,18 @@ type ExtensionIngestRefusal struct {
 // names the mapping to fix: "every record fails its participants" is a different
 // bug from "every record fails its key".
 type ExtensionIngestRefusalRefusal string
+
+// ExtensionSettings The governance settings of one composed extension unit.
+type ExtensionSettings struct {
+	// Declared The settings the unit declares as data, with their saved values. Only an admin gets them back, so the list is absent for anyone else. On a write, send the `key` and `value` of each setting to change; a setting left out keeps its value.
+	Declared *[]DeclaredExtensionSetting `json:"declared,omitempty"`
+
+	// LandsRecords True when the unit lands companies or deals. Only such a unit has a field a user can have edited, so the screen offers the overwrite switch for it and for no other unit. Ignored on a write.
+	LandsRecords *bool `json:"lands_records,omitempty"`
+
+	// OverwritesEditedFields True when the unit's feed may overwrite a company or deal field that a user last edited. False, the default, makes the feed leave such a field as it is and name it in `Result.Withheld`.
+	OverwritesEditedFields bool `json:"overwrites_edited_fields"`
+}
 
 // ExtensionUnitIngestHealth defines model for ExtensionUnitIngestHealth.
 type ExtensionUnitIngestHealth struct {
@@ -42561,7 +42813,7 @@ type KnowledgeDocumentList struct {
 //   - `complete`: every live passage carries a vector under the model bound now.
 type KnowledgeEmbedState string
 
-// Lead A thin, segregated prospect. Mirrors the `lead` table. NO company FK.
+// Lead A thin, segregated prospect. Mirrors the `lead` table.
 type Lead struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
@@ -42575,7 +42827,13 @@ type Lead struct {
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
-	// CompanyName Free text; there is no foreign key to a company.
+	// CompanyId The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. Null until then, and null again when an edit of `company_name` no longer names the linked company. Withheld when the reader cannot open that company.
+	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
+
+	// CompanyMatch A company the lead's `company_name` names exactly, offered for a human to confirm. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise.
+	CompanyMatch *LeadCompanyMatch `json:"company_match,omitempty"`
+
+	// CompanyName Free text, as captured or typed. It names the company until a human links one (`company_id`).
 	CompanyName    *string   `json:"company_name,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
 	DisqualifyNote *string   `json:"disqualify_note,omitempty"`
@@ -42637,7 +42895,7 @@ type Lead struct {
 	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
 	Phone *string `json:"phone,omitempty"`
 
-	// ProjectId The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm and none can: a lead has no company_id, only candidate_company_key, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.
+	// ProjectId The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm: a lead's company_id is an optional link a human confirms, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.
 	ProjectId  *openapi_types.UUID `json:"project_id,omitempty"`
 	PromotedAt *time.Time          `json:"promoted_at,omitempty"`
 
@@ -42711,6 +42969,14 @@ type LeadStatus string
 
 // LeadStatusSetBy Who last placed the lead on its status: a human by hand (an agent acting for one counts as the human), or the system from captured activity. Null for a lead nobody has moved yet — one still on new, or one carried over from before the ladder existed.
 type LeadStatusSetBy string
+
+// LeadCompanyMatch A company the lead's `company_name` names exactly, offered for a human to confirm. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise.
+type LeadCompanyMatch struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Name The company's display name.
+	Name string `json:"name"`
+}
 
 // LeadDisqualifyReason defines model for LeadDisqualifyReason.
 type LeadDisqualifyReason struct {
@@ -43422,6 +43688,12 @@ type LinkFinanceSourceCustomerRequest struct {
 	CompanyId openapi_types.UUID `json:"company_id"`
 }
 
+// LinkLeadCompanyRequest defines model for LinkLeadCompanyRequest.
+type LinkLeadCompanyRequest struct {
+	// CompanyId The company to link. The caller must be able to open it.
+	CompanyId openapi_types.UUID `json:"company_id"`
+}
+
 // LinkedInAccount defines model for LinkedInAccount.
 type LinkedInAccount struct {
 	// Connected Whether this member has authorized LinkedIn.
@@ -43921,6 +44193,9 @@ type MagicLine struct {
 	// Lane Which lane this line belongs to. Carried on the line as well as by the array it sits in, so a client that flattens the four for a preview does not lose which one a line came from.
 	Lane MagicLineLane `json:"lane"`
 
+	// Maintenance True when the line is a release correction repairing older records (a data task), not work done for the reader. One correction run is one line however many records it touched, and two runs are two lines. A reader shows these apart from business outcomes and never counts them as things that got done for a customer. Absent or false is an ordinary line.
+	Maintenance *bool `json:"maintenance,omitempty"`
+
 	// OccurredAt When the thing happened. On a `watching` line it is when the condition was OBSERVED instead, uniformly: a source that is off rather than failing has no beginning to report, and dating the observation as the outage would tell a reader a long-dead mailbox broke just now. Where a condition does have a start, it travels as the `failing_since` value on the summary.
 	OccurredAt time.Time `json:"occurred_at"`
 
@@ -44339,6 +44614,18 @@ type MeetingBriefSection struct {
 // `talking_points` — each tied to a specific captured statement.
 // `company_context` — background, collapsed and last.
 type MeetingBriefSectionKind string
+
+// MeetingGuest One guest on a meeting who is not a colleague seat.
+type MeetingGuest struct {
+	// Address The address the invitation named them by. Absent when no row holds one.
+	Address *string `json:"address,omitempty"`
+
+	// ContactId The contact this guest is. Present only when you may read that contact.
+	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
+
+	// DisplayName The contact's name when you may read the contact, else the name the invitation gave, else empty.
+	DisplayName string `json:"display_name"`
+}
 
 // MeetingInvitation defines model for MeetingInvitation.
 type MeetingInvitation struct {
@@ -46916,7 +47203,7 @@ type PromoteLeadRequest struct {
 	// Deal Open a deal in the same transaction as the promotion. Omit both ids to use the
 	// default pipeline's first open stage; a pipeline alone takes its first open stage; a
 	// stage alone is placed in its own pipeline. The deal's owner is the lead's owner
-	// and its company is left unset (a lead has no company). The deal's id lands
+	// and its company is left unset, also for a lead linked to a company. The deal's id lands
 	// on the lead as `qualified_deal_id`; a deal failure rolls the whole promotion back.
 	Deal *QualifyDealRequest `json:"deal,omitempty"`
 
@@ -47377,7 +47664,7 @@ type PutOnboardingStateRequestStep string
 // QualifyDealRequest Open a deal in the same transaction as the promotion. Omit both ids to use the
 // default pipeline's first open stage; a pipeline alone takes its first open stage; a
 // stage alone is placed in its own pipeline. The deal's owner is the lead's owner
-// and its company is left unset (a lead has no company). The deal's id lands
+// and its company is left unset, also for a lead linked to a company. The deal's id lands
 // on the lead as `qualified_deal_id`; a deal failure rolls the whole promotion back.
 type QualifyDealRequest struct {
 	AmountMinor *int64 `json:"amount_minor,omitempty"`
@@ -50459,6 +50746,14 @@ type SendMessageRequest struct {
 // objected, so naming one here is refused (422 `invalid`).
 type SendMessageRequestCommunicationContext string
 
+// ServiceMemberRequest A member for an extension's unattended feed. No password and no way in.
+type ServiceMemberRequest struct {
+	DisplayName string `json:"display_name"`
+
+	// Extension The extension unit the member serves, by its manifest name. Only that unit may act as the member. A name no installed unit carries is accepted and simply never used.
+	Extension string `json:"extension"`
+}
+
 // ServiceStatus The fixed answer of `GET /status`.
 type ServiceStatus struct {
 	Status ServiceStatusStatus `json:"status"`
@@ -53158,7 +53453,7 @@ type UpdateLeadRequest struct {
 	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
 	Phone *string `json:"phone,omitempty"`
 
-	// ProjectId The body of work this lead belongs to; carries no same-company guard (a lead has no company).
+	// ProjectId The body of work this lead belongs to; carries no same-company guard, also for a lead linked to a company.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 
 	// Score Manual human score override (formulas §3.1, AC-S1). Omit to keep the computed lead-local score. Setting it REQUIRES `score_override_reason`; passing null clears the override and resumes recompute.
@@ -53587,6 +53882,9 @@ type User struct {
 	// Roles This member's assigned system role keys. Present ONLY for an admin caller — the roster is readable by every authenticated member (it feeds the share/assignee pickers), and a rep has no business enumerating who holds `admin`. Normally exactly one key: `inviteUser` assigns one and `changeUserRole` replaces the whole set with one. Clients that render a single current role must still handle the empty and multi-key cases. Deliberately absent on `MeResponse.user`, whose sibling `MeResponse.roles` is the one authority for the caller's own roles — the same fact spelled twice could disagree.
 	Roles *[]string `json:"roles,omitempty"`
 
+	// ServiceExtension The extension unit this seat is the service member of: the identity that unit's scheduled feed runs as. Null for every other seat, including an AI agent seat, so a client tells the two apart by this field and not by `is_agent`. Present only for an admin caller, with `roles`.
+	ServiceExtension *string `json:"service_extension,omitempty"`
+
 	// Status `invited` is a seat that exists and has never been entered: the member holds a licensed seat and appears in the roster, but has set no password and can sign in by no method until they redeem their invitation link. Redeeming it makes them `active`, which is the only status that may sign in.
 	// An invited member counts against the licensed seat count, so an invitation that was sent to the wrong address is released by deactivating it.
 	Status UserStatus `json:"status"`
@@ -53651,6 +53949,40 @@ type UserSessionList struct {
 	Sessions []UserSession `json:"sessions"`
 }
 
+// VCardImportField One field of a card, and what the import did with it.
+type VCardImportField struct {
+	// Action `imported` — the record now holds the card's value. `replaced` — the card's value
+	// took the place of a different one, which is kept in `superseded_value` for the
+	// restore. `kept` — the card stated a value and the record kept its own: a human
+	// corrected the field, a newer statement already stands, the number could not be read,
+	// or it is a matched contact's name or an email address, which the import does not add
+	// to a contact who already exists. `not_in_card` — the card states nothing here.
+	Action VCardImportFieldAction `json:"action"`
+
+	// Field The field, named as `POST /contacts/{id}/profile-fields/{field}/restore` names it
+	// where that endpoint has one. `name` and `email` have no profile field. A mobile number
+	// reports as `mobile_phone` and every other number as `phone`; both restore as `phone`.
+	// A field appears once per value, so a card with two addresses reports two `email` rows.
+	Field VCardImportFieldField `json:"field"`
+
+	// Value The value the card stated. Absent for `not_in_card`.
+	Value *string `json:"value,omitempty"`
+}
+
+// VCardImportFieldAction `imported` — the record now holds the card's value. `replaced` — the card's value
+// took the place of a different one, which is kept in `superseded_value` for the
+// restore. `kept` — the card stated a value and the record kept its own: a human
+// corrected the field, a newer statement already stands, the number could not be read,
+// or it is a matched contact's name or an email address, which the import does not add
+// to a contact who already exists. `not_in_card` — the card states nothing here.
+type VCardImportFieldAction string
+
+// VCardImportFieldField The field, named as `POST /contacts/{id}/profile-fields/{field}/restore` names it
+// where that endpoint has one. `name` and `email` have no profile field. A mobile number
+// reports as `mobile_phone` and every other number as `phone`; both restore as `phone`.
+// A field appears once per value, so a card with two addresses reports two `email` rows.
+type VCardImportFieldField string
+
 // VCardImportReport One entry per card in the file, in the order the file listed them.
 type VCardImportReport struct {
 	Results []VCardImportResult `json:"results"`
@@ -53661,6 +53993,12 @@ type VCardImportResult struct {
 	// ContactId The contact created or updated, or — for `needs_review` — the candidate the card resembles.
 	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
 
+	// Fields What the import did with each field of this card, read from the writer's own
+	// decisions. Present for `created` and `updated`, and absent for every other outcome,
+	// since those write nothing. `importCardPhoto` shares this schema and never sends it:
+	// a card read from a photo is a proposal, and nothing is written.
+	Fields *[]VCardImportField `json:"fields,omitempty"`
+
 	// FullName The name the card stated, so a reader can find the row it came from.
 	FullName string `json:"full_name"`
 
@@ -53668,7 +54006,8 @@ type VCardImportResult struct {
 	Index int `json:"index"`
 
 	// Outcome `created` — nobody matched, so the card became a contact, their company and the edge
-	// between them. `updated` — an exact match, filled only where the record was empty.
+	// between them. `updated` — an exact match: what the card states replaces an older value, which
+	// stays in `superseded_value`, and a field a human corrected stands.
 	// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
 	// `proposed` — a card read from a photo that nobody matched, waiting on an approval.
 	// `skipped` — the card states no name, carries a sending system's address, or matches a
@@ -53680,7 +54019,8 @@ type VCardImportResult struct {
 }
 
 // VCardImportResultOutcome `created` — nobody matched, so the card became a contact, their company and the edge
-// between them. `updated` — an exact match, filled only where the record was empty.
+// between them. `updated` — an exact match: what the card states replaces an older value, which
+// stays in `superseded_value`, and a field a human corrected stands.
 // `needs_review` — a resemblance, written nowhere; open the candidate and decide.
 // `proposed` — a card read from a photo that nobody matched, waiting on an approval.
 // `skipped` — the card states no name, carries a sending system's address, or matches a
@@ -56640,7 +56980,7 @@ type ListActivitiesParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -57066,7 +57406,7 @@ type ListAiCallsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Task Filter to one task (capture_classify, enrich, …).
@@ -57294,7 +57634,7 @@ type ListReportRunsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -57332,7 +57672,7 @@ type ListApprovalsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// IncludeMuted Include the caller's muted pending proposals for explicit review; all existing visibility checks still apply. A filtered bundle can contain fewer members than its complete review.
@@ -57435,7 +57775,7 @@ type ListAttachmentsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit      *Limit                          `form:"limit,omitempty" json:"limit,omitempty"`
 	EntityType ListAttachmentsParamsEntityType `form:"entity_type" json:"entity_type"`
 	EntityId   openapi_types.UUID              `form:"entity_id" json:"entity_id"`
@@ -57468,7 +57808,7 @@ type ListAuditLogParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Actor Typed principal filter, e.g. human:<uuid> or agent:sdr.
@@ -57529,7 +57869,7 @@ type ListAutomationsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -57555,7 +57895,7 @@ type ListAutomationRunsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Outcome Filter by run outcome (matches automation_run.status, data-model §12.5).
@@ -57703,7 +58043,7 @@ type ListMyCaptureActivityParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -57719,7 +58059,7 @@ type ListWorkspaceCaptureActivityParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -57741,7 +58081,7 @@ type ListDomainQuestionsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -57798,7 +58138,7 @@ type ListCommissionEntriesParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// PartnerCompanyId The entries owed to one partner.
@@ -57843,7 +58183,7 @@ type ListCompaniesParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
@@ -57978,6 +58318,14 @@ type ListCompaniesParams struct {
 	// reads them in one request instead of one each. An id the caller cannot see, or that
 	// is archived without `include_archived`, is simply absent from the page.
 	Id *[]openapi_types.UUID `form:"id,omitempty" json:"id,omitempty"`
+
+	// SourceSystem Companies that came from this outside system, matched exactly. Send `source_id`
+	// too to find the one company holding that id there. A company the caller cannot
+	// see, or that is archived without `include_archived`, is simply absent from the page.
+	SourceSystem *string `form:"source_system,omitempty" json:"source_system,omitempty"`
+
+	// SourceId An id in an outside system, matched exactly. Send `source_system` with it, because the same id can mean different companies in different systems.
+	SourceId *string `form:"source_id,omitempty" json:"source_id,omitempty"`
 }
 
 // ListCompaniesParamsCapturedByKind defines parameters for ListCompanies.
@@ -58081,7 +58429,7 @@ type GetCompanyAccessParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -58148,7 +58496,7 @@ type ListCompanyContactsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -58167,7 +58515,7 @@ type ListCompanyContractsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit  *Limit                            `form:"limit,omitempty" json:"limit,omitempty"`
 	Status *ListCompanyContractsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
@@ -58190,7 +58538,7 @@ type ListCompanyDocumentsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit      *Limit                              `form:"limit,omitempty" json:"limit,omitempty"`
 	Category   *ListCompanyDocumentsParamsCategory `form:"category,omitempty" json:"category,omitempty"`
 	DocState   *ListCompanyDocumentsParamsDocState `form:"doc_state,omitempty" json:"doc_state,omitempty"`
@@ -58681,7 +59029,7 @@ type ListConfirmSubmissionsParams struct {
 	// Resolved false for the queue, true for what has been decided. Omit for both.
 	Resolved *bool `form:"resolved,omitempty" json:"resolved,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes all three parts of this queue's order — whether the row is resolved, its `submitted_at`, and its id — because two subjects can send in the same second and an id alone cannot continue an order it is only the tie-break of. Changing `contact_id` or `resolved` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when a filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`.
@@ -58724,7 +59072,7 @@ type ListContactsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
@@ -58974,7 +59322,7 @@ type GetContactAccessParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -59257,7 +59605,7 @@ type ListCustomFieldsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -59404,7 +59752,7 @@ type ListDataSubjectRequestsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -59458,7 +59806,7 @@ type ListDealRoomsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -59652,7 +60000,7 @@ type ListDealsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
@@ -59775,6 +60123,14 @@ type ListDealsParams struct {
 	// not read companies is refused with `403`, and a role that withholds the deal's company
 	// with `422` `field_masked`.
 	Country *string `form:"country,omitempty" json:"country,omitempty"`
+
+	// SourceSystem Deals that came from this outside system, matched exactly. Send `source_id` too to
+	// find the one deal holding that id there. A deal that is archived without
+	// `include_archived` is simply absent from the page.
+	SourceSystem *string `form:"source_system,omitempty" json:"source_system,omitempty"`
+
+	// SourceId An id in an outside system, matched exactly. Send `source_system` with it, because the same id can mean different deals in different systems.
+	SourceId *string `form:"source_id,omitempty" json:"source_id,omitempty"`
 }
 
 // ListDealsParamsStatus defines parameters for ListDeals.
@@ -59951,7 +60307,7 @@ type ListDealDocumentsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit         *Limit                           `form:"limit,omitempty" json:"limit,omitempty"`
 	Category      *ListDealDocumentsParamsCategory `form:"category,omitempty" json:"category,omitempty"`
 	IncludeHidden *bool                            `form:"include_hidden,omitempty" json:"include_hidden,omitempty"`
@@ -59978,7 +60334,7 @@ type ListDealOffersParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit  *Limit                      `form:"limit,omitempty" json:"limit,omitempty"`
 	Status *ListDealOffersParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 }
@@ -60144,7 +60500,7 @@ type GetFieldHistoryParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit      *Limit                          `form:"limit,omitempty" json:"limit,omitempty"`
 	EntityType GetFieldHistoryParamsEntityType `form:"entity_type" json:"entity_type"`
 	EntityId   openapi_types.UUID              `form:"entity_id" json:"entity_id"`
@@ -60183,7 +60539,7 @@ type ListFinanceSourceCustomersParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -60348,7 +60704,7 @@ type ListAgentClientsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -60536,7 +60892,7 @@ type ListLeadsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
@@ -60840,7 +61196,7 @@ type ExplainLeadScoreParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -60943,7 +61299,7 @@ type ListListHistoryParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -60959,7 +61315,7 @@ type ListListMembersParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// EntityId Only these records, at most 200, answered in one page; a record that is not a member, or that this caller cannot see, is absent. Takes no cursor.
@@ -61020,7 +61376,7 @@ type ImportLinkedInConnectionsMultipartBody struct {
 
 // GetMyLinkedInReachParams defines parameters for GetMyLinkedInReach.
 type GetMyLinkedInReachParams struct {
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -61112,7 +61468,7 @@ type ListOfferTemplatesParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -61365,7 +61721,7 @@ type ListPartnersParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -61515,7 +61871,7 @@ type ListNoticeCasesParams struct {
 	// State Repeat to ask for several. Omitted means every unresolved state.
 	State *[]NoticeCaseState `form:"state,omitempty" json:"state,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes the last row's `due_at` and id — both, because the order is by both, and an id alone cannot continue it when two duties fall due in the same second. Changing `state` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when the filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`.
@@ -61534,7 +61890,7 @@ type ListProductsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -61615,7 +61971,7 @@ type ListProjectsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -61850,7 +62206,7 @@ type ListProjectHealthAssessmentsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -62150,7 +62506,7 @@ type ListRecordGrantsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -62260,7 +62616,7 @@ type GetRecordHistoryParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Action Return only the rows recording this verb. A caller that wants ONE event —
@@ -62327,7 +62683,7 @@ type ListRelationshipsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -62397,7 +62753,7 @@ type ListLegalHoldsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -62461,7 +62817,7 @@ type ListRestrictedActivitiesParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -62657,7 +63013,7 @@ type SearchParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -62676,7 +63032,7 @@ type ListSignalsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -62993,7 +63349,7 @@ type ListTeamsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Q Case-insensitive match over team name.
@@ -63012,7 +63368,7 @@ type ListUsersParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Q Case-insensitive match over display_name/email.
@@ -63194,7 +63550,7 @@ type ListVoiceProfileDeltasParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -63278,7 +63634,7 @@ type ListVoiceProfileVersionsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -63386,7 +63742,7 @@ type UpdateWebhookSubscriptionParams struct {
 
 // ListWebhookDeliveriesParams defines parameters for ListWebhookDeliveries.
 type ListWebhookDeliveriesParams struct {
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -64175,6 +64531,9 @@ type ResolveEntitiesJSONRequestBody = EntityResolutionRequest
 // CreateFilteredExportJSONRequestBody defines body for CreateFilteredExport for application/json ContentType.
 type CreateFilteredExportJSONRequestBody = FilteredExportRequest
 
+// UpdateExtensionSettingsJSONRequestBody defines body for UpdateExtensionSettings for application/json ContentType.
+type UpdateExtensionSettingsJSONRequestBody = ExtensionSettings
+
 // PreviewFilterJSONRequestBody defines body for PreviewFilter for application/json ContentType.
 type PreviewFilterJSONRequestBody = FilterPreviewRequest
 
@@ -64288,6 +64647,9 @@ type DemoteLeadJSONRequestBody = DemoteLeadRequest
 
 // DraftLeadEmailJSONRequestBody defines body for DraftLeadEmail for application/json ContentType.
 type DraftLeadEmailJSONRequestBody = DraftSteering
+
+// LinkLeadCompanyJSONRequestBody defines body for LinkLeadCompany for application/json ContentType.
+type LinkLeadCompanyJSONRequestBody = LinkLeadCompanyRequest
 
 // SetLeadManualSignalJSONRequestBody defines body for SetLeadManualSignal for application/json ContentType.
 type SetLeadManualSignalJSONRequestBody = SetLeadManualSignalRequest
@@ -64619,6 +64981,9 @@ type InviteUserJSONRequestBody = InviteUserRequest
 // CreateFormerMemberJSONRequestBody defines body for CreateFormerMember for application/json ContentType.
 type CreateFormerMemberJSONRequestBody = FormerMemberRequest
 
+// DeclareServiceMemberJSONRequestBody defines body for DeclareServiceMember for application/json ContentType.
+type DeclareServiceMemberJSONRequestBody = ServiceMemberRequest
+
 // DeactivateUserJSONRequestBody defines body for DeactivateUser for application/json ContentType.
 type DeactivateUserJSONRequestBody = DeactivateUserRequest
 
@@ -64885,6 +65250,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'email_summary': %w", err)
 		}
 		delete(object, "email_summary")
+	}
+
+	if raw, found := object["guests"]; found {
+		err = json.Unmarshal(raw, &a.Guests)
+		if err != nil {
+			return fmt.Errorf("error reading 'guests': %w", err)
+		}
+		delete(object, "guests")
 	}
 
 	if raw, found := object["host_user_id"]; found {
@@ -65238,6 +65611,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["email_summary"], err = json.Marshal(a.EmailSummary)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'email_summary': %w", err)
+		}
+	}
+
+	if a.Guests != nil {
+		object["guests"], err = json.Marshal(a.Guests)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'guests': %w", err)
 		}
 	}
 
@@ -67812,6 +68192,14 @@ func (a *CreateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source_author_name")
 	}
 
+	if raw, found := object["source_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_id': %w", err)
+		}
+		delete(object, "source_id")
+	}
+
 	if raw, found := object["source_system"]; found {
 		err = json.Unmarshal(raw, &a.SourceSystem)
 		if err != nil {
@@ -67916,6 +68304,13 @@ func (a CreateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
+	}
+
+	if a.SourceId != nil {
+		object["source_id"], err = json.Marshal(a.SourceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_id': %w", err)
 		}
 	}
 
@@ -68048,6 +68443,14 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source_author_name")
 	}
 
+	if raw, found := object["source_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_id': %w", err)
+		}
+		delete(object, "source_id")
+	}
+
 	if raw, found := object["source_system"]; found {
 		err = json.Unmarshal(raw, &a.SourceSystem)
 		if err != nil {
@@ -68153,6 +68556,13 @@ func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
+	}
+
+	if a.SourceId != nil {
+		object["source_id"], err = json.Marshal(a.SourceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_id': %w", err)
 		}
 	}
 
@@ -68637,6 +69047,14 @@ func (a *CreateDealRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source_author_name")
 	}
 
+	if raw, found := object["source_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_id': %w", err)
+		}
+		delete(object, "source_id")
+	}
+
 	if raw, found := object["source_system"]; found {
 		err = json.Unmarshal(raw, &a.SourceSystem)
 		if err != nil {
@@ -68789,6 +69207,13 @@ func (a CreateDealRequest) MarshalJSON() ([]byte, error) {
 		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
+	}
+
+	if a.SourceId != nil {
+		object["source_id"], err = json.Marshal(a.SourceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_id': %w", err)
 		}
 	}
 
@@ -69217,6 +69642,14 @@ func (a *CreateProjectRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source_author_name")
 	}
 
+	if raw, found := object["source_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_id': %w", err)
+		}
+		delete(object, "source_id")
+	}
+
 	if raw, found := object["source_system"]; found {
 		err = json.Unmarshal(raw, &a.SourceSystem)
 		if err != nil {
@@ -69300,6 +69733,13 @@ func (a CreateProjectRequest) MarshalJSON() ([]byte, error) {
 		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
+	}
+
+	if a.SourceId != nil {
+		object["source_id"], err = json.Marshal(a.SourceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_id': %w", err)
 		}
 	}
 
@@ -70934,6 +71374,22 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "captured_by")
 	}
 
+	if raw, found := object["company_id"]; found {
+		err = json.Unmarshal(raw, &a.CompanyId)
+		if err != nil {
+			return fmt.Errorf("error reading 'company_id': %w", err)
+		}
+		delete(object, "company_id")
+	}
+
+	if raw, found := object["company_match"]; found {
+		err = json.Unmarshal(raw, &a.CompanyMatch)
+		if err != nil {
+			return fmt.Errorf("error reading 'company_match': %w", err)
+		}
+		delete(object, "company_match")
+	}
+
 	if raw, found := object["company_name"]; found {
 		err = json.Unmarshal(raw, &a.CompanyName)
 		if err != nil {
@@ -71361,6 +71817,20 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 	object["captured_by"], err = json.Marshal(a.CapturedBy)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'captured_by': %w", err)
+	}
+
+	if a.CompanyId != nil {
+		object["company_id"], err = json.Marshal(a.CompanyId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'company_id': %w", err)
+		}
+	}
+
+	if a.CompanyMatch != nil {
+		object["company_match"], err = json.Marshal(a.CompanyMatch)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'company_match': %w", err)
+		}
 	}
 
 	if a.CompanyName != nil {
@@ -76325,6 +76795,9 @@ type ServerInterface interface {
 	// Merge this company into a target (non-lossy).
 	// (POST /companies/{id}/merge)
 	MergeCompany(w http.ResponseWriter, r *http.Request, id Id, params MergeCompanyParams)
+	// What each source last offered for the company's fields, to show beside the value on the record.
+	// (GET /companies/{id}/offered-values)
+	ListCompanyOfferedValues(w http.ResponseWriter, r *http.Request, id Id)
 	// Read the partner extension on a company (404 if the company is not a partner).
 	// (GET /companies/{id}/partner)
 	GetPartner(w http.ResponseWriter, r *http.Request, id Id)
@@ -76913,6 +77386,12 @@ type ServerInterface interface {
 	// List the composed extension units and what each contributes. Human-only, read-only; needs the extension_access read grant.
 	// (GET /extensions)
 	ListExtensions(w http.ResponseWriter, r *http.Request)
+	// Read what the core does with a unit's feed. Needs the extension_access read grant.
+	// (GET /extensions/{name}/settings)
+	GetExtensionSettings(w http.ResponseWriter, r *http.Request, name string)
+	// Set what the core does with a unit's feed. Admin only.
+	// (PUT /extensions/{name}/settings)
+	UpdateExtensionSettings(w http.ResponseWriter, r *http.Request, name string)
 	// Per-field change history for one record, projected from audit_log before/after diffs.
 	// (GET /field-history)
 	GetFieldHistory(w http.ResponseWriter, r *http.Request, params GetFieldHistoryParams)
@@ -77207,6 +77686,9 @@ type ServerInterface interface {
 	// Draft an email to this lead, grounded in their record.
 	// (POST /leads/{id}/draft-email)
 	DraftLeadEmail(w http.ResponseWriter, r *http.Request, id Id)
+	// Link a lead to a company, and add the lead as a contact there.
+	// (POST /leads/{id}/link-company)
+	LinkLeadCompany(w http.ResponseWriter, r *http.Request, id Id)
 	// List current and superseded human-provided qualification signals.
 	// (GET /leads/{id}/manual-signals)
 	ListLeadManualSignals(w http.ResponseWriter, r *http.Request, id Id)
@@ -78017,6 +78499,12 @@ type ServerInterface interface {
 	// Name the colleagues behind a set of ids. Read-only.
 	// (GET /users/names)
 	NameSeats(w http.ResponseWriter, r *http.Request, params NameSeatsParams)
+	// Declare the member that owns an extension's unattended feed. Installation admin only, human only.
+	// (POST /users/service-members)
+	DeclareServiceMember(w http.ResponseWriter, r *http.Request)
+	// Retire a service member. Installation admin only, human only.
+	// (POST /users/service-members/{id}/archive)
+	ArchiveServiceMember(w http.ResponseWriter, r *http.Request, id Id)
 	// What this member sees and may do today, from their roles and teams.
 	// (GET /users/{id}/access)
 	GetUserAccess(w http.ResponseWriter, r *http.Request, id Id)
@@ -79874,6 +80362,12 @@ func (_ Unimplemented) MergeCompany(w http.ResponseWriter, r *http.Request, id I
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// What each source last offered for the company's fields, to show beside the value on the record.
+// (GET /companies/{id}/offered-values)
+func (_ Unimplemented) ListCompanyOfferedValues(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Read the partner extension on a company (404 if the company is not a partner).
 // (GET /companies/{id}/partner)
 func (_ Unimplemented) GetPartner(w http.ResponseWriter, r *http.Request, id Id) {
@@ -81050,6 +81544,18 @@ func (_ Unimplemented) ListExtensions(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Read what the core does with a unit's feed. Needs the extension_access read grant.
+// (GET /extensions/{name}/settings)
+func (_ Unimplemented) GetExtensionSettings(w http.ResponseWriter, r *http.Request, name string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set what the core does with a unit's feed. Admin only.
+// (PUT /extensions/{name}/settings)
+func (_ Unimplemented) UpdateExtensionSettings(w http.ResponseWriter, r *http.Request, name string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Per-field change history for one record, projected from audit_log before/after diffs.
 // (GET /field-history)
 func (_ Unimplemented) GetFieldHistory(w http.ResponseWriter, r *http.Request, params GetFieldHistoryParams) {
@@ -81635,6 +82141,12 @@ func (_ Unimplemented) DemoteLead(w http.ResponseWriter, r *http.Request, id Id,
 // Draft an email to this lead, grounded in their record.
 // (POST /leads/{id}/draft-email)
 func (_ Unimplemented) DraftLeadEmail(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Link a lead to a company, and add the lead as a contact there.
+// (POST /leads/{id}/link-company)
+func (_ Unimplemented) LinkLeadCompany(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -83255,6 +83767,18 @@ func (_ Unimplemented) CreateFormerMember(w http.ResponseWriter, r *http.Request
 // Name the colleagues behind a set of ids. Read-only.
 // (GET /users/names)
 func (_ Unimplemented) NameSeats(w http.ResponseWriter, r *http.Request, params NameSeatsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Declare the member that owns an extension's unattended feed. Installation admin only, human only.
+// (POST /users/service-members)
+func (_ Unimplemented) DeclareServiceMember(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Retire a service member. Installation admin only, human only.
+// (POST /users/service-members/{id}/archive)
+func (_ Unimplemented) ArchiveServiceMember(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -93363,6 +93887,32 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// ------------- Optional query parameter "source_system" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "source_system", r.URL.Query(), &params.SourceSystem, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "source_system"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "source_system", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "source_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "source_id", r.URL.Query(), &params.SourceId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "source_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "source_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListCompanies(w, r, params)
 	}))
@@ -95272,6 +95822,38 @@ func (siw *ServerInterfaceWrapper) MergeCompany(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.MergeCompany(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCompanyOfferedValues operation middleware
+func (siw *ServerInterfaceWrapper) ListCompanyOfferedValues(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCompanyOfferedValues(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -101986,6 +102568,32 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// ------------- Optional query parameter "source_system" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "source_system", r.URL.Query(), &params.SourceSystem, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "source_system"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "source_system", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "source_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "source_id", r.URL.Query(), &params.SourceId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "source_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "source_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListDeals(w, r, params)
 	}))
@@ -104124,6 +104732,70 @@ func (siw *ServerInterfaceWrapper) ListExtensions(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListExtensions(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetExtensionSettings operation middleware
+func (siw *ServerInterfaceWrapper) GetExtensionSettings(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetExtensionSettings(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateExtensionSettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdateExtensionSettings(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateExtensionSettings(w, r, name)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -107601,6 +108273,38 @@ func (siw *ServerInterfaceWrapper) DraftLeadEmail(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DraftLeadEmail(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LinkLeadCompany operation middleware
+func (siw *ServerInterfaceWrapper) LinkLeadCompany(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LinkLeadCompany(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -119276,6 +119980,58 @@ func (siw *ServerInterfaceWrapper) NameSeats(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// DeclareServiceMember operation middleware
+func (siw *ServerInterfaceWrapper) DeclareServiceMember(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeclareServiceMember(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveServiceMember operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveServiceMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveServiceMember(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetUserAccess operation middleware
 func (siw *ServerInterfaceWrapper) GetUserAccess(w http.ResponseWriter, r *http.Request) {
 
@@ -122934,6 +123690,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/companies/{id}/merge", wrapper.MergeCompany)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/companies/{id}/offered-values", wrapper.ListCompanyOfferedValues)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies/{id}/partner", wrapper.GetPartner)
 	})
 	r.Group(func(r chi.Router) {
@@ -123522,6 +124281,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/extensions", wrapper.ListExtensions)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/extensions/{name}/settings", wrapper.GetExtensionSettings)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/extensions/{name}/settings", wrapper.UpdateExtensionSettings)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/field-history", wrapper.GetFieldHistory)
 	})
 	r.Group(func(r chi.Router) {
@@ -123814,6 +124579,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/leads/{id}/draft-email", wrapper.DraftLeadEmail)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/leads/{id}/link-company", wrapper.LinkLeadCompany)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads/{id}/manual-signals", wrapper.ListLeadManualSignals)
@@ -124624,6 +125392,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users/names", wrapper.NameSeats)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/users/service-members", wrapper.DeclareServiceMember)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/users/service-members/{id}/archive", wrapper.ArchiveServiceMember)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users/{id}/access", wrapper.GetUserAccess)

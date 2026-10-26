@@ -47,15 +47,25 @@ func (c requestCompleter) Complete(_ context.Context, req model.Request) (model.
 
 var (
 	uuidPattern  = regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)
+	labelPattern = regexp.MustCompile(`"(m[0-9]+)"`)
 	fencePattern = regexp.MustCompile(`untrusted-([0-9a-f-]{36})`)
 )
 
-// mintedIDs is the ids a reply may cite, in the order the request gives them:
-// the response schema's enum when it has one, else the ids in the turns, less
-// the data-boundary nonce every fenced span repeats.
+// mintedIDs is the ids a reply may cite, in the order the request gives them.
+// A response schema's enum of ids or of message labels comes first. Without
+// one, it is the ids in the turns, less the nonce every fenced span repeats.
 func mintedIDs(req model.Request) []string {
 	if ids := uuidPattern.FindAllString(string(req.ResponseSchema), -1); len(ids) > 0 {
 		return ids
+	}
+	var labels []string
+	for _, m := range labelPattern.FindAllStringSubmatch(string(req.ResponseSchema), -1) {
+		if !slices.Contains(labels, m[1]) {
+			labels = append(labels, m[1])
+		}
+	}
+	if len(labels) > 0 {
+		return labels
 	}
 	var turns strings.Builder
 	for _, m := range req.Messages {
@@ -388,6 +398,14 @@ func emptyAnswerProofs() map[string]judgelessProof {
 		},
 		"an_old_promise_was_fulfilled_later": {
 			correct: noEvent, wrong: event("commitment_made", 1, "I will send the standard and enterprise pricing by Friday."),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		"a_focused_reading_sees_the_receipt_beside_a_new_need": {
+			correct: noEvent, wrong: event("commitment_made", 1, "I will send you the edited recording"),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		"a_focused_reading_does_not_reopen_a_kept_promise": {
+			correct: noEvent, wrong: event("commitment_made", 1, "I will send you the edited recording"),
 			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 		"nothing_material_was_said": {

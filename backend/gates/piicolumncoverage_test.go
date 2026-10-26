@@ -249,6 +249,10 @@ var erasureColumnBaseline = map[string][]string{
 		// it, source_author_name, which is a human's name. `lead` carries the
 		// same column and the same reading, a few entries up.
 		"source_system",
+		// The id the other system issued for this record: an opaque key that
+		// system chose, kept so a re-import finds the row. `lead` carries the
+		// same column and the same reading.
+		"source_id",
 		"visibility",
 		// Why an owner-scoped contact is its owner's: one of five values the
 		// column's CHECK closes, none of them anything about the subject.

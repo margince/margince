@@ -31,6 +31,7 @@ func TestEveryDeclaredContactsFilterNarrowsSomething(t *testing.T) {
 		"domain": "kaercher-technik.example", "lifecycle": "customer", "owner_id": owner,
 		"relationship_type": "partner", "tag_id": ids.NewV7().String(), "tag_mode": "none",
 		"industry": "payments", "size_band": "51-200", "include_anchor": "true",
+		"source_system": "acme-erp", "source_id": "C-1",
 	}))
 	assertEveryFilterNarrows(t, "lead", leadListFilters, withListControls(map[string]string{
 		"min_score": "70", "owner_id": owner, "status": "working",
@@ -59,8 +60,8 @@ func TestEachEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 		}},
 		{datasource.EntityCompany, []string{
 			"ai_written", "captured_by_kind", "domain", "include_anchor", "include_archived", "industry", "lifecycle", "list_id",
-			"owner_id", "owner_team_id", "relationship_type", "size_band", "sort", "tag_id", "tag_mode",
-			"unassigned",
+			"owner_id", "owner_team_id", "relationship_type", "size_band", "sort", "source_id", "source_system", "tag_id",
+			"tag_mode", "unassigned",
 		}},
 		{datasource.EntityLead, []string{
 			"ai_written", "captured_by_kind", "from_contact_id", "include_archived", "list_id", "min_score",

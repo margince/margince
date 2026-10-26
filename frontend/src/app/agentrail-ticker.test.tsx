@@ -71,16 +71,18 @@ describe("useAgentTicker", () => {
     expect(line()).toBe("Loading pipeline");
   });
 
-  it("names it in the reader's language", async () => {
+  it("speaks the reader's language, record name included", async () => {
     render(
       harness(
-        <LocaleProvider initial="vi">
+        <LocaleProvider initial="de">
           <Ticker />
         </LocaleProvider>,
       ),
     );
     await read(["deals"], { data: [] });
-    expect(line()).toBe("Đang tải pipeline");
+    expect(line()).toBe("Pipeline wird geladen");
+    await read(["company360", "o-1"], { id: "o-1", name: "zenloop" });
+    expect(line()).toBe("Übersicht zu zenloop wird geladen");
   });
 
   it("says nothing for a read that is plumbing rather than work", async () => {

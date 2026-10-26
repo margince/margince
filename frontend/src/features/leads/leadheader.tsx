@@ -25,19 +25,23 @@ import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
+import { LeadCompany } from "./leadcompany";
 import { leadStatusLabel } from "./leadpresentation";
 import type { LeadWriter } from "./leads";
 
 type Lead = components["schemas"]["Lead"];
 
-// Under the name, one fact per line: what this lead does, and where. A lead
-// carries no company FK, company_name is free text, so unlike the contact's
-// it is never a link.
+// Under the name, one fact per line: what this lead does, and where. The
+// company is a link once a human linked it, and the typed name before.
 export function LeadSubtitle({ lead }: Readonly<{ lead: Lead }>): ReactNode {
   return (
     <>
       {lead.title && <span>{lead.title}</span>}
-      {lead.company_name && <span>{lead.company_name}</span>}
+      {(lead.company_id || lead.company_name?.trim()) && (
+        <span>
+          <LeadCompany lead={lead} />
+        </span>
+      )}
     </>
   );
 }

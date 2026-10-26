@@ -43,9 +43,23 @@ const FAMILY: Record<WeeklyFigure, Family> = {
  */
 export type FigureState =
   | { kind: "measured" }
-  | { kind: "partial"; since?: string; reason?: string }
-  | { kind: "unrecorded"; since?: string; reason?: string }
-  | { kind: "unavailable"; reason?: string };
+  | { kind: "partial"; since?: string }
+  | { kind: "unrecorded"; since?: string; family: Family }
+  | {
+      kind: "unavailable";
+      status?: NumericCoverage["status"];
+      withheld?: boolean;
+    };
+
+// A source's coverage is said in the reader's language from its status and
+// family. The server's `reason` was written once, in the record's language.
+const NONE_RECORDED: Record<Family, MessageKey> = {
+  deals: "brief.weekly.noneRecorded.deals",
+  tasks: "brief.weekly.noneRecorded.tasks",
+  meetings: "brief.weekly.noneRecorded.meetings",
+  leads: "brief.weekly.noneRecorded.leads",
+  commitments: "brief.weekly.noneRecorded.commitments",
+};
 
 function numericCoverageOf(
   summary: Summary | undefined,
@@ -76,21 +90,21 @@ function figureState(
     return {
       kind: "unrecorded",
       since: source.recorded_since,
-      reason: source.reason,
+      family: FAMILY[figure],
     };
   }
   if (unreadable(numeric)) {
-    return { kind: "unavailable", reason: numeric?.reason };
-  }
-  if (source?.status === "partial") {
     return {
-      kind: "partial",
-      since: source.recorded_since,
-      reason: source.reason,
+      kind: "unavailable",
+      status: numeric?.status,
+      withheld: numeric?.withheld,
     };
   }
+  if (source?.status === "partial") {
+    return { kind: "partial", since: source.recorded_since };
+  }
   if (numeric?.status === "partial") {
-    return { kind: "partial", reason: numeric.reason };
+    return { kind: "partial" };
   }
   return { kind: "measured" };
 }
@@ -165,6 +179,18 @@ function qualified(detail: ReactNode, qualifier: string): ReactNode {
  * A partial figure keeps the caller's value and adds its qualifier to the
  * detail line; a figure nobody measured replaces both.
  */
+// Why a figure could not be read, from its status: the server's `reason` is
+// one English sentence, and the reader may not read English.
+function unavailableWhy(
+  state: Extract<FigureState, { kind: "unavailable" }>,
+  t: Translate,
+): string | undefined {
+  if (state.withheld) {
+    return t("reporting.withheld");
+  }
+  return state.status ? t(`reporting.status.${state.status}`) : undefined;
+}
+
 export function figureReading(
   state: FigureState,
   shown: Readonly<Reading>,
@@ -176,7 +202,10 @@ export function figureReading(
     case "measured":
       return shown;
     case "unavailable":
-      return { value: t("reporting.unavailable"), detail: state.reason };
+      return {
+        value: t("reporting.unavailable"),
+        detail: unavailableWhy(state, t),
+      };
     case "partial": {
       const date = from(state.since);
       return {
@@ -185,7 +214,7 @@ export function figureReading(
           shown.detail,
           date
             ? t("brief.weekly.partialFrom", { date })
-            : (state.reason ?? t("reporting.status.partial")),
+            : t("reporting.status.partial"),
         ),
       };
     }
@@ -195,7 +224,7 @@ export function figureReading(
         value: t("brief.weekly.notRecorded"),
         detail: date
           ? t("brief.weekly.recordedFrom", { date })
-          : (state.reason ?? t("brief.weekly.noRecords")),
+          : t(NONE_RECORDED[state.family]),
       };
     }
   }

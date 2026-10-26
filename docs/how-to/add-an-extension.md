@@ -429,6 +429,11 @@ The call is checked against the live rights of the caller. A subject they cannot
 All of that happens inside the transaction your own row is in, so the two commit together or not at all.
 `backend/pkg/extension/crm` holds the shapes it takes and returns.
 
+**Read core records through the same port.** `tx.Core().Deals()`, `Companies()`, `Signals()`,
+`Activities()` and `CustomFields()` read under the rights of the user who made the call. A tick or a delivery
+has no caller and gets `ErrForbidden`. The verbs, filters and caps are in
+[read-core-records-from-an-extension.md](read-core-records-from-an-extension.md).
+
 Plan for two cases where the core refuses. A scheduled job tick gets `ErrForbidden`. It runs as your unit, with no caller whose
 rights a core write could be checked against (your own tables stay open to writes).
 
@@ -597,25 +602,32 @@ Entries: []extension.Entry{{
 
 `Slot` names the place. The list is `extension.EntrySlots()` in `backend/pkg/extension/entry.go`:
 
-| Slot | Where the button shows |
+| Slot | Where the entry shows |
 |---|---|
 | `extension.SlotLogActivity` (`log_activity`) | The Log activity form, under the fields. A form opened as Add task leaves it out. |
 | `extension.SlotContactHeader` (`record_header.contact`) | The verb row of a contact page, after Add task |
 | `extension.SlotCompanyHeader` (`record_header.company`) | The verb row of a company page, after the booking verb |
 | `extension.SlotDealHeader` (`record_header.deal`) | The verb row of a deal page, after Add task |
+| `extension.SlotContactMark` (`record_mark.contact`) | A small note in the verb row of a contact page, right after the unit's header buttons. Not a button. |
+| `extension.SlotCompanyMark` (`record_mark.company`) | A small note in the verb row of a company page, right after the unit's header buttons. Not a button. |
+| `extension.SlotDealMark` (`record_mark.deal`) | A small note in the verb row of a deal page, right after the unit's header buttons. Not a button. |
 
-The core draws every entry as the same plain button, with the icon first and then the label. The unit supplies
-these fields and nothing more:
+The core draws every entry in a header or form slot as the same plain button, with the icon first and then the
+label. An entry in a `record_mark.*` slot is a small label instead, with the icon first, and pressing it
+does nothing. Use a mark for a note. To show a value, use a custom field on the record. The unit supplies these
+fields and nothing more:
 
 - **`Label`** is a key from your own `frontend/i18n/<locale>.json`. `make gen` refuses a key outside your
   `ext<CamelUnit>.` space, or one that is missing from any of `en`, `de` and `vi`.
 - **`Icon`** is one of the `extension.EntryIcons()` icons: `IconClipboardList`, `IconFileText`, `IconMapPin`,
   `IconCamera`, `IconCheckSquare`, `IconMessageSquare`, `IconPlug`.
-- **`Target`** is one part of the path under your screen, or empty for the screen itself.
-- **`Object`** is one of your RBAC objects. The button shows only to a reader whose role grants `read` on it.
-  `make gen` and the start both refuse an object that none of your operations gates on.
+- **`Target`** is one part of the path under your screen, or empty for the screen itself. A mark opens nothing, so
+  its target only tells two marks of one slot apart.
+- **`Object`** is one of your RBAC objects. The entry shows only to a reader whose role grants `read` on it. A
+  mark carries only your fixed label, never a value from the record, so a reader who may not read your data never
+  sees it. `make gen` and the start both refuse an object that none of your operations gates on.
 
-Two entries in one slot must open different targets.
+Two entries in one slot must have different targets.
 
 A press opens `#/ext/<name>/<Target>?record_type=<type>&record_id=<id>`. The type is `contact`, `company` or `deal`
 on a record page. In the Log activity form it is the record the form was opened on. Read both with
@@ -631,6 +643,30 @@ see it, as for any other id.
 
 The registry the SPA reads is generated from the enabled set, so removing the unit removes its entries. Nothing in
 the core names a unit. `extensions/openchannel` declares a contact header entry.
+
+## Declare settings an admin can change
+
+A unit that needs a value an admin sets does not build a settings screen. Declare one `extension.Setting` per value, and the core shows it on the unit's card under Settings, Extensions:
+
+```go
+Settings: []extension.Setting{
+	{Key: "live", Label: "Send for real", Hint: "Off keeps every message a draft.", Kind: extension.SettingSwitch},
+	{Key: "region", Label: "Region", Kind: extension.SettingText},
+},
+```
+
+| Field | Meaning |
+|---|---|
+| `Key` | The name inside the unit: lower-case letters and digits joined by single hyphens. Two settings of one unit cannot share it. |
+| `Label` | The name the admin sees. Required, one line, up to 60 characters. Shown as written, in one language. |
+| `Hint` | What the setting does. Optional, one line, up to 200 characters. |
+| `Kind` | `extension.SettingSwitch` holds `true` or `false` and starts `false`. `extension.SettingText` holds one line of up to 200 characters and starts empty. |
+
+Only an admin sees these settings, and only an admin can change them. Each change is saved with an audit row, like any installation setting. `make gen` and the start both refuse a declaration that breaks the table above, and the generated manifest lists the settings.
+
+An admin changes them with `PUT /v1/extensions/{name}/settings`. Send `overwrites_edited_fields` and a `declared` list of `key` and `value` pairs, for example `{"overwrites_edited_fields": false, "declared": [{"key": "region", "value": "eu-west"}]}`. A setting left out of the list keeps its value. A key the unit did not declare, or a value its kind cannot hold, is a 422 and saves nothing. A switch value is the text `true` or `false`.
+
+The core stores the values and does not yet hand them to the unit's code. Only core code reads them today. A unit that needs to read its own setting has to wait for that.
 
 ## Draw a panel on a core page
 
@@ -915,6 +951,9 @@ Then hand one record at a time to the core's own capture pipeline:
 res, err := rt.Ingest(ctx, member, rec) // res.Disposition is Accepted or Skipped
 ```
 
+A source may also list `KindCompany` and `KindDeal`; see
+[land-companies-and-deals-from-an-extension.md](land-companies-and-deals-from-an-extension.md).
+
 You build no timeline entry. You hand over a record, and the core decides what to do with it. These rules fail
 you if you miss them:
 
@@ -926,6 +965,8 @@ you if you miss them:
 - **You act on a member's live rights.** The member named in `on` must hold one of your unit's secrets with user
   scope, today. Putting in a key is how a member asks you to act for them here. Say an admin takes rights away from a member
   after they connect. From the next call on, their connection can land only what the new rights allow.
+- A feed that must keep running after a colleague leaves runs as a service member. An operator declares one for
+  your unit, and you file the feed's secret under it. See [declare-a-service-member.md](declare-a-service-member.md).
 - **`Key` must be the same on every read.** It is the key that stops copies. Make it from the provider's own id,
   never from a time, a place in a page or your own row id. If you do not, every read writes a second copy, and
   **nothing reports an error**.
