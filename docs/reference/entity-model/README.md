@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 331 |
-| Columns | 3901 |
+| Columns | 3902 |
 | Foreign keys | 548 |
 | Owning areas | 36 |
 
@@ -454,7 +454,7 @@ erDiagram
 | [`weekly_review_learning_citation`](compose.md#weekly_review_learning_citation) | compose | 5 | 0 |
 | [`weekly_review_movement`](compose.md#weekly_review_movement) | compose | 5 | 0 |
 | [`weekly_review_outlook`](compose.md#weekly_review_outlook) | compose | 15 | 0 |
-| [`weekly_review_scorecard`](compose.md#weekly_review_scorecard) | compose | 25 | 0 |
+| [`weekly_review_scorecard`](compose.md#weekly_review_scorecard) | compose | 26 | 0 |
 | [`withdrawal_credential`](consent.md#withdrawal_credential) | consent | 12 | 0 |
 | [`workflow_run`](automation.md#workflow_run) | automation | 10 | 0 |
 | [`worklist_done`](activities.md#worklist_done) | activities | 5 | 0 |
