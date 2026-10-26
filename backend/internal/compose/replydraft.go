@@ -169,11 +169,16 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 	envelope := d.envelope.Resolve(ctx, draftfloor.Written{
 		Addressee: thread.addresseeEvidence(deliveredTo),
 		Stored:    activityLanguage(activity),
-		Body:      body,
-		Subject:   topic,
-		Thread:    draftcore.LanguageEvidence(thread.evidence, deliveredTo),
-		Rewrite:   steering.RewriteOf,
-		Purpose:   steering.Intent,
+		// The opening rather than the stored body.
+		//
+		// Capture writes a From:/To: block above what the sender wrote. Those
+		// lines read as English whatever the mail is in, so a raw body here
+		// answers for its own envelope.
+		Body:    textlang.MessageOpening(body, draftcore.LanguageEvidenceRunes),
+		Subject: topic,
+		Thread:  draftcore.LanguageEvidence(thread.evidence, deliveredTo),
+		Rewrite: steering.RewriteOf,
+		Purpose: steering.Intent,
 	}, state)
 	recipient, surname := addressee.GreetingNames()
 
