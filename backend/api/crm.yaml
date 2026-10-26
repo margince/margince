@@ -49980,6 +49980,7 @@ components:
       properties:
         key: { type: string, description: 'Stable within a template. An answer is filed under it and a frozen response keeps both, so rewording a label never orphans an answer.' }
         label: { type: string, description: 'What the question asks, worded as the reader sees it.' }
+        label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
         type: { type: string, enum: [text, multiselect], description: 'Text answers use answers; multiple-choice answers use choice_answers.' }
         options: { type: array, items: { type: string }, description: 'Allowed choices, required for multiselect. Frozen alongside the question in each submitted review.' }
         required: { type: boolean }
@@ -49991,6 +49992,7 @@ components:
         id: { type: string, format: uuid }
         key: { type: string }
         label: { type: string }
+        label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
         outcome: { type: string, enum: [won, lost], description: 'Which outcome this template is for. A win review and a loss review ask different questions, and offering both at one close is asking somebody to do filing the record can do itself.' }
         questions: { type: array, items: { $ref: '#/components/schemas/ReviewQuestion' } }
         version: { $ref: '#/components/schemas/RowVersion' }
@@ -50062,6 +50064,7 @@ components:
             The stable identifier stored on the deal. Lowercase, never changes once created —
             relabelling edits `label`, so a report keyed on the key survives the rename.
         label: { type: string, description: What readers see. }
+        label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
         sort_order: { type: integer, description: Display order in pickers and settings. }
         active:
           type: boolean
@@ -50123,6 +50126,7 @@ components:
             The stable identifier. Lowercase, never changes once created — relabelling
             edits `label`, so a report keyed on the role survives the rename.
         label: { type: string, description: What readers see. }
+        label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
         record_types:
           type: array
           minItems: 1
@@ -50233,6 +50237,7 @@ components:
         role_id: { type: string, format: uuid }
         role_key: { type: string, readOnly: true }
         role_label: { type: string, readOnly: true }
+        role_label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
         role_active:
           type: boolean
           readOnly: true
@@ -50274,6 +50279,7 @@ components:
         id: { type: string, format: uuid }
         key: { type: string, description: 'Lowercase stable key, the stored value. Never changes after creation.' }
         label: { type: string }
+        label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
         intent: { $ref: '#/components/schemas/LeadSourceIntent' }
         sort_order: { type: integer }
         active: { type: boolean, description: 'A retired origin leaves the create form and is refused for a new assignment; leads carrying it keep the value.' }
@@ -50362,6 +50368,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         label: { type: string }
+        label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
         sort_order: { type: integer }
         active: { type: boolean }
         system: { type: boolean, readOnly: true }
@@ -58693,6 +58700,14 @@ components:
             so it is still pending and can be declined or decided later.
 
     # ---- Optimistic concurrency ----
+    ShippedLabelKey:
+      type: [string, 'null']
+      readOnly: true
+      description: >-
+        The catalog key a screen renders a built-in value from, in the reader's language. Set
+        only on a value still worded as the product shipped it; null once an administrator
+        relabels it, so their own words show instead of `label`'s translation. `label` keeps the
+        English text for every reader that has no catalog, such as an export or an agent.
     RowVersion:
       type: integer
       format: int64

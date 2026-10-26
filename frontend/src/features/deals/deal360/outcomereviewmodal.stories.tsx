@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, screen } from "storybook/test";
 import { StoryProviders } from "../../../testing/story-utils";
 import { OutcomeReviewModal } from "./outcomereviewmodal";
 
@@ -47,3 +48,32 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 export const RequiredChoices: Story = {};
 export const RequiredChoicesDark: Story = { globals: { theme: "dark" } };
+
+/** The shipped win review asked in Vietnamese; an added question as typed. */
+export const Vietnamese: Story = {
+  render: (args) => (
+    <StoryProviders locale="vi">
+      <OutcomeReviewModal
+        {...args}
+        template={{
+          ...args.template,
+          label_key: "reviewTemplates.builtin.win_review",
+          questions: [
+            {
+              key: "why_we_won",
+              label: "Why did we win?",
+              label_key: "reviewTemplates.builtin.question.why_we_won",
+              type: "text",
+              required: true,
+            },
+            ...args.template.questions.slice(1),
+          ],
+        }}
+      />
+    </StoryProviders>
+  ),
+  play: async () => {
+    await expect(await screen.findByText("Đánh giá khi thắng")).toBeVisible();
+    await expect(screen.getByText("Vì sao thắng deal này?")).toBeVisible();
+  },
+};

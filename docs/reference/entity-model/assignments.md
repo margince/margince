@@ -62,7 +62,7 @@ The 2 tables owned by `assignments`, as the migrations build them. [Back to the 
 
 ## record_role
 
-11 columns · primary key `(id)` · referenced by 1 foreign key
+12 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -71,6 +71,7 @@ The 2 tables owned by `assignments`, as the migrations build them. [Back to the 
 | `assignee_kinds` | `text[]` | yes | Whether a user, a team, or either may hold this role. |
 | `key` | `text` | yes | The stable identifier. |
 | `label` | `text` | yes | What readers see. |
+| `label_key` | `text` |  |  |
 | `record_types` | `text[]` | yes | Which record kinds this role may be held on. |
 | `sort_order` | `integer`, default `0` | yes | Display order in pickers and settings. |
 | `system` | `boolean`, default `false` | yes | Seeded with the installation. |
@@ -94,4 +95,5 @@ The 2 tables owned by `assignments`, as the migrations build them. [Back to the 
 
 **Triggers**
 
+- `trg_record_role_label_key`: `BEFORE UPDATE OF label FOR EACH ROW EXECUTE FUNCTION clear_label_key_on_relabel()`
 - `trg_record_role_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`

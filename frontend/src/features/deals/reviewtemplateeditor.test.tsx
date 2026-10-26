@@ -5,6 +5,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { type Locale, translate } from "../../i18n";
 import {
   installFetchStub,
   jsonResponse,
@@ -54,7 +55,11 @@ function template(over: Partial<ReviewTemplate> = {}): ReviewTemplate {
   };
 }
 
-function openEditor(current: ReviewTemplate, onPatch = vi.fn()) {
+function openEditor(
+  current: ReviewTemplate,
+  onPatch = vi.fn(),
+  locale: Locale = "en",
+) {
   installFetchStub({
     "GET /me": meRoute({ custom_field: ["read", "update"] }),
     [`PATCH /activity-review-templates/${current.id}`]: (body) => {
@@ -64,7 +69,7 @@ function openEditor(current: ReviewTemplate, onPatch = vi.fn()) {
   });
   const close = vi.fn();
   render(
-    <StoryProviders>
+    <StoryProviders locale={locale}>
       <ReviewTemplateEditor template={current} onClose={close} />
     </StoryProviders>,
   );
@@ -108,6 +113,47 @@ describe("editing a review's questions", () => {
         { key: "why", label: "Why?", type: "text", required: true },
       ],
     });
+  });
+
+  it("shows a built-in question in the reader's language and saves the stored words unless reworded", async () => {
+    const onPatch = vi.fn();
+    const { close, user } = openEditor(
+      template({
+        questions: [
+          {
+            ...WHY,
+            label_key: "reviewTemplates.builtin.question.why_we_lost",
+          },
+          {
+            key: "lost_to",
+            label: "Who did they choose instead?",
+            label_key: "reviewTemplates.builtin.question.lost_to",
+            type: "text",
+            required: false,
+          },
+        ],
+      }),
+      onPatch,
+      "vi",
+    );
+    const [why, lostTo] = screen.getAllByRole("textbox", {
+      name: new RegExp(translate("vi", "reviewTemplates.question")),
+    });
+    if (!why || !lostTo) throw new Error("the drawer shows no question box");
+    expect(why).toHaveProperty("value", "Vì sao thua deal này?");
+    await user.clear(lostTo);
+    await user.type(lostTo, "Bên nào thắng?");
+    await user.click(
+      screen.getByRole("button", {
+        name: translate("vi", "reviewTemplates.saveQuestions"),
+      }),
+    );
+    await vi.waitFor(() => expect(close).toHaveBeenCalled());
+    const [body] = onPatch.mock.calls[0] ?? [];
+    expect(body.questions.map((q: { label: string }) => q.label)).toEqual([
+      "Why did we lose?",
+      "Bên nào thắng?",
+    ]);
   });
 
   it("holds Save while a question has no label", async () => {

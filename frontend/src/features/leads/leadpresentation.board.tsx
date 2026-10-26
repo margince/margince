@@ -23,6 +23,7 @@ import {
   leadTerminalKey,
   leadWriteKeys,
 } from "../../lib/leadkeys";
+import { originLabelFor, useLeadOrigins } from "../../lib/leadorigins";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { openTaskCountLabel } from "./leadopentasks";
@@ -153,6 +154,7 @@ function LeadCard({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const origins = useLeadOrigins().data;
   return (
     <button
       type="button"
@@ -177,7 +179,7 @@ function LeadCard({
         {lead.title && <span>{lead.title}</span>}
       </span>
       <span>
-        <span>{lead.origin_label ?? t("lead.originUnset")}</span>
+        <span>{originLabelFor(lead, origins) ?? t("lead.originUnset")}</span>
         <span>
           {lead.next_task_subject ?? t("lead.noNextTask")}
           {lead.open_task_count

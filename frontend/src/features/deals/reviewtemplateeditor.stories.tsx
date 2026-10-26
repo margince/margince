@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, screen } from "storybook/test";
 import { StoryProviders } from "../../testing/story-utils";
 import { ReviewTemplateEditor } from "./reviewtemplateeditor";
 
@@ -48,4 +49,35 @@ export const DrawerDark: Story = { globals: { theme: "dark" } };
 export const DrawerPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+/** A built-in question shows in the reader's language; an added one as typed. */
+export const Vietnamese: Story = {
+  render: (args) => (
+    <StoryProviders locale="vi">
+      <ReviewTemplateEditor
+        {...args}
+        template={{
+          ...args.template,
+          label_key: "reviewTemplates.builtin.win_review",
+          questions: [
+            {
+              key: "why_we_won",
+              label: "Why did we win?",
+              label_key: "reviewTemplates.builtin.question.why_we_won",
+              type: "text",
+              required: true,
+            },
+            ...args.template.questions.slice(1),
+          ],
+        }}
+      />
+    </StoryProviders>
+  ),
+  play: async () => {
+    await expect(await screen.findByText("Đánh giá khi thắng")).toBeVisible();
+    await expect(
+      screen.getByDisplayValue("Vì sao thắng deal này?"),
+    ).toBeVisible();
+  },
 };

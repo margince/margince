@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { within } from "storybook/test";
+import { expect, within } from "storybook/test";
+import type { Locale } from "../../i18n";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -73,6 +74,7 @@ const EDITOR: GrantSpec = { custom_field: ["read", "update"] };
 function served(
   answer: () => Response | Promise<Response>,
   grants: GrantSpec = READER,
+  locale: Locale = "en",
 ) {
   return () => {
     installFetchStub({
@@ -80,7 +82,7 @@ function served(
       "GET /activity-review-templates": answer,
     });
     return (
-      <StoryProviders>
+      <StoryProviders locale={locale}>
         <ReviewTemplatesCard />
       </StoryProviders>
     );
@@ -123,6 +125,38 @@ export const EditablePhone: Story = {
 export const EditableDark: Story = {
   globals: { theme: "dark" },
   render: served(() => jsonResponse({ data: TEMPLATES }), EDITOR),
+};
+
+// The shipped win review names catalog keys, so a Vietnamese reader meets it
+// in Vietnamese; the question an administrator added reads as typed.
+const SHIPPED_WIN = {
+  ...TEMPLATES[0],
+  label_key: "reviewTemplates.builtin.win_review",
+  questions: [
+    {
+      key: "why_we_won",
+      label: "Why did we win?",
+      label_key: "reviewTemplates.builtin.question.why_we_won",
+      type: "text",
+      required: true,
+    },
+    {
+      key: "pricing",
+      label: "Giá có phải lý do?",
+      type: "text",
+      required: false,
+    },
+  ],
+};
+
+export const Vietnamese: Story = {
+  render: served(() => jsonResponse({ data: [SHIPPED_WIN] }), READER, "vi"),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("Đánh giá khi thắng")).toBeVisible();
+    await expect(canvas.getByText("Vì sao thắng deal này?")).toBeVisible();
+    await expect(canvas.getByText("Giá có phải lý do?")).toBeVisible();
+  },
 };
 
 /** No templates served: the card says so rather than drawing an empty list. */

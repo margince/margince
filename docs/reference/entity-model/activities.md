@@ -654,7 +654,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_review_template
 
-13 columns · primary key `(id)` · referenced by 0 foreign keys
+14 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -662,6 +662,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 | `active` | `boolean`, default `true` | yes |  |
 | `key` | `text` | yes |  |
 | `label` | `text` | yes | At most 200 characters. |
+| `label_key` | `text` |  |  |
 | `outcome` | `text` | yes | Which outcome this template is for. |
 | `questions` | `jsonb` | yes |  |
 | `system` | `boolean`, default `false` | yes | Shipped with the product. |
@@ -686,6 +687,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
+- `trg_activity_review_template_label_key`: `BEFORE UPDATE OF label FOR EACH ROW EXECUTE FUNCTION clear_label_key_on_relabel()`
 - `trg_activity_review_template_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## activity_sales_state

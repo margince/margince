@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useT } from "../../i18n";
 import { LEAD_LIST_KEY } from "../../lib/leadkeys";
 import { throwProblem, unwrap } from "../../lib/problem";
+import { withShippedLabels } from "../../lib/shippedlabels";
 
 // Lead handling read from the server: the reasons a lead may be closed with,
 // and whether the first-response target is tracked at all. Where a lead came
@@ -17,6 +19,7 @@ export const LEAD_DISQUALIFY_REASONS_KEY = ["lead-disqualify-reasons"] as const;
 export const LEAD_SETTINGS_KEY = ["lead-settings"] as const;
 
 export function useLeadDisqualifyReasons() {
+  const t = useT();
   return useQuery({
     queryKey: LEAD_DISQUALIFY_REASONS_KEY,
     queryFn: async () => {
@@ -28,6 +31,7 @@ export function useLeadDisqualifyReasons() {
       }
       return data.data;
     },
+    select: (reasons) => withShippedLabels(reasons, t),
   });
 }
 

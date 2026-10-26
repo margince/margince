@@ -36618,6 +36618,7 @@ export interface components {
             key: string;
             /** @description What the question asks, worded as the reader sees it. */
             label: string;
+            label_key?: components["schemas"]["ShippedLabelKey"];
             /**
              * @description Text answers use answers; multiple-choice answers use choice_answers.
              * @enum {string}
@@ -36632,6 +36633,7 @@ export interface components {
             id: string;
             key: string;
             label: string;
+            label_key?: components["schemas"]["ShippedLabelKey"];
             /**
              * @description Which outcome this template is for. A win review and a loss review ask different questions, and offering both at one close is asking somebody to do filing the record can do itself.
              * @enum {string}
@@ -36734,6 +36736,7 @@ export interface components {
             key: string;
             /** @description What readers see. */
             label: string;
+            label_key?: components["schemas"]["ShippedLabelKey"];
             /** @description Display order in pickers and settings. */
             sort_order: number;
             /** @description False is retired: still readable and still filterable on deals that carry it, but refused for a new assignment. */
@@ -36772,6 +36775,7 @@ export interface components {
             key: string;
             /** @description What readers see. */
             label: string;
+            label_key?: components["schemas"]["ShippedLabelKey"];
             /** @description Which record kinds this role may be held on. */
             record_types: components["schemas"]["AssignmentRecordType"][];
             /** @description Whether a user, a team, or either may hold this role. */
@@ -36839,6 +36843,7 @@ export interface components {
             role_id: string;
             readonly role_key: string;
             readonly role_label: string;
+            role_label_key?: components["schemas"]["ShippedLabelKey"];
             /** @description False when the role has since been retired. The assignment remains valid. */
             readonly role_active: boolean;
             /** @description What wrote this assignment. */
@@ -36875,6 +36880,7 @@ export interface components {
             /** @description Lowercase stable key, the stored value. Never changes after creation. */
             key: string;
             label: string;
+            label_key?: components["schemas"]["ShippedLabelKey"];
             intent: components["schemas"]["LeadSourceIntent"];
             sort_order: number;
             /** @description A retired origin leaves the create form and is refused for a new assignment; leads carrying it keep the value. */
@@ -36956,6 +36962,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             label: string;
+            label_key?: components["schemas"]["ShippedLabelKey"];
             sort_order: number;
             active: boolean;
             readonly system: boolean;
@@ -42920,6 +42927,8 @@ export interface components {
              */
             outcome: "decided" | "already_decided" | "expired" | "effect_failed" | "refused";
         };
+        /** @description The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent. */
+        ShippedLabelKey: string | null;
         /**
          * Format: int64
          * @description Monotonic row version, incremented by the server on every mutation (data-model §1.3a).

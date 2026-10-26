@@ -9,6 +9,7 @@ import {
 import { ErrorLine } from "../../../design-system/errorline";
 import { Heading } from "../../../design-system/heading";
 import { useT } from "../../../i18n";
+import { shippedLabel } from "../../../lib/shippedlabels";
 import {
   type ReviewTemplate,
   useCreateOutcomeReview,
@@ -147,14 +148,14 @@ export function OutcomeReviewModal({
   return (
     <Modal open={open} onClose={close} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
-        {draftTemplate.label}
+        {shippedLabel(draftTemplate, t)}
       </Heading>
       <div className="form-stack">
         {draftTemplate.questions.map((question) =>
           question.type === "multiselect" ? (
             <fieldset key={question.key} className="field-multiselect">
               <legend className="t-label">
-                {question.label}
+                {shippedLabel(question, t)}
                 {question.required ? " *" : ""}
               </legend>
               {(question.options ?? []).map((option) => (
@@ -180,7 +181,7 @@ export function OutcomeReviewModal({
           ) : (
             <Field
               key={question.key}
-              label={question.label}
+              label={shippedLabel(question, t)}
               required={question.required}
             >
               {(control) => (

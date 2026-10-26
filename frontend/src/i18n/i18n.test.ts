@@ -315,6 +315,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
 
   // Other cases verified individually against the source.
   "shell.logoAria",
+  // A product's own name, the built-in lead origin.
+  "leadOrigins.builtin.linkedin",
 
   // Worked examples of a German commercial register entry, the shape the
   // legal-notice read actually parses regardless of which locale a reader

@@ -24961,6 +24961,9 @@ type AcquisitionSource struct {
 	// Label What readers see.
 	Label string `json:"label"`
 
+	// LabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	LabelKey *ShippedLabelKey `json:"label_key,omitempty"`
+
 	// SortOrder Display order in pickers and settings.
 	SortOrder int `json:"sort_order"`
 
@@ -25257,6 +25260,9 @@ type ActivityReviewTemplate struct {
 	Id        openapi_types.UUID `json:"id"`
 	Key       string             `json:"key"`
 	Label     string             `json:"label"`
+
+	// LabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	LabelKey *ShippedLabelKey `json:"label_key,omitempty"`
 
 	// Outcome Which outcome this template is for. A win review and a loss review ask different questions, and offering both at one close is asking somebody to do filing the record can do itself.
 	Outcome   ActivityReviewTemplateOutcome `json:"outcome"`
@@ -42709,6 +42715,9 @@ type LeadDisqualifyReason struct {
 	Id        openapi_types.UUID `json:"id"`
 	Label     string             `json:"label"`
 
+	// LabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	LabelKey *ShippedLabelKey `json:"label_key,omitempty"`
+
 	// LeadCount Leads disqualified with this reason.
 	LeadCount *int      `json:"lead_count,omitempty"`
 	SortOrder int       `json:"sort_order"`
@@ -42786,6 +42795,9 @@ type LeadOrigin struct {
 	// Key Lowercase stable key, the stored value. Never changes after creation.
 	Key   string `json:"key"`
 	Label string `json:"label"`
+
+	// LabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	LabelKey *ShippedLabelKey `json:"label_key,omitempty"`
 
 	// LeadCount Live leads carrying this key that the caller may see.
 	LeadCount *int `json:"lead_count,omitempty"`
@@ -47612,6 +47624,9 @@ type RecordAssignment struct {
 	RoleKey    *string            `json:"role_key,omitempty"`
 	RoleLabel  *string            `json:"role_label,omitempty"`
 
+	// RoleLabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	RoleLabelKey *ShippedLabelKey `json:"role_label_key,omitempty"`
+
 	// Source What wrote this assignment.
 	Source *string `json:"source,omitempty"`
 
@@ -47847,6 +47862,9 @@ type RecordRole struct {
 
 	// Label What readers see.
 	Label string `json:"label"`
+
+	// LabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	LabelKey *ShippedLabelKey `json:"label_key,omitempty"`
 
 	// RecordTypes Which record kinds this role may be held on.
 	RecordTypes []AssignmentRecordType `json:"record_types"`
@@ -49426,6 +49444,9 @@ type ReviewQuestion struct {
 	// Label What the question asks, worded as the reader sees it.
 	Label string `json:"label"`
 
+	// LabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	LabelKey *ShippedLabelKey `json:"label_key,omitempty"`
+
 	// Options Allowed choices, required for multiselect. Frozen alongside the question in each submitted review.
 	Options  *[]string `json:"options,omitempty"`
 	Required bool      `json:"required"`
@@ -50786,6 +50807,9 @@ type SharedForecastView struct {
 
 // SharedForecastViewKind Which promise this view makes. A reader shown a frozen number needs to know it is frozen, and as of when.
 type SharedForecastViewKind string
+
+// ShippedLabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+type ShippedLabelKey = string
 
 // SignInProvider One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen.
 type SignInProvider struct {

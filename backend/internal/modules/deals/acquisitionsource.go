@@ -59,7 +59,7 @@ const (
 )
 
 // acquisitionSourceColumns is the catalog's wire projection.
-const acquisitionSourceColumns = `id, key, label, sort_order, active, system, version, created_at, updated_at`
+const acquisitionSourceColumns = `id, key, label, label_key, sort_order, active, system, version, created_at, updated_at`
 
 // UnknownAcquisitionSourceError refuses a key the catalog does not hold.
 type UnknownAcquisitionSourceError struct{}
@@ -351,7 +351,7 @@ func scanAcquisitionSource(row pgx.Row, extra ...any) (crmcontracts.AcquisitionS
 	var out crmcontracts.AcquisitionSource
 	var id ids.UUID
 	var version int64
-	dest := []any{&id, &out.Key, &out.Label, &out.SortOrder, &out.Active, &out.System, &version, &out.CreatedAt, &out.UpdatedAt}
+	dest := []any{&id, &out.Key, &out.Label, &out.LabelKey, &out.SortOrder, &out.Active, &out.System, &version, &out.CreatedAt, &out.UpdatedAt}
 	if err := row.Scan(append(dest, extra...)...); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return out, apperrors.ErrNotFound

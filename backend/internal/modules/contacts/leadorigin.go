@@ -187,7 +187,7 @@ func leadOriginColumns(ctx context.Context, args *[]any) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return `id, key, label, intent, sort_order, active, system, version, created_at, updated_at,
+	return `id, key, label, label_key, intent, sort_order, active, system, version, created_at, updated_at,
 	(SELECT count(*) FROM lead WHERE archived_at IS NULL AND ` + scope + ` AND origin = lead_origin.key)`, nil
 }
 
@@ -198,7 +198,7 @@ func scanLeadOrigin(row pgx.Row) (crmcontracts.LeadOrigin, error) {
 	var system bool
 	var version int64
 	var count int
-	if err := row.Scan(&id, &out.Key, &out.Label, &intent, &out.SortOrder, &out.Active, &system, &version,
+	if err := row.Scan(&id, &out.Key, &out.Label, &out.LabelKey, &intent, &out.SortOrder, &out.Active, &system, &version,
 		&out.CreatedAt, &out.UpdatedAt, &count); err != nil {
 		return out, err
 	}

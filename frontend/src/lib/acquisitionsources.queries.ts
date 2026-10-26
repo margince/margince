@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useT } from "../i18n";
 import { throwProblem } from "./problem";
+import { withShippedLabels } from "./shippedlabels";
 
 // The acquisition-source catalog: the business channels a deal may be
 // attributed to. Every deal surface — the edit form, the list filter, the
@@ -18,6 +20,7 @@ export type AcquisitionSource = components["schemas"]["AcquisitionSource"];
 export const ACQUISITION_SOURCES_KEY = ["acquisition-sources"] as const;
 
 export function useAcquisitionSources() {
+  const t = useT();
   return useQuery({
     queryKey: ACQUISITION_SOURCES_KEY,
     queryFn: async () => {
@@ -27,6 +30,7 @@ export function useAcquisitionSources() {
       }
       return data.data;
     },
+    select: (sources) => withShippedLabels(sources, t),
   });
 }
 
