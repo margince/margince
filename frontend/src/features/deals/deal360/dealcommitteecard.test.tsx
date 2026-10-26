@@ -186,7 +186,7 @@ describe("the deal's committee card", () => {
       within(dialog).getByRole("textbox", {
         name: translate("en", "rel.role"),
       }),
-    ).toHaveValue("champion");
+    ).toHaveValue(translate("en", "co.roleLabel.champion"));
   });
 
   // Six colleagues hold jobs on the deal and one handles most exchanges. The

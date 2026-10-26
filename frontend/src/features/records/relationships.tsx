@@ -20,6 +20,7 @@ import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isOption } from "../../lib/options";
 import { unwrap } from "../../lib/problem";
+import { dealRoleLabel } from "../../lib/recordlabels";
 import {
   type Candidate,
   searchByEntity,
@@ -106,7 +107,7 @@ export function AddRelationshipAction({
   only?: { kind: CreatableRelationshipKind; label: MessageKey };
   // "link" when the verb is a card's one link rather than a button.
   variant?: "link";
-  // The role the form opens with, for a verb offered for one missing seat.
+  // The role key the form opens with, for a verb offered for one missing seat.
   seatRole?: string;
   // The id of the words that say which seat this verb fills.
   describedBy?: string;
@@ -127,7 +128,10 @@ export function AddRelationshipAction({
   const [kind, setKind] = useState<CreatableRelationshipKind>(
     defaultOption.kind,
   );
-  const [role, setRole] = useState(seatRole ?? "");
+  // Until the reader types, the offered seat shows in their words and is sent
+  // as its key, the spelling the coverage rules count.
+  const [typedRole, setTypedRole] = useState<string | null>(null);
+  const role = typedRole ?? (seatRole ? dealRoleLabel(seatRole, t) : "");
   const [startedAt, setStartedAt] = useState<ISODate | "">("");
   const [term, setTerm] = useState("");
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -219,7 +223,7 @@ export function AddRelationshipAction({
   function close() {
     setOpen(false);
     setKind(defaultOption.kind);
-    setRole(seatRole ?? "");
+    setTypedRole(null);
     setStartedAt("");
     setTerm("");
     setCandidates([]);
@@ -296,7 +300,7 @@ export function AddRelationshipAction({
               <TextInput
                 {...control}
                 value={role}
-                onChange={(event) => setRole(event.target.value)}
+                onChange={(event) => setTypedRole(event.target.value)}
               />
             )}
           </Field>
@@ -332,7 +336,7 @@ export function AddRelationshipAction({
                   target,
                   kind,
                   field: endpoint.field,
-                  role,
+                  role: typedRole ?? seatRole ?? "",
                   startedAt,
                 });
               }
