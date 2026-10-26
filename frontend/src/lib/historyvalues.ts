@@ -1,7 +1,14 @@
-import { formatDateTime, formatMoneyOrAbsent } from "../../format/format";
-import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
-import { type Locale, translate } from "../../i18n";
-import { isUuid } from "../../lib/uuid";
+import {
+  formatActivityWhen,
+  type OccurredPrecision,
+} from "../format/activitywhen";
+import { EMAIL_TYPE_LABEL, PHONE_TYPE_LABEL } from "../format/contactchannels";
+import { formatDateTime, formatMoneyOrAbsent } from "../format/format";
+import { INDUSTRY_FIELD, industryWords } from "../format/industry";
+import { type Locale, translate } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import { historyValueLabel } from "./historyvaluelabels";
+import { isUuid } from "./uuid";
 
 // A history value read the way the rest of the record page reads it.
 //
@@ -66,6 +73,68 @@ function asJsonArray(value: string): unknown[] | undefined {
   return Array.isArray(parsed) ? parsed : undefined;
 }
 
+// An activity's time takes the precision stored beside it in the same image.
+// An image that carries no precision holds an instant.
+export function precisionOf(
+  image: Readonly<Record<string, unknown>>,
+  field: string,
+): OccurredPrecision | undefined {
+  if (field !== "occurred_at") {
+    return undefined;
+  }
+  // The image is untyped jsonb, so each spelling is read back by name.
+  switch (image.occurred_precision) {
+    case "day":
+      return "day";
+    default:
+      return "instant";
+  }
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function channelKind(
+  labels: Readonly<Record<string, MessageKey>>,
+  kind: unknown,
+  locale: Locale,
+): string | undefined {
+  if (typeof kind !== "string" || !Object.hasOwn(labels, kind)) {
+    return undefined;
+  }
+  const key = labels[kind];
+  return key === undefined ? undefined : translate(locale, key);
+}
+
+function withKind(value: string, kind: string | undefined): string {
+  return kind === undefined ? value : `${value} (${kind})`;
+}
+
+// One entry of a stored list. Phones, emails and domains are stored as rows,
+// and a row read through String() prints "[object Object]".
+function listItem(item: unknown, locale: Locale): string {
+  if (!isPlainObject(item)) {
+    return String(item);
+  }
+  if (typeof item.phone === "string") {
+    return withKind(
+      item.phone,
+      channelKind(PHONE_TYPE_LABEL, item.phone_type, locale),
+    );
+  }
+  if (typeof item.email === "string") {
+    return withKind(
+      item.email,
+      channelKind(EMAIL_TYPE_LABEL, item.email_type, locale),
+    );
+  }
+  if (typeof item.domain === "string") {
+    return item.domain;
+  }
+  return JSON.stringify(item);
+}
+
 // Currency/locale/zone/name-resolution for turning a stored history value
 // into what it means.
 export type HistoryValueCtx = Readonly<{
@@ -90,9 +159,15 @@ export function historyValue(
   field: string,
   value: string | null | undefined,
   ctx: HistoryValueCtx,
+  // An activity time's precision, from the image the value was read out of.
+  precision?: OccurredPrecision,
 ): string | null {
   if (value === null || value === undefined) {
     return null;
+  }
+  const label = historyValueLabel(field, value, ctx.locale);
+  if (label !== undefined) {
+    return label;
   }
   if (isMinorUnitField(field)) {
     const minor = Number(value);
@@ -108,13 +183,13 @@ export function historyValue(
     return industryWords((key) => translate(ctx.locale, key), value);
   }
   if (ISO_TIMESTAMP.test(value)) {
-    return formatDateTime(value, ctx.locale, ctx.zone);
+    return historyMoment(value, ctx, precision);
   }
   const items = asJsonArray(value);
   if (items !== undefined) {
     return items.length === 0
       ? translate(ctx.locale, "history.emptyList")
-      : items.map((item) => String(item)).join(", ");
+      : items.map((item) => listItem(item, ctx.locale)).join(", ");
   }
   if (isUuid(value)) {
     // Left EXACTLY as stored when the resolver cannot name it — a shortened
@@ -125,4 +200,16 @@ export function historyValue(
     return value.split("/").at(-1) ?? value;
   }
   return value;
+}
+
+// A timestamp on the record's clock. An activity time with a known precision
+// goes through the owner, which draws no clock for a `day` entry.
+function historyMoment(
+  value: string,
+  { locale, zone }: HistoryValueCtx,
+  precision: OccurredPrecision | undefined,
+): string {
+  return precision
+    ? formatActivityWhen(value, precision, locale, zone)
+    : formatDateTime(value, locale, zone);
 }

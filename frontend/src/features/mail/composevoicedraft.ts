@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useT } from "../../i18n";
@@ -248,3 +249,37 @@ export function useVoiceDraft({
 }
 
 export type VoiceDraft = ReturnType<typeof useVoiceDraft>;
+
+// The verb that opened the composer promised a draft. So the draft starts once
+// it can be asked for, once per opening, and never over words on screen.
+export function useDraftOnOpen({
+  open,
+  asked,
+  mail,
+  settled,
+  body,
+  control,
+}: Readonly<{
+  open: boolean;
+  asked: boolean | undefined;
+  /** A channel reply has no drafting to start. */
+  mail: boolean;
+  /** A saved draft has had its chance to come back. */
+  settled: boolean;
+  body: string;
+  control: PendingAction;
+}>) {
+  const started = useRef(false);
+  const wanted = open && asked === true && mail;
+  const ready = settled && body === "";
+  const { run, disabled, pending } = control;
+  useEffect(() => {
+    if (!wanted) {
+      started.current = false;
+      return;
+    }
+    if (started.current || !ready || disabled || pending) return;
+    started.current = true;
+    run();
+  }, [wanted, ready, disabled, pending, run]);
+}

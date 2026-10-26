@@ -14,15 +14,13 @@ package contacts
 import (
 	"context"
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -64,6 +62,10 @@ type RelationshipStrength struct {
 	// waiting.
 	LastInbound  *time.Time
 	LastOutbound *time.Time
+	// LastInboundPrecision and LastOutboundPrecision say how to read the two
+	// dates, from the activity each names; empty when its date is nil.
+	LastInboundPrecision  string
+	LastOutboundPrecision string
 	// LastInboundActivity is the message a follow-up would answer — the anchor
 	// the composer needs to open a reply rather than a fresh thread.
 	//
@@ -95,6 +97,13 @@ func strengthCountsAt(nowPos int) string {
 
 func strengthCitedCountsAt(nowPos int) string {
 	return relstrength.InteractionCountsAtSQL("i", fmt.Sprintf("$%d::timestamptz", nowPos))
+}
+
+// strengthDirectionPrecisions reads the precision behind each direction's last
+// date for the contact, empty where that date is null.
+func strengthDirectionPrecisions(contact string) string {
+	return `coalesce(` + occurredday.LatestPrecisionSQL("a", relstrength.TheyWroteSQL(contact, "a")) + `, ''),
+		coalesce(` + occurredday.LatestPrecisionSQL("a", relstrength.WeWroteSQL("a")) + `, '')`
 }
 
 // ContactStrength computes the §4 baseline for one contact. The contact
@@ -136,60 +145,6 @@ func (s *Store) ContactStrengthTx(
 	}
 	out.finish(now)
 	return out, nil
-}
-
-// StrengthToWire renders a §4 result onto the contract's shared
-// RelationshipStrength. It lives with the computation, not beside one of
-// its transports: the per-contact route, the per-company route and the
-// company view all answer this shape, and a bucket rename made in only one
-// of three places is the drift this prevents.
-//
-// factors.direction has no dedicated domain field — the §4 computation
-// derives it internally on the way to reciprocity — so it is recomputed
-// here from the same two counts rather than invented.
-func StrengthToWire(rs RelationshipStrength, now time.Time) crmcontracts.RelationshipStrength {
-	inbound, outbound := rs.Inbound90d, rs.Outbound90d
-	direction := 0.0
-	if directed := inbound + outbound; directed > 0 {
-		direction = 1 - math.Abs(float64(inbound-outbound))/float64(directed)
-	}
-	contributing := make([]openapi_types.UUID, len(rs.ContributingIDs))
-	for i, activityID := range rs.ContributingIDs {
-		contributing[i] = openapi_types.UUID(activityID.UUID)
-	}
-	computedAt := now
-	wire := crmcontracts.RelationshipStrength{
-		Score:                   rs.Strength,
-		Bucket:                  StrengthBucketToWire(rs.Bucket),
-		LastInteraction:         rs.LastInteraction,
-		ComputedAt:              &computedAt,
-		Inbound90d:              &inbound,
-		Outbound90d:             &outbound,
-		ContributingActivityIds: &contributing,
-	}
-	wire.Factors.Recency = float32(rs.Recency)
-	wire.Factors.Frequency = float32(rs.Frequency)
-	wire.Factors.Reciprocity = float32(rs.Reciprocity)
-	wire.Factors.Direction = float32(direction)
-	return wire
-}
-
-// StrengthBucketToWire types the domain's display bucket for the contract.
-// The two vocabularies are the same words on purpose — the wire enum was
-// aligned to the §4 kernel's — so this switch renames nothing. The input is
-// still a plain string, so a value the kernel never emits reads as none
-// rather than as a wire value the enum never declared.
-func StrengthBucketToWire(bucket string) crmcontracts.RelationshipStrengthBucket {
-	switch bucket {
-	case relstrength.BucketWeak:
-		return crmcontracts.RelationshipStrengthBucketWeak
-	case relstrength.BucketModerate:
-		return crmcontracts.RelationshipStrengthBucketModerate
-	case relstrength.BucketStrong:
-		return crmcontracts.RelationshipStrengthBucketStrong
-	default:
-		return crmcontracts.RelationshipStrengthBucketNone
-	}
 }
 
 // ContactStrength pairs one of a company's current contacts with
@@ -326,15 +281,16 @@ func contactStrengths(
 	rows, err := tx.Query(ctx, `
 		SELECT l.contact_id,
 		       max(a.occurred_at),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND `+relstrength.TheyWroteSQL("l.contact_id", "a")+`),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND `+relstrength.WeWroteSQL("a")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.TheyWroteSQL("l.contact_id", "a")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.WeWroteSQL("a")+`),
 		       max(a.occurred_at) FILTER (WHERE `+relstrength.TheyWroteSQL("l.contact_id", "a")+`),
 		       max(a.occurred_at) FILTER (WHERE `+relstrength.WeWroteSQL("a")+`),
+		       `+strengthDirectionPrecisions("l.contact_id")+`,
 		       (SELECT i.id FROM activity i
 		          JOIN activity_link il ON il.activity_id = i.id AND il.contact_id = l.contact_id
 		         WHERE `+relstrength.TheyWroteSQL("l.contact_id", "i")+` AND `+strengthCitedCountsAt(nowPos)+`
-		           AND i.archived_at IS NULL AND i.occurred_at >= $2`+auth.AudienceWorkspaceOnly("i")+citedWithin+`
+		           AND i.archived_at IS NULL AND `+occurredday.FromSQL("i", "$2")+auth.AudienceWorkspaceOnly("i")+citedWithin+`
 		         ORDER BY i.occurred_at DESC, i.id DESC
 		         LIMIT 1)
 		FROM activity a
@@ -351,7 +307,7 @@ func contactStrengths(
 		var rs RelationshipStrength
 		if err := rows.Scan(&contactID, &rs.LastInteraction, &rs.InteractionCount90d,
 			&rs.Inbound90d, &rs.Outbound90d, &rs.LastInbound, &rs.LastOutbound,
-			&rs.LastInboundActivity); err != nil {
+			&rs.LastInboundPrecision, &rs.LastOutboundPrecision, &rs.LastInboundActivity); err != nil {
 			return nil, err
 		}
 		byContact[contactID] = &rs
@@ -396,15 +352,16 @@ func strengthInputs(
 	// touch, the 90-day direction counts, and the contributing ids.
 	if err := tx.QueryRow(ctx, `
 		SELECT max(a.occurred_at),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND `+relstrength.TheyWroteSQL("$1", "a")+`),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND `+relstrength.WeWroteSQL("a")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.TheyWroteSQL("$1", "a")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.WeWroteSQL("a")+`),
 		       max(a.occurred_at) FILTER (WHERE `+relstrength.TheyWroteSQL("$1", "a")+`),
 		       max(a.occurred_at) FILTER (WHERE `+relstrength.WeWroteSQL("a")+`),
+		       `+strengthDirectionPrecisions("$1")+`,
 		       (SELECT i.id FROM activity i
 		          JOIN activity_link il ON il.activity_id = i.id AND il.contact_id = $1
 		         WHERE `+relstrength.TheyWroteSQL("$1", "i")+` AND `+strengthCitedCountsAt(nowPos)+`
-		           AND i.archived_at IS NULL AND i.occurred_at >= $2`+auth.AudienceWorkspaceOnly("i")+citedWithin+`
+		           AND i.archived_at IS NULL AND `+occurredday.FromSQL("i", "$2")+auth.AudienceWorkspaceOnly("i")+citedWithin+`
 		         ORDER BY i.occurred_at DESC, i.id DESC
 		         LIMIT 1)
 		FROM activity a
@@ -412,7 +369,7 @@ func strengthInputs(
 		WHERE `+strengthCountsAt(nowPos)+` AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+scoreWithin,
 		foldArgs...).Scan(&out.LastInteraction, &out.InteractionCount90d,
 		&out.Inbound90d, &out.Outbound90d, &out.LastInbound, &out.LastOutbound,
-		&out.LastInboundActivity); err != nil {
+		&out.LastInboundPrecision, &out.LastOutboundPrecision, &out.LastInboundActivity); err != nil {
 		return err
 	}
 
@@ -425,7 +382,7 @@ func strengthInputs(
 	rows, err := tx.Query(ctx, `
 		SELECT a.id FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
-		WHERE `+strengthCountsAt(4)+` AND a.archived_at IS NULL AND a.occurred_at >= $2`+auth.AudienceWorkspaceOnly("a")+contributingWithin+`
+		WHERE `+strengthCountsAt(4)+` AND a.archived_at IS NULL AND `+occurredday.FromSQL("a", "$2")+auth.AudienceWorkspaceOnly("a")+contributingWithin+`
 		ORDER BY a.occurred_at DESC
 		LIMIT $3`, citeArgs...)
 	if err != nil {

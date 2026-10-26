@@ -34,8 +34,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/signals"
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -53,6 +53,7 @@ type ghostedCandidate struct {
 	CompanyID  ids.UUID
 	ActivityID ids.UUID
 	At         time.Time
+	Precision  string
 }
 
 // scanGhostedThreads finds the accounts whose newest interaction is ours and
@@ -79,7 +80,7 @@ func scanGhostedThreads(ctx context.Context, tx pgx.Tx, now time.Time) ([]ghoste
 	rows, err := tx.Query(ctx, `
 		WITH newest AS (
 			SELECT DISTINCT ON (ro.company_id)
-			       ro.company_id, a.id, a.direction, a.occurred_at
+			       ro.company_id, a.id, a.direction, a.occurred_at, a.occurred_precision
 			  FROM activity a
 			  JOIN (`+activities.CompanyReachSet()+`) ro ON ro.activity_id = a.id
 			 WHERE a.archived_at IS NULL
@@ -88,10 +89,10 @@ func scanGhostedThreads(ctx context.Context, tx pgx.Tx, now time.Time) ([]ghoste
 			   -- last, so it is skipped rather than guessed at — the same rule
 			   -- PO-F-4 applies to the engagement state.
 			   AND a.direction IS NOT NULL
-			   AND a.occurred_at <= $1
+			   AND `+occurredday.HappenedSQL("a", "$1")+`
 			 ORDER BY ro.company_id, a.occurred_at DESC, a.id DESC
 		)
-		SELECT n.company_id, n.id, n.occurred_at
+		SELECT n.company_id, n.id, n.occurred_at, n.occurred_precision
 		  FROM newest n
 		  JOIN company o ON o.id = n.company_id AND o.archived_at IS NULL
 		 WHERE n.direction = 'outbound'
@@ -108,7 +109,7 @@ func scanGhostedThreads(ctx context.Context, tx pgx.Tx, now time.Time) ([]ghoste
 	var out []ghostedCandidate
 	for rows.Next() {
 		var found ghostedCandidate
-		if err := rows.Scan(&found.CompanyID, &found.ActivityID, &found.At); err != nil {
+		if err := rows.Scan(&found.CompanyID, &found.ActivityID, &found.At, &found.Precision); err != nil {
 			return nil, err
 		}
 		out = append(out, found)
@@ -167,7 +168,7 @@ func WriteGhostedSignals(ctx context.Context, tx pgx.Tx, now time.Time) (Ghosted
 	said := signalSummaryCopyFor(identity.BaseLanguageForRecord(ctx, tx))
 	pass := GhostedPass{Considered: len(candidates)}
 	for _, found := range candidates {
-		days := max(elapsed.Days(found.At, now, loc), 0)
+		days := max(occurredday.DaysSince(occurredday.Moment{At: found.At, DateOnly: occurredday.IsDay(found.Precision)}, now, loc), 0)
 		raised, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
 			Kind:        kindGhostedThread,
 			CompanyID:   found.CompanyID,

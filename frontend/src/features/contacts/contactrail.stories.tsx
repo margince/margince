@@ -151,6 +151,7 @@ const granted: View = {
   activities: {
     data: [
       {
+        occurred_precision: "instant",
         offers_email: false,
         id: "a-1",
         kind: "email",
@@ -181,6 +182,7 @@ const granted: View = {
   next_meeting: {
     activity_id: "a-2",
     starts_at: daysAgo(-4),
+    occurred_precision: "instant",
     subject: "Fleet retrofit walkthrough",
   },
 };

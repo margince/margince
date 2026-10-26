@@ -286,6 +286,7 @@ describe("the moves on the list, and the foot under them", () => {
         next_meeting: {
           activity_id: "a-1",
           starts_at: "2026-08-12T09:00:00Z",
+          occurred_precision: "instant",
           subject: "Renewal review",
           participants: [{ contact_id: "p-1", display_name: "Dana Buyer" }],
         },

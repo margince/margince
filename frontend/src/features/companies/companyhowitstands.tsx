@@ -137,12 +137,14 @@ export function CompanyHowItStands({
         <StandingTimeline
           label={view.company.display_name}
           asOf={view.as_of}
+          record={zone}
           gap={gap}
           events={events}
           marks={activityMarks(view.activities?.data ?? [], {
             t,
             locale,
             zone,
+            record: zone,
             asOf: view.as_of,
             onOpen: onOpenTab && (() => onOpenTab("timeline")),
           })}

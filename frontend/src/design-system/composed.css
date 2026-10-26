@@ -789,8 +789,10 @@
   padding-block: var(--space-3) var(--space-4);
   min-inline-size: 0;
 }
+/* The entry's column keeps a floor beside the verbs: a zero floor let the verbs'
+   `auto` track take the whole width and draw over the entry. */
 .timeline .tl-body:has(> .tl-actions) {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(min(100%, 12rem), 1fr) auto;
 }
 .timeline .tl-body > * {
   grid-column: 1 / -1;

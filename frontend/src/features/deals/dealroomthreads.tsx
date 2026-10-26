@@ -46,6 +46,11 @@ export type BoardDocument = Readonly<{
    * draw it: a kind no browser renders, or a surface with no preview mounted.
    */
   read?: () => void;
+  /**
+   * Set when the buyer no longer gets the file. The tile keeps its threads and
+   * its remove verb, and offers nothing a buyer would answer.
+   */
+  lapsed?: boolean;
 }>;
 
 export type BoardGroup = Readonly<{ key: string; label: string }>;
@@ -99,6 +104,14 @@ export function DocumentBoard({
         (thread) => !thread.document_id || !shown.has(thread.document_id),
       );
   const titles = new Map(documents.map((doc) => [doc.id, doc.title]));
+  // A thread about a file the buyer no longer gets is dropped from the buyer's
+  // list, so a reply there would reach nobody.
+  const lapsed = new Set(
+    documents.filter((doc) => doc.lapsed).map((doc) => doc.id),
+  );
+  const silenced: ThreadVerbs = { ...verbs, reply: undefined };
+  const verbsOf = (thread: DealRoomThread) =>
+    thread.document_id && lapsed.has(thread.document_id) ? silenced : verbs;
   // A thread about a document the board no longer lists still names that it
   // was about a document, so it does not read as room-wide.
   const aboutLabel = (title: string | undefined) =>
@@ -131,7 +144,7 @@ export function DocumentBoard({
                       key={doc.id}
                       doc={doc}
                       threads={byDocument.get(doc.id) ?? []}
-                      verbs={verbs}
+                      verbs={doc.lapsed ? silenced : verbs}
                       threadsInline={!deck}
                     />
                   ))}
@@ -148,7 +161,12 @@ export function DocumentBoard({
       >
         <PanelBody>
           {roomThreads.length === 0 ? <p>{t("threads.empty")}</p> : null}
-          <ThreadList threads={roomThreads} verbs={verbs} aboutOf={aboutOf} />
+          <ThreadList
+            threads={roomThreads}
+            verbs={verbs}
+            aboutOf={aboutOf}
+            verbsOf={verbsOf}
+          />
           <ThreadComposer
             verbs={verbs}
             documentId={null}
@@ -205,8 +223,12 @@ function DocumentCard({
   const { locale } = useLocale();
   const unanswered = unansweredCount(threads);
   const kind = fileKind(doc.filename);
+  const read = doc.lapsed ? undefined : doc.read;
   return (
-    <article className="board-doc" aria-label={doc.title}>
+    <article
+      className={doc.lapsed ? "board-doc board-doc-lapsed" : "board-doc"}
+      aria-label={doc.title}
+    >
       <div className="board-doc-stage">
         {/* The page is a shape, not a rendering of the file: the bytes are
             never fetched to draw a thumbnail, and a shape that promised to be
@@ -241,12 +263,12 @@ function DocumentCard({
             TITLE, not "Read", so a screen reader hears which document it
             opens; the Read verb beside it is the visible spelling of the
             same act. */}
-        {doc.read ? (
+        {read ? (
           <button
             type="button"
             className="board-doc-title board-doc-open"
             aria-haspopup="dialog"
-            onClick={doc.read}
+            onClick={read}
           >
             {doc.title}
           </button>
@@ -266,13 +288,13 @@ function DocumentCard({
         {doc.status ? (
           <div className="board-doc-status">{doc.status}</div>
         ) : null}
-        {doc.read || doc.actions ? (
+        {read || doc.actions ? (
           <div className="board-doc-verbs">
-            {doc.read ? (
+            {read ? (
               <Button
                 variant="primary"
                 aria-label={t("threads.readTitle", { title: doc.title })}
-                onClick={doc.read}
+                onClick={read}
               >
                 <BookOpen aria-hidden />
                 {t("threads.read")}
@@ -295,12 +317,26 @@ function DocumentCard({
           ) : null}
         </div>
       ) : null}
-      <ThreadComposer
-        verbs={verbs}
-        documentId={doc.id}
-        label={t("threads.askAbout")}
-        collapsible
-      />
+      <DocumentQuestion doc={doc} verbs={verbs} />
     </article>
+  );
+}
+
+// A file the buyer no longer gets takes no new question about it.
+function DocumentQuestion({
+  doc,
+  verbs,
+}: Readonly<{ doc: BoardDocument; verbs: ThreadVerbs }>) {
+  const t = useT();
+  if (doc.lapsed) {
+    return null;
+  }
+  return (
+    <ThreadComposer
+      verbs={verbs}
+      documentId={doc.id}
+      label={t("threads.askAbout")}
+      collapsible
+    />
   );
 }

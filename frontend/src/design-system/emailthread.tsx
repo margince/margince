@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, CircleCheck } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
 import type { components } from "../api/schema";
+import type { ActivityWhenFormatter } from "../format/activitywhen";
 import { useT } from "../i18n";
 import { Avatar } from "./avatar";
 import { Callout } from "./callout";
@@ -25,7 +26,7 @@ type EmailPresentation = components["schemas"]["EmailPresentation"];
 type EmailSummary = components["schemas"]["EmailSummary"];
 
 type Renders = Readonly<{
-  formatWhen: (iso: string) => string;
+  formatWhen: ActivityWhenFormatter;
   /** Names the records a message is filed against, on its envelope. */
   renderRecords?: (presentation: EmailPresentation) => ReactNode;
 }>;
@@ -71,7 +72,10 @@ export function EmailThread({
               {!isOpen && (
                 <EmailEntry
                   summary={summary}
-                  timestamp={formatWhen(summary.occurred_at)}
+                  timestamp={formatWhen(
+                    summary.occurred_at,
+                    summary.occurred_precision,
+                  )}
                   onSelect={() => toggle(summary.activity_id)}
                   selected={false}
                 />
@@ -213,7 +217,10 @@ function OpenMessage({
             )}
           </span>
           <span className="t-caption">
-            {formatWhen(presentation.occurred_at)}
+            {formatWhen(
+              presentation.occurred_at,
+              presentation.occurred_precision,
+            )}
           </span>
         </button>
         <button

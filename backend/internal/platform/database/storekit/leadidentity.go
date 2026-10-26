@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // LeadSourceKey names the source record a probe must not report against
@@ -49,16 +50,17 @@ func LeadEmailMatchClause(alias, address string) string {
 	return alias + ".email = lower(btrim(" + address + "))"
 }
 
-// LeadEmailHeldAtClause asks that address was already the lead's at the moment
-// at. The lead's first change of email after that moment must start from its
-// current address.
+// LeadEmailHeldAtClause asks that address was already the lead's when the
+// activity under alias activity happened, placed by occurredday.StartSQL. The
+// lead's first change of email after that moment must start from its current address.
 //
 // Mail from before the lead was created is its history only for a lead an
 // import run created. Even then no other lead, live or retired, may hold or
 // have held the address. Erasure nulls an address without recording it, so
 // the import rule bounds what the history cannot see.
-func LeadEmailHeldAtClause(alias, address, at string) string {
+func LeadEmailHeldAtClause(alias, address, activity string) string {
 	folded := "lower(btrim(" + address + "))"
+	at := occurredday.StartSQL(activity)
 	return `(` + at + ` >= ` + alias + `.created_at OR (` + leadImportedClause(alias) + ` AND NOT (
 		EXISTS (SELECT 1 FROM lead other_holder
 		         WHERE other_holder.id <> ` + alias + `.id AND other_holder.email = ` + folded + `)

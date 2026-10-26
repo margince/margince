@@ -129,6 +129,7 @@ export const populated: View = {
   activities: {
     data: [
       {
+        occurred_precision: "instant",
         offers_email: false,
         id: "a-1",
         kind: "email",
@@ -168,6 +169,7 @@ export const populated: View = {
   next_meeting: {
     activity_id: "a-2",
     starts_at: "2026-08-20T13:00:00Z",
+    occurred_precision: "instant",
     subject: "Fleet retrofit walkthrough",
     linked_deal_id: null,
     participants: [{ contact_id: "p-1", full_name: "Dana Buyer" }],
@@ -178,6 +180,7 @@ export const populated: View = {
       kind: "commitment_ours",
       body: "send the updated retrofit quote",
       source_activity_id: "a-1",
+      occurred_precision: "instant",
       source_quote: "Can we push the fleet retrofit review back a week?",
       source_label: "Re: retrofit timeline",
       occurred_at: "2026-08-01T10:15:00Z",
@@ -190,6 +193,7 @@ export const populated: View = {
       kind: "priority",
       body: "keep the depot offline window under four hours",
       source_activity_id: "a-1",
+      occurred_precision: "instant",
       source_quote: "We can't have the depot down for more than four hours.",
       source_label: "Re: retrofit timeline",
       occurred_at: "2026-08-01T10:15:00Z",
@@ -206,6 +210,7 @@ export const populated: View = {
       summary: "Dana asked to push the retrofit review back a week.",
       generated_by: "deterministic",
       occurred_at: "2026-08-01T10:15:00Z",
+      occurred_precision: "instant",
       activity_count: 3,
       status: "unanswered",
       linked_deal_id: null,
@@ -275,6 +280,7 @@ export const chatConversation: View = {
   activities: {
     data: [
       {
+        occurred_precision: "instant",
         offers_email: false,
         id: "a-9",
         kind: "message",

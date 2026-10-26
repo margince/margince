@@ -13,6 +13,7 @@ import {
   SurfaceState,
 } from "../../design-system/surfacestate";
 import { undoAction, useToast } from "../../design-system/toast";
+import { activityDay } from "../../format/activitywhen";
 import { formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -22,6 +23,7 @@ import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import "./dealfiles.css";
+import { ROOM_DOCUMENTS_PREFIX } from "./dealroomdocuments.key";
 
 // The deal's Files area: what a rep uploaded on the deal, and what arrived
 // with the messages linked to it. The second half is why this exists — an
@@ -208,11 +210,15 @@ function FilesTable({
           key: "added",
           header: t("dealfiles.col.added"),
           render: (doc) =>
-            formatDateAbbrev(
-              doc.attachment.origin?.occurred_at ?? doc.attachment.created_at,
-              locale,
-              recordZone,
-            ),
+            doc.attachment.origin
+              ? activityDay(
+                  doc.attachment.origin.occurred_at,
+                  doc.attachment.origin.occurred_precision,
+                  locale,
+                  recordZone,
+                  formatDateAbbrev,
+                )
+              : formatDateAbbrev(doc.attachment.created_at, locale, recordZone),
         },
         ...(mayWrite
           ? [
@@ -357,12 +363,14 @@ function useFileVerbs(dealId: string, attachmentId: string) {
   const t = useT();
   const toast = useToast();
   const queryClient = useQueryClient();
-  // Both spellings of "the deal's files": this area's own key and the one the
-  // Deal Room's picker reads, so a delete here never leaves a ghost there.
+  // Both keys of the deal's files: this area's own and the Deal Room picker's,
+  // so a delete here leaves no ghost there. The room's own list goes too,
+  // because it says whether each entry still reaches the buyer.
   const refresh = () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: ["deal-documents", dealId] }),
       queryClient.invalidateQueries({ queryKey: ["deal-attachments", dealId] }),
+      queryClient.invalidateQueries({ queryKey: ROOM_DOCUMENTS_PREFIX }),
     ]);
   // A refused hide or Undo has no dialog, and the row has no error slot.
   const sayRefused = (error: Error) =>

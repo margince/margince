@@ -46,6 +46,7 @@ type Activity = components["schemas"]["Activity"];
 const WHY_LABEL = "Active deal";
 
 const ACTIVITY: Activity = {
+  occurred_precision: "instant",
   offers_email: false,
   id: "act-1",
   kind: "email",

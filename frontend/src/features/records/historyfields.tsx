@@ -25,6 +25,7 @@ import { formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { EntityKind } from "../../lib/entity";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
+import type { HistoryValueCtx } from "../../lib/historyvalues";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
@@ -36,7 +37,6 @@ import {
   provenanceOfEntry,
 } from "./history.logic";
 import { HistoryFieldDiff } from "./historyfielddiff";
-import type { HistoryValueCtx } from "./historyvalues";
 import "./history.css";
 import "./historyfields.css";
 
@@ -344,6 +344,8 @@ export function changeTimeline(
     // what the record did.
     qualifier,
     atIso: change.changed_at,
+    // A field change is stamped by the server, so its time is always known.
+    atPrecision: "instant",
     provenance: provenanceOfEntry(change, viewerUserId),
     // The grounding travels with the row. An agent's change is only checkable
     // through the passport that made it and the evidence it cited, and moving

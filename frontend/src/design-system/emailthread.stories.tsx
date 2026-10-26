@@ -18,9 +18,11 @@ const BASE: EmailPresentation = {
   id: "11111111-1111-4111-8111-111111111111",
   lifecycle: "delivered",
   occurred_at: "2026-09-01T09:12:00Z",
+  occurred_precision: "instant",
   summary: {
     activity_id: "11111111-1111-4111-8111-111111111111",
     occurred_at: "2026-09-01T09:12:00Z",
+    occurred_precision: "instant",
     display_status: "team",
     attachment_count: 0,
     move: "none",

@@ -29,6 +29,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
@@ -165,9 +166,9 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		           max(a.occurred_at) AS last_at,
 		           max(a.occurred_at) FILTER (WHERE `+relstrength.TheyWroteSQL("t.contact_id", "a")+`)  AS last_inbound_at,
 		           max(a.occurred_at) FILTER (WHERE `+graphWeWrote+`) AS last_outbound_at,
-		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+`) AS count_90d,
-		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+` AND `+relstrength.TheyWroteSQL("t.contact_id", "a")+`)  AS in_90d,
-		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+` AND `+graphWeWrote+`) AS out_90d,
+		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+`) AS count_90d,
+		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+` AND `+relstrength.TheyWroteSQL("t.contact_id", "a")+`)  AS in_90d,
+		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+` AND `+graphWeWrote+`) AS out_90d,
 		           count(DISTINCT `+graphInteractionUnit+`) AS count_total
 		      FROM target t
 		      JOIN activity_participant up
@@ -390,9 +391,9 @@ func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 		       max(a.occurred_at),
 		       max(a.occurred_at) FILTER (WHERE `+relstrength.TheyWroteSQL("pp.contact_id", "a")+`),
 		       max(a.occurred_at) FILTER (WHERE `+graphWeWrote+`),
-		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+`),
-		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+` AND `+relstrength.TheyWroteSQL("pp.contact_id", "a")+`),
-		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+` AND `+graphWeWrote+`),
+		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+`),
+		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+` AND `+relstrength.TheyWroteSQL("pp.contact_id", "a")+`),
+		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+` AND `+graphWeWrote+`),
 		       count(DISTINCT `+graphInteractionUnit+`),
 		       now()
 		  FROM activity_participant up
@@ -420,7 +421,7 @@ func rebuildContactEdges(ctx context.Context, tx pgx.Tx, window string) error {
 		    (contact_a, contact_b, last_at, count_90d, count_total, computed_at)
 		SELECT pa.contact_id, pb.contact_id,
 		       max(a.occurred_at),
-		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+`),
+		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+`),
 		       count(DISTINCT `+graphInteractionUnit+`),
 		       now()
 		  FROM activity_participant pa

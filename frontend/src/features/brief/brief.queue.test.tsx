@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -10,7 +10,11 @@ import {
   STORAGE_KEYS,
   writeStored,
 } from "../../lib/storage";
-import { readingsDay, taskRow } from "../../testing/brief.fixtures";
+import {
+  failedApprovalRow,
+  readingsDay,
+  taskRow,
+} from "../../testing/brief.fixtures";
 import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
 import { BriefScreen } from "./brief";
 import { BriefQueue, WorklistRedirect } from "./brief.queue";
@@ -202,6 +206,30 @@ it("opens a meeting's own record from its focus row", async () => {
   expect(
     screen.queryByRole("button", { name: en["tasks.complete"] }),
   ).toBeNull();
+});
+
+// A row about a deal has no contact pane, and still opens on why it is here.
+// That is its reasons and what slips if nobody acts; the row line has no room.
+it("opens a deal row on why it needs attention", async () => {
+  const user = userEvent.setup();
+  window.location.hash = "#/home";
+  stubApi({
+    "GET /worklist": () => jsonResponse(readingsDay({}, [failedApprovalRow()])),
+  });
+  render(<BriefScreen />);
+  await user.click(
+    await screen.findByRole("button", { name: en["brief.focus.context"] }),
+  );
+  const details = await screen.findByRole("dialog", {
+    name: en["brief.focus.context"],
+  });
+  expect(within(details).getByText(en["worklist.why.title"])).toBeTruthy();
+  expect(
+    within(details).getByText(en["worklist.because.approved_and_failed"]),
+  ).toBeTruthy();
+  expect(
+    within(details).getByText(en["worklist.consequence.task_slips"]),
+  ).toBeTruthy();
 });
 
 // THE BUTTON AND THE LIST IT OPENS NAME ONE QUEUE.

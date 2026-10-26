@@ -105,6 +105,27 @@ test("a task read out of a meeting opens that meeting", async () => {
   });
 });
 
+test("a task logged with its date alone says when without a time", async () => {
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /activities/task-1": () =>
+      jsonResponse({
+        id: "task-1",
+        kind: "task",
+        subject: "Send the signed order",
+        occurred_at: "2026-09-08T10:00:00Z",
+        occurred_precision: "day",
+        is_done: false,
+        captured_by: "human:u-1",
+      }),
+  });
+  openTask();
+
+  const logged = await screen.findByText(new RegExp(`^${en["tasks.logged"]}`));
+  expect(logged.textContent).toMatch(/08\/09\/2026/);
+  expect(logged.textContent).not.toMatch(/\d{1,2}:\d{2}/);
+});
+
 test("a task nobody read out of a meeting offers no way back", async () => {
   stubTask(null);
   openTask();

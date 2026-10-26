@@ -3,6 +3,7 @@ import { Button } from "../../design-system/atoms";
 import { NextBar } from "../../design-system/nextbar";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { type PeekTask, tasksPeek } from "../../lib/standingpeeks";
 import type { Lead } from "./leads";
@@ -34,7 +35,8 @@ export function LeadNextBar({
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = viewerZone();
-  const next = leadNext(lead, { t, locale, zone, asOf });
+  const record = useRecordZone();
+  const next = leadNext(lead, { t, locale, zone, record, asOf });
   return (
     <NextBar
       title={next.title}

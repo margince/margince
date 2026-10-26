@@ -16,6 +16,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // OpenNextStepSQL renders the predicate "this deal has a next step planned",
@@ -27,10 +28,10 @@ import (
 //     meeting has a next step; telling them they do not is the same defect as
 //     telling them tomorrow's meeting already happened.
 //
-// The end test is written as a direct comparison rather than as `NOT
-// MeetingIsOverSQL(...)`. Negating that expression looks equivalent and is not:
-// it contains an `IN` over a nullable column, so an unmarked meeting made it
-// NULL, `NOT NULL` is NULL, and every such row silently failed the filter.
+// The end test is a direct comparison, not `NOT storekit.MeetingIsOverSQL(...)`.
+// Negating that expression looks equivalent and is not. It holds an `IN` over
+// a nullable column, so an unmarked meeting made it NULL. `NOT NULL` is NULL,
+// and every such row silently failed the filter.
 //
 // A meeting on the calendar is a next step when somebody here takes part in
 // it (storekit.MeetingResponsibilitySQL). A colleague's meeting counts for the
@@ -55,28 +56,9 @@ func OpenNextStepSQL(dealExpr, asOf, currentTask string) string {
 			JOIN activity_link ml ON ml.activity_id = m.id AND ml.deal_id = %[1]s
 			WHERE m.kind = 'meeting' AND m.archived_at IS NULL
 			  AND %[3]s AND NOT %[5]s
-			  AND %[2]s < m.occurred_at
-			         + make_interval(secs => coalesce(m.duration_seconds, 0))
+			  AND %[2]s < %[6]s
 		)
-	)`, dealExpr, asOf, meetingStillStandingSQL("m"), currentTask, storekit.UnclaimedMeetingSQL("m"))
-}
-
-// MeetingIsOverSQL renders "this meeting is finished", the reading the waiting
-// queue and the brief's snooze-lift already share: over means ENDED — start
-// plus duration, not start — and a meeting that will never happen counts as
-// over.
-//
-// A third spelling of a rule that already lives in `activities` is a cost, and
-// the layering is why it is paid: a module never imports a sibling, so `deals`
-// cannot reach activities' copy. backend/gates/meetingoverspelling_test.go is
-// what keeps the two honest — it derives the clause from the activities owner
-// and fails when either side drifts, in both directions.
-func MeetingIsOverSQL(alias, asOf string) string {
-	return fmt.Sprintf(`(%[1]s.archived_at IS NOT NULL
-		OR %[1]s.meeting_status IN ('canceled', 'no_show')
-		OR %[1]s.occurred_at
-		   + make_interval(secs => coalesce(%[1]s.duration_seconds, 0)) <= %[2]s)`,
-		alias, asOf)
+	)`, dealExpr, asOf, meetingStillStandingSQL("m"), currentTask, storekit.UnclaimedMeetingSQL("m"), occurredday.EndSQL("m"))
 }
 
 // meetingStillStandingSQL asks whether a meeting is still expected to happen:

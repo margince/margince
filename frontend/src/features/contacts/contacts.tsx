@@ -2,18 +2,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { usePageName } from "../../app/pagemeta";
 import { useBulkSelection } from "../../components/bulkverbs";
-import {
-  contactCreateFields,
-  mapContactBody,
-} from "../../components/contactformfields";
-import {
-  CreateAction,
-  type CreateField,
-  type FormRows,
-} from "../../components/create";
-import { useObjectCustomFields } from "../../components/customfields.form";
 import { EntityRef } from "../../components/entityref";
-import { searchCompanies } from "../../components/filterreference";
 import {
   type ListPage,
   type ListQuery,
@@ -21,7 +10,6 @@ import {
   listFetchLimit,
   useListQuery,
 } from "../../components/listquery";
-import { normalizeProfileUrl } from "../../components/profileurl";
 import {
   createdColumn,
   lastActivityColumn,
@@ -33,15 +21,14 @@ import {
 } from "../../components/recordlist";
 import { Badge } from "../../design-system/atoms";
 import { Avatar } from "../../design-system/avatar";
-import { useToast } from "../../design-system/toast";
 import { useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
 import { listQueryParams } from "../../lib/tagfilter";
 import { VCardImportAction, VCardImportPage } from "../import/vcard-import";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
+import { ContactCreateActions } from "./contactcreate";
 
 // Contacts list + contact 360 (B-EP09.10a/b). Every row carries its
 // provenance chip (captured_by is server truth); the 360 renders the
@@ -80,94 +67,6 @@ async function fetchContactsPage(
   };
 }
 
-async function createContact(
-  values: Record<string, string>,
-  rows: FormRows | undefined,
-  customFields: Record<string, unknown>,
-  t: (key: MessageKey) => string,
-  idempotencyKey: string,
-): Promise<Contact> {
-  return unwrap(
-    await api.POST("/contacts", {
-      params: { header: { "Idempotency-Key": idempotencyKey } },
-      body: { ...mapContactBody(values, rows ?? {}), ...customFields },
-    }),
-    t,
-  );
-}
-
-// Quick capture: the six things somebody reading a public profile in another
-// window can state, and nothing else. Deliberately NOT contactCreateFields
-// trimmed — the repeatable email and phone rows are two clicks each before a
-// value can be typed, which is the cost this path exists to remove.
-//
-// The company is one box that also offers the companies already carrying a
-// name like the one typed: picking one attaches it by id, and a name nobody
-// picked creates a company, so a reader never has to merge one away later.
-function quickCaptureFields(): CreateField[] {
-  return [
-    { key: "full_name", label: "create.fullName", required: true },
-    { key: "title", label: "create.contactTitle" },
-    {
-      key: "company_name",
-      label: "create.companyName",
-      offers: {
-        search: searchCompanies,
-        pickedKey: "company_id",
-        pickedHint: "create.companyPicked",
-        newHint: "create.companyNew",
-      },
-    },
-    { key: "profile_url", label: "create.linkedin" },
-    { key: "email", label: "create.email", type: "email" },
-    { key: "phone", label: "create.phone" },
-  ];
-}
-
-// A blank box is a field the reader left alone, which is not the same as a
-// value they cleared — this path only ever creates, so an empty string is
-// simply omitted rather than sent as an explicit null.
-function statedValue(values: Record<string, string>, key: string) {
-  const value = values[key]?.trim();
-  return value ? value : undefined;
-}
-
-async function quickCaptureContact(
-  values: Record<string, string>,
-  t: (key: MessageKey) => string,
-): Promise<Contact> {
-  const data = unwrap(
-    await api.POST("/contacts/quick-capture", {
-      body: {
-        full_name: values.full_name?.trim() ?? "",
-        title: statedValue(values, "title"),
-        // The contract lets an id win over a name; sending only one of them
-        // keeps the request saying what the reader chose.
-        ...companyChoice(values),
-        // Normalized here, as the contact rail does on save. A bare
-        // `linkedin.com/in/jdoe` stored as typed is unlinkable on every surface.
-        profile_url: profileUrlOrUndefined(values.profile_url),
-        email: statedValue(values, "email"),
-        phone: statedValue(values, "phone"),
-      },
-    }),
-    t,
-  );
-  return data.contact;
-}
-
-function companyChoice(values: Record<string, string>) {
-  const companyId = statedValue(values, "company_id");
-  return companyId
-    ? { company_id: companyId }
-    : { company_name: statedValue(values, "company_name") };
-}
-
-function profileUrlOrUndefined(raw: string | undefined) {
-  const stated = raw?.trim();
-  return stated ? normalizeProfileUrl(stated) : undefined;
-}
-
 // `#/contacts/import` is this screen's reserved segment (app/nav.ts), so the
 // list's reads never start for the import page.
 export function ContactsScreen({
@@ -186,10 +85,6 @@ function ContactsList() {
   const viewerId = useViewerId();
   const ownerChips = useOwnerTagChips();
   const savedViews = useSavedViewTabs("contacts");
-  const cf = useObjectCustomFields("contact", "create");
-  // The form that never closes gives no other feedback: without this, six
-  // saved contacts look exactly like six that failed silently.
-  const toast = useToast();
   const state = useListQuery<Contact>({
     key: "contacts",
     initialSort: "-created_at",
@@ -210,36 +105,9 @@ function ContactsList() {
         emptyNote={mineEmptyNote({ t, state, viewerId, unit: "unit.contacts" })}
         action={
           <>
-            <CreateAction
-              label={t("create.quickCapture")}
-              invalidate="contacts"
-              screen="contacts"
-              testId="quick-capture"
-              keepOpen
-              create={(values) => quickCaptureContact(values, t)}
-              onCreated={(contact) =>
-                toast.show(
-                  t("create.quickCaptureSaved", { name: contact.full_name }),
-                )
-              }
-              resolveExisting={(_code, id) => ({ screen: "contacts", id })}
-              fields={quickCaptureFields()}
-            />
-            <CreateAction
-              label={t("create.contact")}
-              invalidate="contacts"
-              screen="contacts"
-              create={(values, rows, key) =>
-                createContact(values, rows, cf.toBody(values), t, key)
-              }
-              resolveExisting={(_code, id) => ({ screen: "contacts", id })}
-              fields={[...contactCreateFields(t), ...cf.formFields]}
-            />
-            {/* Last of the three, because it is the one a reader reaches for
-                with a stack of cards already in hand rather than while typing
-                one contact. Beside the others all the same: a handed-over card
-                is a way a contact comes to exist, and every one of those
-                belongs on this list. */}
+            <ContactCreateActions />
+            {/* Last, because it is the one a reader reaches for with a stack
+                of cards already in hand rather than while typing one contact. */}
             <VCardImportAction />
           </>
         }

@@ -193,7 +193,9 @@ func SettleIntoInstall(t *testing.T, e *Env) {
 			`UPDATE contact SET entered_at = created_at WHERE created_at < entered_at`,
 			`UPDATE deal SET entered_at = least(created_at, coalesce(closed_at, created_at))
 			  WHERE least(created_at, coalesce(closed_at, created_at)) < entered_at`,
-			`UPDATE activity SET created_at = occurred_at WHERE occurred_at < created_at`,
+			`UPDATE activity SET created_at = occurred_at
+			 WHERE occurred_at < created_at -- occurred_at raw: a fixture's capture time, never ahead of its row
+			`,
 		} {
 			if _, err := tx.Exec(context.Background(), stmt); err != nil {
 				return err

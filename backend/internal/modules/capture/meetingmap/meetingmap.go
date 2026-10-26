@@ -230,6 +230,7 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 			// The sink adds a mask of the subject to this.
 			CredentialsMasked: m.masked,
 			OccurredAt:        m.occurredAt,
+			DateOnly:          m.allDay,
 			DurationSeconds:   m.durationSeconds,
 			// A meeting is not directional (no inbound/outbound sender).
 			Direction: "",
@@ -306,21 +307,6 @@ func buildBody(ev Event, attendeeEmails []string) (body string, masked bool) {
 	}
 	maskedBody := credentialmask.MaskText(body)
 	return textcut.BytesMarked(maskedBody, MaxBodyLen, "…"), maskedBody != body
-}
-
-// AllDayStart anchors an all-day date (YYYY-MM-DD) at noon UTC.
-//
-// An all-day date is calendar-local with no timezone; reading it as midnight
-// UTC lands it on the PREVIOUS day for any zone west of UTC. Noon keeps the
-// intended calendar date across the whole ±12h range of real offsets, absent a
-// per-event timezone. Exported because every calendar provider has all-day
-// events and the off-by-one is the same one in each.
-func AllDayStart(date string) (time.Time, bool) {
-	t, err := time.Parse("2006-01-02", strings.TrimSpace(date))
-	if err != nil {
-		return time.Time{}, false
-	}
-	return t.Add(12 * time.Hour).UTC(), true
 }
 
 // domainOf returns the lowercased domain part of an address, or "" if it

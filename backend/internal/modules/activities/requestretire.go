@@ -31,7 +31,7 @@ func (s *Store) retireAgedReminders(ctx context.Context, tx pgx.Tx, asOf time.Ti
 		 WHERE reminder.source_system = @source
 		   AND NOT reminder.is_done AND reminder.archived_at IS NULL
 		   AND reminder.captured_by = @actor
-		   AND request.occurred_at < @cutoff
+		   AND request.occurred_at < @cutoff -- occurred_at raw: the age of a captured mail, an instant
 		   AND `+pristineRepairTaskSQL("reminder")+`
 		 ORDER BY request.occurred_at, reminder.id
 		 LIMIT @limit

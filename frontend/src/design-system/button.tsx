@@ -12,12 +12,12 @@ import { swallowWhileBusy, useSinglePress } from "./presslatch";
 /**
  * How loud a control is, and on whose behalf it acts.
  *
- * `ai` is the one that is not a volume. It says a machine does the work behind
- * the click: it drafts the mail, reads the site, writes the summary. It is
- * indigo everywhere for the same reason the bands and the citation rules are.
- * A reader learns one colour for "Margince did this" rather than one per
- * surface. It never marks importance: a destructive verb an agent performs is
- * still danger.
+ * `ai` is the one that is not a volume. It says the press starts a model: it
+ * drafts the mail, reads the site, writes the summary. It is indigo everywhere
+ * for the same reason the bands and the citation rules are. A reader learns
+ * one colour for "Margince does this now" rather than one per surface. It never
+ * marks importance: a destructive verb an agent performs is still danger.
+ * Accepting a proposal is `primary` and only opening something is `ghost`.
  *
  * `link` is the quietest rung: the text affordance `.link-button` already draws
  * for an `<a>` or a hand-rolled `<button>`. A verb reaches it through this

@@ -182,6 +182,7 @@ type ActivityFields struct {
 	// poll saw it — a timeline ordered by discovery is a timeline of this
 	// system's own scheduling.
 	OccurredAt      time.Time
+	DateOnly        bool // OccurredAt names a date with no time of day, as an all-day event does.
 	DurationSeconds *int
 	Direction       string
 }

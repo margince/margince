@@ -27,7 +27,7 @@ var laneDay = time.Date(2026, time.March, 10, 6, 0, 0, 0, time.UTC)
 func todaySubjectsAtLimit(t *testing.T, e *integration.Env, now time.Time, limit int) []string {
 	t.Helper()
 	lane := attentionMeetings{store: activities.NewStore(InstallationDB(e.Pool))}
-	rows, err := lane.Today(e.Admin(), now, now.Truncate(24*time.Hour).Add(24*time.Hour), limit, attention.TasksVisible, ids.UUID{})
+	rows, err := lane.Today(e.Admin(), attention.MeetingWindow{From: now, Until: now.Truncate(24 * time.Hour).Add(24 * time.Hour)}, limit, attention.TasksVisible, ids.UUID{})
 	if err != nil {
 		t.Fatalf("reading the meeting lane: %v", err)
 	}
@@ -73,7 +73,7 @@ func TestTheOutcomeLaneReadsTheOldestDebtAtAnyDepth(t *testing.T) {
 		bookCustomerMeeting(t, e, fmt.Sprintf("Unanswered %02d", back), now.Add(-time.Duration(back)*12*time.Hour), "")
 	}
 	lane := attentionMeetingsAwaitingOutcome{store: activities.NewStore(InstallationDB(e.Pool))}
-	rows, err := lane.Since(e.Admin(), now.Truncate(24*time.Hour).AddDate(0, 0, -14), now, 2, attention.TasksVisible, ids.UUID{})
+	rows, err := lane.Since(e.Admin(), attention.MeetingWindow{From: now.Truncate(24*time.Hour).AddDate(0, 0, -14), Until: now}, 2, attention.TasksVisible, ids.UUID{})
 	if err != nil {
 		t.Fatalf("reading the outcome lane: %v", err)
 	}

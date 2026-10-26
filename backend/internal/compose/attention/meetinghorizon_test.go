@@ -35,9 +35,9 @@ func (h *stubHorizon) Calendar(context.Context) (crmcontracts.WorklistCalendar, 
 }
 
 func (h *stubHorizon) NextCustomerMeeting(
-	_ context.Context, after, before time.Time,
+	_ context.Context, window MeetingWindow,
 ) (crmcontracts.Contact360NextMeeting, bool, error) {
-	h.asked, h.after, h.before = true, after, before
+	h.asked, h.after, h.before = true, window.From, window.Until
 	if h.next == nil {
 		return crmcontracts.Contact360NextMeeting{}, false, h.nextErr
 	}

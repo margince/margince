@@ -26,6 +26,7 @@ import { TimelineActions } from "./timelineactions";
 
 type Activity = components["schemas"]["Activity"];
 const TASK: Activity = {
+  occurred_precision: "instant",
   offers_email: false,
   id: "task-1",
   kind: "task",

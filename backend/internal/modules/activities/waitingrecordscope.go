@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -145,5 +146,5 @@ func appendRequestReviewClause(ctx context.Context, in ListActivitiesInput, arg 
 	wake := messageSnoozeLiftedSQL(instant, backContent)
 	reader := arg(readerOrNobody(ctx))
 	disposition := "NOT " + readerSetAsideSQL(fmt.Sprintf("$%d", reader), wake)
-	return append(where, "("+reviewableRequestSQL(instant)+")", "a.occurred_at <= "+instant, disposition), nil
+	return append(where, "("+reviewableRequestSQL(instant)+")", occurredday.BegunSQL("a", instant), disposition), nil
 }

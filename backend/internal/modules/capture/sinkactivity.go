@@ -44,9 +44,7 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	if err != nil || found {
 		return invited, false, counterpartyDecision{}, err
 	}
-	fields.OccurredAt = defaultOccurredAt(fields.OccurredAt)
-	fields.DurationSeconds = StorableDuration(fields.DurationSeconds)
-	if fields.judged, err = judgeEnvelopeTx(ctx, tx, rec, fields); err != nil {
+	if fields, err = settledFields(ctx, tx, rec, fields); err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
 	// Whose credential carried this record, asked ONCE and carried to both the
@@ -436,6 +434,29 @@ func (s *Sink) upsertActivity(
 	return id, false, nil
 }
 
+// occurredPrecision is the activity column's word for DateOnly.
+func (f ActivityFields) occurredPrecision() string {
+	if f.DateOnly {
+		return string(crmcontracts.OccurredPrecisionOccurredPrecisionDay)
+	}
+	return string(crmcontracts.OccurredPrecisionOccurredPrecisionInstant)
+}
+
+// settledFields fills in what the capture does not take as sent. That is the
+// time and its day anchor, the storable length, and the envelope's judgement.
+func settledFields(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields) (ActivityFields, error) {
+	var err error
+	if fields.DateOnly {
+		if fields.OccurredAt, err = dayAnchor(fields.OccurredAt); err != nil {
+			return fields, err
+		}
+	}
+	fields.OccurredAt = defaultOccurredAt(fields.OccurredAt)
+	fields.DurationSeconds = StorableDuration(fields.DurationSeconds)
+	fields.judged, err = judgeEnvelopeTx(ctx, tx, rec, fields)
+	return fields, err
+}
+
 // defaultOccurredAt fills a provider payload that carried no timestamp:
 // capture time is the honest fallback — better a coarse "when we saw
 // it" than a zero time sorting the record to the beginning of history.
@@ -456,13 +477,14 @@ func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord,
 		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, captureSource(rec), capturedByFor(ctx, rec), nullableString(rec.ThreadKey), nullableString(correspondence.Fold(rec.Counterparty.Email)),
 		rec.Counterparty.SentByOwner(), rec.Counterparty.ListUnsubscribe, audience, nullableString(audienceReason), fields.HasCalendarPart, meetingHostUserID(ctx, fields.Kind), nullableString(string(textlang.DetectFirst(fields.Body, fields.Subject))), nullableID(rec.StoredOriginal), fields.DurationSeconds, nullableID(fields.SentByColleague), nullableString(fields.CalendarMethod),
 		fields.judged.foreignLink, fields.judged.senderWasStranger, inboundSenderAuthenticated(rec, fields), string(fields.BodyCompleteness.stored()), senderIsMachine(rec, fields),
+		fields.occurredPrecision(),
 		nullableID(fields.InvitationFromSeat),
 	}
 	placeholders := make([]string, len(args))
 	for i := range args {
 		placeholders[i] = fmt.Sprintf("$%d", i+1)
 	}
-	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method,foreign_link,sender_was_stranger,inbound_sender_authenticated,body_completeness,sender_is_machine,invitation_sender)
+	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method,foreign_link,sender_was_stranger,inbound_sender_authenticated,body_completeness,sender_is_machine,occurred_precision,invitation_sender)
  VALUES (` + strings.Join(placeholders, ",") + `) ON CONFLICT(source_system,source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL DO NOTHING RETURNING id`
 	return query, args
 }

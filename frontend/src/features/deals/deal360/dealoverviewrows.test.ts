@@ -18,6 +18,7 @@ const t = (
 
 function task(id: string, over: Partial<Activity> = {}): Activity {
   return {
+    occurred_precision: "instant",
     offers_email: false,
     id,
     kind: "task",

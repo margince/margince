@@ -72,12 +72,14 @@ export function ContactHowItStands({ view }: Readonly<{ view: Contact360 }>) {
             name: view.contact.full_name,
           })}
           asOf={view.as_of}
+          record={zone}
           gap={contactGap(view, words)}
           events={contactTimelineEvents(view, words)}
           marks={activityMarks(view.activities?.data ?? [], {
             t,
             locale,
             zone,
+            record: zone,
             asOf: view.as_of,
             onOpen: openHistory,
           })}

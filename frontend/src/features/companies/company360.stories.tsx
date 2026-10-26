@@ -170,6 +170,7 @@ const populated: View = {
   activities: {
     data: [
       {
+        occurred_precision: "instant",
         offers_email: false,
         id: "a-1",
         kind: "email",

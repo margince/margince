@@ -162,6 +162,30 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "A day count is a fact about a named zone: the same two instants are different numbers of calendar days in UTC+7, UTC-5 and UTC.",
   },
   {
+    file: "lib/activitybody.test.ts",
+    why: "A backdated entry's wire date must be the picked day in zones a day ahead of UTC at the moment of logging, so each case names the zone it is logged in.",
+  },
+  {
+    file: "features/worklist/worklist.held.test.ts",
+    why: "A date-only meeting reads on the record's clock and a timed one on the reader's, and the two only differ between named zones far apart.",
+  },
+  {
+    file: "features/leads/leadstanding.test.ts",
+    why: "A date-only signal reads on the record's clock and the other dates on the reader's, and the two only differ between named zones far apart.",
+  },
+  {
+    file: "features/leads/leadstandingparts.test.ts",
+    why: "A date-only signal dates its rung on the record's clock, which differs from the reader's only between named zones far apart.",
+  },
+  {
+    file: "features/automations/approvalpreview.conflicts.test.ts",
+    why: "A date-only source's midday falls on the day before west of the record zone, so the case names a zone east of UTC.",
+  },
+  {
+    file: "format/activitywhen.test.ts",
+    why: "A date-only entry's noon UTC lands on another local date in the zones furthest from UTC, so the case names those zones.",
+  },
+  {
     file: "features/companies/companynextbar.test.ts",
     why: "The days-late count takes the zone its date is drawn in; the fixture pins UTC so the expected count does not move with the test machine.",
   },
@@ -172,6 +196,10 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "features/deals/deal360/dealstanding.test.ts",
     why: "Days in a stage are counted in the record zone; the fixture pins UTC so the expected count does not move with the test machine.",
+  },
+  {
+    file: "features/deals/dealfiles.test.tsx",
+    why: "A file from a mail logged by its day is dated by that day; only a record zone at UTC+14 puts the stored noon on the next local date.",
   },
   {
     file: "features/capture/connectors.historybaseline.stories.tsx",
@@ -331,7 +359,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Same shape, one level up: the hook takes the reading context whole, and these cases assert which ROWS survive a narrowed read rather than how any date renders. A zone read off the runner would make the fixture differ by machine while proving nothing about the zone.",
   },
   {
-    file: "features/records/historyvalues.test.ts",
+    file: "lib/historyvalues.test.ts",
     why: "The zone IS the input under test: a stored timestamp is asserted to render at the RECORD's zone rather than at UTC, which needs a zone east of UTC to stand in. Read off the runner's own zone the suite would assert a different rendering on every machine.",
   },
   {
@@ -534,6 +562,22 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "features/settings/users-admin.stories.tsx",
     why: "Installation-settings fixtures backing the users-admin story rows.",
+  },
+  {
+    file: "design-system/standingtimeline.test.tsx",
+    why: "A day entry dated today is stored at noon UTC, which is later than a late evening in UTC+14; only that zone shows the line still draws it.",
+  },
+  {
+    file: "features/contacts/contactmemory.test.tsx",
+    why: "A day entry's noon UTC is the next date in UTC+14; only that zone shows the card prints the date the entry names.",
+  },
+  {
+    file: "features/companies/company360lasttouch.stories.tsx",
+    why: "A day entry's noon UTC is the next date in UTC+14; only that zone shows the tile counts from and names the date the entry holds.",
+  },
+  {
+    file: "features/contacts/contactmeetings.held.stories.tsx",
+    why: "A day entry's noon UTC is the next date in UTC+14; only that zone shows the table dates a held meeting by the date it names.",
   },
 ];
 

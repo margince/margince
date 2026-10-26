@@ -28,7 +28,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 )
 
 // The citable record types. A brief may only point at things the reader can
@@ -180,7 +179,7 @@ func lastTouchLine(in Input) string {
 	if in.LastTouchAt == nil {
 		return said.Say(touchWords.None)
 	}
-	days := elapsed.Days(*in.LastTouchAt, in.Now, in.Zone)
+	days := in.LastTouchAt.daysAgo(in.Now, in.Zone)
 	switch {
 	case days <= 0:
 		return said.Say(touchWords.Today)
@@ -261,7 +260,7 @@ func (said briefCopy) attendeeLine(attendee AttendeeIn, now time.Time, loc *time
 	if attendee.FirstTime || attendee.LastTouch == nil {
 		return fmt.Sprintf(said.Say(touchWords.First), line)
 	}
-	days := elapsed.Days(*attendee.LastTouch, now, loc)
+	days := attendee.LastTouch.daysAgo(now, loc)
 	if days <= 0 {
 		return fmt.Sprintf(said.Say(touchWords.SpokeToday), line)
 	}

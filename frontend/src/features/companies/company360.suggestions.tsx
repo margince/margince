@@ -7,7 +7,8 @@ import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { sectionState } from "../../design-system/surfacestate";
-import { formatDate, formatNumber } from "../../format/format";
+import { activityDay } from "../../format/activitywhen";
+import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemMessageOf, unwrap } from "../../lib/problem";
@@ -38,6 +39,15 @@ const SUGGESTION_ACTION_LABELS: Record<SuggestionAction["kind"], MessageKey> = {
   draft_reply: "co.suggest.act.draftReply",
   open_deal: "co.suggest.act.openDeal",
   add_task: "co.suggest.act.addTask",
+};
+
+const SUGGESTION_ACTION_VARIANT: Record<
+  SuggestionAction["kind"],
+  "ai" | "primary" | "ghost"
+> = {
+  draft_reply: "ai",
+  add_task: "primary",
+  open_deal: "ghost",
 };
 
 /**
@@ -80,14 +90,13 @@ function SuggestionActionButton({
   onPerform: (action: SuggestionAction) => void;
 }>) {
   const t = useT();
-  // The draft and the prepared step are the agent's own work: a rule wrote the
-  // sentence, and pressing the button accepts it. Opening a deal is navigation.
-  // Indigo there would spend the one mark that means "a machine wrote this" on
-  // a click where nothing did.
-  const byMargince = action.kind !== "open_deal";
+  // Indigo says the press makes the model write, and only the reply does: its
+  // composer drafts on open. Adding the prepared task accepts a rule's
+  // sentence, and opening a deal is navigation.
+  const byMargince = action.kind === "draft_reply";
   return (
     <Button
-      variant={byMargince ? "ai" : "primary"}
+      variant={SUGGESTION_ACTION_VARIANT[action.kind]}
       pending={pending}
       onClick={() => onPerform(action)}
     >
@@ -296,7 +305,12 @@ export function useSuggestionsBody({
       // system chose.
       when={
         suggestion.due_at
-          ? formatDate(suggestion.due_at, locale, recordZone)
+          ? activityDay(
+              suggestion.due_at,
+              suggestion.due_precision ?? "instant",
+              locale,
+              recordZone,
+            )
           : undefined
       }
       // The ask: what the rule wants done. Falls back to the kind only when the

@@ -224,6 +224,7 @@ export const NothingBehindIt: Story = {
 };
 
 const termination: WorklistItem = {
+  occurred_precision: "instant",
   id: "00000000-0000-7000-8000-0000000d0001",
   source: "approval",
   kind: "lifecycle_change",

@@ -42,7 +42,7 @@ func unansweredSubjects(t *testing.T, e *integration.Env, now time.Time) []strin
 	t.Helper()
 	lane := attentionMeetingsAwaitingOutcome{store: activities.NewStore(InstallationDB(e.Pool))}
 	began := now.Truncate(24 * time.Hour)
-	rows, err := lane.Since(e.Admin(), began.AddDate(0, 0, -14), now, 12, attention.TasksVisible, ids.UUID{})
+	rows, err := lane.Since(e.Admin(), attention.MeetingWindow{From: began.AddDate(0, 0, -14), Until: now}, 12, attention.TasksVisible, ids.UUID{})
 	if err != nil {
 		t.Fatalf("reading the outcome lane: %v", err)
 	}

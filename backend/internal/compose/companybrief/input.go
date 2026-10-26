@@ -21,6 +21,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/contactbrief"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -370,7 +371,7 @@ func foldRecent(view crmcontracts.Company360, in *Input) {
 		act := ActIn{
 			ID:   activity.Id.String(),
 			Kind: string(activity.Kind),
-			At:   activity.OccurredAt.UTC().Format(time.RFC3339),
+			At:   activitywhen.Text(activity),
 		}
 		if activity.Subject != nil {
 			act.Subject = *activity.Subject

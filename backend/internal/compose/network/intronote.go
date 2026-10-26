@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -318,9 +319,9 @@ func contactCorrespondence(
 		  JOIN activity_participant ap
 		    ON ap.activity_id = a.id AND ap.role = 'from' AND ap.contact_id = $%d
 		 WHERE a.direction = 'inbound' AND a.archived_at IS NULL
-		   AND a.occurred_at >= $%d AND a.occurred_at <= $%d AND (%s)
+		   AND %s AND %s AND (%s)
 		 ORDER BY a.occurred_at DESC, a.id DESC
-		 LIMIT $%d`, contactPos, sincePos, untilPos, scope, capPos), args...)
+		 LIMIT $%d`, contactPos, occurredday.FromSQL("a", fmt.Sprintf("$%d", sincePos)), occurredday.BegunSQL("a", fmt.Sprintf("$%d", untilPos)), scope, capPos), args...)
 	if err != nil {
 		return "", fmt.Errorf("network: reading what the contact wrote: %w", err)
 	}

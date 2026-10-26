@@ -25,7 +25,7 @@ var companyArms = `FROM activity_link l
 		    LEFT JOIN deal d ON d.id = l.deal_id
 		    LEFT JOIN relationship r ON r.contact_id = l.contact_id AND r.kind = 'employment'
 		      AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL
-		      AND ` + employment.InPlaceAtSQL("r", "la.occurred_at") + `
+		      AND ` + employment.InPlaceForSQL("r", "la") + `
 		      AND ` + relationshipmark.ContactNotMarkedSQL("r.contact_id")
 
 // participantEmployerArm is the fourth arm: the employer of somebody who is on
@@ -41,7 +41,7 @@ var participantEmployerArm = `EXISTS (
 		    SELECT 1 FROM activity_participant ap
 		      JOIN relationship emp ON emp.contact_id = ap.contact_id AND emp.kind = 'employment'
 		        AND ` + employment.IsCurrentSQL("emp.ended_at") + ` AND emp.archived_at IS NULL
-		        AND ` + employment.InPlaceAtSQL("emp", "a.occurred_at") + `
+		        AND ` + employment.InPlaceForSQL("emp", "a") + `
 		        AND ` + relationshipmark.ContactNotMarkedSQL("emp.contact_id") + `
 		    WHERE ap.activity_id = a.id AND emp.company_id = %s)`
 

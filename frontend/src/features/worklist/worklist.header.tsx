@@ -41,6 +41,10 @@ const FILTERS = [
   "meetings",
   "tasks",
   "decisions",
+  // A relationship gone quiet is outreach to someone the reader worked with,
+  // not upkeep. It has its own category on the server. Without its own pill it
+  // was reachable only through All.
+  "relationships",
   "system",
 ] as const satisfies readonly WorklistFilter[];
 
@@ -53,7 +57,7 @@ const FILTERS = [
 // sends them here, `except_decisions` is a complement that only means something
 // on a screen already drawing its own decisions, and `changed_since_brief`
 // describes a moment. Offered as pills they would be three cuts nobody asked
-// for, so the row stays the seven kinds plus `all` and these arrive by link.
+// for, so the row stays the eight kinds plus `all` and these arrive by link.
 const LINKED_ONLY = [
   "urgent",
   "except_decisions",
@@ -135,8 +139,8 @@ export function worklistLaneHref(
  * computed display, so the cuts and the columns cannot disagree — a
  * breakpoint spelled again here in pixels could, and the head's own width
  * cannot tell a lanes column from a narrow page. The cuts are a list in the
- * column and a strip across the page: eight rows of lanes over a phone's
- * queue would push the first row past the fold the phone rules keep it above.
+ * column and a strip across the page. Nine rows of lanes over a phone's queue
+ * would push the first row past the fold the phone rules keep it above.
  *
  * The head's own box is what the observer watches: it changes width when the
  * layout flips and stands still otherwise, and a wrapper that has dissolved

@@ -204,6 +204,7 @@ it("names restricted overview sections even when an open commitment leads", asyn
         kind: "commitment_ours",
         body: "Send the pilot quote",
         source_activity_id: "a-1",
+        occurred_precision: "instant",
         source_quote: "I will send the quote.",
         status: "open",
         needs_review: false,

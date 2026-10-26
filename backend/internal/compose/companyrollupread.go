@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -398,9 +399,9 @@ func closedWonMinorThisQuarter(ctx context.Context, tx pgx.Tx, included []ids.UU
 }
 
 // companyActivityCount30d counts live activities that reach any included
-// company in the half-open window [asOf−30d, asOf). The upper bound
-// keeps a future-dated activity (a scheduled call, a clock-skewed import)
-// out of a count that claims to describe the PAST 30 days.
+// company in [asOf−30d, asOf), a day entry by its date, and have happened by asOf.
+// The upper bound keeps a future-dated activity (a scheduled call, a
+// clock-skewed import) out of a count that claims to describe the PAST 30 days.
 //
 // "Reaches" is activities.CompanyLinkedActivityExistsAny, the four-arm walk the
 // timeline list and the company view's sections use. A count that answered a
@@ -416,7 +417,7 @@ func companyActivityCount30d(ctx context.Context, tx pgx.Tx, included []ids.UUID
 		FROM activity a
 		WHERE `+activities.CompanyLinkedActivityExistsAny(1)+`
 		  AND a.archived_at IS NULL
-		  AND a.occurred_at >= $2 AND a.occurred_at < $3`,
+		  AND `+occurredday.WithinSQL("a", "$2", "$3")+` AND `+occurredday.HappenedSQL("a", "$3"),
 		included, asOf.AddDate(0, 0, -30), asOf).Scan(&count)
 	return count, err
 }

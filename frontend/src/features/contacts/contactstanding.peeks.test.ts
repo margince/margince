@@ -23,10 +23,16 @@ const words = {
   zone: UTC_ZONE,
 } as never;
 
-const mail = (id: string, at: string, direction: "inbound" | "outbound") => ({
+const mail = (
+  id: string,
+  at: string,
+  direction: "inbound" | "outbound",
+  precision: "instant" | "day" = "instant",
+) => ({
   id,
   kind: "email",
   occurred_at: at,
+  occurred_precision: precision,
   direction,
   subject: `Subject ${id}`,
   email_summary: { direction, move: "none" },
@@ -58,6 +64,23 @@ describe("contactPeeks", () => {
 
     expect(exchange?.items.map((item) => item.key)).toEqual(["new", "mid"]);
     expect(exchange?.foot).toBeUndefined();
+  });
+
+  // A `day` entry is stored at noon on the record's clock, which can be later
+  // than the read. Its day has begun, so it is a message already exchanged.
+  it("counts a date-only message from today, though its noon is still ahead", () => {
+    const { exchange } = contactPeeks(
+      view({
+        strength: { inbound_90d: 1, outbound_90d: 0 },
+        activities: {
+          data: [mail("today", "2026-10-22T12:00:00Z", "inbound", "day")],
+        },
+      }),
+      words,
+      () => undefined,
+    );
+
+    expect(exchange?.items.map((item) => item.key)).toEqual(["today"]);
   });
 
   it("lists only the colleagues the Reach reading counts as in touch", () => {

@@ -17,6 +17,7 @@ function mail(
     // whose title is the body or the kind.
     subject: title,
     atIso,
+    atPrecision: "instant",
     provenance: { kind: "human", self: false },
     ...extra,
   };
@@ -217,6 +218,7 @@ describe("grouping the account's chronology", () => {
       kind: "change",
       title: "stage",
       atIso,
+      atPrecision: "instant",
       provenance: { kind: "human", self: false },
     });
     const groups = groupChronology([

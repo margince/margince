@@ -15,8 +15,8 @@ func TestChangedCopyKeepsBaselineSourcesAndQuotes(t *testing.T) {
 	langcopytest.Census(t, changedWords)
 	for _, language := range []string{"en", "de", "vi"} {
 		in := fullInput()
-		in.LastSpokeAt = new(at(5))
-		in.Commitments = []ClaimIn{{ContactName: "Original Name", Kind: kindObjection, Body: "Original objection", SourceID: activityID, OccurredAt: new(at(7))}}
+		in.LastSpokeAt = new(instantOn(5))
+		in.Commitments = []ClaimIn{{ContactName: "Original Name", Kind: kindObjection, Body: "Original objection", SourceID: activityID, OccurredAt: new(instantOn(7))}}
 		in.Recent = []ActIn{{ID: activityID, Subject: "Original subject", At: at(8)}}
 		english := whatChangedSection(in, rankClaims(in))
 		in.Language = language

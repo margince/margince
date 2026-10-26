@@ -92,6 +92,7 @@ function meeting(
   more: Partial<Activity> = {},
 ): Activity {
   return {
+    occurred_precision: "instant",
     offers_email: false,
     id,
     kind: "meeting",
@@ -155,6 +156,7 @@ const bookedView: components["schemas"]["Contact360"] = {
   next_meeting: {
     activity_id: nextMeetingId,
     starts_at: "2026-10-02T09:00:00Z",
+    occurred_precision: "instant",
     subject: "Weekly call: rollout planning",
     participants: [
       { contact_id: "contact-2", full_name: "Sabine Mayer" },

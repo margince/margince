@@ -101,7 +101,7 @@ func (s *Store) ListDealDocuments(
 		rows, err := tx.Query(ctx, fmt.Sprintf(`
 			SELECT %s,
 			       EXISTS (SELECT 1 FROM deal_document_hide h WHERE h.deal_id = $%d AND h.attachment_id = at.id) AS hidden,
-			       a.id, a.kind, a.subject, a.occurred_at, a.counterparty_email
+			       a.id, a.kind, a.subject, a.occurred_at, a.occurred_precision, a.counterparty_email
 			  FROM attachment at
 			  LEFT JOIN activity a ON at.entity_type = '%s' AND a.id = at.entity_id AND a.archived_at IS NULL
 			 WHERE %s
@@ -152,19 +152,21 @@ func scanDealDocument(rows pgx.Rows) (crmcontracts.DealDocument, error) {
 		kind         *string
 		subject      *string
 		occurredAt   *time.Time
+		precision    *string
 		counterparty *string
 	)
-	dest := append(cols.targets(), &hidden, &activityID, &kind, &subject, &occurredAt, &counterparty)
+	dest := append(cols.targets(), &hidden, &activityID, &kind, &subject, &occurredAt, &precision, &counterparty)
 	if err := rows.Scan(dest...); err != nil {
 		return crmcontracts.DealDocument{}, fmt.Errorf("activities: scanning a deal document: %w", err)
 	}
 	doc := crmcontracts.DealDocument{Attachment: cols.attachment(), Hidden: hidden}
-	if activityID != nil && kind != nil && occurredAt != nil {
+	if activityID != nil && kind != nil && occurredAt != nil && precision != nil {
 		doc.Origin = &crmcontracts.DealDocumentOrigin{
-			ActivityId: openapi_types.UUID(*activityID),
-			Kind:       *kind,
-			OccurredAt: *occurredAt,
-			Subject:    subject,
+			ActivityId:        openapi_types.UUID(*activityID),
+			Kind:              *kind,
+			OccurredAt:        *occurredAt,
+			OccurredPrecision: crmcontracts.OccurredPrecision(*precision),
+			Subject:           subject,
 		}
 		if counterparty != nil {
 			email := openapi_types.Email(*counterparty)

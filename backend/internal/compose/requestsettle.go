@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -248,7 +249,7 @@ func conversationRows(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 		   -- thread can be narrowed between the two, which under read-committed
 		   -- this statement is the first to see.
 		   AND audience = 'workspace' AND restricted_at IS NULL
-		   AND occurred_at <= $3
+		   AND `+occurredday.BegunSQL("activity", "$3")+`
 		   AND (occurred_at, id) >= ((SELECT occurred_at FROM activity WHERE id = $2), $2)
 		   AND ($6::uuid IS NULL OR id = $6)
 		 ORDER BY id = $2 DESC, occurred_at DESC, id DESC

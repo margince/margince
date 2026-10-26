@@ -10,7 +10,11 @@ import {
 import { StatCard } from "../../../design-system/statcard";
 import { StatStrip } from "../../../design-system/statstrip";
 import {
-  calendarDaysBetween,
+  activityDay,
+  activityHasHappened,
+  activityIsAhead,
+} from "../../../format/activitywhen";
+import {
   formatDayMonth,
   formatMoneyCompact,
   formatNumber,
@@ -32,7 +36,7 @@ import { activityMarks } from "../../../lib/standingmarks";
 import { useStageTimes } from "./dealstagehistory";
 import type { DealStandingInputs } from "./dealstanding";
 import { lastInbound, nextStepOf, standingOffer } from "./dealstanding";
-import { waitingSince } from "./dealwaiting";
+import { daysWaiting, waitingSince } from "./dealwaiting";
 
 type Activity = components["schemas"]["Activity"];
 
@@ -147,7 +151,7 @@ function DaysInStageFigure({ inputs, words }: FigureProps) {
 
 function NextStepFigure({ inputs, words }: FigureProps) {
   const { t, locale, zone } = words;
-  const step = nextStepOf(inputs.activities, inputs.asOf);
+  const step = nextStepOf(inputs.activities, inputs.asOf, zone);
   const label = t("deal.standing.figure.next");
   if (!step) {
     return <StatCard label={label} value={t("standing.noneYet")} />;
@@ -162,7 +166,7 @@ function NextStepFigure({ inputs, words }: FigureProps) {
   return (
     <StatCard
       label={label}
-      value={formatDayMonth(step.at, locale, zone)}
+      value={activityDay(step.at, step.precision, locale, zone, formatDayMonth)}
       detail={step.subject ?? t(KIND_LABEL[step.kind])}
       tone={tone}
     />
@@ -184,10 +188,12 @@ export function DealTimeline({
         name: inputs.deal.name,
       })}
       asOf={inputs.asOf}
+      record={words.zone}
       gap={timelineGap(inputs, words)}
       events={timelineEvents(inputs, words)}
       marks={activityMarks(inputs.activities, {
         ...words,
+        record: words.zone,
         asOf: inputs.asOf,
         onOpen: onOpenHistory,
       })}
@@ -203,7 +209,7 @@ function timelineGap(
   if (!waiting) {
     return undefined;
   }
-  const days = calendarDaysBetween(new Date(waiting.at), new Date(asOf), zone);
+  const days = daysWaiting(waiting, asOf, zone);
   return {
     from: waiting.at,
     title: plural("standing.days", days, {
@@ -225,9 +231,17 @@ export function timelineEvents(
 ): TimelineEvent[] {
   const now = Date.parse(asOf);
   const day = (iso: string) => formatDayMonth(iso, locale, zone);
+  const dayOf = (row: Activity) =>
+    activityDay(
+      row.occurred_at,
+      row.occurred_precision,
+      locale,
+      zone,
+      formatDayMonth,
+    );
   const titleOf = (row: Activity) => row.subject || t(KIND_LABEL[row.kind]);
   const held = activities
-    .filter((row) => isConversation(row) && Date.parse(row.occurred_at) <= now)
+    .filter((row) => isConversation(row) && activityHasHappened(row, now, zone))
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))
     .slice(0, DONE_EVENTS)
     .map(
@@ -235,7 +249,7 @@ export function timelineEvents(
         key: row.id,
         at: row.occurred_at,
         title: titleOf(row),
-        sub: `${day(row.occurred_at)} · ${t(KIND_LABEL[row.kind])}`,
+        sub: `${dayOf(row)} · ${t(KIND_LABEL[row.kind])}`,
         kind: "done",
         activityIds: [row.id],
       }),
@@ -245,32 +259,33 @@ export function timelineEvents(
       (row) =>
         row.kind === "meeting" &&
         row.meeting_status === "booked" &&
-        Date.parse(row.occurred_at) > now,
+        activityIsAhead(row.occurred_at, row.occurred_precision, now, zone),
     )
     .map(
       (row): TimelineEvent => ({
         key: row.id,
         at: row.occurred_at,
         title: titleOf(row),
-        sub: `${day(row.occurred_at)} · ${t("deal.standing.timeline.booked")}`,
+        sub: `${dayOf(row)} · ${t("deal.standing.timeline.booked")}`,
         kind: "ahead",
       }),
     );
-  const tasks = activities
-    .filter((row) => row.kind === "task" && !row.is_done && row.due_at)
-    .map((row): TimelineEvent => {
-      const due = row.due_at ?? row.occurred_at;
-      return {
-        key: row.id,
-        at: due,
-        title: titleOf(row),
-        sub: day(due),
-        kind: Date.parse(due) < now ? "late" : "ahead",
-      };
-    });
+  const tasks = activities.flatMap((row): TimelineEvent[] =>
+    row.kind === "task" && !row.is_done && row.due_at
+      ? [
+          {
+            key: row.id,
+            at: row.due_at,
+            title: titleOf(row),
+            sub: day(row.due_at),
+            kind: Date.parse(row.due_at) < now ? "late" : "ahead",
+          },
+        ]
+      : [],
+  );
   return [
     ...held,
-    ...lastWord(activities, day, t),
+    ...lastWord(activities, dayOf, t),
     ...ahead,
     ...tasks,
     ...closeEvent(deal, day, t),
@@ -291,7 +306,7 @@ function isConversation(row: Activity): boolean {
 
 function lastWord(
   activities: readonly Activity[],
-  day: (iso: string) => string,
+  dayOf: (row: Activity) => string,
   t: Translator,
 ): TimelineEvent[] {
   const row = lastInbound(activities);
@@ -303,7 +318,7 @@ function lastWord(
       key: `last-${row.id}`,
       at: row.occurred_at,
       title: t("deal.standing.timeline.theyWrote"),
-      sub: `${day(row.occurred_at)} · ${t("deal.standing.timeline.lastContact")}`,
+      sub: `${dayOf(row)} · ${t("deal.standing.timeline.lastContact")}`,
       kind: "last",
       activityIds: [row.id],
     },

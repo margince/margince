@@ -82,6 +82,28 @@ test("says which side the conversation is owed, not just when it moved", async (
   expect(screen.getByText("No exchange yet")).not.toBeNull();
 });
 
+// Two day entries on one date share one stored noon. The server's engagement
+// reads that tie as their message waiting, and the last touch must agree.
+test("a day each way on one date reads as theirs to answer", async () => {
+  const [, waiting] = contactsFixture();
+  const day = "2026-08-30T12:00:00Z";
+  stubContacts([
+    {
+      ...waiting,
+      last_inbound_at: day,
+      last_inbound_precision: "day",
+      last_outbound_at: day,
+      last_outbound_precision: "day",
+    },
+  ]);
+  render(<CompanyContactsList companyId="o-1" />);
+
+  const row = (await screen.findByText("Sabine Vogel")).closest("tr");
+  expect(row).not.toBeNull();
+  expect(within(row as HTMLElement).getByText("Needs reply")).not.toBeNull();
+  expect(within(row as HTMLElement).getByText(/They wrote/)).not.toBeNull();
+});
+
 test("asks the server for the account's own contacts and lets it choose the order", async () => {
   const calls = stubContacts(contactsFixture());
   render(<CompanyContactsList companyId="o-1" />);

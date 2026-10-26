@@ -6,6 +6,10 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  activityHasBegun,
+  type OccurredPrecision,
+} from "../format/activitywhen";
 import { formatNumber } from "../format/format";
 import { formatDayMonth, monthName } from "../format/format.dates";
 import { UTC_ZONE } from "../format/timezone";
@@ -61,6 +65,7 @@ export type TimelineMark = Readonly<{
   // The activity's id, which `TimelineEvent.activityIds` names.
   key: string;
   at: string;
+  precision: OccurredPrecision;
   kind: keyof typeof TIMELINE_ICON;
   // Which way a message or call went; drawn as an arrow on the glyph.
   direction?: "inbound" | "outbound";
@@ -97,6 +102,7 @@ type Pos = CSSProperties & Record<`--${string}`, string>;
 export function StandingTimeline({
   events,
   asOf,
+  record,
   gap,
   label,
   marks = [],
@@ -107,6 +113,8 @@ export function StandingTimeline({
   marks?: readonly TimelineMark[];
   // The instant the record was read at: where today stands. Never the clock.
   asOf: string;
+  // The record zone, which says what date today is for a date-only mark.
+  record: string;
   gap?: TimelineGap;
   // What the axis is a history of, for a screen reader.
   label: string;
@@ -176,7 +184,7 @@ export function StandingTimeline({
       (mark) =>
         !drawn.has(mark.key) &&
         instant(mark.at) >= range.start &&
-        instant(mark.at) <= today,
+        activityHasBegun(mark.at, mark.precision, today, record),
     )
     .sort((a, b) => instant(a.at) - instant(b.at));
   return (

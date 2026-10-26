@@ -27,6 +27,7 @@ describe("the timeline's rail marks who wrote", () => {
             kind: "change",
             title: "Owner set to Carol",
             atIso: "2026-06-12T09:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "agent", agent: "capture" },
           },
           {
@@ -34,6 +35,7 @@ describe("the timeline's rail marks who wrote", () => {
             kind: "change",
             title: "Lifecycle set to Customer",
             atIso: "2026-06-13T09:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "human", self: true },
           },
           {
@@ -41,6 +43,7 @@ describe("the timeline's rail marks who wrote", () => {
             kind: "email",
             title: "Re: fleet retrofit offer",
             atIso: "2026-06-14T09:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "human", self: true },
           },
         ]}

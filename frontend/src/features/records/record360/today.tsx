@@ -293,9 +293,8 @@ export function TodoRow({
   // When it is owed, coloured only where it is bad news: a late promise is the
   // one thing on the row that may shout.
   due?: { label: string; tone?: "warning" | "danger" };
-  // The verb that advances it. `byMargince` marks a verb whose work the agent
-  // does — a draft it writes — because the indigo mark means authorship and
-  // nothing else.
+  // The verb that advances it. `byMargince` marks a verb whose press makes the
+  // model write (a brief it assembles), because that is all indigo means.
   verb?: { label: string; onAct: () => void; byMargince?: boolean };
   // For a shared action component that owns its drawer and pending state.
   action?: ReactNode;

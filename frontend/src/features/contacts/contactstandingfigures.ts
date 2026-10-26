@@ -4,8 +4,13 @@ import type {
   TimelineEvent,
   TimelineGap,
 } from "../../design-system/standingtimeline";
+import {
+  type ActivityMoment,
+  activityDay,
+  activityDaysAway,
+} from "../../format/activitywhen";
 import { formatMoneyCompact, formatNumber } from "../../format/format";
-import { calendarDaysBetween, formatDayMonth } from "../../format/format.dates";
+import { formatDayMonth } from "../../format/format.dates";
 import { daysPast } from "../../format/lateness";
 import { formatMoneyOrWord } from "../../format/moneyword";
 import { type Locale, type Translator, translatePlural } from "../../i18n";
@@ -39,12 +44,30 @@ const CALLED_OFF = new Set(["canceled", "no_show"]);
 // Done meetings past this many crowd the axis and stretch it back years.
 const MEETINGS_DRAWN = 3;
 
-function daysAgo(iso: string, view: Contact360, words: StandingWords) {
-  const days = calendarDaysBetween(
-    new Date(iso),
-    new Date(view.as_of),
-    words.zone,
-  );
+// How many of the record's days have passed since a moment, as of the read.
+function daysSince(
+  { at, precision }: ActivityMoment,
+  view: Contact360,
+  words: StandingWords,
+): number {
+  const asOf = Date.parse(view.as_of);
+  return -activityDaysAway(at, precision, asOf, words.zone, words.zone);
+}
+
+// When they last wrote, read the way the wire says it is known.
+function lastInbound(view: Contact360): ActivityMoment | undefined {
+  const at = view.last_inbound_at;
+  return at
+    ? { at, precision: view.last_inbound_precision ?? "instant" }
+    : undefined;
+}
+
+function daysAgo(
+  moment: ActivityMoment,
+  view: Contact360,
+  words: StandingWords,
+) {
+  const days = daysSince(moment, view, words);
   if (days < 1) {
     return words.t("contact.strip.today");
   }
@@ -77,14 +100,20 @@ function lastReply(view: Contact360, words: StandingWords): ContactFigure {
   if (omitted(view, "last_touch")) {
     return { ...base, value: t("record.notShown"), tone: "neutral" };
   }
-  const at = view.last_inbound_at;
-  if (!at) {
+  const inbound = lastInbound(view);
+  if (!inbound) {
     return { ...base, value: t("contact.strip.never"), tone: "neutral" };
   }
   return {
     ...base,
-    value: formatDayMonth(at, locale, zone),
-    detail: daysAgo(at, view, words),
+    value: activityDay(
+      inbound.at,
+      inbound.precision,
+      locale,
+      zone,
+      formatDayMonth,
+    ),
+    detail: daysAgo(inbound, view, words),
     tone: awaitsOurReply(view) ? "warning" : "neutral",
   };
 }
@@ -167,7 +196,13 @@ function nextMeeting(view: Contact360, words: StandingWords): ContactFigure {
   }
   return {
     ...base,
-    value: formatDayMonth(meeting.starts_at, locale, zone),
+    value: activityDay(
+      meeting.starts_at,
+      meeting.occurred_precision,
+      locale,
+      zone,
+      formatDayMonth,
+    ),
     detail: meeting.subject ?? undefined,
     tone: "neutral",
   };
@@ -203,7 +238,7 @@ function heldMeetings(view: Contact360, words: StandingWords): TimelineEvent[] {
       key: `meeting-${row.id}`,
       at: row.occurred_at,
       title: row.subject ?? t("contact.standing.event.meeting"),
-      sub: `${formatDayMonth(row.occurred_at, locale, zone)} · ${t("contact.standing.event.meetingKind")}`,
+      sub: `${activityDay(row.occurred_at, row.occurred_precision, locale, zone, formatDayMonth)} · ${t("contact.standing.event.meetingKind")}`,
       kind: "done",
       activityIds: [row.id],
     }));
@@ -239,10 +274,11 @@ function datedPromises(
 
 function lastWrote(view: Contact360, words: StandingWords): TimelineEvent[] {
   const { t, locale, zone } = words;
-  const at = view.last_inbound_at;
-  if (!at || omitted(view, "last_touch")) {
+  const inbound = lastInbound(view);
+  if (!inbound || omitted(view, "last_touch")) {
     return [];
   }
+  const { at, precision } = inbound;
   const row = (view.activities?.data ?? []).find(
     (candidate) => candidate.occurred_at === at,
   );
@@ -253,7 +289,7 @@ function lastWrote(view: Contact360, words: StandingWords): TimelineEvent[] {
       title: t("standing.wrote", {
         name: contactFirstName(view.contact),
       }),
-      sub: formatDayMonth(at, locale, zone),
+      sub: activityDay(at, precision, locale, zone, formatDayMonth),
       kind: "last",
       activityIds: row ? [row.id] : undefined,
     },
@@ -271,7 +307,13 @@ function meetingAhead(view: Contact360, words: StandingWords): TimelineEvent[] {
       key: `ahead-${meeting.activity_id}`,
       at: meeting.starts_at,
       title: meeting.subject ?? t("contact.standing.event.meeting"),
-      sub: formatDayMonth(meeting.starts_at, locale, zone),
+      sub: activityDay(
+        meeting.starts_at,
+        meeting.occurred_precision,
+        locale,
+        zone,
+        formatDayMonth,
+      ),
       kind: "ahead",
     },
   ];
@@ -291,11 +333,8 @@ export function contactGap(
   if (!from) {
     return undefined;
   }
-  const days = calendarDaysBetween(
-    new Date(from),
-    new Date(view.as_of),
-    words.zone,
-  );
+  const precision = view.last_contact_precision ?? "instant";
+  const days = daysSince({ at: from, precision }, view, words);
   if (days < 1) {
     return undefined;
   }

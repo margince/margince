@@ -49,6 +49,7 @@ type Story = StoryObj<typeof PairDecision>;
 
 function pairRow(over: Partial<WorklistItem> = {}): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "01a05500-0000-7000-8000-0000000000ff",
     source: "dedupe_candidate",
     category: "decisions",

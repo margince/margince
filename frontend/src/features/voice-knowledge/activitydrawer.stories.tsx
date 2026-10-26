@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { viewerZone } from "../../format/timezone";
 import {
   installFetchStub,
@@ -55,6 +56,33 @@ export const HistoricalMeeting: Story = {
         }),
     });
     return <OpenActivityDrawer {...args} />;
+  },
+};
+
+// A meeting logged with its date and no time: the When line shows the date alone.
+export const DateOnlyMeeting: Story = {
+  render: (args) => {
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read"] }),
+      [`GET /activities/${id}`]: () =>
+        jsonResponse({
+          id,
+          kind: "meeting",
+          subject: "Site visit",
+          body: "Walked the depot with the operations lead.",
+          occurred_at: "2024-10-18T10:00:00Z",
+          occurred_precision: "day",
+          content_state: "available",
+          links: [],
+        }),
+    });
+    return <OpenActivityDrawer {...args} />;
+  },
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement.ownerDocument.body);
+    const when = (await page.findByText("When")).parentElement;
+    await expect(when?.textContent).toMatch(/18\/10\/2024/);
+    await expect(when?.textContent).not.toMatch(/\d{1,2}:\d{2}/);
   },
 };
 

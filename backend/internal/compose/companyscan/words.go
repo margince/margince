@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -79,11 +80,11 @@ func readWords(
 		       coalesce(a.thread_key || '/' || a.kind || '/' || coalesce(a.channel_provider, ''), '')
 		  FROM activity a
 		 WHERE %[6]s AND a.archived_at IS NULL
-		   AND a.occurred_at >= $%[2]d AND (%[5]s)
+		   AND %[2]s AND (%[5]s)
 		   AND %[1]s
 		 ORDER BY a.occurred_at DESC, a.id DESC
 		 LIMIT $%[4]d`,
-		activities.CompanyLinkedActivityExists(companyPos), sincePos, charsPos, capPos, scope,
+		activities.CompanyLinkedActivityExists(companyPos), occurredday.FromSQL("a", fmt.Sprintf("$%d", sincePos)), charsPos, capPos, scope,
 		relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d::timestamptz", nowPos))), args...)
 	if err != nil {
 		return nil, fmt.Errorf("companyscan: reading the account's exchanges: %w", err)

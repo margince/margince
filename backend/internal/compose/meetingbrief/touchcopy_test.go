@@ -16,7 +16,7 @@ func TestMeetingHistoryWordsKeepNamesAndRelativeDays(t *testing.T) {
 	for _, language := range []string{"en", "de", "vi"} {
 		said := briefCopyFor(language)
 		for _, days := range []int{0, 1, 3} {
-			touched := at(10 - days)
+			touched := instantOn(10 - days)
 			attendee := AttendeeIn{FullName: "Original Name", Title: "Original Title", DealRole: "economic_buyer", LastTouch: &touched}
 			line := said.attendeeLine(attendee, at(10), time.UTC)
 			if !strings.Contains(line, attendee.FullName) || !strings.Contains(line, attendee.Title) {

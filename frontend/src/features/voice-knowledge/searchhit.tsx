@@ -6,7 +6,8 @@ import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
 import { EmailEntry } from "../../design-system/emailentry";
 import { RecordCard } from "../../design-system/recordcard";
-import { formatDateTime, formatNumber } from "../../format/format";
+import { formatActivityWhen } from "../../format/activitywhen";
+import { formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import { companyTabRoute } from "../../lib/companytab";
 import { ENTITY } from "../../lib/entity";
@@ -40,7 +41,12 @@ export function SearchHit({
       <li className="search-hit search-hit-email">
         <EmailEntry
           summary={summary}
-          timestamp={formatDateTime(summary.occurred_at, locale, zone)}
+          timestamp={formatActivityWhen(
+            summary.occurred_at,
+            summary.occurred_precision,
+            locale,
+            zone,
+          )}
           onOpen={() => onOpen(summary.activity_id, "email")}
         />
       </li>

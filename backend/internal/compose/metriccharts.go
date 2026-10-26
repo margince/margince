@@ -106,7 +106,7 @@ func reportingTrend(out *reporting.Evaluation, chart crmcontracts.ReportingChart
 func sumFactsBefore(facts []reporting.Fact, end time.Time) *float64 {
 	selected := []reporting.Fact{}
 	for _, fact := range facts {
-		if fact.Row.OccurredAt != nil && fact.Row.OccurredAt.Before(end) {
+		if at := fact.At(); at != nil && at.Before(end) {
 			selected = append(selected, fact)
 		}
 	}
@@ -131,7 +131,7 @@ func reportingWeekly(out *reporting.Evaluation, chart crmcontracts.ReportingChar
 		}
 		selected := []reporting.Fact{}
 		for _, fact := range facts {
-			if fact.Row.OccurredAt != nil && !fact.Row.OccurredAt.Before(start) && fact.Row.OccurredAt.Before(end) {
+			if at := fact.At(); at != nil && !at.Before(start) && at.Before(end) {
 				selected = append(selected, fact)
 			}
 		}

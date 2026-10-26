@@ -22,6 +22,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // assuranceSubjectsSQL is AssuranceSubjects' one read, held at package
@@ -36,7 +38,7 @@ const assuranceSubjectsSQL = `
 		         WHERE al.deal_id = d.id
 		           AND a.direction = 'inbound'
 		           AND a.archived_at IS NULL
-		           AND a.occurred_at <= now()) AS last_inbound_at,
+		           AND %[2]s) AS last_inbound_at,
 		       (SELECT o.gross_minor
 		          FROM offer o
 		         WHERE o.deal_id = d.id
@@ -68,14 +70,12 @@ const assuranceSubjectsSQL = `
 		          JOIN activity_link al ON al.activity_id = a.id
 		         WHERE al.deal_id = d.id
 		           AND a.archived_at IS NULL
-		           AND ((a.kind = 'task' AND a.is_done = false AND %s)
-		                -- NULL is a meeting nothing has said is off. An imported
-		                -- one carries no status, and the strict form raised a
+		           AND ((a.kind = 'task' AND a.is_done = false AND %[1]s)
+		                -- MeetingAheadSQL admits NULL, a meeting nothing has said
+		                -- is off. An imported one carries no status, and the strict form raised a
 		                -- "no next step" finding against a deal whose next step
 		                -- was in the rep's calendar.
-		                OR (a.kind = 'meeting'
-		                    AND (a.meeting_status IS NULL OR a.meeting_status = 'booked')
-		                    AND a.occurred_at > $2))) AS has_next_step,
+		                OR (a.kind = 'meeting' AND %[3]s))) AS has_next_step,
 		       EXISTS (SELECT 1
 		          FROM relationship r
 		         WHERE r.kind = 'deal_stakeholder'
@@ -135,7 +135,8 @@ func AssuranceSubjects(ctx context.Context, tx pgx.Tx) ([]assurance.Subject, err
 	if err != nil {
 		return nil, err
 	}
-	query := fmt.Sprintf(assuranceSubjectsSQL, activities.CurrentTaskClause("a", now, identities, arg))
+	query := fmt.Sprintf(assuranceSubjectsSQL, activities.CurrentTaskClause("a", now, identities, arg),
+		occurredday.BegunSQL("a", "now()"), relstrength.MeetingAheadSQL("a", "$2"))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the deals to check: %w", err)

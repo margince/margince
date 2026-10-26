@@ -257,7 +257,7 @@ func creationAddressFields(address *crmcontracts.Address) map[string]any {
 func creationValueField(field string) string {
 	valueField := ""
 	switch field {
-	case dealIDField, previewFieldBuyerCompanyID, previewFieldTemplateID, "product_id", previewFieldValidUntil, bulkParamOwner, refColProject, companionContactField, refColCompany, refColParentCompany, refColPartnerCompany, fieldPipelineID, fieldStageID, acceptFieldExpectedClose, previewFieldStartedAt, previewFieldTargetEndDate, previewLifecycle:
+	case dealIDField, previewFieldBuyerCompanyID, previewFieldTemplateID, "product_id", previewFieldValidUntil, bulkParamOwner, refColProject, companionContactField, refColCompany, refColParentCompany, refColPartnerCompany, fieldPipelineID, fieldStageID, acceptFieldExpectedClose, previewFieldStartedAt, previewFieldTargetEndDate, previewLifecycle, activityTargetOccurredAt:
 		valueField = field
 	case previewFieldSourceAuthorID:
 		valueField = "user_id"

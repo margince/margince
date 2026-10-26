@@ -919,6 +919,7 @@ Payload for engagement.reply (CAP-FORMULA-1). An inbound message in a thread whe
 | `data.idempotency_key` | string | yes | The capture natural key (source_system:source_id) this reply was detected from. |
 | `data.matched_outbound_activity_id` | string (uuid) | yes | The prior outbound activity this inbound message replies to. |
 | `data.occurred_at` | string (date-time) | yes | When the reply activity occurred. |
+| `data.occurred_precision` | string: `instant`, `day` | no | How to read occurred_at: `day` when only the reply's date is known, its UTC date. |
 
 ### `forecast.assurance_created`
 

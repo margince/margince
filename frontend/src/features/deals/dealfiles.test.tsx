@@ -15,6 +15,7 @@ import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { RecordZoneProvider } from "../../lib/recordzone";
 import { DealFiles } from "./dealfiles";
 
 // The deal's Files area as a rep meets it: a captured file says which message
@@ -106,6 +107,7 @@ function captured(
         kind: "email",
         subject: "Re: MSA",
         occurred_at: "2026-08-21T08:55:00Z",
+        occurred_precision: "instant",
         sender: { address: sender },
       },
     },
@@ -201,6 +203,23 @@ it("tells a captured file from an upload and says where it came from", async () 
     screen.getByText("From laura@buyer.example · Re: MSA"),
   ).toBeInTheDocument();
   expect(screen.getByText("Uploaded here")).toBeInTheDocument();
+});
+
+it("dates a file from a mail logged by its day on that day, in any record zone", async () => {
+  const mail = captured();
+  if (mail.attachment.origin) {
+    mail.attachment.origin.occurred_at = "2026-08-21T12:00:00Z";
+    mail.attachment.origin.occurred_precision = "day";
+  }
+  stubApi([mail]);
+  render(
+    <RecordZoneProvider zone="Pacific/Kiritimati">
+      <DealFiles deal={dealOf()} />
+    </RecordZoneProvider>,
+  );
+
+  expect((await screen.findAllByText("21 Aug 2026")).length).toBeGreaterThan(0);
+  expect(screen.queryByText("22 Aug 2026")).toBeNull();
 });
 
 it("names the rep, not the buyer, as the sender of a sent mail's file", async () => {

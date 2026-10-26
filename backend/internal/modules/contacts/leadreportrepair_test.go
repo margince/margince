@@ -46,22 +46,29 @@ func TestRestampKeepsAStampSomeRemainingTouchExplains(t *testing.T) {
 	created := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
 	first := created.Add(2 * time.Hour)
 	later := created.Add(5 * time.Hour)
-	human := leadResponseTouch{direction: "outbound", capturedBy: "human:rep", occurredAt: later}
-	agentOnly := leadResponseTouch{direction: "outbound", capturedBy: "agent:x", occurredAt: first}
+	now := created.Add(6 * time.Hour)
+	human := leadResponseTouch{direction: "outbound", capturedBy: "human:rep", respondedAt: later}
+	agentOnly := leadResponseTouch{direction: "outbound", capturedBy: "agent:x", respondedAt: first}
 
-	if moved, _ := restampFirstResponse(&first, created, []leadResponseTouch{agentOnly, human}); !moved {
+	if moved, _ := restampFirstResponse(&first, created, []leadResponseTouch{agentOnly, human}, now); !moved {
 		t.Error("a stamp only an agent outbound with nothing to answer explains was kept")
 	}
-	if _, to := restampFirstResponse(&first, created, []leadResponseTouch{agentOnly, human}); to == nil || !to.Equal(later) {
+	if _, to := restampFirstResponse(&first, created, []leadResponseTouch{agentOnly, human}, now); to == nil || !to.Equal(later) {
 		t.Errorf("restamped to %v, want the human's later touch", to)
 	}
-	if moved, to := restampFirstResponse(&first, created, []leadResponseTouch{agentOnly}); !moved || to != nil {
+	if moved, to := restampFirstResponse(&first, created, []leadResponseTouch{agentOnly}, now); !moved || to != nil {
 		t.Errorf("with no accepted touch left: moved=%v to=%v, want the stamp cleared", moved, to)
 	}
-	if moved, _ := restampFirstResponse(&first, created, []leadResponseTouch{{direction: "outbound", capturedBy: "human:rep", occurredAt: first}}); moved {
+	if moved, _ := restampFirstResponse(&first, created, []leadResponseTouch{{direction: "outbound", capturedBy: "human:rep", respondedAt: first}}, now); moved {
 		t.Error("a stamp an accepted touch explains was moved")
 	}
-	if moved, _ := restampFirstResponse(&first, created, nil); moved {
+	if moved, _ := restampFirstResponse(&first, created, nil, now); moved {
 		t.Error("a stamp no touch explains (a disposition wrote it) was moved")
+	}
+	// A day note dated today answers only once its date ends, so it is no
+	// stamp yet.
+	tonight := leadResponseTouch{kind: "note", source: activitySourceManual, capturedBy: "human:rep", respondedAt: created.Add(24 * time.Hour)}
+	if moved, to := restampFirstResponse(&first, created, []leadResponseTouch{agentOnly, tonight}, now); !moved || to != nil {
+		t.Errorf("restamped to %v from a day touch whose date has not ended, want the stamp cleared", to)
 	}
 }

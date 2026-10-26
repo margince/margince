@@ -168,7 +168,7 @@ func TestStoredCommitmentWithoutAReadSetReportsUnassessedContext(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		if got := activities.AdmitAutomaticCommitment(evidence, now, nil); got != activities.CommitmentContextUnassessed {
+		if got := activities.AdmitAutomaticCommitment(evidence, now, time.UTC, nil); got != activities.CommitmentContextUnassessed {
 			t.Fatalf("stored source verdict = %q, want unassessed", got)
 		}
 		return nil

@@ -104,8 +104,8 @@ func TestAnActivitiesFileLandsAtItsPastDatesUnderItsLinks(t *testing.T) {
 	}
 	meeting := activityNamed(t, e, "Site visit")
 	if meeting.Kind != "meeting" || meeting.MeetingStatus == nil || *meeting.MeetingStatus != "held" ||
-		!meeting.OccurredAt.Equal(time.Date(2025, 3, 9, 0, 0, 0, 0, time.UTC)) {
-		t.Fatalf("meeting = %+v, want a held meeting at midnight UTC of its day", meeting)
+		!meeting.OccurredAt.Equal(time.Date(2025, 3, 9, 12, 0, 0, 0, time.UTC)) {
+		t.Fatalf("meeting = %+v, want a held meeting at noon UTC of its day", meeting)
 	}
 }
 
@@ -127,7 +127,7 @@ func TestAnImportedActivityStillCountsAsEngagement(t *testing.T) {
 		fmt.Sprintf("A-1,note,Older note,,2024-01-10,contact:%s,,,\n", contactID) +
 		fmt.Sprintf("A-2,call,Newest call,,2024-06-20,contact:%s,10,,\n", contactID) +
 		fmt.Sprintf("A-3,meeting,Called off,,2025-02-01,contact:%s,,canceled,\n", contactID)}, activityImportParts())
-	want := time.Date(2024, 6, 20, 0, 0, 0, 0, time.UTC)
+	want := time.Date(2024, 6, 20, 12, 0, 0, 0, time.UTC)
 	if got := lastActivity(); got == nil || !got.Equal(want) {
 		t.Fatalf("last activity = %v, want the newest imported one that counts, %v: a called-off meeting is no activity", got, want)
 	}

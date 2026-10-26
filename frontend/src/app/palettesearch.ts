@@ -10,7 +10,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useSettledValue } from "../design-system/debouncedsearch";
-import { formatDate } from "../format/format";
+import { activityDay } from "../format/activitywhen";
 import { useLocale, useT } from "../i18n";
 import {
   problemFieldErrors,
@@ -163,8 +163,9 @@ export function useSearchCommands(query: string): SearchArm {
             cite: hit.email_summary
               ? {
                   subject: hit.email_summary.subject,
-                  occurredAt: formatDate(
+                  occurredAt: activityDay(
                     hit.email_summary.occurred_at,
+                    hit.email_summary.occurred_precision,
                     locale,
                     zone,
                   ),

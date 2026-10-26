@@ -251,7 +251,7 @@ func (s *Service) foldRoom(
 	room meeting,
 	perAttendee map[ids.UUID][]crmcontracts.ConversationClaim,
 	earlier []priorMeeting,
-	lastSpoke *time.Time,
+	lastSpoke *Occurred,
 	moves []DealMoveIn,
 	roomHidden bool,
 	history []HistoryIn,
@@ -287,7 +287,7 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	var scope *ids.ProjectID
 	var perAttendee map[ids.UUID][]crmcontracts.ConversationClaim
 	var earlier []priorMeeting
-	var lastSpoke *time.Time
+	var lastSpoke *Occurred
 	var moves []DealMoveIn
 	var roomHidden bool
 	var history []HistoryIn
@@ -303,13 +303,14 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 				return err
 			}
 		}
-		loaded, err := s.readMeeting(ctx, tx, activityID, requested)
+		loaded, err := s.readMeeting(ctx, tx, activityID, requested, s.now().UTC())
 		if err != nil {
 			return err
 		}
 		if zone, err = identity.ZoneAppliedTx(ctx, tx); err != nil {
 			return err
 		}
+		loaded.Opens = opensAt(loaded, zone)
 		room = loaded
 		chosen, err := resolveScope(loaded, requested)
 		if err != nil {

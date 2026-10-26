@@ -9,10 +9,14 @@ import { Badge } from "../../design-system/atoms";
 import { AvatarStack } from "../../design-system/avatarstack";
 import { OffsiteLink } from "../../design-system/offsitelink";
 import { PanelBody, PanelRow } from "../../design-system/panel";
+import {
+  activityDay,
+  activityDaysAway,
+  activityTimeSpan,
+  type OccurredPrecision,
+} from "../../format/activitywhen";
 import { dateTileParts } from "../../format/datetile";
-import { calendarDaysUntil } from "../../format/daysuntil";
-import { formatNumber, formatTimeOfDay } from "../../format/format";
-import { formatTimeRange } from "../../format/meetingtime";
+import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "../../lib/booking-video";
 import { useMeetingInvitation } from "../../lib/meeting-invitation-query";
@@ -49,19 +53,25 @@ function endOf(activity: Activity): string | undefined {
   ).toISOString();
 }
 
-function useMeetingSpan(start: string, end: string | undefined): string {
+// Null for a meeting whose day alone is known: the date tile says all there is.
+function useMeetingSpan(
+  start: string,
+  end: string | undefined,
+  precision: OccurredPrecision,
+): string | null {
   const { locale } = useLocale();
   const zone = useRecordZone();
-  return end
-    ? formatTimeRange(start, end, locale, zone)
-    : formatTimeOfDay(start, locale, zone);
+  return activityTimeSpan(start, end, precision, locale, zone);
 }
 
 // The day as a small calendar page: weekday over day over month.
-function DateTile({ at }: Readonly<{ at: string }>) {
+function DateTile({
+  at,
+  precision,
+}: Readonly<{ at: string; precision: OccurredPrecision }>) {
   const { locale } = useLocale();
   const zone = useRecordZone();
-  const tile = dateTileParts(at, locale, zone);
+  const tile = activityDay(at, precision, locale, zone, dateTileParts);
   return (
     <time className="pe-meeting-date" dateTime={at}>
       <span className="pe-meeting-date-edge">{tile.weekday}</span>
@@ -75,14 +85,20 @@ function DateTile({ at }: Readonly<{ at: string }>) {
 // is drawn in and from the read's own `as_of`.
 function DaysAway({
   at,
+  precision,
   asOf,
   lead,
-}: Readonly<{ at: string; asOf: string; lead?: boolean }>) {
+}: Readonly<{
+  at: string;
+  precision: OccurredPrecision;
+  asOf: string;
+  lead?: boolean;
+}>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useRecordZone();
-  const days = calendarDaysUntil(at, zone, new Date(asOf));
+  const days = activityDaysAway(at, precision, Date.parse(asOf), zone, zone);
   if (days < 0) return null;
   const label =
     days === 0
@@ -168,12 +184,19 @@ export function MeetingRow({
   verbs?: ReactNode;
 }>) {
   const t = useT();
-  const span = useMeetingSpan(activity.occurred_at, endOf(activity));
+  const span = useMeetingSpan(
+    activity.occurred_at,
+    endOf(activity),
+    activity.occurred_precision,
+  );
   const title = meetingSubject(activity, t);
   return (
     <PanelRow>
       <article className="pe-meeting">
-        <DateTile at={activity.occurred_at} />
+        <DateTile
+          at={activity.occurred_at}
+          precision={activity.occurred_precision}
+        />
         <div className="pe-meeting-body">
           <div className="pe-meeting-headline">
             <MeetingTitle
@@ -182,13 +205,19 @@ export function MeetingRow({
             >
               {title}
             </MeetingTitle>
-            {asOf && <DaysAway at={activity.occurred_at} asOf={asOf} />}
+            {asOf && (
+              <DaysAway
+                at={activity.occurred_at}
+                precision={activity.occurred_precision}
+                asOf={asOf}
+              />
+            )}
             <MeetingStatus
               outcome={activity.meeting_status}
               invitation={activity.invitation_status}
             />
           </div>
-          <p className="t-caption t-num pe-meeting-meta">{span}</p>
+          {span && <p className="t-caption t-num pe-meeting-meta">{span}</p>}
         </div>
         <div className="pe-meeting-verbs">{verbs}</div>
       </article>
@@ -248,28 +277,36 @@ export function NextMeetingCard({
   const span = useMeetingSpan(
     next.starts_at,
     invitation?.end ?? (activity && endOf(activity)),
+    next.occurred_precision,
   );
   const place = invitation?.location.trim();
   const attendees = next.participants ?? [];
   return (
     <PanelBody>
       <article className="pe-meeting pe-meeting-lead">
-        <DateTile at={next.starts_at} />
+        <DateTile at={next.starts_at} precision={next.occurred_precision} />
         <div className="pe-meeting-body">
           <div className="pe-meeting-headline">
             <MeetingTitle activityId={next.activity_id} opens={opens} lead>
               {next.subject ?? t("contact.meetings.untitled")}
             </MeetingTitle>
-            <DaysAway at={next.starts_at} asOf={asOf} lead />
+            <DaysAway
+              at={next.starts_at}
+              precision={next.occurred_precision}
+              asOf={asOf}
+              lead
+            />
             <MeetingStatus
               invitation={invitation?.status ?? activity?.invitation_status}
             />
           </div>
           <ul className="pe-meeting-facts">
-            <li>
-              <Clock aria-hidden="true" />
-              <span className="t-num">{span}</span>
-            </li>
+            {span && (
+              <li>
+                <Clock aria-hidden="true" />
+                <span className="t-num">{span}</span>
+              </li>
+            )}
             {place && (
               <li>
                 <MapPin aria-hidden="true" />

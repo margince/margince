@@ -24,6 +24,7 @@ function t(key: MessageKey, values?: Record<string, string>): string {
 
 function item(over: Partial<WorklistItem> = {}): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "i1",
     source: "customer_waiting",
     level: 1,

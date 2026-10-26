@@ -1,5 +1,10 @@
 import type { components } from "../../api/schema";
 import type { StandingPeek } from "../../design-system/standingdims";
+import {
+  activityDay,
+  activityFallsWithin,
+  activityHasBegun,
+} from "../../format/activitywhen";
 import { formatNumber } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
 import { daysPast } from "../../format/lateness";
@@ -94,8 +99,13 @@ function exchangePeek(
       (row) =>
         MESSAGE_KINDS.has(row.kind) &&
         (row.email_summary?.direction ?? row.direction) &&
-        Date.parse(row.occurred_at) <= asOf &&
-        asOf - Date.parse(row.occurred_at) <= NINETY_DAYS_MS,
+        activityHasBegun(row.occurred_at, row.occurred_precision, asOf, zone) &&
+        activityFallsWithin(
+          row.occurred_at,
+          row.occurred_precision,
+          { from: asOf - NINETY_DAYS_MS },
+          zone,
+        ),
     )
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))
     .slice(0, total);
@@ -114,7 +124,13 @@ function exchangePeek(
           ((row.email_summary?.direction ?? row.direction) === "outbound"
             ? t("timeline.sent")
             : t("timeline.received")),
-        formatDayMonth(row.occurred_at, locale, zone),
+        activityDay(
+          row.occurred_at,
+          row.occurred_precision,
+          locale,
+          zone,
+          formatDayMonth,
+        ),
       ].join(" · "),
       onOpen: open,
     })),
@@ -168,7 +184,13 @@ function unansweredPeek(
       title: row.subject?.trim() || t("timeline.kind.email"),
       sub: [
         messageDetail(row, t),
-        formatDayMonth(row.occurred_at, locale, zone),
+        activityDay(
+          row.occurred_at,
+          row.occurred_precision,
+          locale,
+          zone,
+          formatDayMonth,
+        ),
       ]
         .filter(Boolean)
         .join(" · "),

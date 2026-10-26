@@ -107,10 +107,12 @@ export function ProjectStanding({
             name: view.project.name,
           })}
           asOf={view.as_of}
+          record={zone}
           gap={projectGap(view, ctx)}
           events={projectEvents(view, ctx)}
           marks={activityMarks(view.activities?.data ?? [], {
             ...ctx,
+            record: zone,
             asOf: view.as_of,
           })}
         />

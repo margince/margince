@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -31,7 +30,7 @@ import (
 // compose injects it. Nil is a Sink that never moves a meeting — what it did
 // before this existed.
 type MeetingMover func(
-	ctx context.Context, tx pgx.Tx, id ids.ActivityID, start time.Time, duration *int,
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, slot connector.MeetingSlot,
 ) (bool, error)
 
 // WithMeetingMover returns a copy that moves a captured meeting when the
@@ -71,7 +70,7 @@ func admitCalendarVerb(ctx context.Context, key connector.NaturalKey, verb strin
 // and length, satisfying connector.MeetingMover. A key naming no captured
 // meeting writes nothing: an event beyond the horizon that was never captured
 // stays uncaptured until it comes within it.
-func (s *Sink) MoveMeeting(ctx context.Context, key connector.NaturalKey, start time.Time, duration *int) error {
+func (s *Sink) MoveMeeting(ctx context.Context, key connector.NaturalKey, slot connector.MeetingSlot) error {
 	if s.moveMeeting == nil {
 		return nil
 	}
@@ -91,7 +90,8 @@ func (s *Sink) MoveMeeting(ctx context.Context, key connector.NaturalKey, start 
 		if err != nil {
 			return fmt.Errorf("capture: finding the meeting to move: %w", err)
 		}
-		_, err = s.moveMeeting(ctx, tx, id, start, StorableDuration(duration))
+		slot.Duration = StorableDuration(slot.Duration)
+		_, err = s.moveMeeting(ctx, tx, id, slot)
 		return err
 	})
 }
@@ -112,7 +112,9 @@ func (s *Sink) moveOnReplay(
 	if s.moveMeeting == nil || viaIdentity || !ok || fields.Kind != meetingKind || fields.OccurredAt.IsZero() {
 		return nil
 	}
-	_, err := s.moveMeeting(ctx, tx, id, fields.OccurredAt, StorableDuration(fields.DurationSeconds))
+	_, err := s.moveMeeting(ctx, tx, id, connector.MeetingSlot{
+		Start: fields.OccurredAt, Duration: StorableDuration(fields.DurationSeconds), AllDay: fields.DateOnly,
+	})
 	return err
 }
 

@@ -29,6 +29,7 @@ import "./worklist.row.css";
 // `worklist.dispositions.stories.tsx` gives the judgements sharing it.
 
 const ITEM: WorklistItem = {
+  occurred_precision: "instant",
   id: "01a05500-0000-7000-8000-0000000000b1",
   source: "brief_item",
   category: "deals_at_risk",

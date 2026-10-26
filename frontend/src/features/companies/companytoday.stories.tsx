@@ -99,6 +99,7 @@ const populated: View = {
   next_meeting: {
     activity_id: "a-1",
     starts_at: "2026-07-14T09:00:00Z",
+    occurred_precision: "instant",
     subject: "Renewal review",
     participants: [{ contact_id: "p-1", display_name: "Dana Buyer" }],
   },
@@ -214,6 +215,7 @@ const restingOnAMail: View = {
           email_summary: {
             activity_id: "a-4",
             occurred_at: "2026-07-11T14:17:00Z",
+            occurred_precision: "instant",
             version: 1,
             subject: "Re: Scheduling tool: project start + setup",
             preview:

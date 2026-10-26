@@ -1,6 +1,7 @@
 import type { components } from "../../api/schema";
 import { StatCard } from "../../design-system/atoms";
 import type { STAT_CARD_TONES } from "../../design-system/statcard";
+import { activityDay } from "../../format/activitywhen";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import type { Locale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -45,7 +46,10 @@ export function LastTouchStat({
       />
     );
   }
-  const days = daysAgo(last.at, view.as_of, recordZone);
+  const at = last.at;
+  const precision = last.occurred_precision;
+  const days = daysAgo({ at, precision }, view.as_of, recordZone);
+  const day = activityDay(at, precision, locale, recordZone, formatDateAbbrev);
   return (
     <StatCard
       onOpen={onOpen}
@@ -56,7 +60,7 @@ export function LastTouchStat({
           ? t("co.strip.lastTouch.today")
           : t("co.strip.lastTouch.ago", { count: formatNumber(days, locale) })
       }
-      detail={`${t(LAST_CONTACT_KIND[last.kind])} · ${formatDateAbbrev(last.at, locale, recordZone)}`}
+      detail={`${t(LAST_CONTACT_KIND[last.kind])} · ${day}`}
     />
   );
 }

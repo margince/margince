@@ -21,7 +21,8 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { TIMELINE_KIND_LABEL } from "../../design-system/timelineentry";
 import { isTranscriptActivity } from "../../design-system/transcriptread";
-import { formatDate, formatDateTime } from "../../format/format";
+import { formatActivityWhen } from "../../format/activitywhen";
+import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { activityFollowUpsKey, TASK_QUEUE_KEY } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
@@ -163,7 +164,12 @@ function ActivityBody({
     <div className="emaildetail__body">
       <div className="emaildetail__parties">
         <PartyLine label={t("activity.detail.when")}>
-          {formatDateTime(activity.occurred_at, locale, zone)}
+          {formatActivityWhen(
+            activity.occurred_at,
+            activity.occurred_precision,
+            locale,
+            zone,
+          )}
           {activity.kind === "task" && activity.due_at && (
             <>
               {" "}

@@ -31,6 +31,24 @@ describe("HistoryFieldDiff", () => {
     expect(screen.getByText(/41,500\.00/)).toBeTruthy();
   });
 
+  // A move to a date-only entry keeps the clock on the side that had one. The
+  // side that never had one shows its date alone.
+  it("reads each side of an activity time with that side's precision", () => {
+    show(
+      <HistoryFieldDiff
+        field="occurred_at"
+        oldValue="2026-08-26T09:30:00Z"
+        newValue="2026-08-27T12:00:00Z"
+        oldPrecision="instant"
+        newPrecision="day"
+        values={{ currency: null, locale: "en", zone: "UTC" }}
+      />,
+    );
+    expect(screen.getByText("26/08/2026, 09:30")).toBeTruthy();
+    expect(screen.getByText("27/08/2026")).toBeTruthy();
+    expect(screen.queryByText(/12:00/)).toBeNull();
+  });
+
   // A field with no minor-unit suffix is not money and keeps its own text.
   it("leaves a non-money field alone", () => {
     show(

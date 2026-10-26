@@ -100,6 +100,24 @@ func TestAnEarlierAcceptanceDoesNotConvertALaterMeeting(t *testing.T) {
 	}
 }
 
+// A day meeting began with its date, so an acceptance that morning came after
+// it, though the meeting is stored at that date's noon.
+func TestAnAcceptanceOnADayMeetingsMorningConvertsIt(t *testing.T) {
+	e := setupForecast(t)
+	lead := e.seedHandoffLead(t, "same-day@customer.test")
+	met := e.seedID(t, `INSERT INTO activity (id, kind, direction, meeting_status, subject, occurred_at, occurred_precision, thread_key, source, captured_by)
+		VALUES ($1, 'meeting', 'outbound', 'held', 'Intro day', '2026-05-01T12:00:00Z', 'day', gen_random_uuid()::text, 'manual', 'human:x')`)
+	e.seedID(t, `INSERT INTO activity_link (id, activity_id, entity_type, lead_id) VALUES ($1, $2, 'lead', $3)`, met, lead)
+	e.acceptHandoff(t, lead, "2026-05-01T09:00:00Z")
+
+	result := e.runReport(e.activityReader(tableLead), t, "meeting-conversion",
+		`{"group_by":["became_opportunity"],"aggregates":[{"fn":"count","as":"meetings"}]}`)
+
+	if got := wireInt(t, conversionRow(t, result, true), "meetings"); got != 1 {
+		t.Errorf("converted = %d, want 1: the acceptance came on the meeting's date", got)
+	}
+}
+
 // A prospect handed on TWICE still counts its meeting once.
 //
 // Recycled-and-resubmitted is an ordinary path, so a plain join would multiply

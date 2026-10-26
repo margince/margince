@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -51,9 +52,11 @@ type CommitmentAdmissionInput struct {
 
 // CommitmentAdmissionEvidence carries source facts; decision reads hold the source row lock.
 type CommitmentAdmissionEvidence struct {
-	RawCaptureID       *ids.UUID
-	CapturedMail       bool
-	OccurredAt         time.Time
+	RawCaptureID *ids.UUID
+	CapturedMail bool
+	OccurredAt   time.Time
+	// DateOnly says OccurredAt is a day entry's anchor, which names only a date.
+	DateOnly           bool
 	ProviderReceivedAt *time.Time
 	SourceOccurredAt   *time.Time
 	UnreadLater        bool
@@ -72,7 +75,8 @@ type CommitmentAdmissionEvidence struct {
 }
 
 // AdmitAutomaticCommitment does not change existing work or assert that a promise was fulfilled.
-func AdmitAutomaticCommitment(evidence CommitmentAdmissionEvidence, asOf time.Time, dueAt *time.Time) CommitmentAdmissionReason {
+// zone says which date is today for a source known only by its date.
+func AdmitAutomaticCommitment(evidence CommitmentAdmissionEvidence, asOf time.Time, zone *time.Location, dueAt *time.Time) CommitmentAdmissionReason {
 	if asOf.IsZero() || evidence.OccurredAt.IsZero() {
 		return CommitmentSourceUnknown
 	}
@@ -85,17 +89,15 @@ func AdmitAutomaticCommitment(evidence CommitmentAdmissionEvidence, asOf time.Ti
 	if evidence.SourceIncomplete {
 		return CommitmentSourceIncomplete
 	}
-	if evidence.OccurredAt.After(asOf) {
+	if !evidence.happened(asOf, zone) {
 		if evidence.Meeting {
 			return CommitmentMeetingPending
 		}
 		return CommitmentSourceUnknown
 	}
 	cutoff := asOf.AddDate(0, 0, -provenance.CommitmentHorizonDays)
-	if arrival := evidence.ProviderReceivedAt; arrival != nil {
-		if evidence.OccurredAt.After(arrival.Add(24*time.Hour)) || (evidence.OccurredAt.Before(cutoff) && !arrival.Before(cutoff)) {
-			return CommitmentTimeContradicted
-		}
+	if evidence.timeContradicted(cutoff) {
+		return CommitmentTimeContradicted
 	}
 	if evidence.UnreadLater {
 		if !evidence.ContextAssessed || evidence.LaterUnassessed {
@@ -109,6 +111,23 @@ func AdmitAutomaticCommitment(evidence CommitmentAdmissionEvidence, asOf time.Ti
 	return CommitmentCurrent
 }
 
+// timeContradicted says the provider received the source well before its stated
+// time, or inside the horizon when its stated time is outside it.
+func (e CommitmentAdmissionEvidence) timeContradicted(cutoff time.Time) bool {
+	arrival := e.ProviderReceivedAt
+	return arrival != nil && (e.OccurredAt.After(arrival.Add(24*time.Hour)) ||
+		(e.OccurredAt.Before(cutoff) && !arrival.Before(cutoff)))
+}
+
+// happened is occurredday.Happened for the source at asOf.
+func (e CommitmentAdmissionEvidence) happened(asOf time.Time, zone *time.Location) bool {
+	kind := ""
+	if e.Meeting {
+		kind = KindMeeting
+	}
+	return occurredday.Happened(kind, occurredday.Moment{At: e.OccurredAt, DateOnly: e.DateOnly}, asOf, zone)
+}
+
 // CommitmentAdmissionEvidenceTx locks source facts for decisions, but keeps previews read-only.
 // A nil read set leaves later context unassessed; repair must not treat it as evidence of fulfillment.
 func CommitmentAdmissionEvidenceTx(ctx context.Context, tx pgx.Tx, in CommitmentAdmissionInput) (CommitmentAdmissionEvidence, error) {
@@ -120,7 +139,7 @@ func CommitmentAdmissionEvidenceTx(ctx context.Context, tx pgx.Tx, in Commitment
 	}
 	var args []any
 	arg := func(value any) int { args = append(args, value); return len(args) }
-	query := fmt.Sprintf(`SELECT a.occurred_at, a.raw_capture_id, a.kind = 'email' AND a.source <> 'manual', a.kind = 'meeting', coalesce(a.meeting_status = 'canceled', false),
+	query := fmt.Sprintf(`SELECT a.occurred_at, a.occurred_precision = 'day', a.raw_capture_id, a.kind = 'email' AND a.source <> 'manual', a.kind = 'meeting', coalesce(a.meeting_status = 'canceled', false),
   a.source = 'manual',
   (SELECT min(ci.source_occurred_at) FROM capture_import ci WHERE ci.activity_id = a.id),
   (SELECT min(ci.provider_received_at) FROM capture_import ci WHERE ci.activity_id = a.id),
@@ -141,7 +160,7 @@ func CommitmentAdmissionEvidenceTx(ctx context.Context, tx pgx.Tx, in Commitment
 		query += " FOR UPDATE OF a"
 	}
 	var evidence CommitmentAdmissionEvidence
-	if err := tx.QueryRow(ctx, query, args...).Scan(&evidence.OccurredAt, &evidence.RawCaptureID, &evidence.CapturedMail, &evidence.Meeting, &evidence.CancelledMeeting, &evidence.LoggedByHand, &evidence.SourceOccurredAt, &evidence.ProviderReceivedAt, &evidence.UnreadLater, &evidence.SourceIncomplete, &evidence.SourceUnassessed, &evidence.LaterUnassessed); err != nil {
+	if err := tx.QueryRow(ctx, query, args...).Scan(&evidence.OccurredAt, &evidence.DateOnly, &evidence.RawCaptureID, &evidence.CapturedMail, &evidence.Meeting, &evidence.CancelledMeeting, &evidence.LoggedByHand, &evidence.SourceOccurredAt, &evidence.ProviderReceivedAt, &evidence.UnreadLater, &evidence.SourceIncomplete, &evidence.SourceUnassessed, &evidence.LaterUnassessed); err != nil {
 		return CommitmentAdmissionEvidence{}, fmt.Errorf("activities: reading commitment admission evidence: %w", err)
 	}
 	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, in.SourceID.UUID); err != nil {

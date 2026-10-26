@@ -16,6 +16,7 @@ import { sendPermissionReasonKey } from "../format/sendpermissionreason";
 import type { Locale, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { ResolvedDisplayField } from "./approvaldisplay.types";
+import { lifecyclePreviewFields } from "./approvallifecycle";
 import { previewFieldLabel } from "./approvalpreviewfields";
 import { importPreviewFields } from "./approvalpreviewimport";
 import { mergeValueLabel } from "./approvalpreviewmergevalues";
@@ -284,8 +285,9 @@ export function commercialPreviewDisplay(
   t: Translator,
   locale: Locale = "en",
   formatDay?: (value: string) => string,
+  zone?: string,
 ): readonly ResolvedDisplayField[] {
-  const evidence = lifecyclePreviewFields(preview, t, formatDay);
+  const evidence = lifecyclePreviewFields(preview, t, locale, zone);
   const conflicts = (preview.conflicts ?? []).map((conflict, index) => {
     const label = PREVIEW_CONFLICT_LABELS[conflict.kind];
     return {
@@ -416,42 +418,6 @@ export function editedCommercialPreview(
       return { ...change, after: { ...change.after, text } };
     }),
   };
-}
-
-function lifecyclePreviewFields(
-  preview: Preview,
-  t: Translator,
-  formatDay?: (value: string) => string,
-): ResolvedDisplayField[] {
-  const evidence = preview.lifecycle_evidence;
-  if (!evidence) return [];
-  const labels = {
-    company: "approval.preview.scopeCompany",
-    workstream: "approval.preview.scopeWorkstream",
-    unknown: "approval.preview.scopeUnknown",
-  } satisfies Record<typeof evidence.scope, Parameters<Translator>[0]>;
-  const fields: ResolvedDisplayField[] = [
-    {
-      field: "lifecycle_scope",
-      label: t("approval.preview.scope"),
-      value: t(labels[evidence.scope] ?? "approval.preview.scopeUnknown"),
-      comparison: null,
-    },
-    {
-      field: "source_date",
-      label: t("approval.preview.sourceDate"),
-      value: formatDay?.(evidence.occurred_at) ?? evidence.occurred_at,
-      comparison: null,
-    },
-  ];
-  if (evidence.workstream)
-    fields.push({
-      field: "workstream",
-      label: t("approval.preview.workstream"),
-      value: evidence.workstream,
-      comparison: null,
-    });
-  return fields;
 }
 
 // stagedDealMove is a deal move's own arguments. A move staged through the REST

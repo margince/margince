@@ -712,6 +712,21 @@ func (e AgentClientRegisteredBy) Valid() bool {
 	}
 }
 
+// Defines values for AgentContextItemOccurredPrecision.
+const (
+	AgentContextItemOccurredPrecisionDay AgentContextItemOccurredPrecision = "day"
+)
+
+// Valid indicates whether the value is a known member of the AgentContextItemOccurredPrecision enum.
+func (e AgentContextItemOccurredPrecision) Valid() bool {
+	switch e {
+	case AgentContextItemOccurredPrecisionDay:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AgentToolTier.
 const (
 	AgentToolTierAutoExecute          AgentToolTier = "auto_execute"
@@ -14086,6 +14101,24 @@ func (e NotificationDelivery) Valid() bool {
 	}
 }
 
+// Defines values for OccurredPrecision.
+const (
+	OccurredPrecisionOccurredPrecisionDay     OccurredPrecision = "day"
+	OccurredPrecisionOccurredPrecisionInstant OccurredPrecision = "instant"
+)
+
+// Valid indicates whether the value is a known member of the OccurredPrecision enum.
+func (e OccurredPrecision) Valid() bool {
+	switch e {
+	case OccurredPrecisionOccurredPrecisionDay:
+		return true
+	case OccurredPrecisionOccurredPrecisionInstant:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OfferStatus.
 const (
 	OfferStatusAccepted   OfferStatus = "accepted"
@@ -25090,6 +25123,9 @@ type Activity struct {
 	MeetingStatus *ActivityMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    time.Time              `json:"occurred_at"`
 
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, so a client draws the date without a time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// OffersEmail Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, described on `ReplyRecipient`. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. A client offers Write email only when this is true, and reads the address from reply-recipient.
 	OffersEmail bool                    `json:"offers_email"`
 	Raw         *map[string]interface{} `json:"raw,omitempty"`
@@ -25239,6 +25275,9 @@ type ActivityReference struct {
 	// Kind What KIND of activity it is, so a client dispatches on it: an email opens the drawer, a task opens the task detail, anything else opens the activity itself.
 	Kind       ActivityReferenceKind `json:"kind"`
 	OccurredAt time.Time             `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
 	// Subject The activity's own subject line. Null when it has none, and when the content is not this reader's — the two are told apart by `content_state`, never by this field being empty.
 	Subject *string `json:"subject,omitempty"`
@@ -25537,12 +25576,18 @@ type AgentContextHit struct {
 
 // AgentContextItem One record in an assembled picture, summarised, with the passages that put it there.
 type AgentContextItem struct {
-	Evidence   []AgentExcerpt     `json:"evidence"`
-	OccurredAt *string            `json:"occurred_at,omitempty"`
-	RecordId   openapi_types.UUID `json:"record_id"`
-	RecordType string             `json:"record_type"`
-	Summary    string             `json:"summary"`
+	Evidence   []AgentExcerpt `json:"evidence"`
+	OccurredAt *string        `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision Present when only the date of occurred_at is known: name its UTC date, unconverted, and no time.
+	OccurredPrecision *AgentContextItemOccurredPrecision `json:"occurred_precision,omitempty"`
+	RecordId          openapi_types.UUID                 `json:"record_id"`
+	RecordType        string                             `json:"record_type"`
+	Summary           string                             `json:"summary"`
 }
+
+// AgentContextItemOccurredPrecision Present when only the date of occurred_at is known: name its UTC date, unconverted, and no time.
+type AgentContextItemOccurredPrecision string
 
 // AgentContextSection One heading of an assembled picture: recent activity, open tasks, related records.
 type AgentContextSection struct {
@@ -28090,6 +28135,9 @@ type AttachmentOrigin struct {
 	// OccurredAt When the mail was sent or received.
 	OccurredAt time.Time `json:"occurred_at"`
 
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// Sender One address on a message, resolved to a contact or a seat when it is one.
 	Sender  *EmailParty `json:"sender,omitempty"`
 	Subject *string     `json:"subject,omitempty"`
@@ -28735,6 +28783,9 @@ type AttentionItem struct {
 
 	// OccurredAt When a done_for_you receipt actually happened.
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision How to read a meeting row's time (`due_at` or `occurred_at`). Absent means `instant`.
+	OccurredPrecision *OccurredPrecision `json:"occurred_precision,omitempty"`
 
 	// Overdue Past due at the read instant, resolved server-side so every surface agrees.
 	Overdue *bool `json:"overdue,omitempty"`
@@ -30894,6 +30945,9 @@ type CaptureSenderDecision struct {
 	// LastSeenAt When the newest of those messages was sent or received. Absent when there are none.
 	LastSeenAt *time.Time `json:"last_seen_at,omitempty"`
 
+	// LastSeenPrecision How to read `last_seen_at`, from the message it names. Absent when that is absent.
+	LastSeenPrecision *OccurredPrecision `json:"last_seen_precision,omitempty"`
+
 	// MessageCount How many messages stored from your mailbox have this address as their counterparty, sent
 	// or received. Archived mail is not counted.
 	MessageCount int `json:"message_count"`
@@ -31824,8 +31878,14 @@ type Company360 struct {
 	// LastInboundAt When one of the account's current contacts last wrote to us: the newest of their own last_inbound_at, over the activities the timeline walks. Mail a colleague sent, and activity filed on the account alone, does not move it. Null means none of them ever wrote, which is a fact about the account, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
 	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
 
+	// LastInboundPrecision How to read `last_inbound_at`, from the row it names. Absent when that is null or absent.
+	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+
 	// LastOutboundAt When we last wrote to one of the account's current contacts. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
 	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+
+	// LastOutboundPrecision How to read `last_outbound_at`, from the row it names. Absent when that is null or absent.
+	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
 
 	// ListMemberships The Shortlists this company is on that the caller may find. Absent while the installation has not switched lists on.
 	ListMemberships *[]List `json:"list_memberships,omitempty"`
@@ -32099,6 +32159,9 @@ type Company360Health struct {
 	DaysSinceLastInbound *int       `json:"days_since_last_inbound,omitempty"`
 	LastMeetingAt        *time.Time `json:"last_meeting_at,omitempty"`
 
+	// LastMeetingPrecision How to read `last_meeting_at`, from the row it names. Absent when that is null or absent.
+	LastMeetingPrecision *OccurredPrecision `json:"last_meeting_precision,omitempty"`
+
 	// OpenCommitments Commitments either side made with the contacts at this account, read out of conversations, still owed and not yet a task. Null when the caller cannot read contacts and activities.
 	OpenCommitments *int `json:"open_commitments,omitempty"`
 
@@ -32120,6 +32183,9 @@ type Company360LastContact struct {
 	ActivityId openapi_types.UUID        `json:"activity_id"`
 	At         time.Time                 `json:"at"`
 	Kind       Company360LastContactKind `json:"kind"`
+
+	// OccurredPrecision How to read `at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 }
 
 // Company360LastContactKind defines model for Company360LastContact.Kind.
@@ -32154,6 +32220,9 @@ type Company360NextMeeting struct {
 
 	// LinkedDealId The deal this meeting is filed against, when the caller may read it.
 	LinkedDealId *openapi_types.UUID `json:"linked_deal_id,omitempty"`
+
+	// OccurredPrecision How to read `starts_at`. `day` means only its date is known, and the meeting stays next for that whole date.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
 	// Participants The attendees on file, row-scoped. Empty is honest — a meeting can be booked before anyone is linked to it.
 	Participants []Company360MeetingParticipant `json:"participants"`
@@ -32300,8 +32369,14 @@ type Company360StateStrip struct {
 
 	// Engagement Null when the caller has no activity grant — not assessed, as distinct from never contacted.
 	Engagement *struct {
-		LastInboundAt  *time.Time `json:"last_inbound_at,omitempty"`
-		LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+		LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
+
+		// LastInboundPrecision How to read `last_inbound_at`, from the activity it names. Absent when that is null.
+		LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+		LastOutboundAt       *time.Time         `json:"last_outbound_at,omitempty"`
+
+		// LastOutboundPrecision How to read `last_outbound_at`, from the activity it names. Absent when that is null.
+		LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
 
 		// State PO-F-4, evaluated in the order the spec fixes so the states stay mutually exclusive. `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting.
 		State Company360StateStripEngagementState `json:"state"`
@@ -32379,6 +32454,9 @@ type Company360Suggestion struct {
 	// date moves on its own, so a dismissal keyed on one would expire without anything
 	// about the account changing.
 	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// DuePrecision How to read `due_at` where it is an activity's time, from that activity. Absent when `due_at` is null, and when it is when a deal last moved, a stored clock with no precision.
+	DuePrecision *OccurredPrecision `json:"due_precision,omitempty"`
 
 	// Evidence The records the rule fired on — always ones this reader can open.
 	Evidence []CompanyBriefEvidence `json:"evidence"`
@@ -32706,8 +32784,14 @@ type CompanyContact struct {
 	// `engagement` is what says whether it counts as current.
 	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
 
+	// LastInboundPrecision How to read `last_inbound_at`, from the activity it names. Absent when that is null.
+	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+
 	// LastOutboundAt When we last wrote to them, over all history. Read beside `last_inbound_at`, the pair says which way the conversation is owed.
 	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+
+	// LastOutboundPrecision How to read `last_outbound_at`, from the activity it names. Absent when that is null.
+	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
 
 	// Strength Deterministic relationship-strength (features/07 §4) — a transparent function over captured
 	// interaction features (recency, frequency, direction, reciprocity), NOT a trained model. A fixed
@@ -32849,7 +32933,10 @@ type CompanyCoverageRoute struct {
 	Engagement    ContactEngagement `json:"engagement"`
 	FullName      string            `json:"full_name"`
 	LastInboundAt *time.Time        `json:"last_inbound_at,omitempty"`
-	Title         *string           `json:"title,omitempty"`
+
+	// LastInboundPrecision How to read `last_inbound_at`, from the activity it names. Absent when that is null.
+	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+	Title                *string            `json:"title,omitempty"`
 }
 
 // CompanyCoverageSeat defines model for CompanyCoverageSeat.
@@ -34845,14 +34932,26 @@ type Contact360 struct {
 	// LastContactAt The newest exchange in either direction, a meeting included: the moment "quiet for N days" counts from. Absent when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
 	LastContactAt *time.Time `json:"last_contact_at,omitempty"`
 
+	// LastContactPrecision How to read `last_contact_at`, from the row it names. Absent when that is null or absent.
+	LastContactPrecision *OccurredPrecision `json:"last_contact_precision,omitempty"`
+
 	// LastInboundAt When they last wrote to us. Null means nothing inbound was ever captured — a fact about the relationship, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
 	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
+
+	// LastInboundPrecision How to read `last_inbound_at`, from the row it names. Absent when that is null or absent.
+	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
 
 	// LastLiveInboundAt When they last wrote to us, leaving out email an import brought in as history. Equal to `last_inbound_at` when nothing imported is newer. The re-engaged suggestion reads this, because history that arrived by import is not a reply. Absent when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
 	LastLiveInboundAt *time.Time `json:"last_live_inbound_at,omitempty"`
 
+	// LastLiveInboundPrecision How to read `last_live_inbound_at`, from the row it names. Absent when that is null or absent.
+	LastLiveInboundPrecision *OccurredPrecision `json:"last_live_inbound_precision,omitempty"`
+
 	// LastOutboundAt When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question.
 	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+
+	// LastOutboundPrecision How to read `last_outbound_at`, from the row it names. Absent when that is null or absent.
+	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
 
 	// Moment The ONE thing this contact needs today, selected server-side by the fixed ladder in `ContactMoment.rule` (ADR-0096 D2). Exactly one primary moment wins: a page that offers five reasons has told the reader to choose, which is the work the ladder exists to do. Deterministic and computed at read from captured data. Absent when the caller lacks a grant the ladder needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence.
 	Moment *ContactMoment `json:"moment,omitempty"`
@@ -35013,6 +35112,9 @@ type Contact360NextMeeting struct {
 	ActivityId   openapi_types.UUID  `json:"activity_id"`
 	LinkedDealId *openapi_types.UUID `json:"linked_deal_id,omitempty"`
 
+	// OccurredPrecision How to read `starts_at`. `day` means only its date is known, and the meeting stays next for that whole date.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// Participants Who is in the room, so the reader knows whether they are single-threaded before they walk in.
 	Participants *[]struct {
 		ContactId openapi_types.UUID `json:"contact_id"`
@@ -35055,9 +35157,12 @@ type ContactCaptureGap struct {
 	DisplayName string `json:"display_name"`
 
 	// Invited True when the colleague has not signed in yet.
-	Invited        bool               `json:"invited"`
-	LastOnThreadAt time.Time          `json:"last_on_thread_at"`
-	UserId         openapi_types.UUID `json:"user_id"`
+	Invited        bool      `json:"invited"`
+	LastOnThreadAt time.Time `json:"last_on_thread_at"`
+
+	// LastOnThreadPrecision How to read `last_on_thread_at`, from the activity it names.
+	LastOnThreadPrecision *OccurredPrecision `json:"last_on_thread_precision,omitempty"`
+	UserId                openapi_types.UUID `json:"user_id"`
 }
 
 // ContactConsentGuard Whether an outbound message to this contact is allowed right now, per purpose and
@@ -35228,11 +35333,13 @@ type ContactGraphGroupsOmitted string
 // ContactGraphEdge One corresponding pair, with the evidence the graph is allowed to disclose.
 type ContactGraphEdge struct {
 	// From A node id.
-	From            string     `json:"from"`
-	Inbound90d      *int       `json:"inbound_90d,omitempty"`
-	Interactions90d int        `json:"interactions_90d"`
-	LastAt          *time.Time `json:"last_at,omitempty"`
-	Outbound90d     *int       `json:"outbound_90d,omitempty"`
+	From            string `json:"from"`
+	Inbound90d      *int   `json:"inbound_90d,omitempty"`
+	Interactions90d int    `json:"interactions_90d"`
+
+	// LastAt The newest `occurred_at` among the activities the edge counts. A client orders edges by it.
+	LastAt      *time.Time `json:"last_at,omitempty"`
+	Outbound90d *int       `json:"outbound_90d,omitempty"`
 
 	// Receipts The actual messages behind this edge, each individually visibility-checked before it is named. Present on `direct` edges only: pooled counts are disclosable where the correspondence itself is not, so an `account` edge carries the numbers and no rows.
 	Receipts       *[]ContactGraphReceipt         `json:"receipts,omitempty"`
@@ -35285,7 +35392,10 @@ type ContactGraphReceipt struct {
 	// that drew every one of them as an email would tell a reader a meeting was one.
 	Kind       ContactGraphReceiptKind `json:"kind"`
 	OccurredAt time.Time               `json:"occurred_at"`
-	Subject    *string                 `json:"subject,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+	Subject           *string           `json:"subject,omitempty"`
 }
 
 // ContactGraphReceiptKind What the receipt is evidence OF. The graph counts attendees and organizers as well
@@ -35389,7 +35499,7 @@ type ContactMoment struct {
 	// EvidenceFingerprint A digest of the evidence this moment fired on. The dismissal is held against it, so a dismissed moment RE-ARMS when its evidence moves — the reader dismissed "she went quiet", a reply arrives, and the page must not stay silent about the thing that just changed. Keying a dismissal on the path alone is what gets that wrong.
 	EvidenceFingerprint string `json:"evidence_fingerprint"`
 
-	// FreshnessAt When the fact behind this moment happened, so a reader can judge its age themselves.
+	// FreshnessAt When the fact behind this moment happened, so a reader can judge its age themselves. It reads as an instant; for a day entry it is that date's noon UTC, and the evidence it is taken from says so in `observed_precision`.
 	FreshnessAt *time.Time `json:"freshness_at,omitempty"`
 
 	// Headline The reason in one line, written from the evidence — never a model's paraphrase of it.
@@ -35483,6 +35593,9 @@ type ContactMomentEvidence struct {
 	Label      string              `json:"label"`
 	ObservedAt *time.Time          `json:"observed_at,omitempty"`
 
+	// ObservedPrecision How to read `observed_at` when it is an activity's time, from the row it names. `day` means only its UTC date is known, so a reader takes no time from it. Absent with `observed_at`, and beside a promise's due date.
+	ObservedPrecision *OccurredPrecision `json:"observed_precision,omitempty"`
+
 	// Snippet A verbatim excerpt of the evidence, never a summary of it.
 	Snippet *string                   `json:"snippet,omitempty"`
 	Type    ContactMomentEvidenceType `json:"type"`
@@ -35504,7 +35617,9 @@ type ContactMomentMayBeDone struct {
 
 	// PromiseType `task` — an open task. `claim` — a `commitment_ours` claim with no task.
 	PromiseType ContactMomentMayBeDonePromiseType `json:"promise_type"`
-	WroteAt     time.Time                         `json:"wrote_at"`
+
+	// WroteAt When that email was sent, read as an instant. The same email in the moment's evidence carries `observed_precision`.
+	WroteAt time.Time `json:"wrote_at"`
 }
 
 // ContactMomentMayBeDonePromiseType `task` — an open task. `claim` — a `commitment_ours` claim with no task.
@@ -35884,9 +35999,12 @@ type ContextItem struct {
 	Evidence *[]ContextEvidence `json:"evidence,omitempty"`
 
 	// OccurredAt When an event item happened, null when the item is not an event. A reader states a date from THIS rather than from one written inside a summary's prose — a note recalling "October" for a September email is the reading that otherwise reaches the customer. It is an instant in UTC; render it in the reader's zone before naming a calendar day.
-	OccurredAt *time.Time       `json:"occurred_at,omitempty"`
-	Ref        ContextEntityRef `json:"ref"`
-	Summary    *string          `json:"summary,omitempty"`
+	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision `day` when only the date of `occurred_at` is known. It is stored at noon UTC of that date, so name its UTC date without converting it to a zone, and never its time. Absent on an instant.
+	OccurredPrecision *OccurredPrecision `json:"occurred_precision,omitempty"`
+	Ref               ContextEntityRef   `json:"ref"`
+	Summary           *string            `json:"summary,omitempty"`
 }
 
 // ContextResponse defines model for ContextResponse.
@@ -36062,9 +36180,12 @@ type ConversationClaim struct {
 	Kind ConversationClaimKind `json:"kind"`
 
 	// NeedsReview Contradictory evidence exists for this claim. The surface shows both sources and asks — newest-wins is not a resolution.
-	NeedsReview      bool               `json:"needs_review"`
-	OccurredAt       *time.Time         `json:"occurred_at,omitempty"`
-	SourceActivityId openapi_types.UUID `json:"source_activity_id"`
+	NeedsReview bool       `json:"needs_review"`
+	OccurredAt  *time.Time `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at`, the source activity's time. `day` means only its date is known, so a client draws no time. `instant` when `occurred_at` is absent.
+	OccurredPrecision OccurredPrecision  `json:"occurred_precision"`
+	SourceActivityId  openapi_types.UUID `json:"source_activity_id"`
 
 	// SourceLabel How to name the source in a chip — the thread subject or the meeting title.
 	SourceLabel *string `json:"source_label,omitempty"`
@@ -36138,6 +36259,9 @@ type ConversationMemoryEntry struct {
 	LinkedDealId *openapi_types.UUID `json:"linked_deal_id,omitempty"`
 	OccurredAt   time.Time           `json:"occurred_at"`
 
+	// OccurredPrecision How to read `occurred_at`, from the newest activity the entry folds. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// Status The state a reader acts on: `replied`, `unanswered`, `awaiting_them`, or null when the entry carries no such claim. Derived from direction and what followed it.
 	Status *ConversationMemoryEntryStatus `json:"status,omitempty"`
 
@@ -36203,6 +36327,9 @@ type CreateActivityRequest struct {
 	} `json:"links,omitempty"`
 	MeetingStatus *CreateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision `day` when only the date is known: the date `occurred_at` names in its own offset is stored at noon UTC of that date, and its date is the UTC date. Omitted means `instant`. `day` without `occurred_at` is refused with 422.
+	OccurredPrecision *OccurredPrecision `json:"occurred_precision,omitempty"`
 
 	// Participants The message's own address headers, for mail this installation never captured. Email only — any other kind returns `422 code: field_not_valid_for_kind` — and `direction` is required alongside it, because the counterparty is derived from the two together: an inbound message is with its sender, an outbound one with the first recipient who is not the sending mailbox. An inbound message whose `from` is the mail system itself (postmaster, mailer-daemon, a bounce address) is a delivery report and returns `422` on `participants.from`.
 	Participants *struct {
@@ -37583,6 +37710,9 @@ type DealCommitment struct {
 	// OccurredAt When it was said.
 	OccurredAt time.Time `json:"occurred_at"`
 
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// SourceActivityId The captured activity it was read from.
 	SourceActivityId openapi_types.UUID `json:"source_activity_id"`
 
@@ -37688,7 +37818,10 @@ type DealDocumentOrigin struct {
 	// Kind The activity kind the file arrived with: email, message, meeting.
 	Kind       string    `json:"kind"`
 	OccurredAt time.Time `json:"occurred_at"`
-	Subject    *string   `json:"subject,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+	Subject           *string           `json:"subject,omitempty"`
 }
 
 // DealFollowUpDraft One drafted follow-up, the activity it was saved as, and why the deal is on the list.
@@ -37725,6 +37858,9 @@ type DealLastEmail struct {
 	// Direction Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
 	Direction  *DealLastEmailDirection `json:"direction"`
 	OccurredAt time.Time               `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 }
 
 // DealLastEmailDirection Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
@@ -37749,7 +37885,10 @@ type DealNextBestActionEvidence struct {
 	// Carried on this shape as well as on `CompanyBriefEvidence` because the deal card's basis is its own wire type, and a reader that could open a cited message on the brief but not on the move would be the same citation behaving differently on two pages. Same rules as there: withheld carries no words, absence proves nothing, never stored.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 	OccurredAt   *time.Time    `json:"occurred_at,omitempty"`
-	Text         string        `json:"text"`
+
+	// OccurredPrecision How to read `occurred_at`, from the activity it names. `day` means only its date is known, its UTC date, so a client draws no time. `instant` on a row with no such time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+	Text              string            `json:"text"`
 }
 
 // DealRoleProposalResult defines model for DealRoleProposalResult.
@@ -37941,13 +38080,19 @@ type DealRoomDocument struct {
 	// key never carries a display string. Not configurable, not AI-assigned — the
 	// contact adding the document picks. A plain string rather than an inline enum
 	// for the reason `DealRoomParticipantCapability` gives.
-	GroupKey  DealRoomDocumentGroup `json:"group_key"`
-	Id        openapi_types.UUID    `json:"id"`
-	Position  int                   `json:"position"`
-	RoomId    openapi_types.UUID    `json:"room_id"`
-	Source    string                `json:"source"`
-	Title     string                `json:"title"`
-	UpdatedAt time.Time             `json:"updated_at"`
+	GroupKey DealRoomDocumentGroup `json:"group_key"`
+	Id       openapi_types.UUID    `json:"id"`
+	Position int                   `json:"position"`
+
+	// ReachesBuyer Whether this entry's file is still in the deal's Files area. False once the file was
+	// deleted on the deal, hidden from it, or its message unlinked or narrowed; the entry
+	// stays in the room until the seller removes it. Whether the room itself is open to its
+	// buyer is the room's own state, not this field.
+	ReachesBuyer *bool              `json:"reaches_buyer,omitempty"`
+	RoomId       openapi_types.UUID `json:"room_id"`
+	Source       string             `json:"source"`
+	Title        string             `json:"title"`
+	UpdatedAt    time.Time          `json:"updated_at"`
 
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
@@ -38329,7 +38474,10 @@ type DealSuggestionEvidence struct {
 	AttachmentId *openapi_types.UUID        `json:"attachment_id,omitempty"`
 	Kind         DealSuggestionEvidenceKind `json:"kind"`
 	OccurredAt   time.Time                  `json:"occurred_at"`
-	SignalId     *openapi_types.UUID        `json:"signal_id,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at`, from the meeting, the document's message or, for a signal, the newest activity it cites. `day` means only its date is known, its UTC date, so a client draws no time. Absent when a signal's citations no longer resolve.
+	OccurredPrecision *OccurredPrecision  `json:"occurred_precision,omitempty"`
+	SignalId          *openapi_types.UUID `json:"signal_id,omitempty"`
 
 	// Title The meeting's subject, the signal's summary or the document's file name.
 	Title string `json:"title"`
@@ -38821,6 +38969,9 @@ type EmailPresentation struct {
 	Links      []ActivityLink `json:"links"`
 	OccurredAt time.Time      `json:"occurred_at"`
 
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// Summary One retained email, reduced to what a row shows without opening it. Present on an
 	// activity only when `kind=email`; every other kind carries none, and a reader that
 	// branches on this field is asking the one question that decides the canonical row.
@@ -38992,6 +39143,9 @@ type EmailSummary struct {
 	// the question cannot be answered honestly — an unanswerable move is not a claim.
 	Move       EmailSummaryMove `json:"move"`
 	OccurredAt time.Time        `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
 	// Preview One line of the sender's own text, signature and quoted history already removed.
 	// Null when withheld, and when the message has no text of its own.
@@ -40215,10 +40369,13 @@ type HealthDimensionReasonCode string
 // HealthDimensionReasonParams The values the reason names. Each code lists which it reads.
 type HealthDimensionReasonParams struct {
 	// At An instant, so the client names its day in the record's own zone.
-	At    *time.Time `json:"at,omitempty"`
-	Count *int       `json:"count,omitempty"`
-	Days  *int       `json:"days,omitempty"`
-	Total *int       `json:"total,omitempty"`
+	At *time.Time `json:"at,omitempty"`
+
+	// AtPrecision How to read `at`, from the row it names. `day` means only its UTC date is known. Absent with `at`.
+	AtPrecision *OccurredPrecision `json:"at_precision,omitempty"`
+	Count       *int               `json:"count,omitempty"`
+	Days        *int               `json:"days,omitempty"`
+	Total       *int               `json:"total,omitempty"`
 }
 
 // HeldEntityType defines model for HeldEntityType.
@@ -40270,6 +40427,9 @@ type HeldThread struct {
 
 	// OccurredAt When that message arrived. Absent for the same reason `subject` can be.
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at`, present beside it. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision *OccurredPrecision `json:"occurred_precision,omitempty"`
 
 	// ParticipantCount How many addresses outside the workspace that message names, of which `participants`
 	// shows up to five. Absent when `participants` is.
@@ -42519,6 +42679,9 @@ type Lead struct {
 	// LastActivityAt Most recent activity at or before now linked to this lead — the "last touch" a work queue row shows (ADR-0118). A task never counts, whoever filed it. Derived from activity_link, not stored on the lead.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
+
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
 	LegalHold *bool `json:"legal_hold,omitempty"`
 
@@ -42747,9 +42910,12 @@ type LeadQualification struct {
 // What the qualify dialog shows as the reason and sends back as `trigger`; null when the
 // lead has no such signal yet (a human may still qualify with `human_qualify`).
 type LeadQualificationEvidence struct {
-	ActivityId *openapi_types.UUID              `json:"activity_id,omitempty"`
-	OccurredAt *time.Time                       `json:"occurred_at,omitempty"`
-	Trigger    LeadQualificationEvidenceTrigger `json:"trigger"`
+	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
+	OccurredAt *time.Time          `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at`, present beside it. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision *OccurredPrecision               `json:"occurred_precision,omitempty"`
+	Trigger           LeadQualificationEvidenceTrigger `json:"trigger"`
 }
 
 // LeadQualificationEvidenceTrigger defines model for LeadQualificationEvidence.Trigger.
@@ -43310,9 +43476,12 @@ type LicenseHolder struct {
 
 // LifecyclePreviewEvidence Current readable source and scope supporting a company lifecycle review.
 type LifecyclePreviewEvidence struct {
-	OccurredAt time.Time                     `json:"occurred_at"`
-	Scope      LifecyclePreviewEvidenceScope `json:"scope"`
-	Workstream *string                       `json:"workstream,omitempty"`
+	OccurredAt time.Time `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision             `json:"occurred_precision"`
+	Scope             LifecyclePreviewEvidenceScope `json:"scope"`
+	Workstream        *string                       `json:"workstream,omitempty"`
 }
 
 // LifecyclePreviewEvidenceScope defines model for LifecyclePreviewEvidence.Scope.
@@ -45267,6 +45436,9 @@ type NotificationPreference struct {
 type NotificationPreferenceList struct {
 	Items []NotificationPreference `json:"items"`
 }
+
+// OccurredPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
+type OccurredPrecision string
 
 // Offer A versioned Angebot bound to one deal. Mirrors the `offer` table; totals are derived from the nested line items.
 type Offer struct {
@@ -48708,14 +48880,17 @@ type ReportingEvidenceRef struct {
 
 // ReportingEvidenceRow defines model for ReportingEvidenceRow.
 type ReportingEvidenceRow struct {
-	Key        string              `json:"key"`
-	Label      string              `json:"label"`
-	OccurredAt *time.Time          `json:"occurred_at,omitempty"`
-	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
-	Restricted bool                `json:"restricted"`
-	SourceId   *openapi_types.UUID `json:"source_id,omitempty"`
-	SourceType *string             `json:"source_type,omitempty"`
-	Value      *float64            `json:"value"`
+	Key        string     `json:"key"`
+	Label      string     `json:"label"`
+	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at` on an activity's row. `day` means only its date is known, its UTC date, so a client draws no time. Absent on a row that is not an activity's, whose time is an instant.
+	OccurredPrecision *OccurredPrecision  `json:"occurred_precision,omitempty"`
+	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
+	Restricted        bool                `json:"restricted"`
+	SourceId          *openapi_types.UUID `json:"source_id,omitempty"`
+	SourceType        *string             `json:"source_type,omitempty"`
+	Value             *float64            `json:"value"`
 }
 
 // ReportingExecution defines model for ReportingExecution.
@@ -49219,6 +49394,9 @@ type RestrictedRecord struct {
 	// Kind The interaction kind (email, call, meeting, message).
 	Kind       string    `json:"kind"`
 	OccurredAt time.Time `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
 	// Projects Every project the record qualifies through, by name, on the same terms as `deals`. A project qualifies its correspondence by existing — it is a commercial engagement, so the mail filed under it is about an actual transaction whether or not a deal on it has closed. A record can qualify through both a deal and a project; neither list is a summary of the other.
 	Projects *[]struct {
@@ -51487,6 +51665,9 @@ type TagSuggestionEvidence struct {
 	Kind       string    `json:"kind"`
 	OccurredAt time.Time `json:"occurred_at"`
 
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// Subject Absent when the activity has none or it was redacted.
 	Subject *string `json:"subject,omitempty"`
 }
@@ -52220,6 +52401,9 @@ type UpdateActivityRequest struct {
 	// wrong outcome is fixed by sending the right one.
 	MeetingStatus *UpdateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at` from now on. A patch that sends `occurred_at` without this field sets `instant`, because a new time is a known time. `day` stores the date at noon UTC: the date `occurred_at` names in its own offset, or, sent alone, the date the stored instant falls on in the installation's zone. `instant` on a `day` activity needs `occurred_at` too, or the stored noon would read as a real 12:00, and is refused with 422.
+	OccurredPrecision *OccurredPrecision `json:"occurred_precision,omitempty"`
 
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt             *time.Time             `json:"remind_at,omitempty"`
@@ -55084,8 +55268,14 @@ type WorklistContactTouch struct {
 	// LastInboundAt When they last wrote to us. Null means nothing inbound was ever captured.
 	LastInboundAt *time.Time `json:"last_inbound_at"`
 
+	// LastInboundPrecision How to read `last_inbound_at`, from the row it names. Absent when that is null.
+	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+
 	// LastOutboundAt When we last wrote to them. Null means we never have.
 	LastOutboundAt *time.Time `json:"last_outbound_at"`
+
+	// LastOutboundPrecision How to read `last_outbound_at`, from the row it names. Absent when that is null.
+	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
 }
 
 // WorklistCount What one CATEGORY of work held, and how much of it reached the page.
@@ -55547,6 +55737,9 @@ type WorklistItem struct {
 	// OccurredAt When the thing being reported happened.
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
 
+	// OccurredPrecision How to read the meeting or activity time on this row: `occurred_at`, or `due_at` on a `meeting` row, where it is the start. `day` means only the date is known. `instant` on every row whose time is a real moment, and on a row with no such time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// Overdue Past due at the read instant, resolved server-side so every surface agrees.
 	Overdue *bool `json:"overdue,omitempty"`
 
@@ -55743,9 +55936,12 @@ type WorklistItemSource string
 
 // WorklistLeadFacts The lead's contact context, without inventing an inbound request or response deadline.
 type WorklistLeadFacts struct {
-	CompanyName           *string    `json:"company_name,omitempty"`
-	LastActivityAt        *time.Time `json:"last_activity_at,omitempty"`
-	ResponseTargetTracked *bool      `json:"response_target_tracked,omitempty"`
+	CompanyName    *string    `json:"company_name,omitempty"`
+	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
+	ResponseTargetTracked *bool              `json:"response_target_tracked,omitempty"`
 
 	// Source The administered source label, absent for an unlabelled import or connector key.
 	Source *string `json:"source,omitempty"`
@@ -56556,10 +56752,10 @@ type ListActivitiesParams struct {
 	// ThreadKey One provider conversation. The company view's timeline groups by thread client-side over the page it holds, so a group cut off by that page completes itself through this rather than by widening the page for every account that has no long thread.
 	ThreadKey *string `form:"thread_key,omitempty" json:"thread_key,omitempty"`
 
-	// OccurredAfter Only activities that occurred at or after this instant (inclusive). Pairs with `occurred_before` for a date range; either may stand alone.
+	// OccurredAfter Only activities that occurred at or after this instant (inclusive). A `day` entry is placed where its date begins in the installation's time zone. Pairs with `occurred_before` for a date range; either may stand alone.
 	OccurredAfter *time.Time `form:"occurred_after,omitempty" json:"occurred_after,omitempty"`
 
-	// OccurredBefore Only activities that occurred strictly before this instant (exclusive), so a day range is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`.
+	// OccurredBefore Only activities that occurred strictly before this instant (exclusive), a `day` entry placed where its date begins in the installation's time zone. So a day range is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`, both in that zone.
 	OccurredBefore *time.Time `form:"occurred_before,omitempty" json:"occurred_before,omitempty"`
 
 	// WaitingReply Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply.
@@ -64832,6 +65028,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "occurred_at")
 	}
 
+	if raw, found := object["occurred_precision"]; found {
+		err = json.Unmarshal(raw, &a.OccurredPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'occurred_precision': %w", err)
+		}
+		delete(object, "occurred_precision")
+	}
+
 	if raw, found := object["offers_email"]; found {
 		err = json.Unmarshal(raw, &a.OffersEmail)
 		if err != nil {
@@ -65160,6 +65364,11 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 	object["occurred_at"], err = json.Marshal(a.OccurredAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'occurred_at': %w", err)
+	}
+
+	object["occurred_precision"], err = json.Marshal(a.OccurredPrecision)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'occurred_precision': %w", err)
 	}
 
 	object["offers_email"], err = json.Marshal(a.OffersEmail)
@@ -67204,6 +67413,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "occurred_at")
 	}
 
+	if raw, found := object["occurred_precision"]; found {
+		err = json.Unmarshal(raw, &a.OccurredPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'occurred_precision': %w", err)
+		}
+		delete(object, "occurred_precision")
+	}
+
 	if raw, found := object["participants"]; found {
 		err = json.Unmarshal(raw, &a.Participants)
 		if err != nil {
@@ -67427,6 +67644,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["occurred_at"], err = json.Marshal(a.OccurredAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'occurred_at': %w", err)
+		}
+	}
+
+	if a.OccurredPrecision != nil {
+		object["occurred_precision"], err = json.Marshal(a.OccurredPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'occurred_precision': %w", err)
 		}
 	}
 
@@ -70307,6 +70531,14 @@ func (a *DealRoomDocument) UnmarshalJSON(b []byte) error {
 		delete(object, "position")
 	}
 
+	if raw, found := object["reaches_buyer"]; found {
+		err = json.Unmarshal(raw, &a.ReachesBuyer)
+		if err != nil {
+			return fmt.Errorf("error reading 'reaches_buyer': %w", err)
+		}
+		delete(object, "reaches_buyer")
+	}
+
 	if raw, found := object["room_id"]; found {
 		err = json.Unmarshal(raw, &a.RoomId)
 		if err != nil {
@@ -70422,6 +70654,11 @@ func (a DealRoomDocument) MarshalJSON() ([]byte, error) {
 	object["position"], err = json.Marshal(a.Position)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'position': %w", err)
+	}
+
+	object["reaches_buyer"], err = json.Marshal(a.ReachesBuyer)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'reaches_buyer': %w", err)
 	}
 
 	object["room_id"], err = json.Marshal(a.RoomId)
@@ -70914,6 +71151,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "last_activity_at")
 	}
 
+	if raw, found := object["last_activity_precision"]; found {
+		err = json.Unmarshal(raw, &a.LastActivityPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_activity_precision': %w", err)
+		}
+		delete(object, "last_activity_precision")
+	}
+
 	if raw, found := object["legal_hold"]; found {
 		err = json.Unmarshal(raw, &a.LegalHold)
 		if err != nil {
@@ -71316,6 +71561,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LastActivityPrecision != nil {
+		object["last_activity_precision"], err = json.Marshal(a.LastActivityPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_activity_precision': %w", err)
 		}
 	}
 
@@ -73104,6 +73356,14 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "occurred_at")
 	}
 
+	if raw, found := object["occurred_precision"]; found {
+		err = json.Unmarshal(raw, &a.OccurredPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'occurred_precision': %w", err)
+		}
+		delete(object, "occurred_precision")
+	}
+
 	if raw, found := object["remind_at"]; found {
 		err = json.Unmarshal(raw, &a.RemindAt)
 		if err != nil {
@@ -73178,6 +73438,13 @@ func (a UpdateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["occurred_at"], err = json.Marshal(a.OccurredAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'occurred_at': %w", err)
+		}
+	}
+
+	if a.OccurredPrecision != nil {
+		object["occurred_precision"], err = json.Marshal(a.OccurredPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'occurred_precision': %w", err)
 		}
 	}
 

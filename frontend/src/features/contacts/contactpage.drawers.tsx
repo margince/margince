@@ -226,6 +226,7 @@ export function useComposer(
   open: boolean;
   intent: string;
   threadId: string | undefined;
+  draftOnOpen: boolean;
   close: () => void;
 }> {
   const [params, setParams] = useUrlParams();
@@ -252,6 +253,9 @@ export function useComposer(
     // answering anything in particular. A thread id from a link they already
     // dismissed would anchor that press on it.
     threadId: (key !== undefined && params.get(THREAD_PARAM)) || undefined,
+    // The address is the worklist's prepared move, pressed as an AI verb, so
+    // that composer drafts on arrival. A press of Write here starts empty.
+    draftOnOpen: key !== undefined,
     close,
   };
 }
@@ -273,6 +277,7 @@ export function ContactMailDrawer({
   open,
   intent,
   threadId,
+  draftOnOpen,
   onClose,
 }: Readonly<{
   contactId: string;
@@ -286,6 +291,8 @@ export function ContactMailDrawer({
   intent: string;
   /** The conversation a caller named, when one did. */
   threadId?: string;
+  /** An AI verb opened it, so it drafts on open. */
+  draftOnOpen?: boolean;
   onClose: () => void;
 }>) {
   // Read unconditionally, above the early return: the number of hooks a render
@@ -316,6 +323,7 @@ export function ContactMailDrawer({
       initialTransportId={anchored.chosen?.id}
       staleThread={anchored.stale}
       intent={intent}
+      draftOnOpen={draftOnOpen}
       open={open}
       onClose={onClose}
     />

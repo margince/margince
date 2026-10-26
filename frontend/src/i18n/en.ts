@@ -2030,6 +2030,7 @@ export const en = {
   "history.field.name": "Name",
   "history.field.note": "Note",
   "history.field.occurred_at": "Occurred",
+  "history.field.occurred_precision": "Time precision",
   "history.field.company_id": "Company",
   "history.field.owner_id": "Owner",
   "history.field.provider_claims_received": "Provider claims received",
@@ -2086,6 +2087,8 @@ export const en = {
   // What an empty stored jsonb array means to a reader of a change row —
   // never a blank, which reads as a value the row failed to show.
   "history.emptyList": "None set",
+  "history.value.occurred_precision.instant": "Date and time",
+  "history.value.occurred_precision.day": "Date only",
 
   "confidence.high": "high",
   "confidence.med": "medium",
@@ -2275,6 +2278,8 @@ export const en = {
   "deal.card.addTask": "Add task: {name}",
   "deal.mail.sent": "Sent {ago}",
   "deal.mail.received": "Received {ago}",
+  "deal.mail.sentOn": "Sent on {date}",
+  "deal.mail.receivedOn": "Received on {date}",
   "deal.mail.none": "No email on this deal yet",
   "deal.mail.viewAll": "View all activity",
   "deal.closesProvisional": "provisional close date, not confirmed by a human",
@@ -3912,6 +3917,8 @@ export const en = {
   "activity.files.title": "Files on {subject}",
   "activity.followUpOpen": "Open",
   "activity.detail.withheldReason": "Activity content is withheld",
+  "activity.dayHoldsHostSlot":
+    "This meeting is booked in a calendar, so it needs a time as well as a date.",
   "activity.detail.when": "When",
   "activity.detail.attendees": "Attendees",
   "activity.detail.colleagues": "Colleagues",
@@ -5905,7 +5912,7 @@ export const en = {
   "files.delete": "Delete",
   "files.deleteTitle": "Delete {name}?",
   "files.deleteBody":
-    "The file is removed from this deal, and from any Deal Room sharing it.",
+    "The file is removed from this deal, and buyers no longer see it in any Deal Room. The room entry stays until you remove it from the room.",
   "files.showHidden": "Show hidden files",
   "files.hideHidden": "Hide hidden files",
   "dealfiles.col.file": "File",
@@ -6381,6 +6388,24 @@ export const en = {
   "tasks.isDone": "Completed",
   "tasks.isOpen": "Open",
   "tasks.logged": "Logged",
+  "tasks.origin.no_activity_reminder":
+    "Created by the no-activity reminder: nothing was logged on this record for its set number of days. Get in touch, then mark the task done.",
+  "tasks.origin.check_in_cadence":
+    "Created by the check-in reminder: this record had no contact for its set number of days. Get in touch, then mark the task done.",
+  "tasks.origin.lead_sla":
+    "Created because this lead had no answer within its response time. Answer the lead, then mark the task done.",
+  "tasks.origin.lead_qualify":
+    "Created because this lead stayed open without a decision. Qualify the lead or close it.",
+  "tasks.origin.assurance":
+    "Created by the nightly forecast check: inputs on this deal need attention. The deal page lists them.",
+  "tasks.origin.overnight_reconcile":
+    "Created from a follow-up that the overnight review proposed and someone approved.",
+  "tasks.origin.commitment":
+    "Created from a commitment read out of a conversation.",
+  "tasks.origin.email_request": "Created from a request in an email.",
+  "tasks.origin.which_deal":
+    "Created because a captured email fits more than one open deal. Choose the deal it belongs to.",
+  "tasks.origin.system": "Created by an automation, not typed by a colleague.",
 
   "analytics.sub":
     "Open deals only, converted to {currency}, unweighted and weighted",
@@ -10474,6 +10499,9 @@ export const en = {
   "room.docs.add": "Add to room",
   "room.docs.upload": "Upload a file",
   "room.docs.remove": "Remove {title} from the room",
+  "room.docs.lapsed": "Buyers do not see this",
+  "room.docs.lapsedNote":
+    "The file is no longer in this deal’s Files area: it was deleted, hidden, or its email was unlinked. Remove it from the room.",
   "room.docs.group.commercial": "Commercial",
   "room.docs.group.legal": "Legal",
   "room.docs.group.security_privacy": "Security and privacy",
@@ -15832,6 +15860,25 @@ export const en = {
   "worklist.pane.never": "Never",
   "worklist.pane.company": "Company",
   "worklist.pane.role": "Role",
+  "worklist.why.title": "Why this needs attention",
+  "worklist.why.reasons": "Reasons",
+  "worklist.why.consequence": "If nothing is done",
+  "worklist.why.detail": "Detail",
+  "worklist.consequence.buyer_waits": "The buyer keeps waiting.",
+  "worklist.consequence.promise_breaks": "A commitment is broken.",
+  "worklist.consequence.deal_drifts": "The deal keeps drifting.",
+  "worklist.consequence.deal_slips_past_close":
+    "The deal slips past its close date.",
+  "worklist.consequence.meeting_unprepared": "The meeting starts unprepared.",
+  "worklist.consequence.task_slips": "The task slips past its due date.",
+  "worklist.consequence.work_blocked": "Work that waits on this stays blocked.",
+  "worklist.consequence.customer_never_received":
+    "The customer never gets the message.",
+  "worklist.consequence.you_believe_it_happened":
+    "An approved action stays undone while it looks done.",
+  "worklist.consequence.legal_deadline_missed": "A legal deadline is missed.",
+  "worklist.consequence.mailbox_blind": "Mail stops being captured.",
+  "worklist.consequence.data_drifts": "Records go out of date.",
   "worklist.band.now": "Now",
   "worklist.dueGroup.tomorrow": "Due tomorrow",
   "worklist.dueGroup.this_week": "Due this week",
@@ -16205,7 +16252,7 @@ export const en = {
     "Discussion and next steps. Calendar notes can be edited here.",
   "worklist.verb.meetingHeld": "Held",
   "worklist.verb.meetingNoShow": "No-show",
-  "worklist.verb.meetingCanceled": "Canceled",
+  "worklist.verb.meetingCanceled": "Mark as canceled",
   "worklist.verb.meetingOutcomeRecorded": "Meeting outcome recorded",
   "worklist.verb.meetingOutcomeFailed": "Outcome was not recorded. Retry.",
   "worklist.verb.meetingDayMissing":

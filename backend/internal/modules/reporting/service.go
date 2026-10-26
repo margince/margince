@@ -38,6 +38,17 @@ type Fact struct {
 	// one. It still counts in totals; per-owner outputs skip it. Absent on
 	// stored contributions, which decode as false.
 	OwnerWithheld bool `json:"owner_withheld,omitempty"`
+	// PlacedAt is where a day row falls in a period: its date's start in the
+	// installation zone. The row keeps the stored anchor a reader draws a date from.
+	PlacedAt *time.Time `json:"placed_at,omitempty"`
+}
+
+// At is the moment that places the fact in a period or bucket.
+func (f Fact) At() *time.Time {
+	if f.PlacedAt != nil {
+		return f.PlacedAt
+	}
+	return f.Row.OccurredAt
 }
 
 // Evaluation keeps calculated values and supporting facts in one result.

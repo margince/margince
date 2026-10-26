@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // The verdicts a domain can carry. Only Pending leaves the question open.
@@ -235,10 +236,9 @@ func newestEvidenceFor(ctx context.Context, tx pgx.Tx, domain string, activityID
 	var occurred *time.Time
 	err := tx.QueryRow(ctx, `
 		SELECT max(a.occurred_at)
-		  FROM activity a
-		  LEFT JOIN activity_participant ap ON ap.activity_id = a.id
+		  FROM activity a LEFT JOIN activity_participant ap ON ap.activity_id = a.id
 		 WHERE a.restricted_at IS NULL AND a.archived_at IS NULL
-		   AND a.occurred_at <= now() + $3::interval
+		   AND `+occurredday.BegunSQL("a", "now() + $3::interval")+`
 		   AND (lower(split_part(ap.address, '@', 2)) = $1
 		    OR lower(split_part(ap.address, '@', 2)) LIKE '%.' || `+storekit.EscapeLikeSQL("$1")+`
 		    OR a.id = $2)`, domain, activityID, mailClockSkewAllowance).Scan(&occurred)

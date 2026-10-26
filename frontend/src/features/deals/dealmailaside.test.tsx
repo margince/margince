@@ -109,6 +109,22 @@ describe("DealMailAside", () => {
     expect(url.searchParams.get("limit")).toBe("3");
   });
 
+  // A `day` mail knows its date and no hour, so the line says which day.
+  it("cites a date-only email on its day, not by an age", async () => {
+    const onDay = (row: ReturnType<typeof mail>) => ({
+      ...row,
+      occurred_at: "2026-09-14T12:00:00Z",
+      occurred_precision: "day",
+    });
+    serve([
+      onDay(mail("a1", "Signed order", "outbound", 0)),
+      onDay(mail("a2", "Reply on paper", "inbound", 0)),
+    ]);
+    render();
+    expect(await screen.findByText("Sent on 14/09/2026")).toBeTruthy();
+    expect(screen.getByText("Received on 14/09/2026")).toBeTruthy();
+  });
+
   // A message this reader may know about but not read is cited in the
   // timeline's words for that, and never by a subject the wire withheld.
   it("says a held message is not shared, and offers nothing to press on it", async () => {
@@ -175,7 +191,11 @@ describe("lastMailColumn", () => {
         <LocaleProvider initial="en">
           <Cell
             deal={tableDeal({
-              last_email: { occurred_at: daysAgo(10), direction: "outbound" },
+              last_email: {
+                occurred_at: daysAgo(10),
+                occurred_precision: "instant",
+                direction: "outbound",
+              },
             })}
           />
         </LocaleProvider>

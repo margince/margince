@@ -95,8 +95,9 @@ export function nextMeetingLine(
   next: NonNullable<Worklist["next_meeting"]>,
   locale: Locale,
   t: Translator,
+  zone: string,
 ): string {
-  const date = nextMeetingDay(next, locale);
+  const date = nextMeetingDay(next, locale, zone);
   return next.subject
     ? t("brief.readings.nextMeeting", { date, subject: next.subject })
     : t("brief.readings.nextMeetingUntitled", { date });

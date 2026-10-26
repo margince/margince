@@ -26,15 +26,16 @@ import (
 // never a withheld one with its subject and body nulled out.
 func activityColumnImage(a crmcontracts.Activity) map[string]any {
 	return map[string]any{
-		"subject":            derefOrNil(a.Subject),
-		"body":               derefOrNil(a.Body),
-		"occurred_at":        a.OccurredAt,
-		fieldDurationSeconds: derefOrNil(a.DurationSeconds),
-		"due_at":             derefOrNil(a.DueAt),
-		"remind_at":          derefOrNil(a.RemindAt),
-		"assignee_id":        derefOrNil(a.AssigneeId),
-		auditFieldIsDone:     derefOrNil(a.IsDone),
-		"done_at":            derefOrNil(a.DoneAt),
+		"subject":              derefOrNil(a.Subject),
+		"body":                 derefOrNil(a.Body),
+		auditFieldOccurredAt:   a.OccurredAt,
+		fieldOccurredPrecision: string(a.OccurredPrecision),
+		fieldDurationSeconds:   derefOrNil(a.DurationSeconds),
+		"due_at":               derefOrNil(a.DueAt),
+		"remind_at":            derefOrNil(a.RemindAt),
+		"assignee_id":          derefOrNil(a.AssigneeId),
+		auditFieldIsDone:       derefOrNil(a.IsDone),
+		"done_at":              derefOrNil(a.DoneAt),
 		// Writable on the patch, so it belongs in the image: a column the update
 		// can change and the diff cannot see leaves an audit row saying nothing
 		// happened. "Who recorded that the meeting was a no-show" is exactly the

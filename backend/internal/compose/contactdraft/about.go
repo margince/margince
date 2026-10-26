@@ -11,12 +11,15 @@ import (
 	"errors"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // AboutActivities reads the activity a draft follows up, under the caller's
@@ -35,7 +38,7 @@ func (s *Service) WithAboutActivities(reader AboutActivities) *Service {
 
 // aboutActivity reads the named activity, refusing one the caller may not
 // use the way an unknown id is refused, so its existence stays hidden.
-func (s *Service) aboutActivity(ctx context.Context, id ids.ActivityID, now time.Time) (*ActIn, error) {
+func (s *Service) aboutActivity(ctx context.Context, id ids.ActivityID, envelope draftfloor.Envelope) (*ActIn, error) {
 	if s.aboutReader == nil {
 		return nil, errNoAboutReader
 	}
@@ -47,22 +50,22 @@ func (s *Service) aboutActivity(ctx context.Context, id ids.ActivityID, now time
 	if err != nil {
 		return nil, err
 	}
-	return foldAbout(activity, now), nil
+	return foldAbout(activity, envelope.At(), envelope.Zone()), nil
 }
 
 // foldAbout is the activity as the writer reads it, with the deal it is filed
 // under so the follow-up knows which deal it continues.
-func foldAbout(activity crmcontracts.Activity, now time.Time) *ActIn {
+func foldAbout(activity crmcontracts.Activity, now time.Time, zone *time.Location) *ActIn {
 	folded := ActIn{
 		ID:      activity.Id.String(),
 		Kind:    string(activity.Kind),
-		At:      activity.OccurredAt.UTC().Format(time.RFC3339),
+		At:      activitywhen.Text(activity),
 		Inbound: activity.Direction != nil && *activity.Direction == crmcontracts.ActivityDirectionInbound,
 	}
 	if activity.Subject != nil {
 		folded.Subject = *activity.Subject
 	}
-	if activity.Body != nil && !activity.OccurredAt.After(now) {
+	if activity.Body != nil && occurredday.Happened(string(activity.Kind), activitywhen.MomentOf(activity), now, zone) {
 		folded.Record = draftcore.TurnText(*activity.Body)
 	}
 	if activity.Links != nil {

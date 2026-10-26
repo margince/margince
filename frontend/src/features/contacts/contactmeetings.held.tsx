@@ -4,6 +4,7 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
+import { activityDay } from "../../format/activitywhen";
 import { formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useMemberNames } from "../../lib/membernames";
@@ -65,7 +66,13 @@ export function HeldMeetingsTable({
       header: t("contact.meetings.col.date"),
       render: (meeting) => (
         <span className="t-num">
-          {formatDateAbbrev(meeting.occurred_at, locale, zone)}
+          {activityDay(
+            meeting.occurred_at,
+            meeting.occurred_precision,
+            locale,
+            zone,
+            formatDateAbbrev,
+          )}
         </span>
       ),
     },

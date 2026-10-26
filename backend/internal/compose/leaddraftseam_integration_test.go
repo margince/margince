@@ -58,7 +58,7 @@ func TestTheLeadDraftQuotesTheLeadNotTheNoticesAfterIt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	recent := contactdraft.FoldRecent(rows, now)
+	recent := contactdraft.FoldRecent(rows, now, time.UTC)
 	quoted := false
 	for _, row := range recent {
 		if notices[row.ID] {
@@ -69,7 +69,7 @@ func TestTheLeadDraftQuotesTheLeadNotTheNoticesAfterIt(t *testing.T) {
 	if !quoted {
 		t.Errorf("the lead's own message is missing from the draft's correspondence: %+v", recent)
 	}
-	if text := strings.Join(draftcore.LanguageEvidenceOf(rows, now), "\n"); !strings.Contains(text, "rollout") || strings.Contains(text, "deck was shared") {
+	if text := strings.Join(draftcore.LanguageEvidenceOf(rows, now, time.UTC), "\n"); !strings.Contains(text, "rollout") || strings.Contains(text, "deck was shared") {
 		t.Errorf("the drafting language reads %q, want the lead's words only", text)
 	}
 
@@ -154,7 +154,7 @@ func TestFilteredRowsNewerThanTheLeadsMessageDoNotEmptyTheDraftHistory(t *testin
 	if len(rows) != 1 || rows[0].Id.String() != ours.Id.String() {
 		t.Fatalf("the draft reads %d rows, want only our earlier mail %s", len(rows), ours.Id)
 	}
-	if recent := contactdraft.FoldRecent(rows, now); len(recent) != 1 || recent[0].Said == "" {
+	if recent := contactdraft.FoldRecent(rows, now, time.UTC); len(recent) != 1 || recent[0].Said == "" {
 		t.Errorf("the draft folds to %+v, want our earlier words kept", recent)
 	}
 }

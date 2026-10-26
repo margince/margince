@@ -23,6 +23,7 @@ const TITLE = "Anna Weber is waiting";
 
 function colleaguesRow(): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "01a05500-0000-7000-8000-0000000000c1",
     source: "customer_waiting",
     category: "customer_waiting",

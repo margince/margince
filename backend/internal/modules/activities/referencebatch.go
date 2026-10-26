@@ -77,10 +77,10 @@ func ReferencesByID(
 	// apart under an edit, and the row's `content_state` would then disagree
 	// with whether its own subject was blanked.
 	sql := fmt.Sprintf(`
-		SELECT id, kind, occurred_at, readable,
+		SELECT id, kind, occurred_at, occurred_precision, readable,
 		       CASE WHEN readable THEN subject ELSE NULL END
 		  FROM (
-		    SELECT a.id, a.kind, a.occurred_at, a.subject, (%s) AS readable
+		    SELECT a.id, a.kind, a.occurred_at, a.occurred_precision, a.subject, (%s) AS readable
 		      FROM activity a
 		     WHERE %s
 		  ) admitted`, content, strings.Join(where, " AND "))
@@ -95,7 +95,7 @@ func ReferencesByID(
 		var id ids.UUID
 		var readable bool
 		var ref crmcontracts.ActivityReference
-		if err := rows.Scan(&id, &ref.Kind, &ref.OccurredAt, &readable, &ref.Subject); err != nil {
+		if err := rows.Scan(&id, &ref.Kind, &ref.OccurredAt, &ref.OccurredPrecision, &readable, &ref.Subject); err != nil {
 			return nil, fmt.Errorf("activities: scanning an activity reference: %w", err)
 		}
 		ref.ActivityId = openapi_types.UUID(id)

@@ -44,6 +44,14 @@ const unpriced: DealSuggestion = {
       occurred_at: "2026-09-27T10:00:00Z",
       title: "They committed to a start in November",
     },
+    // A meeting logged for its date alone shows that date and no time.
+    {
+      kind: "meeting",
+      activity_id: "01a0e9f1-0000-7000-8000-0000000000m1",
+      occurred_at: "2026-09-26T12:00:00Z",
+      occurred_precision: "day",
+      title: "Site walk with the buyer",
+    },
   ],
 };
 

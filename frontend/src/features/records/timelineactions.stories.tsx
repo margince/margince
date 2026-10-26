@@ -24,6 +24,7 @@ import { TimelineActions } from "./timelineactions";
 type Activity = components["schemas"]["Activity"];
 
 const BASE: Activity = {
+  occurred_precision: "instant",
   offers_email: false,
   id: "11111111-1111-4111-8111-111111111111",
   kind: "email",
@@ -38,6 +39,7 @@ const BASE: Activity = {
   body: "Können wir Dienstag sprechen?",
   audience: "workspace",
   content_state: "available",
+  writable: true,
   version: 3,
 };
 
@@ -66,7 +68,7 @@ const WITHHELD: Activity = {
 
 function Frame({ activity }: Readonly<{ activity: Activity }>) {
   installFetchStub({
-    "GET /me": meRoute({}),
+    "GET /me": meRoute({ activity: ["update"] }),
   });
   return (
     <StoryProviders>
@@ -111,8 +113,11 @@ export const AudienceOpen: Story = {
     activity: { ...BASE, kind: "call", subject: "Rückfragen zum Angebot" },
   },
   play: async ({ canvasElement }) => {
+    // The control waits for the reader's grants, which arrive after the first paint.
     await userEvent.click(
-      within(canvasElement).getByRole("button", { name: "Change visibility" }),
+      await within(canvasElement).findByRole("button", {
+        name: "Change visibility",
+      }),
     );
     await screen.findByRole("dialog", { name: "Who may read this message?" });
   },

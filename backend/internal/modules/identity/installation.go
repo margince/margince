@@ -398,6 +398,9 @@ type installationIdentity struct {
 // discarded — which is #863. What should happen then is undecided; this only
 // makes sure the caller can say it happened.
 func seedInstallationIdentity(ctx context.Context, tx pgx.Tx, boot *config.Config, id installationIdentity) (discarded []string, err error) {
+	if err := refuseZoneTheDatabaseLacksTx(ctx, tx, id.zone); err != nil {
+		return nil, err
+	}
 	seeds := map[string]func() (bool, error){
 		Name.Key():         func() (bool, error) { return config.SeedTx(ctx, tx, boot, Name, id.name) },
 		Timezone.Key():     func() (bool, error) { return settings.SeedValue(ctx, tx, Timezone, id.zone, nil) },

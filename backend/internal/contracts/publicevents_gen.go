@@ -108,6 +108,24 @@ func (e PublicEventActivityChangedFieldsMeetingStatus) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventActivityChangedFieldsOccurredPrecision.
+const (
+	ActivityTimeIsADay      PublicEventActivityChangedFieldsOccurredPrecision = "day"
+	ActivityTimeIsAnInstant PublicEventActivityChangedFieldsOccurredPrecision = "instant"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventActivityChangedFieldsOccurredPrecision enum.
+func (e PublicEventActivityChangedFieldsOccurredPrecision) Valid() bool {
+	switch e {
+	case ActivityTimeIsADay:
+		return true
+	case ActivityTimeIsAnInstant:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventActivityDispositionRecordedDisposition.
 const (
 	NotMine    PublicEventActivityDispositionRecordedDisposition = "not_mine"
@@ -168,6 +186,24 @@ func (e PublicEventCommsDeliveryBouncedKind) Valid() bool {
 	case Hard:
 		return true
 	case Soft:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicEventEngagementReplyOccurredPrecision.
+const (
+	ReplyTimeIsADay      PublicEventEngagementReplyOccurredPrecision = "day"
+	ReplyTimeIsAnInstant PublicEventEngagementReplyOccurredPrecision = "instant"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventEngagementReplyOccurredPrecision enum.
+func (e PublicEventEngagementReplyOccurredPrecision) Valid() bool {
+	switch e {
+	case ReplyTimeIsADay:
+		return true
+	case ReplyTimeIsAnInstant:
 		return true
 	default:
 		return false
@@ -992,6 +1028,9 @@ type PublicEventActivityChangedFields struct {
 	// OccurredAt The activity's new occurred_at (absent when this update did not touch it).
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
 
+	// OccurredPrecision How to read the activity's occurred_at from now on: `day` when only its date is known, its UTC date. Carried whenever this update names occurred_at, and when it changed the precision alone.
+	OccurredPrecision *PublicEventActivityChangedFieldsOccurredPrecision `json:"occurred_precision,omitempty"`
+
 	// OutboundAttested True when the sender's own provider filing attested the message as their outbound mail, whether it was stored as received or as unattested outbound (absent otherwise).
 	OutboundAttested *bool `json:"outbound_attested,omitempty"`
 
@@ -1022,6 +1061,9 @@ type PublicEventActivityChangedFieldsDirection string
 
 // PublicEventActivityChangedFieldsMeetingStatus How the meeting went, once somebody recorded it (absent when this update did not touch it). Meeting rows only; the update refuses the field on any other kind.
 type PublicEventActivityChangedFieldsMeetingStatus string
+
+// PublicEventActivityChangedFieldsOccurredPrecision How to read the activity's occurred_at from now on: `day` when only its date is known, its UTC date. Carried whenever this update names occurred_at, and when it changed the precision alone.
+type PublicEventActivityChangedFieldsOccurredPrecision string
 
 // PublicEventActivityDispositionRecorded Payload for activity.disposition_recorded. Somebody decided what to do about a waiting message, and the Worklist stopped showing it (activities/disposition.go). Who it stopped showing it to is not on the wire. `not_sales` settles what the message is and holds for everybody. `snoozed` and `not_mine` belong to the one reader who set them. A reader marking a message done is announced as activity.marked_handled, since this enum is closed at v1. A consumer reading this as a workspace-wide fact would report a colleague's private set-aside as the thread's own state. The reader stays on the row, for a caller entitled to it.
 type PublicEventActivityDispositionRecorded struct {
@@ -1740,7 +1782,13 @@ type PublicEventEngagementReply struct {
 
 	// OccurredAt When the reply activity occurred.
 	OccurredAt time.Time `json:"occurred_at"`
+
+	// OccurredPrecision How to read occurred_at: `day` when only the reply's date is known, its UTC date.
+	OccurredPrecision *PublicEventEngagementReplyOccurredPrecision `json:"occurred_precision,omitempty"`
 }
+
+// PublicEventEngagementReplyOccurredPrecision How to read occurred_at: `day` when only the reply's date is known, its UTC date.
+type PublicEventEngagementReplyOccurredPrecision string
 
 // PublicEventEntityRef The primary entity the event concerns.
 type PublicEventEntityRef struct {
@@ -3454,7 +3502,7 @@ var PublicEventSamples = map[string]string{
 	"activity.captured":                         "{\"channel_provider\":\"Sample channel provider\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"kind\":\"Sample kind\",\"source_system\":\"Sample source system\"}",
 	"activity.disposition_recorded":             "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"disposition\":\"not_sales\"}",
 	"activity.marked_handled":                   "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
-	"activity.updated":                          "{\"changed_fields\":{\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"body\":true,\"calendar_method\":\"PUBLISH\",\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"is_done\":true,\"meeting_status\":\"booked\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"restored\":true,\"subject\":\"Sample subject\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
+	"activity.updated":                          "{\"changed_fields\":{\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"body\":true,\"calendar_method\":\"PUBLISH\",\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"is_done\":true,\"meeting_status\":\"booked\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"restored\":true,\"subject\":\"Sample subject\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"approval.decided":                          "{\"decided_by\":\"0190a7f2-0000-7000-8000-000000000010\",\"decided_by_system\":true,\"diff_hash\":\"Sample diff hash\",\"edited\":true,\"edited_change\":{},\"kind\":\"Sample kind\",\"verdict\":\"approved\"}",
 	"approval.failure_acknowledged":             "{\"failed_at\":\"2026-10-14T09:12:00Z\",\"kind\":\"Sample kind\"}",
 	"approval.preference_changed":               "{\"kind\":\"Sample kind\"}",
@@ -3512,7 +3560,7 @@ var PublicEventSamples = map[string]string{
 	"deal_room.thread_resolved":                 "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"document_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"thread_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"deal_room.updated":                         "{\"changed_fields\":[\"Sample changed fields\"],\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"email_signature.changed":                   "{\"has_signature\":true}",
-	"engagement.reply":                          "{\"channel\":\"Sample channel\",\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"idempotency_key\":\"Sample idempotency key\",\"matched_outbound_activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"occurred_at\":\"2026-10-14T09:12:00Z\"}",
+	"engagement.reply":                          "{\"channel\":\"Sample channel\",\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"idempotency_key\":\"Sample idempotency key\",\"matched_outbound_activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\"}",
 	"forecast.assurance_created":                "{\"eligible_deals\":1,\"eligible_signals\":1,\"readiness\":\"ready\",\"run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"status\":\"complete\"}",
 	"forecast.created":                          "{\"amount_minor\":1,\"author_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"call_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"currency\":\"Sample currency\",\"period_end\":\"2026-10-14\",\"period_start\":\"2026-10-14\",\"supersedes_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"forecast.exception_resolved":               "{\"actor_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"exception_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"expires_at\":\"2026-10-14T09:12:00Z\",\"outcome\":\"fixed_record\"}",

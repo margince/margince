@@ -13,11 +13,9 @@ import "./meetingbrief.css";
 // The brief's header band on its own: who it is prepared for, which meeting,
 // and which writer produced the prose.
 //
-// The band is rendered from what the OPENING PAGE holds, not from the wire —
-// the subject, the time and the contact are props — so a story here is a
-// caller's knowledge rather than a server answer. `formatWhen` is the caller's
-// too: this tier holds no locale and no zone, so the stories pass a fixed
-// string rather than a live clock.
+// The band is rendered from what the OPENING PAGE holds, not from the wire:
+// the subject and the contact are props. So a story here is a caller's
+// knowledge rather than a server answer.
 
 const meta: Meta<typeof BriefHeader> = {
   title: "Records/Record 360/Meeting brief/Header band",
@@ -34,7 +32,6 @@ function band(brief: components["schemas"]["MeetingBrief"]) {
           brief={brief}
           meeting={meetingFacts}
           preparedFor={preparedFor}
-          formatWhen={() => "24 June, 15:00"}
         />
       </DrawerHead>
     </StoryProviders>
@@ -42,16 +39,15 @@ function band(brief: components["schemas"]["MeetingBrief"]) {
 }
 
 /** Everything a caller can hand over: the prepared-for line naming contact and
- *  company, the avatar beside the subject, the time under it, and the writer
- *  badge. */
+ *  company, the avatar beside the subject, and the writer badge. */
 export const Prepared: Story = { render: band(briefReady) };
 
 /** The same band for prose a model wrote. Only the badge moves — indigo is a
  *  claim about who decided, and the facts above it are the same facts. */
 export const ModelWritten: Story = { render: band(briefModel) };
 
-/** The band in the dark theme: the prepared-for line and the time both sit on
- *  a muted role, and a muted role is where the dark accent lift shows. */
+/** The band in the dark theme: the prepared-for line sits on a muted role,
+ *  and a muted role is where the dark accent lift shows. */
 export const Dark: Story = {
   globals: { theme: "dark" },
   render: band(briefReady),

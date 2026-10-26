@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -52,6 +53,9 @@ type AwaitingReply struct {
 	// Recipients is who a meeting follow-up goes to, best first; ContactID is
 	// the first of them. Empty on a sent message.
 	Recipients []ids.UUID
+	// Precision is how to read SentAt: a logged day email or a meeting dated
+	// only by day names its date, not a moment.
+	Precision string
 }
 
 // AwaitingReplies answers which messages the reader sent that are still the
@@ -170,7 +174,7 @@ func scanFollowUps(rows pgx.Rows, what string) ([]AwaitingReply, error) {
 	var out []AwaitingReply
 	for rows.Next() {
 		var r AwaitingReply
-		if err := rows.Scan(&r.ActivityID, &r.Subject, &r.SentAt, &r.ContactID, &r.CompanyID, &r.DealID); err != nil {
+		if err := rows.Scan(&r.ActivityID, &r.Subject, &r.SentAt, &r.ContactID, &r.CompanyID, &r.DealID, &r.Precision); err != nil {
 			return nil, fmt.Errorf("activities: reading %s: %w", what, err)
 		}
 		out = append(out, r)
@@ -224,7 +228,7 @@ func awaitingTheirAnswerSQL(asOf, sentByReader, laterContent string) string {
 	                      AND later.kind = a.kind
 	                      AND later.channel_provider IS NOT DISTINCT FROM a.channel_provider
 	                      AND (later.occurred_at, later.id) > (a.occurred_at, a.id)
-	                      AND later.occurred_at <= ` + asOf + `
+	                      AND ` + occurredday.BegunSQL("later", asOf) + `
 	                      AND EXISTS (SELECT 1 FROM activity_link heard
 	                                    JOIN activity_link sent ON sent.activity_id = a.id
 	                                   WHERE heard.activity_id = later.id
@@ -258,12 +262,13 @@ var awaitingRepliesSQL = `
 	                '00000000-0000-0000-0000-000000000000'::uuid),
 	       COALESCE((array_agg(wl.deal_id ORDER BY wl.deal_id::text)
 	                 FILTER (WHERE wl.deal_id IS NOT NULL))[1],
-	                '00000000-0000-0000-0000-000000000000'::uuid)
+	                '00000000-0000-0000-0000-000000000000'::uuid),
+	       a.occurred_precision
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
 	 WHERE ` + awaitingTheirAnswerSQL("$%[1]d", sentByReaderSQL("$%[9]d", "$%[4]d"), "%[7]s") + `
-	   AND a.occurred_at <= $%[1]d::timestamptz - make_interval(days => $%[5]d::int)
-	   AND a.occurred_at >= $%[1]d::timestamptz - make_interval(days => $%[5]d::int + %[6]d)
+	   AND a.occurred_at <= $%[1]d::timestamptz - make_interval(days => $%[5]d::int) -- occurred_at raw: an age of whole days
+	   AND ` + occurredday.FromSQL("a", "$%[1]d::timestamptz - make_interval(days => $%[5]d::int + %[6]d)") + `
 	   AND %[2]s
 	   -- Nor any contact since with someone it went to, on any channel: a call
 	   -- or a meeting with them is a follow-up already made.
@@ -275,8 +280,8 @@ var awaitingRepliesSQL = `
 	                      AND later.archived_at IS NULL
 	                      AND %[7]s
 	                      AND %[8]s
-	                      AND later.occurred_at > a.occurred_at
-	                      AND later.occurred_at <= $%[1]d)
+	                      AND later.occurred_at > a.occurred_at -- occurred_at raw: heard after the mail, an ordering of rows
+	                      AND ` + occurredday.BegunSQL("later", "$%[1]d") + `)
 	   -- A customer: a lead, someone at a prospect or customer company, or a
 	   -- record with an open deal or a lead being worked.
 	   AND EXISTS (SELECT 1 FROM activity_link sales WHERE sales.activity_id = a.id AND %[11]s)

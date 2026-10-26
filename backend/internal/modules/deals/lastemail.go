@@ -39,7 +39,7 @@ func attachLastEmail(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) 
 		dealIDs[i] = ids.UUID(deals[i].Id)
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT ON (l.deal_id) l.deal_id, a.occurred_at, a.direction
+		SELECT DISTINCT ON (l.deal_id) l.deal_id, a.occurred_at, a.occurred_precision, a.direction
 		  FROM activity_link l
 		  JOIN activity a ON a.id = l.activity_id
 		 WHERE l.deal_id = ANY($1)
@@ -56,11 +56,12 @@ func attachLastEmail(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) 
 	for rows.Next() {
 		var deal ids.UUID
 		var occurredAt time.Time
+		var precision crmcontracts.OccurredPrecision
 		var direction *string
-		if err := rows.Scan(&deal, &occurredAt, &direction); err != nil {
+		if err := rows.Scan(&deal, &occurredAt, &precision, &direction); err != nil {
 			return fmt.Errorf("deals: reading a deal's newest email: %w", err)
 		}
-		newest[deal] = crmcontracts.DealLastEmail{OccurredAt: occurredAt, Direction: wireDirection(direction)}
+		newest[deal] = crmcontracts.DealLastEmail{OccurredAt: occurredAt, OccurredPrecision: precision, Direction: wireDirection(direction)}
 	}
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("deals: reading the newest email on a page of deals: %w", err)

@@ -201,6 +201,8 @@ type ActivityAuthorship struct {
 	Direction    string
 	Participants []Participant
 	OccurredAt   time.Time
+	// DateOnly says OccurredAt is a day entry's anchor, which names only a date.
+	DateOnly bool
 	// AuthorSide is who wrote it, judged against the installation's own
 	// domains. It is the trail's account of who spoke; the kinds settled by a
 	// recorded fact do not consult it.
@@ -268,7 +270,7 @@ func ReadActivityAuthorship(
 		scope = " AND " + scope
 	}
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT l.deal_id, a.direction, a.occurred_at, a.meeting_status, a.kind,
+		SELECT l.deal_id, a.direction, a.occurred_at, a.occurred_precision = 'day', a.meeting_status, a.kind,
 		       a.source_system IS NOT DISTINCT FROM $%[2]d AND coalesce(a.body, '') <> '',
 		       CASE
 		         WHEN coalesce(rtrim(a.body, E'\n'), '') = '' THEN 0
@@ -279,7 +281,7 @@ func ReadActivityAuthorship(
 		  JOIN activity_link l ON l.activity_id = a.id AND l.deal_id IS NOT NULL
 		 WHERE a.id = $%[1]d AND a.archived_at IS NULL%[3]s`,
 		idPos, markerPos, scope), args...).Scan(&out.DealID, &direction,
-		&out.OccurredAt, &meetingStatus, &out.Kind, &out.HasTranscript,
+		&out.OccurredAt, &out.DateOnly, &meetingStatus, &out.Kind, &out.HasTranscript,
 		&out.TranscriptLines)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return out, apperrors.ErrNotFound

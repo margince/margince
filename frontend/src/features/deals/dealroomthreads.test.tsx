@@ -394,3 +394,36 @@ describe("the deck layout", () => {
     expect(screen.getAllByText(/^About /)).toHaveLength(2);
   });
 });
+
+describe("a document the buyer no longer gets", () => {
+  // The buyer's list drops the threads about such a file, so a reply there
+  // would reach nobody; the question stays readable.
+  it.each(["stacked", "deck"] as const)(
+    "takes no reply on its existing threads (%s)",
+    (layout) => {
+      render(
+        <LocaleProvider initial="en">
+          <DocumentBoard
+            title="Documents"
+            groups={[{ key: "contract", label: "Contract" }]}
+            documents={[{ ...DOCUMENT, lapsed: true }]}
+            threads={[thread()]}
+            empty="No documents yet"
+            layout={layout}
+            verbs={{
+              mayRequireChange: false,
+              reply: vi.fn(async () => undefined),
+              resolve: vi.fn(async () => undefined),
+              open: vi.fn(async () => undefined),
+            }}
+          />
+        </LocaleProvider>,
+      );
+      expect(
+        screen.getByText("Which clause covers the notice period?"),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Reply" })).toBeNull();
+      expect(screen.queryByRole("textbox", { name: "Reply" })).toBeNull();
+    },
+  );
+});

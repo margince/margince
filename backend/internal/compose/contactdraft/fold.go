@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -33,7 +34,7 @@ func FromView(view crmcontracts.Contact360, req Request) Input {
 		SectionsOmitted: omittedNames(view.SectionsOmitted),
 	}
 	if view.Activities != nil {
-		in.Recent = FoldRecent(view.Activities.Data, req.Envelope.At())
+		in.Recent = FoldRecent(view.Activities.Data, req.Envelope.At(), req.Envelope.Zone())
 	}
 	foldCommercial(&in, view)
 	foldProject(&in, view, req.ProjectID)
@@ -50,12 +51,12 @@ func FromView(view crmcontracts.Contact360, req Request) Input {
 // derived from cannot drift apart. An unparseable stamp counts as absent, which
 // at worst reads a correspondence as a first touch — the conservative end, and
 // the one that assumes no history rather than inventing some.
-func ConversationState(view crmcontracts.Contact360, now time.Time) convstate.State {
+func ConversationState(view crmcontracts.Contact360, now time.Time, zone *time.Location) convstate.State {
 	var activities []crmcontracts.Activity
 	if view.Activities != nil {
 		activities = view.Activities.Data
 	}
-	return draftcore.ClassifyWithLogged(now, instant(view.LastInboundAt), instant(view.LastOutboundAt), activities)
+	return draftcore.ClassifyWithLogged(now, zone, instant(view.LastInboundAt), instant(view.LastOutboundAt), activities)
 }
 
 // instant parses one optional stamp, treating anything unreadable as absent.
@@ -68,11 +69,11 @@ func instant(at *time.Time) time.Time {
 
 // languageEvidence is what the language of this contact's correspondence is
 // read from; see draftcore.LanguageEvidence for the order.
-func languageEvidence(view crmcontracts.Contact360, now time.Time) []string {
+func languageEvidence(view crmcontracts.Contact360, now time.Time, zone *time.Location) []string {
 	if view.Activities == nil {
 		return nil
 	}
-	return draftcore.LanguageEvidenceOf(view.Activities.Data, now)
+	return draftcore.LanguageEvidenceOf(view.Activities.Data, now, zone)
 }
 
 func recipientOf(view crmcontracts.Contact360) RecipientIn {
@@ -84,8 +85,8 @@ func recipientOf(view crmcontracts.Contact360) RecipientIn {
 		FirstName:    greetingName(contact),
 		LastName:     surname(contact),
 		Employer:     currentEmployer(view),
-		LastInbound:  stamp(view.LastInboundAt),
-		LastOutbound: stamp(view.LastOutboundAt),
+		LastInbound:  contactcontext.StampOf(view.LastInboundAt, view.LastInboundPrecision),
+		LastOutbound: contactcontext.StampOf(view.LastOutboundAt, view.LastOutboundPrecision),
 	}
 	if contact.Title != nil {
 		out.Title = *contact.Title
@@ -297,14 +298,14 @@ func hoistOverdueOurs(claims []crmcontracts.ConversationClaim, now time.Time) []
 // The alternative was a second copy of the loop in the lead's fold, which is
 // how the bound and the newest-inbound rule would come to disagree between two
 // drafts of the same conversation.
-func FoldRecent(activities []crmcontracts.Activity, now time.Time) []ActIn {
+func FoldRecent(activities []crmcontracts.Activity, now time.Time, zone *time.Location) []ActIn {
 	var out []ActIn
 	readInbound := false
-	for _, turn := range draftcore.Conversation(activities, nil, now, DraftInputActivities) {
+	for _, turn := range draftcore.Conversation(activities, nil, now, zone, DraftInputActivities) {
 		folded := ActIn{
 			ID:      turn.ID,
 			Kind:    string(turn.Kind),
-			At:      turn.At.UTC().Format(time.RFC3339),
+			At:      occurredday.When(occurredday.Moment{At: turn.At, DateOnly: turn.DateOnly}),
 			Inbound: turn.Direction == string(crmcontracts.ActivityDirectionInbound),
 			Subject: turn.Subject,
 		}
@@ -334,10 +335,6 @@ func FoldRecent(activities []crmcontracts.Activity, now time.Time) []ActIn {
 func omittedNames(omitted []crmcontracts.Contact360SectionsOmitted) []string {
 	return contactcontext.OmittedNames(omitted)
 }
-
-// stamp renders an optional instant in one fixed format, so two timestamps
-// compare as strings the way the instants they name compare.
-func stamp(at *time.Time) string { return contactcontext.Stamp(at) }
 
 // Threaded reports whether a real inbound message earns this draft a reply
 // prefix. Only a message THEY sent counts: our own last outbound carries a
@@ -387,13 +384,14 @@ func (in Input) Booked() bool { return in.Meeting != nil }
 // which is the privacy line this grounding sits closest to.
 func foldMeeting(in *Input, view crmcontracts.Contact360, now time.Time) {
 	meeting := view.NextMeeting
-	if meeting == nil || !meeting.StartsAt.After(now) {
+	if meeting == nil || !meetingAhead(*meeting, now) {
 		return
 	}
 	if !attends(meeting, view.Contact.Id) {
 		return
 	}
-	folded := MeetingIn{ActivityID: meeting.ActivityId.String(), StartsAt: meeting.StartsAt.UTC().Format(time.RFC3339)}
+	starts := occurredday.Moment{At: meeting.StartsAt, DateOnly: occurredday.IsDay(meeting.OccurredPrecision)}
+	folded := MeetingIn{ActivityID: meeting.ActivityId.String(), StartsAt: occurredday.When(starts)}
 	if meeting.Subject != nil {
 		folded.Subject = *meeting.Subject
 	}
@@ -415,4 +413,13 @@ func attends(meeting *crmcontracts.Contact360NextMeeting, contactID openapi_type
 		}
 	}
 	return false
+}
+
+// meetingAhead says the next meeting has not happened yet. A day meeting has
+// no hour: the 360 kept it only while its date runs in the installation zone.
+func meetingAhead(meeting crmcontracts.Contact360NextMeeting, now time.Time) bool {
+	if occurredday.IsDay(meeting.OccurredPrecision) {
+		return true
+	}
+	return meeting.StartsAt.After(now)
 }

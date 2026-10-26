@@ -169,6 +169,7 @@ export function activityTimeline(
       bulkAttested: activity.bulk_mail_attested,
       automaticKind: activity.automatic_kind,
       atIso: activity.occurred_at,
+      atPrecision: activity.occurred_precision,
       provenance: provenanceOf(
         activity.captured_by,
         viewerUserId,

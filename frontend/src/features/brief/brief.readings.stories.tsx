@@ -61,6 +61,7 @@ export const MeetingsQuietDayNextMeeting: Story = {
       next_meeting: {
         activity_id: "a-next",
         starts_at: "2026-09-04T09:30:00Z",
+        occurred_precision: "instant",
         subject: "Weber GmbH · kickoff",
       },
     },

@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // EngagementWindowDays is the window the engagement test looks back over.
@@ -88,13 +89,13 @@ func EngagedStakeholders(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now 
 			SELECT 1 FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = r.contact_id
 			WHERE %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
-			  AND a.occurred_at >= $%[2]d AND a.direction = 'inbound')
+			  AND %[2]s AND a.direction = 'inbound')
 		  AND EXISTS (
 			SELECT 1 FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = r.contact_id
 			WHERE %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
-			  AND a.occurred_at >= $%[2]d AND a.direction = 'outbound')
-		ORDER BY r.contact_id`, dealPos, windowPos, bound, healthInteraction), args...))
+			  AND %[2]s AND a.direction = 'outbound')
+		ORDER BY r.contact_id`, dealPos, occurredday.FromSQL("a", fmt.Sprintf("$%d", windowPos)), bound, healthInteraction), args...))
 }
 
 // DealStakeholder is one seat on a deal: who, in what role, and whether they

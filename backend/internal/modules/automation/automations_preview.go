@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -229,7 +230,7 @@ func activityPreviewDefs() map[string]previewDef {
 			firedCount: func(ctx context.Context, tx pgx.Tx, since time.Time) (int, error) {
 				var n int
 				err := tx.QueryRow(ctx,
-					`SELECT count(*) FROM activity WHERE occurred_at >= $1 AND kind = $2`,
+					`SELECT count(*) FROM activity a WHERE `+occurredday.FromSQL("a", "$1")+` AND a.kind = $2`,
 					since, activityKindMeeting).Scan(&n)
 				return n, err
 			},

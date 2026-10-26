@@ -38,7 +38,8 @@ const sentHistorySQL = `EXISTS (
  SELECT 1 FROM activity_participant p WHERE p.activity_id = a.id AND p.role IN ('to', 'cc') AND p.address = ce.email)))
  AND a.kind = 'email' AND a.direction = 'outbound'
  AND a.counterparty_outbound_attested AND a.archived_at IS NULL
- AND a.occurred_at < (SELECT min(cc.created_at) FROM capture_connection cc WHERE cc.user_id = ci.user_id))`
+ AND a.occurred_at < (SELECT min(cc.created_at) FROM capture_connection cc WHERE cc.user_id = ci.user_id) -- occurred_at raw: mail sent before the mailbox connected, an instant
+)`
 
 const receivedHistorySQL = `EXISTS (
  SELECT 1 FROM activity_participant p

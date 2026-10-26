@@ -45,8 +45,13 @@ import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
 import { isTranscriptActivity } from "../../design-system/transcriptread";
+import {
+  type ActivityMoment,
+  activityDate,
+  movedActivityStart,
+  type OccurredPrecision,
+} from "../../format/activitywhen";
 import { calendarDay } from "../../format/calendarday";
-import { sameWallClockOnDay } from "../../format/timezone";
 import { useT } from "../../i18n";
 import { outgoingBody } from "../../lib/activitybody";
 import { useActivity } from "../../lib/activityread";
@@ -73,27 +78,33 @@ type OutcomeDraft = {
  * words written against the older copy are not stored on the newer one.
  */
 type OutcomeSeed = {
-  occurredAt: string;
+  start: ActivityMoment;
   day: string;
   version: number | undefined;
+};
+
+type MovedStart = {
+  occurred_at: string;
+  occurred_precision: OccurredPrecision;
 };
 
 /**
  * The start the save sends: none when the day stayed, so the meeting keeps
  * its real start. A moved meeting keeps its time of day in the record zone,
- * capped at now, because a meeting cannot be filed in the future.
+ * capped at now, because a meeting cannot be filed in the future. A date-only
+ * meeting names its new date alone and stays date-only, with no clock to cap.
  */
 function movedStart(
   seed: OutcomeSeed,
   day: string,
   zone: string,
   now: Date,
-): string | undefined {
+): MovedStart | undefined {
   if (day === seed.day) {
     return undefined;
   }
-  const moved = sameWallClockOnDay(seed.occurredAt, day, zone);
-  return Date.parse(moved) > now.getTime() ? now.toISOString() : moved;
+  const { at, precision } = movedActivityStart(seed.start, day, zone, now);
+  return { occurred_at: at, occurred_precision: precision };
 }
 
 /**
@@ -188,7 +199,11 @@ function MeetingOutcomeDialog({
   // effect paints the empty form first, and a reader who types into that frame
   // has their words replaced when the seed lands.
   if (draft === null && meeting.data) {
-    const day = calendarDay(new Date(meeting.data.occurred_at), recordZone);
+    const day = activityDate(
+      meeting.data.occurred_at,
+      meeting.data.occurred_precision,
+      recordZone,
+    );
     setDraft({
       status: "held",
       subject: meeting.data.subject ?? "",
@@ -196,7 +211,10 @@ function MeetingOutcomeDialog({
       day,
     });
     setSeed({
-      occurredAt: meeting.data.occurred_at,
+      start: {
+        at: meeting.data.occurred_at,
+        precision: meeting.data.occurred_precision,
+      },
       day,
       version: meeting.data.version,
     });
@@ -208,10 +226,9 @@ function MeetingOutcomeDialog({
     mutationFn: async (input: {
       draft: OutcomeDraft;
       seed: OutcomeSeed;
-      occurredAt: string | undefined;
+      moved: MovedStart | undefined;
       transcript: boolean;
     }) => {
-      const { occurredAt } = input;
       unwrap(
         await api.PATCH("/activities/{id}", {
           params: {
@@ -224,7 +241,7 @@ function MeetingOutcomeDialog({
             // An emptied box clears the note rather than storing "": null is what
             // the column holds for a meeting nobody has written about.
             body: outgoingBody(input.draft.body, input.transcript),
-            ...(occurredAt === undefined ? {} : { occurred_at: occurredAt }),
+            ...input.moved,
           },
         }),
         t,
@@ -261,14 +278,9 @@ function MeetingOutcomeDialog({
               ) {
                 return;
               }
-              let occurredAt: string | undefined;
+              let moved: MovedStart | undefined;
               try {
-                occurredAt = movedStart(
-                  seed,
-                  draft.day,
-                  recordZone,
-                  new Date(),
-                );
+                moved = movedStart(seed, draft.day, recordZone, new Date());
               } catch (error) {
                 // A day the record zone skipped has no start to keep, so
                 // nothing is sent and the reader picks another date.
@@ -277,7 +289,7 @@ function MeetingOutcomeDialog({
                 return;
               }
               setDayRefused(false);
-              save.mutate({ draft, seed, occurredAt, transcript });
+              save.mutate({ draft, seed, moved, transcript });
             }}
           >
             <div className="form-row">

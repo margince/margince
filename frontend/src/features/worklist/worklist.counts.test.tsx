@@ -43,6 +43,7 @@ function day(counts: WorklistCount[], shown = 1): Worklist {
     scope_options: ["mine"],
     queue: Array.from({ length: shown }, (_, i) => ({
       id: `row-${i}`,
+      occurred_precision: "instant",
       source: "task" as const,
       category: "tasks" as const,
       level: 4,
@@ -328,6 +329,7 @@ describe("what the page says about what it is not showing", () => {
 describe("the line compares items with items", () => {
   type Item = Worklist["queue"][number];
   const pairs = (count: number, atLeast = false): Item => ({
+    occurred_precision: "instant",
     id: "duplicates",
     source: "batch",
     category: "decisions",
@@ -339,6 +341,7 @@ describe("the line compares items with items", () => {
     batch: { key: "duplicates", count, at_least: atLeast },
   });
   const task = (i: number): Item => ({
+    occurred_precision: "instant",
     id: `task-${i}`,
     source: "task",
     category: "tasks",

@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { telUri } from "../../format/contacturi";
 import { LocaleProvider } from "../../i18n";
+import { RecordZoneProvider } from "../../lib/recordzone";
 import { ContactMemory } from "./contactmemory";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -47,6 +48,7 @@ function emailSummary(over: Partial<EmailSummary> = {}): EmailSummary {
   return {
     activity_id: EMAIL_ID,
     occurred_at: "2026-08-29T09:15:00Z",
+    occurred_precision: "instant" as const,
     version: 4,
     subject: "Re: the renewal quote",
     preview: "Can you hold the price until Friday?",
@@ -62,6 +64,7 @@ function emailSummary(over: Partial<EmailSummary> = {}): EmailSummary {
 
 function emailRow(over: Partial<Activity> = {}): Activity {
   return {
+    occurred_precision: "instant",
     offers_email: false,
     id: EMAIL_ID,
     kind: "email",
@@ -106,6 +109,7 @@ const copiedOnly: Partial<Activity> = {
 };
 
 const noteRow: Activity = {
+  occurred_precision: "instant",
   offers_email: false,
   id: NOTE_ID,
   kind: "note",
@@ -313,6 +317,7 @@ describe("the What was said card", () => {
       title: "Site visit",
       summary: "Walked the depot.",
       occurred_at: "2026-08-20T09:00:00Z",
+      occurred_precision: "instant",
       activity_count: 1,
       status: "awaiting_them",
     };
@@ -326,6 +331,35 @@ describe("the What was said card", () => {
     expect(screen.queryByText("Re: the renewal quote")).toBeNull();
   });
 
+  it("prints a day entry from the thread projection on its own date", () => {
+    const entry: Entry = {
+      key: "thread-day",
+      channel: "email",
+      direction: "inbound",
+      title: "Logged by hand",
+      summary: "Dana wrote about the depot.",
+      occurred_at: "2026-08-20T12:00:00Z",
+      occurred_precision: "day",
+      activity_count: 1,
+    };
+    // Noon UTC is already 21 Aug in Kiritimati; the entry names the 20th.
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <LocaleProvider initial="en">
+          <RecordZoneProvider zone="Pacific/Kiritimati">
+            <ContactMemory
+              view={viewWith([], { conversation_memory: [entry] })}
+              onOpenEmail={vi.fn()}
+              onFullHistory={vi.fn()}
+            />
+          </RecordZoneProvider>
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText("Email · 20 Aug")).toBeTruthy();
+  });
+
   it("names nobody but keeps the owed reply of a thread entry with no author", () => {
     const entry: Entry = {
       key: "thread-2",
@@ -334,6 +368,7 @@ describe("the What was said card", () => {
       title: "Signed NDA please",
       summary: "",
       occurred_at: "2026-08-20T09:00:00Z",
+      occurred_precision: "instant",
       activity_count: 1,
       status: "unanswered",
     };
@@ -353,6 +388,7 @@ describe("the What was said card", () => {
         title: "Pricing discussion",
         summary: "",
         occurred_at: "2026-08-20T09:00:00Z",
+        occurred_precision: "instant",
         activity_count: 1,
         status: "awaiting_them",
       };
@@ -404,6 +440,7 @@ it("groups replies by conversation without clearing another request from the sam
     thread_key: "answered",
     direction: "outbound",
     occurred_at: "2026-08-30T09:00:00Z",
+    occurred_precision: "instant" as const,
     email_summary: emailSummary({
       activity_id: "reply",
       subject: "Competitor question",
@@ -472,6 +509,7 @@ const callEntry: Entry = {
   title: "Called about the renewal",
   summary: "Walked through the quote.",
   occurred_at: "2026-08-28T11:00:00Z",
+  occurred_precision: "instant",
   activity_count: 1,
 };
 

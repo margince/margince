@@ -68,15 +68,16 @@ func restrictedRecordToWire(record RestrictedRecord) crmcontracts.RestrictedReco
 		redacted = []string{}
 	}
 	return crmcontracts.RestrictedRecord{
-		ActivityId:      openapi_types.UUID(record.ActivityID),
-		Kind:            record.Kind,
-		OccurredAt:      record.OccurredAt,
-		RestrictedAt:    record.RestrictedAt,
-		RestrictedUntil: record.RestrictedUntil,
-		Reason:          record.Class + " · " + statutoryBasisCorrespondence,
-		Deals:           deals,
-		Projects:        &projects,
-		RedactedFields:  &redacted,
+		ActivityId:        openapi_types.UUID(record.ActivityID),
+		Kind:              record.Kind,
+		OccurredAt:        record.OccurredAt,
+		OccurredPrecision: crmcontracts.OccurredPrecision(record.Precision),
+		RestrictedAt:      record.RestrictedAt,
+		RestrictedUntil:   record.RestrictedUntil,
+		Reason:            record.Class + " · " + statutoryBasisCorrespondence,
+		Deals:             deals,
+		Projects:          &projects,
+		RedactedFields:    &redacted,
 	}
 }
 

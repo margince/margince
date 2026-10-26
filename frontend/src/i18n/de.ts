@@ -2102,6 +2102,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.name": "Name",
   "history.field.note": "Notiz",
   "history.field.occurred_at": "Zeitpunkt",
+  "history.field.occurred_precision": "Zeitgenauigkeit",
   "history.field.company_id": "Unternehmen",
   "history.field.owner_id": "Verantwortlich",
   "history.field.provider_claims_received": "Erhaltene Anbieterangaben",
@@ -2157,6 +2158,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.priority": "Priorität",
   "history.field.acquisition_source": "Akquisitionsquelle",
   "history.emptyList": "Nichts festgelegt",
+  "history.value.occurred_precision.instant": "Datum und Uhrzeit",
+  "history.value.occurred_precision.day": "Nur Datum",
 
   "confidence.high": "hoch",
   "confidence.med": "mittel",
@@ -2324,6 +2327,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.card.addTask": "Aufgabe hinzufügen: {name}",
   "deal.mail.sent": "Gesendet {ago}",
   "deal.mail.received": "Erhalten {ago}",
+  "deal.mail.sentOn": "Gesendet am {date}",
+  "deal.mail.receivedOn": "Erhalten am {date}",
   "deal.mail.none": "Noch keine E-Mail zu diesem Deal",
   "deal.mail.viewAll": "Alle Aktivitäten anzeigen",
   "deal.closesProvisional":
@@ -3909,6 +3914,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "activity.files.title": "Dateien zu {subject}",
   "activity.followUpOpen": "Offen",
   "activity.detail.withheldReason": "Inhalt der Aktivität ist zurückgehalten",
+  "activity.dayHoldsHostSlot":
+    "Dieser Termin ist in einem Kalender gebucht und braucht deshalb eine Uhrzeit, nicht nur ein Datum.",
   "activity.detail.when": "Wann",
   "activity.detail.attendees": "Teilnehmende",
   "activity.detail.colleagues": "Teammitglieder",
@@ -5843,7 +5850,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "files.delete": "Löschen",
   "files.deleteTitle": "{name} löschen?",
   "files.deleteBody":
-    "Die Datei wird aus diesem Deal entfernt und aus jedem Deal Room, der sie teilt.",
+    "Die Datei wird aus diesem Deal entfernt, und die Käuferseite sieht sie in keinem Deal Room mehr. Der Eintrag im Raum bleibt, bis du ihn entfernst.",
   "files.showHidden": "Ausgeblendete Dateien anzeigen",
   "files.hideHidden": "Ausgeblendete Dateien verbergen",
   "dealfiles.col.file": "Datei",
@@ -6330,6 +6337,25 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.isDone": "Abgeschlossen",
   "tasks.isOpen": "Offen",
   "tasks.logged": "Erfasst",
+  "tasks.origin.no_activity_reminder":
+    "Erstellt von der Erinnerung bei Inaktivität: Zu diesem Datensatz wurde in der eingestellten Anzahl Tage nichts erfasst. Nimm Kontakt auf und markiere die Aufgabe als erledigt.",
+  "tasks.origin.check_in_cadence":
+    "Erstellt von der Erinnerung zur Kontaktaufnahme: Mit diesem Datensatz gab es in der eingestellten Anzahl Tage keinen Kontakt. Nimm Kontakt auf und markiere die Aufgabe als erledigt.",
+  "tasks.origin.lead_sla":
+    "Erstellt, weil dieser Lead innerhalb seiner Antwortfrist keine Antwort bekam. Antworte dem Lead und markiere die Aufgabe dann als erledigt.",
+  "tasks.origin.lead_qualify":
+    "Erstellt, weil dieser Lead ohne Entscheidung offen geblieben ist. Qualifiziere den Lead oder schließe ihn.",
+  "tasks.origin.assurance":
+    "Erstellt von der nächtlichen Prognoseprüfung: Angaben zu diesem Deal brauchen Aufmerksamkeit. Die Deal-Seite listet sie auf.",
+  "tasks.origin.overnight_reconcile":
+    "Erstellt aus einem Follow-up, das die nächtliche Prüfung vorgeschlagen und jemand freigegeben hat.",
+  "tasks.origin.commitment":
+    "Erstellt aus einer Zusage, die aus einem Gespräch gelesen wurde.",
+  "tasks.origin.email_request": "Erstellt aus einer Anfrage in einer E-Mail.",
+  "tasks.origin.which_deal":
+    "Erstellt, weil eine erfasste E-Mail zu mehr als einem offenen Deal passt. Wähle den Deal, zu dem sie gehört.",
+  "tasks.origin.system":
+    "Von einer Automatisierung erstellt, nicht von einem Teammitglied eingegeben.",
 
   "analytics.sub":
     "Nur offene Deals, in {currency} umgerechnet, ungewichtet und gewichtet",
@@ -10405,6 +10431,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "room.docs.add": "Zum Raum hinzufügen",
   "room.docs.upload": "Datei hochladen",
   "room.docs.remove": "{title} aus dem Raum entfernen",
+  "room.docs.lapsed": "Für die Käuferseite nicht sichtbar",
+  "room.docs.lapsedNote":
+    "Die Datei ist nicht mehr im Dateibereich dieses Deals, weil sie gelöscht oder ausgeblendet oder ihre E-Mail getrennt wurde. Entferne sie aus dem Raum.",
   "room.docs.group.commercial": "Kaufmännisches",
   "room.docs.group.legal": "Rechtliches",
   "room.docs.group.security_privacy": "Sicherheit und Datenschutz",
@@ -15902,6 +15931,29 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.pane.never": "Nie",
   "worklist.pane.company": "Unternehmen",
   "worklist.pane.role": "Rolle",
+  "worklist.why.title": "Warum das Aufmerksamkeit braucht",
+  "worklist.why.reasons": "Gründe",
+  "worklist.why.consequence": "Wenn nichts passiert",
+  "worklist.why.detail": "Detail",
+  "worklist.consequence.buyer_waits": "Die Käuferseite wartet weiter.",
+  "worklist.consequence.promise_breaks": "Eine Zusage wird nicht eingehalten.",
+  "worklist.consequence.deal_drifts": "Der Deal gerät weiter ins Stocken.",
+  "worklist.consequence.deal_slips_past_close":
+    "Der Deal verpasst sein Abschlussdatum.",
+  "worklist.consequence.meeting_unprepared":
+    "Der Termin beginnt unvorbereitet.",
+  "worklist.consequence.task_slips":
+    "Die Aufgabe verpasst ihr Fälligkeitsdatum.",
+  "worklist.consequence.work_blocked":
+    "Arbeit, die darauf wartet, bleibt blockiert.",
+  "worklist.consequence.customer_never_received":
+    "Der Kunde erhält die Nachricht nie.",
+  "worklist.consequence.you_believe_it_happened":
+    "Eine freigegebene Aktion bleibt unerledigt, wirkt aber erledigt.",
+  "worklist.consequence.legal_deadline_missed":
+    "Eine gesetzliche Frist wird versäumt.",
+  "worklist.consequence.mailbox_blind": "E-Mails werden nicht mehr erfasst.",
+  "worklist.consequence.data_drifts": "Datensätze veralten.",
   "worklist.band.now": "Jetzt",
   "worklist.dueGroup.tomorrow": "Morgen fällig",
   "worklist.dueGroup.this_week": "Diese Woche fällig",
@@ -16282,7 +16334,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Besprochenes und nächste Schritte. Kalendernotizen lassen sich hier bearbeiten.",
   "worklist.verb.meetingHeld": "Stattgefunden",
   "worklist.verb.meetingNoShow": "Nicht erschienen",
-  "worklist.verb.meetingCanceled": "Abgesagt",
+  "worklist.verb.meetingCanceled": "Als abgesagt markieren",
   "worklist.verb.meetingOutcomeRecorded": "Terminergebnis erfasst",
   "worklist.verb.meetingOutcomeFailed":
     "Das Ergebnis konnte nicht erfasst werden. Bitte versuche es erneut.",

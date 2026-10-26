@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -53,6 +54,8 @@ type SenderDecision struct {
 	// seat imported with the sender as counterparty, in either direction.
 	MessageCount int
 	LastSeenAt   *time.Time
+	// LastSeenPrecision says how to read LastSeenAt, from the message it names.
+	LastSeenPrecision string
 	// DeletesAt is when this sender's mail is destroyed, set only for a
 	// `personal` verdict the owner has not overruled. Zero means nothing is
 	// scheduled — every other kind is held rather than destroyed.
@@ -174,7 +177,7 @@ func senderMailTx(ctx context.Context, tx pgx.Tx, user ids.UUID, out []SenderDec
 	seat, listed := arg(user), arg(addresses)
 	// archived_at alone also excludes restricted mail: activity_restricted_is_archived.
 	rows, err := tx.Query(ctx, `
-		SELECT a.counterparty_email, count(*), max(a.occurred_at)
+		SELECT a.counterparty_email, count(*), max(a.occurred_at), `+occurredday.LatestPrecisionSQL("a", "")+`
 		  FROM activity a
 		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = `+seat+`
 		 WHERE a.counterparty_email = ANY(`+listed+`) AND a.kind = 'email' AND a.archived_at IS NULL
@@ -184,14 +187,15 @@ func senderMailTx(ctx context.Context, tx pgx.Tx, user ids.UUID, out []SenderDec
 	}
 	defer rows.Close()
 	type mail struct {
-		count int
-		last  time.Time
+		count     int
+		last      time.Time
+		precision string
 	}
 	seen := map[string]mail{}
 	for rows.Next() {
 		var address string
 		var m mail
-		if err := rows.Scan(&address, &m.count, &m.last); err != nil {
+		if err := rows.Scan(&address, &m.count, &m.last, &m.precision); err != nil {
 			return fmt.Errorf("capture: counting a seat's mail per sender: %w", err)
 		}
 		seen[address] = m
@@ -202,7 +206,7 @@ func senderMailTx(ctx context.Context, tx pgx.Tx, user ids.UUID, out []SenderDec
 	for i := range out {
 		if m, ok := seen[out[i].Address]; ok {
 			last := m.last
-			out[i].MessageCount, out[i].LastSeenAt = m.count, &last
+			out[i].MessageCount, out[i].LastSeenAt, out[i].LastSeenPrecision = m.count, &last, m.precision
 		}
 	}
 	return nil

@@ -12,6 +12,7 @@ import { leadIdentityName } from "../../format/leadname";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { addedViaFor } from "../../lib/leadorigins";
+import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { activityMarks } from "../../lib/standingmarks";
 import { useLeadStatusChanges } from "./leadhistory";
@@ -57,10 +58,11 @@ export function LeadHowItStands({
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
-  const ctx: ReadingContext = { t, locale, zone, asOf };
+  const record = useRecordZone();
+  const ctx: ReadingContext = { t, locale, zone, record, asOf };
   const changes = useLeadStatusChanges(lead);
   const explain = useLeadScore(lead);
-  const verdict = leadStanding(lead, t, locale, zone);
+  const verdict = leadStanding(lead, t, locale, zone, record);
   const factors =
     explain.isSuccess && explain.data.explained
       ? (explain.data.current?.factors ?? [])
@@ -127,6 +129,7 @@ export function LeadHowItStands({
             name: leadIdentityName(lead) || t("lead.unnamed"),
           })}
           asOf={asOf}
+          record={record}
           events={timeline.events}
           gap={timeline.gap}
           marks={activityMarks(thread.activities, {

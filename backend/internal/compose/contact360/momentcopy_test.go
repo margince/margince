@@ -152,6 +152,18 @@ func TestUndatedTaskUsesTheRecordDayInEveryLanguage(t *testing.T) {
 	}
 }
 
+func TestAnUndatedDayTaskUsesItsOwnDate(t *testing.T) {
+	task := contracts.Activity{
+		Kind: "task", OccurredAt: time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC),
+		OccurredPrecision: contracts.OccurredPrecisionOccurredPrecisionDay,
+	}
+	said := momentCopyFor("en")
+	said.zone = time.FixedZone("UTC+14", 14*60*60)
+	if got := said.openPromiseWhyNow(now, task); !strings.Contains(got, "2026-08-03") {
+		t.Fatalf("a day task logged on 3 Aug reads %q", got)
+	}
+}
+
 func TestContactEvidenceFallbackCaptionsFollowLanguage(t *testing.T) {
 	for _, tc := range []struct{ lang, inbound, outbound, meeting string }{
 		{"en", "Their last message", "Last message to them", "Meeting"},
@@ -159,10 +171,10 @@ func TestContactEvidenceFallbackCaptionsFollowLanguage(t *testing.T) {
 		{"vi", "Tin nhắn gần nhất của họ", "Tin nhắn gần nhất gửi cho họ", "Cuộc họp"},
 	} {
 		said := momentCopyFor(tc.lang)
-		if got := said.inboundEvidence(&contracts.Contact360{}, now).Label; got != tc.inbound {
+		if got := said.inboundEvidence(&contracts.Contact360{}, now, nil).Label; got != tc.inbound {
 			t.Errorf("inbound %s: %s", tc.lang, got)
 		}
-		if got := said.outboundEvidence(&contracts.Contact360{}, now)[0].Label; got != tc.outbound {
+		if got := said.outboundEvidence(&contracts.Contact360{}, now, nil)[0].Label; got != tc.outbound {
 			t.Errorf("outbound %s: %s", tc.lang, got)
 		}
 		meeting, ok := said.meetingPrepMoment(readerCtx(), now, &contracts.Contact360{NextMeeting: &contracts.Contact360NextMeeting{StartsAt: ahead(24)}})
@@ -187,5 +199,33 @@ func TestTheGoneQuietCopyNeverClaimsTheReaderSentTheLastMessage(t *testing.T) {
 				t.Errorf("%s: %q / %q says the reader sent it", language, moment.WhyNow, moment.Evidence[0].Label)
 			}
 		}
+	}
+}
+
+// A day message counts from the date it names. Its stored noon UTC is already
+// the next morning in Kiritimati, which would make each count a day short.
+func TestADayMessageCountsFromItsOwnDate(t *testing.T) {
+	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatal(err)
+	}
+	said := momentCopyFor("en")
+	said.zone = kiritimati
+	read := time.Date(2026, 8, 20, 9, 0, 0, 0, kiritimati)
+	day := contracts.OccurredPrecisionOccurredPrecisionDay
+	outbound := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC).AddDate(0, 0, -40)
+	quiet, ok := said.goneQuietMoment(readerCtx(), read,
+		&contracts.Contact360{LastOutboundAt: &outbound, LastOutboundPrecision: &day})
+	if !ok || !strings.Contains(quiet.Headline, "40 days") {
+		t.Fatalf("a day message sent 40 days ago reads %q, want 40 days", quiet.Headline)
+	}
+
+	// 23:00 on 19 Aug in Kiritimati, 39 dates after the day message.
+	inbound := time.Date(2026, 8, 19, 9, 0, 0, 0, time.UTC)
+	back, ok := said.reEngagedMoment(readerCtx(), read, &contracts.Contact360{
+		LastOutboundAt: &outbound, LastOutboundPrecision: &day, LastLiveInboundAt: &inbound,
+	})
+	if !ok || !strings.Contains(back.Headline, "39 days") {
+		t.Fatalf("a reply 39 days after a day message reads %q, want 39 days", back.Headline)
 	}
 }

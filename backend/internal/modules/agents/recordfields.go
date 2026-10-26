@@ -237,9 +237,9 @@ const windowRule = "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never 
 
 const windowNote = `,"description":"` + windowRule + `"`
 
-// pastDayNeedsATime is the activity-write sentence for a day named without
-// an hour: the server stores the call's own moment for an omitted occurred_at.
-const pastDayNeedsATime = " No occurred_at means now; for a past day with no time, ask."
+// pastDayNeedsATime is the activity-write sentence for a day named without an
+// hour. An omitted occurred_at is the call's own moment; the server dates a day.
+const pastDayNeedsATime = ` No occurred_at means now; a past day with no time: its date, occurred_precision "day".`
 
 // argumentSchemaFor is schemaFor for a tool ARGUMENT. Every date-time member
 // it derives carries `rule`, like a hand-written one. A result schema has no

@@ -31,6 +31,7 @@ type RestrictedRecord struct {
 	ActivityID      ids.UUID
 	Kind            string
 	OccurredAt      time.Time
+	Precision       string
 	RestrictedAt    time.Time
 	RestrictedUntil time.Time
 	Class           string
@@ -91,7 +92,7 @@ func ListRestrictedActivities(ctx context.Context, db *database.DB, cursor *stri
 		// record is small, and one round trip keeps the page consistent with
 		// itself.
 		rows, err := tx.Query(ctx, `
-			SELECT a.id, a.kind, a.occurred_at, a.restricted_at, a.restricted_until,
+			SELECT a.id, a.kind, a.occurred_at, a.occurred_precision, a.restricted_at, a.restricted_until,
 			       a.retention_class, a.redacted_fields,
 			       coalesce((SELECT jsonb_agg(jsonb_build_object('id', e.deal_id, 'name', e.deal_name) ORDER BY e.deal_name)
 			                   FROM (SELECT DISTINCT deal_id, deal_name FROM activity_retention_evidence
@@ -109,7 +110,7 @@ func ListRestrictedActivities(ctx context.Context, db *database.DB, cursor *stri
 		defer rows.Close()
 		for rows.Next() {
 			var r RestrictedRecord
-			if err := rows.Scan(&r.ActivityID, &r.Kind, &r.OccurredAt, &r.RestrictedAt, &r.RestrictedUntil,
+			if err := rows.Scan(&r.ActivityID, &r.Kind, &r.OccurredAt, &r.Precision, &r.RestrictedAt, &r.RestrictedUntil,
 				&r.Class, &r.RedactedFields, &r.Deals, &r.Projects); err != nil {
 				return err
 			}

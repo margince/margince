@@ -34,7 +34,7 @@ type Store struct {
 	// queue. Nil in a deployment that has not wired it, and then no sender is
 	// excluded for being one of ours (WithOwnDomains).
 	ownDomains OwnDomains
-	// recordZone ends a stated deadline day (WithRecordZone).
+	// recordZone says which date is today and which day an instant falls on (WithRecordZone).
 	recordZone RecordZone
 	// transcriptEnqueue starts the reading of a transcript the moment it
 	// lands, in the same transaction that stores it. Nil in a deployment with

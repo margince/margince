@@ -83,6 +83,9 @@ type DealHealthEvidence struct {
 	// LastActivityAt is the past clock the recency factor bands; nil with
 	// MostRecentActivityID.
 	LastActivityAt *time.Time
+	// LastActivityDateOnly says the activity behind LastActivityAt names only a
+	// date, so days count from that date.
+	LastActivityDateOnly bool
 	// MeetingAhead is a booked meeting the clock has not reached, which
 	// scores recency 1.0 and keeps the deal off stalled.
 	MeetingAhead bool
@@ -120,9 +123,12 @@ type dealHealthInputs struct {
 	status         string
 	createdAt      time.Time
 	lastActivityAt *time.Time
-	waitUntil      *time.Time
-	meetingAhead   bool
-	stageID        ids.StageID
+	// lastActivityDateOnly says the activity behind lastActivityAt names only
+	// a date.
+	lastActivityDateOnly bool
+	waitUntil            *time.Time
+	meetingAhead         bool
+	stageID              ids.StageID
 
 	// stageEnteredAt is the latest history entry into the current stage,
 	// falling back to createdAt when the deal never moved.
@@ -184,6 +190,7 @@ func healthFromInputs(in dealHealthInputs, now time.Time) DealHealth {
 			OverdueTaskIDs:        in.overdueTaskIDs,
 			Stalled:               stalled,
 			LastActivityAt:        in.lastActivityAt,
+			LastActivityDateOnly:  in.lastActivityDateOnly,
 			MeetingAhead:          in.meetingAhead,
 		},
 	}
@@ -304,7 +311,8 @@ func healthInputs(ctx context.Context, tx pgx.Tx, now time.Time, in *dealHealthI
 	// The subquery's meeting, origin, audience and time filters are the ones
 	// last_activity_of_deal reads, so the evidence names a row the clock counts.
 	// It also hides a follow-up task whose source is restricted, which the
-	// clock does not. The meeting-ahead column is read here for the same reason.
+	// clock does not. The meeting-ahead and day columns are read here for the
+	// same reason.
 	var pipelineID ids.PipelineID
 	var recent *ids.UUID
 	args := []any{in.dealID}
@@ -318,10 +326,10 @@ func healthInputs(ctx context.Context, tx pgx.Tx, now time.Time, in *dealHealthI
 		           `+auth.OriginIsEngagement("a")+auth.AudienceWorkspaceOnly("a")+`
 		         ORDER BY a.occurred_at DESC, a.id DESC
 		         LIMIT 1),
-		       `+MeetingAheadSQL("d")+`
+		       `+LastActivityDaySQL("d")+`, `+MeetingAheadSQL("d")+`
 		FROM deal d WHERE d.id = $1 AND d.archived_at IS NULL`, args...).
 		Scan(&in.status, &in.createdAt, &in.lastActivityAt, &in.waitUntil, &in.stageID, &pipelineID, &recent,
-			&in.meetingAhead)
+			&in.lastActivityDateOnly, &in.meetingAhead)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return apperrors.ErrNotFound
 	}

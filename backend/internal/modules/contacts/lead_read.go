@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -67,9 +68,20 @@ func leadNextTaskDueSQL(work string) string {
 // reader sees the instant the list was arranged by rather than a second reading
 // of the same question.
 func leadLastActivitySQL() string {
-	return `(SELECT max(a.occurred_at) FROM activity_link l JOIN activity a ON a.id = l.activity_id
+	return `(SELECT max(a.occurred_at) ` + leadTouchesSQL() + `)`
+}
+
+// leadLastActivityPrecisionSQL is how to read leadLastActivitySQL's instant,
+// from the activity it names.
+func leadLastActivityPrecisionSQL() string {
+	return `(SELECT ` + occurredday.LatestPrecisionSQL("a", "") + ` ` + leadTouchesSQL() + `)`
+}
+
+// leadTouchesSQL is the activities the last-touch clock reads.
+func leadTouchesSQL() string {
+	return `FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL
-	     AND ` + relstrength.LastActivityCountsSQL("a", "now()") + auth.OriginIsEngagement("a") + `)`
+	     AND ` + relstrength.LastActivityCountsSQL("a", "now()") + auth.OriginIsEngagement("a")
 }
 
 func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
@@ -92,7 +104,7 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	(SELECT jsonb_build_object('trigger', CASE WHEN a.kind = 'meeting' AND a.meeting_status = 'held' THEN 'meeting_held'
 	                                           WHEN a.kind = 'meeting' THEN 'meeting_booked'
 	                                           ELSE 'inbound_reply' END,
-	                           'activity_id', a.id, 'occurred_at', a.occurred_at)
+	                           'activity_id', a.id, 'occurred_at', a.occurred_at, 'occurred_precision', a.occurred_precision)
 	   FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	  WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL
 	    AND ((a.kind = 'email' AND a.direction = 'inbound')
@@ -100,7 +112,7 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	             AND (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))))
 	  ORDER BY CASE WHEN a.kind = 'meeting' AND a.meeting_status = 'held' THEN 0
 	                WHEN a.kind = 'meeting' THEN 1 ELSE 2 END, a.occurred_at DESC, a.id LIMIT 1),
-	` + leadLastActivitySQL() + `,
+	` + leadLastActivitySQL() + `, ` + leadLastActivityPrecisionSQL() + `,
 	(SELECT count(*) FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `),
 	-- The next open task, as the pair it is: its title and its deadline
@@ -215,6 +227,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	var status string
 	var version int64
 	var openTasks int
+	var lastActivityPrecision *string
 	var hasInbound bool
 	var authorName, authorSeatName *string
 	var authorID *ids.UUID
@@ -227,7 +240,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 		&version, &l.CreatedAt, &l.UpdatedAt, &l.ArchivedAt,
 		&l.RoutedAt, &l.FirstResponseAt, &l.SourceLabel, &l.Origin, &l.OriginDetail, &l.OriginLabel, &disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
 		&statusSetBy, &qualifiedDeal, &evidence,
-		&l.LastActivityAt, &openTasks,
+		&l.LastActivityAt, &lastActivityPrecision, &openTasks,
 		&l.NextTaskSubject, &l.NextTaskDueAt, &l.ScoreReason, &l.LegalHold, &hasInbound,
 	}
 	cf := storekit.ScanDests(active)
@@ -268,6 +281,9 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	l.Status = crmcontracts.LeadStatus(status)
 	l.Version = &version
 	l.OpenTaskCount = &openTasks
+	if lastActivityPrecision != nil {
+		l.LastActivityPrecision = new(crmcontracts.OccurredPrecision(*lastActivityPrecision))
+	}
 	if !hasInbound {
 		policy.enabled = false
 	}

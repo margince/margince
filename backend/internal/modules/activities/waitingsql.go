@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 )
 
@@ -55,7 +56,7 @@ const filedUnderALiveContactSQL = `(NOT EXISTS (SELECT 1 FROM activity_link wl
 // timeline. requestOpenSQL, as owedSQL is the one relaxable not-sales gate.
 // Cheap tests come first, so most rows never reach the settlement subqueries.
 func withinWaitingHorizonSQL(asOf, days string) string {
-	return `(a.occurred_at >= ` + asOf + ` - make_interval(days => ` + days + `)
+	return `(` + occurredday.FromSQL("a", asOf+` - make_interval(days => `+days+`)`) + `
 	     OR (` + heldRequestSQL() + ` AND ` + requestOpenSQL + `))`
 }
 
@@ -233,7 +234,7 @@ var waitingRepliesSQL = `
 	 WHERE a.kind IN ('email', 'message')
 	   AND a.direction = 'inbound'
 	   AND a.archived_at IS NULL
-	   AND a.occurred_at <= $%[1]d
+	   AND ` + occurredday.BegunSQL("a", "$%[1]d::timestamptz") + `
 	   AND %[2]s
 	   -- Entity narrowing goes HERE, before WaitingScanCap's LIMIT below: a
 	   -- record's own wait can sit outside the oldest WaitingScanCap threads
@@ -414,34 +415,30 @@ func messageSnoozeLiftedSQL(asOf, backContent string) string {
 			  AND back.thread_key = a.thread_key
 			  AND back.kind = a.kind
 			  AND back.channel_provider IS NOT DISTINCT FROM a.channel_provider
-			  AND back.occurred_at > mine.set_at
-			  AND back.occurred_at <= %[1]s)
-		-- The same rule the brief's queue applies, and for the same reasons:
-		-- over means ENDED (start plus duration, not start), a meeting that
-		-- will never happen counts as over, and kind = 'meeting' is what makes
-		-- reopen_ref mean a meeting rather than any activity id.
+			  AND back.occurred_at > mine.set_at -- occurred_at raw: since the item was set down, a window's lower edge
+			  AND %[5]s)
+		-- The rule the brief's queue applies (storekit.MeetingIsOverSQL), and
+		-- kind = 'meeting' is what makes reopen_ref mean a meeting rather than
+		-- any activity id.
 		WHEN 'meeting' THEN EXISTS (
 			SELECT 1 FROM activity m
 			WHERE m.id = mine.reopen_ref AND m.kind = '%[2]s'
-			  AND (m.archived_at IS NOT NULL
-			       OR m.meeting_status IN ('canceled', 'no_show')
-			       OR m.occurred_at
-			          + make_interval(secs => coalesce(m.duration_seconds, 0)) <= %[1]s))
+			  AND %[4]s)
 		ELSE false
-	END)`, asOf, KindMeeting, backContent)
+	END)`, asOf, KindMeeting, backContent, storekit.MeetingIsOverSQL("m", asOf), occurredday.BegunSQL("back", asOf))
 }
 
 // bookedMeetingSQL is when the soonest booked meeting with this message's
 // sender starts, or NULL — the fact that turns a waiting card into "meeting
 // booked" instead of a count of waiting days.
 //
-// Booked means: a meeting the sender's contact is on (linked or attending,
-// the walks the answer arms use), not over — by the rule the snooze
-// disposition already applies: canceled and no-show count as over, and over
-// means ENDED, start plus duration — and booked or moved since the message
-// arrived. That last fact is read from the write shape: a meeting created
-// after the ask, or an audited change to its start after it, which is what
-// both move writers leave behind. A meeting that merely predates the ask
+// Booked means three things. The sender's contact is on the meeting, linked or
+// attending (the walks the answer arms use). It is not over, by the rule the
+// snooze disposition applies: canceled and no-show count as over, and over
+// means ENDED (occurredday.EndSQL). And it was booked or moved since the
+// message arrived. That last fact is read from the write shape. A meeting
+// created after the ask counts, and so does an audited change to its start
+// after it, which both move writers leave behind. A meeting that merely predates the ask
 // untouched does not answer it.
 //
 // Workspace-audience and unrestricted, as every off-thread answer arm is —
@@ -471,9 +468,8 @@ func bookedMeetingSQL(asOf, discover string) string {
 	           AND booked.restricted_at IS NULL` + auth.AudienceWorkspaceOnly("booked") + `
 	           AND (` + discover + `)
 	           AND coalesce(booked.meeting_status, '') NOT IN ('canceled', 'no_show')
-	           AND booked.occurred_at
-	               + make_interval(secs => coalesce(booked.duration_seconds, 0)) > ` + asOf + `
-	           AND (booked.created_at > a.occurred_at
+	           AND ` + occurredday.EndSQL("booked") + ` > ` + asOf + `
+	           AND (booked.created_at > a.occurred_at -- occurred_at raw: booked after the ask, an ordering of rows
 	             OR EXISTS (SELECT 1 FROM audit_log booked_move
 	                 WHERE booked_move.entity_type = 'activity'
 	                   AND booked_move.entity_id = booked.id
@@ -483,7 +479,7 @@ func bookedMeetingSQL(asOf, discover string) string {
 	                   -- length-only edit included.
 	                   AND (booked_move.before ->> 'occurred_at')
 	                       IS DISTINCT FROM (booked_move.after ->> 'occurred_at')
-	                   AND booked_move.occurred_at > a.occurred_at
+	                   AND booked_move.occurred_at > a.occurred_at -- occurred_at raw: moved after the ask, an ordering of rows
 	                   AND booked_move.occurred_at <= ` + asOf + `))
 	        OFFSET 0) booked
 	  WHERE booked_asker.activity_id = a.id AND booked_asker.role = 'from'

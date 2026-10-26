@@ -53,6 +53,7 @@ const standing: components["schemas"]["Company360"] = {
   last_outbound_at: "2026-07-20T10:00:00Z",
   last_contact: {
     at: "2026-08-01T08:00:00Z",
+    occurred_precision: "instant",
     kind: "email",
     activity_id: "a-wrote",
   },
@@ -111,12 +112,14 @@ const standing: components["schemas"]["Company360"] = {
   next_meeting: {
     activity_id: "m-walk",
     starts_at: "2026-08-20T10:00:00Z",
+    occurred_precision: "instant",
     subject: "Walkthrough",
     participants: [],
   },
   activities: {
     data: [
       {
+        occurred_precision: "instant",
         offers_email: false,
         id: "a-kickoff",
         kind: "meeting",
@@ -126,6 +129,7 @@ const standing: components["schemas"]["Company360"] = {
         ...written,
       },
       {
+        occurred_precision: "instant",
         offers_email: false,
         id: "a-visit",
         kind: "note",
@@ -135,6 +139,7 @@ const standing: components["schemas"]["Company360"] = {
         ...written,
       },
       {
+        occurred_precision: "instant",
         offers_email: false,
         id: "a-wrote",
         kind: "email",

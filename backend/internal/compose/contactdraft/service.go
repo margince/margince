@@ -138,15 +138,16 @@ func (s *Service) Draft(
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
+	zone := s.envelope.Zone(ctx)
 	req.Envelope = s.envelope.Resolve(ctx,
-		draftfloor.Written{Thread: languageEvidence(view, s.envelope.Now()), Rewrite: req.RewriteOf, Purpose: req.Intent},
-		ConversationState(view, s.envelope.Now()))
+		draftfloor.Written{Thread: languageEvidence(view, s.envelope.Now(), zone), Rewrite: req.RewriteOf, Purpose: req.Intent},
+		ConversationState(view, s.envelope.Now(), zone)).InZone(zone)
 	in := FromView(view, req)
 	if in.AlsoTo, err = s.coRecipients(ctx, contactID, req.AlsoTo); err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
 	if req.AboutActivityID != nil {
-		if in.About, err = s.aboutActivity(ctx, *req.AboutActivityID, req.Envelope.At()); err != nil {
+		if in.About, err = s.aboutActivity(ctx, *req.AboutActivityID, req.Envelope); err != nil {
 			return crmcontracts.CompanyEmailDraft{}, nil, err
 		}
 		in.Recent = withoutActivity(in.Recent, in.About.ID)

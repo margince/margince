@@ -82,6 +82,7 @@ const aWithheldMail = anActivity({
   email_summary: {
     activity_id: "a-withheld",
     occurred_at: AT,
+    occurred_precision: "instant",
     display_status: "withheld",
     attachment_count: 0,
     move: "none",

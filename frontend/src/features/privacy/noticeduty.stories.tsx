@@ -12,6 +12,7 @@ import { NoticeDuty } from "./noticeduty";
 const CONTACT = "01a05500-0000-7000-8000-0000000000aa";
 
 const IMPORTED: WorklistItem = {
+  occurred_precision: "instant",
   id: "01a05500-0000-7000-8000-0000000000cc",
   source: "notice_case",
   category: "system",

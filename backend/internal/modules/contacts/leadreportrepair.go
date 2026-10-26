@@ -72,7 +72,7 @@ func ReDeriveLeadFromRemainingTouchesTx(ctx context.Context, tx pgx.Tx, leadID i
 	if target, down := stepDownFor(LeadStatus(status), setBy, touches, floor); down {
 		p.Set(leadStatusColumn, status, string(target))
 	}
-	if moved, to := restampFirstResponse(stamp, created, touches); moved {
+	if moved, to := restampFirstResponse(stamp, created, touches, now); moved {
 		p.Set(firstResponseColumn, stamp, to)
 	}
 	if p.Empty() {
@@ -133,23 +133,24 @@ func stepDownFor(current LeadStatus, setBy *string, touches []leadResponseTouch,
 }
 
 // restampFirstResponse moves a stamp that only an unaccepted remaining touch
-// explains: to the earliest accepted touch, or to nothing when none is left.
-func restampFirstResponse(stamp *time.Time, created time.Time, touches []leadResponseTouch) (bool, *time.Time) {
+// explains. It goes to the earliest accepted touch that has answered by now, or
+// to nothing when none is left.
+func restampFirstResponse(stamp *time.Time, created time.Time, touches []leadResponseTouch, now time.Time) (bool, *time.Time) {
 	if stamp == nil {
 		return false, nil
 	}
 	var earliest *time.Time
 	for _, t := range touches {
-		at := firstResponseStamp(t.occurredAt, created)
+		at := firstResponseStamp(t.respondedAt, created)
 		if at.Equal(*stamp) && isFirstResponseActivity(t) {
 			return false, nil
 		}
-		if isFirstResponseActivity(t) && (earliest == nil || at.Before(*earliest)) {
+		if isFirstResponseActivity(t) && !t.respondedAt.After(now) && (earliest == nil || at.Before(*earliest)) {
 			earliest = &at
 		}
 	}
 	for _, t := range touches {
-		if firstResponseStamp(t.occurredAt, created).Equal(*stamp) {
+		if firstResponseStamp(t.respondedAt, created).Equal(*stamp) {
 			return true, earliest
 		}
 	}

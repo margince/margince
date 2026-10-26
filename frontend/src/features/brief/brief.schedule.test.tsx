@@ -18,6 +18,7 @@ import { SchedulePanel, scheduleIsEmpty } from "./brief.schedule";
 
 function taskRow(id: string, title: string): WorklistItem {
   return {
+    occurred_precision: "instant",
     id,
     source: "task",
     level: 2,
@@ -42,6 +43,7 @@ function draw(node: React.ReactNode) {
 const NEXT = {
   activity_id: "a-next",
   starts_at: "2026-09-04T09:30:00Z",
+  occurred_precision: "instant" as const,
   subject: "Weber kickoff",
   linked_deal_id: "deal-1",
   participants: [{ contact_id: "contact-1", full_name: "Anna Weber" }],

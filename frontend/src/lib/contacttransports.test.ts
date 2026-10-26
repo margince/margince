@@ -30,6 +30,7 @@ function activity(
   over: Partial<Activity> & Pick<Activity, "id" | "kind">,
 ): Activity {
   return {
+    occurred_precision: "instant",
     offers_email: false,
     occurred_at: AS_OF,
     is_done: true,

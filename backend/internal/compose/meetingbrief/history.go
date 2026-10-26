@@ -32,6 +32,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // historyCap bounds the scan. Two hundred conversations is more than a year of
@@ -52,6 +53,8 @@ type HistoryIn struct {
 	Subject   string
 	Direction string
 	At        time.Time
+	// DateOnly says At is a day entry's stored noon.
+	DateOnly  bool
 	ThreadKey string
 	// OnDeal marks a conversation filed under the deal this brief is about.
 	OnDeal bool
@@ -64,7 +67,7 @@ type HistoryIn struct {
 
 const historyQuery = `
 	SELECT a.id, a.kind, COALESCE(a.subject, ''), COALESCE(a.direction, ''),
-	       a.occurred_at, COALESCE(a.thread_key, ''),
+	       a.occurred_at, a.occurred_precision = 'day', COALESCE(a.thread_key, ''),
 	       ($%[3]d::uuid IS NOT NULL AND EXISTS (
 	          SELECT 1 FROM activity_link dl
 	          WHERE dl.activity_id = a.id AND dl.deal_id = $%[3]d)) AS on_deal,
@@ -73,25 +76,25 @@ const historyQuery = `
 	WHERE a.archived_at IS NULL
 	  AND a.kind <> 'task'
 	  AND a.id <> $%[4]d
-	  AND a.occurred_at < $%[5]d
-	  AND a.occurred_at >= $%[6]d
+	  AND %[5]s
+	  AND %[9]s
 	  AND (a.kind <> 'meeting' OR a.meeting_status IS NULL OR a.meeting_status = 'held')
 	  AND (EXISTS (
 	         SELECT 1 FROM activity_participant ap
-	         WHERE ap.activity_id = a.id AND ap.contact_id = ANY($%[7]d))
+	         WHERE ap.activity_id = a.id AND ap.contact_id = ANY($%[6]d))
 	       OR EXISTS (
 	         SELECT 1 FROM activity_link pl
 	         WHERE pl.activity_id = a.id AND pl.entity_type = 'contact'
-	           AND pl.contact_id = ANY($%[7]d)))
+	           AND pl.contact_id = ANY($%[6]d)))
 	  AND %[1]s
-	  AND %[8]s
+	  AND %[7]s
 	-- The id breaks a tie on the timestamp. Two conversations captured in the
 	-- same second are common (one sync writes a thread), and without this the
 	-- rows that survive the cap, the messages picked for excerpting and the
 	-- subject a thread is named after would all vary between reads of an
 	-- unchanged database.
 	ORDER BY a.occurred_at DESC, a.id DESC
-	LIMIT %[9]d`
+	LIMIT %[8]d`
 
 // readHistory returns the room's conversations, newest first.
 //
@@ -130,20 +133,20 @@ func (s *Service) readHistory(
 	}
 	dealPos := arg(dealArg)
 	roomPos := arg(room.ID)
-	// The ceiling is the earlier of "now" and the meeting's start: a brief read
-	// three weeks early must not fold in conversations that happen between the
-	// read and the room.
-	ceiling := now
-	if room.StartsAt.Before(ceiling) {
-		ceiling = room.StartsAt
+	// Before the room, and happened by now: a brief read weeks early must not fold
+	// in what comes before the room. A meeting counts once it took place, as in priormeetings.go.
+	opens := fmt.Sprintf("$%d", arg(room.Opens))
+	happened := occurredday.HappenedSQL("a", fmt.Sprintf("$%d", arg(now)))
+	reach := now
+	if room.Opens.Before(reach) {
+		reach = room.Opens
 	}
-	ceilingPos := arg(ceiling)
-	floorPos := arg(ceiling.AddDate(0, -historyMonths, 0))
+	floor := fmt.Sprintf("$%d", arg(reach.AddDate(0, -historyMonths, 0)))
 	attendeePos := arg(room.Room)
 	within := projectWithinPredicate("a", "hw", project, arg)
 
 	rows, err := tx.Query(ctx, fmt.Sprintf(historyQuery,
-		scope, readable, dealPos, roomPos, ceilingPos, floorPos, attendeePos, within, historyCap,
+		scope, readable, dealPos, roomPos, occurredday.WithinSQL("a", floor, opens), attendeePos, within, historyCap, happened,
 	), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the account history: %w", err)
@@ -156,7 +159,7 @@ func (s *Service) readHistory(
 		var id ids.UUID
 		var readableRow bool
 		if err := rows.Scan(&id, &row.Kind, &row.Subject, &row.Direction,
-			&row.At, &row.ThreadKey, &row.OnDeal, &readableRow); err != nil {
+			&row.At, &row.DateOnly, &row.ThreadKey, &row.OnDeal, &readableRow); err != nil {
 			return nil, fmt.Errorf("read the account history: %w", err)
 		}
 		row.ID = id.String()

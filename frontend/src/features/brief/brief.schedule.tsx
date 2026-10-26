@@ -10,7 +10,7 @@ import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
-import { formatTimeOfDay } from "../../format/format";
+import { activityTimeOfDay } from "../../format/activitywhen";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { routeHash } from "../../lib/router";
@@ -181,11 +181,17 @@ function NextMeetingRow({ next }: Readonly<{ next: NextMeeting }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
+  const time = activityTimeOfDay(
+    next.starts_at,
+    next.occurred_precision,
+    locale,
+    zone,
+  );
   const subject = next.subject || t("contact.meetings.untitled");
   return (
     <PanelRow className="rail-schedule-row">
       <span className="t-caption rail-schedule-when">
-        {nextMeetingDay(next, locale)}
+        {nextMeetingDay(next, locale, zone)}
       </span>
       <span className="rail-schedule-dot" aria-hidden="true" />
       <span className="rail-schedule-what">
@@ -194,11 +200,11 @@ function NextMeetingRow({ next }: Readonly<{ next: NextMeeting }>) {
         ) : (
           <span className="t-body">{subject}</span>
         )}
-        <span className="t-caption">
-          {t("brief.schedule.nextAt", {
-            time: formatTimeOfDay(next.starts_at, locale, zone),
-          })}
-        </span>
+        {time && (
+          <span className="t-caption">
+            {t("brief.schedule.nextAt", { time })}
+          </span>
+        )}
         {next.participants?.map((participant) => (
           <EntityRef
             key={participant.contact_id}
@@ -230,16 +236,16 @@ function Title({ item }: Readonly<{ item: WorklistItem }>) {
 /**
  * When a meeting starts, or nothing.
  *
- * The start is on `due_at`. The meeting lane puts it there deliberately — it is
- * the deadline a reader is racing (attention/meeting.go) — and sets no
- * `occurred_at` at all, because a meeting on today's schedule has not occurred
- * yet. Reading the other field drew every row with a blank time.
- *
- * A row the server sent without one is still drawn without a time rather than
- * with an invented one.
+ * The start is on `due_at`, the deadline a reader is racing
+ * (attention/meeting.go). The lane sets no `occurred_at`, since a meeting on
+ * today's schedule has not occurred yet. A row without a start, or with only
+ * its day known, draws no time.
  */
 function whenOf(item: WorklistItem, locale: Locale, zone: string): string {
-  return item.due_at ? formatTimeOfDay(item.due_at, locale, zone) : "";
+  if (!item.due_at) return "";
+  return (
+    activityTimeOfDay(item.due_at, item.occurred_precision, locale, zone) ?? ""
+  );
 }
 
 /** One source's rows, in the server's order. */

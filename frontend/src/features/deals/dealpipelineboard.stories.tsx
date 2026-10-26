@@ -5,6 +5,7 @@ import type {
   BoardMoneyColumn,
 } from "../../design-system/pipelineboard";
 import { WriteToProvider } from "../../lib/writeto";
+import { lastEmailAgo } from "../../testing/dealmail";
 import {
   installFetchStub,
   jsonResponse,
@@ -42,7 +43,7 @@ const proposal: BoardMoneyColumn = {
     deal({
       id: "d-1",
       name: "deal-de-nordwind-x-gradion-admin-fleetops",
-      lastEmail: { agoMs: 2 * DAY_MS, direction: "inbound" },
+      lastEmail: lastEmailAgo(2 * DAY_MS, "inbound"),
     }),
     deal({
       id: "d-2",
@@ -52,7 +53,7 @@ const proposal: BoardMoneyColumn = {
       valueMinor: 4_800_000,
       closeDate: "2027-03-14",
       owner: { id: "u-2", name: "Jonas Ritter" },
-      lastEmail: { agoMs: 5 * 60 * 60 * 1000, direction: "outbound" },
+      lastEmail: lastEmailAgo(5 * 60 * 60 * 1000, "outbound"),
     }),
     deal({
       id: "d-3",
@@ -64,7 +65,7 @@ const proposal: BoardMoneyColumn = {
       closeDateProvisional: true,
       stalled: true,
       ageMs: 23 * DAY_MS,
-      lastEmail: { agoMs: 23 * DAY_MS, direction: "outbound" },
+      lastEmail: lastEmailAgo(23 * DAY_MS, "outbound"),
     }),
   ],
 };

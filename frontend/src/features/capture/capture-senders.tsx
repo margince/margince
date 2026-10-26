@@ -16,7 +16,8 @@ import { ErrorLine } from "../../design-system/errorline";
 import { RowOpen } from "../../design-system/rowopen";
 import { useToast } from "../../design-system/toast";
 import { useTruncationTooltip } from "../../design-system/tooltip";
-import { formatDate, formatDateTime, formatNumber } from "../../format/format";
+import { formatActivityWhen } from "../../format/activitywhen";
+import { formatDate, formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -245,11 +246,23 @@ function SenderTable({
       header: t("senders.colLastSeen"),
       align: "end",
       render: (row) =>
-        row.last_seen_at ? formatDateTime(row.last_seen_at, locale, zone) : "—",
+        row.last_seen_at
+          ? formatActivityWhen(
+              row.last_seen_at,
+              row.last_seen_precision ?? "instant",
+              locale,
+              zone,
+            )
+          : "—",
       folded: (row) =>
         row.last_seen_at
           ? t("senders.lastSeen", {
-              date: formatDateTime(row.last_seen_at, locale, zone),
+              date: formatActivityWhen(
+                row.last_seen_at,
+                row.last_seen_precision ?? "instant",
+                locale,
+                zone,
+              ),
             })
           : null,
     },

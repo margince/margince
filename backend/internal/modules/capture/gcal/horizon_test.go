@@ -140,8 +140,8 @@ type movingSink struct {
 	moves []string
 }
 
-func (s *movingSink) MoveMeeting(_ context.Context, key connector.NaturalKey, start time.Time, _ *int) error {
-	s.moves = append(s.moves, key.SourceID+"@"+start.Format(time.RFC3339))
+func (s *movingSink) MoveMeeting(_ context.Context, key connector.NaturalKey, slot connector.MeetingSlot) error {
+	s.moves = append(s.moves, key.SourceID+"@"+slot.Start.Format(time.RFC3339))
 	return nil
 }
 

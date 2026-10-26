@@ -135,6 +135,9 @@ type Suggestion struct {
 type SuggestionEvidenceItem struct {
 	SuggestionEvidence
 	Title string
+	// Precision is how to read OccurredAt, from the activity behind it; nil when
+	// a signal's citations no longer resolve.
+	Precision *string
 	// carrier is the message a document came on; nil for the other kinds.
 	carrier *ids.UUID
 }
@@ -335,12 +338,14 @@ func attachEvidence(ctx context.Context, tx pgx.Tx, list []Suggestion) error {
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT e.suggestion_id, e.kind, e.activity_id, e.signal_id, e.attachment_id, e.occurred_at,
-		       coalesce(a.subject, sg.summary, at.filename, ''), at.activity_id
+		       coalesce(a.subject, sg.summary, at.filename, ''), at.activity_id,
+		       coalesce(a.occurred_precision, carried.occurred_precision, `+storekit.CitedActivityPrecision("sg.evidence")+`)
 		  FROM deal_suggestion_evidence e
 		  JOIN deal_suggestion s ON s.id = e.suggestion_id
 		  LEFT JOIN activity a ON a.id = e.activity_id
 		  LEFT JOIN signal sg ON sg.id = e.signal_id
 		  LEFT JOIN attachment at ON at.id = e.attachment_id
+		  LEFT JOIN activity carried ON carried.id = at.activity_id
 		 WHERE e.suggestion_id = ANY($1) AND `+visible+`
 		 ORDER BY e.occurred_at DESC, e.id`, args...)
 	if err != nil {
@@ -351,7 +356,7 @@ func attachEvidence(ctx context.Context, tx pgx.Tx, list []Suggestion) error {
 		var owner ids.UUID
 		var item SuggestionEvidenceItem
 		if err := rows.Scan(&owner, &item.Kind, &item.ActivityID, &item.SignalID, &item.AttachmentID,
-			&item.OccurredAt, &item.Title, &item.carrier); err != nil {
+			&item.OccurredAt, &item.Title, &item.carrier, &item.Precision); err != nil {
 			return fmt.Errorf("deals: scanning suggestion evidence: %w", err)
 		}
 		list[index[owner]].Evidence = append(list[index[owner]].Evidence, item)
