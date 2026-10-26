@@ -1462,6 +1462,12 @@ public.audit_log.passport_id uuid gen=- def=-
 public.audit_log.trg_audit_no_mutate CREATE TRIGGER trg_audit_no_mutate BEFORE DELETE OR UPDATE ON public.audit_log FOR EACH ROW EXECUTE FUNCTION audit_log_immutable()
 public.audit_log_immutable() secdef=false cfg=- acl=- 
 BEGIN
+  IF TG_OP = 'UPDATE'
+     AND current_setting('margince.audit_credential_repair', true) = 'on'
+     AND (to_jsonb(NEW) - 'before' - 'after') = (to_jsonb(OLD) - 'before' - 'after')
+  THEN
+    RETURN NEW;
+  END IF;
   RAISE EXCEPTION 'audit_log is append-only (attempted % on row %)', TG_OP, OLD.id
     USING ERRCODE = 'check_violation';
 END; 
