@@ -130,8 +130,8 @@ function useCloseDay(value: string | undefined): DayRange | undefined {
 export function useDeals(f: DealFilters) {
   const closeDay = useCloseDay(f.filters[CLOSE_DAY_DIAL]);
   return useInfiniteQuery({
-    // The days, not the dial's word: a view on "this quarter" refetches once
-    // the quarter turns.
+    // The days, not the dial's word: a list opened after the quarter turns
+    // never reuses the old quarter's cached page. Today is read at mount.
     queryKey: ["deals", f, closeDay],
     // `as` steers useInfiniteQuery's TPageParam generic to the cursor type: a
     // bare `undefined` infers TPageParam=undefined and the string cursor no
