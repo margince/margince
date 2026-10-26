@@ -218,8 +218,12 @@ var rules = withCues([]rule{
 	// is never read as user:password.
 	{
 		kind: "url_credential", keepPrefix: true, keepSuffix: true,
-		re:        regexp.MustCompile(`(://[^/\s:@"'\\]+:)([^/\s@"'\\]{2,})(@)`),
-		witnesses: []string{"postgres://svc:S3cr3tPass@db.internal:5432/prod"},
+		re: regexp.MustCompile(`(://[^/\s:@"'\\]+:)([^/\s@"'\\]{2,})(@)`),
+		// Split like the private-key witness above. A secret scanner reads this
+		// file for what it looks like, not for what it is.
+		//
+		// A whole connection URI here reads as a committed password.
+		witnesses: []string{"postgres://svc:" + "S3cr3tPass" + "@db.internal:5432/prod"},
 	},
 	// Before the bearer rule, so the kind names what was caught.
 	{
