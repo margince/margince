@@ -93,9 +93,9 @@ func (said momentCopy) mayBeDone(ctx context.Context, moment crmcontracts.Contac
 	if !ok {
 		return crmcontracts.ContactMoment{}, false
 	}
-	q := momentaction.DoneQuestion{Plain: moment, Kind: promise.kind, PromiseID: promise.id, Sent: sent, Key: "moment:may_be_done:" + promise.id.String()}
+	q := momentaction.DoneQuestion{Plain: moment, Kind: promise.kind, PromiseID: promise.id, Sent: sent, Key: momentaction.DoneKey(promise.id)}
 	evidence := momentaction.DoneEvidence(said.Spoken, q)
-	return momentaction.AskDone(said.Spoken, said.zone, q, evidence, fingerprintOf(evidence)+promise.holder), true
+	return momentaction.AskDone(said.Spoken, said.zone, q, evidence, momentaction.DoneFingerprint(promise.id, sent, promise.holder)), true
 }
 
 // proposer asks the may-be-done question in place of a promise card. After the

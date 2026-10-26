@@ -6,6 +6,7 @@
 package compose
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -51,8 +52,11 @@ func TestAGhostedSignalCountsCalendarDaysInTheInstallationZone(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if want := fmt.Sprintf(signalSummaryCopyFor(textlang.English).ghostedThread, 15); summary != want {
+	if want := fmt.Sprintf(signalSummaryCopyFor(textlang.English).ghostedThread, ghostedThresholdDays); summary != want {
 		t.Errorf("summary = %q, want %q", summary, want)
+	}
+	if days := signalDaysSilent(t, company, kindGhostedThread); days != 15 {
+		t.Errorf("the scan recorded %d days silent, want 15", days)
 	}
 }
 
@@ -92,14 +96,18 @@ func TestAGhostedSignalCountsADayMailFromItsDate(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if want := fmt.Sprintf(signalSummaryCopyFor(textlang.English).ghostedThread, 15); summary != want {
+	if want := fmt.Sprintf(signalSummaryCopyFor(textlang.English).ghostedThread, ghostedThresholdDays); summary != want {
 		t.Errorf("summary = %q, want %q", summary, want)
+	}
+	if days := signalDaysSilent(t, company, kindGhostedThread); days != 15 {
+		t.Errorf("the scan recorded %d days silent, want 15", days)
 	}
 }
 
 // The digest and the signal are two readers of one quiet project. A project
 // untouched since 22:00 local, judged at 01:00 local 45 calendar days later,
-// is 44 days and three hours quiet by the clock. Both say 45.
+// is 44 days and three hours quiet by the clock. Both count 45; the signal
+// records it on its audit row and says the rule's threshold.
 func TestTheDigestAndTheSignalCountAQuietProjectInTheSameCalendarDays(t *testing.T) {
 	e := integration.Setup(t)
 	e.WsExec(t, `UPDATE setting SET value = '"Asia/Ho_Chi_Minh"'::jsonb WHERE key = 'installation.timezone'`)
@@ -155,7 +163,54 @@ func TestTheDigestAndTheSignalCountAQuietProjectInTheSameCalendarDays(t *testing
 	if digestDays != 45 {
 		t.Errorf("digest days_quiet = %d, want 45", digestDays)
 	}
-	if want := fmt.Sprintf(signalSummaryCopyFor(textlang.English).projectQuiet, "ERP rollout", 45); summary != want {
+	if want := fmt.Sprintf(signalSummaryCopyFor(textlang.English).projectQuiet, "ERP rollout", projects.DefaultProjectQuietDays); summary != want {
 		t.Errorf("signal summary = %q, want %q", summary, want)
+	}
+	if days := signalDaysSilent(t, project.UUID, kindProjectGoneQuiet); days != 45 {
+		t.Errorf("the scan recorded %d days quiet, want 45", days)
+	}
+}
+
+// signalDaysSilent is the day count the scan recorded when it raised the
+// signal. The stored summary carries no age, so the audit row is where the
+// count the scan measured can be read.
+func signalDaysSilent(t *testing.T, subject ids.UUID, kind string) int {
+	t.Helper()
+	var days int
+	if err := integration.OwnerConn(t).QueryRow(context.Background(), `
+		SELECT (l.after->>'days_silent')::int FROM audit_log l JOIN signal s ON s.id = l.entity_id
+		 WHERE l.entity_type = 'signal' AND l.action = 'create' AND s.entity_id = $1 AND s.kind = $2`,
+		subject, kind).Scan(&days); err != nil {
+		t.Fatalf("reading the recorded day count: %v", err)
+	}
+	return days
+}
+
+// A later scan finds the same silence. It raises no second signal, and the
+// summary it stored still holds, because it names the threshold, not an age.
+func TestALaterScanKeepsOneGhostedSignalWhoseSummaryStillHolds(t *testing.T) {
+	e := integration.Setup(t)
+	wrote := time.Date(2026, 9, 1, 10, 0, 0, 0, time.UTC)
+	company := e.SeedCompany(t, "Later Ghost Co", nil)
+	e.WsExec(t, `UPDATE company SET lifecycle = 'opportunity' WHERE id = $1`, company)
+	contact := employedAt(t, e, company, "Lee Ghost")
+	logMail(t, e, contact, "inbound", wrote.AddDate(0, 0, -5))
+	logMail(t, e, contact, "outbound", wrote)
+
+	ctx := principal.SystemActing(e.Admin(), signalScanActor)
+	want := fmt.Sprintf(signalSummaryCopyFor(textlang.English).ghostedThread, ghostedThresholdDays)
+	for _, now := range []time.Time{wrote.AddDate(0, 0, 15), wrote.AddDate(0, 0, 25)} {
+		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			_, err := WriteGhostedSignals(ctx, tx, now)
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM signal WHERE entity_id = $1 AND kind = $2`, company, kindGhostedThread); n != 1 {
+		t.Fatalf("two scans raised %d signals, want 1", n)
+	}
+	if got := e.WsScalar(t, `SELECT summary FROM signal WHERE entity_id = $1 AND kind = $2`, company, kindGhostedThread); got != want {
+		t.Errorf("summary = %q, want %q", got, want)
 	}
 }

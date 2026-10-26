@@ -13,12 +13,16 @@ import (
 	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -29,6 +33,8 @@ import (
 type attentionTasks struct {
 	store  *activities.Store
 	claims *contacts.Store
+	// db reads the may-be-done question. Nil asks none.
+	db *database.DB
 }
 
 // openTasksDueBy is the ONE narrowing the lane's page and its count share.
@@ -100,7 +106,7 @@ func (t attentionTasks) OpenForViewer(
 	for _, row := range rows {
 		open = append(open, taskFromActivity(row, reader, asOf))
 	}
-	return t.markReadOnly(ctx, open)
+	return t.markReadOnly(ctx, open, asOf)
 }
 
 // UpcomingForViewer reads the work due after the day's end, to a horizon.
@@ -127,7 +133,7 @@ func (t attentionTasks) UpcomingForViewer(
 	for _, row := range rows {
 		upcoming = append(upcoming, taskFromActivity(row, reader, asOf))
 	}
-	return t.markReadOnly(ctx, upcoming)
+	return t.markReadOnly(ctx, upcoming, asOf)
 }
 
 // RemindersForViewer reads every due reminder of the reader's through the
@@ -150,7 +156,7 @@ func (t attentionTasks) RemindersForViewer(ctx context.Context, asOf time.Time) 
 			due = append(due, taskFromActivity(row, reader, asOf))
 		}
 		if !next.HasMore {
-			return t.markReadOnly(ctx, due)
+			return t.markReadOnly(ctx, due, asOf)
 		}
 		in.Cursor = &next.NextCursor
 	}
@@ -171,7 +177,7 @@ func reminderReaderFor(ctx context.Context, scope attention.TaskScope) ids.UUID 
 
 // markReadOnly flags the tasks the reader may see and not change, asked of the
 // whole page in one read.
-func (t attentionTasks) markReadOnly(ctx context.Context, tasks []attention.Task) ([]attention.Task, error) {
+func (t attentionTasks) markReadOnly(ctx context.Context, tasks []attention.Task, asOf time.Time) ([]attention.Task, error) {
 	named := make([]ids.UUID, len(tasks))
 	for i, task := range tasks {
 		named[i] = task.ID
@@ -183,7 +189,11 @@ func (t attentionTasks) markReadOnly(ctx context.Context, tasks []attention.Task
 	for i := range tasks {
 		tasks[i].ReadOnly = !writable[tasks[i].ID]
 	}
-	return t.withRecipients(ctx, tasks, named)
+	tasks, err = t.withRecipients(ctx, tasks, named)
+	if err != nil {
+		return nil, err
+	}
+	return t.withMayBeDone(ctx, tasks, asOf)
 }
 
 func (t attentionTasks) withRecipients(ctx context.Context, tasks []attention.Task, named []ids.UUID) ([]attention.Task, error) {
@@ -211,4 +221,135 @@ func (t attentionTasks) withRecipients(ctx context.Context, tasks []attention.Ta
 		tasks[i].Recipients = recipients[tasks[i].ID]
 	}
 	return tasks, nil
+}
+
+// withMayBeDone asks of each promise task whether our later mail on its thread
+// to a recipient kept it. It reads the follow-up rule the contact page reads
+// (activities.PromiseFollowUpsTx), and the newest such mail asks. A Not yet the
+// reader gave to that mail, on either surface, keeps the plain row.
+func (t attentionTasks) withMayBeDone(ctx context.Context, tasks []attention.Task, asOf time.Time) ([]attention.Task, error) {
+	// Only a human answers the question, so an agent reading the queue sees
+	// the plain row.
+	if human := auth.Allows(ctx, "activity", principal.ActionRead) && auth.RequireHuman(ctx) == nil; t.db == nil || !human {
+		return tasks, nil
+	}
+	bases, byBasis, keys := promiseBases(tasks)
+	if len(bases) == 0 {
+		return tasks, nil
+	}
+	var followUps map[ids.UUID]activities.PromiseFollowUp
+	var setAside map[momentaction.DoneSetAside]bool
+	err := t.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		if followUps, err = activities.PromiseFollowUpsTx(ctx, tx, bases, asOf); err != nil {
+			return err
+		}
+		setAside, err = momentaction.DoneSetAsidesTx(ctx, tx, keys)
+		return err
+	})
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return tasks, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	askMayBeDone(ctx, tasks, byBasis, followUps, setAside)
+	return tasks, nil
+}
+
+// promiseBasisOwner is the task and recipient one follow-up basis stands for.
+type promiseBasisOwner struct{ task, contact ids.UUID }
+
+// promiseBases builds one follow-up basis per open recipient of each promise
+// task, and the question keys the reader's Not yet answers are read under.
+func promiseBases(tasks []attention.Task) ([]activities.PromiseBasis, map[ids.UUID]promiseBasisOwner, []string) {
+	var bases []activities.PromiseBasis
+	byBasis := map[ids.UUID]promiseBasisOwner{}
+	var keys []string
+	for _, task := range tasks {
+		if !task.Commitment || task.SourceActivityID == nil {
+			continue
+		}
+		keys = append(keys, momentaction.DoneKey(openapi_types.UUID(task.ID)))
+		for _, recipient := range task.Recipients {
+			if recipient.Status != crmcontracts.WorklistPromiseRecipientStatusOpen {
+				continue
+			}
+			basis := ids.NewV7()
+			byBasis[basis] = promiseBasisOwner{task.ID, ids.UUID(recipient.ContactId)}
+			bases = append(bases, activities.PromiseBasis{PromiseID: basis, SourceActivityID: *task.SourceActivityID, RecipientContactID: ids.UUID(recipient.ContactId)})
+		}
+	}
+	return bases, byBasis, keys
+}
+
+// doneAsked is one recipient's question about a promise task.
+type doneAsked struct {
+	contact     ids.UUID
+	sent        activities.PromiseFollowUp
+	fingerprint string
+}
+
+// askMayBeDone marks each task with the question its newest unanswered
+// follow-up asks.
+func askMayBeDone(
+	ctx context.Context, tasks []attention.Task, byBasis map[ids.UUID]promiseBasisOwner,
+	followUps map[ids.UUID]activities.PromiseFollowUp, setAside map[momentaction.DoneSetAside]bool,
+) {
+	holders := map[ids.UUID]string{}
+	for _, task := range tasks {
+		holders[task.ID] = momentaction.HeldMarker(ctx, task.AssigneeID)
+	}
+	byTask := map[ids.UUID][]doneAsked{}
+	for basis, sent := range followUps {
+		owner := byBasis[basis]
+		fingerprint := momentaction.DoneFingerprint(openapi_types.UUID(owner.task), sent, holders[owner.task])
+		byTask[owner.task] = append(byTask[owner.task], doneAsked{contact: owner.contact, sent: sent, fingerprint: fingerprint})
+	}
+	for i := range tasks {
+		key := momentaction.DoneKey(openapi_types.UUID(tasks[i].ID))
+		found, ok := newestUnanswered(byTask[tasks[i].ID], func(a doneAsked) bool {
+			return setAside[momentaction.DoneSetAside{Contact: a.contact, Key: key, Fingerprint: a.fingerprint}]
+		}, func(a doneAsked) activities.PromiseFollowUp { return a.sent })
+		if !ok {
+			continue
+		}
+		tasks[i].MayBeDone = &crmcontracts.WorklistMayBeDone{
+			ContactId: openapi_types.UUID(found.contact), EmailActivityId: openapi_types.UUID(found.sent.EmailID),
+			WroteAt: found.sent.At, WrotePrecision: crmcontracts.OccurredPrecision(found.sent.Precision),
+			ClaimKey: key, EvidenceFingerprint: found.fingerprint,
+		}
+	}
+}
+
+// newestUnanswered picks the follow-up a promise task asks about. That is the
+// newest one, unless the reader already answered Not yet to it or a later one.
+// One recipient's Not yet then holds for the task until we write to anybody
+// on the thread again. Equal instants are ordered by the mail's id, as
+// PromiseFollowUpsTx orders them.
+func newestUnanswered[T any](candidates []T, answered func(T) bool, sent func(T) activities.PromiseFollowUp) (T, bool) {
+	later := func(a, b activities.PromiseFollowUp) bool {
+		if !a.At.Equal(b.At) {
+			return a.At.After(b.At)
+		}
+		return a.EmailID.String() > b.EmailID.String()
+	}
+	var newest, newestAnswered T
+	var have, haveAnswered bool
+	for _, c := range candidates {
+		if answered(c) {
+			if !haveAnswered || later(sent(c), sent(newestAnswered)) {
+				newestAnswered, haveAnswered = c, true
+			}
+			continue
+		}
+		if !have || later(sent(c), sent(newest)) {
+			newest, have = c, true
+		}
+	}
+	if !have || (haveAnswered && !later(sent(newest), sent(newestAnswered))) {
+		var zero T
+		return zero, false
+	}
+	return newest, true
 }

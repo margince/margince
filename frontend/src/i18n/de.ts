@@ -1809,6 +1809,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.privacy_request_proof_expiry":
     "Bereinigung der Nachweise zu Datenschutzanfragen",
   "systemJob.waiting_horizon_refresh": "Messung der Antwortzeiten",
+  "systemJob.evidence_authorship": "Prüfung, wer Deal-Belege geschrieben hat",
   "systemJob.meeting_delivery": "Versand von Kalendereinladungen",
   "systemJob.merge": "Zusammenführung von Datensätzen",
   "systemJob.notice_case_open": "Aufnahme von Datenschutzanfragen",
@@ -10782,6 +10783,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.enabledFor": "{name} ist aktiv",
   "auto.colLastRun": "Letzter Lauf",
   "auto.colRuns30": "Läufe (30 Tage)",
+  "auto.colOwner": "Läuft als",
+  "auto.ownerFor": "Läuft als {name}",
+  "auto.ownerNone": "Niemand zugeordnet",
+  "auto.ownerHint":
+    "Eine Regel ist blockiert, solange das Mitglied, als das sie läuft, keinen Zugriff hat. Wähle ein anderes Mitglied, damit sie wieder läuft.",
   "auto.colStatus": "Status",
   "auto.colActions": "Aktionen",
   "auto.lastRunNever": "Nie",
@@ -16459,6 +16465,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.untitled.dedupe_candidate": "Mögliche doppelte Datensätze",
   "worklist.untitled.task": "Aufgabe ohne Titel",
   "worklist.untitled.brief_item": "Zu prüfender Deal",
+  "worklist.mayBeDone.asked":
+    "Vielleicht schon erledigt: Du hast am {date} geschrieben.",
+  "worklist.mayBeDone.done": "Erledigt",
+  "worklist.mayBeDone.notYet": "Noch nicht",
   "worklist.recipients.label": "Empfangende",
   "worklist.recipients.open": "Steht noch aus",
   "worklist.recipients.done": "Erledigt",

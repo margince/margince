@@ -6,10 +6,12 @@ import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
+import { useRecordOwnerOptions } from "../../components/assigneepicker";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
+import { Select } from "../../design-system/select";
 import { Switch } from "../../design-system/switch";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useNow } from "../../format/now";
@@ -54,6 +56,7 @@ type AutomationPatch = {
     name?: string;
     params?: Record<string, unknown>;
     status?: "enabled" | "paused";
+    owner_id?: string;
   };
 };
 
@@ -135,6 +138,9 @@ export function ConfiguredAutomations({
     status: (automation) => (
       <AutomationStatus automation={automation} canEdit={canEdit} />
     ),
+    owner: (automation) => (
+      <AutomationOwner automation={automation} canEdit={canEdit} />
+    ),
   });
   const editingEntry = editing && entryFor(editing.automation.key);
   return (
@@ -212,12 +218,14 @@ function instanceColumns({
   entryFor,
   verbs,
   status,
+  owner,
 }: Readonly<{
   t: Translator;
   now: number;
   entryFor: (key: string) => CatalogEntry | undefined;
   verbs: (automation: Automation) => ReactNode;
   status: (automation: Automation) => ReactNode;
+  owner: (automation: Automation) => ReactNode;
 }>): DataTableColumn<Automation>[] {
   return [
     {
@@ -253,6 +261,11 @@ function instanceColumns({
         automation.last_run_at ? (
           <RunCount count={automation.runs_last_30_days ?? 0} />
         ) : null,
+    },
+    {
+      key: "owner",
+      header: t("auto.colOwner"),
+      render: owner,
     },
     {
       key: "status",
@@ -328,6 +341,45 @@ function RunCount({ count }: Readonly<{ count: number }>) {
         {plural("auto.runsInWindow", count, { count: figure })}
       </span>
     </>
+  );
+}
+
+// Who the rule runs as. A rule whose owner lost access is blocked on every
+// firing, so a seat that may edit gets the way out here and nowhere else.
+function AutomationOwner({
+  automation,
+  canEdit,
+}: Readonly<{ automation: Automation; canEdit: boolean }>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const owners = useRecordOwnerOptions(canEdit);
+  const hand = useMutation({
+    mutationFn: patchAutomation,
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: ["automations"] }),
+  });
+  const current = owners.find((option) => option.value === automation.owner_id);
+  if (!canEdit) {
+    return <span>{current?.label ?? t("auto.ownerNone")}</span>;
+  }
+  return (
+    <CellStack>
+      <Select
+        aria-label={t("auto.ownerFor", { name: automation.name })}
+        options={owners}
+        value={automation.owner_id ?? ""}
+        placeholder={t("auto.ownerNone")}
+        onChange={(next) =>
+          hand.mutate({
+            id: automation.id,
+            version: automation.version,
+            body: { owner_id: next },
+          })
+        }
+      />
+      <span className="t-caption">{t("auto.ownerHint")}</span>
+      {hand.isError && <ErrorLine>{problemMessageOf(hand.error, t)}</ErrorLine>}
+    </CellStack>
   );
 }
 

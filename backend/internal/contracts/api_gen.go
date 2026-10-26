@@ -28946,6 +28946,9 @@ type AttentionItem struct {
 	// Kind The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.
 	Kind *string `json:"kind,omitempty"`
 
+	// MayBeDone Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail.
+	MayBeDone *WorklistMayBeDone `json:"may_be_done,omitempty"`
+
 	// NoticeOrigin The original change behind a notification, distinct from the automation delivering it. Historical origins are recovered only through an exact event causation link.
 	NoticeOrigin *NoticeOrigin `json:"notice_origin,omitempty"`
 
@@ -29613,7 +29616,10 @@ type Automation struct {
 	// LastRunOutcome How the run last_run_at dates ended, in the run history's outcome vocabulary. Only GET /automations carries it, and only beside last_run_at.
 	LastRunOutcome *AutomationLastRunOutcome `json:"last_run_outcome,omitempty"`
 	Name           string                    `json:"name"`
-	Params         map[string]interface{}    `json:"params"`
+
+	// OwnerId The member the rule runs as. Null until the rule is first enabled, and after its owner's seat is removed. Firings of a rule whose owner is no longer active are blocked until the owner is changed.
+	OwnerId *openapi_types.UUID    `json:"owner_id,omitempty"`
+	Params  map[string]interface{} `json:"params"`
 
 	// PausedReason Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, or one check moved more than 100 records. Null for a rule running or paused by hand. Resuming clears it.
 	PausedReason *AutomationPausedReason `json:"paused_reason,omitempty"`
@@ -48509,7 +48515,9 @@ type RelinkDestinationType string
 // `entity_type`/`entity_id`/`replace_existing_of_type` mean exactly what they mean on
 // `relinkActivity`.
 type RelinkThreadRequest struct {
-	EntityId openapi_types.UUID `json:"entity_id"`
+	// ActivityId A message of the conversation to move; it always moves with it.
+	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
+	EntityId   openapi_types.UUID  `json:"entity_id"`
 
 	// EntityType The record kinds an activity may be filed under.
 	EntityType RelinkDestinationType `json:"entity_type"`
@@ -48517,8 +48525,9 @@ type RelinkThreadRequest struct {
 	// ReplaceExistingOfType When true, replaces each activity's existing link of the same entity_type (move) rather than adding (associate).
 	ReplaceExistingOfType *bool `json:"replace_existing_of_type,omitempty"`
 
-	// ThreadKey The conversation key the activities carry (`Activity.thread_key`, also the `thread_key` list filter).
-	ThreadKey string `json:"thread_key"`
+	// ThreadKey Ignored. The conversation is the one `activity_id` belongs to, because a thread key alone does not say whose conversation it is.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	ThreadKey *string `json:"thread_key,omitempty"`
 }
 
 // RemovalUndo The way back from taking a tag off a record or a record off a Shortlist. A removal answers it, and the matching restore route takes it back unchanged.
@@ -52700,9 +52709,12 @@ type UpdateAttachmentMetadataRequestDocState string
 
 // UpdateAutomationRequest Any subset; omit a field to leave it unchanged. `status` flips enable/pause.
 type UpdateAutomationRequest struct {
-	Name   *string                        `json:"name,omitempty"`
-	Params *map[string]interface{}        `json:"params,omitempty"`
-	Status *UpdateAutomationRequestStatus `json:"status,omitempty"`
+	Name *string `json:"name,omitempty"`
+
+	// OwnerId Hand the rule to another member, who must be a seat the caller may make an owner (an active human seat that can write, inside the caller's write scope), else `422` with `code: owner_not_assignable`. Cannot be cleared.
+	OwnerId *openapi_types.UUID            `json:"owner_id,omitempty"`
+	Params  *map[string]interface{}        `json:"params,omitempty"`
+	Status  *UpdateAutomationRequestStatus `json:"status,omitempty"`
 }
 
 // UpdateAutomationRequestStatus defines model for UpdateAutomationRequest.Status.
@@ -55998,6 +56010,9 @@ type WorklistItem struct {
 	// hygiene. Levels are never mixed by a score.
 	Level int `json:"level"`
 
+	// MayBeDone Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail.
+	MayBeDone *WorklistMayBeDone `json:"may_be_done,omitempty"`
+
 	// Move The next step this row suggests, and what it would act on.
 	//
 	// The concept's clearest complaint about the surface this replaces: the product
@@ -56238,6 +56253,24 @@ type WorklistLeadFacts struct {
 	// Source The administered source label, absent for an unlabelled import or connector key.
 	Source *string `json:"source,omitempty"`
 	Status *string `json:"status,omitempty"`
+}
+
+// WorklistMayBeDone The question whether a promise task is done, asked because we wrote to a recipient on its thread after the promise.
+// The contact page asks the same question under the same `claim_key`. Not yet is answered by
+// `POST /contacts/{contact_id}/moment/dismiss` with `claim_key` and `evidence_fingerprint`, and holds on both surfaces until we write again.
+type WorklistMayBeDone struct {
+	ClaimKey string `json:"claim_key"`
+
+	// ContactId The recipient the mail was written to.
+	ContactId openapi_types.UUID `json:"contact_id"`
+
+	// EmailActivityId The mail that may have kept the promise.
+	EmailActivityId     openapi_types.UUID `json:"email_activity_id"`
+	EvidenceFingerprint string             `json:"evidence_fingerprint"`
+	WroteAt             time.Time          `json:"wrote_at"`
+
+	// WrotePrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
+	WrotePrecision OccurredPrecision `json:"wrote_precision"`
 }
 
 // WorklistMove The next step this row suggests, and what it would act on.

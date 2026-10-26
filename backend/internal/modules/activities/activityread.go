@@ -194,6 +194,11 @@ func (s *Store) ListActivitiesIn(ctx context.Context, tx pgx.Tx, in ListActiviti
 	if in.ownDomains, err = s.ownDomainList(ctx, tx); err != nil {
 		return nil, storekit.Page{}, err
 	}
+	if in.ConversationOf != nil {
+		if in.conversationDomain, err = s.correspondenceDomainTx(ctx, tx, *in.ConversationOf); err != nil {
+			return nil, storekit.Page{}, err
+		}
+	}
 	if in.WaitingReply && in.WaitingReplyAsOf == nil {
 		asOf := s.now()
 		in.WaitingReplyAsOf = &asOf

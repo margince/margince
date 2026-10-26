@@ -27,6 +27,7 @@ import { PutDownByThumb } from "./worklist.dispositions";
 import { WaitingEmailLine } from "./worklist.emailtitle";
 import { conditionOf, eyebrowKeyFor, kindClass } from "./worklist.eyebrow";
 import { leadFactsText } from "./worklist.leadfacts";
+import { WorklistMayBeDone } from "./worklist.maybedone";
 import { hostText } from "./worklist.meetingparties";
 import { useRowSource } from "./worklist.noticesource";
 import { lastTouch } from "./worklist.pane";
@@ -289,6 +290,7 @@ export function WorklistRow({
           {responsibility && <p className="t-caption">{responsibility}</p>}
           <DepartedOwnerCaption owner={item.owner} />
           <PromiseRecipients recipients={item.promise_recipients} />
+          <WorklistMayBeDone item={item} />
         </div>
         {/* Every verb on one right-aligned line, the row's menu last. Under the
             work where the card has no column to spare for it, beside the work

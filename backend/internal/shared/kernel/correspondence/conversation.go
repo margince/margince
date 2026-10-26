@@ -15,10 +15,16 @@ import "fmt"
 // thread, medium and correspondent, and row is live. A null or empty thread
 // key joins nothing, so two unthreaded mails are never one conversation.
 func ConversationSQL(row, anchor string) string {
+	return ThreadSQL(row, anchor) + fmt.Sprintf(`
+     AND %[1]s.counterparty_email = %[2]s.counterparty_email`, row, anchor)
+}
+
+// ThreadSQL is the thread, medium and liveness half of ConversationSQL. It
+// names no correspondent, so a caller must add one.
+func ThreadSQL(row, anchor string) string {
 	return fmt.Sprintf(`%[2]s.thread_key <> '' AND %[1]s.thread_key = %[2]s.thread_key
      AND %[1]s.kind = %[2]s.kind
      AND %[1]s.channel_provider IS NOT DISTINCT FROM %[2]s.channel_provider
-     AND %[1]s.counterparty_email = %[2]s.counterparty_email
      AND %[1]s.archived_at IS NULL`, row, anchor)
 }
 

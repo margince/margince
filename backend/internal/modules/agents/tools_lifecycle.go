@@ -54,10 +54,8 @@ func RegisterLifecycleTools(
 // on (activity, entity_type, entity_id).
 type ActivityRelinker interface {
 	RelinkActivity(ctx context.Context, activityID ids.UUID, entityType string, entityID ids.UUID, replaceExistingOfType bool, ifVersion *int64) (json.RawMessage, error)
-	// RelinkThread is the same move over every writable member of one
-	// conversation; RelinkActivities over a named set. Both answer the
+	// RelinkActivities is the same move over a named set. It answers the
 	// count-and-ids shape rather than a record.
-	RelinkThread(ctx context.Context, threadKey string, entityType string, entityID ids.UUID, replaceExistingOfType bool) (json.RawMessage, error)
 	RelinkActivities(ctx context.Context, activityIDs []ids.UUID, entityType string, entityID ids.UUID, replaceExistingOfType bool) (json.RawMessage, error)
 }
 

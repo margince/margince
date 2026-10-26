@@ -166,6 +166,10 @@ func (h Handlers) UpdateAutomation(w http.ResponseWriter, r *http.Request, id cr
 		return
 	}
 	in := UpdateAutomationInput{Name: req.Name, IfVersion: ifVersion}
+	if req.OwnerId != nil {
+		owner := ids.From[ids.UserKind](ids.UUID(*req.OwnerId))
+		in.OwnerID = &owner
+	}
 	if req.Params != nil {
 		in.Params = *req.Params
 	}
@@ -387,6 +391,7 @@ func wireAutomation(a Automation) (crmcontracts.Automation, error) {
 		Name:         a.Name,
 		Status:       status,
 		Params:       params,
+		OwnerId:      wireOwner(a.OwnerID),
 		Version:      &version,
 		CreatedAt:    a.CreatedAt,
 		UpdatedAt:    a.UpdatedAt,
@@ -440,4 +445,11 @@ func (h Handlers) RetryAutomationRun(w http.ResponseWriter, r *http.Request, id 
 		result.Refusal = &refusal
 	}
 	httperr.WriteJSON(w, http.StatusOK, result)
+}
+
+func wireOwner(owner *ids.UserID) *openapi_types.UUID {
+	if owner == nil {
+		return nil
+	}
+	return new(openapi_types.UUID(owner.UUID))
 }

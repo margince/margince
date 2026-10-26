@@ -3703,6 +3703,13 @@ public.deal_acquisition_source.updated_at timestamp with time zone NOT NULL gen=
 public.deal_acquisition_source.version bigint NOT NULL gen=- def=1
 public.deal_acquisition_source_key_key CREATE UNIQUE INDEX deal_acquisition_source_key_key ON public.deal_acquisition_source USING btree (key)
 public.deal_acquisition_source_pkey CREATE UNIQUE INDEX deal_acquisition_source_pkey ON public.deal_acquisition_source USING btree (id)
+public.deal_authorship_sweep_cursor acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.deal_authorship_sweep_cursor.after_evidence_id uuid gen=- def=-
+public.deal_authorship_sweep_cursor.deal_authorship_sweep_cursor_one_row CHECK (singleton)
+public.deal_authorship_sweep_cursor.deal_authorship_sweep_cursor_pkey PRIMARY KEY (singleton)
+public.deal_authorship_sweep_cursor.singleton boolean NOT NULL gen=- def=true
+public.deal_authorship_sweep_cursor.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_authorship_sweep_cursor_pkey CREATE UNIQUE INDEX deal_authorship_sweep_cursor_pkey ON public.deal_authorship_sweep_cursor USING btree (singleton)
 public.deal_clear_partner_attribution_on_company_delete() secdef=false cfg=- acl=- 
 BEGIN
   UPDATE deal

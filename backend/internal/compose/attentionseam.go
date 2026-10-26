@@ -177,7 +177,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 	return attention.NewService(
 		attentionApprovals{svc: svc},
 		attentionDuplicates{store: contacts.NewStore(db)},
-		attentionTasks{store: activities.NewStore(db), claims: contacts.NewStore(db)},
+		attentionTasks{store: activities.NewStore(db), claims: contacts.NewStore(db), db: db},
 		attentionReceipts{svc: svc, deals: deals.NewStore(db, DealsInstallation())},
 		attentionBriefing{
 			engine: briefs.NewBriefEngine(pool, contacts.NewStore(db)),

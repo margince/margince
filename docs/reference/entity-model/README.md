@@ -28,8 +28,8 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 331 |
-| Columns | 3905 |
+| Tables | 332 |
+| Columns | 3908 |
 | Foreign keys | 548 |
 | Owning areas | 36 |
 
@@ -109,7 +109,7 @@ erDiagram
 | [contracts](contracts.md) | 1 |
 | [customfields](customfields.md) | 1 |
 | [dealrooms](dealrooms.md) | 8 |
-| [deals](deals.md) | 22 |
+| [deals](deals.md) | 23 |
 | [finance](finance.md) | 5 |
 | [forecasting](forecasting.md) | 4 |
 | [identity](identity.md) | 22 |
@@ -269,6 +269,7 @@ erDiagram
 | [`data_task_run_history`](platform.md#data_task_run_history) | platform | 5 | 0 |
 | [`deal`](deals.md#deal) | deals | 44 | 27 |
 | [`deal_acquisition_source`](deals.md#deal_acquisition_source) | deals | 9 | 1 |
+| [`deal_authorship_sweep_cursor`](deals.md#deal_authorship_sweep_cursor) | deals | 3 | 0 |
 | [`deal_correction`](deals.md#deal_correction) | deals | 18 | 0 |
 | [`deal_document_hide`](activities.md#deal_document_hide) | activities | 4 | 0 |
 | [`deal_move_dismissal`](compose.md#deal_move_dismissal) | compose | 4 | 0 |

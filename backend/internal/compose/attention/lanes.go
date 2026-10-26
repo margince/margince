@@ -170,8 +170,13 @@ type Tasks interface {
 
 // Task is one piece of agreed work.
 type Task struct {
-	SourceActivityID       *ids.UUID
-	Recipients             []crmcontracts.WorklistPromiseRecipient
+	SourceActivityID *ids.UUID
+	Recipients       []crmcontracts.WorklistPromiseRecipient
+	// Commitment marks a task written for a promise read out of a message.
+	Commitment bool
+	// MayBeDone is the question whether our later mail kept the promise, set
+	// when one asks it (momentaction.DoneKey).
+	MayBeDone              *crmcontracts.WorklistMayBeDone
 	LeadResponseEscalation bool
 	ID                     ids.UUID
 	Subject                string

@@ -62,6 +62,9 @@ type Store struct {
 
 	// followOwner hands pending proposals to a deal's new owner (ownerfollow.go).
 	followOwner FollowOwner
+	// ownDomains, when bound, lets the stage-move check judge activity
+	// evidence against the current own domains (WithOwnDomains).
+	ownDomains OwnDomainReader
 
 	// suggestionEffects are an accepted suggestion's writes outside this module.
 	suggestionEffects SuggestionEffects
@@ -197,6 +200,13 @@ func refusing(field string) InstallationValue {
 
 // WithClock overrides the "today" source (tests only). Returns the store
 // for chaining.
+// WithOwnDomains binds the own-domain reader the stage-move check judges an
+// activity's author with, so a card is held to the domains as they stand.
+func (s *Store) WithOwnDomains(own OwnDomainReader) *Store {
+	s.ownDomains = own
+	return s
+}
+
 func (s *Store) WithClock(clock func() time.Time) *Store {
 	s.clock = clock
 	return s

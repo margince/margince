@@ -330,6 +330,7 @@ var tableOwners = map[string]string{
 	// pass rather than a record fact, not audited; pruned to a history.
 	"capture_sweep_run":             "internal/modules/capture",
 	"capture_answered_sweep_cursor": "internal/modules/capture",
+	"deal_authorship_sweep_cursor":  "internal/modules/deals",
 	// What the pipeline decided about each message, for 24 hours. Written by
 	// the sink alone; compose reads it and sweeps it, and the verdict engine
 	// writes nothing here — its answers live in the disposition ledger and are

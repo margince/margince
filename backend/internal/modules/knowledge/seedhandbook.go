@@ -172,7 +172,15 @@ func reconcilePages(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, pages []h
 		// runs this, and a rollout restarts every replica: re-ingesting eleven
 		// pages each time would spend an embedding call per page per boot to
 		// arrive at the passages already in the table.
+		//
+		// A page still marked running is queued again, as its worker may have
+		// died. The ingest's per-document lock lets a live run keep it.
 		if known && prior.checksum == checksum {
+			if prior.status == ingestRunning {
+				if err := queueIngestOf(ctx, tx, prior.id, queue); err != nil {
+					return 0, err
+				}
+			}
 			continue
 		}
 		if known {
@@ -210,11 +218,12 @@ func reconcilePages(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, pages []h
 type managedDoc struct {
 	id       ids.UUID
 	checksum string
+	status   string
 }
 
 func managedDocuments(ctx context.Context, tx pgx.Tx, corpusID ids.UUID) (map[string]managedDoc, error) {
 	rows, err := tx.Query(ctx,
-		`SELECT id, filename, checksum FROM knowledge_document
+		`SELECT id, filename, checksum, ingest_status FROM knowledge_document
 		 WHERE corpus_id = $1 AND managed_source = $2 AND archived_at IS NULL`,
 		corpusID, HandbookSource)
 	if err != nil {
@@ -225,7 +234,7 @@ func managedDocuments(ctx context.Context, tx pgx.Tx, corpusID ids.UUID) (map[st
 	for rows.Next() {
 		var doc managedDoc
 		var filename string
-		if err := rows.Scan(&doc.id, &filename, &doc.checksum); err != nil {
+		if err := rows.Scan(&doc.id, &filename, &doc.checksum, &doc.status); err != nil {
 			return nil, fmt.Errorf("read a filed handbook page: %w", err)
 		}
 		out[filename] = doc

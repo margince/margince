@@ -73,8 +73,17 @@ func (s *standingEnv) message(t *testing.T, threadKey, audience string, parties 
 // clientToColleague is the anchor every case answers: the client wrote to Rep2 alone.
 func (s *standingEnv) clientToColleague(t *testing.T, threadKey string) ids.UUID {
 	t.Helper()
-	return s.message(t, threadKey, "workspace",
+	id := s.message(t, threadKey, "workspace",
 		threadParty{role: "from", address: clientAddress}, threadParty{role: "to", address: colleagueAddress})
+	s.WsExec(t, `UPDATE activity SET counterparty_email = $2 WHERE id = $1`, id, clientAddress)
+	return id
+}
+
+// ourMailWith makes a seeded message our own attested mail to counterparty.
+func (s *standingEnv) ourMailWith(t *testing.T, id ids.UUID, counterparty string) {
+	t.Helper()
+	s.WsExec(t, `UPDATE activity SET direction = 'outbound', counterparty_email = $2, counterparty_outbound_attested = true
+		WHERE id = $1`, id, counterparty)
 }
 
 func (s *standingEnv) dealOwnedBy(t *testing.T, owner ids.UUID, filed ...ids.UUID) ids.UUID {
@@ -161,21 +170,29 @@ func TestAReplierNamedOnTheThreadIsOnTheConversation(t *testing.T) {
 		{"stamped by seat on the message answered", func(anchor ids.UUID, _ string) {
 			s.WsExec(t, `INSERT INTO activity_participant (activity_id, role, user_id) VALUES ($1, 'to', $2)`, anchor, rep1)
 		}, true},
-		{"addressed on an earlier message of the thread", func(_ ids.UUID, thread string) {
-			s.message(t, thread, "workspace", threadParty{role: "to", address: replierAddress})
+		{"copied on our earlier mail to the client", func(_ ids.UUID, thread string) {
+			earlier := s.message(t, thread, "workspace", threadParty{role: "cc", address: replierAddress})
+			s.ourMailWith(t, earlier, clientAddress)
 		}, true},
+		{"copied on our mail to someone else on the thread key", func(_ ids.UUID, thread string) {
+			other := s.message(t, thread, "workspace", threadParty{role: "cc", address: replierAddress})
+			s.ourMailWith(t, other, "orders@other.test")
+		}, false},
 		{"blind-copied only", func(anchor ids.UUID, _ string) {
 			s.WsExec(t, `INSERT INTO activity_participant (activity_id, role, address) VALUES ($1, 'bcc', $2)`, anchor, replierAddress)
 		}, false},
 		{"addressed on an archived message of the thread", func(_ ids.UUID, thread string) {
 			earlier := s.message(t, thread, "workspace", threadParty{role: "to", address: replierAddress})
+			s.ourMailWith(t, earlier, clientAddress)
 			s.WsExec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, earlier)
 		}, false},
 		{"addressed on another thread", func(_ ids.UUID, thread string) {
-			s.message(t, thread+"-other", "workspace", threadParty{role: "to", address: replierAddress})
+			other := s.message(t, thread+"-other", "workspace", threadParty{role: "to", address: replierAddress})
+			s.ourMailWith(t, other, clientAddress)
 		}, false},
 		{"addressed on a thread message they may not read", func(_ ids.UUID, thread string) {
-			s.message(t, thread, "participants", threadParty{role: "to", address: replierAddress})
+			hidden := s.message(t, thread, "participants", threadParty{role: "to", address: replierAddress})
+			s.ourMailWith(t, hidden, clientAddress)
 		}, false},
 	}
 	for _, tc := range cases {

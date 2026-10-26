@@ -11,7 +11,7 @@ import (
 )
 
 func TestDataTaskCommandRejectsUnknownActionsBeforeConnecting(t *testing.T) {
-	for _, args := range [][]string{nil, {"execute"}, {"status", "--wait"}} {
+	for _, args := range [][]string{nil, {"apply"}, {"status", "--wait"}, {"execute", "--max-batches", "0"}} {
 		if err := runDataTasks(t.Context(), args, io.Discard, io.Discard); err == nil {
 			t.Fatalf("invalid command accepted: %v", args)
 		}

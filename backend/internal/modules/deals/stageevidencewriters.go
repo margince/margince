@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -295,34 +296,19 @@ func ReadActivityAuthorship(
 	if meetingStatus != nil {
 		out.MeetingStatus = *meetingStatus
 	}
-	rows, err := tx.Query(ctx, `
-		SELECT role, coalesce(user_id::text, ''), coalesce(address, ''),
-		       contact_id IS NOT NULL
-		  FROM activity_participant WHERE activity_id = $1`, activityID)
-	if err != nil {
-		return out, fmt.Errorf("read the activity's participants: %w", err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var p Participant
-		if err := rows.Scan(&p.Role, &p.UserID, &p.Address, &p.ContactLinked); err != nil {
-			return out, fmt.Errorf("scan a participant: %w", err)
-		}
-		out.Participants = append(out.Participants, p)
-	}
-	if err := rows.Err(); err != nil {
-		return out, fmt.Errorf("read the activity's participants: %w", err)
+	if out.Participants, err = readActivityParticipants(ctx, tx, activityID); err != nil {
+		return out, err
 	}
 	domains, err := own.Domains(ctx, tx)
 	if err != nil {
 		return out, err
 	}
 	out.AuthorSide = AuthorSideOf(out.Direction, out.Participants, domains)
-	for _, p := range out.Participants {
-		if CountsAsBuyerParticipant(p, domains) {
-			out.BuyerParticipants++
-		}
+	parties, err := own.MeetingParties(ctx, tx)
+	if err != nil {
+		return out, err
 	}
+	out.BuyerParticipants = BuyerParticipantCount(out.Participants, parties)
 	return out, nil
 }
 
@@ -336,4 +322,41 @@ func ReadActivityAuthorship(
 // the evidence write see one snapshot.
 type OwnDomainReader interface {
 	Domains(ctx context.Context, tx pgx.Tx) ([]string, error)
+	// MeetingParties answers what a meeting's attendees are judged against.
+	MeetingParties(ctx context.Context, tx pgx.Tx) (owndomain.Parties, error)
+}
+
+// readActivityParticipants reads the parties of one activity in the shape the
+// authorship rule takes.
+func readActivityParticipants(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]Participant, error) {
+	return queryActivityParticipants(ctx, tx, activityID, "")
+}
+
+// shareActivityParticipants is readActivityParticipants holding the rows, so
+// an attendee cannot be changed or removed until the caller's write commits.
+func shareActivityParticipants(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]Participant, error) {
+	return queryActivityParticipants(ctx, tx, activityID, " FOR SHARE")
+}
+
+func queryActivityParticipants(ctx context.Context, tx pgx.Tx, activityID ids.UUID, lock string) ([]Participant, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT role, coalesce(user_id::text, ''), coalesce(address, ''),
+		       contact_id IS NOT NULL
+		  FROM activity_participant WHERE activity_id = $1`+lock, activityID)
+	if err != nil {
+		return nil, fmt.Errorf("read the activity's participants: %w", err)
+	}
+	defer rows.Close()
+	var out []Participant
+	for rows.Next() {
+		var p Participant
+		if err := rows.Scan(&p.Role, &p.UserID, &p.Address, &p.ContactLinked); err != nil {
+			return nil, fmt.Errorf("scan a participant: %w", err)
+		}
+		out = append(out, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read the activity's participants: %w", err)
+	}
+	return out, nil
 }

@@ -5723,7 +5723,9 @@ export interface paths {
         /**
          * Re-associate every activity of one conversation thread to a chosen record, in one transaction.
          * @description The thread twin of `relinkActivity`: the same association applied to every non-archived
-         *     activity carrying `thread_key` that the caller may write. A mis-filed conversation is
+         *     activity of the conversation `activity_id` belongs to that the caller may write. A thread
+         *     key alone does not name a conversation, so a member is a message on the activity's thread
+         *     that is our own mail to its correspondent, or authenticated mail from them. A mis-filed conversation is
          *     usually mis-filed whole, and one call here is the remedy rather than one call per message.
          *     Each moved activity gets its own `audit_log` row (`activity_relink`) and its own
          *     `activity.updated` event, exactly as the single relink writes them; filing under a project
@@ -34428,8 +34430,16 @@ export interface components {
          *     `relinkActivity`.
          */
         RelinkThreadRequest: {
-            /** @description The conversation key the activities carry (`Activity.thread_key`, also the `thread_key` list filter). */
-            thread_key: string;
+            /**
+             * Format: uuid
+             * @description A message of the conversation to move; it always moves with it.
+             */
+            activity_id?: string;
+            /**
+             * @deprecated
+             * @description Ignored. The conversation is the one `activity_id` belongs to, because a thread key alone does not say whose conversation it is.
+             */
+            thread_key?: string;
             entity_type: components["schemas"]["RelinkDestinationType"];
             /** Format: uuid */
             entity_id: string;
@@ -44581,6 +44591,11 @@ export interface components {
             /** @enum {string} */
             status: "enabled" | "paused";
             /**
+             * Format: uuid
+             * @description The member the rule runs as. Null until the rule is first enabled, and after its owner's seat is removed. Firings of a rule whose owner is no longer active are blocked until the owner is changed.
+             */
+            owner_id?: string | null;
+            /**
              * @description Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, or one check moved more than 100 records. Null for a rule running or paused by hand. Resuming clears it.
              * @enum {string|null}
              */
@@ -44621,6 +44636,11 @@ export interface components {
             } | null;
             /** @enum {string|null} */
             status?: "enabled" | "paused" | null;
+            /**
+             * Format: uuid
+             * @description Hand the rule to another member, who must be a seat the caller may make an owner (an active human seat that can write, inside the caller's write scope), else `422` with `code: owner_not_assignable`. Cannot be cleared.
+             */
+            owner_id?: string | null;
         };
         /**
          * @description Optional body for POST /automations/{id}/preview. Omit to preview the stored automation as-is; supply
@@ -47599,6 +47619,28 @@ export interface components {
             /** Format: date-time */
             occurred_at: string;
         };
+        /**
+         * @description The question whether a promise task is done, asked because we wrote to a recipient on its thread after the promise.
+         *     The contact page asks the same question under the same `claim_key`. Not yet is answered by
+         *     `POST /contacts/{contact_id}/moment/dismiss` with `claim_key` and `evidence_fingerprint`, and holds on both surfaces until we write again.
+         */
+        WorklistMayBeDone: {
+            /**
+             * Format: uuid
+             * @description The recipient the mail was written to.
+             */
+            contact_id: string;
+            /**
+             * Format: uuid
+             * @description The mail that may have kept the promise.
+             */
+            email_activity_id: string;
+            /** Format: date-time */
+            wrote_at: string;
+            wrote_precision: components["schemas"]["OccurredPrecision"];
+            claim_key: string;
+            evidence_fingerprint: string;
+        };
         /** @description A visible recipient's own claim on a shared deliverable. Other recipients may be outside the reader's scope. */
         WorklistPromiseRecipient: {
             /** Format: uuid */
@@ -47618,6 +47660,8 @@ export interface components {
         AttentionItem: {
             /** @description Sent as true on a task whose reminder is due for the reader, who is its assignee and reads their own work. Absent otherwise. */
             reminder_due?: boolean;
+            /** @description Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail. */
+            may_be_done?: components["schemas"]["WorklistMayBeDone"];
             /** @description Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable. */
             promise_recipients?: components["schemas"]["WorklistPromiseRecipient"][];
             /** @description The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access. */
@@ -49134,6 +49178,8 @@ export interface components {
          *     browser does not.
          */
         WorklistItem: {
+            /** @description Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail. */
+            may_be_done?: components["schemas"]["WorklistMayBeDone"];
             /** @description Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable. */
             promise_recipients?: components["schemas"]["WorklistPromiseRecipient"][];
             /** @description The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access. */

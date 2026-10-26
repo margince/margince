@@ -86,19 +86,12 @@ func (KnowledgeIngestArgs) Kind() string { return "knowledge_ingest" }
 // workspace and work in another.
 func (a KnowledgeIngestArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
-// knowledgeIngestInsertOpts deduplicates the ingest by args over the ACTIVE
-// states only.
-//
-// The state restriction is the load-bearing half. River's default uniqueness
-// window includes completed, so a document whose first ingest finished could
-// never be re-ingested — and the re-embed pass needs exactly that. Restricting
-// to the active states keeps an in-flight ingest deduped while letting a
-// finished one be asked again.
+// knowledgeIngestInsertOpts names no uniqueness. River requires a unique job to
+// count `running`, and a killed worker leaves that row behind. A new ingest
+// folded into it would never start. holdIngest and IngestOwed keep two jobs for
+// one document harmless.
 func knowledgeIngestInsertOpts() *river.InsertOpts {
-	return jobs.QueuedAs[KnowledgeIngestArgs](&river.InsertOpts{
-		MaxAttempts: knowledgeIngestMaxAttempts,
-		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
-	})
+	return jobs.QueuedAs[KnowledgeIngestArgs](&river.InsertOpts{MaxAttempts: knowledgeIngestMaxAttempts})
 }
 
 // knowledgeIngestPrincipal stamps the principal every write of this ingest is
@@ -114,6 +107,9 @@ func knowledgeIngestPrincipal(ctx context.Context, documentID ids.UUID) context.
 // knowledgeIngestWorker turns one stored document into passages.
 type knowledgeIngestWorker struct {
 	store *knowledge.Store
+	// pool carries the per-document ingest lock, which needs a connection of its
+	// own for as long as the run lasts.
+	pool *pgxpool.Pool
 	// embedder is the retrieval embed lane. Nil is a role started without AI
 	// routing: the passages are still written and the document still finishes,
 	// and the ask answers retrieval_unavailable rather than pretending the
@@ -127,6 +123,7 @@ type knowledgeIngestWorker struct {
 func newKnowledgeIngestWorker(pool *pgxpool.Pool, blob blobstore.Store, embedder vectorkit.Embedder, log *slog.Logger) *knowledgeIngestWorker {
 	return &knowledgeIngestWorker{
 		store:    knowledge.NewStore(InstallationDB(pool)).WithBlobstore(blob),
+		pool:     pool,
 		embedder: embedder,
 		log:      log,
 		now:      time.Now,
@@ -139,6 +136,25 @@ func (w *knowledgeIngestWorker) Work(ctx context.Context, job *river.Job[Knowled
 		return jobs.FaultContext(ctx, err)
 	}
 	wsCtx = knowledgeIngestPrincipal(wsCtx, job.Args.DocumentID)
+
+	release, held, err := holdIngest(wsCtx, w.pool, job.Args.DocumentID, w.log)
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	if !held {
+		w.log.InfoContext(wsCtx, "another run is ingesting this document; leaving it to that run",
+			"document_id", job.Args.DocumentID)
+		return nil
+	}
+	defer release()
+
+	owed, err := w.store.IngestOwed(wsCtx, job.Args.DocumentID)
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	if !owed {
+		return nil
+	}
 
 	err = w.ingest(wsCtx, job.Args.DocumentID)
 	if err == nil {

@@ -764,9 +764,8 @@ func TestTheBlockedDomainListWithholdsAnInvisibleCompany(t *testing.T) {
 	}
 }
 
-// What the operator's list carries — decisions, and the questions nobody owns —
-// lives in domainadmissionlist_integration_test.go, beside the WHERE clause that
-// is its whole subject.
+// What the operator's list carries, every decision and every open question,
+// lives in domainadmissionlist_integration_test.go beside its `WHERE` clause.
 
 // Re-asking puts the question back in the sweep's path. The machine cleared the
 // cursor because re-crawling could not help; somebody may know otherwise, and

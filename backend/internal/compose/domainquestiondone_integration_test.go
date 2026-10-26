@@ -7,12 +7,12 @@ package compose
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
@@ -72,16 +72,15 @@ func TestFreshCapturedEvidenceReturnsADeferredDomainQuestion(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 	const domain = "fresh-question.test"
-	deferredAt := time.Date(2025, time.January, 1, 12, 0, 0, 0, time.UTC)
+	// Inside the waiting horizon and before the store's clock, so every
+	// capture counts as current evidence for the rep it was sent to.
+	deferredAt := clocktest.Now(t).Add(-6 * time.Hour)
+	rep1Email := seatEmail(t, e.Rep1)
+	captures := 0
 	capture := func(evidenceAt time.Time) {
 		t.Helper()
-		mail, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{Kind: "email", Subject: new("Domain evidence"), Direction: new("inbound"), OccurredAt: &evidenceAt, Source: "manual"})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := e.Contacts.EnsureCounterparty(ctx, contacts.EnsureCounterpartyInput{Email: "hello@" + domain, DisplayName: "Sender", Domain: domain, OwnerID: e.Rep1, ActivityID: ids.From[ids.ActivityKind](ids.UUID(mail.Id)), Source: "manual"}); err != nil {
-			t.Fatal(err)
-		}
+		captures++
+		captureStaffMail(t, e, staffMail{sourceID: fmt.Sprintf("fresh-question-%d", captures), from: "hello@" + domain, mailbox: e.Rep1, to: []string{rep1Email}, occurred: evidenceAt})
 		if _, err := e.Contacts.ResolveUnreadableDomainTriage(ctx, contacts.ResolveDomainTriageInput{Domain: domain}); err != nil {
 			t.Fatal(err)
 		}

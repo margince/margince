@@ -101,6 +101,7 @@ func base(
 		Detail:            item.Detail,
 		NoticeOrigin:      item.NoticeOrigin,
 		PromiseRecipients: item.PromiseRecipients,
+		MayBeDone:         item.MayBeDone,
 		DomainReasonCode:  item.DomainReasonCode,
 		DomainNote:        item.DomainNote,
 		CauseRef:          item.CauseRef,

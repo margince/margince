@@ -25,9 +25,20 @@ import (
 )
 
 // A withheld promise remains history without appearing as current work.
+// unplacedPromiseSQL holds a promise the scan could not place. Its admission
+// records no current work: no task was written, and the finding waits under
+// Commitment review. The promise itself is open and still owed.
+//
+// A colleague taking it over is the one route it has to a task. So the claim
+// reads as current here, while the admission keeps its own answer.
+const unplacedPromiseSQL = `EXISTS (SELECT 1 FROM activity_commitment_admission unplaced
+ WHERE unplaced.source_activity_id = c.source_activity_id
+   AND unplaced.locator = c.evidence_fingerprint
+   AND unplaced.outcome = 'promiser_not_assignable')`
+
 func currentCommitmentAdmission(asOf time.Time, arg func(any) int) string {
 	current := provenance.CurrentCommitmentClause("c.source_activity_id", "c.evidence_fingerprint", "c.due_at", asOf, arg)
-	return `(c.corrected_at IS NOT NULL OR (starts_with(c.captured_by, 'human:') AND NOT EXISTS (
+	return `(` + unplacedPromiseSQL + ` OR c.corrected_at IS NOT NULL OR (starts_with(c.captured_by, 'human:') AND NOT EXISTS (
  SELECT 1 FROM audit_log imported WHERE imported.entity_type='contact' AND imported.entity_id=c.contact_id
  AND imported.after->>'claim_id'=c.id::text AND NOT ` + storekit.AuditNotFromAnImport("imported") + `)) OR ` + current + `
  OR EXISTS (SELECT 1 FROM activity adopted_task WHERE adopted_task.id=c.task_activity_id

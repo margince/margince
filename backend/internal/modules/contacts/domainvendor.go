@@ -136,13 +136,14 @@ func vendorDeciderSQL(ctx context.Context, domain, reader, identities string, as
 }
 
 // openQuestionForReaderSQL is the shared test of whether a reader holds an
-// open domain question. A vendor question belongs to its decider alone; every
-// other reason to the readers its mail raised it for.
+// open domain question. Every pending reason belongs to one decider, the sole
+// evidenced direct recipient of the newest current staff mail the reader may
+// read (vendorDeciderSQL). Whose mailbox received the mail decides nothing: a
+// question with no decider stays on the record (domainStandingWhere).
 func openQuestionForReaderSQL(ctx context.Context, domain, reader, identities string, asOf time.Time, arg func(any) int) (string, error) {
 	decider, err := vendorDeciderSQL(ctx, domain, reader, identities, asOf, arg)
 	if err != nil {
 		return "", err
 	}
-	return `d.pending_reason IS NOT NULL AND CASE WHEN d.pending_reason = '` + PendingVendorVerdict + `' THEN ` + decider + `
- ELSE EXISTS (SELECT 1 FROM company_domain_question_reader r WHERE r.domain = ` + domain + ` AND r.reader_id = ` + reader + `) END`, nil
+	return `d.pending_reason IS NOT NULL AND ` + decider, nil
 }

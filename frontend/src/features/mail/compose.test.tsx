@@ -188,7 +188,7 @@ describe("RelinkModal", () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     const thread = sent.find((r) => r.key === "POST /activities/relink-thread");
     expect(thread?.body).toEqual({
-      thread_key: "thread:abc",
+      activity_id: "act-1",
       entity_type: "project",
       entity_id: "pr-4",
       replace_existing_of_type: false,

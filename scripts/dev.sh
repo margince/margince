@@ -160,10 +160,18 @@ resolve_stack_environment "$MINIO_PORT"
 # exit between the two — a DSN that will not resolve, for instance — printed
 # `command not found` and left the claim behind.
 
+# The wait between the TERM and the SIGKILL. The worker answers a TERM by letting
+# running jobs finish for its drain window (20s), cancelling the rest and waiting
+# for them to return, so a shorter wait kills a job mid-write and leaves its
+# River row `running`. The window, five seconds to cancel and the teardown fit in
+# thirty; backend/cmd/worker/devstopgrace_test.go fails if the drain window
+# outgrows this number, or if the wait below stops reading it.
+STOP_GRACE_SECONDS=30
+
 kill_pids() { # pid… — TERM, then KILL whatever is still standing
   #
-  # SIGNED FIRST, and re-checked before the KILL. There are five seconds between
-  # the TERM and the SIGKILL, and a process that honours the TERM frees its pid
+  # SIGNED FIRST, and re-checked before the KILL. There are STOP_GRACE_SECONDS
+  # between the TERM and the SIGKILL, and a process that honours the TERM frees its pid
   # inside them: the kernel reissues numbers, and the SIGKILL then lands on
   # whatever took it — somebody's editor, their own shell. A pid is not an
   # identity, and the wait is exactly where it stops being one.
@@ -188,7 +196,7 @@ kill_pids() { # pid… — TERM, then KILL whatever is still standing
   done
   [[ ${#signed[@]} -gt 0 ]] || return 0
   kill "${pids[@]}" 2>/dev/null || true
-  for _ in $(seq 1 10); do
+  for _ in $(seq 1 $((STOP_GRACE_SECONDS * 2))); do
     alive=()
     for entry in "${signed[@]}"; do
       p="${entry%%:*}"

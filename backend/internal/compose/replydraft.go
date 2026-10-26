@@ -23,6 +23,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
@@ -108,9 +109,10 @@ func newReplyDrafter(pool *pgxpool.Pool, brain completer, log *slog.Logger) repl
 		log = slog.Default()
 	}
 	return replyDrafter{
-		brain:      brain,
-		envelope:   draftEnvelope(pool, log),
-		store:      activities.NewStore(InstallationDB(pool)),
+		brain:    brain,
+		envelope: draftEnvelope(pool, log),
+		store: activities.NewStore(InstallationDB(pool)).WithConsumerMail(capture.MatcherTx).
+			WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))}),
 		colleagues: ColleagueDomainsFor(pool),
 		voice:      ai.NewVoiceStore(InstallationDB(pool)),
 		log:        log,
@@ -146,8 +148,9 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		return activities.DraftResult{}, err
 	}
 	addressee := d.recipientFor(ctx, ids.From[ids.ActivityKind](anchor))
-	deliveredTo := d.deliveredTo(ctx, ids.From[ids.ActivityKind](anchor))
-	thread, err := d.replyConversation(ctx, activity, deliveredTo)
+	delivery := d.deliveredTo(ctx, ids.From[ids.ActivityKind](anchor))
+	deliveredTo := delivery.ContactID
+	thread, err := d.replyConversation(ctx, activity, delivery)
 	if err != nil {
 		return activities.DraftResult{}, err
 	}
@@ -314,19 +317,19 @@ func activityLanguage(activity crmcontracts.Activity) string {
 	return string(*activity.Language)
 }
 
-// deliveredTo is the contact a reply to this activity is delivered to, by the
-// send path's own rule, or "" when none can be named. Their mail decides the
-// language; the greeting's recipient answers a different question.
-func (d replyDrafter) deliveredTo(ctx context.Context, anchor ids.ActivityID) string {
+// deliveredTo is the address and contact a reply to this activity is delivered
+// to, by the send path's own rule. It is zero when none can be named. The
+// contact's mail decides the language; the greeting answers another question.
+func (d replyDrafter) deliveredTo(ctx context.Context, anchor ids.ActivityID) activities.ReplyAddressee {
 	if d.store == nil {
-		return ""
+		return activities.ReplyAddressee{}
 	}
 	var covers func(address string) bool
 	if d.colleagues != nil {
 		own, err := d.colleagues.Covers(ctx)
 		if err != nil {
 			d.logger().WarnContext(ctx, "colleague domains unavailable; reading the reply language without an addressee", "err", err)
-			return ""
+			return activities.ReplyAddressee{}
 		}
 		covers = own
 	}
@@ -334,5 +337,5 @@ func (d replyDrafter) deliveredTo(ctx context.Context, anchor ids.ActivityID) st
 	if _, none := errors.AsType[*activities.NoReplyAddressError](err); err != nil && !none {
 		d.logger().WarnContext(ctx, "reply addressee unavailable; ranking inbound mail alike", "err", err)
 	}
-	return to.ContactID
+	return to
 }

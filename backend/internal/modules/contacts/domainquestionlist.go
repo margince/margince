@@ -65,11 +65,18 @@ func (s *Store) listReaderDomainQuestions(ctx context.Context, cursor string, li
 		if err != nil {
 			return err
 		}
-		open, err := openQuestionForReaderSQL(ctx, "d.domain", ownerArg, identities, s.clock(), bind)
+		// One instant for the whole read, so the decider and the freshness
+		// below agree on which mail is inside the horizon.
+		asOf := s.clock()
+		open, err := openQuestionForReaderSQL(ctx, "d.domain", ownerArg, identities, asOf, bind)
 		if err != nil {
 			return err
 		}
-		deferred := `EXISTS (SELECT 1 FROM worklist_done wd LEFT JOIN company_domain_question_reader r ON r.domain = d.domain AND r.reader_id = wd.reader_id WHERE wd.reader_id = ` + ownerArg + ` AND wd.source = 'domain_question' AND wd.row_id = d.domain AND (r.evidence_at IS NULL OR r.evidence_at <= wd.done_at))`
+		// The question's freshness is the newest mail the decider reads, not a
+		// reader row. The sole direct recipient may hold no row at all.
+		latest := `(SELECT max(question_mail.occurred_at) FROM activity question_mail WHERE ` +
+			vendorMailSQL("question_mail", "d.domain", asOf, bind) + `)`
+		deferred := `EXISTS (SELECT 1 FROM worklist_done wd WHERE wd.reader_id = ` + ownerArg + ` AND wd.source = 'domain_question' AND wd.row_id = d.domain AND (` + latest + ` IS NULL OR ` + latest + ` <= wd.done_at))`
 		where := `d.pending_reason <> ` + arg(PendingReservedDomain) + ` AND ` + open + `
 	  AND NOT EXISTS (SELECT 1 FROM capture_exclusion e WHERE e.kind = 'domain' AND e.value = d.domain
 	   AND (e.scope = 'workspace' OR e.user_id = ` + ownerArg + `))`
@@ -84,7 +91,7 @@ func (s *Store) listReaderDomainQuestions(ctx context.Context, cursor string, li
 			where += ` AND (d.created_at, d.id) > (` + arg(after.CreatedAt) + `, ` + arg(after.ID) + `)`
 		}
 		query := `SELECT d.id, d.domain, ` + domainPendingReason + `, d.pending_reason,
-	  d.created_at, (SELECT r.evidence_at FROM company_domain_question_reader r WHERE r.domain = d.domain AND r.reader_id = ` + ownerArg + `), COALESCE(d.evidence, ''), ` + deferred + `
+	  d.created_at, ` + latest + `, COALESCE(d.evidence, ''), ` + deferred + `
 	  FROM company_domain_disposition d WHERE ` + where + `
 	  ORDER BY d.created_at, d.id LIMIT ` + arg(limit+1)
 		rows, err := tx.Query(ctx, query, args...)

@@ -225,6 +225,10 @@ func (d *CommitmentDispatcher) routeCommitment(ctx context.Context, tx pgx.Tx, c
 				return CommitmentRemembered, ids.UUID{}, err
 			}
 		}
+		taken, err := d.takenUnderEarlierAttribution(filing, tx, c)
+		if err != nil || taken {
+			return CommitmentRemembered, ids.UUID{}, err
+		}
 		written, err := d.tasks.CommitmentTaskWritten(filing, tx, c.Locator)
 		if err != nil {
 			return CommitmentRemembered, ids.UUID{}, err

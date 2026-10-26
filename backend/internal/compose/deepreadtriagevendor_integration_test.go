@@ -315,12 +315,14 @@ func TestKeepAsVendorSettlesTheVerdictAndLaterMailAsksNothing(t *testing.T) {
 
 func TestOnlyTheDeciderWithTheCompanyGrantMayKeepAVendorVerdict(t *testing.T) {
 	e := integration.Setup(t)
+	// The unreadable question's fixture mail is dated by the database clock,
+	// so it lands before the store's clock is pinned.
+	const unevidenced = "unreadable.example"
+	openTriageQuestion(t, e, unevidenced, "hello@"+unevidenced, "Sender")
 	now := pinClock(t, e)
 	rep1 := e.As(e.Rep1, nil, integration.AdminPerms)
 	captureStaffMail(t, e, staffMail{sourceID: "vendor-guard", from: hostingStaff, mailbox: e.Rep1, to: []string{seatEmail(t, e.Rep1)}, occurred: now.Add(-time.Hour)})
 	runVendorTriage(t, e, hostingDomain)
-	const unevidenced = "unreadable.example"
-	openTriageQuestion(t, e, unevidenced, "hello@"+unevidenced, "Sender")
 	if _, err := e.Contacts.ResolveUnreadableDomainTriage(rep1, contacts.ResolveDomainTriageInput{Domain: unevidenced}); err != nil {
 		t.Fatal(err)
 	}

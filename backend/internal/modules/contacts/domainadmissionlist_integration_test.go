@@ -7,11 +7,10 @@ package contacts
 
 // What the OPERATOR's list carries, over a real Postgres.
 //
-// The list answers one question nothing else can: a company that never appeared
-// — was it refused, and by whom? Its rows are therefore every decision, plus the
-// open questions that have nobody to ask. An open question WITH an owner is not
-// here: it reaches that colleague's own queue (domainquestionlist.go), which is
-// the only surface carrying the verbs that answer it.
+// The list answers one question nothing else can: a company that never appeared,
+// was it refused, and by whom? Its rows are therefore every decision and
+// every open question. An open question also reaches its decider's own queue
+// (domainquestionlist.go): the sole direct recipient of current mail.
 //
 // These live over a database rather than behind a fake because the whole subject
 // is one WHERE clause, and nothing but SQL decides which rows clear it.
@@ -50,15 +49,9 @@ func (e *dedupeEnv) listedDomains(ctx context.Context, t *testing.T) []string {
 	return out
 }
 
-// An OWNERLESS open question reaches the operator's list, because no other
-// surface can carry it.
-//
-// A question is addressed to the mailbox owner whose mail raised it, and that
-// colleague answers it on their own queue. This row has no such owner — the
-// column is nullable, and it is cleared outright when the owner's account is
-// deleted — so the per-owner read, which matches `owner_id = $1`, matches it for
-// nobody. Without this list it would be a company held out of the CRM that no
-// screen admits exists.
+// An ownerless open question reaches the operator's list. No personal queue
+// may carry it, and without this list it would be a company held out of the
+// CRM that no screen admits exists.
 func TestTheDomainListCarriesTheQuestionsNobodyOwns(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
@@ -96,15 +89,9 @@ func TestTheDomainListCarriesTheQuestionsNobodyOwns(t *testing.T) {
 	}
 }
 
-// A DEACTIVATED owner's open question reaches this list, because deactivation
-// takes away the one surface that was carrying it.
-//
-// This is the case the column alone cannot see. Deactivating a seat keeps the
-// app_user row and revokes its sessions, so owner_id still names somebody and
-// that somebody can no longer sign in. The per-owner queue matches `owner_id =
-// $1` for the calling human, so the question is served to nobody: not to the
-// departed owner, who cannot authenticate, and not to any colleague. Nothing
-// re-asks either — the withholding cleared the retry cursor.
+// A deactivated owner's open question stays on this list, before and after the
+// deactivation. The list carries every open question, so a seat leaving cannot
+// take one off it.
 func TestADeactivatedOwnersQuestionReachesTheOperatorsList(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
@@ -112,9 +99,9 @@ func TestADeactivatedOwnersQuestionReachesTheOperatorsList(t *testing.T) {
 	// records the mailbox owner the message reached, and the fixture's ensure
 	// input names that seat.
 	e.withholdUnreadable(ctx, t, "hello@departing.example", "departing.example")
-	if listed := e.listedDomains(ctx, t); contains(listed, "departing.example") {
-		t.Fatalf("the operator's list = %v, want departing.example absent while its owner "+
-			"can still answer it on their own queue", listed)
+	if listed := e.listedDomains(ctx, t); !contains(listed, "departing.example") {
+		t.Fatalf("the operator's list = %v, want departing.example listed while its owner "+
+			"can still answer it, as every open question is", listed)
 	}
 
 	// They leave. Deactivation is identity's act; what it writes to app_user is
@@ -137,31 +124,22 @@ func TestADeactivatedOwnersQuestionReachesTheOperatorsList(t *testing.T) {
 	}
 }
 
-// An open question owned by a LIVE seat stays off this list, whoever is reading.
+// An open question stays on this list even while a live seat owns it.
 //
-// It has an addressee who can still answer it, on their own queue, with the two
-// verbs that settle it. Carrying it here as well would put one question on two
-// surfaces — and offer an operator a re-ask on mail they cannot read, whose
-// answer belongs to somebody else.
-//
-// Both readers are asserted because the clause is about the ROW, not about who
-// is looking: it asks whether anybody can still answer the question, so a
-// colleague sees exactly what the owner does. The fixture's capture path stamps
-// e.rep as the owner of every disposition it opens, so what the second read
-// varies is the reader alone, which is the whole point of it.
-func TestAnOwnedQuestionStaysOffTheOperatorsList(t *testing.T) {
+// Every pending reason has one decider, the sole direct recipient of current
+// mail (openQuestionForReaderSQL). When there is none, nobody is asked, and
+// this list is where the fact stays. A vendor question was always listed for
+// that reason. Every reason now is, so an operator sees one list of what is
+// held out of the CRM. A colleague reads the same list as the owner.
+func TestAnOwnedQuestionIsAlsoOnTheOperatorsList(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.withholdUnreadable(ctx, t, "hello@mine.example", "mine.example")
 
-	if listed := e.listedDomains(ctx, t); len(listed) != 0 {
-		t.Errorf("the owner's list = %v, want the owned question absent: it is on their "+
-			"queue, and one question on two surfaces is one two colleagues answer "+
-			"differently", listed)
+	if listed := e.listedDomains(ctx, t); !contains(listed, "mine.example") {
+		t.Errorf("the owner's list = %v, want the open question listed", listed)
 	}
-	// A colleague reading the same list sees no more than the owner does.
-	if listed := e.listedDomains(e.asOther(), t); len(listed) != 0 {
-		t.Errorf("the colleague's list = %v, want it empty too: a live seat owns the "+
-			"question, so it is not this list's to carry for anyone", listed)
+	if listed := e.listedDomains(e.asOther(), t); !contains(listed, "mine.example") {
+		t.Errorf("the colleague's list = %v, want the same open question", listed)
 	}
 }

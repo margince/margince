@@ -370,3 +370,12 @@
   align-items: center;
   gap: var(--space-2);
 }
+
+/* The may-be-done question under a promise row: the sentence, then its two
+   verbs on one line. */
+.worklist-may-be-done {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}

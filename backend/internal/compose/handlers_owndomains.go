@@ -9,16 +9,38 @@ package compose
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type ownDomainHandlers struct {
 	store *capture.OwnDomainStore
+	// evidence, when set, judges again the stage evidence a changed domain
+	// can move, right after the change. The hourly evidence_authorship pass
+	// is the backstop when it fails.
+	evidence *deals.Store
+	log      *slog.Logger
+}
+
+// reconcileEvidenceFor judges again the stage evidence written from the
+// domain. The domain change has committed, so a failure here is logged, and
+// the hourly pass corrects the rows.
+func (h ownDomainHandlers) reconcileEvidenceFor(r *http.Request, domain string) {
+	if h.evidence == nil {
+		return
+	}
+	ctx := principal.SystemActing(r.Context(), evidenceAuthorshipActor)
+	if _, err := h.evidence.ReconcileEvidenceAuthorship(ctx, ownDomainReader{store: h.store},
+		deals.EvidenceAuthorshipScope{Domain: domain}); err != nil && h.log != nil {
+		h.log.WarnContext(r.Context(), "own domains: judging stage evidence again failed, the hourly pass retries", "err", err)
+	}
 }
 
 func (h ownDomainHandlers) ListWorkspaceEmailDomains(w http.ResponseWriter, r *http.Request) {
@@ -74,6 +96,7 @@ func (h ownDomainHandlers) CreateWorkspaceEmailDomain(w http.ResponseWriter, r *
 		httperr.Write(w, r, err)
 		return
 	}
+	h.reconcileEvidenceFor(r, domain.Domain)
 	httperr.WriteJSON(w, http.StatusCreated, toContractOwnDomain(domain))
 }
 
@@ -90,6 +113,7 @@ func (h ownDomainHandlers) DeleteWorkspaceEmailDomain(w http.ResponseWriter, r *
 		httperr.Write(w, r, err)
 		return
 	}
+	h.reconcileEvidenceFor(r, domain)
 	w.WriteHeader(http.StatusNoContent)
 }
 
