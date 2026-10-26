@@ -328,3 +328,17 @@ func TestReplayedAndRacingRecordsLeaveOneRowAndOneAuditEntryPerChange(t *testing
 		t.Errorf("create audit rows = %d, want exactly 1", creates)
 	}
 }
+
+// A win a unit reports is a stage move like any other: the deal's audit trail
+// must name it, so a deal that went to won on a paid invoice shows who moved it.
+func TestAStageMoveALandedRecordMakesIsInTheDealsAuditTrail(t *testing.T) {
+	e := setupCRMIngress(t)
+	made := e.mustIngest(t, e.dealRecord("opp-audit", nil))
+	e.mustIngest(t, e.dealRecord("opp-audit", func(d *extension.DealFields) { d.StageID = e.won.String() }))
+
+	rows := e.countAsWorkspace(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1 AND action = 'advance_stage'`,
+		ids.MustParse(made.Ref.ID))
+	if rows != 1 {
+		t.Errorf("advance_stage audit rows for the deal = %d, want 1", rows)
+	}
+}
