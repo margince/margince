@@ -350,11 +350,11 @@ func seedConnectorMailFrom(t *testing.T, e *Env, contact, colleague ids.UUID, ma
 func TestAGuessedSeatRowDoesNotResetTheQuietClock(t *testing.T) {
 	e := Setup(t)
 	guessed := e.SeedContact(t, "Wrote To A Guessed Seat", &e.Rep1)
-	real := e.SeedContact(t, "Wrote To Rep One", &e.Rep1)
+	captured := e.SeedContact(t, "Wrote To Rep One", &e.Rep1)
 	seedLapsedPair(t, e, e.Rep1, guessed, "the lapsed thread")
-	seedLapsedPair(t, e, e.Rep1, real, "the other lapsed thread")
+	seedLapsedPair(t, e, e.Rep1, captured, "the other lapsed thread")
 	seedConnectorMailFrom(t, e, guessed, e.Rep1, false)
-	seedConnectorMailFrom(t, e, real, e.Rep1, true)
+	seedConnectorMailFrom(t, e, captured, e.Rep1, true)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, graphPerms)
 	now := clocktest.Now(t).UTC()
@@ -376,7 +376,7 @@ func TestAGuessedSeatRowDoesNotResetTheQuietClock(t *testing.T) {
 	if !got[guessed] {
 		t.Error("a guessed seat row reset the quiet clock of a relationship nobody answered")
 	}
-	if got[real] {
+	if got[captured] {
 		t.Error("mail captured for the colleague did not end the silence")
 	}
 }

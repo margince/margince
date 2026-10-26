@@ -9,7 +9,7 @@ package activities
 // names no real participant. It has a user_id and nothing else, on mail a
 // connector captured, with no create audit made on that seat's behalf.
 // auth.ParticipantStandsSQL refuses such a row. These readers used to take it
-// as real. The guessed seat owed a follow-up on mail it never sent. It was
+// as captured. The guessed seat owed a follow-up on mail it never sent. It was
 // shown as the mail's sender, or as a colleague on it. Each case sits beside the
 // same row made real by the connector's own create audit.
 
@@ -44,13 +44,13 @@ func TestAGuessedSenderOwesNoFollowUp(t *testing.T) {
 	s := storeAddressing(e, readerAddress)
 	guessed, _ := e.sentTo(t, e.customerAt(t, "customer"), "", 3*24*time.Hour)
 	e.asGuessed(t, guessed)
-	real, _ := e.sentTo(t, e.customerAt(t, "customer"), "", 3*24*time.Hour)
-	e.asCapturedForRep(t, real)
+	captured, _ := e.sentTo(t, e.customerAt(t, "customer"), "", 3*24*time.Hour)
+	e.asCapturedForRep(t, captured)
 
 	if awaited(t, s, e, guessed) {
 		t.Error("a guessed sender row put a follow-up on a seat that never sent the mail")
 	}
-	if !awaited(t, s, e, real) {
+	if !awaited(t, s, e, captured) {
 		t.Error("connector mail captured for the rep lost its follow-up")
 	}
 }
@@ -60,8 +60,8 @@ func TestAGuessedSeatIsNoColleagueAndNoParty(t *testing.T) {
 	contact := e.customerAt(t, "customer")
 	guessed, _ := e.sentTo(t, contact, "", time.Hour)
 	e.asGuessed(t, guessed)
-	real, _ := e.sentTo(t, contact, "", time.Hour)
-	e.asCapturedForRep(t, real)
+	captured, _ := e.sentTo(t, contact, "", time.Hour)
+	e.asCapturedForRep(t, captured)
 
 	ctx := e.followUpReader()
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
@@ -69,7 +69,7 @@ func TestAGuessedSeatIsNoColleagueAndNoParty(t *testing.T) {
 			name     string
 			activity ids.UUID
 			want     int
-		}{{"guessed", guessed, 0}, {"captured for the rep", real, 1}} {
+		}{{"guessed", guessed, 0}, {"captured for the rep", captured, 1}} {
 			seats, err := ColleagueSeats(ctx, tx, tc.activity)
 			if err != nil {
 				return err
