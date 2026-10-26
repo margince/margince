@@ -4,7 +4,7 @@ import { UTC_ZONE, viewerZone } from "../../format/timezone";
 import { type Translator, translate } from "../../i18n";
 import { withShippedLabels } from "../../lib/shippedlabels";
 import type { LeadDisqualifyReason } from "./leadhandling";
-import { leadStanding } from "./leadstanding";
+import { leadStanding, standingReasons } from "./leadstanding";
 
 type Lead = components["schemas"]["Lead"];
 
@@ -219,6 +219,32 @@ describe("leadStanding", () => {
     // A reason the list does not hold keeps the server's label.
     expect(closedFor("r-9", "Removed reason")).toBe(
       "Geschlossen: Removed reason. Der Datensatz bleibt als Verlauf erhalten.",
+    );
+  });
+
+  // The stored label is English. While the list loads, a German reader sees
+  // no reason rather than that one; once the list failed, it is all there is.
+  it("holds the reason back until the list answers, and falls back to the stored one if it fails", () => {
+    const de: Translator = (key, params) => translate("de", key, params);
+    const closedWhile = (read: Parameters<typeof standingReasons>[0]) =>
+      leadStanding(
+        lead({
+          status: "disqualified",
+          disqualify_reason_id: "r-1",
+          disqualify_reason: "No budget",
+        }),
+        de,
+        "de",
+        zone,
+        zone,
+        standingReasons(read),
+      ).sentence;
+
+    expect(closedWhile({ data: undefined, isError: false })).toBe(
+      "Geschlossen. Der Datensatz bleibt als Verlauf erhalten.",
+    );
+    expect(closedWhile({ data: undefined, isError: true })).toBe(
+      "Geschlossen: No budget. Der Datensatz bleibt als Verlauf erhalten.",
     );
   });
 });

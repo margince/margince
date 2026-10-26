@@ -72,6 +72,19 @@ export function terminalBadge(
   }
 }
 
+/**
+ * The reasons a closed lead's sentence reads: none while the list is loading,
+ * and an empty list once it failed, so the stored label stands in.
+ */
+export function standingReasons(
+  read: Readonly<{
+    data?: readonly LeadDisqualifyReason[];
+    isError: boolean;
+  }>,
+): readonly LeadDisqualifyReason[] | undefined {
+  return read.isError ? [] : read.data;
+}
+
 export function leadStanding(
   lead: Lead,
   t: Translator,
@@ -100,8 +113,9 @@ export function leadStanding(
     };
   }
   if (lead.status === "disqualified") {
-    // Neutral, not a failure colour: closing a lead is ordinary work.
-    const reason = disqualifyReasonLabel(lead, reasons);
+    // Neutral, not a failure colour: closing a lead is ordinary work. The
+    // stored label is in the language it was saved in, so it waits for the list.
+    const reason = reasons && disqualifyReasonLabel(lead, reasons);
     return {
       word: t("lead.standing.closed"),
       sentence: reason

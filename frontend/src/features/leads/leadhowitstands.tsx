@@ -20,7 +20,7 @@ import { useLeadStatusChanges } from "./leadhistory";
 import type { Lead, LeadWriter } from "./leads";
 import { LeadStepper } from "./leads.stepper";
 import { useLeadScore } from "./leadscore.queries";
-import { leadStanding } from "./leadstanding";
+import { leadStanding, standingReasons } from "./leadstanding";
 import {
   ladderDates,
   leadDims,
@@ -64,7 +64,14 @@ export function LeadHowItStands({
   const changes = useLeadStatusChanges(lead);
   const explain = useLeadScore(lead);
   const reasons = useLeadDisqualifyReasons();
-  const verdict = leadStanding(lead, t, locale, zone, record, reasons.data);
+  const verdict = leadStanding(
+    lead,
+    t,
+    locale,
+    zone,
+    record,
+    standingReasons(reasons),
+  );
   const factors =
     explain.isSuccess && explain.data.explained
       ? (explain.data.current?.factors ?? [])
