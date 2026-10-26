@@ -46831,7 +46831,8 @@ export interface components {
             learnings?: components["schemas"]["WeeklyReviewLearnings"];
             /**
              * @description How WELL the week went, as against what happened in it — the counts beside this say
-             *     forty leads arrived, this says twelve were answered inside the target.
+             *     forty leads arrived, this says twelve had a first response recorded by the close. It
+             *     does not say a target was met.
              *
              *     ABSENT on a review written before scorecards existed. Each of its two blocks is
              *     independently absent too, and absent is NOT zero: a rep who carried no leads did not

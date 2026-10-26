@@ -6,8 +6,8 @@ package weekly
 // How WELL the week went, as against what happened in it.
 //
 // The counts beside this say a rep was sent 40 leads and held 6 meetings. This
-// says they answered 12 inside the target and 4 of those meetings left a next
-// step behind. The two are different questions and a reader wants both, but
+// says 12 of those leads had a first response recorded by the close, and 4 of
+// those meetings left a next step behind. The two are different questions and a reader wants both, but
 // only this one is a judgement, so only this one has to be careful about what
 // it does when there is nothing to judge.
 //
