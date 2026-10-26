@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
   ENTITY_NAME_KEY,
   EntityRef,
@@ -51,9 +51,7 @@ function StoredSuggestions() {
             <p className="t-caption">
               {formatDateTime(run.generated_at, locale, viewerZone())}
             </p>
-            {run.items.map((item) => (
-              <StoredSuggestion key={item.id} item={item} run={run} />
-            ))}
+            <RunSuggestions run={run} />
           </>
         )
       }
@@ -61,14 +59,63 @@ function StoredSuggestions() {
   );
 }
 
-function StoredSuggestion({
-  item,
-  run,
-}: Readonly<{ item: MorningBriefItem; run: MorningBrief }>) {
-  const client = useQueryClient();
-  const { name, reading } = useEntityName("deal", item.deal_id);
+/**
+ * The run's deals, in rank order, split by whether the overnight pass said
+ * anything about them.
+ *
+ * A deal with a finding is a suggestion: its name, the assessment and when it
+ * was written. A deal without one is not, and drawing it as a heading with
+ * nothing under it read as a finished recommendation that had lost its text.
+ * Those deals are listed once, under one line that says which of two things
+ * is true, read off `annotated_at`: no pass has annotated this run yet, or a
+ * pass ran and had nothing to add. The list never says why a pass did not run;
+ * the run carries no answer to that.
+ */
+function RunSuggestions({ run }: Readonly<{ run: MorningBrief }>) {
   const t = useT();
-  const { locale } = useLocale();
+  const withFinding = run.items.filter((item) => item.finding);
+  const without = run.items.filter((item) => !item.finding);
+  return (
+    <>
+      {withFinding.map((item) => (
+        <StoredSuggestion key={item.id} item={item} run={run} />
+      ))}
+      {without.length > 0 && (
+        <PanelRow>
+          <p className="t-caption">
+            {run.annotated_at
+              ? t("brief.suggestions.nothingToAdd")
+              : t("brief.suggestions.notAnnotated")}
+          </p>
+          <ul className="brief-suggestion-deals">
+            {without.map((item) => (
+              <li key={item.id}>
+                <NamedDeal dealId={item.deal_id}>
+                  {(name) => (
+                    <EntityRef kind="deal" id={item.deal_id} name={name} />
+                  )}
+                </NamedDeal>
+              </li>
+            ))}
+          </ul>
+        </PanelRow>
+      )}
+    </>
+  );
+}
+
+/**
+ * Renders its children only once the deal's name is readable. A deal the
+ * reader may no longer open renders nothing at all, so a stored finding about
+ * it is never shown beside a name they cannot reach.
+ */
+function NamedDeal({
+  dealId,
+  children,
+}: Readonly<{ dealId: string; children: (name: string) => ReactNode }>) {
+  const client = useQueryClient();
+  const { name, reading } = useEntityName("deal", dealId);
+  const t = useT();
   if (reading === "failed" || reading === "pending")
     return (
       <SurfaceState
@@ -79,7 +126,7 @@ function StoredSuggestion({
         detail={{
           onRetry: () =>
             void client.invalidateQueries({
-              queryKey: ["deal", ENTITY_NAME_KEY, item.deal_id],
+              queryKey: ["deal", ENTITY_NAME_KEY, dealId],
               exact: true,
             }),
         }}
@@ -88,21 +135,32 @@ function StoredSuggestion({
       </SurfaceState>
     );
   if (!name) return null;
+  return <>{children(name)}</>;
+}
+
+function StoredSuggestion({
+  item,
+  run,
+}: Readonly<{ item: MorningBriefItem; run: MorningBrief }>) {
+  const t = useT();
+  const { locale } = useLocale();
   return (
-    <PanelRow>
-      <Heading as="h3" size="small">
-        <EntityRef kind="deal" id={item.deal_id} name={name} />
-      </Heading>
-      {item.finding && (
-        <p>
-          {t("worklist.verdict.believes")} {item.finding}
-        </p>
+    <NamedDeal dealId={item.deal_id}>
+      {(name) => (
+        <PanelRow>
+          <Heading as="h3" size="small">
+            <EntityRef kind="deal" id={item.deal_id} name={name} />
+          </Heading>
+          <p>
+            {t("worklist.verdict.believes")} {item.finding}
+          </p>
+          {run.annotated_at && (
+            <p className="t-caption">
+              {formatDateTime(run.annotated_at, locale, viewerZone())}
+            </p>
+          )}
+        </PanelRow>
       )}
-      {item.finding && run.annotated_at && (
-        <p className="t-caption">
-          {formatDateTime(run.annotated_at, locale, viewerZone())}
-        </p>
-      )}
-    </PanelRow>
+    </NamedDeal>
   );
 }
