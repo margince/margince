@@ -100,6 +100,9 @@ func extractRequest(thread settledThread, lang string) model.Request {
 			directionWord(message.Direction), message.At.Format(time.DateOnly), message.Subject,
 			textlang.CurrentMessage(message.Body))
 		body += "\nVerified participants (reference, role, name, address):\n" + commitmentPartyPrompt(message.Parties, textlang.CurrentMessage(message.Body))
+		// The id stands outside the fence on its own line. Asked to copy it from
+		// the tag's attribute, a model copies the tag's own name instead.
+		fmt.Fprintf(&prompt, "Message id: %s\n", message.ID)
 		prompt.WriteString(fence.WrapAttr("source_id", message.ID.String(), body) + "\n")
 	}
 	if len(thread.Focus) > 0 {
@@ -123,7 +126,7 @@ func extractRequest(thread settledThread, lang string) model.Request {
 			`For new_opportunity and commitment_made, lifecycle_scope and workstream are both "". `+
 			`Every event carries "commitment". For contract_ended and new_opportunity it is state "unclear", condition "", deadline_precision "none" and deadline_quote "". `+
 			commitmentRecipientsPrompt+
-			`"message_id" and any "restated_message_id" must be copied exactly from the cited message above, character for character. `+
+			`"message_id" and any "restated_message_id" must be copied exactly from the "Message id" line above the cited message, character for character. The name of an untrusted-… tag is never a message id. `+
 			`Never reconstruct an id or use a participant reference as a message id. `+
 			`"promiser_ref" is the verified participant reference for who made the quoted promise, `+
 			`not necessarily its sender. For "you agreed", resolve the addressed party; for a named `+
