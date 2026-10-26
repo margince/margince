@@ -3570,7 +3570,7 @@ public.deal.commercial_motion text gen=- def=-
 public.deal.company_id uuid gen=- def=-
 public.deal.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal.currency character(3) gen=- def=-
-public.deal.deal_acquisition_source_fkey FOREIGN KEY (acquisition_source) REFERENCES deal_acquisition_source(key) ON UPDATE CASCADE ON DELETE RESTRICT
+public.deal.deal_acquisition_source_fkey FOREIGN KEY (acquisition_source) REFERENCES deal_acquisition_source(key) ON UPDATE RESTRICT ON DELETE RESTRICT
 public.deal.deal_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
 public.deal.deal_arr_source_same_deal FOREIGN KEY (id, arr_source_offer_id) REFERENCES offer(deal_id, id) ON DELETE SET NULL
 public.deal.deal_closed_at CHECK (((status = 'open'::text) OR (closed_at IS NOT NULL)))
@@ -5209,7 +5209,7 @@ public.lead.lead_first_response_follows_creation CHECK (((first_response_at IS N
 public.lead.lead_from_contact_id_fkey FOREIGN KEY (from_contact_id) REFERENCES contact(id) ON DELETE SET NULL
 public.lead.lead_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES lead(id) ON DELETE SET NULL (merged_into_id)
 public.lead.lead_origin_detail_bounded CHECK (((origin_detail IS NULL) OR (length(origin_detail) <= 500)))
-public.lead.lead_origin_fkey FOREIGN KEY (origin) REFERENCES lead_origin(key) ON UPDATE CASCADE ON DELETE RESTRICT
+public.lead.lead_origin_fkey FOREIGN KEY (origin) REFERENCES lead_origin(key) ON UPDATE RESTRICT ON DELETE RESTRICT
 public.lead.lead_override_retains_the_computed_score CHECK (((score_override_reason IS NULL) OR (score_computed IS NOT NULL)))
 public.lead.lead_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
 public.lead.lead_pkey PRIMARY KEY (id)
