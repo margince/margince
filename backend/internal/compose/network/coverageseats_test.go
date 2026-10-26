@@ -122,7 +122,8 @@ func TestASeatGoesOutWithWhenTheContactLastWrote(t *testing.T) {
 // The answer is nil, as the coverage view's field says, and no statement runs.
 func TestASeatDateForAReaderWithoutActivitiesIsNil(t *testing.T) {
 	seats := []deals.DealStakeholder{{ContactID: ids.NewV7(), Role: "champion"}}
-	inbound, err := readSeatsInbound(coverageReaderWithoutTheEdgeGrant(), nil, seats, time.Now().UTC())
+	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	inbound, err := readSeatsInbound(coverageReaderWithoutTheEdgeGrant(), nil, seats, now)
 	if err != nil || inbound != nil {
 		t.Errorf("seat dates for a reader without activity.read = %#v (%v), want nil", inbound, err)
 	}
