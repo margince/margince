@@ -275,12 +275,29 @@ jobs:
           path: backend/coverage.out
           if-no-files-found: ignore
           retention-days: 1
+
+  integration-ext-migrations:
+    name: integration (extension migration gate)
+    timeout-minutes: 20
+    # Parallel to the shards, not after them: it reads the tree and none of their
+    # output, so waiting for the slowest shard only lengthens the lane.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
       # The extension migration gate (ADR-0120) — the ONE gate in the tier that
       # is not textual: it applies each unit's migrations as that unit's own
       # restricted ext_<name> role against a throwaway database and checks the
       # resulting catalog against the allowlist.
       #
-      # It lives HERE, on the integration lane, and not in check-backend where
+      # It lives on the integration lane, and not in check-backend where
       # it started. From the first unit that ships a migrations/ layer the gate
       # needs a cluster, and the Go gate is the fastest merge gate and
       # container-free: arming it there would put a compose-stack start on every
