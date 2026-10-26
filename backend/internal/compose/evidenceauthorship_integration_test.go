@@ -164,7 +164,7 @@ func TestStageEvidenceFollowsAnOwnDomainAddedAndRemoved(t *testing.T) {
 	}
 	dealEvents := func() int {
 		return f.WsCount(t, `SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'deal.updated'
-			AND envelope->'entity'->>'id' = $1`, f.dealID.UUID.String())
+			AND envelope->'entity'->>'id' = $1`, f.dealID.String())
 	}
 	eventsBefore := dealEvents()
 
@@ -255,7 +255,7 @@ func (f *authorshipFixture) unmetForAssurance() int {
 	if err := database.WithWorkspaceTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
 		subjects, err := AssuranceSubjects(f.Admin(), tx)
 		for _, s := range subjects {
-			if s.DealID == f.dealID.UUID.String() {
+			if s.DealID == f.dealID.String() {
 				unmet = s.UnmetExitCriteria
 			}
 		}
