@@ -29,23 +29,26 @@ export function WorklistMayBeDone({ item }: Readonly<{ item: WorklistItem }>) {
   ] as const;
   const task = useTaskUpdate(refresh);
   const complete = useCompleteTask(task);
+  // The question rides in as the mutation's variables, so a press answers the
+  // question the reader saw even when a newer one has rendered since.
   const notYet = useMutation({
-    mutationFn: async () => {
-      if (!question) return;
+    mutationFn: async (asked: NonNullable<WorklistItem["may_be_done"]>) => {
       unwrap(
         await api.POST("/contacts/{id}/moment/dismiss", {
-          params: { path: { id: question.contact_id } },
+          params: { path: { id: asked.contact_id } },
           body: {
-            claim_key: question.claim_key,
-            evidence_fingerprint: question.evidence_fingerprint,
+            claim_key: asked.claim_key,
+            evidence_fingerprint: asked.evidence_fingerprint,
           },
         }),
         t,
       );
     },
-    onSuccess: () =>
+    onSuccess: (_, asked) =>
       Promise.all(
-        refresh.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+        [worklistKey, ["contact360", asked.contact_id]].map((queryKey) =>
+          queryClient.invalidateQueries({ queryKey }),
+        ),
       ),
   });
   if (!question) return null;
@@ -70,7 +73,7 @@ export function WorklistMayBeDone({ item }: Readonly<{ item: WorklistItem }>) {
         <Button
           variant="ghost"
           disabled={pending}
-          onClick={() => notYet.mutate()}
+          onClick={() => notYet.mutate(question)}
         >
           {t("worklist.mayBeDone.notYet")}
         </Button>

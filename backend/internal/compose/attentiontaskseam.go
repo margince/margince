@@ -21,6 +21,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -227,7 +228,9 @@ func (t attentionTasks) withRecipients(ctx context.Context, tasks []attention.Ta
 // (activities.PromiseFollowUpsTx), and the newest such mail asks. A Not yet the
 // reader gave to that mail, on either surface, keeps the plain row.
 func (t attentionTasks) withMayBeDone(ctx context.Context, tasks []attention.Task, asOf time.Time) ([]attention.Task, error) {
-	if t.db == nil {
+	// Only a human answers the question, so an agent reading the queue sees
+	// the plain row.
+	if t.db == nil || auth.RequireHuman(ctx) != nil {
 		return tasks, nil
 	}
 	var bases []activities.PromiseBasis
@@ -267,32 +270,65 @@ func (t attentionTasks) withMayBeDone(ctx context.Context, tasks []attention.Tas
 		return nil, err
 	}
 	type asked struct {
-		contact ids.UUID
-		sent    activities.PromiseFollowUp
+		contact     ids.UUID
+		sent        activities.PromiseFollowUp
+		fingerprint string
 	}
-	newest := map[ids.UUID]asked{}
+	byTask := map[ids.UUID][]asked{}
+	holders := map[ids.UUID]string{}
+	for _, task := range tasks {
+		holders[task.ID] = momentaction.HeldMarker(ctx, task.AssigneeID)
+	}
 	for basis, sent := range followUps {
 		owner := byBasis[basis]
-		if current, ok := newest[owner.task]; !ok || sent.At.After(current.sent.At) {
-			newest[owner.task] = asked{contact: owner.contact, sent: sent}
-		}
+		fingerprint := momentaction.DoneFingerprint(openapi_types.UUID(owner.task), sent, holders[owner.task])
+		byTask[owner.task] = append(byTask[owner.task], asked{contact: owner.contact, sent: sent, fingerprint: fingerprint})
 	}
 	for i := range tasks {
-		found, ok := newest[tasks[i].ID]
+		key := momentaction.DoneKey(openapi_types.UUID(tasks[i].ID))
+		found, ok := newestUnanswered(byTask[tasks[i].ID], func(a asked) bool {
+			return setAside[momentaction.DoneSetAside{Contact: a.contact, Key: key, Fingerprint: a.fingerprint}]
+		}, func(a asked) activities.PromiseFollowUp { return a.sent })
 		if !ok {
-			continue
-		}
-		promise := openapi_types.UUID(tasks[i].ID)
-		key := momentaction.DoneKey(promise)
-		fingerprint := momentaction.DoneFingerprint(promise, found.sent, momentaction.HeldMarker(ctx, tasks[i].AssigneeID))
-		if setAside[momentaction.DoneSetAside{Contact: found.contact, Key: key, Fingerprint: fingerprint}] {
 			continue
 		}
 		tasks[i].MayBeDone = &crmcontracts.WorklistMayBeDone{
 			ContactId: openapi_types.UUID(found.contact), EmailActivityId: openapi_types.UUID(found.sent.EmailID),
 			WroteAt: found.sent.At, WrotePrecision: crmcontracts.OccurredPrecision(found.sent.Precision),
-			ClaimKey: key, EvidenceFingerprint: fingerprint,
+			ClaimKey: key, EvidenceFingerprint: found.fingerprint,
 		}
 	}
 	return tasks, nil
+}
+
+// newestUnanswered picks the follow-up a promise task asks about. That is the
+// newest one, unless the reader already answered Not yet to it or a later one.
+// One recipient's Not yet then holds for the task until we write to anybody
+// on the thread again. Equal instants are ordered by the mail's id, as
+// PromiseFollowUpsTx orders them.
+func newestUnanswered[T any](candidates []T, answered func(T) bool, sent func(T) activities.PromiseFollowUp) (T, bool) {
+	later := func(a, b activities.PromiseFollowUp) bool {
+		if !a.At.Equal(b.At) {
+			return a.At.After(b.At)
+		}
+		return a.EmailID.String() > b.EmailID.String()
+	}
+	var newest, newestAnswered T
+	var have, haveAnswered bool
+	for _, c := range candidates {
+		if answered(c) {
+			if !haveAnswered || later(sent(c), sent(newestAnswered)) {
+				newestAnswered, haveAnswered = c, true
+			}
+			continue
+		}
+		if !have || later(sent(c), sent(newest)) {
+			newest, have = c, true
+		}
+	}
+	if !have || (haveAnswered && !later(sent(newest), sent(newestAnswered))) {
+		var zero T
+		return zero, false
+	}
+	return newest, true
 }

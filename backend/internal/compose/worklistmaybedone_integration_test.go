@@ -10,6 +10,7 @@ package compose
 // one follow-up rule and one Not yet, so the reader answers once.
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -20,7 +21,10 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // promiseTask files the task signal extraction writes for the promise. It
@@ -110,5 +114,79 @@ func TestTheWorklistAsksDoneAsTheContactPageDoesAndHoldsItsNotYet(t *testing.T) 
 	newer := logThreadMail(e.Admin(), t, e, p.contact, "thread-listing", p.address, "outbound", p.sentAt.AddDate(0, 0, 6).Add(3*time.Hour))
 	if again := worklistQuestion(t, e, task, at); again == nil || ids.UUID(again.EmailActivityId) != newer {
 		t.Errorf("a newer mail did not ask again: %+v", again)
+	}
+}
+
+// secondRecipient files the same promise's claim on another contact, as
+// signal extraction does for a promise made to two contacts at once.
+func secondRecipient(t *testing.T, e *integration.Env, p promiseThread, task ids.UUID) (ids.ContactID, string) {
+	t.Helper()
+	const address = "jonas@kunde.example"
+	row, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
+		FullName: "Jonas Kunde", Source: "manual", Emails: []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	contact := ids.From[ids.ContactKind](ids.UUID(row.Id))
+	claim := e.RecordClaim(e.Admin(), t, contacts.ClaimInput{
+		ContactID: contact, Kind: "commitment_ours", Body: "Send the listing details", ActivityID: ids.UUID(p.claim.SourceActivityId),
+		Quote: "I'll prepare the listing details and get those over to you shortly.", Source: "manual",
+	})
+	e.WsExec(t, `UPDATE conversation_claim SET task_activity_id = $1 WHERE id = $2`, task, ids.UUID(claim.Id))
+	return contact, address
+}
+
+func TestANotYetForOneRecipientHoldsUntilWeWriteToAnyRecipientAgain(t *testing.T) {
+	e := integration.Setup(t)
+	p := seedPromiseThread(t, e)
+	task := promiseTask(t, e, p)
+	jonas, jonasAddress := secondRecipient(t, e, p, task)
+	at := p.sentAt.AddDate(0, 0, 9)
+	logThreadMail(e.Admin(), t, e, jonas, "thread-listing", jonasAddress, "outbound", p.sentAt.AddDate(0, 0, 5))
+	toLena := logThreadMail(e.Admin(), t, e, p.contact, "thread-listing", p.address, "outbound", p.sentAt.AddDate(0, 0, 6))
+	q := worklistQuestion(t, e, task, at)
+	if q == nil || ids.UUID(q.EmailActivityId) != toLena || ids.UUID(q.ContactId) != p.contact.UUID {
+		t.Fatalf("may_be_done = %+v, want the newest mail, to Lena", q)
+	}
+	// Not yet on Lena's page holds for the task, though Jonas had an older mail.
+	page := pageAsOf(e, at)
+	if err := page.DismissMoment(e.Admin(), p.contact, crmcontracts.DismissContactMomentRequest{
+		ClaimKey: q.ClaimKey, EvidenceFingerprint: q.EvidenceFingerprint,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if again := worklistQuestion(t, e, task, at); again != nil {
+		t.Errorf("an older mail to Jonas asked again after Not yet: %+v", again)
+	}
+	toJonas := logThreadMail(e.Admin(), t, e, jonas, "thread-listing", jonasAddress, "outbound", p.sentAt.AddDate(0, 0, 8))
+	if again := worklistQuestion(t, e, task, at); again == nil || ids.UUID(again.EmailActivityId) != toJonas || ids.UUID(again.ContactId) != jonas.UUID {
+		t.Errorf("a newer mail to Jonas did not ask again: %+v", again)
+	}
+}
+
+func TestAnAgentReadingTheWorklistIsAskedNothing(t *testing.T) {
+	e := integration.Setup(t)
+	p := seedPromiseThread(t, e)
+	task := promiseTask(t, e, p)
+	logThreadMail(e.Admin(), t, e, p.contact, "thread-listing", p.address, "outbound", p.sentAt.AddDate(0, 0, 6))
+	human, _ := principal.Actor(e.Admin())
+	agent := human
+	agent.Type, agent.ID = principal.PrincipalAgent, "agent:test"
+	ctx := principal.WithActor(e.Admin(), agent)
+	at := p.sentAt.AddDate(0, 0, 7)
+	service := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return at })
+	day, err := service.Worklist(ctx, "mine", "", ids.UUID{}, 100, "")
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		// Refused outright today. The seam asks an agent nothing either way.
+		return
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range day.Queue {
+		if row.Id == task.String() && row.MayBeDone != nil {
+			t.Fatalf("an agent was asked a question only a human answers: %+v", row.MayBeDone)
+		}
 	}
 }
