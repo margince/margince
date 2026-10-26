@@ -18,7 +18,7 @@ export type OfferRow = Readonly<{
   id: string;
   title: string;
   sub: string;
-  status: string;
+  statusLabel: string;
 }>;
 
 /**
@@ -41,7 +41,7 @@ export function offerRow(
       date: formatDayMonth(offer.created_at, locale, zone),
       net: formatMoney(offer.net_minor, offer.currency, locale),
     }),
-    status: offerStatusLabel(offer.status, t),
+    statusLabel: offerStatusLabel(offer.status, t),
   };
 }
 

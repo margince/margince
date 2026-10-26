@@ -36,8 +36,8 @@ describe("the deal status badge", () => {
   });
 });
 
-// A deal's stored status drawn as JSX text, `{deal.status}`, reaches every
-// reader as the English wire value. The status reads through DealStatusBadge.
+// A stored status drawn as JSX text, `{row.status}`, reaches every reader as
+// the English wire code. Any receiver counts, since a deal is often `row`.
 function rawStatusRenders(path: string, text: string): string[] {
   const found: string[] = [];
   const visit = (node: ts.Node): void => {
@@ -45,9 +45,7 @@ function rawStatusRenders(path: string, text: string): string[] {
       ts.isJsxExpression(node) &&
       !ts.isJsxAttribute(node.parent) &&
       node.expression !== undefined &&
-      ts.isPropertyAccessExpression(node.expression) &&
-      node.expression.name.text === "status" &&
-      /deal/i.test(node.expression.expression.getText())
+      drawsStatus(node.expression)
     ) {
       found.push(node.getText());
     }
@@ -55,6 +53,42 @@ function rawStatusRenders(path: string, text: string): string[] {
   };
   visit(parseSource(path, text));
   return found;
+}
+
+function translates(expression: ts.Expression): boolean {
+  return (
+    ts.isCallExpression(expression) &&
+    ts.isIdentifier(expression.expression) &&
+    expression.expression.text === "t"
+  );
+}
+
+// The value a child expression draws: a fallback or a branch draws it too.
+function drawsStatus(expression: ts.Expression): boolean {
+  if (ts.isParenthesizedExpression(expression)) {
+    return drawsStatus(expression.expression);
+  }
+  if (ts.isConditionalExpression(expression)) {
+    // `key ? t(key) : row.status` shows a code this build has no word for.
+    if (translates(expression.whenTrue)) {
+      return false;
+    }
+    return (
+      drawsStatus(expression.whenTrue) || drawsStatus(expression.whenFalse)
+    );
+  }
+  if (
+    ts.isBinaryExpression(expression) &&
+    [ts.SyntaxKind.QuestionQuestionToken, ts.SyntaxKind.BarBarToken].includes(
+      expression.operatorToken.kind,
+    )
+  ) {
+    return drawsStatus(expression.left) || drawsStatus(expression.right);
+  }
+  return (
+    ts.isPropertyAccessExpression(expression) &&
+    expression.name.text === "status"
+  );
 }
 
 describe("screens the shipped bundle loads", () => {
@@ -66,12 +100,25 @@ describe("screens the shipped bundle loads", () => {
     expect(
       rawStatusRenders(
         "/app/src/planted.tsx",
-        `const a = <Badge>{deal.status}</Badge>; const b = <DealStatusBadge status={deal.status} />;`,
+        [
+          `const a = <Badge>{deal.status}</Badge>;`,
+          `const b = <Badge>{row.status}</Badge>;`,
+          `const c = <span>{offer?.status ?? "-"}</span>;`,
+          `const d = <span>{ok ? label : (item.status)}</span>;`,
+          `const e = <DealStatusBadge status={deal.status} />;`,
+          `const f = <span>{row.statusLabel}</span>;`,
+          `const g = <span>{key ? t(key) : row.status}</span>;`,
+        ].join("\n"),
       ),
-    ).toEqual(["{deal.status}"]);
+    ).toEqual([
+      "{deal.status}",
+      "{row.status}",
+      '{offer?.status ?? "-"}',
+      "{ok ? label : (item.status)}",
+    ]);
   });
 
-  it("never draw a deal's status as its stored value", () => {
+  it("never draw a record's status as its stored code", () => {
     expect(screens.length).toBeGreaterThan(500);
     const offenders = screens.flatMap((path) =>
       rawStatusRenders(path, readFileSync(path, "utf8")).map(

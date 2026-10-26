@@ -99,7 +99,7 @@ export function OffersPanel({
                   </button>
                 }
                 sub={row.sub}
-                right={<Badge>{row.status}</Badge>}
+                right={<Badge>{row.statusLabel}</Badge>}
               />
             );
           })}

@@ -49,7 +49,7 @@ describe("an offer as a card row", () => {
         net: formatMoney(100_000, "EUR", "en"),
       }),
     );
-    expect(row.status).toBe(t("commercial.offer.superseded"));
+    expect(row.statusLabel).toBe(t("commercial.offer.superseded"));
   });
 });
 

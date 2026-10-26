@@ -38,7 +38,7 @@ export type BoardDocument = Readonly<{
   /** The stored size, when the server recorded one. */
   byteSize?: number | null;
   /** The share state the seller sees (the buyer only sees shared ones). */
-  status?: ReactNode;
+  shareMark?: ReactNode;
   /** Download or remove — the side's own verbs on the document. */
   actions?: ReactNode;
   /**
@@ -285,8 +285,8 @@ function DocumentCard({
             .filter((part) => part !== "")
             .join(" · ")}
         </p>
-        {doc.status ? (
-          <div className="board-doc-status">{doc.status}</div>
+        {doc.shareMark ? (
+          <div className="board-doc-status">{doc.shareMark}</div>
         ) : null}
         {read || doc.actions ? (
           <div className="board-doc-verbs">
