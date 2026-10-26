@@ -30,7 +30,7 @@ module to put a change in, read [modules.md](../modules.md).
 |---|--:|
 | Tables | 329 |
 | Columns | 3886 |
-| Foreign keys | 547 |
+| Foreign keys | 546 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -46,7 +46,7 @@ Ranked by how many foreign keys point at them.
 | [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 27 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 41 | 18 |
 | [`project`](projects.md#project) | [projects](projects.md) | 23 | 12 |
-| [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 10 |
+| [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 9 |
 | [`team`](identity.md#team) | [identity](identity.md) | 6 | 9 |
 | [`passport`](identity.md#passport) | [identity](identity.md) | 11 | 8 |
 | [`consent_purpose`](consent.md#consent_purpose) | [consent](consent.md) | 7 | 7 |
@@ -71,7 +71,6 @@ erDiagram
     pipeline ||--o{ deal : pipeline_id
     project ||--o{ deal : project_id
     app_user ||--o{ deal : source_author_id
-    stage ||--o{ deal : stage_id
     company ||--o{ lead : company_id
     contact ||--o{ lead : from_contact_id
     app_user ||--o{ lead : owner_id
@@ -410,7 +409,7 @@ erDiagram
 | [`signal_resolution`](signals.md#signal_resolution) | signals | 12 | 0 |
 | [`signal_thread_scan`](compose.md#signal_thread_scan) | compose | 10 | 0 |
 | [`site_read`](contacts.md#site_read) | contacts | 36 | 3 |
-| [`stage`](deals.md#stage) | deals | 10 | 10 |
+| [`stage`](deals.md#stage) | deals | 10 | 9 |
 | [`stage_exit_criterion`](deals.md#stage_exit_criterion) | deals | 12 | 1 |
 | [`stage_progression_outcome`](deals.md#stage_progression_outcome) | deals | 19 | 0 |
 | [`stage_progression_policy`](deals.md#stage_progression_policy) | deals | 18 | 0 |
