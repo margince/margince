@@ -74,9 +74,6 @@ func openTasksAssignedTo(ctx context.Context, tx pgx.Tx, from ids.UserID) ([]ids
 	if err != nil {
 		return nil, err
 	}
-	if content == "" {
-		content = sqlTrue
-	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT a.id FROM activity a
 		 WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL
@@ -85,14 +82,9 @@ func openTasksAssignedTo(ctx context.Context, tx pgx.Tx, from ids.UserID) ([]ids
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading the open tasks to hand over: %w", err)
 	}
-	defer rows.Close()
-	var found []ids.UUID
-	for rows.Next() {
-		var id ids.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, fmt.Errorf("activities: reading the open tasks to hand over: %w", err)
-		}
-		found = append(found, id)
+	found, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading the open tasks to hand over: %w", err)
 	}
-	return found, rows.Err()
+	return found, nil
 }
