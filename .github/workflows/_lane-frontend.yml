@@ -117,7 +117,7 @@ jobs:
   #
   # The knee is at four: it takes 57% off the lane, and every step after it buys
   # around half a minute for another runner slot inside the same 20-concurrent
-  # ceiling the six integration shards already queue in. Raising it is a
+  # ceiling the integration shards already queue in. Raising it is a
   # two-character change here and in the FE_SHARD argument below — the fan-in
   # reads the matrix rather than a second copy of the number, and
   # check-shard-union.sh fails if the two ever disagree.

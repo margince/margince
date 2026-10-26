@@ -300,7 +300,7 @@ jobs:
     name: backend clock drift (main, +200 days)
     runs-on: ubuntu-latest
     # Longer than backend-lane's 45: this runs the integration lane too, on one
-    # runner rather than across the six shards ci.yml splits it into.
+    # runner rather than across the shards ci.yml splits it into.
     timeout-minutes: 90
     permissions:
       contents: read
@@ -638,7 +638,7 @@ jobs:
   # assertion was not: the Fast-3G profile's per-request latency dominates
   # runner contention, and the recorded p95 is 65 ms against a 300 ms budget.
   # The assertion that was removed sat at 1027 against 1000 — a single
-  # wall-clock sample on a runner shared with six integration shards, which
+  # wall-clock sample on a runner shared with the integration shards, which
   # measured the machine. Headroom is what makes the difference, so if this lane
   # starts failing on contention rather than on a regression, the answer is to
   # take it out again rather than to widen the budget it exists to hold.
