@@ -410,17 +410,20 @@ func TestAFocusedReplyKeepsOnlyFocusEventsAndStaysInTheRemainingCap(t *testing.T
 	}
 }
 
-func TestUnjudgedMessagesAreTheOnesThisPassReadsFirstAndNoEventCites(t *testing.T) {
+func TestUnjudgedMessagesAreTheOnesThisPassReadsFirstAndNoPromiseCites(t *testing.T) {
 	day := func(d int) time.Time { return time.Date(2026, 6, d, 9, 0, 0, 0, time.UTC) }
 	cited, restated, plain, fresh := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
 	messages := []threadMessage{
 		{ID: cited, At: day(1)}, {ID: restated, At: day(2)}, {ID: plain, At: day(3)}, {ID: fresh, At: day(5)},
 	}
-	events := []extractedEvent{{MessageID: cited.String(), RestatedMessageID: restated.String()}}
+	events := []extractedEvent{
+		{Kind: extractKindCommitment, MessageID: cited.String(), RestatedMessageID: restated.String()},
+		{Kind: extractKindOpportunity, MessageID: plain.String()},
+	}
 
 	thread := settledThread{Messages: messages}
 	if got := unjudgedMessages(thread, events); len(got) != 2 || got[0] != plain || got[1] != fresh {
-		t.Errorf("a never-read thread: got %v, want the two uncited messages", got)
+		t.Errorf("a never-read thread: got %v, want the two messages no promise cites", got)
 	}
 	readTo := day(4)
 	thread.ReadTo = &readTo
@@ -454,8 +457,8 @@ func TestASecondReadingSendsEveryMessageAndWhatTheFirstRecorded(t *testing.T) {
 	if len(focused.Messages) != 3 {
 		t.Errorf("the second reading sends %d messages, want all 3: the receipt shows the promise kept", len(focused.Messages))
 	}
-	if !slices.Equal(focused.Focus, []ids.UUID{promise, thanks}) {
-		t.Errorf("the second reading is for %v, want the uncited messages", focused.Focus)
+	if !slices.Equal(focused.Focus, []ids.UUID{promise, need, thanks}) {
+		t.Errorf("the second reading is for %v, want every message no promise cites", focused.Focus)
 	}
 	if focused.EventCap != extractMaxEvents-len(first) {
 		t.Errorf("the second reading may report %d events, want %d", focused.EventCap, extractMaxEvents-len(first))

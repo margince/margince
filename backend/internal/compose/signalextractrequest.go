@@ -107,7 +107,7 @@ func extractRequest(thread settledThread, lang string) model.Request {
 		for i, id := range thread.Focus {
 			focus[i] = id.String()
 		}
-		fmt.Fprintf(&prompt, "Report only commitment_made events stated in these messages: %s. A first reading already read them and reported nothing from them, so report only a promise their words state outright; an empty list is the usual answer. The other messages are context, for example to see that a promise was kept or renewed.\n",
+		fmt.Fprintf(&prompt, "Report only commitment_made events stated in these messages: %s. A first reading already read them and found no promise in them, so report only a promise their words state outright; an empty list is the usual answer. The other messages are context, for example to see that a promise was kept or renewed.\n",
 			strings.Join(focus, ", "))
 		recorded := make([]string, len(thread.Recorded))
 		for i, event := range thread.Recorded {

@@ -111,8 +111,8 @@ func TestAPromiseLeftOutOfTheFirstReadingIsReadOnItsOwn(t *testing.T) {
 		t.Errorf("the conversation was not marked read after both readings")
 	}
 	line := focusLine(t, brain.requests[1])
-	if !strings.Contains(line, conv.promise.String()) || !strings.Contains(line, conv.followup.String()) || strings.Contains(line, conv.need.String()) {
-		t.Errorf("the focus must be the two messages no event cited: %s", line)
+	if !strings.Contains(line, conv.promise.String()) || !strings.Contains(line, conv.followup.String()) || !strings.Contains(line, conv.need.String()) {
+		t.Errorf("the focus must be the messages no promise cited: %s", line)
 	}
 	if !strings.Contains(brain.requests[1].Messages[0].Content, "Already recorded, so report none of it again: new_opportunity in "+conv.need.String()) {
 		t.Error("the second reading is not told that the new need is recorded")

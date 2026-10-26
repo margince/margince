@@ -231,14 +231,17 @@ func (x *SignalExtractor) keepFirstReading(
 	return raised, x.deferRefusedReading(ctx, wsID, thread, now, refusal)
 }
 
-// unjudgedMessages are the messages this pass reads for the first time. No
-// event of the first reading cites them, as message_id or as the renewing
-// message. An earlier pass already judged the others. The second reading
-// covers only messages nobody has looked at twice.
+// unjudgedMessages are the messages this pass reads for the first time and
+// no promise of the first reading cites, as message_id or as the renewing
+// message. A message that states a need can also make a promise, and a model
+// that reports the need often drops the promise. An earlier pass already
+// judged the others.
 func unjudgedMessages(thread settledThread, events []extractedEvent) []ids.UUID {
 	cited := map[string]bool{}
 	for _, event := range events {
-		cited[event.MessageID], cited[event.RestatedMessageID] = true, true
+		if event.Kind == extractKindCommitment {
+			cited[event.MessageID], cited[event.RestatedMessageID] = true, true
+		}
 	}
 	var focus []ids.UUID
 	for _, message := range thread.Messages {

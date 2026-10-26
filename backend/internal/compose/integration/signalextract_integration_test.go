@@ -252,8 +252,9 @@ func TestAnUnsureReadingIsDroppedRatherThanFiled(t *testing.T) {
 	if kinds := openSignalKinds(t, e, company); len(kinds) != 0 {
 		t.Fatalf("the account carries signals %v, want none", kinds)
 	}
-	if raised := extractPass(t, e, brain); raised != 0 || brain.calls != 1 {
-		t.Errorf("the unsure thread was read %d times — a dropped event must still "+
+	// One pass is a reading plus a focused reading for a promise.
+	if raised := extractPass(t, e, brain); raised != 0 || brain.calls != 2 {
+		t.Errorf("the unsure thread took %d calls over two passes — a dropped event must still "+
 			"advance the watermark, or every tick pays for the same uncertainty", brain.calls)
 	}
 }
