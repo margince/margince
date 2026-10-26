@@ -80,8 +80,9 @@ func customerClaims(t *testing.T, e *transcriptEnv, customer ids.ContactID) (his
 // waits on its promiser. Turning the proposal down withdraws it there too.
 func TestARefusedProposalWithdrawsTheCustomersClaim(t *testing.T) {
 	e := setupTranscript(t)
+	// The customer is not the promiser's to change, which must not stop them
+	// turning their own promise down.
 	customer := ids.From[ids.ContactKind](linkInes(t, e))
-	e.WsExec(t, `UPDATE contact SET owner_id = $1 WHERE id = $2`, e.Rep1, customer)
 	read := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.75, e.Rep1)})
 	if len(read.ProposalIDs) != 1 {
 		t.Fatalf("an unsure promise staged %d proposals, want 1 (%v)", len(read.ProposalIDs), read.StatusDetail)
@@ -96,5 +97,13 @@ func TestARefusedProposalWithdrawsTheCustomersClaim(t *testing.T) {
 	}
 	if got := e.wsString(t, `SELECT status FROM conversation_claim WHERE contact_id = $1`, customer); got != "dismissed" {
 		t.Errorf("the refused promise's claim reads %q, want dismissed", got)
+	}
+	// The extractor that filed the claim withdraws it; the refusal stays the human's.
+	if got := e.wsString(t, `SELECT actor_type || ' ' || actor_id FROM audit_log
+		WHERE entity_type = 'contact' AND entity_id = $1 AND after->>'claim_status' = 'dismissed'`, customer); got != "system "+signalScanActor {
+		t.Errorf("the withdrawal is audited as %q, want the extractor %q", got, signalScanActor)
+	}
+	if got := e.wsString(t, `SELECT status || ' ' || coalesce(decided_by::text, '') FROM approval WHERE id = $1`, read.ProposalIDs[0]); got != "rejected "+e.Rep1.String() {
+		t.Errorf("the proposal reads %q after the refusal, want rejected by the promiser", got)
 	}
 }
