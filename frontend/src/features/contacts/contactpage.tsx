@@ -293,6 +293,7 @@ export function ContactPageV2({
               open={composer.open}
               intent={composer.intent}
               threadId={composer.threadId}
+              draftOnOpen={composer.draftOnOpen}
               onClose={composer.close}
             />
             <ContactResearchDrawer

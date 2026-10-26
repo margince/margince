@@ -31,9 +31,10 @@ import "./companytabs.css";
 
 // What the composer is anchored on. A reply answers the message it names. An
 // account-started message names the contact it goes to, because it has no
-// thread to inherit a recipient from.
+// thread to inherit a recipient from. `draft` says an AI verb opened it, so
+// the composer drafts on open.
 export type ComposeAnchor =
-  | { kind: "reply"; id: string }
+  | { kind: "reply"; id: string; draft?: boolean }
   | { kind: "account"; id: string };
 
 // A suggestion action kind the page has no handler for. TypeScript refuses a
@@ -65,6 +66,7 @@ function AccountComposer({
       entityType="company"
       entityId={companyId}
       kind="email"
+      draftOnOpen={reply && anchor.draft === true}
       open={open}
       onClose={onClose}
     />

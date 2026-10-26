@@ -206,6 +206,28 @@ function deleteFromToast(input: {
 
 export type SavedDraft = ReturnType<typeof useSavedDraft>;
 
+// The saved draft has had its chance: read, and back on screen when there was
+// one. Until then an empty body is not yet the reader's last word.
+function savedDraftSettled(
+  state: Readonly<{
+    anchored: boolean;
+    read: Readonly<{
+      isError: boolean;
+      isSuccess: boolean;
+      isFetching: boolean;
+    }>;
+    held: boolean;
+    restored: boolean;
+    // A read answering after the first keystroke restores nothing.
+    typed: boolean;
+  }>,
+): boolean {
+  const { read } = state;
+  if (!state.anchored || read.isError) return true;
+  if (!read.isSuccess || read.isFetching) return false;
+  return !state.held || state.restored || state.typed;
+}
+
 export function useSavedDraft(input: {
   where: Parameters<typeof savedDraftAnchor>[0];
   open: boolean;
@@ -401,6 +423,13 @@ export function useSavedDraft(input: {
     enabled: anchor !== null,
     held,
     restored: restoredKey === keyText && held !== null,
+    settled: savedDraftSettled({
+      anchored: anchor !== null,
+      read,
+      held: held !== null,
+      restored: restoredKey === keyText,
+      typed,
+    }),
     changedElsewhere,
     saving: save.isPending,
     // A conflict is not a failure line: the notice above names it and offers

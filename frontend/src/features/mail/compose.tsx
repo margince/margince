@@ -38,7 +38,7 @@ import {
   useTransportDial,
 } from "./composetarget";
 import { ThreadBar } from "./composethreadbar";
-import { useVoiceDraft } from "./composevoicedraft";
+import { useDraftOnOpen, useVoiceDraft } from "./composevoicedraft";
 import type { EditSeed } from "./schedulededit";
 import "./compose.css";
 import { ComposeHead } from "./compose.head";
@@ -130,6 +130,10 @@ export type ComposeProps = Readonly<{
    *  fired — "their reply is overdue", "the meeting needs an agenda" — and that
    *  reason shaped nothing until it reached the steer field. */
   intent?: string;
+  /** The verb that opened the composer was an AI one ("Draft reply"), so the
+   *  composer asks for the draft itself rather than offering the same verb a
+   *  second time. Mail only: a channel reply has no drafting. */
+  draftOnOpen?: boolean;
   /** A scheduled message written again. Read when the composer mounts, so the
    *  caller keys the modal on the message. It keeps no saved draft: the
    *  words are the scheduled message's, not a draft's. */
@@ -195,6 +199,7 @@ export function ComposeWindow({
   initialTransportId,
   staleThread = false,
   intent: askedIntent,
+  draftOnOpen,
   edit,
   open,
   onClose,
@@ -326,6 +331,14 @@ export function ComposeWindow({
     bodyId,
     voiceProfileId: voiceProfile.data?.id ?? null,
     sendPending,
+  });
+  useDraftOnOpen({
+    open,
+    asked: draftOnOpen,
+    mail: !isChannelReply,
+    settled: savedDraft.settled,
+    body: fields.body,
+    control: voice.control,
   });
   const busy = sendPending || voice.rejectionInFlight;
   const selectMessage = useConversationSwitch({

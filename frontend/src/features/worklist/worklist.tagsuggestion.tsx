@@ -86,7 +86,7 @@ function TagSuggestionCard({
         <ErrorLine error={decide.error} />
         <Row gap="2">
           <Button
-            variant="ai"
+            variant="primary"
             pending={decide.isPending && decide.variables?.verb === "accept"}
             disabled={decide.isPending}
             onClick={() =>
