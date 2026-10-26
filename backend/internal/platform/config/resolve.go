@@ -152,3 +152,27 @@ func undeclared(names known, layers []layer) []string {
 	}
 	return slices.Sorted(maps.Keys(seen))
 }
+
+// readElsewhere names the settings the sources set that only a sibling program
+// reads. This program never parses their values, so its check cannot vouch for
+// them, and says so instead of calling the file valid.
+func readElsewhere(reg *Registry, names known, layers []layer) []string {
+	seen := map[string]bool{}
+	for _, l := range layers {
+		where := string(l.source)
+		if l.file != "" {
+			where += " " + l.file
+		}
+		for key := range l.nodes {
+			if _, own := reg.byKey[key]; !own {
+				seen[key+" ("+where+")"] = true
+			}
+		}
+		for name, value := range l.vars {
+			if _, own := reg.byEnv[name]; value != "" && !own && names.envs[name] {
+				seen[name+" ("+where+")"] = true
+			}
+		}
+	}
+	return slices.Sorted(maps.Keys(seen))
+}

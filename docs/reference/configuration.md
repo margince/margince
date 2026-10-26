@@ -71,6 +71,10 @@ does, then stops. It prints the trace and the variables no program reads to stdo
 to stderr. It exits 0 when the configuration is valid and 1 when it is not, and it needs no database
 or network. A stored setting with no boot source shows as unset, since the database is not read.
 
+Each program checks only the settings it reads. A setting that only the other program reads is
+listed as `not checked here`, and the last line says how many there are. `make check-config` runs
+the check on both programs.
+
 **The Configuration page.** Settings → Configuration lists each setting with its value and its
 source. `GET /v1/installation/configuration` returns the same list, with `value: null` and
 `secret: true` for a secret. How a user reads the page is in
