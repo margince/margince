@@ -130,3 +130,55 @@ func TestAnotherOccurrenceOfTheSeriesIsNotBound(t *testing.T) {
 		t.Errorf("%d meetings under this calendar's own key, want this occurrence as its own row", got)
 	}
 }
+
+// Deleting the sync cursor replays the whole calendar. The event finds the
+// meeting it bound to again, and nothing new is filed.
+func TestACalendarReplayAfterTheCursorIsDeletedFilesNoSecondMeeting(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	colleague := seatFor(t, e, guestColleagueA)
+	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
+	stored := colleagueCalendarMeeting(t, e, colleague, "review@google.com", start, guestColleagueA, captureOwner, guestKnown)
+	feed := &calendarFeed{}
+	feed.set(lateGuestEvent("review", "confirmed", start, guestColleagueA, guestList()...))
+	sync := connectFeed(t, env, feed)
+
+	sync()
+	reset, err := e.Owner.Exec(context.Background(), `UPDATE capture_connection SET sync_cursor = NULL WHERE provider = 'gcal'`)
+	if err != nil || reset.RowsAffected() != 1 {
+		t.Fatalf("deleting the calendar's cursor touched %d connections (err %v), want 1", reset.RowsAffected(), err)
+	}
+	sync()
+
+	if got := liveMeetingsAt(t, e, start); got != 1 {
+		t.Errorf("%d live meetings after the replay, want the colleague's row alone", got)
+	}
+	if got := countRows(t, e, `SELECT count(*) FROM capture_import WHERE activity_id = '`+stored.String()+`'`); got != 2 {
+		t.Errorf("the stored meeting has %d importing seats after the replay, want 2", got)
+	}
+}
+
+// An archived holder is a meeting someone erased or merged away. The arrival
+// does not write onto it, and files its own row.
+func TestAnArchivedStoredMeetingIsNotBoundTo(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	colleague := seatFor(t, e, guestColleagueA)
+	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
+	stored := colleagueCalendarMeeting(t, e, colleague, "review@google.com", start, guestColleagueA, captureOwner, guestKnown)
+	if _, err := e.Owner.Exec(context.Background(), `UPDATE activity SET archived_at = now() WHERE id = $1`, stored); err != nil {
+		t.Fatal(err)
+	}
+	feed := &calendarFeed{}
+	feed.set(lateGuestEvent("review", "confirmed", start, guestColleagueA, guestList()...))
+	sync := connectFeed(t, env, feed)
+
+	sync()
+
+	if got := countRows(t, e, `SELECT count(*) FROM capture_import WHERE activity_id = '`+stored.String()+`'`); got != 1 {
+		t.Errorf("the archived meeting gained importing seats: %d", got)
+	}
+	if got := countRows(t, e, `SELECT count(*) FROM activity WHERE source_system = 'gcal' AND archived_at IS NULL`); got != 1 {
+		t.Errorf("%d live meetings under this calendar's own key, want its own row", got)
+	}
+}
