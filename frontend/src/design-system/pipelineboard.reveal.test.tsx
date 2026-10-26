@@ -115,6 +115,13 @@ describe("PipelineBoard search off screen", () => {
     expect(scrolled).toEqual(["won"]);
   });
 
+  it("sets the note in the wrapper a list surface gives the board's gutter", async () => {
+    render(board("fraunhofer"));
+    const hint = await screen.findByRole("status");
+    expect(hint.parentElement?.className).toBe("board-reveal");
+    expect(hint.parentElement?.nextElementSibling?.className).toBe("board");
+  });
+
   it("names the column in the reader's language", async () => {
     render(board("fraunhofer", "vi"));
     const hint = await screen.findByRole("status");

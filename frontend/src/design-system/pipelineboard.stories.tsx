@@ -457,6 +457,38 @@ export const SearchMatchesOffScreen: Story = {
   },
 };
 
+// The same search inside the list surface that hosts the board: the note keeps
+// the stages' gutter instead of meeting the surface's edge.
+export const SearchMatchesOffScreenInSurface: Story = {
+  render: () => (
+    <div style={{ inlineSize: 640 }}>
+      <ListSurface count="1 deal">
+        <PipelineBoard
+          columns={offScreenMatchColumns}
+          cardHref={(d) => `#/deals/${d.id}`}
+          zone="Europe/Berlin"
+          revealKey="umbrella"
+        />
+      </ListSurface>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const hint = await within(canvasElement).findByRole("status");
+    const surface = canvasElement.querySelector(".lt");
+    const stage = canvasElement.querySelector(".lt > .board");
+    if (!surface || !stage) {
+      throw new Error("the board drew outside a list surface");
+    }
+    const inset =
+      hint.getBoundingClientRect().left - surface.getBoundingClientRect().left;
+    const stageInset = Number.parseFloat(getComputedStyle(stage).paddingLeft);
+    await expect(stageInset).toBeGreaterThan(0);
+    await expect(Math.round(inset)).toBeGreaterThanOrEqual(
+      Math.round(stageInset),
+    );
+  },
+};
+
 // `uat-phone` drives the capture gate to 390px, which Storybook's own viewport
 // never reaches in a bare iframe; `fullscreen` keeps the 2rem frame off it.
 export const AtPhoneWidth: Story = {

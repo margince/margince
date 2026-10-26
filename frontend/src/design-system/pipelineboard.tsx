@@ -305,20 +305,23 @@ function BoardLayout<Record extends BoardRecord>({
   return (
     <>
       {offScreen && matches.length > 0 && (
-        <Callout
-          kind="outcome"
-          title={matchesTitle(matches, locale)}
-          actions={
-            <Button
-              variant="ghost"
-              onClick={() =>
-                scrollColumnIn(sections.current.get(matches[0]?.stage ?? ""))
-              }
-            >
-              {t("board.showMatches")}
-            </Button>
-          }
-        />
+        // The host's gutter comes from this wrapper, as a Callout takes no class.
+        <div className="board-reveal">
+          <Callout
+            kind="outcome"
+            title={matchesTitle(matches, locale)}
+            actions={
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  scrollColumnIn(sections.current.get(matches[0]?.stage ?? ""))
+                }
+              >
+                {t("board.showMatches")}
+              </Button>
+            }
+          />
+        </div>
       )}
       <div className="board" ref={board}>
         {columns.map((column) => {

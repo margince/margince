@@ -1364,6 +1364,11 @@
   min-height: 0;
   overflow-y: auto;
 }
+/* The note over a board that scrolled to its matches keeps the stages' gutter,
+ * so it sits inside the surface rather than against its edge. */
+.lt > .board-reveal {
+  padding: var(--space-3) var(--space-4) 0;
+}
 
 /* On a phone the stages are worth more than the margin around them: the swipe
  * itself (stage width and snapping) belongs to the board and is stated in
@@ -1376,6 +1381,9 @@
 @media (max-width: 700px) {
   .lt > .board {
     padding: var(--space-3);
+  }
+  .lt > .board-reveal {
+    padding: var(--space-3) var(--space-3) 0;
   }
 }
 
