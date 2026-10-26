@@ -304,8 +304,8 @@ func (c *signalExtractCase) secondReading(
 	if second = second.asRead(focused); validateExtractEnvelope(second, focused) != "" {
 		return trace, nil
 	}
-	// The joined answer cites messages by label, as the model's own replies do:
-	// the judge reads it beside a prompt that names no message by its id.
+	// The joined answer cites messages by label, as the model's own replies do.
+	// The judge reads it beside a prompt that names no message by its id.
 	both := append(first.events(), second.events()...)
 	for i := range both {
 		both[i].MessageID = c.thread.messageLabel(both[i].MessageID)
