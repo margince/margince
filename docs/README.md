@@ -138,8 +138,6 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`.
 - [debug-an-ai-task.md](how-to/debug-an-ai-task.md): run one AI task on your own input
   (`make ai-probe`).
-- [build-the-desktop-app.md](how-to/build-the-desktop-app.md): build the desktop app for macOS or
-  Windows.
 - [update-the-handbook.md](how-to/update-the-handbook.md): change the handbook so **Ask your documents** can answer
   from it.
 - [cut-a-release.md](how-to/cut-a-release.md): push a `v*` tag to make a GitHub release.
@@ -308,8 +306,6 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 - [self-hosting.md](explanation/self-hosting.md): why it runs the way it does, and what it does when
   something fails.
 - [deployment.md](deployment.md): the old page, now a pointer to the two above.
-- [desktop-distribution.md](explanation/desktop-distribution.md): the one folder that runs Margince on
-  macOS or Windows, with no Docker.
 
 ### Kept records: not how it works today
 

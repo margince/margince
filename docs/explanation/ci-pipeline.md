@@ -153,7 +153,7 @@ to run the Go unit gates. The other is to boot the sharded Postgres databases.
 What the `backend` scope adds on top of `backend_db`:
 
 - The agent rule files `AGENTS.md` and `CLAUDE.md`, and `docs/**`.
-- The two trees the gates read but do not build, `frontend/**` and `desktop/**`. Many gates under
+- The tree the gates read but do not build, `frontend/**`. Many gates under
   `backend/gates/` read files under `frontend/`. So a pull request that only changes the frontend must
   still run the lane that holds them.
 - The rest of what the suite opens: `.github/**`, `.coderabbit.yaml`, `.env.example`, `.tool-versions`,

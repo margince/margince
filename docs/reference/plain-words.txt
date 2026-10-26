@@ -83,7 +83,6 @@ article
 artifact
 as
 ask
-assemble
 assert
 assertion
 assignee
@@ -145,7 +144,6 @@ beyond
 binary
 bind
 bindings
-bit
 blame
 blob
 blobstore
@@ -390,7 +388,6 @@ depth
 derive
 describe
 design
-desktop
 destructive
 desync
 detail
@@ -484,14 +481,12 @@ enrich
 enrichment
 entered
 enters
-entirely
 entry
 enumerate
 env
 envelope
 environment
 ephemeral
-equivalent
 era
 erase
 erasure
@@ -507,14 +502,12 @@ everywhere
 evidence
 exact
 example
-exceed
 except
 exception
 excerpt
 exclamation
 exclusion
 exclusive
-executable
 exempt
 exemption
 exercise
@@ -758,7 +751,6 @@ interval
 into
 introduction
 invalid
-invalidate
 invite
 invocation
 invoice
@@ -806,7 +798,6 @@ last
 latency
 later
 launch
-launcher's
 law
 layer
 lead
@@ -816,7 +807,6 @@ leave
 ledger
 left
 leg
-legacy
 legal
 legibility
 legitimate
@@ -830,7 +820,6 @@ license
 like
 limit
 line
-lineage
 link
 lint
 list
@@ -1105,7 +1094,6 @@ postgres
 posture
 practice
 pre
-prebuilt
 precedes
 predicate
 preference
@@ -1154,13 +1142,11 @@ prove
 provenance
 provide
 proxy
-prune
 psql
 public
 publish
 pull
 punctuation
-purchase
 pure
 purge
 purity
@@ -1209,7 +1195,6 @@ recent
 recipe
 recipient
 reclaims
-recompile
 reconcile
 record
 recovery
@@ -1218,7 +1203,6 @@ redaction
 redeems
 redials
 redirect
-redistributed
 reds
 reduce
 ref
@@ -1241,10 +1225,8 @@ relationship
 relative
 relay
 release
-relicense
 relink
 reload
-relocatable
 relocate
 remain
 remainder
@@ -1291,7 +1273,6 @@ retire
 retrieval
 retry
 return
-reuse
 reverse
 review
 revive
@@ -1311,7 +1292,6 @@ root
 rough
 round
 route
-routine
 row
 rss
 rubric
@@ -1361,7 +1341,6 @@ seeded
 seeds
 segment
 selects
-self
 send
 sent
 sentence
@@ -1429,7 +1408,6 @@ software
 some
 someone
 something
-somewhere
 soon
 sorry
 sort
@@ -1481,7 +1459,6 @@ structural
 structure
 stub
 stylesheet
-subdirectory
 subdomain
 subject
 subscriber
@@ -1493,7 +1470,6 @@ suits
 summary
 superseded
 superuser
-supervises
 supervisor
 supply
 support
@@ -1520,7 +1496,6 @@ tag
 tail
 take
 taken
-tarball
 target
 task
 team
@@ -1598,7 +1573,6 @@ transcript
 transient
 translate
 transport
-travel
 treat
 tree
 trigger
@@ -1631,7 +1605,6 @@ unix
 unknown
 unless
 unlike
-unpack
 unprovisioned
 unreachable
 unregistered
@@ -1751,5 +1724,4 @@ you
 your
 yourself
 zero
-zip
 zone

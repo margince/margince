@@ -50,11 +50,10 @@ func TestEveryGoVersionPinMatchesTheProductModule(t *testing.T) {
 		}
 	})
 
-	// Derived from the tree, not listed. The list this replaced reached five
-	// modules of the twelve that exist, and one it did not reach
-	// (desktop/launcher) had already drifted a patch release behind — which is
-	// the same failure the whole test exists to catch, reintroduced by the shape
-	// of the check. A list also cannot cover a module written after it.
+	// Derived from the tree, not listed. A hand-kept list reached five modules
+	// of twelve, and one it missed had drifted a patch release behind. That is
+	// the failure this test exists to catch. A list also cannot cover a module
+	// written after it.
 	for _, module := range everyModuleFile(t) {
 		t.Run(module, func(t *testing.T) {
 			if got := goVersionOf(t, module); got != want {
@@ -103,7 +102,7 @@ func TestEveryGoVersionPinMatchesTheProductModule(t *testing.T) {
 // the repository root would also read the GENERATED module under build/, and any
 // unrelated checkout nested inside the working tree, neither of whose pins this
 // test has any claim on.
-var moduleRoots = []string{".", "../composition", "../desktop", "../extensions", "../fixtures", "../tools"}
+var moduleRoots = []string{".", "../composition", "../extensions", "../fixtures", "../tools"}
 
 // everyModuleFile collects every go.mod under those roots, so a module added
 // tomorrow is held to the product module's pin on the day it lands.

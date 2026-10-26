@@ -111,8 +111,7 @@ func oneGraphAuthority(tenant string) error {
 
 // FakeModelFault refuses the offline fake model from any source but the flag
 // in production. A fake left on in a deployment's environment or files would
-// serve canned answers; a flag is typed per command, as the desktop launcher
-// does.
+// serve canned answers; a flag is typed per command.
 func FakeModelFault(c *config.Config, posture runtimeenv.Environment) error {
 	fake, origin := config.ValWithSource(c, AIFake)
 	if !fake || origin.FromFlag() || posture != runtimeenv.Production {

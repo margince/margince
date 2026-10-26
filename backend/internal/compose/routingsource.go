@@ -116,12 +116,11 @@ func ResolveRouting(ctx context.Context, pool *pgxpool.Pool, routingPath string,
 // nothing deciding between them. The routing FILE no longer seeds anything at
 // all, so that competitor is gone and the narrowing now only costs.
 //
-// What it costs is every installation that exists before its operator chooses a
-// provider, and the desktop bundles are all of them: they ship a database, so
-// the company was created on the build machine and the recipient's
-// `seeds.ai_routing` is read by nothing. They set a key, and their AI surfaces
-// answer from the offline fake — plausibly, in canned text — with the one
-// screen that looks like the fix naming the file that was already ignored.
+// What it costs is every installation whose company was created before its
+// operator chose a provider: its `seeds.ai_routing` is read by nothing. The
+// operator sets a key, and the AI surfaces answer from the offline fake, in
+// plausible canned text. The one screen that looks like the fix names the file
+// that was ignored.
 //
 // INSERT-ONLY, through the same config.SeedTx the bootstrap uses. So it can
 // run on every boot of every role. An installation keeps the binding it has,

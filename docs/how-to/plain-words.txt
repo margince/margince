@@ -74,7 +74,6 @@ assign
 assignee
 assistant
 at
-attachment
 attack
 attempt
 attribution
@@ -326,7 +325,6 @@ derive
 describe
 description
 design
-desktop
 destroyed
 destructive
 detail
@@ -624,7 +622,6 @@ language
 last
 later
 launch
-launcher
 layer
 layout
 lead
@@ -660,7 +657,6 @@ location
 lock
 log
 login
-logo
 long
 look
 lookup
@@ -923,7 +919,6 @@ qualify
 query
 question
 queue
-quit
 quota
 quote
 radius
@@ -1107,7 +1102,6 @@ sign
 signal
 signature
 silence
-silicon
 similarity
 since
 single
@@ -1199,7 +1193,6 @@ tabular
 tag
 take
 taken
-tarball
 target
 task
 tax

@@ -273,8 +273,7 @@ func TestTheAPIReportsEveryConfigurationFaultTogether(t *testing.T) {
 }
 
 // A fake model left set in a production environment would serve canned
-// answers. A command line names it for that one process, as the desktop
-// launcher's does.
+// answers. A command line names it for that one process.
 func TestTheFakeModelStaysOutOfAProductionEnvironment(t *testing.T) {
 	t.Parallel()
 	dsnEnv := "MARGINCE_DSN=" + testDSN

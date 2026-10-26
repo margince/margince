@@ -8,9 +8,9 @@ package password
 // The Argon2id cost parameters every build EXCEPT the integration test build
 // uses: the OWASP 2024 interactive-login baseline.
 //
-// These are the values the product ships. `go build ./...` — which is what
-// produces api, worker, migrate and the desktop bundle — has no build tags, so
-// this is the file that compiles into every binary a user ever runs.
+// These are the values the product ships. `go build ./...` produces api,
+// worker and migrate with no build tags. So this is the file that compiles into
+// every binary a user ever runs.
 //
 // TestProductionParametersHoldTheOWASPBaseline pins them. That gate is not
 // ceremony: once the values live behind a build tag, nothing else in an

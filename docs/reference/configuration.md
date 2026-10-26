@@ -1244,9 +1244,8 @@ use 0 then would put the process on a bus it was set up to stay off. A UNIX sock
 (`/var/run/redis.sock`) is an address, not a host with an ending, and is passed through whole.
 
 `--redis-password` is the bus credential, where the Redis server needs one. Empty is the normal case
-on a network the deployment controls. Set it when anything else can reach the bus; the desktop
-bundle makes one for each installation, because its bus listens on loopback. Set it through the
-environment, because every process on the machine can read argv.
+on a network the deployment controls. Set it when anything else can reach the bus. Set it through
+the environment, because every process on the machine can read argv.
 
 **Why it exists.** The stream names and consumer groups are constants (`gw:events:crm:*`, `cg:*`).
 So two installations pointed at one Redis database share one consumer group per name.
@@ -1365,8 +1364,7 @@ the endpoint wins, because it may already hold objects this installation wrote. 
 local folder in its place would make the attachments that are already there go missing.
 
 - **The path provider** is for an installation with local storage and no object storage service.
-  That is a deployment on one machine, and the desktop bundle, whose launcher sets it by default to
-  `data/blobs` inside the installation folder.
+  That is a deployment on one machine.
 - Attachments, company logos and CSV import bodies all go through the same `Store` seam, so all of
   them work on both providers.
 - The path provider is not a store shared by many machines. It keeps no copies, no versions and no
@@ -1611,7 +1609,6 @@ the container gets. The scripts read the values below from it too, without expor
 | `MARGINCE_BENCH_TIER` | — | `make bench-perf` | the PERF-3/PERF-7 seed tier the perfbench suite builds: `smb` (default) or `mid_market`. A value it does not know fails the bench with a clear error. |
 | `MARGINCE_BENCH_RECORD` | — | `make bench-perf` | set to `1` to let the PERF-3/PERF-7 tier harness write its record into `docs/reference/perfbench/`, which `make perfdoc` turns into the published budgets page. Off by default, because the standing integration lane runs the same suite and must not write into the tree. `make bench-perf-check` clears it. The weekly scheduled job sets it through `make bench-perf` and offers the record as a pull request. `make bench-mobile` sets it for `perf-mobile.spec.ts` too. The `bench-record`/`bench-capture` targets need no switch, since running one means recording. |
 | `MARGINCE_BENCH_DAILY_SCALE` | `1` | `make bench-daily` | multiplies every count in the daily-use test data. It is a positive number; `0.05` suits a development run. A value other than `1` writes the record to the git-ignored `docs/reference/perfbench/dev/`, marked `development scale N`. `make perfdoc` never reads that folder, so the record never passes as the mid-market tier. A value that is not a positive number fails the bench. |
-| `MARGINCE_HOME` | — | desktop launcher | sets the installation folder the launcher works from. Unset, it uses the folder of the running program, which is where the launcher sits inside a shipped folder. To set it lets a dev stack run from a staging tree that is not shipped. Everything else the launcher touches comes from it: `data/` with the database and the blobs, `margince.yaml`, `margince.env`, and the `runtime/` that can be replaced. |
 
 ### Broker upstream preferences
 

@@ -197,13 +197,13 @@ test-extensions: composition ## Every enabled extension's own test lane (each un
 
 build: composition ## Compile every package (composed workspace), host AND windows/amd64
 	$(GOWORK_COMPOSED) $(GO) build ./...
-	# The same tree for Windows, because the desktop bundle ships THESE binaries
-	# there — `api`, `worker` and `migrate` are the server's, unmodified, and a
-	# folder a Windows user runs is only as portable as they are.
+	# The same tree for Windows, so the packages' Windows halves keep compiling.
+	# Whether the backend should still build for Windows at all, now that no
+	# bundle ships there, is open as issue #9056.
 	#
 	# Without this the gate compiles the host GOOS only, so one Unix-only symbol
-	# in a backend package breaks that bundle and nothing says so until somebody
-	# builds it. That is not hypothetical: syscall.O_NOFOLLOW reached
+	# in a backend package breaks the Windows build and nothing says so until
+	# somebody builds it. That is not hypothetical: syscall.O_NOFOLLOW reached
 	# internal/compose and was found by a Windows build days later, not by a
 	# gate. It is the same argument the integration tag gets under `vet` below —
 	# type-checking a lane the gate otherwise never compiles costs seconds
