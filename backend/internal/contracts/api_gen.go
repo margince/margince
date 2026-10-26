@@ -53430,6 +53430,9 @@ type User struct {
 	// Roles This member's assigned system role keys. Present ONLY for an admin caller — the roster is readable by every authenticated member (it feeds the share/assignee pickers), and a rep has no business enumerating who holds `admin`. Normally exactly one key: `inviteUser` assigns one and `changeUserRole` replaces the whole set with one. Clients that render a single current role must still handle the empty and multi-key cases. Deliberately absent on `MeResponse.user`, whose sibling `MeResponse.roles` is the one authority for the caller's own roles — the same fact spelled twice could disagree.
 	Roles *[]string `json:"roles,omitempty"`
 
+	// ServiceExtension The extension unit this seat is the service member of: the identity that unit's scheduled feed runs as. Null for every other seat, including an AI agent seat, so a client tells the two apart by this field and not by `is_agent`. Present only for an admin caller, with `roles`.
+	ServiceExtension *string `json:"service_extension,omitempty"`
+
 	// Status `invited` is a seat that exists and has never been entered: the member holds a licensed seat and appears in the roster, but has set no password and can sign in by no method until they redeem their invitation link. Redeeming it makes them `active`, which is the only status that may sign in.
 	// An invited member counts against the licensed seat count, so an invitation that was sent to the wrong address is released by deactivating it.
 	Status UserStatus `json:"status"`

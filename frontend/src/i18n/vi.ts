@@ -1775,6 +1775,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.risk_verdict": "Kiểm tra rủi ro deal",
   "systemJob.routing_seed": "Thiết lập phân bổ",
   "systemJob.schedule_read": "Đọc lịch",
+  "systemJob.service_members": "Tạo thành viên dịch vụ",
   "systemJob.setup_token": "Token thiết lập",
   "systemJob.sign_in_policy_read": "Đọc chính sách đăng nhập",
   "systemJob.stage_evidence": "Bằng chứng giai đoạn deal",
@@ -11501,9 +11502,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "extAccess.nobodyReads":
     "Không vai trò nào có quyền đọc {object}, nên mọi thành viên sẽ thấy màn hình trống ở tiện ích này. Cấp quyền đọc cho ít nhất một vai trò bên dưới.",
   "extAccess.matrixName": "Quyền của các vai trò với {unit}",
-  "extGovernance.overwrite": "Ghi đè trường do người dùng sửa",
+  "extGovernance.overwrite": "Ghi đè trường do thành viên sửa",
   "extGovernance.overwriteHint":
-    "Tắt: tiện ích mở rộng này giữ nguyên trường công ty hoặc deal mà một người dùng đã sửa gần nhất và báo là đã giữ lại. Bật: nó thay thế trường đó.",
+    "Tắt: tiện ích mở rộng này giữ nguyên trường công ty hoặc deal mà một thành viên đã sửa gần nhất và báo là đã giữ lại. Bật: nó thay thế trường đó.",
   "extGovernance.readOnly": "Quản trị viên thay đổi cài đặt này.",
   "extGovernance.notSaved": "Chưa lưu được cài đặt.",
   "users.empty": "Chưa có thành viên nào.",
@@ -11595,6 +11596,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đây là danh tính trợ lý AI của công ty. Danh tính này không đăng nhập ở đâu, nên không ai mất quyền truy cập. Các tác vụ định kỳ của tiện ích mở rộng vẫn chạy, mỗi tác vụ hoạt động với danh tính riêng và thu thập dưới quyền của thành viên có kết nối đã tạo ra hồ sơ.",
   "users.agentSeat": "Trợ lý AI",
   "users.agentSeatRole": "Hoạt động qua passport, không theo vai trò",
+  "users.serviceMember": "Thành viên dịch vụ",
+  "users.serviceMemberFor": "Luồng dữ liệu của {extension}",
+  "users.serviceMemberRole": "Vai trò cố định: nhận dữ liệu",
+  "users.deactivateServiceMemberBody":
+    "Đây là danh tính mà luồng dữ liệu định kỳ của một tiện ích mở rộng chạy dưới. Danh tính này không đăng nhập ở đâu, nên không ai mất quyền truy cập. Khi vô hiệu hóa, luồng đó dừng cho đến khi bạn kích hoạt lại.",
   "users.roleLabel": "Vai trò",
   "users.inviteOpen": "Mời thành viên",
   "users.invite": "Mời",

@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 329 |
-| Columns | 3884 |
-| Foreign keys | 546 |
+| Tables | 331 |
+| Columns | 3898 |
+| Foreign keys | 547 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -39,13 +39,13 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 31 | 142 |
-| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 34 | 49 |
-| [`company`](contacts.md#company) | [contacts](contacts.md) | 44 | 47 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 32 | 142 |
+| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 35 | 49 |
+| [`company`](contacts.md#company) | [contacts](contacts.md) | 45 | 48 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 66 | 38 |
-| [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 27 |
+| [`deal`](deals.md#deal) | [deals](deals.md) | 44 | 27 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 40 | 18 |
-| [`project`](projects.md#project) | [projects](projects.md) | 23 | 12 |
+| [`project`](projects.md#project) | [projects](projects.md) | 24 | 12 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 10 |
 | [`team`](identity.md#team) | [identity](identity.md) | 6 | 9 |
 | [`passport`](identity.md#passport) | [identity](identity.md) | 11 | 8 |
@@ -102,9 +102,9 @@ erDiagram
 | [collections](collections.md) | 13 |
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
-| [compose](compose.md) | 43 |
+| [compose](compose.md) | 44 |
 | [consent](consent.md) | 20 |
-| [contacts](contacts.md) | 48 |
+| [contacts](contacts.md) | 49 |
 | [continuity](continuity.md) | 1 |
 | [contracts](contracts.md) | 1 |
 | [customfields](customfields.md) | 1 |
@@ -166,7 +166,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 31 | 142 |
+| [`app_user`](identity.md#app_user) | identity | 32 | 142 |
 | [`approval`](approvals.md#approval) | approvals | 35 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
@@ -222,7 +222,7 @@ erDiagram
 | [`communication_override`](consent.md#communication_override) | consent | 10 | 1 |
 | [`communication_review`](consent.md#communication_review) | consent | 10 | 2 |
 | [`communication_suppression`](consent.md#communication_suppression) | consent | 12 | 1 |
-| [`company`](contacts.md#company) | contacts | 44 | 47 |
+| [`company`](contacts.md#company) | contacts | 45 | 48 |
 | [`company_address_country`](contacts.md#company_address_country) | contacts | 3 | 0 |
 | [`company_brief`](compose.md#company_brief) | compose | 7 | 0 |
 | [`company_domain`](contacts.md#company_domain) | contacts | 11 | 0 |
@@ -233,6 +233,7 @@ erDiagram
 | [`company_fact_revision`](contacts.md#company_fact_revision) | contacts | 2 | 0 |
 | [`company_geocode_state`](contacts.md#company_geocode_state) | contacts | 5 | 0 |
 | [`company_growth_fit`](compose.md#company_growth_fit) | compose | 6 | 0 |
+| [`company_offered_value`](contacts.md#company_offered_value) | contacts | 5 | 0 |
 | [`company_profile_field`](contacts.md#company_profile_field) | contacts | 15 | 0 |
 | [`company_relationship_type`](contacts.md#company_relationship_type) | contacts | 9 | 0 |
 | [`company_scan`](compose.md#company_scan) | compose | 16 | 0 |
@@ -244,7 +245,7 @@ erDiagram
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 7 | 7 |
 | [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 10 | 0 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
-| [`contact`](contacts.md#contact) | contacts | 34 | 49 |
+| [`contact`](contacts.md#contact) | contacts | 35 | 49 |
 | [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 10 | 1 |
 | [`contact_address_country`](contacts.md#contact_address_country) | contacts | 3 | 0 |
 | [`contact_brief`](compose.md#contact_brief) | compose | 6 | 0 |
@@ -266,7 +267,7 @@ erDiagram
 | [`data_task_review`](platform.md#data_task_review) | platform | 6 | 0 |
 | [`data_task_run`](platform.md#data_task_run) | platform | 22 | 0 |
 | [`data_task_run_history`](platform.md#data_task_run_history) | platform | 5 | 0 |
-| [`deal`](deals.md#deal) | deals | 43 | 27 |
+| [`deal`](deals.md#deal) | deals | 44 | 27 |
 | [`deal_acquisition_source`](deals.md#deal_acquisition_source) | deals | 9 | 1 |
 | [`deal_correction`](deals.md#deal_correction) | deals | 18 | 0 |
 | [`deal_document_hide`](activities.md#deal_document_hide) | activities | 4 | 0 |
@@ -293,6 +294,7 @@ erDiagram
 | [`embedding`](search.md#embedding) | search | 7 | 0 |
 | [`erasure_suppression`](privacy.md#erasure_suppression) | privacy | 3 | 0 |
 | [`event_outbox`](platform.md#event_outbox) | platform | 6 | 0 |
+| [`extension_ingest_position`](compose.md#extension_ingest_position) | compose | 4 | 0 |
 | [`extension_ingest_refusal`](compose.md#extension_ingest_refusal) | compose | 6 | 0 |
 | [`extension_secret`](platform.md#extension_secret) | platform | 7 | 0 |
 | [`federated_identity`](identity.md#federated_identity) | identity | 6 | 0 |
@@ -362,7 +364,7 @@ erDiagram
 | [`privacy_notice_case`](consent.md#privacy_notice_case) | consent | 18 | 0 |
 | [`privacy_request_proof`](consent.md#privacy_request_proof) | consent | 15 | 0 |
 | [`product`](deals.md#product) | deals | 18 | 1 |
-| [`project`](projects.md#project) | projects | 23 | 12 |
+| [`project`](projects.md#project) | projects | 24 | 12 |
 | [`project_health_assessment`](projects.md#project_health_assessment) | projects | 10 | 1 |
 | [`project_phase_history`](projects.md#project_phase_history) | projects | 8 | 0 |
 | [`provider_applied_field`](contacts.md#provider_applied_field) | contacts | 10 | 0 |

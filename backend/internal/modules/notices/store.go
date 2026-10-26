@@ -185,9 +185,6 @@ func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[str
 // wants nothing else, and widening it would make four call sites carry a value
 // none of them reads. The coach path does read it: it answers 201 with the
 // notice, and the created_at on that answer has to be the row's own.
-//
-// The bool says whether this call wrote the row; false is a replay that answered
-// the notice already standing.
 func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evidence map[string]any) (Notice, bool, error) {
 	if in.Kind == "" || in.Subject == "" {
 		return Notice{}, false, errors.New("notices: a notice names its kind and its subject")

@@ -67,33 +67,74 @@ func (s *Service) DeclareServiceMember(ctx context.Context, actor Identity, in S
 		if err := lockAuthorization(ctx, tx); err != nil {
 			return err
 		}
-		roleID, err := EnsureServiceIngestRole(ctx, tx)
-		if err != nil {
-			return err
-		}
-		member = ids.From[ids.UserKind](ids.NewV7())
-		address := fmt.Sprintf("service-%s@%s", member, serviceMemberEmailDomain)
-		if _, err := tx.Exec(ctx,
-			`INSERT INTO app_user (id, email, display_name, is_agent, service_extension, email_domain_folded)
-			 VALUES ($1, $2, $3, true, $4, $5)`,
-			member, address, in.DisplayName, in.Extension, owndomain.StoredOfAddress(address)); err != nil {
-			return err
-		}
-		if _, err := tx.Exec(ctx,
-			`INSERT INTO role_assignment (role_id, user_id) VALUES ($1, $2)`,
-			roleID, member); err != nil {
-			return err
-		}
-		_, err = storekit.Audit(ctx, tx, "create", "user", member.UUID, nil, map[string]any{
-			"service_extension": in.Extension, roleEntity: roleServiceIngest,
-			userAuditKeyStatus: userStatusActive,
-		})
+		var err error
+		member, err = insertServiceMember(ctx, tx, in)
 		return err
 	})
 	if err != nil {
 		return ids.UserID{}, err
 	}
 	return member, nil
+}
+
+// insertServiceMember writes the member, its role assignment and the audit row,
+// inside the caller's transaction and under its authorization lock.
+func insertServiceMember(ctx context.Context, tx pgx.Tx, in ServiceMemberInput) (ids.UserID, error) {
+	roleID, err := EnsureServiceIngestRole(ctx, tx)
+	if err != nil {
+		return ids.UserID{}, err
+	}
+	member := ids.From[ids.UserKind](ids.NewV7())
+	address := fmt.Sprintf("service-%s@%s", member, serviceMemberEmailDomain)
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO app_user (id, email, display_name, is_agent, service_extension, email_domain_folded)
+		 VALUES ($1, $2, $3, true, $4, $5)`,
+		member, address, in.DisplayName, in.Extension, owndomain.StoredOfAddress(address)); err != nil {
+		return ids.UserID{}, err
+	}
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO role_assignment (role_id, user_id) VALUES ($1, $2)`,
+		roleID, member); err != nil {
+		return ids.UserID{}, err
+	}
+	_, err = storekit.Audit(ctx, tx, "create", "user", member.UUID, nil, map[string]any{
+		"service_extension": in.Extension, roleEntity: roleServiceIngest,
+		userAuditKeyStatus: userStatusActive,
+	})
+	return member, err
+}
+
+// EnsureServiceMembers gives each unit named in want its service member when it
+// has never had one, and answers how many it made. It is the boot-time twin of
+// DeclareServiceMember, run by the system, never by an agent.
+//
+// A unit that already has a member row is left alone, archived or deactivated
+// included. An admin who retired a feed's member meant it. A boot must not
+// undo that.
+func (s *Service) EnsureServiceMembers(ctx context.Context, want []ServiceMemberInput) (int, error) {
+	made := 0
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
+		for _, in := range want {
+			var has bool
+			if err := tx.QueryRow(ctx,
+				`SELECT EXISTS (SELECT 1 FROM app_user WHERE service_extension = $1)`,
+				in.Extension).Scan(&has); err != nil {
+				return err
+			}
+			if has {
+				continue
+			}
+			if _, err := insertServiceMember(ctx, tx, in); err != nil {
+				return err
+			}
+			made++
+		}
+		return nil
+	})
+	return made, err
 }
 
 // ArchiveServiceMember retires a service member, the only way one leaves. The

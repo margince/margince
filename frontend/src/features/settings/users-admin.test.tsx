@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { en } from "../../i18n/en";
 import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
@@ -251,6 +251,70 @@ describe("UsersAdminCard", () => {
     expect(within(dialog).queryByText(/signed out everywhere/i)).toBeNull();
     // The claim this screen used to make, and the one an operator would act on.
     expect(within(dialog).queryByText(/stops every job/i)).toBeNull();
+  });
+
+  // A service member is an agent row too. The screen has to say which kind
+  // it is looking at and which extension's feed the seat runs.
+  describe("a service member", () => {
+    const SERVICE = {
+      id: "u-feed",
+      email: "service-feed@members.invalid",
+      display_name: "Openchannel feed",
+      status: "active" as const,
+      is_agent: true,
+      service_extension: "openchannel",
+      roles: ["service_ingest"],
+      allowed_actions: ["deactivate" as const],
+    };
+    beforeEach(() => {
+      ROSTER.data.push(SERVICE);
+    });
+    afterEach(() => {
+      ROSTER.data.splice(ROSTER.data.indexOf(SERVICE), 1);
+    });
+
+    it("is labelled as a service member of its extension, not as an agent", async () => {
+      vi.stubGlobal("fetch", backend([]));
+      render(<UsersAdminCard />);
+      await waitFor(() =>
+        expect(screen.getByText("Openchannel feed")).toBeTruthy(),
+      );
+
+      const row = rowFor("Openchannel feed");
+      expect(within(row).getByText("Service member")).toBeTruthy();
+      expect(within(row).queryByText("Agent")).toBeNull();
+      expect(within(row).getByText("Feed of openchannel")).toBeTruthy();
+      expect(within(row).queryByText(/members\.invalid/)).toBeNull();
+      expect(within(row).getByText(/fixed role/i)).toBeTruthy();
+    });
+
+    it("deactivates through the deactivate seam and says the feed stops", async () => {
+      const user = userEvent.setup();
+      const calls: { method: string; url: string; body?: unknown }[] = [];
+      vi.stubGlobal("fetch", backend(calls));
+      render(<UsersAdminCard />);
+      await waitFor(() =>
+        expect(screen.getByText("Openchannel feed")).toBeTruthy(),
+      );
+
+      await user.click(
+        (await rowMenu(user, "Openchannel feed")).getByText("Deactivate"),
+      );
+      const dialog = await screen.findByRole("dialog");
+      expect(within(dialog).getByText(/stops that feed/i)).toBeTruthy();
+      await user.click(
+        within(dialog).getByRole("button", { name: /deactivate/i }),
+      );
+
+      await waitFor(() =>
+        expect(
+          calls.some(
+            (c) =>
+              c.method === "POST" && c.url.includes("/users/u-feed/deactivate"),
+          ),
+        ).toBe(true),
+      );
+    });
   });
 
   // The invite form is a dialog the row's verb opens — three inputs, a team

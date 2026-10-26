@@ -401,8 +401,7 @@ checked against the full budget for names, so a name a unit takes today stays go
   becomes of it.
 
   A record can also be a company or a deal, matched by the provider's id and written through the
-  product's own stores. See
-  [land-companies-and-deals-from-an-extension.md](../how-to/land-companies-and-deals-from-an-extension.md).
+  product's own stores. See [land-companies-and-deals-from-an-extension.md](../how-to/land-companies-and-deals-from-an-extension.md).
 
   It sits on `Runtime` instead of `Tx`, the other way from where the core port sits, because the pipeline
   opens its own transaction. To call it from inside a transaction of the unit would take a second

@@ -38852,6 +38852,8 @@ export interface components {
              * @default false
              */
             is_agent: boolean;
+            /** @description The extension unit this seat is the service member of: the identity that unit's scheduled feed runs as. Null for every other seat, including an AI agent seat, so a client tells the two apart by this field and not by `is_agent`. Present only for an admin caller, with `roles`. */
+            service_extension?: string | null;
             /** @description Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind. */
             assignable?: boolean;
             /** @description This member's assigned system role keys. Present ONLY for an admin caller — the roster is readable by every authenticated member (it feeds the share/assignee pickers), and a rep has no business enumerating who holds `admin`. Normally exactly one key: `inviteUser` assigns one and `changeUserRole` replaces the whole set with one. Clients that render a single current role must still handle the empty and multi-key cases. Deliberately absent on `MeResponse.user`, whose sibling `MeResponse.roles` is the one authority for the caller's own roles — the same fact spelled twice could disagree. */

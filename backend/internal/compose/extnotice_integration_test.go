@@ -5,9 +5,9 @@
 
 package compose
 
-// The notice door against a real database: who a notice reaches is decided at
-// send time from live rights, and the stored notice points at the record without
-// copying anything from it.
+// The notice door against a real database. Who a notice reaches is decided at
+// send time from live rights. The stored notice points at the record and copies
+// nothing from it.
 
 import (
 	"context"
@@ -19,9 +19,9 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// noticeWorld adds three colleagues to the read fixture: one who holds the
-// role and can open every deal, one who holds it and has left, and one who
-// holds it but cannot read deals at all.
+// noticeWorld adds three colleagues to the read fixture. One holds the role
+// and can open every deal. One holds it and has left. One holds it but cannot
+// read deals at all.
 type noticeWorld struct {
 	readWorld
 	reader, departed, blind ids.UUID

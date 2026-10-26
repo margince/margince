@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/contacts backend/internal/modules/deals backend/api/crm.yaml -->
 # Where a record keeps its id in an outside system
 
 A record that came from another system keeps that system's id on the record itself, next to the name of the system. A caller who holds the id can then find the record again. The rules a caller follows are in [rest-api.md](../reference/rest-api.md#an-id-from-your-system).

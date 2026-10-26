@@ -25,9 +25,8 @@ type RecordKind string
 // KindActivity is a captured interaction bound for the shared timeline.
 //
 // There is no lead kind. The sink's lead arm returns before the row is written
-// when a captured lead collides with an existing one. The natural key never
-// enters the table, so the collision restages on every poll. A kind whose
-// idempotency does not hold would offer a unit a guarantee this side cannot keep.
+// when a captured lead collides. The natural key never enters the table, so a
+// kind without idempotency would offer a guarantee this side cannot keep.
 const KindActivity RecordKind = "activity"
 
 // ActivityKindMessage is the timeline kind a message on a messaging channel
@@ -269,13 +268,11 @@ type Record struct {
 	KeyNamesAContact bool
 
 	// Activity is the record itself when it is an activity. A company or a deal
-	// arrives in its own field instead, and at most one of the three is set:
-	// Kind reads which.
+	// arrives in its own field instead. At most one of the three is set.
 	Activity ActivityFields
 
-	// Company and Deal carry the other two kinds. They are matched by the
-	// outside id this record's System and Key name, and they take no
-	// Counterparty, Addresses, Participants or ThreadKey.
+	// Company and Deal carry the other two kinds, matched by the outside id that
+	// System and Key name. They take no Counterparty, Addresses, Participants or ThreadKey.
 	Company *CompanyFields
 	Deal    *DealFields
 
@@ -459,15 +456,13 @@ type Result struct {
 	// on the participants" are different bugs, and Reason beside it cannot be
 	// grouped on because it is prose.
 	Refusal RecordRefusal
-	// Withheld names the fields of an accepted company or deal update that the
-	// core left as they were because a user last edited them (a deal's amount
-	// and currency are withheld together). Empty when the installation lets
-	// this unit overwrite such a field. It is not the Skipped disposition,
-	// which drops the whole record.
+	// Withheld names the fields of an accepted company or deal update left as
+	// they were because a user last edited them. A deal's amount and currency go
+	// together. Empty when the installation lets this unit overwrite them.
 	Withheld []string
-	// Reason says WHY, for the dispositions that are a refusal. It carries the
+	// Reason says why, for the dispositions that are a refusal. It carries the
 	// core's complaint about an unrepresentable record so a unit can log the
-	// same sentence it used to read off the error — and it is empty for an
+	// same sentence it used to read off the error. It is empty for an
 	// acceptance and for a deliberate skip, where there is nothing the unit
 	// could act on.
 	//

@@ -149,8 +149,8 @@ type Runtime interface {
 	// A restarted job reads it back with IngestPosition and carries on from it.
 	//
 	// The position is saved only after every record is answered. A record that
-	// fails ends the batch: the results so far come back with the error and the
-	// saved position does not move, so the next run offers the batch again and
+	// fails ends the batch. The results so far come back with the error and the
+	// saved position does not move. The next run offers the batch again, and
 	// the natural key makes the records already landed a no-op.
 	IngestBatch(ctx context.Context, on UserID, system SourceName, recs []Record, position BatchPosition) ([]Result, error)
 

@@ -14,9 +14,9 @@ import (
 )
 
 // IngestBatch lands the records one at a time through Ingest, then saves the
-// position. The save is a separate commit after the last record is answered, so
-// a stop in the middle leaves the old position and the next run offers the
-// batch again; the natural key makes that replay a no-op.
+// position. The save is a separate commit after the last record is answered.
+// A stop in the middle leaves the old position, so the next run offers the
+// batch again. The natural key makes that replay a no-op.
 //
 // A refusal ends the batch where it happened. The results answered so far come
 // back with the error and the position stays where it was.

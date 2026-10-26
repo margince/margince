@@ -222,7 +222,7 @@ var Country = config.DefineStored(config.Spec[string]{
 // the map reads false: the feed leaves what a user edited and reports it.
 //
 // Machinery-applied because the ingress landing reads it under the feed's own
-// service-member authority, which holds no installation_settings grant; the
+// service-member authority, which holds no installation_settings grant. The
 // value shapes how the write behaves and is answered to no one.
 var ExtensionOverwritesEditedFields = settings.Define[map[string]bool](
 	"identity.extension_overwrites_edited_fields", installationSettingsObject, installationAuditVerb, map[string]bool{}, nil,
@@ -279,10 +279,10 @@ func ExtensionSettingValuesOf(ctx context.Context, store *settings.Store) (map[s
 }
 
 // SetExtensionSettings saves one unit's governance switch and the given values
-// of its declared settings in one transaction, so a form is saved whole or not
-// at all. Every other unit's and setting's value stays as it was. An admin's
-// act alone. Each map is read under its write lock so two admins changing two
-// settings cannot lose one change.
+// of its declared settings in one transaction. A form is saved whole or not at
+// all. Every other value stays as it was. Only an admin may call it. Each
+// map is read under its write lock. Two admins changing two settings cannot
+// lose one change.
 func SetExtensionSettings(ctx context.Context, store *settings.Store, unit string, overwrites bool, changes map[string]string) error {
 	if err := auth.RequireAdmin(ctx); err != nil {
 		return err

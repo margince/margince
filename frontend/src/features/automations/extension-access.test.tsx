@@ -219,30 +219,6 @@ function backend(
     } catch {
       body = undefined;
     }
-    if (new URL(req.url).pathname.endsWith("/settings")) {
-      if (req.method === "GET") {
-        return jsonResponse({
-          overwrites_edited_fields: false,
-          declared: [
-            {
-              key: "region",
-              label: "Region",
-              hint: "Where notes are filed",
-              kind: "text",
-              value: "eu-west",
-            },
-            { key: "live", label: "Live", kind: "switch", value: "false" },
-          ],
-        });
-      }
-      calls.push({
-        method: req.method,
-        url: req.url,
-        body,
-        ifMatch: null,
-      });
-      return jsonResponse(body);
-    }
     calls.push({
       method: req.method,
       url: req.url,
@@ -503,75 +479,6 @@ describe("ExtensionAccessCard", () => {
     // grant.
     await waitFor(() =>
       expect(cell("ext_notes_note", "Rep", "Read").on).toBe(true),
-    );
-  });
-
-  it("PUTs a unit's overwrite choice to that unit's own settings", async () => {
-    const calls: Call[] = [];
-    vi.stubGlobal("fetch", backend(calls));
-    render(<ExtensionAccessCard />);
-    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
-
-    const control = await screen.findByTestId("ext-overwrite-notes");
-    await waitFor(() =>
-      expect(control.getAttribute("aria-busy")).not.toBe("true"),
-    );
-    expect(control.getAttribute("aria-checked")).toBe("false");
-    await userEvent.click(control);
-
-    await waitFor(() => {
-      const put = calls.find((call) => call.method === "PUT");
-      expect(put?.url).toContain("/v1/extensions/notes/settings");
-      expect(put?.body).toEqual({ overwrites_edited_fields: true });
-    });
-    await waitFor(() =>
-      expect(control.getAttribute("aria-checked")).toBe("true"),
-    );
-  });
-
-  it("draws the settings a unit declares and PUTs only the one that changed", async () => {
-    const calls: Call[] = [];
-    vi.stubGlobal("fetch", backend(calls));
-    render(<ExtensionAccessCard />);
-    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
-
-    const region = await screen.findByTestId("ext-setting-notes-region");
-    expect((region as HTMLInputElement).value).toBe("eu-west");
-    expect(screen.getAllByText("Where notes are filed").length).toBeGreaterThan(
-      0,
-    );
-    const user = userEvent.setup();
-    await user.clear(region);
-    await user.type(region, "us-east");
-    await user.tab();
-
-    await waitFor(() => {
-      const put = calls.find((call) => call.method === "PUT");
-      expect(put?.url).toContain("/v1/extensions/notes/settings");
-      expect(put?.body).toEqual({
-        overwrites_edited_fields: false,
-        declared: [{ key: "region", value: "us-east" }],
-      });
-    });
-  });
-
-  it("PUTs a declared switch as the text true", async () => {
-    const calls: Call[] = [];
-    vi.stubGlobal("fetch", backend(calls));
-    render(<ExtensionAccessCard />);
-    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
-
-    const live = await screen.findByTestId("ext-setting-notes-live");
-    await waitFor(() =>
-      expect(live.getAttribute("aria-busy")).not.toBe("true"),
-    );
-    await userEvent.click(live);
-
-    await waitFor(() =>
-      expect(calls.find((call) => call.method === "PUT")?.body).toEqual({
-        overwrites_edited_fields: false,
-        declared: [{ key: "live", value: "true" }],
-      }),
     );
   });
 

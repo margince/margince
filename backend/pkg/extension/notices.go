@@ -7,30 +7,30 @@ import "context"
 
 // NoticeRepo is the door a unit sends a notice through: `tx.Core().Notices().Send(…)`.
 //
-// A unit names WHO and WHAT, never WHERE. It passes no address and no channel:
+// A unit names who and what, never where. It passes no address and no channel:
 // the core finds the member and decides how they are reached, from their own
 // notification settings. A unit that held an address could mail anybody it
-// pleased, which is a spam door with the product's name on it.
+// pleased. That is a spam door with the product's name on it.
 type NoticeRepo interface {
 	// Send raises one notice about a record and answers how many members it newly told.
 	//
 	// The recipient is resolved when the call is made, against live rights. A
 	// member who has left, was erased, or cannot open the record is left out,
-	// so zero is a normal answer and not an error. A record the CALLER cannot
+	// so zero is a normal answer and not an error. A record the caller cannot
 	// see answers ErrNotFound. A unit that sends too often answers
 	// ErrRateLimited, and the same call works later.
 	Send(ctx context.Context, in NoticeRequest) (NoticeSent, error)
 }
 
-// NoticeRequest is one notice. Name exactly one of Member and Role.
+// NoticeRequest is one notice. Name one of Member and Role, not both.
 type NoticeRequest struct {
 	// Member is a user id. Role is a role key, and reaches every live member
 	// who holds it.
 	Member string
 	Role   string
 	// Record is what the notice is about. The body the reader sees is a link to
-	// it, so what a reader may see of the record is decided when they open it,
-	// and no personal data is copied into the notice.
+	// it. What a reader may see of the record is decided when they open it.
+	// No personal data is copied into the notice.
 	Record RecordRef
 	// Subject is one short line of the unit's own words.
 	Subject string

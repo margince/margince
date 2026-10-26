@@ -52833,6 +52833,13 @@ components:
             An invited member counts against the licensed seat count, so an invitation that
             was sent to the wrong address is released by deactivating it.
         is_agent: { type: boolean, default: false, description: First-party Agent Runner identity vs a human seat. }
+        service_extension:
+          type: [string, 'null']
+          description: >
+            The extension unit this seat is the service member of: the identity that unit's scheduled
+            feed runs as. Null for every other seat, including an AI agent seat, so a client tells the
+            two apart by this field and not by `is_agent`. Present only for an admin caller, with
+            `roles`.
         assignable:
           type: boolean
           description: >

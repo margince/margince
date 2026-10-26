@@ -108,8 +108,8 @@ func TestAFeedWithholdsADealAmountAndItsCurrencyTogether(t *testing.T) {
 	}
 }
 
-// The feed overwrote the amount after a user set the figure, so the amount's
-// last writer is the feed while the currency's is still the user.
+// The feed overwrote the amount after a user set the figure. The amount's
+// last writer is the feed, and the currency's is still the user.
 func TestAFeedWithholdsTheAmountWhenTheUserLastWroteOnlyTheCurrency(t *testing.T) {
 	e := setupCRMIngress(t)
 	made := e.mustIngest(t, e.dealRecord("opp-1", nil))

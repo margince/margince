@@ -4,7 +4,7 @@
 package extension
 
 // The settings a unit declares as data. The core draws them on the unit's card
-// of the Extensions page, keeps the values and audits every change, so a unit
+// of the Extensions page, keeps the values and audits every change. A unit
 // ships no settings screen of its own.
 
 import (

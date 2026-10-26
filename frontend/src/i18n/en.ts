@@ -1771,6 +1771,7 @@ export const en = {
   "systemJob.risk_verdict": "Deal risk check",
   "systemJob.routing_seed": "Routing setup",
   "systemJob.schedule_read": "Schedule read",
+  "systemJob.service_members": "Service members made",
   "systemJob.setup_token": "Setup token",
   "systemJob.sign_in_policy_read": "Sign-in policy read",
   "systemJob.stage_evidence": "Deal stage evidence",
@@ -11866,9 +11867,9 @@ export const en = {
   "extAccess.nobodyReads":
     "No role has read access to {object}, so every member sees an empty screen for this extension. Grant read to at least one role below.",
   "extAccess.matrixName": "Role access to {unit}",
-  "extGovernance.overwrite": "Overwrite fields a user edited",
+  "extGovernance.overwrite": "Overwrite fields a member edited",
   "extGovernance.overwriteHint":
-    "Off: this extension leaves a company or deal field that a user last edited as it is, and reports it as withheld. On: it replaces that field.",
+    "Off: this extension leaves a company or deal field that a member last edited as it is, and reports it as withheld. On: it replaces that field.",
   "extGovernance.readOnly": "An admin changes this setting.",
   "extGovernance.notSaved": "Setting was not saved.",
   "users.empty": "No members yet.",
@@ -11959,6 +11960,11 @@ export const en = {
     "This is the company’s agent identity. It signs in nowhere, so no person loses access. Scheduled extension jobs keep running, each acting as itself and capturing under the authority of the member whose connection produced the record.",
   "users.agentSeat": "Agent",
   "users.agentSeatRole": "Acts through a passport, not a role",
+  "users.serviceMember": "Service member",
+  "users.serviceMemberFor": "Feed of {extension}",
+  "users.serviceMemberRole": "Fixed role: feed intake",
+  "users.deactivateServiceMemberBody":
+    "This is the identity an extension’s scheduled feed runs as. It signs in nowhere, so nobody loses access. Deactivating it stops that feed until you reactivate it.",
   "users.roleLabel": "Role",
   "users.inviteOpen": "Invite member",
   "users.invite": "Invite",

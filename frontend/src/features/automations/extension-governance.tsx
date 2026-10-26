@@ -14,11 +14,11 @@ import {
   useUpdateExtensionSettings,
 } from "../../lib/extensions.queries";
 
-// What the core does with one unit's feed. Today that is one decision: when a
+// What the core does with one unit's feed. Today that is one decision. When a
 // feed offers a value for a field a user last edited, it leaves the field
 // (off, the default) or overwrites it (on). The server lets only an admin
 // change it, so the switch is offered to admins and read-only to the rest.
-// Below it come the settings the unit declares as data; the server sends those
+// Below it come the settings the unit declares as data. The server sends those
 // to an admin only, so a reader who is not one sees none.
 export function UnitGovernance({
   unit,

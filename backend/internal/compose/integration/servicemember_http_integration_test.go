@@ -9,15 +9,21 @@ package integration
 //
 // What an operator relies on, one test each. Nobody can sign in as the member.
 // It is free of the seat limit and holds only the landing grants. Only an installation admin
-// may make or retire one. It is archived and never deleted.
+// may make or retire one. It is archived and never deleted. A unit that lands
+// records gets its member at boot, once, and a boot never brings back one an
+// admin retired.
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func declareServiceMember(t *testing.T, e *apptest.AppEnv, extension string) userWire {
@@ -138,5 +144,62 @@ func TestArchiveServiceMemberRefusesAnOrdinaryMember(t *testing.T) {
 	}
 	if status := e.Call(t, "POST", "/v1/users/service-members/"+me.User.ID+"/archive", nil, nil, nil); status != http.StatusNotFound {
 		t.Errorf("archiving a colleague through the service-member route -> %d, want 404", status)
+	}
+}
+
+func TestAUnitThatLandsRecordsGetsItsServiceMemberAtBootOnce(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	e.DescribeCompany(t)
+	ctx := context.Background()
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	lands := extension.Extension{Name: "feeder", Ingress: []extension.IngressSource{
+		{System: "feeder", Lands: []extension.RecordKind{extension.KindActivity}},
+	}}
+	quiet := extension.Extension{Name: "quiet"}
+	boot := func() {
+		t.Helper()
+		if err := compose.EnsureExtensionServiceMembers(ctx, e.Pool, logger, []extension.Extension{lands, quiet}); err != nil {
+			t.Fatalf("EnsureExtensionServiceMembers: %v", err)
+		}
+	}
+	members := func(unit string) int {
+		t.Helper()
+		var n int
+		if err := e.Owner.QueryRow(ctx,
+			`SELECT count(*) FROM app_user WHERE service_extension = $1`, unit).Scan(&n); err != nil {
+			t.Fatalf("counting the members of %s: %v", unit, err)
+		}
+		return n
+	}
+
+	boot()
+	boot()
+	if got := members("feeder"); got != 1 {
+		t.Fatalf("a unit that lands records has %d service members after two boots, want 1", got)
+	}
+	if got := members("quiet"); got != 0 {
+		t.Errorf("a unit that lands nothing has %d service members, want none", got)
+	}
+	var isAgent bool
+	var role string
+	if err := e.Owner.QueryRow(ctx, `
+		SELECT u.is_agent, r.key FROM app_user u
+		JOIN role_assignment ra ON ra.user_id = u.id JOIN role r ON r.id = ra.role_id
+		WHERE u.service_extension = 'feeder'`).Scan(&isAgent, &role); err != nil {
+		t.Fatalf("reading the made member: %v", err)
+	}
+	if !isAgent || role != "service_ingest" {
+		t.Errorf("made member: is_agent=%v role=%q, want an agent row holding service_ingest", isAgent, role)
+	}
+
+	// An admin retired it; the next boot must not bring it back.
+	if _, err := e.Owner.Exec(ctx,
+		`UPDATE app_user SET status = 'deactivated', archived_at = now() WHERE service_extension = 'feeder'`); err != nil {
+		t.Fatalf("archiving the member: %v", err)
+	}
+	boot()
+	if got := members("feeder"); got != 1 {
+		t.Errorf("a boot after the admin archived the member left %d rows, want the one archived row", got)
 	}
 }

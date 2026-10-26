@@ -12,7 +12,7 @@ package compose
 // An update writes the fields the unit offers, except the ones a user last
 // edited: humanprecedence.go answers that from the audit trail. Whether a unit
 // may overwrite those is the installation's per-unit setting, read before the
-// check; with it off, the withheld fields come back in the Result. Stage moves
+// check. With it off, the withheld fields come back in the Result. Stage moves
 // are the one change a unit makes without that check.
 
 import (
@@ -201,7 +201,7 @@ func (l crmLanding) companyByDomain(ctx context.Context, domain string) (ids.UUI
 }
 
 // fillCompany is the edit of the fields the unit offers that differ from the
-// record, less the ones a user owns; those come back as the withheld names.
+// record, less the ones a user owns. Those come back as the withheld names.
 func (l crmLanding) fillCompany(ctx context.Context, id ids.UUID, f extension.CompanyFields) (contacts.UpdateCompanyInput, []string, error) {
 	current, err := l.contacts.GetCompany(ctx, ids.From[ids.CompanyKind](id), storekit.LiveOnly)
 	if err != nil {
@@ -306,7 +306,7 @@ func (l crmLanding) deal(ctx context.Context, key string, f extension.DealFields
 }
 
 // moveDeal writes the value fields the unit offers that differ from the deal,
-// less the ones a user owns, and moves the stage when it differs.
+// less the ones a user owns. It moves the stage when the stage differs.
 func (l crmLanding) moveDeal(ctx context.Context, id, stage ids.UUID, f extension.DealFields) ([]string, error) {
 	dealID := ids.From[ids.DealKind](id)
 	current, err := l.deals.GetDeal(ctx, dealID, storekit.LiveOnly)
@@ -325,10 +325,10 @@ func (l crmLanding) moveDeal(ctx context.Context, id, stage ids.UUID, f extensio
 	if currency != nil {
 		patch[dealTargetCurrency] = *currency
 	}
-	// An amount and its currency are one figure: writing the half a user did
+	// An amount and its currency are one figure. Writing the half a user did
 	// not edit would price their number in another currency. So the half the
-	// unit did not offer is asked about too, as a null no stored value equals,
-	// and a user's edit to either half withholds both.
+	// unit did not offer is asked about too, as a null no stored value equals.
+	// A user's edit to either half withholds both.
 	if len(patch) > 0 {
 		for _, key := range []string{acceptFieldAmountMinor, dealTargetCurrency} {
 			if _, offered := patch[key]; !offered {

@@ -5,7 +5,7 @@ package compose
 
 // The core's half of extension.NoticeRepo: a unit tells a member about a record
 // and the core decides who that is and how they are reached. The write is the
-// notices store's own CreateTx on the unit's transaction, so the notice, its
+// notices store's own CreateTx on the unit's transaction. The notice, its
 // audit row and its event commit with the unit's own rows or not at all.
 
 import (
@@ -27,7 +27,7 @@ import (
 
 // extensionNoticesPerMinute is how many notices one unit may raise in a minute,
 // across all its invocations. A role can reach many members, so the count is per
-// call and not per recipient: the bound is on how often a unit may speak.
+// call and not per recipient. The bound is on how often a unit may speak.
 const extensionNoticesPerMinute = 60
 
 // extensionNotices meters sends per unit. FailClosed: the bound exists to stop
@@ -84,7 +84,7 @@ func (d extensionNoticeDoor) Send(ctx context.Context, in extension.NoticeReques
 	}
 	record, _ := ids.Parse(in.Record.ID)
 	// A caller without read on the type is told ErrNotFound, like one who cannot
-	// see the row: either way the unit learns nothing about the record.
+	// see the row. Either way the unit learns nothing about the record.
 	seen, err := auth.VisibleTo(ctx, d.core.tx, in.Record.Type, record)
 	if err != nil {
 		return extension.NoticeSent{}, portRefusal(err)
@@ -117,7 +117,7 @@ func (d extensionNoticeDoor) deliver(ctx context.Context, in extension.NoticeReq
 		if !seat.Permissions.Allows(in.Record.Type, principal.ActionRead) {
 			continue
 		}
-		// The recipient's own row scope, judged now: a notice is a pointer, and
+		// The recipient's own row scope, judged now. A notice is a pointer, and
 		// a pointer to a record its reader cannot open tells them it exists.
 		if err := auth.EnsureVisibleLive(principal.WithActor(ctx, seat), d.core.tx, in.Record.Type, record); err != nil {
 			continue

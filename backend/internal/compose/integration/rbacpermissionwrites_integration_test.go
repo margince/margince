@@ -432,7 +432,7 @@ var bootstrapUnseededRole = regexp.MustCompile(`(?i)\bkey\s*=\s*'service_ingest'
 
 // withoutRolesTheBootstrapDoesNotSeed drops the statements that write only the
 // service_ingest role. That role does not exist until a unit declares a service
-// member, so the seeded matrix has no entry for it and a rewind of the seeded
+// member. The seeded matrix has no entry for it, so a rewind of the seeded
 // roles has nothing to converge back onto. Every other role's write is still
 // replayed.
 func withoutRolesTheBootstrapDoesNotSeed(statements []string) []string {

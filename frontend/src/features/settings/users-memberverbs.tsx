@@ -171,9 +171,12 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
             what does not stop. */}
         <p>
           {t(
-            member.is_agent
-              ? "users.deactivateAgentConfirmBody"
-              : "users.deactivateConfirmBody",
+            // Order matters: a service member is also an agent row.
+            member.service_extension
+              ? "users.deactivateServiceMemberBody"
+              : member.is_agent
+                ? "users.deactivateAgentConfirmBody"
+                : "users.deactivateConfirmBody",
           )}
         </p>
         <HandoverSummary member={member} enabled={confirmOff && canHandOver} />

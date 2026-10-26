@@ -64,8 +64,8 @@ const (
 	ClassApprovalPending = KindApprovalPending
 
 	// KindExtension is a notice an extension raised. It rides the system class,
-	// which is delivered in the app and can be switched off: a unit's notice is
-	// housekeeping a reader may mute, and a class of its own would need a row on
+	// which is delivered in the app and can be switched off. A unit's notice is
+	// housekeeping a reader may mute. A class of its own would need a row on
 	// every settings screen before any unit had earned one.
 	KindExtension = "extension_notice"
 )
