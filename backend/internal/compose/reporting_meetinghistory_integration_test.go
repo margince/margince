@@ -87,7 +87,8 @@ func TestReportingMixedMeetingHistoryPreservesRecordedCredit(t *testing.T) {
 // A captured meeting is credited by who took part, not by whose calendar it
 // came from. Rep3 imported it and never answered the invitation; Rep1
 // organized it and Rep2 accepted. Each of the two counts it once, and their
-// team counts it once.
+// team counts it once. An organizer who declined their own meeting is not
+// credited with it.
 func TestReportingMeetingsHeldCreditsEveryAttendeeAndCountsATeamOnce(t *testing.T) {
 	e := setupForecast(t)
 	exec := func(t *testing.T, sql string, args ...any) {
@@ -132,6 +133,18 @@ func TestReportingMeetingsHeldCreditsEveryAttendeeAndCountsATeamOnce(t *testing.
 		exec(t, `INSERT INTO activity_participant (activity_id, role, address, user_id, response) VALUES ($1, $2, $3, $4, $5)`,
 			meeting.Id, guest.role, guest.address, guest.seat, guest.response)
 	}
+	declined := "Declined by its organizer"
+	skipped, _, err := store.LogActivity(human, activities.LogActivityInput{
+		Kind: "meeting", Subject: &declined, OccurredAt: &start, MeetingStatus: &held, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: ids.UUID(customer.Id)}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	exec(t, `UPDATE activity SET captured_by = 'connector:google_calendar', host_user_id = $2 WHERE id = $1`, skipped.Id, e.Rep3)
+	exec(t, `UPDATE activity_meeting_history SET host_id_at_change = $2 WHERE activity_id = $1`, skipped.Id, e.Rep3)
+	exec(t, `INSERT INTO activity_participant (activity_id, role, address, user_id, response) VALUES ($1, 'organizer', 'rep1@forecast.test', $2, 'declined')`,
+		skipped.Id, e.Rep1)
 	service := newReportingService(e.Pool, clock)
 	for _, tc := range []struct {
 		name  string

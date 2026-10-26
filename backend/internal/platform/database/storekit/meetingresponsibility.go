@@ -124,11 +124,15 @@ func meetingCreditSQL(meeting, host, seat string) string {
 		meeting, seat, creditedAttendanceSQL("attending", meeting), host)
 }
 
-// creditedAttendanceSQL is one participant row that proves its seat took part:
-// the organizer, or an attendee who accepted, or any attendee on a meeting a
-// human logged, where the row is the logger's own statement.
+// creditedAttendanceSQL is one participant row that proves its seat took part.
+// On a meeting a human logged, any organizer or attendee row counts: it is the
+// logger's own statement. On a calendar's meeting, an attendee counts once they
+// accepted, and the organizer unless they answered otherwise; a calendar that
+// lists the organizer apart from the guests states no answer for them.
 func creditedAttendanceSQL(participant, meeting string) string {
-	return fmt.Sprintf(`(%[1]s.role = 'organizer'
-	     OR (%[1]s.role = 'attendee' AND (%[1]s.response = 'accepted' OR NOT starts_with(%[2]s.captured_by, 'connector:'))))
+	return fmt.Sprintf(`%[1]s.role IN ('organizer', 'attendee')
+	   AND (NOT starts_with(%[2]s.captured_by, 'connector:')
+	     OR %[1]s.response = 'accepted'
+	     OR (%[1]s.role = 'organizer' AND %[1]s.response IS NULL))
 	   AND %[3]s`, participant, meeting, auth.ParticipantStandsSQL(participant, meeting))
 }
