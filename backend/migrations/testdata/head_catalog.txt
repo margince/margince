@@ -3574,7 +3574,7 @@ public.deal.deal_acquisition_source_fkey FOREIGN KEY (acquisition_source) REFERE
 public.deal.deal_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
 public.deal.deal_arr_source_same_deal FOREIGN KEY (id, arr_source_offer_id) REFERENCES offer(deal_id, id) ON DELETE SET NULL
 public.deal.deal_closed_at CHECK (((status = 'open'::text) OR (closed_at IS NOT NULL)))
-public.deal.deal_closed_fx CHECK (((status = 'open'::text) OR (amount_minor IS NULL) OR (fx_rate_to_base IS NOT NULL)))
+public.deal.deal_closed_fx CHECK (((status = 'open'::text) OR (amount_minor IS NULL) OR ((fx_rate_to_base IS NOT NULL) AND (amount_minor_base IS NOT NULL))))
 public.deal.deal_commercial_motion_check CHECK (((commercial_motion IS NULL) OR (commercial_motion = ANY (ARRAY['new_business'::text, 'renewal'::text, 'upsell'::text, 'cross_sell'::text, 'expansion'::text, 'existing_business'::text]))))
 public.deal.deal_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL (company_id)
 public.deal.deal_currency_check CHECK (((currency IS NULL) OR (currency ~ '^[A-Z]{3}$'::text)))
@@ -3596,7 +3596,6 @@ public.deal.deal_priority_check CHECK (((priority IS NULL) OR (priority = ANY (A
 public.deal.deal_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE SET NULL (project_id)
 public.deal.deal_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.deal.deal_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
-public.deal.deal_stage_id_fkey FOREIGN KEY (stage_id) REFERENCES stage(id) ON DELETE RESTRICT
 public.deal.deal_stage_in_pipeline FOREIGN KEY (stage_id, pipeline_id) REFERENCES stage(id, pipeline_id)
 public.deal.deal_status_check CHECK ((status = ANY (ARRAY['open'::text, 'won'::text, 'lost'::text])))
 public.deal.deal_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
