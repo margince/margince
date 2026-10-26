@@ -51,20 +51,22 @@ func DataTaskExecute(ctx context.Context, pool *pgxpool.Pool, maxBatches int) (D
 	return recountDataTasks(ctx, pool, dataTaskCatalog(pool, time.Now), progress)
 }
 
-// recountDataTasks asks each finished step's own estimate what is still in its
-// scope. A row a step saw and left, such as mail with no stored original,
-// still counts there.
+// recountDataTasks asks each finished step marked EmptyWhenDone what its own
+// estimate still counts. A row such a step saw and left, such as mail with no
+// stored original, still counts there.
 func recountDataTasks(ctx context.Context, pool *pgxpool.Pool, catalog []datatask.Task, progress []datatask.Progress) (DataTaskRun, error) {
 	run := DataTaskRun{Progress: progress, LeftInScope: map[string]int64{}, Required: map[string]int{}}
-	done := map[string]bool{}
-	for _, p := range progress {
-		done[p.TaskID+"/"+p.Step] = p.Status == datatask.Done && p.BlockedReason == ""
-	}
 	for _, task := range catalog {
 		run.Required[task.ID] = task.Version
+	}
+	done := map[string]bool{}
+	for _, p := range progress {
+		done[p.TaskID+"/"+p.Step] = current(p, run.Required) && p.Status == datatask.Done && p.BlockedReason == ""
+	}
+	for _, task := range catalog {
 		for _, step := range task.Steps {
 			name := task.ID + "/" + step.Name
-			if !done[name] {
+			if !step.EmptyWhenDone || !done[name] {
 				continue
 			}
 			var left int64
@@ -153,10 +155,12 @@ func DataTaskVerdictOf(run DataTaskRun) DataTaskVerdict {
 	v := DataTaskVerdict{Release: buildinfo.ReleaseVersion, Required: run.Required, LeftInScope: run.LeftInScope}
 	for _, p := range run.Progress {
 		step := p.TaskID + "/" + p.Step
-		if needs, ok := run.Required[p.TaskID]; ok && p.TaskVersion < needs {
-			step += fmt.Sprintf(" (stored v%d, needs v%d)", p.TaskVersion, needs)
+		if !current(p, run.Required) {
+			step += fmt.Sprintf(" (stored v%d, needs v%d)", p.TaskVersion, run.Required[p.TaskID])
 		}
 		switch {
+		case !current(p, run.Required):
+			v.Unfinished = append(v.Unfinished, step)
 		case p.AwaitingReview():
 			v.AwaitingReview = append(v.AwaitingReview, step)
 		case p.Status == datatask.Failed || p.Status == datatask.Paused:
@@ -174,4 +178,11 @@ func DataTaskVerdictOf(run DataTaskRun) DataTaskVerdict {
 	}
 	v.Finished = len(v.AwaitingReview)+len(v.Blocked)+len(v.Failed)+len(v.Unfinished) == 0
 	return v
+}
+
+// current reports whether a step's ledger row is at the version this binary
+// runs. An older finished row is work this release still owes.
+func current(p datatask.Progress, required map[string]int) bool {
+	needs, known := required[p.TaskID]
+	return !known || p.TaskVersion >= needs
 }

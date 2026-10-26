@@ -23,7 +23,8 @@ func TestTheVerdictNamesEveryStepThatDidNotFinish(t *testing.T) {
 		{TaskID: "core/4_failed", Step: "a", Status: datatask.Failed, BlockedReason: "earlier_step", TaskVersion: 1},
 		{TaskID: "core/5_held", Step: "a", Status: datatask.Pending, BlockedReason: "missing_prerequisite", TaskVersion: 1},
 		{TaskID: "core/6_pending", Step: "a", Status: datatask.Pending, TaskVersion: 1},
-	}, Required: map[string]int{"core/6_pending": 2}, LeftInScope: map[string]int64{"core/1_done/a": 4}})
+		{TaskID: "core/7_stale", Step: "a", Status: datatask.Done, Scanned: 5, TaskVersion: 1},
+	}, Required: map[string]int{"core/6_pending": 2, "core/7_stale": 2}, LeftInScope: map[string]int64{"core/1_done/a": 4}})
 	if verdict.Finished || verdict.Done != 2 {
 		t.Errorf("verdict = %+v, want two done and not finished", verdict)
 	}
@@ -32,7 +33,7 @@ func TestTheVerdictNamesEveryStepThatDidNotFinish(t *testing.T) {
 		"awaiting review":   {verdict.AwaitingReview, []string{"core/3_review/a"}},
 		"failed":            {verdict.Failed, []string{"core/4_failed/a (failed)"}},
 		"blocked":           {verdict.Blocked, []string{"core/5_held/a (missing_prerequisite)"}},
-		"unfinished":        {verdict.Unfinished, []string{"core/6_pending/a (stored v1, needs v2)"}},
+		"unfinished":        {verdict.Unfinished, []string{"core/6_pending/a (stored v1, needs v2)", "core/7_stale/a (stored v1, needs v2)"}},
 	} {
 		if !slices.Equal(c.got, c.want) {
 			t.Errorf("%s = %v, want %v", name, c.got, c.want)

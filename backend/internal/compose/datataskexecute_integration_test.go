@@ -168,3 +168,40 @@ func TestExecuteRunsTheReleaseCatalogWithoutReachingOutside(t *testing.T) {
 		t.Errorf("verdict = %+v, want automatic steps done and none failed", verdict)
 	}
 }
+
+// Only a step whose estimate counts rows still to correct is recounted. Its
+// leftover rows are named. A step whose estimate counts input it keeps, and a
+// finished row from an older version, are not recounted.
+func TestTheRecountNamesRowsAStepLeftAndNothingElse(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	counting := func(n int64) func(context.Context, datatask.Querier, int64) (int64, bool, error) {
+		return func(context.Context, datatask.Querier, int64) (int64, bool, error) { return n, false, nil }
+	}
+	leftover := probeStep("assess", probeBatch)
+	leftover.Estimate, leftover.EmptyWhenDone = counting(3), true
+	kept := probeStep("count", probeBatch)
+	kept.Estimate = counting(7)
+	stale := probeStep("assess", probeBatch)
+	stale.Estimate, stale.EmptyWhenDone = counting(9), true
+	catalog := []datatask.Task{
+		{ID: "core/1_left", Version: 1, Steps: []datatask.Step{leftover}},
+		{ID: "core/2_kept", Version: 1, Steps: []datatask.Step{kept}},
+		{ID: "core/3_stale", Version: 2, Steps: []datatask.Step{stale}},
+	}
+	run, err := recountDataTasks(ctx, e.Pool, catalog, []datatask.Progress{
+		{TaskID: "core/1_left", Step: "assess", Status: datatask.Done, TaskVersion: 1},
+		{TaskID: "core/2_kept", Step: "count", Status: datatask.Done, TaskVersion: 1},
+		{TaskID: "core/3_stale", Step: "assess", Status: datatask.Done, TaskVersion: 1},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(run.LeftInScope) != 1 || run.LeftInScope["core/1_left/assess"] != 3 {
+		t.Errorf("left in scope = %v, want only the marked step's three rows", run.LeftInScope)
+	}
+	verdict := DataTaskVerdictOf(run)
+	if verdict.Finished || !slices.Equal(verdict.Unfinished, []string{"core/3_stale/assess (stored v1, needs v2)"}) {
+		t.Errorf("verdict = %+v, want the stale step unfinished", verdict)
+	}
+}

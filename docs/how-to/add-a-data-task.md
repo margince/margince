@@ -69,11 +69,16 @@ retry, after 60 attempts in a row that commit nothing, and after `--max-batches`
 
 It prints a verdict before the steps:
 
+- `release`: the release this binary was built as.
+- `finished`: true when every step finished at the version this binary runs.
+- `done`: how many steps finished.
 - `required_versions`: the version of each task this binary runs. A step stored at an older
-  version is named with both numbers.
+  version is unfinished, even when it finished at that version, and is named with both numbers.
 - `awaiting_review`, `blocked`, `failed` and `unfinished`: each step that did not finish.
-- `left_in_scope`: each finished step whose own estimate still counts rows, with the count. These
-  are rows the step saw and left as they were, such as mail with no stored original.
+- `left_in_scope`: each finished step marked `EmptyWhenDone` whose own estimate still counts rows,
+  with the count. These are rows the step saw and left as they were, such as mail with no stored
+  original. Mark a step `EmptyWhenDone` only when its estimate counts rows still to correct; an
+  estimate that counts input the step keeps would name it on every run.
 - `nothing_inspected`: each finished step that inspected no rows. Such a step proves nothing about
   rows it never saw.
 
