@@ -26,7 +26,7 @@ import {
   whenText,
 } from "../worklist/worklist.copy";
 import { eyebrowKeyFor } from "../worklist/worklist.eyebrow";
-import { hasPane } from "../worklist/worklist.pane";
+import { hasDetails } from "../worklist/worklist.pane";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { WorklistRow } from "../worklist/worklist.row";
 import { contactHref } from "../worklist/worklist.row.captions";
@@ -67,10 +67,10 @@ export function Triage({
     }
   };
   // A meeting gets the door too. Its subject is the activity, not a contact,
-  // so `hasPane` alone would leave it with no way through.
+  // so the pane alone would leave it with no way through.
   const context =
     onContext &&
-    (hasPane(lead) ||
+    (hasDetails(lead) ||
       lead.source === "task" ||
       lead.source === "meeting_outcome");
   // A task row's id is its activity's, so the card reads the task it shows.

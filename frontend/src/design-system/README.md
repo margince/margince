@@ -274,6 +274,15 @@ carrying `co.assistant.aiTag`. It goes on a panel that offers an AI verb: ask, d
 assess again.
 They are two facts, so they combine, and a panel that is both uses both.
 
+**An indigo button starts the model.** Pressing `Button variant="ai"` or `aiQuiet` makes a model
+write now: a draft, a brief, an answer, a rewrite. Accepting what an agent proposed is the reader's
+own decision, so Keep, Accept and Mark done are `primary`. The staged card around them already says
+who proposed it.
+
+A verb that only opens a message, a task or a record is `ghost`. A verb that opens
+the composer to draft passes `draftOnOpen`. Then the draft starts on the first press, and no second
+press of Draft is needed.
+
 **`ProvenanceTag` is the rule at its smallest**: one `Badge` per provenance, and only its `agent`
 arm takes `tone="ai"`, with the Sparkles that tone draws. Every other kind is the default soft badge, told
 apart by its words. Those kinds are a connector, a system job, a human, a buyer, an import, and an unknown
@@ -334,7 +343,7 @@ role, light beside dark), `elevation.stories.tsx`, `spacing.stories.tsx`, `motio
 
 | Primitive | For | File | Story |
 |---|---|---|---|
-| `Button` | The one button. Variants: `primary`, `ghost`, `danger`, `federated`, `ai`, `aiQuiet`, `link`, `bare`; `iconOnly` makes a square glyph button that still needs a name a screen reader can read. Height is always `--controlHeight`, and there is no size prop; a button with a label has a smallest width. `reason` / `reasonId` refuse the press and print why in `t-caption`, and a caller's `disabled` or `aria-describedby` cannot get past them. `pending` marks a write still running: `aria-disabled`, full ink and a turning mark, with `busyLabel` for a sentence about the wait. `federated` is the full-width sign-in door, led by a `ProviderMark`; `unavailable` is how it refuses at rest. `ai` (filled, one per surface) and `aiQuiet` (tinted, for an AI verb next to other verbs) mean a model does the work behind the click. `link` uses `.link-button`, for a verb that needs the refusal and `pending` rules of `Button` but should read as a link; `button.test.tsx` holds its class pair. `bare` takes the `.iconbtn` rules, for a glyph button in the top bar that needs a `ref` or the press rules of `Button`; it compiles only with `iconOnly` | `button.tsx` | ✅ |
+| `Button` | The one button. Variants: `primary`, `ghost`, `danger`, `federated`, `ai`, `aiQuiet`, `link`, `bare`; `iconOnly` makes a square glyph button that still needs a name a screen reader can read. Height is always `--controlHeight`, and there is no size prop; a button with a label has a smallest width. `reason` / `reasonId` refuse the press and print why in `t-caption`, and a caller's `disabled` or `aria-describedby` cannot get past them. `pending` marks a write still running: `aria-disabled`, full ink and a turning mark, with `busyLabel` for a sentence about the wait. `federated` is the full-width sign-in door, led by a `ProviderMark`; `unavailable` is how it refuses at rest. `ai` (filled, one per surface) and `aiQuiet` (tinted, for an AI verb next to other verbs) mean the press starts a model (see [Indigo says a machine did it](#indigo-says-a-machine-did-it)). `link` uses `.link-button`, for a verb that needs the refusal and `pending` rules of `Button` but should read as a link; `button.test.tsx` holds its class pair. `bare` takes the `.iconbtn` rules, for a glyph button in the top bar that needs a `ref` or the press rules of `Button`; it compiles only with `iconOnly` | `button.tsx` | ✅ |
 | `.iconbtn` | A bare icon control that is not a `Button`: no fill, no border, no label. For the verb a row offers where a full button would shout over the row. It carries the `--controlHeight` press target, the hover and the focus ring | `base.css` | in `Button` |
 | `.link-button` | A second-rank text control (in the accent colour, no fill, no border) for an action that must not fight the primary button beside it: a download, a "view existing", a verb inside a row. A class a caller puts on its own `<a>` or `<button>`. Use `Button variant="link"` when the verb also needs the refusal and `pending` rules of `Button`. Not `.co-rowlink`, which is for a row title that shows its underline only on hover. A lucide glyph may lead the label; the class sizes it | `atoms.css` | ✅ |
 | `.cell-link` | A row's title that opens it, from inside a table cell: a `<button>` in the accent ink of `.link-button`, with its underline on hover and its focus ring, but in the cell's own type and with no inset, so its text starts on the column's edge under the heading. It wraps from its start, and serves as the title of a `fold` row. Not `.link-button`, whose inset moves the text off the column | `atoms.css` | in `Data table` |

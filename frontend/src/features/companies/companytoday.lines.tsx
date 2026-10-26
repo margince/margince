@@ -141,10 +141,11 @@ export function manualMoveRows({
             name={recipient.full_name}
           />
         }
+        // Not indigo: the composer opens empty and waits for the rep to say
+        // what the message is for, so the press itself starts no model.
         verb={{
           label: t("today.draft.act"),
           onAct: () => onDraftTo(recipient.contact_id),
-          byMargince: true,
         }}
       />,
     );

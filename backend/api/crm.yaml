@@ -61054,7 +61054,7 @@ components:
         One document a room puts in front of its buyer: a pointer at an attachment
         filed on the deal, with a buyer-facing title, a group and an order. The
         attachment row is the exact version shown.
-      required: [id, room_id, attachment_id, group_key, title, position, filename, source, version, created_at, updated_at]
+      required: [id, room_id, attachment_id, group_key, title, position, filename, reaches_buyer, source, version, created_at, updated_at]
       properties:
         id: { type: string, format: uuid }
         room_id: { type: string, format: uuid }
@@ -61063,6 +61063,14 @@ components:
         title: { type: string }
         position: { type: integer }
         filename: { type: string, readOnly: true, description: "The attachment's stored filename, for the seller's reference." }
+        reaches_buyer:
+          type: boolean
+          readOnly: true
+          description: |
+            Whether this entry's file is still in the deal's Files area. False once the file was
+            deleted on the deal, hidden from it, or its message unlinked or narrowed; the entry
+            stays in the room until the seller removes it. Whether the room itself is open to its
+            buyer is the room's own state, not this field.
         content_type: { type: [string, 'null'], readOnly: true }
         byte_size: { type: [integer, 'null'], format: int64, readOnly: true }
         archived_at: { type: [string, 'null'], format: date-time }

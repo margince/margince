@@ -174,10 +174,10 @@ export function MoveButton({
       }
       return (
         <>
-          {/* The agent's own step, in the agent's own colour: a rule wrote
-              the task and pressing this accepts it. */}
+          {/* A rule wrote the task and pressing this accepts it. No model
+              runs on the press, so it is the plain primary, not indigo. */}
           <Button
-            variant="ai"
+            variant="primary"
             pending={createTask.isPending}
             onClick={() => createTask.mutate(taskBody)}
           >
@@ -259,6 +259,7 @@ function FollowUpDraft({
           followUp={{ alsoTo, aboutActivityId: meetingId }}
           kind="email"
           intent={t("contact.composer.intentFollowUp")}
+          draftOnOpen
           open
           onClose={() => setOpen(false)}
           onSent={() => {

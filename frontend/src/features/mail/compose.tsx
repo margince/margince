@@ -28,7 +28,8 @@ import { useComposeFields } from "./composefields";
 import { useComposeRecords } from "./composefiling";
 import { useRecipientOffer } from "./composerecipientoffer";
 import type { RelinkKind } from "./composerelink";
-import { type SavedDraftFields, useSavedDraft } from "./composesaveddraft";
+import { useSavedDraft } from "./composesaveddraft";
+import type { SavedDraftFields } from "./composesaveddraftcalls";
 import { ScheduleDialog } from "./composeschedule";
 import { useComposeSend } from "./composesend";
 import {
@@ -38,7 +39,7 @@ import {
   useTransportDial,
 } from "./composetarget";
 import { ThreadBar } from "./composethreadbar";
-import { useVoiceDraft } from "./composevoicedraft";
+import { useDraftOnOpen, useVoiceDraft } from "./composevoicedraft";
 import type { EditSeed } from "./schedulededit";
 import "./compose.css";
 import { ComposeHead } from "./compose.head";
@@ -130,6 +131,9 @@ export type ComposeProps = Readonly<{
    *  fired — "their reply is overdue", "the meeting needs an agenda" — and that
    *  reason shaped nothing until it reached the steer field. */
   intent?: string;
+  /** An AI verb ("Draft reply") opened the composer, so it drafts on open
+   *  rather than offering that verb again. Mail only. */
+  draftOnOpen?: boolean;
   /** A scheduled message written again. Read when the composer mounts, so the
    *  caller keys the modal on the message. It keeps no saved draft: the
    *  words are the scheduled message's, not a draft's. */
@@ -195,6 +199,7 @@ export function ComposeWindow({
   initialTransportId,
   staleThread = false,
   intent: askedIntent,
+  draftOnOpen,
   edit,
   open,
   onClose,
@@ -326,6 +331,14 @@ export function ComposeWindow({
     bodyId,
     voiceProfileId: voiceProfile.data?.id ?? null,
     sendPending,
+  });
+  useDraftOnOpen({
+    open,
+    asked: draftOnOpen,
+    mail: !isChannelReply,
+    settled: savedDraft.settled,
+    body: fields.body,
+    control: voice.control,
   });
   const busy = sendPending || voice.rejectionInFlight;
   const selectMessage = useConversationSwitch({

@@ -125,6 +125,7 @@ function fullStub(state: DealRoom["state"], filled: boolean) {
                 group_key: "legal",
                 title: "MSA redline",
                 filename: "msa-redline.docx",
+                reaches_buyer: true,
                 byte_size: 212_000,
                 position: 0,
                 source: "manual",

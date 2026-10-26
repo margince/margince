@@ -77,16 +77,29 @@ const view: Contact360 = {
 // The tab is drawn at the work column's measure. The dials are the reason: how
 // much of one line the cuts and the narrowing row take is a fact about the
 // column they sit in, not about the viewport.
-function tab(record: Contact360 | undefined) {
+function tab(
+  record: Contact360 | undefined,
+  {
+    width = 760,
+    briefs = false,
+    writer = false,
+  }: { width?: number; briefs?: boolean; writer?: boolean } = {},
+) {
   return () => {
     // Routed with no object grants, which is the ordinary seat this tab is
     // drawn for; unrouted, the session reads as malformed and the tab draws a
     // branch these stories are not named for.
-    installFetchStub({ "GET /me": meRoute({}) });
+    installFetchStub({
+      "GET /me": meRoute(writer ? { activity: ["read", "update"] } : {}),
+    });
     return (
       <StoryProviders>
-        <div style={{ maxWidth: 760 }}>
-          <ContactTimelineTab contactId="p-1" view={record} />
+        <div style={{ maxWidth: width }}>
+          <ContactTimelineTab
+            contactId="p-1"
+            view={record}
+            onBriefMeeting={briefs ? () => undefined : undefined}
+          />
         </div>
       </StoryProviders>
     );
@@ -214,6 +227,54 @@ export const LongEmailBesideVerbs: Story = {
         await expect(verb.getBoundingClientRect().right).toBeLessThanOrEqual(
           edge + 0.5,
         );
+      }
+    }
+  },
+};
+
+/**
+ * A held meeting carries five verbs, one more than any other row: Prepare
+ * brief joins Reply, Files, Relink and Change visibility. Drawn just above the
+ * width where the verbs drop under the entry, the kind line and the headline
+ * stay clear of them.
+ */
+export const FiveVerbsBesideTheHead: Story = {
+  render: tab(
+    {
+      ...view,
+      contact: reachable,
+      activities: {
+        data: [
+          activity({
+            id: "a-8",
+            kind: "meeting",
+            subject: "Depot walkthrough with the workshop lead",
+            body: "Walked the Hamburg depot with Dana and her workshop lead.",
+            offers_email: true,
+            writable: true,
+            occurred_at: "2026-08-12T08:00:00Z",
+          }),
+        ],
+        page: { has_more: false },
+      },
+    },
+    { width: 680, briefs: true, writer: true },
+  ),
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement.ownerDocument.body);
+    await page.findByRole("button", { name: "Prepare brief" });
+    for (const body of canvasElement.querySelectorAll(".tl-body")) {
+      const head = body.querySelector(":scope > .tl-head");
+      const verbs = body.querySelector(":scope > .tl-actions");
+      if (!head || !verbs) continue;
+      const row = verbs.getBoundingClientRect();
+      // Each part of the kind line sits clear of the verbs. A collapsed head
+      // still has a box, so its contents are measured instead.
+      for (const part of head.children) {
+        const box = part.getBoundingClientRect();
+        await expect(
+          box.right <= row.left + 0.5 || box.top >= row.bottom - 0.5,
+        ).toBe(true);
       }
     }
   },

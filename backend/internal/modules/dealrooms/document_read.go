@@ -40,8 +40,10 @@ var documentGroups = map[string]bool{
 // documentColumns is the projection every document read returns, in the order
 // scanDocument consumes it. The attachment's file facts ride along so the
 // seller can tell rows apart and the manifest can be frozen from one read.
+// reaches_buyer is the buyer's own membership rule, so the seller sees which
+// entries the buyer no longer gets.
 const documentColumns = `d.id, d.room_id, d.attachment_id, d.group_key, d.title, d.position,
-	a.filename, a.content_type, a.byte_size,
+	a.filename, a.content_type, a.byte_size, (` + inTheDealsFilesArea + `) AS reaches_buyer,
 	d.source, d.captured_by, d.version, d.created_at, d.updated_at, d.archived_at`
 
 // documentFrom is the seller's join: every entry, whatever became of its file,
@@ -65,9 +67,9 @@ const documentFrom = `deal_room_document d
 // some reader is in the audience, it is whether the message is still open to
 // the workspace. A message narrowed, restricted or archived AFTER its file was
 // added drops out on the next read. The rest of this predicate re-checks the
-// same way. The seller's own list does not carry the predicate, so a seat that
-// can remove a stale entry still sees it. It carries sellerReadsTheCarrier
-// instead.
+// same way. The seller's own list does not filter on the predicate, so a seat
+// that can remove a stale entry still sees it. That list reports the predicate
+// as reaches_buyer and filters on sellerReadsTheCarrier instead.
 //
 // It needs the room aliased `r` and the attachment aliased `a`, and carries no
 // principal: the public download has none. The caller-bound half — may THIS
@@ -203,7 +205,7 @@ func scanDocument(row rowScanner) (crmcontracts.DealRoomDocument, error) {
 		capturedBy string
 	)
 	if err := row.Scan(&out.Id, &out.RoomId, &out.AttachmentId, &group, &out.Title, &out.Position,
-		&filename, &out.ContentType, &out.ByteSize,
+		&filename, &out.ContentType, &out.ByteSize, &out.ReachesBuyer,
 		&out.Source, &capturedBy, &out.Version, &out.CreatedAt, &out.UpdatedAt, &archivedAt); err != nil {
 		return crmcontracts.DealRoomDocument{}, fmt.Errorf("scan deal room document: %w", err)
 	}

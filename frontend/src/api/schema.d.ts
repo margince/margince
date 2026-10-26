@@ -45123,6 +45123,13 @@ export interface components {
             position: number;
             /** @description The attachment's stored filename, for the seller's reference. */
             readonly filename: string;
+            /**
+             * @description Whether this entry's file is still in the deal's Files area. False once the file was
+             *     deleted on the deal, hidden from it, or its message unlinked or narrowed; the entry
+             *     stays in the room until the seller removes it. Whether the room itself is open to its
+             *     buyer is the room's own state, not this field.
+             */
+            readonly reaches_buyer: boolean;
             readonly content_type?: string | null;
             /** Format: int64 */
             readonly byte_size?: number | null;

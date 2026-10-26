@@ -233,7 +233,11 @@ export function CompanyPage({
           switch (action.kind) {
             case "draft_reply":
               if (action.activity_id) {
-                setComposing({ kind: "reply", id: action.activity_id });
+                setComposing({
+                  kind: "reply",
+                  id: action.activity_id,
+                  draft: true,
+                });
               }
               return;
             case "open_deal":

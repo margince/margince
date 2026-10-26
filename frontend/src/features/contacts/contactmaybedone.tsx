@@ -55,7 +55,7 @@ export function MayBeDoneVerbs({
     <>
       <span className="today-verb">
         <Button
-          variant="ai"
+          variant="primary"
           onClick={complete}
           disabled={pending}
           reason={

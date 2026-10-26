@@ -28,30 +28,29 @@ import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useContact360 } from "../contacts/contact360";
 import { NoticeDuty } from "../privacy/noticeduty";
 import type { WorklistItem } from "./worklist.queries";
+import { hasWhy, WorklistWhy } from "./worklist.why";
 
 // The pane, for whichever record the selected row is about.
 //
-// Only a CONTACT is drawn today. A deal-bearing row already carries its own
-// figures — amount, close date, owner, risk evidence — on the row itself, so a
-// pane repeating them would be the second spelling this file exists to avoid;
-// what a deal row lacks is its timeline, and that is its own change. A row
-// about neither draws nothing rather than an empty frame.
+// Why the row is here comes first, for every row. The record's own read
+// follows only for a contact. A deal-bearing row already carries its own
+// figures (amount, close date, owner, risk evidence). A pane repeating them
+// would be the second spelling this file exists to avoid.
 export function WorklistPane({ item }: Readonly<{ item: WorklistItem }>) {
   const subject = item.subject;
-  if (subject?.type !== "contact") {
-    return null;
-  }
-  // A privacy-notice duty draws what it IS and how to discharge it above the
-  // contact: the row alone says a deadline and nothing a reader can act on.
-  if (item.source === "notice_case") {
-    return (
-      <>
-        <NoticeDuty item={item} contactId={subject.id} />
-        <ContactContext id={subject.id} label={subject.label} />
-      </>
-    );
-  }
-  return <ContactContext id={subject.id} label={subject.label} />;
+  const contactId = subject?.type === "contact" ? subject.id : undefined;
+  return (
+    <>
+      {/* A privacy-notice duty draws what it is and how to discharge it. The
+          row alone says a deadline and nothing a reader can act on. */}
+      {item.source === "notice_case" && contactId ? (
+        <NoticeDuty item={item} contactId={contactId} />
+      ) : (
+        <WorklistWhy item={item} />
+      )}
+      {contactId && <ContactContext id={contactId} label={subject?.label} />}
+    </>
+  );
 }
 
 // Whether this row HAS a pane, asked before one is rendered.
@@ -62,6 +61,12 @@ export function WorklistPane({ item }: Readonly<{ item: WorklistItem }>) {
 // here — beside the component that obeys it — rather than in the screen.
 export function hasPane(item: WorklistItem | undefined): boolean {
   return item?.subject?.type === "contact";
+}
+
+// Whether the pane draws anything for this row. The Brief offers its details
+// only then, so the drawer never opens on an empty frame.
+export function hasDetails(item: WorklistItem): boolean {
+  return hasPane(item) || hasWhy(item);
 }
 
 // One contact's context: who they are, and what else is open with them.

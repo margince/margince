@@ -189,8 +189,8 @@ read** (`reason`: "the rule that fired, in the words the rep reads. Never a scor
 
 - It also holds the `evidence` records it fired on. Where the server can name one, it holds an `action`
   that opens a governed surface filled in from that evidence.
-- `draft_reply` opens the composer on the message with no answer, and `open_deal` opens the stalled
-  deal. `add_task` writes the step the server prepared, through the same `POST /tasks` that the task
+- `draft_reply` opens the composer on the message with no answer. It drafts once the saved draft is read and the body is empty.
+  `open_deal` opens the stalled deal. `add_task` writes the step the server prepared, through the same `POST /tasks` that the task
   form uses.
 - A rule that cannot name an action holds `null`, and the card gives advice with no button. A control
   that does nothing makes the reader stop pressing them.

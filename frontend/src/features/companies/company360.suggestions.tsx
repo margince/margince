@@ -41,6 +41,15 @@ const SUGGESTION_ACTION_LABELS: Record<SuggestionAction["kind"], MessageKey> = {
   add_task: "co.suggest.act.addTask",
 };
 
+const SUGGESTION_ACTION_VARIANT: Record<
+  SuggestionAction["kind"],
+  "ai" | "primary" | "ghost"
+> = {
+  draft_reply: "ai",
+  add_task: "primary",
+  open_deal: "ghost",
+};
+
 /**
  * The names this page already holds, for citations the server could not name.
  *
@@ -81,14 +90,13 @@ function SuggestionActionButton({
   onPerform: (action: SuggestionAction) => void;
 }>) {
   const t = useT();
-  // The draft and the prepared step are the agent's own work: a rule wrote the
-  // sentence, and pressing the button accepts it. Opening a deal is navigation.
-  // Indigo there would spend the one mark that means "a machine wrote this" on
-  // a click where nothing did.
-  const byMargince = action.kind !== "open_deal";
+  // Indigo says the press makes the model write, and only the reply does: its
+  // composer drafts on open. Adding the prepared task accepts a rule's
+  // sentence, and opening a deal is navigation.
+  const byMargince = action.kind === "draft_reply";
   return (
     <Button
-      variant={byMargince ? "ai" : "primary"}
+      variant={SUGGESTION_ACTION_VARIANT[action.kind]}
       pending={pending}
       onClick={() => onPerform(action)}
     >

@@ -162,7 +162,7 @@ export function SuggestionAnswers({
     <div className="dealsuggestion-answers">
       {mayCreate && (
         <Button
-          variant="ai"
+          variant="primary"
           onClick={() => setAction("create")}
           data-testid="deal-suggestion-accept"
         >

@@ -61,7 +61,11 @@ export function useRowSource(item: WorklistItem): Readonly<{
     // on every window focus, once for each row a reader ever opened.
     drawer:
       opened === null ? null : item.source === "task" ? (
-        <OpenTaskSource activityId={opened} onClose={() => setOpened(null)} />
+        <OpenTaskSource
+          activityId={opened}
+          item={item}
+          onClose={() => setOpened(null)}
+        />
       ) : (
         <SourceDrawer
           activityId={opened}
@@ -76,13 +80,19 @@ export function useRowSource(item: WorklistItem): Readonly<{
 
 function OpenTaskSource({
   activityId,
+  item,
   onClose,
-}: Readonly<{ activityId: string; onClose: () => void }>) {
+}: Readonly<{
+  activityId: string;
+  item: WorklistItem;
+  onClose: () => void;
+}>) {
   const canUpdate = useCanWrite("activity", "update");
   const update = useTaskUpdate([worklistKey, TASK_QUEUE_KEY, ["activities"]]);
   return (
     <TaskDetailModal
       activityId={activityId}
+      item={item}
       readOnly={!canUpdate}
       update={update}
       onClose={onClose}
