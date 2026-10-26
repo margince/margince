@@ -9,7 +9,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { TaskDetailModal } from "./taskdetailmodal";
+import { MeetingDetailModal, TaskDetailModal } from "./taskdetailmodal";
 import { worklistKey } from "./worklist.queries";
 
 export {
@@ -74,6 +74,47 @@ export const AutomaticReminderFromRow: Story = {
     return (
       <StoryProviders>
         <ReminderFromRow />
+      </StoryProviders>
+    );
+  },
+};
+
+// A meeting whose outcome nobody recorded, opened from its row: the meeting
+// under what the row asks, with the row's own verbs.
+export const MeetingOutcomeFromRow: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
+      "GET /activities/meeting-1": () =>
+        jsonResponse({
+          id: "meeting-1",
+          kind: "meeting",
+          writable: true,
+          subject: "AOB: Weekly-Call Einsatzplanungstool",
+          body: "Organizer: josh@example.test Attendees: sabine@example.test",
+          occurred_at: "2026-10-20T13:00:00Z",
+          meeting_status: "booked",
+          version: 3,
+        }),
+    });
+    return (
+      <StoryProviders>
+        <MeetingDetailModal
+          onClose={() => {}}
+          item={{
+            id: "meeting-1",
+            source: "meeting_outcome",
+            category: "meetings",
+            level: 4,
+            title: "AOB: Weekly-Call Einsatzplanungstool",
+            occurred_at: "2026-10-20T13:00:00Z",
+            occurred_precision: "instant",
+            version: 3,
+            consequence: "data_drifts",
+            because: [{ kind: "outcome_unrecorded" }],
+            actions: ["decide"],
+          }}
+        />
       </StoryProviders>
     );
   },

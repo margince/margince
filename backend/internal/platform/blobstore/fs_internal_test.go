@@ -93,3 +93,13 @@ func TestPutRestoresThePreviousMetadataWhenItsSyncFails(t *testing.T) {
 		t.Errorf("Object.ContentType = %q, want the stored object's own application/pdf", obj.ContentType)
 	}
 }
+
+// A directory that cannot be opened is reported, never treated as synced.
+// Otherwise the rename it was meant to make durable would read as safe on disk.
+func TestSyncDirReportsADirectoryItCannotOpen(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "gone")
+	err := syncDir(missing)
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("syncDir(%q) = %v, want an error wrapping os.ErrNotExist", missing, err)
+	}
+}

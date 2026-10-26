@@ -20,12 +20,16 @@ import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { pillCount } from "../../lib/worklistcounts";
 import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
 import { MagicPanel } from "../sign-in/magic";
-import { TaskDetailModal } from "../worklist/taskdetailmodal";
+import {
+  MeetingDetailModal,
+  TaskDetailModal,
+} from "../worklist/taskdetailmodal";
 import { drawerScope } from "../worklist/worklist.address";
 import { WorklistPane } from "../worklist/worklist.pane";
 import {
   useHandledForYou,
   useWorklist,
+  type WorklistItem,
   worklistKey,
 } from "../worklist/worklist.queries";
 import { readerTask } from "../worklist/worklist.reader";
@@ -180,7 +184,6 @@ function PersonalMorning({
   const handled = useHandledForYou();
   const [selected, setSelected] = useState("");
   const [params] = useUrlParams();
-  const titleId = useId();
   const update = useTaskUpdate([worklistKey]);
   const day = briefDay(query.data?.pages);
   const context = day?.focus?.items.find(
@@ -199,10 +202,6 @@ function PersonalMorning({
     : query.isError && !day
       ? "failed"
       : "ready";
-  // A task or a meeting opens the activity's own read. The pane beside the
-  // queue draws only a contact, so a meeting there would show nothing.
-  const opensActivity =
-    context?.source === "task" || context?.source === "meeting_outcome";
   return (
     <>
       {/* The brief and the work it names in one column; beside it, the
@@ -273,29 +272,54 @@ function PersonalMorning({
           onClose={() => replaceDial(TASK_PARAM, undefined)}
         />
       )}
-      {context && opensActivity ? (
-        <TaskDetailModal
-          activityId={context.id}
+      {context && (
+        <FocusDetails
           item={context}
-          readOnly={!context.actions.includes("complete")}
           update={update}
           onClose={() => setSelected("")}
         />
-      ) : (
-        <Modal
-          open={Boolean(context)}
-          onClose={() => setSelected("")}
-          labelledBy={titleId}
-          intent="drawer"
-        >
-          <DrawerHead>
-            <Heading size="large" id={titleId} className="t-h2">
-              {t("brief.focus.context")}
-            </Heading>
-          </DrawerHead>
-          <DrawerBody>{context && <WorklistPane item={context} />}</DrawerBody>
-        </Modal>
       )}
     </>
+  );
+}
+
+// The row in hand, opened. A task opens its own read, a meeting outcome the
+// meeting reader, and any other row what it asks beside its contact.
+function FocusDetails({
+  item,
+  update,
+  onClose,
+}: Readonly<{
+  item: WorklistItem;
+  update: ReturnType<typeof useTaskUpdate>;
+  onClose: () => void;
+}>) {
+  const t = useT();
+  const titleId = useId();
+  if (item.source === "meeting_outcome") {
+    return <MeetingDetailModal item={item} onClose={onClose} />;
+  }
+  if (item.source === "task") {
+    return (
+      <TaskDetailModal
+        activityId={item.id}
+        item={item}
+        readOnly={!item.actions.includes("complete")}
+        update={update}
+        onClose={onClose}
+      />
+    );
+  }
+  return (
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
+      <DrawerHead>
+        <Heading size="large" id={titleId} className="t-h2">
+          {t("brief.focus.context")}
+        </Heading>
+      </DrawerHead>
+      <DrawerBody>
+        <WorklistPane item={item} />
+      </DrawerBody>
+    </Modal>
   );
 }

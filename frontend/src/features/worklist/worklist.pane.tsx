@@ -28,7 +28,7 @@ import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useContact360 } from "../contacts/contact360";
 import { NoticeDuty } from "../privacy/noticeduty";
 import type { WorklistItem } from "./worklist.queries";
-import { hasWhy, WorklistWhy } from "./worklist.why";
+import { WorklistWhy } from "./worklist.why";
 
 // The pane, for whichever record the selected row is about.
 //
@@ -61,12 +61,6 @@ export function WorklistPane({ item }: Readonly<{ item: WorklistItem }>) {
 // here — beside the component that obeys it — rather than in the screen.
 export function hasPane(item: WorklistItem | undefined): boolean {
   return item?.subject?.type === "contact";
-}
-
-// Whether the pane draws anything for this row. The Brief offers its details
-// only then, so the drawer never opens on an empty frame.
-export function hasDetails(item: WorklistItem): boolean {
-  return hasPane(item) || hasWhy(item);
 }
 
 // One contact's context: who they are, and what else is open with them.

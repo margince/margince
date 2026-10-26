@@ -15,7 +15,7 @@ cmd/migrate/drill_integration_test.go 5
 internal/compose/agentcost_test.go 2
 internal/compose/agenttaskhandle_integration_test.go 1
 internal/compose/aggregateaudience_integration_test.go 8
-internal/compose/aicert/claudecli_unix_test.go 1
+internal/compose/aicert/claudeclikill_test.go 1
 internal/compose/analyticsshare_integration_test.go 24
 internal/compose/analyticssharehandlers_test.go 4
 internal/compose/analyticssharehttp_integration_test.go 1

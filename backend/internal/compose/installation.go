@@ -19,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -34,7 +35,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
-	"github.com/margince/margince/backend/internal/platform/ownedfile"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -223,9 +223,10 @@ func announceOutstandingToken(log *slog.Logger) {
 // honest outcome: the operator sees the write error next to the token itself in
 // the log.
 //
-// O_EXCL is the flag that does that, everywhere: it refuses ANY existing final
-// component, a symlink included. ownedfile.OpenNoFollow is reinforcement whose
-// value is per-platform and is documented where it is declared.
+// O_EXCL is the flag that does that: it refuses any existing final component,
+// a symlink included. O_NOFOLLOW adds no case of its own. It is defence in depth
+// against a kernel that does not conform to POSIX, and the umask can only make
+// the 0600 narrower.
 //
 // The guard covers the final component AND the directory it lands in, and
 // neither covers a component above that: a symlink standing in for the working
@@ -241,17 +242,9 @@ func writeSetupTokenFile(raw string) (path string, err error) {
 		return abs, err
 	}
 	// #nosec G304 -- abs derives from the compile-time constant above via filepath.Abs; no request or configuration value reaches this path
-	f, err := os.OpenFile(abs, os.O_WRONLY|os.O_CREATE|os.O_EXCL|ownedfile.OpenNoFollow, 0o600)
+	f, err := os.OpenFile(abs, os.O_WRONLY|os.O_CREATE|os.O_EXCL|syscall.O_NOFOLLOW, 0o600)
 	if err != nil {
 		return abs, err
-	}
-	// The mode argument is advisory on Windows, where the ACL decides. A 0600
-	// that is not enforced is worse than no file at all, so a directory whose
-	// permissions cannot be established refuses the write rather than producing
-	// a readable credential — announceSetupToken then hands the operator the
-	// token through the log, which is exactly the fallback that arm exists for.
-	if err := ownedfile.RestrictToOwner(f); err != nil {
-		return abs, errors.Join(err, f.Close(), os.Remove(abs))
 	}
 	if _, err := f.WriteString(raw); err != nil {
 		return abs, errors.Join(err, f.Close())
@@ -270,8 +263,8 @@ func writeSetupTokenFile(raw string) (path string, err error) {
 // What this does NOT cover, stated rather than implied: a symlink at any
 // component ABOVE the parent (the working directory itself), and a swap of the
 // parent between this check and the open below. Closing those needs an openat
-// walk from a directory handle, which Windows has no portable equivalent for;
-// the case defended here is the one #1579 verified empirically.
+// walk from a directory handle. The case defended here is the one #1579
+// verified empirically.
 func ownTokenDirectory(dir string) error {
 	// #nosec G703 -- dir is filepath.Dir of filepath.Abs(setupTokenFile), a compile-time constant; no request or configuration value reaches this path
 	info, err := os.Lstat(dir)

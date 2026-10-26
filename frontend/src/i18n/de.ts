@@ -15952,6 +15952,62 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.why.reasons": "Gründe",
   "worklist.why.consequence": "Wenn nichts passiert",
   "worklist.why.detail": "Detail",
+  "worklist.ask.approval":
+    "Ein Agent hat eine Änderung vorgeschlagen und wartet auf eine Entscheidung. Gib sie frei oder lehne sie ab.",
+  "worklist.ask.dedupe_candidate":
+    "Diese beiden Datensätze sehen nach demselben aus. Führe sie zusammen oder behalte beide.",
+  "worklist.ask.deal_suggestion":
+    "Ein Gespräch sieht nach einem neuen Deal aus. Lege den Deal an oder verwirf den Vorschlag.",
+  "worklist.ask.tag_suggestion":
+    "Für diesen Datensatz wurde ein Tag vorgeschlagen. Übernimm ihn oder verwirf den Vorschlag.",
+  "worklist.ask.task":
+    "Diese Aufgabe ist offen. Erledige sie und markiere sie als erledigt, oder verschiebe sie auf einen anderen Tag.",
+  "worklist.ask.brief_item":
+    "Die nächtliche Prüfung hat diesen Deal markiert. Reagiere darauf, stelle ihn zurück oder verwirf ihn.",
+  "worklist.ask.conversation_claim":
+    "Du hast das in einem Gespräch zugesagt. Erledige es und markiere es dann als erledigt.",
+  "worklist.ask.customer_waiting":
+    "Ein Kunde hat geschrieben, und noch niemand hat geantwortet. Beantworte die Nachricht.",
+  "worklist.ask.lead_response":
+    "Dieser Lead wartet auf eine erste Antwort. Melde dich, bevor seine Antwortfrist abläuft.",
+  "worklist.ask.deal_at_risk":
+    "Dieser Deal zeigt Anzeichen, dass er abrutscht. Öffne ihn und plane den nächsten Schritt.",
+  "worklist.ask.meeting":
+    "Dieser Termin steht bevor. Öffne ihn, um dich vorzubereiten.",
+  "worklist.ask.relationship_decay":
+    "Mit diesem Kontakt gab es länger keinen Austausch. Melde dich oder stelle ihn für einen Monat zurück.",
+  "worklist.ask.failed_approval":
+    "Eine Aktion, die du freigegeben hast, wurde nicht ausgeführt. Prüfe, was passiert ist, und bestätige es dann.",
+  "worklist.ask.dsr":
+    "Eine Datenschutzanfrage hat eine gesetzliche Frist. Öffne sie und beantworte sie rechtzeitig.",
+  "worklist.ask.notice_case":
+    "Diesem Kontakt steht ein Datenschutzhinweis zu. Sende ihn, fordere eine Bestätigung der Daten an oder beende die Pflicht.",
+  "worklist.ask.capture_health":
+    "Ein Postfach erfasst keine E-Mails mehr. Verbinde es neu, damit seine E-Mails wieder erfasst werden.",
+  "worklist.ask.domain_question":
+    "Margince kann diese Domain nicht zuordnen. Lege ein Unternehmen dafür an, behalte sie als Lieferant oder schließe sie aus.",
+  "worklist.ask.ai_work_health":
+    "Eine KI-Aufgabe schlägt wiederholt fehl. Prüfe ihren KI-Anbieter in den Einstellungen.",
+  "worklist.ask.bounce":
+    "Eine E-Mail konnte nicht zugestellt werden. Prüfe die Adresse und sende sie dann erneut.",
+  "worklist.ask.undelivered":
+    "Eine E-Mail wurde nicht gesendet. Öffne sie, um den Grund zu sehen, und sende sie dann erneut.",
+  "worklist.ask.automation_run":
+    "Eine Automatisierung ist fehlgeschlagen. Prüfe die Ursache und führe sie dann erneut aus.",
+  "worklist.ask.notice":
+    "Etwas hat sich geändert, das du wissen solltest. Lies es und bestätige es dann.",
+  "worklist.ask.introduction_request":
+    "Ein Teammitglied bittet dich, es einem Kontakt vorzustellen. Nimm die Anfrage an oder lehne sie ab.",
+  "worklist.ask.meeting_outcome":
+    "Dieser Termin ist vorbei, und nichts hält fest, wie er gelaufen ist. Halte das Ergebnis fest oder markiere ihn als abgesagt, wenn er nicht stattfand.",
+  "worklist.ask.weekly_commitment":
+    "Du hast das für diese Woche geplant. Erledige es oder verschiebe es in deinem Wochenplan.",
+  "worklist.ask.awaiting_reply":
+    "Du hast zuletzt geschrieben, und niemand hat geantwortet. Sende eine Nachfrage.",
+  "worklist.ask.meeting_follow_up":
+    "Nach diesem Termin wurde nichts gesendet. Sende den Teilnehmenden ein Follow-up.",
+  "worklist.ask.batch":
+    "Hier sind mehrere ähnliche Routineentscheidungen gebündelt. Prüfe sie gemeinsam.",
   "worklist.consequence.buyer_waits": "Die Käuferseite wartet weiter.",
   "worklist.consequence.promise_breaks": "Eine Zusage wird nicht eingehalten.",
   "worklist.consequence.deal_drifts": "Der Deal gerät weiter ins Stocken.",
