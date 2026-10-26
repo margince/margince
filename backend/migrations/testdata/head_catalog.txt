@@ -711,12 +711,14 @@ public.activity_review_template.created_at timestamp with time zone NOT NULL gen
 public.activity_review_template.id uuid NOT NULL gen=- def=uuidv7()
 public.activity_review_template.key text NOT NULL gen=- def=-
 public.activity_review_template.label text NOT NULL gen=- def=-
-public.activity_review_template.label_key text gen=- def=-
+public.activity_review_template.label_key text gen=s def=label_key_while_shipped(label, shipped_label, shipped_label_key)
 public.activity_review_template.outcome text NOT NULL gen=- def=-
 public.activity_review_template.questions jsonb NOT NULL gen=- def=-
+public.activity_review_template.shipped_label text gen=- def=-
+public.activity_review_template.shipped_label_key text gen=- def=-
 public.activity_review_template.source text NOT NULL gen=- def=-
 public.activity_review_template.system boolean NOT NULL gen=- def=false
-public.activity_review_template.trg_activity_review_template_label_key CREATE TRIGGER trg_activity_review_template_label_key BEFORE UPDATE OF label ON public.activity_review_template FOR EACH ROW EXECUTE FUNCTION clear_label_key_on_relabel()
+public.activity_review_template.trg_activity_review_template_question_keys CREATE TRIGGER trg_activity_review_template_question_keys BEFORE UPDATE OF questions ON public.activity_review_template FOR EACH ROW EXECUTE FUNCTION key_shipped_review_questions()
 public.activity_review_template.trg_activity_review_template_updated CREATE TRIGGER trg_activity_review_template_updated BEFORE UPDATE ON public.activity_review_template FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.activity_review_template.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_review_template.version integer NOT NULL gen=- def=1
@@ -2034,14 +2036,6 @@ public.channel_provider.provider text NOT NULL gen=- def=-
 public.channel_provider.supplies_transport boolean NOT NULL gen=- def=true
 public.channel_provider.transport text NOT NULL gen=- def=-
 public.channel_provider_pkey CREATE UNIQUE INDEX channel_provider_pkey ON public.channel_provider USING btree (provider)
-public.clear_label_key_on_relabel() secdef=false cfg=- acl=- 
-BEGIN
-  IF NEW.label IS DISTINCT FROM OLD.label THEN
-    NEW.label_key = NULL;
-  END IF;
-  RETURN NEW;
-END;
-
 public.close_date_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.close_date_run.as_of date NOT NULL gen=- def=-
 public.close_date_run.captured_by text NOT NULL gen=- def=-
@@ -3667,10 +3661,11 @@ public.deal_acquisition_source.deal_acquisition_source_version_js_safe CHECK (((
 public.deal_acquisition_source.id uuid NOT NULL gen=- def=uuidv7()
 public.deal_acquisition_source.key text NOT NULL gen=- def=-
 public.deal_acquisition_source.label text NOT NULL gen=- def=-
-public.deal_acquisition_source.label_key text gen=- def=-
+public.deal_acquisition_source.label_key text gen=s def=label_key_while_shipped(label, shipped_label, shipped_label_key)
+public.deal_acquisition_source.shipped_label text gen=- def=-
+public.deal_acquisition_source.shipped_label_key text gen=- def=-
 public.deal_acquisition_source.sort_order integer NOT NULL gen=- def=0
 public.deal_acquisition_source.system boolean NOT NULL gen=- def=false
-public.deal_acquisition_source.trg_deal_acquisition_source_label_key CREATE TRIGGER trg_deal_acquisition_source_label_key BEFORE UPDATE OF label ON public.deal_acquisition_source FOR EACH ROW EXECUTE FUNCTION clear_label_key_on_relabel()
 public.deal_acquisition_source.trg_deal_acquisition_source_updated CREATE TRIGGER trg_deal_acquisition_source_updated BEFORE UPDATE ON public.deal_acquisition_source FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.deal_acquisition_source.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_acquisition_source.version bigint NOT NULL gen=- def=1
@@ -5066,6 +5061,26 @@ public.ix_contact_confirm_submission_open CREATE INDEX ix_contact_confirm_submis
 public.ix_deal_room_engagement_participant CREATE INDEX ix_deal_room_engagement_participant ON public.deal_room_engagement USING btree (participant_id, occurred_at DESC)
 public.ix_deal_room_engagement_room CREATE INDEX ix_deal_room_engagement_room ON public.deal_room_engagement USING btree (room_id, occurred_at DESC)
 public.ix_lead_privacy_notice_approval CREATE INDEX ix_lead_privacy_notice_approval ON public.lead_privacy_notice USING btree (approval_id) WHERE (approval_id IS NOT NULL)
+public.key_shipped_review_questions() secdef=false cfg=- acl=- 
+BEGIN
+  NEW.questions = (
+    SELECT jsonb_agg(
+             (q - 'label_key' - 'shipped_label' - 'shipped_label_key')
+             || jsonb_strip_nulls(jsonb_build_object(
+                  'shipped_label', kept.was ->> 'shipped_label',
+                  'shipped_label_key', kept.was ->> 'shipped_label_key',
+                  'label_key', label_key_while_shipped(
+                    q ->> 'label', kept.was ->> 'shipped_label', kept.was ->> 'shipped_label_key')))
+             ORDER BY ord)
+      FROM jsonb_array_elements(NEW.questions) WITH ORDINALITY AS a (q, ord)
+      LEFT JOIN LATERAL (
+        SELECT o AS was
+          FROM jsonb_array_elements(OLD.questions) AS o
+         WHERE o ->> 'key' = q ->> 'key'
+         LIMIT 1) AS kept ON true);
+  RETURN NEW;
+END;
+
 public.knowledge_chunk acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.knowledge_chunk.archived_at timestamp with time zone gen=- def=-
 public.knowledge_chunk.chunk_hash text NOT NULL gen=- def=-
@@ -5133,6 +5148,7 @@ public.knowledge_document_by_corpus CREATE INDEX knowledge_document_by_corpus ON
 public.knowledge_document_one_per_content CREATE UNIQUE INDEX knowledge_document_one_per_content ON public.knowledge_document USING btree (corpus_id, checksum) WHERE (archived_at IS NULL)
 public.knowledge_document_one_per_managed_page CREATE UNIQUE INDEX knowledge_document_one_per_managed_page ON public.knowledge_document USING btree (corpus_id, filename) WHERE ((managed_source IS NOT NULL) AND (archived_at IS NULL))
 public.knowledge_document_pkey CREATE UNIQUE INDEX knowledge_document_pkey ON public.knowledge_document USING btree (id)
+public.label_key_while_shipped(label text, shipped_label text, shipped_label_key text) secdef=false cfg=- acl=-  SELECT CASE WHEN label = shipped_label THEN shipped_label_key END 
 public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=- 
   SELECT max(v) FROM (
     -- Filed against the account itself.
@@ -5277,13 +5293,14 @@ public.lead_disqualify_reason.active boolean NOT NULL gen=- def=true
 public.lead_disqualify_reason.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead_disqualify_reason.id uuid NOT NULL gen=- def=uuidv7()
 public.lead_disqualify_reason.label text NOT NULL gen=- def=-
-public.lead_disqualify_reason.label_key text gen=- def=-
+public.lead_disqualify_reason.label_key text gen=s def=label_key_while_shipped(label, shipped_label, shipped_label_key)
 public.lead_disqualify_reason.lead_disqualify_reason_label_present CHECK ((length(btrim(label)) > 0))
 public.lead_disqualify_reason.lead_disqualify_reason_pkey PRIMARY KEY (id)
 public.lead_disqualify_reason.lead_disqualify_reason_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.lead_disqualify_reason.shipped_label text gen=- def=-
+public.lead_disqualify_reason.shipped_label_key text gen=- def=-
 public.lead_disqualify_reason.sort_order integer NOT NULL gen=- def=0
 public.lead_disqualify_reason.system boolean NOT NULL gen=- def=false
-public.lead_disqualify_reason.trg_lead_disqualify_reason_label_key CREATE TRIGGER trg_lead_disqualify_reason_label_key BEFORE UPDATE OF label ON public.lead_disqualify_reason FOR EACH ROW EXECUTE FUNCTION clear_label_key_on_relabel()
 public.lead_disqualify_reason.trg_lead_disqualify_reason_updated CREATE TRIGGER trg_lead_disqualify_reason_updated BEFORE UPDATE ON public.lead_disqualify_reason FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.lead_disqualify_reason.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead_disqualify_reason.version bigint NOT NULL gen=- def=1
@@ -5320,16 +5337,17 @@ public.lead_origin.id uuid NOT NULL gen=- def=uuidv7()
 public.lead_origin.intent text NOT NULL gen=- def='neutral'::text
 public.lead_origin.key text NOT NULL gen=- def=-
 public.lead_origin.label text NOT NULL gen=- def=-
-public.lead_origin.label_key text gen=- def=-
+public.lead_origin.label_key text gen=s def=label_key_while_shipped(label, shipped_label, shipped_label_key)
 public.lead_origin.lead_origin_intent_check CHECK ((intent = ANY (ARRAY['high'::text, 'neutral'::text, 'low'::text])))
 public.lead_origin.lead_origin_key_key UNIQUE (key)
 public.lead_origin.lead_origin_key_shape CHECK (((key = lower(key)) AND (length(btrim(key)) > 0)))
 public.lead_origin.lead_origin_label_present CHECK ((length(btrim(label)) > 0))
 public.lead_origin.lead_origin_pkey PRIMARY KEY (id)
 public.lead_origin.lead_origin_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.lead_origin.shipped_label text gen=- def=-
+public.lead_origin.shipped_label_key text gen=- def=-
 public.lead_origin.sort_order integer NOT NULL gen=- def=0
 public.lead_origin.system boolean NOT NULL gen=- def=false
-public.lead_origin.trg_lead_origin_label_key CREATE TRIGGER trg_lead_origin_label_key BEFORE UPDATE OF label ON public.lead_origin FOR EACH ROW EXECUTE FUNCTION clear_label_key_on_relabel()
 public.lead_origin.trg_lead_origin_updated CREATE TRIGGER trg_lead_origin_updated BEFORE UPDATE ON public.lead_origin FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.lead_origin.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead_origin.version bigint NOT NULL gen=- def=1
@@ -6578,7 +6596,7 @@ public.record_role.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.record_role.id uuid NOT NULL gen=- def=uuidv7()
 public.record_role.key text NOT NULL gen=- def=-
 public.record_role.label text NOT NULL gen=- def=-
-public.record_role.label_key text gen=- def=-
+public.record_role.label_key text gen=s def=label_key_while_shipped(label, shipped_label, shipped_label_key)
 public.record_role.record_role_assignee_kinds_bounded CHECK (((cardinality(assignee_kinds) > 0) AND (assignee_kinds <@ ARRAY['user'::text, 'team'::text])))
 public.record_role.record_role_key_key UNIQUE (key)
 public.record_role.record_role_key_shape CHECK (((key = lower(key)) AND (length(btrim(key)) > 0)))
@@ -6587,9 +6605,10 @@ public.record_role.record_role_pkey PRIMARY KEY (id)
 public.record_role.record_role_record_types_bounded CHECK (((cardinality(record_types) > 0) AND (record_types <@ ARRAY['company'::text, 'deal'::text, 'project'::text])))
 public.record_role.record_role_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.record_role.record_types text[] NOT NULL gen=- def=-
+public.record_role.shipped_label text gen=- def=-
+public.record_role.shipped_label_key text gen=- def=-
 public.record_role.sort_order integer NOT NULL gen=- def=0
 public.record_role.system boolean NOT NULL gen=- def=false
-public.record_role.trg_record_role_label_key CREATE TRIGGER trg_record_role_label_key BEFORE UPDATE OF label ON public.record_role FOR EACH ROW EXECUTE FUNCTION clear_label_key_on_relabel()
 public.record_role.trg_record_role_updated CREATE TRIGGER trg_record_role_updated BEFORE UPDATE ON public.record_role FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.record_role.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.record_role.version bigint NOT NULL gen=- def=1

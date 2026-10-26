@@ -117,9 +117,9 @@ func TestEveryShippedLabelKeyIsOneTheFrontendRenders(t *testing.T) {
 	}
 }
 
-// An administrator's relabel is their own words in every language, so it drops
-// the key; a write that leaves the label alone keeps it.
-func TestARelabelDropsTheShippedLabelKey(t *testing.T) {
+// An administrator's relabel is their own words in every language, so it hides
+// the key; putting the shipped words back shows it again.
+func TestARelabelHidesTheShippedLabelKeyUntilTheShippedWordsReturn(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -131,26 +131,70 @@ func TestARelabelDropsTheShippedLabelKey(t *testing.T) {
 		if err != nil {
 			t.Fatalf("opening a transaction: %v", err)
 		}
-		var id string
-		if err := tx.QueryRow(ctx, `SELECT id::text FROM `+name+` WHERE label_key IS NOT NULL LIMIT 1`).Scan(&id); err != nil {
+		var id, shipped, key string
+		if err := tx.QueryRow(ctx, `SELECT id::text, label, label_key FROM `+name+
+			` WHERE label_key IS NOT NULL LIMIT 1`).Scan(&id, &shipped, &key); err != nil {
 			t.Fatalf("%s holds no keyed row to relabel: %v", table, err)
 		}
-		keyAfter := func(set string) *string {
+		keyAfter := func(label string) *string {
 			t.Helper()
-			var key *string
-			if err := tx.QueryRow(ctx, `UPDATE `+name+` SET `+set+` WHERE id = $1 RETURNING label_key`, id).Scan(&key); err != nil {
-				t.Fatalf("updating %s: %v", table, err)
+			var got *string
+			if err := tx.QueryRow(ctx, `UPDATE `+name+` SET label = $2 WHERE id = $1 RETURNING label_key`,
+				id, label).Scan(&got); err != nil {
+				t.Fatalf("relabelling %s: %v", table, err)
 			}
-			return key
+			return got
 		}
-		if keyAfter(`label = label`) == nil {
-			t.Errorf("%s: a write that kept the label dropped its key", table)
+		if got := keyAfter(shipped + " (ours)"); got != nil {
+			t.Errorf("%s: a relabel kept the key %q, so the new words never show", table, *got)
 		}
-		if key := keyAfter(`label = label || ' (ours)'`); key != nil {
-			t.Errorf("%s: a relabel kept the key %q, so the new words never show", table, *key)
+		if got := keyAfter(shipped); got == nil || *got != key {
+			t.Errorf("%s: the shipped words came back and the key reads %v, want %q", table, got, key)
 		}
 		if err := tx.Rollback(ctx); err != nil {
 			t.Fatalf("rolling back %s: %v", table, err)
 		}
+	}
+}
+
+// A built-in question follows the same rule inside its template, and a save
+// cannot hand a question a key of its own choosing.
+func TestARewordedReviewQuestionReadsTranslatedOnceItsShippedWordsReturn(t *testing.T) {
+	ownerDSN, _ := dsns(t)
+	conn := connect(t, ownerDSN)
+	headSchema(t, conn)
+	ctx := context.Background()
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		t.Fatalf("opening a transaction: %v", err)
+	}
+
+	const question = "why_we_won"
+	keyAfter := func(label, forged string) *string {
+		t.Helper()
+		var got *string
+		if err := tx.QueryRow(ctx, `
+			UPDATE activity_review_template t
+			   SET questions = (
+			         SELECT jsonb_agg(CASE WHEN q ->> 'key' = $1
+			                               THEN q || jsonb_build_object('label', $2::text, 'label_key', $3::text)
+			                               ELSE q END ORDER BY ord)
+			           FROM jsonb_array_elements(t.questions) WITH ORDINALITY AS a (q, ord))
+			 WHERE t.system AND t.key = 'win_review'
+			RETURNING (SELECT q ->> 'label_key' FROM jsonb_array_elements(questions) AS q WHERE q ->> 'key' = $1)`,
+			question, label, forged).Scan(&got); err != nil {
+			t.Fatalf("saving the win review: %v", err)
+		}
+		return got
+	}
+	const shipped, key = "Why did we win?", "reviewTemplates.builtin.question.why_we_won"
+	if got := keyAfter("What tipped it our way?", key); got != nil {
+		t.Errorf("a reworded question kept the key %q, so the new words never show", *got)
+	}
+	if got := keyAfter(shipped, "reviewTemplates.builtin.question.lost_to"); got == nil || *got != key {
+		t.Errorf("the shipped words came back and the question's key reads %v, want %q", got, key)
+	}
+	if err := tx.Rollback(ctx); err != nil {
+		t.Fatalf("rolling back the win review: %v", err)
 	}
 }

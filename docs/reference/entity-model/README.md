@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 329 |
-| Columns | 3890 |
+| Columns | 3900 |
 | Foreign keys | 546 |
 | Owning areas | 36 |
 
@@ -152,7 +152,7 @@ erDiagram
 | [`activity_request_settlement`](activities.md#activity_request_settlement) | activities | 10 | 0 |
 | [`activity_retention_evidence`](activities.md#activity_retention_evidence) | activities | 12 | 0 |
 | [`activity_review_response`](activities.md#activity_review_response) | activities | 16 | 0 |
-| [`activity_review_template`](activities.md#activity_review_template) | activities | 14 | 0 |
+| [`activity_review_template`](activities.md#activity_review_template) | activities | 16 | 0 |
 | [`activity_sales_state`](activities.md#activity_sales_state) | activities | 5 | 0 |
 | [`activity_waiting_horizon`](activities.md#activity_waiting_horizon) | activities | 3 | 0 |
 | [`agent_run`](agents.md#agent_run) | agents | 17 | 1 |
@@ -267,7 +267,7 @@ erDiagram
 | [`data_task_run`](platform.md#data_task_run) | platform | 22 | 0 |
 | [`data_task_run_history`](platform.md#data_task_run_history) | platform | 5 | 0 |
 | [`deal`](deals.md#deal) | deals | 43 | 27 |
-| [`deal_acquisition_source`](deals.md#deal_acquisition_source) | deals | 10 | 1 |
+| [`deal_acquisition_source`](deals.md#deal_acquisition_source) | deals | 12 | 1 |
 | [`deal_correction`](deals.md#deal_correction) | deals | 18 | 0 |
 | [`deal_document_hide`](activities.md#deal_document_hide) | activities | 4 | 0 |
 | [`deal_move_dismissal`](compose.md#deal_move_dismissal) | compose | 4 | 0 |
@@ -320,9 +320,9 @@ erDiagram
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 12 | 1 |
 | [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 16 | 1 |
 | [`lead`](contacts.md#lead) | contacts | 40 | 18 |
-| [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 9 | 1 |
+| [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 11 | 1 |
 | [`lead_manual_signal`](contacts.md#lead_manual_signal) | contacts | 12 | 0 |
-| [`lead_origin`](contacts.md#lead_origin) | contacts | 11 | 1 |
+| [`lead_origin`](contacts.md#lead_origin) | contacts | 13 | 1 |
 | [`lead_privacy_notice`](consent.md#lead_privacy_notice) | consent | 12 | 0 |
 | [`lead_score_history`](contacts.md#lead_score_history) | contacts | 9 | 0 |
 | [`lead_source`](contacts.md#lead_source) | contacts | 10 | 0 |
@@ -375,7 +375,7 @@ erDiagram
 | [`raw_capture`](capture.md#raw_capture) | capture | 7 | 1 |
 | [`record_assignment`](assignments.md#record_assignment) | assignments | 13 | 0 |
 | [`record_grant`](identity.md#record_grant) | identity | 16 | 0 |
-| [`record_role`](assignments.md#record_role) | assignments | 12 | 1 |
+| [`record_role`](assignments.md#record_role) | assignments | 14 | 1 |
 | [`relationship`](contacts.md#relationship) | contacts | 22 | 1 |
 | [`relationship_nudge_dismissal`](contacts.md#relationship_nudge_dismissal) | contacts | 5 | 0 |
 | [`report_definition`](reporting.md#report_definition) | reporting | 11 | 2 |

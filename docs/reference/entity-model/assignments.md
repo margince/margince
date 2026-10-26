@@ -62,7 +62,7 @@ The 2 tables owned by `assignments`, as the migrations build them. [Back to the 
 
 ## record_role
 
-12 columns · primary key `(id)` · referenced by 1 foreign key
+14 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -71,8 +71,10 @@ The 2 tables owned by `assignments`, as the migrations build them. [Back to the 
 | `assignee_kinds` | `text[]` | yes | Whether a user, a team, or either may hold this role. |
 | `key` | `text` | yes | The stable identifier. |
 | `label` | `text` | yes | What readers see. |
-| `label_key` | `text` |  |  |
+| `label_key` | `text`, generated as `label_key_while_shipped(label, shipped_label, shipped_label_key)` |  | Computed by the database. It cannot be written directly. |
 | `record_types` | `text[]` | yes | Which record kinds this role may be held on. |
+| `shipped_label` | `text` |  |  |
+| `shipped_label_key` | `text` |  |  |
 | `sort_order` | `integer`, default `0` | yes | Display order in pickers and settings. |
 | `system` | `boolean`, default `false` | yes | Seeded with the installation. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -95,5 +97,4 @@ The 2 tables owned by `assignments`, as the migrations build them. [Back to the 
 
 **Triggers**
 
-- `trg_record_role_label_key`: `BEFORE UPDATE OF label FOR EACH ROW EXECUTE FUNCTION clear_label_key_on_relabel()`
 - `trg_record_role_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`

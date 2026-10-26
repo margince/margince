@@ -19,8 +19,9 @@ import (
 )
 
 // A built-in question keeps its catalog key through a save that leaves its
-// wording alone and loses it once reworded. A later review freezes the key.
-func TestAReviewQuestionKeepsItsCatalogKeyUntilItIsReworded(t *testing.T) {
+// wording alone, loses it while reworded and gets it back with the shipped
+// words. A later review freezes the key.
+func TestAReviewQuestionNamesItsCatalogKeyWhileItReadsAsShipped(t *testing.T) {
 	e := Setup(t)
 	perms := AdminPerms
 	perms.Objects = maps.Clone(AdminPerms.Objects)
@@ -46,25 +47,38 @@ func TestAReviewQuestionKeepsItsCatalogKeyUntilItIsReworded(t *testing.T) {
 	}
 
 	// Only the shipped questions: another test in this package adds its own.
-	var edited []crmcontracts.ReviewQuestion
+	var shipped []crmcontracts.ReviewQuestion
 	for _, q := range template.Questions {
-		if q.Key == "competitors" {
-			q.Label = "Which other vendors were on the shortlist?"
-		}
 		if q.LabelKey != nil {
+			shipped = append(shipped, q)
+		}
+	}
+	saveCompetitorsAs := func(version crmcontracts.RowVersion, label string) crmcontracts.ActivityReviewTemplate {
+		t.Helper()
+		edited := make([]crmcontracts.ReviewQuestion, 0, len(shipped))
+		for _, q := range shipped {
+			if q.Key == "competitors" {
+				q.Label = label
+			}
 			edited = append(edited, q)
 		}
+		updated, err := e.Activities.UpdateReviewTemplate(ctx, ids.UUID(template.Id),
+			crmcontracts.UpdateActivityReviewTemplateRequest{Version: version, Questions: edited})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return updated
 	}
-	updated, err := e.Activities.UpdateReviewTemplate(ctx, ids.UUID(template.Id),
-		crmcontracts.UpdateActivityReviewTemplateRequest{Version: *template.Version, Questions: edited})
-	if err != nil {
-		t.Fatal(err)
-	}
+	updated := saveCompetitorsAs(*template.Version, "Which other vendors were on the shortlist?")
 	if keyOf(updated.Questions, "why_we_won") == nil {
 		t.Error("a question the save left alone lost its catalog key")
 	}
 	if key := keyOf(updated.Questions, "competitors"); key != nil {
 		t.Errorf("a reworded question kept key %q, so the administrator's words never show", *key)
+	}
+	restored := saveCompetitorsAs(*updated.Version, "Who else were they considering?")
+	if key := keyOf(restored.Questions, "competitors"); key == nil || *key != "reviewTemplates.builtin.question.competitors" {
+		t.Errorf("the shipped words came back and the question names key %v, so it stays in English", key)
 	}
 
 	deal, closing := closedDeal(t, e, "Keyed review")

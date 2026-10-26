@@ -654,7 +654,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_review_template
 
-14 columns · primary key `(id)` · referenced by 0 foreign keys
+16 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -662,9 +662,11 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 | `active` | `boolean`, default `true` | yes |  |
 | `key` | `text` | yes |  |
 | `label` | `text` | yes | At most 200 characters. |
-| `label_key` | `text` |  |  |
+| `label_key` | `text`, generated as `label_key_while_shipped(label, shipped_label, shipped_label_key)` |  | Computed by the database. It cannot be written directly. |
 | `outcome` | `text` | yes | Which outcome this template is for. |
 | `questions` | `jsonb` | yes |  |
+| `shipped_label` | `text` |  |  |
+| `shipped_label_key` | `text` |  |  |
 | `system` | `boolean`, default `false` | yes | Shipped with the product. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
@@ -687,7 +689,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
-- `trg_activity_review_template_label_key`: `BEFORE UPDATE OF label FOR EACH ROW EXECUTE FUNCTION clear_label_key_on_relabel()`
+- `trg_activity_review_template_question_keys`: `BEFORE UPDATE OF questions FOR EACH ROW EXECUTE FUNCTION key_shipped_review_questions()`
 - `trg_activity_review_template_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## activity_sales_state

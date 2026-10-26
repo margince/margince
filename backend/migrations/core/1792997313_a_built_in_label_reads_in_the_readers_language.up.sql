@@ -2,47 +2,28 @@
 -- renders it from, in the reader's language. The stored label stays the
 -- English text that an export, a report or an agent reads.
 --
--- Only rows still worded as shipped get a key. An administrator who already
--- renamed one keeps the name they chose.
+-- A built-in row keeps the wording and key it shipped with. It names its key
+-- only while its label reads as shipped: an administrator's own words win, and
+-- putting the shipped words back makes it read translated again.
 SET LOCAL lock_timeout = '3s';
 
-ALTER TABLE deal_acquisition_source ADD COLUMN label_key text;
-ALTER TABLE lead_origin ADD COLUMN label_key text;
-ALTER TABLE lead_disqualify_reason ADD COLUMN label_key text;
-ALTER TABLE record_role ADD COLUMN label_key text;
-ALTER TABLE activity_review_template ADD COLUMN label_key text;
+-- The one rule every built-in label follows, for the list columns and the
+-- review questions alike.
+CREATE FUNCTION label_key_while_shipped(label text, shipped_label text, shipped_label_key text)
+    RETURNS text
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    AS $$ SELECT CASE WHEN label = shipped_label THEN shipped_label_key END $$;
 
--- A relabel is an administrator's own words, so it drops the key. Held here
--- rather than in each writer, so no write path can keep a stale key.
-CREATE FUNCTION clear_label_key_on_relabel() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-  IF NEW.label IS DISTINCT FROM OLD.label THEN
-    NEW.label_key = NULL;
-  END IF;
-  RETURN NEW;
-END;
-$$;
+ALTER TABLE deal_acquisition_source ADD COLUMN shipped_label text, ADD COLUMN shipped_label_key text;
+ALTER TABLE lead_origin ADD COLUMN shipped_label text, ADD COLUMN shipped_label_key text;
+ALTER TABLE lead_disqualify_reason ADD COLUMN shipped_label text, ADD COLUMN shipped_label_key text;
+ALTER TABLE record_role ADD COLUMN shipped_label text, ADD COLUMN shipped_label_key text;
+ALTER TABLE activity_review_template ADD COLUMN shipped_label text, ADD COLUMN shipped_label_key text;
 
-CREATE TRIGGER trg_deal_acquisition_source_label_key
-    BEFORE UPDATE OF label ON deal_acquisition_source
-    FOR EACH ROW EXECUTE FUNCTION clear_label_key_on_relabel();
-CREATE TRIGGER trg_lead_origin_label_key
-    BEFORE UPDATE OF label ON lead_origin
-    FOR EACH ROW EXECUTE FUNCTION clear_label_key_on_relabel();
-CREATE TRIGGER trg_lead_disqualify_reason_label_key
-    BEFORE UPDATE OF label ON lead_disqualify_reason
-    FOR EACH ROW EXECUTE FUNCTION clear_label_key_on_relabel();
-CREATE TRIGGER trg_record_role_label_key
-    BEFORE UPDATE OF label ON record_role
-    FOR EACH ROW EXECUTE FUNCTION clear_label_key_on_relabel();
-CREATE TRIGGER trg_activity_review_template_label_key
-    BEFORE UPDATE OF label ON activity_review_template
-    FOR EACH ROW EXECUTE FUNCTION clear_label_key_on_relabel();
-
+-- Matched by key, so a value an administrator already renamed keeps the name
+-- they chose and still reads translated if they put the shipped words back.
 UPDATE deal_acquisition_source s
-   SET label_key = 'acqSources.builtin.' || s.key
+   SET shipped_label = shipped.label, shipped_label_key = 'acqSources.builtin.' || s.key
   FROM (VALUES
     ('inbound', 'Inbound'),
     ('outbound', 'Outbound'),
@@ -53,10 +34,10 @@ UPDATE deal_acquisition_source s
     ('employee_referral', 'Employee referral'),
     ('other', 'Other')
   ) AS shipped (key, label)
- WHERE s.system AND s.key = shipped.key AND s.label = shipped.label;
+ WHERE s.system AND s.key = shipped.key;
 
 UPDATE lead_origin o
-   SET label_key = 'leadOrigins.builtin.' || o.key
+   SET shipped_label = shipped.label, shipped_label_key = 'leadOrigins.builtin.' || o.key
   FROM (VALUES
     ('event', 'Event'),
     ('linkedin', 'LinkedIn'),
@@ -66,11 +47,12 @@ UPDATE lead_origin o
     ('cold_outreach', 'Cold outreach'),
     ('other', 'Other')
   ) AS shipped (key, label)
- WHERE o.system AND o.key = shipped.key AND o.label = shipped.label;
+ WHERE o.system AND o.key = shipped.key;
 
--- A reason row has no key of its own, so the label it shipped with names it.
+-- A reason row has no key of its own, so only a row still worded as shipped
+-- can be told apart.
 UPDATE lead_disqualify_reason r
-   SET label_key = 'leadReasons.builtin.' || shipped.slug
+   SET shipped_label = shipped.label, shipped_label_key = 'leadReasons.builtin.' || shipped.slug
   FROM (VALUES
     ('not_a_good_fit', 'Not a good fit'),
     ('bad_timing', 'Bad timing'),
@@ -84,7 +66,7 @@ UPDATE lead_disqualify_reason r
  WHERE r.system AND r.label = shipped.label;
 
 UPDATE record_role r
-   SET label_key = 'recordRoles.builtin.' || r.key
+   SET shipped_label = shipped.label, shipped_label_key = 'recordRoles.builtin.' || r.key
   FROM (VALUES
     ('account_manager', 'Account manager'),
     ('sales_engineer', 'Sales engineer'),
@@ -94,19 +76,22 @@ UPDATE record_role r
     ('executive_sponsor', 'Executive sponsor'),
     ('support_team', 'Support team')
   ) AS shipped (key, label)
- WHERE r.system AND r.key = shipped.key AND r.label = shipped.label;
+ WHERE r.system AND r.key = shipped.key;
 
--- A question is a JSON object, so its key goes inside it. A response copies
--- the question whole, so a review written from now on keeps the key too.
+-- A question is a JSON object, so its shipped wording and key go inside it. A
+-- review copies the question's label_key, so a later review keeps the key.
 UPDATE activity_review_template t
-   SET label_key = CASE WHEN t.label = shipped.label
-                        THEN 'reviewTemplates.builtin.' || t.key END,
+   SET shipped_label = shipped.label,
+       shipped_label_key = 'reviewTemplates.builtin.' || t.key,
        questions = (
          SELECT jsonb_agg(
-                  CASE WHEN asked.label = q ->> 'label'
-                       THEN q || jsonb_build_object(
-                              'label_key', 'reviewTemplates.builtin.question.' || asked.key)
-                       ELSE q END
+                  CASE WHEN asked.key IS NULL THEN q
+                       ELSE q || jsonb_strip_nulls(jsonb_build_object(
+                              'shipped_label', asked.label,
+                              'shipped_label_key', 'reviewTemplates.builtin.question.' || asked.key,
+                              'label_key', label_key_while_shipped(
+                                q ->> 'label', asked.label, 'reviewTemplates.builtin.question.' || asked.key)))
+                  END
                   ORDER BY ord)
            FROM jsonb_array_elements(t.questions) WITH ORDINALITY AS a (q, ord)
            LEFT JOIN (VALUES
@@ -123,3 +108,44 @@ UPDATE activity_review_template t
     ('loss_review', 'Loss review')
   ) AS shipped (key, label)
  WHERE t.system AND t.key = shipped.key;
+
+ALTER TABLE deal_acquisition_source ADD COLUMN label_key text
+    GENERATED ALWAYS AS (label_key_while_shipped(label, shipped_label, shipped_label_key)) STORED;
+ALTER TABLE lead_origin ADD COLUMN label_key text
+    GENERATED ALWAYS AS (label_key_while_shipped(label, shipped_label, shipped_label_key)) STORED;
+ALTER TABLE lead_disqualify_reason ADD COLUMN label_key text
+    GENERATED ALWAYS AS (label_key_while_shipped(label, shipped_label, shipped_label_key)) STORED;
+ALTER TABLE record_role ADD COLUMN label_key text
+    GENERATED ALWAYS AS (label_key_while_shipped(label, shipped_label, shipped_label_key)) STORED;
+ALTER TABLE activity_review_template ADD COLUMN label_key text
+    GENERATED ALWAYS AS (label_key_while_shipped(label, shipped_label, shipped_label_key)) STORED;
+
+-- A saved question keeps the shipped wording and key of the stored question
+-- with its key, and names that key only while it reads as shipped. A writer
+-- cannot supply either, so no write path can keep a stale key or forge one.
+CREATE FUNCTION key_shipped_review_questions() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  NEW.questions = (
+    SELECT jsonb_agg(
+             (q - 'label_key' - 'shipped_label' - 'shipped_label_key')
+             || jsonb_strip_nulls(jsonb_build_object(
+                  'shipped_label', kept.was ->> 'shipped_label',
+                  'shipped_label_key', kept.was ->> 'shipped_label_key',
+                  'label_key', label_key_while_shipped(
+                    q ->> 'label', kept.was ->> 'shipped_label', kept.was ->> 'shipped_label_key')))
+             ORDER BY ord)
+      FROM jsonb_array_elements(NEW.questions) WITH ORDINALITY AS a (q, ord)
+      LEFT JOIN LATERAL (
+        SELECT o AS was
+          FROM jsonb_array_elements(OLD.questions) AS o
+         WHERE o ->> 'key' = q ->> 'key'
+         LIMIT 1) AS kept ON true);
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_activity_review_template_question_keys
+    BEFORE UPDATE OF questions ON activity_review_template
+    FOR EACH ROW EXECUTE FUNCTION key_shipped_review_questions();

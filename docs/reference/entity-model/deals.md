@@ -187,7 +187,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal_acquisition_source
 
-10 columns · primary key `(id)` · referenced by 1 foreign key
+12 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -195,7 +195,9 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `active` | `boolean`, default `true` | yes |  |
 | `key` | `text` | yes |  |
 | `label` | `text` | yes |  |
-| `label_key` | `text` |  |  |
+| `label_key` | `text`, generated as `label_key_while_shipped(label, shipped_label, shipped_label_key)` |  | Computed by the database. It cannot be written directly. |
+| `shipped_label` | `text` |  |  |
+| `shipped_label_key` | `text` |  |  |
 | `sort_order` | `integer`, default `0` | yes |  |
 | `system` | `boolean`, default `false` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -216,7 +218,6 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
-- `trg_deal_acquisition_source_label_key`: `BEFORE UPDATE OF label FOR EACH ROW EXECUTE FUNCTION clear_label_key_on_relabel()`
 - `trg_deal_acquisition_source_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## deal_correction

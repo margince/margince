@@ -122,8 +122,14 @@ func (s *Store) UpdateReviewTemplate(ctx context.Context, id ids.UUID, req crmco
 	if err := validateReviewQuestions(questions); err != nil {
 		return crmcontracts.ActivityReviewTemplate{}, err
 	}
+	// The table's trigger names a built-in question's catalog key while the
+	// question reads as shipped, so the save carries no key of its own.
+	raw, err := json.Marshal(questions)
+	if err != nil {
+		return crmcontracts.ActivityReviewTemplate{}, fmt.Errorf("encode template: %w", err)
+	}
 	var result crmcontracts.ActivityReviewTemplate
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.tx(ctx, func(tx pgx.Tx) error {
 		before, err := scanReviewTemplate(tx.QueryRow(ctx, `SELECT `+reviewTemplateColumns+` FROM activity_review_template WHERE id=$1 AND archived_at IS NULL FOR UPDATE`, id))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
@@ -133,10 +139,6 @@ func (s *Store) UpdateReviewTemplate(ctx context.Context, id ids.UUID, req crmco
 		}
 		if before.Version == nil || *before.Version != req.Version {
 			return apperrors.ErrConflict
-		}
-		raw, err := json.Marshal(keepShippedLabelKeys(questions, before.Questions))
-		if err != nil {
-			return fmt.Errorf("encode template: %w", err)
 		}
 		result, err = scanReviewTemplate(tx.QueryRow(ctx, `UPDATE activity_review_template SET questions=$2 WHERE id=$1 RETURNING `+reviewTemplateColumns, id, raw))
 		if err != nil {
@@ -149,21 +151,4 @@ func (s *Store) UpdateReviewTemplate(ctx context.Context, id ids.UUID, req crmco
 		return err
 	})
 	return result, err
-}
-
-// keepShippedLabelKeys carries a built-in question's catalog key across a save
-// that left its wording alone. A reworded question is the administrator's own
-// text, so it loses the key and reads as typed in every language.
-func keepShippedLabelKeys(questions []ReviewQuestion, before []crmcontracts.ReviewQuestion) []ReviewQuestion {
-	shipped := make(map[string]crmcontracts.ReviewQuestion, len(before))
-	for _, q := range before {
-		shipped[q.Key] = q
-	}
-	for i, q := range questions {
-		was, ok := shipped[q.Key]
-		if ok && was.LabelKey != nil && was.Label == q.Label {
-			questions[i].LabelKey = *was.LabelKey
-		}
-	}
-	return questions
 }
