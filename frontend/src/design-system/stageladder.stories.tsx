@@ -226,6 +226,21 @@ async function pagersMatchOverflow(canvasElement: HTMLElement) {
   return { run, later, earlier };
 }
 
+// Each page glides, and a press during the glide restarts it short. The glide
+// has ended once two reads a poll apart agree; `scrollend` skips a clamped one.
+async function glideEnds(run: HTMLElement) {
+  let last = Number.NaN;
+  await waitFor(
+    () => {
+      const now = run.scrollLeft;
+      const still = now === last;
+      last = now;
+      expect(still).toBe(true);
+    },
+    { interval: 100, timeout: 3000 },
+  );
+}
+
 async function pageToTheEnd(canvasElement: HTMLElement) {
   const { run, later, earlier } = await pagersMatchOverflow(canvasElement);
   // A run that fits has no end to page to, and would pass with no press.
@@ -235,6 +250,7 @@ async function pageToTheEnd(canvasElement: HTMLElement) {
     const button = later();
     if (button) {
       await user.click(button);
+      await glideEnds(run);
     }
     await pagersMatchOverflow(canvasElement);
   }
@@ -291,6 +307,99 @@ export const NineStagesThatFit: Story = {
     expect(run.scrollWidth - run.clientWidth).toBeLessThanOrEqual(1);
     expect(later()).toBeNull();
     expect(earlier()).toBeNull();
+  },
+};
+
+// Every bar holds its whole name, and the run rests with the current bar in
+// view, before any button is pressed.
+async function barsRestWhole(canvasElement: HTMLElement) {
+  const run = canvasElement.querySelector<HTMLElement>(".stage-ladder-run");
+  const here = run?.querySelector<HTMLElement>(
+    ".stage-ladder-bars [aria-current='step']",
+  );
+  if (!run || !here) {
+    throw new Error("The bars drew no run or no current stage.");
+  }
+  // The run must overflow, or the buttons below would be proved on nothing.
+  expect(run.scrollWidth - run.clientWidth).toBeGreaterThan(1);
+  for (const name of canvasElement.querySelectorAll<HTMLElement>(
+    ".stage-ladder-label",
+  )) {
+    expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth);
+  }
+  await waitFor(() => {
+    const box = run.getBoundingClientRect();
+    const bar = here.getBoundingClientRect();
+    expect(bar.left).toBeGreaterThanOrEqual(box.left);
+    expect(bar.right).toBeLessThanOrEqual(box.right);
+  });
+}
+
+function nineBars() {
+  return nineStages(NINE_STAGES).map((step, index) =>
+    index < 4 ? { ...step, sub: `${12 - index * 2} d` } : step,
+  );
+}
+
+/**
+ * The bars shape with nine long stage names, at the width How it stands gives
+ * the ladder on a deal page in a 1280px window. A bar never cuts its name, so
+ * the run scrolls under a fade and a button at each clipped end.
+ */
+export const BarsNineStagesAt1280: Story = {
+  render: () => (
+    <div style={{ inlineSize: 533 }}>
+      <StageLadder label="Stage" variant="bars" steps={nineBars()} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await barsRestWhole(canvasElement);
+    await pageToTheEnd(canvasElement);
+  },
+};
+
+/** The same bars at the width How it stands has in a 1500px window. */
+export const BarsNineStagesAt1500: Story = {
+  render: () => (
+    <div style={{ inlineSize: 729 }}>
+      <StageLadder label="Stage" variant="bars" steps={nineBars()} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await barsRestWhole(canvasElement);
+    await pageToTheEnd(canvasElement);
+  },
+};
+
+const TWELVE_STAGES = [
+  "Lead in",
+  "Qualified",
+  "Discovery",
+  "Solution demo",
+  "Technical evaluation",
+  "Business case",
+  "Proposal",
+  "Negotiation",
+  "Legal review",
+  "Procurement",
+  "Security review",
+  "Awaiting signature",
+];
+
+/** Twelve open stages on a phone: the run rests on the fourth and scrolls. */
+export const BarsTwelveStagesPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => (
+    <StageLadder
+      label="Stage"
+      variant="bars"
+      steps={nineStages(TWELVE_STAGES)}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await barsRestWhole(canvasElement);
+    await pageToTheEnd(canvasElement);
   },
 };
 

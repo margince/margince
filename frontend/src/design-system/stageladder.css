@@ -267,7 +267,8 @@
 
 /* THE BARS SHAPE (`variant="bars"`): the ladder inside How it stands. A
    summary line, then one 6px bar per open stage with its name and its time
-   under it. Nothing scrolls: the bars share the width. */
+   under it. The bars share the width while every name fits, and the run
+   scrolls under the same fade and buttons once one would be cut. */
 .stage-ladder.is-bars {
   flex-direction: column;
   flex-wrap: nowrap;
@@ -305,16 +306,21 @@
 .stage-ladder-exit-label {
   color: var(--textSecondary);
 }
+/* At least the run's own width, so the bars fill a card they fit; past it the
+   list keeps its content's width and the run scrolls. */
 .stage-ladder-bars {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(var(--stage-ladder-count), minmax(0, 1fr));
+  display: flex;
+  inline-size: max-content;
+  min-inline-size: 100%;
   gap: var(--space-1);
 }
+/* Equal shares of the room, but never less than the stage's name. */
 .stage-ladder-bar {
-  min-inline-size: 0;
+  flex: 1 0 0;
+  min-inline-size: max-content;
 }
 .stage-ladder-bar-step,
 .stage-ladder-bar-step.btn {
@@ -353,9 +359,7 @@
 }
 .stage-ladder-label {
   color: var(--textSecondary);
-  overflow: hidden;
   white-space: nowrap;
-  text-overflow: ellipsis;
 }
 .stage-ladder-bar.is-done .stage-ladder-label,
 .stage-ladder-bar-step.is-here .stage-ladder-label {
@@ -368,8 +372,12 @@
   font: var(--fontBodySmall);
   color: var(--textSecondary);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+/* A bar is taller than a button, so the buttons stand on its middle. */
+.stage-ladder.is-bars .stage-ladder-page {
+  inset-block: 0;
+  display: flex;
+  align-items: center;
 }
 .stage-ladder.is-bars .stage-ladder-hint {
   text-align: start;
