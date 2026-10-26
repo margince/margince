@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "../i18n";
 import { useAgentTicker } from "./agentrail-ticker";
 
 // The line under the orb, as a unit. What it says is the product's own promise
@@ -68,6 +69,18 @@ describe("useAgentTicker", () => {
     render(harness(<Ticker />));
     await read(["deals"], { data: [] });
     expect(line()).toBe("Loading pipeline");
+  });
+
+  it("names it in the reader's language", async () => {
+    render(
+      harness(
+        <LocaleProvider initial="vi">
+          <Ticker />
+        </LocaleProvider>,
+      ),
+    );
+    await read(["deals"], { data: [] });
+    expect(line()).toBe("Đang tải pipeline");
   });
 
   it("says nothing for a read that is plumbing rather than work", async () => {

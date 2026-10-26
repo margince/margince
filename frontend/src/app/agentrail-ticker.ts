@@ -3,6 +3,7 @@
 
 import { type QueryClient, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { type Translator, translate, useLocale } from "../i18n";
 import { NAMED, SAID, WROTE } from "./agentrail-copy";
 
 /**
@@ -185,6 +186,7 @@ function lineFor(
   client: QueryClient,
   key: readonly unknown[],
   settled: unknown,
+  t: Translator,
 ): string | null {
   const head = headOf(key);
   if (head === null) {
@@ -194,7 +196,8 @@ function lineFor(
   if (template === undefined) {
     // A list, a queue, a catalog: there is no one record to name, so the phrase
     // is the whole line.
-    return SAID[head] ?? null;
+    const said = SAID[head];
+    return said === undefined ? null : t(said);
   }
   // A single record, and the NAME is the line. There is no unnamed version of
   // this sentence: "Loading contact" tells a reader nothing they cannot see
@@ -203,7 +206,7 @@ function lineFor(
   // nothing until it can say who.
   const id = idOf(key);
   const name = nameIn(settled) ?? (id === null ? null : nameFor(client, id));
-  return name === null ? null : template.replace("%s", name);
+  return name === null ? null : t(template, { name });
 }
 
 /**
@@ -216,6 +219,7 @@ function lineFor(
 function wroteFor(
   client: QueryClient,
   key: readonly unknown[] | undefined,
+  t: Translator,
 ): string | null {
   if (key === undefined) {
     return null;
@@ -229,10 +233,10 @@ function wroteFor(
   if (id === null) {
     // Nothing to name: the write is not about one record, so the plain phrase IS
     // the whole truth about it.
-    return phrases[1];
+    return t(phrases[1]);
   }
   const name = nameFor(client, id);
-  return name === null ? phrases[1] : phrases[0].replace("%s", name);
+  return name === null ? t(phrases[1]) : t(phrases[0], { name });
 }
 
 /**
@@ -244,9 +248,13 @@ function wroteFor(
  */
 export function useAgentTicker(): readonly TickerLine[] {
   const client = useQueryClient();
+  const { locale } = useLocale();
   const [lines, setLines] = useState<readonly TickerLine[]>([]);
 
   useEffect(() => {
+    // Keyed on the locale, not a translator: `useT` answers a new function
+    // every render, which would resubscribe and cancel each line's expiry.
+    const t: Translator = (key, params) => translate(locale, key, params);
     let next = 0;
     const timers = new Set<ReturnType<typeof setTimeout>>();
     // What has already been said, so one read is one line however many times the
@@ -293,7 +301,7 @@ export function useAgentTicker(): readonly TickerLine[] {
         return;
       }
       const key = event.query.queryKey;
-      const said = lineFor(client, key, settled);
+      const said = lineFor(client, key, settled, t);
       if (said !== null) {
         sayOnce(said, key);
       }
@@ -314,7 +322,7 @@ export function useAgentTicker(): readonly TickerLine[] {
       // pending, so one write that retries would otherwise announce itself
       // several times over.
       const key = event.mutation.options.mutationKey;
-      const said = wroteFor(client, key);
+      const said = wroteFor(client, key, t);
       if (said !== null && key !== undefined) {
         sayOnce(said, key);
       }
@@ -328,7 +336,7 @@ export function useAgentTicker(): readonly TickerLine[] {
         clearTimeout(timer);
       }
     };
-  }, [client]);
+  }, [client, locale]);
 
   return lines;
 }
