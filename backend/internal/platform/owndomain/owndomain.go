@@ -33,6 +33,22 @@ func Fold(domain string) string {
 	return ascii
 }
 
+// Spellings is every form a mail header may carry for one domain. That is the
+// ASCII form Fold gives, and its Unicode form when that differs.
+// Postgres cannot fold IDNA, so a SQL comparison against stored header
+// addresses needs both.
+func Spellings(domain string) []string {
+	folded := Fold(domain)
+	if folded == "" {
+		return nil
+	}
+	out := []string{folded}
+	if display, err := idna.Lookup.ToUnicode(folded); err == nil && display != folded {
+		out = append(out, display)
+	}
+	return out
+}
+
 // OfAddress is the folded domain of a mail address, or "" when it has none.
 func OfAddress(address string) string {
 	address = strings.TrimSpace(address)

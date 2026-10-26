@@ -19,8 +19,9 @@ package freemail
 import (
 	"strings"
 
-	"golang.org/x/net/idna"
 	"golang.org/x/net/publicsuffix"
+
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 )
 
 // Registrable normalizes a mail domain to its registrable eTLD+1 via the
@@ -100,22 +101,11 @@ func validHostnameLabel(label string) bool {
 	return true
 }
 
-// normalize lowercases, trims, drops the root dot, and folds Unicode labels to
-// punycode. The IDNA conversion is the lookup profile deliberately: a domain
-// that fails it is returned as-is rather than dropped, because this is also the
-// entry point for the LIST's own entries, and silently discarding one would
-// shrink the gate without saying so.
-func normalize(domain string) string {
-	domain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(domain), ".")))
-	if domain == "" {
-		return ""
-	}
-	ascii, err := idna.Lookup.ToASCII(domain)
-	if err != nil {
-		return domain
-	}
-	return ascii
-}
+// normalize is owndomain.Fold, the one domain fold: lowercased, trimmed,
+// root dot dropped, Unicode labels folded to punycode. A domain IDNA cannot
+// read comes back as typed. This is also the entry point for the list's own
+// entries, and dropping one would shrink the gate without saying so.
+func normalize(domain string) string { return owndomain.Fold(domain) }
 
 // CarveOutKey returns the form a carve-out is stored and matched under.
 // A host at or below a subdomain baseline entry is kept as typed.

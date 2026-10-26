@@ -70,8 +70,10 @@ func UnambiguousMailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][
 		return nil, err
 	}
 	owners, strengths := map[string]string{}, map[string]int{}
+	// Keyed by the folded address, so a Unicode and a punycode spelling of one
+	// mailbox are one claim, and two seats holding them collide.
 	claim := func(seat, label string, strength int) {
-		address := mailidentity.ReaderAddress(label, "")
+		address := mailidentity.SeatAddressKey(label, "")
 		if address == "" {
 			return
 		}
@@ -92,7 +94,9 @@ func UnambiguousMailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][
 	out := map[string][]string{}
 	for address, seat := range owners {
 		if seat != "" {
-			out[seat] = append(out[seat], address)
+			// Every spelling a header may carry: Postgres cannot fold IDNA, so
+			// the SQL side matches stored addresses against each.
+			out[seat] = append(out[seat], mailidentity.AddressSpellings(address)...)
 		}
 	}
 	return out, nil
@@ -108,8 +112,8 @@ func MailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][]string, er
 	}
 	out := map[string][]string{}
 	for _, record := range records {
-		if address := mailidentity.ReaderAddress(record.label, record.source); address != "" {
-			out[record.seat] = append(out[record.seat], address)
+		if address := mailidentity.SeatAddressKey(record.label, record.source); address != "" {
+			out[record.seat] = append(out[record.seat], mailidentity.AddressSpellings(address)...)
 		}
 	}
 	return out, nil
