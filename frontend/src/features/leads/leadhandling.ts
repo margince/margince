@@ -35,6 +35,23 @@ export function useLeadDisqualifyReasons() {
   });
 }
 
+/**
+ * The words a closed lead's reason reads as. The list's label comes first,
+ * because it is in the reader's language; `disqualify_reason` is the stored one.
+ */
+export function disqualifyReasonLabel(
+  lead: Readonly<{
+    disqualify_reason_id?: string | null;
+    disqualify_reason?: string | null;
+  }>,
+  reasons: readonly LeadDisqualifyReason[] | undefined,
+): string | undefined {
+  const listed = reasons?.find(
+    (reason) => reason.id === lead.disqualify_reason_id,
+  );
+  return listed?.label ?? lead.disqualify_reason ?? undefined;
+}
+
 export function useLeadSettings() {
   return useQuery({
     queryKey: LEAD_SETTINGS_KEY,

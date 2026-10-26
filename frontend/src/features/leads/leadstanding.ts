@@ -5,6 +5,10 @@ import { formatDateAbbrev } from "../../format/format";
 import { leadIdentityName } from "../../format/leadname";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import {
+  disqualifyReasonLabel,
+  type LeadDisqualifyReason,
+} from "./leadhandling";
 
 type Lead = components["schemas"]["Lead"];
 
@@ -74,6 +78,7 @@ export function leadStanding(
   locale: Locale,
   zone: string,
   record: string,
+  reasons: readonly LeadDisqualifyReason[] | undefined,
 ): LeadStanding {
   const when = (at: string) => formatDateAbbrev(at, locale, zone);
   // Merged away is read first: the merge archives the loser and leaves
@@ -96,10 +101,11 @@ export function leadStanding(
   }
   if (lead.status === "disqualified") {
     // Neutral, not a failure colour: closing a lead is ordinary work.
+    const reason = disqualifyReasonLabel(lead, reasons);
     return {
       word: t("lead.standing.closed"),
-      sentence: lead.disqualify_reason
-        ? t("lead.standing.closedFor", { reason: lead.disqualify_reason })
+      sentence: reason
+        ? t("lead.standing.closedFor", { reason })
         : t("lead.standing.closedUnreasoned"),
       tone: "neutral",
     };

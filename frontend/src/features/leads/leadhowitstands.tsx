@@ -15,6 +15,7 @@ import { addedViaFor } from "../../lib/leadorigins";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { activityMarks } from "../../lib/standingmarks";
+import { useLeadDisqualifyReasons } from "./leadhandling";
 import { useLeadStatusChanges } from "./leadhistory";
 import type { Lead, LeadWriter } from "./leads";
 import { LeadStepper } from "./leads.stepper";
@@ -62,7 +63,8 @@ export function LeadHowItStands({
   const ctx: ReadingContext = { t, locale, zone, record, asOf };
   const changes = useLeadStatusChanges(lead);
   const explain = useLeadScore(lead);
-  const verdict = leadStanding(lead, t, locale, zone, record);
+  const reasons = useLeadDisqualifyReasons();
+  const verdict = leadStanding(lead, t, locale, zone, record, reasons.data);
   const factors =
     explain.isSuccess && explain.data.explained
       ? (explain.data.current?.factors ?? [])
