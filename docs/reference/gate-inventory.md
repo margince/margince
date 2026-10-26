@@ -365,6 +365,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `outboundidentityusers_test.go` | H3 | Every outbound identity has a request behind it. |
 | `ownerprivatepairing_test.go` | H2 | A table whose visibility admits 'owner' names the owner, or the record it marks most-private is the one nobody can read. |
 | `parallelgates_test.go` | H3 | Every gate in this package calls t.Parallel, so a new gate cannot run alone while the others share the machine. |
+| `participantstands_test.go` | H2 | A participant row that names only a seat records an inferred owner, not a seat that was on the message. |
 | `passportlessagents_test.go` | H1 | An agent principal carrying no passport is a principal nobody can revoke. |
 | `passportmint_test.go` | H1 | A passport is minted for the session user, and for nobody else. |
 | `pendingwriter_test.go` | H2 | A "no writer yet" classification stops being true the moment a writer lands. |

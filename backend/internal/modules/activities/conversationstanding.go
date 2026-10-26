@@ -80,6 +80,12 @@ func (s *Store) onThread(ctx context.Context, tx pgx.Tx, anchor ids.ActivityID, 
 	if err != nil {
 		return false, err
 	}
+	// The seat arm asks whether the participant row stands. Standing on a
+	// thread decides what the caller may read next.
+	//
+	// A guessed mailbox owner would give that to a seat the message never
+	// reached. The address arm needs no such test, because a guessed row
+	// carries no address.
 	me := fmt.Sprintf("$%d::uuid", arg(viewer))
 	q := fmt.Sprintf(`
 		SELECT EXISTS (
@@ -90,8 +96,9 @@ func (s *Store) onThread(ctx context.Context, tx pgx.Tx, anchor ids.ActivityID, 
 		          AND coalesce(a.channel_provider, '') = coalesce(anchor.channel_provider, ''))
 		    JOIN activity_participant ap ON ap.activity_id = a.id AND ap.role IN ('from', 'to', 'cc')
 		   WHERE anchor.id = $%d AND a.archived_at IS NULL AND %s
-		     AND (ap.user_id = %s OR lower(ap.address) = ANY(%s)))`,
-		arg(anchor), content, me, mailSeatAddressesSQL(identities, me))
+		     AND ((ap.user_id = %s AND %s) OR lower(ap.address) = ANY(%s)))`,
+		arg(anchor), content, me, auth.ParticipantStandsSQL("ap", "a"),
+		mailSeatAddressesSQL(identities, me))
 	var on bool
 	if err := tx.QueryRow(ctx, q, args...).Scan(&on); err != nil {
 		return false, fmt.Errorf("activities: reading whether the caller is on the thread: %w", err)
