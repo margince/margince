@@ -1,4 +1,4 @@
--- Validates the two checks 1792988054 added NOT VALID. Its own
+-- Validates the two checks 1793003141 added NOT VALID. Its own
 -- file, so VALIDATE runs in its own transaction under SHARE UPDATE EXCLUSIVE and
 -- writers are not held behind the scan.
 SET LOCAL lock_timeout = '5s';

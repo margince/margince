@@ -8,7 +8,7 @@
 -- team week holding one would be refused at freeze. Each figure is bounded by
 -- the cohort on its own instead.
 --
--- Replaced NOT VALID so no scan runs under the lock; 1792988055 validates it.
+-- Replaced NOT VALID so no scan runs under the lock; 1793003142 validates it.
 SET LOCAL lock_timeout = '5s';
 
 ALTER TABLE team_weekly_review
@@ -21,7 +21,7 @@ ALTER TABLE team_weekly_review
         AND leads_answered_in_target <= leads_routed
         AND leads_breached <= leads_routed) NOT VALID;
 
--- The week's lead cohort (1792988053) is a tally, belongs to a lead block, and
+-- The week's lead cohort (1793003140) is a tally, belongs to a lead block, and
 -- holds every lead the two figures beside it were counted from, each on its own.
 -- NULL is a week frozen before the cohort was recorded.
 ALTER TABLE weekly_review_scorecard
