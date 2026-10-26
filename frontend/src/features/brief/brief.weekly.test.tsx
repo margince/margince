@@ -2,7 +2,9 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { formatDateAbbrev, formatDateTime } from "../../format/format";
+import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { vi as viCopy } from "../../i18n/vi";
 import { RecordZoneProvider } from "../../lib/recordzone";
 import {
   beforeHistoryWeeklyNumbers,
@@ -639,6 +641,54 @@ describe("BriefScreen — the week against the one before", () => {
     ]);
   });
 
+  // The report is about a closed week, read on a later day, so "this week"
+  // would name the wrong one. The headers name the review's own weeks.
+  it("names the review's week and the week before by number", async () => {
+    await mount(withPrior);
+
+    const headers = within(
+      screen.getByRole("table", { name: en["brief.report.chapter.figures"] }),
+    )
+      .getAllByRole("columnheader")
+      .map((cell) => cell.textContent);
+    expect(headers).toContain(
+      en["brief.report.col.week"].replace("{week}", "27"),
+    );
+    expect(headers).toContain(
+      en["brief.report.col.prior"].replace("{week}", "26"),
+    );
+  });
+
+  it("counts the week before across a year end", async () => {
+    await mount({ ...withPrior, local_week_start: "2027-01-04" });
+
+    const headers = within(
+      screen.getByRole("table", { name: en["brief.report.chapter.figures"] }),
+    )
+      .getAllByRole("columnheader")
+      .map((cell) => cell.textContent);
+    expect(headers).toContain(
+      en["brief.report.col.week"].replace("{week}", "1"),
+    );
+    expect(headers).toContain(
+      en["brief.report.col.prior"].replace("{week}", "53"),
+    );
+  });
+
+  // The workings are looked up one at a time, so each pair is a row of its
+  // own. Lost deals are the table's row and are not repeated under it.
+  it("draws each working as its own row and states the lost deals once", async () => {
+    await mount(withPrior);
+
+    const moved = screen.getByText(en["brief.weekly.dealsMoved"]);
+    const decided = screen.getByText(en["brief.weekly.decided"]);
+    expect(moved.closest(".factlist-row")).not.toBeNull();
+    expect(moved.closest(".factlist-row")).not.toBe(
+      decided.closest(".factlist-row"),
+    );
+    expect(screen.getAllByText(en["brief.week.lostLabel"])).toHaveLength(1);
+  });
+
   // An older review may not carry a figure at all. Its column says so with a
   // dash; a "0" there would claim a week that counted nothing.
   it("dashes a figure the week before did not carry", async () => {
@@ -823,15 +873,46 @@ describe("BriefScreen — figures whose source had not started", () => {
     ]);
     expect(card(strip, en["brief.weekly.meetingsHeld"])).toEqual({
       value: "3 / 5",
-      details: ["Some meeting history predates confirmed outcomes."],
+      details: [en["reporting.status.partial"]],
     });
     expect(card(strip, en["brief.weekly.leadsAnswered"])).toEqual({
       value: "—",
-      details: [en["brief.weekly.notRecorded"], "No lead source in scope."],
+      details: [
+        en["brief.weekly.notRecorded"],
+        en["brief.weekly.noneRecorded.leads"],
+      ],
     });
     expect(
       screen.getByText(en["brief.weekly.dealsMoved"]).nextSibling?.textContent,
     ).toBe(en["brief.weekly.partialValue"].replace("{value}", "0"));
+  });
+
+  // The coverage note is the reader's language, whatever language the server
+  // wrote its own reason in when the week was frozen.
+  it("says an unrecorded source in the reader's language", async () => {
+    stubApi({
+      "GET /weekly-reviews/latest": () =>
+        jsonResponse({
+          ...review,
+          counts: { ...zeroWeekCounts, leads_routed: 0 },
+          numeric_summary: partlyRecordedWeeklyNumbers,
+        }),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(
+      <LocaleProvider initial="vi">
+        <RecordZoneProvider zone={recordZone}>
+          <BriefScreen />
+        </RecordZoneProvider>
+      </LocaleProvider>,
+    );
+    const strip = await screen.findByTestId("weekly-strip");
+
+    expect(strip.textContent).toContain(
+      viCopy["brief.weekly.noneRecorded.leads"],
+    );
+    expect(strip.textContent).not.toContain("No lead source in scope.");
   });
 
   // Only a count is drawn at headline size. A share with nothing to share out

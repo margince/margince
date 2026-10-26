@@ -1470,14 +1470,23 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.rates": "Đầu vào {input} · Đầu ra {output} mỗi 1 triệu token",
 
   "brief.weekly.tasksCompleted": "Việc cần làm đã hoàn tất",
-  "brief.weekly.noMeetings": "Chưa ghi nhận",
+  "brief.weekly.noMeetings": "Không có cuộc họp nào",
   "brief.weekly.noLeads": "Chưa nhận lead nào",
   "brief.weekly.noCommitments": "Không có cam kết đến hạn",
   "brief.weekly.basis":
     "Công việc CRM đã ghi nhận trong tuần đã kết thúc này. Thiếu dữ liệu ghi nhận không có nghĩa là không hoạt động.",
   "brief.weekly.notRecorded": "Không ghi nhận",
   "brief.weekly.recordedFrom": "Ghi nhận từ {date}",
-  "brief.weekly.noRecords": "Chưa có thông tin cho phần báo cáo này",
+  "brief.weekly.noneRecorded.deals":
+    "Chưa ghi nhận deal nào trong phạm vi này, nên con số này không phải kết quả đo lường.",
+  "brief.weekly.noneRecorded.tasks":
+    "Chưa ghi nhận công việc nào trong phạm vi này, nên con số này không phải kết quả đo lường.",
+  "brief.weekly.noneRecorded.meetings":
+    "Chưa ghi nhận cuộc họp nào trong phạm vi này, nên con số này không phải kết quả đo lường.",
+  "brief.weekly.noneRecorded.leads":
+    "Chưa ghi nhận lead đến nào trong phạm vi này, nên con số này không phải kết quả đo lường.",
+  "brief.weekly.noneRecorded.commitments":
+    "Chưa ghi nhận kế hoạch tuần nào trong phạm vi này, nên con số này không phải kết quả đo lường.",
   "brief.weekly.partialFrom": "Số liệu chỉ bao gồm thời gian từ {date}",
   "brief.weekly.partialValue": "{value} (một phần)",
   "brief.week.beforeHistory":
@@ -1511,7 +1520,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.focus.context": "Xem chi tiết",
   "brief.queue.back": "Quay lại Danh sách công việc",
   "brief.queue.title": "Danh sách công việc",
-  "brief.queue.show": "Hiển thị Danh sách công việc",
+  "brief.queue.show": "Xem Danh sách công việc",
   "brief.queue.hide": "Ẩn Danh sách công việc",
   "brief.team.planUnavailable":
     "Không có kế hoạch hiện tại nào của {name} mà bạn có quyền xem.",
@@ -1525,7 +1534,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.schedule.connect": "Kết nối lịch",
   "brief.schedule.reconnect": "Kết nối lại lịch",
   "brief.schedule.nextAt": "Cuộc họp tiếp theo lúc {time}",
-  "brief.readings.riskPartial": "Chỉ giá trị đã biết · chưa kiểm tra hết",
+  "brief.readings.riskPartial": "Chỉ tính deal đã có giá",
   "brief.readings.unpricedCount_one": "{count} deal chưa định giá · không tính",
   "brief.readings.unpricedCount_other":
     "{count} deal chưa định giá · không tính",
@@ -1621,7 +1630,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.changes.undone": "Đã hoàn tác",
   "brief.updates.title": "Cập nhật",
   "brief.task.undated": "Chưa có hạn",
-  "brief.readings.unpriced": "Chưa có giá",
+  "brief.readings.unpriced": "Chưa có giá trị",
   "brief.readings.noDealWork": "Không có",
   "brief.readings.noDealWorkWhy": "Hôm nay không có deal nào bị gắn cờ",
   "brief.readings.unavailable": "Chưa đếm",
@@ -1655,7 +1664,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.why.forecast_date_basis":
     "Ước tính chưa được xác nhận từ {sample_count} deal đã thắng: trung vị {median_days} ngày mỗi giai đoạn, còn {remaining_stages} giai đoạn.",
   "magic.undescribed": "Hoạt động chưa được mô tả",
-  "brief.readings.risk": "Giá trị pipeline được đánh dấu",
+  "brief.readings.risk": "Pipeline cần chú ý",
   "theme.toDark": "Giao diện tối",
   "theme.toLight": "Giao diện sáng",
   // Ba lựa chọn giao diện — menu tài khoản hiện cả ba cùng lúc, nên mỗi nhãn nói
@@ -5061,15 +5070,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.learnings.insufficient":
     "Chưa đủ bằng chứng đã ghi nhận để đưa ra nhận xét hữu ích.",
   "brief.weekly.scorecard.title": "Bảng điểm tuần",
-  "brief.weekly.scorecard.basis": "Cơ sở",
-  "brief.weekly.scorecard.advanced": "Lượt lead tiến lên",
-  "brief.weekly.scorecard.advancedBasis": "Theo bước · không theo lead",
-  "brief.weekly.scorecard.answeredInTarget": "Trễ hạn mục tiêu",
+  "brief.weekly.scorecard.basis": "Cách tính",
+  "brief.weekly.scorecard.advanced": "Lead chuyển giai đoạn",
+  "brief.weekly.scorecard.advancedBasis":
+    "Đếm số lần chuyển; một lead chuyển 2 giai đoạn tính 2 lần",
+  "brief.weekly.scorecard.answeredInTarget": "Trả lời quá hạn",
   "brief.weekly.scorecard.answeredDetail": "{count} đã trả lời trong hạn",
-  "brief.weekly.scorecard.allInTarget": "Tất cả đã trả lời trong hạn",
-  "brief.weekly.scorecard.meetingsHeld": "Lượt chuyển sang Đã họp",
+  "brief.weekly.scorecard.allInTarget": "Tất cả đều được trả lời đúng hạn",
+  "brief.weekly.scorecard.meetingsHeld": "Cuộc họp đã diễn ra",
   "brief.weekly.scorecard.meetingsBasis":
-    "{booked} đã đặt · {noShow} không đến",
+    "{booked} đã đặt lịch · {noShow} khách không đến",
   "brief.weekly.scorecard.partialHistory": "Cuộc họp không có lịch sử",
   "brief.weekly.scorecard.partialHistoryBasis":
     "Trước khi có lịch sử · số đếm là mức tối thiểu",
@@ -5092,10 +5102,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chịu ảnh hưởng của một lần xóa · số đếm là mức tối thiểu",
   // Tuần tới. Bản tổng kết đã đóng băng nói điều đã xảy ra; đây là phần duy nhất
   // của trang đó mà vẫn còn ai đó thay đổi được.
-  "plan.title": "Cam kết tuần này",
+  "plan.title": "Kế hoạch tuần {week}",
+  "plan.titleThisWeek": "Kế hoạch tuần này",
   // Hai nút chuyển của bản tóm tắt: bản nào, và của ai.
   "brief.view.label": "Chế độ xem Trang chủ",
-  "brief.view.morning": "Buổi sáng",
+  "brief.view.morning": "Hôm nay",
   "brief.view.weekly": "Tuần",
   // Câu mở đầu của bản tóm tắt, ghép từ chính những dòng trang đang hiển thị —
   // không do mô hình viết.
@@ -5155,14 +5166,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "plan.state.missed": "Bỏ lỡ",
   "plan.state.dropped": "Đã bỏ",
   "plan.help.label": "Cần trưởng nhóm hỗ trợ gì?",
-  "plan.contract.title": "Ràng buộc tuần này",
+  "plan.contract.title": "Lưu ý cho tuần này",
   "plan.contract.risks": "Rủi ro",
   "plan.contract.risksHint":
     "Những gì bạn lường trước có thể trục trặc, viết theo cách diễn đạt riêng",
-  "plan.contract.capacityNote": "Năng lực còn trống",
+  "plan.contract.capacityNote": "Lịch ngoại lệ",
   "plan.contract.capacityNoteHint":
-    "Những gì lịch không thể hiện, như nghỉ phép, đi công tác hay một đợt ra mắt",
-  "plan.contract.unwritten": "Chưa viết",
+    "Nghỉ phép, đi công tác, đợt ra mắt sản phẩm… những gì lịch không thể hiện",
+  "plan.contract.unwritten": "Chưa có",
   "plan.contract.nothingToName": "Không có gì để nêu",
   "plan.contract.edit": "Sửa",
   "plan.contract.save": "Lưu",
@@ -5185,7 +5196,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.outlook.week": "Tuần này",
   "brief.weekly.outlook.month": "Tháng này",
   "brief.weekly.outlook.quarter": "Quý này",
-  "brief.weekly.outlook.none": "Tuần này không có ảnh chụp dự báo.",
+  "brief.weekly.outlook.none": "Chưa có số liệu dự báo cho giai đoạn này.",
   "brief.weekly.outlook.won": "Giá trị đã chốt",
   "brief.weekly.outlook.commit": "Commit còn lại",
   "brief.weekly.outlook.bestCase": "Best case",
@@ -5229,15 +5240,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.report.earlier": "Tuần trước đó",
   "brief.report.later": "Tuần sau đó",
   "brief.report.col.figure": "Chỉ số",
-  "brief.report.col.week": "Tuần này",
-  "brief.report.col.prior": "Tuần trước",
+  "brief.report.col.week": "Tuần {week}",
+  "brief.report.col.prior": "Tuần {week}",
   "brief.report.col.change": "Thay đổi",
   "brief.weekly.none":
     "Chưa có bản tổng kết tuần. Bản đầu tiên sẽ có vào thứ Hai sau tuần đầy đủ đầu tiên.",
   "brief.weekly.tasksDelivered": "Việc đến hạn đã hoàn tất",
   "brief.weekly.ofDue": "{done} trên {due}",
   "brief.weekly.dealsWon": "Deal đã chốt",
-  "brief.weekly.dealsLost": "Deal đã mất",
   "brief.weekly.dealsMoved": "Deal đã đổi giai đoạn",
   "brief.weekly.decided": "Đề xuất đã có quyết định",
   "brief.weekly.acceptedRejected":
@@ -5293,8 +5303,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một nguồn đã chạm giới hạn, nên con số này là mức tối thiểu.",
   "brief.readings.urgent": "Khẩn cấp",
   "brief.readings.urgentBasis": "Liên hệ đang chờ · cam kết đến hạn",
-  "brief.readings.decisions": "Cần xem lại",
-  "brief.readings.decisionsBasis": "Đề xuất · kiểm tra hồ sơ",
+  "brief.readings.decisions": "Chờ bạn duyệt",
+  "brief.readings.decisionsBasis": "Đề xuất và kiểm tra hồ sơ",
   "brief.readings.decisionsBlocking_one": "1 đang chặn việc với khách hàng",
   "brief.readings.decisionsBlocking_other":
     "{count} đang chặn việc với khách hàng",
@@ -5312,7 +5322,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.readings.calendarUnreadableWhy": "Kết nối lại lịch để đếm cuộc họp.",
   "brief.readings.nextMeeting": "Tiếp theo: {date} · {subject}",
   "brief.readings.nextMeetingUntitled": "Tiếp theo: {date}",
-  "brief.readings.leads": "Tìm kiếm khách hàng",
+  "brief.readings.leads": "Tìm khách mới",
   "brief.readings.leadsBasis": "Việc cần làm đã lên kế hoạch cho lead",
   "brief.readings.leadsDue": "Hạn tiếp theo {value}",
   "brief.rail": "Ngữ cảnh",
@@ -15641,7 +15651,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.exceptions.truncated":
     "Danh sách đã bị cắt bớt. Vẫn còn việc khác.",
   "worklist.exceptions.kind.response_breached": "Quá hạn phản hồi lần đầu",
-  "worklist.exceptions.kind.revenue_at_risk": "Giá trị pipeline được đánh dấu",
+  "worklist.exceptions.kind.revenue_at_risk": "Pipeline cần chú ý",
   "worklist.exceptions.kind.unassigned": "Chưa giao",
   "worklist.exceptions.kind.repeated_failure": "Lỗi lặp lại",
   "worklist.board.loading": "Đang tải việc của nhóm…",
@@ -15677,15 +15687,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Số đếm chưa đầy đủ. Mỗi con số là mức tối thiểu.",
   "worklist.rowMenu": "Thao tác khác cho {title}",
   "worklist.readings.label": "Số liệu hôm nay",
-  "worklist.readings.revenue": "Giá trị pipeline được đánh dấu",
+  "worklist.readings.revenue": "Pipeline cần chú ý",
   "worklist.readings.revenue.unpriced": "Deal được đánh dấu · chưa có giá trị",
   "worklist.readings.revenue.noFigure": "Chưa có giá trị",
   "worklist.readings.replies": "Phản hồi của bên mua",
   "worklist.readings.replies.detail": "Khách hàng đang chờ",
   "worklist.readings.prospecting": "Tìm khách hàng mới",
   "worklist.readings.prospecting.detail": "Chờ trả lời đầu tiên",
-  "worklist.readings.review": "Cần xem lại",
-  "worklist.readings.review.detail": "Đề xuất · kiểm tra hồ sơ",
+  "worklist.readings.review": "Chờ bạn duyệt",
+  "worklist.readings.review.detail": "Đề xuất và kiểm tra hồ sơ",
   "worklist.readings.truncated":
     "Số đếm chưa đầy đủ. Mỗi con số là mức tối thiểu.",
   "worklist.hidden.title": "Ẩn khỏi Danh sách công việc",
@@ -16430,7 +16440,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "magic.heading.brief": "Kể từ bản tin sáng gần nhất",
   "magic.loading": "Đang đọc những gì hệ thống đã làm",
-  "magic.lane.done": "Đã làm giúp bạn",
+  "magic.lane.done": "Margince đã làm giúp bạn",
   "magic.lane.needsYou": "Đang chờ bạn",
   "magic.lane.couldNotComplete": "Không thể hoàn tất",
   "magic.lane.watching": "Cần khôi phục",
@@ -16510,15 +16520,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không có gì thay đổi nên không có gì để khôi phục.",
   "magic.undoReason.notEvaluated":
     "Bản cài đặt này chưa kiểm tra xem có thể khôi phục hay không.",
-  "magic.notShown_one": "{count} thay đổi không hiển thị: {reason}",
-  "magic.notShown_other": "{count} thay đổi không hiển thị: {reason}",
-  "magic.notShown.unadmittedAction": "việc bảo trì không có gì cần báo",
+  "magic.notShown_one": "Ẩn {count} thay đổi: {reason}",
+  "magic.notShown_other": "Ẩn {count} thay đổi: {reason}",
+  "magic.notShown.unadmittedAction": "việc bảo trì, không cần bạn xử lý",
   "magic.notShown.unknownEntityType": "loại hồ sơ mà trang này không thể xếp",
   "magic.notShown.outOfScope": "nằm ngoài hồ sơ của bạn",
   "magic.visibleScope": "Chỉ hiển thị những thay đổi bạn có quyền xem.",
   "magic.coverageIncomplete": "Chưa thể đếm một số hoạt động.",
-  "magic.done.all_one": "Tất cả {count} thay đổi, từng mục một",
-  "magic.done.all_other": "Tất cả {count} thay đổi, từng mục một",
+  "magic.done.all_one": "Xem {count} thay đổi",
+  "magic.done.all_other": "Xem {count} thay đổi",
   "magic.done.atLeast_one": "{count} thay đổi, từng mục một",
   "magic.done.atLeast_other": "{count} thay đổi, từng mục một",
   "magic.action.advance_stage": "Một deal đã chuyển sang giai đoạn tiếp theo",

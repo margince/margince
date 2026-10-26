@@ -98,7 +98,7 @@ Records, deals and mail in Margince, by page:
   to a message step by step. The rules that file it against the right contact,
   deal and project. What happens when nothing matches, and what capture refuses
   to store.
-- [Your day](your-day.md): **Morning**, the bands of the Worklist and why a row
+- [Your day](your-day.md): **Today**, the bands of the Worklist and why a row
   appears there. Pinning, snoozing and what each action reaches, and what a team
   lead sees.
 - [Your week](your-week.md): the frozen weekly review, what it counts and will

@@ -247,7 +247,8 @@ func (w *weeklyGenerateWorker) narrate(ctx context.Context, review weekly.Review
 		})
 	}
 
-	lang := identity.BaseLanguageForPrompt(ctx, w.pool)
+	// The sentence is the rep's own week, read by them alone.
+	lang := recipientLanguage(ctx, w.pool)
 	// Bounded per rep. See narrateBudget: without this one wedged provider
 	// spends the whole workspace deadline on the first rep and every rep after
 	// them loses the review itself, not just the remark.

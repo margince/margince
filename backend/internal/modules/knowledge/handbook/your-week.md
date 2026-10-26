@@ -3,7 +3,7 @@
 # Your week
 
 The **Weekly** view of **Home** looks back on a closed week and plans the next one. The day,
-**Morning** and the Worklist are in [Your day](your-day.md).
+**Today** and the Worklist are in [Your day](your-day.md).
 
 ## The weekly review
 
@@ -13,15 +13,17 @@ counts are what they were.
 
 Its title is the week it covers. Above it are the calendar week and when the report was frozen.
 Beside the title, the two arrows **Earlier week** and **Later week** step through the weeks that have
-a report. Under it, a card holds what Margince wrote about the week, marked as written by AI. The
-report's parts are:
+a report. Under it, a card holds what Margince wrote about the week, in your own language, marked
+as written by AI. The report's parts are:
 - **At a glance**: four figures. Deals won shows what they were worth; the other three show their
   share as a bar. Each shows its change on the week before, where there is one.
 - **Closed deals**: the deals won and lost, each with what it closed at, and a bar of won against
   lost.
 - **Pipeline movement**: the deals that changed stage, and the stage each reached.
 - **Forecast**: one table of the forecast for the week, month and quarter.
-- **Figures**: every figure beside the week before, and the scorecard.
+- **Figures**: every figure beside the week before, and the scorecard. The columns name the weeks
+  by number, such as **Week 27** and **Week 26**. Under the table, each other reading has a row of
+  its own.
 - **Observations**: what worked in the week and what did not, where Margince found something.
 - **The week ahead**: your plan for this week.
 
@@ -97,8 +99,8 @@ observations or the written summary, and says so.
 
 ## Planning a week
 
-**This week’s commitments**, on **Home → Weekly**, is your plan for the week: what you said you will
-do, and what you need to do it. A commitment with a **Due date** joins your Worklist and **First**
+**Plan for week {week}**, on **Home → Weekly**, is your plan for the week. It holds what you said
+you will do, and what you need to do it. A commitment with a **Due date** joins your Worklist and **First**
 on that day, in the company's time zone. Done ones, ones due later and ones with no date stay out.
 
 Each commitment has a name, and can have a linked record and a due date. Ticking one marks it but
@@ -116,8 +118,8 @@ when the week closes.
 
 ### What the week is up against
 **Constraints this week** holds two fields for your own text. **Risks** asks what you expect could
-go wrong, in your own words. **Available capacity** asks for anything the calendar does not show,
-such as time off.
+go wrong, in your own words. **Not on your calendar** asks for anything the calendar does not show,
+such as leave or time away.
 
 Each has three states: **Not written yet**, **"Nothing to name"**, or the text. A question nobody
 answered and an answer of "nothing" are different facts.
