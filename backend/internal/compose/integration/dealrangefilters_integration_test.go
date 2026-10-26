@@ -8,16 +8,20 @@ package integration
 import (
 	"context"
 	"errors"
+	"net/http"
 	"slices"
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // rangeDeal creates an open deal on the valuation fixture's pipeline.
@@ -156,5 +160,84 @@ func TestTheDealListNarrowsByTheCompanyCountry(t *testing.T) {
 	_, _, err := f.e.Deals.ListDeals(f.e.As(f.e.Rep1, nil, dealsOnly), germany)
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a seat that may not read companies filtered by their country: %v, want permission denied", err)
+	}
+}
+
+// codeRefusal is the field and code a 422 on the deal list names.
+type codeRefusal struct {
+	Details struct {
+		Errors []struct {
+			Field string `json:"field"`
+			Code  string `json:"code"`
+		} `json:"errors"`
+	} `json:"details"`
+}
+
+// Over HTTP, a currency or country takes either case. A code of the wrong shape
+// is refused by name, never answered with an empty page that reads as "no deals".
+func TestTheDealListTakesACodeInEitherCaseAndRefusesAMalformedOne(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	pipelineID, stageID, _ := companyRollupOpenStage(t, e)
+	var dollars struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/deals", AnyMap{
+		"name": "Priced in dollars", "amount_minor": 50_000, "currency": "USD",
+		"pipeline_id": pipelineID, "stage_id": stageID, "source": "manual",
+	}, nil, &dollars); status != http.StatusCreated {
+		t.Fatalf("creating the dollar deal = %d", status)
+	}
+	euros := createSearchableDeal(t, e, pipelineID, stageID, "Priced in euros", "")
+
+	var page struct {
+		Data []struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	if status := e.Call(t, "GET", "/v1/deals?currency=usd", nil, nil, &page); status != http.StatusOK {
+		t.Fatalf("GET /v1/deals?currency=usd = %d, want 200", status)
+	}
+	if len(page.Data) != 1 || page.Data[0].ID != dollars.ID {
+		t.Errorf("currency=usd listed %+v, want only the dollar deal %s and not %s", page.Data, dollars.ID, euros)
+	}
+
+	for _, tc := range []struct{ query, field string }{
+		{"currency=US", "currency"},
+		{"country=DEU", "country"},
+	} {
+		var refused codeRefusal
+		status := e.Call(t, "GET", "/v1/deals?"+tc.query, nil, nil, &refused)
+		if status != http.StatusUnprocessableEntity || len(refused.Details.Errors) != 1 ||
+			refused.Details.Errors[0].Field != tc.field || refused.Details.Errors[0].Code != tc.field+"_malformed" {
+			t.Errorf("GET /v1/deals?%s = %d %+v, want 422 %s_malformed on %s", tc.query, status, refused, tc.field, tc.field)
+		}
+	}
+}
+
+// The agent's filter reaches the same store. It takes a lower-case code and
+// refuses a malformed one by name, as the HTTP list does.
+func TestTheAgentsDealFilterTakesACodeInEitherCaseAndRefusesAMalformedOne(t *testing.T) {
+	f := setupValuation(t)
+	dollars := f.rangeDeal(t, "USD 500", deals.CreateDealInput{AmountMinor: new(int64(50000)), Currency: new("USD")})
+	f.rangeDeal(t, "EUR 300", deals.CreateDealInput{AmountMinor: new(int64(30000)), Currency: new("EUR")})
+	search := func(filters map[string]string) ([]datasource.Record, error) {
+		records, _, _, err := dealProvider(f.e).SearchEntity(f.e.Admin(), datasource.EntityDeal, nil, 25, nil, filters)
+		return records, err
+	}
+
+	records, err := search(map[string]string{"currency": "usd"})
+	if err != nil {
+		t.Fatalf("the agent's currency=usd: %v", err)
+	}
+	if len(records) != 1 || records[0].Ref.ID != dollars.UUID {
+		t.Errorf("the agent's currency=usd found %d deals, want only the dollar deal", len(records))
+	}
+	for field, code := range map[string]string{"currency": "US", "country": "DEU"} {
+		_, err := search(map[string]string{field: code})
+		var refused *values.ParseError
+		if !errors.As(err, &refused) || refused.Field != field || refused.Code != field+"_malformed" {
+			t.Errorf("the agent's %s=%s → %v, want %s_malformed on it", field, code, err, field)
+		}
 	}
 }

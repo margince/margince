@@ -96,6 +96,28 @@ func TestACodeFilterMatchesWhateverCaseItIsGivenIn(t *testing.T) {
 	}
 }
 
+// A code of the wrong shape matches no deal, and the empty page would read as
+// "none". The HTTP list and the agent's filter both reach the store, so both refuse it by name.
+func TestAMalformedCodeFilterIsRefusedByName(t *testing.T) {
+	for _, tc := range []struct {
+		field string
+		in    RangeFilters
+	}{
+		{filterCurrency, RangeFilters{Currency: new("US")}},
+		{filterCurrency, RangeFilters{Currency: new("EU1")}},
+		{filterCountry, RangeFilters{Country: new("DEU")}},
+		{filterCountry, RangeFilters{Country: new("d-")}},
+	} {
+		t.Run(tc.field, func(t *testing.T) {
+			_, _, err := rangeClauses(systemFilterCtx(), t, tc.in)
+			var refused *values.ParseError
+			if !errors.As(err, &refused) || refused.Field != tc.field || refused.Code != tc.field+"_malformed" {
+				t.Errorf("a malformed %s → %v, want %s_malformed on it", tc.field, err, tc.field)
+			}
+		})
+	}
+}
+
 // No deal is worth less than nothing. A negative bound is refused by name
 // rather than answered with a page that reads as every deal or none.
 func TestANegativeValueBoundIsRefusedByName(t *testing.T) {

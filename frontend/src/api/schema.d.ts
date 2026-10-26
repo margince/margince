@@ -55935,10 +55935,11 @@ export interface operations {
                 value_min?: number;
                 /** @description Deals worth at most this much (inclusive), in minor units of the base currency. See `value_min`. */
                 value_max?: number;
-                /** @description Deals priced in this ISO-4217 currency. A role that withholds the currency is refused with `422` `field_masked`. */
+                /** @description Deals priced in this ISO-4217 currency, in either case. A code that is not three letters is refused with `422` `currency_malformed`. A role that withholds the currency is refused with `422` `field_masked`. */
                 currency?: string;
                 /**
-                 * @description Deals whose company's address is in this ISO-3166 alpha-2 country. A deal naming no
+                 * @description Deals whose company's address is in this ISO-3166 alpha-2 country, in either case. A code
+                 *     that is not two letters is refused with `422` `country_malformed`. A deal naming no
                  *     company, or a company outside the caller's row scope, is not returned. A seat that may
                  *     not read companies is refused with `403`, and a role that withholds the deal's company
                  *     with `422` `field_masked`.
