@@ -26,8 +26,8 @@ func (s *Store) OpenTasksAssignedTo(ctx context.Context, tx pgx.Tx, from ids.Use
 
 // HandOverOpenTasksTx gives every open task from holds, that the caller may
 // change, to the receiver, and answers how many moved. Each task moves through
-// the ordinary update write, so it gets its audit row and event, and a task the
-// caller may not write stays where it is.
+// the ordinary update write and gets its audit row and event. A task the caller
+// may not write stays where it is.
 //
 // The receiver must hold work as for a single reassignment: a live human seat,
 // not an agent.
