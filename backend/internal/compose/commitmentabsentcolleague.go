@@ -25,7 +25,7 @@ import (
 func senderOwesAnAbsentColleaguesWork(
 	ctx context.Context, tx pgx.Tx, ref, sentence string, parties []commitmentParty,
 ) (bool, error) {
-	if !commitmentPartyHasRole(parties, ref, commitmentSenderRole) || speaksInFirstPerson(sentence) {
+	if !commitmentPartyHasRole(parties, ref, commitmentSenderRole) || writerIsTheSubject(sentence) {
 		return false, nil
 	}
 	present := map[ids.UUID]bool{}
@@ -53,18 +53,19 @@ func senderOwesAnAbsentColleaguesWork(
 	return false, rows.Err()
 }
 
-// firstPersonWords are the words a writer uses of themselves in the languages
-// the product reads mail in. A sentence holding one is the writer's own
-// promise, whoever else it names.
-var firstPersonWords = map[string]bool{
-	"i": true, "i'll": true, "i'm": true, "i've": true, "i'd": true, "me": true, "my": true,
-	"let's": true, "we": true, "we'll": true, "we're": true, "we've": true, "we'd": true, "us": true, "our": true,
-	"ich": true, "mich": true, "mir": true, "mein": true, "meine": true, "wir": true, "uns": true, "unser": true, "unsere": true,
+// writerSubjectWords are the subject words a writer uses of themselves in the
+// languages the product reads mail in. A sentence holding one has the writer
+// acting, whoever else it names. An object such as "me" does not count:
+// "Robin will send me the pricing" is Robin's promise.
+var writerSubjectWords = map[string]bool{
+	"i": true, "i'll": true, "i'm": true, "i've": true, "i'd": true, "let's": true,
+	"we": true, "we'll": true, "we're": true, "we've": true, "we'd": true,
+	"ich": true, "wir": true,
 }
 
-func speaksInFirstPerson(sentence string) bool {
+func writerIsTheSubject(sentence string) bool {
 	for _, word := range rawWords(sentence) {
-		if firstPersonWords[strings.ToLower(strings.ReplaceAll(word, "’", "'"))] {
+		if writerSubjectWords[strings.ToLower(strings.ReplaceAll(word, "’", "'"))] {
 			return true
 		}
 	}

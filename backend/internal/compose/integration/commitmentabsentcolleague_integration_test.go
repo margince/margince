@@ -10,8 +10,11 @@ package integration
 // sentence gives a colleague not on the mail files no task for the sender.
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // robinSeat gives the second rep the name the promised sentences use. They are
@@ -25,8 +28,9 @@ func robinSeat(t *testing.T, e *Env) {
 
 func TestAReplyNamingTheSenderForAnAbsentColleaguesWorkFilesNoTask(t *testing.T) {
 	for name, sentence := range map[string]string{
-		"first name": "Product demo on the 5th at 10:00, online with Robin.",
-		"full name":  "Robin Weber runs the product demo on the 5th at 10:00.",
+		"first name":                    "Product demo on the 5th at 10:00, online with Robin.",
+		"full name":                     "Robin Weber runs the product demo on the 5th at 10:00.",
+		"the writer only as the object": "Robin will send me the pricing by Friday.",
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := Setup(t)
@@ -57,9 +61,9 @@ func TestAReplyNamingTheSenderForAnAbsentColleaguesWorkFilesNoTask(t *testing.T)
 
 func TestTheSendersOwnPromiseStillFilesTheirTask(t *testing.T) {
 	for name, sentence := range map[string]string{
-		"first person beside the colleague": "I'll run the product demo with Robin on the 5th at 10:00.",
-		"German first person":               "Ich schicke Ihnen die Unterlagen mit Robin bis Freitag.",
-		"no colleague named":                "Product demo on the 5th at 10:00, online.",
+		"the writer as the subject beside the colleague": "I'll run the product demo with Robin on the 5th at 10:00.",
+		"German writer as the subject":                   "Ich schicke Ihnen die Unterlagen mit Robin bis Freitag.",
+		"no colleague named":                             "Product demo on the 5th at 10:00, online.",
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := Setup(t)
@@ -77,5 +81,69 @@ func TestTheSendersOwnPromiseStillFilesTheirTask(t *testing.T) {
 				t.Errorf("the sender's own promise filed tasks for %q, want one for the sender", got)
 			}
 		})
+	}
+}
+
+// restatedReply is the model naming a promise and a later message renewing it.
+func restatedReply(t *testing.T, original, renewed ids.UUID, promiser, quote, renewedQuote string) string {
+	t.Helper()
+	reply, err := json.Marshal(map[string]any{"events": []map[string]any{{
+		"kind": "commitment_made", "promiser_ref": promiser, "message_id": original.String(), "quote": quote,
+		"restated_message_id": renewed.String(), "restated_quote": renewedQuote,
+		"commitment": OpenCommitmentMeaning("2026-06-05", renewedQuote),
+		"summary":    "Send the pricing", "due_date": "2026-06-05", "confidence": 0.95,
+	}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(reply)
+}
+
+func TestARestatementInAnAbsentColleaguesWordsRenewsNothing(t *testing.T) {
+	e := Setup(t)
+	robinSeat(t, e)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	ines := employeeOf(t, e, company, "Ines Huber")
+	quote := "I'll send the pricing."
+	original := captureCommitmentMessage(t, e, ines, "thread-renewed-robin", "Pricing", "Hi Ines, "+quote, "outbound", extractClock.Add(-72*time.Hour))
+	party(t, original, "from", &e.Rep1, nil)
+	party(t, original, "to", nil, &ines)
+	renewedQuote := "Robin sends the pricing on Friday."
+	renewed := captureCommitmentMessage(t, e, ines, "thread-renewed-robin", "Re: Pricing", "Hi Ines, "+renewedQuote, "outbound", extractClock.Add(-24*time.Hour))
+	party(t, renewed, "from", &e.Rep1, nil)
+	party(t, renewed, "to", nil, &ines)
+
+	extractPass(t, e, &scriptedBrain{reply: restatedReply(t, original, renewed, "seat:"+e.Rep1.String(), quote, renewedQuote)})
+
+	if got := e.WsScalar(t, `SELECT coalesce(string_agg(assignee_id::text, ','), '') FROM activity WHERE kind = 'task'`); got != e.Rep1.String() {
+		t.Fatalf("the sender's own promise filed tasks for %q, want one for the sender", got)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM activity_commitment_admission WHERE renewed_by = $1 OR renewed_at IS NOT NULL`, renewed); got != 0 {
+		t.Errorf("Robin's sentence renewed the sender's promise (%d admission rows record a renewal)", got)
+	}
+}
+
+func TestAnAbsentColleaguesPromiseWithARestatementIsStillRecorded(t *testing.T) {
+	e := Setup(t)
+	robinSeat(t, e)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	ines := employeeOf(t, e, company, "Ines Huber")
+	quote := "Robin sends the pricing."
+	original := captureCommitmentMessage(t, e, ines, "thread-robin-twice", "Pricing", "Hi Ines, "+quote, "outbound", extractClock.Add(-72*time.Hour))
+	party(t, original, "from", &e.Rep1, nil)
+	party(t, original, "to", nil, &ines)
+	renewedQuote := "Robin sends the pricing on Friday."
+	renewed := captureCommitmentMessage(t, e, ines, "thread-robin-twice", "Re: Pricing", "Hi Ines, "+renewedQuote, "outbound", extractClock.Add(-24*time.Hour))
+	party(t, renewed, "from", &e.Rep1, nil)
+	party(t, renewed, "to", nil, &ines)
+
+	extractPass(t, e, &scriptedBrain{reply: restatedReply(t, original, renewed, "seat:"+e.Rep1.String(), quote, renewedQuote)})
+
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 0 {
+		t.Errorf("Robin's promise became %d task(s) for the sender", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM activity_commitment_admission
+		WHERE outcome = 'promiser_not_assignable' AND NOT current_work`); n != 1 {
+		t.Errorf("the promise is recorded %d time(s), want once", n)
 	}
 }

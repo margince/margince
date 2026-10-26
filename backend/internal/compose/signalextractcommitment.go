@@ -217,6 +217,7 @@ func (x *SignalExtractor) emailCommitment(
 	} else if absent {
 		promiser = ""
 	}
+	c.absentColleague = promiser != event.PromiserRef
 	kind, party := attributeCommitment(&c, promiser, verified)
 	if err := attributeCommitmentRecipients(&c, event.RecipientRefs, verified); err != nil {
 		return Commitment{}, false, err

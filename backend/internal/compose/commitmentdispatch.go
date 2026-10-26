@@ -62,9 +62,12 @@ const commitmentIdentityLocator = "locator"
 
 // Commitment is one promise as an extractor hands it to the rule.
 type Commitment struct {
-	Meaning      *commitmentMeaning
-	AsOf         time.Time
-	ReadMessages []ids.UUID
+	// absentColleague says the reply named the sender for a colleague's work
+	// and the promiser was cleared (senderOwesAnAbsentColleaguesWork).
+	absentColleague bool
+	Meaning         *commitmentMeaning
+	AsOf            time.Time
+	ReadMessages    []ids.UUID
 	// Extractor is the principal id the claim and the task are captured by,
 	// which is what marks the task as the extractor's rather than a human's.
 	Extractor        string

@@ -24,19 +24,22 @@ func TestAColleagueIsNamedByTheirWrittenName(t *testing.T) {
 	}
 }
 
-func TestAWriterSpeakingOfThemselvesIsFirstPerson(t *testing.T) {
+func TestAWriterSpeakingOfThemselvesIsTheSubject(t *testing.T) {
 	t.Parallel()
 	for sentence, want := range map[string]bool{
-		"I'll send it with Robin.":        true,
-		"I’ll send it with Robin.":        true,
-		"We send it by Friday.":           true,
-		"Wir schicken es bis Freitag.":    true,
-		"Demo with Robin on the 5th.":     false,
-		"Imagine the demo on the 5th.":    false,
-		"Let's book the demo with Robin.": true,
+		"I'll send it with Robin.":          true,
+		"I’ll send it with Robin.":          true,
+		"We send it by Friday.":             true,
+		"Wir schicken es bis Freitag.":      true,
+		"Demo with Robin on the 5th.":       false,
+		"Imagine the demo on the 5th.":      false,
+		"Let's book the demo with Robin.":   true,
+		"Robin will send me the pricing.":   false,
+		"Robin schickt mir die Unterlagen.": false,
+		"Our team sends it by Friday.":      false,
 	} {
-		if got := speaksInFirstPerson(sentence); got != want {
-			t.Errorf("%q in first person: %v, want %v", sentence, got, want)
+		if got := writerIsTheSubject(sentence); got != want {
+			t.Errorf("%q has the writer as the subject: %v, want %v", sentence, got, want)
 		}
 	}
 }
