@@ -34434,7 +34434,12 @@ export interface components {
              * Format: uuid
              * @description A message of the conversation to move; it always moves with it.
              */
-            activity_id: string;
+            activity_id?: string;
+            /**
+             * @deprecated
+             * @description Ignored. The conversation is the one `activity_id` belongs to, because a thread key alone does not say whose conversation it is.
+             */
+            thread_key?: string;
             entity_type: components["schemas"]["RelinkDestinationType"];
             /** Format: uuid */
             entity_id: string;

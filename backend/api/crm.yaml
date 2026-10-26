@@ -47397,9 +47397,10 @@ components:
         The destination for every writable, non-archived activity of one conversation thread.
         `entity_type`/`entity_id`/`replace_existing_of_type` mean exactly what they mean on
         `relinkActivity`.
-      required: [activity_id, entity_type, entity_id]
+      required: [entity_type, entity_id]
       properties:
         activity_id: { type: string, format: uuid, description: 'A message of the conversation to move; it always moves with it.' }
+        thread_key: { type: string, minLength: 1, maxLength: 512, deprecated: true, description: 'Ignored. The conversation is the one `activity_id` belongs to, because a thread key alone does not say whose conversation it is.' }
         entity_type: { $ref: '#/components/schemas/RelinkDestinationType' }
         entity_id: { type: string, format: uuid }
         replace_existing_of_type:
