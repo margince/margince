@@ -329,10 +329,20 @@ type OwnDomainReader interface {
 // readActivityParticipants reads the parties of one activity in the shape the
 // authorship rule takes.
 func readActivityParticipants(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]Participant, error) {
+	return queryActivityParticipants(ctx, tx, activityID, "")
+}
+
+// shareActivityParticipants is readActivityParticipants holding the rows, so
+// an attendee cannot be changed or removed until the caller's write commits.
+func shareActivityParticipants(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]Participant, error) {
+	return queryActivityParticipants(ctx, tx, activityID, " FOR SHARE")
+}
+
+func queryActivityParticipants(ctx context.Context, tx pgx.Tx, activityID ids.UUID, lock string) ([]Participant, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT role, coalesce(user_id::text, ''), coalesce(address, ''),
 		       contact_id IS NOT NULL
-		  FROM activity_participant WHERE activity_id = $1`, activityID)
+		  FROM activity_participant WHERE activity_id = $1`+lock, activityID)
 	if err != nil {
 		return nil, fmt.Errorf("read the activity's participants: %w", err)
 	}

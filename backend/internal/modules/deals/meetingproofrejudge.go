@@ -109,8 +109,8 @@ func meetingStillProvesHeld(ctx context.Context, tx pgx.Tx, activityID ids.UUID,
 }
 
 // meetingProvesHeld is MeetingWasHeld over the meeting as stored now, linked
-// or not. found is false when the meeting no longer exists. The share lock
-// holds a status or attendee change off until the caller's write commits.
+// or not. found is false when the meeting no longer exists. The share locks
+// on the meeting and its attendees hold a change off until the write commits.
 func meetingProvesHeld(ctx context.Context, tx pgx.Tx, activityID ids.UUID, parties owndomain.Parties) (bool, bool, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -133,7 +133,7 @@ func meetingProvesHeld(ctx context.Context, tx pgx.Tx, activityID ids.UUID, part
 	if err != nil {
 		return false, false, fmt.Errorf("deals: reading a meeting to judge again: %w", err)
 	}
-	participants, err := readActivityParticipants(ctx, tx, activityID)
+	participants, err := shareActivityParticipants(ctx, tx, activityID)
 	if err != nil {
 		return false, false, err
 	}
