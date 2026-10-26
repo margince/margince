@@ -281,7 +281,10 @@ func (c *signalExtractCase) secondReading(
 	ctx context.Context, completer aitasks.Completer, trace aitasks.Trace,
 ) (aitasks.Trace, error) {
 	var first extractPayload
-	if json.Unmarshal([]byte(ai.Unfence(trace.Output)), &first) != nil || validateExtractEnvelope(first, c.thread) != "" {
+	if json.Unmarshal([]byte(ai.Unfence(trace.Output)), &first) != nil {
+		return trace, nil
+	}
+	if first = first.asRead(c.thread); validateExtractEnvelope(first, c.thread) != "" {
 		return trace, nil
 	}
 	focused, ok := focusedReading(c.thread, first.events())
@@ -298,7 +301,7 @@ func (c *signalExtractCase) secondReading(
 	if json.Unmarshal([]byte(ai.Unfence(resp.Text)), &second) != nil {
 		return trace, nil
 	}
-	if second = second.inFocus(focused); validateExtractEnvelope(second, focused) != "" {
+	if second = second.asRead(focused); validateExtractEnvelope(second, focused) != "" {
 		return trace, nil
 	}
 	both := append(first.events(), second.events()...)
@@ -327,7 +330,7 @@ func (c *signalExtractCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 			Detail: fmt.Sprintf("unparseable model output: %v", err),
 		}
 	}
-	payload = payload.inFocus(c.thread)
+	payload = payload.asRead(c.thread)
 	if msg := validateExtractPayload(payload, c.thread); msg != "" {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
 	}
@@ -344,7 +347,7 @@ func (c *signalExtractCase) AnswerConfidence(trace aitasks.Trace) (low, high flo
 	if err := json.Unmarshal([]byte(ai.Unfence(trace.Output)), &payload); err != nil {
 		return 0, 0, false
 	}
-	payload = payload.inFocus(c.thread)
+	payload = payload.asRead(c.thread)
 	var confidences []float64
 	for _, event := range payload.events() {
 		if event.Kind == extractKindCommitment && event.Meaning.withheldOutcome() == "" {

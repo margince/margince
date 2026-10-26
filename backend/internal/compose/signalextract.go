@@ -200,19 +200,26 @@ func focusedReading(thread settledThread, events []extractedEvent) (settledThrea
 	return focused, true
 }
 
-// inFocus keeps a focused reading's promises on its focus messages. The second
-// reading looks for a promise the first missed. Asked to look again, a model
-// also finds needs and endings that the words do not state.
-func (payload extractPayload) inFocus(thread settledThread) extractPayload {
-	if len(thread.Focus) == 0 || payload.Events == nil {
+// asRead is a reply as the server reads it. Each message label becomes its
+// message id. A focused reading keeps only promises on focus messages: asked
+// to look again, a model also finds needs the words do not state.
+func (payload extractPayload) asRead(thread settledThread) extractPayload {
+	if payload.Events == nil {
 		return payload
 	}
-	inFocus := slices.DeleteFunc(slices.Clone(*payload.Events), func(event extractedEvent) bool {
-		return event.Kind != extractKindCommitment || !slices.ContainsFunc(thread.Focus, func(id ids.UUID) bool {
-			return id.String() == event.MessageID || id.String() == event.RestatedMessageID
+	events := slices.Clone(*payload.Events)
+	for i := range events {
+		events[i].MessageID = thread.messageID(events[i].MessageID)
+		events[i].RestatedMessageID = thread.messageID(events[i].RestatedMessageID)
+	}
+	if len(thread.Focus) > 0 {
+		events = slices.DeleteFunc(events, func(event extractedEvent) bool {
+			return event.Kind != extractKindCommitment || !slices.ContainsFunc(thread.Focus, func(id ids.UUID) bool {
+				return id.String() == event.MessageID || id.String() == event.RestatedMessageID
+			})
 		})
-	})
-	payload.Events = &inFocus
+	}
+	payload.Events = &events
 	return payload
 }
 
@@ -231,14 +238,14 @@ func (x *SignalExtractor) keepFirstReading(
 	return raised, x.deferRefusedReading(ctx, wsID, thread, now, refusal)
 }
 
-// unjudgedMessages are the messages this pass reads for the first time and
-// no promise of the first reading cites, as message_id or as the renewal. A
-// message that states a need can also make a promise. A model that reports the
-// need often drops the promise. An earlier pass already judged the others.
+// unjudgedMessages are the messages this pass reads for the first time. Each
+// is cited by no event of the first reading but a new need. A message that
+// states a need can also make a promise. A model that reports the need often
+// drops the promise. An earlier pass already judged the others.
 func unjudgedMessages(thread settledThread, events []extractedEvent) []ids.UUID {
 	cited := map[string]bool{}
 	for _, event := range events {
-		if event.Kind == extractKindCommitment {
+		if event.Kind != extractKindOpportunity {
 			cited[event.MessageID], cited[event.RestatedMessageID] = true, true
 		}
 	}
@@ -449,7 +456,7 @@ func (x *SignalExtractor) askReading(ctx context.Context, thread settledThread) 
 	if err := json.Unmarshal([]byte(ai.Unfence(resp.Text)), &payload); err != nil {
 		return nil, fmt.Errorf("%w: unparseable model output: %w", errRefusedReading, err)
 	}
-	payload = payload.inFocus(thread)
+	payload = payload.asRead(thread)
 	if msg := validateExtractEnvelope(payload, thread); msg != "" {
 		return nil, fmt.Errorf("%w: %s", errRefusedReading, msg)
 	}
@@ -466,7 +473,7 @@ func extractShapeValid(thread settledThread) ai.Validator {
 		if err := json.Unmarshal([]byte(ai.Unfence(text)), &payload); err != nil {
 			return fmt.Errorf("output is not the required JSON shape: %w", err)
 		}
-		payload = payload.inFocus(thread)
+		payload = payload.asRead(thread)
 		if msg := validateExtractEnvelope(payload, thread); msg != "" {
 			return errors.New(msg)
 		}

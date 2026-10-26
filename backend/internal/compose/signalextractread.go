@@ -18,6 +18,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -141,6 +142,29 @@ type settledThread struct {
 	// EventCap is how many events this reading may report; zero is
 	// extractMaxEvents. The second reading gets what the first left.
 	EventCap int
+}
+
+// messageLabel names a message in the prompt by its place, m1 for the oldest
+// shown. A small model copies a short label it was given. It garbles a long id,
+// and the fence tag beside it is an id of the same shape.
+func (t settledThread) messageLabel(id string) string {
+	for i, message := range t.Messages {
+		if message.ID.String() == id {
+			return "m" + strconv.Itoa(i+1)
+		}
+	}
+	return id
+}
+
+// messageID is the id a reply's label names. A string that is no label of
+// this thread stays as written, for the validator to refuse.
+func (t settledThread) messageID(label string) string {
+	for i, message := range t.Messages {
+		if label == "m"+strconv.Itoa(i+1) {
+			return message.ID.String()
+		}
+	}
+	return label
 }
 
 func (t settledThread) eventCap() int {

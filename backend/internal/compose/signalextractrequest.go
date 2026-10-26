@@ -100,21 +100,20 @@ func extractRequest(thread settledThread, lang string) model.Request {
 			directionWord(message.Direction), message.At.Format(time.DateOnly), message.Subject,
 			textlang.CurrentMessage(message.Body))
 		body += "\nVerified participants (reference, role, name, address):\n" + commitmentPartyPrompt(message.Parties, textlang.CurrentMessage(message.Body))
-		// The id stands outside the fence on its own line. Asked to copy it from
-		// the tag's attribute, a model copies the tag's own name instead.
-		fmt.Fprintf(&prompt, "Message id: %s\n", message.ID)
-		prompt.WriteString(fence.WrapAttr("source_id", message.ID.String(), body) + "\n")
+		label := thread.messageLabel(message.ID.String())
+		fmt.Fprintf(&prompt, "Message %s:\n", label)
+		prompt.WriteString(fence.WrapAttr("source_id", label, body) + "\n")
 	}
 	if len(thread.Focus) > 0 {
 		focus := make([]string, len(thread.Focus))
 		for i, id := range thread.Focus {
-			focus[i] = id.String()
+			focus[i] = thread.messageLabel(id.String())
 		}
 		fmt.Fprintf(&prompt, "Report only commitment_made events stated in these messages: %s. A first reading already read them and found no promise in them, so report only a promise their words state outright; an empty list is the usual answer. The other messages are context, for example to see that a promise was kept or renewed.\n",
 			strings.Join(focus, ", "))
 		recorded := make([]string, len(thread.Recorded))
 		for i, event := range thread.Recorded {
-			recorded[i] = event.Kind + " in " + event.MessageID
+			recorded[i] = event.Kind + " in " + thread.messageLabel(event.MessageID)
 		}
 		fmt.Fprintf(&prompt, "Already recorded, so report none of it again: %s. An event recorded there never replaces an unrelated event in the messages to report.\n",
 			strings.Join(recorded, ", "))
@@ -126,8 +125,8 @@ func extractRequest(thread settledThread, lang string) model.Request {
 			`For new_opportunity and commitment_made, lifecycle_scope and workstream are both "". `+
 			`Every event carries "commitment". For contract_ended and new_opportunity it is state "unclear", condition "", deadline_precision "none" and deadline_quote "". `+
 			commitmentRecipientsPrompt+
-			`"message_id" and any "restated_message_id" must be copied exactly from the "Message id" line above the cited message, character for character. The name of an untrusted-… tag is never a message id. `+
-			`Never reconstruct an id or use a participant reference as a message id. `+
+			`"message_id" and any "restated_message_id" are the label of the cited message, such as "m2", from the "Message" line above it. `+
+			`Never use a participant reference as a message id. `+
 			`"promiser_ref" is the verified participant reference for who made the quoted promise, `+
 			`not necessarily its sender. For "you agreed", resolve the addressed party; for a named `+
 			`third party, use a reference only when the clause identifies them unambiguously. `+
@@ -158,7 +157,7 @@ func extractRequest(thread settledThread, lang string) model.Request {
 		System:         extractSystemFor(fence, lang),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: prompt.String()}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
-		ResponseSchema: extractSchema(),
+		ResponseSchema: extractSchema(thread),
 		SecretStripper: ai.NewSecretStripper(),
 	}
 }

@@ -4948,6 +4948,9 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
             "type": "string"
           },
           "message_id": {
+            "enum": [
+              "m1"
+            ],
             "type": "string"
           },
           "promiser_ref": {
@@ -4963,6 +4966,10 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
             "type": "array"
           },
           "restated_message_id": {
+            "enum": [
+              "m1",
+              ""
+            ],
             "type": "string"
           },
           "restated_quote": {

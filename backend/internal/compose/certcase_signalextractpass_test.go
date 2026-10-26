@@ -98,9 +98,8 @@ func TestACertifiedReadingRunsTheWholePassTheProductRuns(t *testing.T) {
 			if len(brain.requests) != tc.calls || len(trace.Requests) != tc.calls {
 				t.Fatalf("the pass made %d calls and traced %d, want %d", len(brain.requests), len(trace.Requests), tc.calls)
 			}
-			need := c.numbered[1].ID.String()
 			if last := brain.requests[len(brain.requests)-1].Messages[0].Content; tc.calls == 2 &&
-				!strings.Contains(last, "Already recorded, so report none of it again: new_opportunity in "+need) {
+				!strings.Contains(last, "Already recorded, so report none of it again: new_opportunity in m2") {
 				t.Error("the second reading is not told that the new need is recorded")
 			}
 			var served extractPayload

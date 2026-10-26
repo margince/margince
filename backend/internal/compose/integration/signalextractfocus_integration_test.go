@@ -111,10 +111,10 @@ func TestAPromiseLeftOutOfTheFirstReadingIsReadOnItsOwn(t *testing.T) {
 		t.Errorf("the conversation was not marked read after both readings")
 	}
 	line := focusLine(t, brain.requests[1])
-	if !strings.Contains(line, conv.promise.String()) || !strings.Contains(line, conv.followup.String()) || !strings.Contains(line, conv.need.String()) {
+	if !strings.Contains(line, "messages: m1, m2, m3.") {
 		t.Errorf("the focus must be the messages no promise cited: %s", line)
 	}
-	if !strings.Contains(brain.requests[1].Messages[0].Content, "Already recorded, so report none of it again: new_opportunity in "+conv.need.String()) {
+	if !strings.Contains(brain.requests[1].Messages[0].Content, "Already recorded, so report none of it again: new_opportunity in m2") {
 		t.Error("the second reading is not told that the new need is recorded")
 	}
 }
@@ -135,14 +135,16 @@ func TestTwoSendsOfOnePromiseEachBecomeATask(t *testing.T) {
 	brain := &scriptedBrain{respond: func(req model.Request) string {
 		content := req.Messages[0].Content
 		switch {
-		case strings.Contains(content, short.promise.String()):
+		// The prompt names messages by label, so a thread is told apart by the
+		// subject its first message carries.
+		case strings.Contains(content, "Subject: Recording thread-short\n"):
 			if isFocused(req) {
 				return eventsReply(t, promiseEvent(e, short.promise))
 			}
 			return eventsReply(t, needEvent(short.need))
-		case strings.Contains(content, long.promise.String()) && !isFocused(req):
+		case strings.Contains(content, "Subject: Recording thread-long\n") && !isFocused(req):
 			return eventsReply(t, promiseEvent(e, long.promise))
-		case strings.Contains(content, long.need.String()) && !isFocused(req):
+		case strings.Contains(content, "join the beta") && strings.Contains(content, "thread-long") && !isFocused(req):
 			return eventsReply(t, needEvent(long.need))
 		}
 		return `{"events": []}`
@@ -194,8 +196,9 @@ func TestAMessageAnEarlierPassJudgedIsNotReadAgain(t *testing.T) {
 	// The follow-up is the newest message the first pass read. It sits at the
 	// watermark instant, which later mail can share, so it is read again.
 	line := focusLine(t, brain.requests[3])
-	if !strings.Contains(line, later.String()) || !strings.Contains(line, conv.followup.String()) ||
-		strings.Contains(line, conv.promise.String()) || strings.Contains(line, conv.need.String()) {
+	// Oldest first, the labels are the promise m1, the need m2, the follow-up m3
+	// and the new message m4.
+	if !strings.Contains(line, "messages: m3, m4.") {
 		t.Errorf("the second pass must focus on the new message and the one at the watermark: %s", line)
 	}
 }

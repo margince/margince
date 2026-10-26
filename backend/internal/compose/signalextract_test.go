@@ -44,7 +44,7 @@ func TestExtractRequestFencesEveryMessageUnderTheMarkerItDeclares(t *testing.T) 
 	}
 	content := req.Messages[0].Content
 	for _, message := range thread.Messages {
-		openTag := "<" + marker + ` source_id="` + message.ID.String() + `">`
+		openTag := "<" + marker + ` source_id="` + thread.messageLabel(message.ID.String()) + `">`
 		openAt := strings.Index(content, openTag)
 		if openAt < 0 {
 			t.Fatalf("message %s is not opened under the declared marker keyed by its id:\n%s",
@@ -363,10 +363,10 @@ func TestExtractRequestNamesTheFocusAndLowersTheCap(t *testing.T) {
 
 	thread.Focus, thread.EventCap = []ids.UUID{first}, 2
 	focused := extractRequest(thread, string(textlang.English)).Messages[0].Content
-	if !strings.Contains(focused, "Report only commitment_made events stated in these messages: "+first.String()+".") {
+	if !strings.Contains(focused, "Report only commitment_made events stated in these messages: m1.") {
 		t.Errorf("the focus is not named:\n%s", focused)
 	}
-	if strings.Contains(focused, "messages: "+first.String()+", "+second.String()) || !strings.Contains(focused, "at most 2") {
+	if strings.Contains(focused, "messages: m1, m2") || !strings.Contains(focused, "at most 2") {
 		t.Errorf("the focused request names more than the focus or keeps the full cap:\n%s", focused)
 	}
 }
@@ -400,7 +400,7 @@ func TestAFocusedReplyKeepsOnlyFocusEventsAndStaysInTheRemainingCap(t *testing.T
 		if err := json.Unmarshal([]byte(`{"events":[`+strings.Join(tc.events, ",")+`]}`), &payload); err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
-		payload = payload.inFocus(thread)
+		payload = payload.asRead(thread)
 		if got := len(payload.events()); got != tc.kept {
 			t.Errorf("%s: kept %d events, want %d", name, got, tc.kept)
 		}
@@ -464,7 +464,28 @@ func TestASecondReadingSendsEveryMessageAndWhatTheFirstRecorded(t *testing.T) {
 		t.Errorf("the second reading may report %d events, want %d", focused.EventCap, extractMaxEvents-len(first))
 	}
 	content := extractRequest(focused, string(textlang.English)).Messages[0].Content
-	if !strings.Contains(content, "Already recorded, so report none of it again: new_opportunity in "+need.String()+".") {
+	if !strings.Contains(content, "Already recorded, so report none of it again: new_opportunity in m2.") {
 		t.Errorf("the second reading is not told what the first recorded:\n%s", content)
+	}
+}
+
+func TestAReplyCitesMessagesByTheLabelsThePromptGave(t *testing.T) {
+	first, second := ids.NewV7(), ids.NewV7()
+	thread := settledThread{Messages: []threadMessage{{ID: first}, {ID: second}}}
+	var payload extractPayload
+	reply := `{"events":[{"kind":"commitment_made","message_id":"m2","restated_message_id":"","summary":"s"},` +
+		`{"kind":"commitment_made","message_id":"m3","restated_message_id":"m1","summary":"s"}]}`
+	if err := json.Unmarshal([]byte(reply), &payload); err != nil {
+		t.Fatal(err)
+	}
+	events := payload.asRead(thread).events()
+	if events[0].MessageID != second.String() || events[0].RestatedMessageID != "" {
+		t.Errorf("m2 read as %q, want the second message", events[0].MessageID)
+	}
+	if events[1].MessageID != "m3" || events[1].RestatedMessageID != first.String() {
+		t.Errorf("a label the thread lacks must stay for the validator to refuse: %+v", events[1])
+	}
+	if !strings.Contains(validateExtractEnvelope(payload.asRead(thread), thread), `"m3"`) {
+		t.Error("a reply citing a label the prompt never gave was not refused")
 	}
 }
