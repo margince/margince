@@ -4435,7 +4435,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Gib eine ganze Zahl an Minuten von 15 bis 10.080 (7 Tage) ein.",
   "leadHandling.targetHint":
     "Längste Wartezeit auf eine erste Antwort nach Zuweisung oder Erstellung, 15 Minuten bis 7 Tage.",
-  "lead.boardCount": "Leads: {count}",
+  "lead.boardCount_one": "Lead: {count}",
+  "lead.boardCount_other": "Leads: {count}",
   "lead.duplicateFound":
     "Ein Lead mit dieser E-Mail oder diesem LinkedIn-Profil ist bereits vorhanden.",
   "lead.promote": "Qualifizieren",

@@ -4428,7 +4428,8 @@ export const en = {
     "Enter a whole number of minutes from 15 to 10,080 (7 days).",
   "leadHandling.targetHint":
     "Maximum wait for a first reply after routing or creation, 15 minutes to 7 days.",
-  "lead.boardCount": "{count} leads",
+  "lead.boardCount_one": "{count} lead",
+  "lead.boardCount_other": "{count} leads",
   "lead.duplicateFound":
     "A lead with this email or LinkedIn profile already exists.",
   "lead.promote": "Qualify",

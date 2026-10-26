@@ -93,7 +93,10 @@ describe("lead work-board presentation", () => {
       />,
     );
 
-    expect(screen.getByText("1 leads")).toBeTruthy();
+    // A column of one says it in the singular.
+    expect(screen.getByText("1 lead")).toBeTruthy();
+    expect(screen.queryByText("1 leads")).toBeNull();
+    expect(screen.getAllByText("0 leads").length).toBeGreaterThan(0);
     expect(screen.queryByText(/deals/i)).toBeNull();
     expect(screen.getByText("Overdue")).toBeTruthy();
     expect(screen.getByText("Website")).toBeTruthy();

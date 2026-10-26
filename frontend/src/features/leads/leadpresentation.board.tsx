@@ -17,7 +17,7 @@ import {
 import { LoadMoreButton } from "../../design-system/querystates";
 import { formatNumber } from "../../format/format";
 import { leadIdentityName } from "../../format/leadname";
-import { useLocale, useT } from "../../i18n";
+import { translatePlural, useLocale, useT } from "../../i18n";
 import {
   LEAD_STATUS_COUNTS_KEY,
   leadTerminalKey,
@@ -348,7 +348,9 @@ export function LeadBoard({
           ) : null
         }
         countLabel={(count) =>
-          t("lead.boardCount", { count: formatNumber(count, locale) })
+          translatePlural(locale, "lead.boardCount", count, {
+            count: formatNumber(count, locale),
+          })
         }
         renderCard={(card) => {
           const lead = leadsById.get(card.id);

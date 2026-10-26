@@ -4309,7 +4309,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Nhập số phút nguyên từ 15 đến 10.080 (7 ngày).",
   "leadHandling.targetHint":
     "Thời gian chờ tối đa cho thư trả lời đầu tiên sau khi phân bổ hoặc tạo, từ 15 phút đến 7 ngày.",
-  "lead.boardCount": "{count} lead",
+  "lead.boardCount_one": "{count} lead",
+  "lead.boardCount_other": "{count} lead",
   "lead.duplicateFound": "Đã có lead với email hoặc hồ sơ LinkedIn này.",
   "lead.promote": "Xác nhận đủ điều kiện",
   "lead.promoteIneligible": "Cần địa chỉ email và trạng thái đang mở.",
