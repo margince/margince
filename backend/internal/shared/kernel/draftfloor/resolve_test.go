@@ -161,7 +161,8 @@ func TestTextThatDecidesTheLanguageReadsNoSetting(t *testing.T) {
 }
 
 // The rest of the conversation is correspondence too: it outranks the rep's
-// app language, and only the stored label and the answered message outrank it.
+// app language. The addressee's own text, the stored label and the answered
+// message outrank it, in that order.
 func TestTheThreadNamesTheLanguageWhenTheAnsweredMessageDoesNot(t *testing.T) {
 	t.Parallel()
 	const englishEarlier = "Thanks for the update, we plan to review the proposal with our team next week and come back to you."
@@ -180,6 +181,14 @@ func TestTheThreadNamesTheLanguageWhenTheAnsweredMessageDoesNot(t *testing.T) {
 		"nothing names a language: the app language": {
 			written: draftfloor.Written{Body: "ok", Thread: []string{"fine"}},
 			want:    "vi",
+		},
+		"the addressee's own German outranks a stored English label": {
+			written: draftfloor.Written{Addressee: []string{germanEarlier}, Stored: "en", Body: englishAnswered},
+			want:    "de",
+		},
+		"an addressee text that names no language leaves the stored label": {
+			written: draftfloor.Written{Addressee: []string{"ok"}, Stored: "de", Body: englishAnswered},
+			want:    "de",
 		},
 		"the stored label wins over the thread": {
 			written: draftfloor.Written{Stored: "de", Body: "ok", Thread: []string{englishEarlier}},

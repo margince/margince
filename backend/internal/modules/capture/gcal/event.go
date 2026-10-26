@@ -47,6 +47,17 @@ type rawEvent struct {
 	Start       eventDateTime `json:"start"`
 	Organizer   eventActor    `json:"organizer"`
 	Attendees   []eventActor  `json:"attendees"`
+	// Google sets attendeesOmitted when it cut the list short. A guest list
+	// hidden from guests (guestsCanSeeOtherGuests false, default true) is
+	// withheld from every copy but the organizer's.
+	AttendeesOmitted        bool  `json:"attendeesOmitted"`        //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+	GuestsCanSeeOtherGuests *bool `json:"guestsCanSeeOtherGuests"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+}
+
+// partiesHidden reports whether this copy of the event may leave guests out.
+func (ev rawEvent) partiesHidden() bool {
+	guestListHidden := ev.GuestsCanSeeOtherGuests != nil && !*ev.GuestsCanSeeOtherGuests
+	return ev.AttendeesOmitted || (guestListHidden && !ev.Organizer.Self)
 }
 
 // eventDateTime is a calendar timestamp: dateTime (RFC3339) for a timed event,
@@ -127,6 +138,7 @@ func decode(ev rawEvent, owner string) meetingmap.Event {
 		AllDay:        isAllDay(ev.Start),
 		Organizer:     meetingmap.Actor{Email: ev.Organizer.Email, Name: ev.Organizer.DisplayName},
 		Attendees:     attendees,
+		PartiesHidden: ev.partiesHidden(),
 	}
 }
 

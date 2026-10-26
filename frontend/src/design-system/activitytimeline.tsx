@@ -167,6 +167,7 @@ export function activityTimeline(
       withheld: activity.content_state === "withheld",
       threadKey: activity.thread_key,
       bulkAttested: activity.bulk_mail_attested,
+      automaticKind: activity.automatic_kind,
       atIso: activity.occurred_at,
       provenance: provenanceOf(
         activity.captured_by,

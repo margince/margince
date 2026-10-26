@@ -195,11 +195,11 @@ type ActIn struct {
 	ID      string `json:"id"`
 	Kind    string `json:"kind"`
 	Subject string `json:"subject,omitempty"`
-	// Speaker is who sent it — "them" for the account, "you" for the reader's
-	// side — named the way the contact brief names it, and empty on a row that
-	// records no direction.
-	Speaker string `json:"speaker,omitempty"`
-	At      string `json:"at"`
+	// Speaker is who wrote it, named the way the contact brief names it: kind
+	// "you" for the reader, else a kind and a separate name. Never "them": an
+	// account is many contacts. Absent on a row that records no author.
+	Speaker *contactbrief.Speaker `json:"speaker,omitempty"`
+	At      string                `json:"at"`
 	// Done says whether a timeline item that CAN be finished has been. It is a
 	// pointer because most items cannot: a call happened, and asking whether it
 	// is "done" is a category error that a plain false would answer anyway.
@@ -375,9 +375,7 @@ func foldRecent(view crmcontracts.Company360, in *Input) {
 		if activity.Subject != nil {
 			act.Subject = *activity.Subject
 		}
-		if activity.Direction != nil {
-			act.Speaker = contactbrief.SpeakerFor(*activity.Direction)
-		}
+		act.Speaker = contactbrief.SpeakerFor(activity.Voice)
 		// Only the kinds that HAVE an outcome carry one. A call or a mail is
 		// neither outstanding nor complete, and answering for it would invent
 		// a state the record does not have — while a task and a meeting each

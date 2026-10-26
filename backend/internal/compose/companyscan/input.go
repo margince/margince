@@ -27,7 +27,7 @@ import (
 // floorVersion names the shape of the input and the merge. It is hand-bumped:
 // nothing about it is a prompt to hash, and a change to what the scan reads
 // is a change to every stored fingerprint.
-const floorVersion = "company-scan-floor-v1"
+const floorVersion = "company-scan-floor-v2"
 
 // promptVersion is derived from the prompt AS SENT, at one fixed language —
 // the language is its own fingerprint component. A rewording re-reads every
@@ -48,6 +48,12 @@ type Input struct {
 	// so the model reads them as a conversation. Empty when the reader may
 	// read none of them, in which case nothing is asked of the model.
 	Messages []MessageIn `json:"messages"`
+	// Partner is a live partner programme with the account, which the reader
+	// may see. Its business is recorded there, never as a deal.
+	Partner bool `json:"partner,omitempty"`
+	// NoDealAdvice is set unless the account is known not to be a partner: a
+	// reader who may not see partner programmes cannot rule one out.
+	NoDealAdvice bool `json:"no_deal_advice,omitempty"`
 }
 
 // MessageIn is one exchange as the model reads it.
@@ -62,6 +68,12 @@ type MessageIn struct {
 	// quote can only come from what was shown.
 	Text        string `json:"text,omitempty"`
 	UnreadChars int    `json:"unread_chars,omitempty"`
+	// Thread labels the messages of one conversation alike, in order of first
+	// appearance. Never the stored thread key, which a sender can type.
+	Thread string `json:"thread,omitempty"`
+	// Settled is the thread's own verdict (activities.SettledCitations): a
+	// later message or a recorded decision met what this one asked or promised.
+	Settled bool `json:"settled,omitempty"`
 }
 
 // Fingerprint identifies what a scan was read from: the versions of the

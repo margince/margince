@@ -24,6 +24,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // routeCandidateCap bounds the list for the same reason the groups are capped:
@@ -184,9 +185,14 @@ func evidenceOf(e *crmcontracts.ContactGraphEdge, now time.Time, loc *time.Locat
 	return ev
 }
 
-// twoWay is the claim that separates a relationship from a mailing list.
+// twoWay is the claim that separates a relationship from a mailing list, in
+// relstrength's direction words over the colleague's 90-day counts.
 func twoWay(e *crmcontracts.ContactGraphEdge) bool {
-	return e.Inbound90d != nil && *e.Inbound90d > 0 && e.Outbound90d != nil && *e.Outbound90d > 0
+	sides := relstrength.Sides{
+		TheyWrote: e.Inbound90d != nil && *e.Inbound90d > 0,
+		WeWrote:   e.Outbound90d != nil && *e.Outbound90d > 0,
+	}
+	return sides.Direction() == relstrength.DirectionTwoWay
 }
 
 func bucketOf(b crmcontracts.ContactGraphEdgeStrengthBucket) *crmcontracts.ContactGraphRouteCandidateStrengthBucket {

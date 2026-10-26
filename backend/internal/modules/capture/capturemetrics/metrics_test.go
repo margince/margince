@@ -49,6 +49,8 @@ func TestEveryFamilyIsDeclaredBeforeItsFirstSample(t *testing.T) {
 		"# TYPE margince_connector_rate_limited_total counter",
 		"# TYPE margince_connector_request_duration_seconds histogram",
 		"# TYPE margince_capture_backfill_messages_total counter",
+		"# TYPE margince_capture_calendar_events_listed_total counter",
+		"# TYPE margince_capture_calendar_events_total counter",
 		"# TYPE margince_capture_backfill_stage_seconds histogram",
 		"# TYPE margince_capture_backfill_pages_total counter",
 		"# TYPE margince_capture_backfill_snooze_seconds_total counter",
@@ -229,4 +231,20 @@ func TestALabelValueIsEscapedForTheTextFormat(t *testing.T) {
 	fresh(t)
 	ObserveRequest("odd\"name", OpOther, http.StatusOK, nil, time.Millisecond)
 	mustContain(t, render(), `margince_connector_requests_total{provider="odd\"name",op="other",result="ok"} 1`)
+}
+
+// A calendar event is counted on every pull, with no backfill run on the
+// context, because a calendar has no backfill to carry one.
+func TestACalendarEventIsCountedOutsideABackfill(t *testing.T) {
+	fresh(t)
+	ObserveCalendarEvent("gcal", "captured")
+	ObserveCalendarEvent("gcal", "captured")
+	ObserveCalendarEvent("gcal", "dropped_no_event_id")
+	ObserveCalendarListed("gcal", 3)
+	ObserveCalendarListed("gcal", 0)
+	mustContain(t, render(),
+		`margince_capture_calendar_events_listed_total{provider="gcal"} 3`,
+		`margince_capture_calendar_events_total{provider="gcal",outcome="captured"} 2`,
+		`margince_capture_calendar_events_total{provider="gcal",outcome="dropped_no_event_id"} 1`,
+	)
 }

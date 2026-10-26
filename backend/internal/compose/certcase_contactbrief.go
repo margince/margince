@@ -63,7 +63,10 @@ func (contactBriefCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pre
 	if err := refuseUnpreparableBrief(f, want); err != nil {
 		return nil, err
 	}
-	in, byLabel := contactBriefInput(f)
+	in, byLabel, err := contactBriefInput(f)
+	if err != nil {
+		return nil, fmt.Errorf("summarize/contact_brief: %w", err)
+	}
 	return &contactBriefCase{
 		// From the Input, not beside it — see certcase_companybrief.go.
 		in: in, contactID: in.ID,

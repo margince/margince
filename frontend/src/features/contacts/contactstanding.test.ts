@@ -3,6 +3,7 @@ import type { components } from "../../api/schema";
 import { UTC_ZONE } from "../../format/timezone";
 import { type Translator, translate } from "../../i18n";
 import { bucketLabel } from "../../lib/bucketlabel";
+import { directionSentence } from "./contactrail";
 import { awaitsOurReply, contactDims, contactVerdict } from "./contactstanding";
 import {
   contactFigures,
@@ -142,6 +143,27 @@ describe("contactVerdict", () => {
     expect(
       contactVerdict({ ...VIEW, sections_omitted: ["moments", "strength"] }, t),
     ).toBeNull();
+  });
+});
+
+describe("directionSentence", () => {
+  it("words the server's direction, not the two dates", () => {
+    // Both dates set, but the server read only our side as written by a human.
+    const view: Contact360 = {
+      ...VIEW,
+      last_inbound_at: "2026-08-10T09:00:00Z",
+      last_outbound_at: "2026-08-11T09:00:00Z",
+      relationship_direction: "outbound_only",
+    };
+    expect(directionSentence(view, t)).toBe(
+      t("contact.standing.direction.outboundOnly"),
+    );
+  });
+
+  it("says none for a server that sent no reading", () => {
+    expect(directionSentence(VIEW, t)).toBe(
+      t("contact.standing.direction.none"),
+    );
   });
 });
 

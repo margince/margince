@@ -24,6 +24,7 @@ fixture:
     - label: discount_question
       days_ago: 5
       direction: inbound
+      author: { kind: contact_record, name: Lena Brandt, role: author }
       subject: "Volume discount for the 2027 order"
       preview: >
         Can you confirm the volume discount for the 2027 order? Our board
@@ -32,6 +33,7 @@ fixture:
     - label: revised_quote
       days_ago: 4
       direction: outbound
+      author: { kind: colleague, reader: true, role: addressee }
       subject: "Re: Volume discount for the 2027 order"
       preview: >
         Thanks Lena, I will send you the revised quote with the volume

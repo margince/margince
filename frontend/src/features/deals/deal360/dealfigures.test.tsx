@@ -177,6 +177,13 @@ describe("what the axis marks", () => {
             id: "mail",
             kind: "email",
             direction: "inbound",
+            voice: {
+              author: {
+                kind: "contact_record",
+                display_name: "Buyer",
+                is_reader: false,
+              },
+            },
             occurred_at: "2026-05-20T09:00:00Z",
           }),
           row({

@@ -36,6 +36,8 @@ func (a *assembly) readLastTouch() error {
 	touch := touched[a.companyID]
 	a.out.LastInboundAt = touch.InboundAt
 	a.out.LastOutboundAt = touch.OutboundAt
+	direction := crmcontracts.RelationshipDirection(relstrength.Sides{TheyWrote: touch.InboundAt != nil, WeWrote: touch.OutboundAt != nil}.Direction())
+	a.out.RelationshipDirection = &direction
 	if c := touch.Contact; c != nil {
 		a.out.LastContact = &crmcontracts.Company360LastContact{
 			ActivityId: openapi_types.UUID(c.ActivityID.UUID),
