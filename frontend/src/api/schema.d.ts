@@ -50192,7 +50192,7 @@ export interface components {
          *     remaining pages see, so re-issue the query without the cursor when changing filters.
          */
         Cursor: string;
-        /** @description Max items in the page. */
+        /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
         Limit: number;
         /**
          * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -51403,7 +51403,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
@@ -52822,7 +52822,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -53203,7 +53203,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
@@ -53987,7 +53987,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -54856,7 +54856,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -55051,7 +55051,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -55300,7 +55300,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -55354,7 +55354,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description The entries owed to one partner. */
                 partner_company_id?: string;
@@ -55879,7 +55879,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
@@ -56467,7 +56467,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -57136,7 +57136,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -58526,7 +58526,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -61534,7 +61534,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -61709,7 +61709,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Filter by run outcome (matches automation_run.status, data-model §12.5). */
                 outcome?: "fired" | "failed" | "blocked" | "skipped" | "queued_for_approval";
@@ -61781,7 +61781,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
@@ -62624,7 +62624,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -63686,7 +63686,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
@@ -63998,7 +63998,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Only these records, at most 200, answered in one page; a record that is not a member, or that this caller cannot see, is absent. Takes no cursor. */
                 entity_id?: string[];
@@ -64204,7 +64204,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -65964,7 +65964,7 @@ export interface operations {
     listWebhookDeliveries: {
         parameters: {
             query?: {
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -66808,7 +66808,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -69790,7 +69790,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -70292,7 +70292,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -70327,7 +70327,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -70537,7 +70537,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -71378,7 +71378,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Filter to one task (capture_classify, enrich, …). */
                 task?: string;
@@ -71728,7 +71728,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Include the caller's muted pending proposals for explicit review; all existing visibility checks still apply. A filtered bundle can contain fewer members than its complete review. */
                 include_muted?: boolean;
@@ -72026,7 +72026,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -72173,7 +72173,7 @@ export interface operations {
             query?: {
                 /** @description Repeat to ask for several. Omitted means every unresolved state. */
                 state?: components["schemas"]["NoticeCaseState"][];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes the last row's `due_at` and id — both, because the order is by both, and an id alone cannot continue it when two duties fall due in the same second. Changing `state` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when the filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`. */
                 cursor?: string;
@@ -72402,7 +72402,7 @@ export interface operations {
                 contact_id?: string;
                 /** @description false for the queue, true for what has been decided. Omit for both. */
                 resolved?: boolean;
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes all three parts of this queue's order — whether the row is resolved, its `submitted_at`, and its id — because two subjects can send in the same second and an id alone cannot continue an order it is only the tie-break of. Changing `contact_id` or `resolved` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when a filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`. */
                 cursor?: string;
@@ -72506,7 +72506,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Typed principal filter, e.g. human:<uuid> or agent:sdr. */
                 actor?: string;
@@ -72555,7 +72555,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Return only the rows recording this verb. A caller that wants ONE event —
@@ -72682,7 +72682,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 entity_type: "contact" | "company" | "deal" | "lead" | "project" | "activity";
                 entity_id: string;
@@ -72726,7 +72726,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -73198,7 +73198,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -73353,7 +73353,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -74079,7 +74079,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -74214,7 +74214,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Case-insensitive match over display_name/email. */
                 q?: string;
@@ -75099,7 +75099,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Case-insensitive match over team name. */
                 q?: string;
@@ -75766,7 +75766,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -75973,7 +75973,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -76089,7 +76089,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -76295,7 +76295,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -77093,7 +77093,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -77439,7 +77439,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 status?: "draft" | "sent" | "accepted" | "rejected" | "expired" | "superseded";
             };
@@ -77993,7 +77993,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
@@ -79075,7 +79075,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -79881,7 +79881,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 entity_type: "contact" | "company" | "deal" | "activity" | "lead" | "project";
                 entity_id: string;
@@ -79986,7 +79986,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other" | "link";
                 include_hidden?: boolean;
@@ -80305,7 +80305,7 @@ export interface operations {
     getMyLinkedInReach: {
         parameters: {
             query?: {
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
             };
             header?: never;
@@ -80865,7 +80865,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 status?: "draft" | "active" | "expired" | "cancelled" | "superseded";
                 /** @description Restrict to contracts under contract as of today (CONTRACT-FORM-1). */
@@ -81171,7 +81171,7 @@ export interface operations {
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
-                /** @description Max items in the page. */
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other" | "link";
                 doc_state?: "draft" | "current" | "final" | "superseded";

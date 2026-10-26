@@ -8077,7 +8077,8 @@ components:
       name: limit
       in: query
       schema: {type: integer, minimum: 1, maximum: 200, default: 50}
-      description: Max items in the page.
+      description: >-
+        Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
     Sort:
       name: sort
       in: query
