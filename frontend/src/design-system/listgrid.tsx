@@ -8,6 +8,7 @@
 import type { ReactNode, RefObject } from "react";
 import { useT } from "../i18n";
 import { Checkbox, type useScrollRegion } from "./atoms";
+import { opensRow } from "./datatable";
 import type { ListColumn, ListSelection } from "./listcolumn";
 import { HeaderCell } from "./listheader";
 import type { SortControl } from "./listsurface";
@@ -267,7 +268,15 @@ function DataRow<Row>({
     <tr
       role="row"
       className={onRowClick ? "lt-rowlink" : undefined}
-      onClick={onRowClick ? () => onRowClick(row) : undefined}
+      // A control in a cell (an address, a company link) acts on its own,
+      // the same rule a DataTable row keeps.
+      onClick={
+        onRowClick
+          ? (event) => {
+              if (opensRow(event)) onRowClick(row);
+            }
+          : undefined
+      }
     >
       {shown.map((column) => (
         <td
