@@ -340,26 +340,24 @@ const boughtPhone: View = {
   },
 };
 
-// The bought mark belongs to the number, so it sits on the number's line and
-// the app links go under both.
+// The bought mark belongs to the number, so it sits on the number's line,
+// and the chat glyph ends that line.
 export const BoughtPhone: Story = {
   name: "Bought phone number",
   render: () => rail(boughtPhone),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByRole("link", { name: "Open chat in Zalo" });
+    await canvas.findByRole("button", { name: "Open a chat" });
     const number = canvas.getByRole("link", { name: "+493012345678" });
     const handle = number.closest(".fieldgrid-handle");
     const mark = handle?.querySelector(":scope > .evmark");
     const chats = handle?.querySelector(":scope > .callaction-chats");
     if (!mark || !chats) {
-      throw new Error("the phone row lost its bought mark or its app links");
+      throw new Error("the phone row lost its bought mark or its chat glyph");
     }
     const box = number.getBoundingClientRect();
     await expect(mark.getBoundingClientRect().top).toBeLessThan(box.bottom);
-    await expect(chats.getBoundingClientRect().top).toBeGreaterThanOrEqual(
-      Math.max(box.bottom, mark.getBoundingClientRect().bottom) - 0.5,
-    );
+    await expect(chats.getBoundingClientRect().top).toBeLessThan(box.bottom);
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
       document.documentElement.clientWidth,
     );
@@ -372,4 +370,36 @@ export const BoughtPhonePhone: Story = {
   parameters: { layout: "fullscreen" },
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+const LONG_ADDRESS = "sebastian.sachsinger@straight.de";
+
+// An address wider than the column keeps one line: the mailbox name gives
+// way and the domain stays whole, so the reader still sees whose it is.
+export const LongAddress: Story = {
+  name: "Long address, phone",
+  render: () =>
+    rail({
+      ...granted,
+      contact: {
+        ...contact,
+        primary_email: LONG_ADDRESS,
+        emails: contact.emails?.map((row) => ({ ...row, email: LONG_ADDRESS })),
+      },
+    }),
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    const face = await within(canvasElement).findByTitle(LONG_ADDRESS);
+    const domain = face.querySelector<HTMLElement>(".contactlink-email-domain");
+    if (!domain) {
+      throw new Error("the address lost its domain");
+    }
+    await expect(face.getClientRects()).toHaveLength(1);
+    await expect(domain.scrollWidth).toBeLessThanOrEqual(domain.clientWidth);
+    await expect(domain.getBoundingClientRect().right).toBeLessThanOrEqual(
+      document.documentElement.clientWidth,
+    );
+  },
 };

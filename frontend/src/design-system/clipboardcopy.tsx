@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { Check, Copy } from "lucide-react";
 import { type ReactElement, type Ref, useRef, useState } from "react";
 import { useT } from "../i18n";
 import { Callout } from "./callout";
+import { IconAction } from "./iconaction";
 
 /**
  * Putting one string on the reader's clipboard, and saying so when the browser
@@ -140,5 +142,37 @@ export function CopyableText({
     >
       {text}
     </div>
+  );
+}
+
+/**
+ * The copy verb as a glyph inside a line of text, beside the value it copies
+ * (an address in a record's details). Its label says Copied once the write
+ * lands, and its failure notice follows it.
+ */
+export function CopyAction({
+  text,
+  labels,
+}: Readonly<{
+  text: string;
+  labels: Readonly<{ copy: string; copied: string; remedy: string }>;
+}>) {
+  const copy = useClipboardCopy(text, labels);
+  return (
+    <span className="copy-action">
+      <IconAction
+        inline
+        label={copy.label}
+        icon={
+          copy.copied ? (
+            <Check aria-hidden="true" />
+          ) : (
+            <Copy aria-hidden="true" />
+          )
+        }
+        onClick={copy.copy}
+      />
+      {copy.notice}
+    </span>
   );
 }

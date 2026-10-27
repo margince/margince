@@ -1773,6 +1773,12 @@ span.error-line {
   position: relative;
   display: inline-flex;
 }
+/* `inline`: the trigger rides a line of text the way `.icon-action-inline` does. */
+.overflow-menu-inline {
+  align-items: center;
+  block-size: 1lh;
+  vertical-align: top;
+}
 /* Fixed and portalled to its layer: the dialog's overlay, or the body. It is
    positioned against the trigger's viewport rectangle, so a card that hides
    its own overflow cannot clip it. */

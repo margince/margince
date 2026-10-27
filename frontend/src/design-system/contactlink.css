@@ -1,0 +1,22 @@
+/* EmailFace: one line, cut in the mailbox name and never in the domain. The
+   control around it shrinks with its column so the cut has a width to meet. */
+:is(.link-button, span):has(> .contactlink-email) {
+  display: inline-flex;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+.contactlink-email {
+  display: inline-flex;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+.contactlink-email-local {
+  min-inline-size: 1ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.contactlink-email-domain {
+  flex: none;
+  white-space: nowrap;
+}

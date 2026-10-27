@@ -339,7 +339,8 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
   // (`iconbtn`) is a different control. And it matches every element
   // except an anchor. `Button` renders a `<button>`, so a link that looks like
   // a button (features/settings/client.tsx's "create a lead" href) has no component to
-  // reach for. It is correctly styled by hand.
+  // reach for. It is correctly styled by hand, as is an `OffsiteLink`, which
+  // draws that anchor for an address off our origin.
   it("renders every button through Button — no hand-rolled btn classes", () => {
     const violations: string[] = [];
     for (const file of files) {
@@ -371,7 +372,7 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
           const handRolled = fragments.some((fragment) =>
             fragment.split(/\s+/).includes("btn"),
           );
-          if (handRolled && tag !== "a") {
+          if (handRolled && tag !== "a" && tag !== "OffsiteLink") {
             const { line } = source.getLineAndCharacterOfPosition(
               node.getStart(),
             );

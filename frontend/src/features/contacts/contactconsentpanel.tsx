@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { Mail } from "lucide-react";
+import { Ban, Check, Mail } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Button, Modal, Skeleton } from "../../design-system/atoms";
+import { Badge, Button, Modal, Skeleton } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import type { DetailRow } from "../../design-system/recorddetails";
@@ -106,10 +106,10 @@ export function useConsentRows(
   return [...transports, ...chats].map((row) => ({
     key: row.key,
     term: row.label,
-    value: (
-      <span className={row.reachable ? verdictClass(row.verdict) : undefined}>
-        {row.reachable ? consentWord(row.verdict, t) : row.unreachableWord}
-      </span>
+    value: row.reachable ? (
+      <VerdictWord verdict={row.verdict} />
+    ) : (
+      <span className="pe-detail-unknown">{row.unreachableWord}</span>
     ),
   }));
 }
@@ -149,16 +149,31 @@ const TRANSPORT_ROWS: Record<
   }),
 };
 
-// Paired with consentWord's table, with the same fallback. A verdict off a
-// newer server than this build reads as unknown, not as no tone at all.
-const VERDICT_TONE: Record<GuardEntry["verdict"], string> = {
-  allowed: "pe-detail-good",
-  blocked: "pe-detail-warn",
-  unknown: "",
-};
+// Paired with consentWord's table, with the same fallback: a verdict is a
+// state and reads as a badge, and a verdict off a newer server than this build
+// reads as unknown, which is missing information and stays grey text.
+const VERDICT_BADGE = {
+  allowed: { tone: "success", icon: Check },
+  blocked: { tone: "warning", icon: Ban },
+} as const;
 
-function verdictClass(verdict: GuardEntry["verdict"] | undefined): string {
-  return (verdict && VERDICT_TONE[verdict]) || "";
+function VerdictWord({
+  verdict,
+}: Readonly<{ verdict: GuardEntry["verdict"] | undefined }>) {
+  const t = useT();
+  const word = consentWord(verdict, t);
+  const badge =
+    verdict === "allowed" || verdict === "blocked"
+      ? VERDICT_BADGE[verdict]
+      : undefined;
+  if (!badge) {
+    return <span className="pe-detail-unknown">{word}</span>;
+  }
+  return (
+    <Badge tone={badge.tone} icon={badge.icon}>
+      {word}
+    </Badge>
+  );
 }
 
 /**
@@ -203,9 +218,7 @@ export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
                     <Mail size={15} aria-hidden="true" />
                     {consentPurposeName(entry, t)}
                   </span>
-                  <span className={verdictClass(entry.verdict)}>
-                    {consentWord(entry.verdict, t)}
-                  </span>
+                  <VerdictWord verdict={entry.verdict} />
                 </div>
                 {entry.reason && (
                   <p className="pe-colleague-proof t-caption">

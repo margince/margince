@@ -50,10 +50,16 @@ function isSetting(item: Element): boolean {
 export function OverflowMenu({
   label,
   word,
+  icon = <MoreHorizontal aria-hidden="true" />,
+  inline = false,
   keepMounted = false,
   children,
 }: Readonly<{
   label: string;
+  /** The trigger's glyph, `aria-hidden`; the three dots unless the menu holds one kind of item (the chats a number opens). */
+  icon?: ReactNode;
+  /** A trigger inside a line of text, as `IconAction inline`: the square keeps its target and takes one line box. */
+  inline?: boolean;
   /** The trigger's short word, drawn under the glyph in a record's verb bar. */
   word?: string;
   /**
@@ -141,7 +147,12 @@ export function OverflowMenu({
   }, [open, layer]);
 
   return (
-    <div className="overflow-menu" ref={joinLayer}>
+    <div
+      className={
+        inline ? "overflow-menu overflow-menu-inline" : "overflow-menu"
+      }
+      ref={joinLayer}
+    >
       {/* A disclosure, not an ARIA menu. `role="menu"` promises arrow-key
           navigation and a roving tabstop; the items here are the caller's own
           buttons — each running its own verb, opening its own dialog or setting
@@ -166,7 +177,7 @@ export function OverflowMenu({
           setOpen((was) => !was);
         }}
       >
-        <MoreHorizontal aria-hidden="true" />
+        {icon}
         {word && (
           <span className="verb-word" aria-hidden="true">
             {word}
