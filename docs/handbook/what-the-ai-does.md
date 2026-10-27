@@ -108,7 +108,9 @@ Where Margince can say who put a value there, it does. The trust marks are:
 - "Automated by {agent}", or "Automated by an agent" when the passport has no
   name to show
 - "Made by {agent} for {colleague}" on a contact an agent made. It names the
-  tool, such as Claude, and the colleague the agent worked for.
+  tool, such as Claude, and the colleague the agent worked for. It reads "Made
+  by an agent for {colleague}" when the tool is not recorded. Without the
+  colleague it reads "Automated by {agent}" or "Automated by an agent".
 - "System task: {job}", naming the job in words such as "Mail participant
   fill-in", or plain "System task" when the job has no name to show.
   This is the installation's own work, such as a planned sweep or a run that

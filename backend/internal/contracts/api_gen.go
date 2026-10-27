@@ -35152,8 +35152,8 @@ type Contact360 struct {
 	ConversationMemory *[]ConversationMemoryEntry `json:"conversation_memory,omitempty"`
 
 	// CreatedBy Who created the contact, from its earliest create audit row: for an agent, the
-	// colleague it worked for and the tool it was typed through, which `captured_by`
-	// cannot say. Absent when no create row is known; a reader says "unknown" for an
+	// colleague it worked for and the tool it was typed through, each when the row
+	// records it, which `captured_by` cannot say. Absent when no create row is known; a reader says "unknown" for an
 	// absent value and never "System".
 	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
 
