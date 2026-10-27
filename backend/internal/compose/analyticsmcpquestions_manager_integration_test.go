@@ -71,7 +71,7 @@ func proveM08WinRateByCountAndValue(t *testing.T) {
 	}
 	// Last quarter's results, which "this quarter" must leave out.
 	for range 5 {
-		seedClosedDealAgo(t, e, "Old win", 10_000, "won", "3 months", e.Rep1, "manual", "went elsewhere")
+		seedClosedDealAgo(t, e, "Old win", 10_000, "won", "3 months", e.Rep1, "manual", "")
 		seedClosedDealAgo(t, e, "Old loss", 60_000, "lost", "3 months", e.Rep1, "manual", "went elsewhere")
 	}
 

@@ -63,8 +63,7 @@ func seedMany(n int, seed func()) {
 }
 
 // rowsBy indexes an answer's rows by one column. A row without it lands under nil.
-func rowsBy(t *testing.T, got []map[string]any, column string) map[any]map[string]any {
-	t.Helper()
+func rowsBy(got []map[string]any, column string) map[any]map[string]any {
 	out := map[any]map[string]any{}
 	for _, row := range got {
 		out[row[column]] = row
@@ -100,7 +99,7 @@ func proveM01ForecastByCategory(t *testing.T) {
 	}
 	seedMany(5, func() { e.seedDealClosing(t, e.Rep3, "commit", future) })
 
-	rows := rowsBy(t, answerRows(e.teamManagerCtx(), t, e, `{"entity":"forecast",
+	rows := rowsBy(answerRows(e.teamManagerCtx(), t, e, `{"entity":"forecast",
 		"group_by":["forecast_category"],"measures":[{"fn":"count","as":"deals"},
 		{"fn":"sum","field":"amount_base_minor","as":"value"}]}`), "forecast_category")
 	for _, category := range []string{"commit", "best_case", "pipeline", "slipped"} {
@@ -132,7 +131,7 @@ func proveM02PipelineByCloseMonth(t *testing.T) {
 			t.Errorf("a month row counts %v, want 5, so a colleague's or a closed deal leaked", row)
 		}
 	}
-	if _, ok := rowsBy(t, rows, "close_month")[nil]; !ok {
+	if _, ok := rowsBy(rows, "close_month")[nil]; !ok {
 		t.Error("the deals with no close date have no row of their own")
 	}
 }
@@ -166,7 +165,7 @@ func proveM09OwnerWithMostPipeline(t *testing.T) {
 	seedMany(7, func() { e.seedDealClosing(t, mate, "pipeline", new(30)) })
 	seedMany(9, func() { e.seedDealClosing(t, e.Rep3, "pipeline", new(30)) })
 
-	rows := rowsBy(t, answerRows(e.teamManagerCtx(), t, e, `{"entity":"pipeline-current",
+	rows := rowsBy(answerRows(e.teamManagerCtx(), t, e, `{"entity":"pipeline-current",
 		"group_by":["owner_id"],"measures":[{"fn":"sum","field":"amount_base_minor","as":"value"}]}`), "owner_id")
 	if rows[mate.String()]["value"] != float64(700_000) || rows[e.Rep1.String()]["value"] != float64(500_000) {
 		t.Errorf("owners = %v, want the teammate at 700000 and the manager at 500000", rows)
@@ -184,10 +183,10 @@ func proveM10WinsByRepThisQuarter(t *testing.T) {
 	seedMany(5, func() { seedClosedOwnedDeal(t, e, "Won", 10_000, "won", "manual", "", e.Rep1) })
 	seedMany(5, func() { seedClosedOwnedDeal(t, e, "Lost", 10_000, "lost", "manual", "price", e.Rep1) })
 	seedMany(7, func() { seedClosedOwnedDeal(t, e, "Won", 10_000, "won", "manual", "", mate) })
-	seedMany(5, func() { seedClosedDealAgo(t, e, "Won", 10_000, "won", "3 months", mate, "manual", "went elsewhere") })
+	seedMany(5, func() { seedClosedDealAgo(t, e, "Won", 10_000, "won", "3 months", mate, "manual", "") })
 	seedMany(9, func() { seedClosedOwnedDeal(t, e, "Won", 10_000, "won", "manual", "", e.Rep3) })
 
-	rows := rowsBy(t, answerRows(e.teamManagerCtx(), t, e, fmt.Sprintf(`{"entity":"win-loss",
+	rows := rowsBy(answerRows(e.teamManagerCtx(), t, e, fmt.Sprintf(`{"entity":"win-loss",
 		"group_by":["owner_id"],"measures":[{"fn":"count","as":"deals"}],
 		"filters":[{"field":"status","op":"eq","value":"won"},
 		{"field":"period_quarter","op":"eq","value":%q}]}`, e.currentQuarter(t))), "owner_id")
@@ -205,10 +204,10 @@ func proveG04OwnWinsAndLossesThisMonth(t *testing.T) {
 	e := setupForecast(t)
 	seedMany(5, func() { seedClosedOwnedDeal(t, e, "Won", 10_000, "won", "manual", "", e.Rep1) })
 	seedMany(6, func() { seedClosedOwnedDeal(t, e, "Lost", 10_000, "lost", "manual", "price", e.Rep1) })
-	seedMany(5, func() { seedClosedDealAgo(t, e, "Won", 10_000, "won", "3 months", e.Rep1, "manual", "went elsewhere") })
+	seedMany(5, func() { seedClosedDealAgo(t, e, "Won", 10_000, "won", "3 months", e.Rep1, "manual", "") })
 	seedMany(7, func() { seedClosedOwnedDeal(t, e, "Colleague", 10_000, "won", "manual", "", e.Rep3) })
 
-	rows := rowsBy(t, answerRows(e.ownLensRepCtx(e.Rep1), t, e, fmt.Sprintf(`{"entity":"win-loss",
+	rows := rowsBy(answerRows(e.ownLensRepCtx(e.Rep1), t, e, fmt.Sprintf(`{"entity":"win-loss",
 		"group_by":["status"],"measures":[{"fn":"count","as":"deals"}],
 		"filters":[{"field":"owner_id","op":"eq","value":%q},
 		{"field":"period_month","op":"eq","value":%q}]}`, e.Rep1, e.currentMonth(t))), "status")
@@ -223,18 +222,18 @@ func proveG04OwnWinsAndLossesThisMonth(t *testing.T) {
 func proveG08WonThisQuarterVersusLast(t *testing.T) {
 	e := setupForecast(t)
 	seedMany(5, func() { seedClosedOwnedDeal(t, e, "Won", 20_000, "won", "manual", "", e.Rep1) })
-	seedMany(5, func() { seedClosedDealAgo(t, e, "Won", 10_000, "won", "3 months", e.Rep1, "manual", "went elsewhere") })
+	seedMany(5, func() { seedClosedDealAgo(t, e, "Won", 10_000, "won", "3 months", e.Rep1, "manual", "") })
 	seedMany(5, func() { seedClosedOwnedDeal(t, e, "Lost", 500_000, "lost", "manual", "price", e.Rep1) })
 
-	rows := rowsBy(t, answerRows(e.wideLensCtx(e.Rep1), t, e, `{"entity":"win-loss",
+	rows := rowsBy(answerRows(e.wideLensCtx(e.Rep1), t, e, `{"entity":"win-loss",
 		"group_by":["period_quarter"],"measures":[{"fn":"sum","field":"amount_base_minor","as":"value"}],
 		"filters":[{"field":"status","op":"eq","value":"won"}]}`), "period_quarter")
 	if len(rows) != 2 || rows[e.currentQuarter(t)]["value"] != float64(100_000) {
-		t.Errorf("quarters = %v, want this quarter at 100000 and one earlier quarter", rows)
+		t.Errorf("quarters = %v, want this quarter at 100000 and one earlier quarter. A lost deal is not won money", rows)
 	}
 	for quarter, row := range rows {
 		if quarter != e.currentQuarter(t) && row["value"] != float64(50_000) {
-			t.Errorf("%v = %v, want 50000, a lost deal is not won money", quarter, row)
+			t.Errorf("%v = %v, want 50000, last quarter's wins", quarter, row)
 		}
 	}
 }
@@ -245,21 +244,21 @@ func proveG10CustomersWithMostOpenDeals(t *testing.T) {
 	e := setupForecast(t)
 	contoso := e.seedCompanyDeals(t, "Contoso", 6)
 	fabrikam := e.seedCompanyDeals(t, "Fabrikam", 8)
-	closedAt := e.seedCompanyDeals(t, "Closed only", 0)
+	closedOnly := e.seedCompanyDeals(t, "Closed only", 0)
 	seedMany(5, func() {
 		e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, company_id, owner_id, amount_minor,
 				currency, status, closed_at, fx_rate_to_base, fx_rate_date, expected_close_date, source, captured_by)
 			VALUES ($1, 'Won', $2, $3, $4, $5, 100000, 'EUR', 'won', now(), 1, current_date,
 			        (now() + interval '30 days')::date, 'manual', 'human:x')`,
-			e.pipeline, e.stages[20], closedAt, e.Rep1)
+			e.pipeline, e.stages[20], closedOnly, e.Rep1)
 	})
 
-	rows := rowsBy(t, answerRows(e.companyReaderCtx(e.Rep1), t, e, `{"entity":"open-deals-per-company",
+	rows := rowsBy(answerRows(e.companyReaderCtx(e.Rep1), t, e, `{"entity":"open-deals-per-company",
 		"group_by":["company_id"],"measures":[{"fn":"count","as":"deals"}]}`), "company_id")
 	if rows[fabrikam.String()]["deals"] != float64(8) || rows[contoso.String()]["deals"] != float64(6) {
 		t.Errorf("companies = %v, want Fabrikam at 8 and Contoso at 6", rows)
 	}
-	if _, named := rows[closedAt.String()]; named || len(rows) != 2 {
+	if _, named := rows[closedOnly.String()]; named || len(rows) != 2 {
 		t.Errorf("a company with only closed deals is listed: %v", rows)
 	}
 }
@@ -283,7 +282,7 @@ func proveG11LeadsByStatus(t *testing.T) {
 				c.status, e.Rep1, c.archived, contact)
 		})
 	}
-	rows := rowsBy(t, answerRows(e.leadReaderCtx(), t, e,
+	rows := rowsBy(answerRows(e.leadReaderCtx(), t, e,
 		`{"entity":"leads-by-status","group_by":["status"],"measures":[{"fn":"count","as":"leads"}]}`), "status")
 	for status, want := range map[string]float64{"new": 6, "engaged": 5, "promoted": 7, "disqualified": 5} {
 		if rows[status]["leads"] != want {
