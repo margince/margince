@@ -105,9 +105,9 @@ export function timePlaceholder(
 const fold = (text: string) => text.toLowerCase().replace(/[.\s]/g, "");
 
 /**
- * A typed time as `HH:MM`, or null. Takes `9`, `930`, `9:30`, `9.30` and `09h30`,
- * and on either clock a trailing half of the day in English or in the reader's
- * language, so a time pasted from a 12-hour page keeps its meaning.
+ * A typed time as `HH:MM`, or null. Takes `9`, `930`, `9:30`, `9.30` and `09h30`.
+ * On either clock it also takes a trailing am/pm, in English or the reader's
+ * language. A time pasted from a 12-hour page keeps its meaning.
  */
 export function parseTypedTime(
   text: string,
