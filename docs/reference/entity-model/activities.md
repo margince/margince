@@ -913,7 +913,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 | `bcc_addresses` | `text[]`, default `'{}'::text[]` | yes |  |
 | `body` | `text`, default `''::text` | yes |  |
 | `cc_addresses` | `text[]`, default `'{}'::text[]` | yes |  |
-| `grounding` | `jsonb`, default `'[]'::jsonb` | yes |  |
+| `grounding` | `jsonb`, default `'[]'::jsonb` | yes | The records this draft was written from, which an agent draft records and a human draft leaves empty. |
 | `html_body` | `text` |  | The editor's markup beside the plain body, so reopening restores the formatting. |
 | `subject` | `text`, default `''::text` | yes |  |
 | `to_addresses` | `text[]`, default `'{}'::text[]` | yes |  |

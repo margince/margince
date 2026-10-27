@@ -82,6 +82,21 @@ func mailDraftResponse(d MailDraft) crmcontracts.MailDraft {
 		html := d.Content.HTMLBody
 		out.HtmlBody = &html
 	}
+	// Served so the composer files a sent draft where it was written from.
+	//
+	// The read already holds these. Without them on the wire, the composer
+	// rebuilds links from whichever page opened it. A draft grounded in a deal
+	// then sends under the contact alone.
+	//
+	// An empty slice rather than nil for a human draft, because the contract
+	// declares an array and a nil would reach a reader as `null`.
+	grounds := make([]crmcontracts.MailDraftGround, 0, len(d.Grounding))
+	for _, ground := range d.Grounding {
+		grounds = append(grounds, crmcontracts.MailDraftGround{
+			AnchorType: ground.Type, AnchorId: openapi_types.UUID(ground.ID),
+		})
+	}
+	out.Grounding = &grounds
 	return out
 }
 

@@ -44818,17 +44818,29 @@ type MailDraft struct {
 	Body       string              `json:"body"`
 	Cc         []string            `json:"cc"`
 	CreatedAt  time.Time           `json:"created_at"`
-	HtmlBody   *string             `json:"html_body,omitempty"`
-	Id         openapi_types.UUID  `json:"id"`
-	Subject    string              `json:"subject"`
-	To         []string            `json:"to"`
-	UpdatedAt  time.Time           `json:"updated_at"`
-	Version    int64               `json:"version"`
+
+	// Grounding The records this draft was written from, which an agent draft records and a human draft leaves empty. The composer files a sent draft under these, so a draft grounded in a deal reaches that deal's timeline even when it is opened from the contact page.
+	Grounding *[]MailDraftGround `json:"grounding,omitempty"`
+	HtmlBody  *string            `json:"html_body,omitempty"`
+	Id        openapi_types.UUID `json:"id"`
+	Subject   string             `json:"subject"`
+	To        []string           `json:"to"`
+	UpdatedAt time.Time          `json:"updated_at"`
+	Version   int64              `json:"version"`
 }
 
 // MailDraftAnchorType What the composer opened against: `activity` for a reply to that message, or the
 // record a new conversation starts from.
 type MailDraftAnchorType string
+
+// MailDraftGround One record the draft was written from. A saved agent draft keeps these so the composer files the sent mail where the draft was grounded, rather than rebuilding links from whichever page it was opened on.
+type MailDraftGround struct {
+	AnchorId openapi_types.UUID `json:"anchor_id"`
+
+	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
+	// record a new conversation starts from.
+	AnchorType MailDraftAnchorType `json:"anchor_type"`
+}
 
 // MailDraftInput The composer's fields as they stand. Every content field is optional and an omitted
 // one saves as empty, because a draft is whatever the rep had typed so far.
