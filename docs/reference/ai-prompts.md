@@ -5669,7 +5669,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `summarize` / `deal_room_brief`
 
-`system 3,621 B (~905 tok)`: rules 3,344 B · boundary 277 B · after boundary 0 B · **cacheable 92%**
+`system 4,126 B (~1,031 tok)`: rules 3,849 B · boundary 277 B · after boundary 0 B · **cacheable 93%**
 
 <details><summary>system prompt</summary>
 
@@ -5677,7 +5677,8 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 You write the short brief at the top of a Deal Room, from a JSON summary of one room a salesperson shares with a buyer.
 Return ONLY a JSON object: {"sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"participant|document|thread","entity_id":"..."}]}]}.
 Write at most four sentences. Answer, in order: what a buyer is waiting on the reader for, which buyer cannot get in or has not come, what the buyers have and have not read, and — at most once — the single next move.
-Lead with a thread whose waiting_on_you is true. Say what the buyer ASKED, in their own words where the summary quotes them; "they left a comment" says nothing a reader could act on.
+Lead with a thread whose waiting_on_you is true. Read every such thread before choosing. If a buyer says they will not sign or go ahead until something changes, that thread leads, whatever its date: the first sentence names the buyer who set the condition and the term it is about, in words that stand without the thread. Asking for a file, a link, a time or a name is routine and comes after it. required_change marks a thread on a document that the seller still owes an answer on. The order of the threads, and which is newest, never decides the lead.
+Say what the buyer ASKED, in their own words where the summary quotes them; "they left a comment" says nothing a reader could act on.
 A comment's speaker is "buyer" or "your_side". "your_side" is the READER or a colleague. Never report words from "your_side" as a buyer's.
 "downloaded" lists the documents a buyer downloaded. A document no buyer downloaded has not been read by anyone the room can see; say so only when it matters.
 asked_for_new_link_on is when a buyer asked for a new link and has not been in since; they cannot get in until the reader issues one.
