@@ -9,9 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/shared/apperrors"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
