@@ -21,30 +21,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // derivesAMailDomain is the shape of taking a domain off an address in SQL.
 var derivesAMailDomain = regexp.MustCompile(`'@'|FROM\s+'@`)
 
-// domainDerivationWaivers are the queries that take a domain off an address for
-// a question that is not "is this one of ours". Each answers which company or
-// contact a domain belongs to.
-var domainDerivationWaivers = gatekit.Waive(map[string]string{
-	"internal/modules/capture/strandedcontacts.go":     "reads a contact's domain to name the company the stranded contact may belong to",
-	"internal/modules/contacts/cohortpromote.go":       "matches contact addresses to the company that claims the domain",
-	"internal/modules/contacts/dedupe.go":              "collects a contact's domains as a duplicate signal",
-	"internal/modules/contacts/deduperecheck.go":       "collects a contact's domains as a duplicate signal",
-	"internal/modules/contacts/domaintriage.go":        "lists the mail and contacts at a domain under triage, which is a company's",
-	"internal/modules/contacts/domaintriageresolve.go": "moves the contacts at a resolved company domain",
-	"internal/modules/contacts/domainvendor.go":        "finds the inbound mail a vendor's domain sent",
-	"internal/modules/contacts/employmentobserved.go":  "matches contact addresses to the company that claims the domain",
-	"internal/modules/contacts/leaddedupe.go":          "compares a lead's domain to a company's as a duplicate signal",
-})
-
 // TestEveryOwnDomainComparisonInSQLReadsFoldedDomains fails when SQL takes a
-// domain off an address outside the ratified company matchers. It also fails
-// when a caller of owndomain.CoversSQL passes anything but a folded column.
+// domain off an address. It also fails when a caller of owndomain.CoversSQL
+// passes anything but a folded column.
 func TestEveryOwnDomainComparisonInSQLReadsFoldedDomains(t *testing.T) {
 	t.Parallel()
 	files := gatekit.Scope{
@@ -59,8 +45,7 @@ func TestEveryOwnDomainComparisonInSQLReadsFoldedDomains(t *testing.T) {
 	var derived, unfolded []string
 	calls := 0
 	for _, source := range files {
-		if slices.ContainsFunc(gatekit.SQLStatementsOf(source.File), derivesAMailDomain.MatchString) &&
-			!domainDerivationWaivers.Waived(t, source.Path) {
+		if slices.ContainsFunc(gatekit.SQLStatementsOf(source.File), derivesAMailDomain.MatchString) {
 			derived = append(derived, source.Path)
 		}
 		for _, call := range coversSQLCalls(source.File) {
@@ -70,17 +55,16 @@ func TestEveryOwnDomainComparisonInSQLReadsFoldedDomains(t *testing.T) {
 			}
 		}
 	}
-	domainDerivationWaivers.AssertAllMatched(t)
-	// The waiting queue and the sender read arm each call it once. Fewer means
-	// the walk lost a caller or a caller went back to comparing addresses.
-	if calls < 2 {
-		t.Errorf("found %d call(s) of owndomain.CoversSQL, want the waiting queue's and the sender arm's at least", calls)
+	// Fewer callers than this means the walk lost one, or a caller went back to
+	// comparing addresses.
+	if calls < 9 {
+		t.Errorf("found %d call(s) of owndomain.CoversSQL, want at least the nine that compare folded domains", calls)
 	}
 	if len(derived) > 0 {
 		t.Errorf("these files take a mail domain off an address in SQL: %v\n\n"+
 			"Postgres cannot fold IDNA, so the domain compares unequal to the folded form of the same "+
-			"domain. For an own-domain check, compare a *_folded column through owndomain.CoversSQL. "+
-			"For a company or contact match, add the file to domainDerivationWaivers with the reason.", derived)
+			"domain. Compare a *_folded column its writers fill through owndomain.StoredOfAddress, "+
+			"through owndomain.CoversSQL when a subdomain counts, or fold the address in Go.", derived)
 	}
 	if len(unfolded) > 0 {
 		t.Errorf("owndomain.CoversSQL compares a value no writer folded: %v\n\n"+
@@ -211,4 +195,25 @@ func writesColumn(statement string, column foldedColumn) (writes, folds bool) {
 		}
 	}
 	return writes, folds
+}
+
+// TestEveryFoldedColumnIsStampedByAPatch holds storekit.FoldedDomains, the list
+// a Patch write stamps from, to the folded columns the migrations add. A column
+// missing from it is one an edit through a Patch leaves stale.
+func TestEveryFoldedColumnIsStampedByAPatch(t *testing.T) {
+	t.Parallel()
+	var migrated, stamped []string
+	for _, column := range foldedColumns(t) {
+		migrated = append(migrated, column.table+"."+column.source+" -> "+column.folded)
+	}
+	for _, column := range storekit.FoldedDomains() {
+		stamped = append(stamped, column.Table+"."+column.Source+" -> "+column.Folded)
+	}
+	slices.Sort(migrated)
+	slices.Sort(stamped)
+	if !slices.Equal(migrated, stamped) {
+		t.Errorf("storekit.FoldedDomains lists\n\t%s\nand the migrations add\n\t%s\n"+
+			"List every folded column there, with the fold its writers store.",
+			strings.Join(stamped, "\n\t"), strings.Join(migrated, "\n\t"))
+	}
 }
