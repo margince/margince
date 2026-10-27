@@ -13911,6 +13911,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.setup.snippet": "Code zum Einfügen",
   "webForms.setup.builderSecret":
     "Verwende dort denselben Signaturschlüssel, den du an diesem Formular gespeichert hast.",
+  "webForms.setup.customFields":
+    "Ein Feld mit dem Namen eines eigenen Lead-Felds füllt es: {fields}. Ein Wert, den es nicht annimmt, kommt in die Notiz.",
   "webForms.setup.copy": "Code kopieren",
   "webForms.setup.copySecret": "Schlüssel kopieren",
   "webForms.setup.copied": "Kopiert",

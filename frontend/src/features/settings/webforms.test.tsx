@@ -12,6 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { CustomField } from "../../components/customfields.form";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { draftFor, webFormBodyOf } from "./webformdrawer";
@@ -50,6 +51,22 @@ const contactForm: WebForm = {
   archived_at: null,
 };
 
+const budgetField: CustomField = {
+  id: "cf-1",
+  object: "lead",
+  label: "Budget",
+  slug: "budget",
+  type: "number",
+  status: "active",
+  column_name: "cf_budget",
+  show_in_create: true,
+  reportable: false,
+  created_by: "u1",
+  created_at: "2026-09-01T09:00:00Z",
+  updated_at: "2026-09-01T09:00:00Z",
+  version: 1,
+};
+
 type Sent = { method: string; url: string; body: unknown; ifMatch: string };
 
 // The backend the card talks to: the list, plus whatever a case writes. Every
@@ -68,6 +85,9 @@ function backendFor(
     }
     if (req.method === "GET" && req.url.includes("/v1/web-forms")) {
       return jsonResponse({ data: forms, secrets_available: true });
+    }
+    if (req.method === "GET" && req.url.includes("/v1/custom-fields")) {
+      return jsonResponse({ data: [budgetField] });
     }
     const route = `${req.method} ${new URL(req.url).pathname}`;
     const answer = writes[route];
@@ -149,6 +169,9 @@ describe("WebFormsCard", () => {
     expect(screen.getByTestId("web-form-snippet").textContent).toContain(
       'name="_mrg_hp"',
     );
+    expect(
+      (await screen.findByTestId("web-form-custom-fields")).textContent,
+    ).toContain("cf_budget (Budget)");
   });
 
   it("shows a server form's minted secret once, with the caution", async () => {

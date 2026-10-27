@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/webforms"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
@@ -34,9 +35,12 @@ const publicFormsPrefix = "/v1/public/forms/"
 // writers. The secret store arrives later, through WithKeyvault.
 func newWebFormHandlers(pool *pgxpool.Pool, log *slog.Logger) webforms.Handlers {
 	store := webforms.NewStore(InstallationDB(pool), log)
+	catalog := customfields.NewService(pool, nil)
 	lander := webFormLeads{
-		leads:      contacts.NewStore(InstallationDB(pool)).WithLeadArrivals(newLeadWorkTasks(InstallationDB(pool), log)),
+		leads: contacts.NewStore(InstallationDB(pool)).WithFieldCatalog(catalog).
+			WithLeadArrivals(newLeadWorkTasks(InstallationDB(pool), log)),
 		activities: activities.NewStore(InstallationDB(pool)),
+		catalog:    catalog,
 	}
 	return webforms.NewHandlers(store, webforms.NewIntake(store, lander), time.Now)
 }

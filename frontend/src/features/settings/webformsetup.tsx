@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useId } from "react";
+import { useObjectCustomFields } from "../../components/customfields.form";
 import { Button, Modal } from "../../design-system/atoms";
 import {
   CopyableText,
@@ -46,6 +47,7 @@ export function WebFormSetupModal({
   const headingId = useId();
   const url = intakeUrlOf(form, origin);
   const snippet = snippetOf(form, url);
+  const leadFields = useObjectCustomFields("lead").fields;
   const copy = useClipboardCopy(secret ?? snippet ?? url, {
     copy: secret ? t("webForms.setup.copySecret") : t("webForms.setup.copy"),
     copied: t("webForms.setup.copied"),
@@ -83,6 +85,15 @@ export function WebFormSetupModal({
           />
         )}
         {isBuilder(form.sender) && <p>{t("webForms.setup.builderSecret")}</p>}
+        {leadFields.length > 0 && (
+          <p data-testid="web-form-custom-fields">
+            {t("webForms.setup.customFields", {
+              fields: leadFields
+                .map((field) => `${field.column_name} (${field.label})`)
+                .join(", "),
+            })}
+          </p>
+        )}
         {copy.notice}
         {secret && !copy.copied && (
           // ds:ignore a caution, not a refusal

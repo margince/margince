@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -176,6 +178,33 @@ func TestASecondSubmissionFromAKnownEmailAddsToItsLead(t *testing.T) {
 	}
 	if notes := notesOnLeadWithEmail(t, e, "bob@visitor.example"); len(notes) != 2 {
 		t.Fatalf("notes = %d, want one per submission", len(notes))
+	}
+}
+
+func TestACustomFieldNameFillsTheLeadAndAValueThatDoesNotFitStaysOnTheNote(t *testing.T) {
+	e := apptest.SetupAppWithOptions(t, compose.WithKeyvault(keyvault.NewMemory()), compose.WithSchemaPool(SchemaPool(t)))
+	e.BootstrapWorkspace(t)
+	budget := createCustomField(t, e, AnyMap{"object": "lead", "label": "Budget", "type": "number", "source": "manual"})
+	plan := createCustomField(t, e, AnyMap{"object": "lead", "label": "Plan", "type": "picklist", "options": []string{"Team", "Business"}, "source": "manual"})
+	form := createForm(t, e, AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
+	answer := browserPost(t, e, form.FormKey, url.Values{
+		"email": {"cf@visitor.example"}, budget: {"12000"}, plan: {"Enterprise"},
+	}, siteOrigin)
+	if answer.Status != http.StatusAccepted {
+		t.Fatalf("browser post → %d %s", answer.Status, answer.Body)
+	}
+	var gotBudget, gotPlan *string
+	query := "SELECT " + pgx.Identifier{budget}.Sanitize() + "::text, " + pgx.Identifier{plan}.Sanitize() +
+		" FROM lead WHERE email = $1"
+	if err := e.Owner.QueryRow(context.Background(), query, "cf@visitor.example").Scan(&gotBudget, &gotPlan); err != nil {
+		t.Fatal(err)
+	}
+	if gotBudget == nil || *gotBudget != "12000" || gotPlan != nil {
+		t.Fatalf("%s = %v, %s = %v; want 12000 and no plan, since Enterprise is not one of its options", budget, gotBudget, plan, gotPlan)
+	}
+	notes := notesOnLeadWithEmail(t, e, "cf@visitor.example")
+	if len(notes) != 1 || !strings.Contains(notes[0], plan+": Enterprise") {
+		t.Fatalf("notes = %q, want the plan the lead could not take", notes)
 	}
 }
 

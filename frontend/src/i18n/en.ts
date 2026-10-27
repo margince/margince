@@ -13894,6 +13894,8 @@ export const en = {
   "webForms.setup.snippet": "Code to paste",
   "webForms.setup.builderSecret":
     "Use the same signing secret there that you saved on this form.",
+  "webForms.setup.customFields":
+    "A field named after a lead custom field fills it: {fields}. A value it cannot take goes on the note.",
   "webForms.setup.copy": "Copy code",
   "webForms.setup.copySecret": "Copy secret",
   "webForms.setup.copied": "Copied",

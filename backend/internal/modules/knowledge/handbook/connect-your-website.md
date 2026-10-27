@@ -27,9 +27,10 @@ Yes. Point the form at the **Form address** with `method="post"`, and give its f
 | `phone`, `company`, `title` | Phone number, company and job title |
 | `message` | What the prospect wrote |
 | `consent` | The consent tick box |
+| `cf_` and a custom field's key, such as `cf_budget` | That lead custom field. **Show setup** lists the names. A value the field cannot take goes in the note. |
 
 Margince also reads common names such as `name`, `your-email` or `Firma`. Every other field is kept in the lead's note, so nothing the prospect wrote is lost. Fields named `utm_source` and the other `utm_` names show where the prospect came from. Copy the hidden fields that start with `_mrg_` from the **Code to paste** as well: they stop most spam.
-Also called: field names, map fields, my own form, Contact Form 7.
+Also called: field names, map fields, custom fields, my own form, Contact Form 7.
 
 ### What happens when someone sends the form?
 Margince adds a lead with the prospect's name, email, phone and company, and the source **Website**. Everything the prospect wrote goes into a note on the lead's timeline. If a lead or contact already has that email address, Margince adds the note to it and makes no new lead. A double click on the send button adds one note.
