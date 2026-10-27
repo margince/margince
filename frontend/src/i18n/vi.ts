@@ -13706,7 +13706,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.field.originsHint": "Mỗi dòng một địa chỉ. Bài gửi từ trang web khác bị từ chối.",
   "webForms.field.originsPlaceholder": "https://www.example.com",
   "webForms.field.senderSecret": "Khóa ký",
-  "webForms.field.senderSecretHint": "Khóa ký Webflow hiện khi bạn tạo webhook trong Webflow. Webhook do một ứng dụng OAuth tạo thì được ký bằng client secret của ứng dụng đó. Để trống cho đến khi có: trước đó biểu mẫu không nhận bài gửi nào.",
+  "webForms.field.senderSecretHint": "Khóa ký API Webflow trả về một lần khi tạo webhook. Webhook do một ứng dụng OAuth tạo thì được ký bằng client secret của ứng dụng đó. Để trống cho đến khi có: trước đó biểu mẫu không nhận bài gửi nào.",
   "webForms.field.senderSecretKeep": "Để trống để giữ khóa đã lưu.",
   "webForms.field.consentRequired": "Yêu cầu đồng ý trước khi nhận bài gửi",
   "webForms.field.consentWording": "Nội dung đồng ý",
@@ -13745,7 +13745,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.steps.server.address": "Máy chủ của bạn gửi mỗi yêu cầu tới địa chỉ biểu mẫu.",
   "webForms.steps.server.code": "Đoạn mã này ký mỗi bài gửi. Lập trình viên của bạn có thể dùng nguyên như vậy.",
   "webForms.steps.webflow.create": "Tạo webhook bằng API của Webflow, với địa chỉ biểu mẫu làm URL.",
-  "webForms.steps.webflow.secret": "Webflow trả về khóa ký của webhook một lần. Dán nó vào Khóa ký trong mục Sửa của biểu mẫu này.",
+  "webForms.steps.webflow.secret": "API Webflow trả về khóa ký của webhook một lần. Webhook do một ứng dụng OAuth tạo thì được ký bằng client secret của ứng dụng đó. Dán khóa phù hợp vào Khóa ký trong mục Sửa của biểu mẫu này.",
   "webForms.steps.test": "Gửi một yêu cầu thử. Nó hiện thành một lead mới trong mục Lead, hoặc thành ghi chú trên lead hay liên hệ đã có email đó.",
   "webForms.steps.secretShownOnce": "Khóa ký chỉ hiện một lần, khi tạo biểu mẫu. Bị mất? Chọn Tạo khóa ký mới trong menu ⋯ của biểu mẫu.",
 

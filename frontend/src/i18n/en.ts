@@ -14096,7 +14096,7 @@ export const en = {
   "webForms.field.originsPlaceholder": "https://www.example.com",
   "webForms.field.senderSecret": "Signing secret",
   "webForms.field.senderSecretHint":
-    "The secret Webflow shows when you make the webhook in Webflow. A webhook an OAuth app makes is signed with that app’s client secret instead. Leave it empty until you have it: the form takes no posts until then.",
+    "The secret the Webflow API answers once when it makes the webhook. A webhook an OAuth app makes is signed with that app’s client secret instead. Leave it empty until you have it: the form takes no posts until then.",
   "webForms.field.senderSecretKeep": "Leave empty to keep the stored secret.",
   "webForms.field.consentRequired":
     "Require consent before a submission is taken",
@@ -14153,7 +14153,7 @@ export const en = {
   "webForms.steps.webflow.create":
     "Create the webhook with Webflow’s API, with the form address as its URL.",
   "webForms.steps.webflow.secret":
-    "Webflow answers the webhook’s secret once. Paste it in Signing secret under Edit on this form.",
+    "The Webflow API answers the webhook’s secret once. A webhook an OAuth app made is signed with that app’s client secret instead. Paste the one that applies in Signing secret under Edit on this form.",
   "webForms.steps.test":
     "Send a test enquiry. It shows up as a new lead under Leads, or as a note on the lead or contact that already has its email.",
   "webForms.steps.secretShownOnce":

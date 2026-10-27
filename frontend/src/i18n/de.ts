@@ -14063,7 +14063,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eine Adresse pro Zeile. Sendungen von anderen Websites werden abgelehnt.",
   "webForms.field.originsPlaceholder": "https://www.example.com",
   "webForms.field.senderSecret": "Signaturschlüssel",
-  "webForms.field.senderSecretHint": "Der Signaturschlüssel, den Webflow zeigt, wenn du den Webhook in Webflow anlegst. Einen Webhook, den eine OAuth-App anlegt, signiert stattdessen das Client Secret dieser App. Lass das Feld leer, bis du ihn hast: Bis dahin nimmt das Formular nichts an.",
+  "webForms.field.senderSecretHint": "Der Signaturschlüssel, den die Webflow-API einmal zurückgibt, wenn sie den Webhook anlegt. Einen Webhook, den eine OAuth-App anlegt, signiert stattdessen das Client Secret dieser App. Lass das Feld leer, bis du ihn hast: Bis dahin nimmt das Formular nichts an.",
   "webForms.field.senderSecretKeep":
     "Leer lassen, um den gespeicherten Signaturschlüssel zu behalten.",
   "webForms.field.consentRequired":
@@ -14111,7 +14111,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.steps.server.address": "Dein Server sendet jede Anfrage an die Formularadresse.",
   "webForms.steps.server.code": "Dieser Code signiert jede Sendung. Dein Entwickler kann ihn so verwenden.",
   "webForms.steps.webflow.create": "Lege den Webhook über die API von Webflow an, mit der Formularadresse als URL.",
-  "webForms.steps.webflow.secret": "Webflow gibt den Signaturschlüssel des Webhooks einmal zurück. Füge ihn unter Bearbeiten an diesem Formular bei Signaturschlüssel ein.",
+  "webForms.steps.webflow.secret": "Die Webflow-API gibt den Signaturschlüssel des Webhooks einmal zurück. Einen Webhook, den eine OAuth-App angelegt hat, signiert stattdessen das Client Secret dieser App. Füge den passenden unter Bearbeiten an diesem Formular bei Signaturschlüssel ein.",
   "webForms.steps.test": "Sende eine Testanfrage. Die Anfrage erscheint als neuer Lead unter Leads, oder als Notiz am Lead oder Kontakt, der diese E-Mail-Adresse schon hat.",
   "webForms.steps.secretShownOnce": "Der Signaturschlüssel wurde einmal angezeigt, als das Formular angelegt wurde. Verloren? Wähle im Menü ⋯ des Formulars Neuen Signaturschlüssel erstellen.",
 

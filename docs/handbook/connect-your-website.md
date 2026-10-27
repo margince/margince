@@ -49,7 +49,7 @@ To connect a Webflow form, choose **Your website** and list the Webflow site's a
 
 A webhook made in the settings of Webflow is not signed, so Margince cannot check it. Choose **Webflow webhook** only when someone who writes code makes the webhook with the Webflow API. Create the form first and give its **Form address** to the webhook.
 
-Webflow then shows the secret of the webhook once. Paste it in **Signing secret** under **Edit**. Until then the form takes no posts, and its row says **Waiting for its secret**.
+The Webflow API then answers the secret of the webhook once. A webhook an OAuth app makes is signed with the client secret of that app instead. Paste the secret in **Signing secret** under **Edit**. Until then the form takes no posts, and its row says **Waiting for its secret**.
 Also called: Webflow form, Webflow action, Webflow webhook.
 
 ### How do I connect Typeform or Tally?
