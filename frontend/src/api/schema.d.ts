@@ -9238,12 +9238,14 @@ export interface paths {
         get: operations["listWebForms"];
         put?: never;
         /**
-         * Create a website form (returns a server signing secret once).
+         * Create a website form (returns a minted signing secret once).
          * @description Mints the form's public key, the last segment of its intake address
          *     `POST /v1/public/forms/{form_key}`. A `server` form answers its own signing secret in
-         *     `signing_secret`, once; no read returns it again. A builder form (`webflow`, `typeform`,
-         *     `tally`) stores the secret the builder signs with, sent in `sender_secret`. Both need a
-         *     secret store on this installation; without one they answer 422 on `sender`.
+         *     `signing_secret`, once; no read returns it again. So does a `typeform` or `tally` form
+         *     sent without `sender_secret`: the secret is then typed into the builder's webhook. A
+         *     `webflow` form stores the secret Webflow issued, sent in `sender_secret` now or on a
+         *     later update; until then it refuses every post. Every signed
+         *     sender needs a secret store on this installation; without one it answers 422 on `sender`.
          */
         post: operations["createWebForm"];
         delete?: never;
@@ -9291,9 +9293,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Rotate a server form's signing secret (returns the new secret once).
-         * @description Only a `server` form has a secret this installation minted; any other sender answers 422 on
-         *     `sender`. The old secret stops verifying at once.
+         * Rotate a form's minted signing secret (returns the new secret once).
+         * @description A `server`, `typeform` or `tally` form gets a new secret this installation mints; a
+         *     `browser` or `webflow` form answers 422 on `sender`. The old secret stops verifying at once.
          */
         post: operations["rotateWebFormSecret"];
         delete?: never;
@@ -22188,7 +22190,8 @@ export interface components {
          * @description Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
          *     allowed website, with spam checks. `server`: a server signing with this form's secret.
          *     `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
-         *     builder computes with the secret stored as `sender_secret`.
+         *     builder computes with the form's stored secret: the `sender_secret` pasted, or for `typeform`
+         *     and `tally` one this installation minted when none was.
          * @enum {string}
          */
         WebFormSender: "browser" | "server" | "webflow" | "typeform" | "tally";
@@ -22237,7 +22240,7 @@ export interface components {
             archived_at?: string | null;
         };
         WebFormCreated: components["schemas"]["WebForm"] & {
-            /** @description A `server` form's signing secret, shown this once. */
+            /** @description The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once. */
             signing_secret?: string;
         };
         WebFormListResponse: {
@@ -22248,7 +22251,7 @@ export interface components {
         CreateWebFormRequest: {
             name: string;
             sender: components["schemas"]["WebFormSender"];
-            /** @description The secret a builder signs with. Required for `webflow`, `typeform` and `tally`; refused for any other sender. */
+            /** @description The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow's secret is pasted. Refused for any other sender. */
             sender_secret?: string;
             /** @description Required, and only allowed, for a `browser` form. */
             allowed_origins?: string[];
@@ -24102,6 +24105,11 @@ export interface components {
              * @description Last sync attempt (CAP-DDL-5); null before the first.
              */
             last_synced_at?: string | null;
+            /**
+             * Format: date-time
+             * @description Last successful sync for this mailbox; null before one succeeds.
+             */
+            last_success_at?: string | null;
             /** @description rate_limited | unreachable | auth | history_gone | internal — class only, detail in system_log. */
             last_sync_error_class?: string | null;
             /**
@@ -30056,13 +30064,15 @@ export interface components {
             activity_id: string;
         };
         /**
-         * @description The contact record page in one payload (PO-EXT-3). Every section except `contact` is
-         *     optional: absent means the caller lacks its grant, and `sections_omitted` names it.
+         * @description The contact record page in one payload. Record sections may be absent when their
+         *     grants are withheld; `sections_omitted` names those sections. Mail coverage
+         *     reports its own state and observation clock. Absent coverage is unknown.
          */
         Contact360: {
+            mail_coverage?: components["schemas"]["MailCaptureCoverage"];
             /**
              * Format: date-time
-             * @description The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
+             * @description The assembly clock. Mail coverage carries its own evaluation time; Read Committed does not promise one snapshot across sections.
              */
             as_of: string;
             contact: components["schemas"]["Contact"];
@@ -31405,6 +31415,7 @@ export interface components {
          *     shape exists to prevent.
          */
         DealStatusCard: {
+            mail_coverage?: components["schemas"]["MailCaptureCoverage"];
             /** Format: uuid */
             deal_id: string;
             /**
@@ -31482,6 +31493,7 @@ export interface components {
          *     to send; absent for `none`.
          */
         DealStatusCardMove: {
+            mail_coverage?: components["schemas"]["MailCaptureCoverage"];
             action: string;
             /** @description One sentence saying why this move and not another. */
             reason: string;
@@ -31501,11 +31513,42 @@ export interface components {
             readonly fingerprint?: string;
         };
         /**
+         * @description The calling reader's mail capture for the requested interval. This does
+         *     not assert that no reply exists. Partial means capture has succeeded but
+         *     does not attest a complete Inbox and Sent interval. Current providers do
+         *     not record such an attestation; a cursor or completed import cannot supply it.
+         *     No mailbox identity, credential, cursor or colleague account travels.
+         */
+        MailCaptureCoverage: {
+            /** @enum {string} */
+            channel: "email";
+            /** @enum {string} */
+            state: "unknown" | "partial" | "unavailable" | "withheld";
+            /**
+             * Format: date-time
+             * @description Start of the requested interval, not a verified coverage boundary.
+             */
+            interval_from?: string;
+            /**
+             * Format: date-time
+             * @description End of the requested interval, not a verified coverage boundary.
+             */
+            interval_to: string;
+            /**
+             * Format: date-time
+             * @description Oldest successful sync across every relevant mailbox; absent if any has never succeeded.
+             */
+            last_success_at?: string;
+            /** Format: date-time */
+            evaluated_at: string;
+        };
+        /**
          * @description A recommendation's scoped source and classification. Known request kinds
          *     are current_request and request_review; unknown kinds remain neutral.
          *     Source age is not a deadline. Evaluation time is not source time.
          */
         WorkEvidenceBasis: {
+            mail_coverage?: components["schemas"]["MailCaptureCoverage"];
             kind: string;
             /** @description The record scope in which the evidence was evaluated. */
             scope: string;
@@ -50363,6 +50406,7 @@ export interface components {
          *     for it.
          */
         WorklistMove: {
+            mail_coverage?: components["schemas"]["MailCaptureCoverage"];
             /** @description The deal recommendation's evidence basis, preserved across surfaces. */
             basis?: components["schemas"]["WorkEvidenceBasis"];
             /**
@@ -66899,7 +66943,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The created form, plus its one-time signing secret for a `server` form. */
+            /** @description The created form, plus the signing secret once whenever this installation minted it. */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -75582,16 +75626,14 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
-                /** @description Case-insensitive match over display_name/email. */
+                /** @description Case-insensitive match over display_name/email that ignores diacritics on both sides. */
                 q?: string;
                 /** @description Admin management view — include deactivated/suspended members. Honored only for an admin caller. */
                 include_inactive?: boolean;
                 /**
-                 * @deprecated
-                 * @description Also list invited seats — members who have not signed in yet. Naming the colleagues a record
-                 *     already points at is `GET /users/names`, which answers id and display name alone; a roster row
-                 *     carries the member's email and seat status with it.
-                 *     Pickers leave it off, so nobody is offered work they cannot open.
+                 * @description Also list invited seats — members who have not signed in yet. Each row's `status` says so.
+                 *     A picker that may hand an invited colleague work, such as a record responsibility, asks for them.
+                 *     Naming the colleagues a record already points at is `GET /users/names`.
                  */
                 include_invited?: boolean;
             };
@@ -76791,7 +76833,7 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
-                /** @description Case-insensitive match over team name. */
+                /** @description Case-insensitive match over team name that ignores diacritics on both sides. */
                 q?: string;
             };
             header?: never;

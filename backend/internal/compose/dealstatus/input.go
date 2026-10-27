@@ -28,7 +28,7 @@ import (
 )
 
 // ProjectionVersion invalidates all card readers when the evidence interpretation changes.
-const ProjectionVersion = "deal-status-projection-8"
+const ProjectionVersion = "deal-status-projection-9"
 
 // promptVersion is DERIVED from the prompt as it is SENT — boundary rule
 // included — so rewording it rewrites the cards whether or not anybody

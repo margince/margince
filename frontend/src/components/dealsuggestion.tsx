@@ -41,7 +41,7 @@ import {
   useAcceptDealSuggestion,
   useDealSuggestions,
 } from "./dealsuggestions.queries";
-import { EntityRef } from "./entityref";
+import { EntityRef, RosterFailedLine } from "./entityref";
 import "./dealsuggestion.css";
 import { currencyOptions } from "../format/currencychoices";
 import { useLeadingCurrencies } from "../lib/leadingcurrencies";
@@ -375,13 +375,14 @@ export function AcceptSuggestionDialog({
               {...control}
               options={[
                 { value: "", label: t("dealSuggestion.ownerMe") },
-                ...owners,
+                ...owners.options,
               ]}
               value={draft.ownerId}
               onChange={(ownerId) => set({ ownerId })}
             />
           )}
         </Field>
+        <RosterFailedLine kind="user" roster={owners.roster} />
         <Field
           label={t("dealSuggestion.field.closeDate")}
           hint={t("dealSuggestion.closeDateHint")}

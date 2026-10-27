@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { meFixture } from "../../testing/mefixture";
 import { PartnersScreen, PartnerTab } from "./partners";
 
 // Partner tab (company 360) + #/partners list (P-6): the Partner tab treats
@@ -44,15 +45,25 @@ function render(ui: ReactNode) {
   );
 }
 
+// The seat a spec runs as when it is not about the grants: one that may set
+// the margin tier.
+const PARTNER_WRITER = meFixture({
+  allow: { company: ["read", "update"], partner: ["read", "update"] },
+});
+
 function stubFetch(
   responder: (
     url: string,
     method: string,
     request: Request,
   ) => Promise<Response>,
+  me = PARTNER_WRITER,
 ) {
   const urls: string[] = [];
   const fetchMock = vi.fn(async (request: Request) => {
+    if (new URL(request.url).pathname.endsWith("/me")) {
+      return jsonResponse(me);
+    }
     urls.push(request.url);
     return responder(request.url, request.method, request);
   });
@@ -125,6 +136,94 @@ describe("PartnerTab — not yet a partner", () => {
     expect(
       screen.getByLabelText("Served segments"),
     ).toHaveAccessibleDescription(/for example mid-size manufacturers/);
+  });
+});
+
+describe("PartnerTab — a company editor without the partner grant", () => {
+  const COMPANY_EDITOR = meFixture({
+    allow: { company: ["read", "update"], partner: ["read"] },
+  });
+
+  async function setUpAs(me: ReturnType<typeof meFixture>) {
+    const user = userEvent.setup();
+    let putBody: Record<string, unknown> | null = null;
+    stubFetch(async (url, method, request) => {
+      if (url.includes("/companies/o-1/partner") && method === "GET") {
+        return jsonResponse({ title: "Not found", detail: "no partner" }, 404);
+      }
+      if (url.includes("/companies/o-1/partner") && method === "PUT") {
+        putBody = JSON.parse(await request.text());
+        return jsonResponse({ ...partner, margin_tier: null });
+      }
+      throw new Error(`unexpected request ${method} ${url}`);
+    }, me);
+    render(<PartnerTab companyId="o-1" />);
+    const tier = await screen.findByLabelText("Margin tier");
+    return {
+      tier,
+      create: async () => {
+        await user.click(screen.getByRole("button", { name: "Create" }));
+        await waitFor(() => expect(putBody).toBeTruthy());
+        return putBody ?? {};
+      },
+    };
+  }
+
+  it("sets up the program with the tier disabled and left out of the request", async () => {
+    const { tier, create } = await setUpAs(COMPANY_EDITOR);
+
+    await waitFor(() =>
+      expect(tier).toHaveAccessibleDescription(
+        "Your role cannot set the margin tier. Ask an admin.",
+      ),
+    );
+    expect(tier).toBeDisabled();
+    const body = await create();
+    expect(body).toMatchObject({ partner_role: "hosting" });
+    expect(body).not.toHaveProperty("margin_tier");
+  });
+
+  it("lets the partner grant set the tier and send it", async () => {
+    const { tier, create } = await setUpAs(PARTNER_WRITER);
+
+    await waitFor(() => expect(tier).toBeEnabled());
+    expect(await create()).toHaveProperty("margin_tier", null);
+  });
+});
+
+describe("PartnerTab — a seat without the company grant", () => {
+  const PARTNER_ONLY = meFixture({
+    allow: { company: ["read"], partner: ["read", "update"] },
+  });
+  const REFUSAL =
+    "Your role cannot change this company’s partner program. Ask an admin.";
+
+  it("offers no set-up form, and says why", async () => {
+    stubFetch(async (url, method) => {
+      if (url.includes("/companies/o-1/partner") && method === "GET") {
+        return jsonResponse({ title: "Not found", detail: "no partner" }, 404);
+      }
+      throw new Error(`unexpected request ${method} ${url}`);
+    }, PARTNER_ONLY);
+    render(<PartnerTab companyId="o-1" />);
+
+    expect(await screen.findByText(REFUSAL)).toBeTruthy();
+    expect(screen.queryByLabelText("Margin tier")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Create" })).toBeNull();
+  });
+
+  it("refuses the edit, and says why", async () => {
+    stubFetch(async (url, method) => {
+      if (url.includes("/companies/o-1/partner") && method === "GET") {
+        return jsonResponse(partner);
+      }
+      throw new Error(`unexpected request ${method} ${url}`);
+    }, PARTNER_ONLY);
+    render(<PartnerTab companyId="o-1" />);
+
+    const edit = await screen.findByTestId("edit-partner");
+    await waitFor(() => expect(edit).toBeDisabled());
+    expect(edit).toHaveAccessibleDescription(REFUSAL);
   });
 });
 

@@ -14502,13 +14502,15 @@ paths:
       operationId: createWebForm
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
-      summary: Create a website form (returns a server signing secret once).
+      summary: Create a website form (returns a minted signing secret once).
       description: |
         Mints the form's public key, the last segment of its intake address
         `POST /v1/public/forms/{form_key}`. A `server` form answers its own signing secret in
-        `signing_secret`, once; no read returns it again. A builder form (`webflow`, `typeform`,
-        `tally`) stores the secret the builder signs with, sent in `sender_secret`. Both need a
-        secret store on this installation; without one they answer 422 on `sender`.
+        `signing_secret`, once; no read returns it again. So does a `typeform` or `tally` form
+        sent without `sender_secret`: the secret is then typed into the builder's webhook. A
+        `webflow` form stores the secret Webflow issued, sent in `sender_secret` now or on a
+        later update; until then it refuses every post. Every signed
+        sender needs a secret store on this installation; without one it answers 422 on `sender`.
       requestBody:
         required: true
         content:
@@ -14516,7 +14518,7 @@ paths:
             schema: { $ref: '#/components/schemas/CreateWebFormRequest' }
       responses:
         '201':
-          description: The created form, plus its one-time signing secret for a `server` form.
+          description: The created form, plus the signing secret once whenever this installation minted it.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/WebFormCreated' }
@@ -14595,10 +14597,10 @@ paths:
       operationId: rotateWebFormSecret
       security: [ { cookieAuth: [] } ]
       x-agent-access: human-only
-      summary: Rotate a server form's signing secret (returns the new secret once).
+      summary: Rotate a form's minted signing secret (returns the new secret once).
       description: |
-        Only a `server` form has a secret this installation minted; any other sender answers 422 on
-        `sender`. The old secret stops verifying at once.
+        A `server`, `typeform` or `tally` form gets a new secret this installation mints; a
+        `browser` or `webflow` form answers 422 on `sender`. The old secret stops verifying at once.
       responses:
         '200':
           description: The form plus its new one-time signing secret.
@@ -23810,20 +23812,18 @@ paths:
         - name: q
           in: query
           schema: { type: string }
-          description: Case-insensitive match over display_name/email.
+          description: Case-insensitive match over display_name/email that ignores diacritics on both sides.
         - name: include_inactive
           in: query
           schema: { type: boolean, default: false }
           description: Admin management view — include deactivated/suspended members. Honored only for an admin caller.
         - name: include_invited
           in: query
-          deprecated: true
           schema: { type: boolean, default: false }
           description: |
-            Also list invited seats — members who have not signed in yet. Naming the colleagues a record
-            already points at is `GET /users/names`, which answers id and display name alone; a roster row
-            carries the member's email and seat status with it.
-            Pickers leave it off, so nobody is offered work they cannot open.
+            Also list invited seats — members who have not signed in yet. Each row's `status` says so.
+            A picker that may hand an invited colleague work, such as a record responsibility, asks for them.
+            Naming the colleagues a record already points at is `GET /users/names`.
       responses:
         '200':
           description: A page of workspace members.
@@ -25063,7 +25063,7 @@ paths:
         - name: q
           in: query
           schema: { type: string }
-          description: Case-insensitive match over team name.
+          description: Case-insensitive match over team name that ignores diacritics on both sides.
       responses:
         '200':
           description: A page of teams.
@@ -32995,7 +32995,8 @@ components:
         Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
         allowed website, with spam checks. `server`: a server signing with this form's secret.
         `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
-        builder computes with the secret stored as `sender_secret`.
+        builder computes with the form's stored secret: the `sender_secret` pasted, or for `typeform`
+        and `tally` one this installation minted when none was.
 
     WebForm:
       type: object
@@ -33037,7 +33038,7 @@ components:
           properties:
             signing_secret:
               type: string
-              description: A `server` form's signing secret, shown this once.
+              description: The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once.
 
     WebFormListResponse:
       type: object
@@ -33054,7 +33055,7 @@ components:
       properties:
         name: { type: string, minLength: 1, maxLength: 200 }
         sender: { $ref: '#/components/schemas/WebFormSender' }
-        sender_secret: { type: string, minLength: 16, maxLength: 512, description: 'The secret a builder signs with. Required for `webflow`, `typeform` and `tally`; refused for any other sender.' }
+        sender_secret: { type: string, minLength: 16, maxLength: 512, description: 'The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow''s secret is pasted. Refused for any other sender.' }
         allowed_origins:
           type: array
           maxItems: 20
@@ -35469,6 +35470,7 @@ components:
         watch_expires_at: { type: [string, 'null'], format: date-time, description: 'Push/delta subscription renewal deadline (Gmail Pub/Sub / Graph change-notification), or null.' }
         scopes: { type: array, items: { type: string }, description: The granted provider scopes. }
         last_synced_at: { type: [string, 'null'], format: date-time, description: 'Last sync attempt (CAP-DDL-5); null before the first.' }
+        last_success_at: { type: [string, 'null'], format: date-time, description: 'Last successful sync for this mailbox; null before one succeeds.' }
         last_sync_error_class: { type: [string, 'null'], description: 'rate_limited | unreachable | auth | history_gone | internal — class only, detail in system_log.' }
         sync_failing_since: { type: [string, 'null'], format: date-time, description: 'When the CURRENT failure streak began, null while healthy. Set on the first failure after a success and left alone until one clears it, so the duration read off it is the outage''s — last_synced_at moves on every postponed tick and dates the newest attempt instead.' }
         next_sync_due_at: { type: [string, 'null'], format: date-time, description: 'When the sweep will next pick this connection up (backoff-aware).' }
@@ -42489,14 +42491,16 @@ components:
     Contact360:
       type: object
       description: |
-        The contact record page in one payload (PO-EXT-3). Every section except `contact` is
-        optional: absent means the caller lacks its grant, and `sections_omitted` names it.
+        The contact record page in one payload. Record sections may be absent when their
+        grants are withheld; `sections_omitted` names those sections. Mail coverage
+        reports its own state and observation clock. Absent coverage is unknown.
       required: [as_of, contact, sections_omitted]
       properties:
+        mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         as_of:
           type: string
           format: date-time
-          description: The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
+          description: The assembly clock. Mail coverage carries its own evaluation time; Read Committed does not promise one snapshot across sections.
         contact: { $ref: '#/components/schemas/Contact' }
         created_by:
           allOf: [{ $ref: '#/components/schemas/PrincipalAttribution' }]
@@ -44460,6 +44464,7 @@ components:
         shape exists to prevent.
       required: [deal_id, story, generated_at, generated_by]
       properties:
+        mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         deal_id: { type: string, format: uuid }
         story:
           allOf: [{ $ref: '#/components/schemas/DealStatusCardSection' }]
@@ -44549,6 +44554,7 @@ components:
         to send; absent for `none`.
       required: [action, reason, evidence]
       properties:
+        mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         action: { type: string }
         reason: { type: string, description: "One sentence saying why this move and not another." }
         arguments:
@@ -44571,6 +44577,33 @@ components:
             nothing to do (`none`).
       additionalProperties: false
 
+    MailCaptureCoverage:
+      type: object
+      additionalProperties: false
+      description: |
+        The calling reader's mail capture for the requested interval. This does
+        not assert that no reply exists. Partial means capture has succeeded but
+        does not attest a complete Inbox and Sent interval. Current providers do
+        not record such an attestation; a cursor or completed import cannot supply it.
+        No mailbox identity, credential, cursor or colleague account travels.
+      required: [channel, state, interval_to, evaluated_at]
+      properties:
+        channel: { type: string, enum: [email] }
+        state: { type: string, enum: [unknown, partial, unavailable, withheld] }
+        interval_from:
+          type: string
+          format: date-time
+          description: Start of the requested interval, not a verified coverage boundary.
+        interval_to:
+          type: string
+          format: date-time
+          description: End of the requested interval, not a verified coverage boundary.
+        last_success_at:
+          type: string
+          format: date-time
+          description: Oldest successful sync across every relevant mailbox; absent if any has never succeeded.
+        evaluated_at: { type: string, format: date-time }
+
     WorkEvidenceBasis:
       type: object
       description: |
@@ -44579,6 +44612,7 @@ components:
         Source age is not a deadline. Evaluation time is not source time.
       required: [kind, scope, source_activity_id, source_at, source_precision, evaluated_at, policy_version]
       properties:
+        mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         kind: { type: string }
         scope: { type: string, description: The record scope in which the evidence was evaluated. }
         source_activity_id: { type: string, format: uuid }
@@ -67462,6 +67496,7 @@ components:
         for it.
       required: [action]
       properties:
+        mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         basis:
           allOf: [{ $ref: '#/components/schemas/WorkEvidenceBasis' }]
           description: The deal recommendation's evidence basis, preserved across surfaces.

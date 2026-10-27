@@ -40,8 +40,7 @@ var setUpPartnerCopy = toolCopy{
 		"stage and a next step.",
 	Limits: "Waits for a human to approve. The margin tier is not an argument: it decides " +
 		"commission on every later deal, so a human sets it on the company's Partner tab. " +
-		"Refused when the company already has a partner program, and needs the partner.update " +
-		"and company.update grants.",
+		"Refused when the company already has a partner program, and needs the company.update grant.",
 	Instead: "Use update_record to change a company's other fields.",
 	Retain: "A staged answer's approval id is what the retry carries. The answer is the " +
 		"partner program as it now stands.",

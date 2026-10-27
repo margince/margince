@@ -6,6 +6,7 @@ import { type ReactNode, useMemo, useState } from "react";
 import { api } from "../../api/client";
 import {
   EntityRef,
+  RosterFailedLine,
   rosterOwnerName,
   useRoster,
 } from "../../components/entityref";
@@ -397,15 +398,18 @@ function OwnerCell({
       ]
     : offered;
   return (
-    <Select
-      aria-label={t("notice.ownerOf", { duty: dutyName(row, t) })}
-      options={options}
-      value={owner ?? ""}
-      placeholder={t("notice.unassigned")}
-      onChange={(next) => onAssign(row.id, next)}
-      disabled={assignPending || roster.isPending}
-      name={`notice-assign-${row.id}`}
-    />
+    <CellStack>
+      <Select
+        aria-label={t("notice.ownerOf", { duty: dutyName(row, t) })}
+        options={options}
+        value={owner ?? ""}
+        placeholder={t("notice.unassigned")}
+        onChange={(next) => onAssign(row.id, next)}
+        disabled={assignPending || roster.isPending}
+        name={`notice-assign-${row.id}`}
+      />
+      <RosterFailedLine kind="user" roster={roster} />
+    </CellStack>
   );
 }
 
