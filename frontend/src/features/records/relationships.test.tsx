@@ -235,7 +235,7 @@ describe("adding a relationship", () => {
 
   // The committee's gap offers its missing seat. The reader reads the role in
   // their own words; the server counts the seat by its key.
-  it("opens a missing seat's role in the reader's words and seats it by its key", async () => {
+  async function seatMaiAsChampion(retype?: string): Promise<unknown[]> {
     vi.useFakeTimers({ shouldAdvanceTime: true, advanceTimeDelta: 5 });
     const posted: unknown[] = [];
     stubWithSession(
@@ -261,9 +261,17 @@ describe("adding a relationship", () => {
 
     await user.click(screen.getByTestId("add-relationship"));
     const dialog = within(screen.getByRole("dialog"));
-    expect(
-      dialog.getByRole("textbox", { name: translate("vi", "rel.role") }),
-    ).toHaveProperty("value", translate("vi", "co.roleLabel.champion"));
+    const role = dialog.getByRole("textbox", {
+      name: translate("vi", "rel.role"),
+    });
+    expect(role).toHaveProperty(
+      "value",
+      translate("vi", "co.roleLabel.champion"),
+    );
+    if (retype !== undefined) {
+      await user.clear(role);
+      await user.type(role, retype);
+    }
     await user.type(
       dialog.getByPlaceholderText(translate("vi", "merge.searchPlaceholder")),
       "mai",
@@ -273,8 +281,24 @@ describe("adding a relationship", () => {
     });
     await user.click(await dialog.findByRole("button", { name: "Mai Trần" }));
     await user.click(screen.getByTestId("add-relationship-submit"));
-
     await waitFor(() => expect(posted).toHaveLength(1));
+    return posted;
+  }
+
+  it("opens a missing seat's role in the reader's words and seats it by its key", async () => {
+    const posted = await seatMaiAsChampion();
     expect(posted[0]).toMatchObject({ role: "champion" });
+  });
+
+  it("seats the role by its key when the reader types its label back", async () => {
+    const posted = await seatMaiAsChampion(
+      ` ${translate("vi", "co.roleLabel.champion")} `,
+    );
+    expect(posted[0]).toMatchObject({ role: "champion" });
+  });
+
+  it("sends a role the reader typed in place of the offered one as typed", async () => {
+    const posted = await seatMaiAsChampion("Người ủng hộ nội bộ");
+    expect(posted[0]).toMatchObject({ role: "Người ủng hộ nội bộ" });
   });
 });

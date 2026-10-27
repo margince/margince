@@ -131,7 +131,13 @@ export function AddRelationshipAction({
   // Until the reader types, the offered seat shows in their words and is sent
   // as its key, the spelling the coverage rules count.
   const [typedRole, setTypedRole] = useState<string | null>(null);
-  const role = typedRole ?? (seatRole ? dealRoleLabel(seatRole, t) : "");
+  const seatLabel = seatRole ? dealRoleLabel(seatRole, t) : "";
+  const role = typedRole ?? seatLabel;
+  // The offered label typed back is still that seat, so it goes as the key.
+  const sentRole =
+    typedRole === null || (seatRole && typedRole.trim() === seatLabel)
+      ? (seatRole ?? "")
+      : typedRole;
   const [startedAt, setStartedAt] = useState<ISODate | "">("");
   const [term, setTerm] = useState("");
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -336,7 +342,7 @@ export function AddRelationshipAction({
                   target,
                   kind,
                   field: endpoint.field,
-                  role: typedRole ?? seatRole ?? "",
+                  role: sentRole,
                   startedAt,
                 });
               }

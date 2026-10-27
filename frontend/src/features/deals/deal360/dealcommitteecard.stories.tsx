@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../../api/schema";
+import { translate } from "../../../i18n";
 import {
   jsonResponse,
   StoryProviders,
@@ -156,7 +157,8 @@ const aGap = view({
   risks: [{ kind: "coverage_gap", summary: "no engaged champion" }],
 });
 
-// The gap's own verb opens the stakeholder form on the seat it misses.
+// The gap's own verb opens the stakeholder form on the seat it misses, in the
+// reader's words. The relationships story proves the form sends its key.
 async function fillTheGap(canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
   const gap = await canvas.findByText("Missing: an engaged champion");
@@ -170,7 +172,7 @@ async function fillTheGap(canvasElement: HTMLElement) {
   const dialog = await screen.findByRole("dialog");
   await expect(
     within(dialog).getByRole("textbox", { name: "Role" }),
-  ).toHaveValue("champion");
+  ).toHaveValue(translate("en", "co.roleLabel.champion"));
 }
 
 export const AGapPhone: Story = {

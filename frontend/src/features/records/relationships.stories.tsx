@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
+import { translate } from "../../i18n";
 import {
   jsonResponse,
   StoryProviders,
@@ -86,13 +87,30 @@ export const Adding: Story = {
   },
 };
 
+// The bodies the missing-seat story's form posts.
+const seated: unknown[] = [];
+
 /**
  * The verb offered for one missing seat. Its description names the gap it
- * fills, and its form opens on the role that seat needs.
+ * fills; its form shows that seat in the reader's words and sends its key.
  */
 export const AddingForAMissingSeat: Story = {
   render: () => {
-    stubWithSession({}, MAY_WRITE_RELATIONSHIPS);
+    seated.length = 0;
+    stubWithSession(
+      {
+        "GET /contacts": () =>
+          jsonResponse({
+            data: [{ id: "p-9", full_name: "Mai Tran" }],
+            page: { next_cursor: null },
+          }),
+        "POST /relationships": (body) => {
+          seated.push(body);
+          return jsonResponse({ ...employmentRel, id: "rel-new" }, 201);
+        },
+      },
+      MAY_WRITE_RELATIONSHIPS,
+    );
     return (
       <StoryProviders>
         <p id="missing-seat">Missing: an engaged champion</p>
@@ -112,10 +130,22 @@ export const AddingForAMissingSeat: Story = {
       "Missing: an engaged champion",
     );
     await userEvent.click(verb);
-    const dialog = await screen.findByRole("dialog");
-    await expect(
-      within(dialog).getByRole("textbox", { name: "Role" }),
-    ).toHaveValue("champion");
+    const dialog = within(await screen.findByRole("dialog"));
+    await expect(dialog.getByRole("textbox", { name: "Role" })).toHaveValue(
+      translate("en", "co.roleLabel.champion"),
+    );
+    await userEvent.type(
+      dialog.getByPlaceholderText(translate("en", "merge.searchPlaceholder")),
+      "mai",
+    );
+    await userEvent.click(
+      await dialog.findByRole("button", { name: "Mai Tran" }),
+    );
+    await userEvent.click(
+      dialog.getByRole("button", { name: translate("en", "create.save") }),
+    );
+    await waitFor(() => expect(seated).toHaveLength(1));
+    await expect(seated[0]).toMatchObject({ role: "champion" });
   },
 };
 
