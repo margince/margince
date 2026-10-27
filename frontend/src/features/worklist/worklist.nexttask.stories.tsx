@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useEffect } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { NextTaskSlot } from "../../components/nexttaskslot";
 import { NextBar } from "../../design-system/nextbar";
@@ -29,12 +28,10 @@ function onContact(id: string, title: string): WorklistItem {
   };
 }
 
-function RecordFrame({
-  queue,
-  locale = "en",
-  reading = false,
-}: Readonly<{ queue: WorklistItem[]; locale?: Locale; reading?: boolean }>) {
-  useEffect(() => {
+// Before the first render: an address that lands after it remounts the button
+// the play already holds.
+function onRecordPage(queue: WorklistItem[], reading = false) {
+  return () => {
     const before = window.location.hash;
     installFetchStub({
       "GET /worklist": () =>
@@ -48,7 +45,10 @@ function RecordFrame({
       window.location.hash = before;
       announceAddressChanged();
     };
-  }, [queue, reading]);
+  };
+}
+
+function RecordFrame({ locale = "en" }: Readonly<{ locale?: Locale }>) {
   return (
     <StoryProviders locale={locale}>
       <NextTaskHost>
@@ -70,13 +70,14 @@ const meta: Meta<typeof NextTaskButton> = {
   title: "Records/Record 360/Next task",
   component: NextTaskButton,
   parameters: { layout: "padded" },
-  render: () => <RecordFrame queue={ahead} />,
+  render: () => <RecordFrame />,
 };
 export default meta;
 type Story = StoryObj<typeof NextTaskButton>;
 
 /** At rest the button reads nothing and is always offered. */
 export const NextTaskAhead: Story = {
+  beforeEach: onRecordPage(ahead),
   play: async ({ canvasElement }) => {
     const button = await within(canvasElement).findByRole("button", {
       name: en["brief.queue.next"],
@@ -87,7 +88,7 @@ export const NextTaskAhead: Story = {
 
 /** Pressed, while the list is read: busy, and a second press is swallowed. */
 export const Reading: Story = {
-  render: () => <RecordFrame queue={ahead} reading />,
+  beforeEach: onRecordPage(ahead, true),
   play: async ({ canvasElement }) => {
     const button = await within(canvasElement).findByRole("button", {
       name: en["brief.queue.next"],
@@ -99,7 +100,7 @@ export const Reading: Story = {
 
 /** Pressed with only this record left on a record page: it says so and refuses. */
 export const NoMoreRecords: Story = {
-  render: () => <RecordFrame queue={[weber]} />,
+  beforeEach: onRecordPage([weber]),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
@@ -115,7 +116,8 @@ export const NoMoreRecords: Story = {
 /** The longest label, at phone width: it wraps under the bar, never off it. */
 export const GermanPhone: Story = {
   tags: ["uat-phone"],
-  render: () => <RecordFrame queue={[weber]} locale="de" />,
+  beforeEach: onRecordPage([weber]),
+  render: () => <RecordFrame locale="de" />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(

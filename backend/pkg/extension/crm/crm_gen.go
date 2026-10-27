@@ -1476,7 +1476,7 @@ type Activity struct {
 	// BulkMailAttested This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply.
 	BulkMailAttested *bool `json:"bulk_mail_attested,omitempty"`
 
-	// CalendarManaged Whether a live calendar invitation holds this meeting. Then only `meeting_status` `held` or `no_show` may be written through this activity; a move, an edit or a cancellation goes through the invitation (`PATCH /scheduling/invitations/{id}`), and the activity refuses it with `calendar_managed`. Every read that carries `writable` carries this. Absent means false.
+	// CalendarManaged Whether a live calendar invitation holds this meeting. Then a write through this activity that sets `subject`, `body`, `occurred_at`, `occurred_precision` or a `meeting_status` other than `held` or `no_show` is refused with `calendar_managed`; that change goes through the invitation (`PATCH /scheduling/invitations/{id}`). Every read that carries `writable` carries this. Absent means false.
 	CalendarManaged *bool `json:"calendar_managed,omitempty"`
 
 	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".

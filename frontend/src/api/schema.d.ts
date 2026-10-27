@@ -5436,8 +5436,10 @@ export interface paths {
          *     the installation's timezone), judged at the start the patch leaves the row with:
          *     `422 code: in_future` on `meeting_status`. A patch that moves the start of a `held` or
          *     `no_show` meeting is judged the same way with the status it keeps. `canceled` and `booked`
-         *     are accepted at any time. A meeting with a live calendar invitation takes `held` or `no_show` alone; any other change
-         *     to it answers `422 code: calendar_managed` on `meeting` and goes through the invitation.
+         *     are accepted at any time. On a meeting with a live calendar invitation, a patch that sets
+         *     `subject`, `body`, `occurred_at`, `occurred_precision` or a `meeting_status` other than
+         *     `held` or `no_show` answers `422 code: calendar_managed` on `meeting`; that change goes
+         *     through the invitation.
          */
         patch: operations["updateActivity"];
         trace?: never;
@@ -34891,7 +34893,7 @@ export interface components {
             readonly writable?: boolean;
             /** @description Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false. */
             readonly awaiting_outcome?: boolean;
-            /** @description Whether a live calendar invitation holds this meeting. Then only `meeting_status` `held` or `no_show` may be written through this activity; a move, an edit or a cancellation goes through the invitation (`PATCH /scheduling/invitations/{id}`), and the activity refuses it with `calendar_managed`. Every read that carries `writable` carries this. Absent means false. */
+            /** @description Whether a live calendar invitation holds this meeting. Then a write through this activity that sets `subject`, `body`, `occurred_at`, `occurred_precision` or a `meeting_status` other than `held` or `no_show` is refused with `calendar_managed`; that change goes through the invitation (`PATCH /scheduling/invitations/{id}`). Every read that carries `writable` carries this. Absent means false. */
             readonly calendar_managed?: boolean;
             /** @description Decisions about promises read from this source, included on list and detail reads when its content is visible. */
             readonly commitment_admissions?: components["schemas"]["CommitmentAdmission"][];

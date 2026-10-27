@@ -36,7 +36,7 @@ func TestAMeetingOutcomeRowOffersCancelOnlyWhereTheWriteIsAccepted(t *testing.T)
 	// A signed-in member holds a full seat, and only a full seat is offered a write.
 	reader := memberSeat(e, e.Rep1, principal.SeatFull)
 	host := ids.From[ids.UserKind](e.Rep1)
-	inviting := newInvitingStore(t, e, reader, now.AddDate(0, 0, -2))
+	inviting := newInvitingStore(reader, t, e, now.AddDate(0, 0, -2))
 	customer := func(name string) ids.UUID {
 		created, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: name})
 		if err != nil {
@@ -77,7 +77,7 @@ func TestAMeetingOutcomeRowOffersCancelOnlyWhereTheWriteIsAccepted(t *testing.T)
 		"canceled invitation":                  withdrawn,
 		"a guest erased from a shared meeting": shared,
 	}
-	offers := cancelOffers(t, e, reader, now)
+	offers := cancelOffers(reader, t, e, now)
 	for name, meeting := range meetings {
 		offered, read := offers[meeting]
 		if !read {
@@ -101,12 +101,12 @@ func TestAMeetingOutcomeRowOffersCancelOnlyWhereTheWriteIsAccepted(t *testing.T)
 			t.Errorf("%s: the read stamps calendar_managed = %v while the cancel is refused = %v", name, managed, refused)
 		}
 	}
-	assertAHeldInvitedMeetingMovedAheadIsCalendarManaged(t, e, reader, confirmed)
+	assertAHeldInvitedMeetingMovedAheadIsCalendarManaged(reader, t, e, confirmed)
 }
 
 // The invitation owns the start, so moving a held invited meeting ahead is
 // refused for the invitation, not for an outcome the move would outrun.
-func assertAHeldInvitedMeetingMovedAheadIsCalendarManaged(t *testing.T, e *integration.Env, reader context.Context, meeting ids.UUID) {
+func assertAHeldInvitedMeetingMovedAheadIsCalendarManaged(reader context.Context, t *testing.T, e *integration.Env, meeting ids.UUID) {
 	t.Helper()
 	id := ids.From[ids.ActivityKind](meeting)
 	held := "held"
@@ -165,7 +165,7 @@ func TestAMeetingOutcomeRowForAReadSeatOffersNoVerb(t *testing.T) {
 func TestOnlyALiveInvitationRefusesTheMeetingCreateUndo(t *testing.T) {
 	e := integration.Setup(t)
 	start := time.Date(2026, time.March, 9, 10, 0, 0, 0, time.UTC)
-	inviting := newInvitingStore(t, e, memberSeat(e, e.Rep1, principal.SeatFull), start.AddDate(0, 0, -2))
+	inviting := newInvitingStore(memberSeat(e, e.Rep1, principal.SeatFull), t, e, start.AddDate(0, 0, -2))
 	const heldByInvitation = "a meeting with a calendar invitation"
 	live := inviting.invite(t, e.SeedContact(t, "Invited Ines", nil), start)
 	if answer := advisoryAnswer(e.Admin(), t, e, entityTypeActivity, live, latestAuditRowID(t, e, entityTypeActivity, live, actionCreate)); answer.Detail != heldByInvitation {
@@ -195,7 +195,7 @@ type invitingStore struct {
 	eraser *privacy.Eraser
 }
 
-func newInvitingStore(t *testing.T, e *integration.Env, ctx context.Context, sentAt time.Time) invitingStore {
+func newInvitingStore(ctx context.Context, t *testing.T, e *integration.Env, sentAt time.Time) invitingStore {
 	t.Helper()
 	vault := keyvault.NewMemory()
 	store := e.Activities.WithClock(func() time.Time { return sentAt }).WithPublicBaseURL("https://crm.example.test").
@@ -255,7 +255,7 @@ func (s invitingStore) deliver(t *testing.T) {
 }
 
 // cancelOffers reads the reader's meeting_outcome rows and whether each offers cancel.
-func cancelOffers(t *testing.T, e *integration.Env, reader context.Context, now time.Time) map[ids.UUID]bool {
+func cancelOffers(reader context.Context, t *testing.T, e *integration.Env, now time.Time) map[ids.UUID]bool {
 	t.Helper()
 	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return now })
 	page, err := feed.Worklist(reader, "mine", "all", ids.Nil, 100, "")

@@ -26,7 +26,7 @@ func StampActivityAffordances(ctx context.Context, tx pgx.Tx, page []crmcontract
 		return err
 	}
 	for i := range page {
-		page[i].CalendarManaged = new(CalendarManaged(page[i]))
+		page[i].CalendarManaged = new(calendarManaged(page[i]))
 	}
 	return stampAwaitingOutcome(ctx, tx, page, asOf)
 }

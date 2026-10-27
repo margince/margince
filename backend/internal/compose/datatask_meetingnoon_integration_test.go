@@ -372,7 +372,7 @@ func TestTheNoonTaskRestoresAMeetingWhoseInvitationWasErased(t *testing.T) {
 	e.WsExec(t, `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, noonZone)
 	f := noonFixture{t: t, e: e}
 	invitedAt := time.Date(2026, 7, 15, 9, 0, 0, 0, time.UTC)
-	inviting := newInvitingStore(t, e, memberSeat(e, e.Rep1, principal.SeatFull), invitedAt.AddDate(0, 0, -2))
+	inviting := newInvitingStore(memberSeat(e, e.Rep1, principal.SeatFull), t, e, invitedAt.AddDate(0, 0, -2))
 	guest := e.SeedContact(t, "Erased guest", nil)
 	meeting := inviting.invite(t, guest, invitedAt)
 	inviting.cancel(t, meeting)

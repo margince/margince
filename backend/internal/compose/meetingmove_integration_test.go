@@ -194,22 +194,21 @@ func TestAMeetingTooLongToStoreIsCapturedWithNoDuration(t *testing.T) {
 }
 
 // A held meeting the calendar moves stays held only where its new start has
-// taken place. Moved ahead, it is booked again, and the history says so.
+// taken place. Moved ahead, it is booked again, and the history and the event say so.
 func TestACalendarMoveKeepsAnOutcomeOnlyWhereTheMeetingTookPlace(t *testing.T) {
 	for name, tc := range map[string]struct {
-		start time.Time
-		want  string
+		start     time.Time
+		want      string
+		announced string
 	}{
-		"moved within the past": {meetingStart.Add(time.Hour), "held"},
-		"moved ahead":           {time.Date(2100, 1, 4, 9, 0, 0, 0, time.UTC), "booked"},
+		"moved within the past": {meetingStart.Add(time.Hour), "held", ""},
+		"moved ahead":           {time.Date(2100, 1, 4, 9, 0, 0, 0, time.UTC), "booked", "booked"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := integration.Setup(t)
 			id := captureMeeting(t, e, e.AdminUser)
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-				_, err := tx.Exec(context.Background(), `UPDATE activity SET meeting_status = 'held' WHERE id = $1`, id)
-				return err
-			}); err != nil {
+			held := "held"
+			if _, err := e.Activities.UpdateActivity(e.Admin(), ids.From[ids.ActivityKind](id), activities.UpdateActivityInput{MeetingStatus: &held}); err != nil {
 				t.Fatalf("recording the meeting as held: %v", err)
 			}
 
@@ -232,6 +231,11 @@ func TestACalendarMoveKeepsAnOutcomeOnlyWhereTheMeetingTookPlace(t *testing.T) {
 			}
 			if wantBooked := map[bool]int{true: 1}[tc.want == "booked"]; booked != wantBooked {
 				t.Errorf("history holds %d booked transition(s) at the new start, want %d", booked, wantBooked)
+			}
+			if n := e.WsCount(t, `SELECT count(*) FROM event_outbox
+				WHERE envelope->'entity'->>'id' = $1::text AND envelope->'payload'->'changed_fields' ? 'occurred_at'
+				  AND coalesce(envelope->'payload'->'changed_fields'->>'meeting_status', '') = $2`, id, tc.announced); n != 1 {
+				t.Errorf("%d move event(s) announce meeting_status %q, want 1", n, tc.announced)
 			}
 		})
 	}

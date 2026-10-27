@@ -179,7 +179,7 @@ func (s *Store) finishInvitation(ctx context.Context, claimed invitationRow, rec
 			if row.Command == invitationCancel {
 				row.Status = invitationCanceled
 			}
-			if err := s.settleInvitation(ctx, tx, row); err != nil {
+			if err := s.settleInvitation(ctx, tx, row, row.Command == invitationUpdate); err != nil {
 				return err
 			}
 		}
@@ -193,7 +193,8 @@ func (s *Store) finishInvitation(ctx context.Context, claimed invitationRow, rec
 	})
 }
 
-func (s *Store) settleInvitation(ctx context.Context, tx pgx.Tx, row invitationRow) error {
+// rescheduled is true only when this settlement delivers a Margince reschedule.
+func (s *Store) settleInvitation(ctx context.Context, tx pgx.Tx, row invitationRow, rescheduled bool) error {
 	current, err := readActivity(ctx, tx, ids.From[ids.ActivityKind](row.ID), storekit.LiveOnly)
 	if err != nil {
 		return err
@@ -201,8 +202,8 @@ func (s *Store) settleInvitation(ctx context.Context, tx pgx.Tx, row invitationR
 	at := s.now()
 	status := new(string(crmcontracts.ActivityMeetingStatusBooked))
 	stored := meetingStatusString(current.MeetingStatus)
-	// An outcome recorded before a reschedule belongs to the slot it left.
-	if row.Command != invitationUpdate && isMeetingOutcome(&stored) {
+	// A reschedule that moves the start leaves its outcome with the old slot.
+	if isMeetingOutcome(&stored) && (!rescheduled || row.Appointment.Start.Equal(current.OccurredAt)) {
 		status = &stored
 	}
 	status, err = statusAfterMove(ctx, tx, status, row.Appointment.Start, PrecisionInstant, &at)
@@ -245,9 +246,9 @@ func refuseActiveInvitationPatch(ctx context.Context, tx pgx.Tx, id ids.UUID) er
 	return nil
 }
 
-// CalendarManaged reports whether a live invitation holds the meeting, so only
-// its outcome may be written here and the rest goes through the calendar.
-func CalendarManaged(meeting crmcontracts.Activity) bool {
+// calendarManaged reports whether a live invitation holds the meeting, so its
+// slot and wording change only through the calendar.
+func calendarManaged(meeting crmcontracts.Activity) bool {
 	return meeting.InvitationStatus != nil && invitationHoldsMeeting(string(*meeting.InvitationStatus))
 }
 
@@ -258,7 +259,7 @@ var releasedInvitationStatuses = []string{invitationCanceled, invitationErased}
 // InvitationHoldsMeetingSQL is invitationHoldsMeeting over the status column of
 // the meeting_invitation row aliased alias, a compile-time identifier.
 func InvitationHoldsMeetingSQL(alias string) string {
-	return pgx.Identifier{alias, "status"}.Sanitize() + " NOT IN ('" + strings.Join(releasedInvitationStatuses, "', '") + "')"
+	return pgx.Identifier{alias}.Sanitize() + ".status NOT IN ('" + strings.Join(releasedInvitationStatuses, "', '") + "')"
 }
 
 func invitationHoldsMeeting(status string) bool {
@@ -331,5 +332,5 @@ func (s *Store) executeInvitation(ctx context.Context, row invitationRow) (*conn
 
 func changesInvitation(in UpdateActivityInput) bool {
 	return in.OccurredAt != nil || in.OccurredPrecision != nil || in.DurationSeconds != nil || in.Subject != nil || in.Body != nil ||
-		(in.MeetingStatus != nil && *in.MeetingStatus != ScheduledStatusHeld && *in.MeetingStatus != "no_show")
+		(in.MeetingStatus != nil && !isMeetingOutcome(in.MeetingStatus))
 }
