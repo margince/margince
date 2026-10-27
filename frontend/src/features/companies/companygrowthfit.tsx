@@ -225,11 +225,15 @@ export function GrowthFitPanel({
           />
         </>
       )}
-      {outcome && (
-        <PanelBody>
-          <ReassessOutcome outcome={outcome} />
-        </PanelBody>
-      )}
+      {/* Mounted before the answer, so a screen reader announces it when it
+          fills in. A live region inserted with its text is often skipped. */}
+      <div role="status">
+        {outcome && (
+          <PanelBody>
+            <ReassessOutcome outcome={outcome} />
+          </PanelBody>
+        )}
+      </div>
       {reassess.error && (
         <PanelBody>
           <ErrorLine error={reassess.error} />
@@ -240,6 +244,7 @@ export function GrowthFitPanel({
 }
 
 type Reassessed = Readonly<{
+  companyId: string;
   changed: boolean;
   band: Band;
   present: number;
@@ -262,10 +267,14 @@ function useReassess(companyId: string) {
       );
     },
     onMutate: () => setOutcome(null),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      // A background read started before the press would land after this
+      // write and put the older reading back.
+      await queryClient.cancelQueries({ queryKey: key });
       const before = queryClient.getQueryData<GrowthFit>(key);
       const { present, expected } = data.data_completeness;
       setOutcome({
+        companyId,
         changed: !before || readingKey(before) !== readingKey(data),
         band: data.band,
         present,
@@ -274,7 +283,12 @@ function useReassess(companyId: string) {
       queryClient.setQueryData(key, data);
     },
   });
-  return { reassess, outcome };
+  // A panel kept across a move to another company must not carry the first
+  // company's outcome.
+  return {
+    reassess,
+    outcome: outcome?.companyId === companyId ? outcome : null,
+  };
 }
 
 // The time and author of a run change on every press. The reading is the
@@ -293,7 +307,7 @@ function ReassessOutcome({ outcome }: Readonly<{ outcome: Reassessed }>) {
     expected: formatNumber(outcome.expected, locale),
   };
   return (
-    <p role="status" className="t-caption">
+    <p className="t-caption">
       {outcome.changed
         ? t("co.growthFit.reassessedChanged", values)
         : t("co.growthFit.reassessedSame", values)}

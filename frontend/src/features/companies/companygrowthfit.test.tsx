@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
@@ -235,11 +235,45 @@ describe("how well this company fits what we sell", () => {
   });
 });
 
+// The status region is mounted before the press, so wait for its text.
+async function announced(): Promise<string> {
+  const region = screen.getByRole("status");
+  await waitFor(() => expect(region.textContent).not.toBe(""));
+  return region.textContent ?? "";
+}
+
 describe("Assess again", () => {
+  it("holds its status region open before the press, empty", async () => {
+    await show(ABSTAINED);
+    expect(screen.getByRole("status").textContent).toBe("");
+  });
+
+  it("drops the outcome when the panel moves to another company", async () => {
+    serving(ABSTAINED);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const panel = (companyId: string) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <GrowthFitPanel companyId={companyId} onOpenReceipt={() => {}} />
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    const { rerender } = render(panel("o-1"));
+    await screen.findByText(/as of /i);
+    screen.getByRole("button", { name: "Assess again" }).click();
+    expect(await announced()).toMatch(/Result unchanged/);
+    serving({ ...ABSTAINED, company_id: "o-2" });
+    rerender(panel("o-2"));
+    await waitFor(() => expect(screen.getAllByRole("status")).toHaveLength(1));
+    expect(screen.getByRole("status").textContent).toBe("");
+  });
+
   it("says the result did not change when the same reading comes back", async () => {
     await show(ABSTAINED);
     screen.getByRole("button", { name: "Assess again" }).click();
-    expect((await screen.findByRole("status")).textContent).toBe(
+    expect(await announced()).toBe(
       "Assessed again. Result unchanged: Not enough data, 2 of 7 inputs recorded.",
     );
   });
@@ -248,9 +282,7 @@ describe("Assess again", () => {
     await show(ABSTAINED);
     serving({ ...ABSTAINED, generated_at: "2026-08-09T10:00:00Z" });
     screen.getByRole("button", { name: "Assess again" }).click();
-    expect((await screen.findByRole("status")).textContent).toMatch(
-      /Result unchanged/,
-    );
+    expect(await announced()).toMatch(/Result unchanged/);
   });
 
   it("calls a reading new when the counts hold but the missing inputs moved", async () => {
@@ -264,9 +296,7 @@ describe("Assess again", () => {
       },
     });
     screen.getByRole("button", { name: "Assess again" }).click();
-    expect((await screen.findByRole("status")).textContent).toMatch(
-      /^Assessed again\. New result: /,
-    );
+    expect(await announced()).toMatch(/^Assessed again\. New result: /);
   });
 
   it("names the new result when the reading moved", async () => {
@@ -278,7 +308,7 @@ describe("Assess again", () => {
       next_step: undefined,
     });
     screen.getByRole("button", { name: "Assess again" }).click();
-    expect((await screen.findByRole("status")).textContent).toMatch(
+    expect(await announced()).toMatch(
       /^Assessed again\. New result: .+, 5 of 7 inputs recorded\.$/,
     );
   });
