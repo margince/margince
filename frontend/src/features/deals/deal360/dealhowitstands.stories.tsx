@@ -218,6 +218,50 @@ export const Drifting: Story = {
 export const DriftingDark: Story = { ...Drifting, globals: { theme: "dark" } };
 
 /**
+ * A deal won while the last reading still had it drifting: the outcome heads
+ * the card, and only who sat on the deal stays beside it.
+ */
+export const Won: Story = {
+  render: () => {
+    installFetchStub({ "GET /field-history": stageHistory });
+    return (
+      <StoryProviders>
+        <DealHowItStands
+          head={read}
+          inputs={{
+            ...drifting,
+            deal: { ...DEAL, status: "won", closed_at: "2026-08-12T12:00:00Z" },
+          }}
+        />
+      </StoryProviders>
+    );
+  },
+};
+
+/** A lost deal says why, in grey, under the outcome. */
+export const Lost: Story = {
+  render: () => {
+    installFetchStub({ "GET /field-history": stageHistory });
+    return (
+      <StoryProviders>
+        <DealHowItStands
+          head={read}
+          inputs={{
+            ...drifting,
+            deal: {
+              ...DEAL,
+              status: "lost",
+              closed_at: "2026-08-12T12:00:00Z",
+              lost_reason: "Budget moved to next year",
+            },
+          }}
+        />
+      </StoryProviders>
+    );
+  },
+};
+
+/**
  * A new deal nobody has read: no verdict, no history the reader may see, no
  * committee, no activity. Every reading names what it lacks.
  */

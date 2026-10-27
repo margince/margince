@@ -64,18 +64,19 @@ export function DealHowItStands({
   const zone = useRecordZone();
   const { deal, stages, ladder } = inputs;
   const subs = useStageSubs(inputs);
+  const verdict = closedVerdict(deal, { t, locale, zone }) ?? head.verdict;
   return (
     <HowItStands
       date={formatDayMonth(head.readAt ?? inputs.asOf, locale, zone)}
-      sources={head.sources}
-      verdict={head.verdict}
+      sources={deal.status === "open" ? head.sources : { by: "records" }}
+      verdict={verdict}
       heroLayout="below"
       hero={
         <DealStageLadder
           deal={deal}
           stages={stages}
           variant="bars"
-          tone={ladderTone(deal, head.verdict.tone)}
+          tone={ladderTone(deal, verdict.tone)}
           subs={subs}
           advancing={ladder.advancing}
           advanceRefused={ladder.advanceRefused}
@@ -93,6 +94,33 @@ export function DealHowItStands({
       figures={<DealFigures inputs={inputs} />}
     />
   );
+}
+
+/**
+ * Won and lost are final, so a closed deal heads the card with its outcome and
+ * the day it came, whatever the last reading of the open deal said. A lost
+ * deal says why under it. An open deal has no outcome to head with.
+ */
+export function closedVerdict(
+  deal: Pick<Deal, "status" | "closed_at" | "lost_reason">,
+  { t, locale, zone }: Words,
+): StandingVerdict | undefined {
+  if (deal.status === "open") {
+    return undefined;
+  }
+  const lines = [
+    deal.closed_at
+      ? t("deal.standing.closedOn", {
+          date: formatDayMonth(deal.closed_at, locale, zone),
+        })
+      : undefined,
+    deal.status === "lost" ? deal.lost_reason?.trim() : undefined,
+  ].filter(Boolean);
+  return {
+    word: t(deal.status === "won" ? "deals.statusWon" : "deals.statusLost"),
+    sentence: lines.length > 0 ? lines.join(" · ") : undefined,
+    tone: deal.status === "won" ? "success" : "neutral",
+  };
 }
 
 // A won deal stands on a green rung and a lost one on a grey one, whatever
@@ -126,17 +154,22 @@ function useStageSubs(
 
 type Words = Readonly<{ t: Translator; locale: Locale; zone: string }>;
 
-function dealDims(inputs: DealStandingInputs, words: Words): StandingDim[] {
+// Momentum and risk read a deal still to be decided. Once it is won or lost
+// neither has anything left to say, and who sat on the deal is what remains.
+export function dealDims(
+  inputs: DealStandingInputs,
+  words: Words,
+): StandingDim[] {
   const { deal, coverage } = inputs;
-  return [
-    momentumDim(deal, words),
-    riskDim(inputs, words),
-    coverageDim(
-      committeeOf(coverage.coverage, coverage.withheld),
-      coverage,
-      words,
-    ),
-  ];
+  const committee = coverageDim(
+    committeeOf(coverage.coverage, coverage.withheld),
+    coverage,
+    words,
+  );
+  if (deal.status !== "open") {
+    return [committee];
+  }
+  return [momentumDim(deal, words), riskDim(inputs, words), committee];
 }
 
 // What the records already flag, counted rather than scored: nothing on the

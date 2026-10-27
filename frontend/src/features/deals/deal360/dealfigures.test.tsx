@@ -114,6 +114,31 @@ it("reads the probability off the deal's stage, and says so", () => {
   ).toBeInTheDocument();
 });
 
+describe("a closed deal's figures", () => {
+  it("states the outcome's certainty instead of the stage default", () => {
+    show({ deal: deal({ status: "won", closed_at: "2026-05-20T12:00:00Z" }) });
+    expect(screen.getByText("100%")).toBeInTheDocument();
+    expect(
+      screen.getByText(en["deal.standing.figure.final"]),
+    ).toBeInTheDocument();
+    cleanup();
+    show({ deal: deal({ status: "lost", closed_at: "2026-05-20T12:00:00Z" }) });
+    expect(screen.getByText("0%")).toBeInTheDocument();
+  });
+
+  it("counts the days from opened to closed in place of days in stage", () => {
+    show({ deal: deal({ status: "won", closed_at: "2026-06-11T12:00:00Z" }) });
+    expect(
+      screen.queryByText(en["deal.standing.figure.daysInStage"]),
+    ).toBeNull();
+    expect(
+      screen.getByText(en["deal.standing.figure.daysToClose"]),
+    ).toBeInTheDocument();
+    expect(screen.getByText("10 days")).toBeInTheDocument();
+    expect(screen.getByText("opened 1 Jun")).toBeInTheDocument();
+  });
+});
+
 describe("what the axis marks", () => {
   const words = {
     t: (
@@ -220,7 +245,27 @@ describe("what the axis marks", () => {
     expect(kept.map(([key]) => key)).toEqual(["m6", "m5", "m4", "m3", "m2"]);
   });
 
-  it("draws no close on a deal that already closed", () => {
+  it("titles a closed deal's close by its outcome, never as expected", () => {
+    const close = timelineEvents(
+      {
+        deal: deal({ status: "lost", closed_at: "2026-05-20T12:00:00Z" }),
+        stages,
+        asOf: AS_OF,
+        activities: [],
+        offers: [],
+        coverage: { withheld: false, pending: false },
+        ladder: {
+          advancing: false,
+          advanceRefused: false,
+          onAdvance: () => {},
+        },
+      },
+      words,
+    ).find((event) => event.key === "close");
+    expect(close?.title).toBe(en["deals.statusLost"]);
+  });
+
+  it("draws no close on a deal that closed without a day", () => {
     expect(
       marks({
         deal: deal({ status: "won", expected_close_date: "2026-05-01" }),
