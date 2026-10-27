@@ -54,11 +54,12 @@ setting needs an endpoint that reads and writes it, and most have a screen under
 5. **Register the function** in `allSettings()` in `backend/internal/compose/configregistry.go`.
    Do this once per package. A module that already has settings is already there.
 6. **Read it.** A `Define` setting is read with `config.Val(cfg, Setting)`, mostly in `compose` or `cmd`.
-   A stored setting is read with `config.StoredVal` or `config.StoredValTx`.
+   A stored setting is read with `config.StoredVal` or `config.StoredValTx`, which ask for the read grant.
+   A `MachineryApplied` one may be read with `config.StoredApplyTx`, as the example does.
    It is written with `config.Save`.
 7. **Run `make config-gen`.**
    It writes again every file that `backend/tools/gen-config/main.go` lists as an output.
-   These are the settings tables of the configuration reference, `config/margince.example.yaml`,
+   They include the settings tables of the configuration reference, `config/margince.example.yaml`,
    `.env.example` and `config/margince.schema.json`. Never edit those parts by hand.
 8. **Test it.** Use `backend/internal/platform/config/configtest`.
    `configtest.MustLoad` loads a YAML text over your settings.
@@ -119,7 +120,7 @@ line and the new line side by side.
 
 The code has no field that marks a key as old. To remove a key, keep it declared:
 
-1. Keep the `config.Define` with its `Key`, `Env`, `Flag` and `Type`. Remove what read its value.
+1. Keep the `config.Define` with its `Key`, `Env`, `Flag`, `Type` and `Roles`. Remove what read its value.
 2. Change its `Doc` to `Ignored; kept so existing files load.`. For a setting with a flag, write
    `Ignored; kept so existing command lines parse.`, as `ai_routing` does in
    `backend/internal/compose/programsettings/shared.go`.
