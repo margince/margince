@@ -1,4 +1,4 @@
--- The validation of the twelve lifetime bounds. A file of its own because
+-- The validation of the 17 lifetime bounds. A file of its own because
 -- VALIDATE takes a lighter lock than the ADD, and only a separate transaction
 -- lets writers through while each table is scanned.
 SET LOCAL lock_timeout = '3s';
