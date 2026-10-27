@@ -28806,7 +28806,8 @@ export interface components {
          *     dimension the client rates itself.
          *
          *     - `never_written`: no message from them and no meeting with them, ever.
-         *     - `quiet`: no message from them and no meeting with them for `days` days.
+         *     - `quiet`: no message from them and no meeting with them for `days` days, counted from
+         *       `at`, the last of the two.
          *     - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
          *     - `last_met`: in touch through a meeting `days` days ago.
          *     - `single_threaded`: in touch, but one contact carries the whole account.

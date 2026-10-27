@@ -246,6 +246,31 @@ describe("a row the CSV importer wrote", () => {
     expect(fromWire(null)).toMatchObject({ kind: "human", self: true });
   });
 
+  it("names a connector import by the product's own spelling", () => {
+    const tag = (importedFrom: string) => {
+      render(
+        <LocaleProvider initial="vi">
+          <ProvenanceTag
+            provenance={provenanceOf(
+              `human:${VIEWER}`,
+              VIEWER,
+              undefined,
+              "",
+              importedFrom,
+            )}
+          />
+        </LocaleProvider>,
+      );
+      const said = document.body.textContent;
+      cleanup();
+      return said;
+    };
+
+    expect(tag("hubspot")).toBe("Đã nhập từ HubSpot");
+    // An upload the administrator named keeps the name they gave it.
+    expect(tag("Q3 leads")).toBe("Đã nhập từ Q3 leads");
+  });
+
   it("names the upload of an imported activity", () => {
     expect(imported("mirror:csv:pipedrive-export:activity:a-9")).toEqual({
       kind: "import",

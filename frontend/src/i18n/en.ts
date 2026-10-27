@@ -3065,6 +3065,10 @@ export const en = {
   "co.health.reason.neverWritten": "No message from them and no meeting yet.",
   "co.health.reason.quiet_one": "No reply and no meeting for {days} day.",
   "co.health.reason.quiet_other": "No reply and no meeting for {days} days.",
+  "co.health.reason.quietSince_one":
+    "No reply and no meeting since {at} ({days} day).",
+  "co.health.reason.quietSince_other":
+    "No reply and no meeting since {at} ({days} days).",
   "co.health.reason.meetingBooked": "A meeting is booked for {at}.",
   "co.health.reason.lastMetToday": "Last met them today.",
   "co.health.reason.lastMet_one": "Last met them {days} day ago.",

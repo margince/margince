@@ -40604,7 +40604,8 @@ type HealthDimension struct {
 	// dimension the client rates itself.
 	//
 	// - `never_written`: no message from them and no meeting with them, ever.
-	// - `quiet`: no message from them and no meeting with them for `days` days.
+	// - `quiet`: no message from them and no meeting with them for `days` days, counted from
+	//   `at`, the last of the two.
 	// - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
 	// - `last_met`: in touch through a meeting `days` days ago.
 	// - `single_threaded`: in touch, but one contact carries the whole account.
@@ -40624,15 +40625,16 @@ type HealthDimensionRating string
 // HealthDimensionReasonCode Which sentence `reason` is, so a client can say it in the reader's language. Absent on a
 // dimension the client rates itself.
 //
-// - `never_written`: no message from them and no meeting with them, ever.
-// - `quiet`: no message from them and no meeting with them for `days` days.
-// - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
-// - `last_met`: in touch through a meeting `days` days ago.
-// - `single_threaded`: in touch, but one contact carries the whole account.
-// - `several_contacts`: `count` contacts here are in touch with us.
-// - `deals_all_stalled`: all `count` open deals have stalled.
-// - `deals_some_stalled`: `count` of `total` open deals have stalled.
-// - `deals_none_stalled`: `count` open deals, none stalled.
+//   - `never_written`: no message from them and no meeting with them, ever.
+//   - `quiet`: no message from them and no meeting with them for `days` days, counted from
+//     `at`, the last of the two.
+//   - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
+//   - `last_met`: in touch through a meeting `days` days ago.
+//   - `single_threaded`: in touch, but one contact carries the whole account.
+//   - `several_contacts`: `count` contacts here are in touch with us.
+//   - `deals_all_stalled`: all `count` open deals have stalled.
+//   - `deals_some_stalled`: `count` of `total` open deals have stalled.
+//   - `deals_none_stalled`: `count` open deals, none stalled.
 type HealthDimensionReasonCode string
 
 // HealthDimensionReasonParams The values the reason names. Each code lists which it reads.

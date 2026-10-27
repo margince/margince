@@ -3066,6 +3066,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Seit {days} Tag keine Antwort und kein Termin.",
   "co.health.reason.quiet_other":
     "Seit {days} Tagen keine Antwort und kein Termin.",
+  "co.health.reason.quietSince_one":
+    "Seit {at} ({days} Tag) keine Antwort und kein Termin.",
+  "co.health.reason.quietSince_other":
+    "Seit {at} ({days} Tagen) keine Antwort und kein Termin.",
   "co.health.reason.meetingBooked": "Ein Termin ist für den {at} angesetzt.",
   "co.health.reason.lastMetToday": "Heute getroffen.",
   "co.health.reason.lastMet_one": "Zuletzt vor {days} Tag getroffen.",

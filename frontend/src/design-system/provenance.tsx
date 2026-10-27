@@ -140,8 +140,12 @@ export function importLabel(
   provenance: Extract<Provenance, { kind: "import" }>,
   t: Translator,
 ): string {
+  // A connector import is named by the system's key ("hubspot"); the reader
+  // sees the product's own spelling, the same one an author's "via" gets.
   return provenance.uploadName
-    ? t("trust.importedFrom", { uploadName: provenance.uploadName })
+    ? t("trust.importedFrom", {
+        uploadName: sourceSystemName(provenance.uploadName),
+      })
     : t("trust.imported");
 }
 
