@@ -11,7 +11,7 @@ forms up in **Settings → Integrations**, under **Website forms**.
 To put a contact form on your website, open **Settings → Integrations** and choose **New website form** in **Website forms**.
 1. Type a **Name**, such as Contact page. Each lead's note shows it.
 2. Keep **Sent by** on **Website**.
-3. Under **Websites**, type each address the form is on, such as `https://www.example.com`, one per line.
+3. Under **Websites**, type each address the form is on, such as `https://www.example.com`, one per line. A page address such as `https://www.example.com/contact` counts as its whole website, and the field says so.
 4. Choose **Create form**. The **Connect** dialog shows the **Form address** and the **Code to paste**.
 5. Choose **Copy code** and paste the code into your page where the form goes.
 Style the form as you like, but keep each field's `name`. A post from a website not on the list is refused.
