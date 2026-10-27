@@ -75,13 +75,13 @@ const ANSWERED_BY = {
   keep: { how: "inline", file: "worklist.domainquestion.tsx" },
   keep_as_vendor: { how: "inline", file: "worklist.domainquestion.tsx" },
   discard: { how: "inline", file: "worklist.domainquestion.tsx" },
+  // Taking a task nobody holds writes its assignee where the reader stands.
+  take: { how: "inline", file: "worklist.take.tsx" },
   // Putting an overnight correction back acts in place, on the receipt that
   // reported it. It is the one verb this queue draws OUTSIDE the row: the
   // handled panel is where a change nobody was asked about is told, so it is
   // also where the way back belongs. Routing it would send the reader to the
   // deal's history to find the entry themselves.
-  // Taking a task nobody holds writes its assignee where the reader stands.
-  take: { how: "inline", file: "worklist.take.tsx" },
   undo: {
     how: "inline",
     file: "worklist.receiptundo.tsx",

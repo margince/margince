@@ -11,13 +11,7 @@ import {
 } from "../testing/story-utils";
 import { MeetingOutcome } from "./meetingoutcome";
 
-// What a rep does with a meeting that already happened.
-//
-// The card used to offer three statuses — held, no-show, cancelled — and each
-// wrote one word and closed. The two verbs here are not two of those three:
-// they differ in KIND. Cancelling is a fact with nothing to add, so the card
-// writes it; saying what came of a meeting is the thing a rep opened the queue
-// to record, so it opens the composer bound to that meeting.
+// Canceling writes at once; saying how a meeting went opens the composer bound to it.
 
 const MEETING_ID = "01a05500-0000-7000-8000-0000000000b1";
 
@@ -63,7 +57,11 @@ type Story = StoryObj<typeof MeetingOutcome>;
 // function rather than two copies that can drift apart.
 const openComposer: Story["play"] = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
-  await userEvent.click(await canvas.findByRole("button", { name: "Update" }));
+  await userEvent.click(
+    await canvas.findByRole("button", {
+      name: "Update Discovery call with Turbinenbau",
+    }),
+  );
 };
 
 /**
@@ -124,6 +122,29 @@ export const ComposerOpen: Story = {
 export const NothingCapturedYet: Story = {
   render: () => {
     stubRoutes({ ...CAPTURED_MEETING, body: null });
+    return (
+      <StoryProviders>
+        <div>
+          <MeetingOutcome
+            id={MEETING_ID}
+            version={3}
+            title="Discovery call with Turbinenbau"
+            invalidateKeys={[]}
+          />
+        </div>
+      </StoryProviders>
+    );
+  },
+  play: openComposer,
+};
+
+/**
+ * A meeting with a live calendar invitation: the invitation owns its subject,
+ * notes and date, so the composer asks only how it went.
+ */
+export const CalendarManaged: Story = {
+  render: () => {
+    stubRoutes({ ...CAPTURED_MEETING, invitation_status: "confirmed" });
     return (
       <StoryProviders>
         <div>

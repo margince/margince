@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -86,7 +87,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	if err := WithCommitmentAdmissions(ctx, tx, activities); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	if err := StampActivitiesWritable(ctx, tx, activities); err != nil {
+	if err := StampActivityAffordances(ctx, tx, activities, listClock(in)); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	if err := withCustomValues(ctx, tx, in.Columns.cols, pageOf(activities)); err != nil {
@@ -118,4 +119,13 @@ func requireActivityListScope(ctx context.Context, tx pgx.Tx, in ListActivitiesI
 		}
 	}
 	return nil
+}
+
+// listClock is the instant a page is judged at. A store read sets TaskAsOf from
+// its clock; without one it is the wall clock that clock defaults to.
+func listClock(in ListActivitiesInput) time.Time {
+	if in.TaskAsOf != nil {
+		return *in.TaskAsOf
+	}
+	return time.Now()
 }

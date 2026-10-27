@@ -229,7 +229,7 @@ func (m attentionMeetingsAwaitingOutcome) Since(
 	kind := string(crmcontracts.ActivityKindMeeting)
 	in := activities.ListActivitiesInput{
 		Kind: &kind, OccurredAfter: &window.From, OccurredBefore: &window.Until, DayDates: dayDatesOf(window),
-		AwaitingOutcome: true, CustomerMeetingsOnly: true, Limit: &limit, Sort: &soonestFirst, ReadableOnly: true,
+		AwaitingOutcomeAsOf: &window.Until, Limit: &limit, Sort: &soonestFirst, ReadableOnly: true,
 	}
 	if !applyMeetingScope(ctx, &in, scope, owner) {
 		return nil, nil

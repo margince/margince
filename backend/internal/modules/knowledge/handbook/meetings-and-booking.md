@@ -35,14 +35,17 @@ Your current time stays held until the calendar accepts the change. The meeting 
 Also called: reschedule, change the time, postpone a meeting.
 
 ### How do I record what came of a meeting?
-To record what came of a meeting, press **Update** on its Worklist row.
+To record what came of a meeting, press **Update** on its Worklist row. A customer meeting that has
+started with no outcome also shows **Update** on the contact's **Meetings** tab and on the timeline.
 1. Pick **Held** or **No-show** and write what was said.
 2. Change **Date** only if the meeting was on another day.
 3. Press **Log**.
 The meeting keeps its start time. A meeting moved to another day keeps its time of day there. One
-moved to today at an hour still to come is filed at the moment you save. Press **Canceled** on the
-row for a meeting that did not happen. Also called: mark a meeting held, meeting outcome, no-show,
-meeting happened.
+moved to today at an hour still to come is filed at the moment you save.
+
+Press **Mark as canceled** on the row for a meeting that did not happen. A meeting with a Margince
+invitation takes only **Held** or **No-show**, because its notes and date follow the invitation.
+Also called: mark a meeting held, meeting outcome, no-show, meeting happened.
 
 ### How do I cancel a meeting?
 To cancel a Margince meeting, open it from its line on the timeline and choose **Cancel meeting**. Confirm "Cancel this meeting and notify the attendee?".

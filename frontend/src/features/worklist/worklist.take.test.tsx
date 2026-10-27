@@ -103,6 +103,16 @@ describe("taking a task nobody holds", () => {
     expect(await screen.findByText(en["worklist.take.failed"])).toBeTruthy();
   });
 
+  it("is not drawn on a row that carries no version to pin the write to", async () => {
+    stubSession(jsonResponse({}));
+    renderRow({ ...unheld(), version: undefined });
+
+    await findRowMenu();
+    expect(
+      screen.queryByRole("button", { name: en["worklist.take.action"] }),
+    ).toBeNull();
+  });
+
   it("is not drawn on a row the server did not offer it on", async () => {
     stubSession(jsonResponse({}));
     renderRow(row({ id: "task-1", actions: ["complete", "snooze"] }));

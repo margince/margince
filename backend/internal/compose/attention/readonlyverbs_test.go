@@ -50,3 +50,23 @@ func TestOnlyATaskNobodyHoldsThatTheReaderMayChangeOffersTake(t *testing.T) {
 		}
 	}
 }
+
+// The Worklist gates Reassign on `complete`, because a task carries it only
+// when the reader may change it. The client has no other writability signal
+// on a row, so this tie must not come apart.
+func TestATaskCarriesCompleteExactlyWhenTheReaderMayChangeIt(t *testing.T) {
+	holder := ids.NewV7()
+	for name, tc := range map[string]struct {
+		task     Task
+		complete bool
+	}{
+		"unheld and changeable": {Task{ID: ids.NewV7()}, true},
+		"held and changeable":   {Task{ID: ids.NewV7(), AssigneeID: &holder}, true},
+		"unheld and read-only":  {Task{ID: ids.NewV7(), ReadOnly: true}, false},
+		"held and read-only":    {Task{ID: ids.NewV7(), AssigneeID: &holder, ReadOnly: true}, false},
+	} {
+		if got := slices.Contains(taskActions(tc.task), crmcontracts.AttentionItemActionsComplete); got != tc.complete {
+			t.Errorf("%s: carries complete = %v, want %v", name, got, tc.complete)
+		}
+	}
+}

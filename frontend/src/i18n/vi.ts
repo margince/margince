@@ -1519,7 +1519,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.focus.context": "Xem chi tiết",
   "brief.queue.back": "Quay lại Danh sách công việc",
   "brief.queue.next": "Việc tiếp theo",
-  "brief.queue.nextDone": "Đã hết việc",
+  "brief.queue.nextNone": "Không còn hồ sơ nào",
   "brief.queue.title": "Danh sách công việc",
   "brief.queue.show": "Xem Danh sách công việc",
   "brief.queue.hide": "Ẩn Danh sách công việc",
@@ -15774,7 +15774,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.scope.unassigned": "Chưa nhận",
   "worklist.scope.team": "Nhóm",
   "worklist.scope.all": "Tất cả",
-  "worklist.scope.unassignedHint": "Việc trong nhóm chưa có người phụ trách.",
+  "worklist.scope.unassignedHint": "Việc đang mở mà bạn xem được, chưa có người phụ trách.",
   "worklist.take.action": "Nhận việc",
   "worklist.take.done": "Đã nhận việc",
   "worklist.take.failed": "Không thể nhận việc này. Thử lại.",
@@ -16115,6 +16115,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingOutcomeFailed": "Không thể ghi nhận kết quả. Thử lại.",
   "worklist.verb.meetingDayMissing":
     "Ngày này không có trong múi giờ của công ty. Chọn ngày khác.",
+  "worklist.verb.meetingUpdateFor": "Cập nhật {subject}",
+  "worklist.verb.meetingCanceledFor": "Đánh dấu {subject} đã hủy",
+  "worklist.verb.meetingCalendarManaged":
+    "Lời mời trên lịch giữ tiêu đề, ghi chú và ngày. Tại đây chỉ lưu kết quả cuộc họp.",
   "worklist.verb.retry": "Chạy lại",
   "worklist.verb.retryStarted": "Đang chạy lại quy tắc…",
   "worklist.verb.retryFailed": "Không thể chạy lại quy tắc. Thử lại.",

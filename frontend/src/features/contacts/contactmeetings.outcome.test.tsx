@@ -3,7 +3,13 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -57,6 +63,7 @@ function meeting(row: Partial<Activity>): Activity {
     created_at: "2026-08-01T08:00:00Z",
     updated_at: "2026-08-01T08:00:00Z",
     writable: true,
+    awaiting_outcome: true,
     version: 3,
     ...row,
   };
@@ -77,12 +84,12 @@ function mount(
     },
   });
   const requests = vi.spyOn(globalThis, "fetch");
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const invalidated = vi.spyOn(client, "invalidateQueries");
   render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+    <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <ToastProvider>
           <ContactMeetingsTab view={view} />
@@ -90,7 +97,7 @@ function mount(
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  return requests;
+  return { requests, invalidated };
 }
 
 async function heldPanel() {
@@ -99,20 +106,28 @@ async function heldPanel() {
   return panel;
 }
 
-it("records a no-show on a meeting 30 days back, then shows it on the row", async () => {
+const UPDATE = "Update Discovery call";
+const CANCEL = "Mark Discovery call as canceled";
+
+it("records a no-show on a meeting the server says awaits one, then shows it on the row", async () => {
   let stored = meeting({});
   const patched: unknown[] = [];
-  const requests = mount(
+  const { requests, invalidated } = mount(
     () => [stored],
     (body) => {
       patched.push(body);
-      stored = { ...stored, meeting_status: "no_show", version: 4 };
+      stored = {
+        ...stored,
+        meeting_status: "no_show",
+        awaiting_outcome: false,
+        version: 4,
+      };
     },
   );
   const user = userEvent.setup();
   const panel = await heldPanel();
 
-  await user.click(within(panel).getByRole("button", { name: "Update" }));
+  await user.click(within(panel).getByRole("button", { name: UPDATE }));
   const dialog = await screen.findByRole("dialog");
   await user.click(within(dialog).getByRole("combobox"));
   await user.click(await screen.findByRole("option", { name: "No-show" }));
@@ -125,17 +140,47 @@ it("records a no-show on a meeting 30 days back, then shows it on the row", asyn
     .map(([input]) => input)
     .find((input) => input instanceof Request && input.method === "PATCH");
   expect(patch instanceof Request && patch.headers.get("If-Match")).toBe("3");
-  expect(within(panel).queryByRole("button", { name: "Update" })).toBeNull();
+  expect(within(panel).queryByRole("button", { name: UPDATE })).toBeNull();
+  expect(invalidated).toHaveBeenCalledWith({ queryKey: ["worklist"] });
+});
+
+it("sends only how it went for a meeting its calendar invitation holds", async () => {
+  const patched: unknown[] = [];
+  mount(
+    () => [
+      meeting({ meeting_status: "booked", invitation_status: "confirmed" }),
+    ],
+    (body) => patched.push(body),
+  );
+  const user = userEvent.setup();
+  const panel = await heldPanel();
+
+  await user.click(within(panel).getByRole("button", { name: UPDATE }));
+  const dialog = await screen.findByRole("dialog");
+  expect(
+    await within(dialog).findByText(
+      "The calendar invitation keeps the subject, notes and date. Only the outcome is saved here.",
+    ),
+  ).toBeTruthy();
+  expect(within(dialog).queryByRole("textbox")).toBeNull();
+  await user.click(within(dialog).getByRole("button", { name: "Log" }));
+
+  await waitFor(() => expect(patched).toEqual([{ meeting_status: "held" }]));
+});
+
+it("offers the outcome on a past booked meeting the server stamps as awaiting one", async () => {
+  mount(() => [meeting({ meeting_status: "booked" })]);
+  const panel = await heldPanel();
+  expect(within(panel).getByRole("button", { name: UPDATE })).toBeTruthy();
+  expect(within(panel).getByRole("button", { name: CANCEL })).toBeTruthy();
 });
 
 it.each([
-  ["a meeting the reader may not write", { writable: false }],
-  ["a meeting that already has a status", { meeting_status: "held" as const }],
-  ["a meeting still ahead", { occurred_at: "2026-10-20T09:00:00Z" }],
-])("offers no outcome for %s", async (_name, change) => {
+  ["the server says awaits none", { awaiting_outcome: false }],
+  ["the reader may not write", { writable: false }],
+])("offers no outcome on a meeting %s", async (_name, change) => {
   mount(() => [meeting(change)]);
-  const body = await screen.findByText("Discovery call");
-  expect(body).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Update" })).toBeNull();
-  expect(screen.queryByRole("button", { name: "Mark as canceled" })).toBeNull();
+  const panel = await heldPanel();
+  expect(within(panel).queryByRole("button", { name: UPDATE })).toBeNull();
+  expect(within(panel).queryByRole("button", { name: CANCEL })).toBeNull();
 });

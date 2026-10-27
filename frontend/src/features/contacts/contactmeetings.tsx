@@ -235,7 +235,6 @@ export function ContactMeetingsTab({
         <RecordMeetingOutcome
           activity={activity}
           invalidateKeys={entityTimelineKeys("contact", contactId)}
-          asOf={view ? Date.parse(view.as_of) : undefined}
         />
       )}
       {briefOf(activity)}

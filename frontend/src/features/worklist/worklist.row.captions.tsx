@@ -3,7 +3,6 @@
 
 import { ENTITY } from "../../lib/entity";
 import { routeHash } from "../../lib/router";
-import type { UrlParams } from "../../lib/urlstate";
 import { briefSubjectLabel, subjectHref } from "./worklist.copy";
 import { employerOf } from "./worklist.meetingparties";
 import type { HeldTouch } from "./worklist.pane";
@@ -31,10 +30,10 @@ export function contactHref(contact: NonNullable<WorklistItem["contact"]>) {
   return routeHash(ENTITY.contact.route(contact.id));
 }
 
-/** `href` as a row links it inside a Worklist: carrying that list's way back. */
-export function useListedHref(href: string | undefined): string | undefined {
+/** How a row links an address inside a Worklist: carrying that list's way back. */
+export function useListed(): (href: string) => string {
   const drawer = useDrawerDials();
-  return href && withWorklistReturn(href, drawer);
+  return (href) => withWorklistReturn(href, drawer);
 }
 
 /**
@@ -50,26 +49,24 @@ export function useListedHref(href: string | undefined): string | undefined {
 export function aboutRecord(
   item: WorklistItem,
   named: boolean,
-  drawer: UrlParams | null,
+  listed: (href: string) => string,
 ): RowReadings["about"] {
   const contact = item.contact;
   if (contact?.label && (named || contact.id !== item.subject?.id)) {
     const employer = employerOf(contact);
     return {
-      href: withWorklistReturn(contactHref(contact), drawer),
+      href: listed(contactHref(contact)),
       label: contact.label,
       company: employer && {
         ...employer,
-        href: withWorklistReturn(employer.href, drawer),
+        href: listed(employer.href),
       },
     };
   }
   if (!named) return undefined;
   const label = item.subject?.label;
   const href = subjectHref(item);
-  return label && href
-    ? { href: withWorklistReturn(href, drawer), label }
-    : undefined;
+  return label && href ? { href: listed(href), label } : undefined;
 }
 
 /**

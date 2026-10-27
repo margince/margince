@@ -6,49 +6,55 @@ import { NextTaskProvider } from "../../components/nexttaskslot";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
-import { navigate, parseHash, useRoute } from "../../lib/router";
+import { navigate, parseHash, routeHash, useRoute } from "../../lib/router";
 import { parseParams, useUrlParams } from "../../lib/urlstate";
 import { continuedList, nextTaskHref } from "./worklist.next";
 import type { Worklist } from "./worklist.queries";
-import { loadedQueue, useWorklist } from "./worklist.reads";
+import { loadedQueue, readWorklistPage } from "./worklist.reads";
 
-/** Opens the next open row's record in the Worklist this record came from,
- *  read fresh on the press so a finished task is gone and an urgent row leads. */
+/**
+ * Opens the record after this one in the Worklist it came from. The list is
+ * read only on the press, fresh, so a page on screen polls nothing.
+ */
 export function NextTaskButton() {
   const t = useT();
   const [params] = useUrlParams();
   const onScreen = useRoute();
+  const here = routeHash(onScreen);
   const list = continuedList(params);
-  // The drawer's own read and key, so the two share one cache of the list.
-  const day = useWorklist(
-    list.scope,
-    list.filter,
-    list.owner === "" ? undefined : list.owner,
-  );
   const [reading, setReading] = useState(false);
   const [failure, setFailure] = useState<unknown>(null);
-  const nextIn = (pages: readonly Worklist[] | undefined) =>
-    nextTaskHref(loadedQueue(pages ?? []), onScreen, list.carried);
-  const done =
-    day.isSuccess && !day.hasNextPage && nextIn(day.data.pages) === undefined;
+  // Keyed on the address, so moving to another page offers the press again.
+  const [spentOn, setSpentOn] = useState<string | null>(null);
+  const spent = spentOn === here;
   const press = async () => {
     setFailure(null);
     setReading(true);
     try {
-      // Read on page by page until a row on another record turns up. A failed
-      // read opens nothing: the cache it would fall back on is the stale list.
-      let read = await day.refetch();
-      while (!read.isError) {
-        const next = nextIn(read.data?.pages);
-        if (next !== undefined) {
-          navigate(parseHash(next), parseParams(next));
-          return;
-        }
-        // A last page with no cursor is the end of the list.
-        if (!read.data?.pages.at(-1)?.next_cursor) return;
-        read = await day.fetchNextPage();
-      }
-      setFailure(read.error);
+      // Read on while the record on screen, or the one after it, may be on a later page.
+      const pages: Worklist[] = [];
+      let cursor: string | undefined;
+      let next: string | undefined;
+      do {
+        const page = await readWorklistPage(
+          list.scope,
+          list.filter,
+          list.owner,
+          cursor,
+        );
+        pages.push(page);
+        cursor = page.next_cursor ?? undefined;
+        next = nextTaskHref(
+          loadedQueue(pages),
+          onScreen,
+          list.carried,
+          cursor === undefined,
+        );
+      } while (next === undefined && cursor !== undefined);
+      if (next === undefined) setSpentOn(here);
+      else navigate(parseHash(next), parseParams(next));
+    } catch (error) {
+      setFailure(error);
     } finally {
       setReading(false);
     }
@@ -57,11 +63,11 @@ export function NextTaskButton() {
     <>
       <Button
         variant="ghost"
-        disabled={done}
+        disabled={spent}
         pending={reading}
         onClick={() => void press()}
       >
-        {done ? t("brief.queue.nextDone") : t("brief.queue.next")}
+        {spent ? t("brief.queue.nextNone") : t("brief.queue.next")}
       </Button>
       <ErrorLine error={failure} inline />
     </>

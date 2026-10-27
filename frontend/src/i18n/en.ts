@@ -1507,7 +1507,7 @@ export const en = {
   "brief.focus.context": "View details",
   "brief.queue.back": "Back to Worklist",
   "brief.queue.next": "Next task",
-  "brief.queue.nextDone": "Worklist done",
+  "brief.queue.nextNone": "No more records",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Show Worklist",
   "brief.queue.hide": "Hide Worklist",
@@ -16128,7 +16128,7 @@ export const en = {
   "worklist.scope.team": "Team",
   "worklist.scope.all": "All",
   "worklist.scope.unassignedHint":
-    "Open work in your company that nobody is responsible for.",
+    "Open work you can see that nobody is responsible for.",
   "worklist.take.action": "Take it",
   "worklist.take.done": "Assigned to you",
   "worklist.take.failed": "Task was not assigned to you. Retry.",
@@ -16469,6 +16469,10 @@ export const en = {
   "worklist.verb.meetingOutcomeFailed": "Outcome was not recorded. Retry.",
   "worklist.verb.meetingDayMissing":
     "That date does not exist in the company’s time zone. Pick another date.",
+  "worklist.verb.meetingUpdateFor": "Update {subject}",
+  "worklist.verb.meetingCanceledFor": "Mark {subject} as canceled",
+  "worklist.verb.meetingCalendarManaged":
+    "The calendar invitation keeps the subject, notes and date. Only the outcome is saved here.",
   "worklist.verb.retry": "Run again",
   "worklist.verb.retryStarted": "Rerunning rule…",
   "worklist.verb.retryFailed": "Rule was not rerun. Retry.",

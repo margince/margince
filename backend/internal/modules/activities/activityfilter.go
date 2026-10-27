@@ -130,6 +130,9 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	if where, err = appendCustomerMeetingClause(ctx, in, arg, where); err != nil {
 		return nil, "", nil, nil, err
 	}
+	if where, err = appendAwaitingOutcomeClause(ctx, in, arg, where); err != nil {
+		return nil, "", nil, nil, err
+	}
 	where = append(where, activityRowClauses(in, arg)...)
 	custom, err := storekit.CustomFilterClauses(in.Columns.cols, in.CustomFilters, arg)
 	if err != nil {
@@ -257,9 +260,7 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 	}
 	where = append(where, occurredWindowClauses(in, arg)...)
 	if in.AwaitingOutcome {
-		// NULL counts as awaiting: a captured calendar event carries no status,
-		// and excluding it would empty this question on a connected calendar.
-		where = append(where, "(a.meeting_status IS NULL OR a.meeting_status = 'booked')")
+		where = append(where, openMeetingStatusSQL)
 	}
 	return where
 }

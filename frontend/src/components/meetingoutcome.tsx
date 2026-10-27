@@ -24,43 +24,32 @@ import { isTranscriptActivity } from "../design-system/transcriptread";
 import {
   type ActivityMoment,
   activityDate,
-  activityHasHappened,
   movedActivityStart,
   type OccurredPrecision,
 } from "../format/activitywhen";
 import { calendarDay } from "../format/calendarday";
-import { useNow } from "../format/now";
 import { useT } from "../i18n";
 import { outgoingBody } from "../lib/activitybody";
 import { useActivity } from "../lib/activityread";
 import { useCanWriteRecord } from "../lib/capability";
 import { unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
+import { worklistKey } from "../lib/workkeys";
 import { ActivityBodyField } from "./activitybodyfield";
 import { useMeetingOutcome } from "./taskactions";
 
 type Activity = components["schemas"]["Activity"];
 
-/** The outcome choice for a meeting that has begun, has no status and is writable. `asOf` defaults to mount time. */
+/** The outcome choice on a record page, for a meeting the server stamps as awaiting one. */
 export function RecordMeetingOutcome({
   activity,
   invalidateKeys,
-  asOf,
 }: Readonly<{
   activity: Activity;
   invalidateKeys: readonly QueryKey[];
-  asOf?: number;
 }>) {
   const writable = useCanWriteRecord("activity", activity);
-  const zone = useRecordZone();
-  const mountedAt = useNow(0);
-  const open =
-    activity.kind === "meeting" &&
-    !activity.meeting_status &&
-    activity.content_state !== "withheld" &&
-    writable &&
-    activityHasHappened(activity, asOf ?? mountedAt, zone);
-  if (!open) {
+  if (!(activity.awaiting_outcome && writable)) {
     return null;
   }
   return (
@@ -68,7 +57,8 @@ export function RecordMeetingOutcome({
       id={activity.id}
       version={activity.version}
       title={activity.subject ?? undefined}
-      invalidateKeys={invalidateKeys}
+      // The Worklist asks about the same meeting, so an answer here clears it there.
+      invalidateKeys={[...invalidateKeys, worklistKey]}
     />
   );
 }
@@ -101,6 +91,13 @@ type MovedStart = {
   occurred_at: string;
   occurred_precision: OccurredPrecision;
 };
+
+/** A live invitation owns the subject, notes and start; the server takes only how it went. */
+function calendarManaged(meeting: Activity): boolean {
+  return Boolean(
+    meeting.invitation_status && meeting.invitation_status !== "canceled",
+  );
+}
 
 /**
  * The start the save sends: none when the day stayed, so the meeting keeps
@@ -148,11 +145,24 @@ export function MeetingOutcome({
   const record = useMeetingOutcome(invalidateKeys);
   return (
     <>
-      <Button pending={record.isPending} onClick={() => setOpen(true)}>
+      <Button
+        pending={record.isPending}
+        aria-label={
+          title
+            ? t("worklist.verb.meetingUpdateFor", { subject: title })
+            : undefined
+        }
+        onClick={() => setOpen(true)}
+      >
         {t("worklist.verb.meetingUpdate")}
       </Button>
       <Button
         pending={record.isPending}
+        aria-label={
+          title
+            ? t("worklist.verb.meetingCanceledFor", { subject: title })
+            : undefined
+        }
         onClick={() =>
           record.mutate(
             { id, version, status: "canceled" },
@@ -217,6 +227,7 @@ function MeetingOutcomeDialog({
   // that invalidates ["activity", id] refreshes whichever of the two is open.
   const meeting = useActivity(id);
   const transcript = meeting.data ? isTranscriptActivity(meeting.data) : false;
+  const managed = meeting.data ? calendarManaged(meeting.data) : false;
   // Seeded during render, not in an effect: an effect paints an empty form first
   // and replaces words typed into that frame.
   if (draft === null && meeting.data) {
@@ -247,6 +258,7 @@ function MeetingOutcomeDialog({
       seed: OutcomeSeed;
       moved: MovedStart | undefined;
       transcript: boolean;
+      managed: boolean;
     }) => {
       unwrap(
         await api.PATCH("/activities/{id}", {
@@ -254,14 +266,16 @@ function MeetingOutcomeDialog({
             path: { id },
             ...ifMatch(requireVersion(input.seed.version)),
           },
-          body: {
-            meeting_status: input.draft.status,
-            subject: input.draft.subject.trim(),
-            // An emptied box clears the note rather than storing "": null is what
-            // the column holds for a meeting nobody has written about.
-            body: outgoingBody(input.draft.body, input.transcript),
-            ...input.moved,
-          },
+          body: input.managed
+            ? { meeting_status: input.draft.status }
+            : {
+                meeting_status: input.draft.status,
+                subject: input.draft.subject.trim(),
+                // An emptied box clears the note rather than storing "": null is what
+                // the column holds for a meeting nobody has written about.
+                body: outgoingBody(input.draft.body, input.transcript),
+                ...input.moved,
+              },
         }),
         t,
       );
@@ -301,7 +315,9 @@ function MeetingOutcomeDialog({
               }
               let moved: MovedStart | undefined;
               try {
-                moved = movedStart(seed, draft.day, recordZone, new Date());
+                moved = managed
+                  ? undefined
+                  : movedStart(seed, draft.day, recordZone, new Date());
               } catch (error) {
                 // A day the record zone skipped has no start to keep, so
                 // nothing is sent and the reader picks another date.
@@ -310,7 +326,7 @@ function MeetingOutcomeDialog({
                 return;
               }
               setDayRefused(false);
-              save.mutate({ draft, seed, moved, transcript });
+              save.mutate({ draft, seed, moved, transcript, managed });
             }}
           >
             <div className="form-row">
@@ -337,44 +353,36 @@ function MeetingOutcomeDialog({
                   />
                 )}
               </Field>
-              <Field label={t("log.date")}>
-                {(control) => (
-                  <DateInput
-                    {...control}
-                    value={isoOrBlank(draft.day)}
-                    // A meeting cannot have happened in the future, and the cap
-                    // makes the box say so rather than leaving the server to.
-                    max={latestDay}
-                    today={latestDay}
-                    onChange={(event) => {
-                      setDayRefused(false);
-                      setDraft({ ...draft, day: event.target.value });
-                    }}
-                  />
-                )}
-              </Field>
-            </div>
-            <Field label={t("log.subject")} required>
-              {(control) => (
-                <TextInput
-                  {...control}
-                  value={draft.subject}
-                  onChange={(event) =>
-                    setDraft({ ...draft, subject: event.target.value })
-                  }
-                />
+              {!managed && (
+                <Field label={t("log.date")}>
+                  {(control) => (
+                    <DateInput
+                      {...control}
+                      value={isoOrBlank(draft.day)}
+                      // A meeting cannot have happened in the future, and the cap
+                      // makes the box say so rather than leaving the server to.
+                      max={latestDay}
+                      today={latestDay}
+                      onChange={(event) => {
+                        setDayRefused(false);
+                        setDraft({ ...draft, day: event.target.value });
+                      }}
+                    />
+                  )}
+                </Field>
               )}
-            </Field>
-            {/* The editor Log activity writes with; a transcript keeps its
-                lines, which a citation points at. */}
-            <ActivityBodyField
-              label={t("log.body")}
-              hint={t("worklist.verb.meetingBodyHint")}
-              transcript={transcript}
-              rows={6}
-              value={draft.body}
-              onChange={(body) => setDraft({ ...draft, body })}
-            />
+            </div>
+            {managed ? (
+              <p className="t-caption">
+                {t("worklist.verb.meetingCalendarManaged")}
+              </p>
+            ) : (
+              <OutcomeWords
+                draft={draft}
+                transcript={transcript}
+                onChange={setDraft}
+              />
+            )}
             {dayRefused && (
               <ErrorLine>{t("worklist.verb.meetingDayMissing")}</ErrorLine>
             )}
@@ -388,7 +396,7 @@ function MeetingOutcomeDialog({
               variant="primary"
               type="submit"
               form={formId}
-              disabled={!save.isPending && !draft.subject.trim()}
+              disabled={!save.isPending && !managed && !draft.subject.trim()}
               pending={save.isPending}
               busyLabel={t("log.saving")}
             >
@@ -398,5 +406,43 @@ function MeetingOutcomeDialog({
         </>
       )}
     </Modal>
+  );
+}
+
+/** The subject and notes a meeting without a live invitation takes with its outcome. */
+function OutcomeWords({
+  draft,
+  transcript,
+  onChange,
+}: Readonly<{
+  draft: OutcomeDraft;
+  transcript: boolean;
+  onChange: (draft: OutcomeDraft) => void;
+}>) {
+  const t = useT();
+  return (
+    <>
+      <Field label={t("log.subject")} required>
+        {(control) => (
+          <TextInput
+            {...control}
+            value={draft.subject}
+            onChange={(event) =>
+              onChange({ ...draft, subject: event.target.value })
+            }
+          />
+        )}
+      </Field>
+      {/* The editor Log activity writes with; a transcript keeps its
+          lines, which a citation points at. */}
+      <ActivityBodyField
+        label={t("log.body")}
+        hint={t("worklist.verb.meetingBodyHint")}
+        transcript={transcript}
+        rows={6}
+        value={draft.body}
+        onChange={(body) => onChange({ ...draft, body })}
+      />
+    </>
   );
 }

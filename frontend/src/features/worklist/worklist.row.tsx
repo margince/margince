@@ -38,8 +38,12 @@ import {
   sharedResponsibility,
 } from "./worklist.reader";
 import { PromiseRecipients } from "./worklist.recipients";
-import { useDrawerDials, withWorklistReturn } from "./worklist.return";
-import { aboutRecord, shapedReadings, touchOf } from "./worklist.row.captions";
+import {
+  aboutRecord,
+  shapedReadings,
+  touchOf,
+  useListed,
+} from "./worklist.row.captions";
 import { CompactRowLine, type RowReadings } from "./worklist.row.compact";
 import { RowActs } from "./worklist.rowverbs";
 import "./worklist.row.css";
@@ -137,9 +141,9 @@ export function WorklistRow({
   // moment the reader is racing on their own clock.
   const recordZone = useRecordZone();
   // Inside the drawer a row's record links carry the way back to it.
-  const drawer = useDrawerDials();
+  const listed = useListed();
   const target = rowHref(item);
-  const href = target && withWorklistReturn(target, drawer);
+  const href = target && listed(target);
   // Open the activity itself without leaving the queue for its linked record.
   const source = useRowSource(item);
   const viewer = useMe(false).data?.user;
@@ -181,7 +185,7 @@ export function WorklistRow({
   // its rows and this line is the only place those facts are said there.
   const about = framed
     ? undefined
-    : aboutRecord(item, emailOpener !== undefined, drawer);
+    : aboutRecord(item, emailOpener !== undefined, listed);
   const touch = lastTouch(touchOf(item, framed), t, locale, zone);
   const host = hostText(item, viewer?.id, t);
   const responsibility = sharedResponsibility(item, locale, t);

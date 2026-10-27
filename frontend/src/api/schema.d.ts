@@ -5412,7 +5412,15 @@ export interface paths {
         delete: operations["archiveActivity"];
         options?: never;
         head?: never;
-        /** Update an activity (e.g. complete a task). */
+        /**
+         * Update an activity (e.g. complete a task).
+         * @description `meeting_status` `held` or `no_show` describes a meeting that took place, so it is refused
+         *     on a meeting whose start has not passed yet (a date-only meeting until its date is over in
+         *     the installation's timezone), judged at the start the patch leaves the row with:
+         *     `422 code: in_future` on `meeting_status`. `canceled` and `booked` are accepted at any time.
+         *     A meeting with a live calendar invitation takes `held` or `no_show` alone; any other change
+         *     to it answers `422 code: calendar_managed` and goes through the invitation.
+         */
         patch: operations["updateActivity"];
         trace?: never;
     };
@@ -34794,6 +34802,8 @@ export interface components {
         Activity: {
             /** @description Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
+            /** @description Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false. */
+            readonly awaiting_outcome?: boolean;
             /** @description Decisions about promises read from this source, included on list and detail reads when its content is visible. */
             readonly commitment_admissions?: components["schemas"]["CommitmentAdmission"][];
             /** Format: uuid */

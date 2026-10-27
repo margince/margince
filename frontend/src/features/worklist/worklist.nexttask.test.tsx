@@ -1,8 +1,9 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
+import { navigate } from "../../lib/router";
 import { readingsDay, taskRow } from "../../testing/brief.fixtures";
 import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
 import { NextTaskButton } from "./worklist.nexttask";
@@ -14,25 +15,36 @@ afterEach(() => {
   window.location.hash = "";
 });
 
-function onContact(id: string): WorklistItem {
+function onContact(id: string, task = 1): WorklistItem {
   return {
-    ...taskRow(`t-${id}`, `Call ${id}`),
+    ...taskRow(`t-${id}-${task}`, `Call ${id}`),
     subject: { type: "contact", id, label: id },
   };
 }
+
+function noticeOn(id: string): WorklistItem {
+  return { ...onContact(id, 9), source: "notice_case" };
+}
+
+const privacyCase: WorklistItem = {
+  ...taskRow("case-1", "Answer the request"),
+  source: "dsr",
+};
 
 function page(rows: WorklistItem[], next_cursor?: string): Worklist {
   return { ...readingsDay({}, rows), next_cursor };
 }
 
-/** Serves each read of the list the next answer, and records what it asked. */
-function serveList(...answers: Worklist[]): URLSearchParams[] {
+/** Serves the list's pages by the cursor asked for, and records each read. */
+function serveList(...pages: Worklist[]): URLSearchParams[] {
   const asked: URLSearchParams[] = [];
+  const byCursor = new Map(
+    pages.map((answer, index) => [pages[index - 1]?.next_cursor ?? "", answer]),
+  );
   stubApi({
     "GET /worklist": (_body, query) => {
       asked.push(query);
-      const answer = answers[Math.min(asked.length, answers.length) - 1];
-      return jsonResponse(answer);
+      return jsonResponse(byCursor.get(query.get("cursor") ?? ""));
     },
   });
   return asked;
@@ -41,55 +53,168 @@ function serveList(...answers: Worklist[]): URLSearchParams[] {
 const nextTask = () =>
   screen.findByRole("button", { name: en["brief.queue.next"] });
 
-describe("Next task on a record", () => {
-  it("opens the next record in the list, then the one after it once that is finished", async () => {
-    window.location.hash = "#/contacts/a";
-    // The second read is fresh: A and B are finished, so the cached A is not next.
-    serveList(
-      page([onContact("a"), onContact("b"), onContact("c")]),
-      page([onContact("a"), onContact("b"), onContact("c")]),
-      page([onContact("c")]),
-    );
-    render(<NextTaskButton />);
-    const user = userEvent.setup();
+async function pressOn(hash: string) {
+  window.location.hash = hash;
+  render(<NextTaskButton />);
+  await userEvent.setup().click(await nextTask());
+}
 
-    await user.click(await nextTask());
+describe("Next task on a record", () => {
+  it.each([
+    ["a", "b"],
+    ["b", "c"],
+    ["c", "a"],
+    ["gone", "a"],
+  ])(
+    "on contact %s with A, B and C open, opens contact %s",
+    async (on, opens) => {
+      serveList(page([onContact("a"), onContact("b"), onContact("c")]));
+      await pressOn(`#/contacts/${on}`);
+      await waitFor(() =>
+        expect(window.location.hash).toBe(`#/contacts/${opens}?from=worklist`),
+      );
+    },
+  );
+
+  it("orders records by their first row, so a later row on the record on screen does not move it", async () => {
+    serveList(
+      page([onContact("a"), onContact("b"), onContact("a", 2), onContact("c")]),
+    );
+    await pressOn("#/contacts/a");
     await waitFor(() =>
       expect(window.location.hash).toBe("#/contacts/b?from=worklist"),
     );
+  });
 
-    await user.click(await nextTask());
+  it.each([
+    ["a", "b"],
+    ["b", "c"],
+    ["c", "a"],
+  ])(
+    "with notices trailing in reverse order, on contact %s opens contact %s",
+    async (on, opens) => {
+      serveList(
+        page([
+          onContact("a"),
+          onContact("a", 2),
+          onContact("b"),
+          onContact("c"),
+          onContact("c", 2),
+          onContact("c", 3),
+          noticeOn("c"),
+          noticeOn("b"),
+          noticeOn("a"),
+        ]),
+      );
+      await pressOn(`#/contacts/${on}`);
+      await waitFor(() =>
+        expect(window.location.hash).toBe(`#/contacts/${opens}?from=worklist`),
+      );
+    },
+  );
+
+  it("reads on to the page holding the record on screen before choosing", async () => {
+    const asked = serveList(
+      page([onContact("b")], "p2"),
+      page([onContact("a"), onContact("c")]),
+    );
+    await pressOn("#/contacts/a");
     await waitFor(() =>
       expect(window.location.hash).toBe("#/contacts/c?from=worklist"),
     );
+    expect(asked.map((query) => query.get("cursor"))).toEqual([null, "p2"]);
+  });
+
+  it("wraps to the first page once the pages after the record on screen end", async () => {
+    serveList(page([onContact("b")], "p2"), page([onContact("a")]));
+    await pressOn("#/contacts/a");
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/contacts/b?from=worklist"),
+    );
+  });
+
+  it("reads the list only when pressed", async () => {
+    const asked = serveList(page([onContact("a"), onContact("b")]));
+    window.location.hash = "#/contacts/a";
+    render(<NextTaskButton />);
+    const button = await nextTask();
+    expect(asked).toHaveLength(0);
+
+    await userEvent.setup().click(button);
+
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/contacts/b?from=worklist"),
+    );
+    expect(asked).toHaveLength(1);
+  });
+
+  it("is busy while it reads and takes no second press", async () => {
+    const asked: URLSearchParams[] = [];
+    let answer: (response: Response) => void = () => undefined;
+    stubApi({
+      "GET /worklist": (_body, query) => {
+        asked.push(query);
+        return new Promise<Response>((resolve) => {
+          answer = resolve;
+        });
+      },
+    });
+    window.location.hash = "#/contacts/a";
+    render(<NextTaskButton />);
+    const user = userEvent.setup();
+    const button = await nextTask();
+
+    await user.click(button);
+    await waitFor(() => expect(button.getAttribute("aria-busy")).toBe("true"));
+    await user.click(button);
+    expect(asked).toHaveLength(1);
+
+    answer(jsonResponse(page([onContact("b")])));
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/contacts/b?from=worklist"),
+    );
+  });
+
+  it("says No more records when only this record and rows off record pages are left, and a press then reads nothing", async () => {
+    const asked = serveList(page([onContact("a"), privacyCase]));
+    await pressOn("#/contacts/a");
+
+    const none = await screen.findByRole("button", {
+      name: en["brief.queue.nextNone"],
+    });
+    expect(none).toHaveProperty("disabled", true);
+    await userEvent.setup().click(none);
+    expect(asked).toHaveLength(1);
+    expect(window.location.hash).toBe("#/contacts/a");
+  });
+
+  it("offers the press again on the next page the reader opens", async () => {
+    serveList(page([onContact("a")]));
+    await pressOn("#/contacts/a");
+    await screen.findByRole("button", { name: en["brief.queue.nextNone"] });
+
+    act(() => navigate({ screen: "contacts", id: "z" }));
+
+    expect(await nextTask()).toHaveProperty("disabled", false);
   });
 
   it("continues the drawer's filter, scope and owner the record carries", async () => {
-    window.location.hash =
-      "#/contacts/a?filter=tasks&from=worklist&queue_scope=team";
     const asked = serveList(page([onContact("a"), onContact("b")]));
-    render(<NextTaskButton />);
-
-    await userEvent.setup().click(await nextTask());
+    await pressOn("#/contacts/a?filter=tasks&from=worklist&queue_scope=team");
 
     await waitFor(() =>
       expect(window.location.hash).toBe(
         "#/contacts/b?filter=tasks&from=worklist&queue_scope=team",
       ),
     );
-    expect(asked.length).toBeGreaterThan(0);
-    for (const query of asked) {
-      expect(query.get("filter")).toBe("tasks");
-      expect(query.get("scope")).toBe("team");
-    }
+    expect(asked).toHaveLength(1);
+    expect(asked[0]?.get("filter")).toBe("tasks");
+    expect(asked[0]?.get("scope")).toBe("team");
   });
 
   it("reads a named owner's queue by the owner alone", async () => {
-    window.location.hash = "#/contacts/a?from=worklist&owner=u-7";
     const asked = serveList(page([onContact("b")]));
-    render(<NextTaskButton />);
-
-    await userEvent.setup().click(await nextTask());
+    await pressOn("#/contacts/a?from=worklist&owner=u-7");
 
     await waitFor(() =>
       expect(window.location.hash).toBe("#/contacts/b?from=worklist&owner=u-7"),
@@ -99,11 +224,8 @@ describe("Next task on a record", () => {
   });
 
   it("continues the reader's own whole list on a record not opened from one", async () => {
-    window.location.hash = "#/contacts/a?filter=meetings";
     const asked = serveList(page([onContact("b")]));
-    render(<NextTaskButton />);
-
-    await userEvent.setup().click(await nextTask());
+    await pressOn("#/contacts/a?filter=meetings");
 
     await waitFor(() =>
       expect(window.location.hash).toBe("#/contacts/b?from=worklist"),
@@ -112,52 +234,12 @@ describe("Next task on a record", () => {
     expect(asked[0]?.get("filter")).toBe("all");
   });
 
-  it("reads on past a page with no row on another record", async () => {
-    window.location.hash = "#/contacts/a";
-    const asked = serveList(
-      page([onContact("a")], "p2"),
-      page([onContact("a")], "p2"),
-      page([onContact("b")]),
-    );
-    render(<NextTaskButton />);
-
-    await userEvent.setup().click(await nextTask());
-
-    await waitFor(() =>
-      expect(window.location.hash).toBe("#/contacts/b?from=worklist"),
-    );
-    expect(asked.at(-1)?.get("cursor")).toBe("p2");
-  });
-
-  it("reads Worklist done, and refuses the press, with no row on another record", async () => {
-    window.location.hash = "#/contacts/a";
-    const privacyCase: WorklistItem = {
-      ...taskRow("case-1", "Answer the request"),
-      source: "dsr",
-    };
-    serveList(page([onContact("a"), privacyCase]));
-    render(<NextTaskButton />);
-
-    const done = await screen.findByRole("button", {
-      name: en["brief.queue.nextDone"],
-    });
-    expect(done).toHaveProperty("disabled", true);
-  });
-
-  it("opens nothing when the fresh read fails, and says so", async () => {
-    window.location.hash = "#/contacts/a";
-    let reads = 0;
+  it("opens nothing when the read fails, and says so", async () => {
     stubApi({
-      "GET /worklist": () => {
-        reads += 1;
-        return reads === 1
-          ? jsonResponse(page([onContact("a"), onContact("b")]))
-          : jsonResponse({ title: "Unavailable", status: 503 }, 503);
-      },
+      "GET /worklist": () =>
+        jsonResponse({ title: "Unavailable", status: 503 }, 503),
     });
-    render(<NextTaskButton />);
-
-    await userEvent.setup().click(await nextTask());
+    await pressOn("#/contacts/a");
 
     expect(await screen.findByRole("alert")).toBeTruthy();
     expect(window.location.hash).toBe("#/contacts/a");

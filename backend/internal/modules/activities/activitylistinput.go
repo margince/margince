@@ -151,6 +151,9 @@ type ListActivitiesInput struct {
 	// rule reporting counts customer meetings with (CustomerMeetingSQL). An
 	// internal stand-up owes no customer follow-up.
 	CustomerMeetingsOnly bool
+	// AwaitingOutcomeAsOf keeps the meetings that owe an outcome at that instant
+	// (awaitingOutcomeClause), the rule each Activity read stamps as awaiting_outcome.
+	AwaitingOutcomeAsOf *time.Time
 	// WaitingReplyAsOf narrows the list to the SAME thread walk WaitingReplies
 	// answers for the Worklist: the newest inbound message per thread that
 	// nobody has answered, as of this instant. Nil means the filter is off.

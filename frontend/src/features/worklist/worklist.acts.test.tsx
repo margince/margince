@@ -235,7 +235,10 @@ describe("a row's verbs are one line with the row's menu last", () => {
     );
 
     const update = await screen.findByRole("button", {
-      name: en["worklist.verb.meetingUpdate"],
+      name: en["worklist.verb.meetingUpdateFor"].replace(
+        "{subject}",
+        "Quarterly review with Turbinenbau",
+      ),
     });
     const drawn = verbsInOrder();
     expect(filled(drawn)).toEqual([]);
@@ -246,7 +249,10 @@ describe("a row's verbs are one line with the row's menu last", () => {
     ).toBeGreaterThan(-1);
     const cancelled = drawn.indexOf(
       screen.getByRole("button", {
-        name: en["worklist.verb.meetingCanceled"],
+        name: en["worklist.verb.meetingCanceledFor"].replace(
+          "{subject}",
+          "Quarterly review with Turbinenbau",
+        ),
       }),
     );
     expect(

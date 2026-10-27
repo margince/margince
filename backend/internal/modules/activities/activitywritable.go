@@ -5,6 +5,10 @@ package activities
 
 import (
 	"context"
+	"fmt"
+	"maps"
+	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -14,11 +18,21 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// StampActivitiesWritable sets Writable on a page of activities from the
-// question the update path asks. That is the object grant, then the row
-// authority auth.ActivityWritableSubset answers for the whole page at once.
-// The list, the single read and the contact timeline each call it.
-func StampActivitiesWritable(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) error {
+// StampActivityAffordances sets what the reader may do with each row of a page.
+// Writable says they may write it; AwaitingOutcome, judged at asOf, says its
+// meeting still asks how it went. The list, the single read and the contact
+// timeline each call it.
+func StampActivityAffordances(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity, asOf time.Time) error {
+	if err := stampActivitiesWritable(ctx, tx, page); err != nil {
+		return err
+	}
+	return stampAwaitingOutcome(ctx, tx, page, asOf)
+}
+
+// stampActivitiesWritable answers the question the update path asks: the
+// object grant, then the row authority auth.ActivityWritableSubset answers
+// for the whole page at once.
+func stampActivitiesWritable(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) error {
 	may := make(map[ids.UUID]bool)
 	if mayMutate(ctx) && auth.Allows(ctx, "activity", principal.ActionUpdate) && len(page) > 0 {
 		named := make([]ids.UUID, len(page))
@@ -33,6 +47,42 @@ func StampActivitiesWritable(ctx context.Context, tx pgx.Tx, page []crmcontracts
 	for i := range page {
 		w := may[ids.UUID(page[i].Id)]
 		page[i].Writable = &w
+	}
+	return nil
+}
+
+// stampAwaitingOutcome asks awaitingOutcomeClause of the page's readable
+// meetings. Readability is the row's own content_state, which the outcome lane
+// gets from ReadableOnly: a meeting the reader cannot read is not theirs to answer.
+func stampAwaitingOutcome(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity, asOf time.Time) error {
+	at := make(map[ids.UUID]int)
+	for i := range page {
+		page[i].AwaitingOutcome = new(false)
+		readable := page[i].ContentState == nil || *page[i].ContentState == crmcontracts.ActivityContentStateAvailable
+		if page[i].Kind == crmcontracts.ActivityKindMeeting && readable {
+			at[ids.UUID(page[i].Id)] = i
+		}
+	}
+	if len(at) == 0 {
+		return nil
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	owed, err := awaitingOutcomeClause(ctx, asOf, arg)
+	if err != nil {
+		return err
+	}
+	rows, err := tx.Query(ctx, sprintf(`SELECT a.id FROM activity a WHERE a.id = ANY($%d::uuid[]) AND %s`,
+		arg(slices.Collect(maps.Keys(at))), owed), args...)
+	if err != nil {
+		return fmt.Errorf("activities: reading which meetings await an outcome: %w", err)
+	}
+	owedIDs, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return fmt.Errorf("activities: reading which meetings await an outcome: %w", err)
+	}
+	for _, id := range owedIDs {
+		page[at[id]].AwaitingOutcome = new(true)
 	}
 	return nil
 }

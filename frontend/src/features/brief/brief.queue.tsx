@@ -92,7 +92,7 @@ export function BriefQueue() {
       </DrawerHead>
       <DrawerBody className="brief-queue-body" ref={body}>
         <WorklistReturnScope>
-          <WorklistScreen opensOn={owner} embedded />
+          <WorklistScreen embedded />
         </WorklistReturnScope>
       </DrawerBody>
     </Modal>

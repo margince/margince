@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect } from "react";
-import { expect, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { NextTaskSlot } from "../../components/nexttaskslot";
 import { NextBar } from "../../design-system/nextbar";
 import type { Locale } from "../../i18n";
@@ -32,11 +32,15 @@ function onContact(id: string, title: string): WorklistItem {
 function RecordFrame({
   queue,
   locale = "en",
-}: Readonly<{ queue: WorklistItem[]; locale?: Locale }>) {
+  reading = false,
+}: Readonly<{ queue: WorklistItem[]; locale?: Locale; reading?: boolean }>) {
   useEffect(() => {
     const before = window.location.hash;
     installFetchStub({
-      "GET /worklist": () => jsonResponse(readingsDay({}, queue)),
+      "GET /worklist": () =>
+        reading
+          ? new Promise<Response>(() => {})
+          : jsonResponse(readingsDay({}, queue)),
     });
     window.location.hash = "#/contacts/c-weber?filter=tasks&from=worklist";
     announceAddressChanged();
@@ -44,7 +48,7 @@ function RecordFrame({
       window.location.hash = before;
       announceAddressChanged();
     };
-  }, [queue]);
+  }, [queue, reading]);
   return (
     <StoryProviders locale={locale}>
       <NextTaskHost>
@@ -71,7 +75,7 @@ const meta: Meta<typeof NextTaskButton> = {
 export default meta;
 type Story = StoryObj<typeof NextTaskButton>;
 
-/** Another record has an open row: the press opens it. */
+/** At rest the button reads nothing and is always offered. */
 export const NextTaskAhead: Story = {
   play: async ({ canvasElement }) => {
     const button = await within(canvasElement).findByRole("button", {
@@ -81,12 +85,28 @@ export const NextTaskAhead: Story = {
   },
 };
 
-/** Only this record is left in the list: the button says so and refuses. */
-export const WorklistDone: Story = {
-  render: () => <RecordFrame queue={[weber]} />,
+/** Pressed, while the list is read: busy, and a second press is swallowed. */
+export const Reading: Story = {
+  render: () => <RecordFrame queue={ahead} reading />,
   play: async ({ canvasElement }) => {
     const button = await within(canvasElement).findByRole("button", {
-      name: en["brief.queue.nextDone"],
+      name: en["brief.queue.next"],
+    });
+    await userEvent.click(button);
+    await expect(button).toHaveAttribute("aria-busy", "true");
+  },
+};
+
+/** Pressed with only this record left on a record page: it says so and refuses. */
+export const NoMoreRecords: Story = {
+  render: () => <RecordFrame queue={[weber]} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: en["brief.queue.next"] }),
+    );
+    const button = await canvas.findByRole("button", {
+      name: en["brief.queue.nextNone"],
     });
     await expect(button).toBeDisabled();
   },
@@ -95,11 +115,13 @@ export const WorklistDone: Story = {
 /** The longest label, at phone width: it wraps under the bar, never off it. */
 export const GermanPhone: Story = {
   tags: ["uat-phone"],
-  render: () => <RecordFrame queue={ahead} locale="de" />,
+  render: () => <RecordFrame queue={[weber]} locale="de" />,
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findByRole("button", {
-      name: de["brief.queue.next"],
-    });
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: de["brief.queue.next"] }),
+    );
+    await canvas.findByRole("button", { name: de["brief.queue.nextNone"] });
     await expect(canvasElement.scrollWidth).toBeLessThanOrEqual(
       canvasElement.clientWidth,
     );

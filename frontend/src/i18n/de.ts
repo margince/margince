@@ -1557,7 +1557,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.focus.context": "Details anzeigen",
   "brief.queue.back": "Zurück zur Worklist",
   "brief.queue.next": "Nächste Aufgabe",
-  "brief.queue.nextDone": "Worklist erledigt",
+  "brief.queue.nextNone": "Keine weiteren Datensätze",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Worklist einblenden",
   "brief.queue.hide": "Worklist ausblenden",
@@ -16204,7 +16204,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.scope.team": "Team",
   "worklist.scope.all": "Alle",
   "worklist.scope.unassignedHint":
-    "Offene Arbeit in deinem Unternehmen, für die niemand zuständig ist.",
+    "Offene Arbeit, die du sehen kannst und für die niemand zuständig ist.",
   "worklist.take.action": "Übernehmen",
   "worklist.take.done": "Dir zugewiesen",
   "worklist.take.failed":
@@ -16553,6 +16553,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Ergebnis konnte nicht erfasst werden. Bitte versuche es erneut.",
   "worklist.verb.meetingDayMissing":
     "Dieses Datum gibt es in der Zeitzone des Unternehmens nicht. Wähle ein anderes Datum.",
+  "worklist.verb.meetingUpdateFor": "{subject} aktualisieren",
+  "worklist.verb.meetingCanceledFor": "{subject} als abgesagt markieren",
+  "worklist.verb.meetingCalendarManaged":
+    "Betreff, Notizen und Datum folgen der Kalendereinladung. Hier wird nur das Ergebnis gespeichert.",
   "worklist.verb.retry": "Erneut ausf\u00fchren",
   "worklist.verb.retryStarted": "Regel wird erneut ausgeführt…",
   "worklist.verb.retryFailed":

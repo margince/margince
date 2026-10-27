@@ -159,7 +159,9 @@ describe("a meeting that owes an answer", () => {
       await screen.findByRole("button", { name: /update/i }),
     ).not.toBeNull();
     expect(
-      screen.getByRole("button", { name: /^mark as canceled$/i }),
+      screen.getByRole("button", {
+        name: "Mark Discovery call with Turbinenbau as canceled",
+      }),
     ).not.toBeNull();
     // The two statuses that need prose are answers INSIDE the composer, not
     // verbs on the card: a row that still offered them would write one word and
@@ -175,7 +177,9 @@ describe("a meeting that owes an answer", () => {
     renderUnderAToastRegion();
 
     await user.click(
-      await screen.findByRole("button", { name: /^mark as canceled$/i }),
+      await screen.findByRole("button", {
+        name: "Mark Discovery call with Turbinenbau as canceled",
+      }),
     );
     expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
     expect(sent).toEqual([{ meeting_status: "canceled" }]);
@@ -268,7 +272,9 @@ describe("a meeting that owes an answer", () => {
     renderUnderAToastRegion();
 
     await user.click(
-      await screen.findByRole("button", { name: /^mark as canceled$/i }),
+      await screen.findByRole("button", {
+        name: "Mark Discovery call with Turbinenbau as canceled",
+      }),
     );
     // A refused write leaves the row exactly as it was, which renders the same
     // as a click that did nothing.

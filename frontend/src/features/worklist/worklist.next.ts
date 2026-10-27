@@ -21,22 +21,44 @@ export function continuedList(params: UrlParams) {
   return { ...drawerQueue(carried), carried };
 }
 
-/** The address of the first row on another record than the one on screen, or undefined. */
+/** A record with a row in the list, and whether it is the one on screen. */
+type Stop = Readonly<{ href: string; here: boolean }>;
+
+/** Each record once, where its first row is; rows off record pages drop out. */
+function recordsInOrder(
+  rows: readonly WorklistItem[],
+  onScreen: Route,
+): Stop[] {
+  const seen = new Map<string, Stop>();
+  for (const row of rows) {
+    const href = rowHref(row);
+    const record = href && returningRecord(href);
+    const key = record && `${record.screen}/${record.id}`;
+    if (href && record && key && !seen.has(key)) {
+      seen.set(key, {
+        href,
+        here: record.screen === onScreen.screen && record.id === onScreen.id,
+      });
+    }
+  }
+  return [...seen.values()];
+}
+
+/**
+ * The record after the one on screen, in the order records first appear.
+ * Once the list has `ended` it wraps to the first; before then, undefined
+ * means read on.
+ */
 export function nextTaskHref(
   rows: readonly WorklistItem[],
   onScreen: Route,
   carried: UrlParams,
+  ended: boolean,
 ): string | undefined {
-  for (const row of rows) {
-    const href = rowHref(row);
-    const record = href && returningRecord(href);
-    if (
-      href &&
-      record &&
-      (record.screen !== onScreen.screen || record.id !== onScreen.id)
-    ) {
-      return withWorklistReturn(href, carried);
-    }
-  }
-  return undefined;
+  const records = recordsInOrder(rows, onScreen);
+  const here = records.findIndex((record) => record.here);
+  const target =
+    (here >= 0 ? records[here + 1] : undefined) ??
+    (ended ? records.find((record) => !record.here) : undefined);
+  return target && withWorklistReturn(target.href, carried);
 }

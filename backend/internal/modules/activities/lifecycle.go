@@ -29,6 +29,9 @@ import (
 type UpdateActivityInput struct {
 	recordedAt         *time.Time
 	calendarSettlement bool
+	// askedByCaller marks a patch a caller asked for. A capture replay or a
+	// calendar settlement reports what the source system says instead.
+	askedByCaller bool
 	// recordZone dates a stored instant made a day; the store sets it (WithRecordZone).
 	recordZone RecordZone
 	// Trail names what the audit trail calls this write; zero is an update.
@@ -67,7 +70,7 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 		return crmcontracts.Activity{}, err
 	}
 	at := s.now()
-	in.recordedAt, in.recordZone = &at, s.recordZone
+	in.recordedAt, in.recordZone, in.askedByCaller = &at, s.recordZone, true
 	if err := s.readPatchColumns(ctx, &in); err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -315,6 +318,11 @@ func admitActivityPatch(
 	// field and try again against a row that will refuse them either way.
 	if !held && in.MeetingStatus != nil && current.Kind != crmcontracts.ActivityKindMeeting {
 		return crmcontracts.Activity{}, held, &MeetingStatusKindError{Kind: string(current.Kind)}
+	}
+	if !held {
+		if err := refuseOutcomeBeforeStart(ctx, tx, current, *in); err != nil {
+			return crmcontracts.Activity{}, held, err
+		}
 	}
 	if !held {
 		if err := checkTaskFieldsKind(string(current.Kind), taskFields{in.DueAt, in.RemindAt, in.AssigneeID, in.IsDone}); err != nil {

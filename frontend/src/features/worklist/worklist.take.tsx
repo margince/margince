@@ -13,7 +13,11 @@ import { useReassignTask } from "./worklist.writes";
  * assignee. Drawn only where the server offers `take`.
  */
 export function TakeVerb({ item }: Readonly<{ item: WorklistItem }>) {
-  if (!item.actions.includes("take") || item.batch) {
+  if (
+    !item.actions.includes("take") ||
+    item.batch ||
+    item.version === undefined
+  ) {
     return null;
   }
   return <TakeButton item={item} />;

@@ -38,6 +38,7 @@ const MEETING: Activity = {
   created_at: "2020-03-01T08:00:00Z",
   updated_at: "2020-03-01T08:00:00Z",
   writable: true,
+  awaiting_outcome: true,
   version: 5,
 };
 
@@ -72,11 +73,13 @@ function show(activity: Activity) {
   return patched;
 }
 
-it("offers a past meeting with no status the same outcome choice as the lane", async () => {
+it("offers a meeting the server says awaits an outcome the same choice as the lane", async () => {
   const patched = show(MEETING);
   const user = userEvent.setup();
 
-  await user.click(await screen.findByRole("button", { name: "Update" }));
+  await user.click(
+    await screen.findByRole("button", { name: "Update Site visit" }),
+  );
   const dialog = await screen.findByRole("dialog");
   await user.click(within(dialog).getByRole("combobox"));
   await user.click(await screen.findByRole("option", { name: "No-show" }));
@@ -87,14 +90,19 @@ it("offers a past meeting with no status the same outcome choice as the lane", a
   expect(patched[0]).toMatchObject({ meeting_status: "no_show" });
 });
 
+it("offers a past booked meeting the server stamps as awaiting one", async () => {
+  show({ ...MEETING, meeting_status: "booked" });
+  expect(
+    await screen.findByRole("button", { name: "Mark Site visit as canceled" }),
+  ).toBeTruthy();
+});
+
 it.each([
-  ["not writable", { writable: false }],
-  ["already has a status", { meeting_status: "held" as const }],
-  ["still ahead", { occurred_at: "2099-03-02T09:00:00Z" }],
-  ["is not a meeting", { kind: "call" as const }],
-])("offers no outcome for a meeting that is %s", async (_name, change) => {
+  ["the server says awaits none", { awaiting_outcome: false }],
+  ["the reader may not write", { writable: false }],
+])("offers no outcome on a meeting %s", async (_name, change) => {
   show({ ...MEETING, ...change });
   expect(await screen.findByRole("button", { name: "Relink" })).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Update" })).toBeNull();
-  expect(screen.queryByRole("button", { name: "Mark as canceled" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Update/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /canceled$/ })).toBeNull();
 });
