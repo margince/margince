@@ -109,7 +109,10 @@ describe("a day count names its zone", () => {
 
   it("finds no count in UTC beside a zoned date", () => {
     const findings = sourcesUnderTest().flatMap((path) => {
-      const file = parsed(path);
+      const text = readFileSync(path, "utf8");
+      // A statement's text is part of its file's, so a file that cannot hold a finding is not parsed.
+      if (!mayHoldFinding(text)) return [];
+      const file = parseSource(path, text);
       return file.statements.flatMap((statement) => {
         const key = `${relative(srcRoot, path)}:${ts.isFunctionDeclaration(statement) ? statement.name?.text : ""}`;
         const found = findingsIn(path, statement.getText(file));
