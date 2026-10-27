@@ -62,10 +62,15 @@ func seedMany(n int, seed func()) {
 	}
 }
 
-// rowsBy indexes an answer's rows by one column. A row without it lands under nil.
-func rowsBy(got []map[string]any, column string) map[any]map[string]any {
+// rowsBy indexes an answer's rows by one column, and fails on a repeated key.
+// A row without the column is keyed by nil.
+func rowsBy(t *testing.T, got []map[string]any, column string) map[any]map[string]any {
+	t.Helper()
 	out := map[any]map[string]any{}
 	for _, row := range got {
+		if _, dup := out[row[column]]; dup {
+			t.Fatalf("two rows share %s = %v: %v", column, row[column], got)
+		}
 		out[row[column]] = row
 	}
 	return out
@@ -99,7 +104,7 @@ func proveM01ForecastByCategory(t *testing.T) {
 	}
 	seedMany(5, func() { e.seedDealClosing(t, e.Rep3, "commit", future) })
 
-	rows := rowsBy(answerRows(e.teamManagerCtx(), t, e, `{"entity":"forecast",
+	rows := rowsBy(t, answerRows(e.teamManagerCtx(), t, e, `{"entity":"forecast",
 		"group_by":["forecast_category"],"measures":[{"fn":"count","as":"deals"},
 		{"fn":"sum","field":"amount_base_minor","as":"value"}]}`), "forecast_category")
 	for _, category := range []string{"commit", "best_case", "pipeline", "slipped"} {
@@ -131,7 +136,7 @@ func proveM02PipelineByCloseMonth(t *testing.T) {
 			t.Errorf("a month row counts %v, want 5, so a colleague's or a closed deal leaked", row)
 		}
 	}
-	if _, ok := rowsBy(rows, "close_month")[nil]; !ok {
+	if _, ok := rowsBy(t, rows, "close_month")[nil]; !ok {
 		t.Error("the deals with no close date have no row of their own")
 	}
 }
@@ -165,7 +170,7 @@ func proveM09OwnerWithMostPipeline(t *testing.T) {
 	seedMany(7, func() { e.seedDealClosing(t, mate, "pipeline", new(30)) })
 	seedMany(9, func() { e.seedDealClosing(t, e.Rep3, "pipeline", new(30)) })
 
-	rows := rowsBy(answerRows(e.teamManagerCtx(), t, e, `{"entity":"pipeline-current",
+	rows := rowsBy(t, answerRows(e.teamManagerCtx(), t, e, `{"entity":"pipeline-current",
 		"group_by":["owner_id"],"measures":[{"fn":"sum","field":"amount_base_minor","as":"value"}]}`), "owner_id")
 	if rows[mate.String()]["value"] != float64(700_000) || rows[e.Rep1.String()]["value"] != float64(500_000) {
 		t.Errorf("owners = %v, want the teammate at 700000 and the manager at 500000", rows)
@@ -186,7 +191,7 @@ func proveM10WinsByRepThisQuarter(t *testing.T) {
 	seedMany(5, func() { seedClosedDealAgo(t, e, "Won", 10_000, "won", "3 months", mate, "manual", "") })
 	seedMany(9, func() { seedClosedOwnedDeal(t, e, "Won", 10_000, "won", "manual", "", e.Rep3) })
 
-	rows := rowsBy(answerRows(e.teamManagerCtx(), t, e, fmt.Sprintf(`{"entity":"win-loss",
+	rows := rowsBy(t, answerRows(e.teamManagerCtx(), t, e, fmt.Sprintf(`{"entity":"win-loss",
 		"group_by":["owner_id"],"measures":[{"fn":"count","as":"deals"}],
 		"filters":[{"field":"status","op":"eq","value":"won"},
 		{"field":"period_quarter","op":"eq","value":%q}]}`, e.currentQuarter(t))), "owner_id")
@@ -207,7 +212,7 @@ func proveG04OwnWinsAndLossesThisMonth(t *testing.T) {
 	seedMany(5, func() { seedClosedDealAgo(t, e, "Won", 10_000, "won", "3 months", e.Rep1, "manual", "") })
 	seedMany(7, func() { seedClosedOwnedDeal(t, e, "Colleague", 10_000, "won", "manual", "", e.Rep3) })
 
-	rows := rowsBy(answerRows(e.ownLensRepCtx(e.Rep1), t, e, fmt.Sprintf(`{"entity":"win-loss",
+	rows := rowsBy(t, answerRows(e.ownLensRepCtx(e.Rep1), t, e, fmt.Sprintf(`{"entity":"win-loss",
 		"group_by":["status"],"measures":[{"fn":"count","as":"deals"}],
 		"filters":[{"field":"owner_id","op":"eq","value":%q},
 		{"field":"period_month","op":"eq","value":%q}]}`, e.Rep1, e.currentMonth(t))), "status")
@@ -225,7 +230,7 @@ func proveG08WonThisQuarterVersusLast(t *testing.T) {
 	seedMany(5, func() { seedClosedDealAgo(t, e, "Won", 10_000, "won", "3 months", e.Rep1, "manual", "") })
 	seedMany(5, func() { seedClosedOwnedDeal(t, e, "Lost", 500_000, "lost", "manual", "price", e.Rep1) })
 
-	rows := rowsBy(answerRows(e.wideLensCtx(e.Rep1), t, e, `{"entity":"win-loss",
+	rows := rowsBy(t, answerRows(e.wideLensCtx(e.Rep1), t, e, `{"entity":"win-loss",
 		"group_by":["period_quarter"],"measures":[{"fn":"sum","field":"amount_base_minor","as":"value"}],
 		"filters":[{"field":"status","op":"eq","value":"won"}]}`), "period_quarter")
 	if len(rows) != 2 || rows[e.currentQuarter(t)]["value"] != float64(100_000) {
@@ -253,7 +258,7 @@ func proveG10CustomersWithMostOpenDeals(t *testing.T) {
 			e.pipeline, e.stages[20], closedOnly, e.Rep1)
 	})
 
-	rows := rowsBy(answerRows(e.companyReaderCtx(e.Rep1), t, e, `{"entity":"open-deals-per-company",
+	rows := rowsBy(t, answerRows(e.companyReaderCtx(e.Rep1), t, e, `{"entity":"open-deals-per-company",
 		"group_by":["company_id"],"measures":[{"fn":"count","as":"deals"}]}`), "company_id")
 	if rows[fabrikam.String()]["deals"] != float64(8) || rows[contoso.String()]["deals"] != float64(6) {
 		t.Errorf("companies = %v, want Fabrikam at 8 and Contoso at 6", rows)
@@ -282,7 +287,7 @@ func proveG11LeadsByStatus(t *testing.T) {
 				c.status, e.Rep1, c.archived, contact)
 		})
 	}
-	rows := rowsBy(answerRows(e.leadReaderCtx(), t, e,
+	rows := rowsBy(t, answerRows(e.leadReaderCtx(), t, e,
 		`{"entity":"leads-by-status","group_by":["status"],"measures":[{"fn":"count","as":"leads"}]}`), "status")
 	for status, want := range map[string]float64{"new": 6, "engaged": 5, "promoted": 7, "disqualified": 5} {
 		if rows[status]["leads"] != want {
