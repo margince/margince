@@ -1815,7 +1815,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "trust.typedByPrefix": "Người nhập",
   "trust.loggedInByVia": "{name} đã ghi nhận trong {via}",
   "trust.loggedInBy": "{name} đã ghi nhận",
-  "contact.readFromARecord": "Được đọc từ một bản ghi trong không gian làm việc này.",
+  "contact.readFromARecord": "Được đọc từ một bản ghi.",
   "trust.sourceUnknown": "Không ghi nhận nguồn",
   "trust.imported": "Đã nhập",
   "trust.importedFrom": "Đã nhập từ {uploadName}",

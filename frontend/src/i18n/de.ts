@@ -1863,7 +1863,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "trust.typedByPrefix": "Eingetragen von",
   "trust.loggedInByVia": "In {via} erfasst von {name}",
   "trust.loggedInBy": "Erfasst von {name}",
-  "contact.readFromARecord": "Aus einem Datensatz dieses Arbeitsbereichs gelesen.",
+  "contact.readFromARecord": "Aus einem Datensatz gelesen.",
   "trust.sourceUnknown": "Quelle nicht erfasst",
   "trust.imported": "Importiert",
   "trust.importedFrom": "Importiert aus {uploadName}",
