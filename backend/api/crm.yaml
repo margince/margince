@@ -39506,6 +39506,15 @@ components:
       description: A contact. Mirrors the `contact` table.
       required: [id, full_name, source, captured_by, created_at, updated_at]
       properties:
+        created_from_activity_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            The note, mail or quick capture this contact was read out of, where
+            one was named at creation. Null on a contact a member typed, and
+            null to a reader who may not open that record, so the source chip
+            renders without a link rather than refusing the contact.
         relationship_mark:
           type: [string, 'null']
           enum: [vendor_marketing, null]
@@ -39738,6 +39747,14 @@ components:
       required: [full_name, source]
       properties:
         full_name: { type: string }
+        created_from_activity_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The note, mail or quick capture this contact was read out of. An
+            agent that creates a contact from a record names it here, so a
+            reader can check where the name and title came from. The caller
+            must be able to read it (404 `not_found` otherwise, never 403).
         first_name: { type: [string, 'null'] }
         last_name: { type: [string, 'null'] }
         title: { type: [string, 'null'] }

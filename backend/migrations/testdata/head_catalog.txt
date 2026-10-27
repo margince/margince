@@ -3115,6 +3115,7 @@ public.contact.address_region text gen=- def=-
 public.contact.archived_at timestamp with time zone gen=- def=-
 public.contact.captured_by text NOT NULL gen=- def=-
 public.contact.contact_converted_from_lead_id_fkey FOREIGN KEY (converted_from_lead_id) REFERENCES lead(id) ON DELETE SET NULL (converted_from_lead_id)
+public.contact.contact_created_from_activity_id_fkey FOREIGN KEY (created_from_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.contact.contact_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES contact(id) ON DELETE SET NULL (merged_into_id)
 public.contact.contact_narrowing_reason_check CHECK ((narrowing_reason = ANY (ARRAY['awaiting_verdict'::text, 'outbound_no_answer'::text, 'confidentiality_hold'::text, 'advisor'::text, 'human_decided'::text])))
 public.contact.contact_narrowing_reason_only_when_owner CHECK (((narrowing_reason IS NULL) OR (visibility = 'owner'::text)))
@@ -3132,6 +3133,7 @@ public.contact.contact_version_js_safe CHECK (((version >= '-9007199254740991'::
 public.contact.contact_visibility_check CHECK ((visibility = ANY (ARRAY['workspace'::text, 'owner'::text])))
 public.contact.converted_from_lead_id uuid gen=- def=-
 public.contact.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.contact.created_from_activity_id uuid gen=- def=-
 public.contact.entered_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact.first_name text gen=- def=-
 public.contact.full_name text NOT NULL gen=- def=-
@@ -4765,6 +4767,7 @@ public.idx_consent_event_contact CREATE INDEX idx_consent_event_contact ON publi
 public.idx_consent_event_lead CREATE INDEX idx_consent_event_lead ON public.consent_event USING btree (lead_id, captured_at DESC) WHERE (lead_id IS NOT NULL)
 public.idx_contact_channel_identity_contact CREATE INDEX idx_contact_channel_identity_contact ON public.contact_channel_identity USING btree (contact_id)
 public.idx_contact_confirm_submission_token CREATE INDEX idx_contact_confirm_submission_token ON public.contact_confirm_submission USING btree (token_id)
+public.idx_contact_created_from CREATE INDEX idx_contact_created_from ON public.contact USING btree (created_from_activity_id) WHERE (created_from_activity_id IS NOT NULL)
 public.idx_contact_created_keyset CREATE INDEX idx_contact_created_keyset ON public.contact USING btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_contact_dedupe_scan CREATE INDEX idx_contact_dedupe_scan ON public.contact USING btree (updated_at, id) WHERE (archived_at IS NULL)
 public.idx_contact_email_base CREATE INDEX idx_contact_email_base ON public.contact_email USING btree (regexp_replace(lower(email), '^([^+@]+)\+[^@]*@'::text, '\1@'::text)) WHERE (archived_at IS NULL)

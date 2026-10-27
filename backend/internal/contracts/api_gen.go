@@ -35356,7 +35356,10 @@ type Contact struct {
 	// ConvertedFromLeadId Canonical origin pointer if promoted from a lead.
 	ConvertedFromLeadId *openapi_types.UUID `json:"converted_from_lead_id,omitempty"`
 	CreatedAt           time.Time           `json:"created_at"`
-	Emails              *[]ContactEmail     `json:"emails,omitempty"`
+
+	// CreatedFromActivityId The note, mail or quick capture this contact was read out of, where one was named at creation. Null on a contact a member typed, and null to a reader who may not open that record, so the source chip renders without a link rather than refusing the contact.
+	CreatedFromActivityId *openapi_types.UUID `json:"created_from_activity_id,omitempty"`
+	Emails                *[]ContactEmail     `json:"emails,omitempty"`
 
 	// Employer Where this contact works TODAY: their current primary employment edge, resolved to the account it names. History is not here — the full career ribbon is `contact_360.employments`, and a past employer never appears in this field. Absent is not "works nowhere": the field is also absent when the caller may not read relationship edges (an edge discloses its endpoints as a PAIR, which the grant on the contact does not cover) or when the employer sits outside their company row scope. A reader is told who somebody works for or nothing at all, never a company they have no grant for.
 	Employer  *ContactEmployer `json:"employer,omitempty"`
@@ -37070,15 +37073,18 @@ type CreateContactRequest struct {
 	// into the contact in the same write, and a conversion the server refuses fails the
 	// whole write. An agent sending this field is refused with 422
 	// `convert_needs_a_human`: an agent converts with `promote_lead`.
-	ConvertLeadIds *[]openapi_types.UUID   `json:"convert_lead_ids,omitempty"`
-	Emails         *[]ContactEmailInput    `json:"emails,omitempty"`
-	FirstName      *string                 `json:"first_name,omitempty"`
-	FullName       string                  `json:"full_name"`
-	LastName       *string                 `json:"last_name,omitempty"`
-	OwnerId        *openapi_types.UUID     `json:"owner_id,omitempty"`
-	Phones         *[]ContactPhoneInput    `json:"phones,omitempty"`
-	Social         *map[string]interface{} `json:"social,omitempty"`
-	Source         string                  `json:"source"`
+	ConvertLeadIds *[]openapi_types.UUID `json:"convert_lead_ids,omitempty"`
+
+	// CreatedFromActivityId The note, mail or quick capture this contact was read out of. An agent that creates a contact from a record names it here, so a reader can check where the name and title came from. The caller must be able to read it (404 `not_found` otherwise, never 403).
+	CreatedFromActivityId *openapi_types.UUID     `json:"created_from_activity_id,omitempty"`
+	Emails                *[]ContactEmailInput    `json:"emails,omitempty"`
+	FirstName             *string                 `json:"first_name,omitempty"`
+	FullName              string                  `json:"full_name"`
+	LastName              *string                 `json:"last_name,omitempty"`
+	OwnerId               *openapi_types.UUID     `json:"owner_id,omitempty"`
+	Phones                *[]ContactPhoneInput    `json:"phones,omitempty"`
+	Social                *map[string]interface{} `json:"social,omitempty"`
+	Source                string                  `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -67589,6 +67595,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "created_at")
 	}
 
+	if raw, found := object["created_from_activity_id"]; found {
+		err = json.Unmarshal(raw, &a.CreatedFromActivityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_from_activity_id': %w", err)
+		}
+		delete(object, "created_from_activity_id")
+	}
+
 	if raw, found := object["emails"]; found {
 		err = json.Unmarshal(raw, &a.Emails)
 		if err != nil {
@@ -67865,6 +67879,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 	object["created_at"], err = json.Marshal(a.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'created_at': %w", err)
+	}
+
+	if a.CreatedFromActivityId != nil {
+		object["created_from_activity_id"], err = json.Marshal(a.CreatedFromActivityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'created_from_activity_id': %w", err)
+		}
 	}
 
 	if a.Emails != nil {
@@ -69325,6 +69346,14 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "convert_lead_ids")
 	}
 
+	if raw, found := object["created_from_activity_id"]; found {
+		err = json.Unmarshal(raw, &a.CreatedFromActivityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_from_activity_id': %w", err)
+		}
+		delete(object, "created_from_activity_id")
+	}
+
 	if raw, found := object["emails"]; found {
 		err = json.Unmarshal(raw, &a.Emails)
 		if err != nil {
@@ -69459,6 +69488,13 @@ func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 		object["convert_lead_ids"], err = json.Marshal(a.ConvertLeadIds)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'convert_lead_ids': %w", err)
+		}
+	}
+
+	if a.CreatedFromActivityId != nil {
+		object["created_from_activity_id"], err = json.Marshal(a.CreatedFromActivityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'created_from_activity_id': %w", err)
 		}
 	}
 

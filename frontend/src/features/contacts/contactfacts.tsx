@@ -148,6 +148,12 @@ export function ContactSource({
       }
     >
       <p className="t-body">{contact.source || t("trust.sourceUnknown")}</p>
+      {/* Said, not linked: `activity` has no 360 route by design, so there is
+          no page to send a reader to. Saying a record was read says more than
+          the source stamp alone, which names the door and not the evidence. */}
+      {contact.created_from_activity_id ? (
+        <p className="t-body">{t("contact.readFromARecord")}</p>
+      ) : null}
     </Popover>
   );
 }

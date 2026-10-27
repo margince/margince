@@ -252,25 +252,22 @@ func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, c
 	return nil
 }
 
-// A var rather than a const: the seat-name subselect is built by a
-// function, the way leadColumns already composes its own two.
-var contactColumns = `id, full_name, first_name, last_name, title, owner_id, visibility,
-	address_line1, address_line2, address_city, address_region, address_postal_code, address_country,
-	` + addressCountriesSQL("contact") + `,
-	merged_into_id, converted_from_lead_id, source, captured_by,
-	source_system, source_author_id, source_author_name,
-	` + sourceAuthorSeatNameSQL("contact") + `,
-	version, created_at, updated_at, archived_at, last_activity_at, legal_hold, relationship_mark`
-
 // readContact resolves one contact row; active names the custom-field
 // columns to carry alongside the core ones — nil for internal decision
 // reads whose result never reaches the wire.
 func readContact(ctx context.Context, tx pgx.Tx, id ids.ContactID, archived storekit.ArchivedFilter, active []fieldcatalog.Column) (crmcontracts.Contact, error) {
-	q := `SELECT ` + contactColumns + storekit.SelectSuffix(active) + ` FROM contact WHERE id = $1`
+	// The id binds first, so the gate's own parameters count from there.
+	args := []any{id}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	columns, err := contactColumns(ctx, arg)
+	if err != nil {
+		return crmcontracts.Contact{}, err
+	}
+	q := `SELECT ` + columns + storekit.SelectSuffix(active) + ` FROM contact WHERE id = $1`
 	if archived == storekit.LiveOnly {
 		q += ` AND archived_at IS NULL`
 	}
-	row := tx.QueryRow(ctx, q, id)
+	row := tx.QueryRow(ctx, q, args...)
 	p, err := scanContact(row, active)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.Contact{}, apperrors.ErrNotFound
@@ -303,6 +300,10 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	var sourceSystem, authorName, authorSeatName *string
 	var authorID *ids.UUID
 	var mark *string
+	// Null where the contact was typed, and null where the reader may not open
+	// the record it was read from. The query cannot tell those apart, and a
+	// reader is owed the same answer either way.
+	var createdFrom *ids.UUID
 
 	dests := []any{
 		&id, &p.FullName, &p.FirstName, &p.LastName, &p.Title, &ownerID, &visibility,
@@ -311,7 +312,7 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		&mergedInto, &fromLead, &p.Source, &p.CapturedBy,
 		&sourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt, &p.LastActivityAt, &p.LegalHold,
-		&mark,
+		&mark, &createdFrom,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {
@@ -322,6 +323,7 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	}
 
 	p.Id = openapi_types.UUID(id)
+	p.CreatedFromActivityId = uuidPtr(createdFrom)
 	p.OwnerId = uuidPtr(ownerID)
 	if v := crmcontracts.ContactVisibility(visibility); v != "" {
 		p.Visibility = &v

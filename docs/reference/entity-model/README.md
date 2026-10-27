@@ -29,8 +29,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 333 |
-| Columns | 3946 |
-| Foreign keys | 551 |
+| Columns | 3947 |
+| Foreign keys | 552 |
 | Owning areas | 37 |
 
 ## The 12 records everything else hangs off
@@ -41,8 +41,8 @@ Ranked by how many foreign keys point at them.
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 34 | 145 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 45 | 49 |
-| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 35 | 49 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 68 | 38 |
+| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 36 | 49 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 68 | 39 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 44 | 27 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 41 | 18 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 12 |
@@ -58,6 +58,7 @@ erDiagram
     app_user ||--o{ company : owner_id
     app_user ||--o{ company : source_author_id
     lead ||--o{ contact : converted_from_lead_id
+    activity ||--o{ contact : created_from_activity_id
     app_user ||--o{ contact : owner_id
     app_user ||--o{ contact : source_author_id
     app_user ||--o{ activity : assignee_id
@@ -132,7 +133,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 68 | 38 |
+| [`activity`](activities.md#activity) | activities | 68 | 39 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 5 | 0 |
 | [`activity_clock_refold_mark`](activities.md#activity_clock_refold_mark) | activities | 3 | 0 |
@@ -246,7 +247,7 @@ erDiagram
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 7 | 7 |
 | [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 10 | 0 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
-| [`contact`](contacts.md#contact) | contacts | 35 | 49 |
+| [`contact`](contacts.md#contact) | contacts | 36 | 49 |
 | [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 10 | 1 |
 | [`contact_address_country`](contacts.md#contact_address_country) | contacts | 3 | 0 |
 | [`contact_brief`](compose.md#contact_brief) | compose | 6 | 0 |

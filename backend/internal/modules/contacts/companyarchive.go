@@ -199,7 +199,9 @@ func retireCompanyCascade(ctx context.Context, tx pgx.Tx, id ids.CompanyID, now 
 	return cascade, nil
 }
 
-// A var rather than a const, for the reason contactColumns is one.
+// A var rather than a const: the address-countries subselect is built by a
+// function. A company carries no reader-gated projection, so unlike the
+// contact's list this one needs no context.
 var companyColumns = `id, display_name, legal_name, description, industry, size_band, owner_id, visibility,
 	address_line1, address_line2, address_city, address_region, address_postal_code, address_country,
 	` + addressCountriesSQL("company") + `,

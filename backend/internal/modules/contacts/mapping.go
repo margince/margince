@@ -102,15 +102,16 @@ func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer
 		return CreateContactInput{}, err
 	}
 	in := CreateContactInput{
-		FullName:     req.FullName,
-		FirstName:    req.FirstName,
-		LastName:     req.LastName,
-		Title:        req.Title,
-		Source:       req.Source,
-		SourceSystem: req.SourceSystem,
-		SourceID:     req.SourceId,
-		Author:       author,
-		OwnerID:      idArg[ids.UserKind](req.OwnerId),
+		FullName:              req.FullName,
+		FirstName:             req.FirstName,
+		LastName:              req.LastName,
+		Title:                 req.Title,
+		Source:                req.Source,
+		SourceSystem:          req.SourceSystem,
+		SourceID:              req.SourceId,
+		Author:                author,
+		OwnerID:               idArg[ids.UserKind](req.OwnerId),
+		CreatedFromActivityID: (*ids.UUID)(req.CreatedFromActivityId),
 		// The body's extra top-level keys (custom-field values); the
 		// store decides which land (active catalog columns only).
 		CustomFields:   req.AdditionalProperties,

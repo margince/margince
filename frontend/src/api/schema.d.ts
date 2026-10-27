@@ -27758,6 +27758,11 @@ export interface components {
         /** @description A contact. Mirrors the `contact` table. */
         Contact: {
             /**
+             * Format: uuid
+             * @description The note, mail or quick capture this contact was read out of, where one was named at creation. Null on a contact a member typed, and null to a reader who may not open that record, so the source chip renders without a link rather than refusing the contact.
+             */
+            readonly created_from_activity_id?: string | null;
+            /**
              * @description Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
              * @enum {string|null}
              */
@@ -27886,6 +27891,11 @@ export interface components {
         };
         CreateContactRequest: {
             full_name: string;
+            /**
+             * Format: uuid
+             * @description The note, mail or quick capture this contact was read out of. An agent that creates a contact from a record names it here, so a reader can check where the name and title came from. The caller must be able to read it (404 `not_found` otherwise, never 403).
+             */
+            created_from_activity_id?: string | null;
             first_name?: string | null;
             last_name?: string | null;
             title?: string | null;
