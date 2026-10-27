@@ -7,33 +7,33 @@ package compose
 
 // The registry half of the canonical corpus. The composed registry carries
 // these tools and no direct runner reaches them. Each proof calls the tool by
-// name, as an MCP client does, as a person holding chosen grants.
+// name, as an MCP client does, under a seat holding chosen grants.
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // toolRegistry is the api role's own composition over the forecast fixture.
 func (e *forecastEnv) toolRegistry() *agents.Registry {
-	return registryWithGate(InstallationDB(e.Pool), auth.NewGate(adminSeat{}), nil,
-		SendPath{}, companyEnricher{}, nil, nil, nil, nil, nil, registryFeatures{})
+	return composedRegistryOn(InstallationDB(e.Pool))
 }
 
-// callTool invokes one tool and decodes its answer into out.
+// invokeAnswer invokes one tool and decodes its answer into out.
 //
-//craft:ignore naked-any callTool is the one decode seam; each caller passes its own answer struct
-func (e *forecastEnv) callTool(ctx context.Context, t *testing.T, tool, args string, out any) {
+//craft:ignore naked-any invokeAnswer is the decode seam of these proofs; each caller passes its own answer struct
+func invokeAnswer(ctx context.Context, t *testing.T, registry *agents.Registry, tool, args string, out any) {
 	t.Helper()
-	raw, err := e.toolRegistry().Invoke(ctx, tool, json.RawMessage(args))
+	raw, err := registry.Invoke(ctx, tool, json.RawMessage(args))
 	if err != nil {
 		t.Fatalf("%s(%s) was refused: %v", tool, args, err)
 	}
@@ -60,14 +60,14 @@ func (e *forecastEnv) daysAgo(t *testing.T, n int) string {
 	return at
 }
 
-// seedHeldMeetingBy writes a held meeting credited to a host and linked to a
-// lead.
-func (e *forecastEnv) seedHeldMeetingBy(t *testing.T, host, lead ids.UUID) {
+// seedMeetingBy writes a meeting at a given standing, credited to a host and
+// linked to a lead.
+func (e *forecastEnv) seedMeetingBy(t *testing.T, status string, host, lead ids.UUID) {
 	t.Helper()
 	meeting := e.seedID(t, `INSERT INTO activity (id, kind, direction, meeting_status, subject, occurred_at,
 			thread_key, source, captured_by, host_user_id)
-		VALUES ($1, 'meeting', 'outbound', 'held', 'Intro call', now() - interval '3 days',
-		        gen_random_uuid()::text, 'manual', 'human:x', $2)`, host)
+		VALUES ($1, 'meeting', 'outbound', $2, 'Intro call', now() - interval '3 days',
+		        gen_random_uuid()::text, 'manual', 'human:x', $3)`, status, host)
 	e.seedID(t, `INSERT INTO activity_link (id, activity_id, entity_type, lead_id) VALUES ($1, $2, 'lead', $3)`,
 		meeting, lead)
 }
@@ -78,30 +78,39 @@ func (e *forecastEnv) seedHeldMeetingBy(t *testing.T, host, lead ids.UUID) {
 func proveG05HeldMeetingsThatConverted(t *testing.T) {
 	e := setupForecast(t)
 	converted := e.seedHandoffLead(t, "converted@customer.test")
-	e.seedHeldMeetingBy(t, e.Rep1, converted)
+	e.seedMeetingBy(t, "held", e.Rep1, converted)
 	e.acceptHandoff(t, converted, e.daysAgo(t, 2))
 	e.acceptHandoff(t, converted, e.daysAgo(t, 1))
 
 	company := e.seedHandoffCompany(t)
 	metOnly := e.seedHandoffLead(t, "met-only@customer.test")
-	e.seedHeldMeetingBy(t, e.Rep1, metOnly)
+	e.seedMeetingBy(t, "held", e.Rep1, metOnly)
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE lead SET company_name = 'Handoff Customer' WHERE id = $1`, metOnly); err != nil {
+		t.Fatalf("naming the prospect's company: %v", err)
+	}
 	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, company_id, amount_minor, currency,
 			source, captured_by)
 		VALUES ($1, 'Same company', $2, $3, $4, 250000, 'EUR', 'manual', 'human:x')`,
 		e.pipeline, e.stages[60], company)
 
 	notHeld := e.seedHandoffLead(t, "booked@customer.test")
-	e.seedMeeting(t, "booked", notHeld, "2026-03-02T10:00:00Z")
+	e.seedMeetingBy(t, "booked", e.Rep1, notHeld)
+	e.acceptHandoff(t, notHeld, e.daysAgo(t, 1))
 	colleague := e.seedHandoffLead(t, "colleague@customer.test")
-	e.seedHeldMeetingBy(t, e.Rep3, colleague)
+	e.seedMeetingBy(t, "held", e.Rep3, colleague)
 	e.acceptHandoff(t, colleague, e.daysAgo(t, 1))
 
 	var got struct {
 		Rows []map[string]any `json:"rows"`
 	}
-	e.callTool(e.activityReader(tableLead), t, "run_report", `{"report":"meeting-conversion",
+	invokeAnswer(e.activityReader(tableLead), t, e.toolRegistry(), "run_report", `{"report":"meeting-conversion",
 		"filters":{"host_user_id":"`+e.Rep1.String()+`"},"group_by":["became_opportunity"],
 		"aggregates":[{"fn":"count","as":"meetings"}]}`, &got)
+	if _, err := e.toolRegistry().Invoke(e.activityReader(), "run_report", json.RawMessage(`{"report":"meeting-conversion",
+		"group_by":["became_opportunity"],"aggregates":[{"fn":"count","as":"meetings"}]}`)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("the conversion without the lead grant answered %v, want a permission refusal", err)
+	}
 	byOutcome := rowsBy(t, got.Rows, "became_opportunity")
 	if len(byOutcome) != 2 || byOutcome[true]["meetings"] != float64(1) || byOutcome[false]["meetings"] != float64(1) {
 		t.Errorf("conversion = %v, want one converted and one not: a double handoff counted twice, "+
@@ -119,8 +128,10 @@ func proveG09LeadFirstResponse(t *testing.T) {
 	}
 	imported := "mirror:hubspot"
 	e.seedLeadAnsweredAfter(t, 200, &imported)
-	e.seedID(t, `INSERT INTO lead (id, full_name, source, captured_by, created_at)
-		VALUES ($1, 'Waiting', 'inbound', 'human:x', now() - interval '5 days')`)
+	for range 2 {
+		e.seedID(t, `INSERT INTO lead (id, full_name, source, captured_by, created_at)
+			VALUES ($1, 'Waiting', 'inbound', 'human:x', now() - interval '5 days')`)
+	}
 
 	var got struct {
 		Evaluation struct {
@@ -130,13 +141,13 @@ func proveG09LeadFirstResponse(t *testing.T) {
 			} `json:"metrics"`
 		} `json:"evaluation"`
 	}
-	e.callTool(sectionsReader(e, e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeAll), t, "read_reporting",
+	invokeAnswer(sectionsReader(e, e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeAll), t, e.toolRegistry(), "read_reporting",
 		`{"mode":"evaluate","selection":{"metrics":["lead_first_response"],"scope":{"kind":"workspace"},
 		"period":"custom","interval":{"start_at":"`+e.daysAgo(t, 10)+`","end_at":"`+e.daysAgo(t, -1)+`"},
 		"target_basis":"month","close_window":"all_open","blocks":["metric_reading"]}}`, &got)
 	if len(got.Evaluation.Metrics) != 1 || got.Evaluation.Metrics[0].Value == nil || *got.Evaluation.Metrics[0].Value != 4 {
 		t.Errorf("first response = %+v, want a median of 4 hours: the imported lead would make it 6 "+
-			"and the unanswered one read as zero would make it 3", got.Evaluation.Metrics)
+			"and the unanswered ones read as zero would make it 3", got.Evaluation.Metrics)
 	}
 }
 
@@ -150,27 +161,6 @@ func (e *forecastEnv) seedLeadAnsweredAfter(t *testing.T, hours int, sourceSyste
 		hours, sourceSystem)
 }
 
-// callToolAs invokes one tool on the real registry the integration env
-// carries, as a person with the env's admin grants.
-//
-//craft:ignore naked-any callToolAs is the one decode seam; each caller passes its own answer struct
-func callToolAs(ctx context.Context, t *testing.T, e *integration.Env, tool, args string, out any) {
-	t.Helper()
-	raw, err := composedRegistry(e).Invoke(ctx, tool, json.RawMessage(args))
-	if err != nil {
-		t.Fatalf("%s(%s) was refused: %v", tool, args, err)
-	}
-	var envelope struct {
-		Data json.RawMessage `json:"data"`
-	}
-	if err := json.Unmarshal(raw, &envelope); err != nil {
-		t.Fatalf("%s answered %s, which is not a tool envelope: %v", tool, raw, err)
-	}
-	if err := json.Unmarshal(envelope.Data, out); err != nil {
-		t.Fatalf("%s answered %s, which is not the shape this proof reads: %v", tool, envelope.Data, err)
-	}
-}
-
 // G06: which of my deals are slipping this week, and why. Each listed deal
 // carries its evidence. A quiet deal with no next step says so, and a quiet
 // deal with a booked meeting ahead does not. A deal touched today is absent.
@@ -178,10 +168,7 @@ func proveG06SlippingDealsWithEvidence(t *testing.T) {
 	e := setupReconcile(t)
 	quiet := func(name string) ids.UUID {
 		deal := e.SeedDeal(t, name, e.pipeline, e.open, &e.Rep1)
-		if _, err := e.owner.Exec(context.Background(), `UPDATE deal SET created_at = now() - interval '30 days',
-			last_activity_at = now() - interval '30 days' WHERE id = $1`, deal); err != nil {
-			t.Fatalf("aging %s: %v", name, err)
-		}
+		idleFor(t, e.Env, deal, 30)
 		return deal
 	}
 	noStep := quiet("No next step")
@@ -197,7 +184,7 @@ func proveG06SlippingDealsWithEvidence(t *testing.T) {
 			} `json:"evidence"`
 		} `json:"deals"`
 	}
-	callToolAs(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms), t, e.Env, "read_attention",
+	invokeAnswer(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms), t, composedRegistry(e.Env), "read_attention",
 		`{"view":"slipping","quiet_days":14,"limit":10}`, &got)
 	sources := map[ids.UUID][]string{}
 	for _, deal := range got.Deals {
@@ -211,8 +198,8 @@ func proveG06SlippingDealsWithEvidence(t *testing.T) {
 	if !slices.Contains(sources[noStep], "activity.task") {
 		t.Errorf("the quiet deal with no next step has evidence %v, want the no-next-step reason", sources[noStep])
 	}
-	if slices.Contains(sources[meetingAhead], "activity.task") {
-		t.Errorf("the deal with a booked meeting ahead is flagged as having no next step: %v", sources[meetingAhead])
+	if _, listed := sources[meetingAhead]; listed {
+		t.Errorf("the deal with a booked meeting ahead is listed as slipping: %v", sources[meetingAhead])
 	}
 	if _, listed := sources[fresh]; listed {
 		t.Errorf("a deal touched today is listed as slipping: %v", sources[fresh])
@@ -226,6 +213,8 @@ func proveG07OpenPromisesToCustomers(t *testing.T) {
 	contact := e.SeedContact(t, "Herr Vogt", &e.Rep1)
 	seedClaim(t, e, contact, "I will send the revised offer on Friday", "commitment_ours")
 	seedClaim(t, e, contact, "We will confirm the budget next week", "commitment_theirs")
+	done := seedWorklistTask(t, e, contact, "Already sent")
+	e.WsExec(t, `UPDATE activity SET is_done = true, done_at = now() WHERE id = $1`, done.Id.String())
 
 	var got struct {
 		Commitments []struct {
@@ -234,9 +223,9 @@ func proveG07OpenPromisesToCustomers(t *testing.T) {
 			DueAt  *string `json:"due_at"`
 		} `json:"commitments"`
 	}
-	callToolAs(e.Admin(), t, e, "read_attention", `{"view":"commitments","limit":20}`, &got)
+	invokeAnswer(e.Admin(), t, composedRegistry(e), "read_attention", `{"view":"commitments","limit":20}`, &got)
 	if len(got.Commitments) != 1 || got.Commitments[0].Quote != "I will send the revised offer on Friday" {
-		t.Fatalf("commitments = %+v, want only our own promise: the customer's must never be read as ours",
+		t.Fatalf("commitments = %+v, want only our own open promise: the customer's must never be read as ours, nor a finished task",
 			got.Commitments)
 	}
 	if got.Commitments[0].DueAt == nil {
