@@ -5403,6 +5403,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/extension-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The counts and breakdowns installed extensions add to Reports and Home, answered for this caller.
+         * @description Each count and breakdown an installed extension declares, run through the report engine for
+         *     this caller. Row scope, field masks and the group floor apply as they do to a core report.
+         *     Which extensions are installed is a fact of the binary, so the contract cannot list them;
+         *     this operation does.
+         *
+         *     A report the caller may not read, or whose custom field this installation does not define,
+         *     is left out. A breakdown over a multi-select custom field splits by the combination of
+         *     values a record holds. Empty when no installed extension declares one.
+         */
+        get: operations["listExtensionReports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tasks": {
         parameters: {
             query?: never;
@@ -35493,6 +35520,42 @@ export interface components {
             /** @description The extension that declared the type. */
             unit: string;
         };
+        /** @description The counts and breakdowns installed extensions add that this caller may read, ordered by name. */
+        ExtensionReportDirectory: {
+            data: components["schemas"]["ExtensionReport"][];
+        };
+        ExtensionReport: {
+            /** @description The report as `ext:<unit>:<name>`. */
+            name: string;
+            /** @description The extension that declared it. */
+            unit: string;
+            /** @description What a screen shows, in English. */
+            label: string;
+            /** @enum {string} */
+            kind: "count" | "breakdown";
+            /** @description What is counted, a record kind (`ext:<unit>:<kind>`) or a core report population. */
+            population: string;
+            /** @description The field a breakdown splits by. Absent on a count. */
+            by?: string;
+            /**
+             * @description One entry per group of a breakdown, or one for a count. A group the floor withheld
+             *     carries no key and no count.
+             */
+            groups: components["schemas"]["ExtensionReportGroup"][];
+            /** @description The group floor kept a group back, and with it the total. */
+            withheld: boolean;
+            /** @description The whole count. Null once anything is withheld, because total minus the shown groups would be the withheld one. */
+            total: number | null;
+            /** @description Visible rows a field mask withheld from this run. Null when no mask applied. */
+            excluded_by_permission: number | null;
+        };
+        ExtensionReportGroup: {
+            /** @description The value of the field. Null for records with no value, and for a withheld group. */
+            key: string | null;
+            /** @description Null for a withheld group. */
+            count: number | null;
+            withheld: boolean;
+        };
         /** @description The record kinds installed extensions add that this caller may read, ordered by name. */
         RecordKindDirectory: {
             data: components["schemas"]["RecordKindOption"][];
@@ -59630,6 +59693,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecordKindDirectory"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listExtensionReports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every report this caller may read, ordered by name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtensionReportDirectory"];
                 };
             };
             401: components["responses"]["Unauthorized"];

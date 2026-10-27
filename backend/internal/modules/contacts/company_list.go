@@ -317,8 +317,8 @@ func appendCompanyEnumClauses(where []string, in ListCompaniesInput, arg func(an
 	return where, nil
 }
 
-// relationshipTypeClause is EXISTS, not a join: an account carries several types,
-// and a join would return it once per row for the keyset cursor to page over.
+// relationshipTypeClause is EXISTS, not a join. An account carries several
+// types, and a join would return it once per row for the keyset cursor to page over.
 func relationshipTypeClause(argument int) string {
 	return storekit.SQLf(`EXISTS (
 		SELECT 1 FROM company_relationship_type rt

@@ -282,6 +282,12 @@ type Extension struct {
 	// tags, lists and the audit log, under rights that default to deny.
 	RecordKinds []RecordKindDeclaration
 
+	// ReportCounts and ReportBreakdowns are the named numbers this unit adds to
+	// Reports and Home. They are data: core builds the query, so a unit cannot
+	// register one that skips row scope, field masks or the group floor.
+	ReportCounts     []ReportCount
+	ReportBreakdowns []ReportBreakdown
+
 	// FinanceSources are the accounting systems this unit can read into the
 	// core's finance mirror. Read only: nothing on the surface writes back to
 	// an accounting system. A provider may be supplied by one unit only.

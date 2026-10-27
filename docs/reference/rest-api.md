@@ -138,6 +138,22 @@ seat sees only the kinds it may read. Each entry carries the `display_name`, the
 `delete_policy` and the `actions` the seat holds. The list is empty when no extension declares a kind or the seat may read none.
 The steps for the extension's side are in [how-to/add-an-extension.md](../how-to/add-an-extension.md#declare-a-record-kind).
 
+## Reports from extensions
+
+`GET /v1/extension-reports` answers the counts installed extensions add, whole or split by a field, to Reports and Home, each named
+`ext:<unit>:<name>`. Each entry carries the `label`, the `kind` (`count` or `breakdown`), the `population`, the `by`
+field of a breakdown, the `groups` and the `total`. Row scope, the mask and the group floor apply as for a core report.
+
+| Field | Meaning |
+|---|---|
+| `groups` | One entry per group, or one for a count. A hidden group has `withheld: true` and no key or count. |
+| `withheld` | The floor hides a group. `total` is then `null`. |
+| `excluded_by_permission` | Visible rows a mask hides. `null` when no mask applied. |
+
+A report the seat may not read is left out. So is one whose custom field this installation has not set up. The list is
+empty when no extension declares one. The steps for the extension's side are in
+[how-to/add-an-extension.md](../how-to/add-an-extension.md#declare-a-report-count-or-breakdown).
+
 ## Events out
 
 Margince sends events to your system as signed webhooks. To register one, see

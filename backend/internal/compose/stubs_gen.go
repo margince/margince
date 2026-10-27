@@ -1907,6 +1907,10 @@ func (stubs) ConnectExtOauth(w nethttp.ResponseWriter, r *nethttp.Request, provi
 	httperr.NotImplemented(w, r, "ConnectExtOauth")
 }
 
+func (stubs) ListExtensionReports(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListExtensionReports")
+}
+
 func (stubs) ListExtensions(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListExtensions")
 }

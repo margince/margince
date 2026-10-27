@@ -435,27 +435,8 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 		if err == nil {
 			m.FinanceSources = append(m.FinanceSources, sources...)
 		}
-	case "Entries":
-		m.Entries, err = r.readEntries(kv.Value, file)
-	case "Settings":
-		m.Settings, err = r.readSettings(kv.Value, file)
-	case "CompanyTypes":
-		m.CompanyTypes, err = r.readCompanyTypes(kv.Value, file)
-	case "RecordKinds":
-		m.RecordKinds, err = r.readRecordKindDecls(kv.Value, file, extension.Name(r.unit))
-	case "Panels":
-		m.Panels, err = r.readPanels(kv.Value, file)
-	case "Inbound":
-		m.Inbound, err = r.readInbound(kv.Value, file)
-	case "SystemReads":
-		m.SystemReads, err = r.readSystemReads(kv.Value, file)
-	case "OAuthApps":
-		m.OAuthApps, err = r.readOAuthApps(kv.Value, file)
 	default:
-		// Fail closed: a field this generator does not recognize could be a
-		// future governed capability, and a manifest that silently omitted
-		// it would hide a request from the operator.
-		err = r.errAt(kv, "Extension field %s is not derivable by this generator — teach the manifest reader before declaring it", key.Name)
+		err = r.readDeclaredField(key.Name, kv, file, m)
 	}
 	return err
 }

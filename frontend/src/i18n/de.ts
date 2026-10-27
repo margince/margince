@@ -5799,6 +5799,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.readings.leadsDue": "Nächste Fälligkeit {value}",
   "brief.rail": "Kontext",
   "brief.rail.numbers": "Kennzahlen",
+  "extensionReports.withheld":
+    "Zurückgehalten: zu wenige Datensätze für eine Anzeige",
+  "extensionReports.noValue": "Kein Wert",
+  "extensionReports.excluded_one":
+    "{count} Datensatz ist für dich durch eine Feldberechtigung ausgeblendet.",
+  "extensionReports.excluded_other":
+    "{count} Datensätze sind für dich durch eine Feldberechtigung ausgeblendet.",
+  "extensionReports.failed":
+    "Die Berichte deiner Erweiterungen konnten nicht geladen werden.",
   "brief.deck.later": "Später",
   "brief.deck.showMore": "Ganze Nachricht anzeigen",
   "brief.deck.showLess": "Weniger anzeigen",
