@@ -245,7 +245,7 @@ func (m attentionMeetingsAwaitingOutcome) Since(
 		}
 		over = append(over, attention.MeetingAwaitingOutcome{
 			ID: ids.UUID(row.Id), Subject: subjectOfMeeting(row), StartedAt: row.OccurredAt, Precision: row.OccurredPrecision,
-			Version: row.Version, HostUserID: hostOfMeeting(row), CalendarManaged: activities.CalendarManaged(row),
+			Version: row.Version, HostUserID: hostOfMeeting(row), CalendarManaged: row.CalendarManaged != nil && *row.CalendarManaged,
 			ReadOnly: row.Writable == nil || !*row.Writable,
 		})
 	}

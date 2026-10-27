@@ -33,7 +33,7 @@ const MeetingNoonCutoffMigration = "1792761600"
 // noon of the day the start already had. No later change moved the start. The
 // zone is $1, the cutoff migration $2. A day meeting is stored at noon UTC and
 // has no start to restore, so neither side of that save is one.
-const noonMeetingScope = `
+var noonMeetingScope = `
   FROM activity a
   JOIN LATERAL (
        SELECT au.action, au.actor_type, au.occurred_at AS saved_at, au.after ? 'meeting_status' AS set_status,
@@ -50,7 +50,7 @@ const noonMeetingScope = `
    AND (last.original AT TIME ZONE $1)::date = (a.occurred_at AT TIME ZONE $1)::date
    AND (last.original AT TIME ZONE $1)::time <> TIME '12:00:00' AND last.original_precision IS DISTINCT FROM 'day'
    AND last.saved_at < (SELECT m.applied_at FROM schema_migrations_core m WHERE m.version = $2)
-   AND NOT EXISTS (SELECT 1 FROM meeting_invitation i WHERE i.activity_id = a.id AND i.` + InvitationHoldsMeetingSQL + `)`
+   AND NOT EXISTS (SELECT 1 FROM meeting_invitation i WHERE i.activity_id = a.id AND ` + InvitationHoldsMeetingSQL("i") + `)`
 
 // NoonMeeting is one meeting to restore: the start it holds, the one the
 // outcome save replaced, and whether it was archived since.

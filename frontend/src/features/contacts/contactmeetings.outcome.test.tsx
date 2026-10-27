@@ -148,7 +148,11 @@ it("sends only how it went for a meeting its calendar invitation holds", async (
   const patched: unknown[] = [];
   mount(
     () => [
-      meeting({ meeting_status: "booked", invitation_status: "confirmed" }),
+      meeting({
+        meeting_status: "booked",
+        invitation_status: "confirmed",
+        calendar_managed: true,
+      }),
     ],
     (body) => patched.push(body),
   );

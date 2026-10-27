@@ -316,6 +316,11 @@ func admitActivityPatch(
 	if !held && in.MeetingStatus != nil && current.Kind != crmcontracts.ActivityKindMeeting {
 		return crmcontracts.Activity{}, held, &MeetingStatusKindError{Kind: string(current.Kind)}
 	}
+	if !held && !in.calendarSettlement && changesInvitation(*in) {
+		if err := refuseActiveInvitationPatch(ctx, tx, id.UUID); err != nil {
+			return crmcontracts.Activity{}, held, err
+		}
+	}
 	if !held {
 		if err := refuseOutcomeBeforeStart(ctx, tx, current, *in); err != nil {
 			return crmcontracts.Activity{}, held, err
@@ -323,11 +328,6 @@ func admitActivityPatch(
 	}
 	if !held {
 		if err := checkTaskFieldsKind(string(current.Kind), taskFields{in.DueAt, in.RemindAt, in.AssigneeID, in.IsDone}); err != nil {
-			return crmcontracts.Activity{}, held, err
-		}
-	}
-	if !held && !in.calendarSettlement && changesInvitation(*in) {
-		if err := refuseActiveInvitationPatch(ctx, tx, id.UUID); err != nil {
 			return crmcontracts.Activity{}, held, err
 		}
 	}
@@ -462,7 +462,7 @@ func archiveActivityInTx(
 		return crmcontracts.Activity{}, err
 	}
 	p := storekit.NewPatch()
-	p.Set("archived_at", nil, time.Now().UTC())
+	p.Set("archived_at", nil, asOf.UTC())
 	// held drops the filter AND the pin: the filter lets the UPDATE reach
 	// activity_refuse_restricted_mutation instead of a LiveOnly clause
 	// hiding the row again, and the pin — a CAS by WHERE clause that never

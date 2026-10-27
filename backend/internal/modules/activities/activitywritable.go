@@ -19,11 +19,14 @@ import (
 )
 
 // StampActivityAffordances sets what the reader may do with each row of a page.
-// Writable says they may write it; AwaitingOutcome, judged at asOf, says its
-// meeting still asks how it went.
+// Writable says they may write it; CalendarManaged that an invitation holds it;
+// AwaitingOutcome, judged at asOf, that its meeting still asks how it went.
 func StampActivityAffordances(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity, asOf time.Time) error {
 	if err := stampActivitiesWritable(ctx, tx, page); err != nil {
 		return err
+	}
+	for i := range page {
+		page[i].CalendarManaged = new(CalendarManaged(page[i]))
 	}
 	return stampAwaitingOutcome(ctx, tx, page, asOf)
 }

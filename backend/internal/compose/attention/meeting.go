@@ -9,7 +9,6 @@ package attention
 // one file apart, where a change to the hint could stop the ranking reading it.
 
 import (
-	"slices"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -266,9 +265,7 @@ func classifyUnansweredMeeting(item crmcontracts.AttentionItem, asOf time.Time) 
 	// the consequence says what it costs.
 	row := base(item, levelAgreed, "meetings", "data_drifts")
 	row.Because = []crmcontracts.WorklistReason{reason("outcome_unrecorded", nil)}
-	if !slices.Contains(row.Actions, crmcontracts.WorklistItemActionsDecide) {
-		row.Because = append(row.Because, reason("read_only", nil))
-	}
+	row.Because = appendReadOnly(row, crmcontracts.WorklistItemActionsDecide)
 	row.Host = hostOnTheWire(item)
 	return ranked{
 		item:       row,

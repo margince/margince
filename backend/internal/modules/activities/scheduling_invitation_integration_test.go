@@ -30,6 +30,8 @@ type invitationCalendar struct {
 	checkErr   error
 	listErr    error
 	busyErr    error
+	// saved runs once the provider holds the event, before its receipt is filed.
+	saved func()
 }
 
 func (c *invitationCalendar) Check(context.Context, ids.UserID, string) error { return c.checkErr }
@@ -44,6 +46,9 @@ func (c *invitationCalendar) Save(_ context.Context, _ ids.UserID, _ string, in 
 	c.requests = append(c.requests, in)
 	if c.fail {
 		return connector.CalendarReceipt{}, connector.ErrUnreachable
+	}
+	if c.saved != nil {
+		c.saved()
 	}
 	receipt := connector.CalendarReceipt{EventID: in.RequestID, UID: in.RequestID + "@calendar.test", URL: "https://calendar.example.test/event"}
 	if in.VideoCall {

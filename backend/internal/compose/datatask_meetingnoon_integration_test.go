@@ -362,3 +362,27 @@ func TestTheNoonRepairOfAnArchivedMeetingRollsBackWithItsBatch(t *testing.T) {
 		t.Errorf("restore audit rows escaped the rollback: %d", got)
 	}
 }
+
+// An erased invitation no longer holds its meeting. The noon save landed while
+// the invitation was canceled. Erasing the guest then archived the meeting and
+// erased the invitation, and the task still restores the start.
+func TestTheNoonTaskRestoresAMeetingWhoseInvitationWasErased(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	e.WsExec(t, `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, noonZone)
+	f := noonFixture{t: t, e: e}
+	invitedAt := time.Date(2026, 7, 15, 9, 0, 0, 0, time.UTC)
+	inviting := newInvitingStore(t, e, memberSeat(e, e.Rep1, principal.SeatFull), invitedAt.AddDate(0, 0, -2))
+	guest := e.SeedContact(t, "Erased guest", nil)
+	meeting := inviting.invite(t, guest, invitedAt)
+	inviting.cancel(t, meeting)
+	f.save(ids.From[ids.ActivityKind](meeting), berlinNoon)
+	inviting.eraseGuest(t, e, guest, meeting)
+	f.cutoffNow()
+
+	runMachineAddressTask(ctx, t, e, meetingNoonStartsDataTask())
+
+	if got, want := f.start(ids.From[ids.ActivityKind](meeting)), "2026-07-15T09:00:00.000Z"; got != want {
+		t.Errorf("the meeting whose invitation was erased starts at %s, want %s", got, want)
+	}
+}

@@ -6,6 +6,8 @@ package activities
 import (
 	"context"
 	"errors"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -197,20 +199,24 @@ func (s *Store) settleInvitation(ctx context.Context, tx pgx.Tx, row invitationR
 		return err
 	}
 	at := s.now()
-	status := "booked"
-	// An outcome stays only on a slot that has started: a meeting moved ahead has not happened.
-	started := !row.Appointment.Start.After(at)
-	if started && current.MeetingStatus != nil && (*current.MeetingStatus == ScheduledStatusHeld || *current.MeetingStatus == "no_show") {
-		status = string(*current.MeetingStatus)
+	status := new(string(crmcontracts.ActivityMeetingStatusBooked))
+	stored := meetingStatusString(current.MeetingStatus)
+	// An outcome recorded before a reschedule belongs to the slot it left.
+	if row.Command != invitationUpdate && isMeetingOutcome(&stored) {
+		status = &stored
+	}
+	status, err = statusAfterMove(ctx, tx, status, row.Appointment.Start, PrecisionInstant, &at)
+	if err != nil {
+		return err
 	}
 	if row.Status == invitationCanceled {
-		status = invitationCanceled
+		status = new(invitationCanceled)
 	}
 	id := ids.From[ids.ActivityKind](row.ID)
 	// Provider receipts identify the organizer's intent without taking the natural
 	// key of a colleague's independently captured attendee copy.
 	seconds := int(row.Appointment.End.Sub(row.Appointment.Start) / time.Second)
-	if _, err := updateActivityInTx(ctx, tx, id, UpdateActivityInput{calendarSettlement: true, recordedAt: &at, OccurredAt: &row.Appointment.Start, MeetingStatus: &status, DurationSeconds: &seconds}); err != nil {
+	if _, err := updateActivityInTx(ctx, tx, id, UpdateActivityInput{calendarSettlement: true, recordedAt: &at, OccurredAt: &row.Appointment.Start, MeetingStatus: status, DurationSeconds: &seconds}); err != nil {
 		return err
 	}
 
@@ -245,13 +251,18 @@ func CalendarManaged(meeting crmcontracts.Activity) bool {
 	return meeting.InvitationStatus != nil && invitationHoldsMeeting(string(*meeting.InvitationStatus))
 }
 
-// InvitationHoldsMeetingSQL is invitationHoldsMeeting over a meeting_invitation
-// row's status column, qualified by the caller's alias when it needs one.
-const InvitationHoldsMeetingSQL = "status NOT IN ('" + invitationCanceled + "', '" + invitationErased + "')"
+// releasedInvitationStatuses no longer hold their meeting. An erased invitation
+// was withdrawn with its guest.
+var releasedInvitationStatuses = []string{invitationCanceled, invitationErased}
 
-// An erased invitation was withdrawn with its guest, so it no longer holds the meeting.
+// InvitationHoldsMeetingSQL is invitationHoldsMeeting over the status column of
+// the meeting_invitation row aliased alias, a compile-time identifier.
+func InvitationHoldsMeetingSQL(alias string) string {
+	return pgx.Identifier{alias, "status"}.Sanitize() + " NOT IN ('" + strings.Join(releasedInvitationStatuses, "', '") + "')"
+}
+
 func invitationHoldsMeeting(status string) bool {
-	return status != invitationCanceled && status != invitationErased
+	return !slices.Contains(releasedInvitationStatuses, status)
 }
 
 func transitionInvitation(ctx context.Context, tx pgx.Tx, row *invitationRow, in crmcontracts.MeetingInvitationChange, buffer int) error {
@@ -264,7 +275,7 @@ func transitionInvitation(ctx context.Context, tx pgx.Tx, row *invitationRow, in
 			return err
 		}
 		row.Appointment.Start, row.Appointment.End = *in.Start, *in.End
-		row.Status, row.Command = "rescheduling", "update"
+		row.Status, row.Command = "rescheduling", invitationUpdate
 	case invitationCancel:
 		if row.Status == invitationCanceled || row.Status == invitationCanceling || row.Status == invitationErased {
 			return apperrors.ErrConflict
@@ -275,7 +286,7 @@ func transitionInvitation(ctx context.Context, tx pgx.Tx, row *invitationRow, in
 			return apperrors.ErrConflict
 		}
 		row.Status = invitationPending
-		if row.Command == "update" {
+		if row.Command == invitationUpdate {
 			row.Status = "rescheduling"
 		}
 		if row.Command == invitationCancel {

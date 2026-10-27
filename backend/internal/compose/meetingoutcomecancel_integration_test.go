@@ -21,21 +21,20 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // A meeting outcome row offers `cancel` only where the cancel is accepted. A
-// live invitation refuses it; a canceled or erased one no longer holds the meeting.
+// live invitation refuses it, as does one whose guest left a shared meeting by
+// erasure; a canceled one no longer holds the meeting.
 func TestAMeetingOutcomeRowOffersCancelOnlyWhereTheWriteIsAccepted(t *testing.T) {
 	e := integration.Setup(t)
 	now := laneDay.Add(3 * time.Hour)
 	// A signed-in member holds a full seat, and only a full seat is offered a write.
-	reader := principal.WithActor(e.As(e.Rep1, nil, integration.AdminPerms), principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
-		Permissions: integration.AdminPerms, SeatType: principal.SeatFull,
-	})
+	reader := memberSeat(e, e.Rep1, principal.SeatFull)
 	host := ids.From[ids.UserKind](e.Rep1)
 	inviting := newInvitingStore(t, e, reader, now.AddDate(0, 0, -2))
 	customer := func(name string) ids.UUID {
@@ -65,18 +64,18 @@ func TestAMeetingOutcomeRowOffersCancelOnlyWhereTheWriteIsAccepted(t *testing.T)
 		t.Fatalf("booking the withdrawn meeting again: %v", err)
 	}
 	erasedGuest := customer("Erased guest")
-	erased := inviting.invite(t, erasedGuest, monday(14))
-	if _, err := e.Activities.RelinkActivity(reader, ids.From[ids.ActivityKind](erased), activities.RelinkActivityInput{EntityType: "contact", EntityID: customer("Second attendee")}); err != nil {
+	shared := inviting.invite(t, erasedGuest, monday(14))
+	if _, err := e.Activities.RelinkActivity(reader, ids.From[ids.ActivityKind](shared), activities.RelinkActivityInput{EntityType: "contact", EntityID: customer("Second attendee")}); err != nil {
 		t.Fatalf("linking a second attendee, so the meeting outlives the erasure: %v", err)
 	}
 	if err := inviting.eraser.EraseContact(e.Admin(), erasedGuest, "subject request"); err != nil {
 		t.Fatalf("erasing the guest: %v", err)
 	}
 	meetings := map[string]ids.UUID{
-		"no invitation":       booked("Booked in the app"),
-		"live invitation":     confirmed,
-		"canceled invitation": withdrawn,
-		"erased invitation":   erased,
+		"no invitation":                        booked("Booked in the app"),
+		"live invitation":                      confirmed,
+		"canceled invitation":                  withdrawn,
+		"a guest erased from a shared meeting": shared,
 	}
 	offers := cancelOffers(t, e, reader, now)
 	for name, meeting := range meetings {
@@ -84,8 +83,12 @@ func TestAMeetingOutcomeRowOffersCancelOnlyWhereTheWriteIsAccepted(t *testing.T)
 		if !read {
 			t.Fatalf("%s: no meeting_outcome row for the meeting", name)
 		}
+		stamped, err := e.Activities.GetActivity(reader, ids.From[ids.ActivityKind](meeting), storekit.LiveOnly)
+		if err != nil {
+			t.Fatalf("%s: reading the meeting: %v", name, err)
+		}
 		canceled := "canceled"
-		_, err := e.Activities.UpdateActivity(reader, ids.From[ids.ActivityKind](meeting), activities.UpdateActivityInput{MeetingStatus: &canceled})
+		_, err = e.Activities.UpdateActivity(reader, ids.From[ids.ActivityKind](meeting), activities.UpdateActivityInput{MeetingStatus: &canceled})
 		var refusal *activities.SchedulingArgumentError
 		refused := errors.As(err, &refusal) && refusal.Code == "calendar_managed"
 		if err != nil && !refused {
@@ -94,7 +97,94 @@ func TestAMeetingOutcomeRowOffersCancelOnlyWhereTheWriteIsAccepted(t *testing.T)
 		if offered == refused {
 			t.Errorf("%s: the row offers cancel = %v while the write is refused = %v", name, offered, refused)
 		}
+		if managed := stamped.CalendarManaged != nil && *stamped.CalendarManaged; managed != refused {
+			t.Errorf("%s: the read stamps calendar_managed = %v while the cancel is refused = %v", name, managed, refused)
+		}
 	}
+	assertAHeldInvitedMeetingMovedAheadIsCalendarManaged(t, e, reader, confirmed)
+}
+
+// The invitation owns the start, so moving a held invited meeting ahead is
+// refused for the invitation, not for an outcome the move would outrun.
+func assertAHeldInvitedMeetingMovedAheadIsCalendarManaged(t *testing.T, e *integration.Env, reader context.Context, meeting ids.UUID) {
+	t.Helper()
+	id := ids.From[ids.ActivityKind](meeting)
+	held := "held"
+	if _, err := e.Activities.UpdateActivity(reader, id, activities.UpdateActivityInput{MeetingStatus: &held}); err != nil {
+		t.Fatalf("recording the invited meeting as held: %v", err)
+	}
+	ahead := time.Date(2100, time.January, 4, 9, 0, 0, 0, time.UTC)
+	_, err := e.Activities.UpdateActivity(reader, id, activities.UpdateActivityInput{OccurredAt: &ahead})
+	var refusal *activities.SchedulingArgumentError
+	if !errors.As(err, &refusal) || refusal.Code != "calendar_managed" {
+		t.Errorf("moving the held invited meeting ahead answered %v, want the calendar_managed refusal", err)
+	}
+}
+
+// A reader who may not change the meeting is offered no verb on its outcome
+// row, and the row says why.
+func TestAMeetingOutcomeRowForAReadSeatOffersNoVerb(t *testing.T) {
+	e := integration.Setup(t)
+	now := laneDay.Add(3 * time.Hour)
+	guest, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Customer met"})
+	if err != nil {
+		t.Fatalf("creating the customer: %v", err)
+	}
+	host := ids.From[ids.UserKind](e.Rep1)
+	at, status, subject := now.AddDate(0, 0, -2), "booked", "Met two days ago"
+	meeting, _, err := e.Activities.LogActivity(memberSeat(e, e.Rep1, principal.SeatFull), activities.LogActivityInput{
+		Kind: "meeting", Subject: &subject, OccurredAt: &at, Source: "manual", MeetingStatus: &status, HostUserID: &host,
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: ids.UUID(guest.Id)}},
+	})
+	if err != nil {
+		t.Fatalf("booking the meeting: %v", err)
+	}
+
+	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return now })
+	page, err := feed.Worklist(memberSeat(e, e.Rep1, principal.SeatRead), "mine", "all", ids.Nil, 100, "")
+	if err != nil {
+		t.Fatalf("reading the worklist: %v", err)
+	}
+	i := slices.IndexFunc(page.Queue, func(row crmcontracts.WorklistItem) bool {
+		return row.Source == crmcontracts.WorklistItemSourceMeetingOutcome && row.Id == meeting.Id.String()
+	})
+	if i < 0 {
+		t.Fatal("the read seat has no meeting_outcome row for the meeting")
+	}
+	row := page.Queue[i]
+	if len(row.Actions) != 0 {
+		t.Errorf("the read seat is offered %v, want no verb", row.Actions)
+	}
+	if !slices.ContainsFunc(row.Because, func(why crmcontracts.WorklistReason) bool { return why.Kind == "read_only" }) {
+		t.Errorf("the row gives %v, want a read_only reason", row.Because)
+	}
+}
+
+// A live invitation holds its meeting, so undoing the meeting's create is
+// refused for it. A canceled one holds nothing.
+func TestOnlyALiveInvitationRefusesTheMeetingCreateUndo(t *testing.T) {
+	e := integration.Setup(t)
+	start := time.Date(2026, time.March, 9, 10, 0, 0, 0, time.UTC)
+	inviting := newInvitingStore(t, e, memberSeat(e, e.Rep1, principal.SeatFull), start.AddDate(0, 0, -2))
+	const heldByInvitation = "a meeting with a calendar invitation"
+	live := inviting.invite(t, e.SeedContact(t, "Invited Ines", nil), start)
+	if answer := advisoryAnswer(e.Admin(), t, e, entityTypeActivity, live, latestAuditRowID(t, e, entityTypeActivity, live, actionCreate)); answer.Detail != heldByInvitation {
+		t.Fatalf("the live invitation's meeting create was answered %+v, want refused for %q", answer, heldByInvitation)
+	}
+
+	withdrawn := inviting.invite(t, e.SeedContact(t, "Withdrawn Wim", nil), start.Add(2*time.Hour))
+	inviting.cancel(t, withdrawn)
+	if answer := advisoryAnswer(e.Admin(), t, e, entityTypeActivity, withdrawn, latestAuditRowID(t, e, entityTypeActivity, withdrawn, actionCreate)); answer.Detail == heldByInvitation {
+		t.Errorf("the canceled invitation's meeting create was refused for %q, which it no longer holds", heldByInvitation)
+	}
+}
+
+// memberSeat signs user in as a member holding seat, with every grant.
+func memberSeat(e *integration.Env, user ids.UUID, seat principal.SeatType) context.Context {
+	return principal.WithActor(e.As(user, nil, integration.AdminPerms), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
+		Permissions: integration.AdminPerms, SeatType: seat,
+	})
 }
 
 // invitingStore is the scheduling engine as the host, its clock at the moment
@@ -131,6 +221,17 @@ func (s invitingStore) invite(t *testing.T, guest ids.UUID, start time.Time) ids
 	}
 	s.deliver(t)
 	return ids.UUID(meeting.Id)
+}
+
+// eraseGuest erases a meeting's sole guest, which withdraws its invitation.
+func (s invitingStore) eraseGuest(t *testing.T, e *integration.Env, guest, meeting ids.UUID) {
+	t.Helper()
+	if err := s.eraser.EraseContact(e.Admin(), guest, "subject request"); err != nil {
+		t.Fatalf("erasing the guest: %v", err)
+	}
+	if got := e.WsScalar(t, `SELECT status FROM meeting_invitation WHERE activity_id = $1`, meeting); got != "erased" {
+		t.Fatalf("the invitation reads %q after its guest was erased, want erased", got)
+	}
 }
 
 // cancel withdraws the invitation and delivers the cancellation.

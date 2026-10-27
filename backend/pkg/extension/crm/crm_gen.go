@@ -1476,6 +1476,9 @@ type Activity struct {
 	// BulkMailAttested This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply.
 	BulkMailAttested *bool `json:"bulk_mail_attested,omitempty"`
 
+	// CalendarManaged Whether a live calendar invitation holds this meeting. Then only `meeting_status` `held` or `no_show` may be written through this activity; a move, an edit or a cancellation goes through the invitation (`PATCH /scheduling/invitations/{id}`), and the activity refuses it with `calendar_managed`. Every read that carries `writable` carries this. Absent means false.
+	CalendarManaged *bool `json:"calendar_managed,omitempty"`
+
 	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 	CaptureLabel *ActivityCaptureLabel `json:"capture_label,omitempty"`
 
@@ -2780,6 +2783,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "bulk_mail_attested")
 	}
 
+	if raw, found := object["calendar_managed"]; found {
+		err = json.Unmarshal(raw, &a.CalendarManaged)
+		if err != nil {
+			return fmt.Errorf("error reading 'calendar_managed': %w", err)
+		}
+		delete(object, "calendar_managed")
+	}
+
 	if raw, found := object["capture_label"]; found {
 		err = json.Unmarshal(raw, &a.CaptureLabel)
 		if err != nil {
@@ -3177,6 +3188,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["bulk_mail_attested"], err = json.Marshal(a.BulkMailAttested)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'bulk_mail_attested': %w", err)
+		}
+	}
+
+	if a.CalendarManaged != nil {
+		object["calendar_managed"], err = json.Marshal(a.CalendarManaged)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'calendar_managed': %w", err)
 		}
 	}
 

@@ -34891,6 +34891,8 @@ export interface components {
             readonly writable?: boolean;
             /** @description Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false. */
             readonly awaiting_outcome?: boolean;
+            /** @description Whether a live calendar invitation holds this meeting. Then only `meeting_status` `held` or `no_show` may be written through this activity; a move, an edit or a cancellation goes through the invitation (`PATCH /scheduling/invitations/{id}`), and the activity refuses it with `calendar_managed`. Every read that carries `writable` carries this. Absent means false. */
+            readonly calendar_managed?: boolean;
             /** @description Decisions about promises read from this source, included on list and detail reads when its content is visible. */
             readonly commitment_admissions?: components["schemas"]["CommitmentAdmission"][];
             /** Format: uuid */

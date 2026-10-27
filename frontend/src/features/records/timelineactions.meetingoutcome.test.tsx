@@ -107,16 +107,16 @@ it.each([
   expect(screen.queryByRole("button", { name: /canceled/ })).toBeNull();
 });
 
-it("offers no cancel on a meeting a live calendar invitation holds", async () => {
-  show({ ...MEETING, invitation_status: "confirmed" });
+it("offers no cancel on a meeting the server marks calendar-managed", async () => {
+  show({ ...MEETING, invitation_status: "confirmed", calendar_managed: true });
   expect(
     await screen.findByRole("button", { name: "Update Site visit" }),
   ).toBeTruthy();
   expect(screen.queryByRole("button", { name: /canceled/ })).toBeNull();
 });
 
-it("offers a cancel again once the invitation itself was canceled", async () => {
-  show({ ...MEETING, invitation_status: "canceled" });
+it("offers a cancel on a meeting the server does not mark calendar-managed", async () => {
+  show({ ...MEETING, invitation_status: "canceled", calendar_managed: false });
   expect(
     await screen.findByRole("button", { name: "Mark as canceled: Site visit" }),
   ).toBeTruthy();

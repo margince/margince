@@ -102,30 +102,38 @@ func TestRescheduleKeepsTheOriginalReservationUntilAcknowledged(t *testing.T) {
 	}
 }
 
-// A held meeting rescheduled to a slot still ahead has not happened there. So
-// settling the move books it again; held is not carried into the future.
-func TestAHeldMeetingRescheduledAheadSettlesBooked(t *testing.T) {
-	f := newInvitationFixture(t)
-	meeting := f.book(t)
-	id := ids.From[ids.ActivityKind](ids.UUID(meeting.Id))
-	f.now = monday(12)
-	held := string(crmcontracts.ActivityMeetingStatusHeld)
-	if _, err := f.store.UpdateActivity(f.ctx, id, UpdateActivityInput{MeetingStatus: &held}); err != nil {
-		t.Fatalf("recording the meeting as held: %v", err)
-	}
-	start, end := monday(15), monday(16)
-	if _, err := f.store.ChangeInvitation(f.ctx, ids.UUID(meeting.Id), crmcontracts.MeetingInvitationChange{Action: "reschedule", Version: meeting.Version, Start: &start, End: &end}); err != nil {
-		t.Fatalf("rescheduling: %v", err)
-	}
-	if err := f.store.DeliverInvitations(f.ctx); err != nil {
-		t.Fatalf("settling the reschedule: %v", err)
-	}
-	var status string
-	if err := f.env.owner.QueryRow(f.ctx, `SELECT meeting_status FROM activity WHERE id=$1`, meeting.Id).Scan(&status); err != nil {
-		t.Fatal(err)
-	}
-	if status != "booked" {
-		t.Errorf("the meeting moved ahead reads %q, want booked", status)
+// A held meeting rescheduled has not happened at its new slot. So settling the
+// move books it again, even when the receipt lands after the new slot began.
+func TestAHeldMeetingRescheduledSettlesBooked(t *testing.T) {
+	for name, settledAt := range map[string]time.Time{
+		"settled before the new slot":      monday(12),
+		"settled after the new slot began": monday(17),
+	} {
+		t.Run(name, func(t *testing.T) {
+			f := newInvitationFixture(t)
+			meeting := f.book(t)
+			id := ids.From[ids.ActivityKind](ids.UUID(meeting.Id))
+			f.now = monday(12)
+			held := string(crmcontracts.ActivityMeetingStatusHeld)
+			if _, err := f.store.UpdateActivity(f.ctx, id, UpdateActivityInput{MeetingStatus: &held}); err != nil {
+				t.Fatalf("recording the meeting as held: %v", err)
+			}
+			start, end := monday(15), monday(16)
+			if _, err := f.store.ChangeInvitation(f.ctx, ids.UUID(meeting.Id), crmcontracts.MeetingInvitationChange{Action: "reschedule", Version: meeting.Version, Start: &start, End: &end}); err != nil {
+				t.Fatalf("rescheduling: %v", err)
+			}
+			f.calendar.saved = func() { f.now = settledAt }
+			if err := f.store.DeliverInvitations(f.ctx); err != nil {
+				t.Fatalf("settling the reschedule: %v", err)
+			}
+			var status string
+			if err := f.env.owner.QueryRow(f.ctx, `SELECT meeting_status FROM activity WHERE id=$1`, meeting.Id).Scan(&status); err != nil {
+				t.Fatal(err)
+			}
+			if status != "booked" {
+				t.Errorf("the rescheduled meeting reads %q, want booked", status)
+			}
+		})
 	}
 }
 

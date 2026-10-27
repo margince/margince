@@ -59,7 +59,7 @@ export function RecordMeetingOutcome({
       id={activity.id}
       version={activity.version}
       title={activity.subject ?? undefined}
-      cancellable={!isCalendarManaged(activity)}
+      cancellable={activity.calendar_managed !== true}
       // The Worklist asks about the same meeting, so an answer here clears it there.
       invalidateKeys={[...invalidateKeys, worklistKey]}
     />
@@ -94,13 +94,6 @@ type MovedStart = {
   occurred_at: string;
   occurred_precision: OccurredPrecision;
 };
-
-/** A live invitation owns the subject, notes and start; the server takes only how it went. */
-function isCalendarManaged(meeting: Activity): boolean {
-  return Boolean(
-    meeting.invitation_status && meeting.invitation_status !== "canceled",
-  );
-}
 
 /**
  * The start the save sends: none when the day stayed, so the meeting keeps
@@ -258,7 +251,7 @@ function MeetingOutcomeDialog({
   // invalidates ["activity", id] refreshes whichever of the two is open.
   const meeting = useActivity(id);
   const transcript = meeting.data ? isTranscriptActivity(meeting.data) : false;
-  const managed = meeting.data ? isCalendarManaged(meeting.data) : false;
+  const managed = meeting.data?.calendar_managed === true;
   // Seeded during render, not in an effect: an effect paints an empty form first
   // and replaces words typed into that frame.
   if (draft === null && meeting.data) {

@@ -5,6 +5,7 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -48,7 +49,8 @@ func refuseOutcomeBeforeStart(ctx context.Context, tx pgx.Tx, current crmcontrac
 	if in.OccurredPrecision != nil {
 		precision = *in.OccurredPrecision
 	}
-	if status == nil && (in.OccurredAt != nil || in.OccurredPrecision != nil) && current.MeetingStatus != nil {
+	moved := !start.Equal(current.OccurredAt) || precision != string(current.OccurredPrecision)
+	if status == nil && moved && current.MeetingStatus != nil {
 		status = new(string(*current.MeetingStatus))
 	}
 	return refuseOutcomeAt(ctx, tx, status, &start, precision, in.recordedAt)
@@ -66,8 +68,7 @@ func refuseLoggedOutcomeBeforeStart(ctx context.Context, tx pgx.Tx, in LogActivi
 // refuseOutcomeAt refuses held or no_show before the meeting took place at
 // asOf. Took place is occurredday's SQL rule, the one awaitingOutcomeClause asks.
 func refuseOutcomeAt(ctx context.Context, tx pgx.Tx, status *string, start *time.Time, precision string, asOf *time.Time) error {
-	if status == nil || (*status != string(crmcontracts.ActivityMeetingStatusHeld) &&
-		*status != string(crmcontracts.ActivityMeetingStatusNoShow)) {
+	if !isMeetingOutcome(status) {
 		return nil
 	}
 	var args []any
@@ -82,6 +83,21 @@ func refuseOutcomeAt(ctx context.Context, tx pgx.Tx, status *string, start *time
 		return &MeetingNotTakenPlaceError{}
 	}
 	return nil
+}
+
+// statusAfterMove is the status a meeting keeps once its start moves. An
+// outcome holds only where the new start has taken place; else it is booked.
+func statusAfterMove(ctx context.Context, tx pgx.Tx, status *string, start time.Time, precision string, asOf *time.Time) (*string, error) {
+	err := refuseOutcomeAt(ctx, tx, status, &start, precision, asOf)
+	if _, early := errors.AsType[*MeetingNotTakenPlaceError](err); early {
+		return new(string(crmcontracts.ActivityMeetingStatusBooked)), nil
+	}
+	return status, err
+}
+
+func isMeetingOutcome(status *string) bool {
+	return status != nil && (*status == string(crmcontracts.ActivityMeetingStatusHeld) ||
+		*status == string(crmcontracts.ActivityMeetingStatusNoShow))
 }
 
 // ProbeLoggedOutcome asks, without writing, whether logging in would be

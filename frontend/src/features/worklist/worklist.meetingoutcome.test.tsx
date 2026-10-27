@@ -129,10 +129,7 @@ function stubWithMeetingRead(
             );
           }
           // The server's rule: a live invitation is canceled through itself.
-          const live =
-            meeting.invitation_status &&
-            meeting.invitation_status !== "canceled";
-          if (live && body.includes('"canceled"')) {
+          if (meeting.calendar_managed && body.includes('"canceled"')) {
             return new Response(
               JSON.stringify({
                 title: "Unprocessable",
@@ -349,6 +346,7 @@ describe("a meeting that owes an answer", () => {
     stubWithMeetingRead(sent, 200, {
       ...CAPTURED_MEETING,
       invitation_status: "confirmed",
+      calendar_managed: true,
     });
     const user = userEvent.setup();
     renderUnderAToastRegion();

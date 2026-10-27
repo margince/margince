@@ -192,3 +192,47 @@ func TestAMeetingTooLongToStoreIsCapturedWithNoDuration(t *testing.T) {
 		t.Error("the meeting stored a duration, want none for one past the column's range")
 	}
 }
+
+// A held meeting the calendar moves stays held only where its new start has
+// taken place. Moved ahead, it is booked again, and the history says so.
+func TestACalendarMoveKeepsAnOutcomeOnlyWhereTheMeetingTookPlace(t *testing.T) {
+	for name, tc := range map[string]struct {
+		start time.Time
+		want  string
+	}{
+		"moved within the past": {meetingStart.Add(time.Hour), "held"},
+		"moved ahead":           {time.Date(2100, 1, 4, 9, 0, 0, 0, time.UTC), "booked"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := integration.Setup(t)
+			id := captureMeeting(t, e, e.AdminUser)
+			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+				_, err := tx.Exec(context.Background(), `UPDATE activity SET meeting_status = 'held' WHERE id = $1`, id)
+				return err
+			}); err != nil {
+				t.Fatalf("recording the meeting as held: %v", err)
+			}
+
+			if err := movingCalendarSink(e).MoveMeeting(calendarOwnerCtx(e, e.AdminUser), meetingKey, connector.MeetingSlot{Start: tc.start}); err != nil {
+				t.Fatalf("moving: %v", err)
+			}
+
+			var status string
+			var booked int
+			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+				return tx.QueryRow(context.Background(), `
+					SELECT a.meeting_status, (SELECT count(*) FROM activity_meeting_history h
+					        WHERE h.activity_id = a.id AND h.status = 'booked' AND h.scheduled_start = $2)
+					  FROM activity a WHERE a.id = $1`, id, tc.start).Scan(&status, &booked)
+			}); err != nil {
+				t.Fatalf("reading the moved meeting: %v", err)
+			}
+			if status != tc.want {
+				t.Errorf("the moved meeting reads %q, want %q", status, tc.want)
+			}
+			if wantBooked := map[bool]int{true: 1}[tc.want == "booked"]; booked != wantBooked {
+				t.Errorf("history holds %d booked transition(s) at the new start, want %d", booked, wantBooked)
+			}
+		})
+	}
+}

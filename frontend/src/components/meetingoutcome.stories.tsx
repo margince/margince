@@ -148,7 +148,11 @@ export const NothingCapturedYet: Story = {
  */
 export const CalendarManaged: Story = {
   render: () => {
-    stubRoutes({ ...CAPTURED_MEETING, invitation_status: "confirmed" });
+    stubRoutes({
+      ...CAPTURED_MEETING,
+      invitation_status: "confirmed",
+      calendar_managed: true,
+    });
     return (
       <StoryProviders>
         <div>

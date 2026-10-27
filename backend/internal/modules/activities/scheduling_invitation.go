@@ -37,6 +37,7 @@ const (
 	invitationNeedsAttention = "needs_attention"
 	invitationCanceled       = "canceled"
 	invitationCancel         = "cancel"
+	invitationUpdate         = "update"
 	invitationCanceling      = "canceling"
 	invitationErased         = "erased"
 	fieldDurationSeconds     = "duration_seconds"

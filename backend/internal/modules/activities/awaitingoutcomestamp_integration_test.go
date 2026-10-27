@@ -197,6 +197,24 @@ func TestMovingAHeldMeetingAheadIsRefused(t *testing.T) {
 	}
 }
 
+// A form resending the start a held meeting already has moves nothing. So a
+// row stored held ahead of its start still takes an edit to its subject.
+func TestResendingAHeldMeetingsStartIsNoMove(t *testing.T) {
+	e := setupSend(t)
+	customer := seedCustomer(t, e)
+	booked := "booked"
+	start := clocktest.Now(t).UTC().Truncate(time.Second).AddDate(0, 0, 7)
+	ahead := customerMeeting(t, e, customer, "Held ahead of its start", start, &booked)
+	if _, err := e.owner.Exec(context.Background(), `UPDATE activity SET meeting_status = 'held' WHERE id = $1`, ahead.UUID); err != nil {
+		t.Fatalf("storing the meeting held ahead of its start: %v", err)
+	}
+
+	subject := "Renamed"
+	if _, err := meetingStore(e).UpdateActivity(meetingCtx(e), ahead, UpdateActivityInput{Subject: &subject, OccurredAt: &start}); err != nil {
+		t.Errorf("resending the unchanged start with a new subject answered %v, want it accepted", err)
+	}
+}
+
 // A date-only meeting takes place once its date is over in the installation's
 // timezone. Dated today there, it is not owed yet and cannot be held.
 func TestADateOnlyMeetingIsOwedOnceItsLocalDateIsOver(t *testing.T) {
