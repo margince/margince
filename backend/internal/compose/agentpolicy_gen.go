@@ -35,6 +35,7 @@ type agentRecordType string
 const (
 	recordTypeActivity            agentRecordType = "activity"
 	recordTypeAppUser             agentRecordType = "app_user"
+	recordTypeUserAdmin           agentRecordType = "user_admin"
 	recordTypeCommission          agentRecordType = "commission"
 	recordTypeCustomField         agentRecordType = "custom_field"
 	recordTypeDataSubjectRequest  agentRecordType = "data_subject_request"
@@ -535,8 +536,10 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/users/access-preview":                                          {Op: "previewAccess", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/users/assignable-roles":                                        {Op: "listAssignableRoles", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/users/names":                                                   {Op: "nameSeats", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
+	"GET /v1/users/{id}":                                                    {Op: "getMember", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/users/{id}/access":                                             {Op: "getUserAccess", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/users/{id}/handover":                                           {Op: "getUserHandover", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/users/{id}/retirement-preview":                                 {Op: "previewMemberRetirement", Access: "tool", Tool: "preview_member_retirement", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"GET /v1/users/{id}/sessions":                                           {Op: "listUserSessions", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/views":                                                         {Op: "listSavedViews", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/views/{id}":                                                    {Op: "getSavedView", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -624,6 +627,7 @@ var agentPolicies = map[string]agentPolicy{
 	"PATCH /v1/stages/{id}/exit-criteria/{criterion_id}":                    {Op: "updateStageExitCriterion", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PATCH /v1/tags/{id}":                                                   {Op: "updateTag", Access: "tool", Tool: "update_tag", RecordType: "tag", Tier: "auto_execute", Scope: "write"},
 	"PATCH /v1/teams/{id}":                                                  {Op: "updateTeam", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PATCH /v1/users/{id}":                                                  {Op: "updateMember", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PATCH /v1/users/{id}/role":                                             {Op: "changeUserRole", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PATCH /v1/views/{id}":                                                  {Op: "updateSavedView", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PATCH /v1/voice-profiles/{id}":                                         {Op: "updateVoiceProfile", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -939,8 +943,10 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/users/service-members/{id}/archive":                           {Op: "archiveServiceMember", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/users/{id}/deactivate":                                        {Op: "deactivateUser", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/users/{id}/handover":                                          {Op: "handOverUserWork", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/users/{id}/merge":                                             {Op: "mergeMembers", Access: "tool", Tool: "merge_members", RecordType: "user_admin", Tier: "confirmation_required", Scope: "write", ServedBy: "registry"},
 	"POST /v1/users/{id}/password-link":                                     {Op: "issueUserPasswordLink", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/users/{id}/reactivate":                                        {Op: "reactivateUser", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/users/{id}/remove":                                            {Op: "removeMember", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/views":                                                        {Op: "createSavedView", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/voice-profiles":                                               {Op: "createVoiceProfile", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/voice-profiles/{id}/builds":                                   {Op: "createVoiceBuild", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

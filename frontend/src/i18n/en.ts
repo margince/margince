@@ -3,6 +3,128 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "webhooks.event.signal.updated.label": "Alert owner changed",
+  "webhooks.event.signal.updated.when":
+    "When an alert moves to the surviving member during a duplicate merge.",
+  "webhooks.event.user.updated.label": "Member settings changed",
+  "webhooks.event.user.updated.when":
+    "When an administrator saves a member’s profile or consolidates a duplicate identity.",
+
+  "approval.kind.merge_members": "Merge member accounts",
+  "users.retirement.approval_decisions":
+    "Resolve approvals awaiting this member’s decision.",
+  "users.retirement.automations":
+    "Pause or reassign this member’s automations.",
+  "users.retirement.booking_pages": "Remove this member’s booking pages.",
+  "users.retirement.data_requests":
+    "Reassign this member’s open data requests.",
+  "users.retirement.deal_rooms": "Reassign this member’s open Deal Rooms.",
+  "users.retirement.introductions":
+    "Close this member’s outstanding introductions.",
+  "users.retirement.lists": "Reassign or archive this member’s lists.",
+  "users.retirement.stewarded_lists":
+    "Reassign or archive this member’s stewarded lists.",
+  "users.retirement.mail_drafts":
+    "Send or discard this member’s saved mail drafts.",
+  "users.retirement.meeting_invitations":
+    "Cancel this member’s outstanding meeting invitations.",
+  "users.retirement.meeting_proposals":
+    "Resolve this member’s meeting proposals.",
+  "users.retirement.privacy_notices":
+    "Reassign this member’s open privacy notices.",
+  "users.retirement.record_responsibilities":
+    "Reassign this member’s record responsibilities.",
+  "users.retirement.reports": "Reassign or archive this member’s reports.",
+  "users.retirement.report_schedules":
+    "Disable this member’s report schedules.",
+  "users.retirement.saved_views": "Remove this member’s saved views.",
+  "users.retirement.scheduled_mail": "Cancel this member’s scheduled mail.",
+  "users.retirement.handoffs": "Reassign this member’s open handoffs.",
+  "users.retirement.voice_profiles": "Archive this member’s voice profiles.",
+  "users.retirement.web_forms":
+    "Pause or reassign this member’s website forms.",
+  "users.retirement.webhooks": "Reassign or disable this member’s webhooks.",
+  "users.retirement.weekly_plans": "Close this member’s open weekly plans.",
+  "users.retirement.analytics_shares":
+    "Revoke live analytics shares scoped to this member.",
+  "users.retirement.source_used":
+    "Only unused imported or invited identities can be merged. Hand over work and deactivate a member who has already completed sign-in setup.",
+  "users.retirement.self_survivor":
+    "Choose a surviving member other than yourself.",
+  "users.retirement.deactivate_first":
+    "Deactivate this member before removing it.",
+  "users.retirement.choose_survivor": "Choose the member to keep.",
+  "users.retirement.choose_receiver":
+    "Choose a colleague to receive the remaining work.",
+  "users.retirement.private_tasks":
+    "Some open tasks are outside your access. Ask their owner to share or reassign them before removal.",
+  "users.retirement.work_not_transferable":
+    "Some owned work is outside your write access. Reassign it before continuing.",
+  "users.retirement.state_changed":
+    "This member changed. Request a fresh preview.",
+  "users.retirement.source_signed_out":
+    "The removed identity is signed out everywhere.",
+  "users.retirement.connectors_reconnect":
+    "Connected accounts must be reconnected under the surviving member.",
+  "users.retirement.survivor_access":
+    "The survivor keeps its roles, teams and sign-in settings, and retains the merged identity’s personal access and correspondence.",
+  "users.retirement.original_attribution": "Original names remain in history.",
+  "users.retirement.private_alerts_archived": "Personal alerts are archived.",
+  "users.retirement.crm_private_records_move":
+    "Owned CRM records, including private contacts and companies, become visible to the receiving colleague.",
+  "users.retirement.private_audiences_retained":
+    "Mail and activities keep their own audience. Activity already shared with a transferred record’s readers may become discoverable to the recipient.",
+  "users.retirement.email_reserved":
+    "Removal cannot be undone here. The original email stays reserved; use Deactivate if this colleague may return.",
+  "users.retirement.survivor_inactive":
+    "The surviving member is deactivated. Reactivate it to restore sign-in and team assignment.",
+  "users.retirement.unknown": "Resolve the remaining work before continuing.",
+  "users.retirement.protected_email":
+    "This sign-in address has already been used and cannot be changed here.",
+  "users.mergeSource": "Duplicate account",
+  "users.mergedAccounts": "Accounts merged into this member",
+  "users.reloadMember": "Reload member",
+  "users.teamAdminOnly": "Only an administrator can change team membership.",
+  "users.visibleWorkNote":
+    "Counts show the work you may see. Merging also preserves personal record access and private correspondence for the same colleague.",
+  "users.search": "Search members",
+  "users.searchPlaceholder": "Name or email",
+  "users.clearSearch": "Clear search",
+  "users.resultCount": "{matching} of {total} members",
+  "users.noSearchResults": "No members match this search.",
+  "users.edit": "Edit member",
+  "users.editTitle": "Edit {name}",
+  "users.saved": "Member saved.",
+  "users.invitedSetup":
+    "This account is enabled and waiting for sign-in setup. You can edit the name, role and teams now.",
+  "users.editInactive": "Reactivate this member before adding them to teams.",
+  "users.emailChangeEndsSessions":
+    "Changing the account email signs this member out and cancels existing sign-in links.",
+  "users.keepRoles": "Keep current roles",
+  "users.editCancel": "Cancel",
+  "users.editSave": "Save member",
+  "users.merge": "Merge duplicate",
+  "users.remove": "Remove member",
+  "users.mergeTitle": "Merge {name} into another account?",
+  "users.removeTitle": "Remove {name}?",
+  "users.mergeBody":
+    "Choose the account to keep. Work moves to it, and this duplicate leaves the member list.",
+  "users.removeBody":
+    "This account leaves the member list. Its original authorship stays in history. Choose a colleague if it still owns work.",
+  "users.survivingMember": "Account to keep",
+  "users.noHandover": "No handover needed",
+  "users.chooseMember": "Choose a member",
+  "users.workToTransfer": "Work to transfer",
+  "users.merged": "Duplicate account merged.",
+  "users.removed": "Member removed.",
+  "users.work.contacts": "Contacts",
+  "users.work.companies": "Companies",
+  "users.work.leads": "Leads",
+  "users.work.deals": "Deals",
+  "users.work.projects": "Projects",
+  "users.work.alerts": "Open alerts",
+  "users.work.tasks": "Tasks",
+
   "homeRepair.taskPermission":
     "Activity archive permission is required to archive reviewed tasks.",
   "homeRepair.classificationPermission":

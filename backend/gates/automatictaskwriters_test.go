@@ -104,6 +104,7 @@ var taskSourceWriters = map[string][]string{
 // storekit.CurrentTaskClause itself, with why.
 // gatekit:fixture the declared readers of another population, checked both ways below
 var openTaskReadersElsewhere = map[string]string{
+	"modules/activities/memberhandover.go:ConsolidateMemberTasksTx":       "moves every open task during an admitted identity merge, including tasks no longer current, so none can be left on a hidden account",
 	"compose/automaticworksql.go:automaticItemsSQL":                       "lists what Margince did, done or not, for Done for you; it reports work, it assigns none",
 	"modules/activities/bulkcomplete.go:LockTaskForBulkTx":                "locks one task a human chose to complete",
 	"compose/reportprojects.go:projectCommitmentsSpec":                    "a report over the project's recorded promises, not a personal queue",

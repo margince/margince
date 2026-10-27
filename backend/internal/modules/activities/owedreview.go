@@ -66,7 +66,7 @@ func owedReviewReadTx(ctx context.Context, tx pgx.Tx, after ids.UUID, exact *ids
 	}
 	body, prior := arg(bodyLimit), arg(priorBodyLimit)
 	columns := storekit.SQLf(candidateColumns, body, 0, 0, prior)
-	join := storekit.SQLf(priorOutboundVisibleJoin(priorScope), body, 0, 0, prior)
+	join := storekit.SQLf(priorOutboundVisibleJoin("%[5]s"), body, 0, 0, prior, priorScope)
 	exactArg := arg(exact)
 	query := storekit.SQLf(`SELECT %s, prior.id, a.version,a.owed_verdict,coalesce(a.owed_verdict_ruleset,''),a.owed_verdict_at,
  encode(sha256(convert_to(jsonb_build_object('source',to_jsonb(a),'participants',jsonb_agg(to_jsonb(p) ORDER BY p.id),
@@ -79,7 +79,7 @@ func owedReviewReadTx(ctx context.Context, tx pgx.Tx, after ids.UUID, exact *ids
  AND human.actor_type='human' AND human.occurred_at>=a.owed_verdict_at),
  NOT EXISTS(SELECT 1 FROM activity prior WHERE `+ourOutboundInThisThread("prior", "a")+`
  AND (prior.occurred_at,prior.id)<(a.occurred_at,a.id)
- AND (prior.audience<>'workspace' OR prior.restricted_at IS NOT NULL OR NOT (`+priorScope+`))),
+ AND (prior.audience<>'workspace' OR prior.restricted_at IS NOT NULL OR NOT (%s))),
  `+provenance.MailBodyCompleteSQL("a")+` AND `+priorContextComplete+`
  FROM activity a LEFT JOIN activity_participant p ON p.activity_id=a.id %s
  WHERE a.direction='inbound' AND a.kind IN ('email','message') AND a.owed_verdict IS NOT NULL
@@ -87,7 +87,7 @@ func owedReviewReadTx(ctx context.Context, tx pgx.Tx, after ids.UUID, exact *ids
  AND (%s) AND a.id>$%d AND ($%d::uuid IS NULL OR a.id=$%d)
  AND NOT EXISTS(SELECT 1 FROM activity_sales_state dismissed WHERE dismissed.thread_key=a.thread_key
  AND dismissed.kind=a.kind AND dismissed.channel_provider=coalesce(a.channel_provider,''))
- GROUP BY %s ORDER BY a.id LIMIT $%d`, columns, join, scope, arg(after), exactArg, exactArg, candidateGroupBy, arg(min(max(limit, 1), 25)))
+ GROUP BY %s ORDER BY a.id LIMIT $%d`, columns, priorScope, join, scope, arg(after), exactArg, exactArg, candidateGroupBy, arg(min(max(limit, 1), 25)))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err

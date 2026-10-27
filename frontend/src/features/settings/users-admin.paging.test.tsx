@@ -11,6 +11,7 @@ import { backend, jsonResponse, ROSTER, render } from "./users-admin.testkit";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 // The roster the server pages: the first page carries a cursor, the second
@@ -41,15 +42,22 @@ function pagedRoster() {
 
 describe("the members list past its first page", () => {
   it("reaches the members the first page did not carry", async () => {
-    const user = userEvent.setup();
     const { answer, reads } = pagedRoster();
     vi.stubGlobal("fetch", answer);
     render(<UsersAdminCard />);
 
-    await user.click(await screen.findByRole("button", { name: "Load more" }));
-
     await waitFor(() => expect(screen.getByText("Lena Late")).toBeTruthy());
     expect(reads.at(-1)).toContain("cursor=page-2");
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    await user.type(
+      screen.getByRole("searchbox", { name: "Search members" }),
+      "Lena",
+    );
+    expect(screen.getByText("Lena Late")).toBeTruthy();
+    expect(screen.queryByText("Ada Active")).toBeNull();
+    await user.clear(screen.getByRole("searchbox", { name: "Search members" }));
+    expect(screen.getByText("Ada Active")).toBeTruthy();
   });
 });

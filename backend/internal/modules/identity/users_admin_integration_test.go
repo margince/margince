@@ -104,7 +104,7 @@ func TestReactivateRefusalNamesEveryStateItCanBeReachedFrom(t *testing.T) {
 		SELECT pg_get_constraintdef(c.oid)
 		FROM pg_constraint c JOIN pg_class t ON t.oid = c.conrelid
 		WHERE t.relname = 'app_user' AND c.contype = 'c'
-		  AND pg_get_constraintdef(c.oid) LIKE '%status%'`).Scan(&check); err != nil {
+		  AND c.conkey = ARRAY(SELECT a.attnum FROM pg_attribute a WHERE a.attrelid=t.oid AND a.attname='status')`).Scan(&check); err != nil {
 		t.Fatalf("reading the app_user status constraint: %v", err)
 	}
 	// The statuses the refusal and the contract account for. Compared as a SET

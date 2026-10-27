@@ -190,7 +190,7 @@ func TestTheRosterOffersOnlyTheVerbsTheCallerHolds(t *testing.T) {
 	repCopy := e.customRole(t, "Rep copy", "rep", nil)
 	for verb, want := range map[string][]memberAction{
 		"delete": {actionDeactivate},
-		"update": {actionChangeRole, actionIssuePasswordLink, actionHandOver},
+		"update": {actionChangeRole, actionIssuePasswordLink, actionHandOver, actionEdit},
 	} {
 		grant := storedGrant{Read: true, Delete: verb == "delete", Update: verb == "update"}
 		caller := e.seat(t, "holder-"+verb, e.customRole(t, "Holds "+verb, "rep", map[string]storedGrant{objectUserAdmin: grant}))

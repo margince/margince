@@ -58,6 +58,7 @@ The 2 tables owned by `assignments`, as the migrations build them. [Back to the 
 
 **Triggers**
 
+- `record_assignment_user_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.user_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('user_id')`
 - `trg_record_assignment_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## record_role

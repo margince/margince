@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -78,6 +79,9 @@ type userRow struct {
 	// or the member never signed in.
 	LastActiveAt *time.Time
 	CreatedAt    time.Time
+	Unused       bool
+	UpdatedAt    time.Time
+	MergedFrom   []crmcontracts.SeatName
 	// ServiceExtension names the extension unit a service member serves; nil
 	// for every other seat.
 	ServiceExtension *string
@@ -117,8 +121,8 @@ const lastActive = `CASE WHEN $1::boolean THEN
 	    (SELECT max(s.last_seen_at) FROM session s WHERE s.user_id = app_user.id))
 	  ELSE NULL::timestamptz END`
 
-const userColumns = `id, email, display_name, status, is_agent, seat_type, ` +
-	roleKeys + `, ` + teamIDs + `, ` + lastActive + `, created_at, service_extension`
+var userColumns = `id, email, display_name, status, is_agent, seat_type, ` +
+	roleKeys + `, ` + teamIDs + `, ` + lastActive + `, created_at, service_extension, updated_at, ` + mergedAccounts + `, ` + unusedMemberSQL("app_user")
 
 // $1 is the "read role keys?" flag on every user query below, so the aggregate
 // stays inside ONE fixed query string instead of two the caller picks between.
@@ -164,18 +168,18 @@ var listUsersInvitedFilteredQuery = `
 
 // The admin management roster: every non-archived member regardless of status,
 // so a deactivated member is visible to reactivate.
-const listUsersAllQuery = `
+var listUsersAllQuery = `
 	SELECT ` + userColumns + `
 	FROM app_user
-	WHERE archived_at IS NULL
+	WHERE archived_at IS NULL AND removed_at IS NULL
 	  AND ($2::timestamptz IS NULL OR (created_at, id) > ($2, $3))
 	ORDER BY created_at, id
 	LIMIT $4`
 
-const listUsersAllFilteredQuery = `
+var listUsersAllFilteredQuery = `
 	SELECT ` + userColumns + `
 	FROM app_user
-	WHERE archived_at IS NULL
+	WHERE archived_at IS NULL AND removed_at IS NULL
 	  AND (display_name ILIKE $2 OR email ILIKE $2)
 	  AND ($3::timestamptz IS NULL OR (created_at, id) > ($3, $4))
 	ORDER BY created_at, id
@@ -184,12 +188,12 @@ const listUsersAllFilteredQuery = `
 func scanUser(r pgx.Row) (userRow, error) {
 	var u userRow
 	err := r.Scan(&u.ID, &u.Email, &u.DisplayName, &u.Status, &u.IsAgent, &u.SeatType,
-		&u.Roles, &u.TeamIDs, &u.LastActiveAt, &u.CreatedAt, &u.ServiceExtension)
+		&u.Roles, &u.TeamIDs, &u.LastActiveAt, &u.CreatedAt, &u.ServiceExtension, &u.UpdatedAt, &u.MergedFrom, &u.Unused)
 	return u, err
 }
 
-const getUserQuery = `SELECT ` + userColumns + ` FROM app_user
-	WHERE id = $2 AND archived_at IS NULL`
+var getUserQuery = `SELECT ` + userColumns + ` FROM app_user
+	WHERE id = $2 AND archived_at IS NULL AND removed_at IS NULL`
 
 // GetUser reads one member by id regardless of status — the read every member
 // administration write returns after a mutation, so it always asks for the role
@@ -311,14 +315,6 @@ func withholdActivity(ctx context.Context, actor *Identity, rows []userRow, gran
 			rows[i].LastActiveAt = nil
 		}
 	}
-}
-
-func rowIDs(rows []userRow) []ids.UUID {
-	out := make([]ids.UUID, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, row.ID)
-	}
-	return out
 }
 
 // RosterPage is one roster read: the rows, the keyset position, and WHICH VIEW

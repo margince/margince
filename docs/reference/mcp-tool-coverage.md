@@ -336,9 +336,9 @@ Every run of every case requiring this tool passed, for the model named.
 | `read_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `update_record` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `change_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
+| `read_workspace` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` |
 | `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
-| `read_workspace` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
 | `decide_approvals` | 1.00 | 6 | `case43_the_fair_leads_are_prospects`, `case48_that_whole_thread_is_filed_wrong`, `case8_whats_waiting` |
 | `list_approvals` | 1.00 | 2 | `case8_whats_waiting` |
@@ -363,9 +363,9 @@ Every run of every case requiring this tool passed, for the model named.
 | `send_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `preview_import` | 1.00 | 4 | `case10_finish_the_import`, `case3_spreadsheet` |
 | `update_record` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
+| `read_workspace` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` |
 | `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
-| `read_workspace` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
 | `list_approvals` | 1.00 | 2 | `case8_whats_waiting` |
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |

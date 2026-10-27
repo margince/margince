@@ -161,13 +161,13 @@ func assignedCommitmentArm(p principal.Principal, alias string, arg func(any) in
 // may learn a row EXISTS through attendance rather than through its links.
 func activityAttendanceArm(p principal.Principal, alias string, arg func(any) int) string {
 	me := arg(p.UserID)
-	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id = $%[2]d)
+	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id IN (%[2]s))
 	   OR EXISTS (SELECT 1 FROM activity_participant ap
-	               WHERE ap.activity_id = %[1]s.id AND ap.user_id = $%[2]d AND ap.address IS NOT NULL)
-	   OR (%[1]s.sent_by_colleague = $%[2]d AND EXISTS (SELECT 1 FROM data_task_run sender_check
+	               WHERE ap.activity_id = %[1]s.id AND ap.user_id IN (%[2]s) AND ap.address IS NOT NULL)
+	   OR (%[1]s.sent_by_colleague IN (%[2]s) AND EXISTS (SELECT 1 FROM data_task_run sender_check
 	        WHERE sender_check.step = '%[3]s' AND sender_check.status = 'done')
 	       AND %[4]s))`,
-		alias, me, SenderStampsCheckedStep, senderAtOwnDomain(alias))
+		alias, memberIdentitySQL(me), SenderStampsCheckedStep, senderAtOwnDomain(alias))
 }
 
 // senderAtOwnDomain re-asks at read time that the stamped seat's login address
@@ -209,9 +209,9 @@ const SenderStampsCheckedStep = "recheck_colleague_sender_domains"
 // than about who was present.
 func activityMembershipArm(p principal.Principal, alias string, arg func(any) int) string {
 	me := arg(p.UserID)
-	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id = $%[2]d)
-	   OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = %[1]s.id AND ap.user_id = $%[2]d AND %[3]s))`,
-		alias, me, ParticipantStandsSQL("ap", alias))
+	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id IN (%[2]s))
+	   OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = %[1]s.id AND ap.user_id IN (%[2]s) AND %[3]s))`,
+		alias, memberIdentitySQL(me), ParticipantStandsSQL("ap", alias))
 }
 
 // ActivityContentClause is the stronger activity gate: discoverable AND the
@@ -299,19 +299,18 @@ func activityAudienceArm(p principal.Principal, alias string, arg func(any) int)
 	// cc'd on a held thread whose own sync ran second used to fall through to
 	// the participant arm alone, which is a different question (were you on the
 	// mail) from this one (was this your mail).
-	author := arg("%:" + p.UserID.String())
 	teams := arg(p.TeamIDs)
 	// The two membership arms are activityMembershipArm's, composed rather than
 	// repeated: discovery asks the same question of the same two tables, and a
 	// second copy is how one of them gains an arm the other lacks.
 	return fmt.Sprintf(`(%[1]s.audience = 'workspace'
-	   OR %[1]s.captured_by LIKE $%[3]d
 	   OR %[5]s
+	   OR %[4]s
 	   OR (%[1]s.audience = 'selected' AND EXISTS (
 	      SELECT 1 FROM activity_audience_member am WHERE am.activity_id = %[1]s.id
-	        AND ((am.subject_type = 'user' AND am.subject_id = $%[2]d)
-	          OR (am.subject_type = 'team' AND am.subject_id = ANY($%[4]d))))))`,
-		alias, me, author, teams, activityMembershipArm(p, alias, arg))
+	        AND ((am.subject_type = 'user' AND am.subject_id IN (%[2]s))
+	          OR (am.subject_type = 'team' AND am.subject_id = ANY($%[3]d))))))`,
+		alias, memberIdentitySQL(me), teams, activityMembershipArm(p, alias, arg), memberAuthorshipSQL(alias, me, arg))
 }
 
 // EnsureActivityVisible is EnsureVisible for activities under the DISCOVER

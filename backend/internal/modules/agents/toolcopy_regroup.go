@@ -86,7 +86,7 @@ var scheduleMeetingCopy = toolCopy{
 }
 
 var changeStateCopy = toolCopy{
-	Purpose: "Move a lead, deal or project on, or set up a company as a partner. qualify fills what a lead's own data already " +
+	Purpose: "merge_member_accounts consolidates an unused member into a different surviving colleague after a confirmed retirement preview. Move a lead, deal or project on, or set up a company as a partner. qualify fills what a lead's own data already " +
 		"implies, today the company name from its email domain, and names the fields still " +
 		"empty. promote turns a lead who has genuinely engaged into a contact. disqualify " +
 		"closes out a lead going nowhere. demote reverses a promotion. move_deal moves a deal " +
@@ -109,7 +109,7 @@ var changeStateCopy = toolCopy{
 }
 
 var readWorkspaceCopy = toolCopy{
-	Purpose: "Read how this workspace is set up. colleagues: the seats that can receive work, " +
+	Purpose: "member_retirement previews a member removal, or a merge when mode is merge and to_user_id names the survivor. Read how this workspace is set up. colleagues: the seats that can receive work, " +
 		"not the contacts stored as records; q narrows by name. pipelines: every pipeline with " +
 		"its stages, each open, won or lost. channel_providers: the messaging transports. The " +
 		"other topics name what a tool accepts: query (find_records engine query), analytics " +

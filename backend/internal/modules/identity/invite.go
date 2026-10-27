@@ -71,7 +71,6 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 	if err != nil {
 		return ids.UserID{}, "", err
 	}
-	ctx = actorCtx(ctx, actor)
 	var newUserID ids.UserID
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := lockAuthorization(ctx, tx); err != nil {
@@ -94,6 +93,9 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 		// out a role is handing out a role whichever verb spells it.
 		// No teams to weigh: only an admin invites onto a team, and an admin
 		// needs no containment.
+		if err := refuseRemovedEmail(ctx, tx, in.Email); err != nil {
+			return err
+		}
 		roleID, err := roleForAssignment(ctx, tx, actor, in.Role, nil)
 		if err != nil {
 			return err

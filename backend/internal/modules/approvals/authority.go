@@ -24,6 +24,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+const objectUserAdmin = "user_admin"
+
 // objectActivity is the RBAC object every timeline write is governed by, spelled
 // once: three staged kinds and the target-visibility switch below all name it,
 // and a typo in any of them would silently ask for a grant nobody holds.
@@ -115,6 +117,7 @@ const objectCommunicationException = "communication_exception"
 // both today, and decisionGrantsFor combines them so one that grows a second half
 // gains authority rather than silently losing the first.
 var decisionGrants = map[string][]grantRequirement{
+	"merge_members": {{objectUserAdmin, principal.ActionDelete}},
 	// A held message asks its rep to try again or give up. Both answers move the
 	// message's own state — reschedule and cancel — which the store gates on
 	// activity.UPDATE, so that is what deciding requires. It is the effects'

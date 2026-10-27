@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 130.4 KB |
+| Tool catalog | 131.2 KB |
 | Resource catalog | 3.6 KB |
-| Approx. wire tokens | 34293 |
+| Approx. wire tokens | 34512 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 28.4 KB | 21% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 32.5 KB | 24% | Yes, every step |
-| Input schemas | 60.7 KB | 46% | Yes, every step |
+| Descriptions (incl. governance clause) | 32.8 KB | 24% | Yes, every step |
+| Input schemas | 61.3 KB | 46% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 6% | Partly |
-| **Description + input schema** | **93.2 KB** | **71%** | **the recurring cost** |
+| **Description + input schema** | **94.1 KB** | **71%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -65,7 +65,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1381 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
-| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1117 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1228 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 553 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 337 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
@@ -90,7 +90,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 1891 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
 | [`read_view`](#read_view) | Read a view | yes |  | 993 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 488 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 590 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 393 |
 | [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 469 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1014 |
@@ -1805,24 +1805,26 @@ record's own fields, and create_record with record_type offer to make an offer w
 **Move a lead, deal, project or partner**
 
 ```text
-Move a lead, deal or project on, or set up a company as a partner. qualify fills what a lead's own
-data already implies, today the company name from its email domain, and names the fields still
-empty. promote turns a lead who has genuinely engaged into a contact. disqualify closes out a lead
-going nowhere. demote reverses a promotion. move_deal moves a deal to a stage, with a note.
-move_project moves a project to a phase; closed closes it. set_up_partner starts a partner program
-on a company, with company_id, partner_role and optionally relationship_stage, next_step and
-next_step_due_at. promote needs a trigger naming the engagement; cold outreach nobody answered never
-promotes. demote needs a reason and is refused once the contact owns a deal. set_up_partner always
-waits for a human, takes no margin tier (a human sets that on the company's Partner tab) and is
-refused for a company that already is a partner. move_deal to a won or lost stage waits for a human;
-to an open stage it runs at once. move_project to closed needs a reason and leaves the project's
-tasks open. When the user asked for the close, report what is still open and close: an open task is
-news for them, not a reason to hold back. read_workspace topic pipelines gives the stage ids. Use
-update_record for a record's other fields, and enrich to learn about a company from its website. A
-promotion answers with the new contact's id. A staged answer's approval id is what the retry
-carries; do not report the change until the retry has answered. (Governance: runs immediately for
-demote, disqualify, move_project, promote, qualify; a human approves first for set_up_partner;
-decided per call from its arguments for move_deal; requires passport scope "write".)
+merge_member_accounts consolidates an unused member into a different surviving colleague after a
+confirmed retirement preview. Move a lead, deal or project on, or set up a company as a partner.
+qualify fills what a lead's own data already implies, today the company name from its email domain,
+and names the fields still empty. promote turns a lead who has genuinely engaged into a contact.
+disqualify closes out a lead going nowhere. demote reverses a promotion. move_deal moves a deal to a
+stage, with a note. move_project moves a project to a phase; closed closes it. set_up_partner starts
+a partner program on a company, with company_id, partner_role and optionally relationship_stage,
+next_step and next_step_due_at. promote needs a trigger naming the engagement; cold outreach nobody
+answered never promotes. demote needs a reason and is refused once the contact owns a deal.
+set_up_partner always waits for a human, takes no margin tier (a human sets that on the company's
+Partner tab) and is refused for a company that already is a partner. move_deal to a won or lost
+stage waits for a human; to an open stage it runs at once. move_project to closed needs a reason and
+leaves the project's tasks open. When the user asked for the close, report what is still open and
+close: an open task is news for them, not a reason to hold back. read_workspace topic pipelines
+gives the stage ids. Use update_record for a record's other fields, and enrich to learn about a
+company from its website. A promotion answers with the new contact's id. A staged answer's approval
+id is what the retry carries; do not report the change until the retry has answered. (Governance:
+runs immediately for demote, disqualify, move_project, promote, qualify; a human approves first for
+merge_member_accounts, set_up_partner; decided per call from its arguments for move_deal; requires
+passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1834,6 +1836,7 @@ decided per call from its arguments for move_deal; requires passport scope "writ
       "enum": [
         "demote",
         "disqualify",
+        "merge_member_accounts",
         "move_deal",
         "move_project",
         "promote",
@@ -1843,7 +1846,7 @@ decided per call from its arguments for move_deal; requires passport scope "writ
       "type": "string"
     },
     "approval_id": {
-      "description": "demote, disqualify, move_deal, move_project, promote, set_up_partner only: Set on approved retry",
+      "description": "demote, disqualify, merge_member_accounts, move_deal, move_project, promote, set_up_partner only: Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -1901,6 +1904,11 @@ decided per call from its arguments for move_deal; requires passport scope "writ
       ],
       "type": "string"
     },
+    "preview_token": {
+      "description": "merge_member_accounts only",
+      "minLength": 1,
+      "type": "string"
+    },
     "project_id": {
       "description": "move_project only",
       "format": "uuid",
@@ -1927,6 +1935,11 @@ decided per call from its arguments for move_deal; requires passport scope "writ
       ],
       "type": "string"
     },
+    "source_id": {
+      "description": "merge_member_accounts only",
+      "format": "uuid",
+      "type": "string"
+    },
     "to_phase": {
       "description": "move_project only",
       "enum": [
@@ -1939,6 +1952,11 @@ decided per call from its arguments for move_deal; requires passport scope "writ
     },
     "to_stage_id": {
       "description": "move_deal only: The target stage, by id — obtain it from the workspace's pipeline list, since a deal you have read carries only the stage it is already IN. That stage's semantic decides what happens next: open executes immediately, won or lost is staged for a human's approval.",
+      "format": "uuid",
+      "type": "string"
+    },
+    "to_user_id": {
+      "description": "merge_member_accounts only",
       "format": "uuid",
       "type": "string"
     },
@@ -6936,10 +6954,11 @@ view refuses an argument it does not take and names the ones it does.
 **Read how this workspace is set up**
 
 ```text
-Read how this workspace is set up. colleagues: the seats that can receive work, not the contacts
-stored as records; q narrows by name. pipelines: every pipeline with its stages, each open, won or
-lost. channel_providers: the messaging transports. The other topics name what a tool accepts: query
-(find_records engine query), analytics (read_analytics), record_fields (create_record and
+member_retirement previews a member removal, or a merge when mode is merge and to_user_id names the
+survivor. Read how this workspace is set up. colleagues: the seats that can receive work, not the
+contacts stored as records; q narrows by name. pipelines: every pipeline with its stages, each open,
+won or lost. channel_providers: the messaging transports. The other topics name what a tool accepts:
+query (find_records engine query), analytics (read_analytics), record_fields (create_record and
 update_record), list_filters (find_records engine list), report_vocabulary (read_reports kind run),
 report_blocks (read_analytics step compose). A q matching nobody answers with every colleague and a
 warning. A stage's semantic, not its name, says whether it closes a deal. None of the name topics is
@@ -6966,8 +6985,27 @@ custom field is spelled cf_<slug>.
       "description": "colleagues only: Also list invited seats that have not signed in yet",
       "type": "boolean"
     },
+    "mode": {
+      "default": "remove",
+      "description": "member_retirement only",
+      "enum": [
+        "merge",
+        "remove"
+      ],
+      "type": "string"
+    },
     "q": {
       "description": "colleagues only: Narrow by name or email; omit for the whole roster",
+      "type": "string"
+    },
+    "source_id": {
+      "description": "member_retirement only",
+      "format": "uuid",
+      "type": "string"
+    },
+    "to_user_id": {
+      "description": "member_retirement only",
+      "format": "uuid",
       "type": "string"
     },
     "topic": {
@@ -6977,6 +7015,7 @@ custom field is spelled cf_<slug>.
         "channel_providers",
         "colleagues",
         "list_filters",
+        "member_retirement",
         "pipelines",
         "query",
         "record_fields",

@@ -114,6 +114,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `company_delete_clears_deal_partner`: `BEFORE DELETE FOR EACH ROW EXECUTE FUNCTION deal_clear_partner_attribution_on_company_delete()`
+- `company_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 - `company_refuse_anchor_retirement`: `BEFORE INSERT OR UPDATE OF merged_into_id, is_anchor FOR EACH ROW EXECUTE FUNCTION company_refuse_anchor_retirement()`
 - `trg_company_address_country_stale`: `AFTER UPDATE OF address_postal_code, address_city, address_country FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_address_country_goes_stale()`
 - `trg_company_geocode_stale`: `BEFORE UPDATE OF address_line1, address_line2, address_city, address_region, address_postal_code, address_country FOR EACH ROW WHEN (((old.address_line1 IS DISTINCT FROM new.address_line1) OR (old.address_line2 IS DISTINCT FROM new.address_line2) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_region IS DISTINCT FROM new.address_region) OR (old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_geocode_goes_stale()`
@@ -628,6 +629,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `contact_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 - `trg_contact_address_country_stale`: `AFTER UPDATE OF address_postal_code, address_city, address_country FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION contact_address_country_goes_stale()`
 - `trg_contact_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
@@ -1280,6 +1282,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `lead_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 - `trg_lead_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## lead_disqualify_reason
@@ -1918,6 +1921,10 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_sdr_handoff_lead`: `btree (lead_id) WHERE (lead_id IS NOT NULL)`
 - `idx_sdr_handoff_submitter`: `btree (submitted_by, submitted_at DESC)`
 - `sdr_handoff_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `sdr_handoff_assigned_to_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.assigned_to IS NOT NULL) AND (new.status = ANY (ARRAY['submitted', 'accepted'])))) EXECUTE FUNCTION refuse_retired_member_work('assigned_to')`
 
 ## sdr_handoff_event
 

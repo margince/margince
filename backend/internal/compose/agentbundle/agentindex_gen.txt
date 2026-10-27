@@ -291,6 +291,8 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /whoami` | getActingIdentity | Who this caller acts for. | Read records | at once |
 | `GET /openapi.json` | getAgentOpenAPIDocument | The OpenAPI 3.1 document of every operation a passport can call, as JSON. | Read records | at once |
 | `GET /users` | listUsers | List workspace members (roster) — cursor-paginated. Read-only. | Read records | at once |
+| `GET /users/{id}/retirement-preview` | previewMemberRetirement | Preview removing a member or merging them into another account. | Read records | at once |
+| `POST /users/{id}/merge` | mergeMembers | Merge a duplicate into the selected surviving member. | Change records | waits for approval |
 | `GET /users/names` | nameSeats | Name the colleagues behind a set of ids. Read-only. | Read records | at once |
 | `GET /teams` | listTeams | List workspace teams — cursor-paginated. Read-only. | Read records | at once |
 
