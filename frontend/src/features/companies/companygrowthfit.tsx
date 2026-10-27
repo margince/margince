@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import {
@@ -122,7 +122,6 @@ export function GrowthFitPanel({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const queryClient = useQueryClient();
   const recordZone = useRecordZone();
   const fit = useQuery({
     queryKey: ["company-growth-fit", companyId],
@@ -134,17 +133,7 @@ export function GrowthFitPanel({
       );
     },
   });
-  const reassess = useMutation({
-    mutationFn: async () => {
-      return unwrap(
-        await api.POST("/companies/{id}/growth-fit", {
-          params: { path: { id: companyId } },
-        }),
-      );
-    },
-    onSuccess: (data) =>
-      queryClient.setQueryData(["company-growth-fit", companyId], data),
-  });
+  const { reassess, outcome } = useReassess(companyId);
 
   const written = fit.data;
   // A payload this build cannot read is not a company we know nothing about.
@@ -231,12 +220,76 @@ export function GrowthFitPanel({
           />
         </>
       )}
+      {outcome && (
+        <PanelBody>
+          <ReassessOutcome outcome={outcome} />
+        </PanelBody>
+      )}
       {reassess.error && (
         <PanelBody>
           <ErrorLine error={reassess.error} />
         </PanelBody>
       )}
     </Panel>
+  );
+}
+
+type Reassessed = Readonly<{
+  changed: boolean;
+  band: Band;
+  present: number;
+  expected: number;
+}>;
+
+// What "Assess again" did, said once it answers. With the same inputs the
+// model gives the same reading, and a card that only moves its timestamp reads
+// as a press that did nothing.
+function useReassess(companyId: string) {
+  const queryClient = useQueryClient();
+  const key = ["company-growth-fit", companyId];
+  const [outcome, setOutcome] = useState<Reassessed | null>(null);
+  const reassess = useMutation({
+    mutationFn: async () => {
+      return unwrap(
+        await api.POST("/companies/{id}/growth-fit", {
+          params: { path: { id: companyId } },
+        }),
+      );
+    },
+    onMutate: () => setOutcome(null),
+    onSuccess: (data) => {
+      const before = queryClient.getQueryData<GrowthFit>(key);
+      const { present, expected } = data.data_completeness;
+      setOutcome({
+        changed:
+          !before ||
+          before.band !== data.band ||
+          before.data_completeness.present !== present ||
+          before.data_completeness.expected !== expected,
+        band: data.band,
+        present,
+        expected,
+      });
+      queryClient.setQueryData(key, data);
+    },
+  });
+  return { reassess, outcome };
+}
+
+function ReassessOutcome({ outcome }: Readonly<{ outcome: Reassessed }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const values = {
+    band: t(BAND_LABELS[outcome.band]),
+    present: formatNumber(outcome.present, locale),
+    expected: formatNumber(outcome.expected, locale),
+  };
+  return (
+    <p role="status" className="t-caption">
+      {outcome.changed
+        ? t("co.growthFit.reassessedChanged", values)
+        : t("co.growthFit.reassessedSame", values)}
+    </p>
   );
 }
 

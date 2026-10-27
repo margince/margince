@@ -37,8 +37,8 @@ Also called: partner list, partner overview, reseller list.
 The partner fields in Margince are fixed lists, set on the company's **Partner** tab.
 - **Partner role**: **Hosting** (they run it for their clients), **Consulting** (they help clients and bring you in), **Strategic** (a broader alliance).
 - **Certification status**: **Applied** (the first value), **Certified**, **Suspended**. It says nothing else about the company.
-- **Margin tier**: **Intro (15%)**, **Active collaboration (20%)**, **Partner closed (25%)**, or **Not set** until a tier is agreed.
-- **Served segments**: free words, with commas between them.
+- **Margin tier**: the share the partner earns on each won deal they sourced. **Intro (15%)**: they only introduced the client. **Active collaboration (20%)**: the deal was worked together. **Partner closed (25%)**: they sold it themselves. **Not set** until a tier is agreed, and it stays **Not set** when the partner's agreement pays differently.
+- **Served segments**: who the partner sells to, for example mid-size manufacturers. Free words, with commas between them.
 
 ### Partner relationship stages
 

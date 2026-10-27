@@ -2480,11 +2480,14 @@ export const en = {
   "partner.certStatus": "Certification status",
   "partner.certStatusAll": "All statuses",
   "partner.marginTier": "Margin tier",
+  "partner.marginTierHint":
+    "The share the partner earns on each won deal they sourced. Intro: they only introduced the client. Active collaboration: the deal was worked together. Partner closed: they sold it themselves. Leave it unset when their agreement pays differently.",
   "partner.stage": "Relationship stage",
   "partner.nextStep": "Next step",
   "partner.nextStepDue": "Next step due",
   "partner.servedSegments": "Served segments",
-  "partner.servedSegmentsHint": "comma-separated",
+  "partner.servedSegmentsHint":
+    "Who the partner sells to, for example mid-size manufacturers. Separate several with commas.",
   "partner.role.hosting": "Hosting",
   "partner.role.consulting": "Consulting",
   "partner.role.strategic": "Strategic",
@@ -3473,6 +3476,10 @@ export const en = {
     "Assessing this company. The first assessment reads the whole record and can take a minute.",
   "co.growthFit.reassess": "Assess again",
   "co.growthFit.reassessing": "Assessing…",
+  "co.growthFit.reassessedSame":
+    "Assessed again. Result unchanged: {band}, {present} of {expected} inputs recorded.",
+  "co.growthFit.reassessedChanged":
+    "Assessed again. New result: {band}, {present} of {expected} inputs recorded.",
   "co.growthFit.band.strong": "Strong fit",
   "co.growthFit.dim.industryFit": "Industry fit",
   "co.growthFit.dim.companySize": "Company size",
@@ -4923,6 +4930,8 @@ export const en = {
   "assignments.empty": "No one is assigned yet",
   "assignments.emptyDetail":
     "Assign a colleague or a team to record who looks after this work.",
+  "assignments.emptyReadOnly":
+    "Changing who looks after this record needs edit rights on it.",
   "assignments.roleRetired": "(retired role)",
   "assignments.teamSuffix": "(team)",
   "assignments.subjectInactive": "(inactive)",

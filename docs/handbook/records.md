@@ -79,7 +79,7 @@ To edit a contact in Margince, open it and click the value to change in the **De
 Also called: update a contact, change a phone number, rename.
 
 ### Why can't I edit a contact or company?
-A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes."). It also takes none when it is not yours to change: "You cannot edit this contact. Ask the owner to share it, or an administrator for edit rights." Fields you cannot edit show as plain text, with the reason when you point at them.
+A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes."). It also takes none when it is not yours to change: "You cannot edit this contact. Ask the owner to share it, or an administrator for edit rights." Fields you cannot edit show as plain text, with the reason when you point at them. Actions you cannot use stay greyed out, and **More actions** states the reason at the top of its list.
 If someone else changed the same field while you were editing, your edit is refused: "This record changed after you opened it. Reload it to see the change, then make yours again."
 
 Also called: read-only record, edit greyed out, cannot change.

@@ -234,3 +234,27 @@ describe("how well this company fits what we sell", () => {
     expect(screen.queryByText(/inputs recorded/)).toBeNull();
   });
 });
+
+describe("Assess again", () => {
+  it("says the result did not change when the same reading comes back", async () => {
+    await show(ABSTAINED);
+    screen.getByRole("button", { name: "Assess again" }).click();
+    expect((await screen.findByRole("status")).textContent).toBe(
+      "Assessed again. Result unchanged: Not enough data, 2 of 7 inputs recorded.",
+    );
+  });
+
+  it("names the new result when the reading moved", async () => {
+    await show(ABSTAINED);
+    serving({
+      ...ABSTAINED,
+      band: "weak",
+      data_completeness: { present: 5, expected: 7, missing: [] },
+      next_step: undefined,
+    });
+    screen.getByRole("button", { name: "Assess again" }).click();
+    expect((await screen.findByRole("status")).textContent).toMatch(
+      /^Assessed again\. New result: .+, 5 of 7 inputs recorded\.$/,
+    );
+  });
+});

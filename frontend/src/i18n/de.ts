@@ -2533,11 +2533,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "partner.certStatus": "Zertifizierungsstatus",
   "partner.certStatusAll": "Alle Status",
   "partner.marginTier": "Margenstaffel",
+  "partner.marginTierHint":
+    "Der Anteil, den der Partner an jedem gewonnenen Deal erhält, den er gebracht hat. Intro: Er hat den Kunden nur vorgestellt. Aktive Zusammenarbeit: Der Deal wurde gemeinsam bearbeitet. Abschluss durch Partner: Er hat ihn selbst verkauft. Leer lassen, wenn die Vereinbarung mit ihm anders vergütet.",
   "partner.stage": "Beziehungsphase",
   "partner.nextStep": "Nächster Schritt",
   "partner.nextStepDue": "Nächster Schritt fällig",
   "partner.servedSegments": "Betreute Segmente",
-  "partner.servedSegmentsHint": "durch Kommas getrennt",
+  "partner.servedSegmentsHint":
+    "An wen der Partner verkauft, zum Beispiel mittelständische Hersteller. Mehrere durch Kommas trennen.",
   "partner.role.hosting": "Hosting",
   "partner.role.consulting": "Beratung",
   "partner.role.strategic": "Strategisch",
@@ -3468,6 +3471,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieses Unternehmen wird bewertet. Die erste Bewertung liest den gesamten Datensatz und kann eine Minute dauern.",
   "co.growthFit.reassess": "Neu bewerten",
   "co.growthFit.reassessing": "Wird bewertet…",
+  "co.growthFit.reassessedSame":
+    "Erneut bewertet. Ergebnis unverändert: {band}, {present} von {expected} Angaben erfasst.",
+  "co.growthFit.reassessedChanged":
+    "Erneut bewertet. Neues Ergebnis: {band}, {present} von {expected} Angaben erfasst.",
   "co.growthFit.band.strong": "Passt gut",
   "co.growthFit.dim.industryFit": "Branchen-Fit",
   "co.growthFit.dim.companySize": "Unternehmensgröße",
@@ -4912,6 +4919,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "assignments.empty": "Noch niemand zugewiesen",
   "assignments.emptyDetail":
     "Weise ein Teammitglied oder ein Team zu, um festzuhalten, wer sich um diese Arbeit kümmert.",
+  "assignments.emptyReadOnly":
+    "Wer sich um diesen Datensatz kümmert, kann nur ändern, wer ihn bearbeiten darf.",
   "assignments.roleRetired": "(stillgelegte Rolle)",
   "assignments.teamSuffix": "(Team)",
   "assignments.subjectInactive": "(inaktiv)",

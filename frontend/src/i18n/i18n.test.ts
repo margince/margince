@@ -511,3 +511,41 @@ describe("the product's word for the tenant", () => {
     }
   });
 });
+
+/**
+ * A record has one owner and, beside it, responsibility roles a team fills.
+ * Where the Responsibilities card says the owner's word, a reader is told
+ * "X is responsible" and "nobody is responsible" on one page.
+ *
+ * The word, not the whole label: Vietnamese says "Người chịu trách nhiệm" as a
+ * label and "ai chịu trách nhiệm" in a sentence. The label check below keeps
+ * this table in step with the catalogs.
+ */
+const OWNER_WORD: Record<string, string> = {
+  en: "owner",
+  de: "verantwortlich",
+  vi: "chịu trách nhiệm",
+};
+
+describe("the owner and the responsibility roles", () => {
+  it("names the owner's word for every locale, as its label says it", () => {
+    for (const [locale, catalog] of Object.entries(catalogs)) {
+      expect(
+        catalog["list.owner"].toLowerCase(),
+        `${locale}: the owner's word is missing`,
+      ).toContain(OWNER_WORD[locale]);
+    }
+  });
+
+  it("no catalog uses the owner's word in the Responsibilities card", () => {
+    for (const [locale, catalog] of Object.entries(catalogs)) {
+      for (const [key, value] of Object.entries(catalog)) {
+        if (!key.startsWith("assignments.")) continue;
+        expect(
+          value.toLowerCase().includes(OWNER_WORD[locale]),
+          `${locale}: ${key} — "${value}" says the owner's word`,
+        ).toBe(false);
+      }
+    }
+  });
+});

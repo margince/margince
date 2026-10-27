@@ -26,6 +26,7 @@ import { CompanyContractsCard } from "./companycontracts";
 import { CompanyDocumentsCard } from "./companydocuments";
 import { EvidenceModal } from "./companyevidence";
 import { CompanyFinanceCard } from "./companyfinance";
+import { useCompanyVerbRefusal } from "./companyheader";
 import "./company360.css";
 import "./companytabs.css";
 
@@ -130,6 +131,7 @@ export function CompanyRecordBody({
   const recordZone = useRecordZone();
   const canWriteCompany =
     useCanWriteRecord("company", company) && !company.archived_at;
+  const verbRefusal = useCompanyVerbRefusal(company);
   if (composing !== null) {
     shownAnchor.current = composing;
   }
@@ -281,6 +283,7 @@ export function CompanyRecordBody({
           <CompanyDocumentsCard
             companyId={company.id}
             refusedReasonId={refusedReasonId}
+            refusedReason={verbRefusal}
             onOpenEmail={receipt.openEmail}
           />
         </div>

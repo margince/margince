@@ -412,7 +412,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.mergeTags":
     "Thay nhãn nguồn trên các bản ghi được hiển thị bằng nhãn giữ lại. Nếu đã có cả hai nhãn, chỉ xóa gán nhãn nguồn trùng lặp. Lưu trữ nhãn nguồn và cho phép dùng lại tên; tên không được giữ làm bí danh.",
   "approval.preview.partnerTierUnset":
-    "Bậc biên lợi nhuận: chưa đặt. Một thành viên đặt bậc này ở tab Đối tác của công ty.",
+    "Mức hoa hồng đối tác: chưa đặt. Một thành viên đặt mức này ở tab Đối tác của công ty.",
   "approval.preview.mergeTagSource": "Nhãn sẽ xóa",
   "approval.preview.mergeTagTarget": "Nhãn giữ lại",
   "approval.preview.mergeTagMove": "Bản ghi sẽ nhận nhãn giữ lại",
@@ -1087,7 +1087,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.name": "Tên báo cáo",
   "reporting.description": "Mục đích",
   "reporting.audience": "Hiển thị với",
-  "reporting.private": "Chỉ tôi",
+  "reporting.private": "Chỉ riêng tôi",
   "reporting.team": "Nhóm đã chọn",
   "reporting.workspace": "Cả công ty",
   "reporting.blocks": "Biểu đồ và thứ tự",
@@ -1755,7 +1755,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.link_reconcile": "Sửa liên kết hồ sơ",
   "systemJob.linkedin_match": "Đối chiếu dữ liệu nhập từ LinkedIn",
   "systemJob.linkedin_rematch": "Đối chiếu dữ liệu nhập từ LinkedIn",
-  "systemJob.list_checker": "Kiểm tra danh sách động",
+  "systemJob.list_checker": "Kiểm tra danh sách tự cập nhật",
   "systemJob.mail_draft_retention": "Dọn dẹp thư nháp",
   "systemJob.privacy_request_proof_expiry":
     "Dọn dẹp bằng chứng yêu cầu quyền riêng tư",
@@ -2462,12 +2462,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "partner.roleAll": "Tất cả vai trò",
   "partner.certStatus": "Trạng thái chứng nhận",
   "partner.certStatusAll": "Tất cả trạng thái",
-  "partner.marginTier": "Cấp biên lợi nhuận",
+  "partner.marginTier": "Mức hoa hồng đối tác",
+  "partner.marginTierHint":
+    "Tỷ lệ đối tác nhận trên mỗi deal thắng do đối tác mang về. Giới thiệu: đối tác chỉ giới thiệu khách hàng. Hợp tác tích cực: hai bên cùng làm deal. Đối tác tự chốt: đối tác tự bán. Để trống khi thỏa thuận với đối tác trả theo cách khác.",
   "partner.stage": "Giai đoạn quan hệ",
   "partner.nextStep": "Bước tiếp theo",
   "partner.nextStepDue": "Hạn bước tiếp theo",
   "partner.servedSegments": "Phân khúc phục vụ",
-  "partner.servedSegmentsHint": "phân tách bằng dấu phẩy",
+  "partner.servedSegmentsHint": "Nhóm khách hàng đối tác phục vụ, ví dụ doanh nghiệp sản xuất vừa và nhỏ. Phân tách nhiều nhóm bằng dấu phẩy.",
   "partner.role.hosting": "Máy chủ web",
   "partner.role.consulting": "Tư vấn",
   "partner.role.strategic": "Chiến lược",
@@ -2686,7 +2688,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "views.renamed": "Đã đổi tên chế độ xem",
   "views.deleteTitle": "Xóa chế độ xem này?",
   "views.deleteBody":
-    "“{name}” sẽ bị gỡ khỏi Bộ lọc và chế độ xem. Không hồ sơ nào bị thay đổi.",
+    "“{name}” sẽ bị gỡ khỏi Danh sách và bộ lọc. Không hồ sơ nào bị thay đổi.",
   "views.deleted": "Đã xóa chế độ xem: “{name}”",
   "list.viewMine": "Của tôi",
   "list.viewCustomers": "Khách hàng",
@@ -3377,6 +3379,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đang đánh giá công ty này. Lần đánh giá đầu tiên đọc toàn bộ hồ sơ và có thể mất một phút.",
   "co.growthFit.reassess": "Đánh giá lại",
   "co.growthFit.reassessing": "Đang đánh giá…",
+  "co.growthFit.reassessedSame":
+    "Đã đánh giá lại. Kết quả không đổi: {band}, đã ghi nhận {present}/{expected} dữ liệu đầu vào.",
+  "co.growthFit.reassessedChanged":
+    "Đã đánh giá lại. Kết quả mới: {band}, đã ghi nhận {present}/{expected} dữ liệu đầu vào.",
   "co.growthFit.band.strong": "Rất phù hợp",
   "co.growthFit.dim.industryFit": "Phù hợp ngành",
   "co.growthFit.dim.companySize": "Quy mô công ty",
@@ -3683,7 +3689,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "companyReach.you": "Bạn",
   "companyReach.connections": "K\u1ebft n\u1ed1i \u1edf \u0111\u00e2y",
   "companyReach.none":
-    "Không có phạm vi nào của đồng nghiệp được hiển thị cho công ty này.",
+    "Không có đồng nghiệp nào có kết nối ở công ty này được hiển thị.",
   "companyReach.readFailed":
     "Kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c danh s\u00e1ch n\u00e0y",
   "linkedinReach.title": "Mạng lưới LinkedIn",
@@ -4783,12 +4789,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.expectedArr": "ARR dự kiến",
 
   "deal.monthlyApproximate": "khoảng",
-  "assignments.title": "Phụ trách",
+  "assignments.title": "Vai trò trong nhóm",
   "assignments.noAccessNote":
-    "Ghi nhận ai chịu trách nhiệm. Không cấp quyền truy cập vào hồ sơ này.",
-  "assignments.empty": "Chưa giao cho ai",
+    "Ghi nhận ai phụ trách việc gì. Không cấp quyền truy cập vào hồ sơ này.",
+  "assignments.empty": "Chưa giao vai trò nào",
   "assignments.emptyDetail":
-    "Giao cho đồng nghiệp hoặc nhóm để ghi nhận ai chịu trách nhiệm cho công việc này.",
+    "Giao đồng nghiệp hoặc nhóm vào một vai trò để ghi nhận ai phụ trách công việc này.",
+  "assignments.emptyReadOnly":
+    "Cần quyền sửa hồ sơ này để thay đổi ai phụ trách.",
   "assignments.roleRetired": "(vai trò đã ngừng dùng)",
   "assignments.teamSuffix": "(nhóm)",
   "assignments.subjectInactive": "(không hoạt động)",
@@ -4953,15 +4961,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "bulk.refusal.required": "Liên hệ riêng tư phải có người chịu trách nhiệm",
   "bulk.confirmReassign": "Đổi người chịu trách nhiệm",
   "bulk.confirmArchive": "Chuyển {unit} vào kho lưu trữ",
-  "bulk.addToShortlist": "Thêm vào danh sách rút gọn",
+  "bulk.addToShortlist": "Thêm vào danh sách chọn tay",
   "bulk.titleAddToList":
     "Th\u00eam {unit} \u0111\u00e3 ch\u1ecdn v\u00e0o {list}?",
-  "bulk.confirmAddToList": "Thêm vào danh sách rút gọn",
+  "bulk.confirmAddToList": "Thêm vào danh sách chọn tay",
   "bulk.titleRemoveFromList":
     "G\u1ee1 {unit} \u0111\u00e3 ch\u1ecdn kh\u1ecfi {list}?",
-  "bulk.confirmRemoveFromList": "Gỡ khỏi danh sách rút gọn",
-  "bulk.stateListed": "Có trong danh sách rút gọn",
-  "bulk.stateNotListed": "Không có trong danh sách rút gọn",
+  "bulk.confirmRemoveFromList": "Gỡ khỏi danh sách chọn tay",
+  "bulk.stateListed": "Có trong danh sách chọn tay",
+  "bulk.stateNotListed": "Không có trong danh sách chọn tay",
   "bulk.doneContacts_one": "Đã thay đổi {count} liên hệ.",
   "bulk.doneContacts_other": "Đã thay đổi {count} liên hệ.",
   "bulk.doneCompanies_one": "Đã thay đổi {count} công ty.",
@@ -4980,7 +4988,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{count} liên kết, thẻ hoặc mục trong danh sách không thể khôi phục.",
   "bulk.undoLeftBehind_other":
     "{count} liên kết, thẻ hoặc mục trong danh sách không thể khôi phục.",
-  "bulk.reason.no_change_list": "Đã ở trong hoặc ngoài danh sách rút gọn",
+  "bulk.reason.no_change_list": "Đã ở trong hoặc ngoài danh sách chọn tay",
   "bulk.reason.no_change_tag": "Đã có hoặc chưa có thẻ này",
   "bulk.tag": "Thẻ",
   "bulk.tagPick": "Chọn thẻ",
@@ -5004,7 +5012,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "bulk.confirmCreateTask": "Tạo việc",
   "bulk.stateNewTask": "Việc cần làm mới",
   "bulk.stateNoTask": "Không có việc cần làm mới",
-  "bulk.removeFromThisShortlist": "Gỡ khỏi danh sách rút gọn này",
+  "bulk.removeFromThisShortlist": "Gỡ khỏi danh sách chọn tay này",
   "bulk.doneLeads_one": "Đã thay đổi {count} lead.",
   "bulk.doneLeads_other": "Đã thay đổi {count} lead.",
   "bulk.undoneLeads_one": "Đã khôi phục {count} lead.",
@@ -7946,7 +7954,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.import_validate": "Chạy thử dữ liệu nhập",
   "jobs.kind.intro_expiry": "Hết hạn lời giới thiệu",
   "jobs.kind.knowledge_ingest": "Lập chỉ mục tài liệu",
-  "jobs.kind.list_evaluate": "Kiểm tra danh sách động",
+  "jobs.kind.list_evaluate": "Kiểm tra danh sách tự cập nhật",
   "jobs.kind.notification_email": "Thư thông báo",
   "jobs.kind.privacy_retention": "Áp dụng chính sách lưu giữ",
   "jobs.kind.provider_lookup_sweep": "Bổ sung dữ liệu cho liên hệ sẵn có",
@@ -10486,19 +10494,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auto.pausedReason.listArchived":
     "Đã tạm dừng vì danh sách mà tự động hóa theo dõi hoặc thêm vào đã được chuyển vào kho lưu trữ. Khôi phục danh sách không làm tự động hóa tiếp tục.",
   "auto.pausedReason.listInvalid":
-    "Đã tạm dừng vì bộ lọc của danh sách động mà tự động hóa theo dõi đã ngừng hoạt động. Sửa bộ lọc không làm tự động hóa tiếp tục.",
+    "Đã tạm dừng vì bộ lọc của danh sách tự cập nhật mà tự động hóa theo dõi đã ngừng hoạt động. Sửa bộ lọc không làm tự động hóa tiếp tục.",
   "auto.pausedReason.listUnavailable":
     "Đã tạm dừng vì người phụ trách tự động hóa không còn tìm thấy danh sách được theo dõi.",
   "auto.pausedReason.burst":
     "Đã tạm dừng vì một lần kiểm tra làm thay đổi hơn 100 hồ sơ. Tự động hóa không xử lý hồ sơ nào trong số đó.",
   "auto.lists.placeholder": "Chọn danh sách",
   "auto.lists.needsWatched":
-    "Chọn danh sách động trước. Danh sách rút gọn chứa cùng loại hồ sơ.",
+    "Chọn danh sách tự cập nhật trước. Danh sách chọn tay chứa cùng loại hồ sơ.",
   "auto.lists.loadError": "Không thể tải danh sách.",
   "auto.lists.noLive":
-    "Chưa có danh sách động nào. Lưu một bộ lọc thành danh sách động trước.",
+    "Chưa có danh sách tự cập nhật nào. Lưu một bộ lọc thành danh sách tự cập nhật trước.",
   "auto.lists.noShortlist":
-    "Không có danh sách rút gọn nào thuộc loại hồ sơ này có thể thay đổi ở đây.",
+    "Không có danh sách chọn tay nào thuộc loại hồ sơ này có thể thay đổi ở đây.",
   "auto.dateField.placeholder": "Chọn trường ngày",
   "auto.dateField.needsObject":
     "Chọn đối tượng trước để liệt kê các trường ngày.",
@@ -10524,14 +10532,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auto.trigger.stageChanged": "Deal đổi giai đoạn",
   "auto.trigger.leadCreated": "Lead mới",
   "auto.trigger.activityCaptured": "Hoạt động được ghi nhận",
-  "auto.trigger.listEvaluated": "Danh sách động thay đổi",
+  "auto.trigger.listEvaluated": "Danh sách tự cập nhật thay đổi",
   "auto.action.createTask": "tạo công việc",
   "auto.action.notify": "gửi thông báo",
   "auto.action.assignOwner": "giao người chịu trách nhiệm",
   "auto.action.setField": "đặt giá trị trường",
   "auto.action.draftEmail": "soạn nháp email",
   "auto.action.requestApproval": "yêu cầu duyệt",
-  "auto.action.addToShortlist": "thêm vào danh sách rút gọn",
+  "auto.action.addToShortlist": "thêm vào danh sách chọn tay",
   "auto.pausedShort.listArchived": "Đã tạm dừng · danh sách đã lưu trữ",
   "auto.pausedShort.listInvalid": "Đã tạm dừng · bộ lọc danh sách bị lỗi",
   "auto.pausedShort.listUnavailable": "Đã tạm dừng · không tìm thấy danh sách",
@@ -10685,12 +10693,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "cf.retire.body":
     "Trường sẽ bị ẩn khỏi hồ sơ mới và bộ lọc. Giá trị đã lưu vẫn được giữ. Không thể hoàn tác việc lưu trữ.",
   "cf.retire.lists":
-    "Các danh sách động này lọc theo trường này. Các danh sách này vẫn hoạt động với giá trị đã lưu, và mỗi danh sách sẽ nhắc người chịu trách nhiệm thay điều kiện lọc:",
+    "Các danh sách tự cập nhật này lọc theo trường này. Các danh sách này vẫn hoạt động với giá trị đã lưu, và mỗi danh sách sẽ nhắc người chịu trách nhiệm thay điều kiện lọc:",
   "cf.retire.unseen_one":
-    "{count} danh sách động khác mà bạn không có quyền mở cũng lọc theo trường này.",
+    "{count} danh sách tự cập nhật khác mà bạn không có quyền mở cũng lọc theo trường này.",
   "cf.retire.unseen_other":
-    "{count} danh sách động khác mà bạn không có quyền mở cũng lọc theo trường này.",
-  "cf.retire.noLists": "Không có danh sách động nào lọc theo trường này.",
+    "{count} danh sách tự cập nhật khác mà bạn không có quyền mở cũng lọc theo trường này.",
+  "cf.retire.noLists": "Không có danh sách tự cập nhật nào lọc theo trường này.",
   "cf.retire.checking": "Đang kiểm tra danh sách nào dùng trường này",
   // "Chung" thay vì "Tổ chức" cho mục đầu tiên: tiêu đề nhóm phía trên đã nói
   // từ đó, và một dòng lặp lại tiêu đề của chính nó thì không gọi tên được gì.
@@ -13796,7 +13804,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.eventGroup.lists": "Danh sách",
   "webhooks.event.list.created.label": "Đã tạo danh sách",
   "webhooks.event.list.created.when":
-    "Có ai đó tạo danh sách động hoặc danh sách rút gọn.",
+    "Có ai đó tạo danh sách tự cập nhật hoặc danh sách chọn tay.",
   "webhooks.event.list.updated.label": "Đã đổi cài đặt danh sách",
   "webhooks.event.list.updated.when":
     "Tên, mục đích, bộ lọc, chia sẻ, nhóm hoặc người chịu trách nhiệm của danh sách thay đổi.",
@@ -13807,16 +13815,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.list.restored.when":
     "Một danh sách được khôi phục từ kho lưu trữ.",
   "webhooks.event.list.member_added.label":
-    "Đã thêm hồ sơ vào danh sách rút gọn",
+    "Đã thêm hồ sơ vào danh sách chọn tay",
   "webhooks.event.list.member_added.when":
-    "Hồ sơ được thêm vào danh sách rút gọn thủ công, qua thay đổi hàng loạt hoặc do tự động hóa.",
+    "Hồ sơ được thêm vào danh sách chọn tay thủ công, qua thay đổi hàng loạt hoặc do tự động hóa.",
   "webhooks.event.list.member_removed.label":
-    "Đã gỡ hồ sơ khỏi danh sách rút gọn",
+    "Đã gỡ hồ sơ khỏi danh sách chọn tay",
   "webhooks.event.list.member_removed.when":
-    "Hồ sơ được gỡ khỏi danh sách rút gọn thủ công hoặc qua thay đổi hàng loạt.",
-  "webhooks.event.list.evaluated.label": "Danh sách động đã thay đổi",
+    "Hồ sơ được gỡ khỏi danh sách chọn tay thủ công hoặc qua thay đổi hàng loạt.",
+  "webhooks.event.list.evaluated.label": "Danh sách tự cập nhật đã thay đổi",
   "webhooks.event.list.evaluated.when":
-    "Lần kiểm tra danh sách động thấy có hồ sơ vào hoặc rời danh sách.",
+    "Lần kiểm tra danh sách tự cập nhật thấy có hồ sơ vào hoặc rời danh sách.",
   "webhooks.eventGroup.deal_rooms": "Deal Room",
   "webhooks.event.deal_room.opened.label": "Đã mở Deal Room",
   "webhooks.event.deal_room.opened.when": "Deal Room được tạo cho một deal.",
@@ -14879,10 +14887,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Kiểm tra 15 phút một lần, thưa hơn khi có rất nhiều danh sách, và ghi lại hồ sơ nào vào hoặc rời danh sách. Chọn ai có thể tìm thấy danh sách.",
   "filters.purpose": "Mục đích (không bắt buộc)",
   "filters.viewSaved": "Đã lưu chế độ xem",
-  "filters.listCreated": "Đã tạo danh sách động “{name}”",
-  "filters.view.facts": "Chế độ xem đã lưu · {records} · Chỉ tôi",
-  "filters.listFacts": "Danh sách động · {records} · {who}",
-  "filters.view.saveAsList": "Lưu thành danh sách động",
+  "filters.listCreated": "Đã tạo danh sách tự cập nhật “{name}”",
+  "filters.view.facts": "Chế độ xem đã lưu · {records} · Chỉ riêng tôi",
+  "filters.listFacts": "Danh sách tự cập nhật · {records} · {who}",
+  "filters.view.saveAsList": "Lưu thành danh sách tự cập nhật",
   "filters.editConditions": "Sửa điều kiện",
   "filters.done": "Xong",
   "filters.noChanges": "Chưa có thay đổi",
@@ -14895,7 +14903,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.view.reload": "Tải lại chế độ xem",
   "filters.view.gone":
     "Chế độ xem đã lưu này đã bị xóa hoặc không thể tìm thấy.",
-  "filters.backToLibrary": "Quay lại Bộ lọc và chế độ xem",
+  "filters.backToLibrary": "Quay lại Danh sách và bộ lọc",
   "filters.emptyGroup": "Nhóm trống không khớp với hồ sơ nào.",
   "filters.field": "Tr\u01b0\u1eddng",
   "filters.field.amount": "Số tiền quy đổi",
@@ -15031,14 +15039,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bộ lọc này có {count} điều kiện đề xuất, sẽ được giữ lại khi lưu.",
   "lists.page": "Danh s\u00e1ch",
   "lists.loading": "Đang tải danh sách",
-  "lists.kind.live": "Danh s\u00e1ch \u0111\u1ed9ng",
-  "lists.kind.shortlist": "Danh sách rút gọn",
+  "lists.kind.live": "Danh sách tự cập nhật",
+  "lists.kind.shortlist": "Danh sách chọn tay",
   "lists.type.contact": "Li\u00ean h\u1ec7",
   "lists.type.company": "C\u00f4ng ty",
   "lists.type.deal": "Deal",
   "lists.type.lead": "Lead",
   "lists.type.project": "D\u1ef1 \u00e1n",
-  "lists.sharing.private": "Chỉ tôi",
+  "lists.sharing.private": "Chỉ riêng tôi",
   "lists.sharing.team": "M\u1ed9t nh\u00f3m",
   "lists.sharing.workspace": "Cả công ty",
   "lists.sharingLabel": "Ai c\u00f3 th\u1ec3 t\u00ecm th\u1ea5y",
@@ -15060,9 +15068,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.col.kind": "Lo\u1ea1i",
   "lists.col.recordType": "Hồ sơ",
   "lists.noSteward": "Ch\u01b0a c\u00f3 ai",
-  "lists.newShortlist": "Danh sách rút gọn mới",
-  "lists.newShortlistTitle": "Tạo danh sách rút gọn",
-  "lists.newShortlistOption": "Danh sách rút gọn mới…",
+  "lists.newShortlist": "Danh sách chọn tay mới",
+  "lists.newShortlistTitle": "Tạo danh sách chọn tay",
+  "lists.newShortlistOption": "Danh sách chọn tay mới…",
   "lists.recordTypeLabel": "Loại hồ sơ",
   "lists.name": "T\u00ean",
   "lists.purpose": "Mục đích",
@@ -15155,22 +15163,22 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.why.today": "h\u00f4m nay",
   "lists.why.inDays_one": "sau {count} ngày",
   "lists.why.inDays_other": "sau {count} ngày",
-  "lists.remove": "Gỡ khỏi danh sách rút gọn",
+  "lists.remove": "Gỡ khỏi danh sách chọn tay",
   "lists.note": "L\u00fd do (kh\u00f4ng b\u1eaft bu\u1ed9c)",
   "lists.noteHint": "Lưu cùng thay đổi để đồng nghiệp biết lý do.",
   "lists.record.title": "Danh s\u00e1ch",
   "lists.record.loading": "\u0110ang t\u1ea3i danh s\u00e1ch",
   "lists.record.empty":
     "Kh\u00f4ng c\u00f3 trong danh s\u00e1ch n\u00e0o b\u1ea1n c\u00f3 th\u1ec3 t\u00ecm th\u1ea5y.",
-  "lists.record.check": "Kiểm tra danh sách động",
-  "lists.record.checkPick": "Chọn danh sách động",
+  "lists.record.check": "Kiểm tra danh sách tự cập nhật",
+  "lists.record.checkPick": "Chọn danh sách tự cập nhật",
   "lists.record.truncated": "Còn các danh sách khác không hiển thị ở đây.",
   "lists.record.takenOff": "Đã gỡ khỏi {name}",
   "lists.record.putBack": "Đã thêm lại vào {name}",
-  "lists.addToShortlist": "Thêm vào danh sách rút gọn",
+  "lists.addToShortlist": "Thêm vào danh sách chọn tay",
   "lists.add": "Th\u00eam",
-  "lists.shortlist": "Danh sách rút gọn",
-  "lists.pickShortlist": "Chọn danh sách rút gọn",
+  "lists.shortlist": "Danh sách chọn tay",
+  "lists.pickShortlist": "Chọn danh sách chọn tay",
   "lists.pulse.chip": "+{entered} / −{left}",
   "lists.pulse.label":
     "{entered} hồ sơ vào và {left} hồ sơ rời đi kể từ lần truy cập gần nhất",
@@ -15229,7 +15237,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.history.reason.automation": "do một tự động hóa",
 
   // Giao di\u1ec7n B\u1ed9 l\u1ecdc & Ch\u1ee7 \u0111\u1ec1.
-  "filters.title": "Bộ lọc và chế độ xem",
+  "filters.title": "Danh sách và bộ lọc",
   "filters.subtitle":
     "Mọi chế độ xem và danh sách đã lưu mà bạn có thể dùng, và nơi bắt đầu một bộ lọc mới.",
   "filters.library.loading": "Đang tải chế độ xem và danh sách",
@@ -15241,7 +15249,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.new.deals": "Bộ lọc deal mới",
   "filters.new.leads": "Bộ lọc lead mới",
   "filters.library.whichRecords": "Lọc loại hồ sơ nào?",
-  "filters.library.mine": "Chỉ tôi",
+  "filters.library.mine": "Của riêng tôi",
   "filters.library.shared": "Được chia sẻ",
   "filters.library.views": "Chế độ xem đã lưu",
   "filters.library.kindView": "Chế độ xem đã lưu",
@@ -15281,7 +15289,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.library.firstRunTitle":
     "Chưa có chế độ xem hay danh sách nào được lưu",
   "filters.library.firstRunBody":
-    "Bộ lọc tìm hồ sơ theo các trường. Lưu bộ lọc thành chế độ xem cho riêng bạn, hoặc thành danh sách động để đồng nghiệp cũng tìm thấy.",
+    "Bộ lọc tìm hồ sơ theo các trường. Lưu bộ lọc thành chế độ xem cho riêng bạn, hoặc thành danh sách tự cập nhật để đồng nghiệp cũng tìm thấy.",
   "filters.library.viewsEmptyTitle": "Chưa có chế độ xem đã lưu",
   "filters.library.viewsEmptyBody":
     "Bộ lọc tìm hồ sơ theo các trường. Lưu bộ lọc thành chế độ xem để mở lại sau.",
