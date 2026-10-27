@@ -101,9 +101,12 @@ export const OriginAndCountInGerman: Story = {
     const fresh = await canvas.findByRole("region", {
       name: translate("de", "lead.statusNew"),
     });
-    const card = await within(fresh).findByRole("button", {
-      name: /Jonas Petersen/,
+    const opener = await within(fresh).findByRole("button", {
+      name: lead.full_name,
     });
+    // The opener holds the name alone; origin and task are its card siblings.
+    const card = opener.closest<HTMLElement>(".deal-card");
+    if (card === null) throw new Error("the opener sits outside a lead card");
     await expect(
       await within(card).findByText(
         translate("de", "leadOrigins.builtin.event"),
