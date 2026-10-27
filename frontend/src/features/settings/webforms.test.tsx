@@ -223,6 +223,106 @@ describe("WebFormsCard", () => {
   });
 });
 
+describe("WebFormsCard actions", () => {
+  const serverForm: WebForm = {
+    ...contactForm,
+    sender: "server",
+    allowed_origins: [],
+    secret_configured: true,
+  };
+
+  it("rotates a server form's secret only after confirming, and shows the new one", async () => {
+    const backend = backendFor(OPERATOR, [serverForm], {
+      "POST /v1/web-forms/wf-1/rotate-secret": () =>
+        jsonResponse({ ...serverForm, signing_secret: "mwf_rotated" }),
+    });
+    vi.stubGlobal("fetch", backend.fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(
+      await screen.findByRole("button", { name: "More actions" }),
+    );
+    await user.click(await screen.findByTestId("rotate-web-form-secret"));
+    expect(backend.sent).toHaveLength(0);
+    const confirm = await screen.findAllByRole("button", {
+      name: "Rotate secret",
+    });
+    await user.click(confirm[confirm.length - 1] as HTMLElement);
+
+    expect((await screen.findByTestId("web-form-secret")).textContent).toBe(
+      "mwf_rotated",
+    );
+    expect(backend.sent[0]?.url).toContain("/rotate-secret");
+  });
+
+  it("edits a form's consent against the version it was read at", async () => {
+    const backend = backendFor(OPERATOR, [contactForm], {
+      "PATCH /v1/web-forms/wf-1": () =>
+        jsonResponse({ ...contactForm, consent_required: true, version: 4 }),
+    });
+    vi.stubGlobal("fetch", backend.fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(await screen.findByTestId("edit-web-form"));
+    await user.click(screen.getByLabelText(/Require consent/));
+    await user.type(
+      screen.getByLabelText(/^Consent wording/),
+      "You may answer me.",
+    );
+    await user.type(
+      screen.getByLabelText(/^Privacy policy version/),
+      "2026-10",
+    );
+    await user.click(screen.getByTestId("save-web-form"));
+
+    await waitFor(() => expect(backend.sent).toHaveLength(1));
+    expect(backend.sent[0]).toMatchObject({
+      method: "PATCH",
+      ifMatch: "3",
+      body: {
+        consent_required: true,
+        consent_wording: "You may answer me.",
+        consent_policy_version: "2026-10",
+      },
+    });
+    expect(backend.sent[0]?.body).not.toHaveProperty("sender");
+  });
+
+  it("puts a refused setting under its own field until it is corrected", async () => {
+    const backend = backendFor(OPERATOR, [contactForm], {
+      "PATCH /v1/web-forms/wf-1": () =>
+        jsonResponse(
+          {
+            type: "about:blank",
+            title: "Unprocessable",
+            status: 422,
+            code: "validation_error",
+            details: {
+              errors: [
+                {
+                  field: "redirect_url",
+                  code: "invalid",
+                  message: "must be an https address",
+                },
+              ],
+            },
+          },
+          422,
+        ),
+    });
+    vi.stubGlobal("fetch", backend.fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(await screen.findByTestId("edit-web-form"));
+    await user.type(screen.getByLabelText(/^Thank-you page/), "x");
+    await user.click(screen.getByTestId("save-web-form"));
+
+    expect(await screen.findByText("must be an https address")).toBeTruthy();
+    await user.type(screen.getByLabelText(/^Thank-you page/), "y");
+    expect(screen.queryByText("must be an https address")).toBeNull();
+  });
+});
+
 describe("web form settings", () => {
   it("keeps a builder's stored secret when the field is left empty", () => {
     const builder = { ...contactForm, sender: "typeform" as const };

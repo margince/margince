@@ -36,8 +36,8 @@ type UpdateInput struct {
 	IfVersion            *int64
 }
 
-// The web_form columns an update may clear, named once for the patch, the
-// clear list and the audit image.
+// The web_form columns an update may clear, shared by the patch, the clear
+// list and the audit image.
 const (
 	colLeadOrigin           = "lead_origin"
 	colOwnerID              = "owner_id"
