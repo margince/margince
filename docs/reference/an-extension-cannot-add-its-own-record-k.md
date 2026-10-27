@@ -24,7 +24,7 @@ are done.
 | 7 | "Pick a record" field type | Add a custom field of type `record` that points at one record of a kind an extension declared. Set and read it on the record pages and in the settings table. | ["Pick a record" field type](#pick-a-record-field-type) | done |
 | 8 | Record page with merged history for extension kinds | Declare a timeline for a record kind. Its rows that reference a contact, company or deal, and the unit's signals about it, show in that record's History beside activities and field changes. | [Record page with merged history for extension kinds](#record-page-with-merged-history-for-extension-kinds) | done |
 | 9 | Search and lists for extension kinds | Find a kind's rows in search. List them in a Shortlist or a Live List, filter them in the Filters screen and keep a saved view over them. | [Search and lists for extension kinds](#search-and-lists-for-extension-kinds) | done |
-| 10 | Suggested-link resolver | Nothing yet. | None yet | planned |
+| 10 | Suggested-link resolver | Propose which deal, company, contact or project a message belongs to. A reader accepts or rejects each suggestion in a queue on the Worklist. Nothing is filed until they accept. | [Suggested-link resolver](#suggested-link-resolver) | done |
 | 11 | Typed links between core records | Nothing yet. | None yet | planned |
 | 12 | Let an unattended extension run land a signal through Ingest | Nothing yet. | None yet | planned |
 
@@ -347,3 +347,39 @@ What this feature does not do yet:
 - The filtered export and the saved view export refuse an extension kind.
 - The list members endpoint has no `exclude_ids`. It takes `entity_id`, which keeps only the ids named.
 - Every declared field is a text field. A kind cannot declare a number or a date field yet.
+
+## Suggested-link resolver
+
+An extension can suggest which deal, company, contact or project a message belongs to. A suggestion waits in a review
+queue and attaches nothing. A reader accepts or rejects each one. Core makes no suggestion of its own, so the queue
+holds only what an extension proposed.
+
+```mermaid
+flowchart LR
+    Unit[Extension] -->|Propose| Queue[Review queue]
+    Queue -->|Accept| Link[Message filed under the record]
+    Queue -->|Reject| Closed[Closed, not offered again]
+```
+
+| Part | What it does |
+|---|---|
+| Seam | `tx.Core().LinkSuggestions().Propose(…)` in `backend/pkg/extension/linksuggestion.go`. It takes the message id, the target (`contact`, `company`, `deal` or `project`), one reason of at most 200 characters and a score from 0 to 1. |
+| Answer | `created`, `existing` (the same target was proposed for the message before, whatever became of it) or `excluded` (the target is the message's own author). |
+| Author | A contact who sent the message (the `from` participant) is never stored as a suggestion for it. Core drops it, so a unit cannot suggest filing a message under its sender. |
+| Rights | The caller must be able to update the message and to attach to the target, and must be able to read both. A record the caller cannot see answers `ErrNotFound`. A scheduled job or a bus delivery has no caller and is refused with `ErrForbidden`, as for any core write. |
+| Rate | A unit may propose 120 times a minute. Past that the call answers `ErrRateLimited`. |
+| Queue | `GET /v1/link-suggestions` answers the pending suggestions, oldest first, at most 50. A suggestion is left out when the caller may not read its message or its target. |
+| Decision | `POST /v1/link-suggestions/{id}/accept` files the message through the ordinary relink and closes the suggestion in one transaction. `POST /v1/link-suggestions/{id}/reject` closes it and attaches nothing. Deciding the same way twice is the same success. The opposite decision is a `409`. Both routes are for a signed-in reader, not an agent. |
+| Record | Each proposal and decision writes an audit row on the message and the event `activity.link_suggestion_changed`. The table is `activity_link_suggestion`. It holds the message, the target, the unit, the reason and the score, and nothing about a user. |
+| Frontend | The Worklist draws a **Suggested links** panel when the queue is not empty. |
+
+What this feature does not do yet:
+
+- The seam is a door the unit calls, not a callback core runs. Core runs no resolver of its own on a new message. A unit
+  that wants to propose on arrival needs the unattended landing of feature 12, because a bus delivery cannot write
+  through core today.
+- Core's retired guess for projects (the table `project_link_candidate`) is not brought back. This queue is separate.
+- `Core` has no search door yet, so a unit cannot pass `exclude_ids` from inside a handler. Core drops the author on
+  the proposal for that reason.
+- One piece the plan named as a dependency is not in the tree, and nothing here builds it. The seam uses what exists.
+- The queue shows at most 50 suggestions and has no paging.

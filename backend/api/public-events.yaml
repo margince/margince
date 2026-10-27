@@ -118,6 +118,7 @@ components:
         - weekly_plan.help_requested
         - activity.disposition_recorded
         - activity.marked_handled
+        - activity.link_suggestion_changed
         - relationship_nudge.decided
         - notice.read
         - approval.preference_changed
@@ -2698,6 +2699,42 @@ components:
         - activity_id
       properties:
         activity_id:
+          type: string
+          format: uuid
+      additionalProperties: false
+
+    PublicEventActivityLinkSuggestionChanged:
+      type: object
+      x-event-type: activity.link_suggestion_changed
+      x-entity-type: activity
+      x-version: 1
+      description: >-
+        Payload for activity.link_suggestion_changed. An extension proposed a
+        record a message may belong to, or a reader accepted or rejected one
+        (activities/linksuggestion.go). A proposal attaches nothing. Accepting
+        it files the message through the ordinary relink, which announces
+        activity.updated as well. Who decided is on the audit row, not on the
+        wire.
+      required:
+        - activity_id
+        - suggestion_id
+        - status
+        - target_type
+        - target_id
+      properties:
+        activity_id:
+          type: string
+          format: uuid
+        suggestion_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          description: One of proposed, accepted or rejected.
+        target_type:
+          type: string
+          description: The kind of record the suggestion names, one of contact, company, deal or project.
+        target_id:
           type: string
           format: uuid
       additionalProperties: false

@@ -907,6 +907,33 @@ page looks as it does without the tier.
 The panel calls your own routes like a screen does. A route asks core about its own caller before it serves
 or acts. See [Ask what a colleague may do](#ask-what-a-colleague-may-do-canread-and-canwrite).
 
+## Link a message to a record
+
+A unit can name the deal, company, contact or project a message belongs to. A user decides in a queue on the
+Worklist, and nothing is filed until they accept. Call it from a handler that runs for a signed-in user:
+
+```go
+outcome, err := tx.Core().LinkSuggestions().Propose(ctx, extension.LinkSuggestionRequest{
+	Activity: messageID,
+	Target:   extension.RecordRef{Type: "deal", ID: dealID},
+	Reason:   "The subject names this deal.",
+	Score:    0.8,
+})
+```
+
+- `Type` is `contact`, `company`, `deal` or `project`. `Reason` is one sentence of at most 200 characters, and
+  `Score` is from 0 to 1.
+- The answer is `LinkSuggestionCreated`, `LinkSuggestionExisting` or `LinkSuggestionExcluded`. The same target for
+  the same message is `Existing`, even after a user said no to it. A target that is the message's own sender is
+  `Excluded`.
+- The user you act for needs the right to update the message and to link the target. A scheduled job or a bus
+  delivery has no user and gets `ErrForbidden`.
+- Keep no score for a user. The queue stores the message, the target, your unit's name, the reason and the score of
+  the link.
+
+The details are in the
+[package overview](../reference/an-extension-cannot-add-its-own-record-k.md#suggested-link-resolver).
+
 ## Own scheduled jobs
 
 Declare **two kinds** in `api/jobs.yaml`. One is a `dispatcher` on a clock that fans out over every workspace.

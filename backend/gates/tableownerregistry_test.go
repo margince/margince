@@ -218,6 +218,7 @@ var tableOwners = map[string]string{
 	"activity_identity":        "internal/modules/activities",
 	"activity_mail_reference":  "internal/modules/activities",
 	"activity_sales_state":     "internal/modules/activities",
+	"activity_link_suggestion": "internal/modules/activities",
 	"activity_reader_state":    "internal/modules/activities",
 	"activity_review_template": "internal/modules/activities",
 	"activity_review_response": "internal/modules/activities",

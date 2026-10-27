@@ -5773,6 +5773,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/link-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The records an extension suggests messages belong to, waiting for a reader to decide.
+         * @description An extension may suggest which deal, company, contact or project a message belongs to. A
+         *     suggestion attaches nothing. It waits here until a reader accepts or rejects it. Core makes
+         *     none of its own: this queue holds only what an extension proposed.
+         *
+         *     Oldest first, at most 50. A decided suggestion leaves the queue, so asking again shows the
+         *     next ones. A suggestion is left out when the caller may not read its message or its target,
+         *     so the queue never names a record the caller could not open.
+         */
+        get: operations["listLinkSuggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/link-suggestions/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept a suggestion, which files the message under the record it names.
+         * @description Files the message under the suggested record through the same relink as any other filing,
+         *     and closes the suggestion in the same transaction. The caller needs the right to update the
+         *     message and to attach to the target. Accepting a suggestion that is already accepted is the
+         *     same success. A rejected one answers `409`.
+         */
+        post: operations["acceptLinkSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/link-suggestions/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a suggestion. The message stays where it is, and the suggestion is not offered again.
+         * @description Closes the suggestion and attaches nothing. The same target is not proposed for the same
+         *     message a second time. Rejecting a suggestion that is already rejected is the same success.
+         *     An accepted one answers `409`.
+         */
+        post: operations["rejectLinkSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}/project-filing": {
         parameters: {
             query?: never;
@@ -35943,6 +36020,32 @@ export interface components {
              */
             permanent?: boolean;
         };
+        LinkSuggestion: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            activity_id: string;
+            /** @description The subject of the message. Empty when the message has none. */
+            activity_subject?: string | null;
+            /** @enum {string} */
+            entity_type: "contact" | "company" | "deal" | "project";
+            /** Format: uuid */
+            entity_id: string;
+            /** @description The name of the suggested record, for the screen. Absent on a decision's answer. */
+            entity_name?: string | null;
+            /** @description The extension that proposed it. */
+            unit: string;
+            /** @description One short sentence from the extension on why. */
+            reason: string;
+            score: number;
+            /** @enum {string} */
+            status: "pending" | "accepted" | "rejected";
+            /** Format: date-time */
+            created_at: string;
+        };
+        LinkSuggestionList: {
+            data: components["schemas"]["LinkSuggestion"][];
+        };
         SetActivityDispositionRequest: {
             /**
              * @description What the reader decided. `not_sales` binds the thread for everybody; `handled`,
@@ -60389,6 +60492,84 @@ export interface operations {
                     "application/json": components["schemas"]["Activity"];
                 };
             };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listLinkSuggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The pending suggestions the caller may see. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkSuggestionList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    acceptLinkSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The suggestion, now accepted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkSuggestion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    rejectLinkSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The suggestion, now rejected. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkSuggestion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["VersionConflict"];
             422: components["responses"]["ValidationError"];

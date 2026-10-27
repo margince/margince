@@ -8584,6 +8584,81 @@ paths:
         '409': { $ref: '#/components/responses/VersionConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /link-suggestions:
+    get:
+      tags: [Activities]
+      operationId: listLinkSuggestions
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: The records an extension suggests messages belong to, waiting for a reader to decide.
+      description: |
+        An extension may suggest which deal, company, contact or project a message belongs to. A
+        suggestion attaches nothing. It waits here until a reader accepts or rejects it. Core makes
+        none of its own: this queue holds only what an extension proposed.
+
+        Oldest first, at most 50. A decided suggestion leaves the queue, so asking again shows the
+        next ones. A suggestion is left out when the caller may not read its message or its target,
+        so the queue never names a record the caller could not open.
+      responses:
+        '200':
+          description: The pending suggestions the caller may see.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LinkSuggestionList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /link-suggestions/{id}/accept:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities]
+      operationId: acceptLinkSuggestion
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Accept a suggestion, which files the message under the record it names.
+      description: |
+        Files the message under the suggested record through the same relink as any other filing,
+        and closes the suggestion in the same transaction. The caller needs the right to update the
+        message and to attach to the target. Accepting a suggestion that is already accepted is the
+        same success. A rejected one answers `409`.
+      responses:
+        '200':
+          description: The suggestion, now accepted.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LinkSuggestion' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /link-suggestions/{id}/reject:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities]
+      operationId: rejectLinkSuggestion
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Reject a suggestion. The message stays where it is, and the suggestion is not offered again.
+      description: |
+        Closes the suggestion and attaches nothing. The same target is not proposed for the same
+        message a second time. Rejecting a suggestion that is already rejected is the same success.
+        An accepted one answers `409`.
+      responses:
+        '200':
+          description: The suggestion, now rejected.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LinkSuggestion' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /activities/{id}/project-filing:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -49755,6 +49830,41 @@ components:
             Stop following this contact for good, for this reader only. It has no end
             date; the reader resumes it with the DELETE verb. A colleague, or a later
             owner, keeps their own choice.
+
+    LinkSuggestion:
+      type: object
+      additionalProperties: false
+      required: [id, activity_id, entity_type, entity_id, unit, reason, score, status, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        activity_id: { type: string, format: uuid }
+        activity_subject:
+          type: [string, 'null']
+          description: The subject of the message. Empty when the message has none.
+        entity_type: { type: string, enum: [contact, company, deal, project] }
+        entity_id: { type: string, format: uuid }
+        entity_name:
+          type: [string, 'null']
+          description: The name of the suggested record, for the screen. Absent on a decision's answer.
+        unit:
+          type: string
+          description: The extension that proposed it.
+        reason:
+          type: string
+          maxLength: 200
+          description: One short sentence from the extension on why.
+        score: { type: number, minimum: 0, maximum: 1 }
+        status: { type: string, enum: [pending, accepted, rejected] }
+        created_at: { type: string, format: date-time }
+
+    LinkSuggestionList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/LinkSuggestion' }
 
     SetActivityDispositionRequest:
       type: object

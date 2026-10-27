@@ -2145,6 +2145,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.cohort_promoted": "Tin nhắn đã quy về",
   "history.field.corrected": "Đã sửa kết quả",
   "history.field.disposition": "Kết quả xử lý",
+  "history.field.link_suggestion": "Liên kết gợi ý",
   "history.field.domain": "Tên miền",
   "history.field.merged_from_id": "Gộp vào từ",
   "history.field.merged_into_id": "Đã gộp vào",
@@ -14168,6 +14169,22 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã đánh dấu xong việc trong Danh sách công việc",
   "webhooks.event.activity.marked_handled.when":
     "Có ai đó đánh dấu một việc trong Danh sách công việc là đã xong vì đã xử lý theo cách khác.",
+  "webhooks.event.activity.link_suggestion_changed.label":
+    "Đã đề xuất hoặc quyết định một liên kết gợi ý",
+  "webhooks.event.activity.link_suggestion_changed.when":
+    "Một tiện ích mở rộng gợi ý thư thuộc bản ghi nào, hoặc có ai đó chấp nhận hay từ chối một gợi ý.",
+  "linkSuggestions.title": "Liên kết gợi ý",
+  "linkSuggestions.reason": "{unit} cho biết: {reason}",
+  "linkSuggestions.target": "{subject} vào {record} ({kind})",
+  "linkSuggestions.noSubject": "Thư không có tiêu đề",
+  "linkSuggestions.kind.contact": "liên hệ",
+  "linkSuggestions.kind.company": "công ty",
+  "linkSuggestions.kind.deal": "giao dịch",
+  "linkSuggestions.kind.project": "dự án",
+  "linkSuggestions.accept": "Gắn vào đó",
+  "linkSuggestions.reject": "Không phải đó",
+  "linkSuggestions.unavailable":
+    "Không đọc được các liên kết gợi ý. Hãy thử lại sau.",
   "webhooks.event.engagement.reply.label": "Đã nhận phản hồi",
   "webhooks.event.engagement.reply.when":
     "Tin nhắn đến xuất hiện trong chuỗi thư mà bạn viết trước.",

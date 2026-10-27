@@ -524,6 +524,7 @@ const (
 	ActivityArchived                      SubscribableEventType = "activity.archived"
 	ActivityCaptured                      SubscribableEventType = "activity.captured"
 	ActivityDispositionRecorded           SubscribableEventType = "activity.disposition_recorded"
+	ActivityLinkSuggestionChanged         SubscribableEventType = "activity.link_suggestion_changed"
 	ActivityMarkedHandled                 SubscribableEventType = "activity.marked_handled"
 	ActivityUpdated                       SubscribableEventType = "activity.updated"
 	ApprovalDecided                       SubscribableEventType = "approval.decided"
@@ -673,6 +674,8 @@ func (e SubscribableEventType) Valid() bool {
 	case ActivityCaptured:
 		return true
 	case ActivityDispositionRecorded:
+		return true
+	case ActivityLinkSuggestionChanged:
 		return true
 	case ActivityMarkedHandled:
 		return true
@@ -1084,6 +1087,19 @@ type PublicEventActivityDispositionRecorded struct {
 
 // PublicEventActivityDispositionRecordedDisposition What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the reader states, Done included. A decision withdrawn is itself a decision. A consumer counting dispositions has to see it happen rather than infer it from a row going quiet.
 type PublicEventActivityDispositionRecordedDisposition string
+
+// PublicEventActivityLinkSuggestionChanged Payload for activity.link_suggestion_changed. An extension proposed a record a message may belong to, or a reader accepted or rejected one (activities/linksuggestion.go). A proposal attaches nothing. Accepting it files the message through the ordinary relink, which announces activity.updated as well. Who decided is on the audit row, not on the wire.
+type PublicEventActivityLinkSuggestionChanged struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// Status One of proposed, accepted or rejected.
+	Status       string             `json:"status"`
+	SuggestionId openapi_types.UUID `json:"suggestion_id"`
+	TargetId     openapi_types.UUID `json:"target_id"`
+
+	// TargetType The kind of record the suggestion names, one of contact, company, deal or project.
+	TargetType string `json:"target_type"`
+}
 
 // PublicEventActivityMarkedHandled Payload for activity.marked_handled. One reader marked an activity on their Worklist done. It is a waiting message, a message of their own still unanswered, or a meeting still owed a follow-up. They dealt with it another way, by phone, in a meeting, or with nothing owed (activities/disposition.go). It is that reader's own state, like a snooze, and the reader is not on the wire. No reply was sent. The undo is activity.disposition_recorded with `picked_up`.
 type PublicEventActivityMarkedHandled struct {
@@ -2808,6 +2824,12 @@ func (PublicEventActivityDispositionRecorded) EventType() string {
 
 func (PublicEventActivityDispositionRecorded) EntityType() string { return "activity" }
 
+func (PublicEventActivityLinkSuggestionChanged) EventType() string {
+	return "activity.link_suggestion_changed"
+}
+
+func (PublicEventActivityLinkSuggestionChanged) EntityType() string { return "activity" }
+
 func (PublicEventActivityMarkedHandled) EventType() string { return "activity.marked_handled" }
 
 func (PublicEventActivityMarkedHandled) EntityType() string { return "activity" }
@@ -3385,6 +3407,7 @@ var PublicEventVersions = map[string]int{
 	"activity.archived":                         1,
 	"activity.captured":                         1,
 	"activity.disposition_recorded":             1,
+	"activity.link_suggestion_changed":          1,
 	"activity.marked_handled":                   1,
 	"activity.updated":                          1,
 	"approval.decided":                          1,
@@ -3532,6 +3555,7 @@ var PublicEventSamples = map[string]string{
 	"activity.archived":                         "{\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"activity.captured":                         "{\"channel_provider\":\"Sample channel provider\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"kind\":\"Sample kind\",\"source_system\":\"Sample source system\"}",
 	"activity.disposition_recorded":             "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"disposition\":\"not_sales\"}",
+	"activity.link_suggestion_changed":          "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"status\":\"Sample status\",\"suggestion_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"target_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"target_type\":\"Sample target type\"}",
 	"activity.marked_handled":                   "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"activity.updated":                          "{\"changed_fields\":{\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"automatic_task_repaired\":true,\"body\":true,\"calendar_method\":\"PUBLISH\",\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"is_done\":true,\"meeting_status\":\"booked\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"restored\":true,\"subject\":\"Sample subject\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"approval.decided":                          "{\"decided_by\":\"0190a7f2-0000-7000-8000-000000000010\",\"decided_by_system\":true,\"diff_hash\":\"Sample diff hash\",\"edited\":true,\"edited_change\":{},\"kind\":\"Sample kind\",\"verdict\":\"approved\"}",

@@ -285,6 +285,31 @@ BEGIN
     RETURN NEW;
 END;
 
+public.activity_link_suggestion acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.activity_link_suggestion.activity_id uuid NOT NULL gen=- def=-
+public.activity_link_suggestion.activity_link_suggestion_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.activity_link_suggestion.activity_link_suggestion_decided CHECK ((((status = 'pending'::text) AND (decided_at IS NULL) AND (decided_by IS NULL)) OR ((status <> 'pending'::text) AND (decided_at IS NOT NULL) AND (decided_by IS NOT NULL))))
+public.activity_link_suggestion.activity_link_suggestion_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'project'::text])))
+public.activity_link_suggestion.activity_link_suggestion_pkey PRIMARY KEY (id)
+public.activity_link_suggestion.activity_link_suggestion_reason_check CHECK (((char_length(reason) >= 1) AND (char_length(reason) <= 200)))
+public.activity_link_suggestion.activity_link_suggestion_score_check CHECK (((score >= (0)::numeric) AND (score <= (1)::numeric)))
+public.activity_link_suggestion.activity_link_suggestion_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'accepted'::text, 'rejected'::text])))
+public.activity_link_suggestion.activity_link_suggestion_touch CREATE TRIGGER activity_link_suggestion_touch BEFORE UPDATE ON public.activity_link_suggestion FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.activity_link_suggestion.activity_link_suggestion_version_check CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.activity_link_suggestion.captured_by text NOT NULL gen=- def=-
+public.activity_link_suggestion.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.activity_link_suggestion.decided_at timestamp with time zone gen=- def=-
+public.activity_link_suggestion.decided_by text gen=- def=-
+public.activity_link_suggestion.entity_id uuid NOT NULL gen=- def=-
+public.activity_link_suggestion.entity_type text NOT NULL gen=- def=-
+public.activity_link_suggestion.id uuid NOT NULL gen=- def=uuidv7()
+public.activity_link_suggestion.reason text NOT NULL gen=- def=-
+public.activity_link_suggestion.score numeric(5,4) NOT NULL gen=- def=-
+public.activity_link_suggestion.status text NOT NULL gen=- def='pending'::text
+public.activity_link_suggestion.unit text NOT NULL gen=- def=-
+public.activity_link_suggestion.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.activity_link_suggestion.version bigint NOT NULL gen=- def=1
+public.activity_link_suggestion_pkey CREATE UNIQUE INDEX activity_link_suggestion_pkey ON public.activity_link_suggestion USING btree (id)
 public.activity_mail_reference acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_mail_reference.activity_id uuid NOT NULL gen=- def=-
 public.activity_mail_reference.activity_mail_reference_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
@@ -4642,6 +4667,7 @@ public.idx_activity_counterparty_email CREATE INDEX idx_activity_counterparty_em
 public.idx_activity_direction CREATE INDEX idx_activity_direction ON public.activity USING btree (direction, occurred_at DESC) WHERE ((direction IS NOT NULL) AND (archived_at IS NULL))
 public.idx_activity_kind CREATE INDEX idx_activity_kind ON public.activity USING btree (kind, occurred_at DESC) WHERE (archived_at IS NULL)
 public.idx_activity_labeled CREATE INDEX idx_activity_labeled ON public.activity USING btree (capture_labeled_at) WHERE (capture_labeled_at IS NOT NULL)
+public.idx_activity_link_suggestion_pending CREATE INDEX idx_activity_link_suggestion_pending ON public.activity_link_suggestion USING btree (created_at, id) WHERE (status = 'pending'::text)
 public.idx_activity_meeting_host CREATE INDEX idx_activity_meeting_host ON public.activity USING btree (host_user_id, occurred_at) WHERE ((kind = 'meeting'::text) AND (archived_at IS NULL))
 public.idx_activity_occurred_live CREATE INDEX idx_activity_occurred_live ON public.activity USING btree (occurred_at DESC) WHERE (archived_at IS NULL)
 public.idx_activity_owed_ruleset CREATE INDEX idx_activity_owed_ruleset ON public.activity USING btree (owed_verdict_ruleset, occurred_at) WHERE ((owed_verdict IS NOT NULL) AND (direction = 'inbound'::text) AND (kind = ANY (ARRAY['email'::text, 'message'::text])) AND (archived_at IS NULL) AND (audience = 'workspace'::text) AND (restricted_at IS NULL))
@@ -8120,6 +8146,7 @@ END
 public.uq_activity_link CREATE UNIQUE INDEX uq_activity_link ON public.activity_link USING btree (activity_id, entity_type, COALESCE(contact_id, company_id, deal_id, lead_id, project_id))
 public.uq_activity_link_ext CREATE UNIQUE INDEX uq_activity_link_ext ON public.activity_link USING btree (activity_id, entity_type, ext_entity_id) WHERE (ext_entity_id IS NOT NULL)
 public.uq_activity_link_project CREATE UNIQUE INDEX uq_activity_link_project ON public.activity_link USING btree (activity_id) WHERE (entity_type = 'project'::text)
+public.uq_activity_link_suggestion_target CREATE UNIQUE INDEX uq_activity_link_suggestion_target ON public.activity_link_suggestion USING btree (activity_id, entity_type, entity_id)
 public.uq_activity_participant CREATE UNIQUE INDEX uq_activity_participant ON public.activity_participant USING btree (activity_id, role, user_id, contact_id, address, channel_user_id) NULLS NOT DISTINCT
 public.uq_activity_retention_evidence CREATE UNIQUE INDEX uq_activity_retention_evidence ON public.activity_retention_evidence USING btree (activity_id, deal_id, deal_name, project_id, project_name, basis) NULLS NOT DISTINCT WHERE ((basis <> 'controller_pin'::text) AND ((deal_id IS NOT NULL) OR (project_id IS NOT NULL)))
 public.uq_activity_source CREATE UNIQUE INDEX uq_activity_source ON public.activity USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))

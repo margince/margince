@@ -44,6 +44,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`activity.archived`](#activityarchived) | activity | 1 |
 | [`activity.captured`](#activitycaptured) | activity | 1 |
 | [`activity.disposition_recorded`](#activitydisposition_recorded) | activity | 1 |
+| [`activity.link_suggestion_changed`](#activitylink_suggestion_changed) | activity | 1 |
 | [`activity.marked_handled`](#activitymarked_handled) | activity | 1 |
 | [`activity.updated`](#activityupdated) | activity | 1 |
 | [`approval.decided`](#approvaldecided) | approval | 1 |
@@ -219,6 +220,20 @@ Payload for activity.disposition_recorded. Somebody decided what to do about a w
 |---|---|---|---|
 | `data.activity_id` | string (uuid) | yes |  |
 | `data.disposition` | string: `not_sales`, `sales_again`, `snoozed`, `not_mine`, `picked_up` | yes | What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the reader states, Done included. A decision withdrawn is itself a decision. A consumer counting dispositions has to see it happen rather than infer it from a row going quiet. |
+
+### `activity.link_suggestion_changed`
+
+Record: `activity` · version 1
+
+Payload for activity.link_suggestion_changed. An extension proposed a record a message may belong to, or a reader accepted or rejected one (activities/linksuggestion.go). A proposal attaches nothing. Accepting it files the message through the ordinary relink, which announces activity.updated as well. Who decided is on the audit row, not on the wire.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.activity_id` | string (uuid) | yes |  |
+| `data.status` | string | yes | One of proposed, accepted or rejected. |
+| `data.suggestion_id` | string (uuid) | yes |  |
+| `data.target_id` | string (uuid) | yes |  |
+| `data.target_type` | string | yes | The kind of record the suggestion names, one of contact, company, deal or project. |
 
 ### `activity.marked_handled`
 

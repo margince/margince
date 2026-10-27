@@ -2217,6 +2217,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.cohort_promoted": "Zugeordnete Nachrichten",
   "history.field.corrected": "Ergebnis korrigiert",
   "history.field.disposition": "Einstufung",
+  "history.field.link_suggestion": "Verknüpfungsvorschlag",
   "history.field.domain": "Domain",
   "history.field.merged_from_id": "Zusammengeführt aus",
   "history.field.merged_into_id": "Zusammengeführt in",
@@ -14536,6 +14537,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Worklist-Eintrag als erledigt markiert",
   "webhooks.event.activity.marked_handled.when":
     "Jemand markiert einen Worklist-Eintrag als erledigt, da er auf anderem Weg bearbeitet wurde.",
+  "webhooks.event.activity.link_suggestion_changed.label":
+    "Verknüpfungsvorschlag gemacht oder entschieden",
+  "webhooks.event.activity.link_suggestion_changed.when":
+    "Eine Erweiterung schlägt vor, zu welchem Datensatz eine Nachricht gehört, oder jemand nimmt einen Vorschlag an oder lehnt ihn ab.",
+  "linkSuggestions.title": "Verknüpfungsvorschläge",
+  "linkSuggestions.reason": "{unit}: {reason}",
+  "linkSuggestions.target": "{subject} zu {record} ({kind})",
+  "linkSuggestions.noSubject": "Eine Nachricht ohne Betreff",
+  "linkSuggestions.kind.contact": "Kontakt",
+  "linkSuggestions.kind.company": "Unternehmen",
+  "linkSuggestions.kind.deal": "Deal",
+  "linkSuggestions.kind.project": "Projekt",
+  "linkSuggestions.accept": "Dort ablegen",
+  "linkSuggestions.reject": "Nicht dort",
+  "linkSuggestions.unavailable":
+    "Die Verknüpfungsvorschläge konnten nicht gelesen werden. Versuche es später erneut.",
   "webhooks.event.engagement.reply.label": "Antwort eingegangen",
   "webhooks.event.engagement.reply.when":
     "Eine eingehende Nachricht kommt in einem Thread an, in dem du zuerst geschrieben hast.",
