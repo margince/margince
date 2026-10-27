@@ -7,10 +7,10 @@ import {
   EmptyState,
   Field,
   SegmentedControl,
-  TextInput,
 } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { isISODate } from "../../design-system/dateinput";
+import { MonthInput, type YearMonth } from "../../design-system/monthinput";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { useLocale, useT } from "../../i18n";
@@ -42,7 +42,7 @@ export function ReportingTargets() {
   const canUpdate = useCanWrite("sales_target", "update");
   const { cursor, next: setCursor, back, canBack } = useReportingPages();
   const [status, setStatus] = useState("active");
-  const [periodFilter, setPeriodFilter] = useState("");
+  const [periodFilter, setPeriodFilter] = useState<YearMonth | "">("");
   const [editing, setEditing] = useState<Target | "new" | null>(null);
   const query = useQuery({
     queryKey: ["reporting-targets", cursor, status, periodFilter],
@@ -92,12 +92,11 @@ export function ReportingTargets() {
           />
           <Field label={t("reporting.periodMonth")}>
             {(field) => (
-              <TextInput
+              <MonthInput
                 {...field}
-                type="month"
                 value={periodFilter}
-                onChange={(event) => {
-                  setPeriodFilter(event.target.value);
+                onChange={(month) => {
+                  setPeriodFilter(month);
                   setCursor(undefined);
                 }}
               />
