@@ -166,8 +166,8 @@ function DaysInStageFigure({ inputs, words }: FigureProps) {
 }
 
 // How long the deal took, from the day it was opened to the day it closed. An
-// imported close with no day has no span to count, and a corrected close day
-// may fall before the deal was opened, which is no span either.
+// imported close with no day has no span to count. Nor does a corrected close
+// day that falls before the deal was opened.
 function DaysToCloseFigure({ inputs, words }: FigureProps) {
   const { t, plural, locale, zone } = words;
   const { created_at: opened, closed_at: closed } = inputs.deal;
