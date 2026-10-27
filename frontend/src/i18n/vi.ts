@@ -3692,6 +3692,18 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không có đồng nghiệp nào có kết nối ở công ty này được hiển thị.",
   "companyReach.readFailed":
     "Kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c danh s\u00e1ch n\u00e0y",
+  "companyReach.functions": "Kết nối làm ở bộ phận",
+  "companyReach.functionCount": "{function} · {connections}",
+  "companyReach.ask": "Nhờ giới thiệu",
+  "companyReach.askNamed": "Nhờ {name} giới thiệu",
+  "companyReach.function.management": "Quản lý",
+  "companyReach.function.it": "CNTT",
+  "companyReach.function.finance": "Tài chính",
+  "companyReach.function.sales": "Kinh doanh",
+  "companyReach.function.marketing": "Tiếp thị",
+  "companyReach.function.hr": "Nhân sự",
+  "companyReach.function.operations": "Vận hành",
+  "companyReach.function.procurement": "Mua hàng",
   "linkedinReach.title": "Mạng lưới LinkedIn",
   "linkedinReach.sub":
     "Các công ty đã có trong CRM mà bạn có người quen, công ty nhiều kết nối nhất xếp trước.",
@@ -3984,6 +3996,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.contacts.board.readFromMessages": "Đọc từ tin nhắn của họ",
   "co.intro.title": "Yêu cầu giới thiệu",
   "co.intro.who": "Nhờ {colleague} giới thiệu bạn với {contact}.",
+  "co.intro.whoAccount":
+    "Nhờ {colleague} giới thiệu bạn với ai đó ở {company}.",
+  "co.intro.function": "Ai đó làm ở bộ phận",
+  "co.intro.functionAny": "Bộ phận bất kỳ",
   "co.intro.write": "Soạn tin nhắn",
   "co.intro.writing": "Đang viết…",
   "co.intro.fromTemplate":

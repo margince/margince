@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { expectReadable } from "../readable.testkit";
 import { approvalFixture } from "./fixture";
 
 const calls: { tool: string; args: Record<string, unknown> }[] = [];
@@ -51,30 +52,39 @@ beforeEach(() => {
 });
 
 describe("the approval card", () => {
-  it("draws nothing for an answer that is not a staged action", () => {
-    expect(mount({}).childElementCount).toBe(0);
+  it("says there is nothing to decide for an answer that is not a staged action", () => {
+    const root = mount({});
+    expect(root.querySelector("h1")?.textContent).toBe("No approval to show");
+    expect(labels(root)).toEqual([]);
   });
 
-  it("shows what is proposed and by whom", () => {
+  it("shows what is proposed, by whom and for whom", () => {
     const root = mount();
     expect(root.querySelector(".name")?.textContent).toBe(
       "Move Acme renewal to Negotiation",
     );
-    expect(root.textContent).toContain("Proposed by agent:claude");
+    expect(root.textContent).toContain("Proposed by an assistant for Sam Rep");
     expect(
       [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
-    ).toEqual(["stageNegotiation", "amount minor1200000"]);
+    ).toEqual(["StageProposal → Negotiation"]);
   });
 
-  it("shows a nested change as text rather than hiding it", () => {
+  it("shows a structured value as words rather than as its document", () => {
     const root = mount({
       ...(approvalFixture.data as object),
-      proposed_change: { body: { text: "Hello Anna" }, to: ["a@b.test"] },
+      changes: [
+        {
+          field: "address",
+          label: "Address",
+          before: { kind: "empty", text: "" },
+          after: { kind: "structured", text: '{"city":"Berlin","zip":""}' },
+        },
+      ],
     });
-    const cells = [...root.querySelectorAll("tbody td")].map(
-      (n) => n.textContent,
+    expectReadable(root);
+    expect(root.querySelector("tbody td")?.textContent).toBe(
+      "— → City: Berlin",
     );
-    expect(cells).toEqual(['{"text":"Hello Anna"}', '["a@b.test"]']);
   });
 
   it("shows the evidence the proposal was read out of", () => {
@@ -87,13 +97,26 @@ describe("the approval card", () => {
     );
   });
 
-  it("shows a long nested change in full", () => {
+  it("shows a long value in full", () => {
     const long = "x".repeat(900);
     const root = mount({
       ...(approvalFixture.data as object),
-      proposed_change: { body: { text: long } },
+      changes: [
+        {
+          field: "description",
+          label: "Description",
+          before: { kind: "empty", text: "" },
+          after: { kind: "text", text: long },
+        },
+      ],
     });
     expect(root.querySelector("tbody td")?.textContent).toContain(long);
+  });
+
+  it("names nothing it was not told, for a proposal it cannot preview", () => {
+    const root = mount({ ...(approvalFixture.data as object), changes: [] });
+    expectReadable(root);
+    expect(root.querySelector("tbody")).toBeNull();
   });
 
   it("approves through decide_approvals and says the assistant still has to run it", async () => {
@@ -154,5 +177,35 @@ describe("the approval card", () => {
     await press(root, "Ask the assistant to decide");
     expect(calls).toHaveLength(0);
     expect(asked[0]).toContain(ID);
+  });
+});
+
+describe("an approval for a held update", () => {
+  it("shows the fields it would set, not the call that carries them", () => {
+    const record = "0195c3a0-0000-7000-8000-0000000000a1";
+    const root = mount({
+      ...(approvalFixture.data as object),
+      summary: 'Update lead "Jane Doe": overwrite Job title, edited by hand',
+      proposed_by: "agent:0195c3a0-0000-7000-8000-0000000000a9",
+      proposed_change: {
+        record_type: "lead",
+        id: record,
+        fields: { title: "VP Sales" },
+      },
+      on_behalf_of: { id: record, is_you: true },
+      changes: [
+        {
+          field: "title",
+          label: "Job title",
+          before: { kind: "text", text: "Head of Sales" },
+          after: { kind: "text", text: "VP Sales" },
+        },
+      ],
+    });
+    expectReadable(root);
+    expect(root.textContent).toContain("Proposed by an assistant for you");
+    expect(
+      [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
+    ).toEqual(["Job titleHead of Sales → VP Sales"]);
   });
 });

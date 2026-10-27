@@ -94,6 +94,9 @@ type Registry struct {
 	// seats names the owner every served record row carries (queryowner.go).
 	// Nil leaves owners unnamed but still disclosed.
 	seats SeatNamer
+	// changeWords describes what a write changed (changewords.go). Nil
+	// answers no changes.
+	changeWords ChangeWords
 	// importWait is how long preview_import waits for its test's report.
 	importWait importWait
 }
@@ -262,9 +265,9 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 // handler still marshals only its own payload and never sees the envelope,
 // which is what keeps thirty tools from carrying thirty spellings of it.
 //
-// The failure path deliberately seals nothing: a refusal is an error, and an
-// error carries the sentinel and the message the caller acts on, not a document
-// with an empty payload inside it.
+// The failure path seals nothing of its own. A refusal is an error, and it
+// carries the sentinel and the message the caller acts on. A refusal that
+// carries an answer for a view has that answer sealed (shownrefusal.go).
 // runClaimed is the one path from admission to a handler: claim the retry key,
 // redeem any asserted approval, run, and record what the run produced.
 //
@@ -336,7 +339,9 @@ func (r *Registry) runAndSeal(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec
 	ctx, withheld := auth.WithWithheldReport(ctx)
 	out, err := t.Handle(ctx, args)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, sealShown(err, func(answer json.RawMessage) (json.RawMessage, error) {
+			return sealEnvelope(spec, trace, facts, answer)
+		})
 	}
 	noteCaptureWithheld(ctx, withheld)
 	r.noteCostShare(ctx)

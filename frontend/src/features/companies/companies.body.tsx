@@ -250,7 +250,10 @@ export function CompanyRecordBody({
             recordId={company.id}
             readOnly={!canWriteCompany}
           />
-          <CompanyReachCard companyId={company.id} />
+          <CompanyReachCard
+            companyId={company.id}
+            companyName={company.display_name}
+          />
         </div>
       )}
       {/* Files get the whole column on their own tab, which is what the mockup

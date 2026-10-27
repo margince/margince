@@ -410,7 +410,13 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 		if handle, minted := s.mintTask(callCtx, fr, served.Tool, err); minted {
 			return handle
 		}
-		return toolError(s.explain(served.Tool, err))
+		refusal := toolError(s.explain(served.Tool, err))
+		if shown := shownAnswer(err); shown != nil {
+			if structured, ok := s.structuredContent(served.Tool, shown); ok {
+				refusal["structuredContent"] = structured
+			}
+		}
+		return refusal
 	}
 	return s.result(served.Tool, served.Output)
 }

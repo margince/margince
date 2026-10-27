@@ -432,6 +432,8 @@ type UpdateWithStagedApprovalResult struct {
 	// optional member says exactly what is true — the note is there when a human
 	// last wrote one of the fields, and absent otherwise.
 	StagedApproval *stagedApprovalNote `json:"staged_approval,omitempty"`
+	// Changes names each field this call applied, as it was and as it is.
+	Changes []FieldChange `json:"changes,omitempty"`
 }
 
 // SendEmailResult is what send_email answers once a human has released it.

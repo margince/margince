@@ -68,8 +68,8 @@ type StageResolver interface {
 // TestEveryDeclaredToolVerbIsRegistered fails the build for it.
 func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, ownership FieldOwnership, consumerMail ConsumerMail, duplicates OpenDuplicatesFor, tagOffer TagOfferFor) {
 	r.Register(readRecord{p: p, name: r.seats})
-	r.Register(createRecord{p: p, duplicates: duplicates, tagOffer: tagOffer, language: r.language})
-	r.Register(updateRecord{p: p, ownership: ownership, staging: r.approvals, language: r.language})
+	r.Register(createRecord{p: p, duplicates: duplicates, tagOffer: tagOffer, language: r.language, words: r.changeWords})
+	r.Register(updateRecord{p: p, ownership: ownership, staging: r.approvals, language: r.language, words: r.changeWords})
 	r.Register(logActivity{p: p})
 	r.Register(createTask{p: p})
 	r.Register(advanceDeal{p: p, stages: stages, language: r.language})
@@ -203,6 +203,7 @@ type createRecord struct {
 	// vocabulary is bound, and a nil seam offers nothing.
 	tagOffer TagOfferFor
 	language baselanguage.Resolver
+	words    ChangeWords
 }
 
 func (t createRecord) Spec() mcp.ToolSpec {
@@ -255,6 +256,7 @@ func (t createRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	}
 	return marshalResult(createdRecord{
 		wireRecord:          rec,
+		Changes:             t.words.describeCreate(ctx, summaryIn(ctx, t.language).lang, args.Fields, rec.Fields),
 		DuplicateCandidates: t.reportCreateDuplicates(ctx, args.RecordType, args.Fields, ref.ID, filed.IDs()),
 		TagOffer:            t.offerTag(ctx, args.RecordType, args.OfferTag),
 	}, nil)

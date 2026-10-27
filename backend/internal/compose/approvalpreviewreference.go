@@ -50,7 +50,7 @@ func previewReferenceType(field string) string {
 	switch field {
 	case previewFieldTemplateID:
 		return string(recordTypeOfferTemplate)
-	case bulkParamOwner:
+	case bulkParamOwner, previewFieldAssigneeID:
 		return entityUser
 	case previewFieldBuyerCompanyID, refColParentCompany, refColPartnerCompany:
 		return string(recordTypeCompany)

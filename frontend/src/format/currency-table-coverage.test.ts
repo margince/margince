@@ -43,10 +43,8 @@ import { parseSource } from "../../scripts/lib/source-tree";
 // calls. Nor does this follow a computed key, which would need the type
 // checker.
 //
-// `mcp-apps/bridge.ts` needs no exemption and is worth saying so: it formats
-// money for a document served to a third-party host and CANNOT import the
-// formatters, but it imports `minorUnitDigits` and asks `Intl` for the rest —
-// the sanctioned way to be a second caller without being a second answer.
+// `mcp-apps/values.ts` needs no exemption. A view cannot import the formatters,
+// so it imports `minorUnitDigits` and asks `Intl` for the rest.
 
 const formatDir = dirname(fileURLToPath(import.meta.url));
 const srcRoot = join(formatDir, "..");
