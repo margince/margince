@@ -1,0 +1,51 @@
+name: ask_whats_open_names_the_promise_each_side_owes
+task: summarize
+site: company_ask
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  question: whats_open
+  name: Brandt Automotive GmbH
+  industry: Automotive
+  strength: 41
+  contact_count: 2
+  open_deals:
+    - label: stalled_retrofit
+      name: Fleet retrofit 2026
+      stage: Proposal
+      amount_minor: 4800000
+      currency: EUR
+      stalled: true
+  open_commitments:
+    - label: our_revised_quote
+      claim: Send the revised quote with the volume discount.
+      side: ours
+      due: "2026-07-17"
+    - label: their_site_access
+      claim: Confirm the depot access dates for the retrofit survey.
+      side: theirs
+      holder: Lena Brandt
+      due: "2026-07-20"
+  recent:
+    - label: last_email
+      kind: email
+      subject: "Re: proposal — coming back to you after the board meeting"
+      at: "2026-07-10T09:00:00Z"
+expect:
+  outcome: accepted
+  # Open here means the deal AND both promises. An answer that names only the
+  # deal omits what is owed. One that calls a promise a task, gives their
+  # promise to us, or names a holder for ours, misstates who must act.
+  answer: [stalled_retrofit, our_revised_quote, their_site_access]
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the answer lists what is open: the stalled deal and both
+    promises. The revised quote is OUR promise and has no named holder. The
+    site access dates are THEIR promise, held by Lena Brandt. An answer that
+    calls a promise a task, swaps the sides, names a holder for our promise,
+    or drops either promise is wrong. Every sentence must cite
+    ids the summary supplied, and the answer must not read intent into the
+    quoted subject.

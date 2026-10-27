@@ -12576,15 +12576,17 @@ components:
         next:
           allOf: [{$ref: '#/components/schemas/DealStatusCardMove'}]
           description: The one move to make, with the verb to perform it.
+        request_basis:
+          allOf: [{$ref: '#/components/schemas/WorkEvidenceBasis'}]
+          description: Current request evidence supporting reply_to; absent for historical review.
         reply_to:
           type: [string, 'null']
           format: uuid
           description: |-
-            The inbound message an email from here would answer: the most recent
-            one this deal has received that nobody has replied to. Null when the
-            buyer has never written, or when the last thing they wrote has been
-            answered — then a mail from here starts a thread rather than
-            continuing one.
+            A confirmed current inbound request on this deal, admitted by the
+            request owner's responsibility, settlement and currency rules.
+            Absent for historical or unconfirmed review. Its absence makes no
+            claim about whether an unrecorded reply exists.
         generated_at: {type: string, format: date-time}
         generated_by: {$ref: '#/components/schemas/WrittenBy'}
       additionalProperties: false
@@ -12638,6 +12640,9 @@ components:
         evidence:
           type: array
           items: {$ref: '#/components/schemas/DealNextBestActionEvidence'}
+        basis:
+          allOf: [{$ref: '#/components/schemas/WorkEvidenceBasis'}]
+          description: Evidence classification for this recommendation; absence supplies no urgency.
         fingerprint:
           type: string
           readOnly: true
@@ -12646,6 +12651,23 @@ components:
             rules chose it. Send it to `POST /deals/{id}/move/dismiss` to set this move aside;
             the set-aside lifts when the card names a different move. Absent on a move with
             nothing to do (`none`).
+      additionalProperties: false
+    WorkEvidenceBasis:
+      type: object
+      description: |-
+        A recommendation's scoped source and classification. Known request kinds
+        are current_request and request_review; unknown kinds remain neutral.
+        Source age is not a deadline. Evaluation time is not source time.
+      required: [kind, scope, source_activity_id, source_at, source_precision, evaluated_at, policy_version]
+      properties:
+        kind: {type: string}
+        scope: {type: string, description: The record scope in which the evidence was evaluated.}
+        source_activity_id: {type: string, format: uuid}
+        source_at: {type: string, format: date-time}
+        source_precision: {$ref: '#/components/schemas/OccurredPrecision'}
+        source_version: {$ref: '#/components/schemas/RowVersion'}
+        evaluated_at: {type: string, format: date-time}
+        policy_version: {type: string}
       additionalProperties: false
     DealNextBestActionEvidence:
       type: object

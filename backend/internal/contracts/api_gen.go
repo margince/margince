@@ -38909,16 +38909,14 @@ type DealStatusCard struct {
 	// Next The one move to make, with the verb to perform it.
 	Next *DealStatusCardMove `json:"next,omitempty"`
 
-	// ReplyTo The inbound message an email from here would answer: the most recent
-	// one this deal has received that nobody has replied to. Null when the
-	// buyer has never written, or when the last thing they wrote has been
-	// answered — then a mail from here starts a thread rather than
-	// continuing one.
-	//
-	// Independent of `next` on purpose. Whether there is something to reply
-	// to is a fact about the deal; which move ranks first is a judgement,
-	// and the two must not have to agree for the reply to be reachable.
+	// ReplyTo A confirmed current inbound request on this deal, admitted by the
+	// request owner's responsibility, settlement and currency rules.
+	// Absent for historical or unconfirmed review. Its absence makes no
+	// claim about whether an unrecorded reply exists.
 	ReplyTo *openapi_types.UUID `json:"reply_to,omitempty"`
+
+	// RequestBasis Current request evidence supporting reply_to; absent for historical review.
+	RequestBasis *WorkEvidenceBasis `json:"request_basis,omitempty"`
 
 	// Story What has happened and where that leaves things, in the order it
 	// happened. The section a reader with no memory of the deal starts at.
@@ -38937,8 +38935,11 @@ type DealStatusCardMove struct {
 	Action string `json:"action"`
 
 	// Arguments `draft_email`, `open_task` and `open_meeting_brief` carry `{activity_id}`; `create_task` carries a `CreateTaskRequest` body.
-	Arguments *map[string]interface{}      `json:"arguments,omitempty"`
-	Evidence  []DealNextBestActionEvidence `json:"evidence"`
+	Arguments *map[string]interface{} `json:"arguments,omitempty"`
+
+	// Basis Evidence classification for this recommendation; absence supplies no urgency.
+	Basis    *WorkEvidenceBasis           `json:"basis,omitempty"`
+	Evidence []DealNextBestActionEvidence `json:"evidence"`
 
 	// Fingerprint A digest of what the move names: its verb, operands and evidence, taken when the
 	// rules chose it. Send it to `POST /deals/{id}/move/dismiss` to set this move aside;
@@ -44817,17 +44818,29 @@ type MailDraft struct {
 	Body       string              `json:"body"`
 	Cc         []string            `json:"cc"`
 	CreatedAt  time.Time           `json:"created_at"`
-	HtmlBody   *string             `json:"html_body,omitempty"`
-	Id         openapi_types.UUID  `json:"id"`
-	Subject    string              `json:"subject"`
-	To         []string            `json:"to"`
-	UpdatedAt  time.Time           `json:"updated_at"`
-	Version    int64               `json:"version"`
+
+	// Grounding The records this draft was written from, which an agent draft records and a human draft leaves empty. The composer files a sent draft under these, so a draft grounded in a deal reaches that deal's timeline even when it is opened from the contact page.
+	Grounding *[]MailDraftGround `json:"grounding,omitempty"`
+	HtmlBody  *string            `json:"html_body,omitempty"`
+	Id        openapi_types.UUID `json:"id"`
+	Subject   string             `json:"subject"`
+	To        []string           `json:"to"`
+	UpdatedAt time.Time          `json:"updated_at"`
+	Version   int64              `json:"version"`
 }
 
 // MailDraftAnchorType What the composer opened against: `activity` for a reply to that message, or the
 // record a new conversation starts from.
 type MailDraftAnchorType string
+
+// MailDraftGround One record the draft was written from. A saved agent draft keeps these so the composer files the sent mail where the draft was grounded, rather than rebuilding links from whichever page it was opened on.
+type MailDraftGround struct {
+	AnchorId openapi_types.UUID `json:"anchor_id"`
+
+	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
+	// record a new conversation starts from.
+	AnchorType MailDraftAnchorType `json:"anchor_type"`
+}
 
 // MailDraftInput The composer's fields as they stand. Every content field is optional and an omitted
 // one saves as empty, because a draft is whatever the rep had typed so far.
@@ -55706,6 +55719,29 @@ type WeeklyScorecardLeadBlock struct {
 	Promoted               int `json:"promoted"`
 }
 
+// WorkEvidenceBasis A recommendation's scoped source and classification. Known request kinds
+// are current_request and request_review; unknown kinds remain neutral.
+// Source age is not a deadline. Evaluation time is not source time.
+type WorkEvidenceBasis struct {
+	EvaluatedAt   time.Time `json:"evaluated_at"`
+	Kind          string    `json:"kind"`
+	PolicyVersion string    `json:"policy_version"`
+
+	// Scope The record scope in which the evidence was evaluated.
+	Scope            string             `json:"scope"`
+	SourceActivityId openapi_types.UUID `json:"source_activity_id"`
+	SourceAt         time.Time          `json:"source_at"`
+
+	// SourcePrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
+	SourcePrecision OccurredPrecision `json:"source_precision"`
+
+	// SourceVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	SourceVersion *RowVersion `json:"source_version,omitempty"`
+}
+
 // WorkingHours When one contact is bookable, on their own clock.
 //
 // Personal, never installation-wide: contacts on one team sit in different
@@ -56966,6 +57002,9 @@ type WorklistMove struct {
 	// chose requires; a client that does not recognize a verb draws nothing and so
 	// never reads these.
 	Arguments *map[string]interface{} `json:"arguments,omitempty"`
+
+	// Basis The deal recommendation's evidence basis, preserved across surfaces.
+	Basis *WorkEvidenceBasis `json:"basis,omitempty"`
 }
 
 // WorklistMoveAction `draft_reply` answers the message in `activity_id` — offered only where the

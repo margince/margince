@@ -136,7 +136,7 @@ func (s *Server) wireContact360(pool *pgxpool.Pool) {
 	// Deal Room through their own gates. Built through the shared constructor
 	// because the worklist reads the move this same service decides — see
 	// newDealStatusService for why there is only one.
-	s.dealStatusSvc = newDealStatusService(pool)
+	s.dealStatusSvc = newDealStatusService(pool, time.Now)
 	s.dealStatusHandlers = dealstatus.NewHandlers(s.dealStatusSvc)
 	s.roomBriefSvc = newRoomBriefService(pool)
 	s.roomBriefHandlers = roombrief.NewHandlers(s.roomBriefSvc)

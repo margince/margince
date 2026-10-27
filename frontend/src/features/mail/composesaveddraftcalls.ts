@@ -26,7 +26,30 @@ export type SavedDraftFields = Readonly<{
   subject: string;
   body: string;
   html: string;
+  // Where an agent drafted it, so a restore files the send there rather than
+  // wherever the composer was opened.
+  //
+  // Absent rather than empty on the way OUT: the composer saving a draft has
+  // no grounding to report, and only a restore carries one.
+  grounding?: readonly { readonly type: string; readonly id: string }[];
 }>;
+
+/**
+ * The filing a restored draft starts from: the deal and project it was
+ * written against.
+ *
+ * Only these two, because the contact comes from the recipient and the other
+ * anchor kinds are not filings a composer can set. A draft grounded in
+ * several of one kind keeps the first, since the composer holds one.
+ */
+export function groundedFiling(grounding: SavedDraftFields["grounding"]): {
+  dealId: string;
+  projectId: string;
+} {
+  const first = (kind: string) =>
+    (grounding ?? []).find((ground) => ground.type === kind)?.id ?? "";
+  return { dealId: first("deal"), projectId: first("project") };
+}
 
 // A reply keeps its draft on the message it answers, a new message on the
 // record it was started from. A channel reply keeps none: the draft is a mail's

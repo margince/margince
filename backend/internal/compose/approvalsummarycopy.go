@@ -45,8 +45,6 @@ type approvalSummaryCopy struct {
 	enrichmentOf string
 	// contractEndedMove: %s is the account's current stage, then the proposed one.
 	contractEndedMove string
-	// overwriteHumanEdited: %s is the withheld fields, then the call's summary.
-	overwriteHumanEdited string
 	// linkedInLooksLike: %s is the connection, their employer, then the contact.
 	linkedInLooksLike string
 	// vcardResemblesContact: %s is the card's name, after the qualifier.
@@ -108,7 +106,6 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		siteLeadFound:            "Found on %s: %s — %s",
 		enrichmentOf:             "Enrichment of %s",
 		contractEndedMove:        "Their mail says the contract ended. Move this account from %s to %s?",
-		overwriteHumanEdited:     "overwrite %s, edited by hand — %s",
 		linkedInLooksLike:        "%s at %s looks like %s",
 		unnamedEmployer:          "an unnamed employer",
 		vcardResemblesContact:    "This card resembles an existing contact. Create %s anyway?",
@@ -149,7 +146,6 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		siteLeadFound:            "Gefunden auf %s: %s (%s)",
 		enrichmentOf:             "Anreicherung aus %s",
 		contractEndedMove:        "Laut ihrer E-Mail ist der Vertrag beendet. Diesen Account von %s nach %s verschieben?",
-		overwriteHumanEdited:     "Manuell bearbeitete Felder überschreiben (%s): %s",
 		linkedInLooksLike:        "%s bei %s scheint %s zu sein",
 		unnamedEmployer:          "einem nicht genannten Arbeitgeber",
 		vcardResemblesContact:    "Diese Visitenkarte ähnelt einem bestehenden Kontakt. %s trotzdem erstellen?",
@@ -191,7 +187,6 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		siteLeadFound:            "Tìm thấy trên %s: %s (%s)",
 		enrichmentOf:             "Bổ sung thông tin từ %s",
 		contractEndedMove:        "Email của họ cho biết hợp đồng đã kết thúc. Chuyển công ty này từ %s sang %s?",
-		overwriteHumanEdited:     "Ghi đè các trường đã được chỉnh sửa thủ công (%s): %s",
 		linkedInLooksLike:        "%s tại %s có vẻ là %s",
 		unnamedEmployer:          "một nơi làm việc không rõ tên",
 		vcardResemblesContact:    "Danh thiếp này giống một liên hệ đã có. Vẫn tạo %s chứ?",

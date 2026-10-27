@@ -97,7 +97,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// Approval decisions need the same registered effects as the HTTP path.
 	approvalsSvc := decidingApprovalsService(pool, send, log)
 	registry := agents.NewRegistry(approvalsAdapter{svc: approvalsSvc}, gate, opts...)
-	agents.RegisterCoreTools(registry, provider, provider, provider, fieldOwnership{pool: pool}, newConsumerMailSeam(db),
+	agents.RegisterCoreTools(registry, provider, provider, provider, newConsumerMailSeam(db),
 		openDuplicatesFor(pool), tagOfferSeam(db))
 	agents.RegisterListTool(registry, provider, provider)
 	agents.RegisterRecordPartsTool(registry, recordParts{offers: provider, RecordParts: contacts.NewRecordParts(db)})

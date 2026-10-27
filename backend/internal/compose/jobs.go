@@ -405,7 +405,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	addImportJobs(reg, pool, cfg, log)
 
 	periodic := slices.Concat(
-		addDataTaskJobs(reg, pool, cfg),
+		addDataTaskJobs(reg, pool, cfg, log),
 		addMeetingDeliveryJob(reg, pool, cfg),
 		// The passes that register themselves: each helper wires its own
 		// workers and hands back the schedules that go with them, so this

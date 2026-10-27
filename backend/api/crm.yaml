@@ -32,14 +32,10 @@ openapi: 3.1.0
 #     keyed by operationId→ToolSpec, and returns the approval-required response (403 code:
 #     approval_required, or 202 where a staging ref is returned). REST is NOT read-only for agents;
 #     the SAME resolver/approval flow gates both surfaces. A human's direct call is itself approval.
-#   - Human-edit precedence is PER FIELD (interfaces.md §2.1): `update_record` is 🟢, but when an
-#     agent's patch touches a field whose current value a HUMAN last wrote (audit-trail lookup),
-#     exactly those fields are split off into a 🟡 staged approval while the rest of the patch
-#     applies at the auto_execute tier in the same request. A mixed patch answers 200 with the updated record plus a
-#     `staged_approval` member naming the withheld fields and the approval id; a patch made up
-#     entirely of human-owned fields answers 403 approval_required with the staging reference.
-#     Redemption replays ONLY the staged fields with the approval reference (X-Approval-Token on
-#     REST, `approval_id` on MCP) — the staged sub-patch, not the original call, is the bound diff.
+#   - `update_record` is 🟢: an agent's patch applies in the one request, whoever last wrote the fields,
+#     and the audit row and Undo are the safety net. A call the contract tightens to confirm-first
+#     stages the whole call, and redemption replays it with the approval reference (X-Approval-Token
+#     on REST, `approval_id` on MCP).
 #   - DEFAULT-DENY (fail-closed): the gate resolves an agent-principal mutation's tier from
 #     `operationId → ToolSpec`. A mutating operation that maps to NO ToolSpec tier is REFUSED for an
 #     agent principal (403 code: permission_denied) — never silently admitted. So a new endpoint that
@@ -44491,19 +44487,17 @@ components:
         next:
           allOf: [{ $ref: '#/components/schemas/DealStatusCardMove' }]
           description: The one move to make, with the verb to perform it.
+        request_basis:
+          allOf: [{ $ref: '#/components/schemas/WorkEvidenceBasis' }]
+          description: Current request evidence supporting reply_to; absent for historical review.
         reply_to:
           type: [string, 'null']
           format: uuid
           description: |
-            The inbound message an email from here would answer: the most recent
-            one this deal has received that nobody has replied to. Null when the
-            buyer has never written, or when the last thing they wrote has been
-            answered — then a mail from here starts a thread rather than
-            continuing one.
-
-            Independent of `next` on purpose. Whether there is something to reply
-            to is a fact about the deal; which move ranks first is a judgement,
-            and the two must not have to agree for the reply to be reachable.
+            A confirmed current inbound request on this deal, admitted by the
+            request owner's responsibility, settlement and currency rules.
+            Absent for historical or unconfirmed review. Its absence makes no
+            claim about whether an unrecorded reply exists.
         generated_at: { type: string, format: date-time }
         generated_by: { $ref: '#/components/schemas/WrittenBy' }
       additionalProperties: false
@@ -44564,6 +44558,9 @@ components:
         evidence:
           type: array
           items: { $ref: '#/components/schemas/DealNextBestActionEvidence' }
+        basis:
+          allOf: [{ $ref: '#/components/schemas/WorkEvidenceBasis' }]
+          description: Evidence classification for this recommendation; absence supplies no urgency.
         fingerprint:
           type: string
           readOnly: true
@@ -44572,6 +44569,24 @@ components:
             rules chose it. Send it to `POST /deals/{id}/move/dismiss` to set this move aside;
             the set-aside lifts when the card names a different move. Absent on a move with
             nothing to do (`none`).
+      additionalProperties: false
+
+    WorkEvidenceBasis:
+      type: object
+      description: |
+        A recommendation's scoped source and classification. Known request kinds
+        are current_request and request_review; unknown kinds remain neutral.
+        Source age is not a deadline. Evaluation time is not source time.
+      required: [kind, scope, source_activity_id, source_at, source_precision, evaluated_at, policy_version]
+      properties:
+        kind: { type: string }
+        scope: { type: string, description: The record scope in which the evidence was evaluated. }
+        source_activity_id: { type: string, format: uuid }
+        source_at: { type: string, format: date-time }
+        source_precision: { $ref: '#/components/schemas/OccurredPrecision' }
+        source_version: { $ref: '#/components/schemas/RowVersion' }
+        evaluated_at: { type: string, format: date-time }
+        policy_version: { type: string }
       additionalProperties: false
 
     DealNextBestActionEvidence:
@@ -50364,6 +50379,16 @@ components:
       description: |
         What the composer opened against: `activity` for a reply to that message, or the
         record a new conversation starts from.
+    MailDraftGround:
+      description: >-
+        One record the draft was written from. A saved agent draft keeps these
+        so the composer files the sent mail where the draft was grounded,
+        rather than rebuilding links from whichever page it was opened on.
+      type: object
+      required: [anchor_type, anchor_id]
+      properties:
+        anchor_type: { $ref: '#/components/schemas/MailDraftAnchorType' }
+        anchor_id: { type: string, format: uuid }
 
     MailDraftInput:
       type: object
@@ -50392,6 +50417,15 @@ components:
         id: { type: string, format: uuid }
         anchor_type: { $ref: '#/components/schemas/MailDraftAnchorType' }
         anchor_id: { type: string, format: uuid }
+        grounding:
+          type: array
+          readOnly: true
+          description: >-
+            The records this draft was written from, which an agent draft
+            records and a human draft leaves empty. The composer files a sent
+            draft under these, so a draft grounded in a deal reaches that
+            deal's timeline even when it is opened from the contact page.
+          items: { $ref: '#/components/schemas/MailDraftGround' }
         to: { type: array, items: { type: string } }
         cc: { type: array, items: { type: string } }
         bcc: { type: array, items: { type: string } }
@@ -67428,6 +67462,9 @@ components:
         for it.
       required: [action]
       properties:
+        basis:
+          allOf: [{ $ref: '#/components/schemas/WorkEvidenceBasis' }]
+          description: The deal recommendation's evidence basis, preserved across surfaces.
         action:
           type: string
           enum: [draft_reply, draft_email, create_task, open_task, open_meeting_brief, reconnect, none]

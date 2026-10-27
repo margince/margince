@@ -1,0 +1,34 @@
+name: signature_prints_the_given_name_first
+task: enrich
+site: signature
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# A signature that labels its name line "Vorname Nachname" prints the given name
+# first. A reader that reorders it as a family-first name swaps the two columns.
+fixture:
+  full_name: Katrin Albrecht
+  email: k.albrecht@albrecht-maschinenbau.test
+  body: |
+    Hallo Tomas,
+
+    Die Zeichnungen sind angekommen. Ich melde mich morgen mit den Maßen
+    der beiden Halterungen.
+
+    Viele Grüße
+
+    Vorname Nachname: Katrin Albrecht
+    Leiterin Einkauf
+    Albrecht Maschinenbau GmbH
+expect:
+  outcome: accepted
+  answer:
+    first_name: Katrin
+    last_name: Albrecht
+    title: Leiterin Einkauf
+    company_name: Albrecht Maschinenbau GmbH
+  judge: none
+  judge_none_reason: >
+    The two name columns are expected verbatim, so a reply that treats the
+    printed order as family-first writes the swapped pair and disagrees. The
+    title and company are pinned so a reply that spends itself on the name
+    still has to read the rest of the block.

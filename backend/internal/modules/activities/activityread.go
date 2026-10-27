@@ -125,7 +125,7 @@ func TimelineCursor(ctx context.Context, last crmcontracts.Activity) (string, er
 // they gave one, else the default this narrowing implies.
 func timelineSort(ctx context.Context, in ListActivitiesInput, arg func(any) int) (*storekit.ListSort, error) {
 	if in.Sort != nil && *in.Sort != "" {
-		if in.RequestReviewAsOf != nil {
+		if in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil {
 			return nil, &storekit.SortError{
 				Code:    storekit.CodeSortUnsupported,
 				Message: "the request queue is ordered by what is owed and when it arrived, and cannot be re-ordered",

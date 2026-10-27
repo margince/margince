@@ -4624,7 +4624,7 @@ public.idempotency_key.response_records integer NOT NULL gen=- def=0
 public.idempotency_key.response_status integer gen=- def=-
 public.idempotency_key_pkey CREATE UNIQUE INDEX idempotency_key_pkey ON public.idempotency_key USING btree (principal_id, key, endpoint)
 public.idx_aam_subject CREATE INDEX idx_aam_subject ON public.activity_audience_member USING btree (subject_type, subject_id)
-public.idx_activity_answer_mail CREATE INDEX idx_activity_answer_mail ON public.activity USING btree (counterparty_email, kind, occurred_at) WHERE ((direction = 'outbound'::text) AND counterparty_outbound_attested AND (restricted_at IS NULL) AND (audience = 'workspace'::text) AND (archived_at IS NULL))
+public.idx_activity_answer_mail_subject CREATE INDEX idx_activity_answer_mail_subject ON public.activity USING btree (counterparty_email, kind, lower(btrim(regexp_replace(regexp_replace(COALESCE(subject, ''::text), '^(\s*(re|aw|antw)\s*:)+\s*'::text, ''::text, 'i'::text), '\s+'::text, ' '::text, 'g'::text))), occurred_at) WHERE ((direction = 'outbound'::text) AND counterparty_outbound_attested AND (restricted_at IS NULL) AND (audience = 'workspace'::text) AND (archived_at IS NULL))
 public.idx_activity_answer_touch CREATE INDEX idx_activity_answer_touch ON public.activity USING btree (id, occurred_at) WHERE (((kind = 'call'::text) OR ((kind = 'meeting'::text) AND (meeting_status = 'held'::text))) AND (restricted_at IS NULL) AND (audience = 'workspace'::text) AND (archived_at IS NULL))
 public.idx_activity_channel_thread CREATE INDEX idx_activity_channel_thread ON public.activity USING btree (channel_provider, thread_key) WHERE (channel_provider IS NOT NULL)
 public.idx_activity_counterparty_email CREATE INDEX idx_activity_counterparty_email ON public.activity USING btree (counterparty_email) WHERE (counterparty_email IS NOT NULL)
@@ -4667,6 +4667,7 @@ public.idx_analytics_share_scope_user CREATE INDEX idx_analytics_share_scope_use
 public.idx_analytics_share_snapshot CREATE INDEX idx_analytics_share_snapshot ON public.analytics_share USING btree (snapshot_id)
 public.idx_aparticipant_address CREATE INDEX idx_aparticipant_address ON public.activity_participant USING btree (lower(address)) WHERE (address IS NOT NULL)
 public.idx_aparticipant_contact CREATE INDEX idx_aparticipant_contact ON public.activity_participant USING btree (contact_id, activity_id) WHERE (contact_id IS NOT NULL)
+public.idx_aparticipant_sender_host_reversed CREATE INDEX idx_aparticipant_sender_host_reversed ON public.activity_participant USING btree (reverse(split_part(lower(address), '@'::text, 2)) COLLATE "C") WHERE ((role = 'from'::text) AND (address IS NOT NULL))
 public.idx_aparticipant_user CREATE INDEX idx_aparticipant_user ON public.activity_participant USING btree (user_id, activity_id) WHERE (user_id IS NOT NULL)
 public.idx_app_user_live CREATE INDEX idx_app_user_live ON public.app_user USING btree (created_at, id) WHERE (archived_at IS NULL)
 public.idx_app_user_merge_target CREATE INDEX idx_app_user_merge_target ON public.app_user USING btree (merged_into_user_id) WHERE (merged_into_user_id IS NOT NULL)

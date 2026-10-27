@@ -245,10 +245,10 @@ export function DealTimeline({
 }
 
 function timelineGap(
-  { card, activities, asOf }: DealStandingInputs,
+  { card, asOf }: DealStandingInputs,
   { t, plural, locale, zone }: Words,
 ): TimelineGap | undefined {
-  const waiting = card ? waitingSince(card, activities) : null;
+  const waiting = card ? waitingSince(card) : null;
   if (!waiting) {
     return undefined;
   }
@@ -258,7 +258,7 @@ function timelineGap(
     title: plural("standing.days", days, {
       count: formatNumber(days, locale),
     }),
-    sub: t("standing.noReply"),
+    sub: t("deal.standing.timeline.currentRequest"),
   };
 }
 
