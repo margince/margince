@@ -8,22 +8,15 @@ import {
 } from "../../design-system/recordpicker";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import {
+  BILLING_CONTACT_ROLES,
+  billingRoleLabel,
+  isBillingContactRole,
+} from "../../lib/recordlabels";
 import { searchByEntity } from "../../lib/relationshipcandidates";
 import type { BillingContact, BillingContactRole } from "./billingcontacts";
 import type { BillingContactActions } from "./billingcontacts.queries";
 import "../../design-system/querystates.css";
-
-// The three capacities, in the order an invoice moves through them: it is
-// addressed to somebody, approved by somebody, then paid by somebody. Spelled
-// here as well as in recordlabels.ts because these are the PICKABLE ones and
-// its map is the readable ones. The two lists match, and the server refuses a
-// fourth.
-const ROLE_OPTIONS: { value: BillingContactRole; label: MessageKey }[] = [
-  { value: "recipient", label: "billing.role.recipient" },
-  { value: "approver", label: "billing.role.approver" },
-  { value: "accounts_payable", label: "billing.role.accountsPayable" },
-];
 
 /**
  * Naming who handles this company's invoices, or changing the capacity one of
@@ -115,12 +108,16 @@ export function BillingContactModal({
           {(control) => (
             <Select
               {...control}
-              options={ROLE_OPTIONS.map((o) => ({
-                value: o.value,
-                label: t(o.label),
+              options={BILLING_CONTACT_ROLES.map((value) => ({
+                value,
+                label: billingRoleLabel(value, t),
               }))}
               value={role}
-              onChange={(next) => setRole(next as BillingContactRole)}
+              onChange={(next) => {
+                if (isBillingContactRole(next)) {
+                  setRole(next);
+                }
+              }}
               disabled={write.isPending}
             />
           )}

@@ -176,11 +176,11 @@ export function isProjectStakeholderRole(
 export const PROJECT_STAKEHOLDER_ROLES: readonly ProjectStakeholderRole[] =
   Object.keys(PROJECT_ROLE_LABELS).filter(isProjectStakeholderRole);
 
-// A billing contact's capacities, which the server refuses a fourth of.
-const BILLING_ROLE_LABELS: Record<
-  components["schemas"]["BillingContactRole"],
-  MessageKey
-> = {
+type BillingContactRole = components["schemas"]["BillingContactRole"];
+
+// A billing contact's capacities, in the order an invoice moves through them:
+// addressed to somebody, approved by somebody, then paid by somebody.
+const BILLING_ROLE_LABELS: Record<BillingContactRole, MessageKey> = {
   recipient: "billing.role.recipient",
   approver: "billing.role.approver",
   accounts_payable: "billing.role.accountsPayable",
@@ -196,6 +196,17 @@ export function billingRoleLabel(
   return key ? t(key) : role;
 }
 
+/** Whether `value` names a capacity the billing contact contract accepts. */
+export function isBillingContactRole(
+  value: string,
+): value is BillingContactRole {
+  return Object.hasOwn(BILLING_ROLE_LABELS, value);
+}
+
+/** The billing capacities a form offers, in the order an invoice meets them. */
+export const BILLING_CONTACT_ROLES: readonly BillingContactRole[] =
+  Object.keys(BILLING_ROLE_LABELS).filter(isBillingContactRole);
+
 export const DEAL_ROLES: RoleVocabulary = {
   keys: Object.keys(DEAL_ROLE_LABELS),
   label: dealRoleLabel,
@@ -207,6 +218,6 @@ export const PROJECT_ROLES: RoleVocabulary = {
 };
 
 export const BILLING_ROLES: RoleVocabulary = {
-  keys: Object.keys(BILLING_ROLE_LABELS),
+  keys: BILLING_CONTACT_ROLES,
   label: billingRoleLabel,
 };
