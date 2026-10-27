@@ -110,11 +110,20 @@ var countryShape = regexp.MustCompile(`^[A-Z]{2}$`)
 // codeOperand upper-cases a currency or country dial and refuses one of the
 // wrong shape. It could match no deal, and the empty page would read as "none".
 func codeOperand(raw, field string, shaped func(string) bool, shape string) (string, error) {
-	code := strings.ToUpper(raw)
+	code := strings.Map(upperASCII, raw)
 	if shaped(code) {
 		return code, nil
 	}
 	return "", &values.ParseError{Field: field, Code: field + "_malformed", Message: field + " must be " + shape}
+}
+
+// upperASCII folds an ASCII letter alone. strings.ToUpper also folds some
+// non-ASCII letters into ASCII ones, which would pass a non-code as a code.
+func upperASCII(r rune) rune {
+	if 'a' <= r && r <= 'z' {
+		return r - ('a' - 'A')
+	}
+	return r
 }
 
 // appendBounds adds `expr >= low` and `expr <= high` for each bound given. A
@@ -138,8 +147,8 @@ func calendarDay(day *time.Time) *string {
 	return &iso
 }
 
-// refuseNegativeValues refuses a value bound below zero, which the contract's
-// minimum rules out. No deal is worth less than nothing, so it would match none.
+// refuseNegativeValues refuses a value bound below zero, as the contract's
+// minimum does. It holds the agent's path, which the HTTP check never sees.
 func refuseNegativeValues(f RangeFilters) error {
 	for _, bound := range []struct {
 		field string
@@ -148,7 +157,7 @@ func refuseNegativeValues(f RangeFilters) error {
 		if bound.value != nil && *bound.value < 0 {
 			return &values.ParseError{
 				Field: bound.field, Code: "out_of_range",
-				Message: bound.field + " must be zero or more",
+				Message: bound.field + " must be at least 0",
 			}
 		}
 	}

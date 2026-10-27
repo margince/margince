@@ -107,6 +107,9 @@ func TestAMalformedCodeFilterIsRefusedByName(t *testing.T) {
 		{filterCurrency, RangeFilters{Currency: new("EU1")}},
 		{filterCountry, RangeFilters{Country: new("DEU")}},
 		{filterCountry, RangeFilters{Country: new("d-")}},
+		// Upper-casing folds these non-ASCII letters into ASCII ones.
+		{filterCurrency, RangeFilters{Currency: new("uſd")}},
+		{filterCountry, RangeFilters{Country: new("dı")}},
 	} {
 		t.Run(tc.field, func(t *testing.T) {
 			_, _, err := rangeClauses(systemFilterCtx(), t, tc.in)
