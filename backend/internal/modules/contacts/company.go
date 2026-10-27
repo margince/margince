@@ -130,6 +130,9 @@ func (s *Store) geocodeANewCompany(ctx context.Context, tx pgx.Tx,
 // resolution. It answers the attribution the write shape stamps.
 // Both entry points call it, so neither can drift from the other's validation.
 func (s *Store) readyCompanyCreate(ctx context.Context, in *CreateCompanyInput) (string, error) {
+	if err := checkCompanyDescription(in.Description); err != nil {
+		return "", err
+	}
 	if err := parseCompanyDomains(in.Domains); err != nil {
 		return "", err
 	}

@@ -4,7 +4,10 @@
 package activities
 
 import (
+	"time"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // CheckKindFields is the one rule for which fields an activity's kind may carry.
@@ -45,6 +48,42 @@ func checkKind(kind string) error {
 func checkMeetingStatusKind(kind string, meetingStatus *string) error {
 	if meetingStatus != nil && kind != KindMeeting {
 		return &MeetingStatusKindError{Kind: kind}
+	}
+	return nil
+}
+
+const (
+	fieldDueAt    = "due_at"
+	fieldRemindAt = "remind_at"
+)
+
+// taskFields are the update's members that only a task carries. The
+// activity_task_fields CHECK refuses them on any other kind, with an answer
+// that names no field.
+type taskFields struct {
+	dueAt, remindAt *time.Time
+	assignee        *ids.UserID
+	isDone          *bool
+}
+
+// checkTaskFieldsKind refuses a task-only field on another kind, naming it. A
+// false is_done is what such a row already holds, so only true is refused.
+func checkTaskFieldsKind(kind string, f taskFields) error {
+	if kind == string(crmcontracts.ActivityKindTask) {
+		return nil
+	}
+	for _, set := range []struct {
+		field string
+		is    bool
+	}{
+		{fieldDueAt, f.dueAt != nil},
+		{fieldRemindAt, f.remindAt != nil},
+		{fieldAssignee, f.assignee != nil},
+		{auditFieldIsDone, f.isDone != nil && *f.isDone},
+	} {
+		if set.is {
+			return &KindFieldError{Field: set.field, Only: "a task"}
+		}
 	}
 	return nil
 }

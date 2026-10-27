@@ -316,6 +316,11 @@ func admitActivityPatch(
 	if !held && in.MeetingStatus != nil && current.Kind != crmcontracts.ActivityKindMeeting {
 		return crmcontracts.Activity{}, held, &MeetingStatusKindError{Kind: string(current.Kind)}
 	}
+	if !held {
+		if err := checkTaskFieldsKind(string(current.Kind), taskFields{in.DueAt, in.RemindAt, in.AssigneeID, in.IsDone}); err != nil {
+			return crmcontracts.Activity{}, held, err
+		}
+	}
 	if !held && !in.calendarSettlement && changesInvitation(*in) {
 		if err := refuseActiveInvitationPatch(ctx, tx, id.UUID); err != nil {
 			return crmcontracts.Activity{}, held, err

@@ -407,6 +407,9 @@ func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 	if err := checkMeetingStatusKind(in.Kind, meetingStatusOf(req.MeetingStatus)); err != nil {
 		return err
 	}
+	if err := checkTaskFieldsKind(in.Kind, taskFields{dueAt: req.DueAt, remindAt: req.RemindAt, assignee: idArg[ids.UserKind](req.AssigneeId)}); err != nil {
+		return err
+	}
 	if req.MeetingStatus != nil {
 		m := string(*req.MeetingStatus)
 		in.MeetingStatus = &m
