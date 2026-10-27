@@ -3,6 +3,13 @@ import { Phone, Plus } from "lucide-react";
 import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import {
+  expectAppliedFiltersFit,
+  expectAppliedFiltersOneLine,
+  LONG_FILTER_CHIPS,
+  LONG_FILTER_VALUES,
+  WIDE,
+} from "../testing/appliedfilterchecks";
 import { Button } from "./atoms";
 import { IconAction } from "./iconaction";
 import { Menu, useCloseOnEscape } from "./listmenu";
@@ -168,107 +175,35 @@ export const MenuUnderATip: Story = {
   },
 };
 
-const LONG_CHIPS = [
-  {
-    key: "size_band",
-    label: "Unternehmensgröße",
-    allLabel: "Jede Unternehmensgröße",
-    options: [{ value: "1001-5000", label: "1001–5000 Mitarbeitende" }],
-  },
-  {
-    key: "industry",
-    label: "Branche",
-    allLabel: "Jede Branche",
-    options: [
-      {
-        value: "legal_professional_services",
-        label: "Recht und professionelle Dienstleistungen",
-      },
-    ],
-  },
-];
-
 // An applied filter longer than a phone's line: its value wraps at its spaces,
 // whole, and the "⋮" that removes the filter stays inside the toolbar.
 export const LongAppliedFilterPhone: Story = {
   name: "Long applied filter, phone",
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  render: () => (
-    <ListSurface
-      title="Leads"
-      chips={LONG_CHIPS}
-      chosen={{
-        size_band: "1001-5000",
-        industry: "legal_professional_services",
-      }}
-      onChipChange={() => undefined}
-    >
-      <p>Zeilen</p>
-    </ListSurface>
-  ),
-  play: async ({ canvasElement }) => {
-    const rows = await within(canvasElement).findAllByRole("group", {
-      name: /^(Unternehmensgröße|Branche): /,
-    });
-    await expect(rows).toHaveLength(2);
-    for (const row of rows) {
-      const tools = row.closest(".lt-tools");
-      const menu = row.querySelector(".lt-frow-more");
-      const value = row.querySelector(".lt-frow-valuetext");
-      if (
-        !(tools instanceof HTMLElement) ||
-        !(menu instanceof HTMLElement) ||
-        !(value instanceof HTMLElement)
-      ) {
-        throw new Error("the applied filter did not render in the toolbar");
-      }
-      const edge = tools.getBoundingClientRect();
-      const box = menu.getBoundingClientRect();
-      await expect(box.left).toBeGreaterThanOrEqual(edge.left);
-      await expect(box.right).toBeLessThanOrEqual(edge.right);
-      await expect(value.scrollWidth).toBeLessThanOrEqual(value.clientWidth);
-    }
-  },
+  render: () => <LongFilters />,
+  play: async ({ canvasElement }) => expectAppliedFiltersFit(canvasElement),
 };
 
 // The same filters on a desktop line: each stays one line at the control height.
 export const LongAppliedFilterWide: Story = {
   name: "Long applied filter, wide",
-  parameters: {
-    viewport: {
-      options: {
-        wide: { name: "Wide", styles: { width: "1440px", height: "900px" } },
-      },
-    },
-  },
+  parameters: WIDE,
   globals: { viewport: { value: "wide" } },
   tags: ["uat-wide"],
-  render: () => (
+  render: () => <LongFilters />,
+  play: async ({ canvasElement }) => expectAppliedFiltersOneLine(canvasElement),
+};
+
+function LongFilters() {
+  return (
     <ListSurface
       title="Leads"
-      chips={LONG_CHIPS}
-      chosen={{
-        size_band: "1001-5000",
-        industry: "legal_professional_services",
-      }}
+      chips={LONG_FILTER_CHIPS}
+      chosen={LONG_FILTER_VALUES}
       onChipChange={() => undefined}
     >
       <p>Zeilen</p>
     </ListSurface>
-  ),
-  play: async ({ canvasElement }) => {
-    const rows = await within(canvasElement).findAllByRole("group", {
-      name: /^(Unternehmensgröße|Branche): /,
-    });
-    await expect(rows).toHaveLength(2);
-    for (const row of rows) {
-      const name = row.querySelector(".lt-frow-attr");
-      if (!(name instanceof HTMLElement)) {
-        throw new Error("the applied filter drew no name segment");
-      }
-      const floor = Number.parseFloat(getComputedStyle(name).minBlockSize);
-      await expect(name.getBoundingClientRect().height).toBe(floor);
-    }
-  },
-};
+  );
+}
