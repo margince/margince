@@ -22,6 +22,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import {
   problemFieldErrorsOf,
   problemMessageOf,
@@ -64,13 +65,61 @@ export function draftFor(form?: WebForm): WebFormDraft {
 
 const optional = (text: string) => (text.trim() === "" ? null : text.trim());
 
-// The settings create and update share. A builder's secret is sent only when
-// one was typed, so an edit that leaves the field empty keeps the stored one.
-export function webFormBodyOf(draft: WebFormDraft) {
-  const origins = draft.origins
+function originsOf(draft: WebFormDraft): string[] {
+  return draft.origins
     .split(/[\s,]+/)
     .map((origin) => origin.trim())
     .filter(Boolean);
+}
+
+/**
+ * Every required field the draft leaves empty, with the sentence it owes.
+ *
+ * The server refuses only the first empty field it meets, so a form that
+ * waited for it would make the reader press Create once per missing field.
+ */
+export function missingFields(
+  draft: WebFormDraft,
+  editing: boolean,
+): ReadonlyMap<string, MessageKey> {
+  const missing = new Map<string, MessageKey>();
+  if (draft.name.trim() === "") {
+    missing.set("name", "webForms.required.name");
+  }
+  if (draft.sender === "browser" && originsOf(draft).length === 0) {
+    missing.set("allowed_origins", "webForms.required.origins");
+  }
+  if (isBuilder(draft.sender) && !editing && draft.senderSecret.trim() === "") {
+    missing.set("sender_secret", "webForms.required.senderSecret");
+  }
+  if (draft.consentRequired && draft.consentWording.trim() === "") {
+    missing.set("consent_wording", "webForms.required.consentWording");
+  }
+  return missing;
+}
+
+/**
+ * The entries that name a page rather than a website, and the website each is
+ * kept as. A post's Origin header carries only scheme, host and port, so a
+ * path cannot narrow who may post, and the reader is told so before saving.
+ */
+export function narrowedOrigins(
+  draft: WebFormDraft,
+): { entry: string; origin: string }[] {
+  return originsOf(draft).flatMap((entry) => {
+    if (!URL.canParse(entry)) {
+      return [];
+    }
+    const { origin, pathname, search, hash } = new URL(entry);
+    const page = pathname !== "/" || search !== "" || hash !== "";
+    return origin !== "null" && page ? [{ entry, origin }] : [];
+  });
+}
+
+// The settings create and update share. A builder's secret is sent only when
+// one was typed, so an edit that leaves the field empty keeps the stored one.
+export function webFormBodyOf(draft: WebFormDraft) {
+  const origins = originsOf(draft);
   return {
     name: draft.name.trim(),
     ...(draft.sender === "browser" ? { allowed_origins: origins } : {}),
@@ -117,6 +166,32 @@ const FIELDS_WITH_A_SLOT = new Set([
   "success_message",
 ]);
 
+// Each field's sentence, and the one line for a refusal no field can hold. A
+// missing field speaks over the server's word for it, which is a fragment.
+function useDrawerErrors(
+  failure: Error | null,
+  missing: ReadonlyMap<string, MessageKey>,
+) {
+  const t = useT();
+  const fieldErrors = new Map(
+    problemFieldErrorsOf(failure).map((p) => [p.field, p.message]),
+  );
+  for (const [field, key] of missing) {
+    fieldErrors.set(field, t(key));
+  }
+  const unplaced = [...fieldErrors.entries()].filter(
+    ([field]) => !FIELDS_WITH_A_SLOT.has(field),
+  );
+  let generalError: string | null = null;
+  if (failure) {
+    generalError =
+      fieldErrors.size === 0
+        ? problemMessageOf(failure, t)
+        : (unplaced[0]?.[1] ?? null);
+  }
+  return { fieldErrors, generalError };
+}
+
 export function WebFormDrawer({
   form,
   secretsAvailable = true,
@@ -132,6 +207,9 @@ export function WebFormDrawer({
   const titleId = useId();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<WebFormDraft>(() => draftFor(form));
+  // Set by the first press of Create, so an empty field is not flagged before
+  // the reader has had a chance to fill it.
+  const [checked, setChecked] = useState(false);
   const save = useMutation({
     mutationFn: saveWebForm,
     onSuccess: (saved, { form: edited }) => {
@@ -149,18 +227,13 @@ export function WebFormDrawer({
     }
     setDraft((prev) => ({ ...prev, ...patch }));
   };
-  const fieldErrors = new Map(
-    problemFieldErrorsOf(save.error).map((p) => [p.field, p.message]),
-  );
-  const unplaced = [...fieldErrors.entries()].filter(
-    ([field]) => !FIELDS_WITH_A_SLOT.has(field),
-  );
-  const generalError = !save.isError
-    ? null
-    : fieldErrors.size === 0
-      ? problemMessageOf(save.error, t)
-      : (unplaced[0]?.[1] ?? null);
   const editing = form !== undefined;
+  const missing = missingFields(draft, editing);
+  const { fieldErrors, generalError } = useDrawerErrors(
+    save.error,
+    checked ? missing : new Map(),
+  );
+  const narrowed = draft.sender === "browser" ? narrowedOrigins(draft) : [];
   // Every sender but a browser verifies against a stored secret, so an
   // installation without a secret store offers the browser alone.
   const senders = secretsAvailable ? WEB_FORM_SENDERS : ["browser" as const];
@@ -233,6 +306,11 @@ export function WebFormDrawer({
             )}
           </Field>
         )}
+        {narrowed.map(({ entry, origin }) => (
+          <p key={entry} className="t-caption">
+            {t("webForms.field.originKept", { entry, origin })}
+          </p>
+        ))}
         {isBuilder(draft.sender) && (
           <Field
             label={t("webForms.field.senderSecret")}
@@ -336,7 +414,12 @@ export function WebFormDrawer({
           variant="primary"
           data-testid="save-web-form"
           pending={save.isPending}
-          onClick={() => save.mutate({ draft, form })}
+          onClick={() => {
+            setChecked(true);
+            if (missing.size === 0) {
+              save.mutate({ draft, form });
+            }
+          }}
         >
           {editing ? t("webForms.drawer.save") : t("webForms.drawer.create")}
         </Button>

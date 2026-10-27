@@ -14,8 +14,14 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CustomField } from "../../components/customfields.form";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
-import { draftFor, webFormBodyOf } from "./webformdrawer";
+import {
+  draftFor,
+  missingFields,
+  narrowedOrigins,
+  webFormBodyOf,
+} from "./webformdrawer";
 import type { WebForm } from "./webformkinds";
 import { WebFormsCard } from "./webforms";
 import { browserSnippet, intakeUrlOf, serverSnippet } from "./webformsnippet";
@@ -174,6 +180,38 @@ describe("WebFormsCard", () => {
     ).toContain("cf_budget (Budget)");
   });
 
+  it("flags every empty required field on Create and sends nothing", async () => {
+    const backend = backendFor(OPERATOR, []);
+    vi.stubGlobal("fetch", backend.fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(await screen.findByTestId("new-web-form"));
+    await user.click(screen.getByTestId("save-web-form"));
+
+    expect(screen.getByText(en["webForms.required.name"])).toBeTruthy();
+    expect(screen.getByText(en["webForms.required.origins"])).toBeTruthy();
+    expect(backend.sent).toHaveLength(0);
+    await user.type(screen.getByLabelText(/^Name/), "Demo request");
+    expect(screen.queryByText(en["webForms.required.name"])).toBeNull();
+  });
+
+  it("says a page address is kept as its website", async () => {
+    vi.stubGlobal("fetch", backendFor(OPERATOR, []).fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(await screen.findByTestId("new-web-form"));
+    await user.type(
+      screen.getByLabelText(/^Websites/),
+      "https://a.example/path",
+    );
+
+    expect(
+      screen.getByText(
+        "https://a.example/path is kept as https://a.example: every page of that website can post.",
+      ),
+    ).toBeTruthy();
+  });
+
   it("shows a server form's minted secret once, with the caution", async () => {
     const created = {
       ...contactForm,
@@ -324,6 +362,34 @@ describe("WebFormsCard actions", () => {
 });
 
 describe("web form settings", () => {
+  it("names each required field a draft leaves empty", () => {
+    const empty = draftFor();
+    expect([...missingFields(empty, false).keys()]).toEqual([
+      "name",
+      "allowed_origins",
+    ]);
+    const builder = { ...empty, name: "Leads", sender: "typeform" as const };
+    expect([...missingFields(builder, false).keys()]).toEqual([
+      "sender_secret",
+    ]);
+    expect(missingFields(builder, true).size).toBe(0);
+    const consent = { ...builder, senderSecret: "x", consentRequired: true };
+    expect([...missingFields(consent, false).keys()]).toEqual([
+      "consent_wording",
+    ]);
+  });
+
+  it("names only the entries a path, query or fragment would narrow", () => {
+    const draft = {
+      ...draftFor(),
+      origins:
+        "https://a.example\nhttps://b.example/\nhttps://c.example/x?y\nnot a url",
+    };
+    expect(narrowedOrigins(draft)).toEqual([
+      { entry: "https://c.example/x?y", origin: "https://c.example" },
+    ]);
+  });
+
   it("keeps a builder's stored secret when the field is left empty", () => {
     const builder = { ...contactForm, sender: "typeform" as const };
     expect(webFormBodyOf(draftFor(builder))).not.toHaveProperty(

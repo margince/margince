@@ -14089,6 +14089,14 @@ export const en = {
   "webForms.field.origins": "Websites",
   "webForms.field.originsHint":
     "One address per line. Posts from any other website are refused.",
+  "webForms.required.name": "Enter a name for this form.",
+  "webForms.required.origins": "Enter the website the form is posted from.",
+  "webForms.required.senderSecret":
+    "Paste the signing secret from the tool’s webhook settings.",
+  "webForms.required.consentWording":
+    "Enter the wording the visitor agrees to.",
+  "webForms.field.originKept":
+    "{entry} is kept as {origin}: every page of that website can post.",
   "webForms.field.originsPlaceholder": "https://www.example.com",
   "webForms.field.senderSecret": "Signing secret",
   "webForms.field.senderSecretHint":
