@@ -101,12 +101,18 @@ func floorWindowEnd(currentArg, carriedArg int) string {
 }
 
 // rawCaptureUnshielded keeps the provider original, aliased `rc`, of an activity
-// the floor shields. A held message keeps its original as evidence, the same
-// as it keeps its row.
+// the floor shields or a legal hold reaches. A held message keeps its original
+// as evidence, the same as it keeps its row.
+//
+// Both arms are asked of every activity the original was read into.
+//
+// The hold is asked here as well as at selection. The delete runs later, so a
+// hold placed in between would otherwise reach a chosen row.
 func rawCaptureUnshielded(currentArg, carriedArg int) string {
 	return `NOT EXISTS (SELECT 1 FROM activity a
 		  WHERE ` + rawCaptureLink + `
-		    AND ` + handelsbriefShielded(currentArg, carriedArg) + `)`
+		    AND (` + handelsbriefShielded(currentArg, carriedArg) + `
+		         OR ` + retentionscope.HeldThroughAnyLink("a.id") + `))`
 }
 
 // windowEndUnder is one floor's window end over the activity aliased `a`.
