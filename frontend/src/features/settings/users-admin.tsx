@@ -4,15 +4,21 @@ import {
   Badge,
   Button,
   EmptyState,
+  Field,
   Modal,
+  SearchField,
 } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { CellStrip } from "../../design-system/listtable";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
-import { LoadMoreButton, QueryStates } from "../../design-system/querystates";
+import { QueryStates } from "../../design-system/querystates";
 import { StatusBadge, type StatusKind } from "../../design-system/statusbadge";
-import { formatDateAbbrev, formatDateTime } from "../../format/format";
+import {
+  formatDateAbbrev,
+  formatDateTime,
+  formatNumber,
+} from "../../format/format";
 import { formatRelativeTime } from "../../format/relativetime";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
@@ -20,6 +26,8 @@ import { useMe } from "../../lib/session";
 import "./users-admin.css";
 import { PageHeadAction } from "../../components/pageheadaction";
 import { useRoster } from "../../components/roster";
+import { ErrorLine } from "../../design-system/errorline";
+import { FilterBar } from "../../design-system/filterbar";
 import { useCan, useCanWrite } from "../../lib/capability";
 import {
   type AssignableRole,
@@ -79,7 +87,9 @@ function MembersCard({
   readOnlyPage: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const members = useMembers();
+  const [search, setSearch] = useState("");
   const read = withRoles(
     members,
     useAssignableRoles(canChangeRole),
@@ -99,10 +109,47 @@ function MembersCard({
           <InviteAction canIssueLink={canIssueLink} />
         </PageHeadAction>
       )}
-      {/* Untitled: on a one-panel page the page heading names the roster. */}
-      <Panel
-        actions={members.hasNextPage && <LoadMoreButton query={members} />}
+      <FilterBar
+        label={t("users.search")}
+        actions={
+          search ? (
+            <Button variant="ghost" onClick={() => setSearch("")}>
+              {t("users.clearSearch")}
+            </Button>
+          ) : null
+        }
+        caption={
+          read.data
+            ? t("users.resultCount", {
+                matching: formatNumber(
+                  matchingMembers(read.data.list, search).length,
+                  locale,
+                ),
+                total: formatNumber(read.data.list.length, locale),
+              })
+            : undefined
+        }
       >
+        <Field label={t("users.search")}>
+          {(control) => (
+            <SearchField
+              {...control}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={t("users.searchPlaceholder")}
+            />
+          )}
+        </Field>
+      </FilterBar>
+      <Panel>
+        {read.isError && read.data !== undefined && (
+          <PanelBody>
+            <ErrorLine error={read.error} />
+            <Button variant="ghost" onClick={() => void read.refetch?.()}>
+              {t("common.retry")}
+            </Button>
+          </PanelBody>
+        )}
         {posture && (
           <PanelBody>
             <PanelIntro>{posture}</PanelIntro>
@@ -125,7 +172,8 @@ function MembersCard({
           </PanelBody>
         ) : (
           <MembersTable
-            list={read.data.list}
+            list={matchingMembers(read.data.list, search)}
+            allMembers={read.data.list}
             roles={read.data.roles}
             management={management}
             refusalOf={(member, list, roles) =>
@@ -144,15 +192,27 @@ function MembersCard({
   );
 }
 
+function matchingMembers(members: readonly User[], search: string): User[] {
+  const term = search.trim().normalize("NFKC").toLowerCase();
+  return members.filter((member) =>
+    `${member.display_name} ${member.email}`
+      .normalize("NFKC")
+      .toLowerCase()
+      .includes(term),
+  );
+}
+
 // Server order is join order (created_at, id), which the Added line reads
 // back; re-sorting the first page here would misstate the pages after it.
 function MembersTable({
   list,
+  allMembers,
   roles,
   management,
   refusalOf,
 }: Readonly<{
   list: User[];
+  allMembers: User[];
   roles: readonly AssignableRole[];
   management: boolean;
   refusalOf: (
@@ -185,7 +245,7 @@ function MembersTable({
             <MemberRole
               member={u}
               roles={roles}
-              refusal={refusalOf(u, list, roles)}
+              refusal={refusalOf(u, allMembers, roles)}
             />
           ),
         },
@@ -200,10 +260,16 @@ function MembersTable({
           header: t("table.actions"),
           headerHidden: true,
           fold: "end",
-          render: (u) => <MemberVerbs member={u} />,
+          render: (u) => <MemberVerbs member={u} members={allMembers} />,
         },
       ]
     : [member, activity];
+  if (list.length === 0)
+    return (
+      <PanelBody>
+        <EmptyState>{t("users.noSearchResults")}</EmptyState>
+      </PanelBody>
+    );
   return (
     <DataTable
       fold

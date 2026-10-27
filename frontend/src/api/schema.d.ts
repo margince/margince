@@ -6652,6 +6652,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/forms/{form_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                form_key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Land one website form submission as a lead (anonymous).
+         * @description The intake address of one website form. What admits a request depends on the form's
+         *     `sender`: a `browser` form takes posts only from its allowed websites (the `Origin`
+         *     header) and runs the spam checks; a `server` form takes posts signed with
+         *     `X-Margince-Timestamp`, `X-Margince-Nonce` and `X-Margince-Signature`; a builder form
+         *     checks the builder's own signature header.
+         *
+         *     A new email becomes a lead with the form's origin; an email an open lead or a contact
+         *     already holds adds the message to that record's timeline instead. The answer is the same in
+         *     every case and for
+         *     a submission the spam checks dropped, so the address tells nobody who is in the CRM.
+         *
+         *     A request whose `Accept` asks for HTML (a plain `<form>` post) is answered with a redirect
+         *     to the form's `redirect_url`, or a short thank-you page.
+         */
+        post: operations["submitWebForm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/rooms/peek": {
         parameters: {
             query?: never;
@@ -9191,6 +9225,81 @@ export interface paths {
          *     anything it has ever sent, and every message it received would be skipped silently.
          */
         patch: operations["replaceChannelToken"];
+        trace?: never;
+    };
+    "/web-forms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the website forms that land leads in this installation. */
+        get: operations["listWebForms"];
+        put?: never;
+        /**
+         * Create a website form (returns a server signing secret once).
+         * @description Mints the form's public key, the last segment of its intake address
+         *     `POST /v1/public/forms/{form_key}`. A `server` form answers its own signing secret in
+         *     `signing_secret`, once; no read returns it again. A builder form (`webflow`, `typeform`,
+         *     `tally`) stores the secret the builder signs with, sent in `sender_secret`. Both need a
+         *     secret store on this installation; without one they answer 422 on `sender`.
+         */
+        post: operations["createWebForm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/web-forms/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get one website form. */
+        get: operations["getWebForm"];
+        put?: never;
+        post?: never;
+        /** Archive a website form; its address stops taking submissions. */
+        delete: operations["archiveWebForm"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a website form, pause it or resume it.
+         * @description A partial update. The sender kind and the form key never change: a form a website already
+         *     points at keeps its address. `sender_secret` replaces a builder form's stored secret.
+         */
+        patch: operations["updateWebForm"];
+        trace?: never;
+    };
+    "/web-forms/{id}/rotate-secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rotate a server form's signing secret (returns the new secret once).
+         * @description Only a `server` form has a secret this installation minted; any other sender answers 422 on
+         *     `sender`. The old secret stops verifying at once.
+         */
+        post: operations["rotateWebFormSecret"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/webhook-subscriptions": {
@@ -15972,6 +16081,93 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Read a member for administration. */
+        get: operations["getMember"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit a member's identity, role and teams. */
+        patch: operations["updateMember"];
+        trace?: never;
+    };
+    "/users/{id}/retirement-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Preview removing a member or merging them into another account. */
+        get: operations["previewMemberRetirement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge a duplicate into the selected surviving member.
+         * @description The source must be an unused imported or invited identity. The acting administrator cannot be the survivor.
+         */
+        post: operations["mergeMembers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retire an account while preserving historical attribution.
+         * @description Removal is permanent. The original email remains reserved for historical attribution. Deactivate an account that may return instead.
+         */
+        post: operations["removeMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/assignable-roles": {
         parameters: {
             query?: never;
@@ -16071,8 +16267,8 @@ export interface paths {
          *     reads that put a name on a timeline row, and a former member exists precisely so
          *     their name still appears on the work they did.
          *
-         *     Admin-only (`role: admin`); an agent may never provision a human. A duplicate email
-         *     answers 409 `email_taken` — if that member is merely deactivated they are already
+         *     Admin-only (`role: admin`); an agent may never provision a human. An email merged into another member returns the live surviving account with status 200. Removed identities without a live survivor answer 409 `removed_member_email`. Other duplicate emails
+         *     answer 409 `email_taken` — if that member is merely deactivated they are already
          *     what this route would create, and if they are active this is the wrong route.
          *
          *     Emits no event: the closed V1 catalog carries `user.invited`, which announces an
@@ -21987,6 +22183,122 @@ export interface components {
              * @description Defaults to today; must not be in the past (append-forward).
              */
             effective_date?: string;
+        };
+        /**
+         * @description Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
+         *     allowed website, with spam checks. `server`: a server signing with this form's secret.
+         *     `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
+         *     builder computes with the secret stored as `sender_secret`.
+         * @enum {string}
+         */
+        WebFormSender: "browser" | "server" | "webflow" | "typeform" | "tally";
+        /** @description A website form (`web_form`): a public intake address that turns a submission into a lead. No secret is ever returned here; `secret_configured` says one is stored. */
+        WebForm: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description The last segment of the intake address. Public; it is an address, not a credential. */
+            form_key: string;
+            sender: components["schemas"]["WebFormSender"];
+            /** @description The websites a `browser` form takes posts from, as origins (`https://example.com`). */
+            allowed_origins: string[];
+            /** @description The `/lead-origins` key every lead from this form carries. */
+            lead_origin?: string | null;
+            /**
+             * Format: uuid
+             * @description Who owns the leads this form creates; null leaves them in the unassigned queue.
+             */
+            owner_id?: string | null;
+            /** @description The sender's field names mapped to lead fields, for names the defaults do not already read. */
+            field_map: {
+                [key: string]: string;
+            };
+            /** @description A submission without `consent` ticked is refused with 422. */
+            consent_required: boolean;
+            consent_policy_version?: string | null;
+            /** @description The consent wording the form shows, written on each lead's timeline as evidence. */
+            consent_wording?: string | null;
+            /** @description Where a plain HTML post is sent after a submission. */
+            redirect_url?: string | null;
+            success_message?: string | null;
+            /** @enum {string} */
+            state: "active" | "paused";
+            secret_configured: boolean;
+            /**
+             * Format: int64
+             * @description Optimistic-concurrency version; echo it in If-Match on update.
+             */
+            version: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: date-time */
+            archived_at?: string | null;
+        };
+        WebFormCreated: components["schemas"]["WebForm"] & {
+            /** @description A `server` form's signing secret, shown this once. */
+            signing_secret?: string;
+        };
+        WebFormListResponse: {
+            data: components["schemas"]["WebForm"][];
+            /** @description Whether this installation can store a secret, which every sender but `browser` needs. */
+            secrets_available: boolean;
+        };
+        CreateWebFormRequest: {
+            name: string;
+            sender: components["schemas"]["WebFormSender"];
+            /** @description The secret a builder signs with. Required for `webflow`, `typeform` and `tally`; refused for any other sender. */
+            sender_secret?: string;
+            /** @description Required, and only allowed, for a `browser` form. */
+            allowed_origins?: string[];
+            lead_origin?: string | null;
+            /** Format: uuid */
+            owner_id?: string | null;
+            field_map?: {
+                [key: string]: string;
+            };
+            /** @default false */
+            consent_required: boolean;
+            consent_policy_version?: string | null;
+            consent_wording?: string | null;
+            redirect_url?: string | null;
+            success_message?: string | null;
+        };
+        UpdateWebFormRequest: {
+            name?: string;
+            sender_secret?: string;
+            allowed_origins?: string[];
+            lead_origin?: string | null;
+            /** Format: uuid */
+            owner_id?: string | null;
+            field_map?: {
+                [key: string]: string;
+            };
+            consent_required?: boolean;
+            consent_policy_version?: string | null;
+            consent_wording?: string | null;
+            redirect_url?: string | null;
+            success_message?: string | null;
+            /** @enum {string} */
+            state?: "active" | "paused";
+        };
+        /**
+         * @description The submitted fields. Read by name: `email` (required), `full_name` or `first_name` and
+         *     `last_name`, `phone`, `company`, `title`, `message`, `consent`, plus `page_url`,
+         *     `referrer` and `utm_*`. Common spellings (`name`, `e-mail`, `your-email`) read too, and
+         *     the form's `field_map` names the rest. Every other field is kept on the lead's timeline.
+         *     Fields starting `_mrg_` steer the spam checks and are never stored.
+         */
+        WebFormFields: {
+            [key: string]: unknown;
+        };
+        WebFormReceipt: {
+            /** @enum {string} */
+            status: "received";
+            /** @description The form's success message. */
+            message?: string | null;
+            redirect_url?: string | null;
         };
         /** @description An outbound webhook subscription (`webhook_subscription`): a tenant-configured target URL that receives signed HTTP POSTs for a chosen subset of the published event catalog. The signing secret is NEVER returned here — it is surfaced once, at create/rotate, in `WebhookSubscriptionCreated`. */
         WebhookSubscription: {
@@ -28806,7 +29118,8 @@ export interface components {
          *     dimension the client rates itself.
          *
          *     - `never_written`: no message from them and no meeting with them, ever.
-         *     - `quiet`: no message from them and no meeting with them for `days` days.
+         *     - `quiet`: no message from them and no meeting with them for `days` days, counted from
+         *       `at`, the last of the two.
          *     - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
          *     - `last_met`: in touch through a meeting `days` days ago.
          *     - `single_threaded`: in touch, but one contact carries the whole account.
@@ -29753,6 +30066,13 @@ export interface components {
              */
             as_of: string;
             contact: components["schemas"]["Contact"];
+            /**
+             * @description Who created the contact, from its earliest create audit row: for an agent, the
+             *     colleague it worked for and the tool it was typed through, each when the row
+             *     records it, which `captured_by` cannot say. Absent when no create row is known; a reader says "unknown" for an
+             *     absent value and never "System".
+             */
+            created_by?: components["schemas"]["PrincipalAttribution"];
             /** @description The project this was narrowed to, when the request named one. */
             scope?: components["schemas"]["ProjectScope"];
             /**
@@ -39177,6 +39497,46 @@ export interface components {
             /** @enum {string} */
             format: "csv" | "json";
         };
+        UpdateMemberRequest: {
+            display_name: string;
+            /**
+             * Format: email
+             * @description May change only before the account has been used to sign in.
+             */
+            email: string;
+            /** @description Omit to keep the current roles. */
+            role?: string;
+            team_ids?: string[];
+            /** Format: date-time */
+            expected_updated_at: string;
+        };
+        /** @enum {string} */
+        MemberRetirementBlocker: "approval_decisions" | "automations" | "booking_pages" | "data_requests" | "deal_rooms" | "introductions" | "lists" | "stewarded_lists" | "mail_drafts" | "meeting_invitations" | "meeting_proposals" | "privacy_notices" | "record_responsibilities" | "reports" | "report_schedules" | "saved_views" | "scheduled_mail" | "handoffs" | "voice_profiles" | "web_forms" | "webhooks" | "weekly_plans" | "analytics_shares" | "source_used" | "self_survivor" | "deactivate_first" | "choose_survivor" | "choose_receiver" | "private_tasks" | "work_not_transferable" | "state_changed";
+        /** @enum {string} */
+        MemberRetirementConsequence: "source_signed_out" | "connectors_reconnect" | "survivor_access" | "original_attribution" | "private_alerts_archived" | "crm_private_records_move" | "private_audiences_retained" | "email_reserved" | "survivor_inactive";
+        MemberRetirementPreview: {
+            owned: components["schemas"]["HandoverCounts"];
+            signal_count: number;
+            blockers: components["schemas"]["MemberRetirementBlocker"][];
+            consequences: components["schemas"]["MemberRetirementConsequence"][];
+            token: string;
+            source_name: string;
+            /** Format: email */
+            source_email: string;
+            survivor_name?: string;
+            /** Format: email */
+            survivor_email?: string;
+        };
+        MergeMembersRequest: {
+            /** Format: uuid */
+            to_user_id: string;
+            preview_token: string;
+        };
+        RemoveMemberRequest: {
+            /** Format: uuid */
+            to_user_id?: string;
+            preview_token: string;
+        };
         /** @description A seat — human or first-party agent. Mirrors `app_user`. */
         User: {
             /** Format: uuid */
@@ -39217,8 +39577,12 @@ export interface components {
             roles?: string[];
             /** @description The live teams this user belongs to, ordered by team name. Present ONLY for an admin caller, on the same terms as `roles`: the roster answers every authenticated user because the share and assignee pickers read it, and who is in which team is not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no scope and no share, so listing one would describe access the user does not have. */
             team_ids?: string[];
+            /** @description Whether this unused member's sign-in email can still be corrected. Present only on the administration view. */
+            email_editable?: boolean;
+            /** @description Original account identities consolidated into this member, present only on the administration view. */
+            merged_from?: components["schemas"]["SeatName"][];
             /** @description The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer. */
-            allowed_actions?: ("change_role" | "issue_password_link" | "remove_mfa" | "deactivate" | "reactivate" | "hand_over")[];
+            allowed_actions?: ("change_role" | "issue_password_link" | "remove_mfa" | "deactivate" | "reactivate" | "hand_over" | "edit" | "merge" | "remove")[];
             /**
              * Format: date-time
              * @description When this member last used the product: the latest request any of their sign-in sessions made, including a session since signed out, revoked or expired. Clearing dead sessions records the latest of their requests on the member first, so the value outlives the sessions. Signing in counts as activity. Work an agent or a connected app did on their behalf does not.
@@ -41911,7 +42275,7 @@ export interface components {
              * @description The record the operation targets. A confirm-first operation that resolves a concrete {id} must name one, or the approval it stages cannot be row-scoped.
              * @enum {string}
              */
-            record_type?: "activity" | "app_user" | "commission" | "custom_field" | "data_subject_request" | "deal" | "deal_room" | "deal_room_comment" | "deal_room_document" | "deal_room_participant" | "deal_room_thread" | "import_run" | "lead" | "list" | "offer" | "offer_template" | "company" | "partner" | "contact" | "product" | "project" | "record_grant" | "relationship" | "saved_view" | "tag" | "team" | "webhook_subscription";
+            record_type?: "activity" | "app_user" | "user_admin" | "commission" | "custom_field" | "data_subject_request" | "deal" | "deal_room" | "deal_room_comment" | "deal_room_document" | "deal_room_participant" | "deal_room_thread" | "import_run" | "lead" | "list" | "offer" | "offer_template" | "company" | "partner" | "contact" | "product" | "project" | "record_grant" | "relationship" | "saved_view" | "tag" | "team" | "webhook_subscription";
             /**
              * @description The autonomy tier, identical on REST and MCP (ADR-0055).
              * @enum {string}
@@ -61496,6 +61860,89 @@ export interface operations {
             502: components["responses"]["CalendarUnavailable"];
         };
     };
+    submitWebForm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                form_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["WebFormFields"];
+                "multipart/form-data": components["schemas"]["WebFormFields"];
+                "application/json": components["schemas"]["WebFormFields"];
+            };
+        };
+        responses: {
+            /** @description The thank-you page, for a plain HTML post on a form with no redirect. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description Received. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebFormReceipt"];
+                };
+            };
+            /** @description Redirect to the form's `redirect_url`, for a plain HTML post. */
+            303: {
+                headers: {
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A server or builder form's signature did not verify. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A browser form was posted from a website not on its list. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description The form is paused. */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description Rate-limited; a webhook sender retries. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     peekDealRoomCredential: {
         parameters: {
             query?: never;
@@ -66383,6 +66830,181 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    listWebForms: {
+        parameters: {
+            query?: {
+                /** @description Include soft-deleted (archived) rows. Default false. */
+                include_archived?: components["parameters"]["IncludeArchived"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Website forms, newest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebFormListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    createWebForm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWebFormRequest"];
+            };
+        };
+        responses: {
+            /** @description The created form, plus its one-time signing secret for a `server` form. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebFormCreated"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getWebForm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The form. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebForm"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    archiveWebForm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The archived form. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebForm"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    updateWebForm: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateWebFormRequest"];
+            };
+        };
+        responses: {
+            /** @description The updated form. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebForm"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    rotateWebFormSecret: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The form plus its new one-time signing secret. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebFormCreated"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listWebhookSubscriptions: {
@@ -75017,6 +75639,185 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The current member profile and access assignments. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    updateMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description Saved atomically. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewMemberRetirement: {
+        parameters: {
+            query?: {
+                mode?: "merge" | "remove";
+                to_user_id?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The work, unresolved dependencies and confirmation token. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberRetirementPreview"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    mergeMembers: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+                /**
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeMembersRequest"];
+            };
+        };
+        responses: {
+            /** @description Work transferred and duplicate removed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        merged: boolean;
+                    };
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    removeMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemoveMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description Member removed from the roster. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listAssignableRoles: {
         parameters: {
             query?: never;
@@ -75106,6 +75907,15 @@ export interface operations {
             };
         };
         responses: {
+            /** @description The live surviving member for an already merged import identity. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
             /** @description The former member's seat. */
             201: {
                 headers: {

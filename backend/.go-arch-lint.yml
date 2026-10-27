@@ -110,6 +110,7 @@ components:
   automation:  { in: internal/modules/automation }
   migration:   { in: internal/modules/migration }
   webhooks:    { in: internal/modules/webhooks }
+  webforms:    { in: internal/modules/webforms }
   comms:       { in: internal/modules/comms }
   notices:     { in: internal/modules/notices }
   assignments: { in: internal/modules/assignments }
@@ -240,6 +241,9 @@ deps:
   migration:
     mayDependOn: [platform]
     canUse: [pgx]
+  webforms:
+    mayDependOn: [contracts, platform]
+    canUse: [pgx, oapi]
   webhooks:
     mayDependOn: [contracts, platform]
     # xnet: httpguts checks a custom header's name and value before it is sealed.
@@ -272,7 +276,7 @@ deps:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
   compose:
-    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, knowledge, assignments, platform, migrations, projects]
+    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, migration, webhooks, webforms, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, knowledge, assignments, platform, migrations, projects]
     # xtext: the evidence gate normalizes page text to NFC before matching
     # (evidencematch.go) — Unicode normal forms need golang.org/x/text.
     # yaml: aicert's corpus loader parses scenario files directly — the
@@ -368,8 +372,8 @@ deps:
     # directions because fewer lets the prose return and more rewrites a
     # completed outcome into "cancelled".
     # gates carries test files only, so this grants no production edge.
-    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, contacts, customfields, deals, forecasting, comms, identity, introductions, privacy]
+    mayDependOn: [contracts, compose, ai, collections, webforms, platform, activities, aiactivity, agents, approvals, contacts, customfields, deals, forecasting, comms, identity, introductions, privacy]
     canUse: [yaml, jsonschema]
   cmd:
-    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, assignments, platform, migrations, projects]
+    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, migration, webhooks, webforms, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, assignments, platform, migrations, projects]
     canUse: [pgx, redis, xterm, composition]

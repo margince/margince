@@ -37,8 +37,8 @@ const leadRepliedActor = "system:lead-replied"
 
 // The task titles. A lead's name fills the first verb.
 const (
-	leadRepliedSubject    = "%s replied, qualify them?"
-	leadBookedSubject     = "%s booked a meeting, qualify them?"
+	leadRepliedSubject    = "Review qualification for %s"
+	leadBookedSubject     = "Review qualification for %s after booking"
 	leadForContactSubject = "%s came in as a new lead, and is already your contact"
 )
 
@@ -79,7 +79,11 @@ func (w leadWorkTasks) askToQualifyTx(ctx context.Context, tx pgx.Tx, lead ids.L
 	if err := storekit.LockWriteIdentity(ctx, tx, provenance.LeadRepliedSource, lead.String()); err != nil {
 		return err
 	}
-	open, err := activities.OpenSystemTaskOnTx(ctx, tx, provenance.LeadRepliedSource, entityLead, lead.UUID)
+	eligible, err := activities.CurrentLeadEngagementTx(ctx, tx, arrival, owner, w.now())
+	if err != nil || !eligible {
+		return err
+	}
+	open, err := activities.OpenSystemTaskOnTx(ctx, tx, provenance.LeadRepliedSource, entityLead, lead.UUID, w.now(), owner)
 	if err != nil || open {
 		return err
 	}
@@ -130,8 +134,8 @@ func (w leadWorkTasks) repliedTaskInput(lead ids.LeadID, arrival ids.UUID, title
 	at := w.now().UTC()
 	source, key := provenance.LeadRepliedSource, arrival.String()
 	return activities.LogActivityInput{
-		Kind: activityKindTask, Subject: &title, OccurredAt: &at, DueAt: &at,
-		SourceSystem: &source, SourceID: &key,
+		Kind: activityKindTask, Subject: &title, OccurredAt: &at,
+		SourceSystem: &source, SourceID: &key, SourceActivityID: &arrival,
 		Links:      []activities.ActivityLinkInput{{EntityType: entityLead, EntityID: lead.UUID}},
 		Source:     systemActor,
 		Origin:     activities.OriginSystemRemediation,
@@ -144,7 +148,7 @@ func (w leadWorkTasks) arrivalTaskInput(arrival contacts.LeadArrival, title, bod
 	at := w.now().UTC()
 	source, key := provenance.LeadForContactSource, arrival.Key
 	return activities.LogActivityInput{
-		Kind: activityKindTask, Subject: &title, Body: &body, OccurredAt: &at, DueAt: &at,
+		Kind: activityKindTask, Subject: &title, Body: &body, OccurredAt: &at,
 		SourceSystem: &source, SourceID: &key,
 		Links:      []activities.ActivityLinkInput{{EntityType: entityContact, EntityID: arrival.ContactID.UUID}},
 		Source:     systemActor,

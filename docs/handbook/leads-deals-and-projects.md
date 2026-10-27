@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/leads frontend/src/features/deals frontend/src/features/projects backend/internal/modules/contacts/leadstatus.go backend/internal/modules/contacts/leadscore.go backend/internal/modules/deals/deal_create.go backend/internal/modules/deals/deal_update.go backend/internal/modules/projects -->
+<!-- describes: backend/internal/compose/leadworktasks.go frontend/src/features/leads frontend/src/features/deals frontend/src/features/projects backend/internal/modules/contacts/leadstatus.go backend/internal/modules/contacts/leadscore.go backend/internal/modules/deals/deal_create.go backend/internal/modules/deals/deal_update.go backend/internal/modules/projects -->
 # Leads, deals and projects
 
 A lead is someone you may sell to. A deal is one opportunity with one company, and a project is work a deal may belong to. See [Records](records.md) for contacts, companies, archiving, undo, custom fields and tags.
@@ -70,10 +70,11 @@ Either way the lead's history and activities come with it, and the lead is
 marked qualified and archived. You can preview which of the two
 will happen before you confirm.
 
-Margince does not qualify a lead on its own. Mail and chat from a lead stay on
-the lead, and a booking is filed there too. A reply or booking gives the lead's
-owner a task to review the lead and qualify them when that is the right next
-step.
+Margince does not qualify a lead on its own. Mail and chat stay on the lead, and a booking is filed there too.
+A current reply or booking gives the lead's owner a task to review the lead and qualify them
+when that is the right next step.
+
+This advice has no automatic deadline. Old imported mail creates no new task. A reply you already answered creates no new task. A task you kept remains your work.
 
 When you add or edit a contact with an email or LinkedIn profile held by a
 live lead, Margince asks whether to convert the lead. Nothing is written until

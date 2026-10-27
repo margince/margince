@@ -3,7 +3,7 @@ import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { ProvenanceTag } from "./provenance";
-import { provenanceOf } from "./provenanceof";
+import { provenanceOf, withCreator } from "./provenanceof";
 
 afterEach(() => {
   cleanup();
@@ -246,6 +246,31 @@ describe("a row the CSV importer wrote", () => {
     expect(fromWire(null)).toMatchObject({ kind: "human", self: true });
   });
 
+  it("names a connector import by the product's own spelling", () => {
+    const tag = (importedFrom: string) => {
+      render(
+        <LocaleProvider initial="vi">
+          <ProvenanceTag
+            provenance={provenanceOf(
+              `human:${VIEWER}`,
+              VIEWER,
+              undefined,
+              "",
+              importedFrom,
+            )}
+          />
+        </LocaleProvider>,
+      );
+      const said = document.body.textContent;
+      cleanup();
+      return said;
+    };
+
+    expect(tag("hubspot")).toBe("Đã nhập từ HubSpot");
+    // An upload the administrator named keeps the name they gave it.
+    expect(tag("Q3 leads")).toBe("Đã nhập từ Q3 leads");
+  });
+
   it("names the upload of an imported activity", () => {
     expect(imported("mirror:csv:pipedrive-export:activity:a-9")).toEqual({
       kind: "import",
@@ -312,5 +337,50 @@ describe("a row the CSV importer wrote", () => {
         userId: VIEWER,
       });
     }
+  });
+});
+
+// captured_by names only a passport. The create audit row names the tool and
+// the colleague, which is what lets a reader ask someone where it came from.
+describe("withCreator", () => {
+  const PASSPORT = "agent:0b9f3c2a-6d7e-4c1b-9a8f-1e2d3c4b5a69";
+  const said = (createdBy?: Parameters<typeof withCreator>[1]) => {
+    render(
+      <LocaleProvider initial="en">
+        <ProvenanceTag
+          provenance={withCreator(provenanceOf(PASSPORT), createdBy)}
+        />
+      </LocaleProvider>,
+    );
+    const text = document.body.textContent;
+    cleanup();
+    return text;
+  };
+  const agent = {
+    actor_type: "agent" as const,
+    actor_id: PASSPORT,
+    on_behalf_of_name: "Anna Weber",
+  };
+
+  it("names the tool and the colleague the agent worked for", () => {
+    expect(said({ ...agent, agent_client: "Claude" })).toBe(
+      "Made by Claude for Anna Weber",
+    );
+  });
+
+  it("names the colleague when the tool is not recorded", () => {
+    expect(said(agent)).toBe("Made by an agent for Anna Weber");
+  });
+
+  it("says the kind alone when no create row is known", () => {
+    expect(said(undefined)).toBe("Automated by an agent");
+  });
+
+  // A human's or a connector's create row says nothing about an agent tag.
+  it("leaves every other kind as captured_by says", () => {
+    const human = provenanceOf("human:4f1c7a2e-8b3d-4e5f-9a6b-7c8d9e0f1a2b");
+    expect(
+      withCreator(human, { ...agent, actor_type: "human", actor_id: "x" }),
+    ).toBe(human);
   });
 });

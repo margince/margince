@@ -11,10 +11,11 @@ import {
 } from "../../testing/story-utils";
 import { openCitation } from "../records/record360";
 import {
-  AccountDraftContext,
+  type DraftNeed,
   DraftOffer,
   DraftReasons,
   type PendingAction,
+  RelatedFiling,
 } from "./composedraftcontext";
 // The drawer's own sheet. In the app it arrives through compose.tsx's
 // side-effect import; this file takes only a TYPE from compose.tsx, so the
@@ -22,9 +23,9 @@ import {
 // would picture the offer bar and the chip run unstyled.
 import "./compose.css";
 
-// What a draft stands on, from the three sides composedraftcontext.tsx draws
-// it: the pickers that say which record the message is about, the offer that
-// asks a model for words, and the reasons panel that says what was read.
+// What a draft stands on, from the three sides composedraftcontext.tsx draws.
+// The picker says which record the message is about. The offer asks a model
+// for words, and the reasons panel says what was read.
 //
 // Every fixture is the shape the compose suites already exercise
 // (compose-links.test.tsx's account view, compose.test.tsx's draft) rather
@@ -32,17 +33,11 @@ import "./compose.css";
 
 const COMPANY_ID = "company-1";
 
-// The account view the grounding pickers are populated from: two contacts and
-// two open deals, so each pick is a real choice rather than the only option.
+// The account view the picker's deals are read from: two open deals, so each
+// pick is a real choice rather than the only option.
 // Mirrors compose-links.test.tsx's COMPANY_VIEW.
 const COMPANY_VIEW = {
   company: { id: COMPANY_ID, name: "Acme" },
-  contacts: {
-    data: [
-      { contact_id: "per-1", full_name: "Dieter Klein" },
-      { contact_id: "per-2", full_name: "Sara Vogel" },
-    ],
-  },
   deals: {
     data: [
       { deal_id: "deal-1", name: "Acme Renewal" },
@@ -51,13 +46,15 @@ const COMPANY_VIEW = {
   },
 };
 
-// The same account with nobody on it: the DRAFT's honest dead end, which the
-// component says in words instead of offering a picker the rep cannot use.
-const COMPANY_VIEW_NO_CONTACTS = {
-  ...COMPANY_VIEW,
-  contacts: { data: [] },
-  deals: { data: [] },
-};
+// The account's projects, as the composer passes them from the same view.
+const PROJECTS = [
+  {
+    project_id: "pr-1",
+    name: "Website relaunch",
+    key: "WEB-1",
+    phase: "delivering" as const,
+  },
+];
 
 // Both shapes a reason comes in, because the panel draws them differently and
 // the difference is the point: a reason carrying evidence is pressable and
@@ -86,19 +83,19 @@ const REASONS: readonly components["schemas"]["AccountDraftReason"][] = [
 ];
 
 /**
- * The pickers own no state, so the story lends them some: a reader in the
- * catalog can choose a contact and a deal and watch both selects settle, which
- * is the half of this component a static frame cannot show.
+ * The picker owns no state, so the story lends it some. A reader in the
+ * catalog can choose a project, a deal or nothing and watch the face settle.
  */
-function Pickers() {
-  const [recipientId, setRecipientId] = useState("");
+function Related() {
+  const [projectId, setProjectId] = useState("pr-1");
   const [dealId, setDealId] = useState("");
   return (
     <StoryProviders>
-      <AccountDraftContext
+      <RelatedFiling
         companyId={COMPANY_ID}
-        recipientId={recipientId}
-        onRecipientChange={setRecipientId}
+        projects={PROJECTS}
+        projectId={projectId}
+        onProjectChange={setProjectId}
         dealId={dealId}
         onDealChange={setDealId}
       />
@@ -109,12 +106,12 @@ function Pickers() {
 // Installs the stub from the story's own `render()`, which runs before any
 // mount effect, so the 360 query's first call always sees it — the ordering
 // the compose suites rely on too.
-function pickersOver(view: unknown) {
+function relatedOver(view: unknown) {
   return () => {
     installFetchStub({
       [`GET /companies/${COMPANY_ID}/360`]: () => jsonResponse(view),
     });
-    return <Pickers />;
+    return <Related />;
   };
 }
 
@@ -133,10 +130,12 @@ function Offer({
   draft,
   initialIntent = "",
   replying = false,
+  need = null,
 }: Readonly<{
   draft: PendingAction;
   initialIntent?: string;
   replying?: boolean;
+  need?: DraftNeed;
 }>) {
   const [intent, setIntent] = useState(initialIntent);
   return (
@@ -147,6 +146,7 @@ function Offer({
         onIntentChange={setIntent}
         draft={draft}
         unavailable={null}
+        need={need}
       />
     </StoryProviders>
   );
@@ -159,18 +159,29 @@ export default meta;
 
 type Story = StoryObj;
 
-/** The account path's two choices: who the draft is to, and which deal it is about. */
-export const AccountPickers: Story = {
-  render: pickersOver(COMPANY_VIEW),
+/** What the message is about: one of the account's projects, deals, or nothing. */
+export const RelatedTo: Story = {
+  render: relatedOver(COMPANY_VIEW),
+};
+
+/** Nobody from the account in To yet, so the draft waits for one. */
+export const OfferNeedsRecipient: Story = {
+  render: () => (
+    <Offer
+      draft={{ ...READY, disabled: true }}
+      initialIntent="Ask for the signed order"
+      need="recipient"
+    />
+  ),
 };
 
 /**
  * An account with no contact on it. The draft has no relationship to write
- * from, so the component says so rather than offering an empty picker — the
- * rep can still type an address into To and write the mail themselves.
+ * from, so the offer says so. The rep can still type an address into To and
+ * write the mail themselves.
  */
-export const NoGroundableRecipient: Story = {
-  render: pickersOver(COMPANY_VIEW_NO_CONTACTS),
+export const OfferNoContacts: Story = {
+  render: () => <Offer draft={{ ...READY, disabled: true }} need="contacts" />,
 };
 
 /** The pre-draft drawer: what the rep wants said, and the one control that asks for it. */

@@ -27,6 +27,14 @@ export type PickableProject = Pick<
 // What the server reports about a read it narrowed to one project.
 export type ProjectScope = components["schemas"]["ProjectScope"];
 
+// How a project reads in a list or a sentence. The key comes first, because a
+// subject line carries it and a rep searches their inbox for it.
+export function projectLabel(
+  project: Readonly<{ key?: string | null; name: string }>,
+): string {
+  return project.key ? `${project.key} · ${project.name}` : project.name;
+}
+
 // The projects a surface can be scoped to: the unarchived ones the page
 // carries, minus the closed — a closed project is history, and a new message
 // or a fresh reading is not about history.
@@ -143,9 +151,7 @@ export function ProjectPicker({
               { value: "", label: t("compose.projectNone") },
               ...projects.map((project) => ({
                 value: project.project_id,
-                label: project.key
-                  ? `${project.key} · ${project.name}`
-                  : project.name,
+                label: projectLabel(project),
               })),
             ]}
             value={projectId}

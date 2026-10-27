@@ -41,9 +41,6 @@ import (
 // deciding who may read, it belongs in the read clause too and this list is
 // where the next author is told to look.
 var resolutionOnlyRelations = gatekit.Waive(map[string]string{
-	// The read clause is given the caller's own uuid; the existential has to
-	// ask which uuids exist at all to match the captured_by suffix arm.
-	"app_user": "resolves the captured_by suffix arm against every user, where the read clause is handed one",
 	// The read clause is given p.TeamIDs, already filtered to live teams by
 	// identity's loadGrants; the existential has to do that filtering itself.
 	"team_membership": "resolves a selected team to its members, which the read clause receives as p.TeamIDs",
@@ -95,10 +92,17 @@ func sqlOf(t *testing.T, file, fn string) string {
 // the relations it reads count as the function's own.
 func composedFragment(call *ast.CallExpr) string {
 	name, ok := call.Fun.(*ast.Ident)
-	if !ok || name.Name != "ParticipantStandsSQL" {
+	if !ok {
 		return ""
 	}
-	return ParticipantStandsSQL("ap", "a") + "\n"
+	switch name.Name {
+	case "ParticipantStandsSQL":
+		return ParticipantStandsSQL("ap", "a") + "\n"
+	case "memberIdentitySetSQL":
+		return memberIdentitySetSQL(1) + "\n"
+	default:
+		return ""
+	}
 }
 
 // relationsIn collects the relations a SQL text reads, from its own FROM and

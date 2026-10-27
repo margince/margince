@@ -34,8 +34,41 @@ func TestTextThatNamesAnIndustryResolvesToItsCode(t *testing.T) {
 	}
 }
 
+// Enrichment providers return LinkedIn's industry names, in its older and its
+// newer wording, and with the "&" or "/" sometimes dropped.
+func TestALinkedInIndustryNameResolvesToItsCode(t *testing.T) {
+	for raw, want := range map[string]string{
+		"Computer Software":                   "software",
+		"Information Technology & Services":   "it_services",
+		"Information Technology And Services": "it_services",
+		"IT Services and IT Consulting":       "it_services",
+		"Management Consulting":               "legal_professional_services",
+		"Hospital & Health Care":              "healthcare",
+		"Hospital Health Care":                "healthcare",
+		"Logistics & Supply Chain":            "logistics_transport",
+		"Logistics And Supply Chain":          "logistics_transport",
+		"Transportation/Trucking/Railroad":    "logistics_transport",
+		"Capital Markets":                     "financial_services",
+		"Venture Capital & Private Equity":    "financial_services",
+		"Electrical/Electronic Manufacturing": "manufacturing",
+		"Apparel & Fashion":                   "consumer_goods_retail",
+		"Food Production":                     "food_beverage",
+		"Renewables & Environment":            "energy_utilities",
+		"Leisure, Travel & Tourism":           "hospitality_tourism",
+		"Airlines/Aviation":                   "aerospace_defense",
+		"Professional Training & Coaching":    "education",
+		"Government Administration":           "government_public_sector",
+		"Philanthropy":                        "nonprofit",
+	} {
+		got, ok := ResolveIndustry(raw)
+		if !ok || got != want {
+			t.Errorf("ResolveIndustry(%q) = %q, %v, want %q", raw, got, ok, want)
+		}
+	}
+}
+
 func TestTextThatNamesNoIndustryResolvesToNothing(t *testing.T) {
-	for _, raw := range []string{"", "   ", "pumps, valves, gaskets and seals", "Other"} {
+	for _, raw := range []string{"", "   ", "pumps, valves, gaskets and seals", "Other", "Consumer Services", "Business Supplies And Equipment"} {
 		if code, ok := ResolveIndustry(raw); ok {
 			t.Errorf("ResolveIndustry(%q) = %q, want no code", raw, code)
 		}

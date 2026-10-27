@@ -1,43 +1,32 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import {
-  useInfiniteQuery,
-  useIsMutating,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { api } from "../../api/client";
+import { useIsMutating, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
-import { unwrap } from "../../lib/problem";
+import { readMemberPage } from "../../lib/memberpages";
 
 export type User = components["schemas"]["User"];
 type MemberAction = NonNullable<User["allowed_actions"]>[number];
 
-const MEMBERS_KEY = ["users-admin"] as const;
+const MEMBERS_KEY = ["users-admin", "all"] as const;
 
-// include_inactive is honored server-side only for a caller holding
-// `user_admin:read`, so a deactivated member stays reachable for reactivation.
-// The roster is read a page at a time; the card asks for the next on demand.
 export function useMembers() {
-  return useInfiniteQuery({
+  return useQuery({
     queryKey: MEMBERS_KEY,
-    initialPageParam: "",
-    queryFn: async ({ pageParam }) =>
-      unwrap(
-        await api.GET("/users", {
-          params: {
-            query: {
-              include_inactive: true,
-              ...(pageParam ? { cursor: pageParam } : {}),
-            },
-          },
-        }),
-      ),
-    getNextPageParam: (last) =>
-      last.page.has_more && last.page.next_cursor
-        ? last.page.next_cursor
-        : undefined,
-    select: (data): User[] => data.pages.flatMap((page) => page.data),
+    queryFn: async ({ signal }): Promise<User[]> => {
+      const members: User[] = [];
+      const seen = new Set<string>();
+      let cursor: string | null = null;
+      do {
+        const page = await readMemberPage(cursor, true, signal);
+        members.push(...page.entries);
+        cursor = page.next ?? null;
+        if (cursor && seen.has(cursor))
+          throw new Error("The member list stopped advancing. Try again.");
+        if (cursor) seen.add(cursor);
+      } while (cursor);
+      return members;
+    },
   });
 }
 
@@ -69,6 +58,9 @@ export function useMemberRefresh() {
   return () =>
     Promise.all([
       qc.invalidateQueries({ queryKey: MEMBERS_KEY }),
+      qc.invalidateQueries({ queryKey: ["users"] }),
+      qc.invalidateQueries({ queryKey: ["teams"] }),
+      qc.invalidateQueries({ queryKey: ["me"] }),
       // Settings › Seats reads the seat count from its own endpoint.
       qc.invalidateQueries({ queryKey: ["installation-seat-usage"] }),
       qc.invalidateQueries({ queryKey: ["installation-license"] }),

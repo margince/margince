@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 37,
     "system_frame_tokens": 592,
-    "tokens": 22955,
+    "tokens": 23168,
     "median_tool_tokens": 469,
-    "mean_tool_tokens": 619
+    "mean_tool_tokens": 625
   },
   "agents": [
     {
@@ -97,7 +97,7 @@
     },
     {
       "name": "change_state",
-      "tokens": 1117
+      "tokens": 1228
     },
     {
       "name": "read_analytics",
@@ -140,6 +140,10 @@
       "tokens": 620
     },
     {
+      "name": "read_workspace",
+      "tokens": 590
+    },
+    {
       "name": "change_record_parts",
       "tokens": 567
     },
@@ -150,10 +154,6 @@
     {
       "name": "draft_outbound",
       "tokens": 517
-    },
-    {
-      "name": "read_workspace",
-      "tokens": 488
     },
     {
       "name": "schedule_meeting",

@@ -45,6 +45,10 @@ The 2 tables owned by `weeklyplan`, as the migrations build them. [Back to the e
 - `uq_weekly_plan_owner_week`: `unique, btree (owner_id, local_week_start)`
 - `weekly_plan_pkey`: `unique, btree (id)`
 
+**Triggers**
+
+- `weekly_plan_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.status = 'open'))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+
 ## weekly_plan_commitment
 
 23 columns · primary key `(id)` · referenced by 0 foreign keys

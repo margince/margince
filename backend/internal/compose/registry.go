@@ -148,6 +148,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterResolveTool(registry, provider, entityResolver(pool))
 	agents.RegisterWhoamiTool(registry, actingIdentity(pool))
 	agents.RegisterColleaguesTool(registry, colleagueLister(pool))
+	agents.RegisterMemberTools(registry, newMemberManager(db))
 	agents.RegisterTagTools(registry, tagSeamFor(db))
 	agents.RegisterDuplicateTools(registry, duplicateQueueSeam(db))
 	agents.RegisterListTools(registry, newListSeam(pool, features.lists))

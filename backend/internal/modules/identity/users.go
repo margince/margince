@@ -102,7 +102,7 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 		}
 		var status, seat string
 		err := tx.QueryRow(ctx,
-			`SELECT status, seat_type FROM app_user WHERE id = $1 AND archived_at IS NULL FOR UPDATE`,
+			`SELECT status, seat_type FROM app_user WHERE id = $1 AND archived_at IS NULL AND removed_at IS NULL FOR UPDATE`,
 			userID).Scan(&status, &seat)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
@@ -230,7 +230,7 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 		}
 		var status string
 		err := tx.QueryRow(ctx,
-			`SELECT status FROM app_user WHERE id = $1 AND archived_at IS NULL FOR UPDATE`,
+			`SELECT status FROM app_user WHERE id = $1 AND archived_at IS NULL AND removed_at IS NULL FOR UPDATE`,
 			in.UserID).Scan(&status)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound

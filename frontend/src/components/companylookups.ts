@@ -105,12 +105,23 @@ type HealthReasonCode = components["schemas"]["HealthDimensionReasonCode"];
 type ReasonParam = "days" | "count" | "total" | "at";
 type ReasonMessage = { needs: readonly ReasonParam[] } & (
   | { key: MessageKey }
-  | { plural: PluralBase; by: "days" | "count"; today?: MessageKey }
+  | {
+      plural: PluralBase;
+      by: "days" | "count";
+      today?: MessageKey;
+      // The same count with the day it starts from, when the server names it.
+      since?: PluralBase;
+    }
 );
 
 const HEALTH_REASON: Record<HealthReasonCode, ReasonMessage> = {
   never_written: { needs: [], key: "co.health.reason.neverWritten" },
-  quiet: { needs: ["days"], plural: "co.health.reason.quiet", by: "days" },
+  quiet: {
+    needs: ["days"],
+    plural: "co.health.reason.quiet",
+    by: "days",
+    since: "co.health.reason.quietSince",
+  },
   meeting_booked: { needs: ["at"], key: "co.health.reason.meetingBooked" },
   last_met: {
     needs: ["days"],
@@ -158,6 +169,14 @@ function reasonParams(
   return params;
 }
 
+// A counted reason names the day its count starts from when the server sent it.
+function countedSentence(
+  message: Extract<ReasonMessage, { plural: PluralBase }>,
+  params: Record<string, string>,
+): PluralBase {
+  return params.at && message.since ? message.since : message.plural;
+}
+
 /** Says a health dimension's reason in the reader's language. */
 export function useHealthReason(): (
   dimension: Pick<HealthDimension, "reason" | "reason_code" | "reason_params">,
@@ -191,7 +210,7 @@ export function useHealthReason(): (
     if (counted === 0 && message.today) {
       return t(message.today, params);
     }
-    return plural(message.plural, counted, params);
+    return plural(countedSentence(message, params), counted, params);
   };
 }
 

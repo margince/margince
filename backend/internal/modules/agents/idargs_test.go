@@ -359,6 +359,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterDuplicateTools(r, stubDuplicateQueue{})
 	RegisterListTools(r, &stubLists{})
 	RegisterImportTools(r, stubImports{})
+	RegisterMemberTools(r, seamProbeMembers{})
 	RegisterListTool(r, seamProbeProvider{}, probeVocabulary{})
 	RegisterRecordPartsTool(r, seamProbeRecordParts{})
 	RegisterReadViewTool(r, probeViews, func(context.Context, ReadView, map[string]string, url.Values) (json.RawMessage, error) {

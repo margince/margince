@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { components } from "../../api/schema";
 import { Badge, Button } from "../../design-system/atoms";
+import { ContactLink } from "../../design-system/contactlink";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
@@ -73,6 +74,7 @@ export function BillingContactsPanel({
               <BillingContactRow
                 key={c.relationship_id}
                 contact={c}
+                companyId={companyId}
                 canWrite={mayWrite}
                 canRemove={mayRemove}
                 busy={actions.remove.isPending}
@@ -100,6 +102,7 @@ export function BillingContactsPanel({
 // and a blank row reads as "fine" to somebody scanning the list.
 function BillingContactRow({
   contact,
+  companyId,
   canWrite,
   canRemove,
   busy,
@@ -107,6 +110,8 @@ function BillingContactRow({
   onRemove,
 }: Readonly<{
   contact: BillingContact;
+  // The account an invoice question is about, so a message is filed there.
+  companyId: string;
   canWrite: boolean;
   // Separate from canWrite because the server separates them: naming and
   // moving are relationship:create, taking off is relationship:delete, and the
@@ -149,9 +154,13 @@ function BillingContactRow({
         )}
       </div>
       {contact.email ? (
-        <a className="billing-email" href={`mailto:${contact.email}`}>
-          {contact.email}
-        </a>
+        <ContactLink
+          kind="email"
+          value={contact.email}
+          record={{ entityType: "company", entityId: companyId }}
+          className="link-button billing-email"
+          textClassName="billing-email"
+        />
       ) : (
         <span className="billing-email t-caption">{t("billing.noEmail")}</span>
       )}

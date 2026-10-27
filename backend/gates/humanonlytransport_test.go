@@ -66,6 +66,9 @@ var humanOnlyWithoutASession = gatekit.Waive(map[string]string{
 	"acceptPublicMeetingProposal":   "an expiring recipient-bound capability authorizes one atomic acceptance without a seat",
 	// The public booking page, opened by somebody who has never been here.
 	"bookPublicMeeting": "the public booking page: an anonymous buyer holds no seat, and the link is the capability",
+	// A website form's intake: the visitor holds no seat, and the form's allowed
+	// origins, or its signature, admit the post.
+	"submitWebForm": "a website visitor holds no seat; the form key names the form, and its allowed origins or signature admit the post",
 
 	// Pages a buyer opens from a link, holding no seat here. The token in the
 	// URL is the capability, and requiring a session would make the page

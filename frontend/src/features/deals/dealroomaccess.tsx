@@ -2,6 +2,7 @@ import { Link2 } from "lucide-react";
 import { useState } from "react";
 import type { components } from "../../api/schema";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
+import { ContactLink } from "../../design-system/contactlink";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
@@ -156,7 +157,14 @@ function ParticipantRow({
       <div className="access-row-main">
         <p>
           {participant.full_name}
-          <span className="t-caption"> · {participant.email}</span>
+          <span className="t-caption">
+            {" · "}
+            <ContactLink
+              kind="email"
+              value={participant.email}
+              record={{ entityType: "deal", entityId: room.deal_id }}
+            />
+          </span>
         </p>
         <p className="t-caption">
           {capability

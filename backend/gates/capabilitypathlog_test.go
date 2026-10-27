@@ -217,6 +217,7 @@ func TestEveryPublicRoutePrefixIsJudgedForCredentials(t *testing.T) {
 	// A prefix leaves this map only by joining capabilitypath's list.
 	notCredentials := map[string]string{
 		"/v1/public/rooms/": "the segment is an operation name (peek, exchange, link-request); a deal room presents a Bearer, never a path token",
+		"/v1/public/forms/": "the segment is a website form's key, printed in the page's own HTML; a signed form proves itself with a header signature, never the key",
 	}
 
 	redacted := make(map[string]bool)

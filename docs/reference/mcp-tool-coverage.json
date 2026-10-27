@@ -2090,7 +2090,7 @@
     },
     {
       "name": "change_state",
-      "tokens": 1117,
+      "tokens": 1228,
       "agents": [],
       "required_by_cases": [
         "case40_sort_the_queue",
@@ -2378,6 +2378,46 @@
       }
     },
     {
+      "name": "read_workspace",
+      "tokens": 590,
+      "agents": [],
+      "required_by_cases": [
+        "case33_two_cards_for_one_company",
+        "case42_can_i_answer_on_whatsapp"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case1_log_it",
+        "case20_put_it_in_the_board_pack",
+        "case30_a_word_for_it",
+        "case31_wrong_word_on_the_record",
+        "case32_two_words_for_one_thing",
+        "case43_the_fair_leads_are_prospects",
+        "case45_move_the_deal_on",
+        "case47_tidy_the_fair_list",
+        "case49_who_can_introduce_us",
+        "case4_use_the_moment",
+        "case7_ask_for_a_number"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 4,
+          "passed": 4,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 4,
+          "passed": 4,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "change_tags",
       "tokens": 553,
       "agents": [],
@@ -2419,46 +2459,6 @@
       ],
       "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 4,
-          "passed": 4,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 4,
-          "passed": 4,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "read_workspace",
-      "tokens": 488,
-      "agents": [],
-      "required_by_cases": [
-        "case33_two_cards_for_one_company",
-        "case42_can_i_answer_on_whatsapp"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case1_log_it",
-        "case20_put_it_in_the_board_pack",
-        "case30_a_word_for_it",
-        "case31_wrong_word_on_the_record",
-        "case32_two_words_for_one_thing",
-        "case43_the_fair_leads_are_prospects",
-        "case45_move_the_deal_on",
-        "case47_tidy_the_fair_list",
-        "case49_who_can_introduce_us",
-        "case4_use_the_moment",
-        "case7_ask_for_a_number"
-      ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": null,

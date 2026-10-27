@@ -43,6 +43,10 @@ The 12 tables owned by `reporting`, as the migrations build them. [Back to the e
 - `report_definition_library`: `btree (owner_id, audience, name, id) WHERE (archived_at IS NULL)`
 - `report_definition_pkey`: `unique, btree (id)`
 
+**Triggers**
+
+- `report_definition_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+
 ## report_definition_revision
 
 6 columns · primary key `(report_id, revision)` · referenced by 2 foreign keys
@@ -268,6 +272,10 @@ The 12 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 - `report_schedule_due`: `btree (next_due_at, id) WHERE enabled`
 - `report_schedule_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `report_schedule_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND new.enabled)) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 
 ## reporting_framework
 

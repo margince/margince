@@ -184,6 +184,17 @@ func TestAWebhookSubscriptionSavedAsItAlreadyIsChangesNothing(t *testing.T) {
 	assertSaveChangesNothing(t, e, "PATCH", path, AnyMap{"state": "paused"}, created.Subscription.ID, version)
 }
 
+// The settings drawer sends every field it shows, cleared ones as null. Saved
+// unchanged, that body must not move the version or write history.
+func TestAWebsiteFormSavedAsItAlreadyIsChangesNothing(t *testing.T) {
+	e := setupFormsApp(t)
+	form := createForm(t, e, AnyMap{"name": "Contact page", "sender": "browser", "allowed_origins": []string{siteOrigin}})
+	assertSaveChangesNothing(t, e, "PATCH", "/v1/web-forms/"+form.ID, AnyMap{
+		"name": "Contact page", "allowed_origins": []string{siteOrigin}, "consent_required": false,
+		"consent_wording": nil, "consent_policy_version": nil, "redirect_url": nil, "success_message": nil,
+	}, form.ID, form.Version)
+}
+
 // Clearing the headers a subscription sends is a change. The tokens they carry
 // must stop being sent, so an empty list is not "nothing to do".
 func TestClearingAWebhooksCustomHeadersIsAChange(t *testing.T) {
@@ -257,6 +268,7 @@ var noOpProbedRoutes = map[string]string{
 	"PATCH /relationships/{id}":         "TestASaveOfTheStoredValuesChangesNothing",
 	"PATCH /tags/{id}":                  "TestASaveOfTheStoredValuesChangesNothing",
 	"PATCH /webhook-subscriptions/{id}": "TestAWebhookSubscriptionSavedAsItAlreadyIsChangesNothing",
+	"PATCH /web-forms/{id}":             "TestAWebsiteFormSavedAsItAlreadyIsChangesNothing",
 	"PUT /deal-rooms/{id}/expiry":       "TestADealRoomExpirySetToItsStoredValueChangesNothing",
 	"PUT /offer-templates/{id}":         "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
 	"PATCH /products/{id}":              "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",

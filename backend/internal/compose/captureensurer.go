@@ -39,6 +39,12 @@ import (
 // of them would silently fall back to the shipped baseline and ignore the
 // workspace's own corrections.
 func newCounterpartyStore(pool *pgxpool.Pool) *contacts.Store {
+	return newCounterpartyStoreAt(pool, time.Now)
+}
+
+func newCounterpartyStoreAt(pool *pgxpool.Pool, now func() time.Time) *contacts.Store {
+	tasks := newLeadWorkTasks(InstallationDB(pool), slog.Default())
+	tasks.now = now
 	// The VAT-check enqueue rides here rather than being passed in, because
 	// every caller of this constructor is several layers below the composition
 	// that holds a job runner. A site read's accepted fields land through the
@@ -50,7 +56,7 @@ func newCounterpartyStore(pool *pgxpool.Pool) *contacts.Store {
 	// no longer that record-less thing once it does. activities owns the
 	// derivation, contacts may not import it, so compose hands it over.
 	return contacts.NewStore(InstallationDB(pool)).
-		WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
+		WithLeadQualifyTasks(tasks).
 		WithConsumerMail(capture.MatcherTx).
 		WithAudienceRecompute(activities.RecomputeAudienceTx).
 		WithVatCheckEnqueue(boundVatCheckEnqueue()).

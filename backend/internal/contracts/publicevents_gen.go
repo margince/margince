@@ -638,6 +638,7 @@ const (
 	RoleChanged                           SubscribableEventType = "role.changed"
 	SignalDetected                        SubscribableEventType = "signal.detected"
 	SignalResolved                        SubscribableEventType = "signal.resolved"
+	SignalUpdated                         SubscribableEventType = "signal.updated"
 	StageArchived                         SubscribableEventType = "stage.archived"
 	StageCreated                          SubscribableEventType = "stage.created"
 	StageUpdated                          SubscribableEventType = "stage.updated"
@@ -652,6 +653,7 @@ const (
 	UserMfaRemoved                        SubscribableEventType = "user.mfa_removed"
 	UserPasswordLinkIssued                SubscribableEventType = "user.password_link_issued"
 	UserReactivated                       SubscribableEventType = "user.reactivated"
+	UserUpdated                           SubscribableEventType = "user.updated"
 	VoiceBuildChanged                     SubscribableEventType = "voice.build_changed"
 	VoiceCorpusChanged                    SubscribableEventType = "voice.corpus_changed"
 	VoiceDraftOutcomeRecorded             SubscribableEventType = "voice.draft_outcome_recorded"
@@ -900,6 +902,8 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case SignalResolved:
 		return true
+	case SignalUpdated:
+		return true
 	case StageArchived:
 		return true
 	case StageCreated:
@@ -927,6 +931,8 @@ func (e SubscribableEventType) Valid() bool {
 	case UserPasswordLinkIssued:
 		return true
 	case UserReactivated:
+		return true
+	case UserUpdated:
 		return true
 	case VoiceBuildChanged:
 		return true
@@ -2460,6 +2466,12 @@ type PublicEventSignalResolved struct {
 	SignalId openapi_types.UUID `json:"signal_id"`
 }
 
+// PublicEventSignalUpdated defines model for PublicEventSignalUpdated.
+type PublicEventSignalUpdated struct {
+	OwnerId  openapi_types.UUID `json:"owner_id"`
+	SignalId openapi_types.UUID `json:"signal_id"`
+}
+
 // PublicEventStageArchived Payload for stage.archived — a stage was removed from a pipeline (archiveStage; archive is the removal, so the stage-change history referencing it stays readable). The pipeline is named here, as it is on stage.created, because a subscriber holding only the envelope's stage id cannot tell which pipeline reshaped; the shift that closes the vacated position rides its own pipeline.updated.
 type PublicEventStageArchived struct {
 	// PipelineId The pipeline the stage belonged to.
@@ -2604,6 +2616,12 @@ type PublicEventUserReactivated struct {
 	Status UserReactivatedStatus `json:"status"`
 
 	// UserId The reactivated member.
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
+// PublicEventUserUpdated defines model for PublicEventUserUpdated.
+type PublicEventUserUpdated struct {
+	By     openapi_types.UUID `json:"by"`
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
@@ -3255,6 +3273,10 @@ func (PublicEventSignalResolved) EventType() string { return "signal.resolved" }
 
 func (PublicEventSignalResolved) EntityType() string { return "signal" }
 
+func (PublicEventSignalUpdated) EventType() string { return "signal.updated" }
+
+func (PublicEventSignalUpdated) EntityType() string { return "signal" }
+
 func (PublicEventStageArchived) EventType() string { return "stage.archived" }
 
 func (PublicEventStageArchived) EntityType() string { return "stage" }
@@ -3310,6 +3332,10 @@ func (PublicEventUserPasswordLinkIssued) EntityType() string { return "user" }
 func (PublicEventUserReactivated) EventType() string { return "user.reactivated" }
 
 func (PublicEventUserReactivated) EntityType() string { return "user" }
+
+func (PublicEventUserUpdated) EventType() string { return "user.updated" }
+
+func (PublicEventUserUpdated) EntityType() string { return "user" }
 
 func (PublicEventVoiceBuildChanged) EventType() string { return "voice.build_changed" }
 
@@ -3470,6 +3496,7 @@ var PublicEventVersions = map[string]int{
 	"role.changed":                              1,
 	"signal.detected":                           1,
 	"signal.resolved":                           1,
+	"signal.updated":                            1,
 	"stage.archived":                            1,
 	"stage.created":                             1,
 	"stage.updated":                             1,
@@ -3480,6 +3507,7 @@ var PublicEventVersions = map[string]int{
 	"user.mfa_removed":                          1,
 	"user.password_link_issued":                 1,
 	"user.reactivated":                          1,
+	"user.updated":                              1,
 	"user_delivery.changed":                     1,
 	"user_display_name.changed":                 1,
 	"user_greeting_name.changed":                1,
@@ -3615,6 +3643,7 @@ var PublicEventSamples = map[string]string{
 	"role.changed":                              "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"from_role\":\"Sample from role\",\"to_role\":\"Sample to role\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"signal.detected":                           "{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\",\"kind\":\"Sample kind\",\"resolution_confidence\":1.5,\"resolution_state\":\"Sample resolution state\",\"severity\":\"Sample severity\",\"signal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"source_channel\":\"Sample source channel\"}",
 	"signal.resolved":                           "{\"match_confidence\":1.5,\"matched_on\":\"Sample matched on\",\"resolution_state\":\"Sample resolution state\",\"resolved_company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"resolved_contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"signal_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"signal.updated":                            "{\"owner_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"signal_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"stage.archived":                            "{\"pipeline_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"stage.created":                             "{\"name\":\"Sample name\",\"pipeline_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"position\":1,\"semantic\":\"Sample semantic\",\"win_probability\":1}",
 	"stage.updated":                             "{\"name\":\"Sample name\",\"pipeline_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"semantic\":\"Sample semantic\",\"win_probability\":1}",
@@ -3625,6 +3654,7 @@ var PublicEventSamples = map[string]string{
 	"user.mfa_removed":                          "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"sessions_ended\":1,\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user.password_link_issued":                 "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"expires_at\":\"2026-10-14T09:12:00Z\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user.reactivated":                          "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"status\":\"invited\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"user.updated":                              "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user_delivery.changed":                     "{\"changed_fields\":[\"Sample changed fields\"]}",
 	"user_display_name.changed":                 "{\"display_name\":\"Sample display name\"}",
 	"user_greeting_name.changed":                "{\"greeting_name\":\"Sample greeting name\"}",
