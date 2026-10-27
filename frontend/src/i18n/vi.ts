@@ -6028,10 +6028,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Thêm mã dự án vào tiêu đề (giúp lưu đúng chỗ)",
   "compose.noGroundableRecipient":
     "Công ty này chưa có liên hệ nào. Tự viết tin nhắn, hoặc thêm liên hệ trước.",
-  "compose.draftTo": "Soạn gửi",
-  "compose.draftToUnset": "Chọn liên hệ",
   "compose.relatedTo": "Liên quan đến",
-  "compose.relatedToNone": "Cả công ty",
+  "compose.relatedToNone": "Không cụ thể",
+  "compose.relatedDeal": "Thuộc deal: {name}",
+  "compose.draftNeedsRecipient":
+    "Để soạn bằng AI, hãy thêm một liên hệ của công ty này vào ô Đến.",
   "compose.project": "Dự án",
   "compose.projectNone": "Không có dự án",
   "compose.scopedToCounted":

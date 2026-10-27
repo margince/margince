@@ -6230,10 +6230,11 @@ export const en = {
   "compose.projectKeyInSubject": "Add project key to subject (helps filing)",
   "compose.noGroundableRecipient":
     "No contacts at this company yet. Write the message manually, or add a contact first.",
-  "compose.draftTo": "Draft to",
-  "compose.draftToUnset": "Choose a contact",
   "compose.relatedTo": "Related to",
-  "compose.relatedToNone": "Whole company",
+  "compose.relatedToNone": "Nothing specific",
+  "compose.relatedDeal": "Deal: {name}",
+  "compose.draftNeedsRecipient":
+    "To draft with AI, add a contact from this company to To.",
   "compose.project": "Project",
   "compose.projectNone": "No project",
   "compose.scopedToCounted":

@@ -111,6 +111,28 @@ export const Wrapping: Story = {
   ),
 };
 
+/**
+ * Values the record knows by name: a committed address reads as its person,
+ * with the address dimmed after it. A typed value with no suggestion stays bare.
+ */
+export const Named: Story = {
+  render: () => (
+    <div style={column}>
+      <TokenDemo
+        label="To"
+        start={["sabine.mayer@straight.example", "someone@else.example"]}
+        suggestions={[
+          {
+            value: "sabine.mayer@straight.example",
+            label: "Sabine Mayer",
+            hint: "sabine.mayer@straight.example",
+          },
+        ]}
+      />
+    </div>
+  ),
+};
+
 export const Disabled: Story = {
   render: () => (
     <div style={column}>

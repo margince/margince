@@ -48,6 +48,7 @@ export function AiDraftBand({
       onIntentChange={fields.setIntent}
       draft={control}
       unavailable={fields.draftUnavailable}
+      need={voice.need}
     />
   );
   if (!drafted || !provenance) {

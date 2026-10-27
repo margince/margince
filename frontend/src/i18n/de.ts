@@ -6177,10 +6177,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Projektschlüssel in den Betreff einfügen (hilft beim Ablegen)",
   "compose.noGroundableRecipient":
     "Noch keine Kontakte bei diesem Unternehmen. Schreibe die Nachricht selbst oder erstelle zuerst einen Kontakt.",
-  "compose.draftTo": "Entwurf an",
-  "compose.draftToUnset": "Kontakt wählen",
   "compose.relatedTo": "Bezug",
-  "compose.relatedToNone": "Gesamtes Unternehmen",
+  "compose.relatedToNone": "Nichts Bestimmtes",
+  "compose.relatedDeal": "Deal: {name}",
+  "compose.draftNeedsRecipient":
+    "Für einen KI-Entwurf füge unter „An“ einen Kontakt dieses Unternehmens hinzu.",
   "compose.project": "Projekt",
   "compose.projectNone": "Kein Projekt",
   "compose.scopedToCounted":

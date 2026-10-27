@@ -7,6 +7,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { entityTimelineKeys } from "../../lib/activitykeys";
 import {
   asksWhy,
@@ -395,3 +396,24 @@ export function useComposeSend({
 }
 
 export type ComposeSend = ReturnType<typeof useComposeSend>;
+
+// What the dialog promises. A scheduled message waits and can be withdrawn,
+// so its title and body say so; a channel reply has no send-later field.
+export function sendWording(
+  isChannelReply: boolean,
+  scheduling: boolean,
+): Readonly<{ title: MessageKey; body: MessageKey }> {
+  if (isChannelReply) {
+    return {
+      title: "compose.sendMessageConfirmTitle",
+      body: "compose.sendMessageBody",
+    };
+  }
+  if (scheduling) {
+    return {
+      title: "compose.scheduleConfirmTitle",
+      body: "compose.scheduleBody",
+    };
+  }
+  return { title: "compose.sendConfirmTitle", body: "compose.sendBody" };
+}
