@@ -87,3 +87,13 @@ it("folds an unset custom field with the other empty fields", () => {
   show({ ...deal, cf_ticket_url: null } as components["schemas"]["Deal"]);
   expect(screen.queryByText("Ticket URL")).toBeNull();
 });
+
+it("draws a custom field that holds a web address as a link", () => {
+  show({
+    ...deal,
+    cf_ticket_url: "https://example.com/t/42",
+  } as components["schemas"]["Deal"]);
+  expect(
+    screen.getByRole("link", { name: /example\.com\/t\/42/ }),
+  ).toBeTruthy();
+});

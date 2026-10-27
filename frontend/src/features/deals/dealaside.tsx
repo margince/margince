@@ -4,11 +4,13 @@
 import type { ReactNode } from "react";
 import { useEmployerSummary } from "../../components/contactemployersummary";
 import {
+  customFieldHref,
   useCustomFieldDisplay,
   useObjectCustomFields,
 } from "../../components/customfields.form";
 import { EntityRef, useEntityName } from "../../components/entityref";
 import { Badge } from "../../design-system/atoms";
+import { OffsiteLink } from "../../design-system/offsitelink";
 import { provenanceLabel } from "../../design-system/provenance";
 import { provenanceOf } from "../../design-system/provenanceof";
 import { FieldGuard } from "../../design-system/rbac";
@@ -99,10 +101,15 @@ function DealAsideBody({
         ...cf.fields.map((field) => {
           const record: Record<string, unknown> = deal;
           const value = display(field, record[field.column_name]);
+          const href = value ? customFieldHref(value) : null;
           return {
             key: field.column_name,
             term: field.label,
-            value: value || t("field.unset"),
+            value: href ? (
+              <OffsiteLink href={href}>{value}</OffsiteLink>
+            ) : (
+              value || t("field.unset")
+            ),
             empty: !value,
           };
         }),
