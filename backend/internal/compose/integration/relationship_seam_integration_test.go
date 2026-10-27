@@ -33,7 +33,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 // edgeFields is the read-back shape a caller sees. Only what the contract
@@ -158,14 +157,15 @@ func TestAnEmploymentEdgeLivesItsWholeLifeThroughTheToolSurface(t *testing.T) {
 		t.Errorf("role = %v after an unrelated patch, want the human's own cto", patched.Role)
 	}
 
-	// And per-field human-edit precedence reaches the new entity too: `role` was
-	// written by a human, so overwriting it is STAGED rather than applied. This
-	// is the rule that stops a tool call quietly undoing someone's edit, and a
-	// new record type inherits it or it does not hold.
-	_, err = registry.Invoke(ctx, "update_record", json.RawMessage(fmt.Sprintf(
+	// A field a human wrote applies at once too, for an edge like any other
+	// record: the audit row and Undo are the safety net, and nothing waits.
+	overwritten, err := registry.Invoke(ctx, "update_record", json.RawMessage(fmt.Sprintf(
 		`{"record_type":"relationship","id":%q,"fields":{"role":"vp_sales"}}`, edgeID)))
-	if _, ok := errors.AsType[*workflow.StagedApprovalError](err); !ok {
-		t.Errorf("overwriting a human-written role answered %v, want a staged approval", err)
+	if err != nil {
+		t.Fatalf("overwriting a human-written role: %v", err)
+	}
+	if _, edge := wireEdge(t, overwritten); edge.Role == nil || *edge.Role != "vp_sales" {
+		t.Errorf("role after the overwrite = %v, want vp_sales", edge.Role)
 	}
 
 	// ARCHIVE. The caller here is a HUMAN in their own seat, so the 🟡 tier does
