@@ -10,7 +10,7 @@ passport. The operations themselves are in the OpenAPI document; to make a passp
 
 | What | Value |
 |---|---|
-| Base URL | The install's API address with `/v1`. `GET /v1/passports` answers it as `api_base_url`; [configuration.md](configuration.md#public-base-url) says where it comes from. |
+| Base URL | The install's API address with `/v1`. `GET /v1/passports` answers it as `api_base_url`; [configuration.md](programs.md#public-base-url) says where it comes from. |
 | Credential | `Authorization: Bearer mgp_…`, a passport. The web app signs in with the `crm_session` cookie instead. |
 | A bad or revoked passport | `401`. Every call checks the passport again, so a revoke takes effect on the next call. |
 | An operation only a human may call | `403 permission_denied`. These operations are left out of the OpenAPI document. |

@@ -18,7 +18,7 @@ The cadence below meets the two recovery targets that [run-a-restore-drill.md](r
 Keep the root key apart from the database backup. A backup and its key in one place give anyone who gets the backup
 every sealed credential. Without the key, a restored database that holds sealed secrets stops the api and the worker
 at start. Nothing can open those secrets again: see
-[configuration.md](../reference/configuration.md#secret-vault-api-worker-connector-credentials).
+[configuration.md](../reference/storage-secrets-and-license.md#secret-vault-api-worker-connector-credentials).
 
 ## How often
 

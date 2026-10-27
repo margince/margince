@@ -127,7 +127,7 @@ var exempt = gatekit.Waive(map[string]string{
 	"backend/internal/modules/capture/connectorapp_test.go": "Microsoft's `companies` authority alias",
 	"backend/internal/modules/capture/graph/client.go":      "Microsoft's `common` authority, which admits any tenant",
 	"backend/cmd/api/config.go":                             "flag help for the Microsoft authority aliases",
-	"docs/reference/configuration.md":                       "the Microsoft authority aliases",
+	"docs/reference/connectors-and-sign-in.md":              "the Microsoft authority aliases",
 
 	"backend/internal/platform/licensecheck/host.go": "the licence payload's `company` key. The Go " +
 		"name is ours; the key belongs to whoever signs the licence, and renaming it would stop " +

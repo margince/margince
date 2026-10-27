@@ -210,7 +210,6 @@ clone
 close
 closure
 cloud
-cmd
 code
 cold
 colleague

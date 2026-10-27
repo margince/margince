@@ -206,4 +206,4 @@ The failures you meet first, in the order you would meet them:
   one copy live. Such a job is not that workspace's share of a pass over every workspace. If it is merged
   with a running pass, the rows the event was about would be dropped.
 - To read the jobs back, see the job gauge values, `GET /v1/admin/job-health`, and the notes on a kind's rows in
-  [reference/configuration.md](../reference/configuration.md#reading-the-job-surfaces).
+  [reference/configuration.md](../reference/job-surfaces.md#reading-the-job-surfaces).
