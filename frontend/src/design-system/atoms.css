@@ -449,6 +449,11 @@
   min-block-size: 0;
   overflow-y: auto;
 }
+/* The body scrolls, so no card in it may shrink to fit: a panel is
+   `overflow: hidden` and would clip its content instead. */
+.modal-drawer:has(> .drawer-head) > .drawer-body.form-stack > * {
+  flex-shrink: 0;
+}
 /* The READING drawer: its bands are sticky so close and commit stay in reach
    however long the body runs. */
 .modal-drawer-wide {
@@ -1772,6 +1777,12 @@ span.error-line {
 .overflow-menu {
   position: relative;
   display: inline-flex;
+}
+/* `inline`: the trigger rides a line of text the way `.icon-action-inline` does. */
+.overflow-menu-inline {
+  align-items: center;
+  block-size: 1lh;
+  vertical-align: top;
 }
 /* Fixed and portalled to its layer: the dialog's overlay, or the body. It is
    positioned against the trigger's viewport rectangle, so a card that hides

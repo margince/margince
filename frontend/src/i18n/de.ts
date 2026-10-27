@@ -14892,6 +14892,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Keine Adresse und kein Thread, auf den geantwortet werden kann.",
   "contact.action.call": "Anrufen",
   "callAction.openChat": "Chat in {app} öffnen",
+  "callAction.chats": "Chat öffnen",
+  "contactLink.copyEmail": "E-Mail-Adresse kopieren",
+  "contactLink.emailCopied": "E-Mail-Adresse kopiert",
+  "contactLink.copyEmailRemedy":
+    "Markiere die Adresse und kopiere sie mit der Tastatur.",
   "contact.action.noPhone": "Dieser Kontakt hat keine Telefonnummer.",
   "contact.action.meetings": "Termine",
   "contact.action.addTask": "Aufgabe hinzufügen",

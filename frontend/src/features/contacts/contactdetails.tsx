@@ -15,7 +15,11 @@ import { RecordFields } from "../../components/recordfields";
 import { rawRecord } from "../../components/recordfieldtypes";
 import { TagsPanel } from "../../components/tagspanel";
 import { Badge } from "../../design-system/atoms";
-import { ContactLink } from "../../design-system/contactlink";
+import {
+  ContactLink,
+  CopyEmail,
+  EmailFace,
+} from "../../design-system/contactlink";
 import { FieldRow } from "../../design-system/fieldgrid";
 import { OffsiteLink } from "../../design-system/offsitelink";
 import { RecordCard } from "../../design-system/recordcard";
@@ -95,17 +99,20 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
           "email",
           t("create.email"),
           email && (
-            <>
+            <span className="fieldgrid-handle">
               <ContactLink
                 kind="email"
                 value={email}
                 record={{ entityType: "contact", entityId: contact.id }}
-              />
+              >
+                <EmailFace address={email} />
+              </ContactLink>
               <BoughtMark
                 bought={emailRow && bought.get(`email:${emailRow.id}`)}
                 subject={email}
               />
-            </>
+              <CopyEmail address={email} />
+            </span>
           ),
           Boolean(email),
         ),

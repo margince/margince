@@ -14836,6 +14836,11 @@ export const en = {
   "contact.action.noTransport": "No address and no thread to reply to.",
   "contact.action.call": "Call",
   "callAction.openChat": "Open chat in {app}",
+  "callAction.chats": "Open a chat",
+  "contactLink.copyEmail": "Copy email address",
+  "contactLink.emailCopied": "Email address copied",
+  "contactLink.copyEmailRemedy":
+    "Select the address and copy it with your keyboard.",
   "contact.action.noPhone": "No phone number on this contact.",
   "contact.action.meetings": "Meetings",
   "contact.action.addTask": "Add task",
