@@ -12,20 +12,35 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// dealFilterSamples is one operand per deal list filter a grant or a mask can
-// refuse, each of a shape the list accepts.
-var dealFilterSamples = []struct{ parameter, sample string }{
-	{"company_id", "00000000-0000-7000-8000-000000000001"},
-	{"project_id", "00000000-0000-7000-8000-000000000002"},
-	{"partner_company_id", "00000000-0000-7000-8000-000000000003"},
-	{"partner_sourced", "true"},
-	{"partner_attribution", "sourced"},
-	{"value_min", "0"},
-	{"value_max", "0"},
-	{"currency", "EUR"},
-	{"country", "DE"},
+// refusableDealFilters is every deal filter some role can be refused, with the
+// probe's operand. They are those refused to a role that reads deals and withholds every deal field.
+func refusableDealFilters(t *testing.T) []deals.FilterReach {
+	t.Helper()
+	var masks []principal.FieldMask
+	for _, field := range fieldmask.Maskable(fieldmask.Deal) {
+		masks = append(masks, principal.FieldMask{Object: fieldmask.Deal, Field: field, Condition: principal.MaskAlways})
+	}
+	reach, err := deals.ListFilterReach(principal.WithActor(t.Context(), principal.Principal{
+		Type: principal.PrincipalHuman,
+		Permissions: principal.Permissions{
+			RowScope:   principal.RowScopeTeam,
+			Objects:    map[string]principal.ObjectGrant{fieldmask.Deal: {Read: true}},
+			FieldMasks: masks,
+		},
+	}))
+	if err != nil {
+		t.Fatalf("probing the deal list filters: %v", err)
+	}
+	refusable := slices.DeleteFunc(reach, func(probe deals.FilterReach) bool { return !probe.Refused })
+	if len(refusable) == 0 {
+		t.Fatal("no deal list filter is refusable, so the snapshot would be checked against nothing")
+	}
+	return refusable
 }
 
 // narrowSignedInRole moves the signed-in admin onto a role of its own: the
@@ -85,12 +100,12 @@ func refusedDealFilters(t *testing.T, e *apptest.AppEnv) []string {
 	return *me.Authorization.RefusedDealFilters
 }
 
-// assertSnapshotMatchesTheList asks the list itself for every sampled filter,
+// assertSnapshotMatchesTheList asks the list itself for every refusable filter,
 // so the snapshot is held to what the list answers, refused or not.
 func assertSnapshotMatchesTheList(t *testing.T, e *apptest.AppEnv, refused []string) {
 	t.Helper()
-	for _, filter := range dealFilterSamples {
-		parameter, sample := filter.parameter, filter.sample
+	for _, filter := range refusableDealFilters(t) {
+		parameter, sample := filter.Parameter, filter.Operand
 		var problem codeRefusal
 		status := e.Call(t, "GET", "/v1/deals?"+parameter+"="+sample, nil, nil, &problem)
 		masked := status == http.StatusUnprocessableEntity && len(problem.Details.Errors) == 1 &&

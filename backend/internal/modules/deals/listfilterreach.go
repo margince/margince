@@ -10,6 +10,9 @@ package deals
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -17,52 +20,80 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// refusableFilterProbes are the list filters a grant or a field mask can
-// refuse, each with an operand the clause builder accepts on its shape.
-func refusableFilterProbes() []struct {
-	parameter string
-	input     ListDealsInput
-} {
-	sourced, zero := true, int64(0)
-	attribution, currency, country := "sourced", "EUR", "DE"
-	return []struct {
-		parameter string
-		input     ListDealsInput
-	}{
-		{filterCompanyID, ListDealsInput{CompanyID: &ids.CompanyID{}}},
-		{filterProjectID, ListDealsInput{ProjectID: &ids.ProjectID{}}},
-		{filterPartnerCompanyID, ListDealsInput{PartnerCompanyID: &ids.CompanyID{}}},
-		{filterPartnerSourced, ListDealsInput{PartnerSourced: &sourced}},
-		{filterPartnerAttribution, ListDealsInput{PartnerAttribution: &attribution}},
-		{filterValueMin, ListDealsInput{ValueMin: &zero}},
-		{filterValueMax, ListDealsInput{ValueMax: &zero}},
-		{filterCurrency, ListDealsInput{Currency: &currency}},
-		{filterCountry, ListDealsInput{Country: &country}},
-	}
+// ISO reserves these codes for no currency and for user assignment, so a
+// probe that sends them names no market.
+const (
+	probeCurrency = "XXX"
+	probeAlpha2   = "ZZ"
+)
+
+// probeOperands are tried on each filter in turn: one of each kind a filter
+// binds, then the words a clause checks for itself.
+var probeOperands = []string{
+	ids.Nil.String(), strconv.FormatBool(true), strconv.Itoa(0), time.Time{}.Format(time.DateOnly),
+	attributionSourced, probeCurrency, probeAlpha2,
 }
 
-// RefusedListFilters names the deal list filters the caller bound on ctx is
-// refused, by running each through the clause builder the list itself runs.
+// FilterReach is one deal list filter as the probe sent it, and whether the
+// caller is refused it.
+type FilterReach struct {
+	Parameter string
+	Operand   string
+	Refused   bool
+}
+
+// ListFilterReach probes every filter the deal list binds for the caller on
+// ctx, through the clause builder the list itself runs.
 //
 // Only a role-wide refusal counts. A mask that withholds a reference on some
 // rows, such as a private company, narrows those rows and refuses no filter.
-func RefusedListFilters(ctx context.Context) ([]string, error) {
-	refused := []string{}
-	for _, probe := range refusableFilterProbes() {
-		_, err := appendDealFilters(ctx, nil, probe.input, func(any) int { return 1 })
-		switch {
-		case err == nil:
-		case refusedForReach(err):
-			refused = append(refused, probe.parameter)
-		default:
+func ListFilterReach(ctx context.Context) ([]FilterReach, error) {
+	reach := make([]FilterReach, 0, len(dealListFilters))
+	for _, parameter := range dealListFilters.Names() {
+		probe, err := probeListFilter(ctx, parameter)
+		if err != nil {
 			return nil, err
+		}
+		reach = append(reach, probe)
+	}
+	return reach, nil
+}
+
+// RefusedListFilters names the deal list filters the caller on ctx is refused.
+func RefusedListFilters(ctx context.Context) ([]string, error) {
+	reach, err := ListFilterReach(ctx)
+	if err != nil {
+		return nil, err
+	}
+	refused := []string{}
+	for _, probe := range reach {
+		if probe.Refused {
+			refused = append(refused, probe.Parameter)
 		}
 	}
 	return refused, nil
 }
 
+// probeListFilter sends the filter the first operand its clause takes. An
+// operand of the wrong shape faults, so the next one is tried.
+func probeListFilter(ctx context.Context, parameter string) (FilterReach, error) {
+	fault := fmt.Errorf("deal list filter %s binds none of the probe operands", parameter)
+	for _, operand := range probeOperands {
+		var in ListDealsInput
+		if dealListFilters.Apply(&in, map[string]string{parameter: operand}) != nil {
+			continue
+		}
+		_, err := appendDealFilters(ctx, nil, in, func(any) int { return 1 })
+		if err == nil || refusedForReach(err) {
+			return FilterReach{Parameter: parameter, Operand: operand, Refused: err != nil}, nil
+		}
+		fault = fmt.Errorf("probing deal list filter %s: %w", parameter, err)
+	}
+	return FilterReach{}, fault
+}
+
 // refusedForReach tells a refusal of the caller's grant or mask from a fault
-// in the probe's own operand. Such a fault is a bug here, and is returned.
+// in the probe's own operand.
 func refusedForReach(err error) bool {
 	if masked, ok := errors.AsType[*values.ParseError](err); ok {
 		return masked.Code == auth.CodeFieldMasked
