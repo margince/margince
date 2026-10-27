@@ -256,3 +256,25 @@ func TestAnArchivedAccountTakesNoNewResponsibility(t *testing.T) {
 		t.Fatalf("staffing an archived account: err=%v, want ErrNotFound", err)
 	}
 }
+
+// An invited colleague can be given a responsibility before their first
+// sign-in; a suspended one cannot. The picker offers the same split.
+func TestAnInvitedColleagueTakesAResponsibilityAndASuspendedOneDoesNot(t *testing.T) {
+	e := setupRoleEnv(t)
+	ctx := e.actingAs(e.admin, companyCRUD, principal.RowScopeAll)
+	company := e.seedCompany(t, e.admin, "workspace")
+	invited := e.seedColleague(t, "Thắng")
+	suspended := e.seedColleague(t, "Ines")
+	for id, status := range map[ids.UUID]string{invited: "invited", suspended: "suspended"} {
+		if _, err := e.owner.Exec(context.Background(), `UPDATE app_user SET status = $2 WHERE id = $1`, id, status); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if _, err := e.store.CreateAssignment(ctx, staffing(company, invited, e.accountManager(t))); err != nil {
+		t.Fatalf("staffing a company with an invited colleague: %v", err)
+	}
+	if _, err := e.store.CreateAssignment(ctx, staffing(company, suspended, e.accountManager(t))); err == nil {
+		t.Fatal("a suspended colleague was given a responsibility")
+	}
+}
