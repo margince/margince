@@ -69,3 +69,37 @@ func TestAReminderFollowsTheReachOfItsMail(t *testing.T) {
 		t.Errorf("the opened mail's reminder reads %q, want it opened too", got)
 	}
 }
+
+// A mail with no reminder is the common case, and the pass says nothing about
+// it.
+//
+// The consumer runs on every audience event, and most of those concern a mail
+// no request was ever read out of.
+//
+// So this is the path it takes most often, and the one a failure would be
+// loudest in.
+func TestAMailWithNoReminderIsLeftAlone(t *testing.T) {
+	o := setupOwed(t)
+	o.contact(t, "Buyer", "buyer@customer.example")
+	mail := o.capture(t, owedMail{
+		from: "buyer@customer.example", to: o.seat, subject: "Thanks for the call",
+		body: "Good to speak just now, nothing needed from you.", at: o.now.Add(-time.Hour),
+		messageID: ids.NewV7().String() + "@customer.example",
+	})
+	if reminders := o.e.WsCount(t, `SELECT count(*) FROM activity
+		WHERE source_system = $1 AND source_activity_id = $2`,
+		activities.EmailRequestTaskSource, mail); reminders != 0 {
+		t.Fatalf("%d reminders name a mail that asked for nothing", reminders)
+	}
+
+	o.e.WsExec(t, `UPDATE activity SET audience = 'participants' WHERE id = $1`, mail)
+	if err := NewAudienceRescopeGen(o.e.Pool).HandleEvent(
+		context.Background(), narrowedEvent(t, mail)); err != nil {
+		t.Fatalf("narrowing a mail with no reminder answered %v", err)
+	}
+	if reminders := o.e.WsCount(t, `SELECT count(*) FROM activity
+		WHERE source_system = $1 AND source_activity_id = $2`,
+		activities.EmailRequestTaskSource, mail); reminders != 0 {
+		t.Errorf("the pass invented %d reminders for a mail that had none", reminders)
+	}
+}
