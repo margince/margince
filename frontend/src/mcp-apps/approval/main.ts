@@ -17,9 +17,8 @@ import {
 import actions from "../actions.json";
 import { badge } from "../badge";
 import { el } from "../bridge";
-import { isID } from "../fieldlabels";
 import { button, panel, panelBody, viewRenderer } from "../parts";
-import { changeTable, refusalPanel } from "../summary";
+import { type Change, changesOf, changeTable, refusalPanel } from "../summary";
 import {
   asList,
   asRecord,
@@ -38,7 +37,7 @@ type Item = {
   summary: string;
   proposedBy: string;
   expiresAt: number | null;
-  change: Record<string, unknown>;
+  changes: Change[];
   evidence: string[];
 };
 
@@ -58,23 +57,22 @@ function outcomesOf(root: HTMLElement): Map<string, Outcome> {
   return found;
 }
 
-/**
- * changeOf answers the values a reader checks before deciding. A staged record
- * write carries its record's type and id beside the fields it would set, and
- * only the fields are the decision.
- */
-function changeOf(proposed: unknown): Record<string, unknown> {
-  const change = asRecord(proposed);
-  const fields = asRecord(change.fields);
-  return Object.keys(fields).length > 0 && "record_type" in change
-    ? fields
-    : change;
-}
+/** The words for each kind of proposer, by the prefix its id carries. */
+const PROPOSERS: Readonly<Record<string, string>> = {
+  agent: "an assistant",
+  connector: "a connected app",
+  human: "a colleague",
+  system: "Margince",
+};
 
-/** proposerOf names who proposed it; an assistant's own id names no one. */
-function proposerOf(proposedBy: string): string {
-  const who = proposedBy.replace(/^agent:/, "");
-  return who === "" || isID(who) ? "an assistant" : who;
+/** proposerOf says who proposed it and for whom; an id names no one. */
+function proposerOf(proposedBy: string, onBehalfOf: unknown): string {
+  const kind = proposedBy.split(":")[0] ?? "";
+  const who = PROPOSERS[kind] ?? "someone";
+  const person = asRecord(onBehalfOf);
+  if (person.is_you === true) return `${who} for you`;
+  const name = asText(person.name);
+  return name === "" ? who : `${who} for ${name}`;
 }
 
 function itemOf(raw: unknown): Item | null {
@@ -87,9 +85,9 @@ function itemOf(raw: unknown): Item | null {
     kind: asText(a.kind),
     status: asText(a.status),
     summary: asText(a.summary),
-    proposedBy: proposerOf(asText(a.proposed_by)),
+    proposedBy: proposerOf(asText(a.proposed_by), a.on_behalf_of),
     expiresAt: Number.isNaN(expires) ? null : expires,
-    change: changeOf(a.proposed_change),
+    changes: changesOf(a.changes),
     evidence: asList(a.evidence)
       .map((e) => asText(asRecord(e).evidence_snippet))
       .filter((snippet) => snippet !== ""),
@@ -119,7 +117,7 @@ function draw(
     el("p", "name", item.summary || item.kind),
     el("p", "meta", `Proposed by ${item.proposedBy}`),
   );
-  const change = changeTable(item.change, item.change, { linked: "Set" });
+  const change = changeTable(item.changes, { before: true });
   if (change !== null) body.appendChild(change);
   if (item.evidence.length > 0) body.appendChild(evidenceList(item.evidence));
   body.appendChild(choices(item, outcomes, again));

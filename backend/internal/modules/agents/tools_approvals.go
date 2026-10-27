@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -68,6 +69,15 @@ type StagedApproval struct {
 	DiffHash       string           `json:"diff_hash,omitempty"`
 	Evidence       []StagedEvidence `json:"evidence,omitempty"`
 	ProposedChange json.RawMessage  `json:"proposed_change,omitempty"`
+	// TargetLabel is what the target was called when the change was staged,
+	// the name the decision is taken against.
+	TargetLabel string `json:"target_label,omitempty"`
+	// OnBehalfOf is the person the proposer acted for. read_approval names them.
+	OnBehalfOf *RecordOwner `json:"on_behalf_of,omitempty"`
+	// Changes names each field the staged change would set, before and after.
+	// It is the inbox's own preview of the change. read_approval carries it
+	// while the change is pending and can still be shown.
+	Changes []FieldChange `json:"changes,omitempty"`
 }
 
 // StagedEvidence is one thing a proposal was read out of. It travels with the
@@ -126,7 +136,7 @@ func RegisterApprovalTools(r *Registry, inbox ApprovalInbox) {
 		return
 	}
 	r.Register(listApprovalsTool{inbox: inbox})
-	r.Register(readApprovalTool{inbox: inbox})
+	r.Register(readApprovalTool{inbox: inbox, seats: r.seats, language: r.language})
 	r.Register(decideApprovalTool{inbox: inbox})
 	r.Register(decideBundleTool{inbox: inbox})
 	r.Register(decideApprovals{})
@@ -202,7 +212,11 @@ func (t listApprovalsTool) Handle(ctx context.Context, in json.RawMessage) (json
 
 // --- read_approval (🟢 read) ---
 
-type readApprovalTool struct{ inbox ApprovalInbox }
+type readApprovalTool struct {
+	inbox    ApprovalInbox
+	seats    SeatNamer
+	language baselanguage.Resolver
+}
 
 type readApprovalArgs struct {
 	StagedActionID ids.UUID `json:"staged_action_id"`
@@ -235,7 +249,31 @@ func (t readApprovalTool) Handle(ctx context.Context, in json.RawMessage) (json.
 	if err != nil {
 		return nil, err
 	}
+	lang := summaryIn(ctx, t.language).lang
+	for i := range staged.Changes {
+		staged.Changes[i].Label = FieldLabel(lang, staged.Changes[i].Field)
+	}
+	if staged.OnBehalfOf != nil {
+		staged.OnBehalfOf = t.namePerson(ctx, staged.OnBehalfOf.ID)
+	}
 	return json.Marshal(staged)
+}
+
+// namePerson names the seat an approval was proposed for. A failed lookup
+// leaves the id and says so, as an unnamed record owner does.
+func (t readApprovalTool) namePerson(ctx context.Context, seat ids.UUID) *RecordOwner {
+	me, haveSeat := callerSeat(ctx)
+	person := &RecordOwner{ID: seat, IsYou: haveSeat && seat == me}
+	if t.seats == nil {
+		return person
+	}
+	names, err := t.seats(ctx, []ids.UUID{seat})
+	if err != nil {
+		noteWarning(ctx, CodeOwnerNamesUnavailable, ownerNamesUnavailableDetail)
+		return person
+	}
+	person.Name = names[seat]
+	return person
 }
 
 // --- decide_approval (🟢 write) ---

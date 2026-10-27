@@ -66,8 +66,10 @@ type DuplicateCandidate struct {
 // members it can rely on ought to be the ones the contract names. The stored
 // snapshot is written by this system in exactly these five keys.
 type DuplicateEvidence struct {
-	// Field is the axis — "phone", "full_name", "email".
+	// Field is the axis, such as "phone" or "email". Label names it in the
+	// installation's language.
 	Field string `json:"field"`
+	Label string `json:"label,omitempty"`
 	// Left is the value on the record this call created and Right the one
 	// already here, in their stored form: detection writes the evidence from
 	// the created record's side, whichever order the pair's ids sort in.
@@ -143,6 +145,9 @@ type createdRecord struct {
 	// TagOffer is present only when the caller proposed a word with offer_tag
 	// and it can be offered. It records an offer; nothing was applied.
 	TagOffer *TagOffer `json:"tag_offer,omitempty"`
+	// Changes is every field the call set, as the record now holds it. Absent
+	// when the fields could not be named, which a warning then says.
+	Changes []FieldChange `json:"changes,omitempty"`
 }
 
 // employmentEdgeContact names the contact an employment-edge create gives an
@@ -210,7 +215,11 @@ func (t createRecord) reportDuplicates(ctx context.Context, recordType string, i
 	w := duplicateWarning(len(found))
 	noteWarning(ctx, w.Code, w.Message)
 
+	lang := summaryIn(ctx, t.language).lang
 	for _, d := range found {
+		for i := range d.Evidence {
+			d.Evidence[i].Label = FieldLabel(lang, d.Evidence[i].Field)
+		}
 		// Each disclosed record is cited: naming a record to an agent hands it
 		// over, so the evidence list has to say so. Without this a create
 		// discloses up to five other records while citing only the one it wrote.

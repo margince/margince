@@ -19,10 +19,11 @@ import {
 } from "../actions";
 import actions from "../actions.json";
 import { el } from "../bridge";
-import { fieldLabel } from "../fieldlabels";
 import { button, panel, panelBody, viewRenderer } from "../parts";
 import {
+  changesOf,
   changeTable,
+  inWords,
   nameField,
   recordName,
   recordNoun,
@@ -48,7 +49,7 @@ const MERGEABLE = new Set(["contact", "company"]);
 type Candidate = {
   id: string;
   otherID: string;
-  evidence: { field: string; mine: string; theirs: string }[];
+  evidence: { label: string; mine: string; theirs: string }[];
 };
 
 type Outcome =
@@ -79,7 +80,7 @@ function candidatesOf(data: Record<string, unknown>): Candidate[] {
       evidence: asList(c.evidence)
         .map(asRecord)
         .map((e) => ({
-          field: asText(e.field),
+          label: asText(e.label) || inWords(asText(e.field)),
           mine: asText(e.left_value),
           theirs: asText(e.right_value),
         })),
@@ -98,7 +99,7 @@ function evidenceTable(candidate: Candidate): HTMLElement {
   for (const row of candidate.evidence) {
     const tr = el("tr");
     tr.append(
-      el("th", "meta", fieldLabel(row.field)),
+      el("th", "meta", row.label),
       el("td", "name", row.mine || "—"),
       el("td", "name", row.theirs || "—"),
     );
@@ -134,7 +135,7 @@ function draw(
   const candidates = candidatesOf(created);
   const tag = tagOfferPanel(root, created, again);
   if (candidates.length === 0) {
-    root.appendChild(tag ?? createdPanel(created, call));
+    root.appendChild(tag ?? createdPanel(created));
     return;
   }
   const recordType = asText(created.record_type);
@@ -163,10 +164,7 @@ function draw(
 }
 
 /** createdPanel says what a create with nothing to decide made. */
-function createdPanel(
-  created: Record<string, unknown>,
-  call: ToolCall,
-): HTMLElement {
+function createdPanel(created: Record<string, unknown>): HTMLElement {
   const fields = asRecord(created.fields);
   const noun = recordNoun(asText(created.record_type), fields);
   const skip = nameField(fields);
@@ -175,9 +173,9 @@ function createdPanel(
       ? el("p", "intro", "Saved in Margince.")
       : el("p", "name", recordName(fields)),
   ];
-  const rows = changeTable(asRecord(call.input.fields), fields, {
+  const rows = changeTable(changesOf(created.changes), {
     skip,
-    linked: "Set",
+    before: false,
   });
   if (rows !== null) lines.push(rows);
   return summaryPanel(`Created ${withArticle(noun)}`, ...lines);

@@ -58,26 +58,33 @@ describe("the approval card", () => {
     expect(labels(root)).toEqual([]);
   });
 
-  it("shows what is proposed and by whom", () => {
+  it("shows what is proposed, by whom and for whom", () => {
     const root = mount();
     expect(root.querySelector(".name")?.textContent).toBe(
       "Move Acme renewal to Negotiation",
     );
-    expect(root.textContent).toContain("Proposed by claude");
+    expect(root.textContent).toContain("Proposed by an assistant for Sam Rep");
     expect(
       [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
-    ).toEqual(["StageNegotiation", "Value—"]);
+    ).toEqual(["StageProposal → Negotiation"]);
   });
 
-  it("shows a nested change as words rather than hiding it", () => {
+  it("shows a structured value as words rather than as its document", () => {
     const root = mount({
       ...(approvalFixture.data as object),
-      proposed_change: { body: { text: "Hello Anna" }, to: ["a@b.test"] },
+      changes: [
+        {
+          field: "address",
+          label: "Address",
+          before: { kind: "empty", text: "" },
+          after: { kind: "structured", text: '{"city":"Berlin","zip":""}' },
+        },
+      ],
     });
-    const cells = [...root.querySelectorAll("tbody td")].map(
-      (n) => n.textContent,
+    expectReadable(root);
+    expect(root.querySelector("tbody td")?.textContent).toBe(
+      "— → City: Berlin",
     );
-    expect(cells).toEqual(["Text: Hello Anna", "a@b.test"]);
   });
 
   it("shows the evidence the proposal was read out of", () => {
@@ -90,13 +97,26 @@ describe("the approval card", () => {
     );
   });
 
-  it("shows a long nested change in full", () => {
+  it("shows a long value in full", () => {
     const long = "x".repeat(900);
     const root = mount({
       ...(approvalFixture.data as object),
-      proposed_change: { body: { text: long } },
+      changes: [
+        {
+          field: "description",
+          label: "Description",
+          before: { kind: "empty", text: "" },
+          after: { kind: "text", text: long },
+        },
+      ],
     });
     expect(root.querySelector("tbody td")?.textContent).toContain(long);
+  });
+
+  it("names nothing it was not told, for a proposal it cannot preview", () => {
+    const root = mount({ ...(approvalFixture.data as object), changes: [] });
+    expectReadable(root);
+    expect(root.querySelector("tbody")).toBeNull();
   });
 
   it("approves through decide_approvals and says the assistant still has to run it", async () => {
@@ -172,11 +192,20 @@ describe("an approval for a held update", () => {
         id: record,
         fields: { title: "VP Sales" },
       },
+      on_behalf_of: { id: record, is_you: true },
+      changes: [
+        {
+          field: "title",
+          label: "Job title",
+          before: { kind: "text", text: "Head of Sales" },
+          after: { kind: "text", text: "VP Sales" },
+        },
+      ],
     });
     expectReadable(root);
-    expect(root.textContent).toContain("Proposed by an assistant");
+    expect(root.textContent).toContain("Proposed by an assistant for you");
     expect(
       [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
-    ).toEqual(["Job titleVP Sales"]);
+    ).toEqual(["Job titleHead of Sales → VP Sales"]);
   });
 });

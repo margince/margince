@@ -53,8 +53,6 @@ export function nextRequestID(): number {
   return nextID++;
 }
 let resultHandler: ResultHandler | null = null;
-// The arguments ui/notifications/tool-input named, which a host may not send.
-let toolInput: Record<string, unknown> = {};
 // The id our own ui/initialize was sent under, cleared as it is consumed.
 let initializeID: number | null = null;
 // Whether the handshake has completed. A view is only supposed to be given a
@@ -214,7 +212,7 @@ function deliverResult(message: Record<string, unknown>): void {
   if (resultHandler === null) return;
   const result = asRecord(message.params);
   const envelope = asRecord(result.structuredContent);
-  const call = asToolCall(result, toolInput);
+  const call = asToolCall(result);
   resultHandler(envelope.data ?? null, asWarnings(envelope.warnings), call);
   // Sized from the first answer drawn: before it the document is only padding,
   // and a host told that height shrinks the frame just to grow it again.
@@ -262,10 +260,6 @@ function handle(event: MessageEvent): void {
     initialized
   ) {
     followHostChange(message.params);
-    return;
-  }
-  if (message.method === "ui/notifications/tool-input" && initialized) {
-    toolInput = asRecord(asRecord(message.params).arguments);
     return;
   }
   // A result BEFORE the handshake is dropped rather than rendered. The view has

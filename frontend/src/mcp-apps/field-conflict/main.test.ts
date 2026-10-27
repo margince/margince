@@ -27,6 +27,8 @@ vi.mock("../actions", () => ({
 const { render } = await import("./main");
 
 const APPROVAL = "0195c3a0-0000-7000-8000-0000000000c1";
+const KEEP = "Keep Head of Sales";
+const USE = "Use VP Sales";
 
 function mount(data: unknown = fieldConflictFixture.data): HTMLElement {
   const root = document.createElement("main");
@@ -73,7 +75,7 @@ describe("the field-conflict card", () => {
 
   it("keeps the current values by rejecting the staged change", async () => {
     const root = mount();
-    await press(root, "Keep the current values");
+    await press(root, KEEP);
     expect(calls).toEqual([
       {
         tool: "decide_approvals",
@@ -85,7 +87,7 @@ describe("the field-conflict card", () => {
 
   it("uses the new values by approving, then redeeming the exact replay", async () => {
     const root = mount();
-    await press(root, "Use the new values");
+    await press(root, USE);
     expect(calls).toEqual([
       {
         tool: "decide_approvals",
@@ -110,7 +112,7 @@ describe("the field-conflict card", () => {
       { ok: false, reason: "The record changed since." },
     );
     const root = mount();
-    await press(root, "Use the new values");
+    await press(root, USE);
     expect(labels(root)).toEqual(["Apply the new values"]);
     expect(root.querySelector(".refusal")?.textContent).toBe(
       "The record changed since.",
@@ -123,14 +125,11 @@ describe("the field-conflict card", () => {
   it("shows the engine's refusal of the approval and keeps both choices", async () => {
     answers.push({ ok: false, reason: "Already answered." });
     const root = mount();
-    await press(root, "Use the new values");
+    await press(root, USE);
     expect(root.querySelector(".refusal")?.textContent).toBe(
       "Already answered.",
     );
-    expect(labels(root)).toEqual([
-      "Keep the current values",
-      "Use the new values",
-    ]);
+    expect(labels(root)).toEqual([KEEP, USE]);
     expect(calls.map((c) => c.tool)).toEqual(["decide_approvals"]);
   });
 
@@ -150,20 +149,17 @@ describe("the field-conflict card", () => {
       unknown: true,
     });
     const root = mount();
-    await press(root, "Use the new values");
+    await press(root, USE);
     expect(labels(root)).toEqual(["Apply the new values"]);
   });
 
   it("starts a different conflict drawn into the same frame undecided", async () => {
     const root = mount();
-    await press(root, "Keep the current values");
+    await press(root, KEEP);
     const other = JSON.parse(JSON.stringify(fieldConflictFixture.data));
     other.staged_approval.approval_id = "0195c3a0-0000-7000-8000-0000000000c2";
     render(root, other, []);
-    expect(labels(root)).toEqual([
-      "Keep the current values",
-      "Use the new values",
-    ]);
+    expect(labels(root)).toEqual([KEEP, USE]);
   });
 });
 
@@ -173,53 +169,80 @@ describe("an update with nothing held for an answer", () => {
 
   function updated(
     fields: Record<string, unknown>,
-    sent: Record<string, unknown>,
+    changes: unknown[],
   ): HTMLElement {
     const root = document.createElement("main");
     document.body.replaceChildren(root);
-    render(root, { record_type: "lead", id: LEAD, fields }, [], {
-      input: { record_type: "lead", id: LEAD, fields: sent },
-      refusal: null,
-    });
+    render(root, { record_type: "lead", id: LEAD, fields, changes }, []);
     return root;
   }
 
-  it("names the record and the owner it gave a new value", () => {
-    const root = updated(
-      { full_name: "Jane Doe", owner_id: REP },
-      { owner_id: REP },
-    );
+  const rows = (root: HTMLElement) =>
+    [...root.querySelectorAll("tbody tr")].map((r) => r.textContent);
+
+  it("names the record and the owner it handed over, before and after", () => {
+    const root = updated({ full_name: "Jane Doe", owner_id: REP }, [
+      {
+        field: "owner_id",
+        label: "Owner",
+        before: { kind: "owner", text: "Ana Rep" },
+        after: { kind: "owner", text: "Sam Rep" },
+      },
+    ]);
     expectReadable(root);
     expect(root.querySelector("h1")?.textContent).toBe(
       'Updated lead "Jane Doe"',
     );
-    expect(
-      [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
-    ).toEqual(["OwnerChanged"]);
+    expect(rows(root)).toEqual(["OwnerAna Rep → Sam Rep"]);
   });
 
-  it("shows a changed job title as its new value", () => {
-    const root = updated(
-      { full_name: "Jane Doe", title: "VP Sales" },
-      { title: "VP Sales" },
-    );
+  it("shows an amount in its currency and an empty value as a dash", () => {
+    const root = updated({ full_name: "Jane Doe" }, [
+      {
+        field: "amount_minor",
+        label: "Value",
+        before: { kind: "empty", text: "" },
+        after: { kind: "money", text: "120000", currency: "EUR" },
+      },
+    ]);
     expectReadable(root);
-    expect(
-      [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
-    ).toEqual(["Job titleVP Sales"]);
+    expect(rows(root)[0]).toMatch(/^Value— → .*1,?200/);
   });
 
-  it("says nothing was changed when every field was held", () => {
+  it("says nothing was changed when the update was refused", () => {
     const root = document.createElement("main");
-    render(root, null, [], {
-      input: { record_type: "lead", id: LEAD, fields: { owner_id: REP } },
-      refusal: `staged as approval ${LEAD} to update lead "Jane Doe"`,
-    });
+    render(root, null, [], { refusal: "A lead cannot be its own parent." });
     expectReadable(root);
     expect(root.querySelector("h1")?.textContent).toBe("Nothing was changed");
+    expect(root.querySelector(".intro")?.textContent).toBe(
+      "A lead cannot be its own parent.",
+    );
+  });
+
+  it("offers the choice when every field was held and nothing applied", () => {
+    const root = document.createElement("main");
+    render(root, fieldConflictFixture.data, [], {
+      refusal: `staged as approval ${APPROVAL}`,
+    });
+    expectReadable(root);
+    expect(root.querySelector("h1")?.textContent).toBe("Edited by hand");
+    expect(root.querySelector(".intro")?.textContent).toMatch(
+      /^Nothing was changed yet\./,
+    );
+    expect(labels(root)).toEqual([KEEP, USE]);
   });
 
   it("labels a held field by its name in the app", () => {
     expectReadable(mount());
+  });
+
+  it("still names a held field the server sent no words for", () => {
+    const bare = JSON.parse(JSON.stringify(fieldConflictFixture.data));
+    bare.staged_approval.fields = ["owner_id"];
+    bare.staged_approval.changes = [];
+    bare.staged_approval.replay.fields = { owner_id: REP };
+    const root = mount(bare);
+    expectReadable(root);
+    expect(rows(root)).toEqual(["Owner—A linked record"]);
   });
 });

@@ -366,28 +366,39 @@ describe("a create that filed more than one pair", () => {
 });
 
 describe("a create with nothing to decide", () => {
-  function created(
-    record: Record<string, unknown>,
-    input: Record<string, unknown>,
-  ): HTMLElement {
+  function created(record: Record<string, unknown>): HTMLElement {
     const root = document.createElement("main");
     document.body.replaceChildren(root);
-    render(root, record, [], { input, refusal: null });
+    render(root, record, []);
     return root;
   }
 
-  it("names a created task and the fields the assistant set", () => {
-    const fields = {
-      kind: "task",
-      subject: "Qualify the opportunity",
-      lead_id: LEAD,
-      assignee_id: REP,
-      due_at: "2026-11-03T09:00:00Z",
-    };
-    const root = created(
-      { record_type: "activity", id: LEAD, fields },
-      { record_type: "activity", fields },
-    );
+  const set = (field: string, label: string, kind: string, text: string) => ({
+    field,
+    label,
+    before: { kind: "empty", text: "" },
+    after: { kind, text },
+  });
+
+  it("names a created task and each field it set, people by name", () => {
+    const root = created({
+      record_type: "activity",
+      id: LEAD,
+      fields: {
+        kind: "task",
+        subject: "Qualify the opportunity",
+        lead_id: LEAD,
+        assignee_id: REP,
+        due_at: "2026-11-03T09:00:00Z",
+      },
+      changes: [
+        set("assignee_id", "Assignee", "reference", "Sam Rep"),
+        set("due_at", "Due", "text", "2026-11-03T09:00:00Z"),
+        set("kind", "Kind", "text", "task"),
+        set("lead_id", "Lead", "reference", "Jane Doe (Partner Co)"),
+        set("subject", "Subject", "text", "Qualify the opportunity"),
+      ],
+    });
     expectReadable(root);
     expect(root.querySelector("h1")?.textContent).toBe("Created a task");
     expect(root.querySelector(".name")?.textContent).toBe(
@@ -395,7 +406,12 @@ describe("a create with nothing to decide", () => {
     );
     expect(
       [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
-    ).toEqual(["Kindtask", "LeadSet", "AssigneeSet", "Due2026-11-03"]);
+    ).toEqual([
+      "AssigneeSam Rep",
+      "Due2026-11-03",
+      "Kindtask",
+      "LeadJane Doe (Partner Co)",
+    ]);
   });
 
   it.each([
@@ -407,10 +423,7 @@ describe("a create with nothing to decide", () => {
     ],
     ["company", { display_name: "Partner Co" }, "Created a company"],
   ])("names a created %s", (type, fields, title) => {
-    const root = created(
-      { record_type: type, id: LEAD, fields },
-      { record_type: type, fields },
-    );
+    const root = created({ record_type: type, id: LEAD, fields });
     expectReadable(root);
     expect(root.querySelector("h1")?.textContent).toBe(title);
   });
@@ -418,7 +431,6 @@ describe("a create with nothing to decide", () => {
   it("says nothing was created, and why, when the create was refused", () => {
     const root = document.createElement("main");
     render(root, null, [], {
-      input: { record_type: "lead", fields: { status: "promoted" } },
       refusal: 'A new lead cannot start as "promoted".',
     });
     expectReadable(root);
@@ -431,7 +443,6 @@ describe("a create with nothing to decide", () => {
   it("leaves a refusal written for the assistant to the assistant", () => {
     const root = document.createElement("main");
     render(root, null, [], {
-      input: {},
       refusal: `staged as approval ${LEAD}: repeat this call with approval_id`,
     });
     expectReadable(root);

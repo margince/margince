@@ -335,6 +335,14 @@ const PLAIN_CALLS = [
           record_type: "lead",
           id: LEAD,
           fields: { full_name: "Jane Doe", owner_id: REP },
+          changes: [
+            {
+              field: "owner_id",
+              label: "Owner",
+              before: { kind: "owner", text: "Ana Rep" },
+              after: { kind: "owner", text: "Sam Rep" },
+            },
+          ],
         },
         warnings: [],
       },
@@ -348,8 +356,43 @@ const PLAIN_CALLS = [
     result: {
       isError: true,
       content: [{ type: "text", text: `staged as approval ${LEAD}` }],
+      structuredContent: {
+        data: {
+          record_type: "lead",
+          id: LEAD,
+          fields: { full_name: "Jane Doe", owner_id: LEAD },
+          staged_approval: {
+            approval_id: LEAD,
+            fields: ["owner_id"],
+            replay: {
+              record_type: "lead",
+              id: LEAD,
+              fields: { owner_id: REP },
+            },
+            changes: [
+              {
+                field: "owner_id",
+                label: "Owner",
+                before: { kind: "owner", text: "Ana Rep" },
+                after: { kind: "owner", text: "Sam Rep" },
+              },
+            ],
+          },
+        },
+        warnings: [],
+      },
     },
-    heading: "Nothing was changed",
+    heading: "Edited by hand",
+  },
+  {
+    name: "a refused create",
+    file: "create-followups",
+    input: { record_type: "lead", fields: { status: "promoted" } },
+    result: {
+      isError: true,
+      content: [{ type: "text", text: "A new lead cannot start as promoted." }],
+    },
+    heading: "Nothing was created",
   },
 ] as const;
 

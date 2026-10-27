@@ -10,15 +10,15 @@
   "totals": {
     "tools": 37,
     "resources": 9,
-    "tool_catalog_bytes": 129828,
+    "tool_catalog_bytes": 133339,
     "resource_catalog_bytes": 3588,
-    "approx_wire_tokens_total": 33354,
+    "approx_wire_tokens_total": 34231,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
       "description_bytes": 33327,
       "input_schema_bytes": 61981,
-      "output_schema_bytes": 25592,
+      "output_schema_bytes": 29103,
       "description_plus_input_schema_bytes": 95308
     }
   },
@@ -2139,6 +2139,76 @@
           "properties": {
             "data": {
               "properties": {
+                "changes": {
+                  "items": {
+                    "properties": {
+                      "after": {
+                        "properties": {
+                          "currency": {
+                            "type": "string"
+                          },
+                          "entity_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "entity_type": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "text"
+                        ],
+                        "type": "object"
+                      },
+                      "before": {
+                        "properties": {
+                          "currency": {
+                            "type": "string"
+                          },
+                          "entity_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "entity_type": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "text"
+                        ],
+                        "type": "object"
+                      },
+                      "field": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "after",
+                      "before",
+                      "field",
+                      "label"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
                 "duplicate_candidates": {
                   "items": {
                     "properties": {
@@ -2152,6 +2222,9 @@
                         "items": {
                           "properties": {
                             "field": {
+                              "type": "string"
+                            },
+                            "label": {
                               "type": "string"
                             },
                             "left_value": {
@@ -3014,6 +3087,76 @@
                         "format": "uuid",
                         "type": "string"
                       },
+                      "changes": {
+                        "items": {
+                          "properties": {
+                            "after": {
+                              "properties": {
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "entity_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "entity_type": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string"
+                                },
+                                "text": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "text"
+                              ],
+                              "type": "object"
+                            },
+                            "before": {
+                              "properties": {
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "entity_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "entity_type": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string"
+                                },
+                                "text": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "text"
+                              ],
+                              "type": "object"
+                            },
+                            "field": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "after",
+                            "before",
+                            "field",
+                            "label"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
                       "created_at": {
                         "format": "date-time",
                         "type": "string"
@@ -3057,6 +3200,25 @@
                       "kind": {
                         "type": "string"
                       },
+                      "on_behalf_of": {
+                        "properties": {
+                          "id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "is_you": {
+                            "type": "boolean"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "is_you"
+                        ],
+                        "type": "object"
+                      },
                       "proposed_by": {
                         "type": "string"
                       },
@@ -3075,6 +3237,9 @@
                       },
                       "target_id": {
                         "format": "uuid",
+                        "type": "string"
+                      },
+                      "target_label": {
                         "type": "string"
                       },
                       "target_type": {
@@ -4378,6 +4543,76 @@
                   "format": "uuid",
                   "type": "string"
                 },
+                "changes": {
+                  "items": {
+                    "properties": {
+                      "after": {
+                        "properties": {
+                          "currency": {
+                            "type": "string"
+                          },
+                          "entity_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "entity_type": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "text"
+                        ],
+                        "type": "object"
+                      },
+                      "before": {
+                        "properties": {
+                          "currency": {
+                            "type": "string"
+                          },
+                          "entity_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "entity_type": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "text"
+                        ],
+                        "type": "object"
+                      },
+                      "field": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "after",
+                      "before",
+                      "field",
+                      "label"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
                 "created_at": {
                   "format": "date-time",
                   "type": "string"
@@ -4421,6 +4656,25 @@
                 "kind": {
                   "type": "string"
                 },
+                "on_behalf_of": {
+                  "properties": {
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "is_you": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "is_you"
+                  ],
+                  "type": "object"
+                },
                 "proposed_by": {
                   "type": "string"
                 },
@@ -4439,6 +4693,9 @@
                 },
                 "target_id": {
                   "format": "uuid",
+                  "type": "string"
+                },
+                "target_label": {
                   "type": "string"
                 },
                 "target_type": {
@@ -6541,6 +6798,76 @@
           "properties": {
             "data": {
               "properties": {
+                "changes": {
+                  "items": {
+                    "properties": {
+                      "after": {
+                        "properties": {
+                          "currency": {
+                            "type": "string"
+                          },
+                          "entity_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "entity_type": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "text"
+                        ],
+                        "type": "object"
+                      },
+                      "before": {
+                        "properties": {
+                          "currency": {
+                            "type": "string"
+                          },
+                          "entity_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "entity_type": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "text"
+                        ],
+                        "type": "object"
+                      },
+                      "field": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "after",
+                      "before",
+                      "field",
+                      "label"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
                 "fields": {
                   "type": "object"
                 },
@@ -6556,6 +6883,76 @@
                     "approval_id": {
                       "format": "uuid",
                       "type": "string"
+                    },
+                    "changes": {
+                      "items": {
+                        "properties": {
+                          "after": {
+                            "properties": {
+                              "currency": {
+                                "type": "string"
+                              },
+                              "entity_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "entity_type": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string"
+                              },
+                              "text": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "text"
+                            ],
+                            "type": "object"
+                          },
+                          "before": {
+                            "properties": {
+                              "currency": {
+                                "type": "string"
+                              },
+                              "entity_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "entity_type": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string"
+                              },
+                              "text": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "text"
+                            ],
+                            "type": "object"
+                          },
+                          "field": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "after",
+                          "before",
+                          "field",
+                          "label"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
                     },
                     "fields": {
                       "items": {

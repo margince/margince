@@ -86,7 +86,12 @@ Open the row to see each action, the verb it runs and its tier, for example `mer
 - **`update_record` is 🟢, with a 🟡 part.** The patch works per field. The fields no human wrote last apply at once.
   The fields a human *did* write last wait for approval. The result names them in `staged_approval`, with the replay
   call that uses the approval. A machine never undoes the edit of a human unless asked, and the edit of a human never
-  blocks the own fields of the machine.
+  blocks the own fields of the machine. When every field waits, nothing applies and the call is refused. The refusal
+  still carries the same result, `staged_approval` included, so a view can offer the choice.
+- **A write says what it changed.** `create_record` and `update_record` list each field they set in `changes`, and
+  `staged_approval` lists each field that waits. Each entry has the field's label and its value before and after,
+  with a name in place of an ID. The approval inbox shows a change in the same words. `read_approval` carries the
+  same `changes` for a pending change the inbox can show.
 - **A deal move follows its stage.** It waits or runs by what the stage means. A column renamed `"Won"` still waits.
   `advanceDealTier` trusts the meaning set up for the stage. A stage it cannot prove is `open` waits too.
 - **Margince works out the list filters at boot.** `find_records` with `engine=list` takes them. They are the overlap

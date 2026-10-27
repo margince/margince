@@ -348,25 +348,7 @@ describe("the bridge says which call a result answers", () => {
     return { parent, got: () => got };
   }
 
-  it("hands the view the arguments the host said the tool ran with", async () => {
-    const { parent, got } = await handshaken();
-    deliver(parent.win, "https://host.example", {
-      jsonrpc: "2.0",
-      method: "ui/notifications/tool-input",
-      params: { arguments: { record_type: "lead", fields: { title: "VP" } } },
-    });
-    deliver(parent.win, "https://host.example", {
-      jsonrpc: "2.0",
-      method: "ui/notifications/tool-result",
-      params: { structuredContent: { data: {}, warnings: [] } },
-    });
-    expect(got()).toEqual({
-      input: { record_type: "lead", fields: { title: "VP" } },
-      refusal: null,
-    });
-  });
-
-  it("hands the view a refusal's words, which travel without an envelope", async () => {
+  it("hands the view a refusal's words", async () => {
     const { parent, got } = await handshaken();
     deliver(parent.win, "https://host.example", {
       jsonrpc: "2.0",
@@ -378,10 +360,32 @@ describe("the bridge says which call a result answers", () => {
         ],
       },
     });
-    expect(got()).toEqual({
-      input: {},
-      refusal: "A new lead cannot start as promoted.",
+    expect(got()).toEqual({ refusal: "A new lead cannot start as promoted." });
+  });
+
+  it("hands the view the answer a refusal carries beside its words", async () => {
+    const parent = stubParent();
+    const bridge = await loadBridge(parent.win);
+    deliver(parent.win, "https://host.example", {
+      jsonrpc: "2.0",
+      id: parent.sent[0].msg.id,
+      result: {},
     });
+    const got: unknown[] = [];
+    bridge.onResult((data, _warnings, call) => got.push(data, call));
+    deliver(parent.win, "https://host.example", {
+      jsonrpc: "2.0",
+      method: "ui/notifications/tool-result",
+      params: {
+        isError: true,
+        content: [{ type: "text", text: "Staged for a human." }],
+        structuredContent: { data: { staged_approval: {} }, warnings: [] },
+      },
+    });
+    expect(got).toEqual([
+      { staged_approval: {} },
+      { refusal: "Staged for a human." },
+    ]);
   });
 });
 
