@@ -24,7 +24,7 @@ const probeCurrency = "XXX"
 // binds, then the words a clause checks for itself.
 var probeOperands = []string{
 	ids.Nil.String(), strconv.FormatBool(true), strconv.Itoa(0), time.Time{}.Format(time.DateOnly),
-	attributionSourced, probeCurrency, storekit.ProbeCountry,
+	attributionSourced, probeCurrency, storekit.ProbeAlpha2,
 }
 
 // ListFilterReach probes every filter the deal list binds for the caller on

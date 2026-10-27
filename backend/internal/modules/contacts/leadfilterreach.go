@@ -22,7 +22,7 @@ import (
 var leadProbeOperands = []string{
 	ids.Nil.String(), strconv.FormatBool(true), strconv.Itoa(0), string(crmcontracts.ListLeadsParamsCapturedByKindHuman),
 	string(crmcontracts.ListLeadsParamsIndustryAgriculture), string(crmcontracts.ListLeadsParamsSizeBandN110),
-	storekit.ProbeCountry,
+	storekit.ProbeAlpha2,
 }
 
 // LeadListFilterReach probes every lead list filter for the caller on ctx, through the list's

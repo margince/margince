@@ -89,9 +89,9 @@ func CodeOperand(raw, field string, shaped func(string) bool, shape string) (str
 	return "", &values.ParseError{Field: field, Code: field + "_malformed", Message: field + " must be " + shape}
 }
 
-// ProbeCountry is a country operand a reach probe may send. ISO reserves it for
+// ProbeAlpha2 is a country operand a reach probe may send. ISO reserves it for
 // user assignment, so it names no country.
-const ProbeCountry = "ZZ"
+const ProbeAlpha2 = "ZZ"
 
 // CountryOperand is CodeOperand for an ISO 3166-1 alpha-2 dial, the shape a
 // company's address country is stored in.
