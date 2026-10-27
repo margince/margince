@@ -131,9 +131,9 @@ func assertSnapshotMatchesTheList(t *testing.T, e *apptest.AppEnv, refused []str
 	}
 }
 
-// unenumeratedOperands are words the contract types as a bare string, where
-// the probe's operand is not one the list admits.
-var unenumeratedOperands = map[string]string{"sort": "created_at"}
+// sortOperand is a column the deal list sorts by. The contract types sort as a
+// bare string, and the probe's operand names no column.
+const sortOperand = "created_at"
 
 // listDealsEnums is each deal list query parameter the contract closes to an
 // enum, with its members as the wire spells them.
@@ -161,8 +161,8 @@ func listDealsEnums(t *testing.T) map[string][]string {
 // admittedOperand is the probe's operand where the contract admits it, and
 // otherwise a word it does: the contract's operand fault answers before any grant.
 func admittedOperand(filter deals.FilterReach, enums map[string][]string) string {
-	if word, ok := unenumeratedOperands[filter.Parameter]; ok {
-		return word
+	if filter.Parameter == "sort" {
+		return sortOperand
 	}
 	members := enums[filter.Parameter]
 	if len(members) == 0 || slices.Contains(members, filter.Operand) {
