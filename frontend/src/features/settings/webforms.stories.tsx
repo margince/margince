@@ -77,7 +77,7 @@ function cardStory(forms: WebForm[], allow: GrantSpec = OPERATOR) {
 }
 
 const meta: Meta<typeof WebFormsCard> = {
-  title: "Settings/Data/Website forms",
+  title: "Settings/Data/Website forms/Website forms",
   component: WebFormsCard,
 };
 export default meta;
