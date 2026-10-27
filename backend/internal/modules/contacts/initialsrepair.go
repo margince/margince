@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -107,10 +108,7 @@ func mailsLinkedAtCreateTx(ctx context.Context, tx pgx.Tx, contactIDs []ids.Cont
 		              a.direction = 'outbound' AS outbound
 		         FROM activity_link l
 		         JOIN activity a ON a.id = l.activity_id AND a.kind = 'email'
-		         JOIN raw_capture rc
-		           ON rc.id = a.raw_capture_id
-		           OR (a.raw_capture_id IS NULL
-		               AND rc.source_system = a.source_system AND rc.source_id = a.source_id)
+		         JOIN raw_capture rc ON `+storekit.StoredOriginalSQL("a", "rc")+`
 		        WHERE l.entity_type = 'contact' AND l.contact_id = p.id AND l.created_at = p.created_at
 		          AND EXISTS (
 		              SELECT 1 FROM contact_email e

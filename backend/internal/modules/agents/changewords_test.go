@@ -18,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
-	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 // wordsSeen records what a write asked to have named. It names each value by
@@ -97,9 +96,9 @@ func promoteToCTO(t *testing.T, p *patchingProvider) json.RawMessage {
 	return in
 }
 
-func decodeUpdate(t *testing.T, raw json.RawMessage) UpdateWithStagedApprovalResult {
+func decodeUpdate(t *testing.T, raw json.RawMessage) UpdateResult {
 	t.Helper()
-	var got UpdateWithStagedApprovalResult
+	var got UpdateResult
 	if err := json.Unmarshal(raw, &got); err != nil {
 		t.Fatalf("decoding %s: %v", raw, err)
 	}
@@ -109,7 +108,7 @@ func decodeUpdate(t *testing.T, raw json.RawMessage) UpdateWithStagedApprovalRes
 func TestAnUpdateNamesEachFieldFromWhatItReplaced(t *testing.T) {
 	p := contactWith(`{"full_name":"Ada Lovelace","title":"Analyst"}`)
 	seen := &wordsSeen{}
-	tool := updateRecord{p: p, ownership: noConflicts{}, staging: &recordingApprovals{}, words: seen.words}
+	tool := updateRecord{p: p, words: seen.words}
 
 	out, err := tool.Handle(context.Background(), promoteToCTO(t, p))
 	if err != nil {
@@ -184,7 +183,7 @@ func TestChangesThatCannotBeNamedLeaveTheWriteStandingAndSaySo(t *testing.T) {
 	p := contactWith(`{"full_name":"Ada Lovelace","title":"Analyst"}`)
 	seen := &wordsSeen{err: errors.New("the names are unreachable")}
 	r := NewRegistry(&recordingApprovals{}, auth.NewGate(fullSeatAuthority{}))
-	r.Register(updateRecord{p: p, ownership: noConflicts{}, staging: r.approvals, words: seen.words})
+	r.Register(updateRecord{p: p, words: seen.words})
 
 	out, err := r.Invoke(agentCtx(), "update_record", promoteToCTO(t, p))
 	if err != nil {
@@ -196,62 +195,6 @@ func TestChangesThatCannotBeNamedLeaveTheWriteStandingAndSaySo(t *testing.T) {
 	}
 	if got := decodeUpdate(t, env.Data).Changes; got != nil {
 		t.Errorf("changes = %+v, want none", got)
-	}
-}
-
-// A patch whose every field a human last edited applies nothing, so the answer
-// stays the staged refusal the runner suspends on. It also carries the held
-// fields, because a view drawn for the call offers the choice from them.
-func TestAWholeHeldPatchCarriesTheChoiceBesideItsRefusal(t *testing.T) {
-	p := contactWith(`{"full_name":"Greta Human","title":"Analyst"}`)
-	seen := &wordsSeen{}
-	r := NewRegistry(&recordingApprovals{}, auth.NewGate(fullSeatAuthority{}))
-	r.Register(updateRecord{
-		p: p, ownership: fixedOwnership{conflicts: []string{"title"}}, staging: r.approvals, words: seen.words,
-	})
-
-	_, err := r.Invoke(agentCtx(), "update_record", promoteToCTO(t, p))
-	var staged *workflow.StagedApprovalError
-	if !errors.As(err, &staged) {
-		t.Fatalf("Invoke err = %v, want the staged refusal", err)
-	}
-	answer := shownAnswer(err)
-	if answer == nil {
-		t.Fatal("the refusal carries no answer for a view")
-	}
-	held := decodeUpdate(t, sealedEnvelope(t, answer).Data).StagedApproval
-	if held == nil || held.ApprovalID != staged.ApprovalID || !slices.Equal(held.Fields, []string{"title"}) {
-		t.Fatalf("staged_approval = %+v, want approval %s holding title", held, staged.ApprovalID)
-	}
-	if len(held.Changes) != 1 || held.Changes[0].After.Text != `"CTO"` || held.Changes[0].Before.Text != `"Analyst"` {
-		t.Errorf("held changes = %+v, want title from Analyst to CTO", held.Changes)
-	}
-}
-
-func TestTheDispatcherServesAHeldPatchAsARefusalWithItsChoice(t *testing.T) {
-	p := contactWith(`{"full_name":"Greta Human","title":"Analyst"}`)
-	r := NewRegistry(&recordingApprovals{}, auth.NewGate(fullSeatAuthority{}))
-	r.Register(updateRecord{p: p, ownership: fixedOwnership{conflicts: []string{"title"}}, staging: r.approvals})
-	d := NewDispatcher(r, bindAuthenticated, "margince-crm", "test").WithLogger(discardLog())
-
-	params, err := json.Marshal(map[string]any{"name": "update_record", "arguments": promoteToCTO(t, p)})
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp := rpcAs(agentCtx(), t, d, methodToolsCall, string(params))
-	result, ok := resp.Result.(map[string]any)
-	if !ok {
-		t.Fatalf("result = %#v", resp.Result)
-	}
-	if result["isError"] != true {
-		t.Errorf("isError = %v, want the call reported as not applied", result["isError"])
-	}
-	structured, ok := result["structuredContent"].(json.RawMessage)
-	if !ok {
-		t.Fatalf("structuredContent = %#v, want the held fields beside the refusal", result["structuredContent"])
-	}
-	if held := decodeUpdate(t, sealedEnvelope(t, structured).Data).StagedApproval; held == nil {
-		t.Errorf("structuredContent = %s, want staged_approval", structured)
 	}
 }
 

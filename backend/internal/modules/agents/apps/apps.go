@@ -51,9 +51,9 @@ const CreateFollowupsURI = "ui://margince/create-followups.html"
 // release, with Approve and Reject beside it.
 const ApprovalURI = "ui://margince/approval.html"
 
-// FieldConflictURI is the card update_record offers when part of a patch was
-// held because those fields were last edited by hand.
-const FieldConflictURI = "ui://margince/field-conflict.html"
+// UpdateURI is the card update_record offers: what the call changed, field by
+// field, or why it changed nothing.
+const UpdateURI = "ui://margince/update.html"
 
 // view is one published document's identity. The document itself is not here:
 // it is fetched, admitted and held at run time, so this is the half that is a
@@ -82,10 +82,10 @@ var catalog = []view{
 		description: "A change an assistant proposed, what it would do, and the choice to approve or reject it.",
 	},
 	{
-		uri:         FieldConflictURI,
-		name:        "field_conflict_view",
-		title:       "Edited by hand",
-		description: "What an update changed, or why it changed nothing. Fields last edited by hand that it would overwrite show the stored value beside the proposed one, with the choice to keep or replace it.",
+		uri:         UpdateURI,
+		name:        "update_view",
+		title:       "What changed",
+		description: "What an update changed, field by field as it was and as it is, or why it changed nothing.",
 	},
 }
 

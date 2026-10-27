@@ -10,16 +10,16 @@
   "totals": {
     "tools": 37,
     "resources": 9,
-    "tool_catalog_bytes": 134393,
-    "resource_catalog_bytes": 3657,
-    "approx_wire_tokens_total": 34512,
+    "tool_catalog_bytes": 133315,
+    "resource_catalog_bytes": 3541,
+    "approx_wire_tokens_total": 34214,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
-      "description_bytes": 33587,
-      "input_schema_bytes": 62775,
-      "output_schema_bytes": 29103,
-      "description_plus_input_schema_bytes": 96362
+      "description_bytes": 33525,
+      "input_schema_bytes": 62645,
+      "output_schema_bytes": 28225,
+      "description_plus_input_schema_bytes": 96170
     }
   },
   "tools": {
@@ -6786,7 +6786,7 @@
       {
         "_meta": {
           "ui": {
-            "resourceUri": "ui://margince/field-conflict.html",
+            "resourceUri": "ui://margince/update.html",
             "visibility": [
               "model",
               "app"
@@ -6798,17 +6798,17 @@
           "readOnlyHint": false,
           "title": "Update a record"
         },
-        "description": "Change stored field values on a record that already exists — a corrected title, an amount, an expected close date. Only the fields you send change, and only the fields the record type stores (a contact's email addresses are not among them). A field a HUMAN last set is not overwritten: that part is staged for a human and named in the result, and that part of the write has not happened. It names the record by id; when a name matches two records, a human picks. owner_id is NOT neutral — ownership decides visibility, so reassigning moves the record onto someone else's book and can take it off the owner's. An activity moved to another day keeps its time of day unless the user names one; moving a date-only one, send occurred_precision \"day\" again, or it reads as a time. Use change_state with action=move_deal to move a deal between stages, and change_activities with action=relink to change what an activity is about; neither is a field edit. Send if_version with the version you read, and keep the staged approval id from the result if you intend to retry the same change once a human has released it. (Runs immediately; requires passport scope \"write\".)",
+        "description": "Change stored field values on a record that already exists — a corrected title, an amount, an expected close date. Only the fields you send change, and only the fields the record type stores (a contact's email addresses are not among them). The whole patch applies in this call, and the result names each change so a human can Undo it. It names the record by id; when a name matches two records, a human picks. owner_id is NOT neutral — ownership decides visibility, so reassigning moves the record onto someone else's book and can take it off the owner's. An activity moved to another day keeps its time of day unless the user names one; moving a date-only one, send occurred_precision \"day\" again, or it reads as a time. Use change_state with action=move_deal to move a deal between stages, and change_activities with action=relink to change what an activity is about; neither is a field edit. Send if_version with the version you read. If the call comes back staged, keep its approval id to retry the same change once a human has released it. (Runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
             "approval_id": {
-              "description": "Set on retry after a human approved overwriting their edit; send it with exactly the staged replay arguments",
+              "description": "Set on retry after a human approved the staged call; send it with exactly the staged arguments",
               "format": "uuid",
               "type": "string"
             },
             "fields": {
-              "description": "Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by read_workspace with topic=record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. An rfc3339 value carries Z or the offset the user gave. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
+              "description": "Only sent fields change. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by read_workspace with topic=record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. An rfc3339 value carries Z or the offset the user gave. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
               "type": "object"
             },
             "id": {
@@ -6931,103 +6931,6 @@
                 },
                 "record_type": {
                   "type": "string"
-                },
-                "staged_approval": {
-                  "properties": {
-                    "approval_id": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "changes": {
-                      "items": {
-                        "properties": {
-                          "after": {
-                            "properties": {
-                              "currency": {
-                                "type": "string"
-                              },
-                              "entity_id": {
-                                "format": "uuid",
-                                "type": "string"
-                              },
-                              "entity_type": {
-                                "type": "string"
-                              },
-                              "kind": {
-                                "type": "string"
-                              },
-                              "text": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "kind",
-                              "text"
-                            ],
-                            "type": "object"
-                          },
-                          "before": {
-                            "properties": {
-                              "currency": {
-                                "type": "string"
-                              },
-                              "entity_id": {
-                                "format": "uuid",
-                                "type": "string"
-                              },
-                              "entity_type": {
-                                "type": "string"
-                              },
-                              "kind": {
-                                "type": "string"
-                              },
-                              "text": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "kind",
-                              "text"
-                            ],
-                            "type": "object"
-                          },
-                          "field": {
-                            "type": "string"
-                          },
-                          "label": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "after",
-                          "before",
-                          "field",
-                          "label"
-                        ],
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "fields": {
-                      "items": {
-                        "type": "string"
-                      },
-                      "type": "array"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "replay": {
-                      "type": "object"
-                    }
-                  },
-                  "required": [
-                    "approval_id",
-                    "fields",
-                    "message",
-                    "replay"
-                  ],
-                  "type": "object"
                 },
                 "trust_tier": {
                   "type": "string"
@@ -7359,11 +7262,11 @@
             "prefersBorder": true
           }
         },
-        "description": "What an update changed, or why it changed nothing. Fields last edited by hand that it would overwrite show the stored value beside the proposed one, with the choice to keep or replace it.",
+        "description": "What an update changed, field by field as it was and as it is, or why it changed nothing.",
         "mimeType": "text/html;profile=mcp-app",
-        "name": "field_conflict_view",
-        "title": "Edited by hand",
-        "uri": "ui://margince/field-conflict.html"
+        "name": "update_view",
+        "title": "What changed",
+        "uri": "ui://margince/update.html"
       }
     ],
     "resultType": "complete",
@@ -7378,6 +7281,6 @@
     "margince://schema/reports": "{\"version\":\"1\",\"notation\":\"Each report accepts ONLY the names listed under it. `group_by` and `aggregates` take names from their own lists; `filters` is one object whose keys come from the `filters` list, which holds both equality predicates and numeric thresholds. A name outside a report's list is refused by name, with that list, rather than approximated.\",\"reports\":[{\"report\":\"activities-by-kind\",\"group_by\":[\"direction\",\"kind\",\"meeting_status\",\"project\",\"project_id\"],\"filters\":[\"direction\",\"host_user_id\",\"kind\",\"meeting_status\",\"project_id\"],\"aggregates\":[],\"defaults\":\"count as activities grouped by kind\",\"notes\":\"project_id admits exactly the activities filed under that project (an activity_link row naming it); an activity filed nowhere, or under another project, is excluded\"},{\"report\":\"deals-by-stage\",\"group_by\":[\"currency\",\"partner_company_id\",\"pipeline_id\",\"stage_id\",\"status\",\"win_probability\"],\"filters\":[\"company_id\",\"currency\",\"forecast_category\",\"owner_id\",\"partner_company_id\",\"partner_sourced\",\"pipeline_id\",\"project_id\",\"stalled\",\"status\"],\"aggregates\":[\"amount_base_minor\",\"amount_minor\",\"weighted_amount_minor\",\"weighted_base_minor\"],\"defaults\":\"count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency\"},{\"report\":\"forecast\",\"group_by\":[\"currency\",\"forecast_category\",\"owner_id\",\"partner_company_id\",\"pipeline_id\",\"stage_id\",\"win_probability\"],\"filters\":[\"currency\",\"forecast_category\",\"owner_id\",\"partner_company_id\",\"pipeline_id\",\"project_id\",\"stage_id\"],\"aggregates\":[\"amount_base_minor\",\"amount_minor\",\"weighted_amount_minor\",\"weighted_base_minor\"],\"defaults\":\"count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency\"},{\"report\":\"leads-by-status\",\"group_by\":[\"origin\",\"owner_id\",\"source\",\"status\"],\"filters\":[\"origin\",\"owner_id\",\"source\",\"status\"],\"aggregates\":[],\"defaults\":\"count as leads grouped by status\",\"notes\":\"counts every lead whatever its status: promoted and disqualified leads are archived, and this is the one lead key that still counts them\"},{\"report\":\"meeting-conversion\",\"group_by\":[\"became_opportunity\",\"host_user_id\"],\"filters\":[\"became_opportunity\",\"host_user_id\"],\"aggregates\":[],\"defaults\":\"count as meetings grouped by became_opportunity\"},{\"report\":\"open-deals-per-company\",\"group_by\":[\"company_id\",\"currency\",\"owner_id\"],\"filters\":[\"currency\",\"owner_id\",\"pipeline_id\",\"project_id\"],\"aggregates\":[\"amount_minor\"],\"defaults\":\"count as open_deals grouped by company_id\"},{\"report\":\"pipeline-current\",\"group_by\":[\"close_month\",\"currency\",\"owner_id\",\"partner_company_id\",\"pipeline_id\",\"stage_id\"],\"filters\":[\"company_id\",\"currency\",\"owner_id\",\"partner_company_id\",\"pipeline_id\",\"project_id\"],\"aggregates\":[\"amount_base_minor\",\"weighted_base_minor\"],\"defaults\":\"count as deals, sum(amount_base_minor) as amount_base_minor_sum, sum(weighted_base_minor) as weighted_base_minor_sum, count(amount_base_minor) as priced_deals grouped by stage_id\"},{\"report\":\"project-commitments\",\"group_by\":[\"company_id\",\"key\",\"name\",\"owner_id\",\"phase\",\"project_id\"],\"filters\":[\"company_id\",\"owner_id\",\"phase\"],\"aggregates\":[\"open_commitments\",\"overdue_commitments\"],\"defaults\":\"sum(overdue_commitments), sum(open_commitments) grouped by project_id, name, key, phase, owner_id\",\"notes\":\"rows are ordered most overdue first\"},{\"report\":\"projects-by-phase\",\"group_by\":[\"company_id\",\"owner_id\",\"phase\"],\"filters\":[\"company_id\",\"owner_id\",\"phase\"],\"aggregates\":[\"open_deal_unpriced\",\"open_deal_value_minor\",\"won_deal_unpriced\",\"won_deal_value_minor\"],\"defaults\":\"count as projects, sum(open_deal_value_minor), sum(won_deal_value_minor), sum(open_deal_unpriced), sum(won_deal_unpriced) grouped by phase\",\"notes\":\"open and won deal values use the same base-currency valuation; unpriced counts identify amounts omitted for missing prices\"},{\"report\":\"projects-gone-quiet\",\"group_by\":[\"company_id\",\"key\",\"last_activity_at\",\"name\",\"owner_id\",\"phase\",\"project_id\",\"quiet_since\"],\"filters\":[\"company_id\",\"days\",\"owner_id\",\"phase\"],\"aggregates\":[],\"defaults\":\"count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since\",\"notes\":\"`days` is a whole number of days of silence, default 30; quiet_since is when the silence began\"},{\"report\":\"stage-age\",\"group_by\":[\"owner_id\",\"pipeline_id\",\"stage_id\"],\"filters\":[\"owner_id\",\"pipeline_id\"],\"aggregates\":[\"days_in_stage\"],\"defaults\":\"count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id\"},{\"report\":\"win-loss\",\"group_by\":[\"company_id\",\"currency\",\"lost_reason\",\"owner_id\",\"period_month\",\"period_quarter\",\"period_year\",\"pipeline_id\",\"size_band\",\"source\",\"status\"],\"filters\":[\"company_id\",\"currency\",\"lost_reason\",\"owner_id\",\"period_month\",\"period_quarter\",\"period_year\",\"pipeline_id\",\"project_id\",\"size_band\",\"source\",\"status\"],\"aggregates\":[\"amount_base_minor\",\"amount_minor\",\"days_to_close\"],\"defaults\":\"count as deals, sum(amount_minor) as amount_minor_sum, median(days_to_close) as median_days_to_close, p75(days_to_close) as p75_days_to_close grouped by status, currency\"}],\"notes\":[\"A `pipeline_id` or `stage_id` used in a plan comes from the workspace's pipeline list.\"]}",
     "ui://margince/approval.html": "(not published here: a ui:// document is fetched from a web origin at boot, so its bytes are a property of the deployment rather than of this build)",
     "ui://margince/create-followups.html": "(not published here: a ui:// document is fetched from a web origin at boot, so its bytes are a property of the deployment rather than of this build)",
-    "ui://margince/field-conflict.html": "(not published here: a ui:// document is fetched from a web origin at boot, so its bytes are a property of the deployment rather than of this build)"
+    "ui://margince/update.html": "(not published here: a ui:// document is fetched from a web origin at boot, so its bytes are a property of the deployment rather than of this build)"
   }
 }
