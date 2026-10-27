@@ -133,10 +133,10 @@ type Handlers struct {
 	listsAvailable bool
 
 	// installationBrand reads the anchor company's name and marks for /me.
-	// Nil omits them (installationbrand.go).
+	// Nil omits them (meparts.go).
 	installationBrand InstallationBrand
 	// refusedDealFilters names the deal list filters the caller is refused.
-	// Nil omits them (installationbrand.go).
+	// Nil omits them (meparts.go).
 	refusedDealFilters RefusedDealFilters
 	// mcpResource is the canonical MCP server URL (public_base_url +
 	// "/mcp"), injected by the composition root from deployment config.
