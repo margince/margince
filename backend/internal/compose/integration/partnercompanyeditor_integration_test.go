@@ -7,7 +7,7 @@ package integration
 
 // Whoever may edit a company may run its partner program. The margin tier
 // prices every later commission, so setting or clearing it also takes the
-// partner grant. People and the assistant's set-up share this one rule.
+// partner grant. The web form and the assistant's set-up share this one rule.
 
 import (
 	"errors"
