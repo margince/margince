@@ -100,8 +100,8 @@ func TestEveryIndustryCodeIsWordedTheSameInGoAndInEveryClientCatalog(t *testing.
 }
 
 // Every enum the contract declares for an industry or a size band, on a schema
-// property or a query parameter, is the company's own list. A copy is found by
-// its name, so a new one that drifts fails here without being listed.
+// property or a query parameter, is the company's own list. The walk matches by
+// name, so a copy under another name, such as company_industry, is out of scope.
 func TestEveryIndustryAndSizeBandEnumIsTheCompanys(t *testing.T) {
 	t.Parallel()
 	doc := loadContractDocument(t)
@@ -111,24 +111,22 @@ func TestEveryIndustryAndSizeBandEnumIsTheCompanys(t *testing.T) {
 	}
 	census := map[string][]string{}
 	walkVocabularyCopies(doc, "", func(where, name string, schema map[string]any) {
-		raw, closed := schema["enum"].([]any)
-		if !closed {
-			return
-		}
-		census[name] = append(census[name], where)
-		admitted := map[string]bool{}
-		for _, value := range enumStrings(t, map[string]any{"enum": raw}, where) {
-			admitted[value] = true
-		}
-		if !maps.Equal(admitted, want[name]) {
-			t.Errorf("%s admits %v, want the company's %s list %v", where, admitted, name, want[name])
+		for _, raw := range schemaEnums(t, doc, schema, where) {
+			census[name] = append(census[name], where)
+			admitted := map[string]bool{}
+			for _, value := range enumStrings(t, map[string]any{"enum": raw}, where) {
+				admitted[value] = true
+			}
+			if !maps.Equal(admitted, want[name]) {
+				t.Errorf("%s admits %v, want the company's %s list %v", where, admitted, name, want[name])
+			}
 		}
 	})
 	t.Logf("industry enums (%d): %v", len(census["industry"]), census["industry"])
 	t.Logf("size_band enums (%d): %v", len(census["size_band"]), census["size_band"])
-	// The copies the contract holds today; a walk that finds fewer has stopped reaching some.
-	if len(census["industry"]) < 5 || len(census["size_band"]) < 6 {
-		t.Errorf("the walk found %v, fewer copies than the contract holds, so it compared too little", census)
+	// The copies the contract holds today. A new copy bumps the count; a lost one fails.
+	if len(census["industry"]) != 5 || len(census["size_band"]) != 6 {
+		t.Errorf("the walk found %v, want 5 industry and 6 size_band copies", census)
 	}
 }
 
@@ -159,4 +157,36 @@ func walkVocabularyCopies(node any, where string, visit func(where, name string,
 			walkVocabularyCopies(child, where, visit)
 		}
 	}
+}
+
+// schemaEnums collects the enums a schema admits through, following $ref, allOf,
+// oneOf, anyOf and an array's items.
+func schemaEnums(t *testing.T, doc, schema map[string]any, where string) [][]any {
+	t.Helper()
+	if raw, ok := schema["enum"].([]any); ok {
+		return [][]any{raw}
+	}
+	if ref, ok := schema["$ref"].(string); ok {
+		path, local := strings.CutPrefix(ref, "#/")
+		if !local {
+			t.Fatalf("%s refers outside the contract: %s", where, ref)
+		}
+		return schemaEnums(t, doc, descendContract(t, doc, strings.Split(path, "/")...), where)
+	}
+	var found [][]any
+	for _, combinator := range []string{"allOf", "oneOf", "anyOf"} {
+		branches, ok := schema[combinator].([]any)
+		if !ok {
+			continue
+		}
+		for _, branch := range branches {
+			if sub, ok := branch.(map[string]any); ok {
+				found = append(found, schemaEnums(t, doc, sub, where)...)
+			}
+		}
+	}
+	if items, ok := schema["items"].(map[string]any); ok {
+		found = append(found, schemaEnums(t, doc, items, where)...)
+	}
+	return found
 }
