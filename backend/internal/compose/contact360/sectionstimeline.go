@@ -194,8 +194,7 @@ var (
 // expression: spelling the namespace inline to keep it constant is exactly the
 // second copy the helper exists to prevent.
 var byUrgencyHumanFirst = sectionOrder(
-	"(CASE WHEN " + activities.SystemMintedExpr("a") + " THEN 1 ELSE 0 END) ASC, " +
-		storekit.TaskDueSQL("a") + " ASC NULLS LAST, a.occurred_at ASC, a.id ASC",
+	"(CASE WHEN " + activities.SystemMintedExpr("a") + " THEN 1 ELSE 0 END) ASC, " + string(byUrgency),
 )
 
 // sectionPage is the section's edge in the activities list's own cursor
