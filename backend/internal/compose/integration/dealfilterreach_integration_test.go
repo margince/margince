@@ -115,11 +115,13 @@ func refusedDealFilters(t *testing.T, e *apptest.AppEnv) []string {
 func assertSnapshotMatchesTheList(t *testing.T, e *apptest.AppEnv, refused []string) {
 	t.Helper()
 	probed := probedDealFilters(t)
+	enums := listDealsEnums(t)
 	for _, filter := range probed {
-		listRefuses := theListRefuses(t, e, filter.Parameter, filter.Operand)
+		operand := admittedOperand(filter, enums)
+		listRefuses := theListRefuses(t, e, filter.Parameter, operand)
 		if listRefuses != slices.Contains(refused, filter.Parameter) {
 			t.Errorf("the list refuses %s=%s: %v, and /me lists it as refused: %v",
-				filter.Parameter, filter.Operand, listRefuses, slices.Contains(refused, filter.Parameter))
+				filter.Parameter, operand, listRefuses, slices.Contains(refused, filter.Parameter))
 		}
 	}
 	for _, parameter := range refused {
@@ -129,8 +131,49 @@ func assertSnapshotMatchesTheList(t *testing.T, e *apptest.AppEnv, refused []str
 	}
 }
 
+// unenumeratedOperands are words the contract types as a bare string, where
+// the probe's operand is not one the list admits.
+var unenumeratedOperands = map[string]string{"sort": "created_at"}
+
+// listDealsEnums is each deal list query parameter the contract closes to an
+// enum, with its members as the wire spells them.
+func listDealsEnums(t *testing.T) map[string][]string {
+	t.Helper()
+	enums := map[string][]string{}
+	for _, parameter := range loadContract(t).Paths.Value("/deals").Get.Parameters {
+		if parameter.Value.Schema == nil {
+			continue
+		}
+		for _, member := range parameter.Value.Schema.Value.Enum {
+			word, ok := member.(string)
+			if !ok {
+				t.Fatalf("the contract's %s enum holds %v, which is not a word", parameter.Value.Name, member)
+			}
+			enums[parameter.Value.Name] = append(enums[parameter.Value.Name], word)
+		}
+	}
+	if len(enums) == 0 {
+		t.Fatal("the contract's deal list closes no parameter to an enum, so the operands were read from nothing")
+	}
+	return enums
+}
+
+// admittedOperand is the probe's operand where the contract admits it, and
+// otherwise a word it does: the contract's operand fault answers before any grant.
+func admittedOperand(filter deals.FilterReach, enums map[string][]string) string {
+	if word, ok := unenumeratedOperands[filter.Parameter]; ok {
+		return word
+	}
+	members := enums[filter.Parameter]
+	if len(members) == 0 || slices.Contains(members, filter.Operand) {
+		return filter.Operand
+	}
+	return members[0]
+}
+
 // theListRefuses reads one filtered deal list. A 403 or a masked field refuses
-// the caller; a page, an id that names nothing or a malformed operand does not.
+// the caller; a page or an id that names nothing does not. An operand fault
+// fails the test, since it answers before the list checks a grant.
 func theListRefuses(t *testing.T, e *apptest.AppEnv, parameter, operand string) bool {
 	t.Helper()
 	var problem codeRefusal
@@ -143,10 +186,8 @@ func theListRefuses(t *testing.T, e *apptest.AppEnv, parameter, operand string) 
 		return true
 	case status == http.StatusOK || status == http.StatusNotFound:
 		return false
-	case status == http.StatusUnprocessableEntity && len(fault) == 1 && fault[0].Field == parameter:
-		return false
 	}
-	t.Errorf("GET /v1/deals?%s=%s = %d %+v, want a page, a refusal or a fault in the operand", parameter, operand, status, fault)
+	t.Errorf("GET /v1/deals?%s=%s = %d %+v, want a page or a refusal", parameter, operand, status, fault)
 	return false
 }
 
