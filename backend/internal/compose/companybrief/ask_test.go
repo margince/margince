@@ -31,7 +31,7 @@ import (
 // openingTag matches the fence's opening marker, whatever promptfence names it
 // — the test asserts that the prompt and the wrap agree, not what the marker
 // is called.
-var openingTag = regexp.MustCompile(`<[a-z-]+-[0-9a-f-]{36}>`)
+var openingTag = regexp.MustCompile(`<[a-z]+-[a-z2-7]{26}>`)
 
 const askCompanyID = "018f0000-0000-7000-8000-000000000001"
 

@@ -19,8 +19,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// releaseQuestion clears an open question's owner, which is what puts it on
-// the operator's list rather than on a colleague's queue.
+// releaseQuestion clears an open question's owner. The question stays on the
+// operator's list, where every open question is.
 func (e *dedupeEnv) releaseQuestion(ctx context.Context, t *testing.T, domain string) {
 	t.Helper()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
@@ -171,8 +171,8 @@ func TestAListedCompanyNameIsWithheldWithItsID(t *testing.T) {
 	}
 }
 
-// The open question a name twin leaves reaches its owner with the same sentence
-// the operator's list gives it once nobody owns it.
+// The open question a name twin leaves reaches its decider with the same
+// sentence the operator's list gives it.
 func TestANameTwinQuestionTellsItsOwnerWhy(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()

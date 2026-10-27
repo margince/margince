@@ -22,7 +22,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -77,31 +76,15 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 	// must sit outside the agent gate so a staged-approval refusal is
 	// never recorded as "the" response for a key (the approved retry is
 	// the same request under the same key).
-	api := crmcontracts.HandlerWithOptions(srv, crmcontracts.ChiServerOptions{
-		BaseURL: httpserver.BaseURL,
-		Middlewares: []crmcontracts.MiddlewareFunc{
-			// Innermost: a caller refused for who they are hears that before
-			// they hear their query was wrong.
-			refuseUnknownQueryEnum,
-			refuseQueryBelowMinimum,
-			agentGate(registry, staging, provider, provider, fieldOwnership{pool: pool}, importsFor(&srv), tagSeam(pool), gate),
-			idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), dealrooms.NewStore(InstallationDB(pool)), deals.NewStore(InstallationDB(pool), DealsInstallation()), InstallationDB(pool)), schedulingReplayRestore(sendStore(pool, srv.send))),
-			// Outermost, so the measurement covers the admission gate and the
-			// idempotency replay rather than only the handler underneath them. A 403 from the gate IS this route's
-			// latency as a client experiences it, and a refusal that cost a
-			// database read is exactly the slow answer worth seeing.
-			//
-			// These are OPERATION middleware: the generated wrapper applies
-			// them after chi has matched, which is what makes chiRoutePattern
-			// able to answer at all.
-			srv.httpMetrics.Measure(chiRoutePattern),
-		},
-		// Keep query/path/header parse failures on the problem+json path:
-		// the generated default writes err.Error() as text/plain, an
-		// off-contract shape that also leaks the parser's internal text.
-		ErrorHandlerFunc: paramParseError,
-	})
-	return api
+	return contractRouter(srv,
+		agentGate(registry, staging, provider, provider, fieldOwnership{pool: pool}, importsFor(&srv), tagSeam(pool), gate),
+		idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), dealrooms.NewStore(InstallationDB(pool)), deals.NewStore(InstallationDB(pool), DealsInstallation()), InstallationDB(pool)), schedulingReplayRestore(sendStore(pool, srv.send))),
+		// Outermost, so the measurement covers the admission gate and the
+		// idempotency replay: a refusal that cost a database read is a slow
+		// answer worth seeing. The wrapper applies it after chi has matched,
+		// which is what lets chiRoutePattern answer.
+		srv.httpMetrics.Measure(chiRoutePattern),
+	)
 }
 
 // chiRoutePattern reads the route TEMPLATE chi matched -- `/v1/deals/{dealId}`,

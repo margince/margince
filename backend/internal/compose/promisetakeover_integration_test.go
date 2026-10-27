@@ -22,10 +22,12 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type takeOverFixture struct {
@@ -209,5 +211,51 @@ func TestAPromiseFromNarrowedMailBecomesATaskOnlyItsTakerReads(t *testing.T) {
 				t.Errorf("the %s reads the promise in a task body: %q", name, *row.Body)
 			}
 		}
+	}
+}
+
+// A promise the scan could not place is one nobody was asked to keep, which is
+// the case the takeover exists for. The fixture above files its claims through
+// the claim writer. This drives the dispatcher instead, because only that path
+// records the admission whose currency the takeover reads.
+func TestAPromiseTheScanCouldNotPlaceIsStillTakenOver(t *testing.T) {
+	f := setupTakeOver(t)
+	const span = "Draft the renewal quote before the board meeting"
+	subject := "Renewal"
+	body := span
+	message, _, err := f.e.Activities.LogActivity(f.e.Admin(), activities.LogActivityInput{
+		Kind: "email", Subject: &subject, Body: &body, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: f.contact}},
+	})
+	if err != nil {
+		t.Fatalf("logging the message the promise was made in: %v", err)
+	}
+	source := ids.UUID(message.Id)
+	locator := commitmentLocator(source, claimKindOurs, unnamedPromiserKey(""), span)
+	c := Commitment{
+		Meaning: openCommitmentMeaning("", ""), AsOf: message.OccurredAt, SourceActivityID: source,
+		Extractor: signalScanActor, Locator: locator, Summary: span, Quote: span, Span: span,
+		Confidence: 0.95, Recipients: []ids.ContactID{ids.From[ids.ContactKind](f.contact)},
+	}
+	// The scan captures the claim, not a member. A promise a colleague wrote or
+	// corrected is current by another arm of the rule, and would pass here
+	// whatever this records.
+	scan := principal.SystemActing(f.e.Admin(), "signal-scan")
+	var outcome CommitmentOutcome
+	if err := database.WithWorkspaceTx(scan, f.e.Pool, func(tx pgx.Tx) error {
+		var err error
+		outcome, _, err = NewCommitmentDispatcher(f.e.Pool, approvals.NewService(f.e.DB())).
+			DispatchTx(scan, tx, c, ids.NewV7())
+		return err
+	}); err != nil {
+		t.Fatalf("dispatching a promise whose promiser cannot be placed: %v", err)
+	}
+	if outcome != CommitmentPromiserUnassignable {
+		t.Fatalf("the scan reports %q, want the promiser unplaceable", outcome)
+	}
+	claim := ids.MustParse(f.e.WsScalar(t,
+		`SELECT id::text FROM conversation_claim WHERE evidence_fingerprint = $1`, locator))
+	if _, err := f.h.TakeOver(f.priya, claim); err != nil {
+		t.Fatalf("taking over a promise nobody was asked to keep: %v", err)
 	}
 }

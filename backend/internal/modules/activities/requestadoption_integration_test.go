@@ -107,7 +107,7 @@ func TestTwoRecipientsCannotBothAdoptTheSameAutomaticRequest(t *testing.T) {
 	if _, err := store.SetOwedVerdict(asClassifier(e), sourceID, OwedVerdictAsksUs, "fixture", requestInstant); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := store.LogActivity(asClassifier(e), emailRequestTaskInput(source, nil, e.other, requestInstant)); err != nil {
+	if _, _, err := store.LogActivity(asClassifier(e), emailRequestTaskInput(source, nil, e.other, requestInstant, false)); err != nil {
 		t.Fatal(err)
 	}
 	start := make(chan struct{})

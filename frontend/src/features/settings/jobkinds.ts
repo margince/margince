@@ -47,6 +47,7 @@ const JOB_KIND_NAME: Readonly<Record<string, MessageKey>> = {
   embed_drift_sweep: "jobs.kind.embed_drift_sweep",
   embed_reindex: "jobs.kind.embed_reindex",
   employment_import_sweep: "jobs.kind.employment_import_sweep",
+  evidence_authorship: "systemJob.evidence_authorship",
   finance_sync: "jobs.kind.finance_sync",
   finance_sync_sweep: "jobs.kind.finance_sync_sweep",
   follow_up_reconcile: "jobs.kind.follow_up_reconcile",

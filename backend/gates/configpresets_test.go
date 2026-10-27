@@ -245,8 +245,8 @@ func shippedRoutingFiles(t *testing.T) []string {
 
 // shippedRouting parses one shipped config, separating "binds nothing" from
 // "binds something broken". routingFromPreset cannot: it fatals on both, and
-// config/margince.example.yaml is a template whose routing block is entirely
-// commented out.
+// config/margince.example.yaml and config/margince.defaults.yaml declare no
+// seeds at all.
 func shippedRouting(t *testing.T, path string) (ai.RoutingConfig, bool) {
 	t.Helper()
 	raw, err := os.ReadFile(path)

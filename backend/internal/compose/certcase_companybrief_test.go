@@ -170,12 +170,6 @@ func TestCompanyBriefCaseReportsAMissedRecordAsAWrongAnswer(t *testing.T) {
 	}
 }
 
-// firstRecordID pulls the first minted RECORD id out of what the prompt
-// carried, so a test can answer with an id the model was actually handed.
-//
-// It anchors on the id field rather than scanning for anything uuid-shaped:
-// the prompt also carries the fence nonce, which is uuid-shaped and is not a
-// record — answering with it would test nothing.
 // firstRecordID answers the id of the first record INSIDE a collection —
 // open_deals, recent, contacts — rather than the first `"id"` in the payload.
 //

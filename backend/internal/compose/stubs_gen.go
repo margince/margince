@@ -2883,7 +2883,7 @@ func (stubs) DeleteProviderData(w nethttp.ResponseWriter, r *nethttp.Request, pr
 	httperr.NotImplemented(w, r, "DeleteProviderData")
 }
 
-func (stubs) GetPublicBookingCompanyLogo(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) GetPublicBookingCompanyLogo(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetPublicBookingCompanyLogoParams) {
 	httperr.NotImplemented(w, r, "GetPublicBookingCompanyLogo")
 }
 

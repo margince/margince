@@ -31,6 +31,17 @@ func (e *dedupeEnv) ensureInput(ctx context.Context, t *testing.T, email, displa
 			INSERT INTO activity (id, kind, subject, direction, source_system, source_id, source, captured_by)
 			VALUES ($1, 'email', 'hi', 'inbound', 'gmail', $2, 'gmail:seed', 'connector:gmail')`,
 			activityID, activityID.String())
+		if err != nil {
+			return err
+		}
+		// The envelope real inbound mail carries: the sender as From, and the
+		// rep, by their login address, as its one direct To recipient. A domain
+		// question is asked of that recipient (openQuestionForReaderSQL).
+		_, err = tx.Exec(ctx, `
+			INSERT INTO activity_participant (activity_id, role, address, user_id)
+			SELECT $1::uuid, 'from', $2::text, NULL::uuid
+			UNION ALL SELECT $1::uuid, 'to', lower(u.email), u.id FROM app_user u WHERE u.id = $3`,
+			activityID, email, e.rep)
 		return err
 	}); err != nil {
 		t.Fatal(err)

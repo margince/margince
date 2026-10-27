@@ -43,6 +43,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/modules/signals"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -137,7 +138,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		// Which domains are our own, for the waiting queue's colleague rule.
 		// capture owns workspace_email_domain and the rule for which entries
 		// count as vouched-for, so the edge is injected rather than restated.
-		WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))}).
+		WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))}).WithConsumerMail(capture.MatcherTx).
 		// When a host is bookable. identity owns the setting because it is a
 		// fact about a contact; this transport asks for it rather than holding
 		// a pair of numbers for everybody (docs/explanation/scheduling.md).
@@ -149,6 +150,10 @@ type ownDomainReader struct{ store *capture.OwnDomainStore }
 
 func (o ownDomainReader) Domains(ctx context.Context, tx pgx.Tx) ([]string, error) {
 	return o.store.ColleagueDomainsTx(ctx, tx)
+}
+
+func (o ownDomainReader) MeetingParties(ctx context.Context, tx pgx.Tx) (owndomain.Parties, error) {
+	return o.store.MeetingPartiesTx(ctx, tx)
 }
 
 func (o ownDomainReader) ReaderAddresses(
@@ -275,7 +280,10 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool, log *slog.Logger
 	// which rebuilds the sync over the vault it brings.
 	s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, s.vault, log, s.priceCatalogues))
 	s.aiAdminHandlers = aiAdminHandlers{store: ai.NewAdminStore(InstallationDB(pool), NewSettingsStore(pool), StoredConfig(pool), budgetFullUsers, aiDeferredWork(pool))}
-	s.ownDomainHandlers = ownDomainHandlers{store: capture.NewOwnDomainStore(InstallationDB(pool))}
+	s.ownDomainHandlers = ownDomainHandlers{
+		store:    capture.NewOwnDomainStore(InstallationDB(pool)),
+		evidence: deals.NewStore(InstallationDB(pool), DealsInstallation()), log: log,
+	}
 	// The installation's own identity and reporting basis (ADR-0090/A135):
 	// name, reporting zone, base currency — the last of which locks once a
 	// deal has converted against it (ADR-0085 §7).

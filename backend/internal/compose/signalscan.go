@@ -172,7 +172,7 @@ func WriteGhostedSignals(ctx context.Context, tx pgx.Tx, now time.Time) (Ghosted
 		raised, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
 			Kind:        kindGhostedThread,
 			CompanyID:   found.CompanyID,
-			Summary:     fmt.Sprintf(said.ghostedThread, days),
+			Summary:     fmt.Sprintf(said.ghostedThread, ghostedThresholdDays),
 			Severity:    severityWarn,
 			Fingerprint: signalFingerprint(kindGhostedThread, found.CompanyID, found.ActivityID),
 			// The message is CITED, not quoted. This finding is shared with

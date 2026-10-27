@@ -15,14 +15,14 @@ anything. This page shows what each declared agent pays, how much room that leav
 what to check before adding a tool. Each tool's own cost is the Prompt tokens column of
 [mcp-info.md](mcp-info.md#index).
 
-The heaviest menu is `overnight_at_risk_sweep`: 6244 of the window's 32768 tokens per step (19%).
+The heaviest menu is `overnight_at_risk_sweep`: 6239 of the window's 32768 tokens per step (19%).
 
 ## The declared agents
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 37 | 2072 | 1501 | 4170 | 12% | 19040 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 37 | 3300 | 2347 | 6244 | 19% | 16966 | 4 | 6 |
+| `morning_brief` | 5 | 5 of 37 | 2072 | 1501 | 4165 | 12% | 19045 | 0 | 5 |
+| `overnight_at_risk_sweep` | 7 | 7 of 37 | 3300 | 2347 | 6239 | 19% | 16971 | 4 | 6 |
 | _whole served catalog's listing, for scale; no run is offered it_ | 37 |  | 22955 |  |  | 70% |  |  |  |
 
 ### `morning_brief`
@@ -39,8 +39,8 @@ existing order. If there are no items, finish without inventing a brief. A tool 
 findings were not saved: correct it before claiming completion.
 ```
 
-Attaches 5 tools and pays 4170 tokens on every step (2072 listing, 1501 step schema), leaving
-19040 of its budget and 28598 tokens of the
+Attaches 5 tools and pays 4165 tokens on every step (2072 listing, 1501 step schema), leaving
+19045 of its budget and 28603 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -60,8 +60,8 @@ at-risk deal summarizing the risk and the evidence (cite the records you read). 
 stages, send anything, or archive anything.
 ```
 
-Attaches 7 tools and pays 6244 tokens on every step (3300 listing, 2347 step schema), leaving
-16966 of its budget and 26524 tokens of the
+Attaches 7 tools and pays 6239 tokens on every step (3300 listing, 2347 step schema), leaving
+16971 of its budget and 26529 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -117,7 +117,7 @@ listing budget above; whether each attached tool is one its goal needs is a revi
 judgement. An MCP client connecting from outside is served the whole catalog by
 `tools/list`, but that is its own agent's window rather than a run of this engine.
 
-Before any tool is listed the frame itself costs **597 tokens**: the output contract,
+Before any tool is listed the frame itself costs **592 tokens**: the output contract,
 the rules and the prompt fence. It is shown here because moving a rule from each
 tool's schema into the frame costs one sentence per run instead of one per tool.
 It is part of every agent's per-step figure below, so a frame that grows a paragraph

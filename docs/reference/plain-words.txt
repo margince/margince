@@ -376,8 +376,6 @@ defines
 definition
 degrade
 delay
-delegate
-delegation
 delete
 delivery
 demo
@@ -1606,7 +1604,6 @@ unknown
 unless
 unlike
 unprovisioned
-unreachable
 unregistered
 unrelated
 unresolved

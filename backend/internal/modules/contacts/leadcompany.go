@@ -27,55 +27,31 @@ import (
 
 const leadCompanyIDColumn = "company_id"
 
-// LinkLeadCompany links a lead to a company and lands it on a contact employed
-// there, in one transaction. The contact is the one promotion would land on, but
-// the lead is not promoted: its status, owner and place on the lead list stay.
+// LinkLeadCompany links a lead to a company and changes nothing else. Someone is
+// a lead or a contact, so the contact at that company comes only from promotion.
 func (s *Store) LinkLeadCompany(ctx context.Context, id ids.LeadID, companyID ids.CompanyID) (crmcontracts.Lead, error) {
 	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
-		return crmcontracts.Lead{}, err
-	}
-	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	// The employment edge the link writes asks both, so a caller without them
-	// is refused here rather than after the contact was found or made.
-	if err := requireRelationshipCreate(ctx, anchorContact); err != nil {
-		return crmcontracts.Lead{}, err
-	}
 	if err := httperr.RequireBodyID(leadCompanyIDColumn, companyID.UUID); err != nil {
-		return crmcontracts.Lead{}, err
-	}
-	by, err := storekit.CapturedBy(ctx)
-	if err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	active, err := s.activeColumns(ctx, "lead")
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	// Restarts when the contact the lead's email matches moved, as QualifyLead does.
-	for range promoteAttempts {
-		var out crmcontracts.Lead
-		err = s.tx(ctx, func(tx pgx.Tx) error {
-			candidate, err := s.promoteCandidate(ctx, tx, id)
-			if err != nil {
-				return err
-			}
-			out, err = s.linkLeadCompanyTx(ctx, tx, id, companyID, by, candidate, active)
-			return err
-		})
-		if _, moved := errors.AsType[*promoteTargetMovedError](err); !moved {
-			return out, s.AskHolderToShare(ctx, err)
-		}
-	}
-	return crmcontracts.Lead{}, apperrors.ErrConflict
+	var out crmcontracts.Lead
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		out, err = linkLeadCompanyTx(ctx, tx, id, companyID, active)
+		return err
+	})
+	return out, s.AskHolderToShare(ctx, err)
 }
 
-func (s *Store) linkLeadCompanyTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, companyID ids.CompanyID, by string,
-	candidate ids.ContactID, active []fieldcatalog.Column,
+func linkLeadCompanyTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, companyID ids.CompanyID, active []fieldcatalog.Column,
 ) (crmcontracts.Lead, error) {
 	// Asked before any lock, so a company the caller cannot open is never locked for them.
 	visible, err := auth.VisibleTo(ctx, tx, companyEntity, companyID.UUID)
@@ -85,60 +61,32 @@ func (s *Store) linkLeadCompanyTx(ctx context.Context, tx pgx.Tx, id ids.LeadID,
 	if !visible {
 		return crmcontracts.Lead{}, apperrors.ErrNotFound
 	}
-	lanes, err := s.lockLeadForContact(ctx, tx, id, candidate, &companyID)
-	if err != nil {
-		return crmcontracts.Lead{}, err
-	}
-	lead, err := linkableLead(ctx, tx, id)
-	if err != nil {
+	// The name lock, then the company, then the lead: a company merge's order.
+	// The name lock keeps a second company of the matched name out until commit.
+	if err := lockCompanyNameWrites(ctx, tx); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	if err := ensureLinkableCompany(ctx, tx, companyID); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	if done, err := s.alreadyLinked(ctx, tx, lead, companyID); err != nil || done {
-		if err != nil {
-			return crmcontracts.Lead{}, err
-		}
+	lead, lock, err := linkableLead(ctx, tx, id)
+	if err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	linked, err := leadLinkedCompany(ctx, tx, id)
+	if err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	if linked != nil && *linked == companyID {
 		return readLead(ctx, tx, id, storekit.LiveOnly, active)
 	}
 	if err := ensureCurrentMatch(ctx, tx, lead, companyID); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	var merged bool
-	contactID, mergeFields, err := s.promoteTarget(ctx, tx, lead, by, candidate, lanes, &merged)
-	if err != nil {
-		return crmcontracts.Lead{}, err
-	}
-	if err := s.ensureEmployment(ctx, tx, contactID, companyID, deref(lead.Title), manualSource); err != nil {
-		return crmcontracts.Lead{}, err
-	}
-	auditID, err := writeLeadCompanyLink(ctx, tx, id, companyID)
-	if err != nil {
-		return crmcontracts.Lead{}, err
-	}
-	contact, err := readContact(ctx, tx, contactID, storekit.LiveOnly, nil)
-	if err != nil {
-		return crmcontracts.Lead{}, fmt.Errorf("read the contact a lead was linked through: %w", err)
-	}
-	if err := emitLeadContactEvent(ctx, tx, auditID, contact, contactID, merged, mergeFields); err != nil {
+	if err := writeLeadCompanyLink(ctx, tx, lock, id, linked, companyID); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	return readLead(ctx, tx, id, storekit.LiveOnly, active)
-}
-
-// alreadyLinked reports a repeat of a link that changed nothing: the lead names
-// this company and the contact its email matches is already employed there.
-func (s *Store) alreadyLinked(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, companyID ids.CompanyID) (bool, error) {
-	linked, err := leadLinkedCompany(ctx, tx, ids.From[ids.LeadKind](ids.UUID(lead.Id)))
-	if err != nil || linked == nil || *linked != companyID {
-		return false, err
-	}
-	match, err := s.previewTarget(ctx, tx, lead)
-	if err != nil || match.Decision != DecisionExactCollision {
-		return false, err
-	}
-	return holdsLiveEmployment(ctx, tx, match.ContactID, companyID)
 }
 
 // ensureCurrentMatch refuses a company that is not the lead's match as the
@@ -156,32 +104,33 @@ func ensureCurrentMatch(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, 
 	return nil
 }
 
-// linkableLead reads the lead a link is about under its lock. It refuses a lead
-// the caller may not change, and one that is closed. It also refuses one its
-// privacy notice holds, and one with neither name nor email.
-func linkableLead(ctx context.Context, tx pgx.Tx, id ids.LeadID) (crmcontracts.Lead, error) {
+// linkableLead locks and reads the lead a link is about. It refuses a lead the
+// caller may not change, one that is closed, one its privacy notice holds, and
+// one with neither name nor email.
+func linkableLead(ctx context.Context, tx pgx.Tx, id ids.LeadID) (crmcontracts.Lead, storekit.RowLock, error) {
 	if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
-		return crmcontracts.Lead{}, err
+		return crmcontracts.Lead{}, storekit.RowLock{}, err
+	}
+	lock, err := storekit.LockRow(ctx, tx, "lead", id.UUID, storekit.LiveOnly)
+	if err != nil {
+		return crmcontracts.Lead{}, storekit.RowLock{}, err
 	}
 	lead, err := readLead(ctx, tx, id, storekit.LiveOnly, nil)
 	if err != nil {
-		return crmcontracts.Lead{}, err
+		return crmcontracts.Lead{}, storekit.RowLock{}, err
 	}
 	if err := refuseWebsiteLeadNotYetTold(ctx, tx, id.UUID); err != nil {
-		return crmcontracts.Lead{}, err
+		return crmcontracts.Lead{}, storekit.RowLock{}, err
 	}
 	if leadIdentityName(lead) == "" {
-		return crmcontracts.Lead{}, &PromoteNeedsIdentityError{}
+		return crmcontracts.Lead{}, storekit.RowLock{}, &PromoteNeedsIdentityError{}
 	}
-	return lead, nil
+	return lead, lock, nil
 }
 
 // ensureLinkableCompany refuses a company that is archived, merged away or out
-// of the caller's sight, all as 404. EnsureLinkTarget holds the row until commit.
+// of the caller's sight, all as 404. It holds the row FOR UPDATE, as a promotion does.
 func ensureLinkableCompany(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) error {
-	if err := auth.EnsureLinkTarget(ctx, tx, companyEntity, companyID.UUID); err != nil {
-		return err
-	}
 	live, err := companyIsLive(ctx, tx, companyID)
 	if err != nil {
 		return err
@@ -189,34 +138,27 @@ func ensureLinkableCompany(ctx context.Context, tx pgx.Tx, companyID ids.Company
 	if !live {
 		return apperrors.ErrNotFound
 	}
-	return nil
+	return auth.EnsureLinkTarget(ctx, tx, companyEntity, companyID.UUID)
 }
 
-// writeLeadCompanyLink sets the link and answers the lead's audit row. The
-// contact stays named by its converted_from_lead_id; from_contact_id keeps
-// meaning the contact a lead was created from.
-func writeLeadCompanyLink(ctx context.Context, tx pgx.Tx, id ids.LeadID, companyID ids.CompanyID) (ids.UUID, error) {
-	lock, err := storekit.LockRow(ctx, tx, "lead", id.UUID, storekit.LiveOnly)
-	if err != nil {
-		return ids.UUID{}, err
-	}
-	linked, err := leadLinkedCompany(ctx, tx, id)
-	if err != nil {
-		return ids.UUID{}, err
-	}
+// writeLeadCompanyLink sets the link on the locked lead, with its audit row and
+// lead.updated event.
+func writeLeadCompanyLink(ctx context.Context, tx pgx.Tx, lock storekit.RowLock, id ids.LeadID,
+	linked *ids.CompanyID, companyID ids.CompanyID,
+) error {
 	p := storekit.NewPatch()
 	p.Set(leadCompanyIDColumn, untypedPtr(linked), companyID.UUID)
 	if err := p.ApplyLocked(ctx, tx, lock); err != nil {
-		return ids.UUID{}, fmt.Errorf("link the lead to its company: %w", err)
+		return fmt.Errorf("link the lead to its company: %w", err)
 	}
 	auditID, err := storekit.Audit(ctx, tx, "update", "lead", id.UUID, p.Before(), p.After())
 	if err != nil {
-		return ids.UUID{}, fmt.Errorf("audit the lead's company link: %w", err)
+		return fmt.Errorf("audit the lead's company link: %w", err)
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventLeadUpdated{ChangedFields: p.After()}); err != nil {
-		return ids.UUID{}, fmt.Errorf("emit lead.updated for the company link: %w", err)
+		return fmt.Errorf("emit lead.updated for the company link: %w", err)
 	}
-	return auditID, nil
+	return nil
 }
 
 // leadLinkedCompany is the company a lead row is linked to, or nil. Read off
@@ -234,8 +176,8 @@ func leadLinkedCompany(ctx context.Context, tx pgx.Tx, id ids.LeadID) (*ids.Comp
 }
 
 // carryLeadCompany gives the contact a lead was promoted into its employment at
-// the lead's linked company, through the writer the link itself uses. A company
-// the promoter cannot open or attach to adds no edge and does not stop the promotion.
+// the lead's linked company. A company the promoter cannot open or attach to adds
+// no edge and does not stop the promotion.
 func (s *Store) carryLeadCompany(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, contactID ids.ContactID, title string) error {
 	company, err := leadLinkedCompany(ctx, tx, leadID)
 	if err != nil || company == nil {
@@ -334,16 +276,30 @@ func unlinkRenamedCompany(ctx context.Context, tx pgx.Tx, id ids.LeadID, p *stor
 	if err != nil || linked == nil {
 		return err
 	}
-	var stillNamed bool
-	if err := tx.QueryRow(ctx, `
-		SELECT coalesce(`+exactNameKeySQL("display_name")+` = `+exactNameKeySQL("$2::text")+`, false)
-		  FROM company WHERE id = $1`, linked, renamed).Scan(&stillNamed); err != nil {
-		return fmt.Errorf("compare the lead's new company name with its linked company: %w", err)
+	var name *string
+	if typed, ok := renamed.(string); ok {
+		name = &typed
+	}
+	stillNamed, err := namesCompany(ctx, tx, *linked, name)
+	if err != nil {
+		return err
 	}
 	if !stillNamed {
 		p.Set(leadCompanyIDColumn, linked.UUID, nil)
 	}
 	return nil
+}
+
+// namesCompany reports whether a lead's company name names a company, compared
+// the way the match offer compares. A nil or blank name names none.
+func namesCompany(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, name *string) (bool, error) {
+	var named bool
+	if err := tx.QueryRow(ctx, `
+		SELECT coalesce(`+exactNameKeySQL("display_name")+` = `+exactNameKeySQL("$2::text")+`, false)
+		  FROM company WHERE id = $1`, companyID, name).Scan(&named); err != nil {
+		return false, fmt.Errorf("compare a lead's company name with its linked company: %w", err)
+	}
+	return named, nil
 }
 
 // withholdUnreadableCompanies blanks company_id on every lead whose company the

@@ -27,15 +27,16 @@ package compose
 import (
 	"fmt"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 const (
-	// fieldHostUser names the seat that ran the meeting — the SDR whose rate this
-	// is. It reads the activity's own host column rather than the handoff's
-	// submitter: the question is whose MEETINGS converted, and the contact who
-	// held the meeting is not always the contact who later wrote the handoff.
+	// fieldMeetingHost names the seat the meeting is credited to: the SDR
+	// whose rate this is. It reads the meeting credit rule, not the handoff's
+	// submitter or the host column. The question is whose MEETINGS converted.
+	// On a captured meeting the host column only says whose calendar it was.
 	fieldMeetingHost = "host_user_id"
 
 	// fieldBecameOpportunity is the conversion itself, as a dimension rather
@@ -98,7 +99,23 @@ const (
 	// that June meeting, and without the ordering the report would credit a
 	// meeting for an opportunity that already existed when it happened.
 	colBecameOpportunity = "(hoff.id IS NOT NULL)"
+
+	colCreditedSeat = "credited_seat.id"
 )
+
+// joinMeetingCredit computes the credited seat once per meeting, so the
+// report can group by it.
+var joinMeetingCredit = "LEFT JOIN LATERAL (SELECT " + storekit.MeetingCreditedSeatSQL("t") + " AS id) credited_seat ON true"
+
+// activityOwnRowFields names, per report, each dimension or filter read off
+// the base activity's own rows (its participants, its invitations) through a
+// correlated join. Those rows carry the activity's scope. The activity walk
+// applies it to t, so a report listed here must walk activities.
+var activityOwnRowFields = map[string]map[string]string{
+	"meeting-conversion": {
+		fieldMeetingHost: "the credited seat is read off the meeting's own participant and invitation rows",
+	},
+}
 
 // meetingConversionSpec is the held-meeting-to-accepted-opportunity key.
 //
@@ -111,7 +128,7 @@ func meetingConversionSpec() reportSpec {
 	return reportSpec{
 		entity: datasource.EntityActivity,
 		table:  tableActivity,
-		joins:  []string{fmt.Sprintf(joinAcceptedHandoff, occurredday.StartSQL("t"))},
+		joins:  []string{fmt.Sprintf(joinAcceptedHandoff, occurredday.StartSQL("t")), joinMeetingCredit},
 		// Row scope for an activity is real per-row discoverability rather than
 		// the identity-table TRUE a deal's is, so this walks it the way
 		// activities-by-kind does. The population default's hardcoded owner_id
@@ -124,12 +141,12 @@ func meetingConversionSpec() reportSpec {
 		basePlain: "meetings the record says were HELD (a booked one is a plan, and a no-show " +
 			"or a cancellation is a plan that failed)",
 		dimensions: map[string]string{
-			fieldMeetingHost:       colHostUserID,
+			fieldMeetingHost:       colCreditedSeat,
 			fieldBecameOpportunity: colBecameOpportunity,
 		},
 		measures: map[string]string{},
 		filters: map[string]string{
-			fieldMeetingHost:       colHostUserID,
+			fieldMeetingHost:       colCreditedSeat,
 			fieldBecameOpportunity: colBecameOpportunity,
 		},
 		defaultBy: []string{fieldBecameOpportunity},

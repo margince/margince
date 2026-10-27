@@ -7,12 +7,19 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { LeadBoard, scoreTone } from "./leadpresentation";
+
+const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }));
+vi.mock("../../lib/router", async (actual) => ({
+  ...(await actual<typeof import("../../lib/router")>()),
+  navigate,
+}));
 
 type Lead = components["schemas"]["Lead"];
 
@@ -76,6 +83,7 @@ const lead: Lead = {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  navigate.mockReset();
 });
 
 describe("lead work-board presentation", () => {
@@ -104,6 +112,95 @@ describe("lead work-board presentation", () => {
       screen.getByText(/Call about the pilot · 1 open task$/),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: /next page/i })).toBeNull();
+  });
+
+  it("opens a linked company from the card under its own name, without opening the lead", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) =>
+        request.url.includes("/v1/companies/c-7")
+          ? jsonOk({ id: "c-7", display_name: "Nordwind Holding SE" })
+          : jsonOk({ rows: [] }),
+      ),
+    );
+    renderBoard(
+      <LeadBoard
+        rows={[{ ...lead, company_id: "c-7" }]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+    const link = await screen.findByRole("link", {
+      name: "Nordwind Holding SE",
+    });
+    expect(link.getAttribute("href")).toContain("c-7");
+    expect(screen.queryByText("Nordwind Logistik")).toBeNull();
+    fireEvent.click(link);
+    expect(navigate).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Jonas Petersen" }));
+    expect(navigate).toHaveBeenCalledWith({ screen: "leads", id: lead.id });
+  });
+
+  it("opens the lead from the keyboard, with Enter and with Space", async () => {
+    const user = userEvent.setup();
+    renderBoard(
+      <LeadBoard
+        rows={[lead]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+    const opener = screen.getByRole("button", { name: "Jonas Petersen" });
+    opener.focus();
+    await user.keyboard("{Enter}");
+    expect(navigate).toHaveBeenCalledTimes(1);
+    await user.keyboard(" ");
+    expect(navigate).toHaveBeenCalledTimes(2);
+    expect(navigate).toHaveBeenLastCalledWith({ screen: "leads", id: lead.id });
+  });
+
+  it("drags the lead from anywhere on the card, the company link included", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) =>
+        request.url.includes("/v1/companies/c-7")
+          ? jsonOk({ id: "c-7", display_name: "Nordwind Holding SE" })
+          : jsonOk({ rows: [] }),
+      ),
+    );
+    renderBoard(
+      <LeadBoard
+        rows={[{ ...lead, company_id: "c-7" }]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+    const link = await screen.findByRole("link", {
+      name: "Nordwind Holding SE",
+    });
+    const card = document.querySelector(`.deal-card[data-lead="${lead.id}"]`);
+    if (card === null) throw new Error("the board drew no card for the lead");
+    for (const from of [card, link]) {
+      const setData = vi.fn();
+      fireEvent.dragStart(from, { dataTransfer: { setData } });
+      expect(setData).toHaveBeenCalledWith("text/plain", lead.id);
+    }
+  });
+
+  it("names an unlinked lead's company as plain text", () => {
+    renderBoard(
+      <LeadBoard
+        rows={[lead]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+    expect(screen.getByText("Nordwind Logistik")).toBeTruthy();
+    expect(screen.queryByRole("link")).toBeNull();
   });
 
   it("says where an unclassified lead came from as not set, and never prints how the row was written", () => {

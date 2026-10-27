@@ -18,6 +18,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -56,7 +57,7 @@ type approvalPreviewReader struct {
 }
 
 func newApprovalPreviewReader(db *database.DB) approvalPreviewReader {
-	return approvalPreviewReader{db: db, now: time.Now, names: newAttentionNames(db), records: NewProviderFor(db), deals: deals.NewStore(db, DealsInstallation()), signals: signals.NewStore(db, nil), activities: activities.NewStore(db).WithChannelReachability(channelReachability{}).WithDisclosures(newDisclosureAdapter(db))}
+	return approvalPreviewReader{db: db, now: time.Now, names: newAttentionNames(db), records: NewProviderFor(db), deals: deals.NewStore(db, DealsInstallation()).WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(db)}), signals: signals.NewStore(db, nil), activities: activities.NewStore(db).WithChannelReachability(channelReachability{}).WithDisclosures(newDisclosureAdapter(db))}
 }
 
 func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {

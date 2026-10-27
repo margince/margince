@@ -121,7 +121,7 @@ export function RelinkModal({
           await api.POST("/activities/relink-thread", {
             params: { header: { "Idempotency-Key": crypto.randomUUID() } },
             body: {
-              thread_key: threadKey,
+              activity_id: activityId,
               entity_type: kind,
               entity_id: target.id,
               replace_existing_of_type: replace,

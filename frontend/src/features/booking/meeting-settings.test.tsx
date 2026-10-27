@@ -587,7 +587,11 @@ it("reads the company and the host's name from where they are kept", async () =>
   const user = userEvent.setup();
   const server = mount({ logo_url: "" });
   expect(await screen.findByText("Company name and logo")).toBeTruthy();
-  expect(screen.getByText(/No logo is uploaded yet/)).toBeTruthy();
+  expect(
+    screen.getByText(
+      "Gradion has no logo yet, so guests see the name only. An admin assigns the company you work for.",
+    ),
+  ).toBeTruthy();
   expect(
     screen.getByText(`${bookingProfile.host_name}, from your account.`),
   ).toBeTruthy();
@@ -606,7 +610,14 @@ it("says the booking page has no company to show rather than leaving it blank", 
       "Not set in the company profile yet, so guests see your name only.",
     ),
   ).toBeTruthy();
-  expect(screen.queryByText(/No logo is uploaded yet/)).toBeNull();
+  expect(screen.queryByText(/has no logo yet/)).toBeNull();
+});
+
+it("names the legal entity the host works for and who assigns it", async () => {
+  mount({ company_name: "Wien", logo_url: "/v1/public/booking/company-logo" });
+  expect(
+    await screen.findByText("Wien. An admin assigns the company you work for."),
+  ).toBeTruthy();
 });
 
 it("turns the reminder email on only with a mailbox to send it from", async () => {

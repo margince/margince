@@ -126,13 +126,6 @@ func (r *recordingRelinker) RelinkActivity(
 	return nil, nil
 }
 
-func (r *recordingRelinker) RelinkThread(
-	_ context.Context, _ string, entityType string, _ ids.UUID, _ bool,
-) (json.RawMessage, error) {
-	r.entityType = entityType
-	return nil, nil
-}
-
 func (r *recordingRelinker) RelinkActivities(
 	_ context.Context, _ []ids.UUID, entityType string, _ ids.UUID, _ bool,
 ) (json.RawMessage, error) {

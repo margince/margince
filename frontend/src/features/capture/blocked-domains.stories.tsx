@@ -138,9 +138,9 @@ export const RowMenu: Story = {
   },
 };
 
-// Decisions and ownerless open questions in one list, which is the case the card
-// exists for: an operator hunting a company that never appeared has to be able to
-// tell "we refused this" from "nobody ever answered". The undecided rows carry a
+// Decisions and open questions in one list, which is the case the card exists
+// for. An operator hunting a company that never appeared has to tell "we
+// refused this" from "nobody ever answered". The undecided rows carry a
 // different verb — asking again, not deciding — and a neutral badge.
 export const WithOpenQuestions: Story = {
   render: story([UNEVIDENCED, STALE, BY_HEURISTIC, BY_HUMAN], 4, OPS),

@@ -286,11 +286,9 @@ func gradedBy(rule, graderRequest string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// perCallID matches a canonical UUID, which is the shape of every identifier
-// this codebase mints for one call: the row ids a prompt tells the model to
-// answer per ("classify each by its id"), and the nonce inside a data-boundary
-// marker. A hand-written prompt carries none — they arrive from ids.NewV7 —
-// so replacing them is what makes two sends of the SAME prompt hash alike.
+// perCallID matches a canonical UUID: the shape of every row id minted for one
+// call, which a prompt tells the model to answer per. A hand-written prompt
+// carries none, so replacing them makes two sends of the same prompt hash alike.
 var perCallID = regexp.MustCompile(`[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}`)
 
 // canonicalID stands in for one. It is deliberately not UUID-shaped, so a
@@ -305,13 +303,13 @@ const canonicalID = "per-call-id"
 // a routing change that altered no wording.
 //
 // The data boundary is canonicalised the way the router canonicalises it for a
-// cache key — through promptfence, which replaces only the marker the SYSTEM
-// prompt declares, so captured text can neither choose what is treated as a
-// boundary nor make two different payloads hash alike. The per-call ids are then
-// swept from the whole material: a marker's nonce would fall to that sweep as
-// well, but only because a marker happens to carry a UUID today, and the
-// boundary's own canonicalisation is promptfence's to define, not this file's to
-// infer from its spelling.
+// cache key, through promptfence. It replaces only the marker the system prompt
+// declares. Captured text can neither choose what counts as a boundary nor make
+// two different payloads hash alike.
+//
+// The material is then swept for per-call row ids. It is also swept for the
+// nonce of any marker quoted from another request, such as a judge shown the
+// prompt it grades.
 func canonicalRequestDigest(req model.Request) (string, error) {
 	declaring := req.System
 	messages := make([]model.Message, len(req.Messages))
@@ -335,6 +333,8 @@ func canonicalRequestDigest(req model.Request) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("aicert: stamp: the built request cannot be digested: %w", err)
 	}
-	sum := sha256.Sum256(perCallID.ReplaceAll(material, []byte(canonicalID)))
+	withoutIDs := perCallID.ReplaceAll(material, []byte(canonicalID))
+	canonical := promptfence.ReplaceNonces(string(withoutIDs), canonicalID)
+	sum := sha256.Sum256([]byte(canonical))
 	return hex.EncodeToString(sum[:]), nil
 }

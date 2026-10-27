@@ -40,8 +40,13 @@ func seedQuietExchange(t *testing.T, e *integration.Env, sender, copied, contact
 			t.Errorf("closing fixture connection: %v", err)
 		}
 	}()
+	seedQuietExchangeAt(t, e, owner, sender, copied, contact, quietLaneNow.AddDate(0, 0, -daysAgo))
+}
+
+// seedQuietExchangeAt is seedQuietExchange with the last mail at an instant.
+func seedQuietExchangeAt(t *testing.T, e *integration.Env, owner *pgx.Conn, sender, copied, contact ids.UUID, last time.Time) {
+	t.Helper()
 	ctx := context.Background()
-	last := quietLaneNow.AddDate(0, 0, -daysAgo)
 	var folded []ids.UUID
 	for _, at := range []time.Time{last.AddDate(0, 0, -1), last} {
 		activity := ids.NewV7()
@@ -270,5 +275,117 @@ func TestAStopReadsBackPerReaderAndClearsOnResume(t *testing.T) {
 	}
 	if got, err := store.RelationshipNudgeState(reader, contact); err != nil || got.Stopped || got.Until != nil {
 		t.Fatalf("after resume the reader's state = %+v, %v, want following", got, err)
+	}
+}
+
+// The decided rule: a relationship silent for longer than 180 days leaves the
+// Worklist. A silence of 180 days is still a suggestion; 181 is not.
+func TestTheQuietCeilingKeepsDayOneHundredEightyAndDropsTheDayAfter(t *testing.T) {
+	e := integration.Setup(t)
+	atCeiling := e.SeedContact(t, "Silent 180 Days", &e.Rep1)
+	past := e.SeedContact(t, "Silent 181 Days", &e.Rep1)
+	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, atCeiling, 180)
+	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, past, 181)
+
+	got := quietLaneFor(t, e, e.Rep1, attention.TasksMine, ids.UUID{})
+	if len(got) != 1 || got[0].ContactID != atCeiling {
+		t.Fatalf("the lane = %+v, want only the relationship silent for exactly 180 days", got)
+	}
+}
+
+// A meeting on the calendar has not happened. It must not count as the
+// contact having been heard from, or a relationship silent for months reads
+// as fresh because somebody scheduled something.
+func TestAFutureMeetingIsNotATouch(t *testing.T) {
+	e := integration.Setup(t)
+	contact := e.SeedContact(t, "Booked But Silent", &e.Rep1)
+	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, contact, 60)
+	owner := integration.OwnerConn(t)
+	defer func() {
+		if err := owner.Close(context.Background()); err != nil {
+			t.Errorf("closing fixture connection: %v", err)
+		}
+	}()
+	meeting := ids.NewV7()
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'meeting', 'next review', $2, 'manual', 'human:x')`, meeting, quietLaneNow.AddDate(0, 0, 10)); err != nil {
+		t.Fatal(err)
+	}
+	integration.LinkActivity(t, owner, meeting, "contact", contact)
+	for _, party := range []struct {
+		column string
+		id     ids.UUID
+		role   string
+	}{{"user_id", e.Rep1, "organizer"}, {"contact_id", contact, "attendee"}} {
+		if _, err := owner.Exec(context.Background(), `INSERT INTO activity_participant (activity_id, `+party.column+`, role) VALUES ($1, $2, $3)`,
+			meeting, party.id, party.role); err != nil {
+			t.Fatal(err)
+		}
+	}
+	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
+		return search.RecomputeEdgesForActivities(wsCtx, tx, []ids.UUID{meeting})
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	got := quietLaneFor(t, e, e.Rep1, attention.TasksMine, ids.UUID{})
+	if len(got) != 1 || got[0].ContactID != contact {
+		t.Fatalf("the lane = %+v, want the contact still quiet: a future meeting is not a touch", got)
+	}
+}
+
+// The boundary counts calendar days, not 24-hour spans. A last touch at 10:00
+// on the 181st calendar day before a 09:00 read is under 181 x 24 hours ago.
+// It is still a silence longer than 180 days.
+func TestTheQuietCeilingCountsCalendarDaysNotHours(t *testing.T) {
+	e := integration.Setup(t)
+	contact := e.SeedContact(t, "Silent 181 Calendar Days", &e.Rep1)
+	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, contact, 181)
+	owner := integration.OwnerConn(t)
+	defer func() {
+		if err := owner.Close(context.Background()); err != nil {
+			t.Errorf("closing fixture connection: %v", err)
+		}
+	}()
+	// Move the contact's latest touch one hour later in the day.
+	if _, err := owner.Exec(context.Background(), `
+		UPDATE activity SET occurred_at = occurred_at + interval '1 hour'
+		 WHERE id IN (SELECT activity_id FROM activity_link WHERE contact_id = $1)
+		   AND occurred_at = (SELECT max(a.occurred_at) FROM activity a
+		                        JOIN activity_link l ON l.activity_id = a.id WHERE l.contact_id = $1)`,
+		contact); err != nil {
+		t.Fatal(err)
+	}
+	if got := quietLaneFor(t, e, e.Rep1, attention.TasksMine, ids.UUID{}); len(got) != 0 {
+		t.Fatalf("the lane = %+v, want nothing: 181 calendar days is longer than 180", got)
+	}
+}
+
+// Day 180 holds across a DST change. In New York, a last touch at 00:00 EDT on
+// 19 July 2025 read at 23:30 EST on 15 January 2026 is 180 calendar days, but
+// more than 181 x 24 hours. The relationship is still a suggestion.
+func TestDayOneHundredEightyHoldsAcrossADaylightSavingChange(t *testing.T) {
+	e := integration.Setup(t)
+	e.WsExec(t, `UPDATE setting SET value = '"America/New_York"'::jsonb WHERE key = 'installation.timezone'`)
+	zone, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		t.Fatal(err)
+	}
+	contact := e.SeedContact(t, "Quiet Since July", &e.Rep1)
+	owner := integration.OwnerConn(t)
+	defer func() {
+		if err := owner.Close(context.Background()); err != nil {
+			t.Errorf("closing fixture connection: %v", err)
+		}
+	}()
+	seedQuietExchangeAt(t, e, owner, e.Rep1, ids.UUID{}, contact, time.Date(2025, time.July, 19, 0, 0, 0, 0, zone))
+	// In UTC, as the server clock hands it to the lane.
+	read := time.Date(2026, time.January, 15, 23, 30, 0, 0, zone).UTC()
+
+	got := quietLaneAt(t, e, read, e.Rep1, attention.TasksMine, ids.UUID{})
+	if len(got) != 1 || got[0].ContactID != contact || got[0].QuietDays != quietSuggestionCeilingDays {
+		t.Fatalf("the lane = %+v, want the contact at %d quiet days", got, quietSuggestionCeilingDays)
 	}
 }

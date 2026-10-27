@@ -106,6 +106,7 @@ paths:
               schema: {$ref: '#/components/schemas/EmploymentImportReport'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: Read retained provider roles and their company-link outcomes without buying another lookup.
   /contacts:
     get:
@@ -298,6 +299,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
     patch:
       tags: [Contacts]
       operationId: updateContact
@@ -350,6 +352,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /contacts/{id}/merge:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -457,6 +460,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: Relationship strength for a contact (deterministic recency × frequency × reciprocity).
   /companies:
     get:
@@ -631,6 +635,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Company'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: Get a company by id (the 360 record).
     patch:
       tags: [Companies]
@@ -683,6 +688,7 @@ paths:
               schema: {$ref: '#/components/schemas/Company'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Archive (soft-delete) a company.
 
@@ -810,6 +816,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/graph:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -910,6 +917,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Partner'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: Read the partner extension on a company (404 if the company is not a partner).
   /companies/{id}/partner/setup:
     parameters:
@@ -1101,6 +1109,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/vat-check:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -1123,6 +1132,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/site-reads/latest:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -1145,6 +1155,7 @@ paths:
               schema: {$ref: '#/components/schemas/SiteReadReport'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/site-reads/{readId}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -1164,6 +1175,7 @@ paths:
               schema: {$ref: '#/components/schemas/SiteReadReport'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: One deep read's progress and outcome — pages read, pages skipped and WHY, what got staged.
   /companies/{id}/strength:
     parameters:
@@ -1181,6 +1193,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: Relationship strength for a company (max over current employees).
   /companies/{id}/finance-summary:
     parameters:
@@ -1202,6 +1215,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/facts:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -1218,6 +1232,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: The company's confirmed facts, grouped by category on the client. Site-read facts carry evidence (snippet, source URL, confidence); human/migration values may omit it.
     post:
       tags: [Companies]
@@ -1270,6 +1285,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: The company's confirmed profile fields. A field with no stored value is absent (evidence-or-omit); site-read values carry evidence, human/migration values may omit it.
   /partners:
     get:
@@ -1297,6 +1313,7 @@ paths:
                 properties:
                   data: {type: array, items: {$ref: '#/components/schemas/Partner'}}
                   page: {$ref: '#/components/schemas/PageInfo'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: List partner companies (companies with a partner row), filterable by role/cert status.
   /commissions:
     get:
@@ -1330,6 +1347,7 @@ paths:
               schema: {$ref: '#/components/schemas/CommissionEntryListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /commissions/summary:
     get:
       tags: [Commissions]
@@ -1359,6 +1377,7 @@ paths:
               schema: {$ref: '#/components/schemas/CommissionEntry'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: One ledger entry.
   /deals:
     get:
@@ -1678,6 +1697,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Deal'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: Get a deal by id (the 360 record).
     patch:
       tags: [Deals]
@@ -1723,6 +1743,7 @@ paths:
               schema: {$ref: '#/components/schemas/Deal'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Archive (soft-delete) a deal.
 
@@ -1836,6 +1857,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/RelationshipListResponse'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: List a deal's stakeholders (deal↔contact relationships).
   /projects:
     get:
@@ -2017,6 +2039,7 @@ paths:
               schema: {$ref: '#/components/schemas/BulkOperation'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /bulk/{id}/undo/preview:
     parameters:
       - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
@@ -2097,6 +2120,7 @@ paths:
               schema: {$ref: '#/components/schemas/Project'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: Get a project by id.
     patch:
       tags: [Projects]
@@ -2149,6 +2173,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /projects/{id}/advance:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -2211,6 +2236,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /projects/{id}/360:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -2255,6 +2281,7 @@ paths:
               schema: {$ref: '#/components/schemas/ProjectHealthAssessmentListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /projects/{id}/stakeholders:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -2274,6 +2301,7 @@ paths:
               schema: {$ref: '#/components/schemas/RelationshipListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
     put:
       tags: [Projects]
       operationId: setProjectStakeholder
@@ -2316,6 +2344,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Detach a contact from a project (archives the edge).
 
@@ -2393,6 +2422,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/PipelineListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: List pipelines.
   /pipelines/{id}:
     parameters:
@@ -2408,6 +2438,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Pipeline'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: Get a pipeline (with its ordered stages).
   /stages:
     get:
@@ -2426,6 +2457,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/StageListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: List stages (optionally filtered by pipeline).
   /stages/{id}:
     parameters:
@@ -2441,6 +2473,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Stage'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: Get a stage by id.
   /deals/{id}/stage-evidence:
     parameters:
@@ -2458,6 +2491,7 @@ paths:
               schema: {$ref: '#/components/schemas/StageEvidenceListResponse'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /stage-automation/report:
     get:
       tags: [Pipelines]
@@ -2507,6 +2541,7 @@ paths:
               schema: {$ref: '#/components/schemas/TransitionPolicyList'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /stages/{id}/exit-criteria:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -2531,6 +2566,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/StageExitCriterionListResponse'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /channel-providers:
     get:
       tags: [Activities]
@@ -2670,6 +2706,7 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
+        '422': {$ref: '#/components/responses/ValidationError'}
     post:
       tags: [Activities]
       operationId: logActivity
@@ -2727,6 +2764,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Activity'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: Get an activity by id (includes its links and raw capture payload).
     patch:
       tags: [Activities]
@@ -2770,6 +2808,7 @@ paths:
               schema: {$ref: '#/components/schemas/Activity'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Archive (soft-delete) an activity.
 
@@ -2800,6 +2839,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/EmailPresentation'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /activities/{id}/meeting-brief:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -2877,7 +2917,9 @@ paths:
       summary: Re-associate every activity of one conversation thread to a chosen record, in one transaction.
       description: |-
         The thread twin of `relinkActivity`: the same association applied to every non-archived
-        activity carrying `thread_key` that the caller may write. A mis-filed conversation is
+        activity of the conversation `activity_id` belongs to that the caller may write. A thread
+        key alone does not name a conversation, so a member is a message on the activity's thread
+        that is our own mail to its correspondent, or authenticated mail from them. A mis-filed conversation is
         usually mis-filed whole, and one call here is the remedy rather than one call per message.
         An activity in the thread the
         caller cannot write is left where it is and is not counted — the response says how many
@@ -2956,6 +2998,7 @@ paths:
               schema: {$ref: '#/components/schemas/TranscriptReadReport'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /activities/{id}/transcript-proposals/{readId}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -2975,6 +3018,7 @@ paths:
               schema: {$ref: '#/components/schemas/TranscriptReadReport'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: One reading's progress and outcome — how many lines it addressed, what it staged, and why it produced nothing.
   /activities/{id}/draft-email:
     parameters:
@@ -3005,6 +3049,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/EmailDraft'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /activities/{id}/reply-recipient:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -3024,6 +3069,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/ReplyRecipient'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /activities/{id}/send-email:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -3218,6 +3264,7 @@ paths:
       operationId: getMeetingInvitation
       summary: Read invitation delivery and calendar state.
       responses:
+        '422': {$ref: '#/components/responses/ValidationError'}
         default:
           description: The operation could not be completed.
           content:
@@ -3384,6 +3431,7 @@ paths:
                 properties:
                   data: {type: array, items: {$ref: '#/components/schemas/Automation'}}
                   page: {$ref: '#/components/schemas/PageInfo'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: List the workspace's configured automation instances.
   /automations/{id}:
     parameters:
@@ -3399,6 +3447,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Automation'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: Read one automation instance.
   /leads:
     get:
@@ -3602,6 +3651,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Lead'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: Get a lead by id.
     patch:
       tags: [Leads]
@@ -3652,6 +3702,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Lead'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /leads/{id}/promote:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -3880,6 +3931,7 @@ paths:
               schema: {$ref: '#/components/schemas/RecordAssignmentListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /lead-disqualify-reasons:
     get:
       tags: [Leads]
@@ -3921,6 +3973,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/RelationshipListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: List relationships (employment, deal_stakeholder, or partner edges).
     post:
       tags: [Relationships]
@@ -4022,6 +4075,7 @@ paths:
               schema: {$ref: '#/components/schemas/Relationship'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Archive (soft-delete) a relationship.
 
@@ -4067,6 +4121,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
     post:
       tags: [Lists]
       operationId: createList
@@ -4110,6 +4165,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: Read one list, with the count of its members this caller may see.
     patch:
       tags: [Lists]
@@ -4152,6 +4208,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Archive a list. Its members and history stay, read-only.
 
@@ -4175,6 +4232,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Bring an archived list back.
 
@@ -4300,6 +4358,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /records/{entity_type}/{entity_id}/lists:
     parameters:
       - name: entity_type
@@ -4329,6 +4388,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /lists/{id}/history:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -4530,6 +4590,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: Export this edition's permitted frozen metrics, chart readings and kept question answers.
   /analytics/evaluate:
     get:
@@ -5221,6 +5282,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/TagListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/ValidationError'}
     post:
       tags: [Tags]
       operationId: createTag
@@ -5263,6 +5325,7 @@ paths:
               schema: {$ref: '#/components/schemas/TagDetail'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
     patch:
       tags: [Tags]
       operationId: updateTag
@@ -5310,6 +5373,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Tag'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /tags/{id}/merge:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -5850,6 +5914,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/DedupeCandidateListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: The dedupe review queue, confidence-sorted.
   /dedupe/candidates/{id}:
     parameters:
@@ -5867,6 +5932,7 @@ paths:
               schema: {$ref: '#/components/schemas/DedupeCandidate'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: One candidate with its full detection-time evidence.
   /dedupe/candidates/{id}/disposition:
     parameters:
@@ -5930,6 +5996,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /approvals:
     get:
       tags: [Approvals]
@@ -6000,6 +6067,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Approval'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /approvals/{id}/approve:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -6039,6 +6107,7 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /approvals/{id}/reject:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -6074,6 +6143,7 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /approval-bundles/{bundle_id}/approve:
     parameters:
       - $ref: '#/components/parameters/BundleId'
@@ -6190,6 +6260,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /consent-purposes:
     get:
       tags: [Compliance]
@@ -6248,6 +6319,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/UserListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /users/names:
     get:
       tags: [Identity]
@@ -6299,6 +6371,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/TeamListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /products:
     get:
       tags: [Offers]
@@ -6324,6 +6397,7 @@ paths:
               schema: {$ref: '#/components/schemas/ProductListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: List rate-card products (live by default; cursor-paginated).
     post:
       tags: [Offers]
@@ -6369,6 +6443,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Product'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: Get a product by id.
     patch:
       tags: [Offers]
@@ -6501,6 +6576,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: Get a Deal Room by id.
   /deal-rooms/{id}/participants:
     parameters:
@@ -6527,6 +6603,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /deal-rooms/{id}/documents:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -6547,6 +6624,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /deal-rooms/{id}/threads:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -6570,6 +6648,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
     post:
       tags: [Deals]
       operationId: openDealRoomThread
@@ -6656,6 +6735,7 @@ paths:
               schema: {$ref: '#/components/schemas/OfferTemplateListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
     post:
       tags: [Offers]
       operationId: createOfferTemplate
@@ -6725,6 +6805,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: Get an offer template by id.
     put:
       tags: [Offers]
@@ -6797,6 +6878,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/OutcomeReviewListResponse'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /activity-review-templates:
     get:
       tags: [Activities]
@@ -6829,6 +6911,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/OfferListResponse'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: List a deal's offers, newest revision first.
     post:
       tags: [Offers]
@@ -6875,6 +6958,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Offer'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: Get an offer with its line items and computed totals.
     patch:
       tags: [Offers]
@@ -7039,6 +7123,7 @@ paths:
               schema: {$ref: '#/components/schemas/SignalListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: List signals (cursor-paginated), newest first.
   /signals/{id}:
     parameters:
@@ -7054,6 +7139,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Signal'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: Get a signal by id.
   /signals/{id}/warmth:
     parameters:
@@ -7264,6 +7350,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /forecast/movement:
     get:
       tags: [Reports]
@@ -7588,6 +7675,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /deals/{id}/documents:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -7654,6 +7742,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /deals/{id}/coverage:
     get:
       tags: [Deals]
@@ -7674,6 +7763,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /deals/{id}/commitments:
     get:
       tags: [Deals]
@@ -7697,6 +7787,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/documents:
     get:
       tags: [Attachments]
@@ -7817,6 +7908,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /imports/{id}/report:
     parameters:
       - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
@@ -7840,6 +7932,7 @@ paths:
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /imports/{id}/approve:
     parameters:
       - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
@@ -7879,6 +7972,7 @@ paths:
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/profile-fields/{field}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -14946,9 +15040,10 @@ components:
         The destination for every writable, non-archived activity of one conversation thread.
         `entity_type`/`entity_id`/`replace_existing_of_type` mean exactly what they mean on
         `relinkActivity`.
-      required: [thread_key, entity_type, entity_id]
+      required: [entity_type, entity_id]
       properties:
-        thread_key: {type: string, minLength: 1, maxLength: 512, description: 'The conversation key the activities carry (`Activity.thread_key`, also the `thread_key` list filter).'}
+        activity_id: {type: string, format: uuid, description: 'A message of the conversation to move; it always moves with it.'}
+        thread_key: {type: string, minLength: 1, maxLength: 512, deprecated: true, description: 'Ignored. The conversation is the one `activity_id` belongs to, because a thread key alone does not say whose conversation it is.'}
         entity_type: {$ref: '#/components/schemas/RelinkDestinationType'}
         entity_id: {type: string, format: uuid}
         replace_existing_of_type:
@@ -15010,8 +15105,8 @@ components:
         title: {type: string, maxLength: 200}
         location: {type: string, maxLength: 1000}
         host_name: {type: string, maxLength: 200, description: Derived from the host account display name; request values are ignored. Names longer than 200 characters are abbreviated for this profile.}
-        company_name: {type: string, maxLength: 200, description: Derived from the anchor company; request values are ignored. Names longer than 200 characters are abbreviated for this profile.}
-        logo_url: {type: string, maxLength: 2000, description: Derived from the anchor company; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin.}
+        company_name: {type: string, maxLength: 200, description: The name of the legal entity an admin assigns the host to; request values are ignored. Names longer than 200 characters are abbreviated for this profile.}
+        logo_url: {type: string, maxLength: 2000, description: The logo of the legal entity the host works for and absent when it has none; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin.}
         slug: {type: string, readOnly: true}
         public_url: {type: string, readOnly: true}
         replace_link: {type: boolean, writeOnly: true}
@@ -15085,6 +15180,21 @@ components:
         address: {type: string, description: 'The address the invitation named them by. Absent when no row holds one.'}
         display_name: {type: string, description: "The contact's name when you may read the contact, else the name the invitation gave, else empty."}
         contact_id: {type: string, format: uuid, description: 'The contact this guest is. Present only when you may read that contact.'}
+        response:
+          allOf: [{$ref: '#/components/schemas/MeetingResponse'}]
+          description: What the guest answered the invitation. Absent when no calendar stated an answer.
+    MeetingResponse:
+      type: string
+      enum: [accepted, declined, tentative, needs_action]
+      description: A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
+    MeetingAttendeeResponse:
+      type: object
+      description: The answer one colleague or linked contact on a meeting gave its invitation. Exactly one of `user_id` and `contact_id` is set.
+      required: [response]
+      properties:
+        user_id: {type: string, format: uuid, description: 'The colleague, one of `colleague_ids` or the host.'}
+        contact_id: {type: string, format: uuid, description: 'The contact, one of the contact `links` you see.'}
+        response: {$ref: '#/components/schemas/MeetingResponse'}
     Activity:
       type: object
       description: |-
@@ -15153,6 +15263,18 @@ components:
           items: {$ref: '#/components/schemas/MeetingGuest'}
           description: >-
             Meeting only: the guests who are not a colleague seat and whose contact is not among the `links` you see. That covers a guest who is not a contact yet, and one past the link ceiling or filed under a contact you may not read. `contact_id` is set only for a contact you may read. A colleague is in `colleague_ids`. Filled wherever one activity is answered whole; a list leaves it out. Withheld with the content, like `colleague_ids`.
+        attendee_responses:
+          type: array
+          readOnly: true
+          items: {$ref: '#/components/schemas/MeetingAttendeeResponse'}
+          description: >-
+            Meeting only: the answers the colleagues and the linked contacts you see gave the invitation, for those a calendar stated one for. A guest in `guests` carries their own `response`. Filled and withheld like `guests`.
+        guests_left_out:
+          type: integer
+          minimum: 0
+          readOnly: true
+          description: >-
+            Meeting only: how many outside guests of a meeting past the party cap are not listed, because a crowded meeting keeps at most 200 by address. Filled and withheld like `guests`.
         direction: {type: [string, 'null'], enum: [null, inbound, outbound], description: 'inbound/outbound for email/call; null for note/task.'}
         email_summary:
           allOf: [{$ref: '#/components/schemas/EmailSummary'}]
@@ -16176,7 +16298,7 @@ components:
           format: uuid
           readOnly: true
           description: >-
-            The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. Null until then, and null again when an edit of `company_name` no longer names the linked company. Withheld when the reader cannot open that company.
+            The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. Null until then, and null again when an edit of `company_name` no longer names the linked company. Withheld when the reader cannot open that company. The link adds no contact; converting the lead makes it a contact employed there.
         company_match: {$ref: '#/components/schemas/LeadCompanyMatch'}
         candidate_company_key: {type: [string, 'null'], description: Loose key for ABM routing without creating a company.}
         project_id: {type: [string, 'null'], format: uuid, description: 'The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm: a lead''s company_id is an optional link a human confirms, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.'}
@@ -16317,7 +16439,7 @@ components:
       type: object
       readOnly: true
       description: >-
-        A company the lead's `company_name` names exactly, offered for a human to confirm. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise.
+        A company the lead's `company_name` names exactly, offered for a human to confirm. Confirming sets `company_id` and creates no contact. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise.
       required: [id, name]
       properties:
         id: {type: string, format: uuid}
@@ -20172,6 +20294,11 @@ components:
         key: {type: string, description: The catalog type this instance is built from.}
         name: {type: string}
         status: {type: string, enum: [enabled, paused]}
+        owner_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The member the rule runs as. Null until the rule is first enabled, and after its owner's seat is removed. Firings of a rule whose owner is no longer active are blocked until the owner is changed.
         paused_reason:
           type: [string, 'null']
           enum: [list_archived, list_invalid, list_unavailable, burst, null]

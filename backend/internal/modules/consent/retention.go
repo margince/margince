@@ -34,7 +34,7 @@ import (
 //
 // `ai_call_payload` / `content` is the only bound on payloads an Art. 17
 // erasure cannot find, because they cite no record and name no address.
-// config/margince.example.yaml says the same beside `ai.capture_payloads`.
+// The doc of `ai.capture_payloads` names this policy.
 //
 // `deal_risk_day` keeps the widest window GET /worklist/response reads, and
 // TestTheVerdictWindowIsTheFiguresWidestWindow keeps the two numbers one.

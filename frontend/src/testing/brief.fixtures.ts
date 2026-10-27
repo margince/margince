@@ -441,6 +441,7 @@ export const weeklyScorecard: NonNullable<WeeklyReview["scorecard"]> = {
     advanced: 4,
     disqualified: 1,
     promoted: 2,
+    arrived: 9,
     answered_in_target: 7,
     breached: 2,
     meetings_booked: 6,

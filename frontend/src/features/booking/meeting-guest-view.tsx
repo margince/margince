@@ -26,7 +26,8 @@ type Profile = components["schemas"]["SchedulingProfile"];
 /**
  * The public booking page as a guest meets it, beside the settings that feed
  * it. Only the reminder is set here; the company and the host's name are read
- * from where they are kept, and each row links there.
+ * from where they are kept, and each row links there. The company is the legal
+ * entity an admin assigns the host to, so the row names it and who assigns it.
  */
 export function GuestViewCard({ profile }: Readonly<{ profile: Profile }>) {
   const t = useT();
@@ -52,7 +53,9 @@ export function GuestViewCard({ profile }: Readonly<{ profile: Profile }>) {
           <SettingList>
             <SettingRow
               label={t("scheduling.companyRow")}
-              description={t(companyHelp(profile))}
+              description={t(companyHelp(profile), {
+                company: profile.company_name ?? "",
+              })}
               control={
                 <Button
                   onClick={() =>

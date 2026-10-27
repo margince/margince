@@ -23,11 +23,12 @@ import "github.com/margince/margince/backend/internal/shared/kernel/textlang"
 // signalSummaryCopy is one language's set. Every field is required — a partial
 // set is a silent English fallback in miniature, and the census refuses one.
 type signalSummaryCopy struct {
-	// ghostedThread says we wrote and nobody answered. %d is how many days ago.
+	// ghostedThread says we wrote and nobody answered. %d is the rule's
+	// threshold in days. The summary is stored once, so it says what the
+	// finding proves and never an age that goes stale.
 	ghostedThread string
 	// projectQuiet says a project has had nothing filed on it. %s is the
-	// project's name, %d how many days — in that order, and the census holds
-	// both holes present so a translation cannot drop the number it is about.
+	// project's name, %d the rule's threshold in days, in that order.
 	projectQuiet string
 }
 
@@ -35,16 +36,16 @@ type signalSummaryCopy struct {
 // walk textlang.Shipped and ask this map directly.
 var signalSummaryByLang = map[textlang.Lang]signalSummaryCopy{
 	textlang.English: {
-		ghostedThread: "We wrote %d days ago and nobody has answered.",
-		projectQuiet:  "Nothing has been filed on %s for %d days.",
+		ghostedThread: "We wrote at least %d days ago and nobody has answered.",
+		projectQuiet:  "Nothing has been filed on %s for at least %d days.",
 	},
 	textlang.German: {
-		ghostedThread: "Wir haben vor %d Tagen geschrieben und niemand hat geantwortet.",
-		projectQuiet:  "Zu %s wurde seit %d Tagen nichts abgelegt.",
+		ghostedThread: "Wir haben vor mindestens %d Tagen geschrieben und niemand hat geantwortet.",
+		projectQuiet:  "Zu %s wurde seit mindestens %d Tagen nichts abgelegt.",
 	},
 	textlang.Vietnamese: {
-		ghostedThread: "Chúng ta đã viết cách đây %d ngày và chưa ai trả lời.",
-		projectQuiet:  "Không có gì được lưu cho %s trong %d ngày.",
+		ghostedThread: "Chúng ta đã viết cách đây ít nhất %d ngày và chưa ai trả lời.",
+		projectQuiet:  "Không có gì được lưu cho %s trong ít nhất %d ngày.",
 	},
 }
 

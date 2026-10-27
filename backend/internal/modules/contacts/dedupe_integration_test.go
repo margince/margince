@@ -109,6 +109,9 @@ func (e *dedupeEnv) as() context.Context {
 				"company":      {Create: true, Read: true, Update: true},
 				"lead":         {Create: true, Read: true, Update: true},
 				"relationship": {Create: true, Read: true},
+				// A rep reads mail. The domain-question decider asks only a seat
+				// that may read the mail that raised the question.
+				"activity": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -407,6 +410,9 @@ func (e *dedupeEnv) asOther() context.Context {
 				"company":      {Create: true, Read: true, Update: true},
 				"lead":         {Create: true, Read: true, Update: true},
 				"relationship": {Create: true, Read: true},
+				// A rep reads mail. The domain-question decider asks only a seat
+				// that may read the mail that raised the question.
+				"activity": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

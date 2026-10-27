@@ -8,12 +8,18 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/capture/htmltext"
+	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // htmlTag matches a real element (a known name, opening or closing) or a
 // comment. A bracketed address or link such as <a@b.c> or <https://x.test> is
 // plain text, and rendering it would drop the bracketed value.
 var htmlTag = regexp.MustCompile(`(?is)<!--.*?-->|</?(?:` + htmlElements + `)(?:\s[^<>]*)?/?>`)
+
+// cutOpeningTag matches a known opening tag that an older stored-body cut
+// left unfinished at the very end, marked by the cut's ellipsis.
+var cutOpeningTag = regexp.MustCompile(`(?is)<(?:` + htmlElements + `)(?:\s[^<>]*)?…$`)
 
 const htmlElements = `a|abbr|b|blockquote|body|br|button|center|code|div|em|font|h[1-6]|head|hr|html|i|img|li|ol|p|pre|s|small|span|strike|strong|style|script|sub|sup|table|tbody|td|th|thead|tr|u|ul`
 
@@ -25,4 +31,34 @@ func descriptionText(desc string) string {
 		desc, _ = htmltext.Render(desc)
 	}
 	return strings.TrimSpace(desc)
+}
+
+// RerenderStoredBody returns the body capture stores today for a calendar
+// meeting body stored before descriptions were rendered. The organizer and
+// attendee header stays as stored. A description with HTML tags is rendered
+// as descriptionText does, then masked and cut as buildBody does. changed is
+// false when the stored description has no tags or renders to itself.
+func RerenderStoredBody(stored string) (body string, changed bool) {
+	header, desc, found := strings.Cut(stored, "\n\n")
+	if !found {
+		return stored, false
+	}
+	var text string
+	switch {
+	case htmlTag.MatchString(desc):
+		text = descriptionText(desc)
+	case cutOpeningTag.MatchString(desc):
+		// The cut fell inside the first tag, so no tag is whole. The renderer
+		// still reads the text before it.
+		rendered, _ := htmltext.Render(desc)
+		text = strings.TrimSpace(rendered)
+	default:
+		return stored, false
+	}
+	body = header
+	if text != "" {
+		body = header + "\n\n" + text
+	}
+	body = textcut.BytesMarked(credentialmask.MaskText(body), MaxBodyLen, "…")
+	return body, body != stored
 }

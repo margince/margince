@@ -251,7 +251,7 @@ func TestOnlyAReaderBoundLaneNamesTheReader(t *testing.T) {
 		"undelivered":          "the same per-user read as the bounce beside it",
 		"notice":               "a notice is addressed to one contact",
 		"capture_health":       "a mailbox belongs to one contact",
-		"domain_question":      "OpenDomainQuestionsForOwner reads the acting human's own owner_id",
+		"domain_question":      "OpenDomainQuestionsForOwner asks only the acting human's decider rule: the sole direct recipient of current mail",
 	}
 	rows := classifyDay(dayOfEveryLane(), rankInstant, dayMoney{})
 	planService := meetingPrepService(nil).WithWeeklyPlans(planWorkStub{entries: []PlanWork{{ID: ids.NewV7(), OwnerID: readerOf(meetingPrepReader()), Label: "Prepare proposal", DueAt: rankInstant}}})

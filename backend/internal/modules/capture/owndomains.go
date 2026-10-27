@@ -245,3 +245,17 @@ func (s SelfSet) WithoutSelf(addresses []string) []string {
 	}
 	return out
 }
+
+// meetingPartiesTx reads what a meeting's sides are judged against, around the
+// trusted domains the caller already holds.
+func meetingPartiesTx(ctx context.Context, tx pgx.Tx, trusted InternalDomains) (owndomain.Parties, error) {
+	possible, err := ownDomainsTx(ctx, tx)
+	if err != nil {
+		return owndomain.Parties{}, err
+	}
+	consumer, err := MatcherTx(ctx, tx)
+	if err != nil {
+		return owndomain.Parties{}, err
+	}
+	return owndomain.Parties{Trusted: trusted.Set, Possible: possible.Set, Consumer: consumer.IsConsumer}, nil
+}

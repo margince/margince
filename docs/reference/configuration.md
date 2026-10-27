@@ -1782,10 +1782,9 @@ the SPA shows the action only where it will work: Admin settings → *data* tab 
 the server checks that string.
 
 The **deployment config** (`--config`, default `margince.yaml`) is set up the same way for local
-dev. The reference with notes is
-[`config/margince.example.yaml`](../../config/margince.example.yaml). `make dev` copies it to a
-gitignored `config/margince.yaml` on the first run, and then leaves it alone (create if missing,
-keep if there). So the edits of an engineer (workspace, `bootstrap_admin`, or the
+dev. [`config/margince.example.yaml`](../../config/margince.example.yaml) holds only the workspace
+and the first admin. `make dev` copies it to a gitignored `config/margince.yaml` on the first run,
+and then leaves it alone (create if missing, keep if there). So the edits of an engineer (workspace, `bootstrap_admin`, or the
 `ai.capture_payloads` posture) stay across `make dev-stop` / `make dev`.
 
 The admin `password_file` it points at (`config/margince-admin-password`) is created next to it on
@@ -2119,7 +2118,7 @@ into the vault. The debug and certification lanes, which run with no database, r
 variable.
 
 The **binding** is a stored setting; there is no routing file. A new installation declares it under
-`seeds.ai_routing` (see `config/margince.example.yaml`); you bind a running one again from Settings
+`seeds.ai_routing` (a file in `config/presets/` is one to copy); you bind a running one again from Settings
 → AI. A dev stack is bound by `seeds.ai_routing` in `config/margince.dev.yaml`.
 
 The lanes that test a binding without opening a database get their model from the command line.

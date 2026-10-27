@@ -48,7 +48,7 @@ func (c requestCompleter) Complete(_ context.Context, req model.Request) (model.
 var (
 	uuidPattern  = regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)
 	labelPattern = regexp.MustCompile(`"(m[0-9]+)"`)
-	fencePattern = regexp.MustCompile(`untrusted-([0-9a-f-]{36})`)
+	fencePattern = regexp.MustCompile(`untrusted-([a-z2-7]{26})`)
 )
 
 // mintedIDs is the ids a reply may cite, in the order the request gives them.

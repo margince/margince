@@ -29,6 +29,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -38,6 +39,11 @@ type staticDomains []string
 
 func (d staticDomains) Domains(context.Context, pgx.Tx) ([]string, error) {
 	return []string(d), nil
+}
+
+func (d staticDomains) MeetingParties(context.Context, pgx.Tx) (owndomain.Parties, error) {
+	own := owndomain.New(d)
+	return owndomain.Parties{Trusted: own, Possible: own}, nil
 }
 
 // evidenceTriggerEnv seeds a deal on a stage carrying one criterion of each

@@ -269,6 +269,8 @@ export function leadFigures(
   ctx: ReadingContext,
   // True once the page holds the lead's whole history.
   wholeHistory = false,
+  // The linked company's own name, which a rename may have moved from the typed one.
+  companyName: string | null | undefined = lead.company_name,
 ): LeadFigure[] {
   const { t } = ctx;
   return [
@@ -281,7 +283,7 @@ export function leadFigures(
     {
       key: "company",
       label: t("lead.readings.company"),
-      value: lead.company_name?.trim() || t("lead.readings.noCompany"),
+      value: companyName?.trim() || t("lead.readings.noCompany"),
       ...companyFigureLink(lead, t),
     },
   ];

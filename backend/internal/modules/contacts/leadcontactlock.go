@@ -85,13 +85,35 @@ func (s *Store) lockLeadForContact(ctx context.Context, tx pgx.Tx, id ids.LeadID
 	return lanes, err
 }
 
-// promoteTargetMovedError says the contact a promotion locked is no longer the
-// one the lead's email matches under the lock. QualifyLead starts over with
-// the new match; a caller that cannot start over reads it as a conflict.
+// promoteTargetMovedError says the contact or company a promotion locked is no
+// longer the lead's under the lock. QualifyLead starts over with the new one; a
+// caller that cannot start over reads it as a conflict.
 type promoteTargetMovedError struct{}
 
 func (e *promoteTargetMovedError) Error() string {
-	return "the contact this lead matches changed while it was being promoted"
+	return "the contact or company this lead names changed while it was being promoted"
+}
+
+// refuseMovedCompany answers promoteTargetMovedError when the lead's linked
+// company is not the one locked before the lead. Taking it now would lock a
+// company after its lead, the reverse of a company merge.
+func refuseMovedCompany(ctx context.Context, tx pgx.Tx, id ids.LeadID, locked *ids.CompanyID) error {
+	linked, err := leadLinkedCompany(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	if !sameCompany(linked, locked) {
+		return &promoteTargetMovedError{}
+	}
+	return nil
+}
+
+// sameCompany compares two optional company ids, where nil is no company.
+func sameCompany(a, b *ids.CompanyID) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
 }
 
 // Is lets a caller with no retry of its own treat the move as the conflict it

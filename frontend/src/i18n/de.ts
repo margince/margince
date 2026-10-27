@@ -1203,7 +1203,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Benötigt ein Microsoft-365-Geschäfts- oder Schulkonto.",
   "scheduling.unsaved": "Du hast ungespeicherte Änderungen",
   "scheduling.discard": "Verwerfen",
-  "scheduling.brand": "Unternehmensname und Logo",
   "scheduling.back": "Zurück zu Margince",
   "scheduling.prepare": "Auf diesen Termin vorbereiten",
   "scheduling.timezone": "Zeitzone",
@@ -1688,9 +1687,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.week.leads_one": "{count} Lead zugewiesen.",
   "brief.week.leads_other": "{count} Leads zugewiesen.",
   "brief.week.responses_one":
-    "{count} Lead innerhalb der Zielzeit beantwortet.",
+    "{count} Lead bis Wochenende erstmals beantwortet.",
   "brief.week.responses_other":
-    "{count} Leads innerhalb der Zielzeit beantwortet.",
+    "{count} Leads bis Wochenende erstmals beantwortet.",
   "brief.week.lost_one": "{count} Deal verloren.",
   "brief.week.lost_other": "{count} Deals verloren.",
   "brief.row.details": "Details",
@@ -1809,6 +1808,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.privacy_request_proof_expiry":
     "Bereinigung der Nachweise zu Datenschutzanfragen",
   "systemJob.waiting_horizon_refresh": "Messung der Antwortzeiten",
+  "systemJob.evidence_authorship": "Prüfung, wer Deal-Belege geschrieben hat",
   "systemJob.meeting_delivery": "Versand von Kalendereinladungen",
   "systemJob.merge": "Zusammenführung von Datensätzen",
   "systemJob.notice_case_open": "Aufnahme von Datenschutzanfragen",
@@ -2064,6 +2064,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.guests_added": "Gäste aus dem Kalender ergänzt",
   "history.field.guest_links_added": "Gäste aus dem Kalender verknüpft",
   "history.field.guests_retired": "Gäste vom Kalender entfernt",
+  "history.field.guest_answers_changed":
+    "Antworten der Gäste aus dem Kalender aktualisiert",
+  "history.field.guests_left_out": "Nicht aufgeführte Gäste",
   "history.field.relinked_emails": "E-Mail-Adressen übernommen",
   "history.field.relinked_phones": "Telefonnummern übernommen",
   "history.field.relinked_relationships": "Beziehungen übernommen",
@@ -3971,6 +3974,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Termin ist in einem Kalender gebucht und braucht deshalb eine Uhrzeit, nicht nur ein Datum.",
   "activity.detail.when": "Wann",
   "activity.detail.attendees": "Teilnehmende",
+  "activity.detail.response.declined": "Abgesagt",
+  "activity.detail.response.tentative": "Vielleicht",
+  "activity.detail.response.needsAction": "Keine Antwort",
+  "activity.detail.guestsLeftOut_one":
+    "und {count} weiterer Gast, nicht aufgeführt",
+  "activity.detail.guestsLeftOut_other":
+    "und {count} weitere Gäste, nicht aufgeführt",
   "activity.detail.colleagues": "Teammitglieder",
   "activity.detail.filedUnder": "Abgelegt unter",
   "email.detail.bccWithheld":
@@ -5324,9 +5334,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.scorecard.advancedBasis":
     "Jeder Wechsel zählt: ein Lead mit zwei Phasenwechseln zählt doppelt",
   "brief.weekly.scorecard.answeredInTarget": "Antworten nach der Zielzeit",
-  "brief.weekly.scorecard.answeredDetail":
-    "In der Zielzeit beantwortet: {count}",
-  "brief.weekly.scorecard.allInTarget": "Alle in der Zielzeit beantwortet",
+  "brief.weekly.scorecard.noArrivals": "Diese Woche kam kein Lead an",
+  "brief.weekly.scorecard.unanswered":
+    "Ohne erfasste erste Antwort bis Wochenende: {count} von {total}",
+  "brief.weekly.scorecard.allResponded":
+    "Erste Antwort bis Wochenende erfasst: alle {total}",
+  "brief.weekly.scorecard.respondedNoCohort":
+    "Erste Antwort bis Wochenende erfasst: {count}. Eingänge wurden für diese Woche nicht erfasst",
   "brief.weekly.scorecard.meetingsHeld": "Als stattgefunden markiert",
   "brief.weekly.scorecard.meetingsBasis":
     "Gebucht: {booked} · Nicht erschienen: {noShow}",
@@ -10836,6 +10850,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.enabledFor": "{name} ist aktiv",
   "auto.colLastRun": "Letzter Lauf",
   "auto.colRuns30": "Läufe (30 Tage)",
+  "auto.colOwner": "Läuft als",
+  "auto.ownerFor": "Läuft als {name}",
+  "auto.ownerNone": "Niemand zugeordnet",
+  "auto.ownerHint":
+    "Eine Regel ist blockiert, solange das Mitglied, als das sie läuft, keinen Zugriff hat. Wähle ein anderes Mitglied, damit sie wieder läuft.",
   "auto.colStatus": "Status",
   "auto.colActions": "Aktionen",
   "auto.lastRunNever": "Nie",
@@ -11177,6 +11196,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "configuration.detail.type": "Typ: {type}",
   "configuration.detail.flag": "Option: {flag}",
   "configuration.detail.readBy": "Gelesen von: {programs}",
+  "configuration.detail.fullDefault": "Vollständiger Standardwert",
+  "configuration.copyValue": "Wert kopieren",
+  "configuration.copyDefault": "Standardwert kopieren",
+  "configuration.copied": "Kopiert",
+  "configuration.copyRemedy": "Markiere den Text und kopiere ihn von Hand.",
+  "configuration.scope.label": "Nach Quelle filtern",
+  "configuration.scope.all": "Alle",
+  "configuration.scope.changed": "Nicht Standard",
+  "configuration.scope.outside": "Außerhalb der App gesetzt",
   "settings.tab.reset": "Daten zurücksetzen",
   "settings.group.me": "Du",
   "settings.group.company": "Unternehmen",
@@ -12202,6 +12230,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.handover.deals_other": "{count} Deals",
   "users.handover.projects_one": "{count} Projekt",
   "users.handover.projects_other": "{count} Projekte",
+  "users.handover.tasks_one": "{count} offene Aufgabe",
+  "users.handover.tasks_other": "{count} offene Aufgaben",
   "users.removeMfa": "Zweistufige Anmeldung entfernen",
   "users.removeMfaConfirmTitle": "Zweistufige Anmeldung für {name} entfernen?",
   "users.removeMfaConfirmBody":
@@ -16528,6 +16558,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.untitled.dedupe_candidate": "Mögliche doppelte Datensätze",
   "worklist.untitled.task": "Aufgabe ohne Titel",
   "worklist.untitled.brief_item": "Zu prüfender Deal",
+  "worklist.mayBeDone.asked":
+    "Vielleicht schon erledigt: Du hast am {date} geschrieben.",
+  "worklist.mayBeDone.done": "Erledigt",
+  "worklist.mayBeDone.notYet": "Noch nicht",
   "worklist.recipients.label": "Empfangende",
   "worklist.recipients.open": "Steht noch aus",
   "worklist.recipients.done": "Erledigt",
@@ -17035,8 +17069,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.company.linkConfirm": "Unternehmen verknüpfen",
   "lead.company.linkOpens":
     "Der Unternehmensname dieses Leads öffnet dann {name}.",
-  "lead.company.linkContact":
-    "Dieser Lead wird als Kontakt bei {name} angelegt. Sein Status ändert sich nicht.",
+  "lead.company.linkOnQualify":
+    "Es wird noch kein Kontakt angelegt. Wenn du diesen Lead qualifizierst, wird er ein Kontakt bei {name}.",
   "lead.timeline.received": "{at} · eingegangen",
   "lead.timeline.weReplied": "Du hast geantwortet",
   "lead.timeline.repliedIn": "{at} · in {span}",
@@ -17472,9 +17506,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.guestView": "Was Gäste sehen",
   "scheduling.previewLabel": "Vorschau deiner öffentlichen Buchungsseite",
   "scheduling.companyRow": "Unternehmensname und Logo",
-  "scheduling.companyRowHelp": "Aus dem Unternehmensprofil.",
+  "scheduling.companyRowHelp":
+    "{company}. Für welches Unternehmen du arbeitest, legt ein Admin fest.",
   "scheduling.companyNoLogo":
-    "Aus dem Unternehmensprofil. Noch ist kein Logo hochgeladen, daher sehen Gäste nur den Namen.",
+    "{company} hat noch kein Logo, daher sehen Gäste nur den Namen. Für welches Unternehmen du arbeitest, legt ein Admin fest.",
   "scheduling.companyNoName":
     "Im Unternehmensprofil noch nicht gesetzt, daher sehen Gäste nur deinen Namen.",
   "scheduling.addLogo": "Logo hinzufügen",

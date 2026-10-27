@@ -13,7 +13,7 @@ package gates
 //     docs/reference/configuration.md — the table of record for the binaries;
 //  2. every MARGINCE_* var configuration.md names is still part of the product;
 //  3. every MARGINCE_* var a deploy entrypoint hard-requires is named in
-//     .env.example — that file is the annotated template
+//     .env.example — that file is the template
 //     docs/how-to/deploy-margince.md hands an operator, so a var the container
 //     refuses to boot without must not be discoverable only by reading the
 //     entrypoint script.
@@ -201,7 +201,7 @@ func TestConfigurationDocNamesOnlyLiveVars(t *testing.T) {
 
 // entrypointRequired is each var a deploy entrypoint stops without, mapped to
 // the script that reads it, from deployconfig.EntrypointVars. The generated
-// .env.example marks the same set [required] from the same call.
+// .env.example lists the same set first, under its own heading, from the same call.
 // Its stated limits are these gates' limits too: only the `${VAR:?}` and
 // `${VAR?}` forms are seen, never an explicit guard or `set -u`.
 func entrypointRequired(t *testing.T) map[string]string {

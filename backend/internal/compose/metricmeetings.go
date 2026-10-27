@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
@@ -21,20 +22,30 @@ func readReportingMeetings(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	}
 	var b reportingBindings
 	legacy := "(held.id IS NULL OR held.customer_eligible_at_change IS NULL OR held.partial_pre_history)"
-	owner := "CASE WHEN " + legacy + " THEN a.host_user_id ELSE held.host_id_at_change END"
 	eligible := "CASE WHEN " + legacy + " THEN " + activities.CustomerMeetingSQL("a") + " ELSE held.customer_eligible_at_change END"
 	// The history keeps no precision. Its start reads as the meeting's precision
 	// only while it is the meeting's time, so a later change to a day cannot move it.
 	start := "COALESCE(held.scheduled_start,a.occurred_at)"
 	precision := "CASE WHEN held.scheduled_start IS NULL OR held.scheduled_start = a.occurred_at THEN a.occurred_precision ELSE 'instant' END"
 	placed := occurredday.StartAtSQL(start, precision)
-	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), owner, b.arg, unownedIsExcluded)
+	// Every colleague the attendance evidence credits counts the meeting in
+	// their own figures; a team counts it once, because it is one row here.
+	// The row is listed under the first credited seat in the population. A
+	// recorded transition keeps the host it recorded.
+	seats := storekit.MeetingCreditedSeatsAtChangeSQL("a", legacy, "held.host_id_at_change")
+	_, credited, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), "credit.id", b.arg, unownedIsExcluded)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
-	if population == "" {
-		population = sqlUnnarrowed
+	// The whole workspace counts every held meeting, credited or not.
+	population := sqlUnnarrowed
+	if credited == "" {
+		credited = sqlUnnarrowed
+	} else {
+		population = "EXISTS (SELECT 1 FROM " + seats + " WHERE " + credited + ")"
 	}
+	owner := "(SELECT credit.id FROM " + seats + " WHERE " + credited +
+		" ORDER BY credit.id IS NOT DISTINCT FROM " + storekit.MeetingCreditedSeatAtChangeSQL("a", legacy, "held.host_id_at_change") + " DESC, credit.id LIMIT 1)"
 	visible, err := auth.ActivityContentClause(ctx, "a", b.arg)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err

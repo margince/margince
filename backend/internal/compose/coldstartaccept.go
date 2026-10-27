@@ -114,8 +114,10 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 	commitmentTasks := activities.NewStore(InstallationDB(pool))
 	svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(svc, commitmentTasks, contacts.NewStore(InstallationDB(pool))))
 	svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck(InstallationDB(pool), commitmentTasks))
+	svc.WithDeclinedEffect(CommitmentTaskKind, commitmentTaskDeclineEffect())
 	svc.WithEffect(deals.StageProgressionKind, stageProgressionEffect(svc,
-		deals.NewStore(InstallationDB(pool), DealsInstallation())))
+		deals.NewStore(InstallationDB(pool), DealsInstallation()).
+			WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))})))
 	svc.WithPrecheck(deals.StageProgressionKind, stageProgressionPrecheck())
 	svc.WithEffect(fxRateProposalKind, fxRateAcceptEffect(svc, deals.NewStore(InstallationDB(pool), DealsInstallation())))
 	return svc

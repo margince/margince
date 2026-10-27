@@ -32,8 +32,9 @@ func mailBodyCompletenessDataTask() datatask.Task {
 			Estimate: estimateRecoverableMailBodies, Batch: restoreMailBodiesBatch,
 		}, {
 			Name: "assess_stored_mail_bodies", Limit: 50, MinLimit: 1,
-			Audit:    datatask.AuditPolicy{Reason: "capture stamps the same parsed completeness on the row it inserts, without a separate audit"},
-			Estimate: estimateUnassessedMailBodies, Batch: assessMailBodiesBatch,
+			EmptyWhenDone: true,
+			Audit:         datatask.AuditPolicy{Reason: "capture stamps the same parsed completeness on the row it inserts, without a separate audit"},
+			Estimate:      estimateUnassessedMailBodies, Batch: assessMailBodiesBatch,
 		}},
 	}
 }

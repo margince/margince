@@ -224,11 +224,16 @@ type AddressProver func(ctx context.Context, tx pgx.Tx, seat ids.UUID, address s
 // way; what changes is whether they see it once or twice. It buys the importer
 // no reach into anything.
 //
-// Only an ASSERTED incumbent is attributable. A row a connector captured is
-// already covered by the same-seat rule, and widening this to observed rows
-// would let one mailbox join another's captured copy on a stated address.
+// For mail only an ASSERTED incumbent is attributable. A captured mail's
+// addresses are the sender's headers. Widening this to observed mail would let
+// one mailbox join another's captured copy on a stated address.
+//
+// A MEETING is attributable whichever door stored it. A captured meeting's
+// guests are the calendar provider's list for the seat that synced it, which
+// the arriving seat cannot write. A colleague's calendar naming this seat as
+// a guest is the proof that both seats reached one meeting.
 func attributableTo(
-	ctx context.Context, tx pgx.Tx, incumbent ids.ActivityID, proved AddressProver,
+	ctx context.Context, tx pgx.Tx, kind string, incumbent ids.ActivityID, proved AddressProver,
 ) (bool, error) {
 	if proved == nil {
 		return false, nil
@@ -246,8 +251,8 @@ func attributableTo(
 		  FROM activity_participant p
 		  JOIN activity a ON a.id = p.activity_id
 		 WHERE p.activity_id = $1
-		   AND a.captured_by LIKE 'human:%'
-		   AND coalesce(p.address, '') <> ''`, incumbent)
+		   AND (a.captured_by LIKE 'human:%' OR ($2 = '`+IdentityKindMeeting+`' AND a.kind = 'meeting'))
+		   AND coalesce(p.address, '') <> ''`, incumbent, kind)
 	if err != nil {
 		return false, fmt.Errorf("activities: reading the addresses an import states: %w", err)
 	}
@@ -403,9 +408,9 @@ func bindableIdentityUnder(
 	}
 	if !bindable {
 		// The same seat did not write both rows. One more way to say yes, and
-		// only one: the incumbent is an IMPORT stating an address this seat has
-		// proven is theirs. Everything else still refuses.
-		bindable, err = attributableTo(ctx, tx, incumbent, proved)
+		// only one: the incumbent states an address this seat has proven is
+		// theirs (attributableTo). Everything else still refuses.
+		bindable, err = attributableTo(ctx, tx, kind, incumbent, proved)
 		if err != nil || !bindable {
 			return ids.ActivityID{}, false, err
 		}

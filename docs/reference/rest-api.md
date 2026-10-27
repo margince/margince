@@ -57,6 +57,11 @@ An error answers `application/problem+json` (RFC 7807) with a machine `code` to 
 some: an `errors` array of `{field, code, message}` on a `422`, or `existing_id` on a duplicate. The
 statuses each operation can answer are listed with its responses in the OpenAPI document.
 
+A path, query or header parameter whose value does not parse, or that is missing, answers
+`422 validation_error`, with `invalid_parameter` as the code of its entry. Every operation that can
+answer this declares the `422`: `backend/internal/compose/paramrefusaldeclared_test.go` sends each
+operation a bad value for each parameter and checks.
+
 ## Safe retries and concurrent edits
 
 | Header | Rule |

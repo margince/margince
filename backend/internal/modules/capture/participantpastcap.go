@@ -18,15 +18,9 @@ import (
 // StampSeatsPastTheCap binds the workspace's own seats from a party list the
 // MaxParticipants cap withheld, and nobody else on it.
 //
-// The cap refuses a crowded invitation because its names are a distribution
-// list, and folding them in would report a relationship with everybody who got
-// the same mail. A seat is not that: the event is in their own calendar, and
-// the row admits them to a meeting they attended. So the seat arm is the only
-// one taken here. No contact is resolved and no unknown address is kept, which
-// leaves every external name exactly as refused as the cap left it.
-//
-// Live capture and the attendee repair both call this, so one invitation is
-// split into seats and strangers by one rule whichever pass reads it.
+// A seat's own calendar holds the event. The row admits them to a meeting they
+// attended, and no contact is resolved. Live capture then names the outside
+// guests (stampGuestsPastCap).
 func StampSeatsPastTheCap(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -55,27 +49,29 @@ func stampSeatsPastCap(
 	addresses := make([]string, 0, len(withheld))
 	roles := make([]string, 0, len(withheld))
 	names := make([]string, 0, len(withheld))
+	responses := make([]string, 0, len(withheld))
 	for _, p := range withheld {
 		address := strings.ToLower(strings.TrimSpace(p.Email))
-		if address == "" || p.Declined {
+		if address == "" || p.Declined() {
 			continue
 		}
 		addresses = append(addresses, address)
 		roles = append(roles, p.Role)
 		names = append(names, strings.TrimSpace(p.DisplayName))
+		responses = append(responses, p.Response)
 	}
 	// One attendance row per seat: a colleague listed twice is one colleague in
 	// the room. The owner's directional row from capture records whose calendar
 	// it is, not attendance, so it does not stand in for this one.
-	args := []any{activityID, addresses, roles, names, storedDomainsOf(addresses), rosterSeat}
+	args := []any{activityID, addresses, roles, names, storedDomainsOf(addresses), rosterSeat, responses}
 	seatMatch, err := calendarSeatMatch(ctx, tx, kind, partyListIsAttested, &args)
 	if err != nil {
 		return 0, err
 	}
 	tag, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, user_id, address, role, display_name, address_domain_folded, roster_seat)
-		SELECT DISTINCT ON (u.id) $1, u.id, inp.address, inp.role, inp.display_name, inp.domain_folded, $6::uuid
-		  FROM unnest($2::text[], $3::text[], $4::text[], $5::text[]) WITH ORDINALITY AS inp(address, role, display_name, domain_folded, ord)
+		INSERT INTO activity_participant (activity_id, user_id, address, role, display_name, address_domain_folded, roster_seat, response)
+		SELECT DISTINCT ON (u.id) $1, u.id, inp.address, inp.role, inp.display_name, inp.domain_folded, $6::uuid, NULLIF(inp.response, '')
+		  FROM unnest($2::text[], $3::text[], $4::text[], $5::text[], $7::text[]) WITH ORDINALITY AS inp(address, role, display_name, domain_folded, response, ord)
 		  JOIN app_user u ON `+seatMatch+`
 		 WHERE NOT EXISTS (
 		       SELECT 1 FROM activity_participant ap

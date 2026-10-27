@@ -195,7 +195,7 @@ func (in DerivedSignal) channelAndSource() (channel, source string) {
 		channel = "derived"
 	}
 	if source == "" {
-		source = "signal-scan"
+		source = scanSource
 	}
 	return channel, source
 }

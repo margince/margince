@@ -14,13 +14,17 @@ On a dev stack it is `config/margince.yaml`. `make dev` makes it from
 also reads `config/margince.dev.yaml` over it through `--config-file`, and a key set in the dev file
 wins.
 
-The example file sets the workspace and the first admin. Then it lists every other setting at its
-default, each line turned off with `# `. To set one:
+The example file sets only the workspace and the first admin. So every other line in your file is
+one you wrote. [`config/margince.defaults.yaml`](../../config/margince.defaults.yaml) holds every
+setting at its default. To set one:
 
-1. Find the setting in the file.
-2. Remove the first `# ` from its line and from the section lines above it.
+1. Find the setting in the defaults file or in the
+   [configuration reference](../reference/configuration.md#every-setting).
+2. Copy its line, and the section lines above it, into your file.
 3. Change the value, and save the file.
 4. Start the api and the worker again. A running program does not read the file a second time.
+
+To see what you changed, compare your file with the defaults file.
 
 A secret takes a reference such as `${file:/run/secrets/smtp_password}`, never the value itself.
 

@@ -105,6 +105,21 @@ func decodeEvent(raw []byte, _ string) (meetingmap.Event, error) {
 	return decode(ev), nil
 }
 
+// guestResponses maps Graph's status.response onto the connector's answers.
+// "none" is Graph's word for an attendee who has not answered yet.
+var guestResponses = map[string]string{
+	"accepted":            connector.ResponseAccepted,
+	"organizer":           connector.ResponseAccepted,
+	"declined":            connector.ResponseDeclined,
+	"tentativelyaccepted": connector.ResponseTentative,
+	"notresponded":        connector.ResponseNeedsAction,
+	"none":                connector.ResponseNeedsAction,
+}
+
+func guestResponse(status string) string {
+	return guestResponses[strings.ToLower(strings.TrimSpace(status))]
+}
+
 // decode maps Microsoft's event resource onto the neutral shape.
 func decode(ev rawEvent) meetingmap.Event {
 	attendees := make([]meetingmap.Actor, 0, len(ev.Attendees))
@@ -113,7 +128,7 @@ func decode(ev rawEvent) meetingmap.Event {
 			Email:    a.EmailAddress.Address,
 			Name:     a.EmailAddress.Name,
 			Room:     strings.EqualFold(strings.TrimSpace(a.Type), "resource"),
-			Declined: strings.EqualFold(strings.TrimSpace(a.Status.Response), "declined"),
+			Response: guestResponse(a.Status.Response),
 		})
 	}
 	return meetingmap.Event{

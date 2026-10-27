@@ -1167,7 +1167,6 @@ export const en = {
   "scheduling.videoTeamsHelp": "Needs a work or school Microsoft 365 account.",
   "scheduling.unsaved": "You have unsaved changes",
   "scheduling.discard": "Discard",
-  "scheduling.brand": "Company name and logo",
   "scheduling.back": "Back to Margince",
   "scheduling.prepare": "Prepare for this meeting",
   "scheduling.timezone": "Time zone",
@@ -1630,8 +1629,10 @@ export const en = {
   "brief.week.workRecorded": "Work completed this week.",
   "brief.week.leads_one": "{count} lead assigned.",
   "brief.week.leads_other": "{count} leads assigned.",
-  "brief.week.responses_one": "{count} lead answered within target.",
-  "brief.week.responses_other": "{count} leads answered within target.",
+  "brief.week.responses_one":
+    "{count} lead got a first response by week close.",
+  "brief.week.responses_other":
+    "{count} leads got a first response by week close.",
   "brief.week.lost_one": "{count} deal lost.",
   "brief.week.lost_other": "{count} deals lost.",
   "brief.row.details": "Details",
@@ -1756,6 +1757,7 @@ export const en = {
   "systemJob.mail_draft_retention": "Mail draft cleanup",
   "systemJob.privacy_request_proof_expiry": "Privacy request proof cleanup",
   "systemJob.waiting_horizon_refresh": "Reply time measurement",
+  "systemJob.evidence_authorship": "Deal evidence author check",
   "systemJob.meeting_delivery": "Calendar delivery",
   "systemJob.merge": "Record merge",
   "systemJob.notice_case_open": "Privacy request intake",
@@ -1992,6 +1994,9 @@ export const en = {
   "history.field.guests_added": "Guests added from the calendar",
   "history.field.guest_links_added": "Guests linked from the calendar",
   "history.field.guests_retired": "Guests removed by the calendar",
+  "history.field.guest_answers_changed":
+    "Guest answers updated from the calendar",
+  "history.field.guests_left_out": "Guests not listed",
   "history.field.relinked_emails": "Email addresses moved over",
   "history.field.relinked_phones": "Phone numbers moved over",
   "history.field.relinked_relationships": "Relationships moved over",
@@ -3973,6 +3978,11 @@ export const en = {
     "This meeting is booked in a calendar, so it needs a time as well as a date.",
   "activity.detail.when": "When",
   "activity.detail.attendees": "Attendees",
+  "activity.detail.response.declined": "Declined",
+  "activity.detail.response.tentative": "Maybe",
+  "activity.detail.response.needsAction": "No answer",
+  "activity.detail.guestsLeftOut_one": "and {count} more guest not listed",
+  "activity.detail.guestsLeftOut_other": "and {count} more guests not listed",
   "activity.detail.colleagues": "Colleagues",
   "activity.detail.filedUnder": "Filed under",
   "email.detail.bccWithheld":
@@ -5358,8 +5368,13 @@ export const en = {
   "brief.weekly.scorecard.advancedBasis":
     "Each move counts: a lead that moves two stages counts twice",
   "brief.weekly.scorecard.answeredInTarget": "Replies past target time",
-  "brief.weekly.scorecard.answeredDetail": "{count} answered in target",
-  "brief.weekly.scorecard.allInTarget": "All answered in target",
+  "brief.weekly.scorecard.noArrivals": "No lead arrived this week",
+  "brief.weekly.scorecard.unanswered":
+    "No first response recorded by week close: {count} of {total}",
+  "brief.weekly.scorecard.allResponded":
+    "First response recorded by week close: all {total}",
+  "brief.weekly.scorecard.respondedNoCohort":
+    "First response recorded by week close: {count}. Arrivals were not recorded for this week",
   "brief.weekly.scorecard.meetingsHeld": "Meetings marked held",
   "brief.weekly.scorecard.meetingsBasis": "{booked} booked · {noShow} no-show",
   "brief.weekly.scorecard.partialHistory": "Meetings without history",
@@ -10901,6 +10916,11 @@ export const en = {
   "auto.enabledFor": "{name} is enabled",
   "auto.colLastRun": "Last run",
   "auto.colRuns30": "Runs (30 days)",
+  "auto.colOwner": "Runs as",
+  "auto.ownerFor": "Runs as {name}",
+  "auto.ownerNone": "No owner",
+  "auto.ownerHint":
+    "A rule is blocked while its owner has no access. Pick a member to run it again.",
   "auto.colStatus": "Status",
   "auto.colActions": "Actions",
   "auto.lastRunNever": "Never",
@@ -11238,6 +11258,15 @@ export const en = {
   "configuration.detail.type": "Type: {type}",
   "configuration.detail.flag": "Flag: {flag}",
   "configuration.detail.readBy": "Read by: {programs}",
+  "configuration.detail.fullDefault": "Full default",
+  "configuration.copyValue": "Copy value",
+  "configuration.copyDefault": "Copy default",
+  "configuration.copied": "Copied",
+  "configuration.copyRemedy": "Select the text and copy it by hand.",
+  "configuration.scope.label": "Filter by source",
+  "configuration.scope.all": "All",
+  "configuration.scope.changed": "Not default",
+  "configuration.scope.outside": "Set outside the app",
   "settings.tab.reset": "Reset data",
   "settings.group.me": "You",
   "settings.group.company": "Company",
@@ -12231,6 +12260,8 @@ export const en = {
   "users.handover.deals_other": "{count} deals",
   "users.handover.projects_one": "{count} project",
   "users.handover.projects_other": "{count} projects",
+  "users.handover.tasks_one": "{count} open task",
+  "users.handover.tasks_other": "{count} open tasks",
   "users.removeMfa": "Remove two-step sign-in",
   "users.removeMfaConfirmTitle": "Remove two-step sign-in for {name}?",
   "users.removeMfaConfirmBody":
@@ -16435,6 +16466,10 @@ export const en = {
   "worklist.untitled.dedupe_candidate": "Possible duplicate records",
   "worklist.untitled.task": "Untitled task",
   "worklist.untitled.brief_item": "Deal to review",
+  "worklist.mayBeDone.asked":
+    "You may have done this: you wrote to them on {date}.",
+  "worklist.mayBeDone.done": "Done",
+  "worklist.mayBeDone.notYet": "Not yet",
   "worklist.recipients.label": "Recipients",
   "worklist.recipients.open": "Still waiting",
   "worklist.recipients.done": "Done",
@@ -16950,8 +16985,8 @@ export const en = {
   "lead.company.linkTitle": "Link this lead to {name}?",
   "lead.company.linkConfirm": "Link company",
   "lead.company.linkOpens": "The company name on this lead then opens {name}.",
-  "lead.company.linkContact":
-    "This lead is added as a contact at {name}. Its status does not change.",
+  "lead.company.linkOnQualify":
+    "No contact is created now. When you qualify this lead, it becomes a contact at {name}.",
   "lead.timeline.received": "{at} · received",
   "lead.timeline.weReplied": "You replied",
   "lead.timeline.repliedIn": "{at} · in {span}",
@@ -17371,9 +17406,10 @@ export const en = {
   "scheduling.guestView": "What guests see",
   "scheduling.previewLabel": "Preview of your public booking page",
   "scheduling.companyRow": "Company name and logo",
-  "scheduling.companyRowHelp": "From the company profile.",
+  "scheduling.companyRowHelp":
+    "{company}. An admin assigns the company you work for.",
   "scheduling.companyNoLogo":
-    "From the company profile. No logo is uploaded yet, so guests see the name only.",
+    "{company} has no logo yet, so guests see the name only. An admin assigns the company you work for.",
   "scheduling.companyNoName":
     "Not set in the company profile yet, so guests see your name only.",
   "scheduling.addLogo": "Add logo",

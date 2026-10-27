@@ -125,8 +125,7 @@ func decode(ev rawEvent, owner string) meetingmap.Event {
 	attendees := make([]meetingmap.Actor, 0, len(ev.Attendees))
 	for _, a := range ev.Attendees {
 		attendees = append(attendees, meetingmap.Actor{
-			Email: a.Email, Name: a.DisplayName, Room: a.isRoom(),
-			Declined: strings.EqualFold(strings.TrimSpace(a.ResponseStatus), "declined"),
+			Email: a.Email, Name: a.DisplayName, Room: a.isRoom(), Response: guestResponse(a.ResponseStatus),
 		})
 	}
 	return meetingmap.Event{
@@ -143,6 +142,19 @@ func decode(ev rawEvent, owner string) meetingmap.Event {
 		Attendees:     attendees,
 		PartiesHidden: ev.partiesHidden(),
 	}
+}
+
+// guestResponses maps Google's responseStatus onto the connector's answers. A
+// value Google adds later reads as no stated answer rather than a wrong one.
+var guestResponses = map[string]string{
+	"accepted":    connector.ResponseAccepted,
+	"declined":    connector.ResponseDeclined,
+	"tentative":   connector.ResponseTentative,
+	"needsaction": connector.ResponseNeedsAction,
+}
+
+func guestResponse(status string) string {
+	return guestResponses[strings.ToLower(strings.TrimSpace(status))]
 }
 
 // ownerDeclined reports that the connected account answered NO to this

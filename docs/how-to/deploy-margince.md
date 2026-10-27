@@ -122,11 +122,12 @@ On the first boot against an empty database the api bootstraps the company + adm
    [`config/margince.example.yaml`](../../config/margince.example.yaml).
 2. Set its `password_file` to `secrets/admin-password`, where the entrypoint writes the password.
 3. Set `MARGINCE_ADMIN_PASSWORD`. The example config's default path differs, so step 2 matters.
-4. To enable AI, declare the binding under `seeds.ai_routing`. Put each provider's key in under
-   Settings → AI → AI models → Providers.
-5. Keep the `mcp` block only if you serve the MCP connector. It then needs
+4. To enable AI, declare the binding under `seeds.ai_routing`; a file in
+   [`config/presets/`](../../config/presets/README.md) is a binding to copy. Put each provider's key
+   in under Settings → AI → AI models → Providers.
+5. Add an `mcp` block only if you serve the MCP connector. It then needs
    `MARGINCE_PUBLIC_BASE_URL`, or the api refuses to boot.
-6. Leave `operations:` commented out, as the example ships it.
+6. Leave `operations:` out, as the example does.
 7. Decide the retention posture before first boot, if the installation must keep everything (below).
 8. Choose the country: set `workspace.country` (below).
 

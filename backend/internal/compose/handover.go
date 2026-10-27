@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -65,10 +66,11 @@ func (e *handoverReceiverError) FieldFault() (field, code, message string) {
 type handoverSeam struct {
 	db      *database.DB
 	targets map[crmcontracts.BulkRecordType]bulkTarget
+	tasks   *activities.Store
 }
 
 func newHandoverSeam(engine *bulkEngine) handoverSeam {
-	return handoverSeam{db: engine.db, targets: engine.targets}
+	return handoverSeam{db: engine.db, targets: engine.targets, tasks: engine.tasks}
 }
 
 // admit is the gate the count and the move both pass, in their own transaction.
@@ -89,14 +91,18 @@ func (s handoverSeam) Owned(ctx context.Context, member ids.UUID) (crmcontracts.
 			return err
 		}
 		var err error
-		counts, err = countOwned(ctx, tx, member)
+		counts, err = s.countOwned(ctx, tx, member)
 		return err
 	})
 	return counts, err
 }
 
-func countOwned(ctx context.Context, tx pgx.Tx, member ids.UUID) (crmcontracts.HandoverCounts, error) {
+func (s handoverSeam) countOwned(ctx context.Context, tx pgx.Tx, member ids.UUID) (crmcontracts.HandoverCounts, error) {
 	var counts crmcontracts.HandoverCounts
+	var err error
+	if counts.Task, err = s.tasks.OpenTasksAssignedTo(ctx, tx, ids.From[ids.UserKind](member)); err != nil {
+		return crmcontracts.HandoverCounts{}, err
+	}
 	for table, count := range handoverTally(&counts) {
 		owned, err := visibleOwnedIDs(ctx, tx, table, member)
 		if err != nil {
@@ -195,8 +201,11 @@ func (s handoverSeam) handOverInTx(
 	if _, err := approvals.WithdrawSharesDecidedByInTx(ctx, tx, member); err != nil {
 		return crmcontracts.UserHandoverResult{}, err
 	}
-	left, err := countOwned(ctx, tx, member)
-	return crmcontracts.UserHandoverResult{Moved: moved, Left: left}, err
+	// Either failure aborts the transaction, so both are reported together.
+	var taskErr error
+	moved.Task, taskErr = s.tasks.HandOverOpenTasksTx(ctx, tx, ids.From[ids.UserKind](member), receiver)
+	left, countErr := s.countOwned(ctx, tx, member)
+	return crmcontracts.UserHandoverResult{Moved: moved, Left: left}, errors.Join(taskErr, countErr)
 }
 
 // handOverKind moves one record type, each row in its own savepoint. A row its

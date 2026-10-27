@@ -5723,7 +5723,9 @@ export interface paths {
         /**
          * Re-associate every activity of one conversation thread to a chosen record, in one transaction.
          * @description The thread twin of `relinkActivity`: the same association applied to every non-archived
-         *     activity carrying `thread_key` that the caller may write. A mis-filed conversation is
+         *     activity of the conversation `activity_id` belongs to that the caller may write. A thread
+         *     key alone does not name a conversation, so a member is a message on the activity's thread
+         *     that is our own mail to its correspondent, or authenticated mail from them. A mis-filed conversation is
          *     usually mis-filed whole, and one call here is the remedy rather than one call per message.
          *     Each moved activity gets its own `audit_log` row (`activity_relink`) and its own
          *     `activity.updated` event, exactly as the single relink writes them; filing under a project
@@ -6308,7 +6310,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read the anchor company's public booking logo. */
+        /**
+         * Read the logo a public booking page shows.
+         * @description The logo of the legal entity the host works for. With no `entity`, the default
+         *     entity's logo, which is the anchor company's. A booking profile's `logo_url` names
+         *     the right one, so a client follows that link rather than building it.
+         */
         get: operations["getPublicBookingCompanyLogo"];
         put?: never;
         post?: never;
@@ -7374,25 +7381,24 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Link a lead to a company, and add the lead as a contact there.
+         * Link a lead to a company.
          * @description The confirm action behind `company_match`: a human says this lead belongs to this
-         *     company. One transaction sets `company_id`, makes sure the lead has a contact, and makes
-         *     sure that contact has a current employment at the company.
+         *     company. One transaction sets `company_id`, with the lead's audit row and its
+         *     `lead.updated` event, and writes nothing else.
          *
-         *     The contact is found the way promotion finds it: a live contact holding the lead's email
-         *     is used, otherwise one is created from the lead, and either way its
-         *     `converted_from_lead_id` names this lead when it named none. The lead is NOT promoted:
-         *     its status, owner and place on the lead list stay as they were, and a later promotion
-         *     lands on the same contact. An employment that already exists is kept, not duplicated.
+         *     Someone is a lead or a contact, never both, so the link creates no contact and no
+         *     employment. The lead is NOT promoted: its status, owner and place on the lead list stay as
+         *     they were. The lead becomes a contact at the linked company when it is converted:
+         *     promotion gives the contact it creates or merges into a current employment there.
          *
-         *     The caller needs `lead:update`, `contact:create`, `contact:update`, `company:read` and
-         *     `relationship:create`; a missing grant answers `403` before anything is read. A company
-         *     the caller cannot open answers `404`, as a missing one does. A company that is not the
-         *     lead's current `company_match` answers `422` naming `company_id` with code
-         *     `not_the_lead_match`: the lead's company name changed, a second company of that name
-         *     appeared, or the id was never offered. Repeating a link that already holds changes
-         *     nothing and answers the lead as it is. A lead with neither name nor email answers
-         *     `422` with code `identity_required`; one that is promoted or disqualified answers `404`.
+         *     The caller needs `lead:update` and `company:read`; a missing grant answers `403` before
+         *     anything is read. A company the caller cannot open answers `404`, as a missing one does.
+         *     A company that is not the lead's current `company_match` answers `422` naming
+         *     `company_id` with code `not_the_lead_match`: the lead's company name changed, a second
+         *     company of that name appeared, or the id was never offered. Repeating a link that already
+         *     holds changes nothing and answers the lead as it is. A lead with neither name nor email
+         *     answers `422` with code `identity_required`; one that is promoted or disqualified answers
+         *     `404`.
          */
         post: operations["linkLeadCompany"];
         delete?: never;
@@ -16266,8 +16272,8 @@ export interface paths {
          *     stay private, now to the new owner; an active member keeps theirs. A record the caller may not change stays with the member and is counted
          *     in `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
          *     owner (an active human seat that can write, inside the caller's write scope), else `422`
-         *     with `code: owner_not_assignable` and nothing moves. Tasks, automations and deal-room
-         *     stewardships are not moved.
+         *     with `code: owner_not_assignable` and nothing moves. Open tasks assigned to the member move too, each through the ordinary update; a task the
+         *     caller may not change stays with the member. Automations and deal-room stewardships are not moved.
          */
         post: operations["handOverUserWork"];
         delete?: never;
@@ -33636,6 +33642,8 @@ export interface components {
             company: number;
             deal: number;
             project: number;
+            /** @description Open tasks assigned to the member. */
+            task: number;
         };
         UserHandover: {
             owned: components["schemas"]["HandoverCounts"];
@@ -34442,8 +34450,16 @@ export interface components {
          *     `relinkActivity`.
          */
         RelinkThreadRequest: {
-            /** @description The conversation key the activities carry (`Activity.thread_key`, also the `thread_key` list filter). */
-            thread_key: string;
+            /**
+             * Format: uuid
+             * @description A message of the conversation to move; it always moves with it.
+             */
+            activity_id?: string;
+            /**
+             * @deprecated
+             * @description Ignored. The conversation is the one `activity_id` belongs to, because a thread key alone does not say whose conversation it is.
+             */
+            thread_key?: string;
             entity_type: components["schemas"]["RelinkDestinationType"];
             /** Format: uuid */
             entity_id: string;
@@ -34580,9 +34596,9 @@ export interface components {
             location: string;
             /** @description Derived from the host account display name; request values are ignored. Names longer than 200 characters are abbreviated for this profile. */
             host_name?: string;
-            /** @description Derived from the anchor company; request values are ignored. Names longer than 200 characters are abbreviated for this profile. */
+            /** @description The name of the legal entity an admin assigns the host to; request values are ignored. Names longer than 200 characters are abbreviated for this profile. */
             company_name?: string;
-            /** @description Derived from the anchor company; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin. */
+            /** @description The logo of the legal entity the host works for and absent when it has none; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin. */
             logo_url?: string;
             readonly slug?: string;
             readonly public_url?: string;
@@ -34752,6 +34768,27 @@ export interface components {
              * @description The contact this guest is. Present only when you may read that contact.
              */
             contact_id?: string;
+            /** @description What the guest answered the invitation. Absent when no calendar stated an answer. */
+            response?: components["schemas"]["MeetingResponse"];
+        };
+        /**
+         * @description A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
+         * @enum {string}
+         */
+        MeetingResponse: "accepted" | "declined" | "tentative" | "needs_action";
+        /** @description The answer one colleague or linked contact on a meeting gave its invitation. Exactly one of `user_id` and `contact_id` is set. */
+        MeetingAttendeeResponse: {
+            /**
+             * Format: uuid
+             * @description The colleague, one of `colleague_ids` or the host.
+             */
+            user_id?: string;
+            /**
+             * Format: uuid
+             * @description The contact, one of the contact `links` you see.
+             */
+            contact_id?: string;
+            response: components["schemas"]["MeetingResponse"];
         };
         /**
          * @description A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
@@ -34828,6 +34865,10 @@ export interface components {
             readonly colleague_ids?: string[];
             /** @description Meeting only: the guests who are not a colleague seat and whose contact is not among the `links` you see. That covers a guest who is not a contact yet, and one past the link ceiling or filed under a contact you may not read. `contact_id` is set only for a contact you may read. A colleague is in `colleague_ids`. Filled wherever one activity is answered whole; a list leaves it out. Withheld with the content, like `colleague_ids`. */
             readonly guests?: components["schemas"]["MeetingGuest"][];
+            /** @description Meeting only: the answers the colleagues and the linked contacts you see gave the invitation, for those a calendar stated one for. A guest in `guests` carries their own `response`. Filled and withheld like `guests`. */
+            readonly attendee_responses?: components["schemas"]["MeetingAttendeeResponse"][];
+            /** @description Meeting only: how many outside guests of a meeting past the party cap are not listed, because a crowded meeting keeps at most 200 by address. Filled and withheld like `guests`. */
+            readonly guests_left_out?: number;
             /**
              * @description inbound/outbound for email/call; null for note/task.
              * @enum {string|null}
@@ -36510,7 +36551,7 @@ export interface components {
             company_name?: string | null;
             /**
              * Format: uuid
-             * @description The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. Null until then, and null again when an edit of `company_name` no longer names the linked company. Withheld when the reader cannot open that company.
+             * @description The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. Null until then, and null again when an edit of `company_name` no longer names the linked company. Withheld when the reader cannot open that company. The link adds no contact; converting the lead makes it a contact employed there.
              */
             readonly company_id?: string | null;
             company_match?: components["schemas"]["LeadCompanyMatch"];
@@ -36748,7 +36789,7 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
-        /** @description A company the lead's `company_name` names exactly, offered for a human to confirm. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise. */
+        /** @description A company the lead's `company_name` names exactly, offered for a human to confirm. Confirming sets `company_id` and creates no contact. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise. */
         LeadCompanyMatch: {
             /** Format: uuid */
             id: string;
@@ -44584,6 +44625,11 @@ export interface components {
             /** @enum {string} */
             status: "enabled" | "paused";
             /**
+             * Format: uuid
+             * @description The member the rule runs as. Null until the rule is first enabled, and after its owner's seat is removed. Firings of a rule whose owner is no longer active are blocked until the owner is changed.
+             */
+            owner_id?: string | null;
+            /**
              * @description Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, or one check moved more than 100 records. Null for a rule running or paused by hand. Resuming clears it.
              * @enum {string|null}
              */
@@ -44624,6 +44670,11 @@ export interface components {
             } | null;
             /** @enum {string|null} */
             status?: "enabled" | "paused" | null;
+            /**
+             * Format: uuid
+             * @description Hand the rule to another member, who must be a seat the caller may make an owner (an active human seat that can write, inside the caller's write scope), else `422` with `code: owner_not_assignable`. Cannot be cleared.
+             */
+            owner_id?: string | null;
         };
         /**
          * @description Optional body for POST /automations/{id}/preview. Omit to preview the stored automation as-is; supply
@@ -46644,6 +46695,18 @@ export interface components {
             advanced: number;
             disqualified: number;
             promoted: number;
+            /**
+             * @description The week's lead cohort: leads that arrived in the window (dated by when they were
+             *     routed, or created when nobody routed them), are not archived, and no import wrote.
+             *     `answered_in_target` and `breached` are both counted from exactly these leads, so
+             *     `arrived - answered_in_target` is the leads with no first response recorded by the
+             *     close. Do not subtract `breached` too: a late answer is in both.
+             *
+             *     Null, or absent from an older server, on a week frozen before the cohort was
+             *     recorded. Such a week cannot say how many leads went unanswered, and a reader shows
+             *     that as unknown, never as zero and never as every lead answered.
+             */
+            arrived?: number | null;
             /** @description Leads arriving this week with a first response recorded before the week closed, including late responses. Breaches are counted separately. This is not an SLA success rate. */
             answered_in_target: number;
             breached: number;
@@ -46846,7 +46909,8 @@ export interface components {
             learnings?: components["schemas"]["WeeklyReviewLearnings"];
             /**
              * @description How WELL the week went, as against what happened in it — the counts beside this say
-             *     forty leads arrived, this says twelve were answered inside the target.
+             *     forty leads arrived, this says twelve had a first response recorded by the close. It
+             *     does not say a target was met.
              *
              *     ABSENT on a review written before scorecards existed. Each of its two blocks is
              *     independently absent too, and absent is NOT zero: a rep who carried no leads did not
@@ -47589,6 +47653,28 @@ export interface components {
             /** Format: date-time */
             occurred_at: string;
         };
+        /**
+         * @description The question whether a promise task is done, asked because we wrote to a recipient on its thread after the promise.
+         *     The contact page asks the same question under the same `claim_key`. Not yet is answered by
+         *     `POST /contacts/{contact_id}/moment/dismiss` with `claim_key` and `evidence_fingerprint`, and holds on both surfaces until we write again.
+         */
+        WorklistMayBeDone: {
+            /**
+             * Format: uuid
+             * @description The recipient the mail was written to.
+             */
+            contact_id: string;
+            /**
+             * Format: uuid
+             * @description The mail that may have kept the promise.
+             */
+            email_activity_id: string;
+            /** Format: date-time */
+            wrote_at: string;
+            wrote_precision: components["schemas"]["OccurredPrecision"];
+            claim_key: string;
+            evidence_fingerprint: string;
+        };
         /** @description A visible recipient's own claim on a shared deliverable. Other recipients may be outside the reader's scope. */
         WorklistPromiseRecipient: {
             /** Format: uuid */
@@ -47608,6 +47694,8 @@ export interface components {
         AttentionItem: {
             /** @description Sent as true on a task whose reminder is due for the reader, who is its assignee and reads their own work. Absent otherwise. */
             reminder_due?: boolean;
+            /** @description Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail. */
+            may_be_done?: components["schemas"]["WorklistMayBeDone"];
             /** @description Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable. */
             promise_recipients?: components["schemas"]["WorklistPromiseRecipient"][];
             /** @description The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access. */
@@ -49124,6 +49212,8 @@ export interface components {
          *     browser does not.
          */
         WorklistItem: {
+            /** @description Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail. */
+            may_be_done?: components["schemas"]["WorklistMayBeDone"];
             /** @description Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable. */
             promise_recipients?: components["schemas"]["WorklistPromiseRecipient"][];
             /** @description The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access. */
@@ -51464,6 +51554,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     downloadAgentSkillBundle: {
@@ -51567,6 +51658,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     applyContactEmploymentImport: {
@@ -52028,6 +52120,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     archiveContact: {
@@ -52064,6 +52157,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateContact: {
@@ -52305,6 +52399,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     dismissRelationshipNudge: {
@@ -52358,6 +52453,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getContactBrief: {
@@ -52571,6 +52667,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     runContactResearch: {
@@ -52823,6 +52920,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createIntroRequest: {
@@ -53011,6 +53109,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     restoreContactProfileField: {
@@ -53117,6 +53216,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getIntegrationsSettings: {
@@ -53431,6 +53531,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listCompanies: {
@@ -53699,6 +53800,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     archiveCompany: {
@@ -53733,6 +53835,7 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateCompany: {
@@ -53999,6 +54102,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getCompanyLogo: {
@@ -54025,6 +54129,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
                 headers: {
@@ -54060,6 +54165,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
                 headers: {
@@ -54125,6 +54231,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getCompanyGraph: {
@@ -54767,6 +54874,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     upsertPartner: {
@@ -55008,6 +55116,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getCompanyVatCheck: {
@@ -55034,6 +55143,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     requestCompanyVatCheck: {
@@ -55058,6 +55168,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
             /** @description Consulted too recently — the answer on the record still stands. */
             429: {
                 headers: {
@@ -55092,6 +55203,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getSiteRead: {
@@ -55118,6 +55230,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getCompanyAccess: {
@@ -55185,6 +55298,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getCompanyFinanceSummary: {
@@ -55211,6 +55325,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getFinanceSource: {
@@ -55349,6 +55464,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     linkFinanceSourceCustomer: {
@@ -55429,6 +55545,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
             /** @description This deployment composed no domain triage, so there is no company check to read. An empty list would say the domains were never triaged, which a composition gap cannot support. */
             503: {
                 headers: {
@@ -55464,6 +55581,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createCompanyFact: {
@@ -55562,6 +55680,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listPartners: {
@@ -55616,6 +55735,7 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     listCommissionEntries: {
@@ -55657,6 +55777,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getCommissionSummary: {
@@ -55704,6 +55825,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     decideCommissionEntry: {
@@ -55771,6 +55893,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     requestLegalReview: {
@@ -55908,6 +56031,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     decideLegalReview: {
@@ -55967,6 +56091,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listDealSuggestions: {
@@ -56032,6 +56157,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     acceptDealSuggestion: {
@@ -56141,6 +56267,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listDeals: {
@@ -56480,6 +56607,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     archiveDeal: {
@@ -56514,6 +56642,7 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateDeal: {
@@ -56767,6 +56896,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listProjects: {
@@ -57023,6 +57153,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     previewBulkUndo: {
@@ -57188,6 +57319,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     archiveProject: {
@@ -57231,6 +57363,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateProject: {
@@ -57409,6 +57542,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getProject360: {
@@ -57475,6 +57609,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createProjectHealthAssessment: {
@@ -57609,6 +57744,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     setProjectStakeholder: {
@@ -57685,6 +57821,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     setProjectCompany: {
@@ -57786,6 +57923,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createPipeline: {
@@ -57860,6 +57998,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     archivePipeline: {
@@ -57974,6 +58113,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     reorderPipelines: {
@@ -58113,6 +58253,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createStage: {
@@ -58187,6 +58328,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     archiveStage: {
@@ -58414,6 +58556,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getDealWinEvidence: {
@@ -58440,6 +58583,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getStageAutomationReport: {
@@ -58495,6 +58639,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     setTransitionPolicy: {
@@ -58613,6 +58758,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createStageExitCriterion: {
@@ -58702,6 +58848,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateStageExitCriterion: {
@@ -58915,6 +59062,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     logActivity: {
@@ -58999,6 +59147,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     archiveActivity: {
@@ -59033,6 +59182,7 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateActivity: {
@@ -59122,6 +59272,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     setActivityAudience: {
@@ -59278,6 +59429,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     relinkActivity: {
@@ -59375,6 +59527,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     undoActivityProjectFiling: {
@@ -59585,6 +59738,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getTranscriptRead: {
@@ -59611,6 +59765,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     draftEmail: {
@@ -59639,6 +59794,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getReplyRecipient: {
@@ -59663,6 +59819,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     previewSendAuthorization: {
@@ -59945,6 +60102,7 @@ export interface operations {
                     "application/json": components["schemas"]["ScheduledSend"][];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     getScheduledSend: {
@@ -59980,6 +60138,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     rescheduleScheduledSend: {
@@ -60077,6 +60236,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     getMailDraft: {
@@ -60201,6 +60361,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     sendMessage: {
@@ -60284,14 +60445,17 @@ export interface operations {
     };
     getPublicBookingCompanyLogo: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description A live legal entity other than the default one. */
+                entity?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description The anchor company's normalized PNG logo. */
+            /** @description The entity's normalized PNG logo. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -60301,6 +60465,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
             /** @description The logo could not be read. */
             default: {
                 headers: {
@@ -60433,6 +60598,7 @@ export interface operations {
                     "application/json": components["schemas"]["MeetingAvailability"];
                 };
             };
+            422: components["responses"]["ValidationError"];
             502: components["responses"]["CalendarUnavailable"];
             /** @description The operation could not be completed. */
             default: {
@@ -60468,6 +60634,7 @@ export interface operations {
                     "application/json": components["schemas"]["MeetingAvailability"];
                 };
             };
+            422: components["responses"]["ValidationError"];
             502: components["responses"]["CalendarUnavailable"];
             /** @description The operation could not be completed. */
             default: {
@@ -60502,6 +60669,7 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationError"];
             /** @description The operation could not be completed. */
             default: {
                 headers: {
@@ -60675,6 +60843,7 @@ export interface operations {
                     "application/json": components["schemas"]["MeetingAvailability"];
                 };
             };
+            422: components["responses"]["ValidationError"];
             502: components["responses"]["CalendarUnavailable"];
             /** @description The operation could not be completed. */
             default: {
@@ -60712,6 +60881,7 @@ export interface operations {
                     }[];
                 };
             };
+            422: components["responses"]["ValidationError"];
             /** @description The calendar connection is unavailable. */
             default: {
                 headers: {
@@ -60873,6 +61043,7 @@ export interface operations {
                     "application/json": components["schemas"]["MeetingInvitation"];
                 };
             };
+            422: components["responses"]["ValidationError"];
             /** @description The operation could not be completed. */
             default: {
                 headers: {
@@ -61131,6 +61302,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
             502: components["responses"]["CalendarUnavailable"];
         };
     };
@@ -61434,6 +61606,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
             /** @description Rate-limited. */
             429: {
                 headers: {
@@ -61466,6 +61639,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
             /** @description Rate-limited. */
             429: {
                 headers: {
@@ -61871,6 +62045,7 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     createAutomation: {
@@ -61920,6 +62095,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     deleteAutomation: {
@@ -61942,6 +62118,7 @@ export interface operations {
                 content?: never;
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateAutomation: {
@@ -62052,6 +62229,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     retryAutomationRun: {
@@ -62081,6 +62259,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listLeads: {
@@ -62503,6 +62682,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     disqualifyLead: {
@@ -62531,6 +62711,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateLead: {
@@ -62795,6 +62976,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     demoteLead: {
@@ -62922,6 +63104,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     explainLeadScore: {
@@ -62962,6 +63145,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     draftLeadEmail: {
@@ -63017,6 +63201,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     setLeadManualSignal: {
@@ -63116,6 +63301,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listLeadSources: {
@@ -63211,6 +63397,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateLeadSource: {
@@ -63360,6 +63547,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateLeadOrigin: {
@@ -63689,6 +63877,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createRecordAssignment: {
@@ -63767,6 +63956,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateRecordAssignment: {
@@ -63924,6 +64114,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateLeadDisqualifyReason: {
@@ -64027,6 +64218,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createRelationship: {
@@ -64088,6 +64280,7 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateRelationship: {
@@ -64159,6 +64352,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createList: {
@@ -64213,6 +64407,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     archiveList: {
@@ -64239,6 +64434,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateList: {
@@ -64298,6 +64494,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listListMembers: {
@@ -64478,6 +64675,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getRecordLists: {
@@ -64504,6 +64702,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listListHistory: {
@@ -64571,6 +64770,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getFilterVocabulary: {
@@ -64773,6 +64973,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     evaluateReporting: {
@@ -65736,6 +65937,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createSavedView: {
@@ -65785,6 +65987,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     archiveSavedView: {
@@ -65809,6 +66012,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateSavedView: {
@@ -66009,6 +66213,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
             /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured to seal a bot token in (`code: channel_credentials_not_configured`). */
             503: {
                 headers: {
@@ -66102,6 +66307,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createWebhookSubscription: {
@@ -66182,6 +66388,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     archiveWebhookSubscription: {
@@ -66208,6 +66415,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateWebhookSubscription: {
@@ -66275,6 +66483,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listWebhookDeliveries: {
@@ -66319,6 +66528,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     replayWebhookDelivery: {
@@ -66374,6 +66584,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     acceptTagSuggestion: {
@@ -66401,6 +66612,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     dismissTagSuggestion: {
@@ -66428,6 +66640,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listTags: {
@@ -66454,6 +66667,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createTag: {
@@ -66505,6 +66719,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     archiveTag: {
@@ -66529,6 +66744,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateTag: {
@@ -66597,6 +66813,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     mergeTags: {
@@ -67166,6 +67383,15 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            /** @description No embeddings model is bound to the installation, so there is no index to rebuild. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     EmbedReindexPreview: {
@@ -67188,6 +67414,15 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            /** @description No embeddings model is bound to the installation, so there is no index to rebuild. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     EmbedReindexStart: {
@@ -67215,6 +67450,15 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             409: components["responses"]["Conflict"];
+            /** @description No embeddings model is bound to the installation, so there is no index to rebuild. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     listAgentTools: {
@@ -67711,6 +67955,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createLegalEntity: {
@@ -67765,6 +68010,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateLegalEntity: {
@@ -67842,6 +68088,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     uploadLegalEntityLogo: {
@@ -67941,6 +68188,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getLegalEntityLogo: {
@@ -67967,6 +68215,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
                 headers: {
@@ -68002,6 +68251,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     assignLegalEntityMember: {
@@ -68155,6 +68405,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getAnchorCompanySiteReadLogo: {
@@ -68180,6 +68431,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
                 headers: {
@@ -68432,6 +68684,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     purgeCaptureExclusion: {
@@ -68461,6 +68714,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     setThreadAudience: {
@@ -68712,6 +68966,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listCaptureOwnerIdentities: {
@@ -68782,6 +69037,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     restoreCaptureOwnerIdentity: {
@@ -68817,6 +69073,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     deleteWorkspaceEmailDomain: {
@@ -69009,6 +69266,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
             /** @description This deployment composed no OAuth transport. */
             501: {
                 headers: {
@@ -69486,6 +69744,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getMagicLineRecords: {
@@ -69518,6 +69777,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getWorklist: {
@@ -69827,6 +70087,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getHandledForYou: {
@@ -69974,6 +70235,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getAuthenticationPolicy: {
@@ -70178,6 +70440,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateAgentClient: {
@@ -70236,6 +70499,7 @@ export interface operations {
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listOauthApps: {
@@ -70627,6 +70891,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listWorkspaceCaptureActivity: {
@@ -70663,6 +70928,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     readCaptureTracePipeline: {
@@ -70688,6 +70954,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listConsumerMailDomains: {
@@ -70760,6 +71027,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listBlockedDomains: {
@@ -71515,6 +71783,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listProviderLocations: {
@@ -71819,6 +72088,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listDedupeCandidates: {
@@ -71846,6 +72116,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getDedupeCandidate: {
@@ -71870,6 +72141,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     disposeDedupeCandidate: {
@@ -71927,6 +72199,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getAutonomy: {
@@ -72113,6 +72386,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     approveApproval: {
@@ -72174,6 +72448,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     rejectApproval: {
@@ -72213,6 +72488,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     acknowledgeApprovalFailure: {
@@ -72363,6 +72639,9 @@ export interface operations {
                     };
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createDataSubjectRequest: {
@@ -72410,6 +72689,8 @@ export interface operations {
                     "application/json": components["schemas"]["DataSubjectRequest"];
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -72512,6 +72793,9 @@ export interface operations {
                     };
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getNoticeCase: {
@@ -72537,6 +72821,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     assignNoticeCase: {
@@ -72620,6 +72905,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     recordCommunicationContext: {
@@ -72741,6 +73027,7 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     resolveConfirmSubmission: {
@@ -72855,6 +73142,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getRecordHistory: {
@@ -73255,6 +73543,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     retireCustomField: {
@@ -73312,6 +73601,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateCustomFieldOptions: {
@@ -73537,6 +73827,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     releaseRestrictedActivity: {
@@ -73692,6 +73983,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     placeLegalHold: {
@@ -73887,6 +74179,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateRetentionPolicy: {
@@ -73945,6 +74238,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     recordConsent: {
@@ -74239,6 +74533,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     sendPrivacyNotice: {
@@ -74265,6 +74560,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     requestDetailsConfirmation: {
@@ -74375,6 +74671,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     listRecordGrants: {
@@ -74416,6 +74713,7 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     createRecordGrant: {
@@ -74514,6 +74812,7 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listUsers: {
@@ -74561,6 +74860,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
         };
     };
     inviteUser: {
@@ -74689,6 +74989,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createFormerMember: {
@@ -74809,6 +75110,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     nameSeats: {
@@ -74922,6 +75224,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     reactivateUser: {
@@ -74965,6 +75268,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     getUserHandover: {
@@ -74991,6 +75295,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     handOverUserWork: {
@@ -75071,6 +75376,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     revokeUserSession: {
@@ -75096,6 +75402,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     removeUserMfa: {
@@ -75129,6 +75436,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     issueUserPasswordLink: {
@@ -75166,6 +75474,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
             /** @description Issuance rate limit reached for this actor or this target. */
             429: {
                 headers: {
@@ -75200,6 +75509,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createRole: {
@@ -75561,6 +75871,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createTeam: {
@@ -75646,6 +75957,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     removeTeamMember: {
@@ -75671,6 +75983,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listVoiceProfiles: {
@@ -75767,6 +76080,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     deleteVoiceProfile: {
@@ -75801,6 +76115,7 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateVoiceProfile: {
@@ -75868,6 +76183,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     ingestVoiceCorpusSource: {
@@ -76015,6 +76331,7 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateVoiceCorpusSource: {
@@ -76113,6 +76430,7 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createVoiceBuild: {
@@ -76191,6 +76509,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listVoiceProfileVersions: {
@@ -76232,6 +76551,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     applyVoiceProfileVersion: {
@@ -76290,6 +76610,7 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     rejectVoiceProfileVersion: {
@@ -76348,6 +76669,7 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     rollbackVoiceProfileVersion: {
@@ -76398,6 +76720,7 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listVoiceProfileDeltas: {
@@ -76439,6 +76762,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getVoiceLearningSummary: {
@@ -76463,6 +76787,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     rejectVoiceDraft: {
@@ -76514,6 +76839,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listProducts: {
@@ -76570,6 +76896,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createProduct: {
@@ -76646,6 +76973,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     archiveProduct: {
@@ -76858,6 +77186,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     archiveDealRoom: {
@@ -76894,6 +77223,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateDealRoom: {
@@ -76962,6 +77292,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     resumeDealRoom: {
@@ -76989,6 +77320,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     closeDealRoom: {
@@ -77016,6 +77348,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     setDealRoomExpiry: {
@@ -77140,6 +77473,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     inviteDealRoomParticipant: {
@@ -77233,6 +77567,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     revokeDealRoomParticipant: {
@@ -77260,6 +77595,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listDealRoomDocuments: {
@@ -77286,6 +77622,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     addDealRoomDocument: {
@@ -77355,6 +77692,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateDealRoomDocument: {
@@ -77425,6 +77763,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     openDealRoomThread: {
@@ -77518,6 +77857,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listOfferTemplates: {
@@ -77573,6 +77913,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createOfferTemplate: {
@@ -77659,6 +78000,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateOfferTemplate: {
@@ -77783,6 +78125,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createDealOutcomeReview: {
@@ -77903,6 +78246,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createOffer: {
@@ -77980,6 +78324,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     archiveOffer: {
@@ -78409,6 +78754,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
             /** @description The object store (blobstore) is not wired on this deployment — the same unwired-by-omission posture as renderOffer. */
             501: {
                 headers: {
@@ -78469,6 +78815,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createSignal: {
@@ -78553,6 +78900,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     archiveSignal: {
@@ -78577,6 +78925,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateSignal: {
@@ -78874,6 +79223,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getLatestWeeklyReview: {
@@ -78908,6 +79258,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     annotateMorningBrief: {
@@ -78983,6 +79334,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     getForecast: {
@@ -79164,6 +79516,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     resolveInputCheck: {
@@ -79851,6 +80204,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     addWeeklyPlanCommitment: {
@@ -80150,6 +80504,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     markAllNoticesRead: {
@@ -80211,6 +80566,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     snoozeBriefItem: {
@@ -80306,6 +80662,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     listAttachments: {
@@ -80411,6 +80768,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listDealDocuments: {
@@ -80478,6 +80836,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     unhideDealDocument: {
@@ -80502,6 +80861,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getDealStatus: {
@@ -80533,6 +80893,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     dismissDealMove: {
@@ -80615,6 +80976,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getDealCommitments: {
@@ -80640,6 +81002,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     proposeDealRoles: {
@@ -80666,6 +81029,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
             /**
              * @description The process role wired no model path — declared absent, never a silent no-op.
              *
@@ -80741,6 +81105,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getMyLinkedInReach: {
@@ -80766,6 +81131,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getMyLinkedInAccount: {
@@ -81006,6 +81372,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getMyMfa: {
@@ -81411,6 +81778,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     archiveContract: {
@@ -81434,6 +81802,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateContract: {
@@ -81706,6 +82075,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     deleteAttachment: {
@@ -81728,6 +82098,7 @@ export interface operations {
                 content?: never;
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getAttachmentExtraction: {
@@ -81753,6 +82124,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     readAttachmentForFields: {
@@ -81779,6 +82151,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
             /** @description The process role wired no model path or no job runner — declared absent, never a silent no-op. */
             501: {
                 headers: {
@@ -81852,6 +82225,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     uploadImportSource: {
@@ -82039,6 +82413,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     updateImportRun: {
@@ -82136,6 +82511,7 @@ export interface operations {
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getImportRunReport: {
@@ -82162,6 +82538,7 @@ export interface operations {
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     downloadImportProblems: {
@@ -82191,6 +82568,7 @@ export interface operations {
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     approveImportRun: {
@@ -82221,6 +82599,7 @@ export interface operations {
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     undoImportRun: {
@@ -82247,6 +82626,7 @@ export interface operations {
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listFxRates: {
@@ -82988,6 +83368,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     archiveCorpus: {
@@ -83021,6 +83402,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     updateCorpus: {
@@ -83085,6 +83467,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     uploadCorpusDocument: {
@@ -83156,6 +83539,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     deleteCorpusDocument: {
@@ -83189,6 +83573,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     askCorpus: {

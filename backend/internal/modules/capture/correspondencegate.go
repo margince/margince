@@ -388,7 +388,7 @@ func metInPersonTx(
 	if err := tx.QueryRow(ctx, `
 		SELECT count(*) > 0, count(*) FILTER (WHERE a.id <> $3) > 0
 		    FROM activity a
-		    JOIN activity_participant p ON p.activity_id = a.id
+		    JOIN activity_participant p ON p.activity_id = a.id AND NOT p.past_party_cap
 		   WHERE a.kind = 'meeting'
 		     AND a.archived_at IS NULL
 		     AND a.captured_by LIKE 'connector:%'

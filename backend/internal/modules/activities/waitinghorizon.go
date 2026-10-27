@@ -28,6 +28,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
@@ -146,9 +147,15 @@ func waitingHorizonAt(ctx context.Context, tx pgx.Tx, asOf time.Time) (int, erro
 // A failed measurement returns its error and writes nothing, so the previous
 // value stands. The compiled horizon is never stored in its place: a reader
 // would take a stand-in for something this installation measured.
-func (s *Store) RefreshWaitingHorizon(ctx context.Context) (int, error) {
+//
+// The measurement reads a year of mail, so it runs under the caller's budget.
+// The general statement ceiling would cut it for being large.
+func (s *Store) RefreshWaitingHorizon(ctx context.Context, budget time.Duration) (int, error) {
 	var days int
 	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		if err := database.BoundStatement(ctx, tx, budget); err != nil {
+			return err
+		}
 		days, err = s.refreshWaitingHorizonTx(ctx, tx, s.now())
 		return err
 	})

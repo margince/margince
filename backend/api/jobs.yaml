@@ -1317,6 +1317,20 @@ kinds:
       fresh value, and a measurement that fails keeps the previous one. The
       measurement is a year of inbound mail, which is why no read does it.
 
+  evidence_authorship:
+    role: worker
+    go_type: EvidenceAuthorshipArgs
+    queue: default
+    timeout: 10m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 1h
+    reason: >-
+      Hourly, so stage evidence follows an own domain added or removed within
+      the hour, whichever writer changed the set: the admin list or the own
+      company's domains. Each pass reads the live activity-backed evidence in
+      capped batches and writes only rows whose author side changed.
+
   idempotency_retention:
     role: worker
     fleet: true

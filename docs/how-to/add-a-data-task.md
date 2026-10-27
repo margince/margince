@@ -53,6 +53,37 @@ CLI process. The database credentials confer operator authority; the HTTP contro
 session and the `data_task` read or update grant. A wait stops with an error on a paused or failed
 step. Use System health to review the cause before resuming or retrying.
 
+## Run corrections without the worker
+
+On a restored copy whose worker must not start, run the corrections in the CLI process instead:
+
+```sh
+margince-migrate data-tasks execute --dsn "$DSN"
+```
+
+`execute` uses the same engine and catalog as the worker. It starts no job queue and no event lane,
+so no correction reaches a mailbox, a model or an enrichment vendor. The events the corrections
+write wait in the outbox for the next worker. It stops at a step waiting longer than 30 seconds to
+retry, after 60 attempts in a row that commit nothing, and after `--max-batches` committed batches
+(100000 by default).
+
+It prints a verdict before the steps:
+
+- `release`: the release this binary was built as.
+- `finished`: true when every step finished at the version this binary runs.
+- `done`: how many steps finished.
+- `required_versions`: the version of each task this binary runs. A step stored at an older
+  version is unfinished, even when it finished at that version, and is named with both numbers.
+- `awaiting_review`, `blocked`, `failed` and `unfinished`: each step that did not finish.
+- `left_in_scope`: each finished step marked `EmptyWhenDone` whose own estimate still counts rows,
+  with the count. These are rows the step saw and left as they were, such as mail with no stored
+  original. Mark a step `EmptyWhenDone` only when its estimate counts rows still to correct; an
+  estimate that counts input the step keeps would name it on every run.
+- `nothing_inspected`: each finished step that inspected no rows. Such a step proves nothing about
+  rows it never saw.
+
+The command fails unless every step finished and none left rows in its scope.
+
 ## Require a reviewed scope
 
 Set `Manual`, `ReviewVersion` and `Review` on a task that needs an operator’s decision. The callback

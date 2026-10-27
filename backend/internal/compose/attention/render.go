@@ -327,7 +327,7 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 		Id:      task.ID.String(),
 		Source:  crmcontracts.AttentionItemSource("task"),
 		Title:   &subject,
-		Subject: subjectOf(task.LinkType, task.LinkID),
+		Subject: subjectOf(task.LinkType, task.LinkID), MayBeDone: task.MayBeDone,
 		Actions: []crmcontracts.AttentionItemActions{"complete", "snooze"},
 	}
 	if task.SourceActivityID != nil {

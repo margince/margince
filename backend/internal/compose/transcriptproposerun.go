@@ -264,6 +264,9 @@ func (p *TranscriptProposer) stage(
 	bundleID := ids.NewV7()
 	asOf := p.now()
 	out := transcriptStaging{withheld: make(map[CommitmentOutcome]int)}
+	if err := lockPromiseSources(ctx, tx, []ids.UUID{activityID.UUID}); err != nil {
+		return transcriptStaging{}, err
+	}
 	for _, step := range steps {
 		commitment, err := p.commitmentFrom(ctx, tx, step, reading, activityID, asOf)
 		if err != nil {

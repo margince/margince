@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
@@ -137,10 +138,11 @@ func (said momentCopy) openPromiseHeadline(ctx context.Context, task crmcontract
 // heldMarker distinguishes the two cards one task can produce, so a
 // dismissal of one does not silence the other.
 func heldMarker(ctx context.Context, task crmcontracts.Activity) string {
-	if heldByAnother(ctx, task) {
-		return ":theirs"
+	var assignee *ids.UUID
+	if task.AssigneeId != nil {
+		assignee = new(ids.UUID(*task.AssigneeId))
 	}
-	return ":ours"
+	return momentaction.HeldMarker(ctx, assignee)
 }
 
 // dueMarker carries the task's due date into the fingerprint. The evidence is

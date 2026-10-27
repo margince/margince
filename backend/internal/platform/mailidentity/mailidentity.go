@@ -215,6 +215,28 @@ func FoldAddress(address string) string {
 	return folded[:at+1] + domain
 }
 
+// AddressSpellings returns the folded address with each of
+// owndomain.Spellings for its domain. An address with no domain is itself.
+func AddressSpellings(address string) []string {
+	folded := FoldAddress(address)
+	at := strings.LastIndex(folded, "@")
+	if at < 0 {
+		if folded == "" {
+			return nil
+		}
+		return []string{folded}
+	}
+	domains := owndomain.Spellings(folded[at+1:])
+	if len(domains) == 0 {
+		return []string{folded}
+	}
+	out := make([]string, 0, len(domains))
+	for _, domain := range domains {
+		out = append(out, folded[:at+1]+domain)
+	}
+	return out
+}
+
 // NormalizeDomain is the one domain fold, owndomain.Fold, so a seat's address
 // and an own domain compare in the same form.
 func NormalizeDomain(domain string) string { return owndomain.Fold(domain) }

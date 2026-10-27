@@ -28,6 +28,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// seededCorrespondent is who every seeded message is authenticated mail from,
+// so a thread's seeds are one correspondence.
+const seededCorrespondent = "buyer@seeded.test"
+
 // seedThreadMail plants one email on a thread with a body of the given length.
 func seedThreadMail(t *testing.T, e *integration.Env, threadKey string, bodyRunes, minutesAgo int) {
 	t.Helper()
@@ -35,10 +39,11 @@ func seedThreadMail(t *testing.T, e *integration.Env, threadKey string, bodyRune
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, direction, thread_key, occurred_at,
-			                      source_system, source_id, source, captured_by)
+			                      source_system, source_id, source, captured_by,
+			                      counterparty_email, inbound_sender_authenticated)
 			VALUES ($1, 'email', 'a subject', $2, 'inbound', $3,
 			        now() - make_interval(mins => $4),
-			        'gmail', $5, 'gmail:seed', 'connector:gmail')`,
+			        'gmail', $5, 'gmail:seed', 'connector:gmail', '`+seededCorrespondent+`', true)`,
 			id, strings.Repeat("x", bodyRunes), threadKey, minutesAgo, id.String())
 		return err
 	}); err != nil {
@@ -188,9 +193,10 @@ func seedThreadMailAt(t *testing.T, e *integration.Env, threadKey string, at tim
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, direction, thread_key, occurred_at,
-			                      source_system, source_id, source, captured_by)
+			                      source_system, source_id, source, captured_by,
+			                      counterparty_email, inbound_sender_authenticated)
 			VALUES ($1, 'email', 'a subject', 'a body', 'inbound', $2, $3,
-			        'gmail', $4, 'gmail:seed', 'connector:gmail')`,
+			        'gmail', $4, 'gmail:seed', 'connector:gmail', '`+seededCorrespondent+`', true)`,
 			id, threadKey, at, id.String())
 		return err
 	}); err != nil {

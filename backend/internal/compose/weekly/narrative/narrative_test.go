@@ -243,7 +243,7 @@ func TestAWeekOfLeadsAndMeetingsIsNotQuiet(t *testing.T) {
 		in   Counts
 	}{
 		{"leads were routed", Counts{LeadsRouted: 4}},
-		{"leads were answered in time", Counts{LeadsAnsweredInTarget: 2}},
+		{"leads got a first response", Counts{LeadsRespondedByClose: 2}},
 		{"a lead's target was missed", Counts{LeadsBreached: 1}},
 		{"meetings were held", Counts{MeetingsHeld: 3}},
 		{"a meeting produced a next step", Counts{MeetingsWithNextStep: 1}},
@@ -269,10 +269,10 @@ func TestAWeekOfLeadsAndMeetingsIsNotQuiet(t *testing.T) {
 // refused by the guard meant to stop the opposite lie. The claim and the fact
 // that settles it have to match.
 func TestASentenceAboutDealsIsJudgedByTheDeals(t *testing.T) {
-	leadsOnly := Input{Counts: Counts{LeadsRouted: 4, LeadsAnsweredInTarget: 4}}
+	leadsOnly := Input{Counts: Counts{LeadsRouted: 4, LeadsRespondedByClose: 4}}
 
 	// TRUE, and it must survive: no deal did anything.
-	if err := refuseContradiction("Four leads answered in time; nothing closed.", leadsOnly); err != nil {
+	if err := refuseContradiction("Four leads got a first response by week close; nothing closed.", leadsOnly); err != nil {
 		t.Errorf("a truthful sentence was refused: %v", err)
 	}
 	// FALSE, and it must still be caught: the week was not empty.

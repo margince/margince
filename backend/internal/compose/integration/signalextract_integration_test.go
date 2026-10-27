@@ -100,9 +100,13 @@ func seedMessage(t *testing.T, e *Env, contact ids.UUID, key, subject, body, dir
 func seedUnlinkedMessage(t *testing.T, e *Env, key, subject, body, direction string, at time.Time) ids.UUID {
 	t.Helper()
 	stamp := at.UTC().Format(time.RFC3339Nano)
-	return SeedIDRow(t, OwnerConn(t), `INSERT INTO activity (id, kind, direction, subject, body, thread_key, occurred_at, created_at, source, captured_by)
+	// One correspondent per thread, with the proof capture records: their mail
+	// is authenticated, ours carries the provider's sent attestation.
+	return SeedIDRow(t, OwnerConn(t), `INSERT INTO activity (id, kind, direction, subject, body, thread_key, occurred_at, created_at, source, captured_by,
+		                      counterparty_email, inbound_sender_authenticated, counterparty_outbound_attested)
 		VALUES ($1, 'email', '`+direction+`', '`+subject+`', '`+body+`', '`+key+`',
-		        '`+stamp+`', '`+stamp+`', 'gmail', 'connector:gmail')`)
+		        '`+stamp+`', '`+stamp+`', 'gmail', 'connector:gmail',
+		        'buyer@seeded.test', '`+direction+`' = 'inbound', '`+direction+`' = 'outbound')`)
 }
 
 // employeeOf is a contact who works at the account, which is the only way

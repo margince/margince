@@ -114,6 +114,9 @@ func (s *Store) updateCompanyInTx(
 	if err := refuseUnreadableCompany(current, in); err != nil {
 		return crmcontracts.Company{}, err
 	}
+	if err := checkCompanyDescription(in.Description); err != nil {
+		return crmcontracts.Company{}, err
+	}
 	if err := auth.EnsureOwnerHandOn(ctx, tx, (*ids.UUID)(current.OwnerId), in.OwnerID); err != nil {
 		return crmcontracts.Company{}, err
 	}

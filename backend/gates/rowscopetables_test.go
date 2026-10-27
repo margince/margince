@@ -586,5 +586,14 @@ const (
 	// The link, the unlink, the promotion's edge and the match offer must see it
 	// whether or not the caller may open the company. Every read of a lead
 	// withholds it through withholdUnreadableCompanies.
-	modulesTierUnscopedCeiling = 140
+	//
+	// 141: deals.reconcileEvidenceAuthorshipTx pages activity evidence for the
+	// own-domain repair, as the system actor over the whole workspace. Its deal
+	// ids go only to correctEvidenceAuthor, which locks and audits the row it
+	// corrects. None is returned to a caller.
+	//
+	// 142: deals.reconcileMeetingProof pages machine event_held claims for the
+	// same pass, as the system actor. Its deal ids go only to
+	// withdrawMeetingClaim, which locks and audits the row. None is returned.
+	modulesTierUnscopedCeiling = 142
 )

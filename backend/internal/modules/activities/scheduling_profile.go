@@ -120,7 +120,7 @@ func (s *Store) SchedulingProfile(ctx context.Context) (crmcontracts.SchedulingP
 		return crmcontracts.SchedulingProfile{}, err
 	}
 	profile, err := s.hostSchedulingProfile(ctx, host)
-	return s.brandSchedulingProfile(ctx, profile), err
+	return s.brandSchedulingProfile(ctx, host, profile), err
 }
 
 func errCalendarNotConnected() error {
@@ -199,7 +199,7 @@ func (s *Store) SaveSchedulingProfile(ctx context.Context, profile crmcontracts.
 		return profile, err
 	}
 	saved, err := s.hostSchedulingProfile(ctx, host)
-	return s.brandSchedulingProfile(ctx, saved), err
+	return s.brandSchedulingProfile(ctx, host, saved), err
 }
 
 // checkBookingCalendar asks the provider only when a live page gains a calendar

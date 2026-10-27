@@ -230,15 +230,39 @@ const CURRENCY_TABLE_OWNERS = [
   "api/schema.d.ts",
 ];
 
+// mayHoldTable answers whether a file is worth parsing. Every shape below
+// needs two codes to count as a table, so text carrying fewer than two cannot
+// hold one whatever its syntax.
+//
+// An escape can spell a code the characters do not show, so text carrying one
+// is parsed rather than judged here. The planted cases hold this against the
+// detector: each table they plant must pass this first.
+function mayHoldTable(text: string): boolean {
+  if (text.includes("\\u") || text.includes("\\x")) {
+    return true;
+  }
+  let seen = 0;
+  for (const code of CURRENCY_CODES) {
+    if (text.includes(code) && ++seen === 2) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function tables(): string[] {
   const files = sourceFiles(srcRoot)
     .map((file) => [relative(srcRoot, file), file] as const)
     .filter(([name]) => !CURRENCY_TABLE_OWNERS.includes(name));
   // A sweep that found no files and a tree with no tables look identical.
   expect(files.length).toBeGreaterThan(0);
-  return files
-    .flatMap(([name, file]) => tablesIn(name, readFileSync(file, "utf8")))
-    .sort();
+  const read = files.map(
+    ([name, file]) => [name, readFileSync(file, "utf8")] as const,
+  );
+  const candidates = read.filter(([, text]) => mayHoldTable(text));
+  // The prefilter admitting nothing reads the same as a clean tree.
+  expect(candidates.length).toBeGreaterThan(0);
+  return candidates.flatMap(([name, text]) => tablesIn(name, text)).sort();
 }
 
 const PARSE_MS = 60_000;
@@ -341,6 +365,14 @@ describe("a currency", () => {
   for (const [name, source, expected] of planted) {
     it(`sees ${name}`, () => {
       expect(tablesIn("planted.ts", source)).toHaveLength(expected);
+      if (expected > 0) {
+        // The sweep parses only what the prefilter admits, so a table it turns
+        // away is a table the sweep never sees.
+        expect(
+          mayHoldTable(source),
+          "the prefilter turns this table away",
+        ).toBe(true);
+      }
     });
   }
 });
