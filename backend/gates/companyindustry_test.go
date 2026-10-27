@@ -200,6 +200,7 @@ func schemaEnums(t testing.TB, doc, schema map[string]any, where string, followi
 // A $ref chain that reaches itself stops the walk by name. One ref reached from
 // two sibling branches is no cycle, and both of its enums count.
 func TestTheIndustryEnumWalkStopsAtARefCycleAndNotAtASharedRef(t *testing.T) {
+	t.Parallel()
 	var doc map[string]any
 	if err := yaml.Unmarshal([]byte(`
 components:
