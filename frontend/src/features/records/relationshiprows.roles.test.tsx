@@ -94,7 +94,7 @@ describe("editing a stakeholder's role", () => {
       const { patched } = await editSeat(
         locale,
         "champion",
-        ` ${label.toLocaleUpperCase().replaceAll(" ", "  ")} `,
+        ` ${label.toUpperCase().replaceAll(" ", "  ")} `,
       );
       expect(patched).toMatchObject({ role: "economic_buyer" });
     },

@@ -14,6 +14,7 @@
 // truthy check, and renders as an empty badge — which reads exactly like a
 // record with no role at all.
 
+import { foldForMatch } from "../format/collate";
 import type { MessageKey } from "../i18n/en";
 
 // What each signal kind is, in words. Keyed by plain string, matching how the
@@ -94,7 +95,7 @@ export function dealRoleLabel(role: string, t: (key: MessageKey) => string) {
 
 /** A role's words as a reader may type them: any case, any run of spaces. */
 function roleWords(text: string): string {
-  return text.normalize("NFC").trim().replace(/\s+/gu, " ").toLocaleLowerCase();
+  return foldForMatch(text.normalize("NFC").trim().replace(/\s+/gu, " "));
 }
 
 /**

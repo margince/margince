@@ -14,7 +14,7 @@ describe("a deal role typed in a reader's words", () => {
   it.each(LOCALES)("goes as its key in any case and spacing (%s)", (locale) => {
     const t = wordsOf(locale);
     const label = t("co.roleLabel.economic_buyer");
-    const shouted = ` ${label.toLocaleUpperCase().replaceAll(" ", "   ")} `;
+    const shouted = ` ${label.toUpperCase().replaceAll(" ", "   ")} `;
     expect(roleFromTyped(shouted, t)).toBe("economic_buyer");
     expect(roleFromTyped(t("co.roleLabel.blocker").normalize("NFD"), t)).toBe(
       "blocker",

@@ -305,7 +305,7 @@ describe("adding a relationship", () => {
     async (locale) => {
       const label = translate(locale, "co.roleLabel.economic_buyer");
       const posted = await seatMaiAsChampion(
-        label.toLocaleUpperCase().replaceAll(" ", "  "),
+        label.toUpperCase().replaceAll(" ", "  "),
         locale,
       );
       expect(posted[0]).toMatchObject({ role: "economic_buyer" });
