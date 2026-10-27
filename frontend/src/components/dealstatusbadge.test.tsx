@@ -115,6 +115,20 @@ function drawsStatus(expression: ts.Expression): boolean {
   ) {
     return drawsStatus(expression.left) || drawsStatus(expression.right);
   }
+  // `cond && row.status` draws only its right side.
+  if (
+    ts.isBinaryExpression(expression) &&
+    expression.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken
+  ) {
+    return drawsStatus(expression.right);
+  }
+  // `row.status.replace(…)` and `.toUpperCase()` still draw the code.
+  if (
+    ts.isCallExpression(expression) &&
+    ts.isPropertyAccessExpression(expression.expression)
+  ) {
+    return drawsStatus(expression.expression.expression);
+  }
   return (
     ts.isPropertyAccessExpression(expression) &&
     expression.name.text === "status"
@@ -144,6 +158,11 @@ describe("screens the shipped bundle loads", () => {
           `const k = <span>{String(row.status)}</span>;`,
           `const l = <span>{ok ? t("deal.status.open") : row.status}</span>;`,
           `const m = <span>{(row.status satisfies string)}</span>;`,
+          `const n = <span>{shown && row.status}</span>;`,
+          `const o = <span>{row.status.replace("_", " ")}</span>;`,
+          `const p = <span>{row.status?.toUpperCase()}</span>;`,
+          `const q = <span>{row.status === "won" && <b>Won</b>}</span>;`,
+          `const r = <span>{statusLabel(row.status)}</span>;`,
         ].join("\n"),
       ),
     ).toEqual([
@@ -157,6 +176,9 @@ describe("screens the shipped bundle loads", () => {
       "{String(row.status)}",
       '{ok ? t("deal.status.open") : row.status}',
       "{(row.status satisfies string)}",
+      "{shown && row.status}",
+      '{row.status.replace("_", " ")}',
+      "{row.status?.toUpperCase()}",
     ]);
   });
 
