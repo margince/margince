@@ -597,6 +597,7 @@ export const en = {
   "approval.preview.promotionContactPhone": "Contact phone to add",
   "approval.preview.promotionExistingContact": "Existing contact to update",
   "approval.preview.promotionSetOrigin": "Link contact back to this lead",
+  "approval.preview.promotionCompanyIndustry": "Company industry",
   "approval.preview.promotionDuplicateCandidate":
     "Possible duplicate to review",
   "approval.preview.promotionMoveActivity": "Activity to move to contact",
@@ -620,6 +621,8 @@ export const en = {
     "Adds the displayed missing details to the existing contact. Keeps its existing name, title and primary phone.",
   "approval.preview.promotionDeal":
     "Opens the displayed deal and adds the contact as a stakeholder. The lead links to this deal.",
+  "approval.preview.promotionFillIndustry":
+    "Sets the displayed industry on the linked company, which has none yet.",
   "approval.preview.promotionReview":
     "Creates a separate contact and queues the possible duplicate for review.",
   "approval.preview.promotionAllMarketing": "All marketing",

@@ -616,6 +616,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.promotionContactPhone": "Zu ergänzende Telefonnummer",
   "approval.preview.promotionExistingContact": "Zu ergänzender Kontakt",
   "approval.preview.promotionSetOrigin": "Kontakt mit diesem Lead verknüpfen",
+  "approval.preview.promotionCompanyIndustry": "Branche des Unternehmens",
   "approval.preview.promotionDuplicateCandidate":
     "Mögliche Dublette zur Prüfung",
   "approval.preview.promotionMoveActivity":
@@ -642,6 +643,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ergänzt die angezeigten fehlenden Angaben am bestehenden Kontakt. Vorhandener Name, Position und Hauptnummer bleiben erhalten.",
   "approval.preview.promotionDeal":
     "Eröffnet den angezeigten Deal und fügt den Kontakt als Beteiligten hinzu. Der Lead wird mit diesem Deal verknüpft.",
+  "approval.preview.promotionFillIndustry":
+    "Trägt die angezeigte Branche beim verknüpften Unternehmen ein, das noch keine hat.",
   "approval.preview.promotionReview":
     "Erstellt einen separaten Kontakt und stellt die mögliche Dublette zur Prüfung bereit.",
   "approval.preview.promotionAllMarketing": "Gesamtes Marketing",

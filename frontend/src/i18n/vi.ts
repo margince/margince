@@ -609,6 +609,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.promotionContactPhone": "Số điện thoại sẽ thêm",
   "approval.preview.promotionExistingContact": "Liên hệ hiện có sẽ cập nhật",
   "approval.preview.promotionSetOrigin": "Liên kết liên hệ với lead này",
+  "approval.preview.promotionCompanyIndustry": "Ngành của công ty",
   "approval.preview.promotionDuplicateCandidate":
     "Liên hệ có thể trùng cần xem xét",
   "approval.preview.promotionMoveActivity": "Hoạt động sẽ chuyển sang liên hệ",
@@ -630,6 +631,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bổ sung thông tin còn thiếu đã hiển thị vào liên hệ hiện có. Giữ tên, chức danh và số điện thoại chính hiện có.",
   "approval.preview.promotionDeal":
     "Mở cơ hội đã hiển thị và thêm liên hệ làm bên liên quan. Lead được liên kết với cơ hội này.",
+  "approval.preview.promotionFillIndustry":
+    "Ghi ngành đã hiển thị vào công ty được liên kết, vì công ty chưa có ngành.",
   "approval.preview.promotionReview":
     "Tạo một liên hệ riêng và đưa cặp có thể trùng vào danh sách xem xét.",
   "approval.preview.promotionAllMarketing": "Tất cả hoạt động tiếp thị",
