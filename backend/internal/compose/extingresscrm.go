@@ -50,8 +50,8 @@ type crmLanding struct {
 	overwrite bool
 }
 
-// ingestOtherKind lands a company or deal under the member's live authority.
-func (r *callRuntime) ingestOtherKind(ctx context.Context, on extension.UserID, rec extension.Record) (extension.Result, error) {
+// ingestOtherKind lands a company, deal or signal under the member's live authority.
+func (r *callRuntime) ingestOtherKind(ctx context.Context, on extension.UserID, rec extension.Record, declared extension.IngressSource) (extension.Result, error) {
 	ctx, err := r.scoped(ctx)
 	if err != nil {
 		return extension.Result{}, err
@@ -59,6 +59,9 @@ func (r *callRuntime) ingestOtherKind(ctx context.Context, on extension.UserID, 
 	runCtx, err := r.ingressAuthority(ctx, on)
 	if err != nil {
 		return extension.Result{}, err
+	}
+	if rec.Kind() == extension.KindSignal {
+		return r.landSignal(runCtx, rec, declared)
 	}
 	db := InstallationDB(r.deps.pool)
 	overwrite, err := r.overwritesEditedFields(ctx)

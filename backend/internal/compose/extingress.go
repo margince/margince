@@ -99,7 +99,7 @@ func (r *callRuntime) Ingest(ctx context.Context, on extension.UserID, rec exten
 		}, nil
 	}
 	if rec.Kind() != extension.KindActivity {
-		return r.ingestOtherKind(ctx, on, rec)
+		return r.ingestOtherKind(ctx, on, rec, declared)
 	}
 	if err := refuseUndeclaredTransport(r.unit, rec.Activity.Kind, rec.Activity.ChannelProvider); err != nil {
 		return extension.Result{}, err

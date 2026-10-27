@@ -26,7 +26,7 @@ are done.
 | 9 | Search and lists for extension kinds | Find a kind's rows in search. List them in a Shortlist or a Live List, filter them in the Filters screen and keep a saved view over them. | [Search and lists for extension kinds](#search-and-lists-for-extension-kinds) | done |
 | 10 | Suggested-link resolver | Propose which deal, company, contact or project a message belongs to. A reader accepts or rejects each suggestion in a queue on the Worklist. Nothing is filed until they accept. | [Suggested-link resolver](#suggested-link-resolver) | done |
 | 11 | Typed links between core records | Link a deal, company or contact to another with a type from core or from an extension. See the links on the deal page, filter the deal list by link type and group deals by it in Reports. | [Typed links between core records](#typed-links-between-core-records) | done |
-| 12 | Let an unattended extension run land a signal through Ingest | Nothing yet. | None yet | planned |
+| 12 | Let an unattended extension run land a signal through Ingest | Raise a signal of a declared type about a record from a scheduled job, as the member whose credential it holds. A repeat of the event is not raised twice. | [Land a signal](../how-to/land-companies-and-deals-from-an-extension.md#land-a-signal) | done |
 
 ```mermaid
 flowchart LR
@@ -190,7 +190,7 @@ flowchart LR
 | `Extension.SignalTypes` | The unit declares each kind: a name, a label and the evidence members. The boot and `make gen` refuse a bad name, a duplicate member or an unknown type. |
 | Evidence layout | Each member has a name, a label, a type (`text`, `number` or `bool`), `Required` and `Personal`. A member the layout does not name, a missing required one or a wrong type is refused with `invalid_evidence`. |
 | `Signals().Create` | Files one signal about a deal, company, contact or project, under the caller's own rights. It writes the signal, its audit row and its `signal.detected` event in the unit's transaction. A scheduled job or a bus delivery is refused. |
-| Fingerprint | Required. The stored fingerprint is the kind plus the unit's value, so two kinds or two units cannot swallow each other's signals. The existing unique index on live fingerprints holds the repeat out, and the call answers the first signal with `created` false. The answer is a read, so a signal the caller cannot see is not found. |
+| Fingerprint | Required. The stored fingerprint is the kind, the subject and the unit's value, so two kinds, two subjects or two units cannot swallow each other's signals. The existing unique index on live fingerprints holds the repeat out, and the call answers the first signal with `created` false. The answer is a read, so a signal the caller cannot see is not found. |
 | Provenance | Core writes the `provenance` member of the evidence claim with the unit and the signed-in seat. A unit cannot set it. The `fields` and `provenance` members of a claim are also refused on a request to create or edit a signal. |
 | Only the unit files it | `POST /v1/signals` refuses an `ext:` kind with the field `kind`, because only the declaring unit's call checks the layout, the owner and the fingerprint. |
 | Evidence is fixed | The evidence of an extension signal cannot be replaced by `PATCH /v1/signals/{id}`, because a replacement would drop the layout members and the provenance. |
@@ -398,3 +398,18 @@ extension declares its own as `ext:<unit>:<type>`, in the registry the record ki
 | Screens | A Links card on the deal Overview, a Linked as list filter and a Linked as report split. |
 
 Not done yet: a merge does not carry links to the record that stays, and the filter reads deal links only.
+
+## Let an unattended extension run land a signal through Ingest
+
+A scheduled job of an extension can raise a signal of a type the extension declared, with `Ingest`, as the member whose
+credential it holds. The steps are in [Land a signal](../how-to/land-companies-and-deals-from-an-extension.md#land-a-signal).
+
+| Part | What it does |
+|---|---|
+| `extension.KindSignal` | A source lists it in `Lands`. A record carries a `Signal` payload instead of an activity, and `Key` is the unit's key for the event. |
+| Authority | The write runs as the member named in `on`, with their live rights. It needs their grant to create signals and their sight of the subject. A demoted member is refused from the next call. |
+| Subject | The subject type must also be listed in `Lands`. A record the member cannot see is not found. |
+| Writer | The same writer as `Signals().Create`, so the layout check, provenance, audit row and `signal.detected` event are the same. |
+| Repeat | The fingerprint is the kind, the subject and the key. A repeat answers `DispositionAlreadyRaised`, which is a success. A dismissed signal stays dismissed. |
+| Refused as before | Any other governed core write from an unattended run stays refused. No new identity or seat is added. |
+| Personal data | The `Personal` members of the layout are the declaration erasure reads, as for `Signals().Create`. |

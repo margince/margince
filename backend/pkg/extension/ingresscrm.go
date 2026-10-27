@@ -33,7 +33,7 @@ const AdoptKeyDomain = "domain"
 const MaxRelinkActivities = 50
 
 // landableKinds are the kinds a source may declare.
-var landableKinds = []RecordKind{KindActivity, KindCompany, KindDeal}
+var landableKinds = []RecordKind{KindActivity, KindCompany, KindDeal, KindSignal}
 
 // uuidShape is the spelling of an id a deal names its pipeline and stage by.
 var uuidShape = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
@@ -90,6 +90,8 @@ func (r Record) Kind() RecordKind {
 		return KindCompany
 	case r.Deal != nil:
 		return KindDeal
+	case r.Signal != nil:
+		return KindSignal
 	}
 	return KindActivity
 }
@@ -97,14 +99,23 @@ func (r Record) Kind() RecordKind {
 // validatePayload holds the shape rules of a company or deal record. An
 // activity record is held to the activity grammar instead.
 func (r Record) validatePayload() error {
-	if r.Company != nil && r.Deal != nil {
-		return errors.New("extension: a record carries a company or a deal, not both")
+	payloads := 0
+	for _, set := range []bool{r.Company != nil, r.Deal != nil, r.Signal != nil} {
+		if set {
+			payloads++
+		}
+	}
+	if payloads > 1 {
+		return errors.New("extension: a record carries a company, a deal or a signal, not several")
 	}
 	if r.Activity != (ActivityFields{}) {
 		return fmt.Errorf("extension: a %s record carries no activity", r.Kind())
 	}
-	if r.Company != nil {
+	switch r.Kind() {
+	case KindCompany:
 		return r.Company.validate()
+	case KindSignal:
+		return r.Signal.validate()
 	}
 	return r.Deal.validate()
 }

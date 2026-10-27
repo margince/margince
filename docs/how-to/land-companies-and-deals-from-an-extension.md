@@ -1,6 +1,6 @@
 # Land companies and deals from an extension
 
-An extension can hand the core a company or a deal it read from another system. The core matches the record by the id the other system gave it, then creates, updates or adopts. This page is for an extension author. It assumes you already capture activities as in [add-an-extension.md](add-an-extension.md#capture-records-from-your-own-provider).
+An extension can hand the core a company or a deal it read from another system, or raise a signal about a record ([below](#land-a-signal)). The core matches the record by the id the other system gave it, then creates, updates or adopts. This page is for an extension author. It assumes you already capture activities as in [add-an-extension.md](add-an-extension.md#capture-records-from-your-own-provider).
 
 ## What you send
 
@@ -109,6 +109,28 @@ flowchart LR
 ```
 
 After a stop, the next run reads the old position and offers the half-done page again. Records that already landed are matched by their outside id, so the second offer changes nothing. The integration tests are in `backend/internal/compose/extingressbatch_integration_test.go`.
+
+## Land a signal
+
+An unattended run can also raise a signal about a record, with the evidence layout the unit declared in [Declare a signal type](add-an-extension.md#declare-a-signal-type). Set `Signal` instead of `Activity`, and list `extension.KindSignal` in `Lands`.
+
+| Field | Meaning |
+|---|---|
+| `Key` | Your own key for the event, the same on every re-read. Core builds the fingerprint from the signal kind, the subject and this key, so two units cannot collide. |
+| `Signal.Kind` | The short name of a signal type you declared. Core spells the stored kind `ext:<unit>:<kind>`. |
+| `Signal.Subject` | The record's `Type` and `ID`. The type must be a record kind the source lists in `Lands`, and the member must be able to see the record. |
+| `Signal.Evidence` | A summary and the layout members. They are checked against the declared layout. |
+
+| Rule | What happens |
+|---|---|
+| Authority | The signal is written as the member in `on`, with their live rights. It needs their grant to create signals. A member demoted since the last call is refused with `ErrForbidden`. |
+| Subject | A record the member cannot see answers `ErrNotFound`. A subject type the source did not list answers `ErrIngressNotDeclared`. |
+| Repeat | The same kind, subject and key answers `DispositionAlreadyRaised` with the held signal's `Ref`. That is a success, so move your cursor on. A signal a person dismissed stays dismissed, and a replay does not raise it again. |
+| New signal | `DispositionAccepted`. Core writes the signal, its audit row and its `signal.detected` event in one transaction. |
+| Edits | A unit cannot change a signal's kind or evidence afterwards. |
+| Personal data | A layout member marked `Personal` is removed when the contact it is about is erased. |
+
+An attended call is refused with `ErrAttendedIngest`, as for every kind. The integration tests are in `backend/internal/compose/extingresssignal_integration_test.go`.
 
 ## Run it twice
 

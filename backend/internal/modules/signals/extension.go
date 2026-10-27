@@ -68,10 +68,12 @@ func refuseReservedEvidence(evidence []crmcontracts.SignalEvidence) error {
 	return nil
 }
 
-// extensionFingerprint scopes a unit's fingerprint to its kind. The unique index
-// is shared, so without the scope two kinds, or a unit and a core producer,
-// could swallow each other's signals.
-func extensionFingerprint(kind, fingerprint string) string { return kind + "|" + fingerprint }
+// extensionFingerprint scopes a unit's key to its kind and to the record the
+// signal is about. The unique index is shared, so without the scope two kinds,
+// two subjects, or a unit and a core producer could swallow each other's signals.
+func extensionFingerprint(in ExtensionSignal) string {
+	return in.Kind + "|" + in.EntityType + ":" + in.EntityID.String() + "|" + in.Fingerprint
+}
 
 // RecordExtensionTx files the signal, or answers the live signal that carries
 // the same fingerprint with created false. Either answer is a read, so the
@@ -102,7 +104,7 @@ func RecordExtensionTx(ctx context.Context, tx pgx.Tx, in ExtensionSignal) (sig 
 	if err != nil {
 		return crmcontracts.Signal{}, false, err
 	}
-	stored := extensionFingerprint(in.Kind, in.Fingerprint)
+	stored := extensionFingerprint(in)
 	var id ids.UUID
 	err = tx.QueryRow(ctx,
 		`INSERT INTO signal (kind, source_channel, entity_type, entity_id, resolution_state, severity,

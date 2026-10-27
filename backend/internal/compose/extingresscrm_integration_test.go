@@ -48,7 +48,7 @@ func setupCRMIngress(t *testing.T) *crmEnv {
 	e := setupExtRuntime(t)
 	composeCapturingUnit(t, ingressUnit, nil, extension.IngressSource{
 		System: crmSystem,
-		Lands:  []extension.RecordKind{extension.KindActivity, extension.KindCompany, extension.KindDeal},
+		Lands:  []extension.RecordKind{extension.KindActivity, extension.KindCompany, extension.KindDeal, extension.KindSignal},
 	})
 	bindCaptureForTest(t, e)
 	grantPolicy(t, e.Rep1, "crm-probe", crmPolicy)
