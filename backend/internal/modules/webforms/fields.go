@@ -54,7 +54,7 @@ var aliasSpellings = map[string]string{
 var fieldAliases = func() map[string]string {
 	out := map[string]string{}
 	for target, spellings := range aliasSpellings {
-		for _, spelling := range strings.Fields(spellings) {
+		for spelling := range strings.FieldsSeq(spellings) {
 			out[spelling] = target
 		}
 	}

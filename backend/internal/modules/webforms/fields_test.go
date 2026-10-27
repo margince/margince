@@ -39,7 +39,7 @@ func TestCommonFieldSpellingsReadAsLeadFields(t *testing.T) {
 func TestEachSpellingReadsAsOneTarget(t *testing.T) {
 	seen := map[string]string{}
 	for target, spellings := range aliasSpellings {
-		for _, spelling := range strings.Fields(spellings) {
+		for spelling := range strings.FieldsSeq(spellings) {
 			if other, twice := seen[spelling]; twice {
 				t.Errorf("%q reads as both %s and %s", spelling, other, target)
 			}

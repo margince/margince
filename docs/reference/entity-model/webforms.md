@@ -54,6 +54,7 @@ The 1 table owned by `webforms`, as the migrations build them. [Back to the enti
 
 **Indexes**
 
+- `idx_web_form_lead_origin`: `btree (lead_origin) WHERE (lead_origin IS NOT NULL)`
 - `idx_web_form_owner`: `btree (owner_id) WHERE (owner_id IS NOT NULL)`
 - `web_form_form_key_key`: `unique, btree (form_key)`
 - `web_form_pkey`: `unique, btree (id)`

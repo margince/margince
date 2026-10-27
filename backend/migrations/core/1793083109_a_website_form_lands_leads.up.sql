@@ -15,7 +15,7 @@ CREATE TABLE web_form (
     sender                 text NOT NULL,
     allowed_origins        text[] NOT NULL DEFAULT '{}',
     secret_ref             text,
-    lead_origin            text REFERENCES lead_origin (key) ON UPDATE CASCADE ON DELETE SET NULL,
+    lead_origin            text REFERENCES lead_origin (key) ON UPDATE RESTRICT ON DELETE SET NULL,
     owner_id               uuid REFERENCES app_user (id) ON DELETE SET NULL,
     field_map              jsonb NOT NULL DEFAULT '{}'::jsonb,
     consent_required       boolean NOT NULL DEFAULT false,
@@ -47,6 +47,7 @@ CREATE TABLE web_form (
 );
 
 CREATE INDEX idx_web_form_owner ON web_form (owner_id) WHERE owner_id IS NOT NULL;
+CREATE INDEX idx_web_form_lead_origin ON web_form (lead_origin) WHERE lead_origin IS NOT NULL;
 
 -- Last, because a statement after CREATE TRIGGER reads as a rewrite of every table.
 CREATE TRIGGER trg_web_form_updated

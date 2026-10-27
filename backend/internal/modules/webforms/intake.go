@@ -108,8 +108,8 @@ func (in *Intake) Submit(ctx context.Context, a Arrival) (Receipt, error) {
 // no error is a browser post the spam checks dropped: answered as received,
 // landed nowhere.
 func (in *Intake) admit(ctx context.Context, f Form, a Arrival) (Enquiry, string, error) {
-	switch {
-	case f.Sender == SenderBrowser:
+	switch f.Sender {
+	case SenderBrowser:
 		if err := admitBrowser(f, a); err != nil {
 			return Enquiry{}, "", err
 		}
@@ -122,7 +122,7 @@ func (in *Intake) admit(ctx context.Context, f Form, a Arrival) (Enquiry, string
 			return Enquiry{}, "", nil
 		}
 		return e, browserKey(e), nil
-	case f.Sender == SenderServer:
+	case SenderServer:
 		secret, err := in.store.openSecret(ctx, f)
 		if err != nil {
 			return Enquiry{}, "", unverified(err)
