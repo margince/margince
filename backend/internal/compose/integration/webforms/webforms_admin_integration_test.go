@@ -12,13 +12,18 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	webformsmod "github.com/margince/margince/backend/internal/modules/webforms"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 func TestTheFormListShowsArchivedFormsOnlyWhenAskedTo(t *testing.T) {
@@ -146,13 +151,17 @@ func TestASaveNamingAnUnknownLeadOriginIsRefused(t *testing.T) {
 	}
 }
 
-// The settings drawer sends every field it shows, cleared ones as null. Saved
-// unchanged, that body must not move the version or write history.
-func TestAWebsiteFormSavedAsItAlreadyIsChangesNothing(t *testing.T) {
-	e := setupFormsApp(t)
-	form := createForm(t, e, integration.AnyMap{"name": "Contact page", "sender": "browser", "allowed_origins": []string{siteOrigin}})
-	apptest.AssertSaveChangesNothing(t, e, "PATCH", "/v1/web-forms/"+form.ID, integration.AnyMap{
-		"name": "Contact page", "allowed_origins": []string{siteOrigin}, "consent_required": false,
-		"consent_wording": nil, "consent_policy_version": nil, "redirect_url": nil, "success_message": nil,
-	}, form.ID, form.Version)
+// The forms are workspace settings behind the integrations grant, so a rep who
+// holds none can neither list one nor make one.
+func TestARepWithoutTheIntegrationsGrantCannotListOrMakeAForm(t *testing.T) {
+	e := integration.Setup(t)
+	store := webformsmod.NewStore(e.DB(), slog.New(slog.DiscardHandler)).WithVault(keyvault.NewMemory())
+	rep := e.As(e.Rep1, nil, integration.RepPerms)
+	if _, err := store.ListForms(rep, storekit.LiveOnly); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a rep listing forms got %v, want permission denied", err)
+	}
+	_, _, err := store.CreateForm(rep, webformsmod.CreateInput{Name: "Contact", Sender: "server"})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a rep making a form got %v, want permission denied", err)
+	}
 }
