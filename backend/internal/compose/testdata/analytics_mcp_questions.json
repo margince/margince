@@ -97,7 +97,7 @@
       "persona": "team manager",
       "question": "Who on my team owns the most open pipeline?",
       "tool": "run_analytics_query",
-      "expects": "One row per teammate, with the split announced as cut to the owners the caller may measure. An owner outside the team is never named."
+      "expects": "One row per teammate, ranked by open pipeline value. An owner outside the team is never named."
     },
     {
       "id": "M10",
