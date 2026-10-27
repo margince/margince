@@ -96,6 +96,37 @@ export const routes: readonly MockRoute[] = [
       ],
     }),
   },
+  // One website form, so the card draws a row with its verbs.
+  {
+    method: "GET",
+    path: "/web-forms",
+    handle: reply({
+      data: [
+        {
+          id: "wf-contact",
+          name: "Contact page",
+          form_key: "e2eContactPageFormKey00000000000",
+          sender: "browser",
+          allowed_origins: ["https://www.example.com"],
+          lead_origin: "website",
+          owner_id: null,
+          field_map: {},
+          consent_required: false,
+          consent_policy_version: null,
+          consent_wording: null,
+          redirect_url: null,
+          success_message: null,
+          state: "active",
+          secret_configured: false,
+          version: 1,
+          created_at: "2026-09-01T09:00:00Z",
+          updated_at: "2026-09-01T09:00:00Z",
+          archived_at: null,
+        },
+      ],
+      secrets_available: true,
+    }),
+  },
   // The anonymous reads the signed-out surface makes, by design.
   { path: "/embeddings/reindex/status", handle: session.reindexStatus },
   { path: "/auth/capabilities", handle: session.authCapabilities },
