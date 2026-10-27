@@ -13779,6 +13779,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.field.origins": "Trang web",
   "webForms.field.originsHint":
     "Mỗi dòng một địa chỉ. Bài gửi từ trang web khác bị từ chối.",
+  "webForms.required.name": "Nhập tên cho biểu mẫu này.",
+  "webForms.required.origins": "Nhập trang web gửi biểu mẫu này.",
+  "webForms.required.consentWording": "Nhập nội dung mà khách truy cập đồng ý.",
+  "webForms.field.originKept":
+    "{entry} được lưu thành {origin}: mọi trang của trang web đó đều có thể gửi.",
   "webForms.field.originsPlaceholder": "https://www.example.com",
   "webForms.field.senderSecret": "Khóa ký",
   "webForms.field.senderSecretHint":

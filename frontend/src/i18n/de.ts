@@ -14132,6 +14132,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.field.origins": "Websites",
   "webForms.field.originsHint":
     "Eine Adresse pro Zeile. Sendungen von anderen Websites werden abgelehnt.",
+  "webForms.required.name": "Gib dem Formular einen Namen.",
+  "webForms.required.origins":
+    "Gib die Website ein, von der das Formular gesendet wird.",
+  "webForms.required.consentWording":
+    "Gib den Text ein, dem Besuchende zustimmen.",
+  "webForms.field.originKept":
+    "{entry} wird als {origin} gespeichert: Das Formular kann von jeder Seite dieser Website abgesendet werden.",
   "webForms.field.originsPlaceholder": "https://www.example.com",
   "webForms.field.senderSecret": "Signaturschlüssel",
   "webForms.field.senderSecretHint":
