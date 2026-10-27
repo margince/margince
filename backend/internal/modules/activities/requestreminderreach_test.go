@@ -4,6 +4,7 @@
 package activities
 
 import (
+	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -73,5 +74,31 @@ func TestAReminderAgreeingWithItsMailIsLeftAlone(t *testing.T) {
 					c.shared, c.stored, want, move, c.want, c.move)
 			}
 		})
+	}
+}
+
+// The reminder this pass may move is open, unarchived and unrestricted.
+//
+// Each guard is asked because a row missing one is a row the pass must leave:
+// a done reminder was answered, an archived one is off every lane, and a
+// restricted one is under a statutory obligation.
+func TestOnlyAnOpenUnarchivedReminderIsMoved(t *testing.T) {
+	clause := openReminderClause("t")
+	for _, guard := range []string{
+		`"t".kind = 'task'`,
+		`"t".archived_at IS NULL`,
+		`NOT "t".is_done`,
+		`"t".restricted_at IS NULL`,
+	} {
+		if !strings.Contains(clause, guard) {
+			t.Errorf("the clause does not ask %s:\n%s", guard, clause)
+		}
+	}
+}
+
+// The alias is quoted, so a catalog name cannot be read as SQL.
+func TestTheReminderClauseQuotesItsAlias(t *testing.T) {
+	if clause := openReminderClause("task alias"); !strings.Contains(clause, `"task alias".kind`) {
+		t.Errorf("the alias is not quoted:\n%s", clause)
 	}
 }

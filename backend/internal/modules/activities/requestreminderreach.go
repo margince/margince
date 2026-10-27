@@ -46,8 +46,8 @@ func RecomputeRequestReminderReachTx(ctx context.Context, tx pgx.Tx, source ids.
 	var assignee *ids.UUID
 	err = tx.QueryRow(ctx, `
 		SELECT t.id, t.audience, t.assignee_id FROM activity t
-		 WHERE t.source_system = $1 AND t.source_activity_id = $2 AND t.kind = 'task'
-		   AND t.archived_at IS NULL AND NOT t.is_done AND t.restricted_at IS NULL
+		 WHERE t.source_system = $1 AND t.source_activity_id = $2
+		   AND `+openReminderClause("t")+`
 		 FOR UPDATE OF t`, EmailRequestTaskSource, source.UUID).Scan(&reminder, &stored, &assignee)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -138,4 +138,16 @@ func reminderMembers(reach string, assignee *ids.UUID) []AudienceMember {
 		})
 	}
 	return members
+}
+
+// openReminderClause is the reminder this pass may still move, over the
+// activity aliased by alias.
+//
+// Three rows are left alone, each for its own reason. A done reminder has
+// been answered. An archived one is off every lane. A restricted one is under
+// a statutory obligation, and its trigger refuses the write anyway.
+func openReminderClause(alias string) string {
+	a := pgx.Identifier{alias}.Sanitize()
+	return a + `.kind = 'task' AND ` + a + `.archived_at IS NULL` +
+		` AND NOT ` + a + `.is_done AND ` + a + `.restricted_at IS NULL`
 }
