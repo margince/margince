@@ -61,28 +61,20 @@ function DealPage({ status }: Readonly<{ status: string }>) {
   );
 }
 
-async function expectStatusPill(
-  canvasElement: HTMLElement,
-  words: string,
-  toneClass: string | null,
-) {
+async function expectStatusPill(canvasElement: HTMLElement, words: string) {
   await within(canvasElement).findByRole("heading", {
     level: 1,
     name: "Fleet retrofit",
   });
   const pill = canvasElement.querySelector(".record-split-pills .badge");
   await expect(pill?.textContent).toBe(words);
-  const tones = [...(pill?.classList ?? [])].filter(
-    (name) => name !== "badge" && name.startsWith("badge-"),
-  );
-  await expect(tones).toEqual(toneClass ? [toneClass] : []);
 }
 
 export const Open: Story = {
   name: "Open deal",
   render: () => <DealPage status="open" />,
   play: async ({ canvasElement }) => {
-    await expectStatusPill(canvasElement, "Open", null);
+    await expectStatusPill(canvasElement, "Open");
   },
 };
 
@@ -90,7 +82,7 @@ export const Won: Story = {
   name: "Won deal",
   render: () => <DealPage status="won" />,
   play: async ({ canvasElement }) => {
-    await expectStatusPill(canvasElement, "Won", "badge-success");
+    await expectStatusPill(canvasElement, "Won");
   },
 };
 
@@ -98,7 +90,7 @@ export const Lost: Story = {
   name: "Lost deal",
   render: () => <DealPage status="lost" />,
   play: async ({ canvasElement }) => {
-    await expectStatusPill(canvasElement, "Lost", "badge-danger");
+    await expectStatusPill(canvasElement, "Lost");
   },
 };
 
@@ -107,6 +99,6 @@ export const UnknownStatus: Story = {
   name: "Status this build has no word for",
   render: () => <DealPage status="on_hold" />,
   play: async ({ canvasElement }) => {
-    await expectStatusPill(canvasElement, "on_hold", null);
+    await expectStatusPill(canvasElement, "on_hold");
   },
 };

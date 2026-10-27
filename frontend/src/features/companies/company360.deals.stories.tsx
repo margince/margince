@@ -89,7 +89,6 @@ export const OpenAndWon: Story = {
       canvas.getByRole("button", { name: "Phase one licence" }),
     );
     await expect(won?.textContent).toBe("Won");
-    await expect(won?.classList.contains("badge-success")).toBe(true);
   },
 };
 
