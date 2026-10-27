@@ -100,25 +100,26 @@ var retentionSelectors = map[string]string{
 	// the `(source_system, source_id)` tombstone against a replay — the same
 	// reasoning capture's own purge states.
 	//
-	// WHAT IT DOES NOT REACH: an original with no activity row at all, which an
-	// internal-only drop leaves behind. There the raw_capture row IS the
-	// tombstone, and deleting it would let a replay re-ingest a message the
-	// pipeline already judged. Those need the trace to carry the tombstone
-	// before they can be aged, which is not this stage's to invent.
-	"raw_capture/": `SELECT r.id FROM raw_capture r
-		JOIN activity a ON a.source_system = r.source_system AND a.source_id = r.source_id
-		WHERE r.received_at < now() - make_interval(days => $1)
-		  AND a.archived_at IS NULL
-		  ` + correspondenceFloorPredicate(3, 4) + `
-		  AND NOT EXISTS (SELECT 1 FROM activity_link l
-		        LEFT JOIN contact p ON p.id = l.contact_id
-		        LEFT JOIN company o ON o.id = l.company_id
-		        LEFT JOIN deal d ON d.id = l.deal_id
-		        LEFT JOIN lead ld ON ld.id = l.lead_id
-		        LEFT JOIN project pj ON pj.id = l.project_id
-		        WHERE l.activity_id = a.id
-		          AND (coalesce(p.legal_hold, false) OR coalesce(o.legal_hold, false) OR coalesce(d.legal_hold, false)
-		               OR coalesce(ld.legal_hold, false) OR coalesce(pj.legal_hold, false)))
+	// It does not reach an original no activity was read from, such as a lead's
+	// or a channel update that never became a message. With no activity there is
+	// no floor or hold to ask, so the stage leaves the row.
+	// An existence test rather than a join, and the shield asked of every
+	// activity the original was read into.
+	//
+	// A join emits the original once per matching activity, so a replayed
+	// message offers the same row twice. A shield correlated to the joined
+	// activity is worse: it covers that activity alone. An original read into a
+	// shielded activity and an unshielded one would pass on the unshielded row.
+	//
+	// Selection and deletion ask one function, so the two cannot disagree. Asked
+	// of the candidate row alone, selection would offer a mixed original every
+	// sweep, and the delete would refuse it every sweep.
+	"raw_capture/": `SELECT rc.id FROM raw_capture rc
+		WHERE rc.received_at < now() - make_interval(days => $1)
+		  AND EXISTS (SELECT 1 FROM activity a
+		        WHERE ` + rawCaptureLink + `
+		          AND a.archived_at IS NULL)
+		  AND ` + rawCaptureUnshielded(3, 4) + `
 		LIMIT $2`,
 	// The queue's recorded risk days, aged on the day they describe. A day and
 	// its verdicts exist to answer the same-day next-step figure over its
