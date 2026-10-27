@@ -6,6 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
+    "maxSize": 2097152,
     "includes": ["**", "!src/api/schema.d.ts", "!src/api/public-events.ts"]
   },
   "formatter": {
