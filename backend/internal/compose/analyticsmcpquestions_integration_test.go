@@ -53,7 +53,9 @@ func loadCanonicalQuestions(t *testing.T) []canonicalQuestion {
 //
 // run_analytics_query is the agent's typed grammar; run_report is the HTTP
 // report path. They are different reaches, not two names for one.
-var questionSurfaces = map[string]bool{"run_analytics_query": true, "run_report": true}
+var questionSurfaces = map[string]bool{
+	"run_analytics_query": true, "run_report": true, "read_reporting": true, "read_attention": true,
+}
 
 // caseSurfaces names which surface each proof ACTUALLY drives, so the corpus
 // cannot claim one and prove another.
@@ -83,6 +85,10 @@ var caseSurfaces = map[string]string{
 	"G08": "run_analytics_query",
 	"G10": "run_analytics_query",
 	"G11": "run_analytics_query",
+	"G05": "run_report",
+	"G09": "read_reporting",
+	"G06": "read_attention",
+	"G07": "read_attention",
 }
 
 // canonicalCases maps each corpus id to its executable proof.
@@ -107,6 +113,10 @@ func canonicalCases() map[string]func(t *testing.T) {
 		"G08": proveG08WonThisQuarterVersusLast,
 		"G10": proveG10CustomersWithMostOpenDeals,
 		"G11": proveG11LeadsByStatus,
+		"G05": proveG05HeldMeetingsThatConverted,
+		"G09": proveG09LeadFirstResponse,
+		"G06": proveG06SlippingDealsWithEvidence,
+		"G07": proveG07OpenPromisesToCustomers,
 	}
 }
 
