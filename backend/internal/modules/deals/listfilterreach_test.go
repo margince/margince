@@ -83,7 +83,7 @@ func narrowestReader() context.Context {
 }
 
 // The probe walks the list's own filter set. A filter added there is probed,
-// and its refusal lands here with no second list to update.
+// and its refusal lands here with nothing else to update.
 func TestTheReachProbeWalksEveryDealListFilter(t *testing.T) {
 	reach, err := ListFilterReach(narrowestReader())
 	if err != nil {
