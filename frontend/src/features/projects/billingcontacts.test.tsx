@@ -5,6 +5,7 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
@@ -358,4 +359,28 @@ it("says so rather than writing unpinned when the edge cannot be read back", asy
   await userEvent.click(screen.getByRole("button", { name: "Save change" }));
   expect(await screen.findByRole("alert")).toBeTruthy();
   expect(seen.some((s) => s.method === "PATCH")).toBe(false);
+});
+
+it("offers the three capacities in invoice order and sends the one picked", async () => {
+  const user = userEvent.setup();
+  const seen: Seen[] = [];
+  stubFetch(seen, { version: 7 });
+  render(<BillingContactsPanel contacts={[PAT]} companyId={COMPANY} />);
+  await user.click(
+    await screen.findByRole("button", { name: "Change Pat Okafor’s role" }),
+  );
+  await user.click(screen.getByRole("combobox", { name: "Role" }));
+  const listbox = await screen.findByRole("listbox");
+  expect(
+    within(listbox)
+      .getAllByRole("option")
+      .map((option) => option.textContent),
+  ).toEqual(["Invoice recipient", "Approver", "Accounts payable"]);
+  await user.click(within(listbox).getByRole("option", { name: "Approver" }));
+  await user.click(screen.getByRole("button", { name: "Save change" }));
+  await waitFor(() =>
+    expect(seen.find((s) => s.method === "PATCH")?.body).toEqual({
+      role: "approver",
+    }),
+  );
 });
