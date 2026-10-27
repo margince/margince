@@ -449,6 +449,11 @@
   min-block-size: 0;
   overflow-y: auto;
 }
+/* The body scrolls, so no card in it may shrink to fit: a panel is
+   `overflow: hidden` and would clip its content instead. */
+.modal-drawer:has(> .drawer-head) > .drawer-body.form-stack > * {
+  flex-shrink: 0;
+}
 /* The READING drawer: its bands are sticky so close and commit stay in reach
    however long the body runs. */
 .modal-drawer-wide {
