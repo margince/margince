@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { NextTaskProvider } from "../../components/nexttaskslot";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
@@ -17,16 +17,25 @@ import { loadedQueue, readWorklistPage } from "./worklist.reads";
  * read only on the press, fresh, so a page on screen polls nothing.
  */
 export function NextTaskButton() {
+  // Keyed on the address, so a record opened next starts with no answer of this one's.
+  return <NextTaskPress key={routeHash(useRoute())} />;
+}
+
+function NextTaskPress() {
   const t = useT();
   const [params] = useUrlParams();
   const onScreen = useRoute();
-  const here = routeHash(onScreen);
   const list = continuedList(params);
   const [reading, setReading] = useState(false);
   const [failure, setFailure] = useState<unknown>(null);
-  // Keyed on the address, so moving to another page offers the press again.
-  const [spentOn, setSpentOn] = useState<string | null>(null);
-  const spent = spentOn === here;
+  const [spent, setSpent] = useState(false);
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const press = async () => {
     setFailure(null);
     setReading(true);
@@ -51,7 +60,9 @@ export function NextTaskButton() {
           cursor === undefined,
         );
       } while (next === undefined && cursor !== undefined);
-      if (next === undefined) setSpentOn(here);
+      // The answer is about the record it was pressed on; a reader gone elsewhere stays there.
+      if (!mounted.current) return;
+      if (next === undefined) setSpent(true);
       else navigate(parseHash(next), parseParams(next));
     } catch (error) {
       setFailure(error);

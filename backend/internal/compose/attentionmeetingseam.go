@@ -58,7 +58,7 @@ func (m attentionMeetings) openIn(
 	kind := string(crmcontracts.ActivityKindMeeting)
 	in := activities.ListActivitiesInput{
 		Kind: &kind, OccurredAfter: &window.From, OccurredBefore: &window.Until, DayDates: dayDatesOf(window), Limit: &limit,
-		AwaitingOutcome: true, Sort: &soonestFirst, ReadableOnly: true,
+		OpenStatusOnly: true, Sort: &soonestFirst, ReadableOnly: true,
 	}
 	if !applyMeetingScope(ctx, &in, scope, owner) {
 		return nil, nil

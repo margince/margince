@@ -93,7 +93,7 @@ it("offers a meeting the server says awaits an outcome the same choice as the la
 it("offers a past booked meeting the server stamps as awaiting one", async () => {
   show({ ...MEETING, meeting_status: "booked" });
   expect(
-    await screen.findByRole("button", { name: "Mark Site visit as canceled" }),
+    await screen.findByRole("button", { name: "Mark as canceled: Site visit" }),
   ).toBeTruthy();
 });
 
@@ -104,5 +104,20 @@ it.each([
   show({ ...MEETING, ...change });
   expect(await screen.findByRole("button", { name: "Relink" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /^Update/ })).toBeNull();
-  expect(screen.queryByRole("button", { name: /canceled$/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /canceled/ })).toBeNull();
+});
+
+it("offers no cancel on a meeting a live calendar invitation holds", async () => {
+  show({ ...MEETING, invitation_status: "confirmed" });
+  expect(
+    await screen.findByRole("button", { name: "Update Site visit" }),
+  ).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /canceled/ })).toBeNull();
+});
+
+it("offers a cancel again once the invitation itself was canceled", async () => {
+  show({ ...MEETING, invitation_status: "canceled" });
+  expect(
+    await screen.findByRole("button", { name: "Mark as canceled: Site visit" }),
+  ).toBeTruthy();
 });

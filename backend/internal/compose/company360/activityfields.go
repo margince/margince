@@ -46,7 +46,7 @@ func (a *assembly) readTimeline() error {
 		WithinProjectID:  a.opts.ProjectID,
 		WrittenByHuman:   a.opts.WrittenByHumanOnly,
 		ConversationAsOf: conversationAsOf,
-		TaskAsOf:         &a.now,
+		AsOf:             &a.now,
 		Columns:          a.activityColumns,
 	})
 	if err != nil {

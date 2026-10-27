@@ -29,9 +29,6 @@ import (
 type UpdateActivityInput struct {
 	recordedAt         *time.Time
 	calendarSettlement bool
-	// askedByCaller marks a patch a caller asked for. A capture replay or a
-	// calendar settlement reports what the source system says instead.
-	askedByCaller bool
 	// recordZone dates a stored instant made a day; the store sets it (WithRecordZone).
 	recordZone RecordZone
 	// Trail names what the audit trail calls this write; zero is an update.
@@ -70,7 +67,7 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 		return crmcontracts.Activity{}, err
 	}
 	at := s.now()
-	in.recordedAt, in.recordZone, in.askedByCaller = &at, s.recordZone, true
+	in.recordedAt, in.recordZone = &at, s.recordZone
 	if err := s.readPatchColumns(ctx, &in); err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -160,7 +157,7 @@ func updateActivityInTx(
 	// Read back BEFORE auditing: done_at is stamped by the statement above
 	// and a transcript body is renormalized on the way in, so the row is the
 	// only place that says what this write actually stored.
-	out, err := readActivity(ctx, tx, id, storekit.LiveOnly)
+	out, err := readActivityAt(ctx, tx, id, storekit.LiveOnly, orWallClock(in.recordedAt))
 	if err == nil {
 		err = withCustomValuesOf(ctx, tx, in.customColumns, &out)
 	}

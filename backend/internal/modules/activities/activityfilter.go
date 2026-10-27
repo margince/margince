@@ -189,7 +189,7 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 	if in.UnhostedMeetings {
 		where = append(where, "a.kind = 'meeting' AND "+storekit.UnclaimedMeetingSQL("a"))
 	}
-	if clause := openTaskAssigneeClause(in.AssigneeID, in.TaskAsOf, in.mailIdentities, arg); clause != "" {
+	if clause := openTaskAssigneeClause(in.AssigneeID, in.AsOf, in.mailIdentities, arg); clause != "" {
 		where = append(where, clause)
 	}
 	return append(where, openTaskWindowClauses(in, reminders, arg)...)
@@ -259,7 +259,7 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 		where = append(where, sprintf("(a.subject ILIKE $%d ESCAPE '\\' OR a.body ILIKE $%d ESCAPE '\\')", pos, pos))
 	}
 	where = append(where, occurredWindowClauses(in, arg)...)
-	if in.AwaitingOutcome {
+	if in.OpenStatusOnly {
 		where = append(where, openMeetingStatusSQL)
 	}
 	return where

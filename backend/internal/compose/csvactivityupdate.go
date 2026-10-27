@@ -73,7 +73,14 @@ func (w *csvWriters) planActivityUpdate(
 	if _, why, known := activityKindReason(err, fields); known {
 		return plan, why, nil
 	}
-	return plan, migration.Reason{}, nil
+	if plan.patch.MeetingStatus == nil {
+		return plan, migration.Reason{}, nil
+	}
+	err = w.activities.ProbeOutcome(ctx, ids.From[ids.ActivityKind](id), plan.patch)
+	if _, why, known := activityKindReason(err, fields); known {
+		return plan, why, nil
+	}
+	return plan, migration.Reason{}, err
 }
 
 // reconcileActivity brings an activity up to what the file now says.

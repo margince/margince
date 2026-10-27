@@ -65,8 +65,10 @@ type ListActivitiesInput struct {
 	// what the partial index behind it is built on. Done-ness is part of
 	// that question rather than a second dial — see openTaskAssigneeClause.
 	AssigneeID *ids.UserID
-	// TaskAsOf is required for transaction reads filtered by assignee; store reads supply their clock.
-	TaskAsOf *time.Time
+	// AsOf is the page's instant: open tasks, reminders and each row's
+	// awaiting_outcome are judged at it. Store reads supply their clock; a
+	// transaction read filtered by assignee must set it.
+	AsOf *time.Time
 
 	// OwnQueueOf narrows to the open work one contact is answerable for.
 	// Distinct from AssigneeID, which means exact assignment on any kind and is
@@ -142,11 +144,11 @@ type ListActivitiesInput struct {
 	// DayDates holds a day entry to a range of dates instead, as anchors: a day
 	// has no hour to fall inside the range above. Nil leaves days to that range.
 	DayDates *DayDates
-	// AwaitingOutcome narrows to meetings whose status is still open: booked,
-	// or NULL because capture writes calendar events with no status. Both
-	// meeting lanes set it so the status filter runs before the limit. A page
-	// cut first fills with held or canceled rows and hides the next real one.
-	AwaitingOutcome bool
+	// OpenStatusOnly keeps meetings whose status is still open: booked, or NULL
+	// because capture writes calendar events with no status. It says nothing of
+	// the start; AwaitingOutcomeAsOf does. The filter runs before the limit, so
+	// held or canceled rows cannot fill a page and hide the next open one.
+	OpenStatusOnly bool
 	// CustomerMeetingsOnly keeps meetings linked to a customer record, by the
 	// rule reporting counts customer meetings with (CustomerMeetingSQL). An
 	// internal stand-up owes no customer follow-up.

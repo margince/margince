@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 // activityImportParts maps activityHeader onto the targets of the same names,
@@ -442,5 +443,47 @@ func TestARowIdShapedLikeANoteKeyIsAnOrdinaryRow(t *testing.T) {
 		if n := liveActivities(t, e, subject); n != 1 {
 			t.Fatalf("%d live %q notes, want 1", n, subject)
 		}
+	}
+}
+
+// A meeting dated today has not taken place until that day is over. A file that
+// names it held is skipped with that reason by the dry run and the commit. That
+// holds for a row that files the meeting and for one that corrects it.
+func TestAFileCannotHoldAMeetingDatedToday(t *testing.T) {
+	e := setupImportApp(t)
+	now := clocktest.Now(t)
+	offset := 12 - now.UTC().Hour()
+	zone := "UTC"
+	if offset > 0 {
+		zone = fmt.Sprintf("Etc/GMT-%d", offset)
+	} else if offset < 0 {
+		zone = fmt.Sprintf("Etc/GMT+%d", -offset)
+	}
+	if _, err := e.Owner.Exec(context.Background(), `INSERT INTO setting (key, value) VALUES ('installation.timezone', to_jsonb($1::text))
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, zone); err != nil {
+		t.Fatal(err)
+	}
+	today := now.In(time.FixedZone(zone, offset*3600)).Format(time.DateOnly)
+	meeting := func(ref, status string) map[string]string {
+		return map[string]string{
+			"contacts.csv":   "ref,email,name\nP-1,jo@act-today.example,Jo\n",
+			"activities.csv": activityHeader + "\n" + fmt.Sprintf("%s,meeting,Visit %s,,%s,contact:P-1,,%s,\n", ref, ref, today, status),
+		}
+	}
+	parts := contactAndActivityParts()
+	importActivities(t, e, meeting("M-2", "booked"), parts)
+	for name, files := range map[string]map[string]string{"filing": meeting("M-1", "held"), "correcting": meeting("M-2", "held")} {
+		run := stageBundle(t, e, uploadZip(t, e, "crm.zip", zipBytes(t, files)).SourceRef, "crm", parts)
+		preview := readImportReport(t, e, run.ID)
+		approveAndRead(t, e, run.ID)
+		committed := readImportReport(t, e, run.ID)
+		for stage, r := range map[string]importReportDTO{"dry run": preview, "commit": committed} {
+			if r.Disposition.Skipped != 1 || issuesWith(r, "meeting_not_taken_place") != 1 {
+				t.Errorf("%s, %s = %+v, issues %+v, want the meeting skipped as not taken place", name, stage, r.Disposition, r.Issues)
+			}
+		}
+	}
+	if visit := activityNamed(t, e, "Visit M-2"); visit.MeetingStatus == nil || *visit.MeetingStatus != "booked" {
+		t.Errorf("the corrected meeting reads %v, want it still booked", visit.MeetingStatus)
 	}
 }

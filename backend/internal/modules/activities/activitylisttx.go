@@ -100,7 +100,7 @@ func requireActivityListScope(ctx context.Context, tx pgx.Tx, in ListActivitiesI
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return err
 	}
-	if in.AssigneeID != nil && (in.TaskAsOf == nil || in.TaskAsOf.IsZero()) {
+	if in.AssigneeID != nil && (in.AsOf == nil || in.AsOf.IsZero()) {
 		return apperrors.ErrInvalidArgument
 	}
 
@@ -121,11 +121,16 @@ func requireActivityListScope(ctx context.Context, tx pgx.Tx, in ListActivitiesI
 	return nil
 }
 
-// listClock is the instant a page is judged at. A store read sets TaskAsOf from
+// listClock is the instant a page is judged at. A store read sets AsOf from
 // its clock; without one it is the wall clock that clock defaults to.
 func listClock(in ListActivitiesInput) time.Time {
-	if in.TaskAsOf != nil {
-		return *in.TaskAsOf
+	return orWallClock(in.AsOf)
+}
+
+// orWallClock is at, or the wall clock the store's clock defaults to.
+func orWallClock(at *time.Time) time.Time {
+	if at != nil {
+		return *at
 	}
 	return time.Now()
 }

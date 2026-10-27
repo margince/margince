@@ -76,6 +76,17 @@ func boundToKnownMessage(ctx context.Context, tx pgx.Tx, in LogActivityInput) (c
 	return out, true, nil
 }
 
+// replayLanding is the row a log lands on when its source key is already
+// here, with the meeting status the replay moved.
+func replayLanding(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmcontracts.Activity, bool, error) {
+	replay, err := replayedActivity(ctx, tx, in)
+	if err != nil || replay == nil {
+		return crmcontracts.Activity{}, false, err
+	}
+	moved, err := replayMovedTheMeeting(ctx, tx, *replay, in)
+	return moved, true, err
+}
+
 // recognizedMessage answers the activity this message already is, when the
 // other door filed it first.
 //

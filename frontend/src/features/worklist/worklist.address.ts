@@ -36,7 +36,7 @@ export function drawerQueue(params: ReadonlyMap<string, string>): Readonly<{
 }> {
   const owner = params.get("owner") ?? "";
   return {
-    scope: requestedScope(params.get("queue_scope"), owner),
+    scope: requestedScope(params.get("queue_scope")),
     filter: worklistFilterFrom(params),
     owner,
   };

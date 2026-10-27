@@ -24,15 +24,17 @@ import { isTranscriptActivity } from "../design-system/transcriptread";
 import {
   type ActivityMoment,
   activityDate,
+  latestHeldDay,
   movedActivityStart,
   type OccurredPrecision,
 } from "../format/activitywhen";
 import { calendarDay } from "../format/calendarday";
+import type { ISODate } from "../format/datepattern";
 import { useT } from "../i18n";
 import { outgoingBody } from "../lib/activitybody";
 import { useActivity } from "../lib/activityread";
 import { useCanWriteRecord } from "../lib/capability";
-import { unwrap } from "../lib/problem";
+import { problemCodeOf, unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { worklistKey } from "../lib/workkeys";
 import { ActivityBodyField } from "./activitybodyfield";
@@ -57,6 +59,7 @@ export function RecordMeetingOutcome({
       id={activity.id}
       version={activity.version}
       title={activity.subject ?? undefined}
+      calendarManaged={isCalendarManaged(activity)}
       // The Worklist asks about the same meeting, so an answer here clears it there.
       invalidateKeys={[...invalidateKeys, worklistKey]}
     />
@@ -93,7 +96,7 @@ type MovedStart = {
 };
 
 /** A live invitation owns the subject, notes and start; the server takes only how it went. */
-function calendarManaged(meeting: Activity): boolean {
+function isCalendarManaged(meeting: Activity): boolean {
   return Boolean(
     meeting.invitation_status && meeting.invitation_status !== "canceled",
   );
@@ -102,8 +105,8 @@ function calendarManaged(meeting: Activity): boolean {
 /**
  * The start the save sends: none when the day stayed, so the meeting keeps
  * its real start. A moved meeting keeps its time of day in the record zone,
- * capped at now, because a meeting cannot be filed in the future. A date-only
- * meeting names its new date alone and stays date-only, with no clock to cap.
+ * capped just before now, because a held meeting cannot start later. A
+ * date-only meeting names its new date alone, which the date box caps.
  */
 function movedStart(
   seed: OutcomeSeed,
@@ -119,6 +122,22 @@ function movedStart(
 }
 
 /**
+ * The date box's ceiling, and the day it marks as today. Held means taken
+ * place: a date-only meeting once its date is over, a timed one once it began.
+ */
+function heldDays(
+  seed: OutcomeSeed | null,
+  zone: string,
+): { latest: ISODate | undefined; today: ISODate | undefined } {
+  const now = new Date();
+  const precision = seed?.start.precision ?? "instant";
+  return {
+    latest: isoOrBlank(latestHeldDay(precision, now, zone)) || undefined,
+    today: isoOrBlank(calendarDay(now, zone)) || undefined,
+  };
+}
+
+/**
  * MeetingOutcome is the row's answer: cancel it, or say what came of it.
  *
  * Two verbs rather than three, and they are not the same KIND of answer, which
@@ -131,6 +150,7 @@ export function MeetingOutcome({
   version,
   title,
   invalidateKeys,
+  calendarManaged = false,
 }: Readonly<{
   id: string;
   version: number | undefined;
@@ -138,10 +158,14 @@ export function MeetingOutcome({
   invalidateKeys: readonly QueryKey[];
   // The row's own heading for the meeting, so the dialog is titled before its read answers.
   title: string | undefined;
+  // A live invitation is canceled through the calendar; the server refuses it here.
+  calendarManaged?: boolean;
 }>) {
   const t = useT();
   const toast = useToast();
   const [open, setOpen] = useState(false);
+  // A Worklist row does not say whether an invitation holds the meeting, so its refusal does.
+  const [refusedAsManaged, setRefusedAsManaged] = useState(false);
   const record = useMeetingOutcome(invalidateKeys);
   return (
     <>
@@ -156,31 +180,41 @@ export function MeetingOutcome({
       >
         {t("worklist.verb.meetingUpdate")}
       </Button>
-      <Button
-        pending={record.isPending}
-        aria-label={
-          title
-            ? t("worklist.verb.meetingCanceledFor", { subject: title })
-            : undefined
-        }
-        onClick={() =>
-          record.mutate(
-            { id, version, status: "canceled" },
-            {
-              onSuccess: () =>
-                toast.show(t("worklist.verb.meetingOutcomeRecorded")),
-              // A refused write leaves the row exactly as it was, which renders
-              // identically to a click that did nothing.
-              onError: () =>
-                toast.show(t("worklist.verb.meetingOutcomeFailed"), {
-                  tone: "danger",
-                }),
-            },
-          )
-        }
-      >
-        {t("worklist.verb.meetingCanceled")}
-      </Button>
+      {!(calendarManaged || refusedAsManaged) && (
+        <Button
+          pending={record.isPending}
+          aria-label={
+            title
+              ? t("worklist.verb.meetingCanceledFor", { subject: title })
+              : undefined
+          }
+          onClick={() =>
+            record.mutate(
+              { id, version, status: "canceled" },
+              {
+                onSuccess: () =>
+                  toast.show(t("worklist.verb.meetingOutcomeRecorded")),
+                // A refused write leaves the row exactly as it was, which renders
+                // identically to a click that did nothing.
+                onError: (error) => {
+                  const managed = problemCodeOf(error) === "calendar_managed";
+                  setRefusedAsManaged(managed);
+                  toast.show(
+                    t(
+                      managed
+                        ? "worklist.verb.meetingCancelInCalendar"
+                        : "worklist.verb.meetingOutcomeFailed",
+                    ),
+                    { tone: "danger" },
+                  );
+                },
+              },
+            )
+          }
+        >
+          {t("worklist.verb.meetingCanceled")}
+        </Button>
+      )}
       {open && (
         <MeetingOutcomeDialog
           id={id}
@@ -221,13 +255,11 @@ function MeetingOutcomeDialog({
   const [draft, setDraft] = useState<OutcomeDraft | null>(null);
   const [seed, setSeed] = useState<OutcomeSeed | null>(null);
   const [dayRefused, setDayRefused] = useState(false);
-  const latestDay =
-    isoOrBlank(calendarDay(new Date(), recordZone)) || undefined;
   // The SAME read the task detail makes, and keyed the same way, so a write
   // that invalidates ["activity", id] refreshes whichever of the two is open.
   const meeting = useActivity(id);
   const transcript = meeting.data ? isTranscriptActivity(meeting.data) : false;
-  const managed = meeting.data ? calendarManaged(meeting.data) : false;
+  const managed = meeting.data ? isCalendarManaged(meeting.data) : false;
   // Seeded during render, not in an effect: an effect paints an empty form first
   // and replaces words typed into that frame.
   if (draft === null && meeting.data) {
@@ -251,6 +283,7 @@ function MeetingOutcomeDialog({
       version: meeting.data.version,
     });
   }
+  const days = heldDays(seed, recordZone);
   const save = useMutation({
     // Fields travel as variables: a closure would read the last committed render.
     mutationFn: async (input: {
@@ -359,10 +392,8 @@ function MeetingOutcomeDialog({
                     <DateInput
                       {...control}
                       value={isoOrBlank(draft.day)}
-                      // A meeting cannot have happened in the future, and the cap
-                      // makes the box say so rather than leaving the server to.
-                      max={latestDay}
-                      today={latestDay}
+                      max={days.latest}
+                      today={days.today}
                       onChange={(event) => {
                         setDayRefused(false);
                         setDraft({ ...draft, day: event.target.value });

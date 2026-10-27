@@ -107,7 +107,7 @@ async function heldPanel() {
 }
 
 const UPDATE = "Update Discovery call";
-const CANCEL = "Mark Discovery call as canceled";
+const CANCEL = "Mark as canceled: Discovery call";
 
 it("records a no-show on a meeting the server says awaits one, then shows it on the row", async () => {
   let stored = meeting({});

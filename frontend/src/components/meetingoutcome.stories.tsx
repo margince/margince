@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
@@ -140,7 +140,8 @@ export const NothingCapturedYet: Story = {
 
 /**
  * A meeting with a live calendar invitation: the invitation owns its subject,
- * notes and date, so the composer asks only how it went.
+ * notes and date, and is canceled through itself. The card offers no cancel,
+ * and the composer asks only how it went.
  */
 export const CalendarManaged: Story = {
   render: () => {
@@ -153,10 +154,20 @@ export const CalendarManaged: Story = {
             version={3}
             title="Discovery call with Turbinenbau"
             invalidateKeys={[]}
+            calendarManaged
           />
         </div>
       </StoryProviders>
     );
   },
-  play: openComposer,
+  play: async (context) => {
+    const canvas = within(context.canvasElement);
+    await canvas.findByRole("button", {
+      name: "Update Discovery call with Turbinenbau",
+    });
+    await expect(
+      canvas.queryByRole("button", { name: /canceled/ }),
+    ).not.toBeInTheDocument();
+    await openComposer?.(context);
+  },
 };

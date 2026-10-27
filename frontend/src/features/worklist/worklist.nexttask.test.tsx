@@ -198,6 +198,61 @@ describe("Next task on a record", () => {
     expect(await nextTask()).toHaveProperty("disabled", false);
   });
 
+  it("offers the press again on a record the reader comes back to", async () => {
+    const asked = serveList(page([onContact("a")]));
+    await pressOn("#/contacts/a");
+    await screen.findByRole("button", { name: en["brief.queue.nextNone"] });
+
+    act(() => navigate({ screen: "contacts", id: "b" }));
+    expect(await nextTask()).toHaveProperty("disabled", false);
+    act(() => navigate({ screen: "contacts", id: "a" }));
+    await waitFor(() => expect(window.location.hash).toBe("#/contacts/a"));
+
+    expect(await nextTask()).toHaveProperty("disabled", false);
+    expect(asked).toHaveLength(1);
+  });
+
+  it("leaves a reader who opened another record while the list was read where they are", async () => {
+    let answer: (response: Response) => void = () => undefined;
+    stubApi({
+      "GET /worklist": () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    window.location.hash = "#/contacts/a";
+    render(<NextTaskButton />);
+    const user = userEvent.setup();
+    const button = await nextTask();
+    await user.click(button);
+    await waitFor(() => expect(button.getAttribute("aria-busy")).toBe("true"));
+
+    act(() => navigate({ screen: "contacts", id: "z" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button").getAttribute("aria-busy")).toBeNull(),
+    );
+    const list = jsonResponse(page([onContact("a"), onContact("b")]));
+    answer(list);
+    await waitFor(() => expect(list.bodyUsed).toBe(true));
+    await act(async () => undefined);
+
+    expect(window.location.hash).toBe("#/contacts/z");
+  });
+
+  it("drops a failed read's error line on the next record", async () => {
+    stubApi({
+      "GET /worklist": () =>
+        jsonResponse({ title: "Unavailable", status: 503 }, 503),
+    });
+    await pressOn("#/contacts/a");
+    expect(await screen.findByRole("alert")).toBeTruthy();
+
+    act(() => navigate({ screen: "contacts", id: "b" }));
+
+    await nextTask();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("continues the drawer's filter, scope and owner the record carries", async () => {
     const asked = serveList(page([onContact("a"), onContact("b")]));
     await pressOn("#/contacts/a?filter=tasks&from=worklist&queue_scope=team");

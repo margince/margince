@@ -7989,6 +7989,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "„{value}“ ist kein Terminstatus. Es gibt: {allowed}.",
   "import.reason.meeting_status_not_valid_for_kind":
     "Nur ein Termin hat einen Terminstatus. Entferne ihn aus dieser Zeile.",
+  "import.reason.meeting_not_taken_place":
+    "Dieser Termin hat noch nicht stattgefunden und kann daher weder held noch no_show sein. Lass den Status leer oder nimm booked oder canceled.",
   "import.reason.direction_unknown":
     "„{value}“ ist keine Richtung. Es gibt: {allowed}.",
   "import.reason.activity_unlinked":
@@ -16553,8 +16555,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Ergebnis konnte nicht erfasst werden. Bitte versuche es erneut.",
   "worklist.verb.meetingDayMissing":
     "Dieses Datum gibt es in der Zeitzone des Unternehmens nicht. Wähle ein anderes Datum.",
-  "worklist.verb.meetingUpdateFor": "{subject} aktualisieren",
-  "worklist.verb.meetingCanceledFor": "{subject} als abgesagt markieren",
+  "worklist.verb.meetingUpdateFor": "Aktualisieren: {subject}",
+  "worklist.verb.meetingCanceledFor": "Als abgesagt markieren: {subject}",
+  "worklist.verb.meetingCancelInCalendar":
+    "Die Kalendereinladung führt diesen Termin. Sag ihn über die Einladung ab.",
   "worklist.verb.meetingCalendarManaged":
     "Betreff, Notizen und Datum folgen der Kalendereinladung. Hier wird nur das Ergebnis gespeichert.",
   "worklist.verb.retry": "Erneut ausf\u00fchren",

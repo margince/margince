@@ -167,3 +167,81 @@ func TestAMeetingMovedIntoThePastCanBeHeldInOnePatch(t *testing.T) {
 		t.Errorf("the held meeting reads awaiting_outcome %v, want false", out.AwaitingOutcome)
 	}
 }
+
+// A date-only meeting takes place once its date is over in the installation's
+// timezone. Dated today there, it is not owed yet and cannot be held.
+func TestADateOnlyMeetingIsOwedOnceItsLocalDateIsOver(t *testing.T) {
+	e := setupSend(t)
+	setInstallationZone(t, e, "Pacific/Auckland")
+	zone, err := time.LoadLocation("Pacific/Auckland")
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := clocktest.Now(t).UTC().Truncate(24 * time.Hour).Add(22 * time.Hour)
+	store := meetingStore(e).WithClock(func() time.Time { return now })
+	customer := seedCustomer(t, e)
+	local := now.In(zone)
+	today := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC)
+	booked, held := "booked", string(crmcontracts.ActivityMeetingStatusHeld)
+	for _, c := range []struct {
+		subject string
+		date    time.Time
+		owed    bool
+	}{
+		{"Dated today in Auckland", today, false},
+		{"Dated yesterday in Auckland", today.AddDate(0, 0, -1), true},
+	} {
+		logged, _, err := store.LogActivity(meetingCtx(e), LogActivityInput{
+			Kind: string(crmcontracts.ActivityKindMeeting), Subject: &c.subject, OccurredAt: &c.date,
+			OccurredPrecision: PrecisionDay, MeetingStatus: &booked, Source: "manual",
+			Links: []ActivityLinkInput{{EntityType: "contact", EntityID: customer}},
+		})
+		if err != nil {
+			t.Fatalf("logging %q: %v", c.subject, err)
+		}
+		id := ids.From[ids.ActivityKind](ids.UUID(logged.Id))
+		read, err := store.GetActivity(meetingCtx(e), id, storekit.LiveOnly)
+		if err != nil {
+			t.Fatalf("reading %q: %v", c.subject, err)
+		}
+		if read.AwaitingOutcome == nil || *read.AwaitingOutcome != c.owed {
+			t.Errorf("%q reads awaiting_outcome %v, want %v", c.subject, read.AwaitingOutcome, c.owed)
+		}
+		_, err = store.UpdateActivity(meetingCtx(e), id, UpdateActivityInput{MeetingStatus: &held})
+		var early *MeetingNotTakenPlaceError
+		switch {
+		case c.owed && err != nil:
+			t.Errorf("holding %q answered %v, want it accepted", c.subject, err)
+		case !c.owed && !errors.As(err, &early):
+			t.Errorf("holding %q answered %v, want the not-taken-place refusal", c.subject, err)
+		}
+	}
+}
+
+// Logging a meeting is held to the same rule as a patch. So is a second log
+// under the same source key that moves the status of the row it holds.
+func TestLoggingAnOutcomeWaitsForTheMeetingToStart(t *testing.T) {
+	e := setupSend(t)
+	customer := seedCustomer(t, e)
+	tomorrow := clocktest.Now(t).AddDate(0, 0, 1)
+	held := string(crmcontracts.ActivityMeetingStatusHeld)
+	logged := func(status, sourceID string) error {
+		subject, system := "Booked for tomorrow", "crm-sync"
+		_, _, err := meetingStore(e).LogActivity(meetingCtx(e), LogActivityInput{
+			Kind: string(crmcontracts.ActivityKindMeeting), Subject: &subject, OccurredAt: &tomorrow,
+			MeetingStatus: &status, Source: "manual", SourceSystem: &system, SourceID: &sourceID,
+			Links: []ActivityLinkInput{{EntityType: "contact", EntityID: customer}},
+		})
+		return err
+	}
+	var early *MeetingNotTakenPlaceError
+	if err := logged(held, "fresh"); !errors.As(err, &early) {
+		t.Fatalf("logging tomorrow's meeting as held answered %v, want the not-taken-place refusal", err)
+	}
+	if err := logged("booked", "replayed"); err != nil {
+		t.Fatalf("logging tomorrow's meeting as booked: %v", err)
+	}
+	if err := logged(held, "replayed"); !errors.As(err, &early) {
+		t.Errorf("replaying it as held answered %v, want the not-taken-place refusal", err)
+	}
+}

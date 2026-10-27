@@ -204,8 +204,8 @@ func checkKindFields(fields map[string]string, typed map[string]any, _ cellClock
 	return problemOf(target, fields[target], why)
 }
 
-// activityKindReason says in the report's words why the store's kind rules
-// refused an activity, and which column to correct. It is false for an error
+// activityKindReason says in the report's words why the store's kind or
+// meeting status rules refused an activity, and which column to correct. It is false for an error
 // that is not one of those rules.
 func activityKindReason(err error, fields map[string]string) (string, migration.Reason, bool) {
 	switch {
@@ -213,6 +213,8 @@ func activityKindReason(err error, fields map[string]string) (string, migration.
 		return activityTargetType, migration.Why(migration.ReasonMessageNotImportable), true
 	case wrapsA[*activities.MeetingStatusKindError](err):
 		return activityTargetMeetingStatus, migration.Why(migration.ReasonMeetingStatusNotForKind), true
+	case wrapsA[*activities.MeetingNotTakenPlaceError](err):
+		return activityTargetMeetingStatus, migration.Why(migration.ReasonMeetingNotTakenPlace), true
 	case wrapsA[*activities.KindFieldError](err):
 		return activityTargetDuration, migration.Why(migration.ReasonDurationNotValidForKind), true
 	case wrapsA[*activities.SchedulingArgumentError](err):

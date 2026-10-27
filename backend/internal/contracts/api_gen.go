@@ -11764,6 +11764,7 @@ const (
 	ImportReasonCodeLinkTypeUnknown              ImportReasonCode = "link_type_unknown"
 	ImportReasonCodeLinkedinHeld                 ImportReasonCode = "linkedin_held"
 	ImportReasonCodeLostReasonMissing            ImportReasonCode = "lost_reason_missing"
+	ImportReasonCodeMeetingNotTakenPlace         ImportReasonCode = "meeting_not_taken_place"
 	ImportReasonCodeMeetingStatusNotValidForKind ImportReasonCode = "meeting_status_not_valid_for_kind"
 	ImportReasonCodeMeetingStatusUnknown         ImportReasonCode = "meeting_status_unknown"
 	ImportReasonCodeMessageNotImportable         ImportReasonCode = "message_not_importable"
@@ -11958,6 +11959,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeLinkedinHeld:
 		return true
 	case ImportReasonCodeLostReasonMissing:
+		return true
+	case ImportReasonCodeMeetingNotTakenPlace:
 		return true
 	case ImportReasonCodeMeetingStatusNotValidForKind:
 		return true
