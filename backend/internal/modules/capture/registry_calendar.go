@@ -44,7 +44,7 @@ func (r *Registry) CalendarFor(ctx context.Context, host ids.UserID, provider st
 	if err != nil {
 		return nil, nil, err
 	}
-	c = connector.RotatingSyncer(c, rotationSink{registry: r, connectionID: id, generation: generation, readRef: ref, log: slog.Default()})
+	c = connector.RotatingSyncer(c, &rotationSink{registry: r, connectionID: id, generation: generation, readRef: ref, log: slog.Default()})
 	scheduler, ok := c.(connector.CalendarScheduler)
 	if !ok {
 		return nil, nil, fmt.Errorf("calendar: scheduling unavailable: %w", ErrConnectorNotConfigured)

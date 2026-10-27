@@ -332,7 +332,7 @@ func TestAQuietContactedDealNamesTheChampionToMeet(t *testing.T) {
 	if !strings.Contains(mv.Reason, "23 days ago") {
 		t.Errorf("the advice does not say how long it has been quiet: %q", mv.Reason)
 	}
-	if !strings.Contains(mv.Reason, "nothing is booked") {
+	if !strings.Contains(mv.Reason, "no meeting is recorded") {
 		t.Errorf("the advice does not say why now: %q", mv.Reason)
 	}
 	if !strings.Contains(mv.Reason, "champion") {

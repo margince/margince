@@ -1553,7 +1553,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.rates": "Đầu vào {input} · Đầu ra {output} mỗi 1 triệu token",
 
   "brief.weekly.tasksCompleted": "Việc cần làm đã hoàn tất",
-  "brief.weekly.noMeetings": "Không có cuộc họp nào",
+  "brief.weekly.noMeetings": "Chưa ghi nhận cuộc họp nào",
   "brief.weekly.noLeads": "Chưa nhận lead nào",
   "brief.weekly.noCommitments": "Không có cam kết đến hạn",
   "brief.weekly.basis":
@@ -3062,15 +3062,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.health.payment.paidOnTime_other":
     "{count} trên {total} hóa đơn được thanh toán đúng hạn",
   "co.health.reason.neverWritten":
-    "Chưa có tin nhắn nào từ họ và chưa có cuộc họp nào.",
+    "Chưa ghi nhận tin nhắn nào từ họ hoặc cuộc họp nào.",
   "co.health.reason.quiet_one":
-    "Chưa có phản hồi và chưa có cuộc họp nào trong {days} ngày qua.",
+    "Chưa ghi nhận phản hồi hoặc cuộc họp trong {days} ngày.",
   "co.health.reason.quiet_other":
-    "Chưa có phản hồi và chưa có cuộc họp nào trong {days} ngày qua.",
+    "Chưa ghi nhận phản hồi hoặc cuộc họp trong {days} ngày.",
   "co.health.reason.quietSince_one":
-    "Chưa có phản hồi hay cuộc họp nào từ {at} ({days} ngày).",
+    "Chưa ghi nhận phản hồi hoặc cuộc họp từ {at} ({days} ngày).",
   "co.health.reason.quietSince_other":
-    "Chưa có phản hồi hay cuộc họp nào từ {at} ({days} ngày).",
+    "Chưa ghi nhận phản hồi hoặc cuộc họp từ {at} ({days} ngày).",
   "co.health.reason.meetingBooked": "Đã đặt một cuộc họp vào {at}.",
   "co.health.reason.lastMetToday": "Đã họp hôm nay.",
   "co.health.reason.lastMet_one": "Lần họp gần nhất cách đây {days} ngày.",
@@ -3103,7 +3103,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "signal.kind.contract_ended": "Hợp đồng sắp kết thúc",
   "signal.kind.new_opportunity": "Cơ hội mới",
   "signal.kind.commitment_made": "Đã đưa ra cam kết",
-  "signal.kind.ghosted_thread": "Chưa phản hồi",
+  "signal.kind.ghosted_thread": "Chưa ghi nhận phản hồi",
   "signal.kind.project_gone_quiet": "Dự án đã im lặng",
   "signal.kind.funding": "Gọi vốn",
   "signal.kind.leadership_change": "Thay đổi lãnh đạo",
@@ -3702,7 +3702,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.ask.q.whats_changed": "Gần đây có gì thay đổi?",
   "co.ask.nothing": "Không tìm thấy câu trả lời trong các hồ sơ bạn được xem.",
   "co.ask.failed": "Không thể trả lời câu hỏi. Thử lại.",
-  "co.suggest.kind.no_reply": "Chưa phản hồi",
+  "co.suggest.kind.no_reply": "Chưa ghi nhận phản hồi",
   "co.suggest.kind.stalled_deal": "Deal đình trệ",
   "co.suggest.kind.no_next_step": "Chưa có bước tiếp theo",
   "co.suggest.kind.lifecycle_conflict": "Mâu thuẫn vòng đời",
@@ -4132,7 +4132,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.contacts.board.change": "Đổi vai trò",
   "co.reach.waiting": "Cần trả lời",
   "co.reach.answered": "Đã trả lời",
-  "co.reach.silent": "Chưa phản hồi",
+  "co.reach.silent": "Chưa ghi nhận phản hồi",
   "co.reach.lapsed": "Đã im lặng",
   "co.reach.untried": "Chưa liên hệ",
   "co.role.champion": "người ủng hộ",
@@ -9407,7 +9407,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.reconnectToSend":
     "Kết nối lại hộp thư này để gửi thư từ đó. Hộp thư kết nối từ trước khi có tính năng gửi không thể nâng cấp tại chỗ; nhà cung cấp chỉ cấp quyền gửi trên kết nối mới.",
   "connectors.lastSynced": "Đồng bộ lần cuối {at}",
-  "connectors.neverSynced": "Chờ lần đồng bộ đầu tiên",
+  "connectors.neverSynced": "Chưa ghi nhận lần đồng bộ thành công",
   "connectors.notConfigured": "Bản cài đặt này chưa cấu hình thu thập thư.",
   "connectors.reconnect": "Kết nối lại",
   "connectors.disconnect": "Ngắt kết nối",
@@ -14490,12 +14490,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.factReceipts_other": "{count} bằng chứng có thể xem",
   "contact.intro.verdictDirect": "Hỏi {name}: hai bên đã trao đổi với nhau.",
   "contact.intro.verdictOneSided":
-    "Hỏi {name}: đã viết cho liên hệ này nhưng chưa có hồi âm.",
+    "Hỏi {name}: đã viết cho liên hệ này nhưng chưa ghi nhận hồi âm.",
   "contact.intro.verdictVia":
     "Hỏi {name}: tiếp cận được liên hệ này qua {through}.",
   "contact.intro.verdictDirectYou": "Bạn đã trao đổi với liên hệ này.",
   "contact.intro.verdictOneSidedYou":
-    "Bạn đã viết cho liên hệ này nhưng chưa có hồi âm.",
+    "Bạn đã viết cho liên hệ này nhưng chưa ghi nhận hồi âm.",
   "contact.intro.verdictViaYou": "Bạn tiếp cận được họ qua {through}.",
   "contact.intro.ownRouteNoAsk":
     "Không cần nhờ ai. Viết trực tiếp cho liên hệ này.",
@@ -14834,7 +14834,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.standing.direction.inboundOnly":
     "Đến nay chỉ có họ viết. Nhóm của bạn chưa gửi gì.",
   "contact.standing.direction.outboundOnly":
-    "Đến nay chỉ có nhóm của bạn viết. Chưa có trả lời.",
+    "Chỉ ghi nhận tin nhắn gửi đi từ nhóm của bạn. Chưa ghi nhận trả lời.",
   "contact.standing.direction.none": "Chưa có tin nhắn theo chiều nào.",
   "contact.subtitle.at": "tại",
   "contact.standing.dims": "Mối quan hệ đang thế nào",
@@ -16354,20 +16354,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.because.meeting_unprepared": "chưa chuẩn bị gì",
   "worklist.because.outcome_unrecorded": "chưa ghi nhận kết quả",
   "worklist.because.you_wrote_last": "bạn gửi tin sau cùng",
-  "worklist.because.no_reply_days": "chưa phản hồi",
-  "worklist.because.no_reply_days.value_one": "{value} ngày chưa phản hồi",
-  "worklist.because.no_reply_days.value_other": "{value} ngày chưa phản hồi",
+  "worklist.because.no_reply_days": "chưa ghi nhận phản hồi",
+  "worklist.because.no_reply_days.value_one": "{value} ngày chưa ghi nhận phản hồi",
+  "worklist.because.no_reply_days.value_other": "{value} ngày chưa ghi nhận phản hồi",
   "worklist.because.met_days_ago": "đã gặp",
   "worklist.because.met_days_ago.value_one": "đã gặp {value} ngày trước",
   "worklist.because.met_days_ago.value_other": "đã gặp {value} ngày trước",
-  "worklist.because.nothing_sent_since": "chưa gửi gì từ đó",
+  "worklist.because.nothing_sent_since": "chưa ghi nhận thư gửi đi từ đó",
   "worklist.because.no_attendee_on_file": "cuộc họp chưa có liên hệ nào",
   "worklist.because.response_overdue": "quá hạn trả lời",
   "worklist.because.response_due_soon": "sắp đến hạn trả lời",
   "worklist.because.response_due_soon.value": "cần trả lời trước {value}",
   "worklist.because.unassigned": "chưa có ai phụ trách",
   "worklist.because.stale": "đã chờ lâu",
-  "worklist.because.no_reply_history": "chưa có lịch sử trả lời",
+  "worklist.because.no_reply_history": "chưa ghi nhận lịch sử trả lời",
   "worklist.because.asks_nothing": "không yêu cầu gì",
   "worklist.because.addressed_elsewhere": "gửi cho đồng nghiệp",
   "worklist.because.bcc_from_stranger":
@@ -16841,7 +16841,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.standing.closedUnreasoned": "Đã đóng. Hồ sơ được giữ lại làm lịch sử.",
   "lead.standing.noResponse": "Chưa ghi nhận phản hồi đầu tiên.",
   "lead.standing.theirMove": "Chờ lead phản hồi",
-  "lead.standing.answeredOn": "Đã trả lời vào {at}. Chưa có phản hồi.",
+  "lead.standing.answeredOn": "Đã ghi nhận trả lời vào {at}. Chưa ghi nhận phản hồi sau đó.",
   "lead.standing.inMotion": "Đang tiến triển",
   "lead.standing.engagedBecause":
     "Lead đã trả lời, hoặc đã lên lịch một cuộc họp.",
@@ -17775,4 +17775,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.standing.peek.started": "Bắt đầu làm việc",
   "project.standing.peek.today": "Hôm nay",
   "project.standing.peek.documents": "Tệp của dự án này, mới nhất trước",
+  "mailCoverage.title": "Lịch sử email có thể chưa đầy đủ",
+  "mailCoverage.unknown": "Việc thu thập email chưa xác minh đầy đủ giai đoạn này. Các ngày này dựa trên trao đổi đã ghi nhận; phản hồi có thể nằm ngoài hồ sơ.",
+  "mailCoverage.partial": "Thu thập đã thành công, nhưng chưa xác minh đầy đủ lịch sử Hộp thư đến và thư Đã gửi. Thiếu thư trong hồ sơ không chứng minh rằng chưa có ai phản hồi.",
+  "mailCoverage.unavailable": "Không thể thu thập email cho một phần lịch sử này. Phản hồi có thể nằm ngoài hồ sơ.",
+  "mailCoverage.withheld": "Bạn không có quyền kiểm tra phạm vi thu thập email. Thiếu thư trong hồ sơ không chứng minh rằng chưa có ai phản hồi.",
+  "mailCoverage.connections": "Kiểm tra kết nối",
+  "connectors.syncTimeUnknown": "Chưa có thông tin về lần đồng bộ thành công",
 };
