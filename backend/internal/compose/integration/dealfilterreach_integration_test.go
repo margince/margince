@@ -17,8 +17,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// refusableDealFilters is every deal filter some role can be refused, with the
-// probe's operand. They are those refused to a role that reads deals and withholds every deal field.
+// refusableDealFilters reads, with the probe's operand, the deal filters
+// refused to a role that reads deals and withholds every deal field.
 func refusableDealFilters(t *testing.T) []deals.FilterReach {
 	t.Helper()
 	var masks []principal.FieldMask
