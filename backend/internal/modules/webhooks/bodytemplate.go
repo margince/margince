@@ -12,6 +12,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 const (
@@ -45,6 +47,9 @@ type templatePart struct {
 	literal string
 	path    []string // nil for a literal part
 	asJSON  bool
+	// currency is the path `| money` reads the currency code from; nil
+	// without that filter.
+	currency []string
 }
 
 // normalizeContentType resolves the stored or requested content type; an
@@ -119,21 +124,47 @@ func countLiterals(parts []templatePart) int {
 func parsePlaceholder(inner string) (templatePart, error) {
 	expr, filter, hasFilter := strings.Cut(inner, "|")
 	part := templatePart{}
+	var err error
 	if hasFilter {
-		if name := strings.TrimSpace(filter); name != "json" {
-			return part, fmt.Errorf("%q is not a filter; the only filter is json", name)
+		if err = part.applyFilter(strings.Fields(filter)); err != nil {
+			return part, err
 		}
-		part.asJSON = true
 	}
-	expr = strings.TrimSpace(expr)
-	part.path = strings.Split(expr, ".")
-	if expr == "" || slices.Contains(part.path, "") {
-		return part, errors.New("the placeholder names no field")
-	}
-	if !slices.Contains(templateRoots, part.path[0]) {
-		return part, fmt.Errorf("%q is not a field of the event; use one of %s", part.path[0], strings.Join(templateRoots, ", "))
+	if part.path, err = parseFieldPath(expr, "the placeholder names no field"); err != nil {
+		return part, err
 	}
 	return part, nil
+}
+
+// applyFilter reads `json`, or `money <currency path>`.
+func (p *templatePart) applyFilter(words []string) error {
+	switch {
+	case len(words) == 1 && words[0] == "json":
+		p.asJSON = true
+		return nil
+	case len(words) > 0 && words[0] == "money":
+		if len(words) != 2 {
+			return errors.New("money needs the field that holds the currency, as in | money data.currency_at_change")
+		}
+		currency, err := parseFieldPath(words[1], "money names no currency field")
+		p.currency = currency
+		return err
+	case len(words) == 0:
+		return errors.New("the placeholder names no filter after |")
+	}
+	return fmt.Errorf("%q is not a filter; the filters are json and money", words[0])
+}
+
+func parseFieldPath(expr, emptyReason string) ([]string, error) {
+	expr = strings.TrimSpace(expr)
+	path := strings.Split(expr, ".")
+	if expr == "" || slices.Contains(path, "") {
+		return nil, errors.New(emptyReason)
+	}
+	if !slices.Contains(templateRoots, path[0]) {
+		return nil, fmt.Errorf("%q is not a field of the event; use one of %s", path[0], strings.Join(templateRoots, ", "))
+	}
+	return path, nil
 }
 
 // jsonLexer tracks where a scan of JSON text stands: inside a string, after a
@@ -222,7 +253,7 @@ func (t *bodyTemplate) render(envelope []byte) ([]byte, error) {
 	for _, p := range t.parts {
 		if p.path == nil {
 			out.WriteString(p.literal)
-		} else if err := t.writeValue(&out, doc.lookup(p.path), p.asJSON); err != nil {
+		} else if err := t.writePart(&out, doc, p); err != nil {
 			return nil, err
 		}
 		if out.Len() > maxBodyBytes {
@@ -232,12 +263,25 @@ func (t *bodyTemplate) render(envelope []byte) ([]byte, error) {
 	return out.Bytes(), nil
 }
 
-func (t *bodyTemplate) writeValue(out *bytes.Buffer, raw json.RawMessage, asJSON bool) error {
-	text := valueText(raw, asJSON)
-	switch {
-	case t.contentType == contentTypeForm:
+func (t *bodyTemplate) writePart(out *bytes.Buffer, doc *rawDoc, p templatePart) error {
+	if p.currency != nil {
+		return t.writeText(out, moneyText(doc.lookup(p.path), doc.lookup(p.currency)))
+	}
+	text := valueText(doc.lookup(p.path), p.asJSON)
+	if p.asJSON && t.contentType == contentTypeJSON {
+		out.WriteString(text)
+		return nil
+	}
+	return t.writeText(out, text)
+}
+
+// writeText writes text the way the content type escapes it; in JSON it
+// stands inside a string, which the parser has already made sure of.
+func (t *bodyTemplate) writeText(out *bytes.Buffer, text string) error {
+	switch t.contentType {
+	case contentTypeForm:
 		out.WriteString(url.QueryEscape(text))
-	case t.contentType == contentTypeJSON && !asJSON:
+	case contentTypeJSON:
 		quoted, err := marshalNoHTMLEscape(text)
 		if err != nil {
 			return err
@@ -247,6 +291,43 @@ func (t *bodyTemplate) writeValue(out *bytes.Buffer, raw json.RawMessage, asJSON
 		out.WriteString(text)
 	}
 	return nil
+}
+
+// moneyText renders an integer count of minor units in its currency, as
+// "56,830.20 USD". It is empty unless both halves are present and well formed,
+// because an amount without its currency cannot say how many digits are cents.
+func moneyText(amount, currency json.RawMessage) string {
+	minor, err := strconv.ParseInt(string(bytes.TrimSpace(amount)), 10, 64)
+	if err != nil {
+		return ""
+	}
+	var code string
+	if json.Unmarshal(currency, &code) != nil || !values.ValidCurrency(code) {
+		return ""
+	}
+	whole, fraction, hasFraction := strings.Cut(values.MajorUnits(minor, code), ".")
+	text := groupThousands(whole)
+	if hasFraction {
+		text += "." + fraction
+	}
+	return text + " " + code
+}
+
+// groupThousands puts a comma between each group of three digits of a whole
+// number, keeping a leading minus sign in front.
+func groupThousands(whole string) string {
+	sign, digits := "", whole
+	if strings.HasPrefix(whole, "-") {
+		sign, digits = "-", whole[1:]
+	}
+	var grouped strings.Builder
+	for i, digit := range digits {
+		if i > 0 && (len(digits)-i)%3 == 0 {
+			grouped.WriteByte(',')
+		}
+		grouped.WriteRune(digit)
+	}
+	return sign + grouped.String()
 }
 
 // valueText is a value as text: a string's contents, any other value's
