@@ -21,7 +21,7 @@ Also called: write an email, email a customer, message a client.
 
 ### Where can I start writing an email?
 To start an email in Margince, use any of these:
-- the contact header's **Email** button
+- the contact header's **Email** button, or an email address on a record, a card or the contacts list. The address is the recipient, and the email is filed under the record you are on. Without a connected mailbox, the address opens your own mail app.
 - **Write email** or **Draft reply** in a record's **Email** panel
 - **Send email** on a deal
 - **New email** or **Write email** on Home
