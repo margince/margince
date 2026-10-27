@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -67,7 +68,7 @@ func SeatsWithoutMailbox(
 		  JOIN app_user u ON u.is_agent = false AND `+workforce.ActivatableMemberSQL("u")+`
 		   AND (ps.user_id = u.id
 		        OR (ps.user_id IS NULL AND ps.contact_id IS NULL AND ps.role IN ('to','cc')
-		            AND u.created_at <= a.created_at AND lower(ps.address) = lower(u.email)))
+		            AND u.created_at <= a.created_at AND `+storekit.SeatLoginIsSQL("u", "lower(ps.address)", "ps.address_domain_folded")+`))
 		 WHERE pc.contact_id = $1 AND pc.role IN `+relstrength.InteractionRolesSQL+`
 		   AND NOT EXISTS (
 		       SELECT 1 FROM capture_connection cc
