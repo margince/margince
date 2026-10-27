@@ -13,8 +13,8 @@ import {
 import { LeadScreen } from "./leads";
 import { SIGNAL_CATALOG } from "./leadsignals.fixture";
 
-// The lead's details: what the linked company records sits in a group named
-// for that company, and the lead's own industry stands in while it holds none.
+// The linked company's facts sit in a group named for that company. While the
+// company holds no industry, the lead's own industry stands in.
 
 type Lead = components["schemas"]["Lead"];
 

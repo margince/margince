@@ -101,8 +101,8 @@ export function refusedDialNames(
     .join(", ");
 }
 
-// A 403 names no dial, so it only re-reads /me; the dials /me then refuses are
-// named, and a refusal for any other cause stays the list's own error.
+// A 403 names no dial, so it only re-reads /me. The dials /me then refuses are
+// named; a refusal for any other cause stays the list's own error.
 export function useRefusalOf<Row>(
   listQuery: ListState<Row>,
   withheld: ReadonlySet<string>,

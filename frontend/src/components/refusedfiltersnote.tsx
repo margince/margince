@@ -7,8 +7,8 @@ import { useListFocusHandoff } from "../design-system/listfocus";
 import { useT } from "../i18n";
 import { currentParams, replaceParams } from "../lib/urlstate";
 
-// The press goes to the address, not the list's query: a list may keep a
-// refused dial out of its query, and the address is where the dial still is.
+// The press edits the address, not the list's query. A list may keep a refused
+// dial out of its query, yet the dial still sits in the address.
 function withoutDials(dials: readonly string[]) {
   const next = new Map(currentParams());
   for (const dial of dials) {

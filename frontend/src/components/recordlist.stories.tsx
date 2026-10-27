@@ -8,8 +8,8 @@ import { StoryProviders } from "../testing/story-utils";
 import { type ListPage, ListTable, useListQuery } from "./listquery";
 import { mineEmptyNote } from "./recordlist";
 
-// A "Mine" list for a reader who owns nothing: the note offers every record,
-// and pressing it hands focus to the list's title as its button goes away.
+// A "Mine" list for a reader who owns nothing. Its "Show all" button goes away
+// when pressed, so focus must land on the list's title.
 
 type Row = { id: string; name: string };
 

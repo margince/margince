@@ -4,8 +4,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
-// A list whose address holds a dial its reader is refused names that dial and
-// shows no rows: dropping it would show wider rows under the narrowed address.
+// A refused dial in the address is named, and the list shows no rows. Dropping
+// the dial would show wider rows under an address that still narrows.
 
 export function heldRefusedDials(
   filters: Readonly<Record<string, string>>,

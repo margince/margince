@@ -4,8 +4,8 @@
 import { type RefObject, useLayoutEffect, useRef } from "react";
 import { useFocusHandoff } from "./focushandoff";
 
-// Where a list's focus lands when a press takes its own control away: the
-// list's title, or its named scroll region when the list has no title.
+// A press can take its own control away. Focus then lands on the list's title,
+// or on its named scroll region when the list has no title.
 function listLanding(from: Element | null): HTMLElement | null {
   const list = from?.closest(".lt");
   return (

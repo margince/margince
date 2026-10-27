@@ -230,8 +230,8 @@ export function useDealScreenDials({
       readsCompanies,
       refused: refused ?? [],
     });
-    // The role's refusals stay in the query to be named or refused by the
-    // server; the rest of the withheld dials are dropped and apply once readable.
+    // The role's refusals stay, to be named here or refused by the server. Other
+    // withheld dials are dropped, and apply again once readable.
     const quiet = new Set([...withheld].filter((d) => !roleRefused.has(d)));
     const filters = withoutWithheldDials(admitted, quiet);
     return {
