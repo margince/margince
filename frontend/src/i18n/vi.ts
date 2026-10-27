@@ -16452,8 +16452,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.because.outcome_unrecorded": "chưa ghi nhận kết quả",
   "worklist.because.you_wrote_last": "bạn gửi tin sau cùng",
   "worklist.because.no_reply_days": "chưa ghi nhận phản hồi",
-  "worklist.because.no_reply_days.value_one": "{value} ngày chưa ghi nhận phản hồi",
-  "worklist.because.no_reply_days.value_other": "{value} ngày chưa ghi nhận phản hồi",
+  "worklist.because.no_reply_days.value_one":
+    "{value} ngày chưa ghi nhận phản hồi",
+  "worklist.because.no_reply_days.value_other":
+    "{value} ngày chưa ghi nhận phản hồi",
   "worklist.because.met_days_ago": "đã gặp",
   "worklist.because.met_days_ago.value_one": "đã gặp {value} ngày trước",
   "worklist.because.met_days_ago.value_other": "đã gặp {value} ngày trước",
@@ -16938,7 +16940,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.standing.closedUnreasoned": "Đã đóng. Hồ sơ được giữ lại làm lịch sử.",
   "lead.standing.noResponse": "Chưa ghi nhận phản hồi đầu tiên.",
   "lead.standing.theirMove": "Chờ lead phản hồi",
-  "lead.standing.answeredOn": "Đã ghi nhận trả lời vào {at}. Chưa ghi nhận phản hồi sau đó.",
+  "lead.standing.answeredOn":
+    "Đã ghi nhận trả lời vào {at}. Chưa ghi nhận phản hồi sau đó.",
   "lead.standing.inMotion": "Đang tiến triển",
   "lead.standing.engagedBecause":
     "Lead đã trả lời, hoặc đã lên lịch một cuộc họp.",
@@ -17873,10 +17876,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.standing.peek.today": "Hôm nay",
   "project.standing.peek.documents": "Tệp của dự án này, mới nhất trước",
   "mailCoverage.title": "Lịch sử email có thể chưa đầy đủ",
-  "mailCoverage.unknown": "Việc thu thập email chưa xác minh đầy đủ giai đoạn này. Các ngày này dựa trên trao đổi đã ghi nhận; phản hồi có thể nằm ngoài hồ sơ.",
-  "mailCoverage.partial": "Thu thập đã thành công, nhưng chưa xác minh đầy đủ lịch sử Hộp thư đến và thư Đã gửi. Thiếu thư trong hồ sơ không chứng minh rằng chưa có ai phản hồi.",
-  "mailCoverage.unavailable": "Không thể thu thập email cho một phần lịch sử này. Phản hồi có thể nằm ngoài hồ sơ.",
-  "mailCoverage.withheld": "Bạn không có quyền kiểm tra phạm vi thu thập email. Thiếu thư trong hồ sơ không chứng minh rằng chưa có ai phản hồi.",
+  "mailCoverage.unknown":
+    "Việc thu thập email chưa xác minh đầy đủ giai đoạn này. Các ngày này dựa trên trao đổi đã ghi nhận; phản hồi có thể nằm ngoài hồ sơ.",
+  "mailCoverage.partial":
+    "Thu thập đã thành công, nhưng chưa xác minh đầy đủ lịch sử Hộp thư đến và thư Đã gửi. Thiếu thư trong hồ sơ không chứng minh rằng chưa có ai phản hồi.",
+  "mailCoverage.unavailable":
+    "Không thể thu thập email cho một phần lịch sử này. Phản hồi có thể nằm ngoài hồ sơ.",
+  "mailCoverage.withheld":
+    "Bạn không có quyền kiểm tra phạm vi thu thập email. Thiếu thư trong hồ sơ không chứng minh rằng chưa có ai phản hồi.",
   "mailCoverage.connections": "Kiểm tra kết nối",
   "connectors.syncTimeUnknown": "Chưa có thông tin về lần đồng bộ thành công",
 };
