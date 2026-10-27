@@ -6,31 +6,31 @@
   "prompt_version": "pd1e45994f81470a0abb835809268f187",
   "corpus_version": "v1",
   "verdict": "certified",
-  "runs": 90,
-  "passed": 90,
-  "reliability": 1,
-  "reported_accepted": 90,
-  "reported_wrong_answer": 0,
-  "reported_invalid": 0,
+  "runs": 96,
+  "passed": 94,
+  "reliability": 0.9791666666666666,
+  "reported_accepted": 94,
+  "reported_wrong_answer": 1,
+  "reported_invalid": 1,
   "reported_abstained": 0,
   "certified_scope": "full_invocation",
   "context_applied": false,
   "context_scopes": null,
   "judge_score_p50": 97,
-  "judge_score_min": 79,
-  "latency_p50": 3072,
-  "latency_p95": 5114,
-  "mean_tokens": 1966,
-  "mean_tokens_in": 1525,
-  "mean_tokens_out": 441,
+  "judge_score_min": 80,
+  "latency_p50": 3424,
+  "latency_p95": 6702,
+  "mean_tokens": 1791,
+  "mean_tokens_in": 1374,
+  "mean_tokens_out": 416,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 2797,
+  "est_cost_microusd": 2590,
   "judge_served_model": "claude-sonnet-4-6",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
-  "ran_at": "2026-10-20T05:21:15Z",
+  "ran_at": "2026-10-27T09:21:38Z",
   "scenarios": [
     {
       "scenario": "one_side_promises_revised_pricing",
@@ -42,7 +42,7 @@
       "passed": 3,
       "judge_scores": [
         97,
-        96,
+        98,
         97
       ],
       "bands": {
@@ -106,8 +106,8 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        97,
-        95,
+        93,
+        93,
         95
       ],
       "bands": {
@@ -199,11 +199,11 @@
       "stamp": "7bd32a8e9952b1cd00ce91082fc5a442cb9bc906d83eb95b7f9b8d9fab6705b6170588681704c77c78310c421e9f14d5db377fdb9d9210d6d62abda4b280eb7f18b23b234dc58d61eb8a66d640e734be4d743f517e9bd89735fb9a28764ad940",
       "verdict": "certified",
       "judge_band": "certified",
-      "runs": 3,
-      "passed": 3,
+      "runs": 6,
+      "passed": 5,
       "judge_none": true,
-      "reported_accepted": 3,
-      "reported_wrong_answer": 0,
+      "reported_accepted": 5,
+      "reported_wrong_answer": 1,
       "reported_invalid": 0,
       "reported_abstained": 0
     },
@@ -216,7 +216,7 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        97,
+        100,
         97,
         97
       ],
@@ -229,7 +229,7 @@
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
       "reported_abstained": 0,
-      "answer_confidence_min": 0.9,
+      "answer_confidence_min": 0.95,
       "answer_confidence_max": 0.95
     },
     {
@@ -241,7 +241,7 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        100,
+        97,
         100,
         100
       ],
@@ -268,8 +268,8 @@
       "passed": 3,
       "judge_scores": [
         97,
-        96,
-        95
+        97,
+        97
       ],
       "bands": {
         "certified_min": 70,
@@ -292,9 +292,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        95,
-        95,
-        98
+        97,
+        97,
+        97
       ],
       "bands": {
         "certified_min": 70,
@@ -317,9 +317,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        95,
-        95,
-        97
+        97,
+        97,
+        95
       ],
       "bands": {
         "certified_min": 70,
@@ -330,7 +330,7 @@
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
       "reported_abstained": 0,
-      "answer_confidence_min": 0.95,
+      "answer_confidence_min": 0.9,
       "answer_confidence_max": 0.95
     },
     {
@@ -357,8 +357,8 @@
       "passed": 3,
       "judge_scores": [
         97,
-        92,
-        100
+        95,
+        95
       ],
       "bands": {
         "certified_min": 70,
@@ -370,7 +370,7 @@
       "reported_invalid": 0,
       "reported_abstained": 0,
       "answer_confidence_min": 0.9,
-      "answer_confidence_max": 0.9
+      "answer_confidence_max": 0.95
     },
     {
       "scenario": "a_meeting_that_promised_nothing",
@@ -458,7 +458,7 @@
       "reported_invalid": 0,
       "reported_abstained": 0,
       "answer_confidence_min": 0.9,
-      "answer_confidence_max": 0.95
+      "answer_confidence_max": 0.9
     },
     {
       "scenario": "transcript_range_commitment_preserves_its_meaning_vi",
@@ -474,7 +474,7 @@
       "reported_invalid": 0,
       "reported_abstained": 0,
       "answer_confidence_min": 0.9,
-      "answer_confidence_max": 0.95
+      "answer_confidence_max": 0.9
     },
     {
       "scenario": "meeting_speaker_reports_customer_promise",
@@ -485,9 +485,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        79,
+        88,
         80,
-        81
+        82
       ],
       "bands": {
         "certified_min": 70,
@@ -510,9 +510,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        97,
         100,
-        100
+        97,
+        97
       ],
       "bands": {
         "certified_min": 70,
@@ -532,12 +532,12 @@
       "stamp": "d127932a31085612b86d1ea791764da515448fe9899ea60733805546c80a88b2f9af592086d3cfe43fa3d80bc56cfb8c220b4c050ca6ac7efc47280ef2f6686418b23b234dc58d61eb8a66d640e734be4d743f517e9bd89735fb9a28764ad940",
       "verdict": "certified",
       "judge_band": "certified",
-      "runs": 3,
-      "passed": 3,
+      "runs": 6,
+      "passed": 5,
       "judge_none": true,
-      "reported_accepted": 3,
+      "reported_accepted": 5,
       "reported_wrong_answer": 0,
-      "reported_invalid": 0,
+      "reported_invalid": 1,
       "reported_abstained": 0
     },
     {
@@ -563,8 +563,8 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        95,
-        95,
+        97,
+        97,
         97
       ],
       "bands": {
@@ -577,7 +577,7 @@
       "reported_invalid": 0,
       "reported_abstained": 0,
       "answer_confidence_min": 0.9,
-      "answer_confidence_max": 0.9
+      "answer_confidence_max": 0.95
     },
     {
       "scenario": "transcript_unclear_creates_no_work",

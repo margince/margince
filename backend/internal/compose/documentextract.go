@@ -252,7 +252,7 @@ func documentExtractRequest(src documentSource) model.Request {
 		`Return JSON: { "fields": [ { "field", "stated", "value", "source_quote", "page_or_section", "confidence" } ] } — `+
 			`one entry for EACH of %s, in that order, and no others. `+
 			`Set "stated" to %q for a field this document states and %q for one it does not, leaving the other values empty when it does not. `+
-			`"value" for %s is the figure the document PRINTS, exactly as printed, with no currency symbol and no thousands separators and no conversion of any kind; `+
+			`"value" for %s is the figure the document prints, digits and decimal point only: drop the currency symbol and every thousands separator ("1,250.50" is written 1250.50), and convert nothing; `+
 			`for %s it is the ISO-4217 code; for %s it is the calendar date as YYYY-MM-DD; `+
 			`for %s it is what is being bought or supplied — not the document's own title, and not_stated for a document that records no purchase at all. `+
 			`"source_quote" is the exact text the value was read from, copied verbatim — never a paraphrase and never text you composed. `+
@@ -260,8 +260,12 @@ func documentExtractRequest(src documentSource) model.Request {
 		strings.Join(modelFieldOrder(), ", "), documentStated, documentNotStated,
 		modelFieldAmount, documentFieldCurrency, documentFieldClose, documentFieldName)
 
+	system := documentSystemFor(fence)
+	if !src.onTextLane() {
+		system += "\n" + ai.AttachmentTextRule("document")
+	}
 	req := model.Request{
-		System:         documentSystemFor(fence),
+		System:         system,
 		Messages:       []model.Message{{Role: chatRoleUser, Content: prompt.String()}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: documentExtractSchema(),
