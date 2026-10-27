@@ -4,8 +4,14 @@
 // The widest figure each numeric column of a list table holds on screen, which
 // the column layout takes as that column's floor.
 
-import { type RefObject, useMemo, useSyncExternalStore } from "react";
+import { type RefObject, useLayoutEffect, useRef, useState } from "react";
 import type { SizedColumn } from "./listtable.layout";
+
+/**
+ * The class of `CellStrip`. A strip ends in an ellipsis by design, so a cell
+ * that holds one is not a figure and sets no floor.
+ */
+export const CELL_STRIP_CLASS = "lt-strip";
 
 /**
  * The ink width of a cell's text plus its padding. Text, not boxes: a box that
@@ -35,62 +41,108 @@ function inkWidth(cell: HTMLTableCellElement): number {
   return Math.ceil(right - left + padding) + 1;
 }
 
-/** The widest figure each numeric column holds in a rendered table. */
-function numericFloors(
-  table: HTMLTableElement,
-  shown: readonly SizedColumn[],
-): Record<string, number> {
-  const rows = table.tBodies[0]?.rows;
-  const floors: Record<string, number> = {};
-  // Without layout (jsdom) a range has no box, and nothing is raised.
-  if (!rows || typeof Range.prototype.getBoundingClientRect !== "function") {
-    return floors;
-  }
-  shown.forEach((column, index) => {
-    if (!column.numeric) {
-      return;
-    }
-    for (const row of rows) {
-      const cell = row.cells[index];
-      const width = cell ? inkWidth(cell) : 0;
-      if (width > (floors[column.key] ?? 0)) {
-        floors[column.key] = width;
-      }
-    }
-  });
-  return floors;
+/** Where each numeric column sits, as `index:key` pairs joined by spaces. */
+function numericPlaces(shown: readonly SizedColumn[]): string {
+  return shown
+    .flatMap((column, index) =>
+      column.numeric ? [`${index}:${column.key}`] : [],
+    )
+    .join(" ");
 }
 
 /**
- * The floors as JSON, so an unchanged reading is an unchanged snapshot. Read
- * on every render and again after the commit, as `useClippedEdges` reads its
- * box. Text does not move with its column, so the reading settles.
+ * Raises `held` to the widest figure each numeric column holds in the table.
+ * It only rises, so paging to smaller figures does not move the columns.
+ */
+function raiseFloors(
+  table: HTMLTableElement,
+  places: string,
+  held: Record<string, number>,
+) {
+  const rows = table.tBodies[0]?.rows;
+  // Without layout (jsdom) a range has no box, and nothing is raised.
+  if (!rows || typeof Range.prototype.getBoundingClientRect !== "function") {
+    return;
+  }
+  for (const place of places.split(" ")) {
+    const colon = place.indexOf(":");
+    const key = place.slice(colon + 1);
+    for (const row of rows) {
+      const cell = row.cells[Number(place.slice(0, colon))];
+      if (cell && !cell.querySelector(`.${CELL_STRIP_CLASS}`)) {
+        held[key] = Math.max(held[key] ?? 0, inkWidth(cell));
+      }
+    }
+  }
+}
+
+/**
+ * Measures the table now and again whenever its text changes or it resizes:
+ * a new page, search or locale, or a font arriving. Observers report before
+ * the frame paints. Returns what stops the watch.
+ */
+function watchFloors(
+  table: HTMLTableElement,
+  places: string,
+  publish: (floors: string) => void,
+): () => void {
+  const held: Record<string, number> = {};
+  const read = () => {
+    raiseFloors(table, places, held);
+    publish(JSON.stringify(held));
+  };
+  read();
+  const mutations = new MutationObserver(read);
+  mutations.observe(table, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+  });
+  const resizes =
+    typeof ResizeObserver === "undefined" ? null : new ResizeObserver(read);
+  resizes?.observe(table);
+  return () => {
+    mutations.disconnect();
+    resizes?.disconnect();
+  };
+}
+
+type Watch = Readonly<{
+  table: HTMLTableElement;
+  places: string;
+  stop: () => void;
+}>;
+
+/**
+ * The floors as JSON, so an unchanged reading renders nothing. A render that
+ * changed neither the table nor its numeric columns measures nothing.
  */
 export function useNumericFloors(
   shown: readonly SizedColumn[],
   head: RefObject<HTMLTableElement | null>,
 ): string {
-  const subscribe = useMemo(() => watchTable(head), [head]);
-  return useSyncExternalStore(
-    subscribe,
-    () =>
-      head.current
-        ? JSON.stringify(numericFloors(head.current, shown))
-        : NO_FLOORS,
-    () => NO_FLOORS,
-  );
+  const places = numericPlaces(shown);
+  const [floors, setFloors] = useState(NO_FLOORS);
+  const watched = useRef<Watch | null>(null);
+  // Every render, since the table comes and goes with the empty state. The
+  // check is two comparisons; the watch above does the walking.
+  useLayoutEffect(() => {
+    const table = head.current;
+    const current = watched.current;
+    if (current?.table === table && current.places === places) {
+      return;
+    }
+    current?.stop();
+    watched.current =
+      table && places !== ""
+        ? { table, places, stop: watchFloors(table, places, setFloors) }
+        : null;
+    if (!watched.current) {
+      setFloors(NO_FLOORS);
+    }
+  });
+  useLayoutEffect(() => () => watched.current?.stop(), []);
+  return floors;
 }
 
 const NO_FLOORS = "{}";
-
-function watchTable(head: RefObject<HTMLTableElement | null>) {
-  return (changed: () => void) => {
-    const table = head.current;
-    if (!table || typeof ResizeObserver === "undefined") {
-      return () => undefined;
-    }
-    const observer = new ResizeObserver(changed);
-    observer.observe(table);
-    return () => observer.disconnect();
-  };
-}
