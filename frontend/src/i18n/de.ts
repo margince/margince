@@ -4849,7 +4849,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.standing.figure.next": "Nächster Schritt",
   "standing.noneYet": "Noch keiner",
   "deal.standing.figure.daysInStage": "Tage in der Phase",
-  "deal.standing.figure.daysToClose": "Tage bis zum Abschluss",
+  "deal.standing.figure.daysToClose": "Tage bis Abschluss",
   "deal.standing.figure.openedOn": "eröffnet am {date}",
   "deal.standing.figure.final": "Ergebnis",
   "deal.standing.closedOn": "Abgeschlossen am {date}",

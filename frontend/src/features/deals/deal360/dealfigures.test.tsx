@@ -137,6 +137,12 @@ describe("a closed deal's figures", () => {
     expect(screen.getByText("10 days")).toBeInTheDocument();
     expect(screen.getByText("opened 1 Jun")).toBeInTheDocument();
   });
+
+  it("counts no span when the close day falls before the deal was opened", () => {
+    show({ deal: deal({ status: "won", closed_at: "2026-05-20T12:00:00Z" }) });
+    expect(screen.getByText(en["field.unset"])).toBeInTheDocument();
+    expect(screen.queryByText(/-\d+ days?/)).toBeNull();
+  });
 });
 
 describe("what the axis marks", () => {
