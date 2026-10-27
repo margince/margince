@@ -212,13 +212,16 @@ describe("Next task on a record", () => {
     expect(asked).toHaveLength(1);
   });
 
-  it("leaves a reader who opened another record while the list was read where they are", async () => {
+  it("leaves a reader who opened another record while the list was read where they are, and reads no further page", async () => {
     let answer: (response: Response) => void = () => undefined;
+    let reads = 0;
     stubApi({
-      "GET /worklist": () =>
-        new Promise<Response>((resolve) => {
+      "GET /worklist": () => {
+        reads += 1;
+        return new Promise<Response>((resolve) => {
           answer = resolve;
-        }),
+        });
+      },
     });
     window.location.hash = "#/contacts/a";
     render(<NextTaskButton />);
@@ -231,12 +234,13 @@ describe("Next task on a record", () => {
     await waitFor(() =>
       expect(screen.getByRole("button").getAttribute("aria-busy")).toBeNull(),
     );
-    const list = jsonResponse(page([onContact("a"), onContact("b")]));
+    const list = jsonResponse(page([onContact("a")], "p2"));
     answer(list);
     await waitFor(() => expect(list.bodyUsed).toBe(true));
     await act(async () => undefined);
 
     expect(window.location.hash).toBe("#/contacts/z");
+    expect(reads).toBe(1);
   });
 
   it("drops a failed read's error line on the next record", async () => {

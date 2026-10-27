@@ -55,7 +55,7 @@ func TestReportingMixedMeetingHistoryPreservesRecordedCredit(t *testing.T) {
 		var b reportingBindings
 		set := "host_user_id=" + b.add(e.Rep3)
 		if tc.future {
-			// No writer takes held ahead of the start now; legacy rows can still carry it.
+			// Writers refuse held before the start; older rows can carry it.
 			set += ", occurred_at=" + b.add(at.Add(time.Hour))
 		}
 		if _, err := e.owner.Exec(human, "UPDATE activity SET "+set+" WHERE id="+b.add(meeting.Id), b.values...); err != nil {

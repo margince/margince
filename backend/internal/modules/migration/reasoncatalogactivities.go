@@ -123,9 +123,9 @@ var activityReasons = map[ReasonCode]reasonEntry{
 		textlang.Vietnamese: "Chỉ cuộc họp mới có trạng thái cuộc họp. Hãy bỏ giá trị này khỏi hàng.",
 	}},
 	ReasonMeetingNotTakenPlace: {params: nil, text: map[textlang.Lang]string{
-		textlang.English:    "This meeting has not taken place yet, so it cannot be held or no_show. Leave the status empty, or use booked or canceled.",
-		textlang.German:     "Dieser Termin hat noch nicht stattgefunden und kann daher weder held noch no_show sein. Lass den Status leer oder nimm booked oder canceled.",
-		textlang.Vietnamese: "Cuộc họp này chưa diễn ra nên không thể là “held” hoặc “no_show”. Hãy để trống trạng thái hoặc dùng “booked” hay “canceled”.",
+		textlang.English:    "By the date or time on this row, the meeting has not started yet, so it cannot be held or no_show. Leave the status empty, or use booked or canceled. If it started today, add the time it started.",
+		textlang.German:     "Nach dem Datum oder der Uhrzeit in dieser Zeile hat der Termin noch nicht begonnen und kann daher weder held noch no_show sein. Lass den Status leer oder nimm booked oder canceled. Hat er heute begonnen, ergänze die Uhrzeit des Beginns.",
+		textlang.Vietnamese: "Theo ngày hoặc giờ trong hàng này, cuộc họp chưa bắt đầu nên không thể là “held” hoặc “no_show”. Để trống trạng thái hoặc dùng “booked” hay “canceled”. Nếu cuộc họp đã bắt đầu hôm nay, thêm giờ bắt đầu.",
 	}},
 	ReasonDirectionUnknown: {params: []string{paramValue, paramAllowed}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is not a direction. The directions are: {allowed}.",

@@ -9,6 +9,7 @@ package attention
 // one file apart, where a change to the hint could stop the ranking reading it.
 
 import (
+	"slices"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -215,10 +216,8 @@ func meetingAwaitingOutcomeItem(meeting MeetingAwaitingOutcome) crmcontracts.Att
 		Title:      &subject,
 		OccurredAt: &started,
 		Subject:    subjectOf("activity", meeting.ID),
-		Actions: []crmcontracts.AttentionItemActions{
-			crmcontracts.AttentionItemActionsDecide,
-		},
-		Version: meeting.Version,
+		Actions:    meetingOutcomeActions(meeting),
+		Version:    meeting.Version,
 		// Read with the time it describes: a day meeting has no start hour.
 		OccurredPrecision: dayOnly(meeting.Precision),
 	}
@@ -234,10 +233,20 @@ func meetingAwaitingOutcomeItem(meeting MeetingAwaitingOutcome) crmcontracts.Att
 		with := openapi_types.UUID(meeting.ContactID)
 		item.WithContact = &with
 	}
-	if !meeting.CalendarManaged {
-		item.Actions = append(item.Actions, crmcontracts.AttentionItemActionsCancel)
-	}
 	return item
+}
+
+// meetingOutcomeActions is what an outcome row offers. Both verbs PATCH the
+// meeting, so a reader who may not change it is offered neither.
+func meetingOutcomeActions(meeting MeetingAwaitingOutcome) []crmcontracts.AttentionItemActions {
+	if meeting.ReadOnly {
+		return []crmcontracts.AttentionItemActions{}
+	}
+	actions := []crmcontracts.AttentionItemActions{crmcontracts.AttentionItemActionsDecide}
+	if !meeting.CalendarManaged {
+		actions = append(actions, crmcontracts.AttentionItemActionsCancel)
+	}
+	return actions
 }
 
 // classifyUnansweredMeeting places a meeting that happened and owes an answer.
@@ -257,6 +266,9 @@ func classifyUnansweredMeeting(item crmcontracts.AttentionItem, asOf time.Time) 
 	// the consequence says what it costs.
 	row := base(item, levelAgreed, "meetings", "data_drifts")
 	row.Because = []crmcontracts.WorklistReason{reason("outcome_unrecorded", nil)}
+	if !slices.Contains(row.Actions, crmcontracts.WorklistItemActionsDecide) {
+		row.Because = append(row.Because, reason("read_only", nil))
+	}
 	row.Host = hostOnTheWire(item)
 	return ranked{
 		item:       row,

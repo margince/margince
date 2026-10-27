@@ -73,7 +73,8 @@ func (w *csvWriters) planActivityUpdate(
 	if _, why, known := activityKindReason(err, fields); known {
 		return plan, why, nil
 	}
-	if plan.patch.MeetingStatus == nil {
+	movesStart := plan.patch.OccurredAt != nil || plan.patch.OccurredPrecision != nil
+	if plan.patch.MeetingStatus == nil && (!movesStart || stored.Kind != activities.KindMeeting) {
 		return plan, migration.Reason{}, nil
 	}
 	err = w.activities.ProbeOutcome(ctx, ids.From[ids.ActivityKind](id), plan.patch)

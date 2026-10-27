@@ -197,7 +197,7 @@ func TestAMeetingCountsOnlyAsWhatItsStatusAndTimeSay(t *testing.T) {
 				t.Fatalf("logging the meeting: %v", err)
 			}
 			if !logged.Equal(at) {
-				// No writer takes held ahead of the start now; older rows can still carry it.
+				// Writers refuse held before the start; older rows can carry it.
 				e.WsExec(t, `UPDATE activity SET occurred_at = $1 WHERE id = $2`, at, ids.UUID(meeting.Id))
 			}
 

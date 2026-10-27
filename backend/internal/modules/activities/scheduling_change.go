@@ -196,8 +196,11 @@ func (s *Store) settleInvitation(ctx context.Context, tx pgx.Tx, row invitationR
 	if err != nil {
 		return err
 	}
+	at := s.now()
 	status := "booked"
-	if current.MeetingStatus != nil && (*current.MeetingStatus == ScheduledStatusHeld || *current.MeetingStatus == "no_show") {
+	// An outcome stays only on a slot that has started: a meeting moved ahead has not happened.
+	started := !row.Appointment.Start.After(at)
+	if started && current.MeetingStatus != nil && (*current.MeetingStatus == ScheduledStatusHeld || *current.MeetingStatus == "no_show") {
 		status = string(*current.MeetingStatus)
 	}
 	if row.Status == invitationCanceled {
@@ -207,7 +210,7 @@ func (s *Store) settleInvitation(ctx context.Context, tx pgx.Tx, row invitationR
 	// Provider receipts identify the organizer's intent without taking the natural
 	// key of a colleague's independently captured attendee copy.
 	seconds := int(row.Appointment.End.Sub(row.Appointment.Start) / time.Second)
-	if _, err := updateActivityInTx(ctx, tx, id, UpdateActivityInput{calendarSettlement: true, OccurredAt: &row.Appointment.Start, MeetingStatus: &status, DurationSeconds: &seconds}); err != nil {
+	if _, err := updateActivityInTx(ctx, tx, id, UpdateActivityInput{calendarSettlement: true, recordedAt: &at, OccurredAt: &row.Appointment.Start, MeetingStatus: &status, DurationSeconds: &seconds}); err != nil {
 		return err
 	}
 
@@ -242,8 +245,13 @@ func CalendarManaged(meeting crmcontracts.Activity) bool {
 	return meeting.InvitationStatus != nil && invitationHoldsMeeting(string(*meeting.InvitationStatus))
 }
 
+// InvitationHoldsMeetingSQL is invitationHoldsMeeting over a meeting_invitation
+// row's status column, qualified by the caller's alias when it needs one.
+const InvitationHoldsMeetingSQL = "status NOT IN ('" + invitationCanceled + "', '" + invitationErased + "')"
+
+// An erased invitation was withdrawn with its guest, so it no longer holds the meeting.
 func invitationHoldsMeeting(status string) bool {
-	return status != invitationCanceled
+	return status != invitationCanceled && status != invitationErased
 }
 
 func transitionInvitation(ctx context.Context, tx pgx.Tx, row *invitationRow, in crmcontracts.MeetingInvitationChange, buffer int) error {

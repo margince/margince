@@ -26,7 +26,7 @@ const codeInFuture = "in_future"
 type MeetingNotTakenPlaceError struct{}
 
 func (e *MeetingNotTakenPlaceError) Error() string {
-	return "a meeting that has not taken place yet cannot be held or a no-show; cancel it, or record how it went once it has started"
+	return "by its date or start time this meeting has not taken place yet, so it cannot be held or a no-show; use booked or canceled, or for a meeting with only a date, send the time it started"
 }
 
 // FieldFault names meeting_status, the value the caller sent too early.
@@ -34,14 +34,13 @@ func (e *MeetingNotTakenPlaceError) FieldFault() (field, code, message string) {
 	return auditFieldMeetingStatus, codeInFuture, e.Error()
 }
 
-// refuseOutcomeBeforeStart judges the start the patch leaves the meeting with,
-// so moving a meeting into the past and saying it was held is one patch.
+// refuseOutcomeBeforeStart judges the status and start the patch leaves the
+// meeting with, so a patch that moves a held meeting ahead is refused too.
 func refuseOutcomeBeforeStart(ctx context.Context, tx pgx.Tx, current crmcontracts.Activity, in UpdateActivityInput) error {
-	// A calendar settlement reports what the provider says: the provider owns
-	// that meeting's lifecycle, so its status is never refused here.
-	if in.calendarSettlement || current.Kind != crmcontracts.ActivityKindMeeting {
+	if current.Kind != crmcontracts.ActivityKindMeeting {
 		return nil
 	}
+	status := in.MeetingStatus
 	start, precision := current.OccurredAt, string(current.OccurredPrecision)
 	if in.OccurredAt != nil {
 		start = *in.OccurredAt
@@ -49,7 +48,10 @@ func refuseOutcomeBeforeStart(ctx context.Context, tx pgx.Tx, current crmcontrac
 	if in.OccurredPrecision != nil {
 		precision = *in.OccurredPrecision
 	}
-	return refuseOutcomeAt(ctx, tx, in.MeetingStatus, &start, precision, in.recordedAt)
+	if status == nil && (in.OccurredAt != nil || in.OccurredPrecision != nil) && current.MeetingStatus != nil {
+		status = new(string(*current.MeetingStatus))
+	}
+	return refuseOutcomeAt(ctx, tx, status, &start, precision, in.recordedAt)
 }
 
 // refuseLoggedOutcomeBeforeStart is the same refusal for a meeting being

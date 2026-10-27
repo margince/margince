@@ -63,7 +63,7 @@ func boundToKnownMessage(ctx context.Context, tx pgx.Tx, in LogActivityInput) (c
 	// noise, or folded into another row, and handing it back would serve a
 	// tombstone as though it were the message — and, for an erasure, disclose
 	// that the message was erased. The arrival files its own copy instead.
-	out, err := readActivity(ctx, tx, incumbent, storekit.LiveOnly)
+	out, err := readActivityAt(ctx, tx, incumbent, storekit.LiveOnly, orWallClock(in.recordedAt))
 	if errors.Is(err, apperrors.ErrNotFound) {
 		// Out of scope, or no longer live. The message stays hidden and this
 		// caller files their own copy, which is the answer capture reaches for

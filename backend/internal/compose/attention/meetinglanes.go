@@ -74,6 +74,10 @@ type MeetingAwaitingOutcome struct {
 
 	// A live calendar invitation holds the meeting, so it is canceled there.
 	CalendarManaged bool
+
+	// ReadOnly says the reader may see the meeting but not change it, so the
+	// row offers no answer the write would refuse.
+	ReadOnly bool
 }
 
 // Meeting is one appointment still ahead of the reader.

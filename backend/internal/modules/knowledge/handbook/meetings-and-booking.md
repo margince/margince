@@ -41,7 +41,7 @@ started with no outcome also shows **Update** on the contact's **Meetings** tab 
 2. Change **Date** only if the meeting was on another day.
 3. Press **Log**.
 The meeting keeps its start time. A meeting moved to another day keeps its time of day there. One
-moved to today at an hour still to come is filed at the moment you save. **Held** and **No-show**
+moved to today at an hour still to come is filed a minute before you save. **Held** and **No-show**
 wait for the meeting to start. A meeting with a date but no time waits until that day is over.
 
 Press **Mark as canceled** on the row for a meeting that did not happen. A meeting with a Margince

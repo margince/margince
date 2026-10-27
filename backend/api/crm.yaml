@@ -7915,9 +7915,7 @@ paths:
         a task needs its `subject`. An activity may link to >1 entity
         (contact and deal). A link that names a record the caller cannot read answers 422
         naming `links`, the same for a missing record and for one hidden by row scope. `log_activity` is 🟢
-        (reversible).
-
-        `meeting_status` `held` or `no_show` describes a meeting that took place, so it is refused
+        (reversible). `meeting_status` `held` or `no_show` describes a meeting that took place, so it is refused
         on a meeting whose start has not passed yet (a date-only meeting until its date is over in
         the installation's timezone): `422 code: in_future` on `meeting_status`. A meeting with no
         `occurred_at` starts now, so it has taken place. A re-run with the same `source_system` and
@@ -8015,8 +8013,9 @@ paths:
         `meeting_status` `held` or `no_show` describes a meeting that took place, so it is refused
         on a meeting whose start has not passed yet (a date-only meeting until its date is over in
         the installation's timezone), judged at the start the patch leaves the row with:
-        `422 code: in_future` on `meeting_status`. `canceled` and `booked` are accepted at any time.
-        A meeting with a live calendar invitation takes `held` or `no_show` alone; any other change
+        `422 code: in_future` on `meeting_status`. A patch that moves the start of a `held` or
+        `no_show` meeting is judged the same way with the status it keeps. `canceled` and `booked`
+        are accepted at any time. A meeting with a live calendar invitation takes `held` or `no_show` alone; any other change
         to it answers `422 code: calendar_managed` on `meeting` and goes through the invitation.
       x-mcp-tool: { verb: update_record, record_type: activity, tier: auto_execute, scope: write }
       parameters:

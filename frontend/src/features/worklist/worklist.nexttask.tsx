@@ -59,7 +59,7 @@ function NextTaskPress() {
           list.carried,
           cursor === undefined,
         );
-      } while (next === undefined && cursor !== undefined);
+      } while (mounted.current && next === undefined && cursor !== undefined);
       // The answer is about the record it was pressed on; a reader gone elsewhere stays there.
       if (!mounted.current) return;
       if (next === undefined) setSpent(true);

@@ -448,7 +448,8 @@ func TestARowIdShapedLikeANoteKeyIsAnOrdinaryRow(t *testing.T) {
 
 // A meeting dated today has not taken place until that day is over. A file that
 // names it held is skipped with that reason by the dry run and the commit. That
-// holds for a row that files the meeting and for one that corrects it.
+// holds for a row that files the meeting and for one that corrects it. It holds
+// for a row that moves a held meeting to today without changing its status too.
 func TestAFileCannotHoldAMeetingDatedToday(t *testing.T) {
 	e := setupImportApp(t)
 	now := clocktest.Now(t)
@@ -463,16 +464,22 @@ func TestAFileCannotHoldAMeetingDatedToday(t *testing.T) {
 		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, zone); err != nil {
 		t.Fatal(err)
 	}
-	today := now.In(time.FixedZone(zone, offset*3600)).Format(time.DateOnly)
-	meeting := func(ref, status string) map[string]string {
+	local := now.In(time.FixedZone(zone, offset*3600))
+	today, yesterday := local.Format(time.DateOnly), local.AddDate(0, 0, -1).Format(time.DateOnly)
+	meeting := func(ref, date, status string) map[string]string {
 		return map[string]string{
 			"contacts.csv":   "ref,email,name\nP-1,jo@act-today.example,Jo\n",
-			"activities.csv": activityHeader + "\n" + fmt.Sprintf("%s,meeting,Visit %s,,%s,contact:P-1,,%s,\n", ref, ref, today, status),
+			"activities.csv": activityHeader + "\n" + fmt.Sprintf("%s,meeting,Visit %s,,%s,contact:P-1,,%s,\n", ref, ref, date, status),
 		}
 	}
 	parts := contactAndActivityParts()
-	importActivities(t, e, meeting("M-2", "booked"), parts)
-	for name, files := range map[string]map[string]string{"filing": meeting("M-1", "held"), "correcting": meeting("M-2", "held")} {
+	importActivities(t, e, meeting("M-2", today, "booked"), parts)
+	if _, filed := importActivities(t, e, meeting("M-3", yesterday, "held"), parts); filed.Disposition.Created != 1 {
+		t.Fatalf("filing yesterday's held meeting = %+v, issues %+v, want it created", filed.Disposition, filed.Issues)
+	}
+	for name, files := range map[string]map[string]string{
+		"filing": meeting("M-1", today, "held"), "correcting": meeting("M-2", today, "held"), "moving": meeting("M-3", today, "held"),
+	} {
 		run := stageBundle(t, e, uploadZip(t, e, "crm.zip", zipBytes(t, files)).SourceRef, "crm", parts)
 		preview := readImportReport(t, e, run.ID)
 		approveAndRead(t, e, run.ID)
@@ -485,5 +492,8 @@ func TestAFileCannotHoldAMeetingDatedToday(t *testing.T) {
 	}
 	if visit := activityNamed(t, e, "Visit M-2"); visit.MeetingStatus == nil || *visit.MeetingStatus != "booked" {
 		t.Errorf("the corrected meeting reads %v, want it still booked", visit.MeetingStatus)
+	}
+	if visit := activityNamed(t, e, "Visit M-3"); visit.OccurredAt.UTC().Format(time.DateOnly) != yesterday {
+		t.Errorf("the held meeting is dated %v, want it still on %s", visit.OccurredAt, yesterday)
 	}
 }

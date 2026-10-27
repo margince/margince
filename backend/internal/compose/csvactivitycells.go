@@ -205,8 +205,8 @@ func checkKindFields(fields map[string]string, typed map[string]any, _ cellClock
 }
 
 // activityKindReason says in the report's words why the store's kind or
-// meeting status rules refused an activity, and which column to correct. It is false for an error
-// that is not one of those rules.
+// meeting status rules refused an activity, and which column to correct. It
+// is false for an error that is not one of those rules.
 func activityKindReason(err error, fields map[string]string) (string, migration.Reason, bool) {
 	switch {
 	case wrapsA[*activities.MessageProviderError](err):

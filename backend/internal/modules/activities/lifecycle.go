@@ -426,7 +426,7 @@ func (s *Store) ArchiveActivity(
 	var out crmcontracts.Activity
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = archiveActivityInTx(ctx, tx, id, ifVersion, collectArchiveOptions(opts))
+		out, err = archiveActivityInTx(ctx, tx, id, ifVersion, collectArchiveOptions(opts), s.now())
 		return err
 	})
 	if err != nil {
@@ -441,12 +441,12 @@ func (s *Store) ArchiveActivityTx(ctx context.Context, tx pgx.Tx, id ids.Activit
 	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
 		return err
 	}
-	_, err := archiveActivityInTx(ctx, tx, id, ifVersion, collectArchiveOptions(opts))
+	_, err := archiveActivityInTx(ctx, tx, id, ifVersion, collectArchiveOptions(opts), s.now())
 	return err
 }
 
 func archiveActivityInTx(
-	ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64, o archiveOptions,
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64, o archiveOptions, asOf time.Time,
 ) (crmcontracts.Activity, error) {
 	held, err := lockActivityForWrite(ctx, tx, id.UUID)
 	if err != nil {
@@ -492,5 +492,5 @@ func archiveActivityInTx(
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, archived); err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	return readActivity(ctx, tx, id, storekit.IncludeArchived)
+	return readActivityAt(ctx, tx, id, storekit.IncludeArchived, asOf)
 }

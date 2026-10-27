@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -168,6 +170,33 @@ func TestAMeetingMovedIntoThePastCanBeHeldInOnePatch(t *testing.T) {
 	}
 }
 
+// A patch that moves a held meeting to a start still ahead is refused. It sends
+// no status, and the status it leaves is the one judged.
+func TestMovingAHeldMeetingAheadIsRefused(t *testing.T) {
+	e := setupSend(t)
+	customer := seedCustomer(t, e)
+	noon := clocktest.Now(t).UTC().Truncate(24 * time.Hour).Add(12 * time.Hour)
+	store := meetingStore(e).WithClock(func() time.Time { return noon }).
+		WithRecordZone(func(context.Context, pgx.Tx) (*time.Location, error) { return time.UTC, nil })
+	held, subject := string(crmcontracts.ActivityMeetingStatusHeld), "Held an hour ago"
+	for name, patch := range map[string]UpdateActivityInput{
+		"a start tomorrow":    {OccurredAt: new(noon.AddDate(0, 0, 1))},
+		"today, with no time": {OccurredPrecision: new(PrecisionDay)},
+	} {
+		met, _, err := store.LogActivity(meetingCtx(e), LogActivityInput{
+			Kind: string(crmcontracts.ActivityKindMeeting), Subject: &subject, OccurredAt: new(noon.Add(-time.Hour)),
+			MeetingStatus: &held, Source: "manual", Links: []ActivityLinkInput{{EntityType: "contact", EntityID: customer}},
+		})
+		if err != nil {
+			t.Fatalf("logging the held meeting: %v", err)
+		}
+		_, err = store.UpdateActivity(meetingCtx(e), ids.From[ids.ActivityKind](ids.UUID(met.Id)), patch)
+		if _, early := errors.AsType[*MeetingNotTakenPlaceError](err); !early {
+			t.Errorf("moving a held meeting to %s answered %v, want the not-taken-place refusal", name, err)
+		}
+	}
+}
+
 // A date-only meeting takes place once its date is over in the installation's
 // timezone. Dated today there, it is not owed yet and cannot be held.
 func TestADateOnlyMeetingIsOwedOnceItsLocalDateIsOver(t *testing.T) {
@@ -177,7 +206,8 @@ func TestADateOnlyMeetingIsOwedOnceItsLocalDateIsOver(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	now := clocktest.Now(t).UTC().Truncate(24 * time.Hour).Add(22 * time.Hour)
+	// Two days behind the wall clock, so a stamp read at wall time owes "today" too.
+	now := clocktest.Now(t).UTC().Truncate(24*time.Hour).Add(22*time.Hour).AddDate(0, 0, -2)
 	store := meetingStore(e).WithClock(func() time.Time { return now })
 	customer := seedCustomer(t, e)
 	local := now.In(zone)

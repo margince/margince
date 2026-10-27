@@ -70,3 +70,28 @@ func TestATaskCarriesCompleteExactlyWhenTheReaderMayChangeIt(t *testing.T) {
 		}
 	}
 }
+
+// Decide and cancel both PATCH the meeting, so a reader who may only read it is
+// offered neither. The row says why rather than standing empty.
+func TestAMeetingTheReaderMayNotChangeOffersNoAnswer(t *testing.T) {
+	asOf := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
+	for name, tc := range map[string]struct {
+		meeting MeetingAwaitingOutcome
+		answers bool
+	}{
+		"a meeting they may change":    {MeetingAwaitingOutcome{ID: ids.NewV7(), Subject: "Discovery call"}, true},
+		"a meeting they may only read": {MeetingAwaitingOutcome{ID: ids.NewV7(), Subject: "Discovery call", ReadOnly: true}, false},
+	} {
+		item := meetingAwaitingOutcomeItem(tc.meeting)
+		for _, verb := range []crmcontracts.AttentionItemActions{crmcontracts.AttentionItemActionsDecide, crmcontracts.AttentionItemActionsCancel} {
+			if got := slices.Contains(item.Actions, verb); got != tc.answers {
+				t.Errorf("%s: offers %s = %v, want %v (actions %v)", name, verb, got, tc.answers, item.Actions)
+			}
+		}
+		row := classifyUnansweredMeeting(item, asOf).item
+		says := slices.ContainsFunc(row.Because, func(r crmcontracts.WorklistReason) bool { return r.Kind == "read_only" })
+		if says == tc.answers {
+			t.Errorf("%s: says read_only = %v, want %v", name, says, !tc.answers)
+		}
+	}
+}

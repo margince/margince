@@ -50,7 +50,7 @@ const noonMeetingScope = `
    AND (last.original AT TIME ZONE $1)::date = (a.occurred_at AT TIME ZONE $1)::date
    AND (last.original AT TIME ZONE $1)::time <> TIME '12:00:00' AND last.original_precision IS DISTINCT FROM 'day'
    AND last.saved_at < (SELECT m.applied_at FROM schema_migrations_core m WHERE m.version = $2)
-   AND NOT EXISTS (SELECT 1 FROM meeting_invitation i WHERE i.activity_id = a.id AND i.status <> 'canceled')`
+   AND NOT EXISTS (SELECT 1 FROM meeting_invitation i WHERE i.activity_id = a.id AND i.` + InvitationHoldsMeetingSQL + `)`
 
 // NoonMeeting is one meeting to restore: the start it holds, the one the
 // outcome save replaced, and whether it was archived since.

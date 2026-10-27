@@ -88,9 +88,9 @@ func (w *csvWriters) predictActivityCreate(ctx context.Context, row migration.Ro
 	if why.Code != "" {
 		return predictUnwritable, why, nil
 	}
-	err := w.activities.ProbeLinkWrites(ctx, in.Links)
+	err := w.activities.ProbeLoggedOutcome(ctx, in)
 	if err == nil {
-		err = w.activities.ProbeLoggedOutcome(ctx, in)
+		err = w.activities.ProbeLinkWrites(ctx, in.Links)
 	}
 	if why, refused := activityRefusalOf(err, textFields(row.Fields)); refused {
 		return predictUnwritable, why, nil

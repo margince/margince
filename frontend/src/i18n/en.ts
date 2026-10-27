@@ -8062,7 +8062,7 @@ export const en = {
   "import.reason.meeting_status_not_valid_for_kind":
     "Only a meeting has a meeting status. Remove it from this row.",
   "import.reason.meeting_not_taken_place":
-    "This meeting has not taken place yet, so it cannot be held or no_show. Leave the status empty, or use booked or canceled.",
+    "By the date or time on this row, the meeting has not started yet, so it cannot be held or no_show. Leave the status empty, or use booked or canceled. If it started today, add the time it started.",
   "import.reason.direction_unknown":
     "“{value}” is not a direction. The directions are: {allowed}.",
   "import.reason.activity_unlinked":

@@ -234,7 +234,8 @@ func readActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived st
 }
 
 // readActivityAt is readActivity judging awaiting_outcome at asOf, the store's
-// clock or the write's recordedAt, for a row a caller is answered with.
+// clock or the write's recordedAt, for a row a caller is answered with. Neither
+// wraps the other: gates/restrictedreaders_test.go credits a probe one call deep.
 func readActivityAt(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter, asOf time.Time) (crmcontracts.Activity, error) {
 	if err := auth.EnsureActivityVisible(ctx, tx, id.UUID); err != nil {
 		return crmcontracts.Activity{}, err

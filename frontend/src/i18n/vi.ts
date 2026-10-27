@@ -7772,7 +7772,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.reason.meeting_status_not_valid_for_kind":
     "Chỉ cuộc họp mới có trạng thái cuộc họp. Bỏ giá trị này khỏi hàng.",
   "import.reason.meeting_not_taken_place":
-    "Cuộc họp này chưa diễn ra nên không thể là “held” hoặc “no_show”. Để trống trạng thái hoặc dùng “booked” hay “canceled”.",
+    "Theo ngày hoặc giờ trong hàng này, cuộc họp chưa bắt đầu nên không thể là “held” hoặc “no_show”. Để trống trạng thái hoặc dùng “booked” hay “canceled”. Nếu cuộc họp đã bắt đầu hôm nay, thêm giờ bắt đầu.",
   "import.reason.direction_unknown":
     "“{value}” không phải chiều hoạt động. Các chiều: {allowed}.",
   "import.reason.activity_unlinked":

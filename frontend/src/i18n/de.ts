@@ -7990,7 +7990,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.reason.meeting_status_not_valid_for_kind":
     "Nur ein Termin hat einen Terminstatus. Entferne ihn aus dieser Zeile.",
   "import.reason.meeting_not_taken_place":
-    "Dieser Termin hat noch nicht stattgefunden und kann daher weder held noch no_show sein. Lass den Status leer oder nimm booked oder canceled.",
+    "Nach dem Datum oder der Uhrzeit in dieser Zeile hat der Termin noch nicht begonnen und kann daher weder held noch no_show sein. Lass den Status leer oder nimm booked oder canceled. Hat er heute begonnen, ergänze die Uhrzeit des Beginns.",
   "import.reason.direction_unknown":
     "„{value}“ ist keine Richtung. Es gibt: {allowed}.",
   "import.reason.activity_unlinked":

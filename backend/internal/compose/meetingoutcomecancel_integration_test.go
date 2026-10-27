@@ -8,54 +8,77 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"testing"
 	"time"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // A meeting outcome row offers `cancel` only where the cancel is accepted. A
-// live invitation refuses it, and a canceled invitation no longer holds the meeting.
+// live invitation refuses it; a canceled or erased one no longer holds the meeting.
 func TestAMeetingOutcomeRowOffersCancelOnlyWhereTheWriteIsAccepted(t *testing.T) {
 	e := integration.Setup(t)
 	now := laneDay.Add(3 * time.Hour)
-	reader := e.As(e.Rep1, nil, integration.AdminPerms)
+	// A signed-in member holds a full seat, and only a full seat is offered a write.
+	reader := principal.WithActor(e.As(e.Rep1, nil, integration.AdminPerms), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
+		Permissions: integration.AdminPerms, SeatType: principal.SeatFull,
+	})
 	host := ids.From[ids.UserKind](e.Rep1)
-	owner := integration.OwnerConn(t)
-	book := func(subject, invitation string) ids.UUID {
-		customer, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Customer for " + subject})
+	inviting := newInvitingStore(t, e, reader, now.AddDate(0, 0, -2))
+	customer := func(name string) ids.UUID {
+		created, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: name})
 		if err != nil {
-			t.Fatalf("creating the customer for %q: %v", subject, err)
+			t.Fatalf("creating %q: %v", name, err)
 		}
-		at, booked := now.AddDate(0, 0, -2), "booked"
+		return ids.UUID(created.Id)
+	}
+	booked := func(subject string) ids.UUID {
+		at, status := now.AddDate(0, 0, -2), "booked"
 		row, _, err := e.Activities.LogActivity(reader, activities.LogActivityInput{
-			Kind: "meeting", Subject: &subject, OccurredAt: &at, Source: "manual", MeetingStatus: &booked, HostUserID: &host,
-			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: ids.UUID(customer.Id)}},
+			Kind: "meeting", Subject: &subject, OccurredAt: &at, Source: "manual", MeetingStatus: &status, HostUserID: &host,
+			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: customer("Customer for " + subject)}},
 		})
 		if err != nil {
 			t.Fatalf("booking %q: %v", subject, err)
 		}
-		if invitation != "" {
-			if _, err := owner.Exec(context.Background(), `
-				INSERT INTO meeting_invitation (activity_id, host_user_id, provider, calendar_id, appointment, status, management_hash, management_ref)
-				VALUES ($1, $2, 'gcal', 'primary', '{}', $3, $4, 'ref')`, ids.UUID(row.Id), e.Rep1, invitation, ids.NewV7().String()); err != nil {
-				t.Fatalf("inviting to %q: %v", subject, err)
-			}
-		}
 		return ids.UUID(row.Id)
 	}
-	meetings := map[string]ids.UUID{
-		"no invitation":       book("Booked in the app", ""),
-		"live invitation":     book("Invited and confirmed", "confirmed"),
-		"canceled invitation": book("Invitation withdrawn", "canceled"),
+	monday := func(hour int) time.Time { return time.Date(2026, time.March, 9, hour, 0, 0, 0, time.UTC) }
+	confirmed := inviting.invite(t, customer("Confirmed guest"), monday(10))
+	withdrawn := inviting.invite(t, customer("Withdrawn guest"), monday(12))
+	inviting.cancel(t, withdrawn)
+	reopen := "booked"
+	if _, err := e.Activities.UpdateActivity(reader, ids.From[ids.ActivityKind](withdrawn), activities.UpdateActivityInput{MeetingStatus: &reopen}); err != nil {
+		t.Fatalf("booking the withdrawn meeting again: %v", err)
 	}
-	offers := cancelOffers(t, e, now)
+	erasedGuest := customer("Erased guest")
+	erased := inviting.invite(t, erasedGuest, monday(14))
+	if _, err := e.Activities.RelinkActivity(reader, ids.From[ids.ActivityKind](erased), activities.RelinkActivityInput{EntityType: "contact", EntityID: customer("Second attendee")}); err != nil {
+		t.Fatalf("linking a second attendee, so the meeting outlives the erasure: %v", err)
+	}
+	if err := inviting.eraser.EraseContact(e.Admin(), erasedGuest, "subject request"); err != nil {
+		t.Fatalf("erasing the guest: %v", err)
+	}
+	meetings := map[string]ids.UUID{
+		"no invitation":       booked("Booked in the app"),
+		"live invitation":     confirmed,
+		"canceled invitation": withdrawn,
+		"erased invitation":   erased,
+	}
+	offers := cancelOffers(t, e, reader, now)
 	for name, meeting := range meetings {
 		offered, read := offers[meeting]
 		if !read {
@@ -74,11 +97,67 @@ func TestAMeetingOutcomeRowOffersCancelOnlyWhereTheWriteIsAccepted(t *testing.T)
 	}
 }
 
+// invitingStore is the scheduling engine as the host, its clock at the moment
+// the invitations went out, and the eraser that shares its vault.
+type invitingStore struct {
+	ctx    context.Context
+	store  *activities.Store
+	eraser *privacy.Eraser
+}
+
+func newInvitingStore(t *testing.T, e *integration.Env, ctx context.Context, sentAt time.Time) invitingStore {
+	t.Helper()
+	vault := keyvault.NewMemory()
+	store := e.Activities.WithClock(func() time.Time { return sentAt }).WithPublicBaseURL("https://crm.example.test").
+		WithMeetingVault(vault).WithSchedulingCalendar(&erasingCalendar{erase: func() error { return nil }}).
+		WithWorkingHours(func(context.Context, ids.UserID) (activities.WorkingHours, error) {
+			return activities.WorkingHours{StartMinute: 540, EndMinute: 1020, Days: []int{1, 2, 3, 4, 5}, Location: time.UTC}, nil
+		})
+	if _, err := store.SaveSchedulingProfile(ctx, crmcontracts.SchedulingProfile{Provider: "gcal", CalendarId: "primary", DurationMinutes: 30, NoticeMinutes: 120, HorizonDays: 30, Title: "Discovery"}); err != nil {
+		t.Fatalf("saving the scheduling profile: %v", err)
+	}
+	return invitingStore{ctx: ctx, store: store, eraser: privacy.NewEraser(e.DB()).WithPayloadVault(controllerPayloads{v: vault})}
+}
+
+// invite books guest at start through the invitation engine and delivers it.
+func (s invitingStore) invite(t *testing.T, guest ids.UUID, start time.Time) ids.UUID {
+	t.Helper()
+	meeting, err := s.store.CreateInvitation(s.ctx, crmcontracts.MeetingInvitationRequest{
+		ContactId: crmcontracts.Id(guest), AttendeeEmail: openapi_types.Email(fmt.Sprintf("guest-%d@example.test", start.Hour())), Subject: "Invited for " + start.Format(time.Kitchen),
+		Start: start, End: start.Add(30 * time.Minute),
+	})
+	if err != nil {
+		t.Fatalf("inviting for %v: %v", start, err)
+	}
+	s.deliver(t)
+	return ids.UUID(meeting.Id)
+}
+
+// cancel withdraws the invitation and delivers the cancellation.
+func (s invitingStore) cancel(t *testing.T, meeting ids.UUID) {
+	t.Helper()
+	current, err := s.store.Invitation(s.ctx, meeting)
+	if err != nil {
+		t.Fatalf("reading the invitation: %v", err)
+	}
+	if _, err := s.store.ChangeInvitation(s.ctx, meeting, crmcontracts.MeetingInvitationChange{Action: "cancel", Version: current.Version}); err != nil {
+		t.Fatalf("canceling the invitation: %v", err)
+	}
+	s.deliver(t)
+}
+
+func (s invitingStore) deliver(t *testing.T) {
+	t.Helper()
+	if err := s.store.DeliverInvitations(s.ctx); err != nil {
+		t.Fatalf("delivering invitations: %v", err)
+	}
+}
+
 // cancelOffers reads the reader's meeting_outcome rows and whether each offers cancel.
-func cancelOffers(t *testing.T, e *integration.Env, now time.Time) map[ids.UUID]bool {
+func cancelOffers(t *testing.T, e *integration.Env, reader context.Context, now time.Time) map[ids.UUID]bool {
 	t.Helper()
 	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return now })
-	page, err := feed.Worklist(e.As(e.Rep1, nil, integration.AdminPerms), "mine", "all", ids.Nil, 100, "")
+	page, err := feed.Worklist(reader, "mine", "all", ids.Nil, 100, "")
 	if err != nil {
 		t.Fatalf("reading the worklist: %v", err)
 	}
