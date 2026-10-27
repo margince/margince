@@ -73,7 +73,7 @@ var catalog = []view{
 		uri:         CreateFollowupsURI,
 		name:        "create_followups_view",
 		title:       "Next steps for this record",
-		description: "What a new record leaves to decide: a possible duplicate with the choice to merge it or keep it apart, and a tag word offered for it.",
+		description: "A new record and the fields it set, or why none was made. Also what it leaves to decide: a possible duplicate to merge or keep apart, and a tag word offered for it.",
 	},
 	{
 		uri:         ApprovalURI,
@@ -85,7 +85,7 @@ var catalog = []view{
 		uri:         FieldConflictURI,
 		name:        "field_conflict_view",
 		title:       "Edited by hand",
-		description: "Fields last edited by hand that an update would overwrite, with the value on the record beside the one proposed and the choice to keep or replace it.",
+		description: "What an update changed, or why it changed nothing. Fields last edited by hand that it would overwrite show the stored value beside the proposed one, with the choice to keep or replace it.",
 	},
 }
 

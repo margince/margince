@@ -16,8 +16,8 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Tools | 37 |
 | Resources | 9 |
 | Tool catalog | 130.2 KB |
-| Resource catalog | 3.5 KB |
-| Approx. wire tokens | 34231 |
+| Resource catalog | 3.6 KB |
+| Approx. wire tokens | 34249 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -182,8 +182,8 @@ carrying it.
 **Next steps for this record**
 
 ```text
-What a new record leaves to decide: a possible duplicate with the choice to merge it or keep it
-apart, and a tag word offered for it.
+A new record and the fields it set, or why none was made. Also what it leaves to decide: a possible
+duplicate to merge or keep apart, and a tag word offered for it.
 ```
 
 <details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
@@ -239,8 +239,8 @@ A change an assistant proposed, what it would do, and the choice to approve or r
 **Edited by hand**
 
 ```text
-Fields last edited by hand that an update would overwrite, with the value on the record beside the
-one proposed and the choice to keep or replace it.
+What an update changed, or why it changed nothing. Fields last edited by hand that it would
+overwrite show the stored value beside the proposed one, with the choice to keep or replace it.
 ```
 
 <details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
