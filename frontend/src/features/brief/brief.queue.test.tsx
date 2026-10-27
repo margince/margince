@@ -188,7 +188,7 @@ it("opens a meeting on what it asks, with the row's verbs", async () => {
     source: "meeting_outcome",
     category: "meetings",
     because: [{ kind: "outcome_unrecorded" }],
-    actions: ["decide"],
+    actions: ["decide", "cancel"],
   };
   stubApi({
     "GET /worklist": () => jsonResponse(readingsDay({}, [meeting])),

@@ -122,6 +122,7 @@ const ANSWER_BY_SOURCE: Partial<
           // it. The dialog falls back to its own heading when a row has none.
           title={item.title}
           invalidateKeys={[worklistKey]}
+          cancellable={item.actions.includes("cancel")}
         />
       ),
     }),

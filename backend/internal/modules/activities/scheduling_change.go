@@ -222,15 +222,28 @@ func (s *Store) settleInvitation(ctx context.Context, tx pgx.Tx, row invitationR
 
 func refuseActiveInvitationPatch(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	args := schedulingArgs{}
-	var active bool
-	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM meeting_invitation WHERE activity_id=`+args.add(id)+` AND status<>'canceled')`, args...).Scan(&active)
+	var status string
+	err := tx.QueryRow(ctx, `SELECT status FROM meeting_invitation WHERE activity_id=`+args.add(id), args...).Scan(&status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
-	if active {
+	if invitationHoldsMeeting(status) {
 		return &SchedulingArgumentError{Field: KindMeeting, Code: "calendar_managed", Message: "Change or cancel this meeting through its calendar invitation"}
 	}
 	return nil
+}
+
+// CalendarManaged reports whether a live invitation holds the meeting, so only
+// its outcome may be written here and the rest goes through the calendar.
+func CalendarManaged(meeting crmcontracts.Activity) bool {
+	return meeting.InvitationStatus != nil && invitationHoldsMeeting(string(*meeting.InvitationStatus))
+}
+
+func invitationHoldsMeeting(status string) bool {
+	return status != invitationCanceled
 }
 
 func transitionInvitation(ctx context.Context, tx pgx.Tx, row *invitationRow, in crmcontracts.MeetingInvitationChange, buffer int) error {

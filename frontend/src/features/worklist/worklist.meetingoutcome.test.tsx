@@ -53,7 +53,7 @@ function aMeetingOwedAnAnswer(over = {}) {
     title: "Discovery call with Turbinenbau",
     band: "keep_momentum",
     destination: "today",
-    actions: ["decide"],
+    actions: ["decide", "cancel"],
     ...over,
   });
 }
@@ -137,7 +137,17 @@ function stubWithMeetingRead(
               JSON.stringify({
                 title: "Unprocessable",
                 status: 422,
-                code: "calendar_managed",
+                code: "validation_error",
+                details: {
+                  errors: [
+                    {
+                      field: "meeting",
+                      code: "calendar_managed",
+                      message:
+                        "Change or cancel this meeting through its calendar invitation",
+                    },
+                  ],
+                },
               }),
               {
                 status: 422,
@@ -320,6 +330,18 @@ describe("a meeting that owes an answer", () => {
 
     expect(await screen.findByText(/Outcome was not recorded/i)).not.toBeNull();
     await waitFor(() => expect(worklistReads()).toBeGreaterThan(before));
+  });
+
+  it("draws no cancel on a row that does not offer it, and still offers the update", async () => {
+    stub(aDayWithOne({ actions: ["decide"] }));
+    renderUnderAToastRegion();
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Update Discovery call with Turbinenbau",
+      }),
+    ).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /canceled/ })).toBeNull();
   });
 
   it("stops offering a cancel the calendar invitation refuses, and offers no retry", async () => {

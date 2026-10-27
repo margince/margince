@@ -230,7 +230,7 @@ describe("a row's verbs are one line with the row's menu last", () => {
         category: "meetings",
         title: "Quarterly review with Turbinenbau",
         occurred_at: "2026-08-31T08:00:00Z",
-        actions: ["decide"],
+        actions: ["decide", "cancel"],
       }),
     );
 

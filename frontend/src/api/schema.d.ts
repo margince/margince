@@ -5425,7 +5425,7 @@ export interface paths {
          *     the installation's timezone), judged at the start the patch leaves the row with:
          *     `422 code: in_future` on `meeting_status`. `canceled` and `booked` are accepted at any time.
          *     A meeting with a live calendar invitation takes `held` or `no_show` alone; any other change
-         *     to it answers `422 code: calendar_managed` and goes through the invitation.
+         *     to it answers `422 code: calendar_managed` on `meeting` and goes through the invitation.
          */
         patch: operations["updateActivity"];
         trace?: never;
@@ -47878,6 +47878,10 @@ export interface components {
              *     `take` is offered on a task nobody holds that the caller may change. It sets
              *     `assignee_id` to the caller through `PATCH /activities/{id}`, pinned with `If-Match`.
              *
+             *     `cancel` is offered on a meeting owed an outcome that no live calendar invitation
+             *     holds. It sets `meeting_status` to `canceled` through `PATCH /activities/{id}`, pinned
+             *     with `If-Match`. A meeting an invitation holds is canceled through the invitation.
+             *
              *     Domain questions offer `keep`, `discard`, and `reopen` where allowed. Keeping creates a
              *     company or matches the supplied `company_id`; forwarded identity requires an
              *     explicit match. A vendor question offers `keep_as_vendor` instead of `reopen`, which
@@ -47892,7 +47896,7 @@ export interface components {
              *     suggestion until later in the day. One word for both would make a client that
              *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen" | "take")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen" | "take" | "cancel")[];
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time
@@ -49393,7 +49397,7 @@ export interface components {
              */
             undo?: components["schemas"]["AppliedUndo"];
             /** @description What this item offers, routed to the endpoint that owns the verb. */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen" | "take")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen" | "take" | "cancel")[];
             /**
              * @description The heading this row sits under, as an OUTCOME rather than a priority number.
              *

@@ -71,6 +71,9 @@ type MeetingAwaitingOutcome struct {
 	// Who the meeting was with: the same counterparty Meeting.ContactID names.
 	// Zero for an internal meeting, or one whose outside attendees are withheld.
 	ContactID ids.UUID
+
+	// A live calendar invitation holds the meeting, so it is canceled there.
+	CalendarManaged bool
 }
 
 // Meeting is one appointment still ahead of the reader.

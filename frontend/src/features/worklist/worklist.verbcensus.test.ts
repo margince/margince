@@ -77,6 +77,8 @@ const ANSWERED_BY = {
   discard: { how: "inline", file: "worklist.domainquestion.tsx" },
   // Taking a task nobody holds writes its assignee where the reader stands.
   take: { how: "inline", file: "worklist.take.tsx" },
+  // Cancelling a meeting owed an outcome writes its status where the reader is.
+  cancel: { how: "inline", file: "worklist.row.answer.tsx" },
   // Putting an overnight correction back acts in place, on the receipt that
   // reported it. It is the one verb this queue draws OUTSIDE the row: the
   // handled panel is where a change nobody was asked about is told, so it is

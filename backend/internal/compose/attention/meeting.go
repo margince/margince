@@ -199,10 +199,9 @@ func hostOf(item crmcontracts.AttentionItem) ids.UUID {
 //
 // It offers `decide`, the same verb an approval carries and for the same
 // reason: the answer is given ON the row rather than somewhere else. What the
-// row asks is how the meeting went, and the three answers — held, no-show,
-// cancelled — are the meeting_status vocabulary the activity has always
-// contracted. PATCH /activities/{id} has accepted them since the field existed;
-// what was missing was anywhere to say so at the one moment a human knows.
+// row asks is how the meeting went: held or no-show through `decide`, and
+// `cancel` only where no live calendar invitation holds the meeting.
+// PATCH /activities/{id} refuses that cancel, so the row does not offer it.
 //
 // Not `open`: this row's subject is the ACTIVITY, a timeline entry with no page
 // of its own, so a verb promising to open it would advertise a destination that
@@ -234,6 +233,9 @@ func meetingAwaitingOutcomeItem(meeting MeetingAwaitingOutcome) crmcontracts.Att
 	if !meeting.ContactID.IsZero() {
 		with := openapi_types.UUID(meeting.ContactID)
 		item.WithContact = &with
+	}
+	if !meeting.CalendarManaged {
+		item.Actions = append(item.Actions, crmcontracts.AttentionItemActionsCancel)
 	}
 	return item
 }

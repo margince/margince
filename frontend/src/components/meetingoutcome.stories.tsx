@@ -81,6 +81,7 @@ export const TwoVerbs: Story = {
             version={3}
             title="Discovery call with Turbinenbau"
             invalidateKeys={[]}
+            cancellable
           />
         </div>
       </StoryProviders>
@@ -106,6 +107,7 @@ export const ComposerOpen: Story = {
             version={3}
             title="Discovery call with Turbinenbau"
             invalidateKeys={[]}
+            cancellable
           />
         </div>
       </StoryProviders>
@@ -130,6 +132,7 @@ export const NothingCapturedYet: Story = {
             version={3}
             title="Discovery call with Turbinenbau"
             invalidateKeys={[]}
+            cancellable
           />
         </div>
       </StoryProviders>
@@ -154,7 +157,7 @@ export const CalendarManaged: Story = {
             version={3}
             title="Discovery call with Turbinenbau"
             invalidateKeys={[]}
-            calendarManaged
+            cancellable={false}
           />
         </div>
       </StoryProviders>

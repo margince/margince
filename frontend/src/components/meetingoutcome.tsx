@@ -34,7 +34,7 @@ import { useT } from "../i18n";
 import { outgoingBody } from "../lib/activitybody";
 import { useActivity } from "../lib/activityread";
 import { useCanWriteRecord } from "../lib/capability";
-import { problemCodeOf, unwrap } from "../lib/problem";
+import { problemFieldErrorsOf, unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { worklistKey } from "../lib/workkeys";
 import { ActivityBodyField } from "./activitybodyfield";
@@ -59,14 +59,14 @@ export function RecordMeetingOutcome({
       id={activity.id}
       version={activity.version}
       title={activity.subject ?? undefined}
-      calendarManaged={isCalendarManaged(activity)}
+      cancellable={!isCalendarManaged(activity)}
       // The Worklist asks about the same meeting, so an answer here clears it there.
       invalidateKeys={[...invalidateKeys, worklistKey]}
     />
   );
 }
 
-// The two statuses the dialog can record. `canceled` is deliberately absent:
+// The two statuses the dialog can record. `canceled` is absent:
 // the card's own verb writes it, and offering it here as well would give one
 // answer two doors that could drift.
 type HappenedStatus = "held" | "no_show";
@@ -140,17 +140,15 @@ function heldDays(
 /**
  * MeetingOutcome is the row's answer: cancel it, or say what came of it.
  *
- * Two verbs rather than three, and they are not the same KIND of answer, which
- * is why one is a write and the other is a door. A cancelled meeting is a fact
- * with nothing to add; a meeting that happened has an outcome, and that outcome
- * is the thing a rep came to the queue to record.
+ * A cancelled meeting is a fact with nothing to add, so Cancel writes it at once.
+ * A meeting that happened has an outcome to record, so Update opens a dialog.
  */
 export function MeetingOutcome({
   id,
   version,
   title,
   invalidateKeys,
-  calendarManaged = false,
+  cancellable,
 }: Readonly<{
   id: string;
   version: number | undefined;
@@ -158,13 +156,13 @@ export function MeetingOutcome({
   invalidateKeys: readonly QueryKey[];
   // The row's own heading for the meeting, so the dialog is titled before its read answers.
   title: string | undefined;
-  // A live invitation is canceled through the calendar; the server refuses it here.
-  calendarManaged?: boolean;
+  // False where a live invitation holds the meeting: the server refuses the cancel.
+  cancellable: boolean;
 }>) {
   const t = useT();
   const toast = useToast();
   const [open, setOpen] = useState(false);
-  // A Worklist row does not say whether an invitation holds the meeting, so its refusal does.
+  // An invitation can arrive after the row was read, so its refusal hides Cancel too.
   const [refusedAsManaged, setRefusedAsManaged] = useState(false);
   const record = useMeetingOutcome(invalidateKeys);
   return (
@@ -180,7 +178,7 @@ export function MeetingOutcome({
       >
         {t("worklist.verb.meetingUpdate")}
       </Button>
-      {!(calendarManaged || refusedAsManaged) && (
+      {cancellable && !refusedAsManaged && (
         <Button
           pending={record.isPending}
           aria-label={
@@ -194,10 +192,12 @@ export function MeetingOutcome({
               {
                 onSuccess: () =>
                   toast.show(t("worklist.verb.meetingOutcomeRecorded")),
-                // A refused write leaves the row exactly as it was, which renders
-                // identically to a click that did nothing.
+                // A refused write leaves the row as it was, which looks like a
+                // click that did nothing.
                 onError: (error) => {
-                  const managed = problemCodeOf(error) === "calendar_managed";
+                  const managed = problemFieldErrorsOf(error).some(
+                    (fault) => fault.code === "calendar_managed",
+                  );
                   setRefusedAsManaged(managed);
                   toast.show(
                     t(
@@ -230,10 +230,9 @@ export function MeetingOutcome({
 /**
  * The composer, bound to one meeting.
  *
- * It reads the meeting first rather than drawing an empty form: the subject and
- * the captured body are what the reader is amending, and a form that started
- * blank would invite them to retype what the calendar already knew — or, worse,
- * to save an empty body over it.
+ * It reads the meeting first rather than drawing an empty form. The subject and
+ * the captured body are what the reader is amending. A blank form would invite
+ * them to retype what the calendar knew, or to save an empty body over it.
  */
 function MeetingOutcomeDialog({
   id,
@@ -255,8 +254,8 @@ function MeetingOutcomeDialog({
   const [draft, setDraft] = useState<OutcomeDraft | null>(null);
   const [seed, setSeed] = useState<OutcomeSeed | null>(null);
   const [dayRefused, setDayRefused] = useState(false);
-  // The SAME read the task detail makes, and keyed the same way, so a write
-  // that invalidates ["activity", id] refreshes whichever of the two is open.
+  // The read the task detail makes, keyed the same way. A write that
+  // invalidates ["activity", id] refreshes whichever of the two is open.
   const meeting = useActivity(id);
   const transcript = meeting.data ? isTranscriptActivity(meeting.data) : false;
   const managed = meeting.data ? isCalendarManaged(meeting.data) : false;

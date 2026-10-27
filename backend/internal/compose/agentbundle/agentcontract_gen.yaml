@@ -2698,7 +2698,7 @@ paths:
         the installation's timezone), judged at the start the patch leaves the row with:
         `422 code: in_future` on `meeting_status`. `canceled` and `booked` are accepted at any time.
         A meeting with a live calendar invitation takes `held` or `no_show` alone; any other change
-        to it answers `422 code: calendar_managed` and goes through the invitation.
+        to it answers `422 code: calendar_managed` on `meeting` and goes through the invitation.
 
         Needs the passport permission Change records.
 

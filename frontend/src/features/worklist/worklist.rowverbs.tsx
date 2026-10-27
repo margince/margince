@@ -376,6 +376,7 @@ const VERB_LABEL: Record<
   // button this labels, and two spellings of one act would read as two acts.
   reply: (t) => t("compose.reply"),
   take: (t) => t("worklist.take.action"),
+  cancel: (t) => t("worklist.verb.meetingCanceled"),
   // The record history's own word, for the same reason. `undo` is drawn by
   // ReceiptUndo on the handled panel, which acts in place, so VERB_DESTINATION
   // routes it nowhere and this label is never the one a reader sees — it is

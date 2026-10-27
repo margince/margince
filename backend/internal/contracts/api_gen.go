@@ -2450,6 +2450,7 @@ func (e AttentionConnectionFactsMedium) Valid() bool {
 const (
 	AttentionItemActionsAcknowledge  AttentionItemActions = "acknowledge"
 	AttentionItemActionsAct          AttentionItemActions = "act"
+	AttentionItemActionsCancel       AttentionItemActions = "cancel"
 	AttentionItemActionsComplete     AttentionItemActions = "complete"
 	AttentionItemActionsDecide       AttentionItemActions = "decide"
 	AttentionItemActionsDiscard      AttentionItemActions = "discard"
@@ -2473,6 +2474,8 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsAcknowledge:
 		return true
 	case AttentionItemActionsAct:
+		return true
+	case AttentionItemActionsCancel:
 		return true
 	case AttentionItemActionsComplete:
 		return true
@@ -21224,6 +21227,7 @@ func (e WorklistDealVerdictStanding) Valid() bool {
 const (
 	WorklistItemActionsAcknowledge  WorklistItemActions = "acknowledge"
 	WorklistItemActionsAct          WorklistItemActions = "act"
+	WorklistItemActionsCancel       WorklistItemActions = "cancel"
 	WorklistItemActionsComplete     WorklistItemActions = "complete"
 	WorklistItemActionsDecide       WorklistItemActions = "decide"
 	WorklistItemActionsDiscard      WorklistItemActions = "discard"
@@ -21247,6 +21251,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsAcknowledge:
 		return true
 	case WorklistItemActionsAct:
+		return true
+	case WorklistItemActionsCancel:
 		return true
 	case WorklistItemActionsComplete:
 		return true
@@ -28839,6 +28845,10 @@ type AttentionItem struct {
 	//
 	// `take` is offered on a task nobody holds that the caller may change. It sets
 	// `assignee_id` to the caller through `PATCH /activities/{id}`, pinned with `If-Match`.
+	//
+	// `cancel` is offered on a meeting owed an outcome that no live calendar invitation
+	// holds. It sets `meeting_status` to `canceled` through `PATCH /activities/{id}`, pinned
+	// with `If-Match`. A meeting an invitation holds is canceled through the invitation.
 	//
 	// Domain questions offer `keep`, `discard`, and `reopen` where allowed. Keeping creates a
 	// company or matches the supplied `company_id`; forwarded identity requires an

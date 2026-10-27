@@ -147,7 +147,7 @@ function meetingOutcomeRow(): WorklistItem {
     title: "Quarterly review with Turbinenbau",
     occurred_at: "2026-09-02T09:00:00Z",
     because: [],
-    actions: ["decide"],
+    actions: ["decide", "cancel"],
     version: 4,
   };
 }

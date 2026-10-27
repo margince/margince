@@ -59,9 +59,9 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// `complete` settles the claim as done, through POST /claims/{id}/settle.
 	"conversation_claim": {"open", "complete"},
 	"meeting":            {"open"},
-	// Answered inline, like an approval: `decide` reaches MeetingOutcome, which
-	// writes meeting_status through PATCH /activities/{id}.
-	"meeting_outcome": {"decide"},
+	// Answered inline, like an approval: `decide` and `cancel` reach
+	// MeetingOutcome, which writes meeting_status through PATCH /activities/{id}.
+	"meeting_outcome": {"decide", "cancel"},
 	// The task's own verbs. `complete` acts in place through TaskComplete;
 	// `snooze` opens the record, where the due date lives. `take` assigns the
 	// task to the reader through TakeVerb.
