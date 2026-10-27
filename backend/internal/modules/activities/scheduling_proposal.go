@@ -46,9 +46,23 @@ func (s *Store) CreateProposal(ctx context.Context, in crmcontracts.MeetingPropo
 	if err != nil {
 		return proposalLink{}, err
 	}
+	// Read before the expiry is derived, and used for created_at below.
+	//
+	// The expiry can be an option's own start, and a host may set zero notice.
+	// So a clock read after validation can land after a near-term option.
+	created := s.now()
 	expires, err := s.validateProposal(ctx, host, in)
 	if err != nil {
 		return proposalLink{}, err
+	}
+	if !expires.After(created) {
+		// No usable lifetime: the link would be expired before a guest could
+		// open it. Refused by name rather than by the column's own CHECK, so
+		// the host is told what to change.
+		return proposalLink{}, &SchedulingArgumentError{
+			Field: "options", Code: "no_usable_lifetime",
+			Message: "Offer a time far enough ahead that the link is still open when it arrives",
+		}
 	}
 	token, hash, err := invitationToken()
 	if err != nil {
@@ -67,10 +81,10 @@ func (s *Store) CreateProposal(ctx context.Context, in crmcontracts.MeetingPropo
 		}
 		id = ids.UUID(row.Id)
 		args := schedulingArgs{}
-		// created_at is written from the clock that computed the expiry, not
-		// defaulted by the database. A row whose two timestamps come from two
-		// clocks can read as expiring before it was created.
-		values := []string{args.add(id), args.add(host), args.add(in), args.add(hash), args.add(expires), args.add(ref), args.add(s.now())}
+		// created_at comes from the one clock read above, not from the database
+		// default. A row whose two timestamps come from two clocks can read as
+		// expiring before it was created.
+		values := []string{args.add(id), args.add(host), args.add(in), args.add(hash), args.add(expires), args.add(ref), args.add(created)}
 		if _, err := tx.Exec(ctx, `INSERT INTO meeting_proposal(activity_id,host_user_id,request,token_hash,expires_at,link_ref,created_at) VALUES(`+strings.Join(values, ",")+`)`, args...); err != nil {
 			return err
 		}
