@@ -3,6 +3,10 @@
 
 import type { ReactNode } from "react";
 import { useEmployerSummary } from "../../components/contactemployersummary";
+import {
+  useCustomFieldDisplay,
+  useObjectCustomFields,
+} from "../../components/customfields.form";
 import { EntityRef, useEntityName } from "../../components/entityref";
 import { Badge } from "../../design-system/atoms";
 import { provenanceLabel } from "../../design-system/provenance";
@@ -77,6 +81,8 @@ function DealAsideBody({
     row: rowMaker(deal.masked_fields ?? [], t),
   };
   const owner = useMemberName(deal.owner_id).data;
+  const cf = useObjectCustomFields("deal");
+  const display = useCustomFieldDisplay();
   const reads = {
     viewerId: useViewerId(),
     sources: useAcquisitionSources().data ?? [],
@@ -86,7 +92,21 @@ function DealAsideBody({
     {
       key: "about",
       label: t("record.details.about"),
-      rows: aboutRows(facts, stages),
+      rows: [
+        ...aboutRows(facts, stages),
+        // A custom field with a value is an About row; an empty one folds
+        // with the other empty fields.
+        ...cf.fields.map((field) => {
+          const record: Record<string, unknown> = deal;
+          const value = display(field, record[field.column_name]);
+          return {
+            key: field.column_name,
+            term: field.label,
+            value: value || t("field.unset"),
+            empty: !value,
+          };
+        }),
+      ],
     },
     {
       key: "ownership",
