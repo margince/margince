@@ -172,7 +172,7 @@ const DISPLAY: ReadonlyArray<{ token: string; context: string }> = [
   { token: "--fontDisplayLarge", context: "the weekly report's head" },
   {
     token: "--fontDisplayMedium",
-    context: "the Today greeting, and a figure under it",
+    context: "the Today greeting, and a figure under the full-window greeting",
   },
   { token: "--fontLead", context: "the sentence under the greeting" },
 ];
