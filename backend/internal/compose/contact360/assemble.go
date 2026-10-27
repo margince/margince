@@ -136,6 +136,9 @@ func (s *Service) AssembleScoped(ctx context.Context, contactID ids.ContactID, o
 		return crmcontracts.Contact360{}, err
 	}
 	now := s.now().UTC()
+	if opts.AsOf.IsZero() {
+		opts.AsOf = now
+	}
 	out := crmcontracts.Contact360{
 		AsOf:            now,
 		SectionsOmitted: []crmcontracts.Contact360SectionsOmitted{},
