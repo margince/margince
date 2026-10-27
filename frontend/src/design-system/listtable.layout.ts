@@ -185,11 +185,13 @@ export function columnLayout(
 ): ColumnLayout {
   const sizeOf = (column: SizedColumn) => boundsOf(column, floors);
   const fixedWidth = (column: SizedColumn) => {
-    const { share, min } = sizeOf(column);
     const resized = widths[column.key];
+    // A width the reader set is theirs. Only a measured figure raises it, since
+    // a figure cut short reads as a different number.
     if (resized) {
-      return Math.max(resized, min);
+      return Math.max(resized, floors[column.key] ?? 0);
     }
+    const { share, min } = sizeOf(column);
     return share === null ? min : undefined;
   };
   const shared = shown.filter((column) => fixedWidth(column) === undefined);

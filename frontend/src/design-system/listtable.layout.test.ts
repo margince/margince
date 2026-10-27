@@ -96,4 +96,12 @@ describe("columnLayout", () => {
     const layout = columnLayout(catalogue, { price: 90 }, 1000, { price: 150 });
     expect(layout.widthOf(catalogue[1])).toBe("150px");
   });
+
+  // A reader may drag any column under its default minimum; the cell then ends
+  // its text in an ellipsis.
+  it("keeps a width the reader set under the column's default minimum", () => {
+    const layout = columnLayout(catalogue, { name: 100, price: 60 }, 1000);
+    expect(layout.widthOf(catalogue[0])).toBe("100px");
+    expect(layout.widthOf(catalogue[1])).toBe("60px");
+  });
 });
