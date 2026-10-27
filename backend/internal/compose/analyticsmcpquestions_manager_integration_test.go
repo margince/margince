@@ -14,6 +14,7 @@ package compose
 // prose with a test around it.
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -30,13 +31,27 @@ func seedClosedOwnedDeal(
 	t *testing.T, e *forecastEnv, name string, amountMinor int64, status, source, lostReason string, owner ids.UUID,
 ) {
 	t.Helper()
+	seedClosedDealAgo(t, e, name, amountMinor, status, "0 days", owner, source, lostReason)
+}
+
+// seedClosedDealAgo is seedClosedOwnedDeal closed an interval ago, such as
+// "3 months", which always lands in the previous quarter.
+func seedClosedDealAgo(
+	t *testing.T, e *forecastEnv, name string, amountMinor int64, status, ago string, owner ids.UUID,
+	sourceAndReason ...string,
+) {
+	t.Helper()
+	source, lostReason := "manual", "went elsewhere"
+	if len(sourceAndReason) == 2 {
+		source, lostReason = sourceAndReason[0], sourceAndReason[1]
+	}
 	e.seedID(t, `INSERT INTO deal
 		(id, name, pipeline_id, stage_id, owner_id, amount_minor, currency, status, closed_at,
 		 fx_rate_to_base, fx_rate_date, lost_reason, expected_close_date, source, captured_by)
-		VALUES ($1, $2, $3, $4, $5, $6, 'EUR', $7::text, now(), 1, current_date,
+		VALUES ($1, $2, $3, $4, $5, $6, 'EUR', $7::text, now() - $10::interval, 1, current_date,
 		        CASE WHEN $7::text = 'lost' THEN $9::text END,
 		        (now() + interval '30 days')::date, $8, 'human:x')`,
-		name, e.pipeline, e.stages[pipelineTestStage], owner, amountMinor, status, source, lostReason)
+		name, e.pipeline, e.stages[pipelineTestStage], owner, amountMinor, status, source, lostReason, ago)
 }
 
 // M08 — win rate by deal COUNT and by VALUE, this quarter.
@@ -60,10 +75,16 @@ func proveM08WinRateByCountAndValue(t *testing.T) {
 	for range 5 {
 		seedClosedOwnedDeal(t, e, "Large loss", 60_000, "lost", "manual", "went elsewhere", e.Rep1)
 	}
+	// Last quarter's results, which "this quarter" must leave out.
+	for range 5 {
+		seedClosedDealAgo(t, e, "Old win", 10_000, "won", "3 months", e.Rep1)
+		seedClosedDealAgo(t, e, "Old loss", 60_000, "lost", "3 months", e.Rep1)
+	}
 
-	got, err := askTool(e.wideLensCtx(e.Rep1), t, e,
+	got, err := askTool(e.wideLensCtx(e.Rep1), t, e, fmt.Sprintf(
 		`{"entity":"win-loss","group_by":["status"],"measures":[`+
-			`{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_base_minor","as":"value"}]}`)
+			`{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_base_minor","as":"value"}],`+
+			`"filters":[{"field":"period_quarter","op":"eq","value":%q}]}`, e.currentQuarter(t)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -266,13 +287,20 @@ func proveM07StuckDealsUseTheSharedRule(t *testing.T) {
 		        now() - interval '90 days', now() - interval '90 days')`,
 		e.pipeline, e.stages[pipelineTestStage], e.Rep1)
 	e.seedOpenDeal(t, "Fresh", pipelineTestStage, &e.Rep1, &amount, nil)
+	// Idle as long, but deferred to a date ahead: that is an agreed next step.
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, amount_minor,
+		currency, status, expected_close_date, source, captured_by, created_at, updated_at, wait_until)
+		VALUES ($1, 'Waiting on legal', $2, $3, $4, 50000, 'EUR', 'open',
+		        (now() + interval '30 days')::date, 'manual', 'human:x',
+		        now() - interval '90 days', now() - interval '90 days', now() + interval '14 days')`,
+		e.pipeline, e.stages[pipelineTestStage], e.Rep1)
 
 	result := e.runReport(e.wideLensCtx(e.Rep1), t, "deals-by-stage",
 		`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"count","as":"deals"}],`+
 			`"filters":{"stalled":true}}`)
 	row := dealsByStageRow(t, result, e.stages[pipelineTestStage].String())
 	if got := wireInt(t, row, "deals"); got != 1 {
-		t.Errorf("stalled deals = %d, want 1 — the fresh deal is not stuck, and a rule that "+
-			"counted it would flag every deal a rep opened this morning", got)
+		t.Errorf("stalled deals = %d, want 1 — a fresh deal and a deal deferred to a later date "+
+			"are not stuck, and a rule that counted either would flag work with a next step", got)
 	}
 }

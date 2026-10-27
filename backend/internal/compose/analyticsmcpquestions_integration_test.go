@@ -74,6 +74,15 @@ var caseSurfaces = map[string]string{
 	"M08": "run_analytics_query",
 	"M11": "run_analytics_query",
 	"M12": "run_analytics_query",
+	"M01": "run_analytics_query",
+	"M02": "run_analytics_query",
+	"M03": "run_analytics_query",
+	"M09": "run_analytics_query",
+	"M10": "run_analytics_query",
+	"G04": "run_analytics_query",
+	"G08": "run_analytics_query",
+	"G10": "run_analytics_query",
+	"G11": "run_analytics_query",
 }
 
 // canonicalCases maps each corpus id to its executable proof.
@@ -89,6 +98,15 @@ func canonicalCases() map[string]func(t *testing.T) {
 		"M08": proveM08WinRateByCountAndValue,
 		"M11": proveM11LossReasonsByRecordedReason,
 		"M12": proveM12WonRevenueByLeadSource,
+		"M01": proveM01ForecastByCategory,
+		"M02": proveM02PipelineByCloseMonth,
+		"M03": proveM03SlippedCommittedDeals,
+		"M09": proveM09OwnerWithMostPipeline,
+		"M10": proveM10WinsByRepThisQuarter,
+		"G04": proveG04OwnWinsAndLossesThisMonth,
+		"G08": proveG08WonThisQuarterVersusLast,
+		"G10": proveG10CustomersWithMostOpenDeals,
+		"G11": proveG11LeadsByStatus,
 	}
 }
 
@@ -293,30 +311,34 @@ func proveM04OneRowPerStage(t *testing.T) {
 	}
 }
 
-// M06: Which stages are taking longer than normal? The statistic under it —
-// a percentile — answers null below the five-value sample floor, beside an
-// honest count: four values do not make a median, and Postgres computing one
-// anyway is exactly why the refusal is rendered into the SQL.
+// M06: Which stages are taking longer than normal? The statistic under it is
+// a median of days in the current stage. Four deals are withheld whole, with no
+// count or median to read, because four values do not make a typical one.
 func proveM06MedianUnderTheFloor(t *testing.T) {
 	e := setupForecast(t)
-	amount := int64(100_000)
-	for i := range 6 {
-		priced := &amount
-		if i >= 4 {
-			priced = nil // two unpriced deals: six rows, four values
+	askMedian := func() map[string]any {
+		got, err := askTool(e.ownLensRepCtx(e.Rep1), t, e, `{"entity":"stage-age","measures":[
+			{"fn":"count","as":"deals"},{"fn":"median","field":"days_in_stage","as":"typical"}]}`)
+		if err != nil {
+			t.Fatal(err)
 		}
-		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, priced, nil)
+		return toolRow(t, got.Rows[0])
 	}
-	got, err := askTool(e.ownLensRepCtx(e.Rep1), t, e, `{"entity":"pipeline-current","measures":[
-		{"fn":"count","as":"deals"},{"fn":"median","field":"amount_base_minor","as":"typical"}]}`)
-	if err != nil {
-		t.Fatal(err)
+	seedAged := func(n int) {
+		for range n {
+			e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id,
+					expected_close_date, source, captured_by, created_at)
+				VALUES ($1, 'Aged', $2, $3, $4, (now() + interval '30 days')::date, 'manual',
+				        'human:x', now() - interval '20 days')`, e.pipeline, e.stages[20], e.Rep1)
+		}
 	}
-	row := toolRow(t, got.Rows[0])
-	if row["deals"] != float64(6) {
-		t.Errorf("counted %v deals, want 6", row["deals"])
+	seedAged(4)
+	row := askMedian()
+	if row["_withheld"] != true || row["deals"] != nil || row["typical"] != nil {
+		t.Errorf("four deals answered %v, want the row withheld", row)
 	}
-	if row["typical"] != nil {
-		t.Errorf("a median over four values answered %v, want null beside the count", row["typical"])
+	seedAged(2)
+	if row := askMedian(); row["deals"] != float64(6) || row["typical"] != float64(20) {
+		t.Errorf("six deals answered %v, want a count of 6 and a median of 20 days", row)
 	}
 }
