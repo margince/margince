@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { StoryProviders, stubWithSession } from "../../testing/story-utils";
-import { automaticDateReceipt } from "../../testing/worklist.receiptreview.fixtures";
-import { ReceiptUndo } from "./worklist.receiptundo";
+import { StoryProviders, stubWithSession } from "../testing/story-utils";
+import { automaticDateReceipt } from "../testing/worklist.receiptreview.fixtures";
+import { ReceiptUndo } from "./receiptundo";
 
 const meta: Meta<typeof ReceiptUndo> = {
   title: "Records/Worklist/Undo correction",

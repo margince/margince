@@ -2,12 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { StoryProviders, stubWithSession } from "../../testing/story-utils";
+import { StoryProviders, stubWithSession } from "../testing/story-utils";
 import {
   automaticDateReceipt,
   automaticStageReceipt,
-} from "../../testing/worklist.receiptreview.fixtures";
-import { ReceiptReview } from "./worklist.receiptreview";
+} from "../testing/worklist.receiptreview.fixtures";
+import { ReceiptReview } from "./receiptreview";
 
 const meta: Meta<typeof ReceiptReview> = {
   title: "Records/Worklist/Review applied changes",

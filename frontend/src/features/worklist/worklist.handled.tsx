@@ -21,6 +21,7 @@
 // checked. It wears the team board's chrome for the same reason every other
 // panel here does: one shape, so a reader learns it once.
 
+import { ReceiptReview } from "../../components/receiptreview";
 import { Disclosure } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -34,7 +35,6 @@ import { subjectHref } from "./worklist.copy";
 import { AFTER_THE_DAY } from "./worklist.layout";
 import { type Receipt, useHandledForYou } from "./worklist.queries";
 import { receiptBasis, receiptSummary } from "./worklist.receiptcopy";
-import { ReceiptReview } from "./worklist.receiptreview";
 
 export function HandledForYouPanel() {
   const t = useT();
