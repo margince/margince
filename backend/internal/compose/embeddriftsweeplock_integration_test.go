@@ -11,7 +11,9 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"log/slog"
+	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,6 +24,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 func seedSweepRow(ctx context.Context, t *testing.T, pool *pgxpool.Pool, state string) int64 {
@@ -102,5 +106,48 @@ func TestADriftSweepTickNamesNoUniquenessSoADeadRowCannotAbsorbIt(t *testing.T) 
 	opts := periodicInsertOpts(EmbedDriftSweepArgs{})
 	if opts.UniqueOpts.ByArgs || len(opts.UniqueOpts.ByState) != 0 {
 		t.Errorf("the drift sweep tick dedupes over %v, so a dead running row would absorb every later tick", opts.UniqueOpts.ByState)
+	}
+}
+
+// poisonedPool answers a pool whose only idle connection the server has
+// already ended. The client learns that on first use, as it would after a
+// failover, so the statement fails after Acquire has succeeded.
+func poisonedPool(t *testing.T, e *integration.Env) *pgxpool.Pool {
+	t.Helper()
+	ctx := context.Background()
+	pool, err := testdb.OwnPool(ctx, os.Getenv("MARGINCE_TEST_APP_DSN"))
+	if err != nil {
+		t.Fatalf("opening a pool of its own: %v", err)
+	}
+	t.Cleanup(pool.Close)
+	var pid int
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		t.Fatalf("acquiring the connection to end: %v", err)
+	}
+	if err := conn.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
+		t.Fatalf("reading its backend pid: %v", err)
+	}
+	conn.Release()
+	if _, err := e.Pool.Exec(ctx, `SELECT pg_terminate_backend($1)`, pid); err != nil {
+		t.Fatalf("ending the idle connection: %v", err)
+	}
+	return pool
+}
+
+func TestAHoldOnADeadConnectionFailsInsteadOfReadingAsAHeldLock(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := context.Background()
+
+	release, held, err := holdSessionLock(ctx, poisonedPool(t, e), embedDriftSweepLock, slog.Default())
+	if err == nil || held || release != nil {
+		t.Fatalf("hold = held %v, err %v; want a refusal, because a failed lock query is not a held lock", held, err)
+	}
+	if _, err := takeResetLock(ctx, poisonedPool(t, e), slog.Default()); err == nil || errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("a reset lock on a dead connection answered %v, want a failure that is not a conflict", err)
+	}
+	w := &embedDriftSweepWorker{pool: poisonedPool(t, e), log: slog.Default()}
+	if err := w.Work(ctx, &river.Job[EmbedDriftSweepArgs]{JobRow: &rivertype.JobRow{ID: 1, Kind: EmbedDriftSweepArgs{}.Kind()}}); err == nil {
+		t.Fatal("a sweep that could not ask for its lock answered nil, so River would record it as done")
 	}
 }

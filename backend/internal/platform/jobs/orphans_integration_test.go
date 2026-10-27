@@ -57,3 +57,11 @@ func TestDiscardOrphanedRunsClosesOtherRunningRowsOfTheKindOnly(t *testing.T) {
 		}
 	}
 }
+
+func TestDiscardOrphanedRunsReportsADatabaseFailure(t *testing.T) {
+	_, pool := migratedAppPool(t)
+	pool.Close()
+	if _, err := jobs.DiscardOrphanedRuns(t.Context(), pool, "orphan_test_kind", 1); err == nil {
+		t.Fatal("a closed pool answered nil, so a failed discard would read as nothing to discard")
+	}
+}
