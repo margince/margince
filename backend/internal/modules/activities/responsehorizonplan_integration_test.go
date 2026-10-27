@@ -151,8 +151,9 @@ func checkHorizonPlan(t *testing.T, shape mailboxShape) {
 		if alias == "answer_mail" && n.IndexName == "idx_activity_kind" {
 			kindIndexUnderCounterpartyArm++
 		}
-		if alias == "answer_mail" && n.IndexName == "idx_activity_answer_mail" &&
-			strings.Contains(n.IndexCond, "counterparty_email") && strings.Contains(n.IndexCond, "kind") {
+		if alias == "answer_mail" && n.IndexName == "idx_activity_answer_mail_subject" &&
+			strings.Contains(n.IndexCond, "counterparty_email") && strings.Contains(n.IndexCond, "kind") &&
+			strings.Contains(n.IndexCond, "regexp_replace") {
 			addressIndexBoundsKind++
 		}
 		// A heap scan of activity under the touch alias, or an index read keyed
@@ -170,14 +171,14 @@ func checkHorizonPlan(t *testing.T, shape mailboxShape) {
 		t.Errorf("the thread answer arm is planned %d times, want once — the measurement runs every answer check twice per message", seen["answer_thread"])
 	}
 	if addressIndexBoundsKind == 0 {
-		t.Errorf("no answer arm reads idx_activity_answer_mail keyed on the sender's address and the kind: the address falls to a join filter and every message reads every later attested mail of the installation")
+		t.Errorf("no answer arm reads idx_activity_answer_mail_subject keyed on the sender's address, the kind and the normalised subject: each message reads every later attested mail to its sender and normalises each subject")
 	}
 	if touchRangedOnTime != 0 {
 		t.Errorf("a touch arm reads activity %d times by something other than the linked id: it walks every later call and meeting of the installation for each message, where the sender's contact bounds it",
 			touchRangedOnTime)
 	}
 	if kindIndexUnderCounterpartyArm != 0 {
-		t.Errorf("the same-subject arm reads idx_activity_kind %d times: it walks every later email of the installation for each message, where idx_activity_answer_mail bounds it",
+		t.Errorf("the same-subject arm reads idx_activity_kind %d times: it walks every later email of the installation for each message, where idx_activity_answer_mail_subject bounds it",
 			kindIndexUnderCounterpartyArm)
 	}
 }

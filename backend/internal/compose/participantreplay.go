@@ -38,6 +38,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -168,10 +169,7 @@ func selectReplayCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]replay
 		       coalesce(a.counterparty_outbound_attested, false),
 		       `+stampedMailboxLabelSQL+`
 		  FROM activity a
-		  JOIN raw_capture rc
-		    ON rc.id = a.raw_capture_id
-		    OR (a.raw_capture_id IS NULL
-		        AND rc.source_system = a.source_system AND rc.source_id = a.source_id)
+		  JOIN raw_capture rc ON `+storekit.StoredOriginalSQL("a", "rc")+`
 		 WHERE a.archived_at IS NULL
 		   AND a.source_system <> ''
 		   AND a.captured_by LIKE 'connector:%'

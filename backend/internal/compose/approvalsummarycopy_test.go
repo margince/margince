@@ -34,7 +34,6 @@ var approvalSummaryHoles = map[string][]string{
 	"siteLeadFound":                {"%s", "%s", "%s"},
 	"enrichmentOf":                 {"%s"},
 	"contractEndedMove":            {"%s", "%s"},
-	"overwriteHumanEdited":         {"%s", "%s"},
 	"linkedInLooksLike":            {"%s", "%s", "%s"},
 	"vcardResemblesContact":        {"%s"},
 	"vcardReadFromPhoto":           {"%s"},

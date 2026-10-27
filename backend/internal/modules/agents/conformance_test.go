@@ -175,7 +175,7 @@ func (inertRetriever) AssembleContext(context.Context, datasource.EntityRef, ret
 func fullRegistry(t *testing.T) *Registry {
 	t.Helper()
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
-	RegisterCoreTools(r, nil, nil, nil, nil, nil, nil, nil)
+	RegisterCoreTools(r, nil, nil, nil, nil, nil, nil)
 	RegisterRecordSearchTool(r, nil, func(context.Context, RecordSearchQuery) (RecordSearchPage, error) {
 		return RecordSearchPage{}, nil
 	})

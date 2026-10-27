@@ -26,6 +26,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -280,9 +281,7 @@ func (s *PendingStore) PurgeRawCaptureTx(ctx context.Context, tx pgx.Tx, activit
 		DELETE FROM raw_capture r
 		 USING activity a
 		 WHERE a.id = ANY($1)
-		   AND (r.id = a.raw_capture_id
-		        OR (a.raw_capture_id IS NULL
-		            AND r.source_system = a.source_system AND r.source_id = a.source_id))`,
+		   AND `+storekit.StoredOriginalSQL("a", "r"),
 		activityIDs); err != nil {
 		return fmt.Errorf("capture: purging the redacted message's provider originals: %w", err)
 	}
