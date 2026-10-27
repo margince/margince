@@ -11,6 +11,7 @@ import { Button, Radio } from "./atoms";
 import { ChipValueList } from "./listfiltervalues";
 import { Menu } from "./listmenu";
 import type { FilterRowSegment, ListChip } from "./listsurface.dials";
+import "./listtable.css";
 
 /**
  * The one Filter trigger: a searchable list of the attributes not yet
