@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
@@ -83,11 +84,10 @@ func TestADriftSweepWhoseWorkerDiedDoesNotBlockTheNextOrLeaveItsRowRunning(t *te
 
 	var killed int
 	if err := e.Pool.QueryRow(ctx, `
-		SELECT count(*) FROM (
-		  SELECT pg_terminate_backend(pid, 5000) FROM pg_locks
-		  WHERE locktype = 'advisory' AND granted AND objsubid = 1
-		    AND ((classid::bigint << 32) | (objid::bigint & 4294967295)) = hashtextextended($1, 0)
-		) AS ended`, embedDriftSweepLock).Scan(&killed); err != nil || killed != 1 {
+		SELECT count(*) FILTER (WHERE pg_terminate_backend(pid, 5000))
+		FROM pg_locks
+		WHERE locktype = 'advisory' AND granted AND objsubid = 1
+		  AND ((classid::bigint << 32) | (objid::bigint & 4294967295)) = hashtextextended($1, 0)`, embedDriftSweepLock).Scan(&killed); err != nil || killed != 1 {
 		t.Fatalf("ending the holder's connection: ended=%d err=%v", killed, err)
 	}
 
@@ -115,7 +115,13 @@ func TestADriftSweepTickNamesNoUniquenessSoADeadRowCannotAbsorbIt(t *testing.T) 
 func poisonedPool(t *testing.T, e *integration.Env) *pgxpool.Pool {
 	t.Helper()
 	ctx := context.Background()
-	pool, err := testdb.OwnPool(ctx, os.Getenv("MARGINCE_TEST_APP_DSN"))
+	cfg, err := database.PoolConfig(os.Getenv("MARGINCE_TEST_APP_DSN"))
+	if err != nil {
+		t.Fatalf("parsing the pool config: %v", err)
+	}
+	// A pinging pool would notice the dead connection and replace it.
+	cfg.ShouldPing = func(context.Context, pgxpool.ShouldPingParams) bool { return false }
+	pool, err := testdb.OwnPoolFromConfig(ctx, cfg)
 	if err != nil {
 		t.Fatalf("opening a pool of its own: %v", err)
 	}
