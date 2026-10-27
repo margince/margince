@@ -44,3 +44,34 @@ func TestAReminderNamesItsAssigneeOnlyWhereThatIsTheReach(t *testing.T) {
 		t.Errorf("an unassigned reminder names %d members, want none", len(unassigned))
 	}
 }
+
+// A reminder already agreeing with its mail is left alone.
+//
+// The consumer runs on every audience event, so most calls concern a mail
+// whose reminder already agrees. Moving it anyway would write an audit row
+// for a change that did not happen.
+func TestAReminderAgreeingWithItsMailIsLeftAlone(t *testing.T) {
+	selected := string(crmcontracts.ActivityAudienceSelected)
+	workspace := string(crmcontracts.ActivityAudienceWorkspace)
+
+	for _, c := range []struct {
+		name   string
+		shared bool
+		stored string
+		want   string
+		move   bool
+	}{
+		{"workspace mail, workspace reminder", true, workspace, workspace, false},
+		{"limited mail, narrowed reminder", false, selected, selected, false},
+		{"mail opened since filing", true, selected, workspace, true},
+		{"mail narrowed since filing", false, workspace, selected, true},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			want, move := reminderMove(c.shared, c.stored)
+			if want != c.want || move != c.move {
+				t.Errorf("reminderMove(%t, %q) = %q, %t; want %q, %t",
+					c.shared, c.stored, want, move, c.want, c.move)
+			}
+		})
+	}
+}

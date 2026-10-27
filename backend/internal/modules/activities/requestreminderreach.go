@@ -41,7 +41,6 @@ func RecomputeRequestReminderReachTx(ctx context.Context, tx pgx.Tx, source ids.
 	if err != nil {
 		return err
 	}
-	want := reminderReach(shared)
 	var reminder ids.UUID
 	var stored string
 	var assignee *ids.UUID
@@ -56,7 +55,8 @@ func RecomputeRequestReminderReachTx(ctx context.Context, tx pgx.Tx, source ids.
 		}
 		return fmt.Errorf("activities: reading the reminder of %s: %w", source, err)
 	}
-	if stored == want {
+	want, move := reminderMove(shared, stored)
+	if !move {
 		return nil
 	}
 	return writeReminderReachTx(ctx, tx, reminder, stored, want, assignee)
@@ -100,6 +100,17 @@ func writeReminderReachTx(
 	return storekit.EmitEvent(ctx, tx, auditID, reminder, crmcontracts.PublicEventActivityUpdated{
 		ChangedFields: crmcontracts.PublicEventActivityChangedFields{Audience: &audience},
 	})
+}
+
+// reminderMove is the reach a reminder should carry for its mail, and whether
+// that differs from the reach it carries now.
+//
+// A reminder already agreeing with its mail is left alone, so a recompute that
+// changes nothing writes no audit row. The consumer runs on every audience
+// event, and most of them concern a mail whose reminder already agrees.
+func reminderMove(mailShared bool, stored string) (string, bool) {
+	want := reminderReach(mailShared)
+	return want, want != stored
 }
 
 // reminderReach is the audience a reminder carries for a mail that is, or is
