@@ -66,8 +66,8 @@ function restingStage(steps: readonly StageStep[]): number {
 }
 
 /**
- * How far the run scrolls to rest on a rung: centred when it fits between the
- * two ends' fades, else its start just past the start fade, where a name reads.
+ * How far the run scrolls to rest on a rung. A rung that fits between the two
+ * fades is centred. A wider one rests its start just past the start fade.
  */
 function restingShift(rungBox: DOMRect, scroller: HTMLElement): number {
   const runBox = scroller.getBoundingClientRect();

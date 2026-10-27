@@ -90,7 +90,7 @@ function BoardList() {
   );
 }
 
-// A search whose only matches sit in the last stage: once the rows answer it,
+// A search whose only matches sit in the last stage. Once the rows answer it,
 // the board says where they are and scrolls that stage in.
 export const SearchAnsweredOffScreen: Story = {
   render: () => (

@@ -142,8 +142,8 @@ export function useNumericFloors(
       setFloors(NO_FLOORS);
     }
   });
-  // Forgotten as well as stopped, so a remount (Strict Mode runs one) watches
-  // the same table again instead of taking the stopped watch for a live one.
+  // Forgotten as well as stopped. A remount, which Strict Mode runs, then
+  // watches the table again instead of trusting a stopped watch.
   useLayoutEffect(
     () => () => {
       watched.current?.stop();

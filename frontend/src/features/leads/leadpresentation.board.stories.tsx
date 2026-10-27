@@ -12,8 +12,8 @@ import {
 } from "../../testing/story-utils";
 import { LeadBoard } from "./leadpresentation.board";
 
-// A German board: a built-in origin reads in the reader's language, not as the
-// stored English label, and a column holding one lead counts it in the singular.
+// A German board. A built-in origin reads in the reader's language, not as the
+// stored English label. A column holding one lead counts it in the singular.
 const meta: Meta = {
   title: "Records/Leads/Board cards",
   parameters: { layout: "padded" },
