@@ -53,6 +53,25 @@ describe("a press that takes its own button away", () => {
     await pressAndExpectFocused("Clear filters", "Products");
   });
 
+  it("hands focus to the list's own title before its panel's", async () => {
+    render(
+      <Panel title="Products">
+        <ListTableHarness title="Contacts" fetchPage={fetchPage} />
+      </Panel>,
+    );
+    await pressAndExpectFocused("Clear filters", "Contacts");
+  });
+
+  it("hands focus to the search box of a list with no title and no panel", async () => {
+    window.location.hash = "#/contacts?q=zzz";
+    const user = userEvent.setup();
+    render(<ListTableHarness fetchPage={fetchPage} />);
+    await user.click(
+      await screen.findByRole("button", { name: "Clear filters" }),
+    );
+    expect(screen.getByRole("searchbox", { name: "Search" })).toHaveFocus();
+  });
+
   it("hands focus to the list's title from Show all", async () => {
     window.location.hash = "#/contacts?owner_id=u-1";
     render(

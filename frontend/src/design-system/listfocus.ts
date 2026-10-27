@@ -4,15 +4,15 @@
 import { type RefObject, useLayoutEffect, useRef } from "react";
 import { useFocusHandoff } from "./focushandoff";
 
-// A press can take its own control away. Focus then lands on the list's title,
-// else the title of the section around it; a scroll box only once it is named.
+// A press can take its own control away. Focus then lands on the first named
+// thing that stays: the list's title, its Panel's title, its search box.
 function listLanding(from: Element | null): HTMLElement | null {
   const list = from?.closest(".lt");
-  const section = from?.closest("section[aria-labelledby]");
-  const sectionTitle = section?.getAttribute("aria-labelledby");
+  const panel = from?.closest(".panel");
   return (
     list?.querySelector<HTMLElement>(".lt-title") ??
-    (sectionTitle ? document.getElementById(sectionTitle) : null) ??
+    panel?.querySelector<HTMLElement>(":scope > .panel-head > .panel-title") ??
+    list?.querySelector<HTMLElement>(".lt-search-input") ??
     list?.querySelector<HTMLElement>(".lt-scroll[role]") ??
     null
   );
