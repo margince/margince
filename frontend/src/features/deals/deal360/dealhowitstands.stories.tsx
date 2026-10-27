@@ -218,7 +218,7 @@ export const Drifting: Story = {
 export const DriftingDark: Story = { ...Drifting, globals: { theme: "dark" } };
 
 /**
- * A deal won while the last reading still had it drifting: the outcome heads
+ * A deal won while the last reading still had it drifting. The outcome heads
  * the card, and only who sat on the deal stays beside it.
  */
 export const Won: Story = {

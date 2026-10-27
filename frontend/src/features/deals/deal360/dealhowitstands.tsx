@@ -98,8 +98,8 @@ export function DealHowItStands({
 
 /**
  * Won and lost are final, so a closed deal heads the card with its outcome and
- * the day it came, whatever the last reading of the open deal said. A lost
- * deal says why under it. An open deal has no outcome to head with.
+ * the day it came. That holds whatever the last reading of the open deal said.
+ * A lost deal says why under it. An open deal has no outcome to head with.
  */
 export function closedVerdict(
   deal: Pick<Deal, "status" | "closed_at" | "lost_reason">,
