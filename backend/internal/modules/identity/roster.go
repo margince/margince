@@ -4,7 +4,7 @@
 package identity
 
 // The workspace roster reads (A52 sharing needs a subject picker + name
-// resolution): flat, row-scoped member/team lists, active seats only.
+// resolution): flat, row-scoped member/team lists, active seats by default.
 // Keyset-paginated like every other list surface (storekit.EncodeCursor/
 // DecodeCursor + ClampLimit) — the roster can grow past one page, unlike
 // ListRecordGrants. The q filter and the unfiltered read are two fixed,
@@ -43,12 +43,9 @@ type ListUsersInput struct {
 	// place, because two ways to spell one authorization decision is how the
 	// two come to disagree.
 	IncludeInactive bool
-	// IncludeInvited widens the roster to invited seats for any member.
-	//
-	// Deprecated: naming the owners a record points at is SeatNames, which
-	// answers id and display name alone; a roster row carries the member's
-	// email and seat status with it. The pickers leave it off, so the default
-	// stays the list of members who can open what they are given.
+	// IncludeInvited widens the roster to invited seats for any member. The
+	// responsibility picker asks for it, because an invited colleague may be
+	// given work before their first sign-in. Each row carries its status.
 	IncludeInvited bool
 	// Actor is the human asking, when one is. The management view carries each
 	// member's allowed actions for a human caller only, because every member
@@ -138,17 +135,20 @@ var listUsersQuery = `
 	ORDER BY created_at, id
 	LIMIT $4`
 
+// memberMatchesQ is the roster search over $2: name or email, with the
+// diacritics folded on both sides, so "Thắng" finds "Thang" and the reverse.
+const memberMatchesQ = `(f_unaccent(display_name) ILIKE f_unaccent($2) OR f_unaccent(email) ILIKE f_unaccent($2))`
+
 var listUsersFilteredQuery = `
 	SELECT ` + userColumns + `
 	FROM app_user
 	WHERE ` + LiveMemberSQL("") + `
-	  AND (display_name ILIKE $2 OR email ILIKE $2)
+	  AND ` + memberMatchesQ + `
 	  AND ($3::timestamptz IS NULL OR (created_at, id) > ($3, $4))
 	ORDER BY created_at, id
 	LIMIT $5`
 
-// The live members plus the invited seats, for the deprecated include_invited.
-// Naming an id is SeatNames. See ListUsersInput.IncludeInvited.
+// The live members plus the invited seats. See ListUsersInput.IncludeInvited.
 var listUsersInvitedQuery = `
 	SELECT ` + userColumns + `
 	FROM app_user
@@ -161,7 +161,7 @@ var listUsersInvitedFilteredQuery = `
 	SELECT ` + userColumns + `
 	FROM app_user
 	WHERE ` + ActivatableMemberSQL("") + `
-	  AND (display_name ILIKE $2 OR email ILIKE $2)
+	  AND ` + memberMatchesQ + `
 	  AND ($3::timestamptz IS NULL OR (created_at, id) > ($3, $4))
 	ORDER BY created_at, id
 	LIMIT $5`
@@ -180,7 +180,7 @@ var listUsersAllFilteredQuery = `
 	SELECT ` + userColumns + `
 	FROM app_user
 	WHERE archived_at IS NULL AND removed_at IS NULL
-	  AND (display_name ILIKE $2 OR email ILIKE $2)
+	  AND ` + memberMatchesQ + `
 	  AND ($3::timestamptz IS NULL OR (created_at, id) > ($3, $4))
 	ORDER BY created_at, id
 	LIMIT $5`
@@ -372,7 +372,7 @@ var listTeamsQuery = `
 
 var listTeamsFilteredQuery = `
 	SELECT ` + teamColumns + teamFromJoin + `
-	WHERE t.archived_at IS NULL AND t.name ILIKE $1
+	WHERE t.archived_at IS NULL AND f_unaccent(t.name) ILIKE f_unaccent($1)
 	  AND ($2::timestamptz IS NULL OR (t.created_at, t.id) > ($2, $3))
 	GROUP BY t.id
 	ORDER BY t.created_at, t.id

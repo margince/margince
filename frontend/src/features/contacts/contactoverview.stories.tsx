@@ -373,3 +373,28 @@ export const PromiseOverdue: Story = {
     );
   },
 };
+
+export const PromiseWithUnavailableCapture: Story = {
+  render: () => {
+    const view: View = {
+      ...promised,
+      mail_coverage: {
+        channel: "email",
+        state: "unavailable",
+        interval_to: promised.as_of,
+        evaluated_at: promised.as_of,
+      },
+    };
+    install(view);
+    return (
+      <StoryProviders>
+        <ContactOverview
+          view={view}
+          onAction={() => undefined}
+          onOpenEmail={() => undefined}
+          onOpenTab={() => undefined}
+        />
+      </StoryProviders>
+    );
+  },
+};

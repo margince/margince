@@ -2,8 +2,18 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
-import { Button, TextInput } from "../../design-system/atoms";
+import { Button } from "../../design-system/atoms";
+import {
+  DateInput,
+  type ISODate,
+  isoOrBlank,
+} from "../../design-system/dateinput";
 import { Popover } from "../../design-system/popover";
+import {
+  type ClockTime,
+  clockOrBlank,
+  TimeInput,
+} from "../../design-system/timeinput";
 import { localDateTimeValue } from "../../format/calendarday";
 import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
@@ -42,10 +52,11 @@ export function RescheduleMenu({
   const t = useT();
   const { locale } = useLocale();
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState("");
+  const [day, setDay] = useState<ISODate | "">("");
+  const [time, setTime] = useState<ClockTime | "">("");
   // Empty or unparseable yields neither field, and the wire requires both. The
   // button refuses rather than sending half a schedule the server would 422.
-  const fields = scheduleFields(draft);
+  const fields = scheduleFields(day && time ? `${day}T${time}` : "");
 
   const move = (at: string) => {
     onMove({ id: send.id, version: send.version, at });
@@ -59,7 +70,13 @@ export function RescheduleMenu({
       disabled={pending}
       open={open}
       onOpenChange={(next) => {
-        if (next) setDraft(localDateTimeValue(send.scheduled_at));
+        if (next) {
+          const [shownDay, shownTime] = localDateTimeValue(
+            send.scheduled_at,
+          ).split("T");
+          setDay(isoOrBlank(shownDay));
+          setTime(clockOrBlank(shownTime));
+        }
         setOpen(next);
       }}
       panelClassName="scheduledsends-menu"
@@ -87,11 +104,15 @@ export function RescheduleMenu({
         ))}
       </div>
       <div className="scheduledsends-custom">
-        <TextInput
-          type="datetime-local"
-          aria-label={t("sched.moveTo", { subject: send.subject })}
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
+        <DateInput
+          aria-label={t("sched.moveToDay", { subject: send.subject })}
+          value={day}
+          onChange={(event) => setDay(event.target.value)}
+        />
+        <TimeInput
+          aria-label={t("sched.moveToTime", { subject: send.subject })}
+          value={time}
+          onChange={(event) => setTime(event.target.value)}
         />
         <Button
           variant="primary"

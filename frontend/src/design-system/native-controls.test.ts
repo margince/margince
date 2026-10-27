@@ -27,8 +27,9 @@
 // children to a control that no longer takes them. Catching only `<select>`
 // would call that tree clean.
 //
-// A native date field is the same hole: Chrome draws its face and calendar in the
-// browser's language, not the reader's. Its replacement is `DateInput`.
+// A native date or time field is the same hole: Chrome draws its face and picker
+// in the browser's language, not the reader's. The replacements are `DateInput`,
+// `TimeInput` and `MonthInput`.
 //
 // ## Why this is a parser and not a scanner
 //
@@ -138,20 +139,26 @@ const dateHosts = deriveDateHosts(
   ],
   notHosts,
 );
-const nativeDate = "date";
-const isDate = (values: string[]) =>
-  values.some((value) => value.toLowerCase() === nativeDate);
+// The input types the browser draws in its own language.
+const clockTypes = ["date", "time", "datetime-local", "month", "week"];
+const clockTypeOf = (values: string[]) =>
+  values
+    .map((value) => value.toLowerCase())
+    .find((value) => clockTypes.includes(value));
+const clockAlternation = clockTypes.join("|");
 const elementFactories = new Set(["createElement", "jsx", "jsxs", "jsxDEV"]);
 
 // Sound for the same reason as `prefilter`: a hit spells `type`, and its value
 // opens with a quote, backtick, `=` or space, or goes through a backslash escape.
-const dateValueStart = new RegExp(`[\\s"'\`=]${nativeDate}`, "i");
+const dateValueStart = new RegExp(`[\\s"'\`=](?:${clockAlternation})`, "i");
 const worthParsing = (text: string) =>
   prefilter.test(text) || (text.includes("type") && dateValueStart.test(text));
 
-// `<input … type="date">` built in a string; `type="datetime-local"` is not one.
-const dateMarkup =
-  /<input(?![a-zA-Z0-9._:-])[^>]*\stype\s*=\s*(?:"date"|'date'|date(?![\w-]))/gi;
+// `<input … type="date">`, or any other clock type, built in a string.
+const dateMarkup = new RegExp(
+  `<input(?![a-zA-Z0-9._:-])[^>]*\\stype\\s*=\\s*(?:"(${clockAlternation})"|'(${clockAlternation})'|(${clockAlternation})(?![\\w-]))`,
+  "gi",
+);
 
 // Tests and stories are scanned too: a test that drives a native control is a
 // test of the wrong control, and a story catalogues what we ship. Which files
@@ -233,11 +240,11 @@ function findNativeControls(path: string, text: string): string[] {
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
       const tag = intrinsic(node.tagName);
       if (tag) found.push(`${at(node)}: <${tag}>`);
-      if (
-        isDate(typeValues(node.attributes)) &&
-        namesHost(dateHosts, node.tagName)
-      ) {
-        found.push(`${at(node)}: <${renderedName(node.tagName)} type="date">`);
+      const clock = clockTypeOf(typeValues(node.attributes));
+      if (clock && namesHost(dateHosts, node.tagName)) {
+        found.push(
+          `${at(node)}: <${renderedName(node.tagName)} type="${clock}">`,
+        );
       }
     }
     // The same elements built without JSX: `createElement("input", props)`.
@@ -255,8 +262,9 @@ function findNativeControls(path: string, text: string): string[] {
         : tag && namesHost(dateHosts, tag)
           ? renderedName(tag)
           : undefined;
-      if (host && props && isDate(typeInObject(props))) {
-        found.push(`${at(node)}: <${host} type="date">`);
+      const clock = props ? clockTypeOf(typeInObject(props)) : undefined;
+      if (host && clock) {
+        found.push(`${at(node)}: <${host} type="${clock}">`);
       }
     }
     // A string's CONTENT is scanned, for the reason in the header: markup built
@@ -305,7 +313,10 @@ function findNativeControls(path: string, text: string): string[] {
         }
       }
       for (const m of cooked.matchAll(dateMarkup)) {
-        found.push(`${lineAt(m.index)}: <input type="date"> inside a string`);
+        const clock = (m[1] ?? m[2] ?? m[3] ?? "").toLowerCase();
+        found.push(
+          `${lineAt(m.index)}: <input type="${clock}"> inside a string`,
+        );
       }
     }
     ts.forEachChild(node, visit);
@@ -318,12 +329,12 @@ function findNativeControls(path: string, text: string): string[] {
   return [...new Set(found)];
 }
 
-describe("no product surface renders a browser-drawn dropdown or date field", () => {
+describe("no product surface renders a browser-drawn dropdown, date or time field", () => {
   // A generous timeout, stated rather than defaulted: this walks and parses the
   // whole tree, which is not a unit test's shape of work. The pre-filter above
   // is what keeps it near a second, and the timeout is the floor under a slower
   // runner — CI took 21s before the filter and timed out at 13s.
-  it("finds no native select, option, optgroup or date field", {
+  it("finds no native select, option, optgroup, date or time field", {
     timeout: 60_000,
   }, () => {
     const files = [
@@ -354,7 +365,8 @@ describe("no product surface renders a browser-drawn dropdown or date field", ()
       violations,
       "Use Select from src/design-system/select.tsx; see src/design-system/README.md. " +
         "In tests, drive it with pickOption from src/design-system/select-testing.ts. " +
-        "A date field is DateInput from src/design-system/dateinput.tsx, which a unit imports from @margince/frontend/design-system.",
+        "A date field is DateInput from src/design-system/dateinput.tsx, which a unit imports from @margince/frontend/design-system. " +
+        "A time field is TimeInput (timeinput.tsx) and a month field MonthInput (monthinput.tsx).",
     ).toEqual([]);
   });
 
@@ -381,11 +393,13 @@ describe("no product surface renders a browser-drawn dropdown or date field", ()
     }
   });
 
-  it("holds dateinput.tsx to the same rule as everything else", () => {
-    const path = join(srcDir, "design-system", "dateinput.tsx");
-    expect(existsSync(path)).toBe(true);
-    expect(findNativeControls(path, readFileSync(path, "utf8"))).toEqual([]);
-  });
+  for (const replacement of ["dateinput", "timeinput", "monthinput"]) {
+    it(`holds ${replacement}.tsx to the same rule as everything else`, () => {
+      const path = join(srcDir, "design-system", `${replacement}.tsx`);
+      expect(existsSync(path)).toBe(true);
+      expect(findNativeControls(path, readFileSync(path, "utf8"))).toEqual([]);
+    });
+  }
 
   it("holds select.tsx to the same rule as everything else", () => {
     // The file this gate points contacts AT is scanned like any other, and it
@@ -762,9 +776,33 @@ describe("the native-control detector sees what it claims to", () => {
       src: 'const a = <input type={kind === "date" ? "text" : "search"} />;',
     },
     {
-      name: "a date and time input, which is not a date field",
-      fires: false,
+      name: "a native date and time input",
+      fires: true,
       src: 'const a = <input type="datetime-local" />;',
+      expect: ['1: <input type="datetime-local">'],
+    },
+    {
+      name: "a TextInput of type time",
+      fires: true,
+      src: 'const a = <TextInput type="time" value={v} />;',
+      expect: ['1: <TextInput type="time">'],
+    },
+    {
+      name: "a native month input",
+      fires: true,
+      src: 'const a = <input type="month" />;',
+      expect: ['1: <input type="month">'],
+    },
+    {
+      name: "a time type spread from a const object",
+      fires: true,
+      src: 'const clock = { type: "time" } as const;\nconst a = <input {...clock} />;',
+      expect: ['2: <input type="time">'],
+    },
+    {
+      name: "a type that only starts like a clock type",
+      fires: false,
+      src: 'const a = <input type="timeline" />;',
     },
     {
       name: "a date attribute that is not the type",
@@ -783,8 +821,9 @@ describe("the native-control detector sees what it claims to", () => {
     },
     {
       name: "a date and time input built in a string",
-      fires: false,
+      fires: true,
       src: "const html = '<input type=\"datetime-local\">';",
+      expect: ['1: <input type="datetime-local"> inside a string'],
     },
   ];
 

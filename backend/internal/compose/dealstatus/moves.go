@@ -135,6 +135,7 @@ func (s *Service) CachedMoves(
 	if err := s.dropSettledFollowUps(ctx, out); err != nil {
 		return nil, fmt.Errorf("recheck the cached follow-ups: %w", err)
 	}
+	s.refreshMoveCoverage(ctx, out)
 	return out, nil
 }
 

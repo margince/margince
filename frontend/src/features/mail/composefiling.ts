@@ -359,6 +359,7 @@ export function useComposeRecords({
     recipientContact ?? "",
     open && recipientContact != null,
   );
+  // roster-failure: suggestions only; the To field still takes any address.
   const colleagues = useRoster("user", open && !isChannelReply);
   const anchorProject = useAnchorProject(entityType, entityId);
   // A project page's message is about that project, read as a record so the

@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/briefevidence"
+	"github.com/margince/margince/backend/internal/compose/mailcoverage"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -51,6 +52,7 @@ type Service struct {
 	activities     *activities.Store
 	rooms          *dealrooms.Store
 	seatsOf        SeatReader
+	mailCoverage   mailcoverage.Reader
 	lane           Completer
 	routingVersion string
 	now            func() time.Time
@@ -58,6 +60,9 @@ type Service struct {
 
 // NewService binds the reads. Each store carries its own gates.
 func NewService(pool *pgxpool.Pool, d *deals.Store, a *activities.Store, r *dealrooms.Store, now func() time.Time) *Service {
+	if now == nil {
+		now = time.Now
+	}
 	return &Service{pool: pool, deals: d, activities: a, rooms: r, now: now}
 }
 
@@ -88,7 +93,8 @@ type facts struct {
 	currentRequests []crmcontracts.Activity
 	// moreTasks says the open-task read was cut at its window, so the count
 	// is a floor rather than the number.
-	moreTasks bool
+	moreTasks    bool
+	mailCoverage *crmcontracts.MailCaptureCoverage
 	// nextMeeting is the soonest thing booked with the deal, asked of the
 	// database rather than taken off the timeline page: nil means nothing is
 	// booked at all, which the timeline could only ever suggest.
@@ -203,17 +209,22 @@ func (s *Service) cardAndTimeline(
 	verdict := s.decideFromCache(ctx, userID, dealID, fingerprint, policy.refresh, f.now)
 	if verdict.serve {
 		card := verdict.card
+		card.MailCoverage = f.mailCoverage
 		if current, ok := unansweredInbound(f); ok {
 			card.RequestBasis = requestBasis(f, current, basisCurrentRequest)
 		}
 		if card.Next != nil {
 			next := *card.Next
 			next.Basis = mv.Basis
+			next.MailCoverage = f.mailCoverage
 			card.Next = &next
 		}
 		return card, factActivities(f), nil
 	}
-	card, laneFailed := s.write(ctx, f, mv, in, verdict.askModel && !policy.factsOnly)
+	card, laneFailed := s.write(ctx, f, mv, in, verdict.askModel && !policy.factsOnly && humanCacheOwner(ctx))
+	if !humanCacheOwner(ctx) {
+		return card, factActivities(f), nil
+	}
 	if laneFailed {
 		// The lane was wired and did not answer: a timeout, a budget, an
 		// unparseable reply. The reader gets the floor, which is a working
@@ -392,6 +403,7 @@ func (s *Service) gather(ctx context.Context, dealID ids.DealID) (facts, error) 
 	if f.followUps, err = s.activities.MeetingsAwaitingFollowUpOnDeal(ctx, f.now, dealID.UUID); err != nil {
 		return facts{}, fmt.Errorf("deal status: reading the meetings owed a follow-up: %w", err)
 	}
+	s.gatherMailCoverage(ctx, &f)
 	if err := s.gatherRoom(ctx, dealID, &f); err != nil {
 		return facts{}, err
 	}
@@ -443,4 +455,10 @@ func actingUser(ctx context.Context) (ids.UserID, error) {
 			apperrors.ErrPermissionDenied)
 	}
 	return ids.From[ids.UserKind](p.UserID), nil
+}
+
+// An agent with different evidence must not replace the human's cached briefing.
+func humanCacheOwner(ctx context.Context) bool {
+	actor, ok := principal.Actor(ctx)
+	return ok && actor.Type == principal.PrincipalHuman
 }

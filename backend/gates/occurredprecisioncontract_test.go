@@ -65,6 +65,8 @@ var precisionlessTimes = gatekit.Waive(map[string]string{
 	"api/crm.yaml Automation.last_run_at":                    "when an automation last ran, the run's own instant",
 	"api/crm.yaml AutomationRun.occurred_at":                 "when an automation ran, the run's own instant",
 	"api/crm.yaml CaptureConnection.last_synced_at":          "when a mailbox sync last ran, the sync's own instant",
+	"api/crm.yaml CaptureConnection.last_success_at":         "when this mailbox last synced successfully, the observer's clock",
+	"api/crm.yaml MailCaptureCoverage.last_success_at":       "a successful sync checkpoint, not the time of a mail activity",
 	"api/crm.yaml CaptureSweepHealth.last_succeeded_at":      "when a capture pass last finished, the pass's own instant",
 	"api/crm.yaml CaptureTraceEntry.occurred_at":             "when capture logged a step, the trace row's own instant",
 	"api/crm.yaml ClaimEvidence.last_verified_at":            "when a human last confirmed a claim, that act's own instant",

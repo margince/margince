@@ -43,7 +43,7 @@ func (s *Store) CheckPartnerSetUp(ctx context.Context, companyID ids.CompanyID) 
 }
 
 func checkPartnerSetUp(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) error {
-	if err := requirePartnerWriteGrants(ctx); err != nil {
+	if err := requirePartnerWriteGrant(ctx); err != nil {
 		return err
 	}
 	if err := auth.EnsureWritable(ctx, tx, "company", companyID.UUID); err != nil {
@@ -59,14 +59,21 @@ func checkPartnerSetUp(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) 
 	return nil
 }
 
-// requirePartnerWriteGrants holds the two object grants a partner write takes.
-// Promotion adds `partner` to the company's relationship types, so the partner
-// grant alone must not become a side door onto companies.
-func requirePartnerWriteGrants(ctx context.Context) error {
-	if err := auth.Require(ctx, "partner", principal.ActionUpdate); err != nil {
-		return err
-	}
+// requirePartnerWriteGrant holds the grant every partner write takes. Promotion
+// adds `partner` to the company's relationship types, so a program is part of
+// the company and whoever may edit the company may run it.
+func requirePartnerWriteGrant(ctx context.Context) error {
 	return auth.Require(ctx, "company", principal.ActionUpdate)
+}
+
+// requireMarginTierGrant holds the partner grant on a write that sets or clears
+// the margin tier, because the tier prices every later commission. It reads the
+// clears the caller sent, before a set-up adds its own.
+func requireMarginTierGrant(ctx context.Context, in UpsertPartnerInput) error {
+	if in.MarginTier == nil && !slices.Contains(in.Cleared, partnerFieldMarginTier) {
+		return nil
+	}
+	return auth.Require(ctx, "partner", principal.ActionUpdate)
 }
 
 // asFreshProgram makes a set-up start from the column defaults even when it

@@ -1576,7 +1576,7 @@ export const en = {
   "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",
 
   "brief.weekly.tasksCompleted": "Tasks completed",
-  "brief.weekly.noMeetings": "No meetings held",
+  "brief.weekly.noMeetings": "No meetings recorded",
   "brief.weekly.noLeads": "None received",
   "brief.weekly.noCommitments": "None due",
   "brief.weekly.basis":
@@ -2611,6 +2611,10 @@ export const en = {
   "partner.marginTier": "Margin tier",
   "partner.marginTierHint":
     "The share the partner earns on each won deal they sourced. Intro: they only introduced the client. Active collaboration: the deal was worked together. Partner closed: they sold it themselves. Leave it unset when their agreement pays differently.",
+  "partner.writeRefused":
+    "Your role cannot change this company’s partner program. Ask an admin.",
+  "partner.marginTierRefused":
+    "Your role cannot set the margin tier. Ask an admin.",
   "partner.stage": "Relationship stage",
   "partner.nextStep": "Next step",
   "partner.nextStepDue": "Next step due",
@@ -2721,6 +2725,8 @@ export const en = {
   // a destination.
   "ref.nameLoadFailed": "Name did not load",
   "ref.memberLeft": "{name} (left)",
+  "roster.failedUsers": "Colleagues did not load.",
+  "roster.failedTeams": "Teams did not load.",
   "owner.rosterFailed": "Colleagues did not load. Reload the page to pick one.",
   "ref.notInRoster": "Currently assigned (no longer in the user list)",
 
@@ -3188,13 +3194,15 @@ export const en = {
   "co.health.payment.paidOnTime_other":
     "{count} of {total} invoices paid on time",
   // The server's reason codes for the relationship and commercial ratings.
-  "co.health.reason.neverWritten": "No message from them and no meeting yet.",
-  "co.health.reason.quiet_one": "No reply and no meeting for {days} day.",
-  "co.health.reason.quiet_other": "No reply and no meeting for {days} days.",
+  "co.health.reason.neverWritten":
+    "No message from them or meeting is recorded.",
+  "co.health.reason.quiet_one": "No reply or meeting recorded for {days} day.",
+  "co.health.reason.quiet_other":
+    "No reply or meeting recorded for {days} days.",
   "co.health.reason.quietSince_one":
-    "No reply and no meeting since {at} ({days} day).",
+    "No reply or meeting recorded since {at} ({days} day).",
   "co.health.reason.quietSince_other":
-    "No reply and no meeting since {at} ({days} days).",
+    "No reply or meeting recorded since {at} ({days} days).",
   "co.health.reason.meetingBooked": "A meeting is booked for {at}.",
   "co.health.reason.lastMetToday": "Last met them today.",
   "co.health.reason.lastMet_one": "Last met them {days} day ago.",
@@ -3215,6 +3223,8 @@ export const en = {
   "co.health.reason.dealsNoneStalled_other":
     "{count} open deals, none stalled.",
   "company.partnerSetUp": "Set up partner program",
+  "company.partnerSetUpUnreadable":
+    "Your role cannot see partner programs. Ask an admin.",
   "signal.kind.stalled_deal": "Deal stalled",
   "signal.kind.champion_left": "Champion left",
   "signal.kind.reengagement": "Re-engagement",
@@ -3224,7 +3234,7 @@ export const en = {
   "signal.kind.contract_ended": "Contract ending",
   "signal.kind.new_opportunity": "New opportunity",
   "signal.kind.commitment_made": "Commitment made",
-  "signal.kind.ghosted_thread": "No reply",
+  "signal.kind.ghosted_thread": "No reply recorded",
   "signal.kind.project_gone_quiet": "Project gone quiet",
   "signal.kind.funding": "Funding",
   "signal.kind.leadership_change": "Leadership change",
@@ -3836,7 +3846,7 @@ export const en = {
   "co.ask.q.whats_changed": "What changed recently?",
   "co.ask.nothing": "No records you can access answer that question.",
   "co.ask.failed": "The question could not be answered. Retry.",
-  "co.suggest.kind.no_reply": "No reply",
+  "co.suggest.kind.no_reply": "No reply recorded",
   "co.suggest.kind.stalled_deal": "Stalled deal",
   "co.suggest.kind.no_next_step": "No next step",
   "co.suggest.kind.lifecycle_conflict": "Lifecycle conflict",
@@ -4275,7 +4285,7 @@ export const en = {
   "co.contacts.board.change": "Change role",
   "co.reach.waiting": "Needs reply",
   "co.reach.answered": "Answered",
-  "co.reach.silent": "No reply",
+  "co.reach.silent": "No reply recorded",
   "co.reach.lapsed": "Went quiet",
   "co.reach.untried": "Not contacted",
   "co.role.champion": "champion",
@@ -5144,6 +5154,9 @@ export const en = {
   "assignments.kindTeam": "Team",
   "assignments.who": "Who",
   "assignments.findColleague": "Find a colleague",
+  "assignments.invited": "Invited, not signed in yet",
+  "assignments.noColleagueFound":
+    "No colleague found. Only colleagues with a Margince account can be assigned. Ask an admin to invite them.",
   "assignments.findTeam": "Find a team",
   "assignments.role": "Role",
   "assignments.rolePlaceholder": "Pick a role",
@@ -6514,6 +6527,11 @@ export const en = {
   "calendar.patternMonth": "MM",
   "calendar.patternYear": "YYYY",
   "calendar.invalidDate": "Enter a date as {pattern}.",
+  "calendar.patternHour": "hh",
+  "calendar.patternMinute": "mm",
+  "calendar.invalidTime": "Enter a time as {pattern}.",
+  "calendar.anyMonth": "Any month",
+  "calendar.year": "Year",
   "calendar.earliest": "Earliest date: {date}",
   "calendar.latest": "Latest date: {date}",
   "compose.schedulePick": "Select date and time",
@@ -9744,7 +9762,7 @@ export const en = {
   "connectors.reconnectToSend":
     "Reconnect this mailbox to send from it. A mailbox connected before sending existed cannot be upgraded in place; the provider grants sending only on a new connection.",
   "connectors.lastSynced": "Last synced {at}",
-  "connectors.neverSynced": "Awaiting first sync",
+  "connectors.neverSynced": "No successful sync recorded",
   "connectors.notConfigured":
     "Mail capture is not configured on this installation.",
   "connectors.reconnect": "Reconnect",
@@ -14093,6 +14111,12 @@ export const en = {
   "webForms.field.origins": "Websites",
   "webForms.field.originsHint":
     "One address per line. Posts from any other website are refused.",
+  "webForms.required.name": "Enter a name for this form.",
+  "webForms.required.origins": "Enter the website the form is posted from.",
+  "webForms.required.consentWording":
+    "Enter the wording the visitor agrees to.",
+  "webForms.field.originKept":
+    "{entry} is kept as {origin}: every page of that website can post.",
   "webForms.field.originsPlaceholder": "https://www.example.com",
   "webForms.field.senderSecret": "Signing secret",
   "webForms.field.senderSecretHint":
@@ -14880,12 +14904,12 @@ export const en = {
   "contact.intro.verdictDirect":
     "Ask {name}. They already correspond with this contact.",
   "contact.intro.verdictOneSided":
-    "Ask {name}. They wrote to this contact with no reply yet.",
+    "Ask {name}. They wrote to this contact; no reply is recorded.",
   "contact.intro.verdictVia":
     "Ask {name}. They reach this contact through {through}.",
   "contact.intro.verdictDirectYou": "You already correspond with this contact.",
   "contact.intro.verdictOneSidedYou":
-    "You wrote to this contact with no reply yet.",
+    "You wrote to this contact; no reply is recorded.",
   "contact.intro.verdictViaYou": "You reach them through {through}.",
   // What stands where the ask would be on the reader's own route. The panel
   // is the page's one recommendation, so it says what to do rather than
@@ -15247,7 +15271,7 @@ export const en = {
   "contact.standing.direction.inboundOnly":
     "Only they have written so far. Nothing has gone out from your team.",
   "contact.standing.direction.outboundOnly":
-    "Only your team has written so far. No reply yet.",
+    "Only outgoing messages from your team are recorded. No reply is recorded.",
   "contact.standing.direction.none": "No messages either way yet.",
   "contact.subtitle.at": "at",
   "contact.standing.dims": "How the relationship stands",
@@ -16083,7 +16107,8 @@ export const en = {
   "sched.recipientsUnknown": "No recipient on this message",
   "sched.recipientsMore": "{first} and {count} more",
   "sched.move": "Reschedule",
-  "sched.moveTo": "New time for “{subject}”",
+  "sched.moveToDay": "New day for “{subject}”",
+  "sched.moveToTime": "New time for “{subject}”",
   "sched.moveSave": "Move message",
   "sched.withdraw": "Withdraw",
   "sched.withdrawTitle": "Withdraw this message?",
@@ -16743,20 +16768,22 @@ export const en = {
   "worklist.because.meeting_unprepared": "nothing prepared",
   "worklist.because.outcome_unrecorded": "no outcome recorded",
   "worklist.because.you_wrote_last": "you wrote last",
-  "worklist.because.no_reply_days": "no reply",
-  "worklist.because.no_reply_days.value_one": "no reply for {value} day",
-  "worklist.because.no_reply_days.value_other": "no reply for {value} days",
+  "worklist.because.no_reply_days": "no reply recorded",
+  "worklist.because.no_reply_days.value_one":
+    "no reply recorded for {value} day",
+  "worklist.because.no_reply_days.value_other":
+    "no reply recorded for {value} days",
   "worklist.because.met_days_ago": "met",
   "worklist.because.met_days_ago.value_one": "met {value} day ago",
   "worklist.because.met_days_ago.value_other": "met {value} days ago",
-  "worklist.because.nothing_sent_since": "nothing sent since",
+  "worklist.because.nothing_sent_since": "no outgoing message recorded since",
   "worklist.because.no_attendee_on_file": "no attendee on file",
   "worklist.because.response_overdue": "reply overdue",
   "worklist.because.response_due_soon": "reply due soon",
   "worklist.because.response_due_soon.value": "reply due by {value}",
   "worklist.because.unassigned": "no owner",
   "worklist.because.stale": "waiting a long time",
-  "worklist.because.no_reply_history": "no reply history",
+  "worklist.because.no_reply_history": "no reply history recorded",
   "worklist.because.asks_nothing": "asks for nothing",
   "worklist.because.addressed_elsewhere": "addressed to a colleague",
   "worklist.because.bcc_from_stranger":
@@ -17262,7 +17289,8 @@ export const en = {
   "lead.standing.closedUnreasoned": "Closed. The record is kept as history.",
   "lead.standing.noResponse": "No first response recorded.",
   "lead.standing.theirMove": "Awaiting lead",
-  "lead.standing.answeredOn": "Answered on {at}. No reply yet.",
+  "lead.standing.answeredOn":
+    "Answer recorded on {at}. No later reply is recorded.",
   "lead.standing.inMotion": "In motion",
   "lead.standing.engagedBecause":
     "The lead replied, or a meeting is scheduled.",
@@ -18195,6 +18223,17 @@ export const en = {
   "project.standing.peek.started": "Work started",
   "project.standing.peek.today": "Today",
   "project.standing.peek.documents": "Files on this project, newest first",
+  "mailCoverage.title": "Mail history may be incomplete",
+  "mailCoverage.unknown":
+    "Mail capture does not verify this period. These dates describe recorded exchanges; a reply may exist outside this record.",
+  "mailCoverage.partial":
+    "Capture has succeeded, but a complete Inbox and Sent history is unverified. Missing recorded mail does not prove that nobody replied.",
+  "mailCoverage.unavailable":
+    "Mail capture is unavailable for part of this history. A reply may exist outside this record.",
+  "mailCoverage.withheld":
+    "This reader cannot check mail coverage. Missing recorded mail does not prove that nobody replied.",
+  "mailCoverage.connections": "Check connections",
+  "connectors.syncTimeUnknown": "Successful sync time unavailable",
 } as const;
 
 export type MessageKey = keyof typeof en;

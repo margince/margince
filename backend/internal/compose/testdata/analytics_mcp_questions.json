@@ -133,6 +133,34 @@
       "question": "How many leads do we have in each status, including the ones we promoted or disqualified?",
       "tool": "run_analytics_query",
       "expects": "The promoted and disqualified statuses are counted although those leads are archived."
+    },
+    {
+      "id": "G05",
+      "persona": "rep",
+      "question": "How many of my held meetings became opportunities?",
+      "tool": "run_report",
+      "expects": "Held meetings credited to the asker only. A prospect handed on twice counts once, a deal at the same company converts nothing, and the report needs the lead read grant."
+    },
+    {
+      "id": "G09",
+      "persona": "management",
+      "question": "How quickly do we reply to new leads?",
+      "tool": "read_reporting",
+      "expects": "The median hours from arrival to first response. An imported lead is not timed, and a lead nobody has answered is left out rather than read as zero."
+    },
+    {
+      "id": "G06",
+      "persona": "rep",
+      "question": "Which of my deals are slipping this week, and why?",
+      "tool": "read_attention",
+      "expects": "Each listed deal carries its evidence. A quiet deal with no next step says so, a quiet deal with a booked meeting ahead does not, and a deal touched today is not listed."
+    },
+    {
+      "id": "G07",
+      "persona": "rep",
+      "question": "What have I promised customers that is still open?",
+      "tool": "read_attention",
+      "expects": "Our open promises with their due dates. A promise the customer made is never listed as ours."
     }
   ]
 }
