@@ -7,7 +7,7 @@
 
 import { type ReactNode, type RefObject, useRef } from "react";
 import { useT } from "../i18n";
-import { Checkbox } from "./atoms";
+import { Checkbox, type useScrollRegion } from "./atoms";
 import { opensRow } from "./datatable";
 import type { ListColumn, ListSelection } from "./listcolumn";
 import { useListFocusHandoff } from "./listfocus";
@@ -135,12 +135,7 @@ export function ListGrid<Row>({
   children,
 }: Readonly<{
   scrollerRef: (node: HTMLDivElement | null) => void;
-  region: Readonly<{
-    tabIndex: 0 | -1;
-    role: "region";
-    "aria-label"?: string;
-    "aria-labelledby"?: string;
-  }>;
+  region: ReturnType<typeof useScrollRegion>;
   frozen: ReturnType<typeof useFrozenEdge>;
   head: RefObject<HTMLTableElement | null>;
   dense: boolean;

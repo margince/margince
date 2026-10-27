@@ -5,12 +5,15 @@ import { type RefObject, useLayoutEffect, useRef } from "react";
 import { useFocusHandoff } from "./focushandoff";
 
 // A press can take its own control away. Focus then lands on the list's title,
-// or on its named scroll region when the list has no title.
+// else the title of the section around it; a scroll box only once it is named.
 function listLanding(from: Element | null): HTMLElement | null {
   const list = from?.closest(".lt");
+  const section = from?.closest("section[aria-labelledby]");
+  const sectionTitle = section?.getAttribute("aria-labelledby");
   return (
     list?.querySelector<HTMLElement>(".lt-title") ??
-    list?.querySelector<HTMLElement>(".lt-scroll") ??
+    (sectionTitle ? document.getElementById(sectionTitle) : null) ??
+    list?.querySelector<HTMLElement>(".lt-scroll[role]") ??
     null
   );
 }

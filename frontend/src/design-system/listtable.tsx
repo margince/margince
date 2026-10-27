@@ -310,14 +310,7 @@ export function ListTable<Row>({
   );
   // The body is where this surface hides columns, so it is the body that has
   // to be reachable. Named by the noun the count line uses.
-  const scrolling = useScrollRegion(scroller, unit);
-  // Always named, so a list with no title has somewhere to hand focus back to.
-  const region = {
-    role: "region",
-    "aria-label": unit,
-    tabIndex: -1,
-    ...scrolling,
-  } as const;
+  const region = useScrollRegion(scroller, unit);
   const dials: QueryDials = {
     search,
     sort,

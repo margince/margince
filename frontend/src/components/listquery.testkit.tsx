@@ -42,6 +42,7 @@ export function ListTableHarness({
   initialFilters,
   title,
   emptyNote,
+  hideShortChrome,
 }: Readonly<{
   fetchPage: (
     query: ListQuery,
@@ -56,6 +57,7 @@ export function ListTableHarness({
   initialFilters?: Readonly<Record<string, string>>;
   title?: string;
   emptyNote?: (state: ListState<Row>) => ReactNode;
+  hideShortChrome?: boolean;
 }>) {
   const state = useListQuery<Row>({
     key: "list-table-harness",
@@ -67,6 +69,7 @@ export function ListTableHarness({
     <ListTable
       title={title}
       emptyNote={emptyNote?.(state)}
+      hideShortChrome={hideShortChrome}
       state={state}
       unit="nav.contacts"
       columns={[

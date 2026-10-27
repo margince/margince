@@ -3,13 +3,14 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { Panel } from "../design-system/panel";
 import { translate } from "../i18n";
 import { emptyPage, ListTableHarness, render } from "./listquery.testkit";
 import { mineEmptyNote } from "./recordlist";
 import { RefusedFiltersNote } from "./refusedfiltersnote";
 
-// Each press below empties the list's note and takes its own button away. The
-// reader's focus goes to the list's title rather than falling to the page.
+// Each press below empties the list's note and takes its own button away. Focus
+// goes to the list's title, or the panel's around it, not to the page.
 
 beforeEach(() => {
   window.location.hash = "#/contacts?status=new&owner_id=u-1";
@@ -22,27 +23,34 @@ afterEach(() => {
 
 const fetchPage = async () => emptyPage();
 
-async function pressAndExpectTitleFocused(name: string) {
+async function pressAndExpectFocused(name: string, heading = "Contacts") {
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name }));
-  expect(screen.getByRole("heading", { name: "Contacts" })).toHaveFocus();
+  expect(screen.getByRole("heading", { name: heading })).toHaveFocus();
 }
 
 describe("a press that takes its own button away", () => {
   it("hands focus to the list's title from Clear filters", async () => {
     render(<ListTableHarness title="Contacts" fetchPage={fetchPage} />);
-    await pressAndExpectTitleFocused("Clear filters");
+    await pressAndExpectFocused("Clear filters");
   });
 
-  it("hands focus to the list's named rows when it has no title", async () => {
-    const user = userEvent.setup();
-    render(<ListTableHarness fetchPage={fetchPage} />);
-    await user.click(
-      await screen.findByRole("button", { name: "Clear filters" }),
+  it("hands focus to the panel's title when the list has none", async () => {
+    render(
+      <Panel title="Products">
+        <ListTableHarness fetchPage={fetchPage} />
+      </Panel>,
     );
-    expect(
-      screen.getByRole("region", { name: translate("en", "nav.contacts") }),
-    ).toHaveFocus();
+    await pressAndExpectFocused("Clear filters", "Products");
+  });
+
+  it("hands focus to the panel's title when clearing leaves an empty catalogue", async () => {
+    render(
+      <Panel title="Products">
+        <ListTableHarness fetchPage={fetchPage} hideShortChrome />
+      </Panel>,
+    );
+    await pressAndExpectFocused("Clear filters", "Products");
   });
 
   it("hands focus to the list's title from Show all", async () => {
@@ -61,7 +69,7 @@ describe("a press that takes its own button away", () => {
         }
       />,
     );
-    await pressAndExpectTitleFocused("Show all");
+    await pressAndExpectFocused("Show all");
   });
 
   it("hands focus to the list's title from a refused filter's Remove", async () => {
@@ -78,6 +86,6 @@ describe("a press that takes its own button away", () => {
         )}
       />,
     );
-    await pressAndExpectTitleFocused("Remove Status");
+    await pressAndExpectFocused("Remove Status");
   });
 });
