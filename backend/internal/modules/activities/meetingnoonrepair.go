@@ -136,8 +136,7 @@ func restoreMeetingHistoryStartTx(ctx context.Context, tx pgx.Tx, m NoonMeeting)
 }
 
 // restoreArchivedMeetingStartTx puts back the start of a meeting archived after
-// the damage, and writes status when it is non-nil. Restoring the record then
-// shows the meeting when it was. The live update refuses an archived row, so
+// the damage. Restoring the record then shows the meeting when it was. The live update refuses an archived row, so
 // this writes the audit row and event that update would write. An archived
 // meeting moves no last-activity clock. It answers false and writes nothing
 // when the row changed.

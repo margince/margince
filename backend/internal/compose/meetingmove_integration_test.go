@@ -97,6 +97,31 @@ func TestAMoveReachesOnlyAMeetingCapturedEarlier(t *testing.T) {
 	}
 }
 
+// A slot redelivered with nanoseconds past the stored microsecond is the
+// stored start: no write, no audit row, no event, no history row.
+func TestASlotOnlyNanosecondsPastTheStoredStartIsNoMove(t *testing.T) {
+	e := integration.Setup(t)
+	id := captureMeeting(t, e, e.AdminUser)
+	trail := func() int {
+		return e.WsCount(t, `SELECT (SELECT count(*) FROM audit_log WHERE entity_id = $1 AND action = 'update')
+			+ (SELECT count(*) FROM event_outbox WHERE envelope->'entity'->>'id' = $1::text)
+			+ (SELECT count(*) FROM activity_meeting_history WHERE activity_id = $1)`, id)
+	}
+	before := trail()
+
+	if err := movingCalendarSink(e).MoveMeeting(calendarOwnerCtx(e, e.AdminUser), meetingKey,
+		connector.MeetingSlot{Start: meetingStart.Add(500 * time.Nanosecond)}); err != nil {
+		t.Fatalf("moving: %v", err)
+	}
+
+	if after := trail(); after != before {
+		t.Errorf("a redelivered slot left %d audit, event and history row(s), want %d", after, before)
+	}
+	if got := readMeetingStart(t, e, id); !got.Equal(meetingStart) {
+		t.Errorf("the meeting starts %s, want the stored %s", got, meetingStart)
+	}
+}
+
 // Another provider's connector may not move a calendar's meeting.
 func TestAnotherConnectorCannotMoveACalendarMeeting(t *testing.T) {
 	e := integration.Setup(t)

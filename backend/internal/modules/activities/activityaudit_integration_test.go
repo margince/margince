@@ -118,8 +118,8 @@ func TestAnUntouchedFieldStaysOutOfBothImages(t *testing.T) {
 	}
 }
 
-// The column keeps microseconds, so a start resent with nanoseconds below the
-// stored one names the instant the row holds, and saving it moves nothing.
+// The column keeps microseconds, so a start resent with nanoseconds past the
+// stored microsecond names the instant the row holds, and saving it moves nothing.
 func TestAStartDifferingBelowAMicrosecondIsNoMove(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)

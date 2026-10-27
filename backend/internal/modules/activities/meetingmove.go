@@ -91,7 +91,8 @@ func moveCapturedMeetingTx(
 	if !mine || (slot.AllDay && holdsSlot) {
 		return false, nil
 	}
-	moved := meetingPlace{start: slot.Start.UTC(), duration: slot.Duration, precision: PrecisionInstant}
+	// The column keeps microseconds, so the move judges, audits and announces the start it will store.
+	moved := meetingPlace{start: slot.Start.UTC().Truncate(time.Microsecond), duration: slot.Duration, precision: PrecisionInstant}
 	if slot.AllDay {
 		moved.start, moved.precision = occurredday.Anchor(slot.Start), PrecisionDay
 	}
