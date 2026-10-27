@@ -241,11 +241,10 @@ export type RosterRead = Readonly<{ isError: boolean; refetch: () => unknown }>;
 /**
  * The line a surface owes its reader when the roster read failed.
  *
- * A failed walk leaves `data` undefined, and a picker built on `data ?? []`
- * then offers nobody: an empty list that reads as a workspace with no
- * colleagues, under a Save that stays disabled for no stated reason. Takes the
- * query the surface already holds, like `RosterPartialNote`, so it never arms a
- * read the surface deferred. Renders nothing unless that read failed.
+ * A failed walk leaves `data` undefined, so a picker built on `data ?? []`
+ * offers nobody. That reads as a workspace with no colleagues, under a Save
+ * that stays disabled for no stated reason. It takes the query the surface
+ * already holds, like `RosterPartialNote`, so it never arms a deferred read.
  */
 export function RosterFailedLine({
   kind,

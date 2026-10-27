@@ -83,11 +83,9 @@ export function OwnerPicker({
 }>) {
   const t = useT();
   const { options: contacts, roster } = useAssignableUserOptions();
-  // A ROSTER THAT FAILED OR STOPPED SHORT IS SAID SO. The walk is bounded, so past its
-  // reach this list is part of the workspace rather than the workspace — and a
-  // picker missing colleagues looks exactly like a workspace that has none, on
-  // the one control a lead uses to reach somebody. The words are the roster's
-  // own, and the `Field` wires them into the control's `aria-describedby`.
+  // A picker missing colleagues looks like a workspace that has none, so a
+  // roster that failed or stopped short says so. `Field` wires the hint into
+  // the control's `aria-describedby`.
   const rosterHint = useRosterHint(roster, useRosterPartial("user", true));
   // Naming nobody follows the scope dial, so the empty choice says which
   // population that is; "My Worklist" over the whole team misstates it.

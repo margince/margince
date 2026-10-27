@@ -11,9 +11,8 @@ import { useMemberName } from "../../lib/membernames";
 import { useMe } from "../../lib/session";
 
 // Only colleagues the server says the reader may make an owner, so the picker
-// never offers somebody the save then refuses. The hint is the caveat a picker
-// owes when the roster failed or stopped short: without it a failed walk reads
-// as a workspace of one.
+// never offers somebody the save then refuses. The hint says when the roster
+// failed or stopped short; without it a failed walk reads as a workspace of one.
 export function useRecordOwners(ownerId: string | null | undefined): {
   options: { value: string; label: string }[];
   hint?: string;

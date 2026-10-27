@@ -7,16 +7,11 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { filesUnder, parseSource } from "../../scripts/lib/source-tree";
 
-// A roster read is never used for its data alone.
-//
-// A failed walk leaves `data` undefined, and `roster.data ?? []` turns that into
-// an empty picker: no colleagues, a Save that stays disabled, and nothing that
-// says why. So every `useRoster` result must also be read for its failure
-// (`isError`, `isSuccess`, `status`, `error`) or handed whole to something that
-// reads it, such as `RosterFailedLine` or `rosterMissLabel`.
-//
-// A read that only NAMES ids, and offers nothing to pick, may waive the rule
-// with a `// roster-failure: <reason>` line above its statement.
+// A failed walk leaves `data` undefined, and `data ?? []` makes an empty picker
+// that never says why. So a `useRoster` result is also read for its failure,
+// or handed whole to a reader of it such as `RosterFailedLine`.
+
+// A read that only names ids may waive this with `// roster-failure: <reason>`.
 
 const frontendRoot = resolve(__dirname, "..", "..");
 const srcDir = join(frontendRoot, "src");
