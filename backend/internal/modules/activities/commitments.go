@@ -247,6 +247,11 @@ func ensureNarrowingTargetVisible(ctx context.Context, tx pgx.Tx, entityType *st
 	if linkColumn(*entityType) == "" {
 		return &InvalidLinkTypeError{EntityType: *entityType}
 	}
+	// Row scope reads every deal and company, so a role without the type's
+	// read grant would learn which activities a record it cannot open holds.
+	if err := auth.Require(ctx, *entityType, principal.ActionRead); err != nil {
+		return err
+	}
 	// The record type IS the table name for every arm of this vocabulary, which
 	// is the same identity linkNameCoalesce reads.
 	return auth.EnsureVisible(ctx, tx, *entityType, *entityID)
