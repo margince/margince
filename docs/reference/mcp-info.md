@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 131.2 KB |
-| Resource catalog | 3.6 KB |
-| Approx. wire tokens | 34512 |
+| Tool catalog | 130.2 KB |
+| Resource catalog | 3.5 KB |
+| Approx. wire tokens | 34214 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 28.4 KB | 21% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 32.8 KB | 24% | Yes, every step |
-| Input schemas | 61.3 KB | 46% | Yes, every step |
+| Output schemas | 27.6 KB | 21% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 32.7 KB | 25% | Yes, every step |
+| Input schemas | 61.2 KB | 46% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 6% | Partly |
-| **Description + input schema** | **94.1 KB** | **71%** | **the recurring cost** |
+| **Description + input schema** | **93.9 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -53,7 +53,7 @@ descriptions and input schemas are what each step pays for.
 - [`margince://schema/analytics`](#analytics-schema): Analytics query vocabulary
 - [`ui://margince/create-followups.html`](#create_followups_view): Next steps for this record
 - [`ui://margince/approval.html`](#approval_view): Waiting for a decision
-- [`ui://margince/field-conflict.html`](#field_conflict_view): Edited by hand
+- [`ui://margince/update.html`](#update_view): What changed
 
 ### Tools (37)
 
@@ -94,7 +94,7 @@ descriptions and input schemas are what each step pays for.
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 393 |
 | [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 469 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1014 |
-| [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 641 |
+| [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 593 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
 
 ## Resources
@@ -232,15 +232,14 @@ A change an assistant proposed, what it would do, and the choice to approve or r
 
 </details>
 
-### field_conflict_view
+### update_view
 
-`ui://margince/field-conflict.html` · text/html;profile=mcp-app
+`ui://margince/update.html` · text/html;profile=mcp-app
 
-**Edited by hand**
+**What changed**
 
 ```text
-What an update changed, or why it changed nothing. Fields last edited by hand that it would
-overwrite show the stored value beside the proposed one, with the choice to keep or replace it.
+What an update changed, field by field as it was and as it is, or why it changed nothing.
 ```
 
 <details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
@@ -7396,19 +7395,19 @@ scope "send".)
 ```text
 Change stored field values on a record that already exists — a corrected title, an amount, an
 expected close date. Only the fields you send change, and only the fields the record type stores (a
-contact's email addresses are not among them). A field a HUMAN last set is not overwritten: that
-part is staged for a human and named in the result, and that part of the write has not happened. It
-names the record by id; when a name matches two records, a human picks. owner_id is NOT neutral —
-ownership decides visibility, so reassigning moves the record onto someone else's book and can take
-it off the owner's. An activity moved to another day keeps its time of day unless the user names
-one; moving a date-only one, send occurred_precision "day" again, or it reads as a time. Use
-change_state with action=move_deal to move a deal between stages, and change_activities with
-action=relink to change what an activity is about; neither is a field edit. Send if_version with the
-version you read, and keep the staged approval id from the result if you intend to retry the same
-change once a human has released it. (Runs immediately; requires passport scope "write".)
+contact's email addresses are not among them). The whole patch applies in this call, and the result
+names each change so a human can Undo it. It names the record by id; when a name matches two
+records, a human picks. owner_id is NOT neutral — ownership decides visibility, so reassigning
+moves the record onto someone else's book and can take it off the owner's. An activity moved to
+another day keeps its time of day unless the user names one; moving a date-only one, send
+occurred_precision "day" again, or it reads as a time. Use change_state with action=move_deal to
+move a deal between stages, and change_activities with action=relink to change what an activity is
+about; neither is a field edit. Send if_version with the version you read. If the call comes back
+staged, keep its approval id to retry the same change once a human has released it. (Runs
+immediately; requires passport scope "write".)
 ```
 
-Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view), visible to `model`, `app`.
+Renders its result in [`ui://margince/update.html`](#update_view), visible to `model`, `app`.
 
 <details><summary>Input schema</summary>
 
@@ -7417,12 +7416,12 @@ Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view
   "additionalProperties": false,
   "properties": {
     "approval_id": {
-      "description": "Set on retry after a human approved overwriting their edit; send it with exactly the staged replay arguments",
+      "description": "Set on retry after a human approved the staged call; send it with exactly the staged arguments",
       "format": "uuid",
       "type": "string"
     },
     "fields": {
-      "description": "Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by read_workspace with topic=record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. An rfc3339 value carries Z or the offset the user gave. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
+      "description": "Only sent fields change. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by read_workspace with topic=record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. An rfc3339 value carries Z or the offset the user gave. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
       "type": "object"
     },
     "id": {
@@ -7551,103 +7550,6 @@ Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view
         },
         "record_type": {
           "type": "string"
-        },
-        "staged_approval": {
-          "properties": {
-            "approval_id": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "changes": {
-              "items": {
-                "properties": {
-                  "after": {
-                    "properties": {
-                      "currency": {
-                        "type": "string"
-                      },
-                      "entity_id": {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      "entity_type": {
-                        "type": "string"
-                      },
-                      "kind": {
-                        "type": "string"
-                      },
-                      "text": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "kind",
-                      "text"
-                    ],
-                    "type": "object"
-                  },
-                  "before": {
-                    "properties": {
-                      "currency": {
-                        "type": "string"
-                      },
-                      "entity_id": {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      "entity_type": {
-                        "type": "string"
-                      },
-                      "kind": {
-                        "type": "string"
-                      },
-                      "text": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "kind",
-                      "text"
-                    ],
-                    "type": "object"
-                  },
-                  "field": {
-                    "type": "string"
-                  },
-                  "label": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "after",
-                  "before",
-                  "field",
-                  "label"
-                ],
-                "type": "object"
-              },
-              "type": "array"
-            },
-            "fields": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "message": {
-              "type": "string"
-            },
-            "replay": {
-              "type": "object"
-            }
-          },
-          "required": [
-            "approval_id",
-            "fields",
-            "message",
-            "replay"
-          ],
-          "type": "object"
         },
         "trust_tier": {
           "type": "string"

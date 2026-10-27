@@ -1702,7 +1702,7 @@ sbom-validate:
 	@$(CYCLONEDX) validate --input-file $(SBOM_DIR)/margince.cdx.json --fail-on-errors
 	@echo "validating $(SBOM_DIR)/margince.spdx221.json (SPDX 2.2.1, pyspdxtools)"
 	@$(PYSPDX) bash -c '\
-	  pip install --require-hashes --quiet --no-cache-dir --disable-pip-version-check -r $(SBOM_SCHEMA_DIR)/spdx-tools-requirements.txt \
+	  bash scripts/install-sbom-python.sh $(SBOM_SCHEMA_DIR)/spdx-tools-requirements.txt \
 	    || { echo "FAIL: could not install the pinned SPDX validator"; exit 1; }; \
 	  if ! pyspdxtools -i $(SBOM_DIR)/margince.spdx221.json; then echo "FAIL: $(SBOM_DIR)/margince.spdx221.json is not a valid SPDX 2.2.1 document"; exit 1; fi'
 	@echo "validating $(SBOM_DIR)/margince.spdx300.json (SPDX 3.0.1 schema)"

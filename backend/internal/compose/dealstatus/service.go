@@ -5,13 +5,11 @@ package dealstatus
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/briefevidence"
@@ -21,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -83,11 +80,12 @@ func (s *Service) WithLane(lane Completer, routingVersion string) *Service {
 
 // facts are the inputs the card is written from.
 type facts struct {
-	deal      crmcontracts.Deal
-	health    *deals.DealHealth
-	timeline  []crmcontracts.Activity
-	openTasks []activities.OpenTask
-	requests  []crmcontracts.Activity
+	deal            crmcontracts.Deal
+	health          *deals.DealHealth
+	timeline        []crmcontracts.Activity
+	openTasks       []activities.OpenTask
+	requests        []crmcontracts.Activity
+	currentRequests []crmcontracts.Activity
 	// moreTasks says the open-task read was cut at its window, so the count
 	// is a floor rather than the number.
 	moreTasks bool
@@ -111,21 +109,6 @@ type facts struct {
 	// takes the shared language rather than the reader's — the same rule that
 	// separates a record from a piece of correspondence.
 	lang string
-}
-
-// stored is the cached envelope: the card in the payload column, and the three
-// fields the cache decision needs in columns of their own.
-//
-// The split is deliberate. Deciding whether a stored card still stands means
-// comparing a fingerprint and an age, and those are answered from the row
-// without decoding the payload at all — a card this build cannot unmarshal is
-// then a MISS rather than a failed request, because the fields that decide
-// were never inside the thing that failed to decode.
-type stored struct {
-	Fingerprint string                      `json:"-"`
-	GeneratedAt time.Time                   `json:"-"`
-	GeneratedBy crmcontracts.WrittenBy      `json:"-"`
-	Card        crmcontracts.DealStatusCard `json:"card"`
 }
 
 // Get returns the deal's status card, writing it when no current one is
@@ -219,7 +202,16 @@ func (s *Service) cardAndTimeline(
 	}
 	verdict := s.decideFromCache(ctx, userID, dealID, fingerprint, policy.refresh, f.now)
 	if verdict.serve {
-		return verdict.card, append(f.timeline, f.requests...), nil
+		card := verdict.card
+		if current, ok := unansweredInbound(f); ok {
+			card.RequestBasis = requestBasis(f, current, basisCurrentRequest)
+		}
+		if card.Next != nil {
+			next := *card.Next
+			next.Basis = mv.Basis
+			card.Next = &next
+		}
+		return card, factActivities(f), nil
 	}
 	card, laneFailed := s.write(ctx, f, mv, in, verdict.askModel && !policy.factsOnly)
 	if laneFailed {
@@ -229,7 +221,7 @@ func (s *Service) cardAndTimeline(
 		// transient outage permanent, because a matching fingerprint is served
 		// without ever asking again. The card would stand until some unrelated
 		// fact moved.
-		return card, append(f.timeline, f.requests...), nil
+		return card, factActivities(f), nil
 	}
 	if err := s.save(ctx, userID, dealID, stored{
 		Fingerprint: fingerprint,
@@ -239,7 +231,7 @@ func (s *Service) cardAndTimeline(
 	}); err != nil {
 		return crmcontracts.DealStatusCard{}, nil, err
 	}
-	return card, append(f.timeline, f.requests...), nil
+	return card, factActivities(f), nil
 }
 
 // cacheVerdict says what to do with the stored card.
@@ -354,6 +346,13 @@ func (s *Service) gather(ctx context.Context, dealID ids.DealID) (facts, error) 
 	}
 	f.timeline = timeline
 	requestKind := string(crmcontracts.ActivityKindEmail)
+	f.currentRequests, _, err = s.activities.ListActivities(ctx, activities.ListActivitiesInput{
+		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &limit,
+		RequestCurrentAsOf: &f.now, Kind: &requestKind,
+	})
+	if err != nil {
+		return facts{}, fmt.Errorf("deal status: reading current requests: %w", err)
+	}
 	f.requests, _, err = s.activities.ListActivities(ctx, activities.ListActivitiesInput{
 		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &limit,
 		RequestReviewAsOf: &f.now, Kind: &requestKind,
@@ -432,59 +431,6 @@ func (s *Service) gatherRoom(ctx context.Context, dealID ids.DealID, f *facts) e
 	}
 	f.threads = threads
 	return nil
-}
-
-// cached reads this user's card for this deal. The user_id predicate is
-// explicit: the workspace binding is the transaction's, so without it one rep
-// would read another's card — written from records they may not share.
-func (s *Service) cached(ctx context.Context, userID ids.UserID, dealID ids.DealID) (stored, bool, error) {
-	var out stored
-	var payload []byte
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `
-			SELECT fingerprint, generated_at, generated_by, payload FROM deal_status_card
-			WHERE user_id = $1 AND deal_id = $2`,
-			userID, dealID).Scan(&out.Fingerprint, &out.GeneratedAt, &out.GeneratedBy, &payload)
-	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return stored{}, false, nil
-	}
-	if err != nil {
-		return stored{}, false, err
-	}
-	if err := json.Unmarshal(payload, &out); err != nil {
-		// A payload this build cannot read is a cache MISS, not a failure: the
-		// card is derived content, writing it again is cheap, and the new row
-		// replaces the unreadable one.
-		//nolint:nilerr // an unreadable cache entry is a miss by design; the caller regenerates
-		return stored{}, false, nil
-	}
-	return out, true, nil
-}
-
-func (s *Service) save(ctx context.Context, userID ids.UserID, dealID ids.DealID, card stored) error {
-	// The second lock on the one reader-scoped field this row could carry.
-	// Get attaches summaries only after this call, so nothing should reach
-	// here holding one — and a later writer that reorders the two would
-	// otherwise file one reader's access as everybody's, silently.
-	briefevidence.Strip(cardEvidence(&card.Card))
-	payload, err := json.Marshal(card)
-	if err != nil {
-		return fmt.Errorf("encode the deal status payload: %w", err)
-	}
-	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
-			INSERT INTO deal_status_card (user_id, deal_id, fingerprint,
-			                              generated_at, generated_by, payload)
-			VALUES ($1, $2, $3, $4, $5, $6)
-			ON CONFLICT (user_id, deal_id) DO UPDATE
-			SET fingerprint = EXCLUDED.fingerprint,
-			    generated_at = EXCLUDED.generated_at,
-			    generated_by = EXCLUDED.generated_by,
-			    payload = EXCLUDED.payload`,
-			userID, dealID, card.Fingerprint, card.GeneratedAt, card.GeneratedBy, payload)
-		return err
-	})
 }
 
 // actingUser resolves the human this card belongs to. That the card is

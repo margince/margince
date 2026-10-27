@@ -23,6 +23,9 @@ document that is not valid, so the `Makefile` recipe gates on that, and shows it
 The same set holds `PyYAML`. `make sbom-census` runs it in the same image to read every YAML
 document of `pnpm-lock.yaml`. The check fails when the SBOM misses a package that file resolves.
 
+Both Python checks use the [shared installer](../scripts/install-sbom-python.sh). It runs a failed
+download again with the same hash checks. If every download fails, the check fails.
+
 ## Why SPDX 3.0 is checked by JSON schema only
 
 The semantic layer of SPDX 3.0 is SHACL, and the SPDX project points at

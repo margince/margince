@@ -41,7 +41,6 @@ package dealstatus
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -133,7 +132,7 @@ func (s *Service) CachedCards(
 // falls back to, at least names the fact it rests on.
 func cardFromPayload(payload []byte) (CachedCard, bool) {
 	var stored stored
-	if err := json.Unmarshal(payload, &stored); err != nil {
+	if !decodeStored(payload, &stored) {
 		return CachedCard{}, false
 	}
 	verdict := stored.Card.Verdict

@@ -361,8 +361,9 @@ func scanEdges(rows pgx.Rows) ([]InteractionEdge, error) {
 var graphInteractionUnit = relstrength.InteractionUnitSQL("a")
 
 // graphCountedActivity is which activity counts at all: a canceled or no-show
-// meeting is no edge's evidence, and never its last_at.
-var graphCountedActivity = relstrength.InteractionCountsSQL("a")
+// meeting is no edge's evidence, and never its last_at. Nor is one that has
+// not happened yet. The nightly rebuild counts it once its time has passed.
+var graphCountedActivity = relstrength.InteractionCountsAtSQL("a", "now()")
 
 // graphWeWrote is relstrength's outbound side; the inbound side also needs the
 // contact as sender, so a colleague's reply on the thread is not theirs.

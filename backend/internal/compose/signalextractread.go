@@ -240,7 +240,7 @@ func dueThreads(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]set
 		if err := rows.Scan(&thread.Key, &thread.CompanyID,
 			&thread.Newest, &thread.Count, &privateTo,
 			&thread.ReadTo, &thread.ReadFrom, &thread.ReadFromID); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("read a thread due for a read: %w", err)
 		}
 		if privateTo != nil {
 			thread.PrivateTo = *privateTo
@@ -248,7 +248,7 @@ func dueThreads(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]set
 		due = append(due, thread)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list the threads due for a read: %w", err)
 	}
 	for i := range due {
 		messages, err := threadMessages(ctx, tx, &due[i])

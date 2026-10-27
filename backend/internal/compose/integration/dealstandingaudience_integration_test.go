@@ -212,6 +212,7 @@ func seedCachedStandingCiting(
 ) {
 	t.Helper()
 	payload, err := json.Marshal(map[string]any{
+		"projection_version": dealstatus.ProjectionVersion,
 		"card": crmcontracts.DealStatusCard{
 			Verdict: &crmcontracts.DealStatusCardVerdict{
 				Standing: standing,

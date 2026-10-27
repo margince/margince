@@ -18,7 +18,6 @@ import type { ContactTab } from "../../lib/contacttab";
 import { dealRoleLabel } from "../../lib/recordlabels";
 import { omitted } from "./contact360";
 import { contactFirstName } from "./contactfirstname";
-import { awaitsOurReply } from "./contactstanding";
 
 type Contact360 = components["schemas"]["Contact360"];
 
@@ -94,7 +93,7 @@ function lastReply(view: Contact360, words: StandingWords): ContactFigure {
   const { t, locale, zone } = words;
   const base = {
     key: "lastReply",
-    label: t("contact.rail.lastReply"),
+    label: t("contact.standing.lastInbound"),
     opens: { tab: "timeline" },
   } as const;
   if (omitted(view, "last_touch")) {
@@ -114,7 +113,7 @@ function lastReply(view: Contact360, words: StandingWords): ContactFigure {
       formatDayMonth,
     ),
     detail: daysAgo(inbound, view, words),
-    tone: awaitsOurReply(view) ? "warning" : "neutral",
+    tone: "neutral",
   };
 }
 
@@ -319,9 +318,7 @@ function meetingAhead(view: Contact360, words: StandingWords): TimelineEvent[] {
   ];
 }
 
-/** The silence since the newest exchange of any kind, a meeting included, as
- *  the backend counts it. Its sub says whose move it is, on the same rule as
- *  the head's "Your move". */
+/** Recorded contact exchange age, including calls and meetings. */
 export function contactGap(
   view: Contact360,
   words: StandingWords,
@@ -344,8 +341,6 @@ export function contactGap(
     title: translatePlural(locale, "standing.days", days, {
       count: formatNumber(days, locale),
     }),
-    sub: awaitsOurReply(view)
-      ? t("standing.noReply")
-      : t("co.strip.engagement.waiting_on_them"),
+    sub: t("contact.standing.lastRecordedExchange"),
   };
 }

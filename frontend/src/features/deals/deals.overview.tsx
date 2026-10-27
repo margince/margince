@@ -197,8 +197,6 @@ export function DealOverviewPane({
       ) : (
         <DealStatusCardPanel
           deal={deal}
-          timeline={activities}
-          asOf={inputs.asOf}
           onOpenEmail={onOpenEmail}
           more={more}
           renderStanding={(head) => (
