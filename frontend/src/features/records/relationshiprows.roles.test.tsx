@@ -15,7 +15,11 @@ const CONTACT = "01a02be9-2293-75d2-9dd2-3027d9b63dc2";
 const COMPANY = "01a02e25-b6bd-7099-8099-581cbf001b77";
 const PROJECT = "01a02e25-c7ce-7099-8099-581cbf001c55";
 
-type RoleKind = "deal_stakeholder" | "project_stakeholder" | "billing_contact";
+type RoleKind =
+  | "deal_stakeholder"
+  | "project_stakeholder"
+  | "billing_contact"
+  | "employment";
 
 function seat(role: string, kind: RoleKind = "deal_stakeholder") {
   return {
@@ -126,7 +130,7 @@ describe("editing a stakeholder's role", () => {
     expect(patched).toMatchObject({ role: "technical_lead" });
   });
 
-  // A role typed before the vocabulary may spell a deal role's words.
+  // A free-text role may spell a deal role's words.
   it.each(["Champion", "economic buyer"])(
     "keeps the stored spelling %s when saved untouched",
     async (stored) => {
@@ -178,6 +182,17 @@ describe("editing a project or billing role from a company", () => {
       );
       expect(shown).toBe(translate(locale, "billing.role.accountsPayable"));
       expect(patched).toMatchObject({ role: "approver" });
+    },
+  );
+});
+
+// A job title is free text, so a word from a closed list goes as typed.
+describe("editing an employment role from a company", () => {
+  it.each(["Champion", "Approver"])(
+    "sends the job title %s as typed",
+    async (title) => {
+      const { patched } = await editSeat("en", "Engineer", title, "employment");
+      expect(patched).toMatchObject({ role: title });
     },
   );
 });
