@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, screen } from "storybook/test";
+import { expect, screen, within } from "storybook/test";
+import { translate } from "../../i18n";
 import { StoryProviders } from "../../testing/story-utils";
 import { ReviewTemplateEditor } from "./reviewtemplateeditor";
 
@@ -74,10 +75,15 @@ export const Vietnamese: Story = {
       />
     </StoryProviders>
   ),
+  // The drawer fades in, so its name and fields are read, not its opacity.
   play: async () => {
-    await expect(await screen.findByText("Đánh giá khi thắng")).toBeVisible();
+    const drawer = await screen.findByRole("dialog", {
+      name: translate("vi", "reviewTemplates.builtin.win_review"),
+    });
     await expect(
-      screen.getByDisplayValue("Vì sao thắng deal này?"),
-    ).toBeVisible();
+      within(drawer).getByDisplayValue(
+        translate("vi", "reviewTemplates.builtin.question.why_we_won"),
+      ),
+    ).toBeInTheDocument();
   },
 };

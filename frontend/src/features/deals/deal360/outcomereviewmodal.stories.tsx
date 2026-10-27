@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, screen } from "storybook/test";
+import { expect, screen, within } from "storybook/test";
+import { translate } from "../../../i18n";
 import { StoryProviders } from "../../../testing/story-utils";
 import { OutcomeReviewModal } from "./outcomereviewmodal";
 
@@ -72,8 +73,16 @@ export const Vietnamese: Story = {
       />
     </StoryProviders>
   ),
+  // The modal fades in, so its name and question are read, not its opacity.
   play: async () => {
-    await expect(await screen.findByText("Đánh giá khi thắng")).toBeVisible();
-    await expect(screen.getByText("Vì sao thắng deal này?")).toBeVisible();
+    const modal = await screen.findByRole("dialog", {
+      name: translate("vi", "reviewTemplates.builtin.win_review"),
+    });
+    await expect(
+      within(modal).getByText(
+        translate("vi", "reviewTemplates.builtin.question.why_we_won"),
+        { exact: false },
+      ),
+    ).toBeInTheDocument();
   },
 };
