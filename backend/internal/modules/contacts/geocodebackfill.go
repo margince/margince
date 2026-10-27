@@ -80,7 +80,7 @@ func (s *Store) ListGeocodeOrphans(ctx context.Context, limit int) ([]ids.Compan
 			   --
 			   -- 'ok' and 'no_match' are answers and are never swept.
 			   AND (o.geocode_status IS NULL
-			     OR o.geocode_status IN ('stale', 'failed'))
+			     OR o.geocode_status IN ('`+GeocodeStale+`', '`+GeocodeFailed+`'))
 			   -- A failure still inside its backoff is left alone: the ledger
 			   -- asked for that wait, and re-nominating every pass is how a
 			   -- rate limit becomes a block. AddressForGeocode re-checks this

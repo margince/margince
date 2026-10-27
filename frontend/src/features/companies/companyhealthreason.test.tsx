@@ -32,7 +32,7 @@ describe("useHealthReason", () => {
         reason_code: "quiet",
         reason_params: { days: 77 },
       }),
-    ).toBe("Seit 77 Tagen keine Antwort und kein Termin.");
+    ).toBe("Seit 77 Tagen keine Antwort und kein Termin erfasst.");
   });
 
   // Beside a timeline that counts from another exchange, a bare "77 days"
@@ -45,7 +45,7 @@ describe("useHealthReason", () => {
       reason_params: { days: 77, at: "2026-08-11T09:00:00Z" },
     });
     expect(said).toMatch(
-      /^Chưa có phản hồi hay cuộc họp nào từ .*11.* \(77 ngày\)\.$/,
+      /^Chưa ghi nhận phản hồi hoặc cuộc họp từ .*11.* \(77 ngày\)\.$/,
     );
     expect(said).not.toContain("{at}");
   });

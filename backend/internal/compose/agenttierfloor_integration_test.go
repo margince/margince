@@ -150,10 +150,14 @@ func TestAnOrdinaryCompanyPatchStillRunsUnattended(t *testing.T) {
 // registryWithGate rather than NewRegistry so the tier floor arrives the way
 // production supplies it.
 func composedRegistry(e *integration.Env) *agents.Registry {
-	// The nils are the readers this test's tools never reach: a drafter, an
-	// embedder, a transcript enqueue, an imports reader, a meeting-brief reader
-	// and a logger. What it exercises is the tier floor.
-	return registryWithGate(e.DB(), auth.NewGate(adminSeat{}), nil,
+	return composedRegistryOn(e.DB())
+}
+
+// composedRegistryOn is composedRegistry over any handle.
+// The nils are readers these tests never reach: a drafter, an embedder, a
+// transcript enqueue, an imports reader, a meeting-brief reader and a logger.
+func composedRegistryOn(db *database.DB) *agents.Registry {
+	return registryWithGate(db, auth.NewGate(adminSeat{}), nil,
 		SendPath{}, companyEnricher{}, nil, nil, nil, nil, nil, registryFeatures{})
 }
 

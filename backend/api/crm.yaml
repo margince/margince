@@ -35472,6 +35472,7 @@ components:
         watch_expires_at: { type: [string, 'null'], format: date-time, description: 'Push/delta subscription renewal deadline (Gmail Pub/Sub / Graph change-notification), or null.' }
         scopes: { type: array, items: { type: string }, description: The granted provider scopes. }
         last_synced_at: { type: [string, 'null'], format: date-time, description: 'Last sync attempt (CAP-DDL-5); null before the first.' }
+        last_success_at: { type: [string, 'null'], format: date-time, description: 'Last successful sync for this mailbox; null before one succeeds.' }
         last_sync_error_class: { type: [string, 'null'], description: 'rate_limited | unreachable | auth | history_gone | internal — class only, detail in system_log.' }
         sync_failing_since: { type: [string, 'null'], format: date-time, description: 'When the CURRENT failure streak began, null while healthy. Set on the first failure after a success and left alone until one clears it, so the duration read off it is the outage''s — last_synced_at moves on every postponed tick and dates the newest attempt instead.' }
         next_sync_due_at: { type: [string, 'null'], format: date-time, description: 'When the sweep will next pick this connection up (backoff-aware).' }
@@ -42492,14 +42493,16 @@ components:
     Contact360:
       type: object
       description: |
-        The contact record page in one payload (PO-EXT-3). Every section except `contact` is
-        optional: absent means the caller lacks its grant, and `sections_omitted` names it.
+        The contact record page in one payload. Record sections may be absent when their
+        grants are withheld; `sections_omitted` names those sections. Mail coverage
+        reports its own state and observation clock. Absent coverage is unknown.
       required: [as_of, contact, sections_omitted]
       properties:
+        mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         as_of:
           type: string
           format: date-time
-          description: The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
+          description: The assembly clock. Mail coverage carries its own evaluation time; Read Committed does not promise one snapshot across sections.
         contact: { $ref: '#/components/schemas/Contact' }
         created_by:
           allOf: [{ $ref: '#/components/schemas/PrincipalAttribution' }]
@@ -44463,6 +44466,7 @@ components:
         shape exists to prevent.
       required: [deal_id, story, generated_at, generated_by]
       properties:
+        mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         deal_id: { type: string, format: uuid }
         story:
           allOf: [{ $ref: '#/components/schemas/DealStatusCardSection' }]
@@ -44552,6 +44556,7 @@ components:
         to send; absent for `none`.
       required: [action, reason, evidence]
       properties:
+        mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         action: { type: string }
         reason: { type: string, description: "One sentence saying why this move and not another." }
         arguments:
@@ -44574,6 +44579,33 @@ components:
             nothing to do (`none`).
       additionalProperties: false
 
+    MailCaptureCoverage:
+      type: object
+      additionalProperties: false
+      description: |
+        The calling reader's mail capture for the requested interval. This does
+        not assert that no reply exists. Partial means capture has succeeded but
+        does not attest a complete Inbox and Sent interval. Current providers do
+        not record such an attestation; a cursor or completed import cannot supply it.
+        No mailbox identity, credential, cursor or colleague account travels.
+      required: [channel, state, interval_to, evaluated_at]
+      properties:
+        channel: { type: string, enum: [email] }
+        state: { type: string, enum: [unknown, partial, unavailable, withheld] }
+        interval_from:
+          type: string
+          format: date-time
+          description: Start of the requested interval, not a verified coverage boundary.
+        interval_to:
+          type: string
+          format: date-time
+          description: End of the requested interval, not a verified coverage boundary.
+        last_success_at:
+          type: string
+          format: date-time
+          description: Oldest successful sync across every relevant mailbox; absent if any has never succeeded.
+        evaluated_at: { type: string, format: date-time }
+
     WorkEvidenceBasis:
       type: object
       description: |
@@ -44582,6 +44614,7 @@ components:
         Source age is not a deadline. Evaluation time is not source time.
       required: [kind, scope, source_activity_id, source_at, source_precision, evaluated_at, policy_version]
       properties:
+        mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         kind: { type: string }
         scope: { type: string, description: The record scope in which the evidence was evaluated. }
         source_activity_id: { type: string, format: uuid }
@@ -67465,6 +67498,7 @@ components:
         for it.
       required: [action]
       properties:
+        mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         basis:
           allOf: [{ $ref: '#/components/schemas/WorkEvidenceBasis' }]
           description: The deal recommendation's evidence basis, preserved across surfaces.

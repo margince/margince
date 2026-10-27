@@ -19,7 +19,12 @@ import {
 import { ShortlistVerb } from "./bulkshortlist";
 import { TagVerbs } from "./bulktag";
 import { TaskVerb } from "./bulktask";
-import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
+import {
+  RosterFailedLine,
+  RosterPartialNote,
+  useRoster,
+  useRosterPartial,
+} from "./entityref";
 
 // The record lists' types: a Worklist item has its own bar
 // (worklist.bulkdone.tsx) and takes none of these verbs.
@@ -148,6 +153,7 @@ export function BulkVerbs({
           sentence between the picker and its button is where the row would
           break, splitting the control from its verb. */}
       <RosterPartialNote partial={rosterPartial} id={partialNoteId} />
+      <RosterFailedLine kind="user" roster={roster} />
       <BulkChangeDialog
         request={request}
         onClose={() => setRequest(null)}

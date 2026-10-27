@@ -3,8 +3,6 @@
 
 package dealstatus
 
-// Which move the card offers, decided from records.
-//
 // The VERB is never the model's to choose. A reader clicking "Draft the reply"
 // must reach the mail these rules picked; a model that named a different one
 // would send them somewhere the button cannot go. The lane writes why the move
@@ -65,6 +63,7 @@ const meetingHorizon = 14 * 24 * time.Hour
 func decideMove(f facts) crmcontracts.DealStatusCardMove {
 	mv := nextMove(f)
 	mv.Basis = requestMoveBasis(f, mv)
+	mv.MailCoverage = f.mailCoverage
 	if f.lang != "" && f.lang != "en" {
 		// Existing dismissal digests include generated English task subjects.
 		// Keep that identity while the same rules render the requested language.
@@ -79,7 +78,6 @@ func decideMove(f facts) crmcontracts.DealStatusCardMove {
 	return stamped(mv)
 }
 
-// nextMove is the rules' choice, in order.
 func nextMove(f facts) crmcontracts.DealStatusCardMove {
 	said := statusCopyFor(f.lang)
 	if meeting, ok := upcomingMeeting(f); ok {

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go -->
+<!-- describes: frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/components/mailcoveragenotice.tsx frontend/src/features/capture/connection-service.tsx -->
 # Connecting your mailbox and calendar
 
 Capture reads mail and meetings only from an account you connect. This page
@@ -104,7 +104,13 @@ its own word:
   lost" or try again on their own.
 - **Not connected**
 
-You also see when it last synced.
+You also see its last good sync. A failed check does not move that time.
+
+### Why does a record say it may be missing mail?
+
+Dates on a contact or deal describe the mail on record. They do not prove that nobody replied outside these records.
+**Check connections** opens your mailboxes. A good sync or a finished history import does not prove that every Inbox and Sent message is on record.
+A task you kept stays even when some mail is missing.
 
 ### Why did my Gmail or Outlook connection stop working?
 When emails stop coming into Margince, open **Settings → Connections** and read the badge on the account and the word on its **New mail** row.

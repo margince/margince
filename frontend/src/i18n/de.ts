@@ -6,58 +6,103 @@ import type { MessageKey } from "./en";
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.signal.updated.label": "Hinweis neu zugeordnet",
-  "webhooks.event.signal.updated.when": "Wenn ein Hinweis beim Zusammenführen eines Duplikats zum verbleibenden Mitglied wechselt.",
+  "webhooks.event.signal.updated.when":
+    "Wenn ein Hinweis beim Zusammenführen eines Duplikats zum verbleibenden Mitglied wechselt.",
   "webhooks.event.user.updated.label": "Mitgliedseinstellungen geändert",
-  "webhooks.event.user.updated.when": "Wenn ein Admin das Profil eines Mitglieds speichert oder ein Duplikat zusammenführt.",
+  "webhooks.event.user.updated.when":
+    "Wenn ein Admin das Profil eines Mitglieds speichert oder ein Duplikat zusammenführt.",
 
   "approval.kind.merge_members": "Mitgliedskonten zusammenführen",
-  "users.retirement.approval_decisions": "Offene Freigaben dieses Mitglieds entscheiden.",
-  "users.retirement.automations": "Automatisierungen dieses Mitglieds pausieren oder neu zuweisen.",
-  "users.retirement.booking_pages": "Buchungsseiten dieses Mitglieds entfernen.",
-  "users.retirement.data_requests": "Offene Datenanfragen dieses Mitglieds neu zuweisen.",
-  "users.retirement.deal_rooms": "Offene Deal Rooms dieses Mitglieds neu zuweisen.",
-  "users.retirement.introductions": "Offene Vorstellungen dieses Mitglieds abschließen.",
-  "users.retirement.lists": "Listen dieses Mitglieds neu zuweisen oder archivieren.",
-  "users.retirement.stewarded_lists": "Betreute Listen dieses Mitglieds neu zuweisen oder archivieren.",
-  "users.retirement.mail_drafts": "Gespeicherte E-Mail-Entwürfe dieses Mitglieds senden oder verwerfen.",
-  "users.retirement.meeting_invitations": "Offene Termineinladungen dieses Mitglieds absagen.",
-  "users.retirement.meeting_proposals": "Terminvorschläge dieses Mitglieds abschließen.",
-  "users.retirement.privacy_notices": "Offene Datenschutzhinweise dieses Mitglieds neu zuweisen.",
-  "users.retirement.record_responsibilities": "Zuständigkeiten dieses Mitglieds neu zuweisen.",
-  "users.retirement.reports": "Berichte dieses Mitglieds neu zuweisen oder archivieren.",
-  "users.retirement.report_schedules": "Berichtspläne dieses Mitglieds deaktivieren.",
-  "users.retirement.saved_views": "Gespeicherte Ansichten dieses Mitglieds entfernen.",
-  "users.retirement.scheduled_mail": "Geplante E-Mails dieses Mitglieds abbrechen.",
-  "users.retirement.handoffs": "Offene Übergaben dieses Mitglieds neu zuweisen.",
-  "users.retirement.voice_profiles": "Schreibprofile dieses Mitglieds archivieren.",
-  "users.retirement.web_forms": "Website-Formulare dieses Mitglieds pausieren oder neu zuweisen.",
-  "users.retirement.webhooks": "Webhooks dieses Mitglieds neu zuweisen oder deaktivieren.",
-  "users.retirement.weekly_plans": "Offene Wochenpläne dieses Mitglieds abschließen.",
-  "users.retirement.analytics_shares": "Aktive Analytics-Freigaben für dieses Mitglied widerrufen.",
-  "users.retirement.source_used": "Nur ungenutzte importierte oder eingeladene Konten können zusammengeführt werden. Bei eingerichteten Konten Arbeit übergeben und das Mitglied deaktivieren.",
-  "users.retirement.self_survivor": "Ein anderes Mitglied als sich selbst als Ziel wählen.",
-  "users.retirement.deactivate_first": "Dieses Mitglied vor dem Entfernen deaktivieren.",
-  "users.retirement.choose_survivor": "Das Mitglied wählen, das bestehen bleibt.",
-  "users.retirement.choose_receiver": "Ein Mitglied für die verbleibende Arbeit wählen.",
-  "users.retirement.private_tasks": "Einige offene Aufgaben sind für dich nicht zugänglich. Das zuständige Mitglied muss sie vor dem Entfernen teilen oder neu zuweisen.",
-  "users.retirement.work_not_transferable": "Einige zugewiesene Aufgaben oder Datensätze darfst du nicht ändern. Vor dem Fortfahren neu zuweisen.",
-  "users.retirement.state_changed": "Dieses Mitglied wurde geändert. Eine neue Vorschau anfordern.",
-  "users.retirement.source_signed_out": "Das entfernte Konto wird überall abgemeldet.",
-  "users.retirement.connectors_reconnect": "Verbundene Konten müssen beim verbleibenden Mitglied neu verbunden werden.",
-  "users.retirement.survivor_access": "Das verbleibende Mitglied behält Rollen, Teams und Anmeldeeinstellungen und erhält den persönlichen Zugriff und die Korrespondenz des zusammengeführten Kontos.",
-  "users.retirement.original_attribution": "Die ursprünglichen Namen bleiben im Verlauf erhalten.",
-  "users.retirement.private_alerts_archived": "Persönliche Hinweise werden archiviert.",
-  "users.retirement.crm_private_records_move": "Zugewiesene CRM-Datensätze, auch private Kontakte und Unternehmen, werden für das empfangende Mitglied sichtbar.",
-  "users.retirement.private_audiences_retained": "E-Mails und Aktivitäten behalten ihre Freigaben. Bereits freigegebene Aktivitäten können mit übertragenen Datensätzen für das neu zuständige Mitglied sichtbar werden.",
-  "users.retirement.email_reserved": "Das Entfernen lässt sich hier nicht rückgängig machen. Die ursprüngliche E-Mail-Adresse bleibt reserviert. Falls das Mitglied zurückkehren könnte, Deaktivieren verwenden.",
-  "users.retirement.survivor_inactive": "Das verbleibende Mitglied ist deaktiviert. Für Anmeldung und Teamzuordnung wieder aktivieren.",
-  "users.retirement.unknown": "Die verbleibende Arbeit vor dem Fortfahren klären.",
-  "users.retirement.protected_email": "Diese Anmeldeadresse wurde bereits verwendet und kann hier nicht geändert werden.",
+  "users.retirement.approval_decisions":
+    "Offene Freigaben dieses Mitglieds entscheiden.",
+  "users.retirement.automations":
+    "Automatisierungen dieses Mitglieds pausieren oder neu zuweisen.",
+  "users.retirement.booking_pages":
+    "Buchungsseiten dieses Mitglieds entfernen.",
+  "users.retirement.data_requests":
+    "Offene Datenanfragen dieses Mitglieds neu zuweisen.",
+  "users.retirement.deal_rooms":
+    "Offene Deal Rooms dieses Mitglieds neu zuweisen.",
+  "users.retirement.introductions":
+    "Offene Vorstellungen dieses Mitglieds abschließen.",
+  "users.retirement.lists":
+    "Listen dieses Mitglieds neu zuweisen oder archivieren.",
+  "users.retirement.stewarded_lists":
+    "Betreute Listen dieses Mitglieds neu zuweisen oder archivieren.",
+  "users.retirement.mail_drafts":
+    "Gespeicherte E-Mail-Entwürfe dieses Mitglieds senden oder verwerfen.",
+  "users.retirement.meeting_invitations":
+    "Offene Termineinladungen dieses Mitglieds absagen.",
+  "users.retirement.meeting_proposals":
+    "Terminvorschläge dieses Mitglieds abschließen.",
+  "users.retirement.privacy_notices":
+    "Offene Datenschutzhinweise dieses Mitglieds neu zuweisen.",
+  "users.retirement.record_responsibilities":
+    "Zuständigkeiten dieses Mitglieds neu zuweisen.",
+  "users.retirement.reports":
+    "Berichte dieses Mitglieds neu zuweisen oder archivieren.",
+  "users.retirement.report_schedules":
+    "Berichtspläne dieses Mitglieds deaktivieren.",
+  "users.retirement.saved_views":
+    "Gespeicherte Ansichten dieses Mitglieds entfernen.",
+  "users.retirement.scheduled_mail":
+    "Geplante E-Mails dieses Mitglieds abbrechen.",
+  "users.retirement.handoffs":
+    "Offene Übergaben dieses Mitglieds neu zuweisen.",
+  "users.retirement.voice_profiles":
+    "Schreibprofile dieses Mitglieds archivieren.",
+  "users.retirement.web_forms":
+    "Website-Formulare dieses Mitglieds pausieren oder neu zuweisen.",
+  "users.retirement.webhooks":
+    "Webhooks dieses Mitglieds neu zuweisen oder deaktivieren.",
+  "users.retirement.weekly_plans":
+    "Offene Wochenpläne dieses Mitglieds abschließen.",
+  "users.retirement.analytics_shares":
+    "Aktive Analytics-Freigaben für dieses Mitglied widerrufen.",
+  "users.retirement.source_used":
+    "Nur ungenutzte importierte oder eingeladene Konten können zusammengeführt werden. Bei eingerichteten Konten Arbeit übergeben und das Mitglied deaktivieren.",
+  "users.retirement.self_survivor":
+    "Ein anderes Mitglied als sich selbst als Ziel wählen.",
+  "users.retirement.deactivate_first":
+    "Dieses Mitglied vor dem Entfernen deaktivieren.",
+  "users.retirement.choose_survivor":
+    "Das Mitglied wählen, das bestehen bleibt.",
+  "users.retirement.choose_receiver":
+    "Ein Mitglied für die verbleibende Arbeit wählen.",
+  "users.retirement.private_tasks":
+    "Einige offene Aufgaben sind für dich nicht zugänglich. Das zuständige Mitglied muss sie vor dem Entfernen teilen oder neu zuweisen.",
+  "users.retirement.work_not_transferable":
+    "Einige zugewiesene Aufgaben oder Datensätze darfst du nicht ändern. Vor dem Fortfahren neu zuweisen.",
+  "users.retirement.state_changed":
+    "Dieses Mitglied wurde geändert. Eine neue Vorschau anfordern.",
+  "users.retirement.source_signed_out":
+    "Das entfernte Konto wird überall abgemeldet.",
+  "users.retirement.connectors_reconnect":
+    "Verbundene Konten müssen beim verbleibenden Mitglied neu verbunden werden.",
+  "users.retirement.survivor_access":
+    "Das verbleibende Mitglied behält Rollen, Teams und Anmeldeeinstellungen und erhält den persönlichen Zugriff und die Korrespondenz des zusammengeführten Kontos.",
+  "users.retirement.original_attribution":
+    "Die ursprünglichen Namen bleiben im Verlauf erhalten.",
+  "users.retirement.private_alerts_archived":
+    "Persönliche Hinweise werden archiviert.",
+  "users.retirement.crm_private_records_move":
+    "Zugewiesene CRM-Datensätze, auch private Kontakte und Unternehmen, werden für das empfangende Mitglied sichtbar.",
+  "users.retirement.private_audiences_retained":
+    "E-Mails und Aktivitäten behalten ihre Freigaben. Bereits freigegebene Aktivitäten können mit übertragenen Datensätzen für das neu zuständige Mitglied sichtbar werden.",
+  "users.retirement.email_reserved":
+    "Das Entfernen lässt sich hier nicht rückgängig machen. Die ursprüngliche E-Mail-Adresse bleibt reserviert. Falls das Mitglied zurückkehren könnte, Deaktivieren verwenden.",
+  "users.retirement.survivor_inactive":
+    "Das verbleibende Mitglied ist deaktiviert. Für Anmeldung und Teamzuordnung wieder aktivieren.",
+  "users.retirement.unknown":
+    "Die verbleibende Arbeit vor dem Fortfahren klären.",
+  "users.retirement.protected_email":
+    "Diese Anmeldeadresse wurde bereits verwendet und kann hier nicht geändert werden.",
   "users.mergeSource": "Doppeltes Konto",
   "users.mergedAccounts": "Mit diesem Mitglied zusammengeführte Konten",
   "users.reloadMember": "Mitglied neu laden",
   "users.teamAdminOnly": "Nur ein Admin kann die Teamzugehörigkeit ändern.",
-  "users.visibleWorkNote": "Die Zahlen zeigen die für dich sichtbare Arbeit. Beim Zusammenführen bleiben der persönliche Zugriff auf Datensätze und die private Korrespondenz für dasselbe Mitglied erhalten.",
+  "users.visibleWorkNote":
+    "Die Zahlen zeigen die für dich sichtbare Arbeit. Beim Zusammenführen bleiben der persönliche Zugriff auf Datensätze und die private Korrespondenz für dasselbe Mitglied erhalten.",
   "users.search": "Mitglieder suchen",
   "users.searchPlaceholder": "Name oder E-Mail",
   "users.clearSearch": "Suche löschen",
@@ -66,9 +111,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.edit": "Mitglied bearbeiten",
   "users.editTitle": "{name} bearbeiten",
   "users.saved": "Mitglied gespeichert.",
-  "users.invitedSetup": "Dieses Konto ist freigeschaltet und wartet auf die Einrichtung der Anmeldung. Name, Rolle und Teams lassen sich bereits bearbeiten.",
-  "users.editInactive": "Aktiviere dieses Mitglied, bevor du es Teams hinzufügst.",
-  "users.emailChangeEndsSessions": "Eine neue Konto-E-Mail meldet das Mitglied ab und macht bestehende Anmeldelinks ungültig.",
+  "users.invitedSetup":
+    "Dieses Konto ist freigeschaltet und wartet auf die Einrichtung der Anmeldung. Name, Rolle und Teams lassen sich bereits bearbeiten.",
+  "users.editInactive":
+    "Aktiviere dieses Mitglied, bevor du es Teams hinzufügst.",
+  "users.emailChangeEndsSessions":
+    "Eine neue Konto-E-Mail meldet das Mitglied ab und macht bestehende Anmeldelinks ungültig.",
   "users.keepRoles": "Aktuelle Rollen behalten",
   "users.editCancel": "Abbrechen",
   "users.editSave": "Mitglied speichern",
@@ -76,8 +124,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.remove": "Mitglied entfernen",
   "users.mergeTitle": "{name} mit einem anderen Konto zusammenführen?",
   "users.removeTitle": "{name} entfernen?",
-  "users.mergeBody": "Wähle das Konto, das bestehen bleibt. Die Arbeit wird übertragen und das Duplikat aus der Mitgliederliste entfernt.",
-  "users.removeBody": "Dieses Konto wird aus der Mitgliederliste entfernt. Die ursprüngliche Urheberschaft bleibt im Verlauf erhalten. Wähle ein Mitglied zur Übergabe, falls noch Arbeit zugeordnet ist.",
+  "users.mergeBody":
+    "Wähle das Konto, das bestehen bleibt. Die Arbeit wird übertragen und das Duplikat aus der Mitgliederliste entfernt.",
+  "users.removeBody":
+    "Dieses Konto wird aus der Mitgliederliste entfernt. Die ursprüngliche Urheberschaft bleibt im Verlauf erhalten. Wähle ein Mitglied zur Übergabe, falls noch Arbeit zugeordnet ist.",
   "users.survivingMember": "Konto behalten",
   "users.noHandover": "Keine Übergabe nötig",
   "users.chooseMember": "Mitglied wählen",
@@ -1590,7 +1640,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro Million Tokens",
 
   "brief.weekly.tasksCompleted": "Aufgaben erledigt",
-  "brief.weekly.noMeetings": "Keine Termine",
+  "brief.weekly.noMeetings": "Keine Termine erfasst",
   "brief.weekly.noLeads": "Keine eingegangen",
   "brief.weekly.noCommitments": "Keine fällig",
   "brief.weekly.basis":
@@ -2720,6 +2770,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.loading": "Wird geladen…",
   "ref.nameLoadFailed": "Name wurde nicht geladen",
   "ref.memberLeft": "{name} (ausgeschieden)",
+  "roster.failedUsers": "Die Teammitglieder konnten nicht geladen werden.",
+  "roster.failedTeams": "Die Teams konnten nicht geladen werden.",
   "owner.rosterFailed":
     "Die Teammitglieder konnten nicht geladen werden. Lade die Seite neu, um eines zu wählen.",
   "ref.notInRoster":
@@ -3151,15 +3203,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.health.payment.paidOnTime_other":
     "{count} von {total} Rechnungen pünktlich bezahlt",
   "co.health.reason.neverWritten":
-    "Noch nie eine Nachricht von ihnen und noch kein Termin.",
+    "Keine Nachricht dieses Kontakts und kein Termin erfasst.",
   "co.health.reason.quiet_one":
-    "Seit {days} Tag keine Antwort und kein Termin.",
+    "Seit {days} Tag keine Antwort und kein Termin erfasst.",
   "co.health.reason.quiet_other":
-    "Seit {days} Tagen keine Antwort und kein Termin.",
+    "Seit {days} Tagen keine Antwort und kein Termin erfasst.",
   "co.health.reason.quietSince_one":
-    "Seit {at} ({days} Tag) keine Antwort und kein Termin.",
+    "Seit {at} ({days} Tag) keine Antwort und kein Termin erfasst.",
   "co.health.reason.quietSince_other":
-    "Seit {at} ({days} Tagen) keine Antwort und kein Termin.",
+    "Seit {at} ({days} Tagen) keine Antwort und kein Termin erfasst.",
   "co.health.reason.meetingBooked": "Ein Termin ist für den {at} angesetzt.",
   "co.health.reason.lastMetToday": "Heute getroffen.",
   "co.health.reason.lastMet_one": "Zuletzt vor {days} Tag getroffen.",
@@ -3191,7 +3243,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "signal.kind.contract_ended": "Vertrag läuft aus",
   "signal.kind.new_opportunity": "Möglicher neuer Deal",
   "signal.kind.commitment_made": "Zusage gegeben",
-  "signal.kind.ghosted_thread": "Keine Antwort",
+  "signal.kind.ghosted_thread": "Keine Antwort erfasst",
   "signal.kind.project_gone_quiet": "Projekt verstummt",
   "signal.kind.funding": "Finanzierung",
   "signal.kind.leadership_change": "Führungswechsel",
@@ -3798,7 +3850,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Keiner der Datensätze, auf die du Zugriff hast, beantwortet diese Frage.",
   "co.ask.failed":
     "Die Frage konnte nicht beantwortet werden. Bitte versuche es erneut.",
-  "co.suggest.kind.no_reply": "Keine Antwort",
+  "co.suggest.kind.no_reply": "Keine Antwort erfasst",
   "co.suggest.kind.stalled_deal": "Stockender Deal",
   "co.suggest.kind.no_next_step": "Kein nächster Schritt",
   "co.suggest.kind.lifecycle_conflict": "Widerspruch im Lebenszyklus",
@@ -4240,7 +4292,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.contacts.board.change": "Rolle ändern",
   "co.reach.waiting": "Antwort nötig",
   "co.reach.answered": "Beantwortet",
-  "co.reach.silent": "Keine Antwort",
+  "co.reach.silent": "Keine Antwort erfasst",
   "co.reach.lapsed": "Verstummt",
   "co.reach.untried": "Nicht kontaktiert",
   "co.role.champion": "Champion",
@@ -4949,7 +5001,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "standing.timeline.label": "{name} im Zeitverlauf",
   "deal.standing.timeline.booked": "gebucht",
   "deal.standing.timeline.theyWrote": "Nachricht erhalten",
-  "deal.standing.timeline.currentRequest": "aktuelle Anfrage seit dieser Nachricht",
+  "deal.standing.timeline.currentRequest":
+    "aktuelle Anfrage seit dieser Nachricht",
   "deal.standing.timeline.lastContact": "letzter Austausch zu diesem Deal",
   "deal.standing.next.openMessage": "Nachricht öffnen",
   "deal.standing.coverage": "Abdeckung",
@@ -6420,6 +6473,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "calendar.patternMonth": "MM",
   "calendar.patternYear": "JJJJ",
   "calendar.invalidDate": "Gib ein Datum im Format {pattern} ein.",
+  "calendar.patternHour": "hh",
+  "calendar.patternMinute": "mm",
+  "calendar.invalidTime": "Gib eine Uhrzeit im Format {pattern} ein.",
+  "calendar.anyMonth": "Jeder Monat",
+  "calendar.year": "Jahr",
   "calendar.earliest": "Frühestes Datum: {date}",
   "calendar.latest": "Spätestes Datum: {date}",
   "compose.schedulePick": "Datum und Uhrzeit wählen",
@@ -9652,7 +9710,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.reconnectToSend":
     "Verbinde dieses Postfach neu, um daraus zu senden. Ein Postfach, das vor Einführung des Versands verbunden wurde, lässt sich nicht nachträglich erweitern. Der Anbieter erteilt die Sendeberechtigung nur bei einer neuen Verbindung.",
   "connectors.lastSynced": "Zuletzt synchronisiert {at}",
-  "connectors.neverSynced": "Wartet auf erste Synchronisierung",
+  "connectors.neverSynced": "Keine erfolgreiche Synchronisierung erfasst",
   "connectors.notConfigured":
     "Die E-Mail-Erfassung ist in dieser Installation nicht konfiguriert.",
   "connectors.reconnect": "Neu verbinden",
@@ -14035,8 +14093,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.pause": "Formular pausieren",
   "webForms.resume": "Formular fortsetzen",
   "webForms.rotate": "Neuen Signaturschlüssel erstellen",
-  "webForms.rotateConfirm.title": "Neuen Signaturschlüssel für das Formular erstellen?",
-  "webForms.rotateConfirm.body": "Der aktuelle Signaturschlüssel gilt sofort nicht mehr, und der neue wird einmal angezeigt. Füge ihn gleich dort ein, wo der alte stand.",
+  "webForms.rotateConfirm.title":
+    "Neuen Signaturschlüssel für das Formular erstellen?",
+  "webForms.rotateConfirm.body":
+    "Der aktuelle Signaturschlüssel gilt sofort nicht mehr, und der neue wird einmal angezeigt. Füge ihn gleich dort ein, wo der alte stand.",
   "webForms.archive": "Archivieren",
   "webForms.archiveConfirm":
     "Nach dem Archivieren nimmt dieses Formular keine Sendungen mehr an. Das lässt sich nicht rückgängig machen.",
@@ -14053,21 +14113,30 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.field.sender": "Wo ist dein Formular?",
   "webForms.field.senderFixed":
     "Steht fest, sobald das Formular existiert. Lege für eine Änderung ein neues an.",
-  "webForms.senderHint.browser": "Ein Formular auf deinen eigenen Seiten, in WordPress, Webflow oder einem anderen Baukasten, in dem du festlegst, wohin ein Formular sendet. Ohne Entwickler.",
-  "webForms.senderHint.server": "Für Entwickler: Der Server deiner Website leitet jede Anfrage signiert weiter.",
-  "webForms.senderHint.webflow": "Für Entwickler: ein Webhook, der über die API von Webflow angelegt wird. Ein Webflow-Formular verbindest du ohne Webhook über die erste Option.",
-  "webForms.senderHint.typeform": "Jede Typeform-Antwort kommt über einen Webhook. Margince erstellt den Signaturschlüssel für dich.",
-  "webForms.senderHint.tally": "Jede Tally-Antwort kommt über einen Webhook. Margince erstellt den Signaturschlüssel für dich.",
+  "webForms.senderHint.browser":
+    "Ein Formular auf deinen eigenen Seiten, in WordPress, Webflow oder einem anderen Baukasten, in dem du festlegst, wohin ein Formular sendet. Ohne Entwickler.",
+  "webForms.senderHint.server":
+    "Für Entwickler: Der Server deiner Website leitet jede Anfrage signiert weiter.",
+  "webForms.senderHint.webflow":
+    "Für Entwickler: ein Webhook, der über die API von Webflow angelegt wird. Ein Webflow-Formular verbindest du ohne Webhook über die erste Option.",
+  "webForms.senderHint.typeform":
+    "Jede Typeform-Antwort kommt über einen Webhook. Margince erstellt den Signaturschlüssel für dich.",
+  "webForms.senderHint.tally":
+    "Jede Tally-Antwort kommt über einen Webhook. Margince erstellt den Signaturschlüssel für dich.",
   "webForms.field.origins": "Websites",
   "webForms.field.originsHint":
     "Eine Adresse pro Zeile. Sendungen von anderen Websites werden abgelehnt.",
   "webForms.required.name": "Gib dem Formular einen Namen.",
-  "webForms.required.origins": "Gib die Website ein, von der das Formular gesendet wird.",
-  "webForms.required.consentWording": "Gib den Text ein, dem Besuchende zustimmen.",
-  "webForms.field.originKept": "{entry} wird als {origin} gespeichert: Das Formular kann von jeder Seite dieser Website abgesendet werden.",
+  "webForms.required.origins":
+    "Gib die Website ein, von der das Formular gesendet wird.",
+  "webForms.required.consentWording":
+    "Gib den Text ein, dem Besuchende zustimmen.",
+  "webForms.field.originKept":
+    "{entry} wird als {origin} gespeichert: Das Formular kann von jeder Seite dieser Website abgesendet werden.",
   "webForms.field.originsPlaceholder": "https://www.example.com",
   "webForms.field.senderSecret": "Signaturschlüssel",
-  "webForms.field.senderSecretHint": "Der Signaturschlüssel, den die Webflow-API einmal zurückgibt, wenn sie den Webhook anlegt. Einen Webhook, den eine OAuth-App anlegt, signiert stattdessen das Client Secret dieser App. Lass das Feld leer, bis du ihn hast: Bis dahin nimmt das Formular nichts an.",
+  "webForms.field.senderSecretHint":
+    "Der Signaturschlüssel, den die Webflow-API einmal zurückgibt, wenn sie den Webhook anlegt. Einen Webhook, den eine OAuth-App anlegt, signiert stattdessen das Client Secret dieser App. Lass das Feld leer, bis du ihn hast: Bis dahin nimmt das Formular nichts an.",
   "webForms.field.senderSecretKeep":
     "Leer lassen, um den gespeicherten Signaturschlüssel zu behalten.",
   "webForms.field.consentRequired":
@@ -14103,21 +14172,36 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.row.secretMissing": "Wartet auf den Signaturschlüssel",
   "webForms.setup.copyAddress": "Adresse kopieren",
   "webForms.steps.browser.address": "Kopiere die Formularadresse.",
-  "webForms.steps.browser.builder": "Öffne in Webflow, WordPress oder einem anderen Baukasten die Einstellungen deines Formulars. Trag diese Adresse als Ziel ein (in Webflow heißt das Action) und als Methode POST.",
-  "webForms.steps.browser.fields": "Nenne das E-Mail-Feld email. Margince liest auch full_name, phone, company und message und legt jedes andere Feld in der Notiz am Lead ab.",
-  "webForms.steps.browser.code": "Baust du die Seite selbst? Füge stattdessen diesen Code dort ein, wo das Formular hin soll.",
-  "webForms.steps.endpoint": "Füge die Formularadresse als Adresse des Webhooks ein.",
-  "webForms.steps.typeform.open": "Öffne in Typeform das Formular, geh zu Connect, dann Webhooks, und wähle Add a webhook.",
-  "webForms.steps.typeform.secret": "Schalte in den Einstellungen des Webhooks Secret ein, füge den Signaturschlüssel des Formulars ein und speichere. Schalte dann den Webhook ein: Typeform legt ihn ausgeschaltet an.",
-  "webForms.steps.tally.open": "Öffne in Tally das Formular, geh zu Integrations und verbinde Webhooks.",
-  "webForms.steps.tally.secret": "Füge den Signaturschlüssel des Formulars unter Signing secret ein und speichere.",
-  "webForms.steps.server.secret": "Speichere den Signaturschlüssel des Formulars auf dem Server deiner Website als {name}.",
-  "webForms.steps.server.address": "Dein Server sendet jede Anfrage an die Formularadresse.",
-  "webForms.steps.server.code": "Dieser Code signiert jede Sendung. Dein Entwickler kann ihn so verwenden.",
-  "webForms.steps.webflow.create": "Lege den Webhook über die API von Webflow an, mit der Formularadresse als URL.",
-  "webForms.steps.webflow.secret": "Die Webflow-API gibt den Signaturschlüssel des Webhooks einmal zurück. Einen Webhook, den eine OAuth-App angelegt hat, signiert stattdessen das Client Secret dieser App. Füge den passenden unter Bearbeiten an diesem Formular bei Signaturschlüssel ein.",
-  "webForms.steps.test": "Sende eine Testanfrage. Die Anfrage erscheint als neuer Lead unter Leads, oder als Notiz am Lead oder Kontakt, der diese E-Mail-Adresse schon hat.",
-  "webForms.steps.secretShownOnce": "Der Signaturschlüssel wurde einmal angezeigt, als das Formular angelegt wurde. Verloren? Wähle im Menü ⋯ des Formulars Neuen Signaturschlüssel erstellen.",
+  "webForms.steps.browser.builder":
+    "Öffne in Webflow, WordPress oder einem anderen Baukasten die Einstellungen deines Formulars. Trag diese Adresse als Ziel ein (in Webflow heißt das Action) und als Methode POST.",
+  "webForms.steps.browser.fields":
+    "Nenne das E-Mail-Feld email. Margince liest auch full_name, phone, company und message und legt jedes andere Feld in der Notiz am Lead ab.",
+  "webForms.steps.browser.code":
+    "Baust du die Seite selbst? Füge stattdessen diesen Code dort ein, wo das Formular hin soll.",
+  "webForms.steps.endpoint":
+    "Füge die Formularadresse als Adresse des Webhooks ein.",
+  "webForms.steps.typeform.open":
+    "Öffne in Typeform das Formular, geh zu Connect, dann Webhooks, und wähle Add a webhook.",
+  "webForms.steps.typeform.secret":
+    "Schalte in den Einstellungen des Webhooks Secret ein, füge den Signaturschlüssel des Formulars ein und speichere. Schalte dann den Webhook ein: Typeform legt ihn ausgeschaltet an.",
+  "webForms.steps.tally.open":
+    "Öffne in Tally das Formular, geh zu Integrations und verbinde Webhooks.",
+  "webForms.steps.tally.secret":
+    "Füge den Signaturschlüssel des Formulars unter Signing secret ein und speichere.",
+  "webForms.steps.server.secret":
+    "Speichere den Signaturschlüssel des Formulars auf dem Server deiner Website als {name}.",
+  "webForms.steps.server.address":
+    "Dein Server sendet jede Anfrage an die Formularadresse.",
+  "webForms.steps.server.code":
+    "Dieser Code signiert jede Sendung. Dein Entwickler kann ihn so verwenden.",
+  "webForms.steps.webflow.create":
+    "Lege den Webhook über die API von Webflow an, mit der Formularadresse als URL.",
+  "webForms.steps.webflow.secret":
+    "Die Webflow-API gibt den Signaturschlüssel des Webhooks einmal zurück. Einen Webhook, den eine OAuth-App angelegt hat, signiert stattdessen das Client Secret dieser App. Füge den passenden unter Bearbeiten an diesem Formular bei Signaturschlüssel ein.",
+  "webForms.steps.test":
+    "Sende eine Testanfrage. Die Anfrage erscheint als neuer Lead unter Leads, oder als Notiz am Lead oder Kontakt, der diese E-Mail-Adresse schon hat.",
+  "webForms.steps.secretShownOnce":
+    "Der Signaturschlüssel wurde einmal angezeigt, als das Formular angelegt wurde. Verloren? Wähle im Menü ⋯ des Formulars Neuen Signaturschlüssel erstellen.",
 
   "webhooks.title": "Webhooks",
   "webhooks.readOnly":
@@ -14886,13 +14970,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.verdictDirect":
     "Frage {name}. Das Teammitglied steht bereits im Austausch mit diesem Kontakt.",
   "contact.intro.verdictOneSided":
-    "Frage {name}. Das Teammitglied hat diesem Kontakt geschrieben, noch ohne Antwort.",
+    "Frage {name}. Das Teammitglied hat diesem Kontakt geschrieben. Eine Antwort ist nicht erfasst.",
   "contact.intro.verdictVia":
     "Frage {name}. Das Teammitglied erreicht diesen Kontakt über {through}.",
   "contact.intro.verdictDirectYou":
     "Du stehst bereits im Austausch mit diesem Kontakt.",
   "contact.intro.verdictOneSidedYou":
-    "Du hast diesem Kontakt geschrieben, noch ohne Antwort.",
+    "Du hast diesem Kontakt geschrieben. Eine Antwort ist nicht erfasst.",
   "contact.intro.verdictViaYou": "Du erreichst den Kontakt über {through}.",
   "contact.intro.ownRouteNoAsk":
     "Es gibt niemanden, den du fragen kannst. Schreibe diesem Kontakt direkt.",
@@ -15243,13 +15327,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "contact.mayBeDone.notYet": "Noch nicht",
   "contact.rail.blocked": "Blockiert",
-  "contact.standing.lastRecordedExchange": "seit dem letzten erfassten Austausch mit diesem Kontakt",
+  "contact.standing.lastRecordedExchange":
+    "seit dem letzten erfassten Austausch mit diesem Kontakt",
   "contact.standing.lastInbound": "Letzte eingegangene Nachricht",
   "contact.standing.direction.twoWay": "Beide Seiten haben geschrieben.",
   "contact.standing.direction.inboundOnly":
     "Bisher hat nur der Kontakt geschrieben. Dein Team hat noch nichts gesendet.",
   "contact.standing.direction.outboundOnly":
-    "Bisher hat nur dein Team geschrieben. Noch keine Antwort.",
+    "Nur ausgehende Nachrichten deines Teams sind erfasst. Eine Antwort ist nicht erfasst.",
   "contact.standing.direction.none":
     "Noch keine Nachrichten, in keiner Richtung.",
   "contact.subtitle.at": "bei",
@@ -16070,7 +16155,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sched.recipientsUnknown": "Keine Empfangsadresse in dieser Nachricht",
   "sched.recipientsMore": "{first} und {count} weitere",
   "sched.move": "Neu planen",
-  "sched.moveTo": "Neuer Zeitpunkt für „{subject}“",
+  "sched.moveToDay": "Neuer Tag für „{subject}“",
+  "sched.moveToTime": "Neuer Zeitpunkt für „{subject}“",
   "sched.moveSave": "Nachricht verschieben",
   "sched.withdraw": "Zurückziehen",
   "sched.withdrawTitle": "Nachricht zurückziehen?",
@@ -16784,21 +16870,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.because.meeting_unprepared": "nichts vorbereitet",
   "worklist.because.outcome_unrecorded": "kein Ergebnis erfasst",
   "worklist.because.you_wrote_last": "du hast zuletzt geschrieben",
-  "worklist.because.no_reply_days": "keine Antwort",
-  "worklist.because.no_reply_days.value_one": "seit {value} Tag keine Antwort",
+  "worklist.because.no_reply_days": "keine Antwort erfasst",
+  "worklist.because.no_reply_days.value_one": "seit {value} Tag keine Antwort erfasst",
   "worklist.because.no_reply_days.value_other":
-    "seit {value} Tagen keine Antwort",
+    "seit {value} Tagen keine Antwort erfasst",
   "worklist.because.met_days_ago": "getroffen",
   "worklist.because.met_days_ago.value_one": "vor {value} Tag getroffen",
   "worklist.because.met_days_ago.value_other": "vor {value} Tagen getroffen",
-  "worklist.because.nothing_sent_since": "seitdem nichts gesendet",
+  "worklist.because.nothing_sent_since": "seitdem keine ausgehende Nachricht erfasst",
   "worklist.because.no_attendee_on_file": "keine Teilnehmenden erfasst",
   "worklist.because.response_overdue": "Antwort überfällig",
   "worklist.because.response_due_soon": "Antwort bald fällig",
   "worklist.because.response_due_soon.value": "Antwort fällig bis {value}",
   "worklist.because.unassigned": "niemand zuständig",
   "worklist.because.stale": "wartet schon lange",
-  "worklist.because.no_reply_history": "keine bisherigen Antworten",
+  "worklist.because.no_reply_history": "keine bisherigen Antworten erfasst",
   "worklist.because.asks_nothing": "fordert nichts an",
   "worklist.because.addressed_elsewhere": "an jemand anderen im Team gerichtet",
   "worklist.because.bcc_from_stranger":
@@ -17294,7 +17380,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Geschlossen. Der Datensatz bleibt als Verlauf erhalten.",
   "lead.standing.noResponse": "Keine erste Antwort erfasst.",
   "lead.standing.theirMove": "Wartet auf den Lead",
-  "lead.standing.answeredOn": "Am {at} beantwortet. Noch keine Rückmeldung.",
+  "lead.standing.answeredOn": "Antwort am {at} erfasst. Keine spätere Rückmeldung erfasst.",
   "lead.standing.inMotion": "In Bewegung",
   "lead.standing.engagedBecause":
     "Der Lead hat geantwortet, oder ein Termin ist geplant.",
@@ -18259,4 +18345,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.standing.peek.started": "Arbeit begonnen",
   "project.standing.peek.today": "Heute",
   "project.standing.peek.documents": "Dateien dieses Projekts, neueste zuerst",
+  "mailCoverage.title": "Der E-Mail-Verlauf kann unvollständig sein",
+  "mailCoverage.unknown": "Die E-Mail-Erfassung bestätigt diesen Zeitraum nicht vollständig. Diese Daten beschreiben erfasste Nachrichten; eine Antwort kann außerhalb dieses Datensatzes vorliegen.",
+  "mailCoverage.partial": "Die Erfassung war erfolgreich. Ein vollständiger Verlauf von Posteingang und gesendeten Nachrichten ist jedoch nicht bestätigt. Eine fehlende erfasste Nachricht beweist nicht, dass niemand geantwortet hat.",
+  "mailCoverage.unavailable": "Die E-Mail-Erfassung ist für einen Teil dieses Verlaufs nicht verfügbar. Eine Antwort kann außerhalb dieses Datensatzes vorliegen.",
+  "mailCoverage.withheld": "Du darfst den Umfang der E-Mail-Erfassung nicht prüfen. Eine fehlende erfasste Nachricht beweist nicht, dass niemand geantwortet hat.",
+  "mailCoverage.connections": "Verbindungen prüfen",
+  "connectors.syncTimeUnknown": "Zeitpunkt der letzten erfolgreichen Synchronisierung unbekannt",
 };
