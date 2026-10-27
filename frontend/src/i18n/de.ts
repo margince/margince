@@ -16871,13 +16871,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.because.outcome_unrecorded": "kein Ergebnis erfasst",
   "worklist.because.you_wrote_last": "du hast zuletzt geschrieben",
   "worklist.because.no_reply_days": "keine Antwort erfasst",
-  "worklist.because.no_reply_days.value_one": "seit {value} Tag keine Antwort erfasst",
+  "worklist.because.no_reply_days.value_one":
+    "seit {value} Tag keine Antwort erfasst",
   "worklist.because.no_reply_days.value_other":
     "seit {value} Tagen keine Antwort erfasst",
   "worklist.because.met_days_ago": "getroffen",
   "worklist.because.met_days_ago.value_one": "vor {value} Tag getroffen",
   "worklist.because.met_days_ago.value_other": "vor {value} Tagen getroffen",
-  "worklist.because.nothing_sent_since": "seitdem keine ausgehende Nachricht erfasst",
+  "worklist.because.nothing_sent_since":
+    "seitdem keine ausgehende Nachricht erfasst",
   "worklist.because.no_attendee_on_file": "keine Teilnehmenden erfasst",
   "worklist.because.response_overdue": "Antwort überfällig",
   "worklist.because.response_due_soon": "Antwort bald fällig",
@@ -17380,7 +17382,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Geschlossen. Der Datensatz bleibt als Verlauf erhalten.",
   "lead.standing.noResponse": "Keine erste Antwort erfasst.",
   "lead.standing.theirMove": "Wartet auf den Lead",
-  "lead.standing.answeredOn": "Antwort am {at} erfasst. Keine spätere Rückmeldung erfasst.",
+  "lead.standing.answeredOn":
+    "Antwort am {at} erfasst. Keine spätere Rückmeldung erfasst.",
   "lead.standing.inMotion": "In Bewegung",
   "lead.standing.engagedBecause":
     "Der Lead hat geantwortet, oder ein Termin ist geplant.",
@@ -18346,10 +18349,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.standing.peek.today": "Heute",
   "project.standing.peek.documents": "Dateien dieses Projekts, neueste zuerst",
   "mailCoverage.title": "Der E-Mail-Verlauf kann unvollständig sein",
-  "mailCoverage.unknown": "Die E-Mail-Erfassung bestätigt diesen Zeitraum nicht vollständig. Diese Daten beschreiben erfasste Nachrichten; eine Antwort kann außerhalb dieses Datensatzes vorliegen.",
-  "mailCoverage.partial": "Die Erfassung war erfolgreich. Ein vollständiger Verlauf von Posteingang und gesendeten Nachrichten ist jedoch nicht bestätigt. Eine fehlende erfasste Nachricht beweist nicht, dass niemand geantwortet hat.",
-  "mailCoverage.unavailable": "Die E-Mail-Erfassung ist für einen Teil dieses Verlaufs nicht verfügbar. Eine Antwort kann außerhalb dieses Datensatzes vorliegen.",
-  "mailCoverage.withheld": "Du darfst den Umfang der E-Mail-Erfassung nicht prüfen. Eine fehlende erfasste Nachricht beweist nicht, dass niemand geantwortet hat.",
+  "mailCoverage.unknown":
+    "Die E-Mail-Erfassung bestätigt diesen Zeitraum nicht vollständig. Diese Daten beschreiben erfasste Nachrichten; eine Antwort kann außerhalb dieses Datensatzes vorliegen.",
+  "mailCoverage.partial":
+    "Die Erfassung war erfolgreich. Ein vollständiger Verlauf von Posteingang und gesendeten Nachrichten ist jedoch nicht bestätigt. Eine fehlende erfasste Nachricht beweist nicht, dass niemand geantwortet hat.",
+  "mailCoverage.unavailable":
+    "Die E-Mail-Erfassung ist für einen Teil dieses Verlaufs nicht verfügbar. Eine Antwort kann außerhalb dieses Datensatzes vorliegen.",
+  "mailCoverage.withheld":
+    "Du darfst den Umfang der E-Mail-Erfassung nicht prüfen. Eine fehlende erfasste Nachricht beweist nicht, dass niemand geantwortet hat.",
   "mailCoverage.connections": "Verbindungen prüfen",
-  "connectors.syncTimeUnknown": "Zeitpunkt der letzten erfolgreichen Synchronisierung unbekannt",
+  "connectors.syncTimeUnknown":
+    "Zeitpunkt der letzten erfolgreichen Synchronisierung unbekannt",
 };
