@@ -38,6 +38,7 @@ import {
   momentumOf,
   momentumTone,
 } from "./dealstanding";
+import { currentReplyTarget } from "./dealwaiting";
 
 type Deal = components["schemas"]["Deal"];
 
@@ -185,7 +186,7 @@ export function riskDim(
   const base = { key: "risk", label: t("deal.standing.risk") };
   const closeDays = closeWords(deal, locale, zone, t).daysLeft;
   const signals = [
-    ...(card?.reply_to
+    ...(card && currentReplyTarget(card)
       ? [{ key: "reply", title: t("deal.standing.risk.replyOwed") }]
       : []),
     ...(closeTone(deal, closeDays) === "danger"

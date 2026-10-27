@@ -11,10 +11,10 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-const noContactYet = "No contact has taken place on this deal yet"
+const noContactShown = "No exchange is shown in this deal’s recent history"
 
 // A note or an unheld meeting does not prove that contact took place.
-func TestADealWithNoContactIsNotToldNothingWasLogged(t *testing.T) {
+func TestRecentHistoryDoesNotClaimThatNoContactEverHappened(t *testing.T) {
 	canceled := crmcontracts.ActivityMeetingStatusCanceled
 	called := act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -2))
 	called.MeetingStatus = &canceled
@@ -35,11 +35,11 @@ func TestADealWithNoContactIsNotToldNothingWasLogged(t *testing.T) {
 					t.Errorf("a deal with %s was told %q", name, text)
 				}
 			}
-			if got := nextStepReason(f); !strings.Contains(got, noContactYet) {
+			if got := nextStepReason(f); !strings.Contains(got, noContactShown) {
 				t.Errorf("next step reason %q does not say what is missing", got)
 			}
-			if got := storyLines(f)[1].Text; got != noContactYet+"." {
-				t.Errorf("story line %q, want %q", got, noContactYet+".")
+			if got := storyLines(f)[1].Text; got != noContactShown+"." {
+				t.Errorf("story line %q, want %q", got, noContactShown+".")
 			}
 		})
 	}

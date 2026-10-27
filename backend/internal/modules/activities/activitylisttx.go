@@ -33,7 +33,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 		return nil, storekit.Page{}, err
 	}
 	order := sorted.OrderBy()
-	if in.RequestReviewAsOf != nil {
+	if in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil {
 		order = requestPriorityOrder
 	}
 
@@ -65,7 +65,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	var page storekit.Page
 	if len(activities) > limit {
 		activities = activities[:limit]
-		if in.RequestReviewAsOf == nil {
+		if in.RequestReviewAsOf == nil && in.RequestCurrentAsOf == nil {
 			last := activities[limit-1]
 			next, err := sorted.EncodePageCursor(paged[limit-1].key, last.CreatedAt, ids.UUID(last.Id))
 			if err != nil {

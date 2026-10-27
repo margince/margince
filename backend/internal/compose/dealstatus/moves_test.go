@@ -17,7 +17,7 @@ import (
 
 func storedCard(t *testing.T, next *crmcontracts.DealStatusCardMove) []byte {
 	t.Helper()
-	payload, err := json.Marshal(stored{Card: crmcontracts.DealStatusCard{Next: next}})
+	payload, err := json.Marshal(stored{ProjectionVersion: ProjectionVersion, Card: crmcontracts.DealStatusCard{Next: next}})
 	if err != nil {
 		t.Fatalf("encoding a stored card: %v", err)
 	}

@@ -25,7 +25,7 @@ import (
 type summaryCopy struct {
 	// Record writes. A record type reads as the language's noun (recordnouns.go);
 	// labels, field names and ids pass through.
-	archive, createHead, updateHead, logHead, settingFields, moreFields, overwriteHuman, merge,
+	archive, createHead, updateHead, logHead, settingFields, moreFields, merge,
 	enrich, ownDomain string
 
 	// Writes nested under a parent record, named by id.
@@ -72,7 +72,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		logHead:             "Log a %s",
 		settingFields:       ", setting %s",
 		moreFields:          "+%d more",
-		overwriteHuman:      "Update %s %s: overwrite %s, edited by hand",
 		merge:               "Merge %s %s into %s",
 		enrich:              "Read %s from %s and propose enrichment of %s",
 		ownDomain:           "its own domain",
@@ -148,7 +147,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		logHead:             "%s erfassen",
 		settingFields:       ", Felder: %s",
 		moreFields:          "+%d weitere",
-		overwriteHuman:      "%s %s ändern: manuell bearbeitete Felder überschreiben (%s)",
 		merge:               "%s zusammenführen: %s in %s",
 		enrich:              "%s von %s lesen und eine Anreicherung für %s vorschlagen",
 		ownDomain:           "seiner eigenen Domain",
@@ -224,7 +222,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		logHead:             "Ghi nhận %s",
 		settingFields:       ", các trường: %s",
 		moreFields:          "+%d trường khác",
-		overwriteHuman:      "Cập nhật %s %s: ghi đè các trường đã được chỉnh sửa thủ công (%s)",
 		merge:               "Hợp nhất %s: %s vào %s",
 		enrich:              "Đọc %s từ %s và đề xuất làm giàu dữ liệu cho %s",
 		ownDomain:           "tên miền của chính công ty",

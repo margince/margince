@@ -31447,17 +31447,14 @@ export interface components {
             verdict?: components["schemas"]["DealStatusCardVerdict"];
             /** @description The one move to make, with the verb to perform it. */
             next?: components["schemas"]["DealStatusCardMove"];
+            /** @description Current request evidence supporting reply_to; absent for historical review. */
+            request_basis?: components["schemas"]["WorkEvidenceBasis"];
             /**
              * Format: uuid
-             * @description The inbound message an email from here would answer: the most recent
-             *     one this deal has received that nobody has replied to. Null when the
-             *     buyer has never written, or when the last thing they wrote has been
-             *     answered — then a mail from here starts a thread rather than
-             *     continuing one.
-             *
-             *     Independent of `next` on purpose. Whether there is something to reply
-             *     to is a fact about the deal; which move ranks first is a judgement,
-             *     and the two must not have to agree for the reply to be reachable.
+             * @description A confirmed current inbound request on this deal, admitted by the
+             *     request owner's responsibility, settlement and currency rules.
+             *     Absent for historical or unconfirmed review. Its absence makes no
+             *     claim about whether an unrecorded reply exists.
              */
             reply_to?: string | null;
             /** Format: date-time */
@@ -31508,6 +31505,8 @@ export interface components {
                 [key: string]: unknown;
             };
             evidence: components["schemas"]["DealNextBestActionEvidence"][];
+            /** @description Evidence classification for this recommendation; absence supplies no urgency. */
+            basis?: components["schemas"]["WorkEvidenceBasis"];
             /**
              * @description A digest of what the move names: its verb, operands and evidence, taken when the
              *     rules chose it. Send it to `POST /deals/{id}/move/dismiss` to set this move aside;
@@ -31515,6 +31514,25 @@ export interface components {
              *     nothing to do (`none`).
              */
             readonly fingerprint?: string;
+        };
+        /**
+         * @description A recommendation's scoped source and classification. Known request kinds
+         *     are current_request and request_review; unknown kinds remain neutral.
+         *     Source age is not a deadline. Evaluation time is not source time.
+         */
+        WorkEvidenceBasis: {
+            kind: string;
+            /** @description The record scope in which the evidence was evaluated. */
+            scope: string;
+            /** Format: uuid */
+            source_activity_id: string;
+            /** Format: date-time */
+            source_at: string;
+            source_precision: components["schemas"]["OccurredPrecision"];
+            source_version?: components["schemas"]["RowVersion"];
+            /** Format: date-time */
+            evaluated_at: string;
+            policy_version: string;
         };
         DealNextBestActionEvidence: {
             text: string;
@@ -50363,6 +50381,8 @@ export interface components {
          *     for it.
          */
         WorklistMove: {
+            /** @description The deal recommendation's evidence basis, preserved across surfaces. */
+            basis?: components["schemas"]["WorkEvidenceBasis"];
             /**
              * @description `draft_reply` answers the message in `activity_id` — offered only where the
              *     reader may READ that message, because there is no replying to words they

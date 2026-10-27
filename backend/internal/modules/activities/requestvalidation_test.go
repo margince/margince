@@ -30,8 +30,13 @@ func TestOnlyTaskCreationCanAcceptARequest(t *testing.T) {
 func TestARecencyCursorCannotResumeRequestPriorityOrder(t *testing.T) {
 	at := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
 	cursor := "anything"
-	_, _, _, _, err := listActivitiesFilter(unscopedCtx(), ListActivitiesInput{RequestReviewAsOf: &at, Cursor: &cursor})
-	if !errors.Is(err, errRequestReviewWithCursor) {
-		t.Fatalf("request cursor = %v", err)
+	for _, input := range []ListActivitiesInput{
+		{RequestReviewAsOf: &at, Cursor: &cursor},
+		{RequestCurrentAsOf: &at, Cursor: &cursor},
+	} {
+		_, _, _, _, err := listActivitiesFilter(unscopedCtx(), input)
+		if !errors.Is(err, errRequestReviewWithCursor) {
+			t.Fatalf("request cursor = %v", err)
+		}
 	}
 }

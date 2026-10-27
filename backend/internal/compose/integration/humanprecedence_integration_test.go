@@ -5,12 +5,9 @@
 
 package integration
 
-// The human-edit-precedence gate is per FIELD, and it
-// binds automatic work: an agent with no passport behind it. Its patch applies
-// wherever it keeps clear of human-typed values. The human-owned fields it
-// touches are split off into a staged approval, and only a human decision,
-// consumed once, releases the overwrite. An agent on a colleague's passport
-// overwrites as that colleague could, with no approval.
+// An agent edit applies in the one call, whoever last wrote the field. The audit
+// trail and Undo put a wrong edit back, so nothing waits for approval. An agent
+// on a colleague's passport and automatic work with no passport both apply it.
 
 import (
 	"context"
@@ -51,13 +48,11 @@ func TestAnAgentOnAColleaguesPassportOverwritesAHumanTypedField(t *testing.T) {
 	}
 }
 
-// A differently-cased field key cannot slip a human-owned overwrite through the
-// green path. The precedence probe matches audit keys case-sensitively, so it
-// would clear `{"FULL_NAME":…}` as touching no human-owned field. Every record
-// request decoder matches its known fields by exact key and refuses any other
-// key that is no cf_ key. The patch answers 422 and the human value stands. Lead
-// is exercised here because it was the last object to take custom fields.
-func TestEndToEnd_caseVariantKeyCannotBypassPrecedence(t *testing.T) {
+// A differently-cased field key is refused, not applied. Every record request
+// decoder matches its known fields by exact key and refuses any other key that
+// is no cf_ key. The patch answers 422 and the stored value stands. Lead is
+// exercised here because it was the last object to take custom fields.
+func TestEndToEnd_caseVariantKeyIsRefused(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -169,34 +164,27 @@ func contactNameAndTitle(t *testing.T, invoke func(tool, args string) (json.RawM
 	return rec.Fields.FullName, rec.Fields.Title
 }
 
-// Automatic work with no passport applies the fields nobody typed. It is refused
-// the ones a human last wrote: it may not stage an approval, so nothing waits.
-func TestAutomaticWorkIsRefusedTheFieldsAHumanTyped(t *testing.T) {
+// Automatic work with no passport applies the whole patch, including a field a
+// human typed. Nothing is staged for it.
+func TestAutomaticWorkOverwritesAHumanTypedFieldWithoutApproval(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	contactID, _ := stageContactAndAgent(t, e, "Mona Human", "automatic split agent")
+	contactID, _ := stageContactAndAgent(t, e, "Mona Human", "automatic edit agent")
 	invoke := automaticInvoker(t, e)
 
 	out, err := invoke("update_record", fmt.Sprintf(
-		`{"record_type":"contact","id":%q,"fields":{"title":"CTO"}}`, contactID,
-	))
-	if err != nil {
-		t.Fatalf("a patch of fields nobody typed → %v, want it applied", err)
-	}
-	if strings.Contains(string(out), "staged_approval") {
-		t.Fatalf("a patch of fields nobody typed staged something: %s", out)
-	}
-
-	_, err = invoke("update_record", fmt.Sprintf(
 		`{"record_type":"contact","id":%q,"fields":{"full_name":"Mona Machine","title":"VP Engineering"}}`, contactID,
 	))
-	if !isPassportlessStagingRefusal(err) {
-		t.Fatalf("a patch touching a human-typed name → %v, want the refusal that automatic work cannot stage", err)
+	if err != nil {
+		t.Fatalf("a patch touching a human-typed name → %v, want it applied", err)
+	}
+	if strings.Contains(string(out), "staged_approval") {
+		t.Fatalf("the patch staged something: %s", out)
 	}
 	fullName, title := contactNameAndTitle(t, invoke, contactID)
-	if fullName != "Mona Human" || title != "VP Engineering" {
-		t.Errorf("after the refusal the contact reads %q / %q, want the human name kept and the title applied", fullName, title)
+	if fullName != "Mona Machine" || title != "VP Engineering" {
+		t.Errorf("the contact reads %q / %q, want the whole patch applied", fullName, title)
 	}
 	if n := countApprovals(t, e); n != 0 {
 		t.Errorf("automatic work left %d approvals, want none", n)
@@ -204,8 +192,7 @@ func TestAutomaticWorkIsRefusedTheFieldsAHumanTyped(t *testing.T) {
 }
 
 // automaticWork is an agent with no passport behind it, acting for the
-// signed-in colleague. It is refused a confirm-first call and a write over a
-// human-typed value.
+// signed-in colleague. It is refused a confirm-first call.
 func automaticWork(t *testing.T, e *apptest.AppEnv) context.Context {
 	t.Helper()
 	var ws ids.UUID

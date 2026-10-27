@@ -64,6 +64,7 @@ const meetingHorizon = 14 * 24 * time.Hour
 // Closing a deal ends pipeline advice, not meetings, tasks or customer requests.
 func decideMove(f facts) crmcontracts.DealStatusCardMove {
 	mv := nextMove(f)
+	mv.Basis = requestMoveBasis(f, mv)
 	if f.lang != "" && f.lang != "en" {
 		// Existing dismissal digests include generated English task subjects.
 		// Keep that identity while the same rules render the requested language.
@@ -105,13 +106,17 @@ func nextMove(f facts) crmcontracts.DealStatusCardMove {
 		return move(ActionOpenTask, fmt.Sprintf(said.Say(statusWords.Complete), task.Subject), map[string]any{argActivityID: activityID},
 			untimed(&activityID, task.Subject))
 	}
-	if request, ok := unansweredInbound(f); ok {
+	if request, current, ok := requestForMove(f); ok {
 		if request.EmailSummary != nil && request.EmailSummary.RequestHasReminder != nil && *request.EmailSummary.RequestHasReminder {
-			return move(ActionDraftEmail, said.Say(statusWords.Reminder), map[string]any{argActivityID: request.Id},
+			reason := said.Say(statusWords.Reminder)
+			if !current {
+				reason = fmt.Sprintf(said.Say(statusWords.ReviewReply), said.subjectOf(request))
+			}
+			return move(ActionDraftEmail, reason, map[string]any{argActivityID: request.Id},
 				evidenceOf(request, fmt.Sprintf(said.Say(statusWords.Request), said.subjectOf(request))))
 		}
 		reason := fmt.Sprintf(said.Say(statusWords.OwnReply), said.subjectOf(request))
-		if request.EmailSummary == nil || request.EmailSummary.Move != crmcontracts.EmailSummaryMoveNeedsReply {
+		if !current {
 			reason = fmt.Sprintf(said.Say(statusWords.ReviewReply), said.subjectOf(request))
 		}
 		//nolint:goconst // "source" is the record's provenance KEY, and the Go census
@@ -356,11 +361,9 @@ func upcomingMeeting(f facts) (activities.BookedMeeting, bool) {
 	return *f.nextMeeting, true
 }
 
-// unansweredInbound selects from the activities module's obligation read, not
-// the recent timeline. An unrelated reply or a history page boundary cannot
-// settle a request. The same selection supplies the move and its reply target.
+// The activities owner admits current requests before limiting the result.
 func unansweredInbound(f facts) (crmcontracts.Activity, bool) {
-	for _, a := range f.requests {
+	for _, a := range f.currentRequests {
 		if a.Kind == crmcontracts.ActivityKindEmail && !withheld(a) {
 			return a, true
 		}

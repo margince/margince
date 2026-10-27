@@ -40,6 +40,7 @@ import { DealHistoryTab } from "./deal360/dealhistorytab";
 import { DealLegalTab } from "./deal360/deallegaltab";
 import { DealRoomTab } from "./deal360/dealroomtab";
 import { useDealTabCounts } from "./deal360/dealtabcounts";
+import { currentReplyTarget } from "./deal360/dealwaiting";
 import { useDealCoverage } from "./deal360/usedealcoverage";
 import { DealAside } from "./dealaside";
 import { DealFiles } from "./dealfiles";
@@ -125,7 +126,7 @@ function DealPulsePills({
     <>
       {yourMove && (
         <Badge tone="warning" dot>
-          {t("standing.yourMove")}
+          {t("deal.standing.teamReply")}
         </Badge>
       )}
       <DealStatusBadge status={status} />
@@ -294,7 +295,9 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               pulse={
                 <DealPulsePills
                   status={deal.status}
-                  yourMove={Boolean(statusQuery.data?.reply_to)}
+                  yourMove={Boolean(
+                    statusQuery.data && currentReplyTarget(statusQuery.data),
+                  )}
                 />
               }
               actions={

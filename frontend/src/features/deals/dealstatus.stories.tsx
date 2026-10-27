@@ -25,7 +25,7 @@ function panel(
         reason:
           situation === "covered"
             ? "This request already has a reminder. The reply still needs to be handled."
-            : "Review and take responsibility for the reply still owed: Meeting slots",
+            : "Review whether this conversation needs a follow-up: Meeting slots",
         arguments:
           situation === "covered"
             ? {}
@@ -34,6 +34,16 @@ function panel(
                 source: "manual",
                 request_activity_id: "demo-mail",
               },
+        basis: {
+          kind: situation === "covered" ? "current_request" : "request_review",
+          scope: "deal",
+          source_activity_id: "demo-mail",
+          source_at: "2026-02-01T09:00:00Z",
+          source_precision: "instant",
+          source_version: 1,
+          evaluated_at: "2026-09-05T09:00:00Z",
+          policy_version: "demo",
+        },
         evidence: [
           {
             activity_id: "demo-mail",
@@ -67,6 +77,9 @@ function panel(
           },
           verdict: { standing: "live", because: { sentences: [] } },
           next,
+          ...(situation === "covered"
+            ? { reply_to: "demo-mail", request_basis: next.basis }
+            : {}),
           generated_at: "2026-09-05T09:00:00Z",
           generated_by: writer,
         }),

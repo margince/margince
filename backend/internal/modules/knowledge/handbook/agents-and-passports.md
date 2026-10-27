@@ -128,9 +128,6 @@ relinking it away does not remove that. A member can take the filing back with
 **Undo filing**; an agent cannot. See
 [Capture](capture.md#filing-under-a-project-starts-a-retention-clock).
 
-**Any field a human last wrote.** See the section below. This holds back more
-than all the others together.
-
 The **Autonomy tiers** card in **Settings → AI access**, on the **Agent rules** tab under **For developers**, states the same rule.
 It reads "Send email, book meetings, update a contact or deal: runs immediately if the
 agent has that permission. Granting the permission is the approval." and
@@ -247,31 +244,15 @@ calls that leave Margince in each window, 20 by default. The allowance for
 changes can be widened by approving a card; this one cannot. It ends when
 the window ends.
 
-## Human edits win, field by field
+## An agent edit applies at once
 
-This rule stops automatic work from writing over what you typed. An agent on a
-colleague's passport writes over it as that colleague could, without an
-approval.
+When an agent updates a record, every field in the update is saved in the same
+call, including one you typed. Nothing waits for approval. Each change is in the
+record's history with who made it, and **Handled for you** and the record
+history offer Undo.
 
-When automatic work updates a record, Margince looks at each field it is trying to
-change and asks: did a human last type this value?
-
-- Fields whose current value a human last wrote are taken out and staged for
-  approval. Only those fields wait.
-- Fields with no history at all are updated straight away. The *exception* is
-  a record a human created. There, a field that already holds a value is
-  counted as theirs and staged too. Margince would rather ask than write over
-  something whose typing nobody recorded.
-- A proposed value that is the same as what is already there is never held
-  back. So an agent that sends back your own value does not raise a card.
-
-So an update can apply in part and wait in part. The record comes back
-updated, with a note naming which fields were held back and which approval card
-holds them. If *every* field in the update was one a human had written,
-nothing applies and the whole update waits.
-
-When you approve that card, only the held back fields are written. The agent's
-original, wider request is not sent again.
+What still waits is the work that always waits for another reason, such as
+enrichment and the confirm-first actions above.
 
 ## Passports: how an agent is connected
 
