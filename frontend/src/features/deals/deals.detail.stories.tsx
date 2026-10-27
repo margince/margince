@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, waitFor, within } from "storybook/test";
 import {
   emptyPage,
   installFetchStub,
@@ -69,7 +69,8 @@ async function expectStatusPill(canvasElement: HTMLElement, words: string) {
   const header = name.closest("header");
   if (header === null)
     throw new Error("the deal's name sits outside its header");
-  await expect(within(header).getByText(words)).toBeVisible();
+  // The name can render before the header has settled in, so the pill is waited for.
+  await waitFor(() => expect(within(header).getByText(words)).toBeVisible());
 }
 
 export const Open: Story = {
