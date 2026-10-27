@@ -75,8 +75,8 @@ function originsOf(draft: WebFormDraft): string[] {
 /**
  * Every required field the draft leaves empty, with the sentence it owes.
  *
- * The server refuses only the first empty field it meets, so a form that
- * waited for it would make the reader press Create once per missing field.
+ * The server refuses only the first empty field it meets. A form that waited
+ * for it would make the reader press Create once per missing field.
  */
 export function missingFields(
   draft: WebFormDraft,
@@ -101,7 +101,7 @@ export function missingFields(
 /**
  * The entries that name a page rather than a website, and the website each is
  * kept as. A post's Origin header carries only scheme, host and port, so a
- * path cannot narrow who may post, and the reader is told so before saving.
+ * path cannot narrow who may post. The reader is told so before saving.
  */
 export function narrowedOrigins(
   draft: WebFormDraft,
