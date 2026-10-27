@@ -3,8 +3,6 @@
 
 package privacy
 
-import "github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
-
 // The selector table: which records each (object_type, category) policy scope
 // governs. Split out of retention.go because it is also the AUTHORABLE
 // VOCABULARY — retentionscope.go derives what an admin may author from exactly
@@ -105,26 +103,23 @@ var retentionSelectors = map[string]string{
 	// It does not reach an original no activity was read from, such as a lead's
 	// or a channel update that never became a message. With no activity there is
 	// no floor or hold to ask, so the stage leaves the row.
-	// An existence test rather than a join, and the hold asked of every
+	// An existence test rather than a join, and the shield asked of every
 	// activity the original was read into.
 	//
 	// A join emits the original once per matching activity, so a replayed
-	// message offers the same row twice. A hold correlated to the joined
-	// activity is worse: it shields that activity alone.
+	// message offers the same row twice. A shield correlated to the joined
+	// activity is worse: it covers that activity alone. An original read into a
+	// shielded activity and an unshielded one would pass on the unshielded row.
 	//
-	// So an original read into a held activity and an unheld one passes on the
-	// unheld row, and is destroyed while the hold stands. The hold comes from
-	// the shared predicate, so a table that gains the column reaches here
-	// without this file being touched.
+	// Selection and deletion ask one function, so the two cannot disagree. Asked
+	// of the candidate row alone, selection would offer a mixed original every
+	// sweep, and the delete would refuse it every sweep.
 	"raw_capture/": `SELECT rc.id FROM raw_capture rc
 		WHERE rc.received_at < now() - make_interval(days => $1)
 		  AND EXISTS (SELECT 1 FROM activity a
 		        WHERE ` + rawCaptureLink + `
-		          AND a.archived_at IS NULL
-		          ` + correspondenceFloorPredicate(3, 4) + `)
-		  AND NOT EXISTS (SELECT 1 FROM activity a
-		        WHERE ` + rawCaptureLink + `
-		          AND ` + retentionscope.HeldThroughAnyLink("a.id") + `)
+		          AND a.archived_at IS NULL)
+		  AND ` + rawCaptureUnshielded(3, 4) + `
 		LIMIT $2`,
 	// The queue's recorded risk days, aged on the day they describe. A day and
 	// its verdicts exist to answer the same-day next-step figure over its
