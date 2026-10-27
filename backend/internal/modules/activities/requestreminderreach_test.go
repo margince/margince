@@ -79,8 +79,9 @@ func TestAReminderAgreeingWithItsMailIsLeftAlone(t *testing.T) {
 
 // The reminder this pass may move is open, unarchived and unrestricted.
 //
-// Each guard is asked because a row missing one is a row the pass must leave:
-// a done reminder was answered, an archived one is off every lane, and a
+// A row missing any guard is a row the pass must leave.
+//
+// A done reminder was answered. An archived one is off every lane. A
 // restricted one is under a statutory obligation.
 func TestOnlyAnOpenUnarchivedReminderIsMoved(t *testing.T) {
 	clause := openReminderClause("t")
