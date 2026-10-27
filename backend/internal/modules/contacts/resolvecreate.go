@@ -96,10 +96,13 @@ type ContactSpec struct {
 	LastName  *string
 	Title     *string
 	OwnerID   *ids.UserID
-	Address   *crmcontracts.Address
-	Social    map[string]any
-	Emails    []ContactEmailInput
-	Phones    []ContactPhoneInput
+	// CreatedFromActivityID is the record a create was read out of, checked
+	// readable by the caller before it is stored.
+	CreatedFromActivityID *ids.UUID
+	Address               *crmcontracts.Address
+	Social                map[string]any
+	Emails                []ContactEmailInput
+	Phones                []ContactPhoneInput
 
 	// Visibility is "" for the column default; capture mints 'owner' rows
 	// until a human promotes them, the channel bot mints 'workspace' ones.
@@ -161,21 +164,33 @@ func createContact(ctx context.Context, tx pgx.Tx, match ContactResolution, spec
 	if err := storekit.RefuseUnknownSeat(ctx, tx, spec.Author); err != nil {
 		return ids.ContactID{}, err
 	}
+	// The source is checked here, where every creation path meets, rather than
+	// at each door. A caller who cannot read the record cannot name it either:
+	// storing it would let them learn an id exists by reading the contact back.
+	//
+	// EnsureVisibleExisting rather than EnsureVisible, so an id no row holds is
+	// refused instead of stored as a link to nothing.
+	if spec.CreatedFromActivityID != nil {
+		if err := auth.EnsureVisibleExisting(ctx, tx, "activity", *spec.CreatedFromActivityID); err != nil {
+			return ids.ContactID{}, err
+		}
+	}
 	provenanceCols, provenanceHolders, base := storekit.ProvenanceInsertFragments(spec.SourceID, spec.Author, []any{
 		id, spec.FullName, spec.FirstName, spec.LastName, spec.Title, spec.OwnerID,
 		addr.Line1, addr.Line2, addr.City, addr.Region, addr.PostalCode, addr.Country,
 		spec.Source, spec.CapturedBy, spec.Visibility, spec.Quarantined, spec.ConvertedFromLeadID,
 		spec.SourceSystem, spec.Narrowing, string(spec.RelationshipMark), spec.RelationshipMarkSetBy,
+		spec.CreatedFromActivityID,
 	})
 	cfCols, cfHolders, args, err := storekit.InsertFragments(spec.Active, spec.CustomFields, base)
 	if err != nil {
 		return ids.ContactID{}, err
 	}
 	if err := storekit.ExecSourceInsert(ctx, tx, contactEntity,
-		`INSERT INTO contact (id, full_name, first_name, last_name, title, owner_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, visibility, quarantined_at, converted_from_lead_id, source_system, narrowing_reason, relationship_mark, relationship_mark_set_by`+provenanceCols+cfCols+`)
+		`INSERT INTO contact (id, full_name, first_name, last_name, title, owner_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, visibility, quarantined_at, converted_from_lead_id, source_system, narrowing_reason, relationship_mark, relationship_mark_set_by, created_from_activity_id`+provenanceCols+cfCols+`)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
 		         coalesce(NULLIF($15, ''), 'workspace'),
-		         CASE WHEN $16 THEN now() ELSE NULL END, $17, $18, NULLIF($19, ''), NULLIF($20, ''), NULLIF($21, '')`+provenanceHolders+cfHolders+`)`,
+		         CASE WHEN $16 THEN now() ELSE NULL END, $17, $18, NULLIF($19, ''), NULLIF($20, ''), NULLIF($21, ''), $22`+provenanceHolders+cfHolders+`)`,
 		args); err != nil {
 		return ids.ContactID{}, fmt.Errorf("insert contact: %w", err)
 	}

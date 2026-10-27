@@ -1795,6 +1795,7 @@ export const en = {
   // a colleague who left years ago is on a row this installation holds.
   "trust.loggedInByVia": "Logged in {via} by {name}",
   "trust.loggedInBy": "Logged by {name}",
+  "contact.readFromARecord": "Read from a record in this workspace.",
   "trust.sourceUnknown": "Source not recorded",
   "trust.imported": "Imported",
   "trust.importedFrom": "Imported from {uploadName}",
