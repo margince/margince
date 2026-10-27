@@ -13,14 +13,12 @@ items to check. It lives on **Home**. Press **Show Worklist** to open it as a pa
 ## Daily tasks
 
 ### How do I open my worklist?
-To open your Worklist in Margince, go to **Home** in the sidebar and press **Show Worklist**. The
-Worklist opens as a panel headed **Worklist**, with the day's count on the button.
+To open your Worklist in Margince, go to **Home** in the sidebar and press **Show Worklist**. The Worklist opens as a panel headed **Worklist**, with the day's count on the button.
 1. Click **Home** in the sidebar.
 2. Press **Show Worklist**. Press **Hide Worklist** to close it.
-3. A team lead can switch **Whose work** between **Mine**, **Unassigned**, **Team** and **All**.
+3. Switch **Whose work** to **Unassigned** for open work nobody holds. **Team** and **All** show when your role sees them.
 
-There is no separate Worklist page, Today page or Inbox page. Also called: to-do list, my tasks,
-work queue, inbox, today list.
+There is no separate Worklist page, Today page or Inbox page. Also called: to-do list, my tasks, work queue, inbox, today list.
 
 ### How do I make my worklist fill the window?
 To make your Worklist fill the window in Margince, press **Expand** at the top of its panel.
@@ -29,8 +27,10 @@ To make your Worklist fill the window in Margince, press **Expand** at the top o
 3. This browser keeps the size you chose, from any way you open the Worklist. On a phone the panel
    always fills the screen.
 
-On a big screen the panel stops before its rows get too long to read. Also called: full screen, big
-worklist, wide view.
+On a big screen the panel stops before its rows get too long to read. Also called: full screen, big worklist, wide view.
+
+### How do I go to the next record on my worklist?
+To go to the next record in Margince, press **Next task** on the **Next** bar of a contact, company, lead or deal. It opens the next record on your Worklist, in list order. A record you opened from the Worklist follows that list, with its **Whose work** and filters; any other record follows your own list. After the last record it starts again at the top. With no other record on the list, the button says "No more records". Also called: next record, work through my list, go through the queue.
 
 ### How do I snooze something on my worklist?
 To snooze a Worklist item in Margince, press **More actions** at the end of its row and choose
@@ -58,7 +58,7 @@ A task leads your Worklist and the **First** card on **Home** when you hold it a
 Only the colleague who holds the task is reminded. A colleague who opens your queue sees the task in its usual place, and a task nobody holds reminds nobody. A reminder stays at the top for 30 days after its time. Also called: reminder, remind me, notify me.
 
 ### Why is this on my list?
-The **First** card on **Home** says what the row asks of you; **View details**, or a task opened on the Worklist, shows more. **Why this needs attention** repeats that sentence and lists the row's reasons and what happens if nothing is done. A meeting with no outcome opens the meeting itself, with **Update** and **Mark as canceled** beside it. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
+The **First** card on **Home** says what the row asks of you; **View details**, or a task opened on the Worklist, shows more. **Why this needs attention** repeats that sentence and lists the row's reasons and what happens if nothing is done. A meeting with no outcome opens the meeting itself, with **Update** and **Mark as canceled** if you may change it. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
 
 ### How do I hand a task on to a colleague?
 To hand a task on in Margince, press **More actions** on its Worklist row and choose **Reassign**.

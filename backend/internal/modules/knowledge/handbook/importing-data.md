@@ -147,7 +147,7 @@ An `activities.csv` row is one note, call, meeting or email, put on the timeline
 |---|---|
 | `type` | `note`, `call`, `meeting` or `email`. A message and a task are not imported. |
 | `subject` and `body` | A short title, and the text of the note or of what was said. |
-| `occurred_at` | `YYYY-MM-DD`, or a date and time with its zone. A date alone means the start of that day, in UTC. |
+| `occurred_at` | `YYYY-MM-DD`, or a date and time with its zone. A date alone names the day, with no time. |
 | `links` | Records as `type:key`, split by `;`, such as `deal:D-1001; contact:jo@acme.com`. The type is company, contact, lead or deal. At most 25. |
 | `duration_minutes` | Whole minutes, for a call or a meeting. |
 | `meeting_status` | `booked`, `held`, `no_show` or `canceled`, for a meeting only. |
@@ -161,6 +161,7 @@ A row is skipped, with its reason, in these cases:
 - its type is missing or unknown, or it is a message or a task;
 - its time has no zone, or is after now;
 - it has minutes or a meeting status that its type does not take;
+- it marks a meeting `held` or `no_show` before the meeting has started. A date with no time counts once that day is over;
 - it links a call or a meeting to a company;
 - it has a link in the wrong form, or none of its links finds a record;
 - you may not add activities to one of the records it links to.

@@ -32,6 +32,8 @@ Also called: resend invite, invitation failed, calendar refused.
 ### How do I move a meeting to another time?
 To move a Margince meeting, open it from its line on the timeline and choose **Reschedule**. Pick the new time and choose **Confirm new time**.
 Your current time stays held until the calendar accepts the change. The meeting moves in Margince only once the calendar provider takes the new time. A meeting you move keeps the video call it already has.
+
+A move to a new start clears **Held** or **No-show**, so the meeting asks how it went again once the new time has passed.
 Also called: reschedule, change the time, postpone a meeting.
 
 ### How do I record what came of a meeting?
