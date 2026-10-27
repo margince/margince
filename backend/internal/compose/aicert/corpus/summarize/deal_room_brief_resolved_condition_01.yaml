@@ -1,0 +1,80 @@
+name: deal_room_brief_resolved_condition
+task: summarize
+site: deal_room_brief
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# A signing condition that was met. The words that made it a condition are
+# still in the thread, so a brief that reads wording rather than state will
+# report a deal blocked by something the buyer has already released.
+fixture:
+  title: Payroll integration rollout
+  state: live
+  buyers:
+    - label: hendrik
+      name: Hendrik Bauer
+      signed_in: true
+      last_seen_on: "2026-10-24"
+      downloaded: [DPA]
+  documents:
+    - label: dpa
+      title: DPA
+      group: legal
+    - label: sow
+      title: Statement of work
+      group: commercial
+  threads:
+    - label: subprocessor
+      document_label: dpa
+      resolved: true
+      comments:
+        - speaker: buyer
+          author: Hendrik Bauer
+          "on": "2026-10-20"
+          body: >
+            We cannot sign the DPA while the subprocessor list names a
+            processor outside the EU.
+        - speaker: your_side
+          author: Demo Admin
+          "on": "2026-10-22"
+          body: The list is updated; every named processor is now in the EU.
+        - speaker: buyer
+          author: Hendrik Bauer
+          "on": "2026-10-23"
+          body: That settles it, we are clear to sign the DPA.
+    - label: timeline
+      document_label: sow
+      comments:
+        - speaker: buyer
+          author: Hendrik Bauer
+          "on": "2026-10-24"
+          body: When can the rollout start if we sign this week?
+    - label: training
+      comments:
+        - speaker: buyer
+          author: Hendrik Bauer
+          "on": "2026-10-23"
+          body: Do you run training sessions for the payroll team?
+    - label: sandbox
+      comments:
+        - speaker: buyer
+          author: Hendrik Bauer
+          "on": "2026-10-21"
+          body: Can we keep the sandbox tenant after go-live for testing?
+expect:
+  outcome: accepted
+  answer:
+    cites_label: sandbox
+    names_token: sandbox
+    # The condition was released in the thread, so reporting it as live is
+    # the failure this case exists to catch.
+    avoids: ["cannot sign", "outside the eu", blocked, blocker]
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the brief reports the threads still waiting, including the
+    oldest, a question about keeping the sandbox tenant after go-live. Penalise any claim that the DPA is
+    unsigned because of the subprocessor list: the buyer released that
+    condition in the same thread and the thread is resolved. Penalise any
+    date the summary did not supply.
