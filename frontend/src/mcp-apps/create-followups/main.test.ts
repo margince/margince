@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { expectReadable } from "../readable.testkit";
 import { createFollowupsFixture } from "./fixture";
 
 const calls: { tool: string; args: Record<string, unknown> }[] = [];
@@ -32,6 +33,9 @@ vi.mock("../actions", () => ({
 
 const { render } = await import("./main");
 
+const LEAD = "0195c3a0-0000-7000-8000-0000000000a1";
+const REP = "0195c3a0-0000-7000-8000-0000000000a2";
+
 function mount(data: unknown = createFollowupsFixture.data): HTMLElement {
   const root = document.createElement("main");
   document.body.replaceChildren(root);
@@ -59,9 +63,12 @@ beforeEach(() => {
 });
 
 describe("the duplicate card", () => {
-  it("draws nothing when the create filed no candidate", () => {
+  it("says what was created when the create filed no candidate", () => {
     const root = mount({ record_type: "contact", id: "x", fields: {} });
-    expect(root.childElementCount).toBe(0);
+    expect(root.querySelector("h1")?.textContent).toBe("Created a contact");
+    expect(root.querySelector(".intro")?.textContent).toBe(
+      "Saved in Margince.",
+    );
   });
 
   it("shows the two records' values side by side, the new one first", () => {
@@ -71,7 +78,7 @@ describe("the duplicate card", () => {
     ).toEqual(["", "New record", "Already on file"]);
     const phone = [...root.querySelectorAll("tbody tr")][1];
     expect([...phone.children].map((n) => n.textContent)).toEqual([
-      "phone",
+      "Phone",
       "+49 30 1234567",
       "+49301234567",
     ]);
@@ -172,9 +179,10 @@ describe("the tag offer", () => {
     may_create: false,
   };
 
-  it("draws no panel when the create carried no offer", () => {
+  it("draws no tag panel when the create carried no offer", () => {
     const root = mount({ record_type: "contact", id: "x", fields: {} });
-    expect(root.childElementCount).toBe(0);
+    expect(labels(root)).toEqual([]);
+    expect(root.textContent).not.toContain("Tag");
   });
 
   it("applies an existing word by its id, and offers an undo that takes it off", async () => {
@@ -206,8 +214,8 @@ describe("the tag offer", () => {
     const root = mount(
       withOffer({ name: "Fair", exists: false, may_create: true }),
     );
-    expect(labels(root)).toEqual(["Add the tag and tag it", "No thanks"]);
-    await press(root, "Add the tag and tag it");
+    expect(labels(root)).toEqual(["Create and add the tag", "No thanks"]);
+    await press(root, "Create and add the tag");
     expect(calls.map((c) => c.args.action)).toEqual(["create", "apply"]);
     expect(calls[0]).toEqual({
       tool: "change_tags",
@@ -225,7 +233,7 @@ describe("the tag offer", () => {
     const root = mount(
       withOffer({ name: "Fair", exists: false, may_create: true }),
     );
-    await press(root, "Add the tag and tag it");
+    await press(root, "Create and add the tag");
     expect(labels(root)).toEqual(["Tag it", "No thanks"]);
     await press(root, "Tag it");
     expect(calls.map((c) => c.args.action)).toEqual([
@@ -244,14 +252,14 @@ describe("the tag offer", () => {
     );
     const offer = { name: "Fair", exists: false, may_create: true };
     const root = mount(withOffer(offer));
-    await press(root, "Add the tag and tag it");
+    await press(root, "Create and add the tag");
     expect(labels(root)).toEqual(["Tag it", "No thanks"]);
     render(
       root,
       { ...withOffer(offer), id: "0195c3a0-0000-7000-8000-0000000000ff" },
       [],
     );
-    expect(labels(root)).toEqual(["Add the tag and tag it", "No thanks"]);
+    expect(labels(root)).toEqual(["Create and add the tag", "No thanks"]);
   });
 
   it("keeps Undo when taking the tag off failed, since it may still be on", async () => {
@@ -293,7 +301,9 @@ describe("the tag offer", () => {
   });
 
   it("is not drawn for a record type a tag cannot sit on", () => {
-    expect(mount(withOffer(existing, "activity")).childElementCount).toBe(0);
+    const root = mount(withOffer(existing, "activity"));
+    expect(labels(root)).toEqual([]);
+    expect(root.querySelector("h1")?.textContent).toBe("Created an activity");
   });
 });
 
@@ -351,6 +361,82 @@ describe("a create that filed more than one pair", () => {
     expect(labels(root)).toEqual([]);
     expect(calls.filter((c) => c.tool === "resolve_duplicates")).toHaveLength(
       1,
+    );
+  });
+});
+
+describe("a create with nothing to decide", () => {
+  function created(
+    record: Record<string, unknown>,
+    input: Record<string, unknown>,
+  ): HTMLElement {
+    const root = document.createElement("main");
+    document.body.replaceChildren(root);
+    render(root, record, [], { input, refusal: null });
+    return root;
+  }
+
+  it("names a created task and the fields the assistant set", () => {
+    const fields = {
+      kind: "task",
+      subject: "Qualify the opportunity",
+      lead_id: LEAD,
+      assignee_id: REP,
+      due_at: "2026-11-03T09:00:00Z",
+    };
+    const root = created(
+      { record_type: "activity", id: LEAD, fields },
+      { record_type: "activity", fields },
+    );
+    expectReadable(root);
+    expect(root.querySelector("h1")?.textContent).toBe("Created a task");
+    expect(root.querySelector(".name")?.textContent).toBe(
+      "Qualify the opportunity",
+    );
+    expect(
+      [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
+    ).toEqual(["Kindtask", "LeadSet", "AssigneeSet", "Due2026-11-03"]);
+  });
+
+  it.each([
+    ["contact", { full_name: "View Plain" }, "Created a contact"],
+    [
+      "lead",
+      { full_name: "Jane Doe", company_name: "Partner Co" },
+      "Created a lead",
+    ],
+    ["company", { display_name: "Partner Co" }, "Created a company"],
+  ])("names a created %s", (type, fields, title) => {
+    const root = created(
+      { record_type: type, id: LEAD, fields },
+      { record_type: type, fields },
+    );
+    expectReadable(root);
+    expect(root.querySelector("h1")?.textContent).toBe(title);
+  });
+
+  it("says nothing was created, and why, when the create was refused", () => {
+    const root = document.createElement("main");
+    render(root, null, [], {
+      input: { record_type: "lead", fields: { status: "promoted" } },
+      refusal: 'A new lead cannot start as "promoted".',
+    });
+    expectReadable(root);
+    expect(root.querySelector("h1")?.textContent).toBe("Nothing was created");
+    expect(root.querySelector(".intro")?.textContent).toBe(
+      'A new lead cannot start as "promoted".',
+    );
+  });
+
+  it("leaves a refusal written for the assistant to the assistant", () => {
+    const root = document.createElement("main");
+    render(root, null, [], {
+      input: {},
+      refusal: `staged as approval ${LEAD}: repeat this call with approval_id`,
+    });
+    expectReadable(root);
+    expect(root.querySelector(".intro")?.textContent).toBe(
+      "Ask the assistant why.",
     );
   });
 });

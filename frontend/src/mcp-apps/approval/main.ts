@@ -17,8 +17,17 @@ import {
 import actions from "../actions.json";
 import { badge } from "../badge";
 import { el, onResult } from "../bridge";
+import { isID } from "../fieldlabels";
 import { button, keepFocus, panel, panelBody } from "../parts";
-import { asList, asRecord, asText, type Warning } from "../types";
+import { changeTable, refusalPanel } from "../summary";
+import {
+  asList,
+  asRecord,
+  asText,
+  NO_CALL,
+  type ToolCall,
+  type Warning,
+} from "../types";
 import "../view.css";
 
 declareActions(actions.approval);
@@ -30,7 +39,7 @@ type Item = {
   summary: string;
   proposedBy: string;
   expiresAt: number | null;
-  rows: [string, string][];
+  change: Record<string, unknown>;
   evidence: string[];
 };
 
@@ -50,22 +59,23 @@ function outcomesOf(root: HTMLElement): Map<string, Outcome> {
   return found;
 }
 
-function shown(value: unknown): string {
-  if (typeof value === "string" || typeof value === "number")
-    return String(value);
-  if (typeof value === "boolean") return value ? "yes" : "no";
-  if (value === null || value === undefined) return "—";
-  return JSON.stringify(value);
+/**
+ * changeOf answers the values a reader checks before deciding. A staged record
+ * write carries its record's type and id beside the fields it would set, and
+ * only the fields are the decision.
+ */
+function changeOf(proposed: unknown): Record<string, unknown> {
+  const change = asRecord(proposed);
+  const fields = asRecord(change.fields);
+  return Object.keys(fields).length > 0 && "record_type" in change
+    ? fields
+    : change;
 }
 
-/** The members of the staged change, which is what a reader checks before
- *  deciding. A nested value is shown as compact JSON, never hidden: an
- *  email body or a field patch is the thing being released. */
-function rowsOf(change: unknown): [string, string][] {
-  return Object.entries(asRecord(change)).map(([name, value]) => [
-    name.replaceAll("_", " "),
-    shown(value),
-  ]);
+/** proposerOf names who proposed it; an assistant's own id names no one. */
+function proposerOf(proposedBy: string): string {
+  const who = proposedBy.replace(/^agent:/, "");
+  return who === "" || isID(who) ? "an assistant" : who;
 }
 
 function itemOf(raw: unknown): Item | null {
@@ -78,9 +88,9 @@ function itemOf(raw: unknown): Item | null {
     kind: asText(a.kind),
     status: asText(a.status),
     summary: asText(a.summary),
-    proposedBy: asText(a.proposed_by),
+    proposedBy: proposerOf(asText(a.proposed_by)),
     expiresAt: Number.isNaN(expires) ? null : expires,
-    rows: rowsOf(a.proposed_change),
+    change: changeOf(a.proposed_change),
     evidence: asList(a.evidence)
       .map((e) => asText(asRecord(e).evidence_snippet))
       .filter((snippet) => snippet !== ""),
@@ -92,23 +102,33 @@ export function render(
   root: HTMLElement,
   data: unknown,
   warnings: Warning[],
+  call: ToolCall = NO_CALL,
 ): void {
-  keepFocus(root, () => draw(root, data, warnings));
+  keepFocus(root, () => draw(root, data, warnings, call));
 }
 
-function draw(root: HTMLElement, data: unknown, warnings: Warning[]): void {
+function draw(
+  root: HTMLElement,
+  data: unknown,
+  warnings: Warning[],
+  call: ToolCall,
+): void {
   root.replaceChildren();
   const item = itemOf(data);
-  if (item === null) return;
+  if (item === null) {
+    root.appendChild(refusalPanel("No approval to show", call.refusal));
+    return;
+  }
   const outcomes = outcomesOf(root);
-  const again = () => render(root, data, warnings);
+  const again = () => render(root, data, warnings, call);
   const card = panel("Waiting for a decision", { level: "h1" });
   const body = panelBody();
   body.append(
     el("p", "name", item.summary || item.kind),
-    el("p", "meta", `Proposed by ${item.proposedBy || "an assistant"}`),
+    el("p", "meta", `Proposed by ${item.proposedBy}`),
   );
-  if (item.rows.length > 0) body.appendChild(changeTable(item.rows));
+  const change = changeTable(item.change, item.change, { linked: "Set" });
+  if (change !== null) body.appendChild(change);
   if (item.evidence.length > 0) body.appendChild(evidenceList(item.evidence));
   body.appendChild(choices(item, outcomes, again));
   card.appendChild(body);
@@ -121,18 +141,6 @@ function evidenceList(snippets: string[]): HTMLElement {
   const list = el("ul", "evidence-list");
   for (const snippet of snippets) list.appendChild(el("li", "meta", snippet));
   return list;
-}
-
-function changeTable(rows: [string, string][]): HTMLElement {
-  const table = el("table", "evidence");
-  const body = el("tbody");
-  for (const [name, value] of rows) {
-    const tr = el("tr");
-    tr.append(el("th", "meta", name), el("td", "name", value));
-    body.appendChild(tr);
-  }
-  table.appendChild(body);
-  return table;
 }
 
 function choices(
@@ -202,7 +210,7 @@ function settledLine(text: string): HTMLElement {
   return line;
 }
 
-onResult((data, warnings) => {
+onResult((data, warnings, call) => {
   const root = document.getElementById("root");
-  if (root !== null) render(root, data, warnings);
+  if (root !== null) render(root, data, warnings, call);
 });

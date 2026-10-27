@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { expectReadable } from "../readable.testkit";
 import { fieldConflictFixture } from "./fixture";
 
 const calls: { tool: string; args: Record<string, unknown> }[] = [];
@@ -52,17 +53,19 @@ beforeEach(() => {
 });
 
 describe("the field-conflict card", () => {
-  it("draws nothing when the update held nothing back", () => {
-    expect(
-      mount({ record_type: "contact", id: "x", fields: {} }).childElementCount,
-    ).toBe(0);
+  it("says the update is saved when it held nothing back", () => {
+    const root = mount({ record_type: "contact", id: "x", fields: {} });
+    expect(root.querySelector("h1")?.textContent).toBe("Updated a contact");
+    expect(root.querySelector(".intro")?.textContent).toBe(
+      "The change is saved in Margince.",
+    );
   });
 
   it("shows the value on the record beside the value proposed", () => {
     const root = mount();
     const row = root.querySelector("tbody tr");
     expect([...(row?.children ?? [])].map((n) => n.textContent)).toEqual([
-      "job title",
+      "Job title",
       "Head of Sales",
       "VP Sales",
     ]);
@@ -161,5 +164,62 @@ describe("the field-conflict card", () => {
       "Keep the current values",
       "Use the new values",
     ]);
+  });
+});
+
+describe("an update with nothing held for an answer", () => {
+  const LEAD = "0195c3a0-0000-7000-8000-0000000000a1";
+  const REP = "0195c3a0-0000-7000-8000-0000000000a2";
+
+  function updated(
+    fields: Record<string, unknown>,
+    sent: Record<string, unknown>,
+  ): HTMLElement {
+    const root = document.createElement("main");
+    document.body.replaceChildren(root);
+    render(root, { record_type: "lead", id: LEAD, fields }, [], {
+      input: { record_type: "lead", id: LEAD, fields: sent },
+      refusal: null,
+    });
+    return root;
+  }
+
+  it("names the record and the owner it gave a new value", () => {
+    const root = updated(
+      { full_name: "Jane Doe", owner_id: REP },
+      { owner_id: REP },
+    );
+    expectReadable(root);
+    expect(root.querySelector("h1")?.textContent).toBe(
+      'Updated lead "Jane Doe"',
+    );
+    expect(
+      [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
+    ).toEqual(["OwnerChanged"]);
+  });
+
+  it("shows a changed job title as its new value", () => {
+    const root = updated(
+      { full_name: "Jane Doe", title: "VP Sales" },
+      { title: "VP Sales" },
+    );
+    expectReadable(root);
+    expect(
+      [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
+    ).toEqual(["Job titleVP Sales"]);
+  });
+
+  it("says nothing was changed when every field was held", () => {
+    const root = document.createElement("main");
+    render(root, null, [], {
+      input: { record_type: "lead", id: LEAD, fields: { owner_id: REP } },
+      refusal: `staged as approval ${LEAD} to update lead "Jane Doe"`,
+    });
+    expectReadable(root);
+    expect(root.querySelector("h1")?.textContent).toBe("Nothing was changed");
+  });
+
+  it("labels a held field by its name in the app", () => {
+    expectReadable(mount());
   });
 });

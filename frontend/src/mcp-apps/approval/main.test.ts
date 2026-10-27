@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { expectReadable } from "../readable.testkit";
 import { approvalFixture } from "./fixture";
 
 const calls: { tool: string; args: Record<string, unknown> }[] = [];
@@ -51,8 +52,10 @@ beforeEach(() => {
 });
 
 describe("the approval card", () => {
-  it("draws nothing for an answer that is not a staged action", () => {
-    expect(mount({}).childElementCount).toBe(0);
+  it("says there is nothing to decide for an answer that is not a staged action", () => {
+    const root = mount({});
+    expect(root.querySelector("h1")?.textContent).toBe("No approval to show");
+    expect(labels(root)).toEqual([]);
   });
 
   it("shows what is proposed and by whom", () => {
@@ -60,13 +63,13 @@ describe("the approval card", () => {
     expect(root.querySelector(".name")?.textContent).toBe(
       "Move Acme renewal to Negotiation",
     );
-    expect(root.textContent).toContain("Proposed by agent:claude");
+    expect(root.textContent).toContain("Proposed by claude");
     expect(
       [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
-    ).toEqual(["stageNegotiation", "amount minor1200000"]);
+    ).toEqual(["StageNegotiation", "Value—"]);
   });
 
-  it("shows a nested change as text rather than hiding it", () => {
+  it("shows a nested change as words rather than hiding it", () => {
     const root = mount({
       ...(approvalFixture.data as object),
       proposed_change: { body: { text: "Hello Anna" }, to: ["a@b.test"] },
@@ -74,7 +77,7 @@ describe("the approval card", () => {
     const cells = [...root.querySelectorAll("tbody td")].map(
       (n) => n.textContent,
     );
-    expect(cells).toEqual(['{"text":"Hello Anna"}', '["a@b.test"]']);
+    expect(cells).toEqual(["Text: Hello Anna", "a@b.test"]);
   });
 
   it("shows the evidence the proposal was read out of", () => {
@@ -154,5 +157,26 @@ describe("the approval card", () => {
     await press(root, "Ask the assistant to decide");
     expect(calls).toHaveLength(0);
     expect(asked[0]).toContain(ID);
+  });
+});
+
+describe("an approval for a held update", () => {
+  it("shows the fields it would set, not the call that carries them", () => {
+    const record = "0195c3a0-0000-7000-8000-0000000000a1";
+    const root = mount({
+      ...(approvalFixture.data as object),
+      summary: 'Update lead "Jane Doe": overwrite Job title, edited by hand',
+      proposed_by: "agent:0195c3a0-0000-7000-8000-0000000000a9",
+      proposed_change: {
+        record_type: "lead",
+        id: record,
+        fields: { title: "VP Sales" },
+      },
+    });
+    expectReadable(root);
+    expect(root.textContent).toContain("Proposed by an assistant");
+    expect(
+      [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
+    ).toEqual(["Job titleVP Sales"]);
   });
 });

@@ -1,7 +1,8 @@
 // The field-conflict card: an update that touched fields last edited by hand.
 // The rest of the patch applied; these fields wait, because an assistant does
 // not silently overwrite what someone typed. The card shows the value on the
-// record beside the value proposed, and the two answers.
+// record beside the value proposed, and the two answers. Every update reaches
+// this card, so an update with nothing held says what it changed.
 //
 // "Keep" rejects the staged change. "Use the new values" approves it and then
 // sends update_record with exactly the replay the result carried and the
@@ -17,8 +18,24 @@ import {
 } from "../actions";
 import actions from "../actions.json";
 import { el, onResult } from "../bridge";
+import { fieldLabel } from "../fieldlabels";
 import { button, keepFocus, panel, panelBody } from "../parts";
-import { asList, asRecord, asText, type Warning } from "../types";
+import {
+  changeTable,
+  recordName,
+  recordNoun,
+  refusalPanel,
+  summaryPanel,
+  withArticle,
+} from "../summary";
+import {
+  asList,
+  asRecord,
+  asText,
+  NO_CALL,
+  type ToolCall,
+  type Warning,
+} from "../types";
 import "../view.css";
 
 declareActions(actions["field-conflict"]);
@@ -91,7 +108,7 @@ function table(conflict: Conflict): HTMLElement {
   for (const field of conflict.fields) {
     const tr = el("tr");
     tr.append(
-      el("th", "meta", field.name.replaceAll("_", " ")),
+      el("th", "meta", fieldLabel(field.name)),
       el("td", "name", field.current),
       el("td", "name", field.proposed),
     );
@@ -106,15 +123,28 @@ export function render(
   root: HTMLElement,
   data: unknown,
   warnings: Warning[],
+  call: ToolCall = NO_CALL,
 ): void {
-  keepFocus(root, () => draw(root, data, warnings));
+  keepFocus(root, () => draw(root, data, warnings, call));
 }
 
-function draw(root: HTMLElement, data: unknown, warnings: Warning[]): void {
+function draw(
+  root: HTMLElement,
+  data: unknown,
+  warnings: Warning[],
+  call: ToolCall,
+): void {
   root.replaceChildren();
+  if (call.refusal !== null) {
+    root.appendChild(refusalPanel("Nothing was changed", call.refusal));
+    return;
+  }
   const conflict = conflictOf(data);
-  if (conflict === null) return;
-  const again = () => render(root, data, warnings);
+  if (conflict === null) {
+    root.appendChild(updatedPanel(asRecord(data), call));
+    return;
+  }
+  const again = () => render(root, data, warnings, call);
   const outcomes = outcomesOf(root);
   const set = (next: Outcome) => {
     outcomes.set(conflict.approvalID, next);
@@ -133,6 +163,23 @@ function draw(root: HTMLElement, data: unknown, warnings: Warning[]): void {
   );
   card.appendChild(body);
   root.appendChild(card);
+}
+
+/** updatedPanel says what an update with nothing held for an answer changed. */
+function updatedPanel(
+  updated: Record<string, unknown>,
+  call: ToolCall,
+): HTMLElement {
+  const fields = asRecord(updated.fields);
+  const noun = recordNoun(asText(updated.record_type), fields);
+  const name = recordName(fields);
+  const rows = changeTable(asRecord(call.input.fields), fields, {
+    linked: "Changed",
+  });
+  return summaryPanel(
+    name === "" ? `Updated ${withArticle(noun)}` : `Updated ${noun} "${name}"`,
+    rows ?? el("p", "intro", "The change is saved in Margince."),
+  );
 }
 
 function choices(
@@ -237,7 +284,7 @@ function settledLine(text: string): HTMLElement {
   return line;
 }
 
-onResult((data, warnings) => {
+onResult((data, warnings, call) => {
   const root = document.getElementById("root");
-  if (root !== null) render(root, data, warnings);
+  if (root !== null) render(root, data, warnings, call);
 });
