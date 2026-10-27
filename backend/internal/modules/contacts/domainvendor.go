@@ -96,13 +96,21 @@ func (s *Store) KeepDomainAsVendor(ctx context.Context, domain string) error {
 // vendorMailSQL selects the inbound mail a contact at the domain sent inside
 // the shared waiting horizon (storekit.WaitingHorizonSQL), archived or not.
 // The From participant names the sender, never the page's contact.
+//
+// The host is matched reversed, so a domain and its subdomains are one range of
+// idx_aparticipant_sender_host_reversed. The range ends at '/', the byte after
+// '.'. A `LIKE '%.' || domain` match has no index, so every question would read
+// all inbound mail in the horizon.
 func vendorMailSQL(mail, domain string, asOf time.Time, arg func(any) int) string {
-	host := `split_part(lower(vendor_sender.address), '@', 2)`
+	host := `(reverse(split_part(lower(vendor_sender.address), '@', 2)) COLLATE "C")`
+	reversed := `reverse(` + domain + `)`
 	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
 	return mail + `.kind = 'email' AND ` + mail + `.direction = 'inbound'
  AND EXISTS (SELECT 1 FROM activity_participant vendor_sender
   WHERE vendor_sender.activity_id = ` + mail + `.id AND vendor_sender.role = 'from'
-  AND (` + host + ` = ` + domain + ` OR ` + host + ` LIKE '%.' || ` + domain + `)
+  AND vendor_sender.address IS NOT NULL
+  AND (` + host + ` = (` + reversed + ` COLLATE "C")
+   OR (` + host + ` >= ((` + reversed + ` || '.') COLLATE "C") AND ` + host + ` < ((` + reversed + ` || '/') COLLATE "C")))
   AND EXISTS (SELECT 1 FROM contact_email vendor_contact WHERE vendor_contact.email = lower(vendor_sender.address) AND vendor_contact.archived_at IS NULL))
  AND ` + mail + `.occurred_at <= ` + instant + `
  AND ` + mail + `.occurred_at >= ` + instant + ` - make_interval(days => ` + storekit.WaitingHorizonSQL(asOf, arg) + `)`
