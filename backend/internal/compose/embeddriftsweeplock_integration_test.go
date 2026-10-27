@@ -41,11 +41,11 @@ func seedSweepRow(ctx context.Context, t *testing.T, pool *pgxpool.Pool, state s
 	return id
 }
 
-func sweepRowState(ctx context.Context, t *testing.T, pool *pgxpool.Pool, id int64) string {
+func jobRowState(ctx context.Context, t *testing.T, pool *pgxpool.Pool, id int64) string {
 	t.Helper()
 	var state string
 	if err := pool.QueryRow(ctx, `SELECT state::text FROM river_job WHERE id = $1`, id).Scan(&state); err != nil {
-		t.Fatalf("reading sweep row %d: %v", id, err)
+		t.Fatalf("reading job row %d: %v", id, err)
 	}
 	return state
 }
@@ -78,7 +78,7 @@ func TestADriftSweepWhoseWorkerDiedDoesNotBlockTheNextOrLeaveItsRowRunning(t *te
 	if err := run(); err != nil {
 		t.Fatalf("a sweep against a live holder: %v", err)
 	}
-	if got := sweepRowState(ctx, t, e.Pool, dead); got != "running" {
+	if got := jobRowState(ctx, t, e.Pool, dead); got != "running" {
 		t.Fatalf("a sweep against a live holder closed the other row, now %s; the holder may be alive", got)
 	}
 
@@ -94,10 +94,10 @@ func TestADriftSweepWhoseWorkerDiedDoesNotBlockTheNextOrLeaveItsRowRunning(t *te
 	if err := run(); err != nil {
 		t.Fatalf("a sweep after the holder died: %v", err)
 	}
-	if got := sweepRowState(ctx, t, e.Pool, dead); got != "discarded" {
+	if got := jobRowState(ctx, t, e.Pool, dead); got != "discarded" {
 		t.Errorf("the dead worker's row is %s, want discarded", got)
 	}
-	if got := sweepRowState(ctx, t, e.Pool, own); got != "running" {
+	if got := jobRowState(ctx, t, e.Pool, own); got != "running" {
 		t.Errorf("the sweep's own row is %s, want running until River finishes it", got)
 	}
 }
