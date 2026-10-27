@@ -7,7 +7,7 @@ The **Configuration** page lists every setting the installation reads, what its 
 ### What does the Configuration page show?
 Each row shows the **Key** of the setting with the name that sets it under it, its **Value** and its **Source**. Open a row to read what the setting does, its default, its type and the command-line flag that sets it.
 
-A long value is cut short in its row. Open the row to read the whole value and the whole default, each with a button that copies it.
+A long value is cut short in its row. Open the row to read it whole, with a button that copies it. A long default shows whole there too, with its own copy button.
 
 ### How do I see only the values somebody set?
 Press **Not default** above the list. It shows every setting whose value was set outside the app or saved in the app. The other buttons show one source each: **Set outside the app**, **Saved in the app** and **Default value**. **All** shows every row again. Each button shows how many rows it holds.

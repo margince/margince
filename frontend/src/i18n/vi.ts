@@ -10807,7 +10807,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "configuration.scope.label": "Lọc theo nguồn",
   "configuration.scope.all": "Tất cả",
   "configuration.scope.changed": "Không phải mặc định",
-  "configuration.scope.outside": "Đặt ngoài ứng dụng",
+  "configuration.scope.outside": "Đã đặt bên ngoài ứng dụng",
   "settings.tab.reset": "Đặt lại dữ liệu",
   "settings.group.me": "Cá nhân",
   "settings.group.company": "Công ty",
