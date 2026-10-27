@@ -50,7 +50,7 @@ Rest the mouse on **Preview** to see a message's text, and press **Read full ema
 To file an email you send under a project in Margince, choose the project in the composer's head, beside its title. Margince puts its key, such as `[NER-1]`, at the start of the **Subject**, so the client's answer is filed under the project too.
 The switch **Add project key to subject (helps filing)** under the subject is on. Turn it off to send this email without the key; the next email starts with it on. Choosing **No project** also takes the key out; deleting it from the text does not.
 
-The list starts on the thread's own project. If there is none, it starts on the deal's, and then on the company's only live project. Writing from a project page files under that project. With no live project to offer, the list shows **No project** and cannot be changed. A new email from a company has one **Related to** list in that place. It holds the company's live projects, its open deals ("Deal: {name}"), and **Nothing specific**. A deal has no key, so choosing one takes the project key out of the subject, and the email is filed under the deal. Also called: tag an email with a project, project key in the subject, file an email under a deal.
+The list starts on the thread's own project, then on the deal's, then on the company's only live project. Writing from a project page files under that project; with no live project to offer, the list shows **No project** and cannot be changed. A new email from a company has one **Related to** list there instead: the company's live projects, its open deals ("Deal: {name}"), and **Nothing specific**. A deal has no key, so choosing one takes the key out of the subject and files the email under the deal. Also called: tag an email with a project, project key in the subject, file an email under a deal.
 
 ### What do the composer's error messages mean?
 The composer in Margince does not send until four things are filled in, and names each one under its field.
@@ -114,7 +114,7 @@ Also called: add an attachment, send a document, attach a PDF.
 ### How do I use AI to draft an email?
 To have AI draft an email in Margince, open the composer. Say what the email is for in **Purpose of the email** above the message, and press **Draft email**.
 1. Open the composer from a contact, company or deal. **Draft reply**, **Draft follow-up** or **Create draft** on a suggestion opens it already drafting, unless it holds your words.
-2. On a company, put the person you write to in **To**. The draft is written for the first contact of that company in **To**. Until there is one, the composer says "To draft with AI, add a contact from this company to To."
+2. On a company, put the contact you write to in **To**. The draft is written for the first contact of that company in **To**. Until there is one, the composer says "To draft with AI, add a contact from this company to To."
 3. If it is not drafting yet, type the purpose, such as "follow up on last week's quote".
 4. Then press **Draft email** (**Draft reply** for a reply). It shows **Drafting…** while it writes.
 5. Read and edit the draft, then send it as you always do.

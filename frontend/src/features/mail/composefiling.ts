@@ -285,7 +285,7 @@ export function contactsByAddress(
 export function useAccountRecipient(
   companyId: string | undefined,
   to: readonly string[],
-  // The person a verb on the account started from, offered into an empty To
+  // The contact a verb on the account started from, offered into an empty To
   // unless the caller holds the record's own address.
   started: Readonly<{ contactId?: string; recordAddress?: string }>,
 ) {

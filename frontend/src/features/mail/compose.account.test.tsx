@@ -209,7 +209,7 @@ describe("ComposeModal started from an account", () => {
     expect(request?.body).toMatchObject({ contact_id: "p-1" });
   });
 
-  // A verb that names a person on the account opens the composer addressed to
+  // A verb that names a contact on the account opens the composer addressed to
   // them, the way a contact's own page does.
   it("addresses the contact the rep started from", async () => {
     stubRoutes({
@@ -237,7 +237,7 @@ describe("ComposeModal started from an account", () => {
       />,
     );
 
-    // The token reads as the person, with the address beside the name.
+    // The token reads as the contact, with the address beside the name.
     expect(await screen.findByText("Mark Hughes")).toBeTruthy();
     expect(screen.getByText("mark@acme.test")).toBeTruthy();
   });

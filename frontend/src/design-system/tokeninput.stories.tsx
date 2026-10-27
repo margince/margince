@@ -112,7 +112,7 @@ export const Wrapping: Story = {
 };
 
 /**
- * Values the record knows by name: a committed address reads as its person,
+ * Values the record knows by name: a committed address reads as its contact,
  * with the address dimmed after it. A typed value with no suggestion stays bare.
  */
 export const Named: Story = {

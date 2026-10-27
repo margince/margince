@@ -122,7 +122,7 @@ export function TokenInput({
   };
 
   // A committed value reads the way its suggestion did: an address the record
-  // knows shows its person's name, with the address itself beside it.
+  // knows shows its contact's name, with the address itself beside it.
   const labels = new Map(
     (suggestions ?? EMPTY).map((row) => [row.value, row.label]),
   );
