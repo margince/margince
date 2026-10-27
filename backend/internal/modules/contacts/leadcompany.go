@@ -201,7 +201,7 @@ func (s *Store) carryLeadCompany(ctx context.Context, tx pgx.Tx, leadID ids.Lead
 // carryLeadIndustry writes the lead's typed industry to its linked company when that has
 // none. A company the promoter may not change keeps its value and does not stop the promotion.
 func (s *Store) carryLeadIndustry(ctx context.Context, tx pgx.Tx, company *ids.CompanyID, industry *crmcontracts.LeadIndustry) error {
-	code, err := leadIndustryCarry(ctx, tx, company, industry, true)
+	code, err := leadIndustryCarry(ctx, tx, company, industry)
 	if err != nil || code == nil {
 		return err
 	}
@@ -209,9 +209,9 @@ func (s *Store) carryLeadIndustry(ctx context.Context, tx pgx.Tx, company *ids.C
 	return err
 }
 
-// leadIndustryCarry is the code a promotion writes to the lead's linked company, or nil. The
-// writer locks the row so no company edit lands between this check and the write; a preview does not.
-func leadIndustryCarry(ctx context.Context, tx pgx.Tx, company *ids.CompanyID, industry *crmcontracts.LeadIndustry, lock bool,
+// leadIndustryCarry is the code a promotion writes to the lead's linked company, or nil.
+// The promotion already holds that company's row lock (lockLeadForContact), taken before the lead's.
+func leadIndustryCarry(ctx context.Context, tx pgx.Tx, company *ids.CompanyID, industry *crmcontracts.LeadIndustry,
 ) (*string, error) {
 	if company == nil || industry == nil || !auth.ReadGranted(ctx, companyEntity) ||
 		!auth.Allows(ctx, companyEntity, principal.ActionUpdate) {
@@ -224,12 +224,9 @@ func leadIndustryCarry(ctx context.Context, tx pgx.Tx, company *ids.CompanyID, i
 	if err != nil {
 		return nil, err
 	}
-	read := `SELECT industry FROM company WHERE id = $1 AND archived_at IS NULL AND merged_into_id IS NULL`
-	if lock {
-		read += ` FOR UPDATE`
-	}
 	var held *string
-	err = tx.QueryRow(ctx, read, company).Scan(&held)
+	err = tx.QueryRow(ctx, `SELECT industry FROM company WHERE id = $1 AND archived_at IS NULL AND merged_into_id IS NULL`,
+		company).Scan(&held)
 	if errors.Is(err, pgx.ErrNoRows) || held != nil {
 		return nil, nil //nolint:nilnil // a gone company, or one with an industry, takes none
 	}

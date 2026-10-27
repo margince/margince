@@ -127,15 +127,18 @@ func TestALinkByDomainFollowsTheLeadsKey(t *testing.T) {
 		DisplayName: "Gull Shipping", Domains: []CompanyDomainInput{{Domain: "gull.test", IsPrimary: true}},
 	})
 	for _, tc := range []struct {
-		name  string
-		patch UpdateLeadInput
+		name     string
+		calledAs string
+		patch    UpdateLeadInput
+		kept     bool
 	}{
-		{"the key moves to another domain", UpdateLeadInput{CandidateCompanyKey: new("tern.test")}},
-		{"the key is cleared", UpdateLeadInput{Clear: []string{"candidate_company_key"}}},
+		{"the key moves to another domain", "Gull Logistics", UpdateLeadInput{CandidateCompanyKey: new("tern.test")}, false},
+		{"the key is cleared", "Gull Logistics", UpdateLeadInput{Clear: []string{"candidate_company_key"}}, false},
+		{"the key moves while the name still names the company", "Gull Shipping", UpdateLeadInput{CandidateCompanyKey: new("tern.test")}, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			lead := e.factLead(ctx, t, e.owner, CreateLeadInput{
-				Email: new(ids.NewV7().String() + "@gull.test"), CompanyName: new("Gull Logistics"), CandidateCompanyKey: new("gull.test"),
+				Email: new(ids.NewV7().String() + "@gull.test"), CompanyName: new(tc.calledAs), CandidateCompanyKey: new("gull.test"),
 			})
 			if _, err := e.store.LinkLeadCompany(ctx, lead, company); err != nil {
 				t.Fatalf("link: %v", err)
@@ -144,8 +147,8 @@ func TestALinkByDomainFollowsTheLeadsKey(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if moved.CompanyId != nil || moved.CompanyFacts != nil {
-				t.Errorf("the lead kept company %v with facts %+v after its key stopped naming it", moved.CompanyId, moved.CompanyFacts)
+			if kept := moved.CompanyId != nil; kept != tc.kept || (moved.CompanyFacts != nil) != tc.kept {
+				t.Errorf("the lead holds company %v with facts %+v, want the link kept: %v", moved.CompanyId, moved.CompanyFacts, tc.kept)
 			}
 		})
 	}

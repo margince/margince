@@ -243,7 +243,7 @@ func (s *Store) previewLeadContactChangeTx(ctx context.Context, tx pgx.Tx, id id
 	if err != nil {
 		return LeadContactChange{}, err
 	}
-	if out.CompanyIndustry, err = leadIndustryCarry(ctx, tx, company, lead.Industry, false); err != nil {
+	if out.CompanyIndustry, err = leadIndustryCarry(ctx, tx, company, lead.Industry); err != nil {
 		return LeadContactChange{}, err
 	}
 	out.Deal, err = s.previewQualifiedDeal(ctx, tx, lead, in.Deal)

@@ -44,14 +44,6 @@ func TestTheIndustryListIsOneSetInTheContractTheOwnerAndTheClient(t *testing.T) 
 	if len(contract) < 20 || len(contract) > 40 {
 		t.Fatalf("the contract lists %d industries, want between 20 and 40", len(contract))
 	}
-	for _, schema := range []string{"Lead", "LeadCompanyFacts"} {
-		if copied := contractEnum(t, doc, schema, "industry"); !maps.Equal(copied, contract) {
-			t.Errorf("%s.industry admits %v, want the company's list %v", schema, copied, contract)
-		}
-	}
-	if copied := queryEnum(t, doc, "/leads", "industry"); !maps.Equal(copied, contract) {
-		t.Errorf("listLeads industry admits %v, want the company's list %v", copied, contract)
-	}
 	owner := contacts.IndustryCodes()
 	if len(owner) != len(contract) {
 		t.Errorf("the owner holds %d codes and the contract %d", len(owner), len(contract))
@@ -107,45 +99,64 @@ func TestEveryIndustryCodeIsWordedTheSameInGoAndInEveryClientCatalog(t *testing.
 	}
 }
 
-// The lead's company size reads the company's, so every copy of the band list is
-// the company's own.
-func TestTheLeadSizeBandsAreTheCompanyBands(t *testing.T) {
+// Every enum the contract declares for an industry or a size band, on a schema
+// property or a query parameter, is the company's own list. A copy is found by
+// its name, so a new one that drifts fails here without being listed.
+func TestEveryIndustryAndSizeBandEnumIsTheCompanys(t *testing.T) {
 	t.Parallel()
 	doc := loadContractDocument(t)
-	bands := contractEnum(t, doc, "Company", "size_band")
-	if len(bands) == 0 {
-		t.Fatal("Company.size_band read as empty, so this compared nothing")
+	want := map[string]map[string]bool{
+		"industry":  contractEnum(t, doc, "Company", "industry"),
+		"size_band": contractEnum(t, doc, "Company", "size_band"),
 	}
-	if copied := contractEnum(t, doc, "LeadCompanyFacts", "size_band"); !maps.Equal(copied, bands) {
-		t.Errorf("LeadCompanyFacts.size_band admits %v, want the company's bands %v", copied, bands)
-	}
-	if copied := queryEnum(t, doc, "/leads", "size_band"); !maps.Equal(copied, bands) {
-		t.Errorf("listLeads size_band admits %v, want the company's bands %v", copied, bands)
+	census := map[string][]string{}
+	walkVocabularyCopies(doc, "", func(where, name string, schema map[string]any) {
+		raw, closed := schema["enum"].([]any)
+		if !closed {
+			return
+		}
+		census[name] = append(census[name], where)
+		admitted := map[string]bool{}
+		for _, value := range enumStrings(t, map[string]any{"enum": raw}, where) {
+			admitted[value] = true
+		}
+		if !maps.Equal(admitted, want[name]) {
+			t.Errorf("%s admits %v, want the company's %s list %v", where, admitted, name, want[name])
+		}
+	})
+	t.Logf("industry enums (%d): %v", len(census["industry"]), census["industry"])
+	t.Logf("size_band enums (%d): %v", len(census["size_band"]), census["size_band"])
+	// The copies the contract holds today; a walk that finds fewer has stopped reaching some.
+	if len(census["industry"]) < 5 || len(census["size_band"]) < 6 {
+		t.Errorf("the walk found %v, fewer copies than the contract holds, so it compared too little", census)
 	}
 }
 
-// queryEnum is the enum one list's query parameter admits.
-func queryEnum(t *testing.T, doc map[string]any, path, name string) map[string]bool {
-	t.Helper()
-	params, ok := descendContract(t, doc, "paths", path, "get")["parameters"].([]any)
-	if !ok {
-		t.Fatalf("GET %s declares no parameters", path)
+// walkVocabularyCopies calls visit with the schema of every property and query
+// parameter named industry or size_band, anywhere under node.
+//
+//craft:ignore naked-any the contract is read as untyped YAML nodes, as every reader in this file reads it
+func walkVocabularyCopies(node any, where string, visit func(where, name string, schema map[string]any)) {
+	switch typed := node.(type) {
+	case map[string]any:
+		if properties, ok := typed["properties"].(map[string]any); ok {
+			for _, name := range []string{"industry", "size_band"} {
+				if schema, ok := properties[name].(map[string]any); ok {
+					visit(where+"."+name, name, schema)
+				}
+			}
+		}
+		if name, ok := typed["name"].(string); ok && typed["in"] == "query" && (name == "industry" || name == "size_band") {
+			if schema, ok := typed["schema"].(map[string]any); ok {
+				visit(where+"?"+name, name, schema)
+			}
+		}
+		for key, child := range typed {
+			walkVocabularyCopies(child, where+"/"+key, visit)
+		}
+	case []any:
+		for _, child := range typed {
+			walkVocabularyCopies(child, where, visit)
+		}
 	}
-	for _, raw := range params {
-		param, isMap := raw.(map[string]any)
-		if !isMap || param["name"] != name {
-			continue
-		}
-		schema, isMap := param["schema"].(map[string]any)
-		if !isMap {
-			t.Fatalf("GET %s %s carries no schema", path, name)
-		}
-		admitted := map[string]bool{}
-		for _, value := range enumStrings(t, schema, path+" "+name) {
-			admitted[value] = true
-		}
-		return admitted
-	}
-	t.Fatalf("GET %s declares no %s parameter", path, name)
-	return nil
 }
