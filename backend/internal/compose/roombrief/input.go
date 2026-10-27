@@ -141,9 +141,9 @@ func linkStillOwed(p crmcontracts.DealRoomParticipant) bool {
 	return p.LastSeenAt == nil || p.LinkRequestedAt.After(*p.LastSeenAt)
 }
 
-// threadsFrom keeps the threads a reader most needs: the ones waiting on them
-// first, a waiting change request ahead of the other waiting threads, then the
-// most recently active. The cap then never drops a waiting change request for
+// threadsFrom keeps the threads a reader most needs. Waiting threads come
+// first, a waiting change request ahead of the others, then the most recently
+// active. The cap then never drops a waiting change request for
 // newer small asks, and the floor quotes it first.
 func threadsFrom(threads []crmcontracts.DealRoomThread, titles map[string]string) []ThreadIn {
 	out := make([]ThreadIn, 0, len(threads))

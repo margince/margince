@@ -212,8 +212,8 @@ func TestALinkRequestCountsOnlyUntilTheBuyerIsBackIn(t *testing.T) {
 	}
 }
 
-// A waiting change request on a document comes ahead of newer waiting asks,
-// so the thread cap never drops it and the floor quotes it first.
+// A waiting change request on a document comes ahead of newer waiting asks.
+// The thread cap never drops it, and the floor quotes it first.
 func TestAWaitingChangeRequestOutranksNewerWaitingAsks(t *testing.T) {
 	at := time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC)
 	doc := openapi_types.UUID(ids.NewV7())

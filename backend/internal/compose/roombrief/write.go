@@ -43,10 +43,9 @@ const maxRecommendations = 1
 // brief reads, so a move to an address is a buyer's instruction.
 var addressInProse = regexp.MustCompile(`(?i)(https?://|www\.)\S+|[^\s@]+@[^\s@]+\.[a-z]{2,}`)
 
-// briefSystem is the deal_room_brief site's prompt. It turns on two rules:
-// lead with what a buyer is waiting on, and among those with a condition the
-// buyer sets for signing ahead of routine logistics; and never attribute the
-// reader's own side's words to a buyer.
+// briefSystem is the deal_room_brief site's prompt. It leads with what a buyer
+// is waiting on, a buyer's unmet condition for signing ahead of routine asks.
+// It never attributes the reader's own side's words to a buyer.
 const briefSystem = `You write the short brief at the top of a Deal Room, from a JSON summary of one room a salesperson shares with a buyer.
 Return ONLY a JSON object: {"sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"participant|document|thread","entity_id":"..."}]}]}.
 Write at most four sentences. Answer, in order: what a buyer is waiting on the reader for, which buyer cannot get in or has not come, what the buyers have and have not read, and — at most once — the single next move.
