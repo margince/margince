@@ -15,8 +15,9 @@ import type { components } from "../../../api/schema";
 import { Badge, Button, Card } from "../../../design-system/atoms";
 import { ErrorLine } from "../../../design-system/errorline";
 import { formatNumber } from "../../../format/format";
-import { useLocale, useT } from "../../../i18n";
+import { type Translator, useLocale, useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
+import { BAND_BADGE } from "../companygraph";
 import { ReceiptList } from "./receipts";
 
 type Graph = components["schemas"]["ContactGraph"];
@@ -32,11 +33,14 @@ export function EdgeDetail({
   graph,
   nodeId,
   anchorId,
+  viewerId,
   onOpenEmail,
 }: Readonly<{
   graph: Graph;
   nodeId: string;
   anchorId: string;
+  // The signed-in user, whose own node is titled "You" like the rest of the tab.
+  viewerId: string | undefined;
   // Opens one of the cited messages in the contact page's email drawer.
   onOpenEmail?: (activityId: string) => void;
 }>) {
@@ -54,7 +58,7 @@ export function EdgeDetail({
     );
   }
   return (
-    <Card title={node.label} level={3}>
+    <Card title={nameFor(node, viewerId, t)} level={3}>
       {node.suggest_edge && node.contact_id && (
         <RecordWorksWith graph={graph} peer={node} />
       )}
@@ -67,13 +71,15 @@ export function EdgeDetail({
           otherEnd === anchorId
             ? t("contact.graph.withContact")
             : otherNode
-              ? t("contact.graph.withColleague", { name: otherNode.label })
+              ? t("contact.graph.withColleague", {
+                  name: nameFor(otherNode, viewerId, t),
+                })
               : undefined;
         const receipts = edge.receipts ?? [];
         return (
           <div key={`${edge.from}->${edge.to}`}>
             <p className="pn-band">
-              <Badge>{t(`contact.bandBadge.${edge.strength_bucket}`)}</Badge>
+              <Badge>{t(BAND_BADGE[edge.strength_bucket])}</Badge>
               {withWhom && <span>{withWhom}</span>}
             </p>
             <p className="pn-counts t-sub">
@@ -154,4 +160,14 @@ function RecordWorksWith({
       )}
     </p>
   );
+}
+
+function nameFor(
+  node: GraphNode,
+  viewerId: string | undefined,
+  t: Translator,
+): string {
+  return viewerId !== undefined && node.user_id === viewerId
+    ? t("contact.intro.heroYou")
+    : node.label;
 }
