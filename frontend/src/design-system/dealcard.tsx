@@ -255,15 +255,7 @@ export function DealMailChip({
   );
 }
 
-/**
- * The card's last line: how the deal is moving, and the verbs a rep reaches
- * for without opening it.
- *
- * What is wrong with a deal lands HERE rather than in a line above the name,
- * so a card that needs the reader keeps its name and its figure level with the
- * cards beside it — a column is read down, and a flag line that came and went
- * moved every slot under it.
- */
+// Flags stay below the name and figure so adjacent cards keep those slots level.
 function DealCardFoot({
   zone,
   deal,
@@ -388,19 +380,7 @@ export function DealCard({
   deal: BoardDeal;
   /** The record calendar for close dates and ages, shared with the timeline. */
   zone: string;
-  /**
-   * The deal's own address.
-   *
-   * An anchor and not a button, which is what this was: a card that opens a
-   * record is a link, and drawn as a button it could not be opened in a new
-   * tab, middle-clicked, or copied — while every other record row in the
-   * product could. The board is the one surface where a rep wants three deals
-   * open side by side, so it was the worst place to lose that.
-   *
-   * The address arrives as a prop because this tier holds no routes: it is the
-   * same reason `OffsiteLink` takes an href and `ProjectLinks` takes an
-   * adapter.
-   */
+  /** A link preserves new-tab and copy actions; this tier receives its route. */
   href: string;
   /**
    * What a press does BESIDE following the link, and the reason the event

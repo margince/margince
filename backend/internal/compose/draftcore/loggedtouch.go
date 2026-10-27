@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// A logged note or meeting is prior contact even when neither side sent mail.
+// ClassifyWithLogged counts notes and meetings as prior contact, even without mail.
 // It counts as our side: nothing claims the contact wrote.
 func ClassifyWithLogged(now time.Time, zone *time.Location, lastIn, lastOut time.Time, activities []crmcontracts.Activity) convstate.State {
 	if logged := lastLoggedTouch(activities, now, zone); logged.After(lastOut) {

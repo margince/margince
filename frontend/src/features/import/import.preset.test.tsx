@@ -4,7 +4,7 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
@@ -19,6 +19,7 @@ const RUN_PAGE = "#/settings/import/run";
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.restoreAllMocks();
   globalThis.location.hash = "";
 });
@@ -58,7 +59,8 @@ const withActivities = {
 
 describe("importing activities from a contact's page", () => {
   it("opens the import on a contact with the type preset and no links column needed", async () => {
-    const user = userEvent.setup();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /me": () =>
         jsonResponse(
@@ -87,12 +89,19 @@ describe("importing activities from a contact's page", () => {
 
     const upload = sent.find((one) => one.path === "POST /imports/sources");
     expect(JSON.stringify(upload?.body)).toContain("activity");
-    const save = sent.find((one) => one.path.startsWith("PATCH /imports/"));
-    expect(save?.body).toMatchObject({
-      preset_links: [{ type: "contact", id: CONTACT }],
+    const saves = await waitFor(() => {
+      const patches = sent
+        .filter((one) => one.path.startsWith("PATCH /imports/"))
+        .map((one) => one.body);
+      expect(patches).toContainEqual(
+        expect.objectContaining({
+          preset_links: [{ type: "contact", id: CONTACT }],
+        }),
+      );
+      return patches;
     });
     expect(
-      JSON.stringify(save?.body),
+      JSON.stringify(saves),
       "no links column is mapped to a target",
     ).not.toContain('"links"');
   });

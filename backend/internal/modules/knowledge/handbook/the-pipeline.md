@@ -240,7 +240,7 @@ explains.
 
 ## Stalled deals
 
-**A deal in Margince is stalled when it is open and nothing has touched it for more than 60 days.** The deal card then carries a **stalled** badge. "Touched" means real activity (a mail, a meeting, a note). Opening the record does not count. At 60 days a deal is not yet stalled; past 60 it is.
+A deal in Margince is stalled when it is open and nothing has touched it for more than 60 days. The deal card then carries a **stalled** badge. "Touched" means real activity (a mail, a meeting, a note). Opening the record does not count. At 60 days a deal is not yet stalled; past 60 it is.
 
 The board and list count activity ages by calendar days in the installation time zone, as the deal page does. Within today, they show hours or minutes. A day-only email shows its stated date.
 

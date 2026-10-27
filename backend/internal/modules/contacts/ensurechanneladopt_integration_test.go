@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -265,26 +266,40 @@ func TestAMailCapturedAddressStillCountsAsCorrespondence(t *testing.T) {
 // A vouched direct message from a live lead files on that lead. It creates no
 // contact and binds no account.
 func TestAChannelMessageFromALeadFilesOnTheLead(t *testing.T) {
-	e := setupDedupe(t)
-	ctx := e.asChannelConnector()
-	const email = "lan@prospect.example"
-	lead := e.seedHeldLead(e.as(), t, email)
-	ci := connector.ChannelIdentity{Provider: telegramProvider, ChannelUserID: "990202", Username: "lan"}
-	in := e.corroboratedInput(t, ci, "Lan", email)
+	for _, tc := range []struct {
+		name  string
+		read  bool
+		links int
+	}{{"reader", true, 1}, {"without lead read", false, 0}} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := setupDedupe(t)
+			ctx := e.asChannelConnector()
+			actor, ok := principal.Actor(ctx)
+			if !ok {
+				t.Fatal("channel connector has no actor")
+			}
+			actor.Permissions.Objects["lead"] = principal.ObjectGrant{Read: tc.read}
+			ctx = principal.WithActor(ctx, actor)
+			const email = "lan@prospect.example"
+			lead := e.seedHeldLead(e.as(), t, email)
+			ci := connector.ChannelIdentity{Provider: telegramProvider, ChannelUserID: "990202", Username: "lan"}
+			in := e.corroboratedInput(t, ci, "Lan", email)
 
-	res, err := e.store.EnsureChannelCounterparty(ctx, in)
-	if err != nil {
-		t.Fatalf("ensure: %v", err)
+			res, err := e.store.EnsureChannelCounterparty(ctx, in)
+			if err != nil {
+				t.Fatalf("ensure: %v", err)
+			}
+			if res.ContactCreated || !res.ContactID.IsZero() || res.LeadID.UUID != lead {
+				t.Fatalf("ensure = %+v, want no contact and the lead %v", res, lead)
+			}
+			if n := e.countInWorkspace(ctx, t, `SELECT count(*) FROM activity_link WHERE activity_id = $1 AND lead_id = $2`,
+				in.ActivityID, lead); n != tc.links {
+				t.Errorf("the message is filed %d times on the lead, want %d", n, tc.links)
+			}
+			if n := e.countInWorkspace(ctx, t, `SELECT count(*) FROM contact_email WHERE email = $1 AND archived_at IS NULL`, email); n != 0 {
+				t.Errorf("%d contact addresses made for a live lead's address, want none", n)
+			}
+			e.requireLeadUntouched(e.as(), t, lead, "after their message")
+		})
 	}
-	if res.ContactCreated || !res.ContactID.IsZero() || res.LeadID.UUID != lead {
-		t.Fatalf("ensure = %+v, want no contact and the lead %v", res, lead)
-	}
-	if n := e.countInWorkspace(ctx, t, `SELECT count(*) FROM activity_link WHERE activity_id = $1 AND lead_id = $2`,
-		in.ActivityID, lead); n != 1 {
-		t.Errorf("the message is filed %d times on the lead, want once", n)
-	}
-	if n := e.countInWorkspace(ctx, t, `SELECT count(*) FROM contact_email WHERE email = $1 AND archived_at IS NULL`, email); n != 0 {
-		t.Errorf("%d contact addresses made for a live lead's address, want none", n)
-	}
-	e.requireLeadUntouched(e.as(), t, lead, "after their message")
 }

@@ -110,7 +110,7 @@ func (w *linkReconcileWorker) reconcileLinksForWorkspace(ctx context.Context, wo
 			w.receipts.skipped(sweepCtx, capture.SweepStrandedContacts)))
 	}
 	var linked, promoted int64
-	var failed error = leadErr
+	failed := leadErr
 	for _, contact := range owed {
 		// Per contact, each on its own transaction, so one contact whose repair
 		// fails — a lock it could not take, a row a concurrent merge moved —
