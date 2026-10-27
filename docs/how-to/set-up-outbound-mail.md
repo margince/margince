@@ -104,8 +104,8 @@ with a message of one line:
   offers **Get set-password link**, so you can hand the link over in another way.
 - The weekly review and the morning brief stay on Home, and no one mails them.
 
-A dev stack from `make dev` has no relay: `config/margince.example.yaml` ships
-the block as a comment. To close a privacy notice duty on such a stack,
+A dev stack from `make dev` has no relay: `config/margince.example.yaml` has
+no `email` block. To close a privacy notice duty on such a stack,
 set up a relay as above. Or tell the contact in another way, and close
 the duty with **End the duty…**, with a note of how you let them know.
 

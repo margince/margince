@@ -61,6 +61,8 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     const viewControls = new Set([
       // The trigger discloses; the open above sweeps the verbs behind it.
       "More actions",
+      // Copying the address reads it; nothing on the lead changes.
+      "Copy email address",
     ]);
     // The one write a terminal lead offers, in its own set so a reader cannot
     // mistake it for a control that writes nothing. Reopening is the undo of

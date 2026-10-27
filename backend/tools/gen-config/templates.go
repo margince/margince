@@ -14,27 +14,34 @@ import (
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
-// commentWidth is where a doc comment wraps in the YAML and .env templates.
-const commentWidth = 96
-
 const exampleHeader = `# yaml-language-server: $schema=./margince.schema.json
-# Written by tools/gen-config from the settings registry; run ` + "`make config-gen`" + ` after a change.
+# Written by tools/gen-config; run ` + "`make config-gen`" + ` after a change.
 #
-# The bootstrap part first, then every setting commented out at its default. To set one, remove
-# the first "# " of its lines and of the section lines above it. A secret takes a reference and
-# never a literal: ${file:/path} or ${env:NAME}. A secret that allows it takes ${none} to declare
-# itself absent.
+# The bootstrap part only. Every setting at its default is in margince.defaults.yaml: copy the
+# lines you change. What each setting does is in docs/reference/configuration.md, and an editor
+# that reads the schema shows it on hover. A secret takes ${file:/path} or ${env:NAME}, never a
+# literal.
 
 `
 
-// exampleYAML is the bootstrap template, then each setting as nested YAML,
-// commented out.
-func exampleYAML(settings []setting, bootstrap string) (string, error) {
+// exampleYAML is the header, then the bootstrap template.
+func exampleYAML(bootstrap string) string {
+	return exampleHeader + strings.TrimRight(bootstrap, "\n") + "\n"
+}
+
+const defaultsHeader = `# yaml-language-server: $schema=./margince.schema.json
+# Written by tools/gen-config; every setting at its default. Do not edit: copy from it.
+
+version: 1
+`
+
+// defaultsYAML writes each setting at its default as nested YAML a loader
+// reads. A secret is a file reference, and a setting with no default is null.
+func defaultsYAML(settings []setting) (string, error) {
 	var b strings.Builder
-	b.WriteString(exampleHeader)
-	b.WriteString(strings.TrimRight(bootstrap, "\n") + "\n")
+	b.WriteString(defaultsHeader)
 	for _, group := range groups(settings) {
-		b.WriteString("\n# ---- " + groupTitle(group) + " ----\n")
+		b.WriteString("\n")
 		var open []string
 		for _, s := range group {
 			parts := strings.Split(s.Key(), ".")
@@ -47,38 +54,33 @@ func exampleYAML(settings []setting, bootstrap string) (string, error) {
 				b.WriteString(yamlLine(depth, parents[depth]+":"))
 			}
 			open = parents
-			if err := writeYAMLSetting(&b, len(parents), parts[len(parts)-1], s); err != nil {
+			value, err := defaultsValue(s)
+			if err != nil {
 				return "", err
 			}
+			b.WriteString(yamlLine(len(parents), parts[len(parts)-1]+": "+value))
 		}
 	}
 	return b.String(), nil
 }
 
-func writeYAMLSetting(b *strings.Builder, depth int, name string, s setting) error {
-	for _, line := range wrap(s.Doc(), commentWidth) {
-		b.WriteString(yamlLine(depth, "# "+line))
-	}
+func defaultsValue(s setting) (string, error) {
 	if s.Secret() {
-		b.WriteString(yamlLine(depth, name+": ${file:/run/secrets/"+s.Key()+"}"))
-		return nil
+		return "${file:/run/secrets/" + s.Key() + "}", nil
 	}
 	value, ok, err := yamlDefault(s)
 	switch {
 	case err != nil:
-		return err
+		return "", err
 	case !ok:
-		b.WriteString(yamlLine(depth, name+":"))
-		return nil
+		return "null", nil
 	}
-	b.WriteString(yamlLine(depth, "# default: "+value))
-	b.WriteString(yamlLine(depth, name+": "+value))
-	return nil
+	return value, nil
 }
 
-// yamlLine is one commented-out line at a nesting depth.
+// yamlLine is one line at a nesting depth.
 func yamlLine(depth int, text string) string {
-	return "# " + strings.Repeat("  ", depth) + text + "\n"
+	return strings.Repeat("  ", depth) + text + "\n"
 }
 
 // yamlDefault writes the default as YAML reads it back. A list, map or object
@@ -118,13 +120,11 @@ func yamlScalar(text string) (string, error) {
 	return strings.TrimSuffix(string(out), "\n"), nil
 }
 
-const envHeader = `# Written by tools/gen-config from the settings registry; run ` + "`make config-gen`" + ` after a change.
+const envHeader = `# Written by tools/gen-config; run ` + "`make config-gen`" + ` after a change.
 #
 # Every variable a Margince program or image entrypoint reads, commented out at its default. Copy
-# what you need to .env.local (gitignored); a deployment supplies these through its own environment
-# or secret store. A secret has no default: write the value itself here, never in a committed file.
-# [required] marks a variable the image entrypoint refuses to start without.
-# docs/reference/configuration.md lists each setting with the key it sets in margince.yaml.
+# a line to .env.local (git-ignored) and remove its "# " to set it. A secret has no default. What
+# each variable does is in docs/reference/configuration.md.
 `
 
 // envInputs are the variables .env.example lists beside the settings: those
@@ -134,61 +134,53 @@ type envInputs struct {
 	entrypoint []deployconfig.EntrypointVar
 }
 
-// required is the set of variables an entrypoint stops without.
-func (in envInputs) required() map[string]bool {
-	out := map[string]bool{}
-	for _, v := range in.entrypoint {
-		out[v.Name] = out[v.Name] || v.Required
-	}
-	return out
-}
-
-// envExample writes the loader's variables, then the entrypoint's own, then
-// the settings section by section, each commented out at its default.
+// envExample writes the variables an entrypoint stops without, then the
+// loader's, then the entrypoint's other own ones, then the settings section by
+// section. Each variable is one line, under one heading only.
 func envExample(settings []setting, in envInputs) string {
+	defaults := map[string]string{}
+	for _, s := range settings {
+		defaults[s.Env()] = envDefault(s)
+	}
 	var b strings.Builder
 	b.WriteString(envHeader)
-	required := in.required()
-	b.WriteString("\n# ---- loader ----\n")
-	for _, v := range in.loader {
-		if v.Env != "" {
-			writeEnvVar(&b, v.Doc, v.Env, "", required[v.Env])
+	written := map[string]bool{}
+	section := func(title string, names []string) {
+		var lines []string
+		for _, name := range names {
+			if name != "" && !written[name] {
+				written[name] = true
+				lines = append(lines, "# "+name+"="+defaults[name]+"\n")
+			}
+		}
+		if len(lines) > 0 {
+			b.WriteString("\n# ---- " + title + " ----\n" + strings.Join(lines, ""))
 		}
 	}
-	settingEnvs := map[string]bool{}
-	for _, s := range settings {
-		settingEnvs[s.Env()] = true
-	}
-	var entrypointOnly []deployconfig.EntrypointVar
+	var required, entrypoint []string
 	for _, v := range in.entrypoint {
-		if !settingEnvs[v.Name] {
-			entrypointOnly = append(entrypointOnly, v)
+		if v.Required {
+			required = append(required, v.Name)
+		}
+		if _, isSetting := defaults[v.Name]; !isSetting {
+			entrypoint = append(entrypoint, v.Name)
 		}
 	}
-	if len(entrypointOnly) > 0 {
-		b.WriteString("\n# ---- image entrypoint ----\n")
-		for _, v := range entrypointOnly {
-			writeEnvVar(&b, "Read by scripts/deploy/"+v.Script+" before it starts a program.", v.Name, "", v.Required)
-		}
+	section("required by the image entrypoint", required)
+	loader := make([]string, len(in.loader))
+	for i, v := range in.loader {
+		loader[i] = v.Env
 	}
+	section("loader", loader)
+	section("image entrypoint", entrypoint)
 	for _, group := range groups(settings) {
-		b.WriteString("\n# ---- " + groupTitle(group) + " ----\n")
-		for _, s := range group {
-			writeEnvVar(&b, s.Doc(), s.Env(), envDefault(s), required[s.Env()])
+		names := make([]string, len(group))
+		for i, s := range group {
+			names[i] = s.Env()
 		}
+		section(groupTitle(group), names)
 	}
 	return b.String()
-}
-
-func writeEnvVar(b *strings.Builder, doc, name, value string, required bool) {
-	if required {
-		doc = "[required] " + doc
-	}
-	b.WriteString("\n")
-	for _, line := range wrap(doc, commentWidth) {
-		b.WriteString("# " + line + "\n")
-	}
-	b.WriteString("# " + name + "=" + value + "\n")
 }
 
 // envDefault is the default as the variable spells it, quoted where the .env
@@ -208,22 +200,4 @@ func envDefault(s setting) string {
 	default:
 		return `"` + text + `"`
 	}
-}
-
-// wrap breaks text into lines of at most width runes, at spaces.
-func wrap(text string, width int) []string {
-	var lines []string
-	line := ""
-	for word := range strings.FieldsSeq(text) {
-		switch {
-		case line == "":
-			line = word
-		case len([]rune(line))+1+len([]rune(word)) > width:
-			lines = append(lines, line)
-			line = word
-		default:
-			line += " " + word
-		}
-	}
-	return append(lines, line)
 }

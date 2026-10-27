@@ -369,8 +369,10 @@ func (t applyTag) Handle(ctx context.Context, in json.RawMessage) (json.RawMessa
 		return nil, err
 	}
 	noteEvidence(ctx, datasource.EntityType(args.RecordType), args.RecordID)
-	return json.Marshal(TagAppliedResult{Applied: true, TagID: args.TagID,
-		RecordType: args.RecordType, RecordID: args.RecordID})
+	return json.Marshal(TagAppliedResult{
+		Applied: true, TagID: args.TagID,
+		RecordType: args.RecordType, RecordID: args.RecordID,
+	})
 }
 
 type removeTag struct{ tags Tags }
@@ -413,8 +415,10 @@ func (t removeTag) Handle(ctx context.Context, in json.RawMessage) (json.RawMess
 			return nil, err
 		}
 		if !ok {
-			return json.Marshal(TagAppliedResult{Applied: false,
-				RecordType: args.RecordType, RecordID: args.RecordID})
+			return json.Marshal(TagAppliedResult{
+				Applied:    false,
+				RecordType: args.RecordType, RecordID: args.RecordID,
+			})
 		}
 		args.TagID = found
 	}
@@ -422,8 +426,10 @@ func (t removeTag) Handle(ctx context.Context, in json.RawMessage) (json.RawMess
 		return nil, err
 	}
 	noteEvidence(ctx, datasource.EntityType(args.RecordType), args.RecordID)
-	return json.Marshal(TagAppliedResult{Applied: false, TagID: args.TagID,
-		RecordType: args.RecordType, RecordID: args.RecordID})
+	return json.Marshal(TagAppliedResult{
+		Applied: false, TagID: args.TagID,
+		RecordType: args.RecordType, RecordID: args.RecordID,
+	})
 }
 
 type taggingArgs struct {

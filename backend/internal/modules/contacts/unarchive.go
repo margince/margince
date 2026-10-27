@@ -9,6 +9,7 @@ package contacts
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -82,7 +83,39 @@ func (s *Store) RestoreContactTx(
 	if err := ensureRestorable(ctx, tx, contactEntity, id.UUID); err != nil {
 		return storekit.RestoreReport{}, err
 	}
+	if err := refuseRestoreOverLead(ctx, tx, id); err != nil {
+		return storekit.RestoreReport{}, err
+	}
 	return storekit.Unarchive(ctx, tx, contactUnarchive, id.UUID, ifVersion, with)
+}
+
+// refuseRestoreOverLead refuses bringing a contact back while a live lead holds
+// an address the archive retired with it, or its LinkedIn profile. The contact
+// row is locked first, then the identity locks. The refusal is the un-archive's
+// own, so the history and bulk undo name it as they name a taken address.
+func refuseRestoreOverLead(ctx context.Context, tx pgx.Tx, id ids.ContactID) error {
+	if _, err := storekit.LockRow(ctx, tx, contactEntity, id.UUID, storekit.IncludeArchived); err != nil {
+		return err
+	}
+	var keys storekit.IdentityKeys
+	if err := tx.QueryRow(ctx, `
+		SELECT coalesce(array_agg(e.email) FILTER (WHERE e.email IS NOT NULL), '{}'),
+		       coalesce((SELECT array_agg(s.handle) FROM contact_social s
+		                  WHERE s.contact_id = c.id AND s.platform = $2), '{}')
+		  FROM contact c
+		  LEFT JOIN contact_email e ON e.contact_id = c.id AND e.archived_at = c.archived_at
+		 WHERE c.id = $1
+		 GROUP BY c.id`, id, SocialLinkedIn).Scan(&keys.Emails, &keys.LinkedInURLs); err != nil {
+		return fmt.Errorf("read the keys a restore gives back: %w", err)
+	}
+	holders, err := storekit.LockIdentityHolders(ctx, tx, keys)
+	if err != nil {
+		return err
+	}
+	if len(holders.Leads) > 0 {
+		return &storekit.RestoreRefusal{Reason: storekit.RestoreValueTaken, Detail: CodeLeadHoldsEmail}
+	}
+	return nil
 }
 
 // RestoreCompanyTx is RestoreContactTx for a company.

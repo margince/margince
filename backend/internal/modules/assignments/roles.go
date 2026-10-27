@@ -35,7 +35,7 @@ const (
 
 // roleColumns is what a role read returns, shared by the list and the single
 // read.
-const roleColumns = `id, key, label, record_types, assignee_kinds, sort_order, active, system, version, created_at, updated_at`
+const roleColumns = `id, key, label, label_key, record_types, assignee_kinds, sort_order, active, system, version, created_at, updated_at`
 
 var roleKeyJunk = regexp.MustCompile(`[^a-z0-9]+`)
 

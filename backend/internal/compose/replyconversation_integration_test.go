@@ -157,8 +157,10 @@ func TestAnOldInboundMessageStillDecidesTheReplyLanguageBehindManyNewerOutboundO
 	e := o.e
 	at := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
 	german := "Vielen Dank für das Angebot, wir prüfen es mit unserem Team und melden uns nächste Woche bei Ihnen zurück."
-	first := o.capture(t, owedMail{from: replyCorrespondent, to: o.seat, subject: "Angebot", body: german,
-		messageID: "angebot-1@customer.test", at: at, authenticated: true})
+	first := o.capture(t, owedMail{
+		from: replyCorrespondent, to: o.seat, subject: "Angebot", body: german,
+		messageID: "angebot-1@customer.test", at: at, authenticated: true,
+	})
 	thread := e.WsScalar(t, `SELECT thread_key FROM activity WHERE id = $1`, first)
 	var anchor crmcontracts.Activity
 	for i := range replyContextTurns + 4 {
@@ -183,8 +185,10 @@ func TestAReadableCopiedContactDoesNotSetTheReplyLanguageWhenTheSenderIsPrivate(
 	sender := replyLangContact(t, e, "Dietmar Private", "dietmar@kunde.test")
 	at := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
 	mail := func(from, cc, id, body string, offset time.Duration) ids.UUID {
-		return o.capture(t, owedMail{from: from, to: o.seat, cc: cc, subject: "Angebot", body: body,
-			messageID: id, inReplyTo: "angebot-root@kunde.test", at: at.Add(offset), authenticated: true})
+		return o.capture(t, owedMail{
+			from: from, to: o.seat, cc: cc, subject: "Angebot", body: body,
+			messageID: id, inReplyTo: "angebot-root@kunde.test", at: at.Add(offset), authenticated: true,
+		})
 	}
 	mail("anne@copied.test", "", "angebot-1@copied.test",
 		"Thanks for the update, we plan to review the proposal with our team next week and come back to you.", 0)

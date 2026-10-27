@@ -247,6 +247,25 @@ export function mergeScreenDials(
 }
 
 /**
+ * The value an opening filter carries once the reader has removed it.
+ *
+ * A list that opens narrowed (the leads queue opens on "Mine") cannot spell
+ * "All" by absence. Back mounts the list afresh, and a fresh list reads a bare
+ * address as "just arrived" and narrows it again. So the removal is written out
+ * (`owner_id=all`). It is read as a removal only for a key the opening state
+ * holds, so a filter whose real vocabulary has an "all" keeps it.
+ */
+const CLEARED_OPENING_FILTER = "all";
+
+function isClearedOpening(
+  key: string,
+  value: string,
+  opening: ListQuery,
+): boolean {
+  return value === CLEARED_OPENING_FILTER && key in opening.filters;
+}
+
+/**
  * The query `params` describes, with `opening` standing where it says nothing.
  *
  * An address that carries any dial at all is the whole truth about the list.
@@ -274,9 +293,10 @@ export function listQueryFromParams(
   const mine = ownDials(params, scope);
   const filters: Record<string, string> = {};
   for (const [key, value] of mine) {
-    if (!LIST_OWN_PARAMS.has(key)) {
-      filters[key] = value;
+    if (LIST_OWN_PARAMS.has(key) || isClearedOpening(key, value, opening)) {
+      continue;
     }
+    filters[key] = value;
   }
   // An address carrying a dial, or a reader who has turned one, has expressed
   // what the list should be. Only a reader who has expressed nothing at all
@@ -324,6 +344,11 @@ export function paramsFromListQuery(
     params.set(scoped(scope, name), value);
   for (const [key, value] of Object.entries(query.filters)) {
     set(key, value);
+  }
+  for (const key of Object.keys(opening.filters)) {
+    if (!(key in query.filters)) {
+      set(key, CLEARED_OPENING_FILTER);
+    }
   }
   if (query.q) {
     set("q", query.q);

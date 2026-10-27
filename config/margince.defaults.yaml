@@ -1,0 +1,205 @@
+# yaml-language-server: $schema=./margince.schema.json
+# Written by tools/gen-config; every setting at its default. Do not edit: copy from it.
+
+version: 1
+
+addr: :8080
+ai_fake: false
+ai_routing: null
+api_base_url: null
+blobstore_access_key: ${file:/run/secrets/blobstore_access_key}
+blobstore_bucket: null
+blobstore_endpoint: null
+blobstore_path: null
+blobstore_region: null
+blobstore_secret_key: ${file:/run/secrets/blobstore_secret_key}
+blobstore_use_ssl: false
+certlog_base_url: null
+connector_state_key: ${file:/run/secrets/connector_state_key}
+dsn: ${file:/run/secrets/dsn}
+geocode_base_url: null
+gmail_client_id: null
+gmail_client_secret: ${file:/run/secrets/gmail_client_secret}
+gmail_jwks_url: null
+gmail_pubsub_topic: null
+gmail_push_audience: null
+gmail_push_service_account: null
+gmail_push_token: ${file:/run/secrets/gmail_push_token}
+graph_client_id: null
+graph_client_secret: ${file:/run/secrets/graph_client_secret}
+graph_notification_url: ${file:/run/secrets/graph_notification_url}
+graph_push_token: ${file:/run/secrets/graph_push_token}
+graph_tenant: null
+inline_relay: true
+job_drain_window: 20s
+keyvault_root_key: ${file:/run/secrets/keyvault_root_key}
+log_format: text
+log_level: info
+mcp_apps_base_url: null
+metrics_access: token
+metrics_token: ${file:/run/secrets/metrics_token}
+microsoft_signin_tenant: null
+observe_addr: null
+observe_pprof: false
+owner_dsn: ${file:/run/secrets/owner_dsn}
+provider_surfe: live
+public_base_url: null
+redis: localhost:16379
+redis_password: ${file:/run/secrets/redis_password}
+schema_dsn: ${file:/run/secrets/schema_dsn}
+trusted_proxies: null
+vat_check_base_url: null
+webhook_key: ${file:/run/secrets/webhook_key}
+work_dir: .tmp/aitask
+
+activities:
+  follow_up_after_days: 2
+
+ai:
+  budget: {"tokens_per_full_user":12000000,"company_monthly_tokens":null}
+  capture_payloads: false
+  price_sync: {"auto_sync":true}
+  provider_keys_anthropic: ${file:/run/secrets/ai.provider_keys_anthropic}
+  provider_keys_gemini: ${file:/run/secrets/ai.provider_keys_gemini}
+  provider_keys_gemini_vertex: ${file:/run/secrets/ai.provider_keys_gemini_vertex}
+  provider_keys_jev: ${file:/run/secrets/ai.provider_keys_jev}
+  provider_keys_jev_compatible: ${file:/run/secrets/ai.provider_keys_jev_compatible}
+  provider_keys_openai: ${file:/run/secrets/ai.provider_keys_openai}
+  provider_keys_openai_compatible: ${file:/run/secrets/ai.provider_keys_openai_compatible}
+  routing: null
+  task_overrides: {}
+
+analytics:
+  performance_enabled: false
+
+auth:
+  password:
+    enabled: true
+
+capture:
+  auto_enrich: true
+  auto_enrich_daily_cap: 500
+  confidentiality_pass_cap: 40
+  freemail_extra: null
+  freemail_never: null
+  mail_sharing: true
+  mail_sync_interval_seconds: 120
+  max_backfill_months: 0
+  shared_posture_allowed: false
+  signature_enrich: true
+  site_read_max_mib: 32
+  site_read_max_pages: 60
+  site_read_wall_seconds: 240
+  skip_reserved_domain_proposals: true
+  trace_payloads: true
+  transactional_extra: null
+  transactional_never: null
+
+company_context:
+  rollout: onboarding
+
+consent:
+  authorization_modes: {"account_notice":"enforce","active_deal_followup":"enforce","consent_confirmation":"enforce","contract_notice":"enforce","customer_service":"enforce","invoice_or_payment":"enforce","marketing":"enforce","optout_confirmation":"enforce","precontract_quote":"enforce","privacy_notice":"enforce","record_confirmation":"enforce","reply_to_inbound":"enforce","requested_followup":"enforce","security_notice":"enforce"}
+  controller_particulars: null
+
+contacts:
+  first_response_enabled: false
+  first_response_target_minutes: 240
+  signature_template: null
+  unassigned_escalation_user_id: null
+
+data_tasks:
+  pace: 1s
+
+deals:
+  legal_review_enabled: true
+  maintenance_writes_enabled: true
+  stage_autopilot_enabled: false
+
+email:
+  enabled: false
+  from_address: null
+  smtp:
+    host: null
+    password: ${file:/run/secrets/email.smtp.password}
+    password_file: null
+    port: 0
+    username: null
+
+identity:
+  enabled_oidc_providers: null
+  oauth_dynamic_registration: true
+  oauth_metadata_documents: true
+  oidc_group_role_map: null
+  require_mfa: false
+  require_sso: false
+
+installation:
+  agent_calls_per_window: 1000
+  agent_egress_per_window: 20
+  agent_runner_interval_seconds: 30
+  agent_window_hours: 24
+  agent_writes_per_window: 200
+  base_language: en
+  call_telegram: true
+  call_whatsapp: true
+  call_zalo: true
+  close_date_sweep_interval_seconds: 86400
+  country: ""
+  date_format: locale
+  dead_work_banner_hours: 24
+  fiscal_year_start_month: 1
+  follow_up_reconcile_interval_seconds: 86400
+  forecast_forward_measure: commit_evidence
+  geocode_backfill_interval_seconds: 3600
+  gmail_watch_renew_within_hours: 48
+  gmail_watch_scan_interval_seconds: 21600
+  graph_watch_renew_within_hours: 24
+  graph_watch_scan_interval_seconds: 21600
+  name: null
+  oauth_access_token_ttl_minutes: 43200
+  retention_sweep_interval_seconds: 86400
+  send_max_age_hours: 24
+  send_rate_limit: 30
+  send_rate_window_seconds: 60
+  technical_backfill_interval_seconds: 21600
+  time_format: locale
+  time_scan_interval_seconds: 3600
+  webhook_retry_interval_seconds: 30
+
+integrations:
+  automatic_lookup: true
+
+license:
+  token: ${file:/run/secrets/license.token}
+  token_file: null
+
+lists:
+  enabled: true
+
+mcp:
+  client_registration:
+    dynamic: true
+    metadata_document: true
+  connector_enabled: false
+
+operations:
+  allow_data_reset: false
+  allow_test_mailbox: false
+
+privacy:
+  retain_only: false
+
+rates:
+  fx_currencies: null
+  fx_source: null
+  model_pricing: null
+
+uploads:
+  attachment_mb: 25
+  csv_import_mb: 10
+  knowledge_document_mb: 5
+  linkedin_import_mb: 8
+
+web:
+  security_txt: null

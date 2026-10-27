@@ -12,7 +12,8 @@ import {
   useObjectCustomFields,
 } from "./customfields.form";
 import { saveRecordEdit } from "./recordedit";
-import { type FieldRecord, RecordFields } from "./recordfields";
+import { RecordFields } from "./recordfields";
+import type { FieldRecord } from "./recordfieldtypes";
 
 type Kind = "company" | "contact" | "deal" | "lead";
 export function RecordCustomFields({

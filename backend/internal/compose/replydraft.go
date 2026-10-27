@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -163,7 +164,7 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 	// true or false. A reply to something from this morning and a reply to
 	// something from eight months ago are different messages, and only the
 	// timestamp tells them apart.
-	state := d.conversationState(activity)
+	state := d.conversationState(ctx, activity)
 	// The addressee's own text decides first; the stored label comes next,
 	// above a body that may carry a quoted chain in other languages.
 	envelope := d.envelope.Resolve(ctx, draftfloor.Written{
@@ -290,14 +291,18 @@ func (d replyDrafter) recipientFor(ctx context.Context, anchor ids.ActivityID) a
 // not. It carries a real timestamp, so the silence it produces is honest even
 // though nobody spoke: the anchor is treated as our own side's, which is the
 // reading that assumes least about them.
-func (d replyDrafter) conversationState(activity crmcontracts.Activity) convstate.State {
+func (d replyDrafter) conversationState(ctx context.Context, activity crmcontracts.Activity) convstate.State {
+	zone := d.envelope.Zone(ctx)
 	occurred := activity.OccurredAt
+	if occurredday.IsDay(activity.OccurredPrecision) {
+		occurred = occurredday.Begins(occurred, zone)
+	}
 	inbound := activity.Direction != nil &&
 		*activity.Direction == crmcontracts.ActivityDirectionInbound
 	if inbound {
-		return convstate.Classify(d.envelope.Now(), occurred, time.Time{})
+		return convstate.Classify(d.envelope.Now(), occurred, time.Time{}, zone)
 	}
-	return convstate.Classify(d.envelope.Now(), time.Time{}, occurred)
+	return convstate.Classify(d.envelope.Now(), time.Time{}, occurred, zone)
 }
 
 // threadFlag spells the thread state for the flat payload. A named value rather

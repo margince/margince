@@ -11,7 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FieldGrid } from "../../../design-system/fieldgrid";
 import { UTC_ZONE } from "../../../format/timezone";
-import { LocaleProvider, translate } from "../../../i18n";
+import { type Locale, LocaleProvider, translate } from "../../../i18n";
 import { en } from "../../../i18n/en";
 import { closeWords, DealRecordRows, DealSubtitle } from "./dealheaderfacts";
 
@@ -44,13 +44,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function show(node: React.ReactNode) {
+function show(node: React.ReactNode, locale: Locale = "en") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{node}</LocaleProvider>
+      <LocaleProvider initial={locale}>{node}</LocaleProvider>
     </QueryClientProvider>,
   );
 }
@@ -274,7 +274,8 @@ describe("the details rows say where a deal stands and how it closed", () => {
     expect(screen.queryByText(foreign)).not.toBeInTheDocument();
   });
 
-  it("names how the record reached Margince, behind the provenance tag", async () => {
+  // The stored source is a key, so the popover says it in the reader's words.
+  it("names how the record reached Margince in words, behind the provenance tag", async () => {
     show(
       <FieldGrid>
         <DealRecordRows
@@ -282,15 +283,17 @@ describe("the details rows say where a deal stands and how it closed", () => {
             amount_minor: 1000,
             currency: "EUR",
             stage_id: "st-1",
-            source: "csv import",
+            source: "manual",
           }}
           stages={stages}
-          locale="en"
+          locale="de"
         />
       </FieldGrid>,
+      "de",
     );
     await userEvent.setup().click(screen.getByRole("button"));
-    expect(await screen.findByText("csv import")).toBeInTheDocument();
+    expect(await screen.findByText("Manuell erstellt")).toBeInTheDocument();
+    expect(screen.queryByText("manual")).not.toBeInTheDocument();
   });
 
   // A deal somebody wrote in the system it was imported from. An import runs as
@@ -318,6 +321,32 @@ describe("the details rows say where a deal stands and how it closed", () => {
       screen.getByText("Logged in HubSpot by Mutaz Suleiman"),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Typed by/)).not.toBeInTheDocument();
+  });
+
+  // "Source" is the channel a deal came through, so who recorded it has its own
+  // label. The system it was logged in reads as its maker spells it.
+  it("labels who recorded the deal apart from its source, naming the system as its maker does", () => {
+    show(
+      <FieldGrid>
+        <DealRecordRows
+          deal={{
+            stage_id: "st-1",
+            source: "hubspot",
+            captured_by: "human:u-importer",
+            author: { display_name: "Mutaz Suleiman", via: "hubspot" },
+          }}
+          stages={stages}
+          locale="vi"
+        />
+      </FieldGrid>,
+      "vi",
+    );
+    // "Nguồn" is Source's word, and "bởi" a passive no reader says.
+    expect(screen.getByText("Bên ghi nhận")).toBeInTheDocument();
+    expect(screen.queryByText(/Nguồn|bởi/)).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Mutaz Suleiman đã ghi nhận trong HubSpot"),
+    ).toBeInTheDocument();
   });
 });
 

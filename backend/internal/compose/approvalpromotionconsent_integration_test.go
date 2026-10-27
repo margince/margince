@@ -47,11 +47,8 @@ func testConsentCarryPreview(t *testing.T, operation string) {
 			var leadID ids.LeadID
 			var sourceID ids.ContactID
 			if operation == "promotion" {
-				lead, _, err := store.CreateLead(ctx, contacts.CreateLeadInput{FullName: new("Dana Buyer"), Email: new("dana@example.test"), Source: "manual"})
-				if err != nil {
-					t.Fatal(err)
-				}
-				leadID = ids.From[ids.LeadKind](ids.UUID(lead.Id))
+				leadID = seedHistoricalLeadAtContactEmail(t, e, ctx,
+					contacts.CreateLeadInput{FullName: new("Dana Buyer"), Source: "manual"}, "dana@example.test")
 			} else {
 				source, err := store.CreateContact(ctx, contacts.CreateContactInput{FullName: "Dana Duplicate", Source: "manual"})
 				if err != nil {

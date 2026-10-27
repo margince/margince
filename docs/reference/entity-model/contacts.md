@@ -1189,7 +1189,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `email` | `text` |  | Lowercased; lead-internal dedupe key. |
 | `entered_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `first_response_at` | `timestamp with time zone` |  | First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. |
-| `from_contact_id` | `uuid` |  | The existing contact this lead was created from (`contact_id` on the create), and null for any other lead. |
+| `from_contact_id` | `uuid` |  | The contact an older lead was created from, and null for every newly created lead. |
 | `full_name` | `text` |  |  |
 | `linkedin_url` | `text` |  | Normalized LinkedIn profile URL; the exact-match dedupe key. |
 | `merged_into_id` | `uuid` |  | Set when this lead was merged away into another, and null otherwise. |
@@ -1283,13 +1283,16 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead_disqualify_reason
 
-8 columns · primary key `(id)` · referenced by 1 foreign key
+11 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `active` | `boolean`, default `true` | yes |  |
 | `label` | `text` | yes |  |
+| `label_key` | `text`, generated as `label_key_while_shipped(label, shipped_label, shipped_label_key)` |  | Computed by the database. It cannot be written directly. |
+| `shipped_label` | `text` |  |  |
+| `shipped_label_key` | `text` |  |  |
 | `sort_order` | `integer`, default `0` | yes |  |
 | `system` | `boolean`, default `false` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -1354,7 +1357,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead_origin
 
-10 columns · primary key `(id)` · referenced by 1 foreign key
+13 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1363,6 +1366,9 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `intent` | `text`, default `'neutral'::text` | yes | One of `high`, `neutral`, `low`. |
 | `key` | `text` | yes | Lowercase stable key, the stored value. |
 | `label` | `text` | yes |  |
+| `label_key` | `text`, generated as `label_key_while_shipped(label, shipped_label, shipped_label_key)` |  | Computed by the database. It cannot be written directly. |
+| `shipped_label` | `text` |  |  |
+| `shipped_label_key` | `text` |  |  |
 | `sort_order` | `integer`, default `0` | yes |  |
 | `system` | `boolean`, default `false` | yes | Built-in. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |

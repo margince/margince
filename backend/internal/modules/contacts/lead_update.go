@@ -285,6 +285,9 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}
+	if err := refuseContactHeldLeadEdit(ctx, tx, current, in); err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	if err := refuseErasedLeadEmail(ctx, tx, current, in); err != nil {
 		return crmcontracts.Lead{}, err
 	}

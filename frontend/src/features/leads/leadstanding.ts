@@ -5,6 +5,10 @@ import { formatDateAbbrev } from "../../format/format";
 import { leadIdentityName } from "../../format/leadname";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import {
+  disqualifyReasonLabel,
+  type LeadDisqualifyReason,
+} from "./leadhandling";
 
 type Lead = components["schemas"]["Lead"];
 
@@ -68,12 +72,26 @@ export function terminalBadge(
   }
 }
 
+/**
+ * The reasons a closed lead's sentence reads. None while the list is loading;
+ * an empty list once it failed, so the stored label stands in.
+ */
+export function standingReasons(
+  read: Readonly<{
+    data?: readonly LeadDisqualifyReason[];
+    isError: boolean;
+  }>,
+): readonly LeadDisqualifyReason[] | undefined {
+  return read.isError ? [] : read.data;
+}
+
 export function leadStanding(
   lead: Lead,
   t: Translator,
   locale: Locale,
   zone: string,
   record: string,
+  reasons: readonly LeadDisqualifyReason[] | undefined,
 ): LeadStanding {
   const when = (at: string) => formatDateAbbrev(at, locale, zone);
   // Merged away is read first: the merge archives the loser and leaves
@@ -95,11 +113,13 @@ export function leadStanding(
     };
   }
   if (lead.status === "disqualified") {
-    // Neutral, not a failure colour: closing a lead is ordinary work.
+    // Neutral, not a failure colour: closing a lead is ordinary work. The
+    // stored label is in the language it was saved in, so it waits for the list.
+    const reason = reasons && disqualifyReasonLabel(lead, reasons);
     return {
       word: t("lead.standing.closed"),
-      sentence: lead.disqualify_reason
-        ? t("lead.standing.closedFor", { reason: lead.disqualify_reason })
+      sentence: reason
+        ? t("lead.standing.closedFor", { reason })
         : t("lead.standing.closedUnreasoned"),
       tone: "neutral",
     };

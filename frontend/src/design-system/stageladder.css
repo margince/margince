@@ -46,8 +46,8 @@
   min-inline-size: 0;
   overflow-x: auto;
   overscroll-behavior-x: contain;
-  /* A rung reached by Tab stops clear of the faded edge, not under it. */
-  scroll-padding-inline: var(--space-6);
+  /* A rung reached by Tab, or rested on, stops clear of the faded edge. */
+  scroll-padding-inline: var(--stage-ladder-room);
 }
 
 .stage-ladder-steps {
@@ -150,7 +150,7 @@
 /* A way OUT stands off from the run of open stages: won and lost are
    alternatives to each other rather than two more rungs of one ladder. */
 .stage-ladder-step.is-terminal {
-  margin-left: var(--space-2);
+  margin-inline-start: var(--space-2);
 }
 
 /* What the row is about, beside the rungs rather than under them: how the
@@ -178,63 +178,77 @@
     flex-basis: 100%;
   }
   .stage-ladder-exits > .stage-ladder-step:first-child {
-    margin-left: 0;
+    margin-inline-start: 0;
   }
   .stage-ladder-exits > .stage-ladder-step:first-child > .stage-ladder-sep {
     display: none;
   }
 }
 
-/* The run fades at an edge only while more of it lies past that edge: its
-   scroll position drives the two fade widths. Without scroll timelines there
-   is no fade, since the unguarded animation would settle on its last frame
-   and fade the first stage for good. Declared only where motion is welcome:
-   the fade is an animation that runs for as long as the run can scroll, and
-   under reduced motion nothing may be left running for the axe sweep. */
-@property --stage-ladder-fade-start {
-  syntax: "<length>";
-  inherits: false;
-  initial-value: 0px;
+/* The run fades at an end only while that end hides a rung, and a button to
+   page that way sits in the cleared room, which counts the run's inset. The
+   script that knows which ends are clipped sets the classes, so the fade is
+   still and needs no motion. */
+.stage-ladder-run {
+  /* A gradient takes no logical direction, so its start follows the run's. */
+  --stage-ladder-fade-from: 90deg;
+  --stage-ladder-clear-start: 0px;
+  --stage-ladder-solid-start: 0px;
+  --stage-ladder-clear-end: 0px;
+  --stage-ladder-solid-end: 0px;
+  /* The room a clipped end's button and fade take. */
+  --stage-ladder-room: calc(
+    var(--controlHeight) +
+    var(--space-1) +
+    var(--space-5)
+  );
+  mask-image: linear-gradient(
+    var(--stage-ladder-fade-from),
+    transparent var(--stage-ladder-clear-start),
+    black var(--stage-ladder-solid-start),
+    black calc(100% - var(--stage-ladder-solid-end)),
+    transparent calc(100% - var(--stage-ladder-clear-end))
+  );
 }
-@property --stage-ladder-fade-end {
-  syntax: "<length>";
-  inherits: false;
-  initial-value: 0px;
+.stage-ladder-run:dir(rtl) {
+  --stage-ladder-fade-from: 270deg;
 }
-@keyframes stage-ladder-fade {
-  from {
-    --stage-ladder-fade-start: 0px;
-    --stage-ladder-fade-end: var(--space-6);
-  }
-  10% {
-    --stage-ladder-fade-start: var(--space-6);
-  }
-  90% {
-    --stage-ladder-fade-end: var(--space-6);
-  }
-  to {
-    --stage-ladder-fade-start: var(--space-6);
-    --stage-ladder-fade-end: 0px;
-  }
+.stage-ladder-run:not(.is-clipped-start, .is-clipped-end) {
+  mask-image: none;
 }
-@media (prefers-reduced-motion: no-preference) {
-  @supports (animation-timeline: scroll()) {
-    .stage-ladder-run {
-      mask-image: linear-gradient(
-        to right,
-        transparent,
-        black var(--stage-ladder-fade-start),
-        black calc(100% - var(--stage-ladder-fade-end)),
-        transparent
-      );
-      animation: stage-ladder-fade linear both;
-      animation-timeline: scroll(self inline);
-    }
-    /* A mask clips the ring a focused region draws outside its box. */
-    .stage-ladder-run:focus-visible {
-      mask-image: none;
-    }
-  }
+.stage-ladder-run.is-clipped-start {
+  --stage-ladder-clear-start: calc(var(--controlHeight) + var(--space-1));
+  --stage-ladder-solid-start: var(--stage-ladder-room);
+}
+.stage-ladder-run.is-clipped-end {
+  --stage-ladder-clear-end: calc(var(--controlHeight) + var(--space-1));
+  --stage-ladder-solid-end: var(--stage-ladder-room);
+}
+/* A mask clips the ring a focused region draws outside its box. */
+.stage-ladder-run:focus-visible {
+  mask-image: none;
+}
+
+/* The run and the buttons over its ends. It takes the run's place in the
+   track, so it gives up width the way the run did. */
+.stage-ladder-pager {
+  position: relative;
+  min-inline-size: 0;
+}
+.stage-ladder-page {
+  position: absolute;
+  inset-block-start: 0;
+  z-index: 1;
+}
+.stage-ladder-page.is-start {
+  inset-inline-start: 0;
+}
+.stage-ladder-page.is-end {
+  inset-inline-end: 0;
+}
+/* The chevrons point the way their page goes, which a right-to-left run flips. */
+.stage-ladder-page:dir(rtl) svg {
+  transform: scaleX(-1);
 }
 
 /* A fixed list the reader must see whole: the run wraps instead of scrolling,
@@ -251,7 +265,8 @@
 
 /* THE BARS SHAPE (`variant="bars"`): the ladder inside How it stands. A
    summary line, then one 6px bar per open stage with its name and its time
-   under it. Nothing scrolls: the bars share the width. */
+   under it. The bars share the width while every name fits, and the run
+   scrolls under the same fade and buttons once one would be cut. */
 .stage-ladder.is-bars {
   flex-direction: column;
   flex-wrap: nowrap;
@@ -276,7 +291,7 @@
   gap: var(--space-2);
 }
 .stage-ladder.is-bars .stage-ladder-step.is-terminal {
-  margin-left: 0;
+  margin-inline-start: 0;
 }
 /* A way out not yet taken is dashed: a door, not a rung. */
 .stage-ladder-exit.btn {
@@ -289,16 +304,21 @@
 .stage-ladder-exit-label {
   color: var(--textSecondary);
 }
+/* At least the run's own width, so the bars fill a card they fit; past it the
+   list keeps its content's width and the run scrolls. */
 .stage-ladder-bars {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(var(--stage-ladder-count), minmax(0, 1fr));
+  display: flex;
+  inline-size: max-content;
+  min-inline-size: 100%;
   gap: var(--space-1);
 }
+/* Equal shares of the room, but never less than the stage's name. */
 .stage-ladder-bar {
-  min-inline-size: 0;
+  flex: 1 0 0;
+  min-inline-size: max-content;
 }
 .stage-ladder-bar-step,
 .stage-ladder-bar-step.btn {
@@ -337,9 +357,7 @@
 }
 .stage-ladder-label {
   color: var(--textSecondary);
-  overflow: hidden;
   white-space: nowrap;
-  text-overflow: ellipsis;
 }
 .stage-ladder-bar.is-done .stage-ladder-label,
 .stage-ladder-bar-step.is-here .stage-ladder-label {
@@ -352,8 +370,12 @@
   font: var(--fontBodySmall);
   color: var(--textSecondary);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+/* A bar is taller than a button, so the buttons stand on its middle. */
+.stage-ladder.is-bars .stage-ladder-page {
+  inset-block: 0;
+  display: flex;
+  align-items: center;
 }
 .stage-ladder.is-bars .stage-ladder-hint {
   text-align: start;

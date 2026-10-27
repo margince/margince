@@ -1,53 +1,17 @@
 version: 1
 
-# What the installation is, read once: the first time the api boots against an
-# empty database. After that the settings rows are authoritative, so replace the
-# demo values before first boot. Settings -> General edits them later, except
-# base_currency once anything has converted against it.
+# Read once, when the api first boots on an empty database: replace the demo values before that.
+# Settings -> General changes them later. Add country (such as de or vn) to choose the
+# jurisdiction pack now instead of under Settings -> Jurisdiction.
 workspace:
   name: Demo Workspace
   base_currency: EUR
-  # The language AI writes the shared record in: en, de or vi.
-  base_language: en
+  base_language: en # en, de or vi: the language AI writes the shared record in
   timezone: Europe/Berlin
-  # The jurisdiction pack this installation runs under, such as de or vn. Leave
-  # it out to choose later under Settings -> Jurisdiction. Boot refuses a code
-  # with no compiled-in pack.
-  # country: de
 
-# The first administrator, created with the workspace. The password must be at
-# least 12 characters and arrives only by reference:
-#
-#   password: ${file:/run/secrets/admin-password}   a mounted secret
-#   password: ${env:MARGINCE_ADMIN_PASSWORD}        the environment
-#
-# A literal password fails the boot. `make dev` writes the file below on its
-# first run; the path is relative to the directory the api starts in.
+# The first administrator. The password, at least 12 characters, arrives only by reference:
+# password_file, or password: ${file:/path} or ${env:NAME}. `make dev` writes the file below.
 bootstrap_admin:
   email: admin@demo.test
   display_name: Demo Admin
   password_file: config/margince-admin-password
-
-# The retention posture a new installation starts in. standard (or omitted) runs
-# the shipped storage-limitation ladder; retain_only plants the same policy rows
-# and never anonymizes or erases. Read once, at bootstrap.
-# seeds:
-#   retention:
-#     default_policy: retain_only
-
-# The tier-to-model binding a new installation starts with. Read once, at
-# bootstrap; afterwards Settings -> AI or PUT /v1/ai/routing changes it. Omitted,
-# no model is bound. A binding names providers only: each provider's key is a
-# setting of its own (ai.provider_keys_*), never part of this block.
-# seeds:
-#   ai_routing:
-#     profile: cloud_frontier     # eu_hosted | sovereign | cloud_frontier
-#     tiers:
-#       local_small: { provider: gemini, model: gemini-3.1-flash-lite }
-#       cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }
-#       premium:     { provider: gemini, model: gemini-3.5-flash }
-#       frontier:    { provider: gemini, model: gemini-3.1-pro-preview }
-#     embeddings:
-#       provider: gemini
-#       model: gemini-embedding-001
-#       dimensions: 1536

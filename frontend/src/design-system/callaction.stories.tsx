@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { CallStartProvider } from "../lib/callstart";
 import {
   callMessengersRoute,
@@ -43,6 +43,13 @@ const dana = { entityType: "contact", entityId: "p-1" } as const;
 
 const row = { display: "flex", gap: "var(--space-4)", alignItems: "center" };
 
+// The chats fold behind the glyph after the number; a reader opens it first.
+async function openChats(canvasElement: HTMLElement) {
+  await userEvent.click(
+    await within(canvasElement).findByRole("button", { name: "Open a chat" }),
+  );
+}
+
 // A number with its country code offers its chats; a national one only dials.
 export const Value: Story = {
   render: () => (
@@ -53,10 +60,11 @@ export const Value: Story = {
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await canvas.findByRole("link", { name: "Open chat in WhatsApp" });
+    await openChats(canvasElement);
     await expect(
-      canvas.getAllByRole("link", { name: /^Open chat in / }),
+      await within(document.body).findAllByRole("link", {
+        name: /^Open chat in /,
+      }),
     ).toHaveLength(3);
   },
 };
@@ -71,10 +79,11 @@ export const ValueWithTelegramOff: Story = {
     return <CallAction appearance="value" record={dana} number={DIALS} />;
   },
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await canvas.findByRole("link", { name: "Open chat in Zalo" });
+    await openChats(canvasElement);
+    const page = within(document.body);
+    await page.findByRole("link", { name: "Open chat in Zalo" });
     await expect(
-      canvas.queryByRole("link", { name: "Open chat in Telegram" }),
+      page.queryByRole("link", { name: "Open chat in Telegram" }),
     ).toBeNull();
   },
 };
@@ -82,8 +91,8 @@ export const ValueWithTelegramOff: Story = {
 const LONG = "+849123456789012";
 
 /**
- * The header's facts strip at 390px: the chats go under a long number rather
- * than past the edge. `uat-phone` makes the capture gate render it at 390px.
+ * The header's facts strip at 390px: the chat glyph after a long number stays
+ * inside the edge. `uat-phone` makes the capture gate render it at 390px.
  */
 export const ValueAtPhoneWidth: Story = {
   render: () => (
@@ -103,18 +112,18 @@ export const ValueAtPhoneWidth: Story = {
   tags: ["uat-phone"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const zalo = await canvas.findByRole("link", { name: "Open chat in Zalo" });
+    const chat = await canvas.findByRole("button", { name: "Open a chat" });
     const number = canvas.getByRole("link", { name: LONG });
     const page = canvasElement.getBoundingClientRect();
-    for (const link of canvas.getAllByRole("link")) {
-      await expect(link.getBoundingClientRect().right).toBeLessThanOrEqual(
+    for (const control of [...canvas.getAllByRole("link"), chat]) {
+      await expect(control.getBoundingClientRect().right).toBeLessThanOrEqual(
         page.right + 0.5,
       );
     }
     await expect(canvasElement.scrollWidth).toBeLessThanOrEqual(
       canvasElement.clientWidth,
     );
-    await expect(zalo.getBoundingClientRect().left).toBeGreaterThanOrEqual(
+    await expect(chat.getBoundingClientRect().left).toBeGreaterThanOrEqual(
       number.getBoundingClientRect().left - 0.5,
     );
   },

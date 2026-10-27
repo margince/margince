@@ -295,7 +295,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 	// serialises as `null` and breaks a generated client that iterates what the
 	// schema promised was a list.
 	out := crmcontracts.Attention{
-		AsOf:        asOf,
+		AsOf:        asOf.In(loc),
 		ThisMorning: []crmcontracts.AttentionItem{},
 		NeedsYou:    []crmcontracts.AttentionItem{},
 		Planned:     []crmcontracts.AttentionItem{},

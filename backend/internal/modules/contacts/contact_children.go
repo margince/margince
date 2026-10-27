@@ -24,9 +24,12 @@ import (
 )
 
 //nolint:unparam // all four child writers here take (ctx, tx, wsID, contactID, …); dropping wsID from the two that do not spend it would make a reader check which is which at every call site.
-func replaceContactSocial(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, social map[string]any) error {
+func replaceContactSocial(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, social map[string]any, converting []ids.LeadID) error {
 	rows, err := contactSocialInputs(social)
 	if social == nil || err != nil {
+		return err
+	}
+	if err := refuseLeadHeldLinkedIn(ctx, tx, contactID, social, converting); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(ctx,
@@ -59,7 +62,7 @@ func replaceContactSocial(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, 
 // schema answers with a bare conflict.
 //
 //nolint:cyclop // the rename added no branch: this body is what it was under the old noun.
-func replaceContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, source, by string, emails []ContactEmailInput) error {
+func replaceContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, source, by string, emails []ContactEmailInput, converting []ids.LeadID) error {
 	if emails == nil {
 		return nil
 	}
@@ -137,7 +140,7 @@ func replaceContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, 
 	}
 	// Only the addresses this contact does not already hold are inserted: a held
 	// address would collide with its own live row on the unique index.
-	return insertContactEmails(ctx, tx, wsID, contactID, source, by, fresh, storekit.RefuseErased)
+	return insertContactEmails(ctx, tx, wsID, contactID, source, by, fresh, storekit.RefuseErased, converting)
 }
 
 // liveContactEmails answers the addresses a contact currently holds, lowercased
@@ -205,7 +208,7 @@ func parseContactContacts(emails []ContactEmailInput, phones []ContactPhoneInput
 }
 
 //nolint:unparam // the same shape as its siblings; see replaceContactSocial.
-func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, source, by string, emails []ContactEmailInput, erasure storekit.ErasureAdmission) error {
+func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, source, by string, emails []ContactEmailInput, erasure storekit.ErasureAdmission, converting []ids.LeadID) error {
 	// Every address a contact gains is written here, so every create and
 	// update door meets the erasure list without asking for it.
 	addresses := make([]string, 0, len(emails))
@@ -219,6 +222,11 @@ func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, c
 			return err
 		}
 	} else if err := storekit.RefuseErasedEmails(ctx, tx, "emails", addresses); err != nil {
+		return err
+	}
+	// Under the subject locks just taken, so a lead create of the same address
+	// waits for this write or is seen by it.
+	if err := refuseLeadHeldEmails(ctx, tx, addresses, converting); err != nil {
 		return err
 	}
 	for _, e := range emails {
@@ -240,37 +248,6 @@ func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, c
 			}
 			return fmt.Errorf("insert contact email: %w", err)
 		}
-	}
-	return nil
-}
-
-// ensureContactEmailsUnclaimed is the dedupe pre-check, so the 409 can
-// carry the existing id; the unique index remains the structural
-// guarantee under races. The existing id is disclosed only when the
-// caller could read that row; a caller who cannot gets the held refusal
-// (heldcontact.go).
-func ensureContactEmailsUnclaimed(ctx context.Context, tx pgx.Tx, emails []ContactEmailInput) error {
-	return ensureContactEmailsUnclaimedExcept(ctx, tx, ids.ContactID{}, emails)
-}
-
-// ensureContactEmailsUnclaimedExcept is the same probe, ignoring one contact's
-// own rows. An update that re-states an address the contact already holds must
-// not be refused by that contact's own row, which is the only difference between
-// the create case (nothing to exclude) and the replace case.
-func ensureContactEmailsUnclaimedExcept(ctx context.Context, tx pgx.Tx, self ids.ContactID, emails []ContactEmailInput) error {
-	for _, e := range emails {
-		var existing ids.ContactID
-		err := tx.QueryRow(ctx,
-			`SELECT contact_id FROM contact_email
-			  WHERE email = lower($1) AND archived_at IS NULL AND contact_id <> $2`,
-			e.Email, self.UUID).Scan(&existing)
-		if errors.Is(err, pgx.ErrNoRows) {
-			continue
-		}
-		if err != nil {
-			return fmt.Errorf("probe email dedupe: %w", err)
-		}
-		return claimedEmailRefusal(ctx, tx, e.Email, existing)
 	}
 	return nil
 }

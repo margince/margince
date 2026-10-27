@@ -171,12 +171,14 @@ func (s stubTags) ResolveTag(_ context.Context, name string) (ids.UUID, error) {
 	}
 	return ids.NewV7(), nil
 }
+
 func (s stubTags) ApplyTag(_ context.Context, tagID ids.UUID, entityType string, entityID ids.UUID) error {
 	if s.applied != nil {
 		*s.applied = taggingArgs{TagID: tagID, RecordType: entityType, RecordID: entityID}
 	}
 	return nil
 }
+
 func (s stubTags) RemoveTag(_ context.Context, tagID ids.UUID, entityType string, entityID ids.UUID) error {
 	if s.removed != nil {
 		*s.removed = taggingArgs{TagID: tagID, RecordType: entityType, RecordID: entityID}

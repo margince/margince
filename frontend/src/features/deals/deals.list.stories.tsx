@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -185,5 +186,31 @@ export const TableInListSurface: Story = {
         <DealsScreen />
       </StoryProviders>
     );
+  },
+};
+
+// Narrowed by the commercial dials, as a saved view restores them. Each stands
+// as its own row in the filter bar, named rather than shown as its stored value.
+export const TableNarrowedByCloseDateAndCountry: Story = {
+  render: () => {
+    installBoardStub();
+    window.location.hash =
+      "#/deals?view=table&close_day=this_quarter&country=DE";
+    return (
+      <StoryProviders>
+        <DealsScreen />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByRole("group", {
+        name: "Close date: This fiscal quarter",
+      }),
+    ).toBeTruthy();
+    await expect(
+      canvas.getByRole("group", { name: "Country: Germany" }),
+    ).toBeTruthy();
   },
 };

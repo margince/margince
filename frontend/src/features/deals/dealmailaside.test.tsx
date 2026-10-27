@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider, useT } from "../../i18n";
 import { DealMailAside, lastMailColumn } from "./dealmailaside";
 
@@ -175,7 +176,7 @@ function tableDeal(overrides: Partial<Deal>): Deal {
 // The column needs a translator, which only a component can ask for.
 function Cell({ deal }: Readonly<{ deal: Deal }>) {
   const t = useT();
-  return <>{lastMailColumn(t).cell(deal)}</>;
+  return <>{lastMailColumn(t, UTC_ZONE).cell(deal)}</>;
 }
 
 describe("lastMailColumn", () => {
@@ -219,7 +220,7 @@ describe("lastMailColumn", () => {
   it("offers no sort", () => {
     let column: ReturnType<typeof lastMailColumn> | undefined;
     function Probe() {
-      column = lastMailColumn(useT());
+      column = lastMailColumn(useT(), UTC_ZONE);
       return null;
     }
     rtlRender(

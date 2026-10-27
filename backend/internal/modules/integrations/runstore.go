@@ -23,8 +23,8 @@ import (
 // already in flight, and the existing run is returned rather than a second
 // purchase being made.
 func (s *Store) insertRun(ctx context.Context, tx pgx.Tx, conn admittedConnection, in provider.QueueInput,
-	snapshot provider.Snapshot, cats []provider.Category, fingerprint string) (string, bool, error) {
-
+	snapshot provider.Snapshot, cats []provider.Category, fingerprint string,
+) (string, bool, error) {
 	snapJSON, err := json.Marshal(snapshot)
 	if err != nil {
 		return "", false, fmt.Errorf("integrations: freezing the configuration snapshot: %w", err)
@@ -124,8 +124,8 @@ func (s *Store) handOff(ctx context.Context, tx pgx.Tx, runID string) error {
 // insertSkipped records a run that never reached the provider, and why. It
 // takes no reservation: nothing was spent, so nothing is held.
 func (s *Store) insertSkipped(ctx context.Context, tx pgx.Tx, conn admittedConnection, in provider.QueueInput,
-	snapshot provider.Snapshot, cats []provider.Category, reason provider.SkipReason) (provider.Run, error) {
-
+	snapshot provider.Snapshot, cats []provider.Category, reason provider.SkipReason,
+) (provider.Run, error) {
 	snapJSON, err := json.Marshal(snapshot)
 	if err != nil {
 		return provider.Run{}, fmt.Errorf("integrations: freezing the configuration snapshot: %w", err)

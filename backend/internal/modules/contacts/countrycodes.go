@@ -3,7 +3,10 @@
 
 package contacts
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // isoCountryCodes are the officially assigned ISO 3166-1 alpha-2 codes. A locale
 // library's notion of a country is wider. It keeps retired codes such as YU,
@@ -43,3 +46,9 @@ var assignedCountry = func() map[string]struct{} {
 	}
 	return set
 }()
+
+// AssignedCountryCodes is the assigned set in code order. The frontend's
+// country filter mirrors it (gates/frontendcountries_test.go).
+func AssignedCountryCodes() []string {
+	return slices.Clone(assignedCountryCodes)
+}

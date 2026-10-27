@@ -571,13 +571,13 @@
   min-inline-size: 0;
 }
 
-/* The left column's value inks: a consent the guard allows, and a fact that
-   needs a hand (a blocked purpose, an owner the roster no longer names). */
-.pe-detail-good {
-  color: var(--successText);
-}
+/* The left column's value inks: a fact that needs a hand (an owner the roster
+   no longer names), and a fact nobody has recorded, which reads as a gap. */
 .pe-detail-warn {
   color: var(--warningText);
+}
+.pe-detail-unknown {
+  color: var(--textSecondary);
 }
 
 /* The lists the contact is on: grey chips, each pressing through to its list. */

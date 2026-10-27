@@ -465,7 +465,7 @@ describe("empty state", () => {
         columns={columns}
         rowKey={(row) => row.id}
         unit="rows"
-        search={{ value: "acme", onChange: () => {} }}
+        search={{ value: "acme", answered: "acme", onChange: () => {} }}
       />,
     );
     expect(screen.getByText("No rows match these filters.")).toBeTruthy();
@@ -498,7 +498,7 @@ describe("empty state", () => {
         rowKey={(row) => row.id}
         unit="rows"
         sort={{ value: "name", onChange: () => {} }}
-        search={{ value: "acme", onChange: () => {} }}
+        search={{ value: "acme", answered: "acme", onChange: () => {} }}
       />,
     );
     expect(screen.queryByText(/No rows yet/)).toBeNull();

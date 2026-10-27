@@ -66,7 +66,7 @@ or hide a file stay human-only, so no tool or route returns a file's contents to
 
 `TestNoAgentLoopAttachesAToolThatCarriesAFile` (`internal/compose/agentcatalog_test.go`) fails when a
 scheduled agent's tool list names any tool whose input bound is over 1 MiB. The size and type bounds
-are in [configuration.md](../reference/configuration.md#uploads).
+are in [configuration.md](../reference/feature-settings.md#uploads).
 
 ## The reason-act-observe loop (Surface B)
 
@@ -166,7 +166,7 @@ passport can reach:
   passport permission it needs, whether it waits for approval, and whether it waits on a model. Then
   every `x-*` key is stripped.
 - `servers` is left out. The API fills it in when it serves the ZIP, from the address in
-  [configuration.md](../reference/configuration.md#public-base-url), so one build serves every install.
+  [configuration.md](../reference/programs.md#public-base-url), so one build serves every install.
 
 The two guides, `README.md` and `SKILL.md`, are templates in `backend/internal/compose/agentbundle/`.
 `TestTheEmbeddedFilesCarryNoDeveloperNote` there fails when a developer note reaches the generated

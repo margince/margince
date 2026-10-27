@@ -16,6 +16,7 @@ const (
 	ReasonDuplicateEmail             ReasonCode = "duplicate_email"
 	ReasonContactUnnamed             ReasonCode = "contact_unnamed"
 	ReasonContactEmailHeld           ReasonCode = "contact_email_held"
+	ReasonContactHoldsLead           ReasonCode = "contact_holds_lead"
 	ReasonAddressErased              ReasonCode = "address_erased"
 	ReasonCompanyNameEmpty           ReasonCode = "company_name_empty"
 	ReasonDomainHeld                 ReasonCode = "domain_held"
@@ -136,6 +137,11 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.English:    "This email address is already held in the CRM, so the row cannot create a second contact under it.",
 		textlang.German:     "Diese E-Mail-Adresse ist im CRM bereits vergeben, daher kann die Zeile keinen zweiten Kontakt damit anlegen.",
 		textlang.Vietnamese: "Địa chỉ email này đã có trong CRM nên hàng không thể tạo liên hệ thứ hai với nó.",
+	}},
+	ReasonContactHoldsLead: {params: nil, text: map[textlang.Lang]string{
+		textlang.English:    "Somebody with this address is already a contact, so the row does not create a lead. The contact’s owner is told; new business with a contact is a deal.",
+		textlang.German:     "Mit dieser Adresse gibt es bereits einen Kontakt, daher legt die Zeile keinen Lead an. Wer für den Kontakt verantwortlich ist, wird informiert; ein neues Geschäft mit einem Kontakt ist ein Deal.",
+		textlang.Vietnamese: "Địa chỉ này đã thuộc về một liên hệ nên hàng không tạo lead. Chủ sở hữu liên hệ được báo; việc kinh doanh mới với một liên hệ là một deal.",
 	}},
 	ReasonAddressErased: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "Whoever owns this email address asked to be erased and not to be stored again, so the row was not imported.",

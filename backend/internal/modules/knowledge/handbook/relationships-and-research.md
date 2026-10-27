@@ -17,6 +17,8 @@ Also called: who knows this client, warm path, relationship map, colleague conne
 
 A contact's **Network** tab shows which colleagues have written with them, best first, with the number of exchanges behind each. When nobody has: "No one in the company has corresponded with this contact."
 
+When you write with the contact yourself, the tab names you **You**: in the top card, on the map and in the card under it. Your own place on the map offers **Write email**, not **Use this route**, because you need no introduction to a contact you already write with. The top card's badge gives the best route's own strength, such as "Barely in contact", in the same words as the map.
+
 ### How strength is worked out
 Relationship strength in Margince comes from one rule, worked out from captured mail **each time you look**:
 
@@ -85,6 +87,12 @@ The importer reads LinkedIn's English and German exports. A file it cannot read 
 **An imported connection never becomes a contact.** It stays out of search, lists and contact pages. Nobody can write to it, log an activity on it or email it.
 
 It exists to answer one question: does someone here already know someone at this company?
+
+A company's **Who can get you in** card answers it with a count per colleague. When your own connections reach the company, your row reads **You** and comes first, so you can see you have a way in yourself.
+
+Next to each colleague, the card shows where their connections work, such as "IT · 3, Finance · 2". Margince reads this from the job titles in the export, and shows an area only when two or more connections work in it. It never shows a name or a title, because at a small company one title can name one contact.
+
+**Ask for an introduction** on a colleague's row writes a short message asking them to introduce you to someone at the company. You can name an area, such as IT, if the card shows it for that colleague. The message names no contact, and Margince does not send it: you copy it or open it in your mail app. Your own row has no such button.
 
 ### How a connection is matched to a contact
 

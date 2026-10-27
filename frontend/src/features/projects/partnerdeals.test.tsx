@@ -129,7 +129,7 @@ describe("the deals a partner brought", () => {
 
     expect(cells[2]).toBe("Sourced the deal (earns commission)");
     expect(cells[3]).toBe("€48,000.00");
-    expect(cells[4]).toContain("open");
+    expect(cells[4]).toContain("Open");
   });
 
   // A partner's page should show the deals they helped with too, not only the

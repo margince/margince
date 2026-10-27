@@ -19,10 +19,13 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // bundleTaskSubject is what a rep reads on their list.
@@ -33,11 +36,39 @@ import (
 // rather than in this string: the list renders the record beside the subject, so
 // putting the name in both spells it twice, and the copy in the text is the one
 // nothing keeps current.
-func bundleTaskSubject(findings int) string {
+func bundleTaskSubject(lang textlang.Lang, findings int) string {
+	said := langcopy.For(string(lang))
 	if findings == 1 {
-		return "1 forecast input needs attention"
+		return said.Say(bundleTaskWords.One)
 	}
-	return fmt.Sprintf("%d forecast inputs need attention", findings)
+	return fmt.Sprintf(said.Say(bundleTaskWords.Many), findings)
+}
+
+var bundleTaskWords = struct{ One, Many langcopy.Phrase }{
+	One: langcopy.Phrase{
+		En: "1 forecast input needs attention",
+		De: "1 Angabe zur Prognose muss geprüft werden",
+		Vi: "1 đầu vào dự báo cần xem lại",
+	},
+	Many: langcopy.Phrase{
+		En: "%d forecast inputs need attention",
+		De: "%d Angaben zur Prognose müssen geprüft werden",
+		Vi: "%d đầu vào dự báo cần xem lại",
+	},
+}
+
+// bundleTaskLanguage is the assignee's own language, else the installation's,
+// so the task reads in the words of whoever it lands with.
+func bundleTaskLanguage(ctx context.Context, tx pgx.Tx, assignee *ids.UserID) (textlang.Lang, error) {
+	if assignee != nil {
+		lang, err := seatLanguage(ctx, tx, assignee.UUID)
+		// The write refuses a seat gone since the scan as not found. That
+		// refusal is what sends the task to the unassigned queue.
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return lang, err
+		}
+	}
+	return identity.BaseLanguageForRecord(ctx, tx), nil
 }
 
 // taskStillOpenTx holds the task for the rest of the caller's transaction and
@@ -77,7 +108,6 @@ var bundleTaskSource = provenance.AssuranceTaskSource
 func mintBundleTask(
 	ctx context.Context, deps bundleDeps, runID ids.UUID, subject subjectFindings,
 ) (ids.UUID, error) {
-	line := bundleTaskSubject(len(subject.findings))
 	// The natural key that makes a River retry a no-op. It is the RUN, not the
 	// cycle: a retry that re-scans opens a fresh cycle with a new id, so a
 	// cycle-keyed name would differ on exactly the attempt it exists to
@@ -86,7 +116,6 @@ func mintBundleTask(
 	sourceID := subject.kind + ":" + subject.id.String() + ":" + runID.String()
 	in := activities.LogActivityInput{
 		Kind:         activityKindTask,
-		Subject:      &line,
 		Source:       systemActor,
 		SourceSystem: &bundleTaskSource,
 		SourceID:     &sourceID,
@@ -115,7 +144,8 @@ func mintBundleTask(
 		in.AssigneeID = &assignee
 	}
 
-	task, err := writeBundleTask(ctx, deps, in)
+	findings := len(subject.findings)
+	task, err := writeBundleTask(ctx, deps, in, findings)
 	if err == nil {
 		return task, nil
 	}
@@ -134,7 +164,7 @@ func mintBundleTask(
 		return ids.UUID{}, fmt.Errorf("compose: minting the task: %w", err)
 	}
 	in.AssigneeID = nil
-	task, err = writeBundleTask(ctx, deps, in)
+	task, err = writeBundleTask(ctx, deps, in, findings)
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("compose: minting the task unassigned: %w", err)
 	}
@@ -154,12 +184,19 @@ func unassignableSeat(err error) bool {
 	return errors.Is(err, apperrors.ErrNotFound) || errors.As(err, &agent)
 }
 
-// writeBundleTask mints the activity in the bundling store's transaction.
+// writeBundleTask mints the activity in the bundling store's transaction,
+// worded for the seat it is assigned to.
 func writeBundleTask(
-	ctx context.Context, deps bundleDeps, in activities.LogActivityInput,
+	ctx context.Context, deps bundleDeps, in activities.LogActivityInput, findings int,
 ) (ids.UUID, error) {
 	var task ids.UUID
 	err := deps.bundles.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		lang, err := bundleTaskLanguage(ctx, tx, in.AssigneeID)
+		if err != nil {
+			return err
+		}
+		line := bundleTaskSubject(lang, findings)
+		in.Subject = &line
 		created, _, err := deps.activities.LogActivityTx(ctx, tx, in)
 		if err != nil {
 			return err

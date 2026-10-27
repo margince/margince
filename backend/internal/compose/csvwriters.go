@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -132,6 +133,7 @@ func newCSVWriters(
 			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
 			WithGrantCarrier(identity.NewServiceFor(db)).
 			WithShareRequests(contactShareRequests(db.Pool())).
+			WithLeadArrivals(newLeadWorkTasks(db, slog.Default())).
 			WithInstallationRenamer(installationRenamer(db.Pool())),
 		deals:            dealsStoreOver(db),
 		activities:       activities.NewStore(db),
@@ -365,8 +367,8 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 			// onto a company that is not its owner.
 			return skippedFor(domainClaimedWhy), nil
 		}
-		if _, ok := errors.AsType[*contacts.DuplicateLeadError](err); ok {
-			return skippedFor(naturalKeyTakenWhy), nil
+		if why, held := leadKeyHeld(err); held {
+			return skippedFor(why), nil
 		}
 		if linkedInClaimed(err) {
 			return skippedFor(linkedInClaimedWhy), nil
@@ -468,33 +470,4 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed
 		return migration.EnsureResult{}, err
 	}
 	return migration.EnsureResult{Created: true}, nil
-}
-
-// land commits one native record, its identity-map row and its tags in one
-// transaction, then caches the binding. It caches after the commit: a rolled
-// back landing would leave later pages resolving an id that does not exist.
-func (w *csvWriters) land(ctx context.Context, row migration.Row, create func(tx pgx.Tx) (ids.UUID, error)) error {
-	// Every row this importer writes is one of many under a single approval, so
-	// it carries the marker that says so. What it buys today is one thing: a
-	// standing domain refusal is NOT lifted by a spreadsheet, because approving
-	// a file is not the same act as a contact putting one domain on one company.
-	ctx = contacts.WithBulkWrite(ctx)
-	var id ids.UUID
-	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		var err error
-		if id, err = create(tx); err != nil {
-			return err
-		}
-		if err := w.identities.RecordIdentityTx(ctx, tx, w.runID, w.sourceSystem, w.object, row.ExternalID, id, migration.OriginCreated); err != nil {
-			return err
-		}
-		if err := w.tagNames.applyAll(ctx, tx, w.object, id, textFields(row.Fields)[csvTargetTags]); err != nil {
-			return err
-		}
-		return w.fileUnderContextTag(ctx, tx, id)
-	}); err != nil {
-		return err
-	}
-	w.nativeIDs[row.ExternalID] = id
-	return nil
 }

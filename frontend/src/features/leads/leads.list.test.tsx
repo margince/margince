@@ -434,6 +434,42 @@ describe("LeadsScreen — rich create (P-15)", () => {
     await userEvent.click(screen.getByText("View existing record"));
     expect(window.location.hash).toBe("#/leads/existing-lead");
   });
+
+  it("sends a lead for an existing contact to the contact, and says a new opportunity is a deal", async () => {
+    stubFetch(async (url, method) => {
+      if (method === "POST" && url.includes("/leads")) {
+        return new Response(
+          JSON.stringify({
+            code: "contact_holds_email",
+            status: 409,
+            detail: "they are already a contact",
+            details: {
+              existing_id: "held-contact",
+              field: "email",
+              owner_notified: true,
+            },
+          }),
+          {
+            status: 409,
+            headers: { "Content-Type": "application/problem+json" },
+          },
+        );
+      }
+      return emptyPage();
+    });
+    const user = userEvent.setup();
+    render(<LeadsScreen />);
+    await user.click(await screen.findByTestId("new-record"));
+    await user.type(screen.getByLabelText("Full name *"), "Mara Held");
+    await user.type(screen.getByLabelText("Email"), "mara@customer.example");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(
+      await screen.findByText(/open a deal on the contact/),
+    ).toBeInTheDocument();
+    await user.click(screen.getByText("View existing record"));
+    expect(window.location.hash).toBe("#/contacts/held-contact");
+  });
 });
 
 describe("LeadsScreen — archived marking (P-3)", () => {
@@ -533,6 +569,38 @@ describe("LeadsScreen — the one ownership dial (DM-VOCAB-OWN-1)", () => {
         ),
       ).toBe(true),
     );
+  });
+});
+
+describe("LeadsScreen — Back from a lead", () => {
+  it("returns to All when the rep left the list on All", async () => {
+    const { urls } = stubFetchWithMe(async (url) => {
+      if (url.includes("/leads")) {
+        return jsonResponse({
+          data: [lead],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      if (url.includes("/teams")) {
+        return jsonResponse({ data: [], page: { next_cursor: null } });
+      }
+      return undefined;
+    });
+    const first = render(<LeadsScreen />);
+    await screen.findByText("Jonas Petersen");
+    await userEvent.click(screen.getByRole("button", { name: "All" }));
+    await waitFor(() => expect(window.location.hash).toContain("owner_id=all"));
+
+    // Opening a lead unmounts the list; Back mounts it again on that address.
+    first.unmount();
+    urls.length = 0;
+    render(<LeadsScreen />);
+    await screen.findByText("Jonas Petersen");
+
+    const leadReads = urls.filter((url) => url.includes("/leads?"));
+    expect(leadReads.length).toBeGreaterThan(0);
+    expect(leadReads.some((url) => url.includes("owner_id"))).toBe(false);
+    expect(window.location.hash).toContain("owner_id=all");
   });
 });
 

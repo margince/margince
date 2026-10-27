@@ -5,15 +5,16 @@
 
 package gates
 
-// The MARGINCE_* variables the code reads, configuration.md names and an
+// The MARGINCE_* variables the code reads, the reference pages name and an
 // entrypoint requires agree with each other. Three obligations, all derived
 // from the tree rather than a maintained list:
 //
 //  1. every MARGINCE_* var the Go code reads is named in
-//     docs/reference/configuration.md — the table of record for the binaries;
-//  2. every MARGINCE_* var configuration.md names is still part of the product;
+//     docs/reference/configuration.md (the settings), docs/reference/programs.md
+//     or docs/reference/worker-diagnostics.md (every other variable);
+//  2. every MARGINCE_* var those pages name is still part of the product;
 //  3. every MARGINCE_* var a deploy entrypoint hard-requires is named in
-//     .env.example — that file is the annotated template
+//     .env.example — that file is the template
 //     docs/how-to/deploy-margince.md hands an operator, so a var the container
 //     refuses to boot without must not be discoverable only by reading the
 //     entrypoint script.
@@ -27,7 +28,7 @@ package gates
 // What these gates do NOT cover, stated rather than implied:
 //
 //   - Obligation 1 covers Go readers, in the licensed trees only. A var read
-//     solely by deploy shell or a workflow is documented in configuration.md
+//     solely by deploy shell or a workflow is documented in programs.md
 //     by hand, and this sweep walks the backend tree only.
 //     Obligation 2 does count those non-Go readers, because there the
 //     question is merely whether a name is still real.
@@ -75,6 +76,8 @@ var quotedEnvVarName = regexp.MustCompile(`"(MARGINCE_[A-Z0-9_]+)"`)
 
 const (
 	configurationDoc = "../docs/reference/configuration.md"
+	programsDoc      = "../docs/reference/programs.md"
+	workerDoc        = "../docs/reference/worker-diagnostics.md"
 	envExample       = "../.env.example"
 )
 
@@ -177,6 +180,8 @@ func namesIn(t *testing.T, path string) map[string]bool {
 func TestEveryEnvVarIsDocumented(t *testing.T) {
 	t.Parallel()
 	documented := namesIn(t, configurationDoc)
+	maps.Copy(documented, namesIn(t, programsDoc))
+	maps.Copy(documented, namesIn(t, workerDoc))
 	sites := envVarsReadByGoCode(t)
 
 	var undocumented []string
@@ -186,8 +191,8 @@ func TestEveryEnvVarIsDocumented(t *testing.T) {
 		}
 	}
 	if len(undocumented) > 0 {
-		t.Errorf("%d env var(s) read by Go code but not named in %s — add a row there, spelling the name out in full (an abbreviated suffix like `…_SECRET` does not count):\n\t%s",
-			len(undocumented), configurationDoc, strings.Join(undocumented, "\n\t"))
+		t.Errorf("%d env var(s) read by Go code but not named in %s, %s or %s — add a row to the settings or to programs.md, spelling the name out in full (an abbreviated suffix like `…_SECRET` does not count):\n\t%s",
+			len(undocumented), configurationDoc, programsDoc, workerDoc, strings.Join(undocumented, "\n\t"))
 	}
 }
 
@@ -197,11 +202,13 @@ func TestEveryEnvVarIsDocumented(t *testing.T) {
 func TestConfigurationDocNamesOnlyLiveVars(t *testing.T) {
 	t.Parallel()
 	assertNamesOnlyLiveVars(t, configurationDoc)
+	assertNamesOnlyLiveVars(t, programsDoc)
+	assertNamesOnlyLiveVars(t, workerDoc)
 }
 
 // entrypointRequired is each var a deploy entrypoint stops without, mapped to
 // the script that reads it, from deployconfig.EntrypointVars. The generated
-// .env.example marks the same set [required] from the same call.
+// .env.example lists the same set first, under its own heading, from the same call.
 // Its stated limits are these gates' limits too: only the `${VAR:?}` and
 // `${VAR?}` forms are seen, never an explicit guard or `set -u`.
 func entrypointRequired(t *testing.T) map[string]string {
@@ -254,8 +261,8 @@ func TestEntrypointRequiredVarsAreInTheEnvExample(t *testing.T) {
 // remembered, which is the failure mode obligation 1 removed for Go.
 // margince/margince#566.
 //
-// CONFIGURATION.MD, the table of record, in the section it gives the entrypoint
-// variables. Splitting variables across two documents by which process happens
+// PROGRAMS.MD, the table of record for variables that are not settings, in the
+// section it gives the entrypoint variables. Splitting variables across two documents by which process happens
 // to read them is how an operator ends up checking the wrong one. The section,
 // not the whole file, is read. `MARGINCE_DSN` is named in a dozen other rows, so
 // a whole-file match would pass with the entrypoint section deleted.
@@ -267,7 +274,7 @@ func TestEntrypointRequiredVarsAreInTheEnvExample(t *testing.T) {
 // admit most of the deploy surface and leave the label meaningless.
 func TestEntrypointRequiredVarsAreDocumented(t *testing.T) {
 	t.Parallel()
-	documented := namesInSection(t, configurationDoc, entrypointSection)
+	documented := namesInSection(t, programsDoc, entrypointSection)
 
 	required := entrypointRequired(t)
 	var missing []string
@@ -279,11 +286,11 @@ func TestEntrypointRequiredVarsAreDocumented(t *testing.T) {
 	if len(missing) > 0 {
 		t.Errorf("%d var(s) a deploy entrypoint refuses to boot without, absent from %s — an operator "+
 			"provisioning this deployment has no way to learn they must supply them:\n\t%s",
-			len(missing), configurationDoc+" "+entrypointSection, strings.Join(missing, "\n\t"))
+			len(missing), programsDoc+" "+entrypointSection, strings.Join(missing, "\n\t"))
 	}
 }
 
-// entrypointSection is the configuration.md heading that owns the variables the
+// entrypointSection is the programs.md heading that owns the variables the
 // deploy entrypoints read before any binary starts.
 const entrypointSection = "## What the image entrypoint reads"
 

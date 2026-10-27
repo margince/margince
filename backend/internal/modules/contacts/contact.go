@@ -89,6 +89,9 @@ type CreateContactInput struct {
 	auditEvidence map[string]any
 	// erasure is set only by EnsureContactByEmail, from its caller.
 	erasure storekit.ErasureAdmission
+	// ConvertLeadIDs are the live leads holding this contact's address or
+	// profile, which the user chose to convert into the new contact.
+	ConvertLeadIDs []ids.LeadID
 }
 
 // CreateContact inserts the contact + child rows + audit + event atomically.
@@ -165,7 +168,7 @@ func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateConta
 	}
 	in.OwnerID = owner
 
-	match, err := admitAndDedupeContactCreate(ctx, tx, in)
+	match, converting, err := admitAndDedupeContactCreate(ctx, tx, in)
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
@@ -203,6 +206,7 @@ func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateConta
 		CustomFields: in.CustomFields,
 		Active:       active,
 		erasure:      in.erasure,
+		converting:   converting,
 	})
 	if err != nil {
 		return crmcontracts.Contact{}, err
@@ -218,8 +222,7 @@ func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateConta
 	if _, err := match.recordIfReview(ctx, tx, id, in.FullName, in.Source, by); err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	// Somebody typing in a contact who is already a lead has qualified them.
-	if err := s.promoteHeldLeadsTx(ctx, tx, id, TriggerHumanQualify, nil, by); err != nil {
+	if err := s.convertLeadsIntoTx(ctx, tx, id, converting, by); err != nil {
 		return crmcontracts.Contact{}, err
 	}
 
@@ -269,6 +272,23 @@ func (s *Store) GetContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactID,
 		return crmcontracts.Contact{}, err
 	}
 	return readContact(ctx, tx, id, archived, active.cols)
+}
+
+// EnsureBookerByEmail is EnsureContactByEmail for the public booking page. A
+// live lead holding the address is the booker's record. No contact is made,
+// and one of the two ids is set.
+func (s *Store) EnsureBookerByEmail(ctx context.Context, fullName, email, source string, erasure storekit.ErasureAdmission) (ids.UUID, ids.LeadID, error) {
+	contact, err := s.EnsureContactByEmail(ctx, fullName, email, source, erasure)
+	if _, held := errors.AsType[*LeadHoldsIdentityError](err); !held {
+		return contact, ids.LeadID{}, err
+	}
+	lead, err := s.CounterpartyLead(ctx, email)
+	if err == nil && lead.IsZero() {
+		// The lead the refusal named is gone, or a contact took the address:
+		// the same race the claimed-email retry above answers, met the other way.
+		err = apperrors.ErrConflict
+	}
+	return ids.Nil, lead, err
 }
 
 // EnsureContactByEmail returns the contact holding this address, creating one

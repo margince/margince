@@ -600,10 +600,6 @@ function contactCreationApproval(): Approval {
         { field: "email", value: { kind: "text", text: "buyer@example.test" } },
         { field: "creation_email_type", value: { kind: "text", text: "work" } },
         { field: "creation_primary", value: { kind: "boolean", text: "true" } },
-        {
-          field: "creation_promoted_lead",
-          value: { kind: "text", text: "Earlier Buyer" },
-        },
         { field: "title", value: { kind: "text", text: "Director" } },
         {
           field: "creation_source_activity",
@@ -618,7 +614,6 @@ function contactCreationApproval(): Approval {
         "create_contact_record",
         "create_workspace_visible",
         "record_contact_acquisition",
-        "create_promote_matching_leads",
       ],
     },
   });

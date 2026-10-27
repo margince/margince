@@ -106,11 +106,6 @@ type EnsureCounterpartyInput struct {
 	// creates, never over an incumbent's reason.
 	NarrowedBecause NarrowingReason
 
-	// SkipLeadPromotion leaves a lead holding the address where it is. A human
-	// accepting the record for this sender sets it when they may not promote
-	// a lead themselves.
-	SkipLeadPromotion bool
-
 	// RelationshipMark marks the contact this ensure CREATES, and is set by
 	// CapturedBy. A contact that already exists is never marked here: the
 	// decision that made it, or whoever edited it, stands.
@@ -122,6 +117,10 @@ type EnsureCounterpartyInput struct {
 type EnsureCounterpartyResult struct {
 	ContactID      ids.ContactID
 	ContactCreated bool
+	// LeadID is the live lead holding the address when no live contact does.
+	// Nothing was written: the mail files on the lead, and the lead stays a
+	// lead until somebody converts it.
+	LeadID ids.LeadID
 	// CompanyID is the company this counterparty was ATTACHED to, never
 	// one this ensure made: capture no longer creates companies at all, so
 	// there is no created-flag to report. A domain with no company yet reports
@@ -206,6 +205,27 @@ func (s *Store) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in EnsureCo
 	if err := s.ensureContact(ctx, tx, in, &res); err != nil {
 		return EnsureCounterpartyResult{}, err
 	}
+	if !res.LeadID.IsZero() {
+		allowed, err := mayReadLead(ctx)
+		if err != nil || !allowed {
+			return res, err
+		}
+		if err := linkActivityToLead(ctx, tx, in.ActivityID, res.LeadID); err != nil {
+			return EnsureCounterpartyResult{}, err
+		}
+		inbound, err := activityIsInbound(ctx, tx, in.ActivityID)
+		if err != nil {
+			return EnsureCounterpartyResult{}, err
+		}
+		if inbound {
+			if s.leadQualifyTasks != nil {
+				if err := s.leadQualifyTasks.FileLeadReplyTx(ctx, tx, res.LeadID, in.ActivityID.UUID); err != nil {
+					return EnsureCounterpartyResult{}, err
+				}
+			}
+		}
+		return res, nil
+	}
 	if !in.SuppressCompany && in.Domain != "" {
 		if err := s.ensureCompanyAndEmployment(ctx, tx, in, &res); err != nil {
 			return EnsureCounterpartyResult{}, err
@@ -214,34 +234,38 @@ func (s *Store) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in EnsureCo
 	if err := s.linkActivityToContact(ctx, tx, in.ActivityID, res.ContactID); err != nil {
 		return EnsureCounterpartyResult{}, err
 	}
-	if in.SkipLeadPromotion {
-		return res, nil
-	}
-	if err := s.promoteLeadsByMailTx(ctx, tx, in, res.ContactID); err != nil {
-		return EnsureCounterpartyResult{}, err
-	}
 	return res, nil
 }
 
-// promoteLeadsByMailTx folds a lead holding this counterparty's address into
-// the contact the mail resolved to — the one it just minted, or one that
-// already stood beside the lead — once they have written to us.
-//
-// Only their own mail counts. Promotion needs engagement — a reply, a meeting,
-// or a seat's own judgement — and mail we sent that nobody answered is the cold outbound the trigger vocabulary
-// refuses, so it leaves the lead where it is. Their first reply reaches this
-// same call for the same contact and promotes it then, as an inbound_reply
-// with that message as the evidence.
-func (s *Store) promoteLeadsByMailTx(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, contactID ids.ContactID) error {
-	acquired, err := acquiredFromCaptureTx(ctx, tx, in.Replied, in.Email)
-	if err != nil {
+// CounterpartyLeadTx is the live lead an address names when no live contact
+// holds it. A machine door that would mint a contact for that address files on
+// the lead instead: somebody is a lead or a contact, never both. It takes the
+// address's identity locks, so call it before any lane lock.
+func CounterpartyLeadTx(ctx context.Context, tx pgx.Tx, email string) (ids.LeadID, error) {
+	holders, err := storekit.LockIdentityHolders(ctx, tx, storekit.IdentityKeys{Emails: []string{email}})
+	return leadWithoutContact(holders), err
+}
+
+// CounterpartyLead asks the same question without the locks, for a door that
+// decides only whether to put the question to a human.
+func (s *Store) CounterpartyLead(ctx context.Context, email string) (ids.LeadID, error) {
+	if err := auth.Require(ctx, leadEntity, principal.ActionRead); err != nil {
+		return ids.LeadID{}, err
+	}
+	var lead ids.LeadID
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		holders, err := storekit.IdentityHoldersOf(ctx, tx, storekit.IdentityKeys{Emails: []string{email}})
+		lead = leadWithoutContact(holders)
 		return err
+	})
+	return lead, err
+}
+
+func leadWithoutContact(holders storekit.IdentityHolders) ids.LeadID {
+	if len(holders.Leads) == 0 || len(holders.Contacts) > 0 {
+		return ids.LeadID{}
 	}
-	if acquired != AcquiredSubjectInitiated {
-		return nil
-	}
-	evidence := in.ActivityID
-	return s.promoteHeldLeadsTx(ctx, tx, contactID, TriggerInboundReply, &evidence, in.CapturedBy)
+	return holders.Leads[0]
 }
 
 // ensureContact runs PO-F-1 and creates when it does not exactly match; a
@@ -275,6 +299,9 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 		return err
 	}
 	if match.Decision != DecisionExactCollision {
+		if res.LeadID, err = CounterpartyLeadTx(ctx, tx, in.Email); err != nil || !res.LeadID.IsZero() {
+			return err
+		}
 		// The lane locks come only now, on the path that creates. The exact path
 		// goes on to lock the incumbent's row, and a writer holding a lane lock
 		// never waits on an existing contact (lockorder.go). The review lanes are

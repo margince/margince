@@ -8,6 +8,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { stubClipboard } from "../../design-system/clipboard-testing";
 import { jsonResponse, render } from "../../testing/settings.testkit";
 import { InstallationConfigurationPage } from "./installation-configuration";
 
@@ -227,6 +228,99 @@ it("cuts a long value short in its cell and shows it whole in the row's detail",
   );
   expect(await screen.findByText(budget)).toBeVisible();
   expect(screen.getByText("Full value")).toBeVisible();
+});
+
+it("shows a long default whole in the row's detail and copies it", async () => {
+  const budget =
+    '{"tokens_per_full_user":12000000,"company_monthly_tokens":null}';
+  const changed = '{"tokens_per_full_user":9000000,"company_monthly_tokens":5}';
+  stubConfiguration(200, [
+    entry({
+      key: "ai.budget",
+      env: "MARGINCE_AI_BUDGET",
+      value: changed,
+      default: budget,
+    }),
+  ]);
+  const user = userEvent.setup();
+  const clipboard = stubClipboard("accepts");
+  render(<InstallationConfigurationPage />);
+
+  await screen.findByText("ai.budget");
+  await user.click(
+    screen.getByRole("button", { name: "Show details for ai.budget" }),
+  );
+  expect(await screen.findByText(budget)).toBeVisible();
+  expect(screen.getByText("Full default")).toBeVisible();
+  expect(screen.queryByText(/Default:/, { selector: "span" })).toBeNull();
+
+  await user.click(screen.getByRole("button", { name: "Copy default" }));
+  await waitFor(() => expect(clipboard.written).toEqual([budget]));
+  expect(screen.getByRole("button", { name: "Copied" })).toBeVisible();
+  // The clipboard holds the default alone, so the value's control still offers its copy.
+  expect(screen.getByRole("button", { name: "Copy value" })).toBeVisible();
+
+  await user.click(screen.getByRole("button", { name: "Copy value" }));
+  await waitFor(() => expect(clipboard.written).toEqual([budget, changed]));
+  expect(screen.getByRole("button", { name: "Copy default" })).toBeVisible();
+});
+
+const SOURCED: Entry[] = [
+  ...ENTRIES,
+  entry({
+    key: "http.host",
+    env: "MARGINCE_HTTP_HOST",
+    value: "0.0.0.0",
+    origin: { source: "flag", name: "--http-host" },
+  }),
+];
+
+function keysShown(): string[] {
+  return SOURCED.map((row) => row.key).filter(
+    (key) => screen.queryByText(key) !== null,
+  );
+}
+
+it("narrows by where a value comes from, and counts each cut", async () => {
+  window.location.hash = "#/settings/configuration";
+  stubConfiguration(200, SOURCED);
+  const user = userEvent.setup();
+  render(<InstallationConfigurationPage />);
+
+  await screen.findByText("http.port");
+  expect(keysShown()).toHaveLength(SOURCED.length);
+
+  await user.click(screen.getByRole("button", { name: "Not default 3" }));
+  expect(keysShown()).toEqual(["database.url", "company.name", "http.host"]);
+  expect(window.location.hash).toBe("#/settings/configuration?source=changed");
+
+  await user.click(
+    screen.getByRole("button", { name: "Set outside the app 2" }),
+  );
+  expect(keysShown()).toEqual(["database.url", "http.host"]);
+
+  await user.click(screen.getByRole("button", { name: "Saved in the app 1" }));
+  expect(keysShown()).toEqual(["company.name"]);
+
+  await user.click(screen.getByRole("button", { name: "Default value 1" }));
+  expect(keysShown()).toEqual(["http.port"]);
+
+  await user.click(screen.getByRole("button", { name: "All 5" }));
+  expect(keysShown()).toHaveLength(SOURCED.length);
+  expect(window.location.hash).toBe("#/settings/configuration");
+});
+
+it("counts the source cuts within the text filter, and opens on the cut its address carries", async () => {
+  window.location.hash = "#/settings/configuration?q=http&source=outside";
+  stubConfiguration(200, SOURCED);
+  render(<InstallationConfigurationPage />);
+
+  await screen.findByText("http.host");
+  expect(keysShown()).toEqual(["http.host"]);
+  expect(
+    screen.getByRole("button", { name: "Set outside the app 1" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("button", { name: "All 2" })).toBeVisible();
 });
 
 it("narrows by key and by environment variable", async () => {

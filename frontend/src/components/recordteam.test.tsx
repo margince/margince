@@ -7,7 +7,9 @@ import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { LocaleProvider } from "../i18n";
+import { type Locale, LocaleProvider } from "../i18n";
+import { labelsIn } from "../testing/shippedlabels.testkit";
+import { useRecordRoles } from "./recordassignments.queries";
 import { RecordTeam } from "./recordteam";
 
 // The panel used to be a read surface over a write API: every hook for naming,
@@ -91,11 +93,11 @@ function stubFetch(
   );
 }
 
-function render(ui: ReactNode) {
+function render(ui: ReactNode, locale?: Locale) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return rtlRender(
     <QueryClientProvider client={qc}>
-      <LocaleProvider>{ui}</LocaleProvider>
+      <LocaleProvider initial={locale}>{ui}</LocaleProvider>
     </QueryClientProvider>,
   );
 }
@@ -146,6 +148,15 @@ it("offers no verbs at all on a record this reader cannot write", async () => {
   expect(screen.queryByRole("button", { name: /Change/ })).toBeNull();
 });
 
+it("tells a reader who cannot write why nobody is assigned, not to assign", async () => {
+  stubFetch([]);
+  render(<RecordTeam recordType="deal" recordId={RECORD_ID} readOnly />);
+  expect(await screen.findByText(/No one is assigned yet/)).toBeTruthy();
+  expect(screen.getByText(/needs edit rights/)).toBeTruthy();
+  expect(screen.queryByText(/^Assign a colleague/)).toBeNull();
+  expect(screen.queryByRole("button", { name: "Assign" })).toBeNull();
+});
+
 it("offers no way to add over a read that failed", async () => {
   stubFetch([], { failRead: true });
   render(<RecordTeam recordType="deal" recordId={RECORD_ID} />);
@@ -192,4 +203,34 @@ it("says so when ending a responsibility is refused", async () => {
   // Exact match: the row's own name, not the removal verb's tooltip, which
   // also carries "Mara Feld" as part of its own sentence.
   expect(screen.getByText("Mara Feld")).toBeTruthy();
+});
+
+it("names a built-in role in the reader's language, a renamed one as typed", async () => {
+  stubFetch([
+    { ...ROW, role_label_key: "recordRoles.builtin.account_manager" },
+    {
+      ...ROW,
+      id: "a2",
+      subject_name: "Linh Tran",
+      role_key: "sales_engineer",
+      role_label: "Presales lead",
+      role_label_key: null,
+    },
+  ]);
+  render(<RecordTeam recordType="deal" recordId={RECORD_ID} />, "vi");
+  expect(await screen.findByText("Quản lý khách hàng")).toBeTruthy();
+  expect(screen.getByText("Presales lead")).toBeTruthy();
+});
+
+it("offers the built-in roles in the reader's language", async () => {
+  const labels = await labelsIn(
+    "vi",
+    "/record-roles",
+    [
+      { ...ROLES[0], label_key: "recordRoles.builtin.account_manager" },
+      { ...ROLES[0], id: "r2", key: "deal_desk", label: "Deal desk" },
+    ],
+    useRecordRoles,
+  );
+  expect(labels).toEqual(["Quản lý khách hàng", "Deal desk"]);
 });

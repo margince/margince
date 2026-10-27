@@ -58,17 +58,23 @@ func TestTheTablesNameEachSettingOnceWithItsPrograms(t *testing.T) {
 	}
 }
 
-func TestTheExampleNestsEachSettingCommentedOutAtItsDefault(t *testing.T) {
-	want := exampleHeader + "version: 1\n" +
-		"\n# ---- license ----\n# license:\n#   # Licence token.\n#   token: ${file:/run/secrets/license.token}\n" +
-		"\n# ---- uploads ----\n# uploads:\n#   # Largest attachment, in decimal MB.\n#   # default: 25\n#   attachment_mb: 25\n"
-	got, err := exampleYAML(twoSettings(t), "version: 1\n")
-	if err != nil || got != want {
-		t.Errorf("example (%v):\n%s\nwant:\n%s", err, got, want)
+func TestTheExampleIsTheBootstrapPartAlone(t *testing.T) {
+	if got, want := exampleYAML("version: 1\n\n"), exampleHeader+"version: 1\n"; got != want {
+		t.Errorf("example:\n%s\nwant:\n%s", got, want)
 	}
 }
 
-func TestTheEnvTemplateWritesEachVariableCommentedOut(t *testing.T) {
+func TestTheDefaultsFileNestsEachSettingAtItsDefault(t *testing.T) {
+	want := defaultsHeader +
+		"\nlicense:\n  token: ${file:/run/secrets/license.token}\n" +
+		"\nuploads:\n  attachment_mb: 25\n"
+	got, err := defaultsYAML(twoSettings(t))
+	if err != nil || got != want {
+		t.Errorf("defaults (%v):\n%s\nwant:\n%s", err, got, want)
+	}
+}
+
+func TestTheEnvTemplateWritesEachVariableOnceOnOneLine(t *testing.T) {
 	in := envInputs{
 		loader: []config.LoaderVar{{Env: "MARGINCE_ENV", Doc: "The posture."}},
 		entrypoint: []deployconfig.EntrypointVar{
@@ -77,10 +83,10 @@ func TestTheEnvTemplateWritesEachVariableCommentedOut(t *testing.T) {
 		},
 	}
 	want := envHeader +
-		"\n# ---- loader ----\n\n# The posture.\n# MARGINCE_ENV=\n" +
-		"\n# ---- image entrypoint ----\n\n# Read by scripts/deploy/api-entrypoint.sh before it starts a program.\n# MARGINCE_ADMIN_PASSWORD=\n" +
-		"\n# ---- license ----\n\n# [required] Licence token.\n# MARGINCE_LICENSE=\n" +
-		"\n# ---- uploads ----\n\n# Largest attachment, in decimal MB.\n# MARGINCE_UPLOADS_ATTACHMENT_MB=25\n"
+		"\n# ---- required by the image entrypoint ----\n# MARGINCE_LICENSE=\n" +
+		"\n# ---- loader ----\n# MARGINCE_ENV=\n" +
+		"\n# ---- image entrypoint ----\n# MARGINCE_ADMIN_PASSWORD=\n" +
+		"\n# ---- uploads ----\n# MARGINCE_UPLOADS_ATTACHMENT_MB=25\n"
 	if got := envExample(twoSettings(t), in); got != want {
 		t.Errorf("env template:\n%s\nwant:\n%s", got, want)
 	}
@@ -143,8 +149,8 @@ func TestASecretRendersNoValueAndNoDefaultInAnyOutput(t *testing.T) {
 		if !strings.Contains(string(files[envPath]), "\n# "+s.Env()+"=\n") {
 			t.Errorf("%s: .env.example gives the secret a value", s.Key())
 		}
-		if !strings.Contains(string(files[examplePath]), ": ${file:/run/secrets/"+s.Key()+"}\n") {
-			t.Errorf("%s: the example does not write the secret as a file reference", s.Key())
+		if !strings.Contains(string(files[defaultsPath]), ": ${file:/run/secrets/"+s.Key()+"}\n") {
+			t.Errorf("%s: the defaults file does not write the secret as a file reference", s.Key())
 		}
 		row := tableRow(s)
 		if cells := strings.Split(row, " | "); !strings.Contains(string(files[docsPath]), row) || cells[4] != emptyCell {

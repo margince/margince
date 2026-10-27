@@ -6,7 +6,9 @@ import {
 } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useT } from "../i18n";
 import { throwProblem } from "../lib/problem";
+import { withShippedLabels } from "../lib/shippedlabels";
 
 // Who is responsible for a record, and the administered roles they hold it
 // under. The record panel, the settings card and the role picker all read the
@@ -34,6 +36,7 @@ export function recordAssignmentsKey(
 }
 
 export function useRecordRoles() {
+  const t = useT();
   return useQuery({
     queryKey: RECORD_ROLES_KEY,
     queryFn: async () => {
@@ -43,6 +46,7 @@ export function useRecordRoles() {
       }
       return data.data;
     },
+    select: (roles) => withShippedLabels(roles, t),
   });
 }
 

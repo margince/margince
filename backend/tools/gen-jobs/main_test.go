@@ -586,18 +586,23 @@ func TestEmitRendersEachTimeoutForm(t *testing.T) {
 	for _, tc := range []struct {
 		kind, want, why string
 	}{
-		{"a_workspace", "TimeoutPolicy{Fixed: 90 * time.Second}",
-			"a literal under a minute renders in seconds"},
-		{"b_workspace", `TimeoutPolicy{Fixed: 1580 * time.Second, DerivedFrom: "bPassTimeout"}`,
-			"a derived timeout carries BOTH the duration Govern hands River and the constant the census compares"},
-		{"d_workspace", "TimeoutPolicy{None: true}",
-			"a deliberate absence renders as None, which Duration turns into River's -1"},
+		{
+			"a_workspace", "TimeoutPolicy{Fixed: 90 * time.Second}",
+			"a literal under a minute renders in seconds",
+		},
+		{
+			"b_workspace", `TimeoutPolicy{Fixed: 1580 * time.Second, DerivedFrom: "bPassTimeout"}`,
+			"a derived timeout carries BOTH the duration Govern hands River and the constant the census compares",
+		},
+		{
+			"d_workspace", "TimeoutPolicy{None: true}",
+			"a deliberate absence renders as None, which Duration turns into River's -1",
+		},
 	} {
 		if block := specBlock(t, src, tc.kind); !strings.Contains(block, tc.want) {
 			t.Errorf("%s rendered as:\n%s\nwant it to contain %s — %s", tc.kind, block, tc.want, tc.why)
 		}
 	}
-
 }
 
 // TestEmitRendersTheDeclarationsAConsumerReads pins the fields whose absence

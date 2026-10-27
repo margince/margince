@@ -25,7 +25,8 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["duplicate_email", "common.duplicate.email"],
   ["duplicate_domain", "common.duplicate.domain"],
   ["duplicate_linkedin_url", "common.duplicate.linkedinUrl"],
-  ["duplicate_contact_lead", "common.duplicate.contactLead"],
+  ["lead_holds_email", "common.duplicate.leadHolds"],
+  ["contact_holds_email", "common.duplicate.contactHolds"],
   ["slot_taken", "common.duplicate.slotTaken"],
   ["import_source_busy", "import.sourceBusy"],
   // The server's detail lists the closed vocabulary by its wire spellings.

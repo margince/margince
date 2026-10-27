@@ -21,14 +21,13 @@ To create a lead in Margince, open **Leads** in the sidebar and choose **New lea
 Many leads at once come in through Settings → **Data import**.
 Also called: add a prospect, new lead.
 
-### How do I work an existing contact as a lead?
-To work a contact you already have as a lead in Margince, open the contact, choose **More actions**, then **Work as a lead**.
-1. Margince creates a lead owned by you, filled from the contact, and opens it.
-2. A contact has one open lead at a time. After that, the menu shows **Open the lead**.
+### What if someone is already a contact?
+Someone is either a lead or a contact, never both. Open a deal when an existing contact has a new opportunity.
 
-If the lead is still open 14 days later, its owner gets a task: "Qualify this lead or close it". With no owner who can take it, the task waits without one, for anyone to take. The task closes when the lead is qualified or disqualified, or when a call, email or meeting is logged on it.
-Also called: mark a contact as a lead, turn a contact into a lead, start a lead from a contact.
-
+When a new lead carries an email or LinkedIn profile already held by a contact,
+Margince creates no lead. It opens the contact when you enter the lead by hand.
+An automatic request is filed on the contact. Its owner gets a task to review
+it.
 ### The ladder
 
 A lead has five statuses. The first three are open, the last two are final.
@@ -71,16 +70,14 @@ Either way the lead's history and activities come with it, and the lead is
 marked qualified and archived. You can preview which of the two
 will happen before you confirm.
 
-A lead also qualifies on its own when a contact appears for its email address:
+Margince does not qualify a lead on its own. Mail and chat from a lead stay on
+the lead, and a booking is filed there too. A reply or booking gives the lead's
+owner a task to review the lead and qualify them when that is the right next
+step.
 
-- **You add a contact** (typed in, or imported) for somebody who is already a
-  lead. The lead merges into the new contact straight away, qualified by you.
-- **The lead writes to a connected mailbox.** The contact their mail creates,
-  or the one it finds, takes the lead with it, as a reply that came in. Mail you
-  sent that nobody answered does not qualify the lead; their first reply does.
-  Some contacts take no lead until they are cleared. That is a contact only
-  its owner can still see, or one held for review because it may not be who it
-  says.
+When you add or edit a contact with an email or LinkedIn profile held by a
+live lead, Margince asks whether to convert the lead. Nothing is written until
+you choose. An automatic import or enrichment does not make the second record.
 
 A warning on that preview: the matching contact may be one you are not allowed
 to see. The preview then says "Qualifying merges into an existing contact you
@@ -95,7 +92,10 @@ installation.
 To reverse a lead qualification in Margince, open the qualified lead and choose **Reverse qualification**.
 1. Enter a **Reason (recorded in the audit trail)**. Without one the dialog says "Enter a reason first."
 2. Choose **Reverse**.
-The lead goes back to the open status Engaged. A contact the qualification created is archived, unless other records now depend on it. A contact it merged into is left as it was.
+
+The lead goes back to the open status Engaged. A contact the qualification created is archived, unless other records now depend on it.
+
+A qualification that merged into an older contact cannot be reversed. Reversing it would make the same record both a lead and a contact.
 It is refused while the contact is a stakeholder on a live deal.
 Also called: undo a qualification, unqualify, demote a lead.
 
@@ -105,9 +105,8 @@ What reversing does depends on how the lead was qualified:
   now depend on it (see the last point). The lead comes back to the queue at
   Engaged. Activities captured since the qualification stay on
   the contact's timeline.
-- If it **merged** into an existing contact: that contact is left as it is.
-  Only the link to the lead is removed. The merged fields are not taken apart
-  again, because Margince cannot tell which values came from where.
+- If it **merged** into an existing contact: it cannot be reversed. The contact
+  keeps the history and values the qualification carried into it.
 - **A stakeholder on a live deal blocks it.** If the contact is a stakeholder
   on a live deal, the qualification cannot be reversed, so the deal does not
   lose its contact. Being the deal's owner does not count; being a stakeholder

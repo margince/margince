@@ -28,6 +28,7 @@ import { QueryStates } from "../../design-system/querystates";
 import { activityAgo } from "../../format/activitywhen";
 import { type Translator, useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
+import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
 import { boardMail } from "./boarddeal";
 import "./dealmailaside.css";
@@ -76,9 +77,10 @@ export function DealMailAside({
   const { locale } = useLocale();
   const query = useDealMail(dealId);
   const now = useNow(60_000);
+  const zone = useRecordZone();
   const when = (mail: Activity) => {
     const moment = { at: mail.occurred_at, precision: mail.occurred_precision };
-    const ago = activityAgo(moment, now, t, locale);
+    const ago = activityAgo(moment, now, t, locale, zone);
     // A `day` entry names its date, which reads "on" a day, not as an age.
     const dated = mail.occurred_precision === "day";
     if (mail.direction === "outbound") {
@@ -152,14 +154,14 @@ export function dealMailAside(deal: Pick<BoardDeal, "id">) {
  * the server can order by, and a header that promised an ordering it cannot
  * give would be a control that does nothing.
  */
-export function lastMailColumn(t: Translator): ListColumn<Deal> {
+export function lastMailColumn(t: Translator, zone: string): ListColumn<Deal> {
   return {
     key: "last_mail",
     header: t("deal.lastMail"),
     cell: (deal) => {
       const mail = boardMail(deal.last_email);
       return mail ? (
-        <DealMailChip mail={mail} aside={dealMailAside(deal)} />
+        <DealMailChip zone={zone} mail={mail} aside={dealMailAside(deal)} />
       ) : (
         // A word rather than the card's blank: a column is scanned down, and
         // an empty cell in one cannot be told from a cell still loading.

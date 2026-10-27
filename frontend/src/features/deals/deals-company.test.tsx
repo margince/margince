@@ -199,7 +199,11 @@ function stubBackend(opts: {
         roles: ["rep"],
         teams: [],
         authorization: meFixture({
-          allow: { deal: ["read", "create", "update"], project: ["read"] },
+          allow: {
+            deal: ["read", "create", "update"],
+            project: ["read"],
+            company: ["read"],
+          },
         }).authorization,
       });
     }
@@ -587,9 +591,12 @@ describe("the deals table's company columns", () => {
       expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
     );
     expect(
-      within(cellUnder("via partner", "Fleet retrofit")).getByRole("img", {
-        name: MASK,
-      }),
+      within(cellUnder("Referring partner", "Fleet retrofit")).getByRole(
+        "img",
+        {
+          name: MASK,
+        },
+      ),
     ).toBeTruthy();
   });
 });

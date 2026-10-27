@@ -32,7 +32,6 @@ const PREVIEW_DETAIL_LABELS: Record<string, MessageKey> = {
   stage_optional_criterion_unmet: "approval.preview.optionalCriterionUnmet",
   creation_acquisition: "approval.preview.acquisition",
   creation_acquired_at: "approval.preview.acquiredAt",
-  creation_promoted_lead: "approval.preview.promotedLead",
   creation_source_activity: "approval.preview.sourceActivity",
   creation_source_withheld_activities:
     "approval.preview.sourceWithheldActivities",

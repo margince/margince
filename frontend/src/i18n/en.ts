@@ -373,11 +373,8 @@ export const en = {
     "Authorizes the proposing caller to create this contact once with the displayed values. Current permissions and duplicate identities are checked again.",
   "approval.preview.recordAcquisition":
     "Records the displayed acquisition history. This does not grant permission to send messages.",
-  "approval.preview.createPromotions":
-    "Promotes the named leads into this contact and archives them. Fills missing contact fields, adds missing phones, consolidates history, and preserves withdrawals and applicable communication restrictions.",
   "approval.preview.acquisition": "Why this contact is being created",
   "approval.preview.acquiredAt": "Acquired on",
-  "approval.preview.promotedLead": "Lead to promote",
   "approval.preview.sourceActivity": "History linked to this source lead",
   "approval.preview.sourceWithheldActivities":
     "Further history on this source lead you cannot read",
@@ -1749,7 +1746,8 @@ export const en = {
   "systemJob.installation_setup_read": "Setup check",
   "systemJob.intro_advance": "Introduction follow-up",
   "systemJob.introduction_expiry": "Introduction expiry",
-  "systemJob.lead_qualify_scan": "Lead qualification check",
+  "systemJob.lead_for_contact": "Lead for an existing contact",
+  "systemJob.lead_replied": "Lead reply follow-up",
   "systemJob.lead_router": "Lead routing",
   "systemJob.lead_sla_scan": "Lead response time check",
   "systemJob.link_reconcile": "Record link repair",
@@ -2280,6 +2278,9 @@ export const en = {
   "board.count_other": "{count} deals",
   "board.weighted": "weighted {value}",
   "board.convertedAt": "Converted · rates as of {date}",
+  "board.matchesIn_one": "{count} result in {columns}",
+  "board.matchesIn_other": "{count} results in {columns}",
+  "board.showMatches": "Go to column",
   "dealfiles.hidden": "Hidden from this deal",
   "dealfiles.unhidden": "Shown on this deal again",
   "deal.stalledBadge": "Stalled",
@@ -2484,11 +2485,14 @@ export const en = {
   "partner.certStatus": "Certification status",
   "partner.certStatusAll": "All statuses",
   "partner.marginTier": "Margin tier",
+  "partner.marginTierHint":
+    "The share the partner earns on each won deal they sourced. Intro: they only introduced the client. Active collaboration: the deal was worked together. Partner closed: they sold it themselves. Leave it unset when their agreement pays differently.",
   "partner.stage": "Relationship stage",
   "partner.nextStep": "Next step",
   "partner.nextStepDue": "Next step due",
   "partner.servedSegments": "Served segments",
-  "partner.servedSegmentsHint": "comma-separated",
+  "partner.servedSegmentsHint":
+    "Who the partner sells to, for example mid-size manufacturers. Separate several with commas.",
   "partner.role.hosting": "Hosting",
   "partner.role.consulting": "Consulting",
   "partner.role.strategic": "Strategic",
@@ -2581,8 +2585,6 @@ export const en = {
     "Another company already has this domain, so it was not saved here.",
   "common.duplicate.linkedinUrl":
     "Another lead already has this LinkedIn profile, so it was not saved here.",
-  "common.duplicate.contactLead":
-    "This contact already has a live lead, so no second one was created.",
   "common.duplicate.slotTaken":
     "This time is no longer available. Choose another time.",
   "common.retry": "Retry",
@@ -3118,6 +3120,8 @@ export const en = {
   "standing.ring.score": "Score {score} of 100",
   "standing.ladder.position": "Stage {n} of {total}",
   "standing.ladder.moveTo": "Move to {stage}",
+  "stageLadder.earlier": "Show earlier stages",
+  "stageLadder.later": "Show later stages",
   "standing.timeline.empty": "Nothing dated here yet.",
   "standing.next.label": "Next",
   "standing.next.none": "Nothing is due next.",
@@ -3479,6 +3483,10 @@ export const en = {
     "Assessing this company. The first assessment reads the whole record and can take a minute.",
   "co.growthFit.reassess": "Assess again",
   "co.growthFit.reassessing": "Assessing…",
+  "co.growthFit.reassessedSame":
+    "Assessed again. Result unchanged: {band}, {present} of {expected} inputs recorded.",
+  "co.growthFit.reassessedChanged":
+    "Assessed again. New result: {band}, {present} of {expected} inputs recorded.",
   "co.growthFit.band.strong": "Strong fit",
   "co.growthFit.dim.industryFit": "Industry fit",
   "co.growthFit.dim.companySize": "Company size",
@@ -3734,9 +3742,6 @@ export const en = {
   "co.deals.col.value": "Value",
   "co.deals.col.close": "Close",
   "co.deals.col.status": "Status",
-  "co.deals.status.open": "Open",
-  "co.deals.status.won": "Won",
-  "co.deals.status.lost": "Lost",
   "co.rail.contacts.empty": "No contacts yet.",
   "co.rail.contacts.add": "Add contact",
 
@@ -3781,9 +3786,22 @@ export const en = {
     "Colleagues whose LinkedIn connections work here. A count, never the names. Ask them for an introduction.",
   "companyReach.colleaguesLabel": "Colleagues with connections here",
   "companyReach.colleague": "Colleague",
+  "companyReach.you": "You",
   "companyReach.connections": "Connections here",
   "companyReach.none": "No colleague reach is shown for this company.",
   "companyReach.readFailed": "This reach list could not be read",
+  "companyReach.functions": "Where their connections work",
+  "companyReach.functionCount": "{function} · {connections}",
+  "companyReach.ask": "Ask for an introduction",
+  "companyReach.askNamed": "Ask {name} for an introduction",
+  "companyReach.function.management": "Management",
+  "companyReach.function.it": "IT",
+  "companyReach.function.finance": "Finance",
+  "companyReach.function.sales": "Sales",
+  "companyReach.function.marketing": "Marketing",
+  "companyReach.function.hr": "HR",
+  "companyReach.function.operations": "Operations",
+  "companyReach.function.procurement": "Procurement",
   "linkedinReach.title": "LinkedIn network",
   "linkedinReach.sub":
     "Companies on file where you know someone, most connections first.",
@@ -4091,6 +4109,10 @@ export const en = {
   "co.contacts.board.readFromMessages": "Read from their messages",
   "co.intro.title": "Request introduction",
   "co.intro.who": "Asking {colleague} to introduce you to {contact}.",
+  "co.intro.whoAccount":
+    "Asking {colleague} to introduce you to someone at {company}.",
+  "co.intro.function": "Someone who works in",
+  "co.intro.functionAny": "Any function",
   "co.intro.write": "Draft message",
   "co.intro.writing": "Writing…",
   "co.intro.fromTemplate":
@@ -4389,6 +4411,13 @@ export const en = {
   "lead.filterOriginRetired": "(retired)",
   "lead.originNone": "No origin",
   "leadOrigins.title": "Lead origins",
+  "leadOrigins.builtin.event": "Event",
+  "leadOrigins.builtin.linkedin": "LinkedIn",
+  "leadOrigins.builtin.referral": "Referral",
+  "leadOrigins.builtin.partner": "Partner",
+  "leadOrigins.builtin.website": "Website",
+  "leadOrigins.builtin.cold_outreach": "Cold outreach",
+  "leadOrigins.builtin.other": "Other",
   "leadOrigins.sub":
     "Where the lead came from. Used in the New lead form, in filters and in scoring.",
   "leadOrigins.notAdded": "Origin was not added",
@@ -4417,6 +4446,7 @@ export const en = {
   "lead.source.referral": "Referral",
   "lead.source.import": "Import",
   "lead.source.crawl": "Web research",
+  "lead.source.siteread": "From company website",
   "lead.source.unknown": "Unknown source",
   "leadSources.removeOnlyTitle":
     "Your role can remove entries but not add or change them",
@@ -4440,6 +4470,14 @@ export const en = {
   "leadSources.rename": "Rename",
   "leadSources.renameSave": "Save name",
   "leadReasons.title": "Disqualification reasons",
+  "leadReasons.builtin.not_a_good_fit": "Not a good fit",
+  "leadReasons.builtin.bad_timing": "Bad timing",
+  "leadReasons.builtin.no_budget": "No budget",
+  "leadReasons.builtin.no_decision_power": "No decision power",
+  "leadReasons.builtin.chose_a_competitor": "Chose a competitor",
+  "leadReasons.builtin.no_interest": "No interest",
+  "leadReasons.builtin.not_reachable": "Not reachable",
+  "leadReasons.builtin.duplicate_or_spam": "Duplicate or spam",
   "leadReasons.sub":
     "What a rep chooses when disqualifying a lead. The reason shows on the lead and can be filtered.",
   "leadReasons.inUse_one":
@@ -4473,7 +4511,8 @@ export const en = {
     "Enter a whole number of minutes from 15 to 10,080 (7 days).",
   "leadHandling.targetHint":
     "Maximum wait for a first reply after routing or creation, 15 minutes to 7 days.",
-  "lead.boardCount": "{count} leads",
+  "lead.boardCount_one": "{count} lead",
+  "lead.boardCount_other": "{count} leads",
   "lead.duplicateFound":
     "A lead with this email or LinkedIn profile already exists.",
   "lead.promote": "Qualify",
@@ -4656,7 +4695,7 @@ export const en = {
   "lead.evidenceNote": "Evidence note (optional)",
   "lead.segregationTitle": "Leads are kept separate from contacts",
   "lead.segregation":
-    "Qualifying a lead makes it a contact. To work a contact you already have, open it and choose Work as a lead.",
+    "Qualifying a lead makes it a contact. Open a deal when a contact has new business.",
   "lead.segregationDismiss": "Dismiss this notice",
   "list.emptyMine": "No {unit} owned by you.",
   "list.showAll": "Show all",
@@ -4735,7 +4774,7 @@ export const en = {
     "This deal has no signed contract with its file attached. Say how it was won, then confirm.",
   "deals.winReason": "How was it won?",
   "deals.winReasonPick": "Pick how it was won",
-  "deals.winReasonImported": "Imported from another system",
+  "deals.winReasonImported": "Not recorded (imported)",
   "deals.winReasonPurchaseOrder": "On a purchase order",
   "deals.winReasonVerbal": "Verbally, in person or by phone",
   "deals.winReasonRenewalByEmail": "Renewed by email",
@@ -4748,7 +4787,8 @@ export const en = {
   "deal.ownerKeep": "Keep current owner",
   "deal.ownerMe": "Assign to me",
   "deal.ownerUnassign": "Unassign",
-  "deal.partnerCompany": "via partner",
+  "deal.partnerCompany": "Referring partner",
+  "deal.recordedBy": "Recorded by",
   // A reference the reader may not read, on a surface with no room for the
   // mask glyph: a Kanban card's company line, and the one entry a withheld
   // picker offers. Both have to say WHICH thing is withheld, because a card
@@ -4761,8 +4801,18 @@ export const en = {
   "deal.offers.rowSub": "Created {date} · net {net}",
   "deal.committee.seatSub": "{role} · {engagement}",
   "deal.committee.owner": "Owner",
-  "deal.committee.gap.coverageGap": "Nobody inside carries the deal",
-  "deal.committee.gap.singleThreaded": "Fewer than two engaged",
+  "deal.committee.ourTeam": "Your team",
+  "deal.committee.theirTeam": "Their team",
+  "deal.committee.legend": "What the marks mean",
+  "deal.committee.noRole": "No role set",
+  "deal.committee.seatWrote": "{role} · {engagement} · last wrote {date}",
+  "deal.committee.carriesContact": "Handles most exchanges",
+  "deal.committee.teamUnread": "Could not read who else works on this deal.",
+  "deal.committee.missing.champion": "Missing: an engaged champion",
+  "deal.committee.missing.firstContact": "Missing: a contact on their side",
+  "deal.committee.missing.secondContact": "Only one contact. Add a second one.",
+  "deal.committee.missing.secondEngaged":
+    "Fewer than two engaged. Reach a second contact.",
   "deal.committee.foot": "{named} named · {engaged} of {named} engaged",
   "deal.brief.title": "What this deal is",
   "deal.room.open": "Open",
@@ -4780,7 +4830,7 @@ export const en = {
   "deal.committee.card": "Committee",
   "deal.committee.legendEngaged": "Engaged",
   "deal.committee.legendQuiet": "Not engaged",
-  "deal.committee.legendGap": "Coverage gap",
+  "deal.committee.legendGap": "Missing seat",
   "deal.strip.close.inDays_one": "in {days} day",
   "deal.strip.close.inDays_other": "in {days} days",
   "deal.strip.close.overdue_one": "{days} day overdue",
@@ -4854,6 +4904,14 @@ export const en = {
   "legalEntities.country": "Country",
   "legalEntities.countryHint": "Two letters, for example AT.",
   "acqSources.title": "Source list",
+  "acqSources.builtin.inbound": "Inbound",
+  "acqSources.builtin.outbound": "Outbound",
+  "acqSources.builtin.referral": "Referral",
+  "acqSources.builtin.partner": "Partner",
+  "acqSources.builtin.event": "Event",
+  "acqSources.builtin.existing_customer": "Existing customer",
+  "acqSources.builtin.employee_referral": "Employee referral",
+  "acqSources.builtin.other": "Other",
   "acqSources.sub":
     "Separate from lead sources, which record how a record entered Margince.",
   "acqSources.loading": "Loading sources…",
@@ -4877,6 +4935,16 @@ export const en = {
   "reviewTemplates.addQuestion": "Add question",
   "reviewTemplates.edit": "Edit questions",
   "reviewTemplates.title": "Outcome review questions",
+  "reviewTemplates.builtin.win_review": "Win review",
+  "reviewTemplates.builtin.loss_review": "Loss review",
+  "reviewTemplates.builtin.question.why_we_won": "Why was the deal won?",
+  "reviewTemplates.builtin.question.competitors":
+    "Who else were they considering?",
+  "reviewTemplates.builtin.question.decisive_factor": "What decided it?",
+  "reviewTemplates.builtin.question.why_we_lost": "Why was the deal lost?",
+  "reviewTemplates.builtin.question.lost_to": "Who did they choose instead?",
+  "reviewTemplates.builtin.question.what_would_change_it":
+    "What would have changed the outcome?",
   "reviewTemplates.empty": "No review questions are set up",
   "reviewTemplates.retired": "Retired",
   "reviewTemplates.required": "Required",
@@ -4928,6 +4996,8 @@ export const en = {
   "assignments.empty": "No one is assigned yet",
   "assignments.emptyDetail":
     "Assign a colleague or a team to record who looks after this work.",
+  "assignments.emptyReadOnly":
+    "Changing who looks after this record needs edit rights on it.",
   "assignments.roleRetired": "(retired role)",
   "assignments.teamSuffix": "(team)",
   "assignments.subjectInactive": "(inactive)",
@@ -4948,6 +5018,13 @@ export const en = {
   "assignments.saveAdd": "Assign",
   "assignments.saveChange": "Save change",
   "recordRoles.title": "Role list",
+  "recordRoles.builtin.account_manager": "Account manager",
+  "recordRoles.builtin.sales_engineer": "Sales engineer",
+  "recordRoles.builtin.delivery_lead": "Delivery lead",
+  "recordRoles.builtin.project_manager": "Project manager",
+  "recordRoles.builtin.technical_contact": "Technical contact",
+  "recordRoles.builtin.executive_sponsor": "Executive sponsor",
+  "recordRoles.builtin.support_team": "Support team",
   "recordRoles.loading": "Loading roles…",
   "recordRoles.addOpen": "Add role",
   "recordRoles.addTitle": "Add responsibility role",
@@ -5020,6 +5097,24 @@ export const en = {
     "Loaded deals only. Totals are unavailable with a stage filter.",
   "deals.totalsNoTeamFilter":
     "Loaded deals only. The stage totals cannot narrow by team or to unassigned deals, so none is shown.",
+  "deals.totalsNoRangeFilter":
+    "Loaded deals only. The stage totals cannot narrow by close date, value, currency or country, so none is shown.",
+  "deals.filterCloseDate": "Close date",
+  "deals.filterCloseDateAll": "Any close date",
+  "deals.filterValue": "Value",
+  "deals.filterValueAll": "Any value",
+  "deals.filterCurrencyAll": "Any currency",
+  "deals.filterCountry": "Country",
+  "deals.filterCountryAll": "Any country",
+  "deals.filterRefused":
+    "Your role cannot narrow deals by {dial}. Remove that filter to see the list.",
+  "deals.rangeFrom": "From {value}",
+  "deals.rangeTo": "Up to {value}",
+  "deals.valueAtLeast": "At least ({currency})",
+  "deals.valueAtMost": "At most ({currency})",
+  "deals.rangeApply": "Apply",
+  "deals.rangeEmpty": "Enter a start, an end or both.",
+  "deals.rangeBackwards": "The start is after the end.",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Any partner",
   "deals.filterMotion": "Motion",
@@ -5812,6 +5907,18 @@ export const en = {
   "field.yes": "Yes",
   "field.no": "No",
 
+  "common.duplicate.leadHolds":
+    "A lead already has this email address or LinkedIn profile, so no contact was created.",
+  "common.duplicate.contactHolds":
+    "A contact already has this email address or LinkedIn profile, so no lead was created. For new business with them, open a deal on the contact.",
+  "contact.leadHeld.title": "This is already a lead.",
+  "contact.leadHeld.body":
+    "Somebody is a lead or a contact, never both. Convert the lead to make them a contact; the lead’s history moves with them.",
+  "contact.leadHeld.noConvert": "Ask the lead’s owner to convert the lead.",
+  "contact.leadHeld.convert": "Convert the lead",
+  "contact.leadHeld.open": "Open the lead",
+  "approval.preview.leadHoldsEmail":
+    "A lead already has this email address or LinkedIn profile. Convert the lead instead of creating a contact.",
   "dedupe.viewExisting": "View existing record",
 
   "co.spine.exchangeCount": "{count} messages",
@@ -6469,6 +6576,10 @@ export const en = {
     "Created because this lead had no answer within its response time. Answer the lead, then mark the task done.",
   "tasks.origin.lead_qualify":
     "Created because this lead stayed open without a decision. Qualify the lead or close it.",
+  "tasks.origin.lead_for_contact":
+    "Created because a new lead arrived for this contact. No lead was made; the task says what arrived and where from.",
+  "tasks.origin.lead_replied":
+    "Created because this lead wrote in or booked a meeting. A reply converts nobody: qualify the lead when they are ready.",
   "tasks.origin.assurance":
     "Created by the nightly forecast check: inputs on this deal need attention. The deal page lists them.",
   "tasks.origin.overnight_reconcile":
@@ -7921,6 +8032,8 @@ export const en = {
     "Someone matching this row is already in the CRM, and this run was asked to skip duplicates.",
   "import.reason.contact_email_held":
     "This email address is already held in the CRM, so the row cannot create a second contact under it.",
+  "import.reason.contact_holds_lead":
+    "Somebody with this address is already a contact, so the row does not create a lead. The contact’s owner is told; new business with a contact is a deal.",
   "import.reason.contact_unnamed":
     "The row carries neither a name nor an email, so it names no contact.",
   "import.reason.currency_unset":
@@ -10921,7 +11034,7 @@ export const en = {
   "coverage.seatWithheld": "A contact you cannot read",
   "coverage.daysSinceTouch": "{days} days",
   "coverage.risk.single_threaded_theirs": "Single-threaded",
-  "coverage.risk.single_threaded_ours": "Covered by one colleague",
+  "coverage.risk.single_threaded_ours": "One colleague handles most exchanges",
   "coverage.risk.coverage_gap": "No engaged champion",
   "coverage.risk.champion_left": "Champion has left",
   "coverage.risk.stakeholder_left": "Stakeholder has left",
@@ -11189,6 +11302,15 @@ export const en = {
   "configuration.detail.type": "Type: {type}",
   "configuration.detail.flag": "Flag: {flag}",
   "configuration.detail.readBy": "Read by: {programs}",
+  "configuration.detail.fullDefault": "Full default",
+  "configuration.copyValue": "Copy value",
+  "configuration.copyDefault": "Copy default",
+  "configuration.copied": "Copied",
+  "configuration.copyRemedy": "Select the text and copy it by hand.",
+  "configuration.scope.label": "Filter by source",
+  "configuration.scope.all": "All",
+  "configuration.scope.changed": "Not default",
+  "configuration.scope.outside": "Set outside the app",
   "settings.tab.reset": "Reset data",
   "settings.group.me": "You",
   "settings.group.company": "Company",
@@ -14488,7 +14610,6 @@ export const en = {
   "contact.graph.withheldAccount":
     "Some contacts at this company are not shown.",
   "contact.intro.askFirstName": "Ask {name} to introduce you",
-  "contact.intro.leadRouteBadge": "Strong route",
   "contact.intro.heroDirect": "knows them directly",
   "contact.intro.heroIndirect": "reaches them through {through}",
   "contact.intro.heroYou": "You",
@@ -14571,6 +14692,7 @@ export const en = {
   "contact.intro.useThisRoute": "Use this route",
   "contact.intro.mapRegion": "Routes to this contact",
   "contact.intro.edgeDirect": "{name} corresponds with them directly",
+  "contact.intro.edgeDirectYou": "You correspond with them directly",
   "contact.intro.edgeAccount": "works with {name}",
   "contact.intro.routesSub":
     "Best route first. Alternatives apply when the first is unavailable.",
@@ -14791,10 +14913,13 @@ export const en = {
   "contact.action.noTransport": "No address and no thread to reply to.",
   "contact.action.call": "Call",
   "callAction.openChat": "Open chat in {app}",
+  "callAction.chats": "Open a chat",
+  "contactLink.copyEmail": "Copy email address",
+  "contactLink.emailCopied": "Email address copied",
+  "contactLink.copyEmailRemedy":
+    "Select the address and copy it with your keyboard.",
   "contact.action.noPhone": "No phone number on this contact.",
   "contact.action.meetings": "Meetings",
-  "contact.action.workAsLead": "Work as a lead",
-  "contact.action.openLead": "Open the lead",
   "contact.action.addTask": "Add task",
   "contact.action.research": "Research",
   "contact.action.importActivities": "Import activities",

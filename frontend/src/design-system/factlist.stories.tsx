@@ -148,3 +148,31 @@ export const Flat: Story = {
     ],
   },
 };
+
+/** A German term one word longer than the term column: it breaks inside the
+ *  word and never runs into its value. */
+export const FlatLongGermanTerm: Story = {
+  decorators: [
+    (Story) => (
+      <div lang="de" style={{ maxWidth: "18.25rem" }}>
+        <Story />
+      </div>
+    ),
+  ],
+  args: {
+    flat: true,
+    facts: [
+      { key: "source", term: "Akquisitionsquelle", value: "Empfehlung" },
+      { key: "stage", term: "Phase", value: "Verhandlung" },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const term = await within(canvasElement).findByText("Akquisitionsquelle");
+    const value = within(canvasElement).getByText("Empfehlung");
+    const ink = document.createRange();
+    ink.selectNodeContents(term);
+    await expect(ink.getBoundingClientRect().right).toBeLessThanOrEqual(
+      value.getBoundingClientRect().left,
+    );
+  },
+};

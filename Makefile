@@ -20,7 +20,7 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict \
   test-review-coverage \
   test-laneorder check-image-pins check-host-ports ci-doc-parity \
-  make-target-parity contract-breaking-check contract-frontend-drift \
+  make-target-parity test-make-target-parity contract-breaking-check contract-frontend-drift \
   test-contract-frontend-drift migration-versions test-migration-versions \
   test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-test-budget rls-store-path \
   comment-budget test-comment-budget comment-density \
@@ -68,14 +68,19 @@ MINIO_PORT ?= 29000
 # called inside another command's argument would fail unnoticed.
 
 .PHONY: gate-timings
-.PHONY: help install dev-fresh check check-config check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch bench-daily bench-daily-clean perfdoc config-gen lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition check-static test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln vendor-live tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-test-budget comment-budget test-comment-budget comment-density comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-release-tag-version test-release-license-stamped test-release-notes test-release-version-stamped test-closing-declaration test-release-patch-base test-published-tag docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: help help-all install dev-fresh check check-config check-all check-backend check-q check-go check-gates check-fe dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-test-budget comment-budget test-comment-budget comment-density comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-release-tag-version test-release-license-stamped test-release-notes test-release-version-stamped test-closing-declaration test-release-patch-base test-published-tag docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
 
-## help — list every available command (the default goal): the root targets
-## below, then the backend targets `make <name>` delegates into.
+## help — the everyday commands in groups (the default goal); the groups are
+## in scripts/make-help.sh.
 help:
-	@echo "Margince — make commands"
+	@bash scripts/make-help.sh
+
+## help-all — every command: the root targets below, then the backend targets
+## `make <name>` delegates into.
+help-all:
+	@echo "Margince — every make command"
 	@echo ""
 	@echo "Root:"
 	@grep -hE '^## [A-Za-z0-9_-]+ —' $(MAKEFILE_LIST) | sed -E 's/^## /  /'
@@ -217,14 +222,9 @@ gate-timings:
 	@GATE_TIMING_CORES="$$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)" \
 		bash scripts/gate-timings.sh backend/.tmp/gate-timings.log
 
-## infra-up / infra-down — aliases for the dev stack (some deploy tooling and
-## UAT guides call the infra lane by these names). infra-up
-## is `db-up`; infra-down STOPS the containers but keeps the data volumes — use
-## `make clean` to also drop them.
+## infra-up — `db-up` under the name some deploy tooling and UAT guides call
+## (infra-down is backend's own). The root's only alias.
 infra-up: db-up
-
-infra-down:
-	$(MAKE) -C backend infra-down
 
 ## dev — the full local COLD-START stack in a real browser: Postgres + Redis, the api, the
 ## background worker (cmd/worker — outbox relay + Surface-B runner, always on),
@@ -295,8 +295,20 @@ dev-sweep:
 dev-logs:
 	@bash scripts/dev-logs.sh
 
-build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch bench-daily bench-daily-clean perfdoc config-gen lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed drift composition check-composition check-static test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down migrate-create run psql redis-cli tidy clean vuln vendor-live tools tools-go infra-logs infra-reset:
+# Every name this file does not define runs in backend/, so a target added
+# there is reachable from here with no edit, and a typo fails with backend's own
+# "No rule to make target". FORCE makes the rule run even where a root folder
+# shares the name (tools/, composition/). A forwarded name must stay out of
+# .PHONY: make looks for no pattern rule for a phony target, so it would do
+# nothing and exit 0.
+%: FORCE
 	$(MAKE) -C backend $@
+
+.PHONY: FORCE
+FORCE:
+
+# The match-anything rule above would otherwise try to remake this file.
+Makefile: ;
 
 ## check-fe — the frontend half of the gate (part of `make check`). Fails loudly
 ## if the frontend deps are missing rather than skipping — a set-up worktree has
@@ -313,12 +325,6 @@ check-fe: fe-typecheck-composed
 	$(MAKE) fe-test-ext
 	@bash scripts/phase-timer.sh stop
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh report
-## fitness-jurisdiction — no country strings in core (alias for no-jurisdiction).
-fitness-jurisdiction: no-jurisdiction
-## gen-types — regenerate the contract types (alias for gen).
-gen-types: gen
-## gen-types-check — fail if generated types drifted (alias for drift).
-gen-types-check: drift
 
 ## fe-lint — Biome lint the frontend.
 fe-lint:
@@ -1206,13 +1212,17 @@ check-host-ports:
 ci-doc-parity:
 	@./scripts/check-ci-doc-parity.sh
 
-## make-target-parity — every backend target `make help` advertises resolves
-## from the repo root, which is what the help text tells a reader (and a CI
-## step) it does. The root delegation list is hand-maintained, so a new backend
-## target is one edit away from being advertised and unreachable at once — how
-## the scheduled govulncheck lane came to report red daily without ever running.
+## make-target-parity — every backend target `make help-all` advertises runs
+## from the repo root, a typo fails there, and `make help` prints. The root
+## forwards through one pattern rule, and a forwarded name added to the root
+## .PHONY list turns into a silent no-op that exits 0.
 make-target-parity:
 	@./scripts/check-make-target-parity.sh
+
+## test-make-target-parity — the gate's own test: the shipped Makefiles pass and
+## each planted forwarding mistake fails.
+test-make-target-parity:
+	@./scripts/check-make-target-parity.test.sh
 
 ## contract-breaking-check — oasdiff severity gate on backend/api/crm.yaml vs
 ## origin/main: a breaking change (removed op, narrowed type…) fails; additive

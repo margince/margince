@@ -21,7 +21,8 @@
 import { meshOf, meshStyle, monogramOf } from "../design-system/avatarmesh";
 import type { PanelTone } from "../design-system/panel";
 import type { StrengthBand } from "../design-system/strengthmeter";
-import { el, heading } from "./bridge";
+import { el, heading, onResult } from "./bridge";
+import { NO_CALL, type ToolCall, type Warning } from "./types";
 
 let nextTitleID = 1;
 
@@ -127,6 +128,36 @@ export function keepFocus(root: HTMLElement, draw: () => void): void {
     (b) => b.textContent === label,
   );
   same?.focus();
+}
+
+/** A view's draw: the card for one result, rebuilt under root. */
+type Draw = (
+  root: HTMLElement,
+  data: unknown,
+  warnings: Warning[],
+  call: ToolCall,
+) => void;
+
+/** What a view exports to redraw its card, the host's call left optional. */
+export type Render = (
+  root: HTMLElement,
+  data: unknown,
+  warnings: Warning[],
+  call?: ToolCall,
+) => void;
+
+/**
+ * viewRenderer wraps a view's draw so a redraw keeps the reader's place, and
+ * draws every result the host pushes into the document's #root.
+ */
+export function viewRenderer(draw: Draw): Render {
+  const render: Render = (root, data, warnings, call = NO_CALL) =>
+    keepFocus(root, () => draw(root, data, warnings, call));
+  onResult((data, warnings, call) => {
+    const root = document.getElementById("root");
+    if (root !== null) render(root, data, warnings, call);
+  });
+  return render;
 }
 
 /** strengthMeter mirrors `StrengthMeter`: three rising bars beside the word. */

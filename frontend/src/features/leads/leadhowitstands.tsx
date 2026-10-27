@@ -16,11 +16,12 @@ import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { activityMarks } from "../../lib/standingmarks";
 import { LeadCompany, useLeadCompanyName } from "./leadcompany";
+import { useLeadDisqualifyReasons } from "./leadhandling";
 import { useLeadStatusChanges } from "./leadhistory";
 import type { Lead, LeadWriter } from "./leads";
 import { LeadStepper } from "./leads.stepper";
 import { useLeadScore } from "./leadscore.queries";
-import { leadStanding } from "./leadstanding";
+import { leadStanding, standingReasons } from "./leadstanding";
 import {
   ladderDates,
   leadDims,
@@ -63,8 +64,16 @@ export function LeadHowItStands({
   const ctx: ReadingContext = { t, locale, zone, record, asOf };
   const changes = useLeadStatusChanges(lead);
   const explain = useLeadScore(lead);
+  const reasons = useLeadDisqualifyReasons();
   const companyName = useLeadCompanyName(lead);
-  const verdict = leadStanding(lead, t, locale, zone, record);
+  const verdict = leadStanding(
+    lead,
+    t,
+    locale,
+    zone,
+    record,
+    standingReasons(reasons),
+  );
   const factors =
     explain.isSuccess && explain.data.explained
       ? (explain.data.current?.factors ?? [])

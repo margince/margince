@@ -1,11 +1,18 @@
 /* RecordDetails: flat groups under the record's head. A group is a small
-   grey label over a flat `FactList`; nothing is boxed but the footnote. */
+   grey label over a flat `FactList`, parted from the next by a hairline;
+   nothing is boxed but the footnote. */
 
 .recorddetails {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-4);
   min-inline-size: 0;
+}
+/* Space alone read as one long list; the rule says where a group ends. */
+.recorddetails-group + .recorddetails-group,
+.recorddetails-foot {
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--borderSubtle);
 }
 .recorddetails-group {
   display: flex;
@@ -17,10 +24,31 @@
 .recorddetails-group > .recorddetails-label.heading {
   margin-block-end: var(--space-1);
   font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
   color: var(--textSecondary);
 }
-.recorddetails-toggle {
-  align-self: flex-start;
+.recorddetails-foot > .btn.recorddetails-toggle {
+  padding-inline: 0;
+}
+.recorddetails-toggle[aria-expanded="true"] > svg {
+  transform: rotate(180deg);
+}
+/* A value's copy glyph is quiet like the chat glyph (callaction.css), and
+   takes no room until the pointer or focus is on its row, so at rest the
+   address has the whole column and is cut only where it must be. */
+.recorddetails .copy-action {
+  display: inline-flex;
+}
+.recorddetails .copy-action .btn-icon:not(:hover, :focus-visible) {
+  border-color: transparent;
+  background: transparent;
+  color: var(--textSecondary);
+}
+@media (hover: hover) {
+  .recorddetails .factlist-row:not(:hover, :focus-within) .copy-action {
+    max-inline-size: 0;
+    overflow: hidden;
+  }
 }
 .recorddetails-note {
   margin: 0;

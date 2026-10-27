@@ -376,8 +376,6 @@ defines
 definition
 degrade
 delay
-delegate
-delegation
 delete
 delivery
 demo
@@ -998,7 +996,6 @@ opus
 or
 order
 ordinal
-organization
 origin
 orphan
 other
@@ -1606,7 +1603,6 @@ unknown
 unless
 unlike
 unprovisioned
-unreachable
 unregistered
 unrelated
 unresolved

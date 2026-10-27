@@ -250,7 +250,9 @@ func TestPromotingALeadOnATaggedAddressCreatesAndPairs(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	incumbent := e.plainContact(ctx, t, "Ab", "ab@example.com")
-	lead := ids.From[ids.LeadKind](e.plainLead(ctx, t, "Anna Beispiel", "ab+x@example.com"))
+	lead := seedHistoricalLeadWithEmail(ctx, t, e.store, CreateLeadInput{
+		FullName: new("Anna Beispiel"), Source: "manual",
+	}, "ab+x@example.com")
 
 	change, err := e.store.PreviewLeadContactChange(ctx, lead, PromoteLeadInput{Trigger: "human_qualify"})
 	if err != nil || change.ReviewContact == nil || change.ReviewContact.UUID != incumbent {
@@ -270,7 +272,9 @@ func TestPromotingALeadOnAnExactAddressStillAdoptsOnlyThatContact(t *testing.T) 
 	ctx := e.as()
 	e.plainContact(ctx, t, "Ab", "ab@example.com")
 	exact := e.plainContact(ctx, t, "Anna Beispiel", "ab+x@example.com")
-	lead := ids.From[ids.LeadKind](e.plainLead(ctx, t, "Anna Beispiel", "ab+x@example.com"))
+	lead := seedHistoricalLeadWithEmail(ctx, t, e.store, CreateLeadInput{
+		FullName: new("Anna Beispiel"), Source: "manual",
+	}, "ab+x@example.com")
 
 	contact, merged, err := e.store.PromoteLead(ctx, lead, PromoteLeadInput{Trigger: "human_qualify"})
 	if err != nil || !merged || ids.UUID(contact.Id) != exact {

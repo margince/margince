@@ -30,6 +30,7 @@ func TestQuickCaptureWritesTheContactAndTheirEmployer(t *testing.T) {
 	title := "VP Finance"
 	companyName := "Acme Quick GmbH"
 	profile := "https://linkedin.com/in/dana-quick"
+	wantProfile := "https://www.linkedin.com/in/dana-quick"
 	email := "dana@acme-quick.test"
 	out, err := e.store.QuickCapture(ctx, QuickCaptureInput{
 		FullName:    "Dana Quick",
@@ -61,8 +62,8 @@ func TestQuickCaptureWritesTheContactAndTheirEmployer(t *testing.T) {
 
 	// The profile address is stored as stated, under the key every reader of a
 	// contact's profile link already looks at.
-	if got := statedProfileURL(out.Contact.Social); got != profile {
-		t.Errorf("stored profile url = %q, want %q", got, profile)
+	if got := statedProfileURL(out.Contact.Social); got != wantProfile {
+		t.Errorf("stored profile url = %q, want %q", got, wantProfile)
 	}
 }
 
@@ -81,7 +82,7 @@ func TestQuickCaptureStoresAProfileURLTheProductCanLink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("quick capture: %v", err)
 	}
-	if got := statedProfileURL(out.Contact.Social); got != "https://linkedin.com/in/danabare" {
+	if got := statedProfileURL(out.Contact.Social); got != "https://www.linkedin.com/in/danabare" {
 		t.Errorf("stored profile url = %q, want the absolute form", got)
 	}
 

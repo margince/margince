@@ -595,5 +595,11 @@ const (
 	// 142: deals.reconcileMeetingProof pages machine event_held claims for the
 	// same pass, as the system actor. Its deal ids go only to
 	// withdrawMeetingClaim, which locks and audits the row. None is returned.
-	modulesTierUnscopedCeiling = 142
+	//
+	// 143-144: contacts.MergeExistingLeadContactPairsTx and its bounded count
+	// find the contact ids held by a live lead's historical or identity links.
+	// The data task runs as the system principal over the workspace. A unique id
+	// goes only into promoteLeadTx, which locks both records and rechecks the
+	// promotion; several ids leave the lead untouched. No id reaches a caller.
+	modulesTierUnscopedCeiling = 144
 )

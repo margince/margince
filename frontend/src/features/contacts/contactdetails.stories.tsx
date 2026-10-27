@@ -396,9 +396,9 @@ const twoNumbers: components["schemas"]["Contact"] = {
 };
 
 // Each number keeps one line, its kind beside it or (with no room) under it,
-// and its app links under both.
+// and its chat glyph after both.
 async function expectNumbersOnOneLine(canvasElement: HTMLElement) {
-  await within(canvasElement).findAllByRole("link", { name: /WhatsApp/ });
+  await within(canvasElement).findAllByRole("button", { name: "Open a chat" });
   const handles = [
     ...canvasElement.querySelectorAll<HTMLElement>(".fieldgrid-handle"),
   ].filter((handle) => handle.querySelector(".callaction-chats"));
@@ -408,15 +408,13 @@ async function expectNumbersOnOneLine(canvasElement: HTMLElement) {
     const kind = handle.querySelector<HTMLElement>(":scope > .t-caption");
     const chats = handle.querySelector<HTMLElement>(".callaction-chats");
     if (!number || !kind || !chats) {
-      throw new Error("a phone handle lost its number, kind or app links");
+      throw new Error("a phone handle lost its number, kind or chat glyph");
     }
     const line = document.createRange();
     line.selectNodeContents(number);
     await expect(line.getClientRects()).toHaveLength(1);
-    const box = number.getBoundingClientRect();
-    const kindBox = kind.getBoundingClientRect();
-    await expect(chats.getBoundingClientRect().top).toBeGreaterThanOrEqual(
-      Math.max(box.bottom, kindBox.bottom) - 0.5,
+    await expect(chats.getBoundingClientRect().right).toBeLessThanOrEqual(
+      document.documentElement.clientWidth,
     );
   }
   await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(

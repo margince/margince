@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { ChevronDown } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
@@ -33,9 +34,9 @@ export type DetailSection = Readonly<{
 
 /**
  * The details under a record's head, as flat groups: a small label, then
- * label/value rows with no card and no rule around them. The empty rows of
- * every group fold behind one link, and a group with nothing left to show
- * draws no label. The `footnote` is what the record says about itself (who
+ * label/value rows with no card around them, a hairline between groups. The
+ * empty rows of every group fold behind one link, and a group with nothing
+ * left to show draws no label. The `footnote` is what the record says about itself (who
  * may change it, what a verb will ask), in a grey box at the foot.
  */
 export function RecordDetails({
@@ -63,18 +64,21 @@ export function RecordDetails({
         />
       ))}
       {empties > 0 && (
-        <Button
-          variant="link"
-          className="recorddetails-toggle"
-          aria-expanded={showEmpty}
-          onClick={() => setShowEmpty(!showEmpty)}
-        >
-          {showEmpty
-            ? t("record.details.hideEmpty")
-            : plural("record.details.showEmpty", empties, {
-                count: formatNumber(empties, locale),
-              })}
-        </Button>
+        <div className="recorddetails-foot">
+          <Button
+            variant="link"
+            className="recorddetails-toggle"
+            aria-expanded={showEmpty}
+            onClick={() => setShowEmpty(!showEmpty)}
+          >
+            {showEmpty
+              ? t("record.details.hideEmpty")
+              : plural("record.details.showEmpty", empties, {
+                  count: formatNumber(empties, locale),
+                })}
+            <ChevronDown aria-hidden="true" />
+          </Button>
+        </div>
       )}
       {footnote && <p className="recorddetails-note">{footnote}</p>}
     </div>

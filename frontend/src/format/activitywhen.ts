@@ -11,7 +11,12 @@ import type { components } from "../api/schema";
 import type { Locale, Translator } from "../i18n";
 import { calendarDay } from "./calendarday";
 import { calendarDaysUntil } from "./daysuntil";
-import { formatDate, formatDateTime, formatTimeOfDay } from "./format.dates";
+import {
+  calendarDaysBetween,
+  formatDate,
+  formatDateTime,
+  formatTimeOfDay,
+} from "./format.dates";
 import { formatTimeRange } from "./meetingtime";
 import { formatElapsed } from "./now";
 import { sameWallClockOnDay, startOfDayInZone, UTC_ZONE } from "./timezone";
@@ -101,11 +106,17 @@ export function activityAgo(
   now: number,
   t: Translator,
   locale: Locale,
+  zone: string,
   format: DayFormatter = formatDate,
 ): string {
   return precision === "day"
     ? format(at, locale, UTC_ZONE)
-    : formatElapsed(now - Date.parse(at), t, locale);
+    : formatElapsed(
+        now - Date.parse(at),
+        t,
+        locale,
+        Math.max(0, calendarDaysBetween(new Date(at), new Date(now), zone)),
+      );
 }
 
 /** A meeting's start and end as one span, or null when only its day is known. */

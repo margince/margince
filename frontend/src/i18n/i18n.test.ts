@@ -27,6 +27,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Markup with placeholders, which is the same in every language.
   // Only placeholders and punctuation, with no word to translate.
   "compose.aboutWhen",
+  "companyReach.functionCount",
   "deal.committee.seatSub",
   "lead.card.askedQuote",
   "signatureTemplate.placeholder",
@@ -215,6 +216,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
 
   // "deal", "pipeline" and "lead" are loanwords Vietnamese keeps.
   "board.count_one",
+  "lead.boardCount_one",
   "deals.pipeline",
   "deal.fcPipeline",
   "filters.field.pipeline_id",
@@ -238,6 +240,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "leadSources.leads_one",
   "acqSources.deals_one",
   "users.handover.leads_one",
+  "brief.agenda.leads_one",
   "users.handover.deals_one",
   "contracts.renew.deal",
   "contracts.deal",
@@ -314,6 +317,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
 
   // Other cases verified individually against the source.
   "shell.logoAria",
+  // A product's own name, the built-in lead origin.
+  "leadOrigins.builtin.linkedin",
 
   // Worked examples of a German commercial register entry, the shape the
   // legal-notice read actually parses regardless of which locale a reader
@@ -506,6 +511,44 @@ describe("the product's word for the tenant", () => {
         expect(
           TENANT_MISNOMER.test(value.replace(PRODUCT_NAME, "")),
           `${locale}: ${key} — "${value}" says workspace where the product says company`,
+        ).toBe(false);
+      }
+    }
+  });
+});
+
+/**
+ * A record has one owner and, beside it, responsibility roles a team fills.
+ * Where the Responsibilities card says the owner's word, a reader is told
+ * "X is responsible" and "nobody is responsible" on one page.
+ *
+ * The word, not the whole label: Vietnamese says "Người chịu trách nhiệm" as a
+ * label and "ai chịu trách nhiệm" in a sentence. The label check below keeps
+ * this table in step with the catalogs.
+ */
+const OWNER_WORD: Record<string, string> = {
+  en: "owner",
+  de: "verantwortlich",
+  vi: "chịu trách nhiệm",
+};
+
+describe("the owner and the responsibility roles", () => {
+  it("names the owner's word for every locale, as its label says it", () => {
+    for (const [locale, catalog] of Object.entries(catalogs)) {
+      expect(
+        catalog["list.owner"].toLowerCase(),
+        `${locale}: the owner's word is missing`,
+      ).toContain(OWNER_WORD[locale]);
+    }
+  });
+
+  it("no catalog uses the owner's word in the Responsibilities card", () => {
+    for (const [locale, catalog] of Object.entries(catalogs)) {
+      for (const [key, value] of Object.entries(catalog)) {
+        if (!key.startsWith("assignments.")) continue;
+        expect(
+          value.toLowerCase().includes(OWNER_WORD[locale]),
+          `${locale}: ${key} — "${value}" says the owner's word`,
         ).toBe(false);
       }
     }

@@ -1,10 +1,11 @@
+import { DealStatusBadge } from "../../components/dealstatusbadge";
 import { EntityRef, type OwnerNaming } from "../../components/entityref";
 import { ownerColumn, tagsColumn } from "../../components/recordlist";
 import { Badge } from "../../design-system/atoms";
 import { CellStrip, type ListColumn } from "../../design-system/listtable";
 import type { BoardMoneyColumn } from "../../design-system/pipelineboard";
 import { FieldGuard } from "../../design-system/rbac";
-import { formatDate, formatDuration, formatMoney } from "../../format/format";
+import { formatAge, formatDate, formatMoney } from "../../format/format";
 import type { Locale, useT } from "../../i18n";
 import { closeDayOf } from "../../lib/closeday";
 import type { StageTotals } from "../../lib/deals.queries";
@@ -186,10 +187,7 @@ export function dealColumns(
         deal.last_activity_at ? (
           <CellStrip>
             <span>
-              {formatDuration(
-                Math.max(0, Date.now() - Date.parse(deal.last_activity_at)),
-                locale,
-              )}
+              {formatAge(deal.last_activity_at, Date.now(), locale, recordZone)}
             </span>
             {deal.stalled && (
               <Badge tone="warning">{t("deal.stalledBadge")}</Badge>
@@ -199,13 +197,11 @@ export function dealColumns(
           <span>{t("deals.lastSignalNone")}</span>
         ),
     },
-    lastMailColumn(t),
+    lastMailColumn(t, recordZone),
     {
       key: "status",
       header: t("lead.status"),
-      cell: (deal) => (
-        <Badge tone={dealStatusTone(deal.status)}>{deal.status}</Badge>
-      ),
+      cell: (deal) => <DealStatusBadge status={deal.status} />,
       // By the stored value, so the three groups sit together. Alphabetical
       // (`lost`, `open`, `won`) rather than by lifecycle, because `deal.status`
       // is a text column. The machinery orders by the column, not by a
@@ -213,20 +209,4 @@ export function dealColumns(
       sort: "status",
     },
   ];
-}
-
-// Won reads success, lost reads danger, an open deal carries no status tone.
-// Exported so the partner page's sourced-deals panel reads a deal's status the
-// same way the board and the deal record do. A second mapping would render one
-// status in two colours on two screens.
-export function dealStatusTone(
-  status: Deal["status"],
-): "success" | "danger" | undefined {
-  if (status === "won") {
-    return "success";
-  }
-  if (status === "lost") {
-    return "danger";
-  }
-  return undefined;
 }

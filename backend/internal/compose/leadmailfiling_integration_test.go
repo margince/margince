@@ -58,6 +58,8 @@ func (l *leadMailEnv) connectorCtx(t *testing.T, name string, readsLeads bool) c
 	actor.Permissions.Objects["project"] = principal.ObjectGrant{Read: true}
 	if readsLeads {
 		actor.Permissions.Objects["lead"] = principal.ObjectGrant{Read: true}
+	} else {
+		delete(actor.Permissions.Objects, "lead")
 	}
 	return principal.WithActor(ctx, actor)
 }

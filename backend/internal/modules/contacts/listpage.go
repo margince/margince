@@ -92,7 +92,6 @@ func listPage[T any](ctx context.Context, s *Store, sortSpec *string, limitIn *i
 }
 
 func listPageTx[T any](ctx context.Context, tx pgx.Tx, sortSpec *string, limit int, active []fieldcatalog.Column, spec listPageSpec[T]) ([]T, storekit.Page, error) {
-
 	where := []string{whereAlways}
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }

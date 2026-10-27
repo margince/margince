@@ -395,14 +395,10 @@ func TestPromotingALeadStillMergesOnAClaimedAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	lead, _, err := e.store.CreateLead(ctx, CreateLeadInput{
-		FullName: new("Dana Fischer"), Email: new("dana@globex.test"), Source: "manual",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	contact, merged, err := e.store.PromoteLead(ctx,
-		ids.From[ids.LeadKind](ids.UUID(lead.Id)), PromoteLeadInput{Trigger: "human_qualify"})
+	lead := seedHistoricalLeadWithEmail(ctx, t, e.store, CreateLeadInput{
+		FullName: new("Dana Fischer"), Source: "manual",
+	}, "dana@globex.test")
+	contact, merged, err := e.store.PromoteLead(ctx, lead, PromoteLeadInput{Trigger: "human_qualify"})
 	if err != nil {
 		t.Fatalf("promote lead: %v", err)
 	}

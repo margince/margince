@@ -102,6 +102,32 @@ describe("what a bare address means", () => {
   });
 });
 
+describe("a list that opens narrowed", () => {
+  const opensOnMine = { ...OPENING, sort: "", filters: { owner_id: "me" } };
+
+  it("spells the reader's removal of the opening filter, so Back keeps it", () => {
+    // Back mounts the list afresh, and a fresh list reads a bare address as
+    // "just arrived". "All" must therefore say itself in the address.
+    const all = { ...opensOnMine, filters: {} };
+    const written = paramsFromListQuery(all, opensOnMine);
+    expect(written.get("owner_id")).toBe("all");
+    expect(listQueryFromParams(written, opensOnMine, false)).toEqual(all);
+  });
+
+  it("keeps a removed opening filter off the wire", () => {
+    const read = listQueryFromParams(
+      address("owner_id=all&status=new"),
+      opensOnMine,
+      false,
+    );
+    expect(read.filters).toEqual({ status: "new" });
+  });
+
+  it('reads "all" as a value for a filter the list does not open on', () => {
+    expect(shown("stage=all").filters).toEqual({ stage: "all" });
+  });
+});
+
 describe("the address a list writes", () => {
   it("leaves out every dial still at its default", () => {
     // A shared link is about what the reader CHOSE. Carrying the page size and

@@ -33,6 +33,10 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+/* The question wraps to make room; its Required mark never gives way. */
+.reviewtemplate-question > .badge {
+  flex: none;
+}
 
 /* The editor drawer: one card per question, the reorder tools beside it. */
 .rt-questions {

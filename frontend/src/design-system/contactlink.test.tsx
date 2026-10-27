@@ -58,10 +58,11 @@ describe("ContactLink", () => {
         .getByRole("link", { name: "+33 6 12 44 08 91" })
         .getAttribute("href"),
     ).toBe("tel:+33612440891");
+    fireEvent.click(await screen.findByRole("button", { name: "Open a chat" }));
     expect(
-      (
-        await screen.findByRole("link", { name: "Open chat in WhatsApp" })
-      ).getAttribute("href"),
+      screen
+        .getByRole("link", { name: "Open chat in WhatsApp" })
+        .getAttribute("href"),
     ).toBe("https://wa.me/33612440891");
   });
 

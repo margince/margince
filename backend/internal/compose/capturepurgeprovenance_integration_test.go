@@ -130,13 +130,10 @@ func TestASenderPurgeKeepsACapturedContactSomebodyWorkedOn(t *testing.T) {
 		},
 		"a promotion of a typed lead into it": func(t *testing.T, e *integration.Env, minted ids.UUID) {
 			name, email, title := "Assistenz Kanzlei", mintedAddress, "Partnerin"
-			lead, _, err := e.Contacts.CreateLead(ownerCtx(e), contacts.CreateLeadInput{
-				FullName: &name, Email: &email, Title: &title, Source: "manual",
-			})
-			if err != nil {
-				t.Fatalf("typing in the lead: %v", err)
-			}
-			promoted, _, err := e.Contacts.PromoteLead(ownerCtx(e), ids.From[ids.LeadKind](ids.UUID(lead.Id)),
+			lead := seedHistoricalLeadAtContactEmail(t, e, ownerCtx(e), contacts.CreateLeadInput{
+				FullName: &name, Title: &title, Source: "manual",
+			}, email)
+			promoted, _, err := e.Contacts.PromoteLead(ownerCtx(e), lead,
 				contacts.PromoteLeadInput{Trigger: string(contacts.TriggerHumanQualify)})
 			if err != nil {
 				t.Fatalf("promoting the lead: %v", err)

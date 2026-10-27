@@ -26,11 +26,14 @@ import (
 // captured record passes on its way into the domain.
 type Sink struct {
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
-	db             *database.DB
-	stager         MergeStager
-	ensurer        CounterpartyEnsurer
-	channelEnsurer ChannelCounterpartyEnsurer
-	transactional  *TransactionalList
+	db     *database.DB
+	stager MergeStager
+	// contactArrivals tells a contact's owner about a captured lead whose
+	// address is the contact's. Nil tells nobody, and the lead is still not made.
+	contactArrivals ContactArrivals
+	ensurer         CounterpartyEnsurer
+	channelEnsurer  ChannelCounterpartyEnsurer
+	transactional   *TransactionalList
 	// files is the timeline module's attachment writer. Nil is a role that
 	// keeps no files: messages still land, and their attachments do not.
 	files FileKeeper
@@ -163,6 +166,20 @@ func NewSink(db *database.DB) *Sink {
 func (s *Sink) WithFileKeeper(files FileKeeper) *Sink {
 	c := *s
 	c.files = files
+	return &c
+}
+
+// ContactArrivals is the contacts module's side of a captured lead for an
+// existing contact. Compose binds it.
+type ContactArrivals interface {
+	TellContactOwner(ctx context.Context, contact ids.ContactID, rec connector.NormalizedRecord, fields LeadFields)
+}
+
+// WithContactArrivals returns a copy that tells a contact's owner about a
+// captured lead for their contact.
+func (s *Sink) WithContactArrivals(arrivals ContactArrivals) *Sink {
+	c := *s
+	c.contactArrivals = arrivals
 	return &c
 }
 
@@ -311,20 +328,29 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 	// The deal step reads the project link the ladder just wrote, so it runs
 	// after it, on the same terms.
 	s.attributeDeal(ctx, rec, ref)
-	if dedupeHit != nil && s.stager != nil {
-		// Staged OUTSIDE the capture transaction on purpose: the capture
-		// itself wrote nothing (the collision blocked it), and the
-		// proposal must survive independently for the inbox.
-		if _, err := s.stager.StageMerge(ctx, MergeProposal{
-			TargetType:     "lead",
-			TargetID:       dedupeHit.UUID,
-			ProposedChange: dedupeFields,
-			Summary:        s.duplicateLeadSummary(ctx, rec.NaturalKey),
-		}); err != nil {
-			return datasource.EntityRef{}, fmt.Errorf("capture: staging the dedupe merge: %w", err)
+	if ref.Type == datasource.EntityContact && s.contactArrivals != nil {
+		if fields, ok := rec.Fields.(LeadFields); ok {
+			s.contactArrivals.TellContactOwner(ctx, ids.From[ids.ContactKind](ref.ID), rec, fields)
 		}
 	}
+	if err := s.stageDuplicateLead(ctx, rec, dedupeHit, dedupeFields); err != nil {
+		return datasource.EntityRef{}, err
+	}
 	return ref, nil
+}
+
+func (s *Sink) stageDuplicateLead(ctx context.Context, rec connector.NormalizedRecord, hit *ids.LeadID, fields json.RawMessage) error {
+	if hit == nil || s.stager == nil {
+		return nil
+	}
+	_, err := s.stager.StageMerge(ctx, MergeProposal{
+		TargetType: "lead", TargetID: hit.UUID, ProposedChange: fields,
+		Summary: s.duplicateLeadSummary(ctx, rec.NaturalKey),
+	})
+	if err != nil {
+		return fmt.Errorf("capture: staging the dedupe merge: %w", err)
+	}
+	return nil
 }
 
 // admitRecord is what a record must be before ANY of it is written, and it

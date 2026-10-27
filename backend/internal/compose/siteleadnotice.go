@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -135,6 +136,12 @@ type untoldReason struct {
 var errSiteLeadCollision = fmt.Errorf("%w: a lead from another source already holds this address, "+
 	"so the website's copy of this contact was not kept", apperrors.ErrConflict)
 
+// errSiteLeadIsAContact answers an accept for somebody who is already a
+// contact: no lead is kept and no notice is sent. The notice record names it a
+// collision, the address being another record's.
+var errSiteLeadIsAContact = fmt.Errorf("%w: the address is already a contact's, "+
+	"so no lead was kept and no notice was sent", apperrors.ErrConflict)
+
 // sendArticle14Notice keeps a website lead only with the notice it is owed.
 // One transaction holds the redemption, the capture, the staged notice, and,
 // when the notice cannot be given, the record of why.
@@ -202,6 +209,9 @@ func tellAndKeep(
 	ctx context.Context, teller *consent.Store, approvalID ids.ApprovalID, capture siteLeadCaptureStep,
 ) untoldReason {
 	leadID, ours, err := capture(ctx)
+	if errors.Is(err, errSiteLeadIsAContact) {
+		return untoldReason{consent.LeadNoticeCollision, err}
+	}
 	if err != nil {
 		return untoldReason{consent.LeadNoticeRefused, err}
 	}

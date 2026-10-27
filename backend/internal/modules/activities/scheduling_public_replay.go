@@ -26,6 +26,9 @@ type invitationIntent struct {
 	// record and out of the invitation, whose address is only what they typed.
 	// The door sets it because Public is nil whenever a request carries no key.
 	DescriptionFromBooker bool
+	// Lead is the live lead a public booking lands on when no contact holds
+	// the booker's address. The meeting is filed on it instead of a contact.
+	Lead ids.LeadID
 }
 type publicBookingIntent struct {
 	KeyHash   string           `json:"key_hash"`

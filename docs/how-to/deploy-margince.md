@@ -9,6 +9,16 @@ Why a deployment is shaped this way (two database roles, one host, one release f
 in [explanation/self-hosting.md](../explanation/self-hosting.md). Every setting is in
 [reference/configuration.md](../reference/configuration.md).
 
+## The least production needs
+
+- `MARGINCE_DSN` and `MARGINCE_OWNER_DSN`: the app role and the owner role of one database.
+- `MARGINCE_REDIS`, `MARGINCE_PUBLIC_BASE_URL`, and `MARGINCE_LICENSE` (or `license.token`).
+- For the first boot, `MARGINCE_CONFIG` names a `margince.yaml` with `workspace` and
+  `bootstrap_admin`, and `MARGINCE_ADMIN_PASSWORD` holds the first admin's password.
+
+What each other feature needs is in
+[What each feature needs](../reference/what-each-feature-needs.md).
+
 ## What ships in this repo
 
 | File | Purpose |
@@ -92,17 +102,15 @@ To give the token to Margince, do one of these on both `cmd/api` and `cmd/worker
 
 After the first boot, the api's `/metrics`, read with the `--metrics-token` bearer credential,
 reports `margince_license_posture{state="valid"} 1`. What each posture does at boot is in
-[License](../reference/configuration.md#license).
+[License](../reference/storage-secrets-and-license.md#license).
 
 ## Set the environment
 
 The images bake in **no** instance configuration. All settings come from the runtime environment,
-and the binaries resolve every flag from a `MARGINCE_*` env fallback. Set at least these:
-
-- the two DSNs and the admin password in
-  [What the image entrypoint reads](../reference/configuration.md#what-the-image-entrypoint-reads-api-and-worker);
-- `MARGINCE_REDIS`, `MARGINCE_CONFIG` and `MARGINCE_PUBLIC_BASE_URL`, in the
-  [cmd/api table](../reference/configuration.md#cmdapi-the-http-process-role).
+and the binaries resolve every flag from a `MARGINCE_*` env fallback. Set at least the
+[least production needs](#the-least-production-needs). The entrypoint reads the two DSNs and the admin
+password itself; see
+[What the image entrypoint reads](../reference/programs.md#what-the-image-entrypoint-reads-api-and-worker).
 
 The annotated env template is [`.env.example`](../../.env.example). To check the configuration before a
 rollout, and to see which settings the app shows as locked, read
@@ -111,7 +119,7 @@ the settings it reads.
 
 Do **not** set `MARGINCE_ENV=dev` in a deployed environment. It decides which license authorities are
 honoured, and lets the installation run with no license (see
-[License](../reference/configuration.md#license)).
+[License](../reference/storage-secrets-and-license.md#license)).
 
 ## Write the first-boot config
 
@@ -122,11 +130,12 @@ On the first boot against an empty database the api bootstraps the company + adm
    [`config/margince.example.yaml`](../../config/margince.example.yaml).
 2. Set its `password_file` to `secrets/admin-password`, where the entrypoint writes the password.
 3. Set `MARGINCE_ADMIN_PASSWORD`. The example config's default path differs, so step 2 matters.
-4. To enable AI, declare the binding under `seeds.ai_routing`. Put each provider's key in under
-   Settings → AI → AI models → Providers.
-5. Keep the `mcp` block only if you serve the MCP connector. It then needs
+4. To enable AI, declare the binding under `seeds.ai_routing`; a file in
+   [`config/presets/`](../../config/presets/README.md) is a binding to copy. Put each provider's key
+   in under Settings → AI → AI models → Providers.
+5. Add an `mcp` block only if you serve the MCP connector. It then needs
    `MARGINCE_PUBLIC_BASE_URL`, or the api refuses to boot.
-6. Leave `operations:` commented out, as the example ships it.
+6. Leave `operations:` out, as the example does.
 7. Decide the retention posture before first boot, if the installation must keep everything (below).
 8. Choose the country: set `workspace.country` (below).
 
@@ -211,7 +220,7 @@ Both services sit behind one reverse proxy / ingress, under **one host**:
 
 | path | service |
 | --- | --- |
-| `/v1`, `/healthz`, `/readyz`, `/metrics`; `/.well-known/security.txt` when [`web.security_txt`](../reference/configuration.md#securitytxt) is set | api |
+| `/v1`, `/healthz`, `/readyz`, `/metrics`; `/.well-known/security.txt` when [`web.security_txt`](../reference/feature-settings.md#securitytxt) is set | api |
 | `/webhooks/gmail`, `/webhooks/graph` | api (present only where that receiver's own token is set, a separate switch from whether the connector itself is configured) |
 | `/oauth/`, `/mcp`, `/.well-known/oauth-authorization-server`, `/.well-known/oauth-protected-resource` (and its `/mcp`-suffixed form) | api (present only with the MCP connector declared) |
 | everything else, `/` included | web (the SPA, port 8080) |
@@ -249,7 +258,7 @@ During installation acceptance:
 
 A missing optional pool does not fail readiness, so a 200 alone cannot prove field creation works.
 Configuration and the 501 troubleshooting procedure are in
-[Custom-field schema pool](../reference/configuration.md#custom-field-schema-pool-api--runtime-ddl).
+[Custom-field schema pool](../reference/storage-secrets-and-license.md#custom-field-schema-pool-api--runtime-ddl).
 
 ## Alert on the agent bound, do not drain on it
 

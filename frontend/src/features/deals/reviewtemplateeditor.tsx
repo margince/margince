@@ -29,6 +29,7 @@ import { Select } from "../../design-system/select";
 import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
+import { shippedLabel } from "../../lib/shippedlabels";
 import {
   REVIEW_TEMPLATES_KEY,
   type ReviewQuestion,
@@ -49,9 +50,15 @@ export function ReviewTemplateEditor({
   const t = useT();
   const qc = useQueryClient();
   const titleId = useId();
-  const [questions, setQuestions] = useState<ReviewQuestion[]>(
-    template.questions,
+  // The editor shows a built-in question in the reader's language, as it was
+  // when the drawer opened. A language switch then neither edits nor rewords it.
+  const [shown] = useState(() =>
+    template.questions.map((question) => ({
+      ...question,
+      label: shippedLabel(question, t),
+    })),
   );
+  const [questions, setQuestions] = useState<ReviewQuestion[]>(shown);
   const save = useMutation({
     mutationFn: async (submitted: {
       id: string;
@@ -97,13 +104,12 @@ export function ReviewTemplateEditor({
         (q.type === "multiselect" &&
           !(q.options ?? []).some((option) => option.trim())),
     );
-  const dirty =
-    JSON.stringify(questions) !== JSON.stringify(template.questions);
+  const dirty = JSON.stringify(questions) !== JSON.stringify(shown);
   return (
     <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
       <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2 modal-title">
-          {template.label}
+          {shippedLabel(template, t)}
         </Heading>
         <p className="t-caption">
           {t(
@@ -164,12 +170,28 @@ export function ReviewTemplateEditor({
           save.mutate({
             id: template.id,
             version: template.version,
-            questions: questions.map(trimmedChoices),
+            questions: questions
+              .map((question) => storedWording(question, shown, template))
+              .map(trimmedChoices),
           })
         }
       />
     </Modal>
   );
+}
+
+// An untouched built-in question sends the wording it is stored with, so the
+// server keeps its catalog key and other readers keep their own language.
+function storedWording(
+  question: ReviewQuestion,
+  shown: readonly ReviewQuestion[],
+  template: ReviewTemplate,
+): ReviewQuestion {
+  const asShown = shown.find((q) => q.key === question.key);
+  const stored = template.questions.find((q) => q.key === question.key);
+  return asShown && stored?.label_key && question.label === asShown.label
+    ? { ...question, label: stored.label }
+    : question;
 }
 
 // A list question sends its non-blank choices; a free-text one sends none.

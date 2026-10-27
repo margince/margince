@@ -11722,6 +11722,7 @@ const (
 	ImportReasonCodeContactDuplicateFound        ImportReasonCode = "contact_duplicate_found"
 	ImportReasonCodeContactDuplicateSkipped      ImportReasonCode = "contact_duplicate_skipped"
 	ImportReasonCodeContactEmailHeld             ImportReasonCode = "contact_email_held"
+	ImportReasonCodeContactHoldsLead             ImportReasonCode = "contact_holds_lead"
 	ImportReasonCodeContactNotFound              ImportReasonCode = "contact_not_found"
 	ImportReasonCodeContactNotFoundDropped       ImportReasonCode = "contact_not_found_dropped"
 	ImportReasonCodeContactUnnamed               ImportReasonCode = "contact_unnamed"
@@ -11872,6 +11873,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeContactDuplicateSkipped:
 		return true
 	case ImportReasonCodeContactEmailHeld:
+		return true
+	case ImportReasonCodeContactHoldsLead:
 		return true
 	case ImportReasonCodeContactNotFound:
 		return true
@@ -13075,6 +13078,42 @@ func (e LifecyclePreviewEvidenceScope) Valid() bool {
 	case LifecyclePreviewEvidenceScopeUnknown:
 		return true
 	case LifecyclePreviewEvidenceScopeWorkstream:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LinkedInReachFunction.
+const (
+	LinkedInReachFunctionFinance     LinkedInReachFunction = "finance"
+	LinkedInReachFunctionHr          LinkedInReachFunction = "hr"
+	LinkedInReachFunctionIt          LinkedInReachFunction = "it"
+	LinkedInReachFunctionManagement  LinkedInReachFunction = "management"
+	LinkedInReachFunctionMarketing   LinkedInReachFunction = "marketing"
+	LinkedInReachFunctionOperations  LinkedInReachFunction = "operations"
+	LinkedInReachFunctionProcurement LinkedInReachFunction = "procurement"
+	LinkedInReachFunctionSales       LinkedInReachFunction = "sales"
+)
+
+// Valid indicates whether the value is a known member of the LinkedInReachFunction enum.
+func (e LinkedInReachFunction) Valid() bool {
+	switch e {
+	case LinkedInReachFunctionFinance:
+		return true
+	case LinkedInReachFunctionHr:
+		return true
+	case LinkedInReachFunctionIt:
+		return true
+	case LinkedInReachFunctionManagement:
+		return true
+	case LinkedInReachFunctionMarketing:
+		return true
+	case LinkedInReachFunctionOperations:
+		return true
+	case LinkedInReachFunctionProcurement:
+		return true
+	case LinkedInReachFunctionSales:
 		return true
 	default:
 		return false
@@ -25174,6 +25213,9 @@ type AcquisitionSource struct {
 	// Label What readers see.
 	Label string `json:"label"`
 
+	// LabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	LabelKey *ShippedLabelKey `json:"label_key,omitempty"`
+
 	// SortOrder Display order in pickers and settings.
 	SortOrder int `json:"sort_order"`
 
@@ -25482,6 +25524,9 @@ type ActivityReviewTemplate struct {
 	Id        openapi_types.UUID `json:"id"`
 	Key       string             `json:"key"`
 	Label     string             `json:"label"`
+
+	// LabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	LabelKey *ShippedLabelKey `json:"label_key,omitempty"`
 
 	// Outcome Which outcome this template is for. A win review and a loss review ask different questions, and offering both at one close is asking somebody to do filing the record can do itself.
 	Outcome   ActivityReviewTemplateOutcome `json:"outcome"`
@@ -29496,6 +29541,10 @@ type AuthenticationPolicy struct {
 type Authorization struct {
 	// Objects Effective grants keyed by RbacObject. An absent key denies — the server resolves an unknown object to the zero grant, and a client must do the same rather than treat a missing entry as unrestricted.
 	Objects map[string]RbacObjectGrant `json:"objects"`
+
+	// RefusedDealFilters The `listDeals` query parameters this caller is refused whatever their value: `422` `field_masked` where the role masks the column on any deal, `403` where a grant the filter reads is missing, `list_id` included where the caller may not read lists. Computed by the list resolution and clauses the list runs, so a client withholds exactly the dials the list would refuse.
+	// A mask that withholds a reference only on some rows, such as a deal's private company, refuses no filter and is not listed. Absent from a server that does not compute it, and empty when nothing is refused.
+	RefusedDealFilters *[]string `json:"refused_deal_filters,omitempty"`
 
 	// RowScope How far the grants above reach: the caller's own rows, every row belonging to a live team they share, or every row in the workspace. Widened to the maximum any of the caller's roles holds, the same union the server applies.
 	// It is a THIRD axis, independent of the seat ceiling and the object grants, and a client that ignores it will describe a team lead's reach as if it were an admin's.
@@ -33821,8 +33870,14 @@ type CompanyLinkedInReachColleague struct {
 	Connections int `json:"connections"`
 
 	// DisplayName The colleague to ask.
-	DisplayName string             `json:"display_name"`
-	UserId      openapi_types.UUID `json:"user_id"`
+	DisplayName string `json:"display_name"`
+
+	// Functions Which functions those connections work in, read from their job titles, most
+	// first and then by function. A function with fewer than two connections is left
+	// out, and so is a title no function matches. Two is the floor because on a small
+	// account one title can name one contact. Never the titles themselves.
+	Functions []LinkedInReachFunctionCount `json:"functions"`
+	UserId    openapi_types.UUID           `json:"user_id"`
 }
 
 // CompanyLinkedInReachResponse defines model for CompanyLinkedInReachResponse.
@@ -36709,15 +36764,23 @@ type CreateContactEnrichmentRunRequest struct {
 // CreateContactRequest defines model for CreateContactRequest.
 type CreateContactRequest struct {
 	// Address Structured postal address.
-	Address   *Address                `json:"address,omitempty"`
-	Emails    *[]ContactEmailInput    `json:"emails,omitempty"`
-	FirstName *string                 `json:"first_name,omitempty"`
-	FullName  string                  `json:"full_name"`
-	LastName  *string                 `json:"last_name,omitempty"`
-	OwnerId   *openapi_types.UUID     `json:"owner_id,omitempty"`
-	Phones    *[]ContactPhoneInput    `json:"phones,omitempty"`
-	Social    *map[string]interface{} `json:"social,omitempty"`
-	Source    string                  `json:"source"`
+	Address *Address `json:"address,omitempty"`
+
+	// ConvertLeadIds The live leads to convert into this contact, sent after a 409 `lead_holds_email`
+	// named them. The set must equal the leads that hold an email or the LinkedIn profile when the
+	// write runs; otherwise the answer is that 409 again. Each lead is then converted
+	// into the contact in the same write, and a conversion the server refuses fails the
+	// whole write. An agent sending this field is refused with 422
+	// `convert_needs_a_human`: an agent converts with `promote_lead`.
+	ConvertLeadIds *[]openapi_types.UUID   `json:"convert_lead_ids,omitempty"`
+	Emails         *[]ContactEmailInput    `json:"emails,omitempty"`
+	FirstName      *string                 `json:"first_name,omitempty"`
+	FullName       string                  `json:"full_name"`
+	LastName       *string                 `json:"last_name,omitempty"`
+	OwnerId        *openapi_types.UUID     `json:"owner_id,omitempty"`
+	Phones         *[]ContactPhoneInput    `json:"phones,omitempty"`
+	Social         *map[string]interface{} `json:"social,omitempty"`
+	Source         string                  `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -37057,7 +37120,8 @@ type CreateLeadRequest struct {
 	CandidateCompanyKey *string `json:"candidate_company_key,omitempty"`
 	CompanyName         *string `json:"company_name,omitempty"`
 
-	// ContactId An existing contact this lead is worked from. Its name, primary email, title, LinkedIn profile and current employer fill whichever of those fields this request leaves out, so a lead for a contact the CRM already holds is never retyped or left unnamed. The contact must be one the caller may read (422 otherwise). The lead records it as `from_contact_id`, and the contact itself is not changed. A contact already worked through a live lead answers 409 `duplicate_contact_lead` with that lead's id. Not combinable with `source_system` (422): a lead filled from a contact is not an import.
+	// ContactId Older clients may still send this field. The request is refused with 409 `contact_holds_email`; open a deal when a contact has a new opportunity.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ContactId *openapi_types.UUID  `json:"contact_id,omitempty"`
 	Email     *openapi_types.Email `json:"email,omitempty"`
 	FullName  *string              `json:"full_name,omitempty"`
@@ -37951,7 +38015,12 @@ type DealCommitments struct {
 
 // DealCoverage defines model for DealCoverage.
 type DealCoverage struct {
-	DealId  openapi_types.UUID        `json:"deal_id"`
+	DealId openapi_types.UUID `json:"deal_id"`
+
+	// OurSide One entry per colleague with recorded interaction with the deal's seats, warmest
+	// first. `interactions_90d` sums the colleague's exchanges with every seat, and the
+	// score is their warmest single relationship. `single_threaded_ours` reads the same
+	// entries, so its colleague is always one of them.
 	OurSide []ContactNetworkColleague `json:"our_side"`
 	Risks   []DealCoverageRisk        `json:"risks"`
 
@@ -38002,8 +38071,14 @@ type DealCoverageSeat struct {
 	ContactName *string `json:"contact_name,omitempty"`
 
 	// Engaged A two-way exchange in the window — both directions, not just our sends.
-	Engaged bool   `json:"engaged"`
-	Role    string `json:"role"`
+	Engaged bool `json:"engaged"`
+
+	// LastInboundAt When this contact last wrote to us, over all history, from the same fold as the contact's relationship strength. Absent when nothing inbound was captured, and for a caller without the activity grant, so its absence is not a claim that they never wrote.
+	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
+
+	// LastInboundPrecision How to read `last_inbound_at`, from the activity it names. Absent when that is absent.
+	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+	Role                 string             `json:"role"`
 }
 
 // DealDocument One file in a deal's Files area: the attachment, whether it is hidden from this
@@ -38842,16 +38917,16 @@ type DemoteLeadResponse struct {
 	Lead Lead `json:"lead"`
 
 	// Unwind `reversed` — the promotion had created a contact, which is now archived and the
-	// lead restored to `engaged`. `merge_lineage_only` — the promotion had merged into
-	// a pre-existing contact, which is left untouched; only the lineage pointers are
-	// nulled (formulas §26).
+	// lead restored to `engaged`. `merge_lineage_only` is no longer answered: a demote whose
+	// contact must stay is refused with 422 `demote_keeps_contact`. The value stays so a
+	// client reading an older response still parses it.
 	Unwind DemoteLeadResponseUnwind `json:"unwind"`
 }
 
 // DemoteLeadResponseUnwind `reversed` — the promotion had created a contact, which is now archived and the
-// lead restored to `engaged`. `merge_lineage_only` — the promotion had merged into
-// a pre-existing contact, which is left untouched; only the lineage pointers are
-// nulled (formulas §26).
+// lead restored to `engaged`. `merge_lineage_only` is no longer answered: a demote whose
+// contact must stay is refused with 422 `demote_keeps_contact`. The value stays so a
+// client reading an older response still parses it.
 type DemoteLeadResponseUnwind string
 
 // DirectCommunicationSendRequest A designated human's decision that one refused message goes out anyway. Every field is frozen
@@ -42893,7 +42968,7 @@ type Lead struct {
 	// FirstResponseAt First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. A cold-outbound auto-touch does NOT satisfy it.
 	FirstResponseAt *time.Time `json:"first_response_at,omitempty"`
 
-	// FromContactId The existing contact this lead was created from (`contact_id` on the create), and null for any other lead. While this lead is live, a second create from the same contact answers 409 `duplicate_contact_lead` naming this lead.
+	// FromContactId The contact an older lead was created from, and null for every newly created lead.
 	FromContactId *openapi_types.UUID `json:"from_contact_id,omitempty"`
 	FullName      *string             `json:"full_name,omitempty"`
 	Id            openapi_types.UUID  `json:"id"`
@@ -43028,6 +43103,9 @@ type LeadDisqualifyReason struct {
 	Id        openapi_types.UUID `json:"id"`
 	Label     string             `json:"label"`
 
+	// LabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	LabelKey *ShippedLabelKey `json:"label_key,omitempty"`
+
 	// LeadCount Leads disqualified with this reason.
 	LeadCount *int      `json:"lead_count,omitempty"`
 	SortOrder int       `json:"sort_order"`
@@ -43105,6 +43183,9 @@ type LeadOrigin struct {
 	// Key Lowercase stable key, the stored value. Never changes after creation.
 	Key   string `json:"key"`
 	Label string `json:"label"`
+
+	// LabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	LabelKey *ShippedLabelKey `json:"label_key,omitempty"`
 
 	// LeadCount Live leads carrying this key that the caller may see.
 	LeadCount *int `json:"lead_count,omitempty"`
@@ -43782,6 +43863,22 @@ type LinkedInReachAccount struct {
 	// know at this account who are not in the CRM.
 	ContactsOnFile int    `json:"contacts_on_file"`
 	DisplayName    string `json:"display_name"`
+}
+
+// LinkedInReachFunction The function a connection's job title names. A title that names a department and
+// a rank counts as the department: "Head of IT" is `it`, and only a title that names
+// no department, such as "Managing Director", is `management`.
+type LinkedInReachFunction string
+
+// LinkedInReachFunctionCount defines model for LinkedInReachFunctionCount.
+type LinkedInReachFunctionCount struct {
+	// Connections How many of the colleague's connections there work in this function.
+	Connections int `json:"connections"`
+
+	// Function The function a connection's job title names. A title that names a department and
+	// a rank counts as the department: "Head of IT" is `it`, and only a title that names
+	// no department, such as "Managing Director", is `management`.
+	Function LinkedInReachFunction `json:"function"`
 }
 
 // LinkedInReachResponse defines model for LinkedInReachResponse.
@@ -47765,6 +47862,14 @@ type QuickCaptureContactRequest struct {
 	// CompanyName A new employer to create, when no existing record was picked.
 	CompanyName *string `json:"company_name,omitempty"`
 
+	// ConvertLeadIds The live leads to convert into this contact, sent after a 409 `lead_holds_email`
+	// named them. The set must equal the leads that hold the email or the profile URL when the
+	// write runs; otherwise the answer is that 409 again. Each lead is then converted
+	// into the contact in the same write, and a conversion the server refuses fails the
+	// whole write. An agent sending this field is refused with 422
+	// `convert_needs_a_human`: an agent converts with `promote_lead`.
+	ConvertLeadIds *[]openapi_types.UUID `json:"convert_lead_ids,omitempty"`
+
 	// Email Refused with 422 `email_names_no_one` when the local part names a sending system, as ContactEmailInput.email is.
 	Email    *openapi_types.Email `json:"email,omitempty"`
 	FullName string               `json:"full_name"`
@@ -47969,6 +48074,9 @@ type RecordAssignment struct {
 	RoleId     openapi_types.UUID `json:"role_id"`
 	RoleKey    *string            `json:"role_key,omitempty"`
 	RoleLabel  *string            `json:"role_label,omitempty"`
+
+	// RoleLabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	RoleLabelKey *ShippedLabelKey `json:"role_label_key,omitempty"`
 
 	// Source What wrote this assignment.
 	Source *string `json:"source,omitempty"`
@@ -48205,6 +48313,9 @@ type RecordRole struct {
 
 	// Label What readers see.
 	Label string `json:"label"`
+
+	// LabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	LabelKey *ShippedLabelKey `json:"label_key,omitempty"`
 
 	// RecordTypes Which record kinds this role may be held on.
 	RecordTypes []AssignmentRecordType `json:"record_types"`
@@ -49787,6 +49898,9 @@ type ReviewQuestion struct {
 	// Label What the question asks, worded as the reader sees it.
 	Label string `json:"label"`
 
+	// LabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	LabelKey *ShippedLabelKey `json:"label_key,omitempty"`
+
 	// Options Allowed choices, required for multiselect. Frozen alongside the question in each submitted review.
 	Options  *[]string `json:"options,omitempty"`
 	Required bool      `json:"required"`
@@ -51155,6 +51269,9 @@ type SharedForecastView struct {
 
 // SharedForecastViewKind Which promise this view makes. A reader shown a frozen number needs to know it is frozen, and as of when.
 type SharedForecastViewKind string
+
+// ShippedLabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+type ShippedLabelKey = string
 
 // SignInProvider One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen.
 type SignInProvider struct {
@@ -52893,6 +53010,14 @@ type UpdateContactRequest struct {
 	// Address Structured postal address.
 	Address *Address `json:"address,omitempty"`
 
+	// ConvertLeadIds The live leads to convert into this contact, sent after a 409 `lead_holds_email`
+	// named them. The set must equal the leads that hold an email or the LinkedIn profile this edit gives the contact when the
+	// write runs; otherwise the answer is that 409 again. Each lead is then converted
+	// into the contact in the same write, and a conversion the server refuses fails the
+	// whole write. An agent sending this field is refused with 422
+	// `convert_needs_a_human`: an agent converts with `promote_lead`.
+	ConvertLeadIds *[]openapi_types.UUID `json:"convert_lead_ids,omitempty"`
+
 	// Emails REPLACES the contact's addresses with exactly this list, which is what a
 	// correction needs: a bounced address is fixed by sending the set that should
 	// stand, and an append-only field could never remove the one that is dead.
@@ -54053,6 +54178,11 @@ type VCardImportResult struct {
 
 	// Index The card's position in the file, from 0.
 	Index int `json:"index"`
+
+	// LeadId For `skipped`: the live lead that holds the card's address or LinkedIn profile.
+	// Nothing was created; convert the lead instead. Set only when the caller may read
+	// that lead.
+	LeadId *openapi_types.UUID `json:"lead_id,omitempty"`
 
 	// Outcome `created` — nobody matched, so the card became a contact, their company and the edge
 	// between them. `updated` — an exact match: what the card states replaces an older value, which
@@ -58816,13 +58946,16 @@ type GetCompanyHierarchyRollupParamsScope string
 
 // DraftIntroRequestJSONBody defines parameters for DraftIntroRequest.
 type DraftIntroRequestJSONBody struct {
-	// ContactId The contact to be introduced TO. Must be somebody the caller can see on this account; a contact they cannot read is `404`, the same answer a direct read gives.
-	ContactId openapi_types.UUID `json:"contact_id"`
+	// ContactId The contact to be introduced TO. Must be somebody the caller can see on this account; a contact they cannot read is `404`, the same answer a direct read gives. Absent asks for somebody at the account instead.
+	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
 
 	// DealId Which open deal the introduction is for. Absent draws on the account as a whole, which is the honest shape when the rep is opening a conversation rather than moving a transaction.
 	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
 
-	// ViaUserId The colleague being asked. Must hold a recorded route to that contact — asking somebody with no relationship to trade on is a favour they cannot do, and a draft that claims one would be describing a closeness the account's own page does not show.
+	// Function Only with no `contact_id`, and optional there: the function the somebody works in. Must be one of the colleague's `functions` on the reach answer, or it is `422`, because the draft would ask for an introduction the colleague's connections cannot give.
+	Function *LinkedInReachFunction `json:"function,omitempty"`
+
+	// ViaUserId The colleague being asked. Must hold a recorded route to that contact — asking somebody with no relationship to trade on is a favour they cannot do, and a draft that claims one would be describing a closeness the account's own page does not show. With no `contact_id`, must be a colleague with LinkedIn reach into this account, or it is `404`.
 	ViaUserId openapi_types.UUID `json:"via_user_id"`
 }
 
@@ -60176,6 +60309,36 @@ type ListDealsParams struct {
 	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
 	TagMode *ListDealsParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
 
+	// CloseFrom Deals whose close day is on or after this calendar day. The close day is the one the
+	// list's Close column shows and `sort=close_day` orders by: the day a won or lost deal
+	// closed, read in the installation's time zone, or an open deal's expected close date.
+	// A deal with no close day is outside every range. A `close_from` after `close_to` is
+	// `422`.
+	CloseFrom *openapi_types.Date `form:"close_from,omitempty" json:"close_from,omitempty"`
+
+	// CloseTo Deals whose close day is on or before this calendar day (inclusive). See `close_from`.
+	CloseTo *openapi_types.Date `form:"close_to,omitempty" json:"close_to,omitempty"`
+
+	// ValueMin Deals worth at least this much, in minor units of the installation's base currency.
+	// The value is the one `sort=amount_minor` orders by: the deal's amount converted on
+	// today's rate, or the amount frozen at close. A deal with no amount, or one in a currency
+	// with no rate, is outside every range. A role that withholds the amount or the currency
+	// is refused with `422` `field_masked`. A `value_min` above `value_max` is `422`.
+	ValueMin *int64 `form:"value_min,omitempty" json:"value_min,omitempty"`
+
+	// ValueMax Deals worth at most this much (inclusive), in minor units of the base currency. See `value_min`.
+	ValueMax *int64 `form:"value_max,omitempty" json:"value_max,omitempty"`
+
+	// Currency Deals priced in this ISO-4217 currency, in either case. A code that is not three letters is refused with `422` `currency_malformed`. A role that withholds the currency is refused with `422` `field_masked`.
+	Currency *string `form:"currency,omitempty" json:"currency,omitempty"`
+
+	// Country Deals whose company's address is in this ISO-3166 alpha-2 country, in either case. A code
+	// that is not two letters is refused with `422` `country_malformed`. A deal naming no
+	// company, or a company outside the caller's row scope, is not returned. A seat that may
+	// not read companies is refused with `403`, and a role that withholds the deal's company
+	// with `422` `field_masked`.
+	Country *string `form:"country,omitempty" json:"country,omitempty"`
+
 	// SourceSystem Deals that came from this outside system, matched exactly. Send `source_id` too to
 	// find the one deal holding that id there. A deal that is archived without
 	// `include_archived` is simply absent from the page.
@@ -61065,8 +61228,8 @@ type ListLeadsParams struct {
 	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
 	TagMode *ListLeadsParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
 
-	// FromContactId Only the leads worked from this contact (`from_contact_id` on the lead). The contact
-	// page asks it to find the open lead a contact is already worked through.
+	// FromContactId Only older leads that retain this historical contact link. New leads cannot be
+	// created from contacts.
 	FromContactId *openapi_types.UUID `form:"from_contact_id,omitempty" json:"from_contact_id,omitempty"`
 }
 
@@ -68466,6 +68629,14 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "address")
 	}
 
+	if raw, found := object["convert_lead_ids"]; found {
+		err = json.Unmarshal(raw, &a.ConvertLeadIds)
+		if err != nil {
+			return fmt.Errorf("error reading 'convert_lead_ids': %w", err)
+		}
+		delete(object, "convert_lead_ids")
+	}
+
 	if raw, found := object["emails"]; found {
 		err = json.Unmarshal(raw, &a.Emails)
 		if err != nil {
@@ -68593,6 +68764,13 @@ func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 		object["address"], err = json.Marshal(a.Address)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'address': %w", err)
+		}
+	}
+
+	if a.ConvertLeadIds != nil {
+		object["convert_lead_ids"], err = json.Marshal(a.ConvertLeadIds)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'convert_lead_ids': %w", err)
 		}
 	}
 
@@ -74219,6 +74397,14 @@ func (a *UpdateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "address")
 	}
 
+	if raw, found := object["convert_lead_ids"]; found {
+		err = json.Unmarshal(raw, &a.ConvertLeadIds)
+		if err != nil {
+			return fmt.Errorf("error reading 'convert_lead_ids': %w", err)
+		}
+		delete(object, "convert_lead_ids")
+	}
+
 	if raw, found := object["emails"]; found {
 		err = json.Unmarshal(raw, &a.Emails)
 		if err != nil {
@@ -74322,6 +74508,13 @@ func (a UpdateContactRequest) MarshalJSON() ([]byte, error) {
 		object["address"], err = json.Marshal(a.Address)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'address': %w", err)
+		}
+	}
+
+	if a.ConvertLeadIds != nil {
+		object["convert_lead_ids"], err = json.Marshal(a.ConvertLeadIds)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'convert_lead_ids': %w", err)
 		}
 	}
 
@@ -102589,6 +102782,84 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_mode"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_mode", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "close_from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "close_from", r.URL.Query(), &params.CloseFrom, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "close_from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "close_from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "close_to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "close_to", r.URL.Query(), &params.CloseTo, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "close_to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "close_to", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "value_min" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "value_min", r.URL.Query(), &params.ValueMin, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "value_min"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "value_min", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "value_max" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "value_max", r.URL.Query(), &params.ValueMax, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "value_max"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "value_max", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "currency" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "currency", r.URL.Query(), &params.Currency, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "currency"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "currency", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "country" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "country", r.URL.Query(), &params.Country, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "country"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "country", Err: err})
 		}
 		return
 	}

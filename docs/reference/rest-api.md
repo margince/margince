@@ -10,7 +10,7 @@ passport. The operations themselves are in the OpenAPI document; to make a passp
 
 | What | Value |
 |---|---|
-| Base URL | The install's API address with `/v1`. `GET /v1/passports` answers it as `api_base_url`; [configuration.md](configuration.md#public-base-url) says where it comes from. |
+| Base URL | The install's API address with `/v1`. `GET /v1/passports` answers it as `api_base_url`; [configuration.md](programs.md#public-base-url) says where it comes from. |
 | Credential | `Authorization: Bearer mgp_…`, a passport. The web app signs in with the `crm_session` cookie instead. |
 | A bad or revoked passport | `401`. Every call checks the passport again, so a revoke takes effect on the next call. |
 | An operation only a human may call | `403 permission_denied`. These operations are left out of the OpenAPI document. |
@@ -56,6 +56,11 @@ An error answers `application/problem+json` (RFC 7807) with a machine `code` to 
 `detail` is a sentence for a human to read. `details` carries structured context when there is
 some: an `errors` array of `{field, code, message}` on a `422`, or `existing_id` on a duplicate. The
 statuses each operation can answer are listed with its responses in the OpenAPI document.
+
+A path, query or header parameter whose value does not parse, or that is missing, answers
+`422 validation_error`, with `invalid_parameter` as the code of its entry. Every operation that can
+answer this declares the `422`: `backend/internal/compose/paramrefusaldeclared_test.go` sends each
+operation a bad value for each parameter and checks.
 
 ## Safe retries and concurrent edits
 

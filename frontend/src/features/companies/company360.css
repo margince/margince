@@ -638,10 +638,9 @@
 .co-worth-row,
 .co-growth-fit-score {
   display: grid;
-  /* Wide enough for the longest label any of the three draws ("Transformation
-     need"): a label that wraps to two lines takes its row's second line with
-     it, and the answer beside it then starts halfway down a block of empty
-     space. */
+  /* Fixed, so the three line their answers up on one edge. Wide enough for
+     every English label; a longer translation wraps inside it (see the label
+     rules below), and the answer still starts on the label's first line. */
   grid-template-columns: 150px 1fr;
   column-gap: var(--space-5);
   align-items: baseline;
@@ -650,10 +649,11 @@
   margin-block-start: 1.75rem;
 }
 
-/* The type is .t-eyebrow; what belongs to THIS label is that it holds its own
-   line in the grid column beside the prose rather than wrapping into two. */
-.co-brief-section-label {
-  white-space: nowrap;
+/* The type is .t-eyebrow. The label wraps inside its column, because a label
+   kept on one line ran across the answer in any language longer than English. */
+.co-brief-section-label,
+.co-worth-row-label {
+  overflow-wrap: anywhere;
 }
 
 /* The growth fit sits between the brief and the next steps: what this account
@@ -687,13 +687,6 @@
 .co-worth-column > .t-eyebrow {
   display: block;
   margin-bottom: var(--space-2);
-}
-
-/* A labelled answer: the label holds its own column beside the answer rather
-   than sitting as a caption above it, so a column of them reads down — the
-   same shape .co-brief-section uses for the account brief. */
-.co-worth-row-label {
-  white-space: nowrap;
 }
 
 @media (max-width: 640px) {

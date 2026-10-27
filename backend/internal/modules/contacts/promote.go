@@ -68,6 +68,10 @@ type PromoteLeadInput struct {
 	// Nil attaches no precondition, so a REST caller and an agent whose
 	// approval carried no version spell the call the same way.
 	IfVersion *int64
+	// intoCandidate merges the lead into the contact the caller locked, even
+	// when that contact shares only a LinkedIn profile with it. Unexported: only
+	// a door converting the lead it was refused over sets it.
+	intoCandidate bool
 }
 
 // AlreadyPromotedError maps to 409: promotion happened once; the pointer
@@ -306,8 +310,9 @@ func promotableLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLea
 //
 // locked is the contact the caller locked before the lead. A match on any
 // other contact answers promoteTargetMovedError, because locking it now would
-// take the lead's lock before the contact's.
-func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, by string, locked ids.ContactID, lanes ContactCandidate, merged *bool) (ids.ContactID, map[string]any, error) {
+// take the lead's lock before the contact's. intoLocked merges into locked when
+// the ladder names no contact, for a lead that shares only a LinkedIn profile.
+func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, by string, locked ids.ContactID, lanes ContactCandidate, intoLocked bool, merged *bool) (ids.ContactID, map[string]any, error) {
 	candidate, err := s.leadContactCandidate(ctx, tx, lead)
 	if err != nil {
 		return ids.ContactID{}, nil, err
@@ -326,15 +331,16 @@ func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 	if err != nil {
 		return ids.ContactID{}, nil, err
 	}
-	if match.Decision == DecisionExactCollision {
-		if match.ContactID != locked {
-			return ids.ContactID{}, nil, &promoteTargetMovedError{}
-		}
+	if match.Decision == DecisionExactCollision && match.ContactID != locked {
+		return ids.ContactID{}, nil, &promoteTargetMovedError{}
+	}
+	if match.Decision == DecisionExactCollision || (intoLocked && !locked.IsZero()) {
+		match.ContactID = locked
 		// Merging changes the matched contact (the lead's fields land on it) and
 		// returns it, so the probe asks for write authority. A match the
 		// promoter cannot change answers a bare conflict, not the record. One
 		// they cannot see is a colleague's, and answers the held refusal.
-		writable, verr := auth.WritableBy(ctx, tx, "contact", match.ContactID.UUID)
+		writable, verr := auth.WritableBy(ctx, tx, "contact", locked.UUID)
 		if verr != nil {
 			return ids.ContactID{}, nil, verr
 		}
@@ -342,11 +348,15 @@ func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 			return ids.ContactID{}, nil, unwritablePromotionTarget(ctx, tx, match, candidate)
 		}
 		*merged = true
-		mergeFields, merr := s.mergeLeadIntoContact(ctx, tx, lead, match.ContactID, by)
-		return match.ContactID, mergeFields, merr
+		mergeFields, merr := s.mergeLeadIntoContact(ctx, tx, lead, locked, by)
+		return locked, mergeFields, merr
 	}
 
-	id, err := createContact(ctx, tx, match, promotionContactSpec(lead, name, by))
+	spec := promotionContactSpec(lead, name, by)
+	if spec.Acquisition, err = promotionAcquisition(ctx, tx, lead); err != nil {
+		return ids.ContactID{}, nil, err
+	}
+	id, err := createContact(ctx, tx, match, spec)
 	if err != nil {
 		return ids.ContactID{}, nil, err
 	}

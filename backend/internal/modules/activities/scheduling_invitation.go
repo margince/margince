@@ -104,6 +104,24 @@ func guestInvitationView(out crmcontracts.MeetingInvitation) crmcontracts.Meetin
 	return out
 }
 
+// validateInvitee is validateInvitation for a reservation, whose invitee is
+// the request's contact or the lead a public booking landed on.
+func validateInvitee(in crmcontracts.MeetingInvitationRequest, intent invitationIntent) error {
+	if intent.Lead.IsZero() {
+		return validateInvitation(in)
+	}
+	in.ContactId = crmcontracts.Id(intent.Lead.UUID)
+	return validateInvitation(in)
+}
+
+// invitee is the record the meeting is filed on.
+func invitee(in crmcontracts.MeetingInvitationRequest, intent invitationIntent) ActivityLinkInput {
+	if !intent.Lead.IsZero() {
+		return ActivityLinkInput{EntityType: linkEntityLead, EntityID: intent.Lead.UUID}
+	}
+	return ActivityLinkInput{EntityType: linkEntityContact, EntityID: ids.UUID(in.ContactId)}
+}
+
 func validateInvitation(in crmcontracts.MeetingInvitationRequest) error {
 	if err := httperr.RequireBodyID("contact_id", ids.UUID(in.ContactId)); err != nil {
 		return err
@@ -125,15 +143,19 @@ func (s *Store) CreateInvitation(ctx context.Context, in crmcontracts.MeetingInv
 }
 
 func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, in crmcontracts.MeetingInvitationRequest, intent invitationIntent) (crmcontracts.MeetingInvitation, error) {
-	if err := validateInvitation(in); err != nil {
+	if err := validateInvitee(in, intent); err != nil {
 		return crmcontracts.MeetingInvitation{}, err
 	}
 	profile, err := s.validateInvitationTime(ctx, host, in.Start, in.End)
 	if err != nil {
 		return crmcontracts.MeetingInvitation{}, err
 	}
-	if err := s.calendar.CheckRecipient(ctx, host, ids.UUID(in.ContactId), string(in.AttendeeEmail)); err != nil {
-		return crmcontracts.MeetingInvitation{}, err
+	// A lead booker was found by this very address on this request, and the
+	// provider save checks the lead again (compose schedulingCalendar.Save).
+	if intent.Lead.IsZero() {
+		if err := s.calendar.CheckRecipient(ctx, host, ids.UUID(in.ContactId), string(in.AttendeeEmail)); err != nil {
+			return crmcontracts.MeetingInvitation{}, err
+		}
 	}
 	token, hash, err := invitationToken()
 	if err != nil {
@@ -145,6 +167,7 @@ func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, 
 	}
 	row := invitationRow{PublicIntent: intent.Public, ManagementRef: ref, Host: host, Provider: string(profile.Provider), Calendar: profile.CalendarId, ReminderStatus: "off", Status: invitationPending, Version: 1, Command: "create"}
 	row.Appointment = invitationAppointment(profile, in)
+	row.Appointment.LeadID = intent.Lead.UUID
 	if intent.DescriptionFromBooker {
 		row.Appointment.Description = ""
 	}
@@ -153,7 +176,7 @@ func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, 
 	}
 	actor, _ := principal.Actor(ctx)
 	row.Appointment.PassportID = actor.PassportID
-	err = s.insertInvitation(ctx, &row, in, intent.ProposalID, profile.BufferMinutes, hash)
+	err = s.insertInvitation(ctx, &row, in, intent, profile.BufferMinutes, hash)
 	if err != nil {
 		err = errors.Join(err, s.deleteMeetingLink(ctx, ref))
 	}
@@ -234,8 +257,8 @@ func invitationSource(ctx context.Context) string {
 	return sourceManual
 }
 
-func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crmcontracts.MeetingInvitationRequest, proposalID ids.UUID, buffer int, hash string) error {
-	host := row.Host
+func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crmcontracts.MeetingInvitationRequest, intent invitationIntent, buffer int, hash string) error {
+	host, proposalID := row.Host, intent.ProposalID
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		if proposalID != ids.Nil {
 			if err := s.lockOpenProposal(ctx, tx, proposalID); err != nil {
@@ -255,12 +278,19 @@ func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crm
 		activity, _, err := s.LogActivityTx(ctx, tx, LogActivityInput{
 			Kind: KindMeeting, Subject: &in.Subject, Body: &in.Description,
 			OccurredAt: &in.Start, DurationSeconds: &seconds, HostUserID: &host, ClaimsHostSlot: true,
-			Links: []ActivityLinkInput{{EntityType: linkEntityContact, EntityID: ids.UUID(in.ContactId)}}, Source: invitationSource(ctx),
+			Links: []ActivityLinkInput{invitee(in, intent)}, Source: invitationSource(ctx),
 		})
 		if err != nil {
 			return err
 		}
 		row.ID = ids.UUID(activity.Id)
+		if !intent.Lead.IsZero() {
+			if s.leadQualifyTasks != nil {
+				if err := s.leadQualifyTasks.FileLeadBookingTx(ctx, tx, intent.Lead, row.ID); err != nil {
+					return err
+				}
+			}
+		}
 		row.Appointment.RequestID = row.ID.String()
 		args := schedulingArgs{}
 		values := []string{args.add(row.ID), args.add(host), args.add(row.Provider), args.add(row.Calendar), args.add(row.Appointment), args.add(row.Status), args.add(hash), args.add(row.ManagementRef), args.add(s.now()), args.add(row.ReminderStatus), args.add(row.PublicIntent), args.add(s.now())}

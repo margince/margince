@@ -12,9 +12,11 @@ import {
 import { useClipboardCopy } from "../../../design-system/clipboardcopy";
 import { ErrorLine } from "../../../design-system/errorline";
 import { Heading } from "../../../design-system/heading";
+import { Select } from "../../../design-system/select";
 import { ProvenanceTag } from "../../../design-system/trust";
-import { useT } from "../../../i18n";
+import { useLocale, useT } from "../../../i18n";
 import { throwProblem } from "../../../lib/problem";
+import { reachFunctionCount } from "../reachfunction";
 import "./companycontacts.css";
 
 // Asking a colleague for the introduction.
@@ -34,6 +36,20 @@ export type IntroTarget = Readonly<{
   viaName: string;
 }>;
 
+// An ask for somebody at the account, from the reach card. It names no
+// contact: the colleague's connections there never agreed to appear here.
+export type AccountIntroTarget = Readonly<{
+  viaUserId: string;
+  viaName: string;
+  companyName: string;
+  functions: readonly ReachFunctionCount[];
+}>;
+
+type ReachFunctionCount = components["schemas"]["LinkedInReachFunctionCount"];
+type ReachFunction = components["schemas"]["LinkedInReachFunction"];
+
+const ANY_FUNCTION = "";
+
 /**
  * IntroRequestModal drafts the ask and lets the reader take it away.
  *
@@ -49,12 +65,16 @@ export function IntroRequestModal({
   onClose,
 }: Readonly<{
   companyId: string;
-  target: IntroTarget | null;
+  target: IntroTarget | AccountIntroTarget | null;
   dealId?: string | null;
   onClose: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const titleId = useId();
+  const [function_, setFunction] = useState<
+    ReachFunction | typeof ANY_FUNCTION
+  >(ANY_FUNCTION);
   // The reader's edits, held apart from the draft so a re-draft does not
   // silently discard them and an untouched field still follows the model.
   const [edited, setEdited] = useState<{
@@ -63,16 +83,24 @@ export function IntroRequestModal({
   } | null>(null);
 
   const draft = useMutation({
-    mutationFn: async (ask: IntroTarget): Promise<Draft> => {
+    mutationFn: async (
+      ask: IntroTarget | AccountIntroTarget,
+    ): Promise<Draft> => {
       const { data, error } = await api.POST(
         "/companies/{id}/intro-request-draft",
         {
           params: { path: { id: companyId } },
-          body: {
-            contact_id: ask.contactId,
-            via_user_id: ask.viaUserId,
-            ...(dealId ? { deal_id: dealId } : {}),
-          },
+          body:
+            "contactId" in ask
+              ? {
+                  contact_id: ask.contactId,
+                  via_user_id: ask.viaUserId,
+                  ...(dealId ? { deal_id: dealId } : {}),
+                }
+              : {
+                  via_user_id: ask.viaUserId,
+                  ...(function_ ? { function: function_ } : {}),
+                },
         },
       );
       if (error || !data) {
@@ -120,13 +148,44 @@ export function IntroRequestModal({
       </Heading>
       {target && (
         <p className="t-caption cp-intro-who">
-          {t("co.intro.who", {
-            colleague: target.viaName,
-            contact: target.contactName,
-          })}
+          {"contactId" in target
+            ? t("co.intro.who", {
+                colleague: target.viaName,
+                contact: target.contactName,
+              })
+            : t("co.intro.whoAccount", {
+                colleague: target.viaName,
+                company: target.companyName,
+              })}
         </p>
       )}
       <div className="form-stack">
+        {!written &&
+          target &&
+          !("contactId" in target) &&
+          target.functions.length > 0 && (
+            <Field label={t("co.intro.function")}>
+              {(control) => (
+                <Select
+                  {...control}
+                  value={function_}
+                  onChange={(value) =>
+                    setFunction(
+                      target.functions.find((held) => held.function === value)
+                        ?.function ?? ANY_FUNCTION,
+                    )
+                  }
+                  options={[
+                    { value: ANY_FUNCTION, label: t("co.intro.functionAny") },
+                    ...target.functions.map((held) => ({
+                      value: held.function,
+                      label: reachFunctionCount(t, locale, held),
+                    })),
+                  ]}
+                />
+              )}
+            </Field>
+          )}
         {!written && (
           <div>
             <Button

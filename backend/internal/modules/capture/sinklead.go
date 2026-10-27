@@ -69,6 +69,19 @@ func (s *Sink) captureLead(ctx context.Context, tx pgx.Tx, rec connector.Normali
 			}
 			return datasource.EntityRef{}, nil, nil, err
 		}
+		// Somebody who is already a contact is not made a lead as well. The
+		// contact is the answer, and its owner is told after the commit. Only a
+		// caller who may create the lead is given that answer.
+		if err := auth.Require(ctx, "lead", principal.ActionCreate); err != nil {
+			return datasource.EntityRef{}, nil, nil, err
+		}
+		holders, err := storekit.LockIdentityHolders(ctx, tx, storekit.IdentityKeys{Emails: []string{fields.Email}})
+		if err != nil {
+			return datasource.EntityRef{}, nil, nil, err
+		}
+		if len(holders.Contacts) > 0 {
+			return datasource.EntityRef{Type: datasource.EntityContact, ID: holders.Contacts[0].UUID}, nil, nil, nil
+		}
 		existing, captured, err := s.findLeadCollision(ctx, tx, rec, fields)
 		if err != nil {
 			return datasource.EntityRef{}, nil, nil, err

@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -29,6 +30,15 @@ import (
 // hand-off through the holding fence — and re-taking it here would be the
 // ordering the eraser deadlocks against.
 func insertSocialHandle(ctx context.Context, tx pgx.Tx, contactID ids.UUID, platform, handle string) (ids.UUID, bool, error) {
+	if platform == SocialLinkedIn {
+		holders, err := storekit.LockIdentityHolders(ctx, tx, storekit.IdentityKeys{LinkedInURLs: []string{handle}})
+		if err != nil {
+			return ids.UUID{}, false, err
+		}
+		if len(holders.Leads) > 0 {
+			return ids.UUID{}, false, nil
+		}
+	}
 	var rowID ids.UUID
 	err := tx.QueryRow(ctx, `
 		INSERT INTO contact_social (contact_id, platform, handle)
