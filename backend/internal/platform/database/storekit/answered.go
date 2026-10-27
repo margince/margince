@@ -39,25 +39,29 @@ func answerLater(row, inbound, until string) string {
 
 // Off-thread mail must be attested and name the sender; Bcc never proves delivery.
 // Sender-first lateral probes preserve bounded index plans.
-// Predicates must retain idx_activity_answer_mail and idx_activity_answer_touch conditions.
+// Predicates must retain idx_activity_answer_mail_subject and idx_activity_answer_touch conditions.
 func offThreadAnswerArms(inbound, until string) []answerArm {
 	later := func(row string) string { return answerLater(row, inbound, until) }
 	everyoneReads := func(row string) string {
 		return row + `.restricted_at IS NULL` + auth.AudienceWorkspaceOnly(row)
 	}
+	sameSubject := NormalisedSubjectSQL(inbound+".subject") + ` <> ''
+	    AND ` + NormalisedSubjectSQL("answer_mail.subject") + ` = ` + NormalisedSubjectSQL(inbound+".subject")
 	ourMail := `answer_mail.kind = ` + inbound + `.kind
 	    AND answer_mail.channel_provider IS NOT DISTINCT FROM ` + inbound + `.channel_provider
 	    AND answer_mail.direction = 'outbound'
 	    AND answer_mail.counterparty_outbound_attested
 	    AND ` + everyoneReads("answer_mail") + `
 	    AND ` + later("answer_mail") + `
-	    AND ` + NormalisedSubjectSQL(inbound+".subject") + ` <> ''
-	    AND ` + NormalisedSubjectSQL("answer_mail.subject") + ` = ` + NormalisedSubjectSQL(inbound+".subject")
+	    AND ` + sameSubject
+	// The subject is matched inside the address probe, where
+	// idx_activity_answer_mail_subject takes it as a key column.
 	ourMailIndexed := `answer_mail.kind = ` + inbound + `.kind
 	       AND answer_mail.direction = 'outbound'
 	       AND answer_mail.counterparty_outbound_attested
 	       AND ` + everyoneReads("answer_mail") + `
-	       AND ` + later("answer_mail")
+	       AND ` + later("answer_mail") + `
+	       AND ` + sameSubject
 	asker := `answer_asker.activity_id = ` + inbound + `.id AND answer_asker.role = 'from'`
 	senderAddresses := `CROSS JOIN LATERAL (
 	    SELECT lower(btrim(answer_asker.address)) AS address
