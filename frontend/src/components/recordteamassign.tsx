@@ -116,8 +116,8 @@ export function RecordTeamAssign({
   // as a new search space and clears what it is showing, so anything that
   // changes while the reader types would empty the list under them.
   const searchTargets = useCallback(
-    (q: string) => searchSubjects(subjectKind, q),
-    [subjectKind],
+    (q: string) => searchSubjects(subjectKind, q, t("assignments.invited")),
+    [subjectKind, t],
   );
 
   function close() {
@@ -190,6 +190,11 @@ export function RecordTeamAssign({
                 : t("assignments.findColleague")
             }
             searchTargets={searchTargets}
+            noMatch={
+              subjectKind === "user"
+                ? t("assignments.noColleagueFound")
+                : undefined
+            }
             selected={subject}
             onPick={setSubject}
             disabled={write.isPending}
@@ -234,31 +239,29 @@ const ROSTER_PAGE = 200;
 /**
  * Colleagues and teams, as pickable candidates.
  *
- * The colleague roster is searched SERVER-side (`q` matches display name and
- * email), because it is the list that grows: narrowing one page here would
- * leave somebody past the page boundary unassignable however precisely their
- * name was typed. Teams have no search parameter and are an administered
- * vocabulary of a few rows, so that one page is matched here.
+ * Both rosters are searched on the server, which folds diacritics on both
+ * sides. Narrowing one page here would leave somebody past the page boundary
+ * unassignable however precisely their name was typed.
  */
 async function searchSubjects(
   kind: AssignmentSubjectKind,
   q: string,
+  invitedDetail: string,
 ): Promise<RecordPickerCandidate[]> {
-  const term = q.trim();
+  const term = q.trim() || undefined;
   if (kind === "team") {
     const { data, error, response } = await api.GET("/teams", {
-      params: { query: { limit: ROSTER_PAGE } },
+      params: { query: { q: term, limit: ROSTER_PAGE } },
     });
     if (error || !response.ok) {
       throwProblem(error);
     }
-    const needle = term.toLowerCase();
-    return data.data
-      .map((team) => ({ id: team.id, name: team.name }))
-      .filter((team) => team.name.toLowerCase().includes(needle));
+    return data.data.map((team) => ({ id: team.id, name: team.name }));
   }
   const { data, error, response } = await api.GET("/users", {
-    params: { query: { q: term || undefined, limit: ROSTER_PAGE } },
+    params: {
+      query: { q: term, limit: ROSTER_PAGE, include_invited: true },
+    },
   });
   if (error || !response.ok) {
     throwProblem(error);
@@ -278,6 +281,10 @@ async function searchSubjects(
           user.status !== "suspended" &&
           user.status !== "deactivated",
       )
-      .map((user) => ({ id: user.id, name: user.display_name }))
+      .map((user) => ({
+        id: user.id,
+        name: user.display_name,
+        detail: user.status === "invited" ? invitedDetail : undefined,
+      }))
   );
 }

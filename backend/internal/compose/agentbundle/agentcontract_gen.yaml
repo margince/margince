@@ -6310,20 +6310,18 @@ paths:
         - name: q
           in: query
           schema: {type: string}
-          description: Case-insensitive match over display_name/email.
+          description: Case-insensitive match over display_name/email that ignores diacritics on both sides.
         - name: include_inactive
           in: query
           schema: {type: boolean, default: false}
           description: Admin management view — include deactivated/suspended members. Honored only for an admin caller.
         - name: include_invited
           in: query
-          deprecated: true
           schema: {type: boolean, default: false}
           description: |-
-            Also list invited seats — members who have not signed in yet. Naming the colleagues a record
-            already points at is `GET /users/names`, which answers id and display name alone; a roster row
-            carries the member's email and seat status with it.
-            Pickers leave it off, so nobody is offered work they cannot open.
+            Also list invited seats — members who have not signed in yet. Each row's `status` says so.
+            A picker that may hand an invited colleague work, such as a record responsibility, asks for them.
+            Naming the colleagues a record already points at is `GET /users/names`.
       responses:
         '200':
           description: A page of workspace members.
@@ -6435,7 +6433,7 @@ paths:
         - name: q
           in: query
           schema: {type: string}
-          description: Case-insensitive match over team name.
+          description: Case-insensitive match over team name that ignores diacritics on both sides.
       responses:
         '200':
           description: A page of teams.
