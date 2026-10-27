@@ -135,7 +135,8 @@ async function expectRefusedDialNamed(
   const canvas = within(canvasElement);
   await expect(
     await canvas.findByText(
-      `Your role cannot narrow deals by ${withheld.chip}. Remove that filter to see the list.`,
+      `Your role cannot narrow deals by ${withheld.chip}.`,
+      { exact: false },
     ),
   ).toBeTruthy();
   await expect(

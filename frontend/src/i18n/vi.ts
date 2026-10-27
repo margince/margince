@@ -4594,6 +4594,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.segregationDismiss": "Ẩn thông báo này",
   "list.emptyMine": "Bạn không chịu trách nhiệm {unit} nào.",
   "list.showAll": "Hiển thị tất cả",
+  "list.filterRefusedRemove": "Bỏ lọc theo {dial}",
   "lead.assignedAway":
     "{names} đã được giao cho {owner}. Không còn trong “Của tôi”.",
   "lead.viewNew": "Mới",
@@ -4967,8 +4968,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.filterCurrencyAll": "Mọi loại tiền",
   "deals.filterCountry": "Quốc gia",
   "deals.filterCountryAll": "Mọi quốc gia",
-  "deals.filterRefused":
-    "Vai trò hiện tại không lọc được deal theo {dial}. Bỏ bộ lọc này để xem danh sách.",
+  "deals.filterRefused": "Vai trò hiện tại không lọc được deal theo {dial}.",
   "deals.rangeFrom": "Từ {value}",
   "deals.rangeTo": "Đến {value}",
   "deals.valueAtLeast": "Tối thiểu ({currency})",
@@ -16784,7 +16784,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.filterCompanySizeAll": "Mọi quy mô công ty",
   "lead.filterIndustryAll": "Mọi ngành",
   "lead.filterRefused": "Vai trò hiện tại không lọc được lead theo {dial}.",
-  "lead.filterRefusedRemove": "Bỏ lọc theo {dial}",
   "lead.timeline.received": "{at} · đã nhận",
   "lead.timeline.weReplied": "Bạn đã trả lời",
   "lead.timeline.repliedIn": "{at} · sau {span}",

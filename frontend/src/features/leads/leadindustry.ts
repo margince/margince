@@ -5,7 +5,8 @@ import type { components } from "../../api/schema";
 
 type Lead = components["schemas"]["Lead"];
 
-/** The declared mirror of the server's `leadIndustrySQL` (contacts/leadcompanyfacts.go). */
+// The rule the server's `leadIndustrySQL` applies to the industry filter: the
+// linked company's industry when it has one, else the lead's own.
 export function leadIndustry(
   lead: Lead,
 ): Readonly<{ code: string; from: "company" | "lead" }> | null {

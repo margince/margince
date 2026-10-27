@@ -4715,6 +4715,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.segregationDismiss": "Hinweis ausblenden",
   "list.emptyMine": "Keine {unit}, für die du verantwortlich bist.",
   "list.showAll": "Alle anzeigen",
+  "list.filterRefusedRemove": "{dial} entfernen",
   "lead.assignedAway":
     "{names} an {owner} zugewiesen. Nicht mehr unter „Meine“.",
   "lead.viewNew": "Neu",
@@ -5096,8 +5097,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.filterCurrencyAll": "Jede Währung",
   "deals.filterCountry": "Land",
   "deals.filterCountryAll": "Jedes Land",
-  "deals.filterRefused":
-    "Deine Rolle kann Deals nicht nach {dial} eingrenzen. Entferne diesen Filter, um die Liste zu sehen.",
+  "deals.filterRefused": "Deine Rolle kann Deals nicht nach {dial} eingrenzen.",
   "deals.rangeFrom": "Ab {value}",
   "deals.rangeTo": "Bis {value}",
   "deals.valueAtLeast": "Mindestens ({currency})",
@@ -17250,7 +17250,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.filterCompanySizeAll": "Jede Unternehmensgröße",
   "lead.filterIndustryAll": "Jede Branche",
   "lead.filterRefused": "Deine Rolle kann Leads nicht nach {dial} eingrenzen.",
-  "lead.filterRefusedRemove": "{dial} entfernen",
   "lead.timeline.received": "{at} · eingegangen",
   "lead.timeline.weReplied": "Du hast geantwortet",
   "lead.timeline.repliedIn": "{at} · in {span}",

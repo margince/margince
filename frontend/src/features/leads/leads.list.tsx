@@ -21,6 +21,7 @@ import {
   standardViews,
   useOwnerTagChips,
 } from "../../components/recordlist";
+import { RefusedFiltersNote } from "../../components/refusedfiltersnote";
 import { SegmentedControl } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { QueryGate } from "../../design-system/querystates";
@@ -35,7 +36,6 @@ import {
 } from "../../lib/leadorigins";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
-import { heldRefusedDials } from "../../lib/refusedfilters";
 import { useMe } from "../../lib/session";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
 import { listQueryParams } from "../../lib/tagfilter";
@@ -47,7 +47,8 @@ import { LEAD_STATUS_FILTER_OPTIONS, LeadBoard } from "./leadpresentation";
 import { leadColumns } from "./leads.columns";
 import {
   leadCompanyChips,
-  RefusedDialsNote,
+  namedRefusedDials,
+  refusedDialNames,
   useRefusalOf,
   useWithheldLeadDials,
 } from "./leads.companydials";
@@ -75,11 +76,6 @@ const LEAD_SLA_STATES = [
   { value: "at_risk", label: "lead.sla.atRisk" },
   { value: "within_target", label: "lead.sla.withinTarget" },
 ] as const;
-
-const NO_LEADS: ListPage<Lead> = {
-  data: [],
-  page: { next_cursor: null, has_more: false, total: 0 },
-};
 
 export async function fetchLeadsPage(
   query: ListQuery,
@@ -178,11 +174,9 @@ function LeadsWorkbench({
     key: "leads",
     initialSort: "",
     initialFilters: opensOnAll ? {} : { owner_id: viewerId },
-    // A withheld dial in the address would be refused, so its list is not asked for.
-    fetchPage: (query, cursor) =>
-      heldRefusedDials(query.filters, withheld).length > 0
-        ? Promise.resolve(NO_LEADS)
-        : fetchLeadsPage(query, cursor),
+    fetchPage: fetchLeadsPage,
+    // A refused dial the list can name is not asked for; it is named instead.
+    enabled: (query) => namedRefusedDials(query, withheld).length === 0,
     // Board or table is this screen's own, so the codec must not read it as a
     // lead filter: unheld it was spread onto `GET /leads?view=board`, counted
     // as a narrowing, and cleared by "clear filters" — which flipped the board
@@ -246,7 +240,13 @@ function LeadsWorkbench({
         title={pageName}
         emptyNote={
           refused.length > 0 ? (
-            <RefusedDialsNote dials={refused} setQuery={state.setQuery} />
+            <RefusedFiltersNote
+              message={t("lead.filterRefused", {
+                dial: refusedDialNames(refused, t),
+              })}
+              dials={refused}
+              names={refusedDialNames(refused, t)}
+            />
           ) : (
             mineEmptyNote({ t, state, viewerId, unit: "unit.leads" })
           )

@@ -236,9 +236,11 @@
    * min-width that fights an inline-flex pill — reset all four before the
    * row's own look applies. */
   min-width: 0;
+  max-inline-size: 100%;
   margin: 0;
   padding: 0;
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: stretch;
   /* Four segments read as ONE control, so the row stands at the control height
    * every other pill on this line stands at. A floor rather than a height: a
@@ -300,32 +302,29 @@
 }
 /* Only the value gives way on a short line, wrapping at its spaces, so the "⋮"
  * stays on the row; a single word wider than the row is the one thing cut. */
-.lt-frow {
-  max-inline-size: 100%;
-  flex-wrap: wrap;
-}
 .lt-frow > * {
   flex: none;
 }
 .lt-frow > .lt-menu-wrap:has(> .lt-frow-value) {
   flex: 1 1 0;
-  max-inline-size: calc(100% - var(--space-6));
-  margin-inline-end: var(--space-6);
+  max-inline-size: calc(100% - var(--controlHeight));
+  margin-inline-end: var(--controlHeight);
 }
 /* Drawn over the value's end margin, so a line too short for both moves the
  * value down with its "⋮" rather than leaving the "⋮" on a line of its own. */
 .lt-frow > .lt-menu-wrap:has(> .lt-frow-more) {
-  margin-inline-start: calc(-1 * var(--space-6));
+  margin-inline-start: calc(-1 * var(--controlHeight));
 }
 .lt-frow-seg.lt-frow-value {
-  display: block;
-  align-content: center;
   min-inline-size: 0;
   padding-block: var(--space-1);
+  text-align: start;
+}
+.lt-frow-valuetext {
+  min-inline-size: 0;
   overflow: hidden;
   white-space: normal;
   overflow-wrap: normal;
-  text-align: start;
   text-overflow: ellipsis;
 }
 .lt-frow-word {
@@ -352,9 +351,9 @@
   min-inline-size: var(--space-6);
   min-block-size: var(--space-6);
   padding: 0;
-  /* A set width, not a square: the value's end margin reserves exactly this
-   * much, and a row a wrapped value made taller must not widen the "⋮". */
-  inline-size: var(--space-6);
+  /* The one-line row's square, and the width the value's end margin reserves;
+   * a row a wrapped value made taller must not widen the "⋮". */
+  inline-size: var(--controlHeight);
   border: 0;
   border-left: 1px solid var(--borderSubtle);
   background: transparent;

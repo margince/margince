@@ -382,14 +382,50 @@ describe("DealsScreen range dials the reader cannot use", () => {
       </SignedIn>,
     );
     expect(
-      await screen.findByText(
-        "Your role cannot narrow deals by Country. Remove that filter to see the list.",
-      ),
+      await screen.findByText("Your role cannot narrow deals by Country.", {
+        exact: false,
+      }),
     ).toBeTruthy();
-    expect(urls.filter((url) => new URL(url).pathname === "/v1/deals")).toEqual(
-      [],
-    );
+    const dealLists = () =>
+      urls.filter((url) => new URL(url).pathname === "/v1/deals");
+    expect(dealLists()).toEqual([]);
     expect(screen.queryByText("Fleet retrofit")).toBeNull();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Remove Country" }),
+    );
+    expect(await screen.findByText("Fleet retrofit")).toBeTruthy();
+    expect(dealLists().length).toBeGreaterThan(0);
+    expect(dealLists().some((url) => url.includes("country="))).toBe(false);
+  });
+
+  it("leaves a refused dial no chip names to the list's own refusal", async () => {
+    window.location.hash = "#/deals?view=table&owner_team_id=t-9";
+    vi.stubGlobal(
+      "fetch",
+      backend({
+        baseCurrency: "EUR",
+        refused: ["owner_team_id"],
+        urls: [],
+        answerDeals: (url) =>
+          url.includes("owner_team_id=t-9")
+            ? Promise.resolve(
+                jsonResponse({ status: 403, title: "Forbidden" }, 403),
+              )
+            : undefined,
+      }),
+    );
+    render(
+      <SignedIn>
+        <DealsScreen />
+      </SignedIn>,
+    );
+    expect(
+      await screen.findByText("Could not load this view. Reload the page."),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText("Your role cannot narrow deals by", { exact: false }),
+    ).toBeNull();
   });
 
   // The role's refusal is known before any deal loads, so the menu never
@@ -474,9 +510,9 @@ describe("DealsScreen range dials the reader cannot use", () => {
       </SignedIn>,
     );
     expect(
-      await screen.findByText(
-        "Your role cannot narrow deals by Value. Remove that filter to see the list.",
-      ),
+      await screen.findByText("Your role cannot narrow deals by Value.", {
+        exact: false,
+      }),
     ).toBeTruthy();
     expect(screen.queryByText("Something went wrong.")).toBeNull();
     await waitFor(() =>

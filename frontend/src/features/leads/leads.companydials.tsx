@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type Dispatch, type SetStateAction, useMemo } from "react";
+import { useMemo } from "react";
 import {
   formatSizeBand,
   SIZE_BAND_OPTIONS,
 } from "../../components/companylookups";
 import type { ListQuery, ListState } from "../../components/listquery";
-import { Button } from "../../design-system/atoms";
 import type { ListChip } from "../../design-system/listsurface";
 import { countryOptions } from "../../format/assignedcountries";
 import { industryOptions } from "../../format/industry";
-import { type Locale, type Translator, useT } from "../../i18n";
+import type { Locale, Translator } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { problemStatus } from "../../lib/problem";
 import { heldRefusedDials, useReReadMeWhen } from "../../lib/refusedfilters";
 import { useMe } from "../../lib/session";
@@ -21,17 +21,23 @@ import { useMe } from "../../lib/session";
 
 const COMPANY_DIALS = ["industry", "country", "size_band"] as const;
 
-export type CompanyDial = (typeof COMPANY_DIALS)[number];
+type CompanyDial = (typeof COMPANY_DIALS)[number];
+
+// The words a lead dial is named by. A refused dial missing here is sent as it
+// is, so the list's own refusal says what happened.
+const DIAL_NAMES: Readonly<Record<CompanyDial | "list_id", MessageKey>> = {
+  industry: "create.industry",
+  country: "deals.filterCountry",
+  size_band: "lead.companySize",
+  list_id: "lists.record.title",
+};
+
+function dialNameKey(dial: string): MessageKey | undefined {
+  return Object.entries(DIAL_NAMES).find(([known]) => known === dial)?.[1];
+}
 
 function dialLabel(dial: CompanyDial, t: Translator): string {
-  switch (dial) {
-    case "industry":
-      return t("create.industry");
-    case "country":
-      return t("deals.filterCountry");
-    case "size_band":
-      return t("lead.companySize");
-  }
+  return t(DIAL_NAMES[dial]);
 }
 
 export function useWithheldLeadDials(): ReadonlySet<string> {
@@ -74,19 +80,25 @@ export function leadCompanyChips(
   );
 }
 
-function refusedDialLabel(dial: string, t: Translator): string {
-  if (dial === "list_id") {
-    return t("lists.record.title");
-  }
-  const company = COMPANY_DIALS.find((known) => known === dial);
-  return company ? dialLabel(company, t) : dial;
+export function namedRefusedDials(
+  query: ListQuery,
+  withheld: ReadonlySet<string>,
+): string[] {
+  return heldRefusedDials(query.filters, withheld).filter(
+    (dial) => dialNameKey(dial) !== undefined,
+  );
 }
 
 export function refusedDialNames(
   dials: readonly string[],
   t: Translator,
 ): string {
-  return dials.map((dial) => refusedDialLabel(dial, t)).join(", ");
+  return dials
+    .flatMap((dial) => {
+      const key = dialNameKey(dial);
+      return key ? [t(key)] : [];
+    })
+    .join(", ");
 }
 
 // A 403 names no dial, so it only re-reads /me; the dials /me then refuses are
@@ -95,7 +107,7 @@ export function useRefusalOf<Row>(
   listQuery: ListState<Row>,
   withheld: ReadonlySet<string>,
 ): { refused: string[]; state: ListState<Row> } {
-  const refused = heldRefusedDials(listQuery.query.filters, withheld);
+  const refused = namedRefusedDials(listQuery.query, withheld);
   useReReadMeWhen(
     refused.length === 0 &&
       listQuery.isError &&
@@ -103,37 +115,14 @@ export function useRefusalOf<Row>(
   );
   const state =
     refused.length > 0
-      ? { ...listQuery, rows: [], isError: false, hasMore: false, total: 0 }
+      ? {
+          ...listQuery,
+          rows: [],
+          isPending: false,
+          isError: false,
+          hasMore: false,
+          total: 0,
+        }
       : listQuery;
   return { refused, state };
-}
-
-export function RefusedDialsNote({
-  dials,
-  setQuery,
-}: Readonly<{
-  dials: readonly string[];
-  setQuery: Dispatch<SetStateAction<ListQuery>>;
-}>) {
-  const t = useT();
-  const dial = refusedDialNames(dials, t);
-  return (
-    <span>
-      {t("lead.filterRefused", { dial })}{" "}
-      <Button
-        onClick={() =>
-          setQuery((query) => ({
-            ...query,
-            filters: Object.fromEntries(
-              Object.entries(query.filters).filter(
-                ([key]) => !dials.some((dial) => dial === key),
-              ),
-            ),
-          }))
-        }
-      >
-        {t("lead.filterRefusedRemove", { dial })}
-      </Button>
-    </span>
-  );
 }

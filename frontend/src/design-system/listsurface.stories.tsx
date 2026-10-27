@@ -215,7 +215,7 @@ export const LongAppliedFilterPhone: Story = {
     for (const row of rows) {
       const tools = row.closest(".lt-tools");
       const menu = row.querySelector(".lt-frow-more");
-      const value = row.querySelector(".lt-frow-value");
+      const value = row.querySelector(".lt-frow-valuetext");
       if (
         !(tools instanceof HTMLElement) ||
         !(menu instanceof HTMLElement) ||
@@ -228,6 +228,47 @@ export const LongAppliedFilterPhone: Story = {
       await expect(box.left).toBeGreaterThanOrEqual(edge.left);
       await expect(box.right).toBeLessThanOrEqual(edge.right);
       await expect(value.scrollWidth).toBeLessThanOrEqual(value.clientWidth);
+    }
+  },
+};
+
+// The same filters on a desktop line: each stays one line at the control height.
+export const LongAppliedFilterWide: Story = {
+  name: "Long applied filter, wide",
+  parameters: {
+    viewport: {
+      options: {
+        wide: { name: "Wide", styles: { width: "1440px", height: "900px" } },
+      },
+    },
+  },
+  globals: { viewport: { value: "wide" } },
+  tags: ["uat-wide"],
+  render: () => (
+    <ListSurface
+      title="Leads"
+      chips={LONG_CHIPS}
+      chosen={{
+        size_band: "1001-5000",
+        industry: "legal_professional_services",
+      }}
+      onChipChange={() => undefined}
+    >
+      <p>Zeilen</p>
+    </ListSurface>
+  ),
+  play: async ({ canvasElement }) => {
+    const rows = await within(canvasElement).findAllByRole("group", {
+      name: /^(Unternehmensgröße|Branche): /,
+    });
+    await expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      const name = row.querySelector(".lt-frow-attr");
+      if (!(name instanceof HTMLElement)) {
+        throw new Error("the applied filter drew no name segment");
+      }
+      const floor = Number.parseFloat(getComputedStyle(name).minBlockSize);
+      await expect(name.getBoundingClientRect().height).toBe(floor);
     }
   },
 };

@@ -8,7 +8,6 @@ import {
   type ObjectCustomFields,
   useObjectCustomFields,
 } from "../../components/customfields.form";
-import { useAppliedCompanyName } from "../../components/dealdials";
 import {
   type ListState,
   ListTable,
@@ -16,6 +15,7 @@ import {
 } from "../../components/listquery";
 import { useOwnerChips } from "../../components/ownerdials";
 import { mineEmptyNote, standardViews } from "../../components/recordlist";
+import { RefusedFiltersNote } from "../../components/refusedfiltersnote";
 import { ErrorLine } from "../../design-system/errorline";
 import { currencyOptions } from "../../format/currencychoices";
 import { formatNumber } from "../../format/format";
@@ -48,7 +48,6 @@ import {
   ConfirmAdvanceModal,
   type PendingAdvance,
 } from "./deal360/confirmadvance";
-import { dealSurfaceChips } from "./deal360/dealfilterchips";
 import {
   dealProjectFields,
   resolveDealProject,
@@ -64,13 +63,11 @@ import { dealColumns } from "./deals.columns";
 import { partnerFields, usePartnerOptions } from "./deals.fields";
 import {
   DealViewTools,
-  dealFilterChips,
   dealRowSelection,
-  refusedDealLabel,
   savableDealQuery,
+  useDealChips,
   useDealScreenDials,
 } from "./deals.listtools";
-import { dealRangeChips } from "./deals.rangefilters";
 import { mapDealCreate } from "./deals.write";
 
 // The create form, with the one question it has to ask the server: which
@@ -228,19 +225,46 @@ export function DealsScreen({
     setView,
     refusedDials,
   } = useDealScreenDials({ pipelines: pipelinesQuery.data });
-  // A refused dial in the address is named, and no wider list is asked for.
-  const dealsQuery = useDeals(dealFilters, refusedDials.length === 0);
+  const stages = effectivePipeline?.stages ?? [];
+  // The board names its cards' companies from this page, and a reader without
+  // company.read is refused it.
+  const readsCompanies = useCan("company", "read");
+  const companiesQuery = useQuery({
+    queryKey: ["companies"],
+    enabled: readsCompanies,
+    queryFn: async () => {
+      return unwrap(
+        await api.GET("/companies", {
+          params: { query: { limit: 50 } },
+        }),
+      );
+    },
+  });
+
+  const partnerOptions = usePartnerOptions(companiesQuery.data?.data ?? []);
+  // The channel catalog for the filter chip. Shared cache with the edit form's
+  // own read, so opening one after the other costs a single request.
+  const acquisitionSources = useAcquisitionSources().data;
+  const { dealChips, rangeChips, surfaceChips, nameRefusal } = useDealChips({
+    stages,
+    query,
+    withheld,
+    baseCurrency,
+    partnerOptions,
+    acquisitionSources,
+  });
+  // A refused dial the list can name is named, and no wider list is asked for.
+  const roleRefusal = nameRefusal(refusedDials);
+  const dealsQuery = useDeals(dealFilters, !roleRefusal);
   // A dial the role's mask refused, which a current snapshot would have
   // withheld. Reading /me again withholds it and the list reloads without it.
   const maskRefused = maskRefusedDialOf(dealsQuery.error);
   useReReadMeWhen(Boolean(maskRefused));
+  const refusal = nameRefusal([...refusedDials, maskRefused]);
   // The board's column totals: a per-stage server aggregate over every
   // matching deal, not only the capped page useDeals fetches. Built from the
   // same filter dials, so cards and totals agree on which deals are in view.
-  const stageTotalsQuery = useStageTotals(
-    dealFilters,
-    refusedDials.length === 0,
-  );
+  const stageTotalsQuery = useStageTotals(dealFilters, !roleRefusal);
   // The same answer the query keys its `enabled` on, so the column explains the
   // absence by the rule that caused it.
   const totalsWithheld =
@@ -257,7 +281,6 @@ export function DealsScreen({
 
   const advance = useAdvanceDeal();
 
-  const stages = effectivePipeline?.stages ?? [];
   const stageName = new Map(stages.map((stage) => [stage.id, stage.name]));
   // Every page walked so far, in one list. The board draws its columns from
   // this and the table renders it directly, so both surfaces grow together as
@@ -286,26 +309,6 @@ export function DealsScreen({
       dealsQuery.fetchNextPage();
     },
   };
-
-  // The board names its cards' companies from this page, and a reader without
-  // company.read is refused it.
-  const readsCompanies = useCan("company", "read");
-  const companiesQuery = useQuery({
-    queryKey: ["companies"],
-    enabled: readsCompanies,
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/companies", {
-          params: { query: { limit: 50 } },
-        }),
-      );
-    },
-  });
-
-  const partnerOptions = usePartnerOptions(companiesQuery.data?.data ?? []);
-  // The channel catalog for the filter chip. Shared cache with the edit form's
-  // own read, so opening one after the other costs a single request.
-  const acquisitionSources = useAcquisitionSources().data;
 
   // Open-stage targets only: a deal is born open (INV-CLOSE-PAST twin rule);
   // won/lost are reached through the confirmed advance, never at create.
@@ -349,36 +352,7 @@ export function DealsScreen({
       query={savableDealQuery(dealsListState.query, pipelineId)}
     />
   );
-  const companyName = useAppliedCompanyName(query.filters.company_id);
-  const leading = useLeadingCurrencies();
-  const offered = (chip: { key: string }) => !withheld.has(chip.key);
-  const everyDealChip = dealFilterChips(stages, t, companyName);
-  const dealChips = everyDealChip.filter(offered);
-  const rangeOf = (held: ReadonlySet<string>) =>
-    dealRangeChips({
-      words: { t, locale, zone: recordZone },
-      filters: query.filters,
-      baseCurrency,
-      withheld: held,
-      leading,
-    });
-  const rangeChips = rangeOf(withheld);
-  const surfaceOf = (partnerApplied: string | undefined) =>
-    dealSurfaceChips({
-      partnerOptions,
-      partnerApplied,
-      acquisitionSources,
-      retiredSuffix: t("deal.acquisitionRetired"),
-    });
-  const surfaceChips = surfaceOf(query.filters.partner_company_id).filter(
-    offered,
-  );
-  const refusedLabel = refusedDealLabel([...refusedDials, maskRefused], {
-    dataChips: [...everyDealChip, ...rangeOf(new Set())],
-    surfaceOf,
-    t,
-  });
-  const listState: ListState<Deal> = refusedLabel
+  const listState: ListState<Deal> = refusal
     ? {
         ...dealsListState,
         rows: [],
@@ -408,7 +382,7 @@ export function DealsScreen({
   // the surface's head (`bodyCount`). A reader looks for how much is here beside
   // the page's name; under the toolbar it would read as a caption on the dials.
   const boardBody =
-    view === "board" && !refusedLabel ? (
+    view === "board" && !refusal ? (
       <DealBoardBody
         dealsQuery={dealsQuery}
         pipelinesQuery={pipelinesQuery}
@@ -461,14 +435,20 @@ export function DealsScreen({
         chips={surfaceChips}
         views={[...standardViews(viewerId, { sort: "" })]}
         emptyNote={
-          refusedLabel
-            ? t("deals.filterRefused", { dial: refusedLabel })
-            : mineEmptyNote({
-                t,
-                state: dealsListState,
-                viewerId,
-                unit: "unit.deals",
-              })
+          refusal ? (
+            <RefusedFiltersNote
+              message={t("deals.filterRefused", { dial: refusal.names })}
+              dials={refusal.dials}
+              names={refusal.names}
+            />
+          ) : (
+            mineEmptyNote({
+              t,
+              state: dealsListState,
+              viewerId,
+              unit: "unit.deals",
+            })
+          )
         }
       />
       <ErrorLine error={advanceErrorBehind(advance.error, pending !== null)} />

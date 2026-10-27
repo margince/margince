@@ -1,5 +1,6 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
+import { QueryClient } from "@tanstack/react-query";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -136,6 +137,47 @@ describe("the lead list's company dials", () => {
     ).toBeTruthy();
     expect(leadListQueries(urls)).toEqual([]);
     expect(screen.queryByText("Jonas Petersen")).toBeNull();
+  });
+
+  it("asks for the list once /me stops refusing the dial, and shows its rows", async () => {
+    window.location.hash = "#/leads?industry=software";
+    const { urls } = serve({
+      refused: (read) => (read > 1 ? [] : COMPANY_DIALS),
+    });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(<LeadsScreen />, client);
+    await screen.findByText("Your role cannot narrow leads by Industry.", {
+      exact: false,
+    });
+    expect(leadListQueries(urls)).toEqual([]);
+
+    await client.invalidateQueries({ queryKey: ["me"] });
+    expect(await screen.findByText("Jonas Petersen")).toBeTruthy();
+    expect(
+      leadListQueries(urls).some(
+        (query) => query.get("industry") === "software",
+      ),
+    ).toBe(true);
+  });
+
+  it("leaves a refused dial it cannot name to the list's own refusal", async () => {
+    window.location.hash = "#/leads?min_score=80";
+    serve({
+      refused: ["min_score"],
+      listAnswer: (url) =>
+        url.includes("min_score=80")
+          ? jsonResponse({ status: 403, title: "Forbidden" }, 403)
+          : onePage(),
+    });
+    render(<LeadsScreen />);
+    expect(
+      await screen.findByText("Could not load this view. Reload the page."),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText("Your role cannot narrow leads by", { exact: false }),
+    ).toBeNull();
   });
 
   const forbidden = (url: string) =>

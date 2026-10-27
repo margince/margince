@@ -270,7 +270,9 @@ export function FilterRow({
           aria-expanded={openSegment === "value"}
           onClick={() => onToggleSegment("value")}
         >
-          <WholeWords text={valueLabel} />
+          <span className="lt-frow-valuetext">
+            <WholeWords text={valueLabel} />
+          </span>
         </button>
         <Menu open={openSegment === "value"} head={chip.label}>
           <ChipValueList chip={chip} value={value} onPick={onPick} />
