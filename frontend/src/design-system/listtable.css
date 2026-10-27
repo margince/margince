@@ -298,6 +298,25 @@
 .lt-frow-value {
   color: var(--textPrimary);
 }
+/* Only the value gives way on a short line, so the "⋮" stays reachable; the
+ * fieldset's name and the value step still carry the whole value. */
+.lt-frow {
+  max-inline-size: 100%;
+}
+.lt-frow > * {
+  flex: none;
+}
+.lt-frow > .lt-menu-wrap:has(> .lt-frow-value) {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+}
+.lt-frow-seg.lt-frow-value {
+  display: block;
+  align-content: center;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .lt-frow-more {
   display: inline-flex;
