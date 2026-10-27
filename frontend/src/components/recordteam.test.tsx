@@ -148,6 +148,15 @@ it("offers no verbs at all on a record this reader cannot write", async () => {
   expect(screen.queryByRole("button", { name: /Change/ })).toBeNull();
 });
 
+it("tells a reader who cannot write why nobody is assigned, not to assign", async () => {
+  stubFetch([]);
+  render(<RecordTeam recordType="deal" recordId={RECORD_ID} readOnly />);
+  expect(await screen.findByText(/No one is assigned yet/)).toBeTruthy();
+  expect(screen.getByText(/needs edit rights/)).toBeTruthy();
+  expect(screen.queryByText(/^Assign a colleague/)).toBeNull();
+  expect(screen.queryByRole("button", { name: "Assign" })).toBeNull();
+});
+
 it("offers no way to add over a read that failed", async () => {
   stubFetch([], { failRead: true });
   render(<RecordTeam recordType="deal" recordId={RECORD_ID} />);

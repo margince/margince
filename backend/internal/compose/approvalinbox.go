@@ -103,7 +103,11 @@ func (i approvalInbox) ReadApproval(ctx context.Context, stagedActionID ids.UUID
 	if err != nil {
 		return agents.StagedApproval{}, err
 	}
-	return stagedActionFrom(a, true), nil
+	out := stagedActionFrom(a, true)
+	if a.OnBehalfOf != nil {
+		out.OnBehalfOf = &agents.RecordOwner{ID: ids.UUID(*a.OnBehalfOf)}
+	}
+	return out, nil
 }
 
 // DecideApproval carries one contact's verdict to the engine.
@@ -174,6 +178,24 @@ func stagedActionFrom(a crmcontracts.Approval, withPayload bool) agents.StagedAp
 	}
 	out.ProposedChange = stagedPayload(a.ProposedChange)
 	out.Evidence = stagedEvidence(a.Evidence)
+	if a.TargetLabel != nil {
+		out.TargetLabel = *a.TargetLabel
+	}
+	out.Changes = stagedChanges(a.Preview)
+	return out
+}
+
+// stagedChanges carries the inbox's preview of each changed field. Only a ready
+// preview names the change completely; any other state carries none, as the
+// inbox then shows none. The tool surface writes each label.
+func stagedChanges(preview *crmcontracts.ApprovalPreview) []agents.FieldChange {
+	if preview == nil || preview.State != previewReadyState {
+		return nil
+	}
+	out := make([]agents.FieldChange, 0, len(preview.Changes))
+	for _, change := range preview.Changes {
+		out = append(out, agents.FieldChange{Field: change.Field, Before: change.Before, After: change.After})
+	}
 	return out
 }
 

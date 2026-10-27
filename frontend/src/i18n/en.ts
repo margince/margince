@@ -2483,11 +2483,14 @@ export const en = {
   "partner.certStatus": "Certification status",
   "partner.certStatusAll": "All statuses",
   "partner.marginTier": "Margin tier",
+  "partner.marginTierHint":
+    "The share the partner earns on each won deal they sourced. Intro: they only introduced the client. Active collaboration: the deal was worked together. Partner closed: they sold it themselves. Leave it unset when their agreement pays differently.",
   "partner.stage": "Relationship stage",
   "partner.nextStep": "Next step",
   "partner.nextStepDue": "Next step due",
   "partner.servedSegments": "Served segments",
-  "partner.servedSegmentsHint": "comma-separated",
+  "partner.servedSegmentsHint":
+    "Who the partner sells to, for example mid-size manufacturers. Separate several with commas.",
   "partner.role.hosting": "Hosting",
   "partner.role.consulting": "Consulting",
   "partner.role.strategic": "Strategic",
@@ -3478,6 +3481,10 @@ export const en = {
     "Assessing this company. The first assessment reads the whole record and can take a minute.",
   "co.growthFit.reassess": "Assess again",
   "co.growthFit.reassessing": "Assessing…",
+  "co.growthFit.reassessedSame":
+    "Assessed again. Result unchanged: {band}, {present} of {expected} inputs recorded.",
+  "co.growthFit.reassessedChanged":
+    "Assessed again. New result: {band}, {present} of {expected} inputs recorded.",
   "co.growthFit.band.strong": "Strong fit",
   "co.growthFit.dim.industryFit": "Industry fit",
   "co.growthFit.dim.companySize": "Company size",
@@ -3781,6 +3788,18 @@ export const en = {
   "companyReach.connections": "Connections here",
   "companyReach.none": "No colleague reach is shown for this company.",
   "companyReach.readFailed": "This reach list could not be read",
+  "companyReach.functions": "Where their connections work",
+  "companyReach.functionCount": "{function} · {connections}",
+  "companyReach.ask": "Ask for an introduction",
+  "companyReach.askNamed": "Ask {name} for an introduction",
+  "companyReach.function.management": "Management",
+  "companyReach.function.it": "IT",
+  "companyReach.function.finance": "Finance",
+  "companyReach.function.sales": "Sales",
+  "companyReach.function.marketing": "Marketing",
+  "companyReach.function.hr": "HR",
+  "companyReach.function.operations": "Operations",
+  "companyReach.function.procurement": "Procurement",
   "linkedinReach.title": "LinkedIn network",
   "linkedinReach.sub":
     "Companies on file where you know someone, most connections first.",
@@ -4088,6 +4107,10 @@ export const en = {
   "co.contacts.board.readFromMessages": "Read from their messages",
   "co.intro.title": "Request introduction",
   "co.intro.who": "Asking {colleague} to introduce you to {contact}.",
+  "co.intro.whoAccount":
+    "Asking {colleague} to introduce you to someone at {company}.",
+  "co.intro.function": "Someone who works in",
+  "co.intro.functionAny": "Any function",
   "co.intro.write": "Draft message",
   "co.intro.writing": "Writing…",
   "co.intro.fromTemplate":
@@ -4971,6 +4994,8 @@ export const en = {
   "assignments.empty": "No one is assigned yet",
   "assignments.emptyDetail":
     "Assign a colleague or a team to record who looks after this work.",
+  "assignments.emptyReadOnly":
+    "Changing who looks after this record needs edit rights on it.",
   "assignments.roleRetired": "(retired role)",
   "assignments.teamSuffix": "(team)",
   "assignments.subjectInactive": "(inactive)",

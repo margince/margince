@@ -1,6 +1,6 @@
 // The card create_record offers after a create: what it filed for review, and a
-// tag word it was asked to offer. Each panel draws only when the result carries
-// its decision, because the card is bound to the tool and every create reaches it.
+// tag word it was asked to offer. Every create reaches this card, so a create
+// with neither says what was created, and a refused one says nothing was.
 //
 // The duplicate panel is what create_record filed for review, with the choice the
 // create itself could not offer. Merge folds the new record into the one
@@ -18,9 +18,26 @@ import {
   declareActions,
 } from "../actions";
 import actions from "../actions.json";
-import { el, onResult } from "../bridge";
-import { button, keepFocus, panel, panelBody } from "../parts";
-import { asList, asRecord, asText, type Warning } from "../types";
+import { el } from "../bridge";
+import { button, panel, panelBody, viewRenderer } from "../parts";
+import {
+  changesOf,
+  changeTable,
+  inWords,
+  nameField,
+  recordName,
+  recordNoun,
+  refusalPanel,
+  summaryPanel,
+  withArticle,
+} from "../summary";
+import {
+  asList,
+  asRecord,
+  asText,
+  type ToolCall,
+  type Warning,
+} from "../types";
 import { tagOfferPanel } from "./tag-offer";
 import "../view.css";
 
@@ -32,7 +49,7 @@ const MERGEABLE = new Set(["contact", "company"]);
 type Candidate = {
   id: string;
   otherID: string;
-  evidence: { field: string; mine: string; theirs: string }[];
+  evidence: { label: string; mine: string; theirs: string }[];
 };
 
 type Outcome =
@@ -63,21 +80,12 @@ function candidatesOf(data: Record<string, unknown>): Candidate[] {
       evidence: asList(c.evidence)
         .map(asRecord)
         .map((e) => ({
-          field: asText(e.field),
+          label: asText(e.label) || inWords(asText(e.field)),
           mine: asText(e.left_value),
           theirs: asText(e.right_value),
         })),
     }))
     .filter((c) => c.otherID !== "");
-}
-
-function nameOf(data: Record<string, unknown>): string {
-  const fields = asRecord(data.fields);
-  return (
-    asText(fields.full_name) ||
-    asText(fields.name) ||
-    asText(fields.display_name)
-  );
 }
 
 function evidenceTable(candidate: Candidate): HTMLElement {
@@ -91,7 +99,7 @@ function evidenceTable(candidate: Candidate): HTMLElement {
   for (const row of candidate.evidence) {
     const tr = el("tr");
     tr.append(
-      el("th", "meta", row.field),
+      el("th", "meta", row.label),
       el("td", "name", row.mine || "—"),
       el("td", "name", row.theirs || "—"),
     );
@@ -109,27 +117,30 @@ function settled(text: string, undo?: HTMLElement): HTMLElement {
 }
 
 /** render draws the card, keeping the reader's place across a redraw. */
-export function render(
+export const render = viewRenderer(draw);
+
+function draw(
   root: HTMLElement,
   data: unknown,
   warnings: Warning[],
+  call: ToolCall,
 ): void {
-  keepFocus(root, () => draw(root, data, warnings));
-}
-
-function draw(root: HTMLElement, data: unknown, warnings: Warning[]): void {
   root.replaceChildren();
+  if (call.refusal !== null) {
+    root.appendChild(refusalPanel("Nothing was created", call.refusal));
+    return;
+  }
   const created = asRecord(data);
-  const again = () => render(root, data, warnings);
+  const again = () => render(root, data, warnings, call);
   const candidates = candidatesOf(created);
   const tag = tagOfferPanel(root, created, again);
   if (candidates.length === 0) {
-    if (tag !== null) root.appendChild(tag);
+    root.appendChild(tag ?? createdPanel(created));
     return;
   }
   const recordType = asText(created.record_type);
   const createdID = asText(created.id);
-  const name = nameOf(created);
+  const name = recordName(asRecord(created.fields));
   const outcomes = outcomesOf(root);
 
   const card = panel("Next steps for this record", { level: "h1" });
@@ -150,6 +161,24 @@ function draw(root: HTMLElement, data: unknown, warnings: Warning[]): void {
   }
   root.appendChild(card);
   if (tag !== null) root.appendChild(tag);
+}
+
+/** createdPanel says what a create with nothing to decide made. */
+function createdPanel(created: Record<string, unknown>): HTMLElement {
+  const fields = asRecord(created.fields);
+  const noun = recordNoun(asText(created.record_type), fields);
+  const skip = nameField(fields);
+  const lines = [
+    skip === undefined
+      ? el("p", "intro", "Saved in Margince.")
+      : el("p", "name", recordName(fields)),
+  ];
+  const rows = changeTable(changesOf(created.changes), {
+    skip,
+    before: false,
+  });
+  if (rows !== null) lines.push(rows);
+  return summaryPanel(`Created ${withArticle(noun)}`, ...lines);
 }
 
 function choices(
@@ -260,8 +289,3 @@ async function run(
       : { kind: "failed", reason: result.reason, unknown: result.unknown },
   );
 }
-
-onResult((data, warnings) => {
-  const root = document.getElementById("root");
-  if (root !== null) render(root, data, warnings);
-});

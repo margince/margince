@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { EmptyState, Skeleton } from "../../design-system/atoms";
+import { Button, EmptyState, Skeleton } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
@@ -12,6 +13,11 @@ import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useViewerId } from "../../lib/session";
+import {
+  type AccountIntroTarget,
+  IntroRequestModal,
+} from "./companycontacts/introrequest";
+import { reachFunctionCount } from "./reachfunction";
 
 // Who on the team can get us in at this account.
 //
@@ -52,12 +58,16 @@ function readerFirst(
   return [...mine, ...others];
 }
 
-export function CompanyReachCard({ companyId }: { companyId: string }) {
+export function CompanyReachCard({
+  companyId,
+  companyName,
+}: Readonly<{ companyId: string; companyName: string }>) {
   const t = useT();
   const { locale } = useLocale();
   const query = useCompanyReach(companyId);
   const viewerId = useViewerId();
   const colleagues = readerFirst(query.data?.colleagues ?? [], viewerId);
+  const [asking, setAsking] = useState<AccountIntroTarget | null>(null);
   return (
     <Panel title={t("companyReach.title")}>
       <PanelBody>
@@ -96,13 +106,58 @@ export function CompanyReachCard({ companyId }: { companyId: string }) {
                     : colleague.display_name,
               },
               {
+                key: "functions",
+                header: t("companyReach.functions"),
+                render: (colleague: Colleague) =>
+                  colleague.functions
+                    .map((held) => reachFunctionCount(t, locale, held))
+                    .join(", "),
+              },
+              {
                 key: "connections",
                 header: t("companyReach.connections"),
                 align: "end",
                 render: (colleague: Colleague) =>
                   formatNumber(colleague.connections, locale),
               },
+              {
+                key: "ask",
+                header: t("companyReach.ask"),
+                headerHidden: true,
+                align: "end",
+                fold: "trail",
+                // The reader's own row offers nothing: they need no
+                // introduction to an account they already reach.
+                render: (colleague: Colleague) =>
+                  colleague.user_id === viewerId ? null : (
+                    <Button
+                      aria-label={t("companyReach.askNamed", {
+                        name: colleague.display_name,
+                      })}
+                      onClick={() =>
+                        setAsking({
+                          viaUserId: colleague.user_id,
+                          viaName: colleague.display_name,
+                          companyName,
+                          functions: colleague.functions,
+                        })
+                      }
+                    >
+                      {t("companyReach.ask")}
+                    </Button>
+                  ),
+              },
             ]}
+          />
+        )}
+        {/* Keyed on the colleague: the dialog holds a draft, and a second
+            colleague's dialog must not open on the first one's message. */}
+        {asking && (
+          <IntroRequestModal
+            key={asking.viaUserId}
+            companyId={companyId}
+            target={asking}
+            onClose={() => setAsking(null)}
           />
         )}
       </PanelBody>

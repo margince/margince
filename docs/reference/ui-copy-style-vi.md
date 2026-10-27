@@ -67,7 +67,7 @@ the gate reads them from `copy-style.test.ts`:
 | `ob.conv.` | tôi where the agent acts ("để tôi dựng lại"); a noun phrase where one works ("Nội dung đã đọc") | the onboarding agent speaks in a chat bubble, in short factual sentences |
 | `privacynotice.` | chúng tôi, as little as the sentence allows, never a bare tôi | the data controller speaks, as in law |
 | `prefs.wording.`, `prefs.wordingGeneric`, `directSend.acknowledge`, `book.consentWording` | tôi, chúng tôi, chúng ta; "của mình" instead of a second "của tôi" | a consent statement is the reader's own sentence |
-| a value whose English says me, my or mine | tôi | "Giao cho tôi", "Chỉ tôi", "Deal của tôi" name the reader in a control |
+| a value whose English says me, my or mine | tôi | "Giao cho tôi", "Chỉ riêng tôi", "Deal của tôi" name the reader in a control |
 
 A reader's answer on a consent page may speak as the reader: "Không gửi tin cho tôi".
 Reflexive mình refers back to a third party: "chính mình", "tự mình", "một
@@ -231,7 +231,7 @@ the reviewer in the sense its row gives.
 | Snooze | tạm hoãn (Not now / set aside = gác lại, Để sau) | |
 | A classifier's result | kết quả, lần kiểm tra | `phán quyết`, `verdict` |
 | Capture intake step | kiểm tra đầu vào | `admission check` |
-| The owner of a record; a responsibility role on it | chịu trách nhiệm for the owner (label Người chịu trách nhiệm; Assign owner = Giao người chịu trách nhiệm); phụ trách for a role | người sở hữu, chủ sở hữu for ownership; phụ trách for the owner |
+| The owner of a record; a responsibility role on it | chịu trách nhiệm for the owner (label Người chịu trách nhiệm; Assign owner = Giao người chịu trách nhiệm); phụ trách for a role, and the Responsibilities card is Vai trò trong nhóm | người sở hữu, chủ sở hữu for ownership; phụ trách for the owner |
 | Tabs of a record | the tab labels themselves | `phần của bản ghi` |
 | A pointer to a Settings page | Cài đặt, mục followed by the tab or group label as the screen shows it | an arrow between Cài đặt and the label; lowercase cài đặt before the label |
 | The running Margince system | bản cài đặt | |
@@ -260,7 +260,9 @@ the reviewer in the sense its row gives.
 | Meeting; its attendee | cuộc họp; người tham dự | `buổi họp`, `meeting`; khách for an attendee (khách is a booking guest) |
 | Task | việc cần làm where the word stands alone; việc where the task list sets the context (Tạo việc, việc quá hạn); a background job or a kind of AI work (Tác vụ AI) is tác vụ | `task`; nhiệm vụ or công việc for a task |
 | Tag | thẻ | `tag`; nhãn for a tag |
-| Shortlist; Live List | danh sách rút gọn; danh sách động, lowercase mid-sentence (Picklist field type = Danh sách lựa chọn) | danh sách chọn for a Shortlist |
+| Shortlist; Live List | danh sách chọn tay; danh sách tự cập nhật, lowercase mid-sentence (Picklist field type = Danh sách lựa chọn); the pair says how records get in | `danh sách rút gọn`, `danh sách động`; danh sách chọn alone for a Shortlist |
+| Visible only to the reader; the reader's own items | Chỉ riêng tôi; Của riêng tôi | `Chỉ tôi` |
+| A partner's margin tier | mức hoa hồng đối tác (the share the partner earns) | `cấp biên lợi nhuận`, `bậc biên lợi nhuận`, which read as your own profit margin |
 | Report | báo cáo | `report` |
 | AI quota | hạn mức | `định mức` |
 | Credit | credit (enrichment units); số dư (an AI provider's prepaid balance, on an admin screen) | |

@@ -2454,6 +2454,13 @@ export interface paths {
          *     they know each other is not something a string test can decide, and claiming
          *     otherwise would be the more dangerous error — it is scored by the certification
          *     rubric instead.
+         *
+         *     **With no `contact_id`, the ask is for somebody at the account.** The colleague
+         *     must be one `GET /companies/{id}/linkedin-reach` lists for this caller, and the
+         *     draft names no contact, because those connections never consented to appearing
+         *     here. It is written from the template in the reader's own language: the only
+         *     facts are the colleague, the account and a function, and a template states them
+         *     honestly.
          */
         post: operations["draftIntroRequest"];
         delete?: never;
@@ -31961,7 +31968,26 @@ export interface components {
              *     are: they are third parties who never consented to appearing in this CRM.
              */
             connections: number;
+            /**
+             * @description Which functions those connections work in, read from their job titles, most
+             *     first and then by function. A function with fewer than two connections is left
+             *     out, and so is a title no function matches. Two is the floor because on a small
+             *     account one title can name one contact. Never the titles themselves.
+             */
+            functions: components["schemas"]["LinkedInReachFunctionCount"][];
         };
+        LinkedInReachFunctionCount: {
+            function: components["schemas"]["LinkedInReachFunction"];
+            /** @description How many of the colleague's connections there work in this function. */
+            connections: number;
+        };
+        /**
+         * @description The function a connection's job title names. A title that names a department and
+         *     a rank counts as the department: "Head of IT" is `it`, and only a title that names
+         *     no department, such as "Managing Director", is `management`.
+         * @enum {string}
+         */
+        LinkedInReachFunction: "management" | "it" | "finance" | "sales" | "marketing" | "hr" | "operations" | "procurement";
         LinkedInAccount: {
             /** @description Whether this member has authorized LinkedIn. */
             connected: boolean;
@@ -54329,14 +54355,16 @@ export interface operations {
                 "application/json": {
                     /**
                      * Format: uuid
-                     * @description The contact to be introduced TO. Must be somebody the caller can see on this account; a contact they cannot read is `404`, the same answer a direct read gives.
+                     * @description The contact to be introduced TO. Must be somebody the caller can see on this account; a contact they cannot read is `404`, the same answer a direct read gives. Absent asks for somebody at the account instead.
                      */
-                    contact_id: string;
+                    contact_id?: string | null;
                     /**
                      * Format: uuid
-                     * @description The colleague being asked. Must hold a recorded route to that contact — asking somebody with no relationship to trade on is a favour they cannot do, and a draft that claims one would be describing a closeness the account's own page does not show.
+                     * @description The colleague being asked. Must hold a recorded route to that contact — asking somebody with no relationship to trade on is a favour they cannot do, and a draft that claims one would be describing a closeness the account's own page does not show. With no `contact_id`, must be a colleague with LinkedIn reach into this account, or it is `404`.
                      */
                     via_user_id: string;
+                    /** @description Only with no `contact_id`, and optional there: the function the somebody works in. Must be one of the colleague's `functions` on the reach answer, or it is `422`, because the draft would ask for an introduction the colleague's connections cannot give. */
+                    function?: components["schemas"]["LinkedInReachFunction"];
                     /**
                      * Format: uuid
                      * @description Which open deal the introduction is for. Absent draws on the account as a whole, which is the honest shape when the rep is opening a conversation rather than moving a transaction.

@@ -141,6 +141,7 @@ function supersededBase(shown: boolean): PluralBase {
 export function CompanyDocumentsCard({
   companyId,
   refusedReasonId,
+  refusedReason,
   onOpenEmail,
 }: Readonly<{
   companyId: string;
@@ -150,6 +151,9 @@ export function CompanyDocumentsCard({
   // while it does not. The upload hangs a file on the account through the
   // account's own write gate, so it is refused by the same fact as Edit.
   refusedReasonId?: string;
+  // That sentence's words, drawn in this panel too. The page states it far
+  // from the greyed Add button, where a reader of this tab does not look.
+  refusedReason?: string;
 }>) {
   // Reading a document and writing what it says onto a deal are different
   // authorities: a panel that offered Accept to a seat holding only the first
@@ -240,6 +244,11 @@ export function CompanyDocumentsCard({
         ) : undefined
       }
     >
+      {refusedReasonId && refusedReason && (
+        <PanelBody>
+          <p className="t-caption">{refusedReason}</p>
+        </PanelBody>
+      )}
       <AddDocumentDialog
         anchor={{ record: "company", id: companyId }}
         open={adding}

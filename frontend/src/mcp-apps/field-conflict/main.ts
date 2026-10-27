@@ -1,7 +1,9 @@
 // The field-conflict card: an update that touched fields last edited by hand.
-// The rest of the patch applied; these fields wait, because an assistant does
-// not silently overwrite what someone typed. The card shows the value on the
-// record beside the value proposed, and the two answers.
+// Those fields wait, because an assistant does not silently overwrite what
+// someone typed; the rest of the patch applied. When every field waits, the
+// call is refused and the card still offers the choice. The card shows the
+// value on the record beside the value proposed, and the two answers. Every
+// update reaches this card, so an update with nothing held says what it changed.
 //
 // "Keep" rejects the staged change. "Use the new values" approves it and then
 // sends update_record with exactly the replay the result carried and the
@@ -16,16 +18,35 @@ import {
   declareActions,
 } from "../actions";
 import actions from "../actions.json";
-import { el, onResult } from "../bridge";
-import { button, keepFocus, panel, panelBody } from "../parts";
-import { asList, asRecord, asText, type Warning } from "../types";
+import { el } from "../bridge";
+import { button, panel, panelBody, viewRenderer } from "../parts";
+import {
+  type Change,
+  changesOf,
+  changeTable,
+  inWords,
+  isID,
+  recordName,
+  recordNoun,
+  refusalPanel,
+  shown,
+  summaryPanel,
+  withArticle,
+} from "../summary";
+import {
+  asList,
+  asRecord,
+  asText,
+  type ToolCall,
+  type Warning,
+} from "../types";
 import "../view.css";
 
 declareActions(actions["field-conflict"]);
 
 type Conflict = {
   approvalID: string;
-  fields: { name: string; current: string; proposed: string }[];
+  fields: { label: string; current: string; proposed: string }[];
   replay: Record<string, unknown>;
 };
 
@@ -49,13 +70,14 @@ function outcomesOf(root: HTMLElement): Map<string, Outcome> {
   return found;
 }
 
-/** shown renders a stored value as the text a reader sees. */
-function shown(value: unknown): string {
+/** stored renders a raw value, for a held field the server sent no words for. */
+function stored(value: unknown): string {
   if (value === null || value === undefined || value === "") return "—";
+  if (isID(value)) return "A linked record";
   if (typeof value === "string" || typeof value === "number")
     return String(value);
-  if (typeof value === "boolean") return value ? "yes" : "no";
-  return JSON.stringify(value);
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  return "—";
 }
 
 function conflictOf(data: unknown): Conflict | null {
@@ -67,17 +89,35 @@ function conflictOf(data: unknown): Conflict | null {
     .filter((n) => n !== "");
   if (approvalID === "" || names.length === 0) return null;
   const replay = asRecord(staged.replay);
+  return { approvalID, replay, fields: heldFields(names, staged, record) };
+}
+
+/** heldFields reads each held field in the server's words, or from the raw
+ *  values when the server could not name them. */
+function heldFields(
+  names: string[],
+  staged: Record<string, unknown>,
+  record: Record<string, unknown>,
+): Conflict["fields"] {
+  const named = new Map<string, Change>(
+    changesOf(staged.changes).map((c) => [c.field, c]),
+  );
   const current = asRecord(record.fields);
-  const proposed = asRecord(replay.fields);
-  return {
-    approvalID,
-    replay,
-    fields: names.map((name) => ({
-      name,
-      current: shown(current[name]),
-      proposed: shown(proposed[name]),
-    })),
-  };
+  const proposed = asRecord(asRecord(staged.replay).fields);
+  return names.map((name) => {
+    const change = named.get(name);
+    return change === undefined
+      ? {
+          label: inWords(name),
+          current: stored(current[name]),
+          proposed: stored(proposed[name]),
+        }
+      : {
+          label: change.label,
+          current: shown(name, change.before),
+          proposed: shown(name, change.after),
+        };
+  });
 }
 
 function table(conflict: Conflict): HTMLElement {
@@ -91,7 +131,7 @@ function table(conflict: Conflict): HTMLElement {
   for (const field of conflict.fields) {
     const tr = el("tr");
     tr.append(
-      el("th", "meta", field.name.replaceAll("_", " ")),
+      el("th", "meta", field.label),
       el("td", "name", field.current),
       el("td", "name", field.proposed),
     );
@@ -102,19 +142,25 @@ function table(conflict: Conflict): HTMLElement {
 }
 
 /** render draws the card, keeping the reader's place across a redraw. */
-export function render(
+export const render = viewRenderer(draw);
+
+function draw(
   root: HTMLElement,
   data: unknown,
   warnings: Warning[],
+  call: ToolCall,
 ): void {
-  keepFocus(root, () => draw(root, data, warnings));
-}
-
-function draw(root: HTMLElement, data: unknown, warnings: Warning[]): void {
   root.replaceChildren();
   const conflict = conflictOf(data);
-  if (conflict === null) return;
-  const again = () => render(root, data, warnings);
+  if (conflict === null) {
+    root.appendChild(
+      call.refusal === null
+        ? updatedPanel(asRecord(data))
+        : refusalPanel("Nothing was changed", call.refusal),
+    );
+    return;
+  }
+  const again = () => render(root, data, warnings, call);
   const outcomes = outcomesOf(root);
   const set = (next: Outcome) => {
     outcomes.set(conflict.approvalID, next);
@@ -126,13 +172,27 @@ function draw(root: HTMLElement, data: unknown, warnings: Warning[]): void {
     el(
       "p",
       "intro",
-      "The rest of the change was applied. These fields were last edited by hand, so the change is waiting for your answer.",
+      call.refusal === null
+        ? "The rest of the change was applied. These fields were last edited by hand, so the change is waiting for your answer."
+        : "Nothing was changed yet. These fields were last edited by hand, so the change is waiting for your answer.",
     ),
     table(conflict),
     choices(conflict, outcomes.get(conflict.approvalID), set),
   );
   card.appendChild(body);
   root.appendChild(card);
+}
+
+/** updatedPanel says what an update with nothing held for an answer changed. */
+function updatedPanel(updated: Record<string, unknown>): HTMLElement {
+  const fields = asRecord(updated.fields);
+  const noun = recordNoun(asText(updated.record_type), fields);
+  const name = recordName(fields);
+  const rows = changeTable(changesOf(updated.changes), { before: true });
+  return summaryPanel(
+    name === "" ? `Updated ${withArticle(noun)}` : `Updated ${noun} "${name}"`,
+    rows ?? el("p", "intro", "The change is saved in Margince."),
+  );
 }
 
 function choices(
@@ -160,14 +220,10 @@ function choices(
   if (outcome?.kind === "approved") {
     row.appendChild(button("Apply the new values", "primary", apply, busy));
   } else {
+    const [keepWords, useWords] = answerWords(conflict);
     row.append(
-      button(
-        "Keep the current values",
-        "ghost",
-        () => keep(conflict, set),
-        busy,
-      ),
-      button("Use the new values", "primary", () => use(conflict, set), busy),
+      button(keepWords, "ghost", () => keep(conflict, set), busy),
+      button(useWords, "primary", () => use(conflict, set), busy),
     );
   }
   if (
@@ -179,6 +235,20 @@ function choices(
     row.appendChild(el("p", "refusal", reason));
   }
   return row;
+}
+
+/** answerWords names the two answers by the values when one field is held. */
+function answerWords(conflict: Conflict): [string, string] {
+  const [only, ...rest] = conflict.fields;
+  if (
+    only === undefined ||
+    rest.length > 0 ||
+    only.current === "—" ||
+    only.proposed === "—"
+  ) {
+    return ["Keep the current values", "Use the new values"];
+  }
+  return [`Keep ${only.current}`, `Use ${only.proposed}`];
 }
 
 async function keep(
@@ -236,8 +306,3 @@ function settledLine(text: string): HTMLElement {
   line.appendChild(el("p", undefined, text));
   return line;
 }
-
-onResult((data, warnings) => {
-  const root = document.getElementById("root");
-  if (root !== null) render(root, data, warnings);
-});

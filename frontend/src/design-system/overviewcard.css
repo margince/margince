@@ -42,6 +42,14 @@
   color: var(--textPrimary);
   overflow-wrap: anywhere;
 }
+/* A title that opens its record wraps like a plain one. A `.btn` keeps its
+   label on one centred line, so a long subject spilled out of both sides. */
+.overviewrow-title > .btn {
+  max-inline-size: 100%;
+  justify-content: flex-start;
+  text-align: start;
+  white-space: normal;
+}
 .overviewrow-sub {
   font: var(--fontBodySmall);
   color: var(--textSecondary);

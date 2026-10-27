@@ -179,7 +179,7 @@ function PartnerForm({
           />
         )}
       </Field>
-      <Field label={t("partner.marginTier")}>
+      <Field label={t("partner.marginTier")} hint={t("partner.marginTierHint")}>
         {(control) => (
           <Select
             {...control}
@@ -242,12 +242,14 @@ function PartnerForm({
           />
         )}
       </Field>
-      <Field label={t("partner.servedSegments")}>
+      <Field
+        label={t("partner.servedSegments")}
+        hint={t("partner.servedSegmentsHint")}
+      >
         {(control) => (
           <TextInput
             {...control}
             value={values.served_segments}
-            placeholder={t("partner.servedSegmentsHint")}
             onChange={(event) =>
               setValues({ ...values, served_segments: event.target.value })
             }

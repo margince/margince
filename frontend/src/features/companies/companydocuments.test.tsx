@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -86,6 +87,26 @@ function show(ui: ReactNode) {
 }
 
 describe("the account's document library", () => {
+  it("says beside a refused Add why it is refused", async () => {
+    stub(DOCS);
+    show(
+      <>
+        <p id="page-reason">You cannot edit this company.</p>
+        <CompanyDocumentsCard
+          companyId="o-1"
+          refusedReasonId="page-reason"
+          refusedReason="You cannot edit this company."
+        />
+      </>,
+    );
+    const add = await screen.findByRole("button", { name: "Add document" });
+    expect(add).toBeDisabled();
+    // Once on the page, where the header states it, and once in this panel.
+    expect(screen.getAllByText("You cannot edit this company.")).toHaveLength(
+      2,
+    );
+  });
+
   it("prefers the display title a human gave over the filename that arrived", async () => {
     stub(DOCS);
     show(<CompanyDocumentsCard companyId="o-1" />);

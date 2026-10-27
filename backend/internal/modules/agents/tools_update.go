@@ -37,6 +37,7 @@ type updateRecord struct {
 	// outright rather than staged, never applied.
 	staging  Approvals
 	language baselanguage.Resolver
+	words    ChangeWords
 }
 
 type updateRecordArgs struct {
@@ -79,6 +80,9 @@ type stagedApprovalNote struct {
 	Fields     []string        `json:"fields"`
 	Replay     json.RawMessage `json:"replay"`
 	Message    string          `json:"message"`
+	// Changes names each withheld field as it stands and as the replay would
+	// set it.
+	Changes []FieldChange `json:"changes,omitempty"`
 }
 
 // StageInfo puts a patch the contract tightened to confirm-first in the inbox
@@ -151,13 +155,42 @@ func (t updateRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 		if err != nil {
 			return nil, err
 		}
-		staged, err := t.stageConflicts(ctx, args, split, canonical, hash)
-		if err != nil {
-			return nil, err
-		}
-		return nil, staged
+		return nil, t.holdAll(ctx, args, split, canonical, hash)
 	}
 	return t.applySplit(ctx, args, split)
+}
+
+// holdAll stages a patch whose every field a human last edited. Nothing
+// applies, so the answer is the staged refusal. It carries the record as it
+// stands and the held fields, for a view to offer the choice on.
+func (t updateRecord) holdAll(ctx context.Context, args updateRecordArgs, split PatchSplit, canonical json.RawMessage, hash string) error {
+	staged, err := t.stageConflicts(ctx, args, split, canonical, hash)
+	if err != nil {
+		return err
+	}
+	current, err := readBackRecord(ctx, t.p, datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: args.ID})
+	if err != nil {
+		return err
+	}
+	answer, err := json.Marshal(UpdateWithStagedApprovalResult{
+		wireRecord:     current,
+		StagedApproval: t.heldNote(ctx, split, canonical, staged, current),
+	})
+	if err != nil {
+		return err
+	}
+	return &shownRefusal{staged: staged, answer: answer}
+}
+
+// heldNote is the result's account of the fields a human still has to release.
+func (t updateRecord) heldNote(ctx context.Context, split PatchSplit, replay json.RawMessage, staged *workflow.StagedApprovalError, current wireRecord) *stagedApprovalNote {
+	return &stagedApprovalNote{
+		ApprovalID: staged.ApprovalID,
+		Fields:     split.Conflicts,
+		Replay:     replay,
+		Message:    splitStagingNote(split.Conflicts, staged.ApprovalID, stagedState{AlreadyApproved: staged.AlreadyApproved, Releasable: staged.ReleasableByCaller}),
+		Changes:    t.words.describeUpdate(ctx, summaryIn(ctx, t.language).lang, split.Staged, current.Fields, split.Staged),
+	}
 }
 
 // applySplit handles the mixed patch: the auto-execute remainder lands
@@ -166,7 +199,7 @@ func (t updateRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 // covers this call's own auto-execute half instead of being invalidated by
 // it.
 func (t updateRecord) applySplit(ctx context.Context, args updateRecordArgs, split PatchSplit) (json.RawMessage, error) {
-	applied, err := t.applyRecord(ctx, args, split.AutoExecute)
+	before, applied, err := t.applyRecord(ctx, args, split.AutoExecute)
 	if err != nil {
 		return nil, err
 	}
@@ -191,13 +224,9 @@ func (t updateRecord) applySplit(ctx context.Context, args updateRecordArgs, spl
 			strings.Join(split.Conflicts, ", "), err)
 	}
 	return json.Marshal(UpdateWithStagedApprovalResult{
-		wireRecord: applied,
-		StagedApproval: &stagedApprovalNote{
-			ApprovalID: staged.ApprovalID,
-			Fields:     split.Conflicts,
-			Replay:     canonical,
-			Message:    splitStagingNote(split.Conflicts, staged.ApprovalID, stagedState{AlreadyApproved: staged.AlreadyApproved, Releasable: staged.ReleasableByCaller}),
-		},
+		wireRecord:     applied,
+		Changes:        t.words.describeUpdate(ctx, summaryIn(ctx, t.language).lang, split.AutoExecute, before.Fields, applied.Fields),
+		StagedApproval: t.heldNote(ctx, split, canonical, staged, applied),
 	})
 }
 
@@ -266,17 +295,20 @@ func (t updateRecord) stageConflicts(ctx context.Context, args updateRecordArgs,
 
 // apply writes the patch and answers with the post-write record.
 func (t updateRecord) apply(ctx context.Context, args updateRecordArgs, patch json.RawMessage) (json.RawMessage, error) {
-	rec, err := t.applyRecord(ctx, args, patch)
+	before, rec, err := t.applyRecord(ctx, args, patch)
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(rec)
+	return json.Marshal(UpdateWithStagedApprovalResult{
+		wireRecord: rec,
+		Changes:    t.words.describeUpdate(ctx, summaryIn(ctx, t.language).lang, patch, before.Fields, rec.Fields),
+	})
 }
 
-// applyRecord writes the patch and reads the result back — the caller
-// needs the post-write state (server-derived fields, bumped version)
-// whether it answers with the record alone or splices staging info in.
-func (t updateRecord) applyRecord(ctx context.Context, args updateRecordArgs, patch json.RawMessage) (wireRecord, error) {
+// applyRecord writes the patch and reads the record on both sides of it. The
+// caller answers with the post-write state (server-derived fields, bumped
+// version). It names each change from what it replaced.
+func (t updateRecord) applyRecord(ctx context.Context, args updateRecordArgs, patch json.RawMessage) (before datasource.Record, after wireRecord, err error) {
 	// Through pinForWrite, not the raw argument. A redeemed retry that supplied
 	// no if_version would otherwise write unconditioned: redemption commits its
 	// own transaction and this one opens a fresh one, so the skew check inside
@@ -286,27 +318,32 @@ func (t updateRecord) applyRecord(ctx context.Context, args updateRecordArgs, pa
 	// behind it is already carried; this is the same guarantee on this door.
 	pin, err := pinForWrite(ctx, args.IfVersion)
 	if err != nil {
-		return wireRecord{}, err
+		return datasource.Record{}, wireRecord{}, err
 	}
 	// A null in the patch means clear, read by the rule the REST door uses.
 	// The record store clears it or refuses it by name.
 	nulls, err := httperr.NullKeysOf(patch)
 	if err != nil {
-		return wireRecord{}, err
+		return datasource.Record{}, wireRecord{}, err
+	}
+	target := datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: args.ID}
+	before, err = t.p.Read(ctx, target)
+	if err != nil {
+		return datasource.Record{}, wireRecord{}, err
 	}
 	ref, err := t.p.Update(ctx, datasource.UpdateInput{
-		Ref:       datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: args.ID},
+		Ref:       target,
 		Patch:     patch,
 		Source:    ToolSource,
 		IfVersion: pin,
 		Clear:     nulls,
 	})
 	if err != nil {
-		return wireRecord{}, err
+		return datasource.Record{}, wireRecord{}, err
 	}
 	rec, err := t.p.Read(ctx, ref)
 	if err != nil {
-		return wireRecord{}, fmt.Errorf("crmagents: write landed but read-back failed: %w", err)
+		return datasource.Record{}, wireRecord{}, fmt.Errorf("crmagents: write landed but read-back failed: %w", err)
 	}
-	return newWireRecord(ctx, rec), nil
+	return before, newWireRecord(ctx, rec), nil
 }

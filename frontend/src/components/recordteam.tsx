@@ -96,7 +96,7 @@ export function RecordTeam({
           <SurfaceState
             state={isPending ? "loading" : isError ? "failed" : "empty"}
             emptyLabel={t("assignments.empty")}
-            emptyDetail={t("assignments.emptyDetail")}
+            emptyDetail={t(emptyDetailKey(readOnly))}
             loadingLabel={t("assignments.title")}
           >
             {null}
@@ -212,4 +212,9 @@ function AssignmentRow({
       )}
     </li>
   );
+}
+
+// An instruction to assign is only for a reader who has the button.
+function emptyDetailKey(readOnly: boolean) {
+  return readOnly ? "assignments.emptyReadOnly" : "assignments.emptyDetail";
 }

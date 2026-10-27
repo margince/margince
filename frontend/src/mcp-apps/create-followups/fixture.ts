@@ -20,6 +20,7 @@ export const createFollowupsFixture: Envelope = {
         evidence: [
           {
             field: "full_name",
+            label: "Name",
             left_value: "Anna Meyer",
             right_value: "Anna Meyer",
             signal: "collide",
@@ -27,6 +28,7 @@ export const createFollowupsFixture: Envelope = {
           },
           {
             field: "phone",
+            label: "Phone",
             left_value: "+49 30 1234567",
             right_value: "+49301234567",
             signal: "collide",
