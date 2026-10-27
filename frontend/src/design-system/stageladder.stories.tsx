@@ -226,19 +226,25 @@ async function pagersMatchOverflow(canvasElement: HTMLElement) {
   return { run, later, earlier };
 }
 
-// Each page glides, and a press during the glide restarts it short. The glide
-// has ended once two reads a poll apart agree; `scrollend` skips a clamped one.
-async function glideEnds(run: HTMLElement) {
-  let last = Number.NaN;
-  await waitFor(
-    () => {
-      const now = run.scrollLeft;
-      const still = now === last;
-      last = now;
-      expect(still).toBe(true);
-    },
-    { interval: 100, timeout: 3000 },
+// The run's offset at the next painted frame.
+function nextFrame(run: HTMLElement): Promise<number> {
+  return new Promise((resolve) =>
+    requestAnimationFrame(() => resolve(run.scrollLeft)),
   );
+}
+
+// Each page glides, and a press during the glide restarts it short. Two reads
+// in one frame always agree, so the glide has ended once three frames in a row
+// hold one offset. `scrollend` would skip a glide the edge clamps to nothing.
+async function glideEnds(run: HTMLElement) {
+  let held = 0;
+  let last = await nextFrame(run);
+  for (let frame = 0; held < 3 && frame < 600; frame += 1) {
+    const now = await nextFrame(run);
+    held = now === last ? held + 1 : 0;
+    last = now;
+  }
+  expect(held).toBe(3);
 }
 
 async function pageToTheEnd(canvasElement: HTMLElement) {

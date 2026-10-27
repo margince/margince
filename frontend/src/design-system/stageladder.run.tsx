@@ -41,10 +41,7 @@ export function LadderRun({
     }
     // Measured against the scroller's own box, so no ancestor needs a position.
     // The browser clamps past either end, so a ladder that fits stays put.
-    const rungBox = rung.getBoundingClientRect();
-    const runBox = scroller.getBoundingClientRect();
-    scroller.scrollLeft +=
-      (rungBox.left + rungBox.right - runBox.left - runBox.right) / 2;
+    scroller.scrollLeft += restingShift(rung.getBoundingClientRect(), scroller);
   }, [settleOn]);
   const edges = useClippedEdges(runRef);
   return (
@@ -66,6 +63,22 @@ function restingStage(steps: readonly StageStep[]): number {
   const here = run.findIndex((step) => step.current);
   const tookWayOut = steps.some((step) => step.terminal && step.current);
   return here < 0 && tookWayOut ? run.length - 1 : here;
+}
+
+/**
+ * How far the run scrolls to rest on a rung: centred when it fits between the
+ * two ends' fades, else its start just past the start fade, where a name reads.
+ */
+function restingShift(rungBox: DOMRect, scroller: HTMLElement): number {
+  const runBox = scroller.getBoundingClientRect();
+  const style = getComputedStyle(scroller);
+  const room = Number.parseFloat(style.scrollPaddingInlineStart) || 0;
+  if (rungBox.width <= runBox.width - 2 * room) {
+    return (rungBox.left + rungBox.right - runBox.left - runBox.right) / 2;
+  }
+  return style.direction === "rtl"
+    ? rungBox.right - (runBox.right - room)
+    : rungBox.left - (runBox.left + room);
 }
 
 function runClass(edges: ClippedEdges) {

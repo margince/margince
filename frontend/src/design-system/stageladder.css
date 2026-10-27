@@ -46,8 +46,8 @@
   min-inline-size: 0;
   overflow-x: auto;
   overscroll-behavior-x: contain;
-  /* A rung reached by Tab stops clear of the faded edge, not under it. */
-  scroll-padding-inline: calc(var(--controlHeight) + var(--space-5));
+  /* A rung reached by Tab, or rested on, stops clear of the faded edge. */
+  scroll-padding-inline: var(--stage-ladder-room);
 }
 
 .stage-ladder-steps {
@@ -196,6 +196,12 @@
   --stage-ladder-solid-start: 0px;
   --stage-ladder-clear-end: 0px;
   --stage-ladder-solid-end: 0px;
+  /* The room a clipped end's button and fade take. */
+  --stage-ladder-room: calc(
+    var(--controlHeight) +
+    var(--space-1) +
+    var(--space-5)
+  );
   mask-image: linear-gradient(
     var(--stage-ladder-fade-from),
     transparent var(--stage-ladder-clear-start),
@@ -212,19 +218,11 @@
 }
 .stage-ladder-run.is-clipped-start {
   --stage-ladder-clear-start: calc(var(--controlHeight) + var(--space-1));
-  --stage-ladder-solid-start: calc(
-    var(--controlHeight) +
-    var(--space-1) +
-    var(--space-5)
-  );
+  --stage-ladder-solid-start: var(--stage-ladder-room);
 }
 .stage-ladder-run.is-clipped-end {
   --stage-ladder-clear-end: calc(var(--controlHeight) + var(--space-1));
-  --stage-ladder-solid-end: calc(
-    var(--controlHeight) +
-    var(--space-1) +
-    var(--space-5)
-  );
+  --stage-ladder-solid-end: var(--stage-ladder-room);
 }
 /* A mask clips the ring a focused region draws outside its box. */
 .stage-ladder-run:focus-visible {
