@@ -12,7 +12,9 @@ package attention
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -376,5 +378,18 @@ func TestLinkedTasksDoNotInheritDealRecommendations(t *testing.T) {
 	}
 	if queue[0].Move != nil || queue[1].Move != nil || queue[2].Move == nil {
 		t.Fatalf("only deal work may inherit the deal's recommendation: %+v", queue)
+	}
+}
+
+func TestWorklistPreservesTheDealRecommendationsScopedBasis(t *testing.T) {
+	at := time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)
+	basis := &crmcontracts.WorkEvidenceBasis{
+		Kind: "request_review", Scope: "deal", SourceActivityId: openapi_types.UUID(ids.NewV7()),
+		SourceAt: at.AddDate(0, 0, -200), SourceVersion: new(crmcontracts.RowVersion(1)), EvaluatedAt: at,
+		SourcePrecision: crmcontracts.OccurredPrecisionOccurredPrecisionInstant, PolicyVersion: "fixture",
+	}
+	move := worklistMoveOf(crmcontracts.DealStatusCardMove{Action: "create_task", Basis: basis})
+	if !reflect.DeepEqual(move.Basis, basis) {
+		t.Fatalf("Worklist lost the deal basis: %+v", move.Basis)
 	}
 }

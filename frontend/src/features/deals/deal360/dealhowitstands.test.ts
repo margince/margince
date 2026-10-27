@@ -120,7 +120,19 @@ describe("a closed deal's readings", () => {
 describe("the Risk reading", () => {
   it("counts a reply owed and each coverage finding, and names the first two", () => {
     const dim = read({
-      card: card({ reply_to: "m1" }),
+      card: card({
+        reply_to: "m1",
+        request_basis: {
+          kind: "current_request",
+          scope: "deal",
+          source_activity_id: "m1",
+          source_at: "2026-05-29T09:00:00Z",
+          source_precision: "instant",
+          source_version: 1,
+          evaluated_at: AS_OF,
+          policy_version: "test",
+        },
+      }),
       coverage: {
         coverage: coverage([
           { kind: "going_cold", summary: "quiet" },

@@ -196,7 +196,6 @@ internal/compose/integration/reembedrun_integration_test.go 2
 internal/compose/integration/relationshipchangeaudience_integration_test.go 2
 internal/compose/integration/report_activitiesbykind_runreport_integration_test.go 1
 internal/compose/integration/report_projectkeys_integration_test.go 5
-internal/compose/integration/requestlifecycle_integration_test.go 1
 internal/compose/integration/reviewclose_integration_test.go 1
 internal/compose/integration/reviewcontext_integration_test.go 7
 internal/compose/integration/scheduledreviewlink_integration_test.go 2
