@@ -107,6 +107,8 @@ Where Margince can say who put a value there, it does. The trust marks are:
   name
 - "Automated by {agent}", or "Automated by an agent" when the passport has no
   name to show
+- On a contact an agent created, "Made by {agent} for {colleague}": the tool
+  it was typed through, such as Claude, and the colleague it worked for
 - "System task: {job}", naming the job in words such as "Mail participant
   fill-in", or plain "System task" when the job has no name to show.
   This is the installation's own work, such as a planned sweep or a run that
@@ -114,8 +116,9 @@ Where Margince can say who put a value there, it does. The trust marks are:
   decided something or Margince did routine work.
 - "Via {connector}": it came from a connected mailbox, named as you know it, such as "Via Gmail"
 - "Imported from {upload}": a CSV import created the company, contact or lead,
-  and {upload} is the name you set for the upload. It reads plain "Imported"
-  when the upload has no name.
+  and {upload} is the name you set for the upload. An upload named after a
+  known system reads as that system, such as "Imported from HubSpot". It reads
+  plain "Imported" when the upload has no name.
 - On a field change an agent made, the name of your own agent passport. A
   colleague's passport reads "An agent".
 - "Source not recorded": when nobody knows where it came from
