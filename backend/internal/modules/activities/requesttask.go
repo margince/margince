@@ -127,7 +127,24 @@ func emailRequestTask(ctx context.Context, tx pgx.Tx, source crmcontracts.Activi
 	if err != nil {
 		return LogActivityInput{}, err
 	}
-	return emailRequestTaskInput(source, requesterLinks(filed), seat.UserID, asOf), nil
+	shared, err := readMailSharedWithWorkspace(ctx, tx, ids.UUID(source.Id))
+	if err != nil {
+		return LogActivityInput{}, err
+	}
+	return emailRequestTaskInput(source, requesterLinks(filed), seat.UserID, asOf, shared), nil
+}
+
+// readMailSharedWithWorkspace says whether everyone who can discover the mail
+// may read it. Only then does its reminder keep the mail's reach, so a manager
+// reads the task a teammate holds for workspace mail. A held message, or one
+// narrowed to its participants or a selection, stays its assignee's alone.
+func readMailSharedWithWorkspace(ctx context.Context, tx pgx.Tx, message ids.UUID) (bool, error) {
+	var shared bool
+	if err := tx.QueryRow(ctx, `
+		SELECT audience = 'workspace' AND restricted_at IS NULL FROM activity WHERE id = $1`, message).Scan(&shared); err != nil {
+		return false, fmt.Errorf("activities: reading who may read a request: %w", err)
+	}
+	return shared, nil
 }
 
 // requestFiling is where a request is filed, as its assignee can see it.
@@ -206,17 +223,20 @@ func requesterLinks(filed requestFiling) []ActivityLinkInput {
 	}
 }
 
-func emailRequestTaskInput(source crmcontracts.Activity, links []ActivityLinkInput, userID ids.UUID, asOf time.Time) LogActivityInput {
+func emailRequestTaskInput(source crmcontracts.Activity, links []ActivityLinkInput, userID ids.UUID, asOf time.Time, shared bool) LogActivityInput {
 	subject := "Reply to email"
 	if source.Subject != nil && strings.TrimSpace(*source.Subject) != "" {
 		subject = *source.Subject
 	}
 	sourceSystem, sourceID := EmailRequestTaskSource, source.Id.String()
 	messageID, assignee := ids.UUID(source.Id), ids.From[ids.UserKind](userID)
-	return LogActivityInput{
-		audienceMembers: []AudienceMember{{SubjectType: string(crmcontracts.AudienceMemberSubjectTypeUser), SubjectID: userID}},
-		Kind:            string(crmcontracts.ActivityKindTask), Subject: &subject, OccurredAt: &asOf, AssigneeID: &assignee,
+	in := LogActivityInput{
+		Kind: string(crmcontracts.ActivityKindTask), Subject: &subject, OccurredAt: &asOf, AssigneeID: &assignee,
 		SourceSystem: &sourceSystem, SourceID: &sourceID, SourceActivityID: &messageID,
 		Source: EmailRequestTaskSource, Origin: OriginSystemRemediation, Links: links,
 	}
+	if !shared {
+		in.VisibleOnlyTo(userID)
+	}
+	return in
 }

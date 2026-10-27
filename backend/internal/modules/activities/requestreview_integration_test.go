@@ -51,8 +51,27 @@ func TestAnotherReaderSeesCoverageWithoutReadingAPrivateReminder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// A request task reaches whoever may read the mail it was read out of, and
+	// no further.
+	//
+	// So the test is that it never reaches wider, rather than that it is always
+	// private. This mail is the workspace's, so its task is too, and a task
+	// drawn from limited mail is narrowed instead.
+	var mail, task string
+	if err := e.owner.QueryRow(t.Context(),
+		`SELECT audience FROM activity WHERE id = $1`, id).Scan(&mail); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.owner.QueryRow(t.Context(),
+		`SELECT audience FROM activity WHERE source_activity_id = $1 AND kind = 'task'`, id).Scan(&task); err != nil {
+		t.Fatal(err)
+	}
+	if mail != "workspace" && task == "workspace" {
+		t.Fatalf("the request task reaches the workspace where its mail reaches only %q", mail)
+	}
 	for _, row := range rows {
-		if row.SourceActivityId != nil && ids.UUID(*row.SourceActivityId) == id && row.Subject != nil {
+		if row.SourceActivityId != nil && ids.UUID(*row.SourceActivityId) == id &&
+			row.Subject != nil && mail != "workspace" {
 			t.Fatal("coverage disclosed private task content")
 		}
 	}

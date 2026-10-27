@@ -212,17 +212,18 @@ func countWeekLeads(
 // Only tasks created from the meeting before the week closed count.
 //
 // meetingIsTheirsSQL is "this meeting is that rep's" for the weekly figures:
-// the one meeting-responsibility rule the Worklist reads, over alias `m`.
-// Filing a meeting, or importing a copy, credits nobody; a meeting two reps
-// attended is in both their weeks, because both spent the time.
+// the meeting credit rule analytics counts by, over alias `m`. Filing a
+// meeting, importing a copy, or an invitation nobody accepted credits nobody.
+// A meeting two reps attended is in both their weeks: both spent the time.
 //
 // Three readers ask it: the headline count here, the funnel in
 // weeklyscorecard.go and the coverage in weeklycoverage.go. Plan capacity asks
-// the same owner directly, so no panel credits a meeting another denies.
+// the wider responsibility rule instead, because an unanswered invitation
+// still holds the time.
 //
 // Held by: TestTheMeetingAttributionHasOneSpelling (meetingattribution_test.go)
 func meetingIsTheirsSQL(seat string) string {
-	return storekit.MeetingResponsibilitySQL("m", seat)
+	return storekit.MeetingCreditSQL("m", seat)
 }
 
 // NextStepTaskSQL is "task is a next step recorded from meeting": a live task

@@ -334,6 +334,13 @@ func TestEveryJoinedVocabularyDeclaresADefence(t *testing.T) {
 				if _, via := spec.scopeVia[field]; via {
 					continue
 				}
+				if _, own := activityOwnRowFields[report][field]; own {
+					if !spec.activityWalk {
+						t.Errorf("report %q reads %q off the activity's own rows but does not walk "+
+							"activities, so nothing applies the activity's scope to them", report, field)
+					}
+					continue
+				}
 				if freelyReadableJoins.Waived(t, aliases[alias]) {
 					continue
 				}

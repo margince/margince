@@ -5,6 +5,7 @@ package compose
 
 import (
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -13,6 +14,12 @@ const fieldForecastCategory = "forecast_category"
 // The activity report's own vocabulary. Spelled here rather than borrowed from
 // an unrelated surface that happens to use the same words: renaming a report
 // dimension must never rename a capture target type.
+
+// colMeetingCreditedSeat is the one seat a meeting is listed under where a
+// report filters by colleague (storekit.MeetingCreditedSeatSQL); NULL for every
+// other kind of activity.
+var colMeetingCreditedSeat = "(CASE WHEN t.kind = 'meeting' THEN " + storekit.MeetingCreditedSeatSQL("t") + " END)"
+
 const (
 	fieldKind          = "kind"
 	fieldMeetingStatus = "meeting_status"
@@ -21,7 +28,6 @@ const (
 	fieldProject       = "project"
 	colKind            = "t.kind"
 	colMeetingStatus   = "t.meeting_status"
-	colHostUserID      = "t.host_user_id"
 	colDirection       = "t.direction"
 
 	// activityProjectIDExpr is the project an activity is filed under, read
@@ -297,12 +303,12 @@ var prebuiltReports = map[string]reportSpec{
 			fieldKind:          colKind,
 			fieldDirection:     colDirection,
 			fieldMeetingStatus: colMeetingStatus,
-			// The seat hosting the meeting — the one per-contact handle the
-			// activity table itself carries, set exactly for meetings. Not
-			// owner-gated: it narrows WITHIN rows the caller's activity clause
-			// already admits, and the ordinary activities list serves host and
-			// standing on each of those rows one by one.
-			fieldHostUserID: colHostUserID,
+			// The seat a meeting is listed under by the meeting credit rule:
+			// the colleague the attendance evidence credits, not whoever
+			// imported the calendar. Not owner-gated: it narrows WITHIN rows
+			// the caller's activity clause already admits. The ordinary
+			// activities list serves host and standing on each of those rows.
+			fieldHostUserID: colMeetingCreditedSeat,
 			fieldProjectID:  activityProjectIDExpr,
 		},
 		filterScopes: projectFilterScope,
