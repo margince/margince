@@ -189,6 +189,42 @@ func TestAHeldRescheduledMeetingKeepsItsOutcomeWhenTheProviderMovesOnlyTheEnd(t 
 	}
 }
 
+// A reschedule start carries nanoseconds the stored start drops. Settling that
+// reschedule again, as a retry does, still finds the outcome at its own start.
+func TestSettlingASubMicrosecondRescheduleAgainKeepsItsOutcome(t *testing.T) {
+	f := newInvitationFixture(t)
+	meeting := f.book(t)
+	id := ids.From[ids.ActivityKind](ids.UUID(meeting.Id))
+	start, end := monday(13).Add(789*time.Nanosecond), monday(14)
+	if _, err := f.store.ChangeInvitation(f.ctx, ids.UUID(meeting.Id), crmcontracts.MeetingInvitationChange{Action: "reschedule", Version: meeting.Version, Start: &start, End: &end}); err != nil {
+		t.Fatalf("rescheduling: %v", err)
+	}
+	if err := f.store.DeliverInvitations(f.ctx); err != nil {
+		t.Fatalf("settling the reschedule: %v", err)
+	}
+	f.now = monday(15)
+	held := string(crmcontracts.ActivityMeetingStatusHeld)
+	if _, err := f.store.UpdateActivity(f.ctx, id, UpdateActivityInput{MeetingStatus: &held}); err != nil {
+		t.Fatalf("recording the moved meeting as held: %v", err)
+	}
+	if err := f.store.tx(f.ctx, func(tx pgx.Tx) error {
+		row, err := readInvitation(f.ctx, tx, ids.UUID(meeting.Id), false)
+		if err != nil {
+			return err
+		}
+		return f.store.settleInvitation(f.ctx, tx, row, true)
+	}); err != nil {
+		t.Fatalf("settling the reschedule again: %v", err)
+	}
+	var status string
+	if err := f.env.owner.QueryRow(f.ctx, `SELECT meeting_status FROM activity WHERE id=$1`, meeting.Id).Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status != held {
+		t.Errorf("the meeting reads %q after its reschedule settled again, want held", status)
+	}
+}
+
 func TestAProposalIsConsumedInTheInvitationTransaction(t *testing.T) {
 	f := newInvitationFixture(t)
 	link, err := f.store.CreateProposal(f.ctx, crmcontracts.MeetingProposalRequest{ContactId: f.request.ContactId, AttendeeEmail: f.request.AttendeeEmail, Subject: f.request.Subject, DurationMinutes: 60})

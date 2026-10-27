@@ -53,13 +53,14 @@ var noonMeetingScope = `
    AND NOT EXISTS (SELECT 1 FROM meeting_invitation i WHERE i.activity_id = a.id AND ` + InvitationHoldsMeetingSQL("i") + `)`
 
 // NoonMeeting is one meeting to restore: the start it holds, the one the
-// outcome save replaced, and whether it was archived since.
+// outcome save replaced, whether it was archived since, and its status.
 type NoonMeeting struct {
 	ID       ids.UUID
 	Version  int64
 	Noon     time.Time
 	Original time.Time
 	Archived bool
+	Status   *string
 }
 
 // NoonMeetingsAfterTx reads the next limit meetings after the cursor in id
@@ -69,7 +70,7 @@ func NoonMeetingsAfterTx(ctx context.Context, tx pgx.Tx, zone string, after ids.
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id, a.version, a.occurred_at, last.original, a.archived_at IS NOT NULL `+noonMeetingScope+`
+	rows, err := tx.Query(ctx, `SELECT a.id, a.version, a.occurred_at, last.original, a.archived_at IS NOT NULL, a.meeting_status `+noonMeetingScope+`
 		   AND a.id > $3 ORDER BY a.id LIMIT $4`, zone, MeetingNoonCutoffMigration, after, limit)
 	if err != nil {
 		return nil, fmt.Errorf("activities: selecting meetings an outcome save moved to noon: %w", err)
@@ -94,17 +95,25 @@ func CountNoonMeetingsTx(ctx context.Context, q pgx.Tx, zone string, limit int64
 
 // RestoreMeetingStartTx puts a meeting's start back through the module's own
 // update, and on its history rows. That update locks the row, bumps the version,
-// audits, emits the event and moves the last-activity clocks. It answers false
-// and writes nothing when the row changed since it was read.
+// audits, emits the event and moves the last-activity clocks. An outcome
+// whose restored start has not come yet goes back to booked, as any move does.
+// It answers false and writes nothing when the row changed since it was read.
 func RestoreMeetingStartTx(ctx context.Context, tx pgx.Tx, m NoonMeeting) (bool, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return false, err
 	}
-	if m.Archived {
-		return restoreArchivedMeetingStartTx(ctx, tx, m)
+	status, err := statusAfterMove(ctx, tx, m.Status, m.Original, PrecisionInstant, nil)
+	if err != nil {
+		return false, err
 	}
-	_, err := updateActivityInTx(ctx, tx, ids.From[ids.ActivityKind](m.ID), UpdateActivityInput{
-		OccurredAt: &m.Original, IfVersion: &m.Version,
+	if deref(status) == deref(m.Status) {
+		status = nil
+	}
+	if m.Archived {
+		return restoreArchivedMeetingStartTx(ctx, tx, m, status)
+	}
+	_, err = updateActivityInTx(ctx, tx, ids.From[ids.ActivityKind](m.ID), UpdateActivityInput{
+		OccurredAt: &m.Original, MeetingStatus: status, IfVersion: &m.Version,
 	})
 	if errors.Is(err, apperrors.ErrVersionSkew) || errors.Is(err, apperrors.ErrNotFound) {
 		return false, nil
@@ -127,21 +136,20 @@ func restoreMeetingHistoryStartTx(ctx context.Context, tx pgx.Tx, m NoonMeeting)
 }
 
 // restoreArchivedMeetingStartTx puts back the start of a meeting archived after
-// the damage, so a later restore of the record shows the meeting when it was.
-// The live update refuses an archived row, so this writes the start itself,
-// with the audit row and event that update would write. An archived meeting
-// moves no last-activity clock, so none is touched. It answers false and
-// writes nothing when the row changed since it was read.
-func restoreArchivedMeetingStartTx(ctx context.Context, tx pgx.Tx, m NoonMeeting) (bool, error) {
+// the damage, and a non-nil status. A later restore of the record then shows the
+// meeting when it was. The live update refuses an archived row, so this writes
+// the audit row and event that update would write. An archived meeting moves no
+// last-activity clock. It answers false and writes nothing when the row changed.
+func restoreArchivedMeetingStartTx(ctx context.Context, tx pgx.Tx, m NoonMeeting, status *string) (bool, error) {
 	if _, err := storekit.LockRow(ctx, tx, "activity", m.ID, storekit.IncludeArchived); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return false, nil
 		}
 		return false, err
 	}
-	tag, err := tx.Exec(ctx, `UPDATE activity SET occurred_at = $2
+	tag, err := tx.Exec(ctx, `UPDATE activity SET occurred_at = $2, meeting_status = coalesce($5, meeting_status)
 		WHERE id = $1 AND version = $3 AND occurred_at = $4 AND archived_at IS NOT NULL AND restricted_at IS NULL`,
-		m.ID, m.Original, m.Version, m.Noon)
+		m.ID, m.Original, m.Version, m.Noon, status)
 	if err != nil {
 		return false, fmt.Errorf("activities: restoring an archived meeting's start: %w", err)
 	}
@@ -151,17 +159,25 @@ func restoreArchivedMeetingStartTx(ctx context.Context, tx pgx.Tx, m NoonMeeting
 	// The selection keeps instants only, and a time is named with its
 	// precision, as the live update names it.
 	instant := string(PrecisionInstant)
-	auditID, err := storekit.Audit(ctx, tx, "update", "activity", m.ID,
-		map[string]any{auditFieldOccurredAt: m.Noon, fieldOccurredPrecision: instant},
-		map[string]any{auditFieldOccurredAt: m.Original, fieldOccurredPrecision: instant})
+	before := map[string]any{auditFieldOccurredAt: m.Noon, fieldOccurredPrecision: instant}
+	after := map[string]any{auditFieldOccurredAt: m.Original, fieldOccurredPrecision: instant}
+	original, precision := m.Original, crmcontracts.ActivityTimeIsAnInstant
+	changed := crmcontracts.PublicEventActivityChangedFields{OccurredAt: &original, OccurredPrecision: &precision}
+	if status != nil {
+		before[auditFieldMeetingStatus], after[auditFieldMeetingStatus] = deref(m.Status), *status
+		changed.MeetingStatus = new(crmcontracts.PublicEventActivityChangedFieldsMeetingStatus(*status))
+	}
+	auditID, err := storekit.Audit(ctx, tx, "update", "activity", m.ID, before, after)
 	if err != nil {
 		return false, err
 	}
-	original, precision := m.Original, crmcontracts.ActivityTimeIsAnInstant
-	if err := storekit.EmitEvent(ctx, tx, auditID, m.ID, crmcontracts.PublicEventActivityUpdated{
-		ChangedFields: crmcontracts.PublicEventActivityChangedFields{OccurredAt: &original, OccurredPrecision: &precision},
-	}); err != nil {
+	if err := storekit.EmitEvent(ctx, tx, auditID, m.ID, crmcontracts.PublicEventActivityUpdated{ChangedFields: changed}); err != nil {
 		return false, err
 	}
-	return true, restoreMeetingHistoryStartTx(ctx, tx, m)
+	if err := restoreMeetingHistoryStartTx(ctx, tx, m); err != nil {
+		return false, err
+	}
+	return true, recordMeetingTransition(ctx, tx, meetingTransition{
+		ActivityID: ids.From[ids.ActivityKind](m.ID), Status: meetingStatusOrNone(status), ScheduledStart: &m.Original,
+	})
 }
