@@ -86,8 +86,8 @@ func narrowestReader() context.Context {
 	return teamReader(map[string]principal.ObjectGrant{maskObject: {Read: true}}, masks...)
 }
 
-// The probe walks the list's own filter set. A filter added there is probed,
-// and its refusal lands here with nothing else to update.
+// The probe walks the list's own filter set, so a filter added there is probed.
+// A refusal it brings fails this test until want names it.
 func TestTheReachProbeWalksEveryDealListFilter(t *testing.T) {
 	reach, err := ListFilterReach(narrowestReader(), nil)
 	if err != nil {
