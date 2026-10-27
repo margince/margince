@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WriteToProvider } from "../lib/writeto";
@@ -209,3 +212,27 @@ describe("ContactLink's labelled email verb", () => {
     expect(container.childElementCount).toBe(0);
   });
 });
+
+// A `mailto:` built from an address sends the message around the composer, so
+// ContactLink is the one place allowed to build one, for a reader with no
+// mailbox. Every product source file is read, so a new surface cannot slip by.
+describe("an address to write to", () => {
+  it("becomes a mailto only inside ContactLink", () => {
+    const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+    const builders = productSources(srcRoot)
+      .filter((path) => /mailto:\$\{/.test(readFileSync(path, "utf8")))
+      .map((path) => relative(srcRoot, path));
+    expect(builders).toEqual(["design-system/contactlink.tsx"]);
+  });
+});
+
+function productSources(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) return productSources(path);
+    return /\.tsx?$/.test(entry.name) &&
+      !/\.(test|stories)\.tsx?$/.test(entry.name)
+      ? [path]
+      : [];
+  });
+}
