@@ -132,8 +132,6 @@ export function WebFormDrawer({
   const titleId = useId();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<WebFormDraft>(() => draftFor(form));
-  const set = (patch: Partial<WebFormDraft>) =>
-    setDraft((prev) => ({ ...prev, ...patch }));
   const save = useMutation({
     mutationFn: saveWebForm,
     onSuccess: (saved, { form: edited }) => {
@@ -144,6 +142,13 @@ export function WebFormDrawer({
       onClose();
     },
   });
+  // A corrected field should not keep the refusal it no longer earns.
+  const set = (patch: Partial<WebFormDraft>) => {
+    if (save.isError) {
+      save.reset();
+    }
+    setDraft((prev) => ({ ...prev, ...patch }));
+  };
   const fieldErrors = new Map(
     problemFieldErrorsOf(save.error).map((p) => [p.field, p.message]),
   );

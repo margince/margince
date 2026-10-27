@@ -6664,8 +6664,9 @@ export interface paths {
          *     `X-Margince-Timestamp`, `X-Margince-Nonce` and `X-Margince-Signature`; a builder form
          *     checks the builder's own signature header.
          *
-         *     A new email becomes a lead with the form's origin; an email an open lead already holds adds
-         *     the message to that lead's timeline instead. The answer is the same in both cases and for
+         *     A new email becomes a lead with the form's origin; an email an open lead or a contact
+         *     already holds adds the message to that record's timeline instead. The answer is the same in
+         *     every case and for
          *     a submission the spam checks dropped, so the address tells nobody who is in the CRM.
          *
          *     A request whose `Accept` asks for HTML (a plain `<form>` post) is answered with a redirect

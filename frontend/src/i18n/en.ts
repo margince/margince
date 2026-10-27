@@ -13803,7 +13803,8 @@ export const en = {
   "financeSource.cancel": "Cancel",
 
   "webForms.title": "Website forms",
-  "webForms.sub": "Forms on your website that turn each enquiry into a lead.",
+  "webForms.sub":
+    "Forms on your website. Each enquiry becomes a lead, or a note on the lead or contact with that email.",
   "webForms.readOnly":
     "Read-only: only a role with the integrations permission can change website forms.",
   "webForms.new": "New website form",
@@ -13834,7 +13835,7 @@ export const en = {
   "webForms.archiveDone": "Website form archived",
   "webForms.drawer.editTitle": "Edit website form",
   "webForms.drawer.sub":
-    "Each submission becomes a lead, with the enquiry as a note on its timeline.",
+    "Each submission becomes a lead with the enquiry as a note. A lead or contact that already has the email gets the note instead.",
   "webForms.drawer.cancel": "Cancel",
   "webForms.drawer.save": "Save form",
   "webForms.drawer.create": "Create form",
@@ -13865,7 +13866,7 @@ export const en = {
     "Require consent before a submission is taken",
   "webForms.field.consentWording": "Consent wording",
   "webForms.field.consentWordingHint":
-    "The exact text beside the checkbox, kept on each lead as evidence.",
+    "The text you show beside the checkbox. Each ticked submission keeps it in its note as evidence.",
   "webForms.field.consentPolicyVersion": "Privacy policy version",
   "webForms.field.consentPolicyVersionHint":
     "The version of the policy the wording links to.",

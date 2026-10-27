@@ -125,7 +125,10 @@ function RotateAction({
       </Button>
       <ConfirmModal
         open={confirming}
-        onClose={() => setConfirming(false)}
+        onClose={() => {
+          setConfirming(false);
+          rotate.reset();
+        }}
         title={t("webForms.rotateConfirm.title")}
         confirmLabel={t("webForms.rotate")}
         confirmVariant="danger"

@@ -13818,7 +13818,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "webForms.title": "Website-Formulare",
   "webForms.sub":
-    "Formulare auf deiner Website, die jede Anfrage zu einem Lead machen.",
+    "Formulare auf deiner Website. Jede Anfrage wird ein Lead oder eine Notiz am Lead oder Kontakt mit dieser E-Mail.",
   "webForms.readOnly":
     "Nur Lesen: Nur eine Rolle mit der Berechtigung für Integrationen kann Website-Formulare ändern.",
   "webForms.new": "Neues Website-Formular",
@@ -13849,7 +13849,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.archiveDone": "Website-Formular archiviert",
   "webForms.drawer.editTitle": "Website-Formular bearbeiten",
   "webForms.drawer.sub":
-    "Jede Sendung wird ein Lead, mit der Anfrage als Notiz in seiner Chronik.",
+    "Jede Sendung wird ein Lead mit der Anfrage als Notiz. Hat ein Lead oder Kontakt die E-Mail schon, bekommt er die Notiz.",
   "webForms.drawer.cancel": "Abbrechen",
   "webForms.drawer.save": "Formular speichern",
   "webForms.drawer.create": "Formular anlegen",
@@ -13882,7 +13882,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einwilligung verlangen, bevor eine Sendung angenommen wird",
   "webForms.field.consentWording": "Einwilligungstext",
   "webForms.field.consentWordingHint":
-    "Der genaue Text neben der Checkbox, als Nachweis an jedem Lead gespeichert.",
+    "Der Text, den du neben der Checkbox zeigst. Jede angehakte Sendung hält ihn als Nachweis in ihrer Notiz fest.",
   "webForms.field.consentPolicyVersion": "Version der Datenschutzerklärung",
   "webForms.field.consentPolicyVersionHint":
     "Die Version der Erklärung, auf die der Text verweist.",
