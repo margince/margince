@@ -11,6 +11,7 @@ package contacts
 // into one function word and counted, and never shown.
 
 import (
+	"slices"
 	"sort"
 	"strings"
 	"unicode"
@@ -80,7 +81,7 @@ var reachFunctions = []reachFunctionVocabulary{
 	{
 		function: crmcontracts.LinkedInReachFunctionOperations,
 		words:    []string{"operations", "coo", "logistics", "production"},
-		stems:    []string{"logistik", "produktion", "betriebsleit", "werkleit"},
+		stems:    []string{"logistik", "produktion", "betriebsleit", "werkleit"}, //nolint:misspell // German words
 		phrases:  []string{"supply chain", "plant manager", "chief operating officer"},
 	},
 	{
@@ -112,10 +113,8 @@ func reachFunctionOf(title string) (crmcontracts.LinkedInReachFunction, bool) {
 
 func (v reachFunctionVocabulary) matches(words []string, joined string) bool {
 	for _, word := range words {
-		for _, whole := range v.words {
-			if word == whole {
-				return true
-			}
+		if slices.Contains(v.words, word) {
+			return true
 		}
 		for _, stem := range v.stems {
 			if strings.Contains(word, stem) {

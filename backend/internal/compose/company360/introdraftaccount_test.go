@@ -75,7 +75,7 @@ func TestEveryFunctionIsNamedInEveryLanguage(t *testing.T) {
 	if enum == nil {
 		t.Fatal("the contract no longer declares LinkedInReachFunction's enum where this test reads it")
 	}
-	for _, value := range strings.Split(string(enum[1]), ",") {
+	for value := range strings.SplitSeq(string(enum[1]), ",") {
 		function := crmcontracts.LinkedInReachFunction(strings.TrimSpace(value))
 		if _, ok := reachFunctionNames[function]; !ok {
 			t.Errorf("%s has no name for the ask to say", function)
