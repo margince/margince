@@ -35,9 +35,10 @@ function inkWidth(cell: HTMLTableCellElement): number {
     return 0;
   }
   const style = getComputedStyle(cell);
+  // A side with no padding declared reads as an empty string, which is zero.
   const padding =
-    Number.parseFloat(style.paddingLeft) +
-    Number.parseFloat(style.paddingRight);
+    (Number.parseFloat(style.paddingLeft) || 0) +
+    (Number.parseFloat(style.paddingRight) || 0);
   return Math.ceil(right - left + padding) + 1;
 }
 
@@ -141,7 +142,15 @@ export function useNumericFloors(
       setFloors(NO_FLOORS);
     }
   });
-  useLayoutEffect(() => () => watched.current?.stop(), []);
+  // Forgotten as well as stopped, so a remount (Strict Mode runs one) watches
+  // the same table again instead of taking the stopped watch for a live one.
+  useLayoutEffect(
+    () => () => {
+      watched.current?.stop();
+      watched.current = null;
+    },
+    [],
+  );
   return floors;
 }
 
