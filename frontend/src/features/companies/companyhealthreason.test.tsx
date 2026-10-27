@@ -35,6 +35,21 @@ describe("useHealthReason", () => {
     ).toBe("Seit 77 Tagen keine Antwort und kein Termin.");
   });
 
+  // Beside a timeline that counts from another exchange, a bare "77 days"
+  // reads as an error; the day it counts from says why the two differ.
+  it("names the day a quiet spell counts from when the server sends it", () => {
+    const vi = renderHook(() => useHealthReason(), { wrapper: wrapper("vi") });
+    const said = vi.result.current({
+      reason: english,
+      reason_code: "quiet",
+      reason_params: { days: 77, at: "2026-08-11T09:00:00Z" },
+    });
+    expect(said).toMatch(
+      /^Chưa có phản hồi hay cuộc họp nào từ .*11.* \(77 ngày\)\.$/,
+    );
+    expect(said).not.toContain("{at}");
+  });
+
   it("counts the sentence by its number", () => {
     const en = renderHook(() => useHealthReason(), { wrapper: wrapper("en") });
     expect(

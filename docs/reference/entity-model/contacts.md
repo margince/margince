@@ -1357,7 +1357,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead_origin
 
-13 columns · primary key `(id)` · referenced by 1 foreign key
+13 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

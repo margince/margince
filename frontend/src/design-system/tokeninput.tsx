@@ -121,6 +121,12 @@ export function TokenInput({
     setTyped("");
   };
 
+  // A committed value reads the way its suggestion did: an address the record
+  // knows shows its contact's name, with the address itself beside it.
+  const labels = new Map(
+    (suggestions ?? EMPTY).map((row) => [row.value, row.label]),
+  );
+
   const list = useSuggestList({
     anchorRef: fieldRef,
     popupRef,
@@ -172,7 +178,7 @@ export function TokenInput({
     >
       {values.map((value) => (
         <span key={value} className="token">
-          {value}
+          <TokenFace value={value} label={labels.get(value)} />
           <button
             type="button"
             className="token-remove"
@@ -219,6 +225,22 @@ export function TokenInput({
       />
       <SuggestPopup list={list} />
     </span>
+  );
+}
+
+// The value alone, or a name and the value it stands for, dimmed after it.
+function TokenFace({
+  value,
+  label,
+}: Readonly<{ value: string; label: string | undefined }>) {
+  if (!label || label === value) {
+    return value;
+  }
+  return (
+    <>
+      <span className="token-label">{label}</span>
+      <span className="token-detail">{value}</span>
+    </>
   );
 }
 

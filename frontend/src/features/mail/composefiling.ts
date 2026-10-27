@@ -277,6 +277,35 @@ export function contactsByAddress(
   return (address) => owners.get(address.trim().toLowerCase());
 }
 
+/**
+ * Who an account-started message is to: the first address in To that belongs
+ * to one of the account's contacts. The draft is written for that contact, and
+ * the send is linked to them. A second picker could only disagree with To.
+ */
+export function useAccountRecipient(
+  companyId: string | undefined,
+  to: readonly string[],
+  // The contact a verb on the account started from, offered into an empty To
+  // unless the caller holds the record's own address.
+  started: Readonly<{ contactId?: string; recordAddress?: string }>,
+) {
+  const company = useCompany360(companyId ?? "");
+  const contacts = company.data?.contacts?.data ?? [];
+  const ownerOf = contactsByAddress(undefined, company.data);
+  const recipientId =
+    to.map(ownerOf).find((owner) => owner !== undefined) ?? "";
+  const startedFrom = contacts.find(
+    (contact) => contact.contact_id === started.contactId,
+  );
+  return {
+    recipientId,
+    offeredAddress:
+      started.recordAddress ?? startedFrom?.primary_email ?? undefined,
+    // An account with no contact leaves the draft nobody to write for.
+    noContacts: company.isSuccess && contacts.length === 0,
+  };
+}
+
 // Which projects a message may file under, per record kind: a contact's own,
 // a project itself, and otherwise the account's.
 function reachableFrom(

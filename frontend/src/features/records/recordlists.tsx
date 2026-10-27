@@ -113,7 +113,7 @@ function CheckAList({ entityType, entityId }: RecordRef) {
   }
   return (
     <div className="lists-record-check">
-      <Field label={t("lists.record.check")}>
+      <Field label={t("lists.record.check")} hint={t("lists.record.checkHint")}>
         {(control) => (
           <Select
             {...control}

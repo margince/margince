@@ -1002,7 +1002,7 @@ export const en = {
     "Open deals per company and each one’s share of the pipeline, in Pipeline.",
   "reporting.prepared.deliveryTitle": "Delivery review",
   "reporting.prepared.deliveryPurpose":
-    "Project commitments, quiet projects and phases, in Delivery.",
+    "Open project tasks, quiet projects and phases, in Delivery.",
   "reporting.noSalesWon": "No sales won",
   "reporting.openPipelineAsOf": "As of {at}",
   "reporting.openPipelineBasis_one": "Open deal: {count} · as of {at}",
@@ -1683,6 +1683,9 @@ export const en = {
   // a name, so the tag says the kind and stops rather than printing an
   // identifier at a reader who can do nothing with it.
   "trust.agentUnnamed": "Automated by an agent",
+  // The colleague the agent worked for, from the record's create audit row.
+  "trust.agentFor": "Made by {agent} for {name}",
+  "trust.agentUnnamedFor": "Made by an agent for {name}",
   // A job the installation ran itself — a scheduled sweep, a backfill, a public
   // endpoint. Named apart from an agent because "a model decided this" and "the
   // system did its housekeeping" are different answers to "who do I ask".
@@ -1773,6 +1776,7 @@ export const en = {
   "systemJob.public_booking": "Public booking page",
   "systemJob.public_confirm": "Public details confirmation",
   "systemJob.public_preferences": "Public preference page",
+  "systemJob.public_web_form": "Website form",
   "systemJob.rbac_defaults": "Extension starting permissions",
   "systemJob.release_version": "Release check",
   "systemJob.report_schedule": "Scheduled reports",
@@ -3067,6 +3071,10 @@ export const en = {
   "co.health.reason.neverWritten": "No message from them and no meeting yet.",
   "co.health.reason.quiet_one": "No reply and no meeting for {days} day.",
   "co.health.reason.quiet_other": "No reply and no meeting for {days} days.",
+  "co.health.reason.quietSince_one":
+    "No reply and no meeting since {at} ({days} day).",
+  "co.health.reason.quietSince_other":
+    "No reply and no meeting since {at} ({days} days).",
   "co.health.reason.meetingBooked": "A meeting is booked for {at}.",
   "co.health.reason.lastMetToday": "Last met them today.",
   "co.health.reason.lastMet_one": "Last met them {days} day ago.",
@@ -4871,6 +4879,10 @@ export const en = {
   "deal.standing.figure.next": "Next step",
   "standing.noneYet": "None yet",
   "deal.standing.figure.daysInStage": "Days in stage",
+  "deal.standing.figure.daysToClose": "Days to close",
+  "deal.standing.figure.openedOn": "opened {date}",
+  "deal.standing.figure.final": "outcome",
+  "deal.standing.closedOn": "Closed {date}",
   "standing.timeline.label": "{name} over time",
   "standing.noReply": "no reply",
   "deal.standing.timeline.booked": "booked",
@@ -6305,10 +6317,11 @@ export const en = {
   "compose.projectKeyInSubject": "Add project key to subject (helps filing)",
   "compose.noGroundableRecipient":
     "No contacts at this company yet. Write the message manually, or add a contact first.",
-  "compose.draftTo": "Draft to",
-  "compose.draftToUnset": "Choose a contact",
   "compose.relatedTo": "Related to",
-  "compose.relatedToNone": "Whole company",
+  "compose.relatedToNone": "Nothing specific",
+  "compose.relatedDeal": "Deal: {name}",
+  "compose.draftNeedsRecipient":
+    "To draft with AI, add a contact from this company to To.",
   "compose.project": "Project",
   "compose.projectNone": "No project",
   "compose.scopedToCounted":
@@ -6662,10 +6675,10 @@ export const en = {
   "analytics.field.last_activity_at": "Last activity",
   "analytics.field.lost_reason": "Lost reason",
   "analytics.field.meeting_status": "Meeting status",
-  "analytics.field.open_commitments": "Open commitments",
+  "analytics.field.open_commitments": "Open tasks",
   "analytics.field.open_deal_value_minor": "Open deal value",
   "analytics.field.open_deal_unpriced": "Open deals not priced",
-  "analytics.field.overdue_commitments": "Overdue commitments",
+  "analytics.field.overdue_commitments": "Overdue tasks",
   "analytics.field.close_month": "Close month",
   "analytics.field.owner_id": "Owner",
   "analytics.field.partner_company_id": "Partner company",
@@ -6793,14 +6806,14 @@ export const en = {
   "analytics.q.withheldGroups_one": "1 group withheld",
   "analytics.q.withheldGroups_other": "{count} groups withheld",
   "analytics.reportProjectsByPhase": "Projects by phase",
-  "analytics.reportProjectCommitments": "Project commitments",
+  "analytics.reportProjectTasks": "Open project tasks",
   "analytics.reportProjectsGoneQuiet": "Projects inactive for 30 days",
   "analytics.projects": "Projects",
   "analytics.project": "Project",
   "analytics.openDealValue": "Open deal value · {currency}",
   "analytics.wonDealValue": "Won deal value · {currency}",
-  "analytics.openCommitments": "Open commitments",
-  "analytics.overdueCommitments": "Overdue commitments",
+  "analytics.openTasks": "Open tasks",
+  "analytics.overdueTasks": "Overdue tasks",
   "analytics.quietSince": "Quiet since",
   "analytics.nothingQuiet": "No project in delivery has gone quiet.",
   "analytics.noProjectsYet":
@@ -11702,7 +11715,7 @@ export const en = {
   "companyTriage.title": "Company origin",
   "companyTriage.sub": "Mail domains checked and the result of each check.",
   "companyTriage.empty":
-    "No mail domain was checked for this company. It was created manually or imported.",
+    "This company was not created from mail. Its Source line says where it came from.",
   "companyTriage.checkedAt": "checked {when}",
   "pipeline.reason.no_named_reader":
     "this thread has no reader a finding could be addressed to",
@@ -13903,6 +13916,108 @@ export const en = {
   "financeSource.findCompany": "Find a company",
   "financeSource.cancel": "Cancel",
 
+  "webForms.title": "Website forms",
+  "webForms.sub":
+    "Forms on your website. Each enquiry becomes a lead, or a note on the lead or contact with that email.",
+  "webForms.readOnly":
+    "Read-only: only a role with the integrations permission can change website forms.",
+  "webForms.new": "New website form",
+  "webForms.state.active": "Active",
+  "webForms.state.paused": "Paused",
+  "webForms.sender.browser": "Website",
+  "webForms.sender.server": "Website server",
+  "webForms.sender.webflow": "Webflow",
+  "webForms.sender.typeform": "Typeform",
+  "webForms.sender.tally": "Tally",
+  "webForms.senderLine.browser": "Posts from the listed websites",
+  "webForms.senderLine.server": "Signed posts from your website’s server",
+  "webForms.senderLine.webflow": "Signed webhook from Webflow",
+  "webForms.senderLine.typeform": "Signed webhook from Typeform",
+  "webForms.senderLine.tally": "Signed webhook from Tally",
+  "webForms.row.consent": "Consent required",
+  "webForms.setup": "Show setup",
+  "webForms.edit": "Edit",
+  "webForms.pause": "Pause form",
+  "webForms.resume": "Resume form",
+  "webForms.rotate": "Rotate secret",
+  "webForms.rotateConfirm.title": "Rotate form secret?",
+  "webForms.rotateConfirm.body":
+    "The current secret stops working at once and the new one is shown once. Update your website’s server right away.",
+  "webForms.archive": "Archive",
+  "webForms.archiveConfirm":
+    "Archiving stops this form from taking submissions. This cannot be undone.",
+  "webForms.archiveDone": "Website form archived",
+  "webForms.drawer.editTitle": "Edit website form",
+  "webForms.drawer.sub":
+    "Each submission becomes a lead with the enquiry as a note. A lead or contact that already has the email gets the note instead.",
+  "webForms.drawer.cancel": "Cancel",
+  "webForms.drawer.save": "Save form",
+  "webForms.drawer.create": "Create form",
+  "webForms.field.name": "Name",
+  "webForms.field.nameHint":
+    "Shown on each lead’s note, for example Contact page.",
+  "webForms.field.sender": "Sent by",
+  "webForms.field.senderFixed":
+    "Fixed once the form exists. Create a new form to change it.",
+  "webForms.senderHint.browser":
+    "A form on your website posts straight from the visitor’s browser.",
+  "webForms.senderHint.server":
+    "Your website’s server forwards each submission, signed with a secret.",
+  "webForms.senderHint.webflow":
+    "Webflow sends each form submission as a signed webhook.",
+  "webForms.senderHint.typeform":
+    "Typeform sends each response as a signed webhook.",
+  "webForms.senderHint.tally": "Tally sends each response as a signed webhook.",
+  "webForms.field.origins": "Websites",
+  "webForms.field.originsHint":
+    "One address per line. Posts from any other website are refused.",
+  "webForms.field.originsPlaceholder": "https://www.example.com",
+  "webForms.field.senderSecret": "Signing secret",
+  "webForms.field.senderSecretHint":
+    "The secret from the tool’s webhook settings, at least 16 characters.",
+  "webForms.field.senderSecretKeep": "Leave empty to keep the stored secret.",
+  "webForms.field.consentRequired":
+    "Require consent before a submission is taken",
+  "webForms.field.consentWording": "Consent wording",
+  "webForms.field.consentWordingHint":
+    "The text you show beside the checkbox. Each ticked submission keeps it in its note as evidence.",
+  "webForms.field.consentPolicyVersion": "Privacy policy version",
+  "webForms.field.consentPolicyVersionHint":
+    "The version of the policy the wording links to.",
+  "webForms.field.redirectUrl": "Thank-you page",
+  "webForms.field.redirectUrlHint":
+    "Where a visitor goes after sending. Empty shows the success message.",
+  "webForms.field.redirectUrlPlaceholder": "https://www.example.com/thanks",
+  "webForms.field.successMessage": "Success message",
+  "webForms.field.successMessageHint": "Shown to the visitor after sending.",
+  "webForms.setup.title": "Connect {name}",
+  "webForms.setup.how.browser":
+    "Paste this form into your website, or point your own form at the address and keep its field names.",
+  "webForms.setup.how.server":
+    "Your server posts each submission to this address, signed as the code below shows.",
+  "webForms.setup.how.webflow":
+    "In Webflow, add a form submission webhook that sends to this address.",
+  "webForms.setup.how.typeform":
+    "In Typeform, add a webhook under Connect that sends to this address.",
+  "webForms.setup.how.tally":
+    "In Tally, add a webhook under Integrations that sends to this address.",
+  "webForms.setup.address": "Form address",
+  "webForms.setup.secret": "Form secret",
+  "webForms.setup.secretWarning":
+    "This secret is shown once. Store it on your server as {name}.",
+  "webForms.setup.snippet": "Code to paste",
+  "webForms.setup.builderSecret":
+    "Use the same signing secret there that you saved on this form.",
+  "webForms.setup.customFields":
+    "A field named after a lead custom field fills it: {fields}. A value it cannot take goes on the note.",
+  "webForms.setup.copy": "Copy code",
+  "webForms.setup.copySecret": "Copy secret",
+  "webForms.setup.copied": "Copied",
+  "webForms.setup.copyFailed": "Select the text above and copy it manually.",
+  "webForms.setup.leaveWarning":
+    "Closing destroys the only copy of this secret. Copy it first.",
+  "webForms.setup.done": "Done",
+
   "webhooks.title": "Webhooks",
   "webhooks.readOnly":
     "Read-only: only an administrator or operations user can change subscriptions.",
@@ -15611,6 +15726,8 @@ export const en = {
   "lists.record.loading": "Loading lists",
   "lists.record.empty": "Not on any list you can find.",
   "lists.record.check": "Check a Live List",
+  "lists.record.checkHint":
+    "A Live List updates itself from its filters. Pick one to see whether this record matches, and why.",
   "lists.record.checkPick": "Pick a Live List",
   "lists.record.truncated": "And more lists not shown here.",
   "lists.record.takenOff": "Taken off {name}",
@@ -15974,6 +16091,7 @@ export const en = {
   "project.documents.empty":
     "No file is attached to this project. Files attached to its deals stay on the deals.",
   "record.commitments": "Commitments",
+  "project.openTasks": "Open tasks",
   "project.commitments.empty":
     "No open task is filed under this project. Linked tasks appear here, soonest due first.",
   "project.commitments.overdue": "Overdue",

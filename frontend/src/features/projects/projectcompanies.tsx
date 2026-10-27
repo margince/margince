@@ -27,7 +27,11 @@ import {
 import type { RecordPickerCandidate } from "../../design-system/recordpicker";
 import { useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { COMPANY_ROLES, roleKey } from "../companies/companyprojects";
+import {
+  COMPANY_ROLE_LABEL,
+  COMPANY_ROLES,
+  companyRoleLabel,
+} from "../companies/companyprojects";
 import { project360Key } from "./project360.key";
 
 type ProjectCompany = components["schemas"]["ProjectCompany"];
@@ -85,12 +89,15 @@ export function ProjectCompanies({
   // what makes one component serve both — each row says what this record is to
   // the other one. The card draws it the way a contact's employers are drawn.
   const adapter: ProjectLinksAdapter = {
-    linked: (companies ?? []).map((company) => ({
-      project_id: company.company_id,
-      name: company.display_name,
-      phase: <Badge>{company.role}</Badge>,
-      href: `#/companies/${company.company_id}`,
-    })),
+    linked: (companies ?? []).map((company) => {
+      const roleLabel = companyRoleLabel(company.role);
+      return {
+        project_id: company.company_id,
+        name: company.display_name,
+        phase: <Badge>{roleLabel ? t(roleLabel) : company.role}</Badge>,
+        href: `#/companies/${company.company_id}`,
+      };
+    }),
     readOnly,
     card: (company, onDetach) => (
       <ProjectCompanyCard company={company} onDetach={onDetach} />
@@ -100,7 +107,10 @@ export function ProjectCompanies({
     // The same three roles the company page offers, from the other side: one
     // vocabulary, so a company attached here and one attached there mean the
     // same thing.
-    roles: COMPANY_ROLES.map((value) => ({ value, label: t(roleKey(value)) })),
+    roles: COMPANY_ROLES.map((value) => ({
+      value,
+      label: t(COMPANY_ROLE_LABEL[value]),
+    })),
     attach: (companyId, role) => attach.mutateAsync({ companyId, role }),
     detach: (companyId) => detach.mutateAsync(companyId),
   };

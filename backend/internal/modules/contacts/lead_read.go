@@ -54,10 +54,10 @@ func leadTaskWorkSQL(ctx context.Context, arg func(any) int) (string, error) {
 }
 
 func leadNextTaskDueSQL(work string) string {
-	return `(SELECT a.due_at FROM activity_link l JOIN activity a ON a.id = l.activity_id
+	return `(SELECT ` + storekit.TaskDueSQL("a") + ` FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `
-	     AND a.audience = 'workspace'
-	   ORDER BY a.due_at NULLS LAST, a.created_at, a.id LIMIT 1)`
+	     ` + auth.AudienceWorkspaceOnly("a") + `
+	   ORDER BY ` + storekit.TaskDueSQL("a") + ` NULLS LAST, a.created_at, a.id LIMIT 1)`
 }
 
 // leadLastActivitySQL is the last-touch clock. Like last_activity_of_contact, it
@@ -128,8 +128,8 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	-- over all tasks and owe nothing.
 	(SELECT a.subject FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `
-	     AND a.audience = 'workspace'
-	   ORDER BY a.due_at NULLS LAST, a.created_at, a.id LIMIT 1),
+	     ` + auth.AudienceWorkspaceOnly("a") + `
+	   ORDER BY ` + storekit.TaskDueSQL("a") + ` NULLS LAST, a.created_at, a.id LIMIT 1),
 	` + leadNextTaskDueSQL(work) + `,
 	(SELECT factor.value->>'factor'
 	   FROM LATERAL (

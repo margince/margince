@@ -7,6 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { en } from "../../i18n/en";
 import { jsonResponse, render } from "../../testing/settings.testkit";
 import { CompanyTriageSection } from "./companytriage";
 
@@ -73,11 +74,10 @@ it("says no domain was checked in rather than showing an empty list", async () =
   render(<CompanyTriageSection companyId={COMPANY} />);
   await openSection();
 
-  // A company nobody triaged into was typed in or imported, which is ordinary
-  // — and a blank body would leave a reader unable to tell that from a read
-  // that failed.
+  // A company nobody triaged into was not created from mail, which is ordinary.
+  // A blank body would leave a reader unable to tell that from a failed read.
   expect(
-    await screen.findByText(/created manually or imported/),
+    await screen.findByText(en["companyTriage.empty"]),
   ).toBeInTheDocument();
 });
 
@@ -94,7 +94,5 @@ it("reports a failed read as unavailable rather than as nothing checked", async 
   // And the distinction the whole section turns on: "no domain was checked" is
   // a claim about how this record came to exist, and a request that did not
   // answer cannot support it.
-  expect(
-    screen.queryByText(/created manually or imported/),
-  ).not.toBeInTheDocument();
+  expect(screen.queryByText(en["companyTriage.empty"])).not.toBeInTheDocument();
 });

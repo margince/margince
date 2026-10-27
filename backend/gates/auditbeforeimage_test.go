@@ -169,6 +169,8 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 		"nothing but a tagging image on a tag, so a new caller can only write the shape ratified here.",
 	"internal/modules/collections/memberwrite.go:recordMemberChange": "the list row is untouched; the write adds or " +
 		"removes a Shortlist membership, and the after image names the record that joined or left.",
+	"internal/modules/webforms/storechange.go:RotateSecret": "the new form secret replaces a vault reference to a value " +
+		"that must never be copied into audit_log, so the after image carries the fact of the rotation and neither secret.",
 	"internal/modules/webhooks/store.go:RotateSecret": "the new signing secret replaces a value that must never be " +
 		"copied into audit_log, so the after image carries the fact of the rotation and neither secret.",
 	"internal/modules/webhooks/deliverystore.go:requireReplay": "the subscription is unchanged; the write records that " +

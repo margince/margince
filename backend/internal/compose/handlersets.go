@@ -49,6 +49,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/modules/signals"
+	"github.com/margince/margince/backend/internal/modules/webforms"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
 	"github.com/margince/margince/backend/internal/shared/ports/contactdata"
@@ -78,6 +79,7 @@ type (
 	voiceHandlers           = ai.Handlers
 	customfieldsHandlers    = customfields.Handlers
 	webhooksHandlers        = webhooks.Handlers
+	webFormsHandlers        = webforms.Handlers
 	company360Handlers      = company360.Handlers
 	contact360Handlers      = contact360.Handlers
 	project360Handlers      = project360.Handlers

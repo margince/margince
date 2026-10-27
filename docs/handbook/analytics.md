@@ -208,7 +208,7 @@ The **Delivery** section of Analytics holds the project reports.
 
 **Projects by phase**: phase, projects, open deal value, won deal value.
 
-**Project commitments**: project, phase, open, overdue.
+**Open project tasks**: project, phase, open tasks, overdue tasks.
 
 **Projects inactive for 30 days**: project, phase, quiet since.
 

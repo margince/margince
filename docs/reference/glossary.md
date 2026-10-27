@@ -82,13 +82,16 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Slack | A team chat tool where an incoming webhook can post messages. |
 | SonarCloud | A code quality service that scans each pull request. |
 | subscription | A webhook's setup: the address it sends to and the events it sends. |
+| Tally | An online form tool that can send each answer to a webhook address. |
 | Telegram | A chat app Margince can send messages through. |
+| Typeform | An online form tool that can send each answer to a webhook address. |
 | UTF | The Unicode text encoding family, as in UTF-8. |
 | VAT | Value added tax, and the tax number a company is registered under. |
 | vi | The language code for Vietnamese, as a setting value. |
 | Vite | The build and dev server tool for the web app. |
 | vLLM | A server that runs language models on your own machines. |
-| webhook | A message Margince sends to another tool's address when a chosen event happens. |
+| Webflow | A website builder whose forms can send each entry to a webhook address. |
+| webhook | A message one tool sends to another tool's address when a chosen event happens. |
 | WhatsApp | A chat app; a link to it opens a chat with a phone number. |
 | Windows | Microsoft's desktop operating system. |
 | Worklist | The app's list of tasks and items that need a user's action. |

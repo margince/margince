@@ -1,4 +1,7 @@
+import type { components } from "../api/schema";
 import type { Provenance, SourceAuthor } from "./trust";
+
+type PrincipalAttribution = components["schemas"]["PrincipalAttribution"];
 
 // captured_by is server-stamped from the authenticated principal, so it carries
 // that principal's kind. The contract lists four
@@ -88,6 +91,25 @@ export function provenanceOf(
     return { kind: "system", job: rest || undefined };
   }
   return { kind: "unknown" };
+}
+
+/**
+ * An agent's tag with what the record's create audit row adds: the tool it
+ * was typed through and the colleague it worked for. captured_by names only
+ * a passport, so without the row the tag can say neither.
+ */
+export function withCreator(
+  provenance: Provenance,
+  createdBy: PrincipalAttribution | undefined,
+): Provenance {
+  if (provenance.kind !== "agent" || createdBy?.actor_type !== "agent") {
+    return provenance;
+  }
+  return {
+    ...provenance,
+    agent: createdBy.agent_client ?? provenance.agent,
+    forName: createdBy.on_behalf_of_name ?? undefined,
+  };
 }
 
 // What an `agent:<rest>` principal is called on screen. A passport uuid names
