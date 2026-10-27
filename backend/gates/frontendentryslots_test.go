@@ -24,7 +24,7 @@ import (
 const (
 	frontendEntrySlots = "../frontend/src/lib/extensionentries.ts"
 	frontendEntryIcons = "../frontend/src/components/extensionentries.tsx"
-	frontendPanelSlots = "../frontend/src/features/deals/extensionpanels.slots.ts"
+	frontendPanelSlots = "../frontend/src/components/extensionpanels.slots.ts"
 )
 
 // tsKey reads object keys in either spelling an object literal admits, bare or

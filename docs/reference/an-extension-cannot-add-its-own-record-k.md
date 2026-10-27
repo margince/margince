@@ -20,7 +20,7 @@ are done.
 | 3 | Extension record kinds and link registry | Declare a record kind in an extension. Tag it, put it on a Shortlist and refuse access to it by default. Read the kinds you may see from `GET /v1/record-kinds`. | [Extension record kinds and link registry](#extension-record-kinds-and-link-registry) | done |
 | 4 | Extension report breakdowns and counts | Declare a count or a breakdown in an extension. See it on Reports and Home, under the seat's row scope, field masks and the group floor. A multi-select custom field can be split by. | [Extension report breakdowns and counts](#extension-report-breakdowns-and-counts) | done |
 | 5 | Extension signal types with structured evidence | Declare a signal type in an extension, with an evidence layout that marks personal data. File a signal of it. The same event reported twice leaves one signal. Erasing a contact removes the personal members. | [Extension signal types with structured evidence](#extension-signal-types-with-structured-evidence) | done |
-| 6 | Panels and tabs on record pages | Nothing yet. | None yet | planned |
+| 6 | Panels and tabs on record pages | Draw a component of the unit's own on a contact, company or deal page, with the record the page shows. A reader needs `read` on the panel's object. | [Panels and tabs on record pages](#panels-and-tabs-on-record-pages) | done |
 | 7 | "Pick a record" field type | Nothing yet. | None yet | planned |
 | 8 | Record page with merged history for extension kinds | Nothing yet. | None yet | planned |
 | 9 | Search and lists for extension kinds | Nothing yet. | None yet | planned |
@@ -217,3 +217,24 @@ What this feature does not do yet:
   it to one.
 - An extension signal cannot be moved to another kind by an edit.
 - Subjects stay deal, company, contact and project.
+
+## Panels and tabs on record pages
+
+An extension can draw its own component on a contact, company or deal page. The steps to declare one are in
+[Draw a panel on a core page](../how-to/add-an-extension.md#draw-a-panel-on-a-core-page).
+
+The maintainers chose one panel slot per record kind over a single tab slot. The panel mechanism already fences each
+unit's failure in its own card, gates it on the unit's RBAC object and hands it the record. A tab slot would need a
+second mechanism for the same result. The unit's own screen stays reachable from the page header through
+`record_header.<kind>` entries, which carry `record_type` and `record_id`.
+
+| Slot | Where the panel shows |
+|---|---|
+| `record_panel.contact` | The end of a contact page's **Data & tools** tab, after its lists |
+| `record_panel.company` | The end of a company page's **Contacts** tab, after the reach card |
+| `record_panel.deal` | The end of a deal page's **Edit details** drawer, after its lists |
+
+The Go list is `extension.PanelSlots()` in `backend/pkg/extension/panel.go`. The frontend list mirrors it, and
+`backend/gates/frontendentryslots_test.go` fails when the two differ or when a slot is not mounted on a page. A panel
+imports only published `@margince/frontend` subpaths, so the `ext-imports` gate holds it to the same surface as the rest
+of the unit. The header entries and the Log activity entry are unchanged.
