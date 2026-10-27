@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useContext,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from "react";
+import { useContext, useEffect, useId, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import { SendPermission } from "../../components/sendpermission";
 import { useT } from "../../i18n";
@@ -27,8 +20,8 @@ import { useComposeFields } from "./composefields";
 import { useAccountRecipient, useComposeRecords } from "./composefiling";
 import { useRecipientOffer } from "./composerecipientoffer";
 import type { RelinkKind } from "./composerelink";
-import { useSavedDraft } from "./composesaveddraft";
-import type { SavedDraftFields } from "./composesaveddraftcalls";
+import { useDraftRestore, useSavedDraft } from "./composesaveddraft";
+
 import { ScheduleDialog } from "./composeschedule";
 import { sendWording, useComposeSend } from "./composesend";
 import {
@@ -254,14 +247,12 @@ export function ComposeWindow({
   const { settle } = offer;
   const { restoreSaved } = fields;
   const { adoptSavedSubject } = records.projectFiling;
-  const restoreFields = useCallback(
-    (saved: SavedDraftFields) => {
-      settle();
-      restoreSaved(saved);
-      adoptSavedSubject(saved.subject);
-    },
-    [settle, restoreSaved, adoptSavedSubject],
-  );
+  const restoreFields = useDraftRestore({
+    settle,
+    restoreSaved,
+    adoptSavedSubject,
+    account: fields.account,
+  });
   const savedDraft = useSavedDraft({
     where: {
       answering,

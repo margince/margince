@@ -7,7 +7,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
@@ -20,6 +20,7 @@ import { useAutosave } from "./composeautosave";
 import {
   deleteDraft,
   draftKey,
+  groundedFiling,
   type MailDraft,
   readDraft,
   type SavedDraftAnchor,
@@ -35,6 +36,41 @@ import { replySubject } from "./replysubject";
 
 type Activity = components["schemas"]["Activity"];
 
+/**
+ * Putting a saved draft back in the composer.
+ *
+ * The words, the subject the project filing adopts, and the filing the draft
+ * was grounded in. Seeded rather than merged at send: a deal the reader picks
+ * after restoring is their choice and has to win.
+ */
+export function useDraftRestore(input: {
+  settle: () => void;
+  restoreSaved: (saved: SavedDraftFields) => void;
+  adoptSavedSubject: (subject: string) => void;
+  account: {
+    setDealId: (id: string) => void;
+    setProjectId: (id: string) => void;
+  };
+}): (saved: SavedDraftFields) => void {
+  const { settle, restoreSaved, adoptSavedSubject } = input;
+  const { setDealId, setProjectId } = input.account;
+  return useCallback(
+    (saved: SavedDraftFields) => {
+      settle();
+      restoreSaved(saved);
+      adoptSavedSubject(saved.subject);
+      const filing = groundedFiling(saved.grounding);
+      if (filing.dealId) {
+        setDealId(filing.dealId);
+      }
+      if (filing.projectId) {
+        setProjectId(filing.projectId);
+      }
+    },
+    [settle, restoreSaved, adoptSavedSubject, setDealId, setProjectId],
+  );
+}
+
 /** The words a saved draft puts back in the composer. */
 export function fieldsOfDraft(draft: MailDraft): SavedDraftFields {
   return {
@@ -44,6 +80,10 @@ export function fieldsOfDraft(draft: MailDraft): SavedDraftFields {
     subject: draft.subject,
     body: draft.body,
     html: draft.html_body ?? paragraphsFrom(draft.body),
+    grounding: (draft.grounding ?? []).map((ground) => ({
+      type: ground.anchor_type,
+      id: ground.anchor_id,
+    })),
   };
 }
 

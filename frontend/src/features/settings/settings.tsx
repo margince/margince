@@ -227,6 +227,8 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
       );
     case "integrations":
       return <IntegrationsTab />;
+    case "web-forms":
+      return <WebFormsCard />;
     case "knowledge":
       return <KnowledgeCard />;
     case "import":
@@ -313,7 +315,7 @@ function ConnectionsTab() {
 }
 
 // What the INSTALLATION is wired to: one shared contact-data credential, the
-// website forms, the outbound subscriptions and the workspace's Telegram bot. Each is shared by
+// outbound subscriptions and the workspace's Telegram bot. Each is shared by
 // everybody, which is why they sit under the company heading and the personal
 // connections do not.
 function IntegrationsTab() {
@@ -321,7 +323,6 @@ function IntegrationsTab() {
     <>
       <ProviderCard />
       <FinanceSourceCard />
-      <WebFormsCard />
       <WebhooksCard />
       <TelegramConnectorsPanel />
       {/* A unit whose secret is `workspace`-scoped holds the installation's

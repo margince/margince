@@ -13,6 +13,7 @@ import {
   Textarea,
   TextInput,
 } from "../../design-system/atoms";
+import { ChoiceList } from "../../design-system/choicelist";
 import {
   DrawerBody,
   DrawerFoot,
@@ -20,7 +21,6 @@ import {
 } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
-import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
@@ -29,7 +29,7 @@ import {
   unwrap,
 } from "../../lib/problem";
 import {
-  isBuilder,
+  pastesSecret,
   WEB_FORM_SENDERS,
   WEB_FORMS_KEY,
   type WebForm,
@@ -80,7 +80,6 @@ function originsOf(draft: WebFormDraft): string[] {
  */
 export function missingFields(
   draft: WebFormDraft,
-  editing: boolean,
 ): ReadonlyMap<string, MessageKey> {
   const missing = new Map<string, MessageKey>();
   if (draft.name.trim() === "") {
@@ -88,9 +87,6 @@ export function missingFields(
   }
   if (draft.sender === "browser" && originsOf(draft).length === 0) {
     missing.set("allowed_origins", "webForms.required.origins");
-  }
-  if (isBuilder(draft.sender) && !editing && draft.senderSecret.trim() === "") {
-    missing.set("sender_secret", "webForms.required.senderSecret");
   }
   if (draft.consentRequired && draft.consentWording.trim() === "") {
     missing.set("consent_wording", "webForms.required.consentWording");
@@ -123,8 +119,8 @@ export function narrowedOrigins(
   });
 }
 
-// The settings create and update share. A builder's secret is sent only when
-// one was typed, so an edit that leaves the field empty keeps the stored one.
+// The settings create and update share. Webflow's secret is sent only when one
+// was typed, so an edit that leaves the field empty keeps the stored one.
 export function webFormBodyOf(draft: WebFormDraft) {
   // Sent as the Origin header spells it, so a stored `:443` never refuses the
   // site. Text that is no address goes as typed, for the server to refuse.
@@ -132,7 +128,7 @@ export function webFormBodyOf(draft: WebFormDraft) {
   return {
     name: draft.name.trim(),
     ...(draft.sender === "browser" ? { allowed_origins: origins } : {}),
-    ...(isBuilder(draft.sender) && draft.senderSecret.trim() !== ""
+    ...(pastesSecret(draft.sender) && draft.senderSecret.trim() !== ""
       ? { sender_secret: draft.senderSecret.trim() }
       : {}),
     consent_required: draft.consentRequired,
@@ -201,6 +197,55 @@ function useDrawerErrors(
   return { fieldErrors, generalError };
 }
 
+// Where the form lives: fixed once it exists, so an edit only names it.
+function SenderField({
+  sender,
+  editing,
+  senders,
+  error,
+  onChange,
+}: Readonly<{
+  sender: WebFormSender;
+  editing: boolean;
+  senders: readonly WebFormSender[];
+  error?: string;
+  onChange: (sender: WebFormSender) => void;
+}>) {
+  const t = useT();
+  if (editing) {
+    return (
+      <Field
+        label={t("webForms.field.sender")}
+        hint={t("webForms.field.senderFixed")}
+      >
+        {(field) => (
+          <TextInput
+            {...field}
+            value={t(`webForms.sender.${sender}`)}
+            disabled
+          />
+        )}
+      </Field>
+    );
+  }
+  return (
+    <>
+      <ChoiceList
+        legend={t("webForms.field.sender")}
+        layout="cards"
+        value={sender}
+        choices={senders.map((choice) => ({
+          value: choice,
+          label: t(`webForms.sender.${choice}`),
+          description: t(`webForms.senderHint.${choice}`),
+        }))}
+        onChange={onChange}
+      />
+      {error && <ErrorLine>{error}</ErrorLine>}
+    </>
+  );
+}
+
 export function WebFormDrawer({
   form,
   secretsAvailable = true,
@@ -237,7 +282,7 @@ export function WebFormDrawer({
     setDraft((prev) => ({ ...prev, ...patch }));
   };
   const editing = form !== undefined;
-  const missing = missingFields(draft, editing);
+  const missing = missingFields(draft);
   const { fieldErrors, generalError } = useDrawerErrors(
     save.error,
     checked ? missing : new Map(),
@@ -261,6 +306,13 @@ export function WebFormDrawer({
         <p>{t("webForms.drawer.sub")}</p>
       </DrawerHead>
       <DrawerBody className="form-stack">
+        <SenderField
+          sender={draft.sender}
+          editing={editing}
+          senders={senders}
+          error={fieldErrors.get("sender")}
+          onChange={(sender) => set({ sender })}
+        />
         <Field
           label={t("webForms.field.name")}
           required
@@ -272,28 +324,6 @@ export function WebFormDrawer({
               {...field}
               value={draft.name}
               onChange={(event) => set({ name: event.target.value })}
-            />
-          )}
-        </Field>
-        <Field
-          label={t("webForms.field.sender")}
-          hint={
-            editing
-              ? t("webForms.field.senderFixed")
-              : t(`webForms.senderHint.${draft.sender}`)
-          }
-          error={fieldErrors.get("sender")}
-        >
-          {(field) => (
-            <Select
-              {...field}
-              value={draft.sender}
-              disabled={editing}
-              options={senders.map((sender) => ({
-                value: sender,
-                label: t(`webForms.sender.${sender}`),
-              }))}
-              onChange={(sender) => set({ sender: sender as WebFormSender })}
             />
           )}
         </Field>
@@ -320,12 +350,11 @@ export function WebFormDrawer({
             {t("webForms.field.originKept", { entry, origin })}
           </p>
         ))}
-        {isBuilder(draft.sender) && (
+        {pastesSecret(draft.sender) && (
           <Field
             label={t("webForms.field.senderSecret")}
-            required={!editing}
             hint={
-              editing
+              editing && form.secret_configured
                 ? t("webForms.field.senderSecretKeep")
                 : t("webForms.field.senderSecretHint")
             }

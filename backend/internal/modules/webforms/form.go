@@ -111,6 +111,19 @@ func builderSender(sender string) bool {
 	return sender == SenderWebflow || sender == SenderTypeform || sender == SenderTally
 }
 
+// MintsSecret says whether this installation makes the form's secret. A server
+// form always gets one. Typeform and Tally get one when none was pasted, since
+// both take a typed secret; Webflow issues its own.
+func MintsSecret(sender string, pasted *string) bool {
+	switch sender {
+	case SenderServer:
+		return true
+	case SenderTypeform, SenderTally:
+		return pasted == nil || *pasted == ""
+	}
+	return false
+}
+
 func checkSender(sender string) error {
 	switch sender {
 	case SenderBrowser, SenderServer, SenderWebflow, SenderTypeform, SenderTally:

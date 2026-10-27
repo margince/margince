@@ -29,7 +29,7 @@ func mintFormKey() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(buf[:]), nil
 }
 
-func mintServerSecret() (string, error) {
+func mintSigningSecret() (string, error) {
 	var buf [32]byte
 	if _, err := rand.Read(buf[:]); err != nil {
 		return "", fmt.Errorf("webforms: minting a signing secret: %w", err)
@@ -45,9 +45,10 @@ func workspaceOf(ctx context.Context) (ids.WorkspaceID, error) {
 	return ids.From[ids.WorkspaceKind](ws), nil
 }
 
-// storeSecret seals the secret a signed sender needs and answers its ref. For
-// a server form it also answers the secret it minted, to be shown once; a
-// browser form stores nothing.
+// storeSecret seals the secret a signed sender needs and answers its ref. A
+// secret it minted is answered too, to be shown once. A browser form stores
+// nothing. Nor does a Webflow form until its secret is pasted, since its
+// webhook needs the form's address first; an unsigned post is refused.
 func (s *Store) storeSecret(ctx context.Context, sender string, pasted *string) (ref *string, minted string, err error) {
 	if !signedSender(sender) {
 		return nil, "", nil
@@ -55,9 +56,13 @@ func (s *Store) storeSecret(ctx context.Context, sender string, pasted *string) 
 	if s.vault == nil {
 		return nil, "", badInput("sender", "this installation has no secret store, so only a browser form can be set up")
 	}
+	mint := MintsSecret(sender, pasted)
+	if !mint && (pasted == nil || *pasted == "") {
+		return nil, "", nil
+	}
 	secret := ""
-	if sender == SenderServer {
-		if secret, err = mintServerSecret(); err != nil {
+	if mint {
+		if secret, err = mintSigningSecret(); err != nil {
 			return nil, "", err
 		}
 	} else {
@@ -72,7 +77,7 @@ func (s *Store) storeSecret(ctx context.Context, sender string, pasted *string) 
 		return nil, "", fmt.Errorf("webforms: sealing the form's secret: %w", err)
 	}
 	out := string(stored)
-	if sender == SenderServer {
+	if mint {
 		minted = secret
 	}
 	return &out, minted, nil

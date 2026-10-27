@@ -11247,6 +11247,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Systeme, mit denen diese Installation Datensätze austauscht.",
   "settings.page.knowledge.sub":
     "Dokumente, die Entwürfe und Antworten verwenden dürfen.",
+  "settings.page.web-forms.sub":
+    "Formulare auf deiner Website, die jede Anfrage als Lead senden, oder als Notiz am Lead oder Kontakt, von dem sie kommt.",
   "settings.page.import.sub":
     "Datensätze aus einer Datei importieren, ein Lauf nach dem anderen.",
   "settings.page.models.sub":
@@ -11458,6 +11460,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.laneRestricted": "Gesperrt",
   "privacy.requestsEmpty": "Noch keine Datenschutzanfragen.",
   "settings.tab.integrations": "Anbindungen",
+  "settings.tab.web-forms": "Website-Formulare",
   "settings.tab.capture": "Capture-Regeln",
   "settings.tab.knowledge": "Wissen",
   "corpusAsk.title": "Deine Dokumente befragen",
@@ -14016,9 +14019,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.new": "Neues Website-Formular",
   "webForms.state.active": "Aktiv",
   "webForms.state.paused": "Pausiert",
-  "webForms.sender.browser": "Website",
+  "webForms.sender.browser": "Deine Website",
   "webForms.sender.server": "Website-Server",
-  "webForms.sender.webflow": "Webflow",
+  "webForms.sender.webflow": "Webflow-Webhook",
   "webForms.sender.typeform": "Typeform",
   "webForms.sender.tally": "Tally",
   "webForms.senderLine.browser": "Sendungen von den eingetragenen Websites",
@@ -14031,10 +14034,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.edit": "Bearbeiten",
   "webForms.pause": "Formular pausieren",
   "webForms.resume": "Formular fortsetzen",
-  "webForms.rotate": "Signaturschlüssel rotieren",
-  "webForms.rotateConfirm.title": "Signaturschlüssel des Formulars rotieren?",
-  "webForms.rotateConfirm.body":
-    "Der aktuelle Signaturschlüssel gilt sofort nicht mehr, und der neue wird einmal angezeigt. Aktualisiere den Server deiner Website sofort.",
+  "webForms.rotate": "Neuen Signaturschlüssel erstellen",
+  "webForms.rotateConfirm.title": "Neuen Signaturschlüssel für das Formular erstellen?",
+  "webForms.rotateConfirm.body": "Der aktuelle Signaturschlüssel gilt sofort nicht mehr, und der neue wird einmal angezeigt. Füge ihn gleich dort ein, wo der alte stand.",
   "webForms.archive": "Archivieren",
   "webForms.archiveConfirm":
     "Nach dem Archivieren nimmt dieses Formular keine Sendungen mehr an. Das lässt sich nicht rückgängig machen.",
@@ -14048,31 +14050,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.field.name": "Name",
   "webForms.field.nameHint":
     "Steht in der Notiz jedes Leads, zum Beispiel Kontaktseite.",
-  "webForms.field.sender": "Gesendet von",
+  "webForms.field.sender": "Wo ist dein Formular?",
   "webForms.field.senderFixed":
     "Steht fest, sobald das Formular existiert. Lege für eine Änderung ein neues an.",
-  "webForms.senderHint.browser":
-    "Ein Formular auf deiner Website sendet direkt aus dem Browser des Besuchers.",
-  "webForms.senderHint.server":
-    "Der Server deiner Website leitet jede Sendung weiter, signiert mit einem Signaturschlüssel.",
-  "webForms.senderHint.webflow":
-    "Webflow sendet jede Formularsendung als signierten Webhook.",
-  "webForms.senderHint.typeform":
-    "Typeform sendet jede Antwort als signierten Webhook.",
-  "webForms.senderHint.tally":
-    "Tally sendet jede Antwort als signierten Webhook.",
+  "webForms.senderHint.browser": "Ein Formular auf deinen eigenen Seiten, in WordPress, Webflow oder einem anderen Baukasten, in dem du festlegst, wohin ein Formular sendet. Ohne Entwickler.",
+  "webForms.senderHint.server": "Für Entwickler: Der Server deiner Website leitet jede Anfrage signiert weiter.",
+  "webForms.senderHint.webflow": "Für Entwickler: ein Webhook, der über die API von Webflow angelegt wird. Ein Webflow-Formular verbindest du ohne Webhook über die erste Option.",
+  "webForms.senderHint.typeform": "Jede Typeform-Antwort kommt über einen Webhook. Margince erstellt den Signaturschlüssel für dich.",
+  "webForms.senderHint.tally": "Jede Tally-Antwort kommt über einen Webhook. Margince erstellt den Signaturschlüssel für dich.",
   "webForms.field.origins": "Websites",
   "webForms.field.originsHint":
     "Eine Adresse pro Zeile. Sendungen von anderen Websites werden abgelehnt.",
   "webForms.required.name": "Gib dem Formular einen Namen.",
   "webForms.required.origins": "Gib die Website ein, von der das Formular gesendet wird.",
-  "webForms.required.senderSecret": "Füge den Signaturschlüssel aus den Webhook-Einstellungen des Tools ein.",
   "webForms.required.consentWording": "Gib den Text ein, dem Besuchende zustimmen.",
   "webForms.field.originKept": "{entry} wird als {origin} gespeichert: Das Formular kann von jeder Seite dieser Website abgesendet werden.",
   "webForms.field.originsPlaceholder": "https://www.example.com",
   "webForms.field.senderSecret": "Signaturschlüssel",
-  "webForms.field.senderSecretHint":
-    "Der Signaturschlüssel aus den Webhook-Einstellungen des Tools, mindestens 16 Zeichen.",
+  "webForms.field.senderSecretHint": "Der Signaturschlüssel, den die Webflow-API einmal zurückgibt, wenn sie den Webhook anlegt. Einen Webhook, den eine OAuth-App anlegt, signiert stattdessen das Client Secret dieser App. Lass das Feld leer, bis du ihn hast: Bis dahin nimmt das Formular nichts an.",
   "webForms.field.senderSecretKeep":
     "Leer lassen, um den gespeicherten Signaturschlüssel zu behalten.",
   "webForms.field.consentRequired":
@@ -14091,23 +14086,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.field.successMessageHint":
     "Wird dem Besucher nach dem Senden gezeigt.",
   "webForms.setup.title": "{name} verbinden",
-  "webForms.setup.how.browser":
-    "Füge dieses Formular in deine Website ein, oder richte dein eigenes Formular auf die Adresse und behalte die Feldnamen.",
-  "webForms.setup.how.server":
-    "Dein Server sendet jede Sendung an diese Adresse, signiert wie im Code unten.",
-  "webForms.setup.how.webflow":
-    "Lege in Webflow einen Webhook für Formularsendungen an, der an diese Adresse sendet.",
-  "webForms.setup.how.typeform":
-    "Lege in Typeform unter Connect einen Webhook an, der an diese Adresse sendet.",
-  "webForms.setup.how.tally":
-    "Lege in Tally unter Integrations einen Webhook an, der an diese Adresse sendet.",
   "webForms.setup.address": "Formularadresse",
   "webForms.setup.secret": "Signaturschlüssel des Formulars",
-  "webForms.setup.secretWarning":
-    "Dieser Signaturschlüssel wird einmal angezeigt. Speichere ihn auf deinem Server als {name}.",
   "webForms.setup.snippet": "Code zum Einfügen",
-  "webForms.setup.builderSecret":
-    "Verwende dort denselben Signaturschlüssel, den du an diesem Formular gespeichert hast.",
   "webForms.setup.customFields":
     "Ein Feld mit dem Namen eines eigenen Lead-Felds füllt es: {fields}. Ein Wert, den es nicht annimmt, kommt in die Notiz.",
   "webForms.setup.copy": "Code kopieren",
@@ -14118,6 +14099,25 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.setup.leaveWarning":
     "Beim Schließen geht die einzige Kopie dieses Signaturschlüssels verloren. Kopiere ihn zuerst.",
   "webForms.setup.done": "Fertig",
+  "webForms.guide": "Schritt-für-Schritt-Anleitung",
+  "webForms.row.secretMissing": "Wartet auf den Signaturschlüssel",
+  "webForms.setup.copyAddress": "Adresse kopieren",
+  "webForms.steps.browser.address": "Kopiere die Formularadresse.",
+  "webForms.steps.browser.builder": "Öffne in Webflow, WordPress oder einem anderen Baukasten die Einstellungen deines Formulars. Trag diese Adresse als Ziel ein (in Webflow heißt das Action) und als Methode POST.",
+  "webForms.steps.browser.fields": "Nenne das E-Mail-Feld email. Margince liest auch full_name, phone, company und message und legt jedes andere Feld in der Notiz am Lead ab.",
+  "webForms.steps.browser.code": "Baust du die Seite selbst? Füge stattdessen diesen Code dort ein, wo das Formular hin soll.",
+  "webForms.steps.endpoint": "Füge die Formularadresse als Adresse des Webhooks ein.",
+  "webForms.steps.typeform.open": "Öffne in Typeform das Formular, geh zu Connect, dann Webhooks, und wähle Add a webhook.",
+  "webForms.steps.typeform.secret": "Schalte in den Einstellungen des Webhooks Secret ein, füge den Signaturschlüssel des Formulars ein und speichere. Schalte dann den Webhook ein: Typeform legt ihn ausgeschaltet an.",
+  "webForms.steps.tally.open": "Öffne in Tally das Formular, geh zu Integrations und verbinde Webhooks.",
+  "webForms.steps.tally.secret": "Füge den Signaturschlüssel des Formulars unter Signing secret ein und speichere.",
+  "webForms.steps.server.secret": "Speichere den Signaturschlüssel des Formulars auf dem Server deiner Website als {name}.",
+  "webForms.steps.server.address": "Dein Server sendet jede Anfrage an die Formularadresse.",
+  "webForms.steps.server.code": "Dieser Code signiert jede Sendung. Dein Entwickler kann ihn so verwenden.",
+  "webForms.steps.webflow.create": "Lege den Webhook über die API von Webflow an, mit der Formularadresse als URL.",
+  "webForms.steps.webflow.secret": "Die Webflow-API gibt den Signaturschlüssel des Webhooks einmal zurück. Einen Webhook, den eine OAuth-App angelegt hat, signiert stattdessen das Client Secret dieser App. Füge den passenden unter Bearbeiten an diesem Formular bei Signaturschlüssel ein.",
+  "webForms.steps.test": "Sende eine Testanfrage. Die Anfrage erscheint als neuer Lead unter Leads, oder als Notiz am Lead oder Kontakt, der diese E-Mail-Adresse schon hat.",
+  "webForms.steps.secretShownOnce": "Der Signaturschlüssel wurde einmal angezeigt, als das Formular angelegt wurde. Verloren? Wähle im Menü ⋯ des Formulars Neuen Signaturschlüssel erstellen.",
 
   "webhooks.title": "Webhooks",
   "webhooks.readOnly":

@@ -240,8 +240,8 @@ func patchFor(current, next Form) *storekit.Patch {
 	return p
 }
 
-// RotateSecret mints a new secret for a server form and answers it once. The
-// old one stops verifying the moment this commits.
+// RotateSecret mints a new secret for a form whose secret this installation
+// makes, and answers it once. The old one stops verifying the moment this commits.
 func (s *Store) RotateSecret(ctx context.Context, id ids.UUID) (Form, string, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionUpdate); err != nil {
 		return Form{}, "", err
@@ -250,8 +250,8 @@ func (s *Store) RotateSecret(ctx context.Context, id ids.UUID) (Form, string, er
 	if err != nil {
 		return Form{}, "", err
 	}
-	if current.Sender != SenderServer {
-		return Form{}, "", badInput("sender", "only a server form has a secret this installation mints; paste a builder's new secret as sender_secret")
+	if !MintsSecret(current.Sender, nil) {
+		return Form{}, "", badInput("sender", "a %s form signs with the secret %s issues; paste its new one as sender_secret", current.Sender, current.Sender)
 	}
 	newRef, secret, err := s.storeSecret(ctx, current.Sender, nil)
 	if err != nil {

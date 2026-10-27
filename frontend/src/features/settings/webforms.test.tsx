@@ -135,7 +135,19 @@ describe("WebFormsCard", () => {
     expect(await screen.findByText("Contact page")).toBeTruthy();
     expect(screen.getByText("https://www.acme.test")).toBeTruthy();
     expect(screen.getByText("Active")).toBeTruthy();
-    expect(screen.getByText("Website")).toBeTruthy();
+    expect(screen.getByText("Your website")).toBeTruthy();
+  });
+
+  it("marks a Webflow form that is still waiting for Webflow's secret", async () => {
+    const waiting: WebForm = {
+      ...contactForm,
+      sender: "webflow",
+      allowed_origins: [],
+      secret_configured: false,
+    };
+    vi.stubGlobal("fetch", backendFor(OPERATOR, [waiting]).fetch);
+    render(<WebFormsCard />);
+    expect(await screen.findByText("Waiting for its secret")).toBeTruthy();
   });
 
   it("offers no write control to a role without the integrations grants", async () => {
@@ -227,10 +239,7 @@ describe("WebFormsCard", () => {
     render(<WebFormsCard />);
     await user.click(await screen.findByTestId("new-web-form"));
     await user.type(screen.getByLabelText(/^Name/), "Demo request");
-    await user.click(screen.getByRole("combobox", { name: /Sent by/ }));
-    await user.click(
-      await screen.findByRole("option", { name: "Website server" }),
-    );
+    await user.click(screen.getByRole("radio", { name: /Website server/ }));
     await user.click(screen.getByTestId("save-web-form"));
 
     expect((await screen.findByTestId("web-form-secret")).textContent).toBe(
@@ -238,6 +247,38 @@ describe("WebFormsCard", () => {
     );
     expect(backend.sent[0]?.body).not.toHaveProperty("allowed_origins");
     expect(screen.getByText(/destroys the only copy/)).toBeTruthy();
+  });
+
+  it("sets a Tally form up with no secret to bring, and says where each value goes", async () => {
+    const created = {
+      ...contactForm,
+      sender: "tally",
+      allowed_origins: [],
+      signing_secret: "mwf_for_tally",
+    };
+    const backend = backendFor(OPERATOR, [], {
+      "POST /v1/web-forms": () => jsonResponse(created, 201),
+    });
+    vi.stubGlobal("fetch", backend.fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(await screen.findByTestId("new-web-form"));
+    await user.click(screen.getByRole("radio", { name: /^Tally/ }));
+    await user.type(screen.getByLabelText(/^Name/), "Tally survey");
+    expect(screen.queryByLabelText(/^Signing secret/)).toBeNull();
+    await user.click(screen.getByTestId("save-web-form"));
+
+    await waitFor(() => expect(backend.sent).toHaveLength(1));
+    expect(backend.sent[0]?.body).toMatchObject({ sender: "tally" });
+    expect(backend.sent[0]?.body).not.toHaveProperty("sender_secret");
+    expect((await screen.findByTestId("web-form-secret")).textContent).toBe(
+      "mwf_for_tally",
+    );
+    expect(screen.getByText(/In Tally, open the form/)).toBeTruthy();
+    expect(
+      screen.getByText(/Paste the form secret in Signing secret/),
+    ).toBeTruthy();
+    expect(screen.queryByTestId("web-form-snippet")).toBeNull();
   });
 
   it("pauses a form against the version it was read at", async () => {
@@ -283,7 +324,7 @@ describe("WebFormsCard actions", () => {
     await user.click(await screen.findByTestId("rotate-web-form-secret"));
     expect(backend.sent).toHaveLength(0);
     const confirm = await screen.findAllByRole("button", {
-      name: "Rotate secret",
+      name: "Make a new secret",
     });
     await user.click(confirm[confirm.length - 1] as HTMLElement);
 
@@ -364,19 +405,14 @@ describe("WebFormsCard actions", () => {
 describe("web form settings", () => {
   it("names each required field a draft leaves empty", () => {
     const empty = draftFor();
-    expect([...missingFields(empty, false).keys()]).toEqual([
+    expect([...missingFields(empty).keys()]).toEqual([
       "name",
       "allowed_origins",
     ]);
     const builder = { ...empty, name: "Leads", sender: "typeform" as const };
-    expect([...missingFields(builder, false).keys()]).toEqual([
-      "sender_secret",
-    ]);
-    expect(missingFields(builder, true).size).toBe(0);
-    const consent = { ...builder, senderSecret: "x", consentRequired: true };
-    expect([...missingFields(consent, false).keys()]).toEqual([
-      "consent_wording",
-    ]);
+    expect(missingFields(builder).size).toBe(0);
+    const consent = { ...builder, consentRequired: true };
+    expect([...missingFields(consent).keys()]).toEqual(["consent_wording"]);
   });
 
   it("names only the entries saved as another spelling of their website", () => {
@@ -403,8 +439,8 @@ describe("web form settings", () => {
     ]);
   });
 
-  it("keeps a builder's stored secret when the field is left empty", () => {
-    const builder = { ...contactForm, sender: "typeform" as const };
+  it("keeps Webflow's stored secret when the field is left empty", () => {
+    const builder = { ...contactForm, sender: "webflow" as const };
     expect(webFormBodyOf(draftFor(builder))).not.toHaveProperty(
       "sender_secret",
     );

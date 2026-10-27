@@ -5,15 +5,16 @@
 A website form sends each question from your website to Margince as a new lead. Each form
 has its own address. A page you write yourself, a site builder, a form tool or your
 website's server can all send to it. Admin and Ops set
-forms up in **Settings → Integrations**, under **Website forms**.
+forms up in **Settings → Website forms**.
 
 ### How do I put a contact form on my website?
-To put a contact form on your website, open **Settings → Integrations** and choose **New website form** in **Website forms**.
-1. Type a **Name**, such as Contact page. Each lead's note shows it.
-2. Keep **Sent by** on **Website**.
+<!-- opens: settings/web-forms -->
+To put a contact form on your website, open **Settings → Website forms** and choose **New website form**.
+1. Under **Where is your form?**, keep **Your website**.
+2. Type a **Name**, such as Contact page. Each lead's note shows it.
 3. Under **Websites**, type each address the form is on, such as `https://www.example.com`, one per line. A page address such as `https://www.example.com/contact` counts as its whole website, and the field says so.
-4. Choose **Create form**. The **Connect** dialog shows the **Form address** and the **Code to paste**.
-5. Choose **Copy code** and paste the code into your page where the form goes.
+4. Choose **Create form**. The **Connect** dialog lists the steps, each with what to copy.
+5. Choose **Copy code** and paste the code into your page where the form goes. In a site builder, set the form to send to the **Form address** instead.
 Style the form as you like, but keep each field's `name`. A post from a website not on the list is refused.
 Also called: contact form, request form, lead form, web form, embed a form.
 
@@ -38,27 +39,37 @@ The prospect then sees the form's **Success message**, or goes to the **Thank-yo
 Also called: where do my website leads go, new lead from website, duplicate lead.
 
 ### How do I connect WordPress?
-To connect a WordPress site, add a **Custom HTML** block to the page and paste the **Code to paste** into it. Set **Sent by** to **Website** and list the site's address under **Websites**.
+To connect a WordPress site, add a **Custom HTML** block to the page and paste the **Code to paste** into it. Choose **Your website** and list the site's address under **Websites**.
 
 To keep the form an extension already shows, give its fields the names in the table above. Then set the form to post to the **Form address**. An extension that can only send its own kind of message cannot reach Margince this way. Use the **Custom HTML** block for that form instead.
 Also called: WordPress extension, page builder, HTML block.
 
-### How do I connect Webflow, Typeform or Tally?
-To connect Webflow, Typeform or Tally, set **Sent by** to that tool when you create the form. Each tool signs what it sends with a secret, and Margince checks that secret.
-1. In the tool, add a webhook for new form answers and paste the **Form address** as its address.
-2. Copy the signing secret the tool shows for the webhook. In Typeform and Tally you type the secret yourself.
-3. Paste the secret in **Signing secret** in Margince and choose **Create form**.
-In Webflow, the webhooks are under the site's **Apps & integrations**. In Typeform they are under **Connect**, and in Tally under **Integrations**. A post whose secret does not match is refused.
-Also called: Webflow form, Typeform webhook, Tally webhook, form builder.
+### How do I connect a Webflow form?
+To connect a Webflow form, choose **Your website** and list the Webflow site's address under **Websites**. Then, in Webflow, open the form's settings. Set **Action** to the **Form address** and **Method** to **POST**, and publish the site. Name the email field `email`.
+
+A webhook made in the settings of Webflow is not signed, so Margince cannot check it. Choose **Webflow webhook** only when someone who writes code makes the webhook with the Webflow API. Create the form first and give its **Form address** to the webhook.
+
+The Webflow API then answers the secret of the webhook once. A webhook an OAuth app makes is signed with the client secret of that app instead. Paste the secret in **Signing secret** under **Edit**. Until then the form takes no posts, and its row says **Waiting for its secret**.
+Also called: Webflow form, Webflow action, Webflow webhook.
+
+### How do I connect Typeform or Tally?
+To connect Typeform or Tally, choose that tool under **Where is your form?** and choose **Create form**. Margince makes the form's secret and shows it once in the **Connect** dialog.
+1. In Typeform, open the form and go to **Connect**, then **Webhooks**. In Tally, open the form and go to **Integrations**, then **Webhooks**.
+2. Paste the **Form address** as the address of the webhook.
+3. Paste the form secret: in Typeform under **Secret**, in Tally under **Signing secret**. Save the webhook. Typeform makes a new webhook switched off, so switch it on.
+4. Send a test answer. It shows up as a new lead under **Leads**. An email Margince already has gets a note on that record instead.
+
+A post whose secret does not match is refused. If the secret is lost, choose **Make a new secret** in the row's **⋯** menu and paste the new one in the tool.
+Also called: Typeform webhook, Tally webhook, form builder.
 
 ### How do I send leads from my website's server?
-To send leads from your own server, set **Sent by** to **Website server** and choose **Create form**. Margince shows the form's secret once. Store it on the server as `MARGINCE_FORM_SECRET`, then use the **Code to paste**. It signs each post, so a copy of an old post is refused.
+To send leads from your own server, choose **Website server** and choose **Create form**. Margince shows the form's secret once. Store it on the server as `MARGINCE_FORM_SECRET`, then use the **Code to paste**. It signs each post, so a copy of an old post is refused.
 
-This fits a site that handles its forms on the server, such as one built with Payload. **Rotate secret** in the row's **⋯** menu makes a new secret, and the old one stops working at once.
+This fits a site that handles its forms on the server, such as one built with Payload. **Make a new secret** in the row's **⋯** menu makes a new secret, and the old one stops working at once.
 Also called: server to server, API, signed post, backend form.
 
 ### How do I connect a Payload site?
-To connect a site built with Payload and its form tool, create a form with **Sent by** set to **Website server**. Then send each new form entry from a hook:
+To connect a site built with Payload and its form tool, create a form with **Website server** chosen. Then send each new form entry from a hook:
 
 ```ts
 // payload.config.ts

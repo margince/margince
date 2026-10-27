@@ -70,8 +70,7 @@ describe("the scope each page declares", () => {
     voice: "self",
     agents: "self",
     notifications: "self",
-    // The mail-sharing plate carries its own "Whole company" badge, and the
-    // Telegram bot lives on Integrations.
+    // The mail-sharing plate has its own "Whole company" badge; Telegram is on Integrations.
     connections: "self",
 
     // Pages whose cards split across two scopes. `integrations` is one:
@@ -115,6 +114,7 @@ describe("the scope each page declares", () => {
     tags: "workspace",
     products: "workspace",
     capture: "workspace",
+    "web-forms": "workspace",
     knowledge: "workspace",
     import: "workspace",
     automations: "workspace",
@@ -248,6 +248,8 @@ describe("what each page lets a reader change", () => {
     // ExtensionUnitsCard's Open link asks for no grant at all.
     integrations:
       "any(all(full-seat, any(any(integrations:update, integrations:create), integrations:delete, any(webhook_subscription:update, webhook_subscription:create), webhook_subscription:delete, any(channel_connection:update, channel_connection:create), channel_connection:delete)), units:workspace)",
+    "web-forms":
+      "all(full-seat, any(any(integrations:update, integrations:create), integrations:delete))",
     knowledge: "all(full-seat, any(any(knowledge_corpus:create)))",
     // BOTH verbs: ImportCard's own gate is `mayCreate && mayAdvance`.
     import:

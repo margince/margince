@@ -14502,13 +14502,15 @@ paths:
       operationId: createWebForm
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
-      summary: Create a website form (returns a server signing secret once).
+      summary: Create a website form (returns a minted signing secret once).
       description: |
         Mints the form's public key, the last segment of its intake address
         `POST /v1/public/forms/{form_key}`. A `server` form answers its own signing secret in
-        `signing_secret`, once; no read returns it again. A builder form (`webflow`, `typeform`,
-        `tally`) stores the secret the builder signs with, sent in `sender_secret`. Both need a
-        secret store on this installation; without one they answer 422 on `sender`.
+        `signing_secret`, once; no read returns it again. So does a `typeform` or `tally` form
+        sent without `sender_secret`: the secret is then typed into the builder's webhook. A
+        `webflow` form stores the secret Webflow issued, sent in `sender_secret` now or on a
+        later update; until then it refuses every post. Every signed
+        sender needs a secret store on this installation; without one it answers 422 on `sender`.
       requestBody:
         required: true
         content:
@@ -14516,7 +14518,7 @@ paths:
             schema: { $ref: '#/components/schemas/CreateWebFormRequest' }
       responses:
         '201':
-          description: The created form, plus its one-time signing secret for a `server` form.
+          description: The created form, plus the signing secret once whenever this installation minted it.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/WebFormCreated' }
@@ -14595,10 +14597,10 @@ paths:
       operationId: rotateWebFormSecret
       security: [ { cookieAuth: [] } ]
       x-agent-access: human-only
-      summary: Rotate a server form's signing secret (returns the new secret once).
+      summary: Rotate a form's minted signing secret (returns the new secret once).
       description: |
-        Only a `server` form has a secret this installation minted; any other sender answers 422 on
-        `sender`. The old secret stops verifying at once.
+        A `server`, `typeform` or `tally` form gets a new secret this installation mints; a
+        `browser` or `webflow` form answers 422 on `sender`. The old secret stops verifying at once.
       responses:
         '200':
           description: The form plus its new one-time signing secret.
@@ -32995,7 +32997,8 @@ components:
         Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
         allowed website, with spam checks. `server`: a server signing with this form's secret.
         `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
-        builder computes with the secret stored as `sender_secret`.
+        builder computes with the form's stored secret: the `sender_secret` pasted, or for `typeform`
+        and `tally` one this installation minted when none was.
 
     WebForm:
       type: object
@@ -33037,7 +33040,7 @@ components:
           properties:
             signing_secret:
               type: string
-              description: A `server` form's signing secret, shown this once.
+              description: The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once.
 
     WebFormListResponse:
       type: object
@@ -33054,7 +33057,7 @@ components:
       properties:
         name: { type: string, minLength: 1, maxLength: 200 }
         sender: { $ref: '#/components/schemas/WebFormSender' }
-        sender_secret: { type: string, minLength: 16, maxLength: 512, description: 'The secret a builder signs with. Required for `webflow`, `typeform` and `tally`; refused for any other sender.' }
+        sender_secret: { type: string, minLength: 16, maxLength: 512, description: 'The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow''s secret is pasted. Refused for any other sender.' }
         allowed_origins:
           type: array
           maxItems: 20
@@ -50379,6 +50382,16 @@ components:
       description: |
         What the composer opened against: `activity` for a reply to that message, or the
         record a new conversation starts from.
+    MailDraftGround:
+      description: >-
+        One record the draft was written from. A saved agent draft keeps these
+        so the composer files the sent mail where the draft was grounded,
+        rather than rebuilding links from whichever page it was opened on.
+      type: object
+      required: [anchor_type, anchor_id]
+      properties:
+        anchor_type: { $ref: '#/components/schemas/MailDraftAnchorType' }
+        anchor_id: { type: string, format: uuid }
 
     MailDraftInput:
       type: object
@@ -50407,6 +50420,15 @@ components:
         id: { type: string, format: uuid }
         anchor_type: { $ref: '#/components/schemas/MailDraftAnchorType' }
         anchor_id: { type: string, format: uuid }
+        grounding:
+          type: array
+          readOnly: true
+          description: >-
+            The records this draft was written from, which an agent draft
+            records and a human draft leaves empty. The composer files a sent
+            draft under these, so a draft grounded in a deal reaches that
+            deal's timeline even when it is opened from the contact page.
+          items: { $ref: '#/components/schemas/MailDraftGround' }
         to: { type: array, items: { type: string } }
         cc: { type: array, items: { type: string } }
         bcc: { type: array, items: { type: string } }
