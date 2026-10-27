@@ -1312,7 +1312,7 @@ Which model to run each site on, and what that choice rests on.
 | [`propose_roles/committee`](#propose_rolescommittee) | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 13 |
 | [`rate_extract/fx`](#rate_extractfx) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 14 |
 | [`request_settlement/request_settle`](#request_settlementrequest_settle) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 10 | 10 |
-| [`signal_extract/thread_events`](#signal_extractthread_events) | `gemini · gemini-3.6-flash · cloud_frontier` | `certified` | 1.00 | `current` | 55 | 14 |
+| [`signal_extract/thread_events`](#signal_extractthread_events) | `gemini · gemini-3.6-flash · cloud_frontier` | `certified` | 0.99 | `current` | 55 | 14 |
 | [`site_extract/profile`](#site_extractprofile) | - | - | - | `stale` | 5 | 10 |
 | [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | - | - | - | `stale` | 3 | 13 |
 | [`site_triage/triage`](#site_triagetriage) | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 13 |
@@ -1325,7 +1325,7 @@ Which model to run each site on, and what that choice rests on.
 | [`summarize/meeting_brief`](#summarizemeeting_brief) | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `supported_degraded` | 1.00 | `current` | 1 | 13 |
 | [`summarize/meeting_plan`](#summarizemeeting_plan) | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 13 |
 | [`tag_suggest/interest`](#tag_suggestinterest) | - | - | - | `absent` | 5 | 0 |
-| [`transcript_propose/next_steps`](#transcript_proposenext_steps) | `gemini · gemini-3.6-flash · cloud_frontier` | `certified` | 0.98 | `current` | 30 | 13 |
+| [`transcript_propose/next_steps`](#transcript_proposenext_steps) | `gemini · gemini-3.6-flash · cloud_frontier` | `certified` | 0.99 | `current` | 30 | 13 |
 | [`voice_build/demo_draft`](#voice_builddemo_draft) | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 1 | 13 |
 | [`voice_build/derive`](#voice_buildderive) | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 1 | 13 |
 | [`voice_build/eval_draft`](#voice_buildeval_draft) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 13 |
@@ -1362,7 +1362,7 @@ record's own p50 and p95 are in the site tables.
 | `gemini` | `gemini-3.1-pro-preview` | `cloud_frontier` | 6 | 0 | 0 | 6 | 216 | 207 | 0.96 | 14416ms | 3 | 3 | 0 |
 | `gemini` | `gemini-3.5-flash` | `cloud_frontier` | 40 | 22 | 0 | 18 | 468 | 468 | 1.00 | 16000ms | 31 | 8 | 1 |
 | `gemini` | `gemini-3.5-flash-lite` | `cloud_frontier` | 40 | 25 | 0 | 15 | 684 | 661 | 0.97 | 4403ms | 22 | 14 | 4 |
-| `gemini` | `gemini-3.6-flash` | `cloud_frontier` | 4 | 4 | 0 | 0 | 279 | 277 | 0.99 | 10699ms | 3 | 1 | 0 |
+| `gemini` | `gemini-3.6-flash` | `cloud_frontier` | 4 | 4 | 0 | 0 | 282 | 280 | 0.99 | 10303ms | 3 | 1 | 0 |
 | `gemini` | `gemini-3.6-flash` | `cloud_frontier` | 38 | 28 | 1 | 9 | 417 | 414 | 0.99 | 14426ms | 23 | 14 | 1 |
 | `ollama` | `gemma4:12b` | `sovereign` | 44 | 21 | 0 | 23 | 786 | 638 | 0.81 | 123468ms | 12 | 14 | 18 |
 | `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 2 | 0 | 4 | 189 | 166 | 0.88 | 15788ms | 1 | 1 | 4 |
@@ -2809,7 +2809,7 @@ Records (14):
 | `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 0/55 | `certified` | 171 | 162 | 0.95 | 8714ms | 14416ms | 162 | 0 | 9 | 0 |
 | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/55 | `certified` | 24 | 24 | 1.00 | 2210ms | 3897ms | 24 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/55 | `certified` | 24 | 24 | 1.00 | 1055ms | 1647ms | 24 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier` | `current` | 55/55 | `certified` | 165 | 165 | 1.00 | 6337ms | 10699ms | 165 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier` | `current` | 55/55 | `certified` | 171 | 170 | 0.99 | 6142ms | 10303ms | 170 | 1 | 0 | 0 |
 | `ollama · gemma4:12b · sovereign` | `stale` | 0/55 | `not_supported` | 27 | 22 | 0.81 | 20152ms | 33615ms | 22 | 5 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/55 | `certified` | 24 | 24 | 1.00 | 2370ms | 5713ms | 24 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/55 | `not_supported` | 24 | 12 | 0.50 | 1825ms | 7662ms | 12 | 12 | 0 | 0 |
@@ -3280,7 +3280,7 @@ Records (13):
 | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 30/30 | `not_supported` | 102 | 92 | 0.90 | 1088ms | 1667ms | 92 | 3 | 7 | 0 |
 | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/30 | `certified` | 18 | 18 | 1.00 | 2393ms | 5094ms | 18 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/30 | `certified` | 18 | 18 | 1.00 | 972ms | 1206ms | 18 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier` | `current` | 30/30 | `certified` | 96 | 94 | 0.98 | 3424ms | 6702ms | 94 | 1 | 1 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier` | `current` | 30/30 | `certified` | 93 | 92 | 0.99 | 3332ms | 5589ms | 92 | 0 | 1 | 0 |
 | `ollama · gemma4:12b · sovereign` | `stale` | 0/30 | `not_supported` | 18 | 15 | 0.83 | 14394ms | 21930ms | 15 | 3 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/30 | `certified` | 18 | 18 | 1.00 | 3468ms | 8503ms | 18 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/30 | `not_supported` | 54 | 47 | 0.87 | 1345ms | 1963ms | 47 | 7 | 0 | 0 |

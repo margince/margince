@@ -63,8 +63,8 @@ can identify that participant as the buyer; their presence in Cc alone cannot.
 Use supplier, partner or provider only when the source establishes that specific relationship.
 Merely relaying an unidentified company’s need does not establish a partnership: use unknown.
 A meeting invitation alone establishes no buying intent.
-Every field is always present. A field that does not apply to the kind is "", recipient_refs is [],
-and commercial_role is unknown.
+Every field is always present. A text field that does not apply to the kind is "", recipient_refs is [],
+commercial_role is unknown, and commitment is always the object.
 A conversation can state several events in different messages. Report each one. An event in a later
 message does not replace an unrelated event in an earlier one.
 Reporting nothing is the correct answer for most conversations.`

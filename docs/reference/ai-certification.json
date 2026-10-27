@@ -10482,10 +10482,10 @@
       "sites_current": 4,
       "sites_partial": 0,
       "sites_stale": 0,
-      "runs": 279,
-      "passed": 277,
-      "reliability": 0.992831541218638,
-      "slowest_p95_ms": 10699,
+      "runs": 282,
+      "passed": 280,
+      "reliability": 0.9929078014184397,
+      "slowest_p95_ms": 10303,
       "bands": {
         "certified": 3,
         "supported_degraded": 1,
@@ -21308,7 +21308,7 @@
           "env": "cloud_frontier"
         },
         "band": "certified",
-        "reliability": 1,
+        "reliability": 0.9941520467836257,
         "state": "current"
       },
       "scenarios": [
@@ -21888,14 +21888,14 @@
           "band": "certified",
           "scenarios_measured": 55,
           "scenarios_total": 55,
-          "runs": 165,
-          "passed": 165,
-          "reliability": 1,
-          "latency_p50_ms": 6337,
-          "latency_p95_ms": 10699,
+          "runs": 171,
+          "passed": 170,
+          "reliability": 0.9941520467836257,
+          "latency_p50_ms": 6142,
+          "latency_p95_ms": 10303,
           "reported": {
-            "accepted": 165,
-            "wrong_answer": 0,
+            "accepted": 170,
+            "wrong_answer": 1,
             "invalid": 0,
             "abstained": 0
           },
@@ -26566,7 +26566,7 @@
           "env": "cloud_frontier"
         },
         "band": "certified",
-        "reliability": 0.9791666666666666,
+        "reliability": 0.989247311827957,
         "state": "current"
       },
       "scenarios": [
@@ -26876,14 +26876,14 @@
           "band": "certified",
           "scenarios_measured": 30,
           "scenarios_total": 30,
-          "runs": 96,
-          "passed": 94,
-          "reliability": 0.9791666666666666,
-          "latency_p50_ms": 3424,
-          "latency_p95_ms": 6702,
+          "runs": 93,
+          "passed": 92,
+          "reliability": 0.989247311827957,
+          "latency_p50_ms": 3332,
+          "latency_p95_ms": 5589,
           "reported": {
-            "accepted": 94,
-            "wrong_answer": 1,
+            "accepted": 92,
+            "wrong_answer": 0,
             "invalid": 1,
             "abstained": 0
           },
