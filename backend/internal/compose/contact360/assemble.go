@@ -153,11 +153,11 @@ func (s *Service) AssembleScoped(ctx context.Context, contactID ids.ContactID, o
 			return err
 		}
 		out.Contact = contact
-		created, err := privacy.CreationAttributionTx(ctx, tx, "contact", contactID.UUID)
+		created, found, err := privacy.CreationAttributionTx(ctx, tx, "contact", contactID.UUID)
 		if err != nil {
 			return err
 		}
-		if created != nil {
+		if found {
 			out.CreatedBy = created.Wire()
 		}
 		// The scope is a read of the project, gated before any section

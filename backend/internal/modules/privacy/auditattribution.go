@@ -65,10 +65,10 @@ func (a AuditAttribution) Wire() *crmcontracts.PrincipalAttribution {
 }
 
 // CreationAttributionTx is who created the record: its earliest create audit
-// row, read through the same projection as AuditAttributionsTx. Nil when no
-// create row survives, which the caller reads as unknown, not as the system.
-// The caller has already read the record, the gate the record History holds.
-func CreationAttributionTx(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID) (*AuditAttribution, error) {
+// row, read through the same projection as AuditAttributionsTx. found is false
+// when no create row survives, which the caller reads as unknown, not as the
+// system. The caller has already read the record, the gate the History holds.
+func CreationAttributionTx(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID) (attribution AuditAttribution, found bool, err error) {
 	rows, err := tx.Query(ctx, `
 		SELECT `+recordAuditColumns+`
 		FROM audit_log a`+auditActorNameJoins+agentClientNameJoin+`
@@ -76,21 +76,20 @@ func CreationAttributionTx(ctx context.Context, tx pgx.Tx, entityType string, en
 		ORDER BY a.occurred_at, a.id
 		LIMIT 1`, entityType, entityID)
 	if err != nil {
-		return nil, fmt.Errorf("privacy: reading a creation attribution: %w", err)
+		return AuditAttribution{}, false, fmt.Errorf("privacy: reading a creation attribution: %w", err)
 	}
 	defer rows.Close()
 	if !rows.Next() {
 		if err := rows.Err(); err != nil {
-			return nil, fmt.Errorf("privacy: reading a creation attribution: %w", err)
+			return AuditAttribution{}, false, fmt.Errorf("privacy: reading a creation attribution: %w", err)
 		}
-		return nil, nil
+		return AuditAttribution{}, false, nil
 	}
 	var row recordAuditRow
 	if err := scanRecordAuditRow(rows, &row); err != nil {
-		return nil, fmt.Errorf("privacy: reading a creation attribution: %w", err)
+		return AuditAttribution{}, false, fmt.Errorf("privacy: reading a creation attribution: %w", err)
 	}
-	attribution := attributionOf(row)
-	return &attribution, nil
+	return attributionOf(row), true, nil
 }
 
 // AuditAttributionsTx resolves the attribution of the given audit rows in one
