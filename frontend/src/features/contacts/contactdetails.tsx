@@ -15,7 +15,11 @@ import { RecordFields } from "../../components/recordfields";
 import { rawRecord } from "../../components/recordfieldtypes";
 import { TagsPanel } from "../../components/tagspanel";
 import { Badge } from "../../design-system/atoms";
-import { ContactLink } from "../../design-system/contactlink";
+import {
+  ContactLink,
+  CopyEmail,
+  EmailFace,
+} from "../../design-system/contactlink";
 import { FieldRow } from "../../design-system/fieldgrid";
 import { OffsiteLink } from "../../design-system/offsitelink";
 import { RecordCard } from "../../design-system/recordcard";
@@ -23,6 +27,7 @@ import type {
   DetailRow,
   DetailSection,
 } from "../../design-system/recorddetails";
+import { countryBeyondCity } from "../../format/address";
 import {
   EMAIL_TYPE_LABEL,
   PHONE_TYPE_LABEL,
@@ -63,7 +68,10 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
   const email = contact.primary_email;
   const emailRow = contact.emails?.find((row) => row.email === email);
   const phone = primaryPhone(contact.phones);
-  const address = [contact.address?.city, contact.address?.country]
+  const address = [
+    contact.address?.city,
+    countryBeyondCity(contact.address?.city, contact.address?.country),
+  ]
     .filter(Boolean)
     .join(", ");
   const employer = currentEmployer(view.employments?.data);
@@ -95,17 +103,20 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
           "email",
           t("create.email"),
           email && (
-            <>
+            <span className="fieldgrid-handle">
               <ContactLink
                 kind="email"
                 value={email}
                 record={{ entityType: "contact", entityId: contact.id }}
-              />
+              >
+                <EmailFace address={email} />
+              </ContactLink>
               <BoughtMark
                 bought={emailRow && bought.get(`email:${emailRow.id}`)}
                 subject={email}
               />
-            </>
+              <CopyEmail address={email} />
+            </span>
           ),
           Boolean(email),
         ),

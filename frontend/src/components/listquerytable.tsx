@@ -366,6 +366,7 @@ export function ListTable<Row>({
         searchable
           ? {
               value: localSearch,
+              answered: query.q,
               onChange: (next) => {
                 typed.current = next;
                 setLocalSearch(next);

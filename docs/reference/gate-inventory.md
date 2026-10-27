@@ -80,6 +80,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendaudiencereasons_test.go` | H3 | A held message says why it was held, or the reader cannot argue with the verdict. |
 | `frontendautonomykinds_test.go` | H1 | Every kind a rep may put on automatic must have words on the settings screen that offers it, and the screen must offer no kind the product cannot automate. |
 | `frontendcollapsespace_test.go` | H3 | The viewer and the server must fold whitespace by the same set, or a citation opens a document with nothing marked. |
+| `frontendcountries_test.go` | H3 | The deal list's country filter offers the codes the server stores, and no other. |
 | `frontendcurrencies_test.go` | H3 | The currency picker must never offer a code the server refuses. |
 | `frontendemailtext_test.go` | H3 | The browser and the server split a mail body by the same rules, or a row's preview and the message it opens disagree about where the sender stopped writing. |
 | `frontendentrymounts_test.go` | H3 | Every slot pkg/extension accepts is mounted on a core screen, read from the screens themselves. |
@@ -111,6 +112,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendsendpermissionreasons_test.go` | H3 | The composer has its own sentence for every code the send engine refuses with, and no other. |
 | `frontendsetupproviders_test.go` | H3 | Onboarding offers a first-time admin a provider and a model, and the server has to be able to price and serve whatever it offered. |
 | `frontendtaskorigins_test.go` | H3 | Every automatic task source has a sentence in the browser saying what made the task. |
+| `frontendthreadingfloor_test.go` | H3 | The deal page names the seat a single-threaded deal is missing. |
 | `frontendunitspellings_test.go` | H3 | The browser and the server must read a unit's spelling as the same key. |
 | `frontendvendorservices_test.go` | H3 | Which calendar belongs beside which mailbox is answered on both sides of the wire, and the two answers must be the same pairs. |
 | `frontendwebformsigning_test.go` | H3 | The setup dialog hands a website's developer the code that signs a server form's posts. |

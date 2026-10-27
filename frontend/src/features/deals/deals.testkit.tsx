@@ -338,7 +338,10 @@ export function stubBackend(
         },
         roles: ["admin"],
         teams: [],
-        authorization: meFixture({ allow: REP_GRANTS }).authorization,
+        // A rep reads companies: the deal screens name and search them.
+        authorization: meFixture({
+          allow: { ...REP_GRANTS, company: ["read"] },
+        }).authorization,
       });
     }
     if (url.includes("/companies")) {

@@ -4,6 +4,7 @@
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { providerName } from "../format/connectorprovider";
+import { sourceSystemName } from "../format/sourcesystem";
 import { isMessageKey, type Translator, useT } from "../i18n";
 import { Badge } from "./atoms";
 import "./trust.css";
@@ -180,7 +181,7 @@ function humanLabel(
   if (provenance.author) {
     const { display_name: name, via } = provenance.author;
     return via
-      ? t("trust.loggedInByVia", { via, name })
+      ? t("trust.loggedInByVia", { via: sourceSystemName(via), name })
       : t("trust.loggedInBy", { name });
   }
   if (provenance.self) {

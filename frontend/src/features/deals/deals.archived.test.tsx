@@ -102,7 +102,7 @@ describe("DealScreen — an archived deal does not ask for what the server refus
     expect(
       screen.queryByRole("button", { name: en["rel.addStakeholder"] }),
     ).toBeNull();
-    expect(document.querySelector(".dc-graph")).toBeNull();
+    expect(document.querySelector(".dc-sides")).toBeNull();
   });
 
   it("offers no Legal review tab", async () => {

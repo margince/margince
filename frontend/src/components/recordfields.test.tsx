@@ -1,4 +1,7 @@
 /** @vitest-environment happy-dom */
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -179,6 +182,38 @@ describe("record fields", () => {
     expect(
       screen.queryByRole("button", { name: /Change/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it("stacks a value and the link that opens it, editable or not", () => {
+    const profile = "https://www.linkedin.com/in/example";
+    const css = readFileSync(
+      join(
+        dirname(fileURLToPath(import.meta.url)),
+        "../design-system/fieldgrid.css",
+      ),
+      "utf8",
+    );
+    for (const canEdit of [false, true]) {
+      const view = render(
+        <RecordFields
+          title="Details"
+          kind="contact"
+          fields={[{ key: "linkedin", labelText: "LinkedIn" }]}
+          record={{ id: "record-1", version: 1, linkedin: profile }}
+          links={{ linkedin: { href: profile, label: "Open profile" } }}
+          canEdit={canEdit}
+          save={async () => undefined}
+        />,
+        { wrapper },
+      );
+      // Inline siblings with no gap read as "…/in/exampleOpen profile". The
+      // pair is read off the render, so a renamed class fails here.
+      const link = screen.getByRole("link", { name: "Open profile" });
+      const value = link.previousElementSibling;
+      const pair = `> .${value?.classList[0]} + .${link.classList[0]})`;
+      expect(css).toContain(`.fieldgrid-value:has(${pair}`);
+      view.unmount();
+    }
   });
 });
 

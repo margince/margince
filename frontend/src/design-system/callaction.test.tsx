@@ -244,13 +244,14 @@ const CHATS = {
   Zalo: "https://zalo.me/493012345678",
 } as const;
 
+// The chats fold behind one glyph, so a reader opens it before any is drawn.
 async function chatLinks(): Promise<HTMLElement[]> {
-  await screen.findByRole("link", { name: "Open chat in WhatsApp" });
-  return screen.getAllByRole("link", { name: /^Open chat in / });
+  fireEvent.click(await screen.findByRole("button", { name: "Open a chat" }));
+  return screen.findAllByRole("link", { name: /^Open chat in / });
 }
 
 describe("CallAction offers the number's chat in each messenger", () => {
-  it("draws one link per messenger after the number, each off our origin", async () => {
+  it("draws one link per messenger behind the number's chat glyph, each off our origin", async () => {
     render(<CallAction appearance="value" record={DANA} number={DIALS} />);
     const links = await chatLinks();
     expect(
@@ -269,12 +270,7 @@ describe("CallAction offers the number's chat in each messenger", () => {
   ] as const)("drops only its own link when %s is off", async (key, name) => {
     answerSettings(() => jsonResponse({ ...ALL_ON, [key]: false }));
     render(<CallAction appearance="value" record={DANA} number={DIALS} />);
-    await screen.findByText(
-      Object.keys(CHATS).find((other) => other !== name) ?? "",
-    );
-    const shown = screen
-      .getAllByRole("link", { name: /^Open chat in / })
-      .map((link) => link.textContent);
+    const shown = (await chatLinks()).map((link) => link.textContent);
     expect(shown).toEqual(Object.keys(CHATS).filter((app) => app !== name));
   });
 

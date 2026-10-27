@@ -26,6 +26,7 @@ import { CompanyContractsCard } from "./companycontracts";
 import { CompanyDocumentsCard } from "./companydocuments";
 import { EvidenceModal } from "./companyevidence";
 import { CompanyFinanceCard } from "./companyfinance";
+import { useCompanyVerbRefusal } from "./companyheader";
 import "./company360.css";
 import "./companytabs.css";
 
@@ -130,6 +131,7 @@ export function CompanyRecordBody({
   const recordZone = useRecordZone();
   const canWriteCompany =
     useCanWriteRecord("company", company) && !company.archived_at;
+  const verbRefusal = useCompanyVerbRefusal(company);
   if (composing !== null) {
     shownAnchor.current = composing;
   }
@@ -248,7 +250,10 @@ export function CompanyRecordBody({
             recordId={company.id}
             readOnly={!canWriteCompany}
           />
-          <CompanyReachCard companyId={company.id} />
+          <CompanyReachCard
+            companyId={company.id}
+            companyName={company.display_name}
+          />
         </div>
       )}
       {/* Files get the whole column on their own tab, which is what the mockup
@@ -281,6 +286,7 @@ export function CompanyRecordBody({
           <CompanyDocumentsCard
             companyId={company.id}
             refusedReasonId={refusedReasonId}
+            refusedReason={verbRefusal}
             onOpenEmail={receipt.openEmail}
           />
         </div>

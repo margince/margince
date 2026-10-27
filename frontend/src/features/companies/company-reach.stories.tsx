@@ -26,7 +26,7 @@ function reachStory(body: unknown, status = 200) {
     });
     return (
       <StoryProviders>
-        <CompanyReachCard companyId={COMPANY} />
+        <CompanyReachCard companyId={COMPANY} companyName="Acme GmbH" />
       </StoryProviders>
     );
   };
@@ -47,11 +47,13 @@ export const Reached: Story = {
         user_id: "018f3a1b-0000-7000-8000-0000000000u1",
         display_name: "Dana Okonjo",
         connections: 3,
+        functions: [{ function: "it", connections: 2 }],
       },
       {
         user_id: "018f3a1b-0000-7000-8000-0000000000u2",
         display_name: "Minh Tran",
         connections: 1,
+        functions: [],
       },
     ],
   }),

@@ -7,7 +7,11 @@ import { EntityRef } from "../../components/entityref";
 import { saveRecordEdit } from "../../components/recordedit";
 import { TagsPanel } from "../../components/tagspanel";
 import { Badge } from "../../design-system/atoms";
-import { ContactLink } from "../../design-system/contactlink";
+import {
+  ContactLink,
+  CopyEmail,
+  EmailFace,
+} from "../../design-system/contactlink";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import { InlineText } from "../../design-system/inlinetext";
 import { OffsiteLink } from "../../design-system/offsitelink";
@@ -102,14 +106,19 @@ function EmailValue({
   return (
     <span className="lead-row-value">
       {!editing && (
-        <ContactLink
-          kind="email"
-          value={lead.email}
-          record={{ entityType: "lead", entityId: lead.id }}
-          readOnly={Boolean(lead.archived_at)}
-          className="link-button lead-row-link"
-          textClassName="lead-row-link"
-        />
+        <span className="lead-row-email">
+          <ContactLink
+            kind="email"
+            value={lead.email}
+            record={{ entityType: "lead", entityId: lead.id }}
+            readOnly={Boolean(lead.archived_at)}
+            className="link-button lead-row-link"
+            textClassName="lead-row-link"
+          >
+            <EmailFace address={lead.email} />
+          </ContactLink>
+          <CopyEmail address={lead.email} />
+        </span>
       )}
       {canEdit && (
         <span className={editing ? undefined : "lead-row-verb"}>

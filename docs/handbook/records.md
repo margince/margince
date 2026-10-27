@@ -79,7 +79,7 @@ To edit a contact in Margince, open it and click the value to change in the **De
 Also called: update a contact, change a phone number, rename.
 
 ### Why can't I edit a contact or company?
-A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes."). It also takes none when it is not yours to change: "You cannot edit this contact. Ask the owner to share it, or an administrator for edit rights." Fields you cannot edit show as plain text, with the reason when you point at them.
+A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes."). It also takes none when it is not yours to change: "You cannot edit this contact. Ask the owner to share it, or an administrator for edit rights." Fields you cannot edit show as plain text and other actions are greyed out; point at a field or open **More actions** for the reason.
 If someone else changed the same field while you were editing, your edit is refused: "This record changed after you opened it. Reload it to see the change, then make yours again."
 
 Also called: read-only record, edit greyed out, cannot change.
@@ -118,7 +118,7 @@ Also called: combine, deduplicate, remove a duplicate.
 ### How do I call a contact?
 To call a contact from Margince, press **Call** in its header; it dials the main number, or else the first, in your phone app. Click any number in **Details** to dial that one. Margince does not make or record calls, but it opens **Log activity** on **Call** for that contact; close it and nothing is recorded. A logged call's **Call**, the **Call** in a task and the **First** card on **Home** do the same. A seat that may not log activity only dials. A call logged this way is not linked to the task and does not complete it.
 
-**Call** is refused on an archived contact, which shows no numbers; with no number at all, "No phone number on this contact." shows. Only a number that starts with + shows **WhatsApp**, **Telegram** and **Zalo** links, in the header **Phone** field and in **Details**. Each sends the number to the app's website and opens a chat, where you start the call; it does not open **Log activity**. Telegram finds the contact only if the contact allows it. An administrator can turn each link off in [Settings](settings.md).
+**Call** is refused on an archived contact, which shows no numbers; with no number at all, "No phone number on this contact." shows. Only a number that starts with + gets a chat button, in the header **Phone** field and in **Details**, for **WhatsApp**, **Telegram** and **Zalo**. Each sends the number to the app's website and opens a chat, where you start the call; it does not open **Log activity**. Telegram finds the contact only if the contact allows it. An administrator can turn each link off in [Settings](settings.md).
 Also called: phone a contact, click to call, dial.
 
 ### Can I add a photo to a contact, or change a company's logo?

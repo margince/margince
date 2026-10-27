@@ -11,6 +11,7 @@ import { Checkbox, type useScrollRegion } from "./atoms";
 import type { ListColumn, ListSelection } from "./listcolumn";
 import { HeaderCell } from "./listheader";
 import type { SortControl } from "./listsurface";
+import { CELL_STRIP_CLASS } from "./listtable.floors";
 import {
   type ColumnLayout,
   type ColumnResize,
@@ -110,7 +111,7 @@ function IdentityCell<Row>({
  * else, so a column that carries one value keeps whatever layout it returns.
  */
 export function CellStrip({ children }: Readonly<{ children: ReactNode }>) {
-  return <span className="lt-strip">{children}</span>;
+  return <span className={CELL_STRIP_CLASS}>{children}</span>;
 }
 
 /** Placeholder rows while the first page loads: enough to read as a list. */

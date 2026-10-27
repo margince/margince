@@ -129,7 +129,9 @@ type ListDealsInput struct {
 	// status, this is "notice it earlier". Set both and both apply.
 	QuietForDays *int
 	// CloseBefore filters calendar dates before the bound, before pagination.
-	CloseBefore     *time.Time
+	CloseBefore *time.Time
+	// RangeFilters are the close-day, value, currency and country dials.
+	RangeFilters
 	IncludeArchived bool
 	// Sort is the contract's sort spec, validated against the core
 	// vocabulary below plus the workspace's active cf_ columns.
@@ -139,7 +141,7 @@ type ListDealsInput struct {
 	CustomFilters map[string]string
 	// Membership narrows to one list's members (list_id).
 	Membership storekit.ListMemberFilter
-	// MemberOf is the list a seam caller narrowed to; the provider resolves it
+	// MemberOf is the list the caller narrowed to; narrowToList resolves it
 	// into Membership before the read.
 	MemberOf *ids.UUID
 }
@@ -251,18 +253,19 @@ func (s *Store) ListDealsTx(ctx context.Context, tx pgx.Tx, in ListDealsInput, a
 
 // dealListQuery is the half of a deal list both entry points share: the sort
 // refusal, the shared prelude and the deal's own filters. The valuation is
-// read in the list's own transaction, and only when the request sorts by Value or close day.
+// read in the list's own transaction, and only when the request sorts or filters by Value or close day.
 func (s *Store) dealListQuery(ctx context.Context, tx pgx.Tx, in ListDealsInput, active []fieldcatalog.Column) (*storekit.ListPrelude, []string, error) {
 	if err := refuseMaskedSort(ctx, in.Sort); err != nil {
 		return nil, nil, err
 	}
 	vocab := dealListFields
-	if sortsByValue(in.Sort) || sortsByCloseDay(in.Sort) {
+	if sortsByValue(in.Sort) || sortsByCloseDay(in.Sort) || in.readsValuation() {
 		valuation, err := s.valuationTx(ctx, tx)
 		if err != nil {
 			return nil, nil, err
 		}
 		vocab = dealListVocabulary(valuation)
+		in.valuation = valuation
 	}
 	pre, err := storekit.BuildListPrelude(ctx, "deal", vocab, active,
 		in.Sort, in.Limit, in.Cursor, in.CustomFilters)
@@ -389,7 +392,7 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 	if err != nil {
 		return nil, err
 	}
-	return appendIdleFilters(append(where, sourceKey...), in), nil
+	return appendRangeFilters(ctx, appendIdleFilters(append(where, sourceKey...), in), in.RangeFilters, arg)
 }
 
 // appendIdleFilters adds the two activity-clock filters: the product-wide

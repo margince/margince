@@ -22,6 +22,14 @@ export const fieldConflictFixture: Envelope = {
         fields: { job_title: "VP Sales" },
       },
       message: "job_title was last edited by hand, so the change is waiting.",
+      changes: [
+        {
+          field: "job_title",
+          label: "Job title",
+          before: { kind: "text", text: "Head of Sales" },
+          after: { kind: "text", text: "VP Sales" },
+        },
+      ],
     },
   },
   warnings: [],

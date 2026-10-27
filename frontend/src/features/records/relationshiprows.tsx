@@ -37,6 +37,8 @@ import {
   type Relationship,
   type RelationshipScope,
   relationshipEditFields,
+  roleSent,
+  roleShown,
   scopeCopy,
   scopeQueryKey,
 } from "./relationships";
@@ -163,7 +165,11 @@ export function RelationshipRows({
               value: <Badge>{t(KIND_LABELS[rel.kind])}</Badge>,
             },
           ]),
-      { key: "role", term: t("rel.role"), value: rel.role ?? "—" },
+      {
+        key: "role",
+        term: t("rel.role"),
+        value: roleShown(rel, t) || "—",
+      },
       {
         key: "counterparty",
         term: t("rel.counterparty"),
@@ -196,11 +202,15 @@ export function RelationshipRows({
           record={{
             id: rel.id,
             version: rel.version,
-            role: rel.role ?? "",
+            role: roleShown(rel, t),
+            stored_role: rel.role ?? "",
             started_at: rel.started_at ?? "",
             ended_at: rel.ended_at ?? "",
           }}
           update={async (values, _rows, opened) => {
+            // The stored role, so a shown label saved untouched keeps its spelling.
+            const stored = opened?.stored_role;
+            const typed = typeof values.role === "string" ? values.role : "";
             return unwrap(
               await api.PATCH("/relationships/{id}", {
                 params: {
@@ -208,7 +218,14 @@ export function RelationshipRows({
                   ...ifMatch(requireVersion(opened?.version)),
                 },
                 body: {
-                  role: orNull(values.role),
+                  role: orNull(
+                    roleSent(
+                      rel.kind,
+                      typed,
+                      t,
+                      typeof stored === "string" ? [stored] : [],
+                    ),
+                  ),
                   started_at: orNull(values.started_at),
                   ended_at: orNull(values.ended_at),
                 },
@@ -250,7 +267,7 @@ export function RelationshipRows({
     {
       key: "role",
       header: t("rel.role"),
-      render: (rel: Relationship) => rel.role ?? "",
+      render: (rel: Relationship) => roleShown(rel, t),
     },
     {
       key: "counterparty",

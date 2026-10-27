@@ -3776,21 +3776,28 @@ paths:
         they know each other is not something a string test can decide, and claiming
         otherwise would be the more dangerous error — it is scored by the certification
         rubric instead.
+
+        **With no `contact_id`, the ask is for somebody at the account.** The colleague
+        must be one `GET /companies/{id}/linkedin-reach` lists for this caller, and the
+        draft names no contact, because those connections never consented to appearing
+        here. It is written from the template in the reader's own language: the only
+        facts are the colleague, the account and a function, and a template states them
+        honestly.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [contact_id, via_user_id]
+              required: [via_user_id]
               properties:
                 contact_id:
-                  type: string
+                  type: [string, 'null']
                   format: uuid
                   description: >-
                     The contact to be introduced TO. Must be somebody the caller can see on
                     this account; a contact they cannot read is `404`, the same answer a
-                    direct read gives.
+                    direct read gives. Absent asks for somebody at the account instead.
                 via_user_id:
                   type: string
                   format: uuid
@@ -3798,7 +3805,15 @@ paths:
                     The colleague being asked. Must hold a recorded route to that contact —
                     asking somebody with no relationship to trade on is a favour they cannot
                     do, and a draft that claims one would be describing a closeness the
-                    account's own page does not show.
+                    account's own page does not show. With no `contact_id`, must be a
+                    colleague with LinkedIn reach into this account, or it is `404`.
+                function:
+                  allOf: [ { $ref: '#/components/schemas/LinkedInReachFunction' } ]
+                  description: >-
+                    Only with no `contact_id`, and optional there: the function the somebody
+                    works in. Must be one of the colleague's `functions` on the reach answer,
+                    or it is `422`, because the draft would ask for an introduction the
+                    colleague's connections cannot give.
                 deal_id:
                   type: [string, 'null']
                   format: uuid
@@ -5895,6 +5910,48 @@ paths:
             of them, `all` a record carrying every one, `none` a record carrying not one.
 
             Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
+        - name: close_from
+          in: query
+          schema: { type: string, format: date }
+          description: |
+            Deals whose close day is on or after this calendar day. The close day is the one the
+            list's Close column shows and `sort=close_day` orders by: the day a won or lost deal
+            closed, read in the installation's time zone, or an open deal's expected close date.
+            A deal with no close day is outside every range. A `close_from` after `close_to` is
+            `422`.
+        - name: close_to
+          in: query
+          schema: { type: string, format: date }
+          description: Deals whose close day is on or before this calendar day (inclusive). See `close_from`.
+        - name: value_min
+          in: query
+          schema: { type: integer, format: int64, minimum: 0 }
+          description: |
+            Deals worth at least this much, in minor units of the installation's base currency.
+            The value is the one `sort=amount_minor` orders by: the deal's amount converted on
+            today's rate, or the amount frozen at close. A deal with no amount, or one in a currency
+            with no rate, is outside every range. A role that withholds the amount or the currency
+            is refused with `422` `field_masked`. A `value_min` above `value_max` is `422`.
+        - name: value_max
+          in: query
+          schema: { type: integer, format: int64, minimum: 0 }
+          description: Deals worth at most this much (inclusive), in minor units of the base currency. See `value_min`.
+        - name: currency
+          in: query
+          schema: { type: string, pattern: '^[A-Za-z]{3}$' }
+          description: >-
+            Deals priced in this ISO-4217 currency, in either case. A code that is not three letters
+            is refused with `422` `currency_malformed`. A role that withholds the currency is refused
+            with `422` `field_masked`.
+        - name: country
+          in: query
+          schema: { type: string, pattern: '^[A-Za-z]{2}$' }
+          description: |
+            Deals whose company's address is in this ISO-3166 alpha-2 country, in either case. A code
+            that is not two letters is refused with `422` `country_malformed`. A deal naming no
+            company, or a company outside the caller's row scope, is not returned. A seat that may
+            not read companies is refused with `403`, and a role that withholds the deal's company
+            with `422` `field_masked`.
         - name: source_system
           in: query
           schema: { type: string, maxLength: 128 }
@@ -44227,6 +44284,16 @@ components:
         engaged:
           type: boolean
           description: 'A two-way exchange in the window — both directions, not just our sends.'
+        last_inbound_at:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            When this contact last wrote to us, over all history, from the same fold as the
+            contact's relationship strength. Absent when nothing inbound was captured, and for a
+            caller without the activity grant, so its absence is not a claim that they never wrote.
+        last_inbound_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `last_inbound_at`, from the activity it names. Absent when that is absent.
 
     DealCoverageRisk:
       type: object
@@ -45131,7 +45198,14 @@ components:
       properties:
         deal_id:      { type: string, format: uuid }
         stakeholders: { type: array, items: { $ref: '#/components/schemas/DealCoverageSeat' } }
-        our_side:     { type: array, items: { $ref: '#/components/schemas/ContactNetworkColleague' } }
+        our_side:
+          type: array
+          description: |
+            One entry per colleague with recorded interaction with the deal's seats, warmest
+            first. `interactions_90d` sums the colleague's exchanges with every seat, and the
+            score is their warmest single relationship. `single_threaded_ours` reads the same
+            entries, so its colleague is always one of them.
+          items: { $ref: '#/components/schemas/ContactNetworkColleague' }
         risks:        { type: array, items: { $ref: '#/components/schemas/DealCoverageRisk' } }
         sections_omitted:
           type: array
@@ -45373,7 +45447,7 @@ components:
           items: { $ref: '#/components/schemas/CompanyLinkedInReachColleague' }
     CompanyLinkedInReachColleague:
       type: object
-      required: [user_id, display_name, connections]
+      required: [user_id, display_name, connections, functions]
       properties:
         user_id: { type: string, format: uuid }
         display_name: { type: string, description: 'The colleague to ask.' }
@@ -45384,6 +45458,30 @@ components:
             How many of their connections work at this account. At least one, because a
             colleague with none is not listed. Never a list of who those connections
             are: they are third parties who never consented to appearing in this CRM.
+        functions:
+          type: array
+          description: |
+            Which functions those connections work in, read from their job titles, most
+            first and then by function. A function with fewer than two connections is left
+            out, and so is a title no function matches. Two is the floor because on a small
+            account one title can name one contact. Never the titles themselves.
+          items: { $ref: '#/components/schemas/LinkedInReachFunctionCount' }
+    LinkedInReachFunctionCount:
+      type: object
+      required: [function, connections]
+      properties:
+        function: { $ref: '#/components/schemas/LinkedInReachFunction' }
+        connections:
+          type: integer
+          minimum: 2
+          description: How many of the colleague's connections there work in this function.
+    LinkedInReachFunction:
+      type: string
+      enum: [management, it, finance, sales, marketing, hr, operations, procurement]
+      description: |
+        The function a connection's job title names. A title that names a department and
+        a rank counts as the department: "Head of IT" is `it`, and only a title that names
+        no department, such as "Managing Director", is `management`.
     LinkedInAccount:
       type: object
       required: [connected, connections]
@@ -51022,6 +51120,7 @@ components:
       properties:
         key: { type: string, description: 'Stable within a template. An answer is filed under it and a frozen response keeps both, so rewording a label never orphans an answer.' }
         label: { type: string, description: 'What the question asks, worded as the reader sees it.' }
+        label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
         type: { type: string, enum: [text, multiselect], description: 'Text answers use answers; multiple-choice answers use choice_answers.' }
         options: { type: array, items: { type: string }, description: 'Allowed choices, required for multiselect. Frozen alongside the question in each submitted review.' }
         required: { type: boolean }
@@ -51033,6 +51132,7 @@ components:
         id: { type: string, format: uuid }
         key: { type: string }
         label: { type: string }
+        label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
         outcome: { type: string, enum: [won, lost], description: 'Which outcome this template is for. A win review and a loss review ask different questions, and offering both at one close is asking somebody to do filing the record can do itself.' }
         questions: { type: array, items: { $ref: '#/components/schemas/ReviewQuestion' } }
         version: { $ref: '#/components/schemas/RowVersion' }
@@ -51104,6 +51204,7 @@ components:
             The stable identifier stored on the deal. Lowercase, never changes once created —
             relabelling edits `label`, so a report keyed on the key survives the rename.
         label: { type: string, description: What readers see. }
+        label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
         sort_order: { type: integer, description: Display order in pickers and settings. }
         active:
           type: boolean
@@ -51165,6 +51266,7 @@ components:
             The stable identifier. Lowercase, never changes once created — relabelling
             edits `label`, so a report keyed on the role survives the rename.
         label: { type: string, description: What readers see. }
+        label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
         record_types:
           type: array
           minItems: 1
@@ -51275,6 +51377,7 @@ components:
         role_id: { type: string, format: uuid }
         role_key: { type: string, readOnly: true }
         role_label: { type: string, readOnly: true }
+        role_label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
         role_active:
           type: boolean
           readOnly: true
@@ -51316,6 +51419,7 @@ components:
         id: { type: string, format: uuid }
         key: { type: string, description: 'Lowercase stable key, the stored value. Never changes after creation.' }
         label: { type: string }
+        label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
         intent: { $ref: '#/components/schemas/LeadSourceIntent' }
         sort_order: { type: integer }
         active: { type: boolean, description: 'A retired origin leaves the create form and is refused for a new assignment; leads carrying it keep the value.' }
@@ -51404,6 +51508,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         label: { type: string }
+        label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
         sort_order: { type: integer }
         active: { type: boolean }
         system: { type: boolean, readOnly: true }
@@ -55961,6 +56066,19 @@ components:
             This does not let a client decide which rows it gets — the server's scope clauses
             do that on every query. It is what a client needs to EXPLAIN the answer it got, and
             to label a setting as reaching only the reader, their team, or the company.
+        refused_deal_filters:
+          type: array
+          items: { type: string }
+          description: >
+            The `listDeals` query parameters this caller is refused whatever their value: `422`
+            `field_masked` where the role masks the column on any deal, `403` where a grant the
+            filter reads is missing, `list_id` included where the caller may not read lists.
+            Computed by the list resolution and clauses the list runs, so a client withholds
+            exactly the dials the list would refuse.
+
+            A mask that withholds a reference only on some rows, such as a deal's private
+            company, refuses no filter and is not listed. Absent from a server that does not
+            compute it, and empty when nothing is refused.
 
     InstallationBrand:
       type: object
@@ -59800,6 +59918,14 @@ components:
             so it is still pending and can be declined or decided later.
 
     # ---- Optimistic concurrency ----
+    ShippedLabelKey:
+      type: [string, 'null']
+      readOnly: true
+      description: >-
+        The catalog key a screen renders a built-in value from, in the reader's language. Set
+        only on a value still worded as the product shipped it; null once an administrator
+        relabels it, so their own words show instead of `label`'s translation. `label` keeps the
+        English text for every reader that has no catalog, such as an export or an agent.
     RowVersion:
       type: integer
       format: int64

@@ -49,6 +49,7 @@ export function meFixture({
   allow = {},
   rowScope = "own",
   settingsAvailability = {},
+  refusedDealFilters,
 }: {
   roles?: string[];
   seat?: "full" | "read";
@@ -72,6 +73,8 @@ export function meFixture({
    * absence needs its own spelling rather than riding the default.
    */
   settingsAvailability?: Partial<SettingsAvailability> | null;
+  /** The deal list filters the server says this role is refused. */
+  refusedDealFilters?: string[];
 } = {}): MeResponse {
   const objects: Record<string, RbacObjectGrant> = {};
   for (const [object, actions] of Object.entries(allow)) {
@@ -97,7 +100,12 @@ export function meFixture({
     data_reset_available: false,
     admin_password_link: false,
     confirm_requests_sendable: true,
-    authorization: { seat_type: seat, objects, row_scope: rowScope },
+    authorization: {
+      seat_type: seat,
+      objects,
+      row_scope: rowScope,
+      refused_deal_filters: refusedDealFilters,
+    },
     settings_availability:
       settingsAvailability === null
         ? undefined

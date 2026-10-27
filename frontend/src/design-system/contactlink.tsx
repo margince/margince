@@ -4,10 +4,14 @@
 import { Mail } from "lucide-react";
 import type { ReactNode } from "react";
 import { mailbox } from "../format/contacturi";
+import { useT } from "../i18n";
 import type { CallRecord } from "../lib/callstart";
 import { useWriteTo, type WriteToRecord } from "../lib/writeto";
 import { Button } from "./button";
 import { CallAction, linkVerb } from "./callaction";
+import { CopyAction } from "./clipboardcopy";
+import "./contactlink.css";
+import { useTruncationTooltip } from "./tooltip";
 
 // An address or a number a reader can ACT on — an address opens the product's
 // composer to the record it belongs to, a number is the `tel:` link its scheme
@@ -137,5 +141,52 @@ export function ContactLink(props: Contact) {
     >
       {body}
     </button>
+  );
+}
+
+/**
+ * An address as one line that shortens from its mailbox name, so the domain
+ * that says whose address it is stays whole. Pass it as `children`; a cut
+ * address shows in full on hover.
+ */
+export function EmailFace({ address }: Readonly<{ address: string }>) {
+  const { ref, trigger, tip } = useTruncationTooltip<HTMLSpanElement>(address);
+  const at = address.lastIndexOf("@");
+  if (at <= 0) {
+    return address;
+  }
+  // A name built from flex items puts a space between them. So the halves
+  // are hidden from it, and a reader hears the whole address once. The link
+  // around the face is the tab stop, so the tip adds none of its own.
+  return (
+    <>
+      <span
+        className="contactlink-email"
+        aria-hidden="true"
+        ref={ref}
+        {...trigger}
+        tabIndex={undefined}
+      >
+        <span className="contactlink-email-local">{address.slice(0, at)}</span>
+        <span className="contactlink-email-domain">{address.slice(at)}</span>
+        {tip}
+      </span>
+      <span className="sr-only">{address}</span>
+    </>
+  );
+}
+
+/** The copy glyph for an address, worded once for every record that shows one. */
+export function CopyEmail({ address }: Readonly<{ address: string }>) {
+  const t = useT();
+  return (
+    <CopyAction
+      text={address}
+      labels={{
+        copy: t("contactLink.copyEmail"),
+        copied: t("contactLink.emailCopied"),
+        remedy: t("contactLink.copyEmailRemedy"),
+      }}
+    />
   );
 }

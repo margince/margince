@@ -46,7 +46,7 @@ export const ENTITY_LABEL_KEY = {
   "activities-by-kind": "analytics.reportActivitiesByKind",
   "meeting-conversion": "analytics.reportMeetingConversion",
   "projects-by-phase": "analytics.reportProjectsByPhase",
-  "project-commitments": "analytics.reportProjectCommitments",
+  "project-commitments": "analytics.reportProjectTasks",
   "projects-gone-quiet": "analytics.reportProjectsGoneQuiet",
 } as const satisfies Record<string, MessageKey>;
 

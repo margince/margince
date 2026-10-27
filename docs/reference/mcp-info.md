@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 126.8 KB |
-| Resource catalog | 3.5 KB |
-| Approx. wire tokens | 33354 |
+| Tool catalog | 130.4 KB |
+| Resource catalog | 3.6 KB |
+| Approx. wire tokens | 34293 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 25.0 KB | 19% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 32.5 KB | 25% | Yes, every step |
-| Input schemas | 60.5 KB | 47% | Yes, every step |
+| Output schemas | 28.4 KB | 21% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 32.5 KB | 24% | Yes, every step |
+| Input schemas | 60.7 KB | 46% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 6% | Partly |
-| **Description + input schema** | **93.1 KB** | **73%** | **the recurring cost** |
+| **Description + input schema** | **93.2 KB** | **71%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -73,7 +73,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1738 |
+| [`find_records`](#find_records) | Find records | yes |  | 1782 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
@@ -182,8 +182,8 @@ carrying it.
 **Next steps for this record**
 
 ```text
-What a new record leaves to decide: a possible duplicate with the choice to merge it or keep it
-apart, and a tag word offered for it.
+A new record and the fields it set, or why none was made. Also what it leaves to decide: a possible
+duplicate to merge or keep apart, and a tag word offered for it.
 ```
 
 <details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
@@ -239,8 +239,8 @@ A change an assistant proposed, what it would do, and the choice to approve or r
 **Edited by hand**
 
 ```text
-Fields last edited by hand that an update would overwrite, with the value on the record beside the
-one proposed and the choice to keep or replace it.
+What an update changed, or why it changed nothing. Fields last edited by hand that it would
+overwrite show the stored value beside the proposed one, with the choice to keep or replace it.
 ```
 
 <details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
@@ -2519,6 +2519,76 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
   "properties": {
     "data": {
       "properties": {
+        "changes": {
+          "items": {
+            "properties": {
+              "after": {
+                "properties": {
+                  "currency": {
+                    "type": "string"
+                  },
+                  "entity_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "entity_type": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "text"
+                ],
+                "type": "object"
+              },
+              "before": {
+                "properties": {
+                  "currency": {
+                    "type": "string"
+                  },
+                  "entity_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "entity_type": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "text"
+                ],
+                "type": "object"
+              },
+              "field": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "after",
+              "before",
+              "field",
+              "label"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "duplicate_candidates": {
           "items": {
             "properties": {
@@ -2532,6 +2602,9 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
                 "items": {
                   "properties": {
                     "field": {
+                      "type": "string"
+                    },
+                    "label": {
                       "type": "string"
                     },
                     "left_value": {
@@ -3136,10 +3209,22 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
         "channel_provider": {
           "type": "string"
         },
+        "close_from": {
+          "type": "string"
+        },
+        "close_to": {
+          "type": "string"
+        },
         "commercial_motion": {
           "type": "string"
         },
         "company_id": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "currency": {
           "type": "string"
         },
         "deal_id": {
@@ -3287,6 +3372,12 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
           "type": "string"
         },
         "unassigned": {
+          "type": "string"
+        },
+        "value_max": {
+          "type": "string"
+        },
+        "value_min": {
           "type": "string"
         },
         "waiting_reply": {
@@ -3453,6 +3544,76 @@ staged_action_id you mean to act on, the bundle_id when one act staged several, 
                 "format": "uuid",
                 "type": "string"
               },
+              "changes": {
+                "items": {
+                  "properties": {
+                    "after": {
+                      "properties": {
+                        "currency": {
+                          "type": "string"
+                        },
+                        "entity_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "entity_type": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "text"
+                      ],
+                      "type": "object"
+                    },
+                    "before": {
+                      "properties": {
+                        "currency": {
+                          "type": "string"
+                        },
+                        "entity_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "entity_type": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "text"
+                      ],
+                      "type": "object"
+                    },
+                    "field": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "after",
+                    "before",
+                    "field",
+                    "label"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
               "created_at": {
                 "format": "date-time",
                 "type": "string"
@@ -3496,6 +3657,25 @@ staged_action_id you mean to act on, the bundle_id when one act staged several, 
               "kind": {
                 "type": "string"
               },
+              "on_behalf_of": {
+                "properties": {
+                  "id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "is_you": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "is_you"
+                ],
+                "type": "object"
+              },
               "proposed_by": {
                 "type": "string"
               },
@@ -3514,6 +3694,9 @@ staged_action_id you mean to act on, the bundle_id when one act staged several, 
               },
               "target_id": {
                 "format": "uuid",
+                "type": "string"
+              },
+              "target_label": {
                 "type": "string"
               },
               "target_type": {
@@ -4861,6 +5044,76 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
           "format": "uuid",
           "type": "string"
         },
+        "changes": {
+          "items": {
+            "properties": {
+              "after": {
+                "properties": {
+                  "currency": {
+                    "type": "string"
+                  },
+                  "entity_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "entity_type": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "text"
+                ],
+                "type": "object"
+              },
+              "before": {
+                "properties": {
+                  "currency": {
+                    "type": "string"
+                  },
+                  "entity_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "entity_type": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "text"
+                ],
+                "type": "object"
+              },
+              "field": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "after",
+              "before",
+              "field",
+              "label"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "created_at": {
           "format": "date-time",
           "type": "string"
@@ -4904,6 +5157,25 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
         "kind": {
           "type": "string"
         },
+        "on_behalf_of": {
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "is_you": {
+              "type": "boolean"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "is_you"
+          ],
+          "type": "object"
+        },
         "proposed_by": {
           "type": "string"
         },
@@ -4922,6 +5194,9 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
         },
         "target_id": {
           "format": "uuid",
+          "type": "string"
+        },
+        "target_label": {
           "type": "string"
         },
         "target_type": {
@@ -7158,6 +7433,76 @@ Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view
   "properties": {
     "data": {
       "properties": {
+        "changes": {
+          "items": {
+            "properties": {
+              "after": {
+                "properties": {
+                  "currency": {
+                    "type": "string"
+                  },
+                  "entity_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "entity_type": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "text"
+                ],
+                "type": "object"
+              },
+              "before": {
+                "properties": {
+                  "currency": {
+                    "type": "string"
+                  },
+                  "entity_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "entity_type": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "text"
+                ],
+                "type": "object"
+              },
+              "field": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "after",
+              "before",
+              "field",
+              "label"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "fields": {
           "type": "object"
         },
@@ -7173,6 +7518,76 @@ Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view
             "approval_id": {
               "format": "uuid",
               "type": "string"
+            },
+            "changes": {
+              "items": {
+                "properties": {
+                  "after": {
+                    "properties": {
+                      "currency": {
+                        "type": "string"
+                      },
+                      "entity_id": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "entity_type": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "text"
+                    ],
+                    "type": "object"
+                  },
+                  "before": {
+                    "properties": {
+                      "currency": {
+                        "type": "string"
+                      },
+                      "entity_id": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "entity_type": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "text"
+                    ],
+                    "type": "object"
+                  },
+                  "field": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "after",
+                  "before",
+                  "field",
+                  "label"
+                ],
+                "type": "object"
+              },
+              "type": "array"
             },
             "fields": {
               "items": {

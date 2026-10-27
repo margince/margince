@@ -13075,6 +13075,42 @@ func (e LifecyclePreviewEvidenceScope) Valid() bool {
 	}
 }
 
+// Defines values for LinkedInReachFunction.
+const (
+	LinkedInReachFunctionFinance     LinkedInReachFunction = "finance"
+	LinkedInReachFunctionHr          LinkedInReachFunction = "hr"
+	LinkedInReachFunctionIt          LinkedInReachFunction = "it"
+	LinkedInReachFunctionManagement  LinkedInReachFunction = "management"
+	LinkedInReachFunctionMarketing   LinkedInReachFunction = "marketing"
+	LinkedInReachFunctionOperations  LinkedInReachFunction = "operations"
+	LinkedInReachFunctionProcurement LinkedInReachFunction = "procurement"
+	LinkedInReachFunctionSales       LinkedInReachFunction = "sales"
+)
+
+// Valid indicates whether the value is a known member of the LinkedInReachFunction enum.
+func (e LinkedInReachFunction) Valid() bool {
+	switch e {
+	case LinkedInReachFunctionFinance:
+		return true
+	case LinkedInReachFunctionHr:
+		return true
+	case LinkedInReachFunctionIt:
+		return true
+	case LinkedInReachFunctionManagement:
+		return true
+	case LinkedInReachFunctionMarketing:
+		return true
+	case LinkedInReachFunctionOperations:
+		return true
+	case LinkedInReachFunctionProcurement:
+		return true
+	case LinkedInReachFunctionSales:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListEntityType.
 const (
 	ListEntityTypeCompany ListEntityType = "company"
@@ -25258,6 +25294,9 @@ type AcquisitionSource struct {
 	// Label What readers see.
 	Label string `json:"label"`
 
+	// LabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	LabelKey *ShippedLabelKey `json:"label_key,omitempty"`
+
 	// SortOrder Display order in pickers and settings.
 	SortOrder int `json:"sort_order"`
 
@@ -25563,6 +25602,9 @@ type ActivityReviewTemplate struct {
 	Id        openapi_types.UUID `json:"id"`
 	Key       string             `json:"key"`
 	Label     string             `json:"label"`
+
+	// LabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	LabelKey *ShippedLabelKey `json:"label_key,omitempty"`
 
 	// Outcome Which outcome this template is for. A win review and a loss review ask different questions, and offering both at one close is asking somebody to do filing the record can do itself.
 	Outcome   ActivityReviewTemplateOutcome `json:"outcome"`
@@ -29570,6 +29612,10 @@ type AuthenticationPolicy struct {
 type Authorization struct {
 	// Objects Effective grants keyed by RbacObject. An absent key denies — the server resolves an unknown object to the zero grant, and a client must do the same rather than treat a missing entry as unrestricted.
 	Objects map[string]RbacObjectGrant `json:"objects"`
+
+	// RefusedDealFilters The `listDeals` query parameters this caller is refused whatever their value: `422` `field_masked` where the role masks the column on any deal, `403` where a grant the filter reads is missing, `list_id` included where the caller may not read lists. Computed by the list resolution and clauses the list runs, so a client withholds exactly the dials the list would refuse.
+	// A mask that withholds a reference only on some rows, such as a deal's private company, refuses no filter and is not listed. Absent from a server that does not compute it, and empty when nothing is refused.
+	RefusedDealFilters *[]string `json:"refused_deal_filters,omitempty"`
 
 	// RowScope How far the grants above reach: the caller's own rows, every row belonging to a live team they share, or every row in the workspace. Widened to the maximum any of the caller's roles holds, the same union the server applies.
 	// It is a THIRD axis, independent of the seat ceiling and the object grants, and a client that ignores it will describe a team lead's reach as if it were an admin's.
@@ -33895,8 +33941,14 @@ type CompanyLinkedInReachColleague struct {
 	Connections int `json:"connections"`
 
 	// DisplayName The colleague to ask.
-	DisplayName string             `json:"display_name"`
-	UserId      openapi_types.UUID `json:"user_id"`
+	DisplayName string `json:"display_name"`
+
+	// Functions Which functions those connections work in, read from their job titles, most
+	// first and then by function. A function with fewer than two connections is left
+	// out, and so is a title no function matches. Two is the floor because on a small
+	// account one title can name one contact. Never the titles themselves.
+	Functions []LinkedInReachFunctionCount `json:"functions"`
+	UserId    openapi_types.UUID           `json:"user_id"`
 }
 
 // CompanyLinkedInReachResponse defines model for CompanyLinkedInReachResponse.
@@ -38058,7 +38110,12 @@ type DealCommitments struct {
 
 // DealCoverage defines model for DealCoverage.
 type DealCoverage struct {
-	DealId  openapi_types.UUID        `json:"deal_id"`
+	DealId openapi_types.UUID `json:"deal_id"`
+
+	// OurSide One entry per colleague with recorded interaction with the deal's seats, warmest
+	// first. `interactions_90d` sums the colleague's exchanges with every seat, and the
+	// score is their warmest single relationship. `single_threaded_ours` reads the same
+	// entries, so its colleague is always one of them.
 	OurSide []ContactNetworkColleague `json:"our_side"`
 	Risks   []DealCoverageRisk        `json:"risks"`
 
@@ -38109,8 +38166,14 @@ type DealCoverageSeat struct {
 	ContactName *string `json:"contact_name,omitempty"`
 
 	// Engaged A two-way exchange in the window — both directions, not just our sends.
-	Engaged bool   `json:"engaged"`
-	Role    string `json:"role"`
+	Engaged bool `json:"engaged"`
+
+	// LastInboundAt When this contact last wrote to us, over all history, from the same fold as the contact's relationship strength. Absent when nothing inbound was captured, and for a caller without the activity grant, so its absence is not a claim that they never wrote.
+	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
+
+	// LastInboundPrecision How to read `last_inbound_at`, from the activity it names. Absent when that is absent.
+	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+	Role                 string             `json:"role"`
 }
 
 // DealDocument One file in a deal's Files area: the attachment, whether it is hidden from this
@@ -43135,6 +43198,9 @@ type LeadDisqualifyReason struct {
 	Id        openapi_types.UUID `json:"id"`
 	Label     string             `json:"label"`
 
+	// LabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	LabelKey *ShippedLabelKey `json:"label_key,omitempty"`
+
 	// LeadCount Leads disqualified with this reason.
 	LeadCount *int      `json:"lead_count,omitempty"`
 	SortOrder int       `json:"sort_order"`
@@ -43212,6 +43278,9 @@ type LeadOrigin struct {
 	// Key Lowercase stable key, the stored value. Never changes after creation.
 	Key   string `json:"key"`
 	Label string `json:"label"`
+
+	// LabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	LabelKey *ShippedLabelKey `json:"label_key,omitempty"`
 
 	// LeadCount Live leads carrying this key that the caller may see.
 	LeadCount *int `json:"lead_count,omitempty"`
@@ -43889,6 +43958,22 @@ type LinkedInReachAccount struct {
 	// know at this account who are not in the CRM.
 	ContactsOnFile int    `json:"contacts_on_file"`
 	DisplayName    string `json:"display_name"`
+}
+
+// LinkedInReachFunction The function a connection's job title names. A title that names a department and
+// a rank counts as the department: "Head of IT" is `it`, and only a title that names
+// no department, such as "Managing Director", is `management`.
+type LinkedInReachFunction string
+
+// LinkedInReachFunctionCount defines model for LinkedInReachFunctionCount.
+type LinkedInReachFunctionCount struct {
+	// Connections How many of the colleague's connections there work in this function.
+	Connections int `json:"connections"`
+
+	// Function The function a connection's job title names. A title that names a department and
+	// a rank counts as the department: "Head of IT" is `it`, and only a title that names
+	// no department, such as "Managing Director", is `management`.
+	Function LinkedInReachFunction `json:"function"`
 }
 
 // LinkedInReachResponse defines model for LinkedInReachResponse.
@@ -48085,6 +48170,9 @@ type RecordAssignment struct {
 	RoleKey    *string            `json:"role_key,omitempty"`
 	RoleLabel  *string            `json:"role_label,omitempty"`
 
+	// RoleLabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	RoleLabelKey *ShippedLabelKey `json:"role_label_key,omitempty"`
+
 	// Source What wrote this assignment.
 	Source *string `json:"source,omitempty"`
 
@@ -48320,6 +48408,9 @@ type RecordRole struct {
 
 	// Label What readers see.
 	Label string `json:"label"`
+
+	// LabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	LabelKey *ShippedLabelKey `json:"label_key,omitempty"`
 
 	// RecordTypes Which record kinds this role may be held on.
 	RecordTypes []AssignmentRecordType `json:"record_types"`
@@ -49902,6 +49993,9 @@ type ReviewQuestion struct {
 	// Label What the question asks, worded as the reader sees it.
 	Label string `json:"label"`
 
+	// LabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	LabelKey *ShippedLabelKey `json:"label_key,omitempty"`
+
 	// Options Allowed choices, required for multiselect. Frozen alongside the question in each submitted review.
 	Options  *[]string `json:"options,omitempty"`
 	Required bool      `json:"required"`
@@ -51270,6 +51364,9 @@ type SharedForecastView struct {
 
 // SharedForecastViewKind Which promise this view makes. A reader shown a frozen number needs to know it is frozen, and as of when.
 type SharedForecastViewKind string
+
+// ShippedLabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+type ShippedLabelKey = string
 
 // SignInProvider One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen.
 type SignInProvider struct {
@@ -59094,13 +59191,16 @@ type GetCompanyHierarchyRollupParamsScope string
 
 // DraftIntroRequestJSONBody defines parameters for DraftIntroRequest.
 type DraftIntroRequestJSONBody struct {
-	// ContactId The contact to be introduced TO. Must be somebody the caller can see on this account; a contact they cannot read is `404`, the same answer a direct read gives.
-	ContactId openapi_types.UUID `json:"contact_id"`
+	// ContactId The contact to be introduced TO. Must be somebody the caller can see on this account; a contact they cannot read is `404`, the same answer a direct read gives. Absent asks for somebody at the account instead.
+	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
 
 	// DealId Which open deal the introduction is for. Absent draws on the account as a whole, which is the honest shape when the rep is opening a conversation rather than moving a transaction.
 	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
 
-	// ViaUserId The colleague being asked. Must hold a recorded route to that contact — asking somebody with no relationship to trade on is a favour they cannot do, and a draft that claims one would be describing a closeness the account's own page does not show.
+	// Function Only with no `contact_id`, and optional there: the function the somebody works in. Must be one of the colleague's `functions` on the reach answer, or it is `422`, because the draft would ask for an introduction the colleague's connections cannot give.
+	Function *LinkedInReachFunction `json:"function,omitempty"`
+
+	// ViaUserId The colleague being asked. Must hold a recorded route to that contact — asking somebody with no relationship to trade on is a favour they cannot do, and a draft that claims one would be describing a closeness the account's own page does not show. With no `contact_id`, must be a colleague with LinkedIn reach into this account, or it is `404`.
 	ViaUserId openapi_types.UUID `json:"via_user_id"`
 }
 
@@ -60453,6 +60553,36 @@ type ListDealsParams struct {
 	//
 	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
 	TagMode *ListDealsParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
+
+	// CloseFrom Deals whose close day is on or after this calendar day. The close day is the one the
+	// list's Close column shows and `sort=close_day` orders by: the day a won or lost deal
+	// closed, read in the installation's time zone, or an open deal's expected close date.
+	// A deal with no close day is outside every range. A `close_from` after `close_to` is
+	// `422`.
+	CloseFrom *openapi_types.Date `form:"close_from,omitempty" json:"close_from,omitempty"`
+
+	// CloseTo Deals whose close day is on or before this calendar day (inclusive). See `close_from`.
+	CloseTo *openapi_types.Date `form:"close_to,omitempty" json:"close_to,omitempty"`
+
+	// ValueMin Deals worth at least this much, in minor units of the installation's base currency.
+	// The value is the one `sort=amount_minor` orders by: the deal's amount converted on
+	// today's rate, or the amount frozen at close. A deal with no amount, or one in a currency
+	// with no rate, is outside every range. A role that withholds the amount or the currency
+	// is refused with `422` `field_masked`. A `value_min` above `value_max` is `422`.
+	ValueMin *int64 `form:"value_min,omitempty" json:"value_min,omitempty"`
+
+	// ValueMax Deals worth at most this much (inclusive), in minor units of the base currency. See `value_min`.
+	ValueMax *int64 `form:"value_max,omitempty" json:"value_max,omitempty"`
+
+	// Currency Deals priced in this ISO-4217 currency, in either case. A code that is not three letters is refused with `422` `currency_malformed`. A role that withholds the currency is refused with `422` `field_masked`.
+	Currency *string `form:"currency,omitempty" json:"currency,omitempty"`
+
+	// Country Deals whose company's address is in this ISO-3166 alpha-2 country, in either case. A code
+	// that is not two letters is refused with `422` `country_malformed`. A deal naming no
+	// company, or a company outside the caller's row scope, is not returned. A seat that may
+	// not read companies is refused with `403`, and a role that withholds the deal's company
+	// with `422` `field_masked`.
+	Country *string `form:"country,omitempty" json:"country,omitempty"`
 
 	// SourceSystem Deals that came from this outside system, matched exactly. Send `source_id` too to
 	// find the one deal holding that id there. A deal that is archived without
@@ -102976,6 +103106,84 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_mode"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_mode", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "close_from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "close_from", r.URL.Query(), &params.CloseFrom, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "close_from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "close_from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "close_to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "close_to", r.URL.Query(), &params.CloseTo, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "close_to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "close_to", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "value_min" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "value_min", r.URL.Query(), &params.ValueMin, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "value_min"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "value_min", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "value_max" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "value_max", r.URL.Query(), &params.ValueMax, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "value_max"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "value_max", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "currency" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "currency", r.URL.Query(), &params.Currency, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "currency"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "currency", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "country" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "country", r.URL.Query(), &params.Country, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "country"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "country", Err: err})
 		}
 		return
 	}

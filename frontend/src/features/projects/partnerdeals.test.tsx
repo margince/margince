@@ -118,6 +118,16 @@ describe("the deals a partner brought", () => {
     expect(within(panel).queryByText("—")).toBeNull();
   });
 
+  it("names a deal's status in words rather than its stored value", async () => {
+    stubDeals([{ ...sourced, status: "won" }]);
+
+    render(<PartnerDeals companyId="o-1" />);
+    const panel = await screen.findByTestId("partner-deals");
+
+    expect(within(panel).getByText("Won")).toBeTruthy();
+    expect(within(panel).queryByText("won")).toBeNull();
+  });
+
   it("shows the deal value and what the partner's part was", async () => {
     stubDeals([sourced]);
 
@@ -129,7 +139,7 @@ describe("the deals a partner brought", () => {
 
     expect(cells[2]).toBe("Sourced the deal (earns commission)");
     expect(cells[3]).toBe("€48,000.00");
-    expect(cells[4]).toContain("open");
+    expect(cells[4]).toContain("Open");
   });
 
   // A partner's page should show the deals they helped with too, not only the

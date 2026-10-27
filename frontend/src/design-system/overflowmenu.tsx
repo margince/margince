@@ -28,6 +28,27 @@ function isSetting(item: Element): boolean {
   );
 }
 
+// The sentences outside the panel that say why its refused items are refused.
+//
+// A record page states its refusal once, in its header, and points every
+// refused verb at it. In a narrow window that line is cut short, and the open
+// panel covers it, so a reader sees greyed rows and no reason. The panel draws
+// those sentences itself. A sentence already inside the panel is left alone.
+function borrowedReasons(panel: HTMLElement): string[] {
+  const reasons = new Set<string>();
+  for (const item of panel.querySelectorAll("[aria-describedby]:disabled")) {
+    for (const id of item.getAttribute("aria-describedby")?.split(/\s+/) ??
+      []) {
+      const sentence = id ? document.getElementById(id) : null;
+      const text = sentence?.textContent?.trim();
+      if (sentence && text && !panel.contains(sentence)) {
+        reasons.add(text);
+      }
+    }
+  }
+  return [...reasons];
+}
+
 // OverflowMenu folds the verbs a record offers but a reader rarely wants
 // (merge, archive, share) behind one control. The header then carries identity
 // and the frequent actions. It avoids a row of buttons of equal weight, where
@@ -50,10 +71,16 @@ function isSetting(item: Element): boolean {
 export function OverflowMenu({
   label,
   word,
+  icon = <MoreHorizontal aria-hidden="true" />,
+  inline = false,
   keepMounted = false,
   children,
 }: Readonly<{
   label: string;
+  /** The trigger's glyph, `aria-hidden`; the three dots unless the menu holds one kind of item (the chats a number opens). */
+  icon?: ReactNode;
+  /** A trigger inside a line of text, as `IconAction inline`: the square keeps its target and takes one line box. */
+  inline?: boolean;
   /** The trigger's short word, drawn under the glyph in a record's verb bar. */
   word?: string;
   /**
@@ -82,6 +109,32 @@ export function OverflowMenu({
   const panelId = useId();
   const at = useAnchoredToTrigger(open, trigger, panel);
   const { layer, joinLayer, join } = useDialogLayer(wrap, keepMounted);
+  const [reasons, setReasons] = useState<readonly string[]>([]);
+
+  // Read while open, and again when an item's refusal changes under it. A
+  // grant that answers after the press turns a row grey with the panel up.
+  useEffect(() => {
+    const items = panel.current;
+    if (!open || !items) {
+      return;
+    }
+    const read = () => {
+      const next = borrowedReasons(items);
+      setReasons((was) =>
+        was.length === next.length && was.every((text, i) => text === next[i])
+          ? was
+          : next,
+      );
+    };
+    read();
+    const watch = new MutationObserver(read);
+    watch.observe(items, {
+      subtree: true,
+      childList: true,
+      attributeFilter: ["disabled", "aria-describedby"],
+    });
+    return () => watch.disconnect();
+  }, [open]);
 
   // The panel is portalled to the end of its layer, so without moving focus in,
   // Tab reaches the next row's trigger before this menu's items.
@@ -141,7 +194,12 @@ export function OverflowMenu({
   }, [open, layer]);
 
   return (
-    <div className="overflow-menu" ref={joinLayer}>
+    <div
+      className={
+        inline ? "overflow-menu overflow-menu-inline" : "overflow-menu"
+      }
+      ref={joinLayer}
+    >
       {/* A disclosure, not an ARIA menu. `role="menu"` promises arrow-key
           navigation and a roving tabstop; the items here are the caller's own
           buttons — each running its own verb, opening its own dialog or setting
@@ -166,7 +224,7 @@ export function OverflowMenu({
           setOpen((was) => !was);
         }}
       >
-        <MoreHorizontal aria-hidden="true" />
+        {icon}
         {word && (
           <span className="verb-word" aria-hidden="true">
             {word}
@@ -212,6 +270,11 @@ export function OverflowMenu({
             }
           }}
         >
+          {reasons.map((reason) => (
+            <p key={reason} className="t-caption">
+              {reason}
+            </p>
+          ))}
           {(keepMounted || everOpened) && layer !== null && children}
         </div>,
         layer ?? document.body,

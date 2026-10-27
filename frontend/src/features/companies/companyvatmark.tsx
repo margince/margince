@@ -266,16 +266,13 @@ function VatReceipt({
   // rest of the consultation is still worth reading, so the unknown verdict
   // renders as the register's own word, untoned.
   const verdict = VERDICTS[check.status];
+  const verdictWord = verdict ? t(verdict.label) : check.status;
   return (
     <dl className="vatmark-receipt">
       <div>
         <dt>{t("co.vat.verdict")}</dt>
         <dd>
-          {verdict ? (
-            <Badge tone={verdict.tone}>{t(verdict.label)}</Badge>
-          ) : (
-            <Badge>{check.status}</Badge>
-          )}
+          <Badge tone={verdict?.tone}>{verdictWord}</Badge>
         </dd>
       </div>
       <div>

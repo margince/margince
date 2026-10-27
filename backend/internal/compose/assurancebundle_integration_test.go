@@ -26,11 +26,13 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // bundledTask is one task the pass minted, read back the way a list renders it.
@@ -76,7 +78,7 @@ func TestTheNightlyPassBundlesADealsFindingsIntoOneTask(t *testing.T) {
 	// agrees. What does not agree is the subject line: it takes the size of the
 	// group its task was minted for. Grouped by subject it says three; grouped
 	// by finding it says one, on a task that then collects two more.
-	want := bundleTaskSubject(task.findings)
+	want := bundleTaskSubject(textlang.English, task.findings)
 	if task.subject != want {
 		t.Errorf("the task carrying %d findings is titled %q, want %q — the subject "+
 			"line is written from the group the task was minted for, so a wrong "+
@@ -115,6 +117,69 @@ func TestTheBundledTaskIsAssignedToTheDealsOwner(t *testing.T) {
 	if *tasks[0].assignee != e.Rep1 {
 		t.Errorf("the task is assigned to %s, want the deal's owner %s",
 			*tasks[0].assignee, e.Rep1)
+	}
+}
+
+// The task is worded in its assignee's own language, not the server's.
+func TestTheBundledTaskReadsInItsAssigneesLanguage(t *testing.T) {
+	e := setupAssuranceJob(t)
+	if _, err := integration.OwnerConn(t).Exec(context.Background(),
+		`UPDATE app_user SET locale = 'vi' WHERE id = $1`, e.Rep1); err != nil {
+		t.Fatalf("setting the owner's language: %v", err)
+	}
+
+	if err := e.run(t); err != nil {
+		t.Fatalf("the nightly check: %v", err)
+	}
+
+	tasks := e.bundledTasks(t)
+	if len(tasks) != 1 {
+		t.Fatalf("want 1 task, got %d", len(tasks))
+	}
+	want := bundleTaskSubject(textlang.Vietnamese, tasks[0].findings)
+	if tasks[0].subject != want || want == bundleTaskSubject(textlang.English, tasks[0].findings) {
+		t.Errorf("the task for a Vietnamese reader is titled %q, want %q", tasks[0].subject, want)
+	}
+}
+
+// An owner whose seat is gone by the time the task is minted costs the task its
+// assignee, not its existence. It lands unassigned, worded in the base language.
+func TestATaskWhoseOwnerSeatIsGoneLandsUnassigned(t *testing.T) {
+	e := setupAssuranceJob(t)
+	if err := e.run(t); err != nil {
+		t.Fatalf("the first check: %v", err)
+	}
+	first := e.bundledTasks(t)
+	if len(first) != 1 {
+		t.Fatalf("the first pass minted %d task(s), want 1", len(first))
+	}
+	if _, err := e.Pool.Exec(context.Background(),
+		`UPDATE activity SET archived_at = now() WHERE id = $1`, first[0].id); err != nil {
+		t.Fatalf("archiving the first task so the next pass mints: %v", err)
+	}
+	run, err := e.latestRun(t)
+	if err != nil {
+		t.Fatalf("reading the first run: %v", err)
+	}
+
+	ghost := ids.NewV7()
+	_, err = e.runWithFindings(t, func(ctx context.Context, tx pgx.Tx, _ ids.UUID) ([]assurance.Exception, error) {
+		found, err := bundleableFindings(ctx, tx, run.ID)
+		for i := range found {
+			found[i].OwnerID = &ghost
+		}
+		return found, err
+	})
+	if err != nil {
+		t.Fatalf("a pass whose owner seat is gone failed: %v", err)
+	}
+
+	tasks := e.bundledTasks(t)
+	if len(tasks) != 1 || tasks[0].assignee != nil {
+		t.Fatalf("after the owner's seat went, the open tasks are %+v, want one unassigned", tasks)
+	}
+	if want := bundleTaskSubject(textlang.English, tasks[0].findings); tasks[0].subject != want {
+		t.Errorf("the unassigned task is titled %q, want the base language's %q", tasks[0].subject, want)
 	}
 }
 

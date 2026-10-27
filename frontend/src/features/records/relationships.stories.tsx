@@ -2,13 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
+import { translate } from "../../i18n";
 import {
   jsonResponse,
   StoryProviders,
   stubWithSession,
 } from "../../testing/story-utils";
 import { RelationshipsTab } from "./relationshiprows";
+import { AddRelationshipAction } from "./relationships";
 
 // RelationshipsTab reads GET /relationships?contact_id=… (there is no
 // GET /relationships/{id} in the contract — every row is hydrated straight
@@ -82,6 +84,68 @@ export const Adding: Story = {
       await within(canvasElement).findByTestId("add-relationship"),
     );
     await screen.findByRole("dialog");
+  },
+};
+
+// The bodies the missing-seat story's form posts.
+const seated: unknown[] = [];
+
+/**
+ * The verb offered for one missing seat. Its description names the gap it
+ * fills; its form shows that seat in the reader's words and sends its key.
+ */
+export const AddingForAMissingSeat: Story = {
+  render: () => {
+    seated.length = 0;
+    stubWithSession(
+      {
+        "GET /contacts": () =>
+          jsonResponse({
+            data: [{ id: "p-9", full_name: "Mai Tran" }],
+            page: { next_cursor: null },
+          }),
+        "POST /relationships": (body) => {
+          seated.push(body);
+          return jsonResponse({ ...employmentRel, id: "rel-new" }, 201);
+        },
+      },
+      MAY_WRITE_RELATIONSHIPS,
+    );
+    return (
+      <StoryProviders>
+        <p id="missing-seat">Missing: an engaged champion</p>
+        <AddRelationshipAction
+          scope={{ deal_id: "d-1" }}
+          seatRole="champion"
+          describedBy="missing-seat"
+        />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const verb = await within(canvasElement).findByRole("button", {
+      name: "Add stakeholder",
+    });
+    await expect(verb).toHaveAccessibleDescription(
+      "Missing: an engaged champion",
+    );
+    await userEvent.click(verb);
+    const dialog = within(await screen.findByRole("dialog"));
+    await expect(dialog.getByRole("textbox", { name: "Role" })).toHaveValue(
+      translate("en", "co.roleLabel.champion"),
+    );
+    await userEvent.type(
+      dialog.getByPlaceholderText(translate("en", "merge.searchPlaceholder")),
+      "mai",
+    );
+    await userEvent.click(
+      await dialog.findByRole("button", { name: "Mai Tran" }),
+    );
+    await userEvent.click(
+      dialog.getByRole("button", { name: translate("en", "create.save") }),
+    );
+    await waitFor(() => expect(seated).toHaveLength(1));
+    await expect(seated[0]).toMatchObject({ role: "champion" });
   },
 };
 

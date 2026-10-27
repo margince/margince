@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -105,6 +106,25 @@ describe("PartnerTab — not yet a partner", () => {
     await waitFor(() => expect(putBody).toBeTruthy());
     expect(putBody).toMatchObject({ partner_role: "consulting" });
     expect(putHeader).toBeNull();
+  });
+
+  it("says what the margin tier pays and gives an example segment", async () => {
+    stubFetch(async (url, method) => {
+      if (url.includes("/companies/o-1/partner") && method === "GET") {
+        return jsonResponse({ title: "Not found", detail: "no partner" }, 404);
+      }
+      throw new Error(`unexpected request ${method} ${url}`);
+    });
+
+    render(<PartnerTab companyId="o-1" />);
+
+    const tier = await screen.findByLabelText("Margin tier");
+    expect(tier).toHaveAccessibleDescription(
+      /share the partner earns on each won deal they sourced/,
+    );
+    expect(
+      screen.getByLabelText("Served segments"),
+    ).toHaveAccessibleDescription(/for example mid-size manufacturers/);
   });
 });
 

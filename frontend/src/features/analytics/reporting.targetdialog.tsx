@@ -20,6 +20,7 @@ import { formatDateAbbrev, monthName } from "../../format/format";
 import { toMajorUnits, toMinorUnits } from "../../format/minorunits";
 import { dayInZone, UTC_ZONE } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
+import { fiscalQuarter, opensFiscalQuarter } from "../../lib/fiscalquarter";
 import { throwProblem } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { AnalyticsScopePicker } from "./analytics.scope";
@@ -203,7 +204,7 @@ export function ReportingTargetDialog({
                       periodStart
                     ) {
                       setPeriodStart(
-                        fiscalQuarterStart(periodStart, fiscalStart),
+                        fiscalQuarter(periodStart, fiscalStart).from,
                       );
                     }
                   }
@@ -243,7 +244,7 @@ export function ReportingTargetDialog({
                       (month) =>
                         periodKind === "month" ||
                         (fiscalStart != null &&
-                          (month - fiscalStart + 12) % 3 === 0),
+                          opensFiscalQuarter(month, fiscalStart)),
                     )
                     .map((month) => ({
                       value: String(month).padStart(2, "0"),
@@ -325,9 +326,10 @@ export function ReportingTargetDialog({
             !targetPeriodReady(reason, periodStart) ||
             (periodKind === "fiscal_quarter" &&
               (fiscalStart == null ||
-                (Number(periodStart.split("-")[1] ?? "01") - fiscalStart + 12) %
-                  3 !==
-                  0)) ||
+                !opensFiscalQuarter(
+                  Number(periodStart.split("-")[1] ?? "01"),
+                  fiscalStart,
+                ))) ||
             scope.kind === "managed_teams"
           }
         >
@@ -411,13 +413,6 @@ function targetPeriodReady(reason: string, start: string): boolean {
 
 function isRetired(target: Target | undefined): boolean {
   return target?.definition.retired === true;
-}
-
-function fiscalQuarterStart(date: string, fiscalStart: number): string {
-  const month = Number(date.slice(5, 7));
-  const startMonth = month - ((month - fiscalStart + 12) % 3);
-  const year = Number(date.slice(0, 4)) - (startMonth <= 0 ? 1 : 0);
-  return `${year}-${String(startMonth <= 0 ? startMonth + 12 : startMonth).padStart(2, "0")}-01`;
 }
 
 function initialTargetPeriod(

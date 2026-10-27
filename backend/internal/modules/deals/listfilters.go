@@ -9,6 +9,8 @@ package deals
 // them this store answers and what each one narrows.
 
 import (
+	"time"
+
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -94,6 +96,12 @@ var dealListFilters = storekit.FilterSet[ListDealsInput]{
 	filterPriority: storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Priority = v }),
 	filterAcquisitionSource: storekit.FilterWord(
 		func(in *ListDealsInput, v *string) { in.AcquisitionSource = v }),
+	filterCloseFrom:    storekit.FilterDate(func(in *ListDealsInput, v *time.Time) { in.CloseFrom = v }),
+	filterCloseTo:      storekit.FilterDate(func(in *ListDealsInput, v *time.Time) { in.CloseTo = v }),
+	filterValueMin:     storekit.FilterNumber(func(in *ListDealsInput, v *int) { in.ValueMin = widenMinor(v) }),
+	filterValueMax:     storekit.FilterNumber(func(in *ListDealsInput, v *int) { in.ValueMax = widenMinor(v) }),
+	filterCurrency:     storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Currency = v }),
+	filterCountry:      storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Country = v }),
 	filterSourceSystem: storekit.FilterWord(func(in *ListDealsInput, v *string) { in.SourceSystem = v }),
 	filterSourceID:     storekit.FilterWord(func(in *ListDealsInput, v *string) { in.SourceID = v }),
 }

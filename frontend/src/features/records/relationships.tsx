@@ -21,6 +21,14 @@ import type { MessageKey } from "../../i18n/en";
 import { isOption } from "../../lib/options";
 import { unwrap } from "../../lib/problem";
 import {
+  BILLING_ROLES,
+  DEAL_ROLES,
+  dealRoleLabel,
+  PROJECT_ROLES,
+  type RoleVocabulary,
+  roleFromTyped,
+} from "../../lib/recordlabels";
+import {
   type Candidate,
   searchByEntity,
 } from "../../lib/relationshipcandidates";
@@ -79,6 +87,38 @@ export type RelationshipScope =
 // picker offering the kind would not compile.
 export type CreatableRelationshipKind = CreateRelationshipRequest["kind"];
 
+// A role these kinds hold is shown in the reader's words and sent as its key.
+// Any other edge's role is free text, such as a job title.
+const ROLE_VOCABULARY: Partial<Record<Relationship["kind"], RoleVocabulary>> = {
+  deal_stakeholder: DEAL_ROLES,
+  project_stakeholder: PROJECT_ROLES,
+  billing_contact: BILLING_ROLES,
+};
+
+export function roleShown(
+  rel: Pick<Relationship, "kind" | "role">,
+  t: (key: MessageKey) => string,
+): string {
+  if (!rel.role) {
+    return "";
+  }
+  const vocabulary = ROLE_VOCABULARY[rel.kind];
+  return vocabulary ? vocabulary.label(rel.role, t) : rel.role;
+}
+
+/** The role a form sends for `typed`; `offered` holds the role it opened with. */
+export function roleSent(
+  kind: Relationship["kind"],
+  typed: string,
+  t: (key: MessageKey) => string,
+  offered: readonly string[] = [],
+): string {
+  const vocabulary = ROLE_VOCABULARY[kind];
+  return vocabulary
+    ? roleFromTyped(typed, t, vocabulary, offered)
+    : typed.trim();
+}
+
 const SEARCH_DEBOUNCE_MS = 250;
 
 // The "add relationship" affordance: kind + role + start date, plus the
@@ -90,6 +130,8 @@ export function AddRelationshipAction({
   refusedReasonId,
   only,
   variant,
+  seatRole,
+  describedBy,
 }: Readonly<{
   scope: RelationshipScope;
   // The id of the anchor page's sentence about why its record takes no
@@ -104,6 +146,10 @@ export function AddRelationshipAction({
   only?: { kind: CreatableRelationshipKind; label: MessageKey };
   // "link" when the verb is a card's one link rather than a button.
   variant?: "link";
+  // The role key the form opens with, for a verb offered for one missing seat.
+  seatRole?: string;
+  // The id of the words that say which seat this verb fills.
+  describedBy?: string;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -121,7 +167,15 @@ export function AddRelationshipAction({
   const [kind, setKind] = useState<CreatableRelationshipKind>(
     defaultOption.kind,
   );
-  const [role, setRole] = useState("");
+  // Until the reader types, the offered seat shows in their words and is sent
+  // as its key, the spelling the coverage rules count.
+  const [typedRole, setTypedRole] = useState<string | null>(null);
+  const seatLabel = seatRole ? dealRoleLabel(seatRole, t) : "";
+  const role = typedRole ?? seatLabel;
+  const sentRole =
+    typedRole === null
+      ? (seatRole ?? "")
+      : roleSent(kind, typedRole, t, seatRole ? [seatRole] : []);
   const [startedAt, setStartedAt] = useState<ISODate | "">("");
   const [term, setTerm] = useState("");
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -213,7 +267,7 @@ export function AddRelationshipAction({
   function close() {
     setOpen(false);
     setKind(defaultOption.kind);
-    setRole("");
+    setTypedRole(null);
     setStartedAt("");
     setTerm("");
     setCandidates([]);
@@ -227,6 +281,7 @@ export function AddRelationshipAction({
       <Button
         variant={variant}
         reasonId={refusedReasonId}
+        aria-describedby={describedBy}
         onClick={() => setOpen(true)}
         data-testid="add-relationship"
       >
@@ -289,7 +344,7 @@ export function AddRelationshipAction({
               <TextInput
                 {...control}
                 value={role}
-                onChange={(event) => setRole(event.target.value)}
+                onChange={(event) => setTypedRole(event.target.value)}
               />
             )}
           </Field>
@@ -325,7 +380,7 @@ export function AddRelationshipAction({
                   target,
                   kind,
                   field: endpoint.field,
-                  role,
+                  role: sentRole,
                   startedAt,
                 });
               }

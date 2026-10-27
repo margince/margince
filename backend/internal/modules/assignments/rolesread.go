@@ -150,6 +150,7 @@ type roleRow struct {
 	ID            ids.UUID
 	Key           string
 	Label         string
+	LabelKey      *string
 	RecordTypes   []crmcontracts.AssignmentRecordType
 	AssigneeKinds []crmcontracts.AssignmentSubjectKind
 	SortOrder     int
@@ -165,7 +166,7 @@ type rowScanner interface{ Scan(dest ...any) error }
 func scanRoleRow(sc rowScanner) (roleRow, error) {
 	var r roleRow
 	var recordTypes, assigneeKinds []string
-	if err := sc.Scan(&r.ID, &r.Key, &r.Label, &recordTypes, &assigneeKinds,
+	if err := sc.Scan(&r.ID, &r.Key, &r.Label, &r.LabelKey, &recordTypes, &assigneeKinds,
 		&r.SortOrder, &r.Active, &r.System, &r.Version, &r.CreatedAt, &r.UpdatedAt); err != nil {
 		return roleRow{}, err
 	}
@@ -185,6 +186,7 @@ func (r roleRow) wire() crmcontracts.RecordRole {
 		Id:            openapi_types.UUID(r.ID),
 		Key:           r.Key,
 		Label:         r.Label,
+		LabelKey:      r.LabelKey,
 		RecordTypes:   r.RecordTypes,
 		AssigneeKinds: r.AssigneeKinds,
 		SortOrder:     r.SortOrder,

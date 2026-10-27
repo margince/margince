@@ -496,6 +496,10 @@ function findingsIn(
 // expected output moved with the reader's browser would assert nothing.
 const pinnedLocales: { file: string; why: string }[] = [
   {
+    file: "format/address.ts",
+    why: "countryBeyondCity names a country code in EVERY locale this build speaks to compare it with a city, whichever language the city was typed in. The names are matched, never shown.",
+  },
+  {
     file: "format/format.dates.ts",
     why: "hourInZone reads an hour back as a number. The output is never shown, so the pinned tag fixes the parsing and not the wording.",
   },
@@ -520,12 +524,12 @@ const pinnedLocales: { file: string; why: string }[] = [
     why: "Proves the record zone is one Intl will accept, which needs a formatter built with a locale that suite pinned rather than one that moved with the machine it ran on.",
   },
   {
-    file: "mcp-apps/bridge.ts",
+    file: "mcp-apps/values.ts",
     why: "An MCP app document is inlined whole into a page this product does not own. Importing INTL_LOCALE would be cheap; what is missing is the locale to look it up WITH — no LocaleProvider stands above the document and no signed-in reader's choice reaches inside it, so there is nothing to index the mapping by. The host browser's own locale is the honest remaining answer, and the file says so at the subject.",
   },
   {
-    file: "mcp-apps/bridge.test.ts",
-    why: "Reproduces the bridge's own formatter to prove the rendering it produces, which needs the same undefined locale the bridge passes.",
+    file: "mcp-apps/values.test.ts",
+    why: "Reproduces the views' own money formatter to prove the rendering it produces, which needs the same undefined locale that formatter passes.",
   },
 ];
 

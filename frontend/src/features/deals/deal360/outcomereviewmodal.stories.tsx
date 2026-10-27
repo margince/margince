@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, screen, within } from "storybook/test";
+import { translate } from "../../../i18n";
 import { StoryProviders } from "../../../testing/story-utils";
 import { OutcomeReviewModal } from "./outcomereviewmodal";
 
@@ -47,3 +49,40 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 export const RequiredChoices: Story = {};
 export const RequiredChoicesDark: Story = { globals: { theme: "dark" } };
+
+/** The shipped win review asked in Vietnamese; an added question as typed. */
+export const Vietnamese: Story = {
+  render: (args) => (
+    <StoryProviders locale="vi">
+      <OutcomeReviewModal
+        {...args}
+        template={{
+          ...args.template,
+          label_key: "reviewTemplates.builtin.win_review",
+          questions: [
+            {
+              key: "why_we_won",
+              label: "Why did we win?",
+              label_key: "reviewTemplates.builtin.question.why_we_won",
+              type: "text",
+              required: true,
+            },
+            ...args.template.questions.slice(1),
+          ],
+        }}
+      />
+    </StoryProviders>
+  ),
+  // The modal fades in, so its name and question are read, not its opacity.
+  play: async () => {
+    const modal = await screen.findByRole("dialog", {
+      name: translate("vi", "reviewTemplates.builtin.win_review"),
+    });
+    await expect(
+      within(modal).getByText(
+        translate("vi", "reviewTemplates.builtin.question.why_we_won"),
+        { exact: false },
+      ),
+    ).toBeInTheDocument();
+  },
+};

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -119,6 +120,49 @@ export const Written: Story = {
         />
       </StoryProviders>
     );
+  },
+};
+
+// A built-in question reads in the reader's language; one an administrator
+// reworded before the review was written reads as they wrote it.
+export const Vietnamese: Story = {
+  render: () => {
+    backend([
+      review({
+        questions: [
+          {
+            key: "why_we_won",
+            label: "Why did we win?",
+            label_key: "reviewTemplates.builtin.question.why_we_won",
+            type: "text",
+            required: true,
+          },
+          {
+            key: "else",
+            label: "Ai còn trong danh sách?",
+            type: "text",
+            required: false,
+          },
+        ],
+        answers: { why_we_won: "Giá và kế hoạch chuyển đổi." },
+      }),
+    ]);
+    return (
+      <StoryProviders locale="vi">
+        <OutcomeReviewPanel
+          dealId="d-1"
+          status="won"
+          closingOccurrenceId={CLOSING}
+        />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByText("Vì sao thắng deal này?"),
+    ).toBeVisible();
+    await expect(canvas.getByText("Ai còn trong danh sách?")).toBeVisible();
   },
 };
 

@@ -90,6 +90,10 @@ It exists to answer one question: does someone here already know someone at this
 
 A company's **Who can get you in** card answers it with a count per colleague. When your own connections reach the company, your row reads **You** and comes first, so you can see you have a way in yourself.
 
+Next to each colleague, the card shows where their connections work, such as "IT · 3, Finance · 2". Margince reads this from the job titles in the export, and shows an area only when two or more connections work in it. It never shows a name or a title, because at a small company one title can name one contact.
+
+**Ask for an introduction** on a colleague's row writes a short message asking them to introduce you to someone at the company. You can name an area, such as IT, if the card shows it for that colleague. The message names no contact, and Margince does not send it: you copy it or open it in your mail app. Your own row has no such button.
+
 ### How a connection is matched to a contact
 
 Matching runs as soon as the upload ends.

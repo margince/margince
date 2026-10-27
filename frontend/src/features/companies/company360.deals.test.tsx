@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
-import { LocaleProvider } from "../../i18n";
+import { type Locale, LocaleProvider } from "../../i18n";
 import { DealsCard } from "./company360";
 
 type Company360Deal = components["schemas"]["Company360Deal"];
@@ -31,13 +31,13 @@ const DEALS: Company360Deal[] = [
   },
 ];
 
-function renderCard(deals: Company360Deal[]) {
+function renderCard(deals: Company360Deal[], locale: Locale = "en") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
+      <LocaleProvider initial={locale}>
         <DealsCard
           view={{
             as_of: "2026-08-13T09:00:00Z",
@@ -90,6 +90,13 @@ describe("DealsCard: the account's deals as one table", () => {
     expect(won.getByText("Won")).toBeTruthy();
     expect(won.getByText("No stage")).toBeTruthy();
     expect(won.queryByText(/€/)).toBeNull();
+  });
+
+  it("names each status in the reader's language", () => {
+    renderCard(DEALS, "vi");
+
+    expect(within(rowOf("Fleet retrofit")).getByText("Đang mở")).toBeTruthy();
+    expect(within(rowOf("Phase one licence")).getByText("Thắng")).toBeTruthy();
   });
 
   it("draws no table for an account with no deals", () => {

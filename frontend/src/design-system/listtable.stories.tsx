@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   formatDateAbbrev,
   formatMoney,
@@ -176,7 +176,7 @@ function Surface({
       rowKey={(row) => row.id}
       unit="companies"
       action={noAction ? undefined : <Button>New company</Button>}
-      search={{ value: search, onChange: setSearch }}
+      search={{ value: search, answered: search, onChange: setSearch }}
       sort={{ value: sort, onChange: setSort }}
       chips={chips}
       chosen={chosen}
@@ -701,5 +701,61 @@ export const LongHeadersWrap: Story = {
     await expect(arrow.getBoundingClientRect().right).toBeLessThanOrEqual(
       grip.getBoundingClientRect().left,
     );
+  },
+};
+
+const WIDE_FIGURES = ["₫120,000,000,000", "₫4,500,000", "₫900,000"];
+
+// Figures wider than a numeric column's share, in a box too narrow for the
+// row. The column takes its widest figure, so no amount reads as another.
+export const WideFigures: Story = {
+  name: "Wide figures",
+  render: () => (
+    <div style={{ maxWidth: "420px" }}>
+      <Surface
+        rows={companies(3)}
+        columns={[
+          {
+            key: "name",
+            header: "Company",
+            fixed: true,
+            cell: (row: Company) => <strong>{row.name}</strong>,
+          },
+          {
+            key: "value",
+            header: "Value",
+            numeric: true,
+            cell: (row: Company) => (
+              <span className="t-num">
+                {WIDE_FIGURES[Number(row.id.slice(1)) - 1]}
+              </span>
+            ),
+          },
+          {
+            key: "region",
+            header: "Region",
+            cell: (row: Company) => row.region,
+          },
+        ]}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const figure = await within(canvasElement).findByRole("cell", {
+      name: WIDE_FIGURES[0],
+    });
+    const ink = document.createRange();
+    ink.selectNodeContents(figure);
+    const style = getComputedStyle(figure);
+    await waitFor(() => {
+      const cell = figure.getBoundingClientRect();
+      const text = ink.getBoundingClientRect();
+      expect(text.left).toBeGreaterThanOrEqual(
+        cell.left + Number.parseFloat(style.paddingLeft) - 0.5,
+      );
+      expect(text.right).toBeLessThanOrEqual(
+        cell.right - Number.parseFloat(style.paddingRight) + 0.5,
+      );
+    });
   },
 };

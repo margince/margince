@@ -4,23 +4,13 @@ import { Badge, Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
+import { billingRoleLabel } from "../../lib/recordlabels";
 import { BillingContactModal } from "./billingcontactmodal";
 import { useBillingContactActions } from "./billingcontacts.queries";
 
 export type BillingContact = components["schemas"]["BillingContact"];
 export type BillingContactRole = components["schemas"]["BillingContactRole"];
-
-// The three capacities, in the order an invoice moves through them: it is
-// addressed to somebody, approved by somebody, then paid by somebody. The
-// server returns them in this order too; the map is here so a role the reader
-// sees carries a word rather than a database token.
-const ROLE_LABEL: Record<BillingContactRole, MessageKey> = {
-  recipient: "billing.role.recipient",
-  approver: "billing.role.approver",
-  accounts_payable: "billing.role.accountsPayable",
-};
 
 // Who handles this account's invoices.
 //
@@ -131,7 +121,7 @@ function BillingContactRow({
     <li className="billing-row">
       <div className="billing-who">
         <span>{contact.full_name}</span>
-        <Badge>{t(ROLE_LABEL[contact.role])}</Badge>
+        <Badge>{billingRoleLabel(contact.role, t)}</Badge>
         {canWrite && (
           <span className="billing-verbs">
             {/* Named with the row's contact, because a list of billing

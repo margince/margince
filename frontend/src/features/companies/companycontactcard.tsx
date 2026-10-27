@@ -5,21 +5,11 @@ import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
 import { RecordCard } from "../../design-system/recordcard";
 import { useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import { DEAL_ROLES, dealRoleLabel } from "../../lib/recordlabels";
 import { routeHash } from "../../lib/router";
 import { contactRole } from "./companyrailshared";
 
 type Contact = components["schemas"]["Company360Contact"];
-
-// The seat a contact holds on a deal, as the pill names it. A role the server
-// adds before this list learns it draws no pill rather than a raw code.
-const ROLE_LABEL: Record<string, MessageKey> = {
-  champion: "co.roleLabel.champion",
-  economic_buyer: "co.roleLabel.economic_buyer",
-  blocker: "co.roleLabel.blocker",
-  influencer: "co.roleLabel.influencer",
-  user: "co.roleLabel.user",
-};
 
 /**
  * One of the account's contacts as a card: the name, their title at the
@@ -31,9 +21,11 @@ export function CompanyContactCard({
   companyName,
 }: Readonly<{ contact: Contact; companyName: string }>) {
   const t = useT();
+  // A role the server adds before the label map learns it draws no pill
+  // rather than a raw code.
   const role = contact.deal_roles
-    .map((seat) => ROLE_LABEL[seat.role])
-    .find((label) => label !== undefined);
+    .map((seat) => seat.role)
+    .find((seat) => DEAL_ROLES.keys.includes(seat));
   const title = contactRole(contact);
   return (
     <RecordCard
@@ -51,7 +43,7 @@ export function CompanyContactCard({
         )
       }
       email={contact.primary_email ?? undefined}
-      aside={role && <Badge wrap>{t(role)}</Badge>}
+      aside={role && <Badge wrap>{dealRoleLabel(role, t)}</Badge>}
     />
   );
 }

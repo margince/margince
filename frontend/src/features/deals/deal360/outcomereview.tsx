@@ -6,6 +6,7 @@ import { formatDate } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
 import { useRecordZone } from "../../../lib/recordzone";
+import { shippedLabel } from "../../../lib/shippedlabels";
 import {
   type OutcomeReview,
   templateForOutcome,
@@ -166,7 +167,7 @@ function ReviewCard({
             answer than a card with nothing in it. */}
         {(review.questions ?? []).map((question) => (
           <div key={question.key}>
-            <dt className="t-eyebrow">{question.label}</dt>
+            <dt className="t-eyebrow">{shippedLabel(question, t)}</dt>
             {/* An unanswered optional question shows as a stated blank rather
                 than a missing row, so the reader sees WHICH question went
                 unanswered instead of a shorter list. */}

@@ -1031,7 +1031,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Offene Deals je Unternehmen und ihr Anteil an der Pipeline, unter Pipeline.",
   "reporting.prepared.deliveryTitle": "Umsetzung",
   "reporting.prepared.deliveryPurpose":
-    "Projektzusagen, ruhende Projekte und Phasen, unter Umsetzung.",
+    "Offene Projektaufgaben, ruhende Projekte und Phasen, unter Umsetzung.",
   "reporting.noSalesWon": "Keine gewonnenen Abschlüsse",
   "reporting.openPipelineAsOf": "Stand {at}",
   "reporting.openPipelineBasis_one": "Offener Deal: {count} · Stand {at}",
@@ -2324,6 +2324,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "board.count_other": "Deals: {count}",
   "board.weighted": "gewichtet {value}",
   "board.convertedAt": "Umgerechnet · Wechselkurse vom {date}",
+  "board.matchesIn_one": "{count} Treffer in {columns}",
+  "board.matchesIn_other": "{count} Treffer in {columns}",
+  "board.showMatches": "Zur Spalte",
   "dealfiles.hidden": "An diesem Deal ausgeblendet",
   "dealfiles.unhidden": "Wieder an diesem Deal sichtbar",
   "deal.stalledBadge": "Stockt",
@@ -2534,11 +2537,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "partner.certStatus": "Zertifizierungsstatus",
   "partner.certStatusAll": "Alle Status",
   "partner.marginTier": "Margenstaffel",
+  "partner.marginTierHint":
+    "Der Anteil, den der Partner an jedem gewonnenen Deal erhält, den er gebracht hat. Intro: Er hat den Kunden nur vorgestellt. Aktive Zusammenarbeit: Der Deal wurde gemeinsam bearbeitet. Abschluss durch Partner: Er hat ihn selbst verkauft. Leer lassen, wenn die Vereinbarung mit ihm anders vergütet.",
   "partner.stage": "Beziehungsphase",
   "partner.nextStep": "Nächster Schritt",
   "partner.nextStepDue": "Nächster Schritt fällig",
   "partner.servedSegments": "Betreute Segmente",
-  "partner.servedSegmentsHint": "durch Kommas getrennt",
+  "partner.servedSegmentsHint":
+    "An wen der Partner verkauft, zum Beispiel mittelständische Hersteller. Mehrere durch Kommas trennen.",
   "partner.role.hosting": "Hosting",
   "partner.role.consulting": "Beratung",
   "partner.role.strategic": "Strategisch",
@@ -3116,6 +3122,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "standing.ring.score": "Score {score} von 100",
   "standing.ladder.position": "Phase {n} von {total}",
   "standing.ladder.moveTo": "Weiter zu {stage}",
+  "stageLadder.earlier": "Frühere Phasen zeigen",
+  "stageLadder.later": "Spätere Phasen zeigen",
   "standing.timeline.empty": "Hier ist noch nichts datiert.",
   "standing.next.label": "Nächstes",
   "standing.next.none": "Als Nächstes ist nichts fällig.",
@@ -3469,6 +3477,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieses Unternehmen wird bewertet. Die erste Bewertung liest den gesamten Datensatz und kann eine Minute dauern.",
   "co.growthFit.reassess": "Neu bewerten",
   "co.growthFit.reassessing": "Wird bewertet…",
+  "co.growthFit.reassessedSame":
+    "Erneut bewertet. Ergebnis unverändert: {band}, {present} von {expected} Angaben erfasst.",
+  "co.growthFit.reassessedChanged":
+    "Erneut bewertet. Neues Ergebnis: {band}, {present} von {expected} Angaben erfasst.",
   "co.growthFit.band.strong": "Passt gut",
   "co.growthFit.dim.industryFit": "Branchen-Fit",
   "co.growthFit.dim.companySize": "Unternehmensgröße",
@@ -3728,9 +3740,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.deals.col.value": "Wert",
   "co.deals.col.close": "Abschluss",
   "co.deals.col.status": "Status",
-  "co.deals.status.open": "Offen",
-  "co.deals.status.won": "Gewonnen",
-  "co.deals.status.lost": "Verloren",
   "co.rail.contacts.empty": "Noch keine Kontakte.",
   "co.rail.contacts.add": "Kontakt hinzufügen",
 
@@ -3784,6 +3793,18 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "companyReach.none":
     "Für dieses Unternehmen wird keine Reichweite im Team angezeigt.",
   "companyReach.readFailed": "Diese Liste konnte nicht gelesen werden",
+  "companyReach.functions": "Wo ihre Kontakte arbeiten",
+  "companyReach.functionCount": "{function} · {connections}",
+  "companyReach.ask": "Um Vorstellung bitten",
+  "companyReach.askNamed": "{name} um eine Vorstellung bitten",
+  "companyReach.function.management": "Geschäftsführung",
+  "companyReach.function.it": "IT",
+  "companyReach.function.finance": "Finanzen",
+  "companyReach.function.sales": "Vertrieb",
+  "companyReach.function.marketing": "Marketing",
+  "companyReach.function.hr": "Personal",
+  "companyReach.function.operations": "Betrieb",
+  "companyReach.function.procurement": "Einkauf",
   "linkedinReach.title": "LinkedIn-Netzwerk",
   "linkedinReach.sub":
     "Erfasste Unternehmen, bei denen du jemanden kennst, die meisten Verbindungen zuerst.",
@@ -4087,6 +4108,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Aus den Nachrichten des Kontakts gelesen",
   "co.intro.title": "Vorstellung anfragen",
   "co.intro.who": "{colleague} wird gebeten, dich {contact} vorzustellen.",
+  "co.intro.whoAccount":
+    "{colleague} wird gebeten, dich jemandem bei {company} vorzustellen.",
+  "co.intro.function": "Jemand aus dem Bereich",
+  "co.intro.functionAny": "Jeder Bereich",
   "co.intro.write": "Nachricht entwerfen",
   "co.intro.writing": "Wird geschrieben…",
   "co.intro.fromTemplate":
@@ -4391,6 +4416,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.filterOriginRetired": "(stillgelegt)",
   "lead.originNone": "Keine Herkunft",
   "leadOrigins.title": "Lead-Herkunft",
+  "leadOrigins.builtin.event": "Veranstaltung",
+  "leadOrigins.builtin.linkedin": "LinkedIn",
+  "leadOrigins.builtin.referral": "Empfehlung",
+  "leadOrigins.builtin.partner": "Partner",
+  "leadOrigins.builtin.website": "Website",
+  "leadOrigins.builtin.cold_outreach": "Kaltakquise",
+  "leadOrigins.builtin.other": "Sonstiges",
   "leadOrigins.sub":
     "Woher der Lead kam. Wird im Formular „Neuer Lead“, in Filtern und in der Bewertung verwendet.",
   "leadOrigins.notAdded": "Herkunft nicht hinzugefügt",
@@ -4419,6 +4451,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.source.referral": "Empfehlung",
   "lead.source.import": "Import",
   "lead.source.crawl": "Webrecherche",
+  "lead.source.siteread": "Von der Unternehmenswebsite",
   "lead.source.unknown": "Unbekannte Quelle",
   "leadSources.removeOnlyTitle":
     "Deine Rolle darf Einträge entfernen, aber nicht hinzufügen oder ändern",
@@ -4443,6 +4476,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "leadSources.rename": "Umbenennen",
   "leadSources.renameSave": "Namen speichern",
   "leadReasons.title": "Disqualifizierungsgründe",
+  "leadReasons.builtin.not_a_good_fit": "Passt nicht",
+  "leadReasons.builtin.bad_timing": "Falscher Zeitpunkt",
+  "leadReasons.builtin.no_budget": "Kein Budget",
+  "leadReasons.builtin.no_decision_power": "Keine Entscheidungsbefugnis",
+  "leadReasons.builtin.chose_a_competitor":
+    "Hat sich für die Konkurrenz entschieden",
+  "leadReasons.builtin.no_interest": "Kein Interesse",
+  "leadReasons.builtin.not_reachable": "Nicht erreichbar",
+  "leadReasons.builtin.duplicate_or_spam": "Dublette oder Spam",
   "leadReasons.sub":
     "Was Vertriebsmitarbeitende beim Disqualifizieren eines Leads wählen. Der Grund steht am Lead und lässt sich filtern.",
   "leadReasons.inUse_one":
@@ -4476,7 +4518,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Gib eine ganze Zahl an Minuten von 15 bis 10.080 (7 Tage) ein.",
   "leadHandling.targetHint":
     "Längste Wartezeit auf eine erste Antwort nach Zuweisung oder Erstellung, 15 Minuten bis 7 Tage.",
-  "lead.boardCount": "Leads: {count}",
+  "lead.boardCount_one": "Lead: {count}",
+  "lead.boardCount_other": "Leads: {count}",
   "lead.duplicateFound":
     "Ein Lead mit dieser E-Mail oder diesem LinkedIn-Profil ist bereits vorhanden.",
   "lead.promote": "Qualifizieren",
@@ -4745,7 +4788,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Zu diesem Deal gibt es keinen unterschriebenen Vertrag mit angehängter Datei. Gib an, wie er gewonnen wurde, und bestätige dann.",
   "deals.winReason": "Wie wurde der Deal gewonnen?",
   "deals.winReasonPick": "Auswählen, wie der Deal gewonnen wurde",
-  "deals.winReasonImported": "Aus einem anderen System importiert",
+  "deals.winReasonImported": "Nicht erfasst (importiert)",
   "deals.winReasonPurchaseOrder": "Per Bestellung",
   "deals.winReasonVerbal": "Mündlich, persönlich oder telefonisch",
   "deals.winReasonRenewalByEmail": "Per E-Mail verlängert",
@@ -4758,14 +4801,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.ownerKeep": "Aktuelle Verantwortung behalten",
   "deal.ownerMe": "Mir zuweisen",
   "deal.ownerUnassign": "Zuweisung aufheben",
-  "deal.partnerCompany": "Über Partner",
+  "deal.partnerCompany": "Vermittelndes Partnerunternehmen",
+  "deal.recordedBy": "Erfasst von",
   "deal.companyWithheld": "Unternehmen ausgeblendet",
   "deal.partnerWithheld": "Partner ausgeblendet",
   "deal.forecastCategory": "Prognosekategorie",
   "deal.committee.title": "Buying Center",
   "deal.committee.legendEngaged": "Im Austausch",
   "deal.committee.legendQuiet": "Nicht im Austausch",
-  "deal.committee.legendGap": "Abdeckungslücke",
+  "deal.committee.legendGap": "Unbesetzte Rolle",
   "deal.strip.close.inDays_one": "in {days} Tag",
   "deal.strip.close.inDays_other": "in {days} Tagen",
   "deal.strip.close.overdue_one": "{days} Tag überfällig",
@@ -4839,6 +4883,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalEntities.country": "Land",
   "legalEntities.countryHint": "Zwei Buchstaben, zum Beispiel AT.",
   "acqSources.title": "Quellenliste",
+  "acqSources.builtin.inbound": "Eingehend",
+  "acqSources.builtin.outbound": "Ausgehend",
+  "acqSources.builtin.referral": "Empfehlung",
+  "acqSources.builtin.partner": "Partner",
+  "acqSources.builtin.event": "Veranstaltung",
+  "acqSources.builtin.existing_customer": "Bestandskundschaft",
+  "acqSources.builtin.employee_referral": "Empfehlung aus dem Team",
+  "acqSources.builtin.other": "Sonstiges",
   "acqSources.sub":
     "Getrennt von den Lead-Quellen, die festhalten, wie ein Datensatz in Margince gelangt ist.",
   "acqSources.loading": "Quellen werden geladen…",
@@ -4862,6 +4914,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reviewTemplates.addQuestion": "Frage hinzufügen",
   "reviewTemplates.edit": "Fragen bearbeiten",
   "reviewTemplates.title": "Fragen zum Deal-Rückblick",
+  "reviewTemplates.builtin.win_review": "Rückblick auf einen Gewinn",
+  "reviewTemplates.builtin.loss_review": "Rückblick auf einen Verlust",
+  "reviewTemplates.builtin.question.why_we_won":
+    "Warum wurde der Deal gewonnen?",
+  "reviewTemplates.builtin.question.competitors":
+    "Wen hat die Kundschaft noch in Betracht gezogen?",
+  "reviewTemplates.builtin.question.decisive_factor":
+    "Was hat den Ausschlag gegeben?",
+  "reviewTemplates.builtin.question.why_we_lost":
+    "Warum ging der Deal verloren?",
+  "reviewTemplates.builtin.question.lost_to":
+    "Für wen hat sich die Kundschaft stattdessen entschieden?",
+  "reviewTemplates.builtin.question.what_would_change_it":
+    "Was hätte das Ergebnis geändert?",
   "reviewTemplates.empty": "Keine Fragen für den Rückblick eingerichtet",
   "reviewTemplates.retired": "Stillgelegt",
   "reviewTemplates.required": "Erforderlich",
@@ -4913,6 +4979,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "assignments.empty": "Noch niemand zugewiesen",
   "assignments.emptyDetail":
     "Weise ein Teammitglied oder ein Team zu, um festzuhalten, wer sich um diese Arbeit kümmert.",
+  "assignments.emptyReadOnly":
+    "Die Zuständigkeit für diesen Datensatz kann nur ändern, wer ihn bearbeiten darf.",
   "assignments.roleRetired": "(stillgelegte Rolle)",
   "assignments.teamSuffix": "(Team)",
   "assignments.subjectInactive": "(inaktiv)",
@@ -4933,6 +5001,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "assignments.saveAdd": "Zuweisen",
   "assignments.saveChange": "Änderung speichern",
   "recordRoles.title": "Rollenliste",
+  "recordRoles.builtin.account_manager": "Kundenbetreuung",
+  "recordRoles.builtin.sales_engineer": "Technischer Vertrieb",
+  "recordRoles.builtin.delivery_lead": "Umsetzungsleitung",
+  "recordRoles.builtin.project_manager": "Projektleitung",
+  "recordRoles.builtin.technical_contact": "Technische Ansprechperson",
+  "recordRoles.builtin.executive_sponsor": "Patenschaft der Geschäftsleitung",
+  "recordRoles.builtin.support_team": "Support-Team",
   "recordRoles.loading": "Rollen werden geladen…",
   "recordRoles.addOpen": "Rolle hinzuf\u00fcgen",
   "recordRoles.addTitle": "Rolle hinzufügen",
@@ -5002,6 +5077,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur geladene Deals. Keine Summen, solange ein Phasenfilter aktiv ist.",
   "deals.totalsNoTeamFilter":
     "Nur geladene Deals. Es wird keine Summe angezeigt, da sich die Phasensummen nicht nach Team oder auf nicht zugewiesene Deals eingrenzen lassen.",
+  "deals.totalsNoRangeFilter":
+    "Nur geladene Deals. Es wird keine Summe angezeigt, da sich die Phasensummen nicht nach Abschlussdatum, Wert, Währung oder Land eingrenzen lassen.",
+  "deals.filterCloseDate": "Abschlussdatum",
+  "deals.filterCloseDateAll": "Jedes Abschlussdatum",
+  "deals.filterValue": "Wert",
+  "deals.filterValueAll": "Jeder Wert",
+  "deals.filterCurrencyAll": "Jede Währung",
+  "deals.filterCountry": "Land",
+  "deals.filterCountryAll": "Jedes Land",
+  "deals.filterRefused":
+    "Deine Rolle kann Deals nicht nach {dial} eingrenzen. Entferne diesen Filter, um die Liste zu sehen.",
+  "deals.rangeFrom": "Ab {value}",
+  "deals.rangeTo": "Bis {value}",
+  "deals.valueAtLeast": "Mindestens ({currency})",
+  "deals.valueAtMost": "Höchstens ({currency})",
+  "deals.rangeApply": "Anwenden",
+  "deals.rangeEmpty": "Gib einen Anfang, ein Ende oder beides ein.",
+  "deals.rangeBackwards": "Der Anfang liegt nach dem Ende.",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Beliebiger Partner",
   "deals.filterMotion": "Deal-Typ",
@@ -6516,10 +6609,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.last_activity_at": "Letzte Aktivität",
   "analytics.field.lost_reason": "Verlustgrund",
   "analytics.field.meeting_status": "Terminstatus",
-  "analytics.field.open_commitments": "Offene Zusagen",
+  "analytics.field.open_commitments": "Offene Aufgaben",
   "analytics.field.open_deal_value_minor": "Offener Deal-Wert",
   "analytics.field.open_deal_unpriced": "Nicht bewertete offene Deals",
-  "analytics.field.overdue_commitments": "Überfällige Zusagen",
+  "analytics.field.overdue_commitments": "Überfällige Aufgaben",
   "analytics.field.close_month": "Abschlussmonat",
   "analytics.field.owner_id": "Verantwortlich",
   "analytics.field.partner_company_id": "Partnerunternehmen",
@@ -6651,14 +6744,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.q.withheldGroups_one": "1 Gruppe verborgen",
   "analytics.q.withheldGroups_other": "{count} Gruppen verborgen",
   "analytics.reportProjectsByPhase": "Projekte nach Phase",
-  "analytics.reportProjectCommitments": "Projektzusagen",
+  "analytics.reportProjectTasks": "Offene Projektaufgaben",
   "analytics.reportProjectsGoneQuiet": "Projekte ohne Aktivität seit 30 Tagen",
   "analytics.projects": "Projekte",
   "analytics.project": "Projekt",
   "analytics.openDealValue": "Offener Deal-Wert · {currency}",
   "analytics.wonDealValue": "Gewonnener Deal-Wert · {currency}",
-  "analytics.openCommitments": "Offene Zusagen",
-  "analytics.overdueCommitments": "Überfällige Zusagen",
+  "analytics.openTasks": "Offene Aufgaben",
+  "analytics.overdueTasks": "Überfällige Aufgaben",
   "analytics.quietSince": "Ruhig seit",
   "analytics.nothingQuiet": "Kein Projekt in Umsetzung ist verstummt.",
   "analytics.noProjectsYet":
@@ -10874,7 +10967,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "coverage.seatWithheld": "Ein Kontakt, den du nicht lesen kannst",
   "coverage.daysSinceTouch": "{days} T",
   "coverage.risk.single_threaded_theirs": "Nur ein Kontakt",
-  "coverage.risk.single_threaded_ours": "Von einer Person im Team betreut",
+  "coverage.risk.single_threaded_ours":
+    "Ein Teammitglied führt fast den ganzen Austausch",
   "coverage.risk.coverage_gap": "Kein engagierter Champion",
   "coverage.risk.champion_left": "Champion ist ausgeschieden",
   "coverage.risk.stakeholder_left": "Stakeholder ist ausgeschieden",
@@ -11562,7 +11656,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "companyTriage.sub":
     "Geprüfte E-Mail-Domains und das Ergebnis jeder Prüfung.",
   "companyTriage.empty":
-    "Für dieses Unternehmen wurde keine E-Mail-Domain geprüft. Das Unternehmen wurde manuell erstellt oder importiert.",
+    "Dieses Unternehmen wurde nicht aus E-Mails angelegt. Die Zeile Quelle sagt, woher es stammt.",
   "companyTriage.checkedAt": "geprüft {when}",
   "pipeline.reason.no_named_reader":
     "dieser Thread hat keine Lesenden, an die sich ein Befund richten ließe",
@@ -14974,6 +15068,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Keine Adresse und kein Thread, auf den geantwortet werden kann.",
   "contact.action.call": "Anrufen",
   "callAction.openChat": "Chat in {app} öffnen",
+  "callAction.chats": "Chat öffnen",
+  "contactLink.copyEmail": "E-Mail-Adresse kopieren",
+  "contactLink.emailCopied": "E-Mail-Adresse kopiert",
+  "contactLink.copyEmailRemedy":
+    "Markiere die Adresse und kopiere sie mit der Tastatur.",
   "contact.action.noPhone": "Dieser Kontakt hat keine Telefonnummer.",
   "contact.action.meetings": "Termine",
   "contact.action.addTask": "Aufgabe hinzufügen",
@@ -15662,6 +15761,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.record.loading": "Listen werden geladen",
   "lists.record.empty": "Auf keiner Liste, die du finden kannst.",
   "lists.record.check": "Live-Liste pr\u00fcfen",
+  "lists.record.checkHint":
+    "Eine Live-Liste aktualisiert sich selbst nach ihren Filtern. Wähle eine, um zu sehen, ob dieser Datensatz passt und warum.",
   "lists.record.checkPick": "Live-Liste ausw\u00e4hlen",
   "lists.record.truncated": "Und weitere Listen, die hier nicht stehen.",
   "lists.record.takenOff": "Von {name} entfernt",
@@ -15996,7 +16097,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es gibt mehr Deals als angezeigt. Öffne Deals, um alle zu sehen.",
   "project.stakeholders.title": "Stakeholder",
   "project.stakeholders.empty":
-    "Noch keine Stakeholder. Ein Stakeholder ist ein Kontakt mit einer Rolle in diesem Projekt, zum Beispiel Sponsor, Projektleitung oder Champion.",
+    "Noch keine Stakeholder. Ein Stakeholder ist ein Kontakt mit einer Rolle in diesem Projekt, zum Beispiel Projektpatenschaft, Projektleitung oder Champion.",
   "project.stakeholders.add": "Stakeholder hinzufügen",
   "project.stakeholders.addConfirm": "Hinzufügen",
   "project.stakeholders.addHint":
@@ -16006,7 +16107,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.stakeholders.removeConfirm":
     "{name} ist nicht mehr Stakeholder dieses Projekts. Die zugehörigen Aktivitäten bleiben, wo sie sind.",
   "project.stakeholders.removeOne": "{name} aus dem Projekt entfernen",
-  "project.role.sponsor": "Sponsor",
+  "project.role.sponsor": "Projektpatenschaft",
   "project.role.project_lead": "Projektleitung",
   "project.role.delivery_lead": "Umsetzungsleitung",
   "project.role.subject_matter_expert": "Fachexpertise",
@@ -16017,6 +16118,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.documents.empty":
     "An diesem Projekt hängt keine Datei. Dateien an den Deals des Projekts bleiben bei den Deals.",
   "record.commitments": "Zusagen",
+  "project.openTasks": "Offene Aufgaben",
   "project.commitments.empty":
     "Unter diesem Projekt ist keine offene Aufgabe abgelegt. Verknüpfte Aufgaben erscheinen hier, die am frühesten fällige zuerst.",
   "project.commitments.overdue": "Überfällig",
@@ -16115,8 +16217,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.offers.rowSub": "Erstellt am {date} · netto {net}",
   "deal.committee.seatSub": "{role} · {engagement}",
   "deal.committee.owner": "Verantwortlich",
-  "deal.committee.gap.coverageGap": "Niemand intern trägt den Deal",
-  "deal.committee.gap.singleThreaded": "Weniger als zwei aktiv",
+  "deal.committee.ourTeam": "Dein Team",
+  "deal.committee.theirTeam": "Kundenseite",
+  "deal.committee.legend": "Was die Zeichen bedeuten",
+  "deal.committee.noRole": "Keine Rolle gesetzt",
+  "deal.committee.seatWrote":
+    "{role} · {engagement} · zuletzt geschrieben am {date}",
+  "deal.committee.carriesContact": "Führt den Großteil des Austauschs",
+  "deal.committee.teamUnread":
+    "Nicht lesbar, wer sonst an diesem Deal arbeitet.",
+  "deal.committee.missing.champion": "Es fehlt: ein Champion im Austausch",
+  "deal.committee.missing.firstContact":
+    "Es fehlt: ein Kontakt auf Kundenseite",
+  "deal.committee.missing.secondContact":
+    "Nur ein Kontakt. Füge einen zweiten hinzu.",
+  "deal.committee.missing.secondEngaged":
+    "Weniger als zwei im Austausch. Erreiche einen zweiten Kontakt.",
   "deal.committee.foot": "{named} benannt · {engaged} von {named} aktiv",
   "deal.brief.title": "Worum es geht",
   "deal.room.open": "Öffnen",

@@ -98,8 +98,11 @@
 /* A handle and its edit verb stack, always: the verb on its own line under
    the value, whether or not the two would have fit side by side. Inline, a
    short number kept its verb beside it while a long address pushed its own
-   under, and two rows of one card read as two layouts. */
+   under, and two rows of one card read as two layouts. A value and the link
+   that opens it stack the same way, or the two run into one string. */
 .fieldgrid-value:has(> .link-button + .inline-editable),
+.fieldgrid-value:has(> .inline-editable + .link-button),
+.fieldgrid-value:has(> .inlinetext + .link-button),
 .fieldgrid-value:has(> .fieldgrid-handle) {
   display: flex;
   flex-direction: column;
@@ -140,11 +143,10 @@
 .fieldgrid-handle > .callaction-number {
   min-inline-size: fit-content;
 }
-/* A number's chat links take their own line under the number and its kind, so
-   the kind sits in one place on every row. */
+/* The chat glyph ends the line, after the number's kind. */
 .fieldgrid-handle > .callaction-chats {
   order: 1;
-  flex-basis: 100%;
+  flex: none;
   margin-inline-start: 0;
 }
 /* Only the address gives way: the column's inherited `anywhere` would
