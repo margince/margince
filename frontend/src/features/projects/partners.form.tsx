@@ -18,6 +18,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { FieldGuard } from "../../design-system/rbac";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
+import { useCanWrite, useGrantRefused } from "../../lib/capability";
 import { isOption } from "../../lib/options";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { PartnerCommissions } from "./partnercommissions";
@@ -74,7 +75,12 @@ function defaultFormValues(partner?: Partner): PartnerFormValues {
   };
 }
 
-function buildUpsertBody(values: PartnerFormValues): UpsertPartnerRequest {
+// A seat without the partner grant leaves the tier out of the body. The server
+// takes the grant for any tier the body names, a null included.
+function buildUpsertBody(
+  values: PartnerFormValues,
+  setsTier: boolean,
+): UpsertPartnerRequest {
   const segments = values.served_segments
     .split(",")
     .map((segment) => segment.trim())
@@ -82,7 +88,7 @@ function buildUpsertBody(values: PartnerFormValues): UpsertPartnerRequest {
   return {
     partner_role: values.partner_role,
     cert_status: values.cert_status,
-    margin_tier: values.margin_tier || null,
+    ...(setsTier ? { margin_tier: values.margin_tier || null } : {}),
     relationship_stage: values.relationship_stage,
     next_step: values.next_step.trim() || undefined,
     next_step_due_at: values.next_step_due_at || undefined,
@@ -115,6 +121,8 @@ function PartnerForm({
   const [values, setValues] = useState<PartnerFormValues>(() =>
     defaultFormValues(partner),
   );
+  const setsTier = useCanWrite("partner", "update");
+  const tierRefused = useGrantRefused({ object: "partner", action: "update" });
 
   const mutation = useMutation({
     // The prior row rides the variables rather than the closure, and its
@@ -130,7 +138,7 @@ function PartnerForm({
               ? {}
               : ifMatch(requireVersion(prior.version))),
           },
-          body: buildUpsertBody(values),
+          body: buildUpsertBody(values, setsTier),
         }),
       );
     },
@@ -179,10 +187,16 @@ function PartnerForm({
           />
         )}
       </Field>
-      <Field label={t("partner.marginTier")} hint={t("partner.marginTierHint")}>
+      <Field
+        label={t("partner.marginTier")}
+        hint={t(
+          tierRefused ? "partner.marginTierRefused" : "partner.marginTierHint",
+        )}
+      >
         {(control) => (
           <Select
             {...control}
+            disabled={!setsTier}
             value={values.margin_tier}
             onChange={(value) =>
               setValues({

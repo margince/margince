@@ -2628,6 +2628,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "partner.marginTier": "Margenstaffel",
   "partner.marginTierHint":
     "Der Anteil, den der Partner an jedem gewonnenen Deal erhält, den er gebracht hat. Intro: Er hat den Kunden nur vorgestellt. Aktive Zusammenarbeit: Der Deal wurde gemeinsam bearbeitet. Abschluss durch Partner: Er hat ihn selbst verkauft. Leer lassen, wenn die Vereinbarung mit ihm anders vergütet.",
+  "partner.marginTierRefused":
+    "Deine Rolle darf die Margenstaffel nicht festlegen. Frag einen Admin.",
   "partner.stage": "Beziehungsphase",
   "partner.nextStep": "Nächster Schritt",
   "partner.nextStepDue": "Nächster Schritt fällig",
@@ -3182,6 +3184,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.health.reason.dealsNoneStalled_other":
     "{count} offene Deals, keiner stockt.",
   "company.partnerSetUp": "Partnerprogramm einrichten",
+  "company.partnerSetUpUnreadable":
+    "Deine Rolle darf keine Partnerprogramme sehen. Frag einen Admin.",
   "signal.kind.stalled_deal": "Deal stockt",
   "signal.kind.champion_left": "Champion ausgeschieden",
   "signal.kind.reengagement": "Wieder aktiv",

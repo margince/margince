@@ -17,8 +17,13 @@ To make a company a partner in Margince, open the company, choose **More actions
 The company now shows on the **Partners** list and in every deal's **via partner** picker.
 Also called: add a partner, onboard a reseller, start a partner programme.
 
+### Who may set up a partner program?
+In Margince, anyone who may change the company may set up its partner program and change its terms. The **Margin tier** is the one part that needs more. It decides commission on every later deal, so only a role that may change partners sets it. Without that role the field shows "Your role cannot set the margin tier", and the program starts with no tier.
+**Set up partner program** is turned off for a role that cannot see partner programs, with the reason beside it.
+Also called: partner permissions, who can add a partner, margin tier rights.
+
 ### Can an AI assistant set up a partner?
-Yes, in Margince an AI assistant can ask to make a company a partner, with a **Partner role**, a **Relationship stage** and a **Next step**. The request waits in the approvals inbox, and the program starts once someone who may change both partners and companies approves it.
+Yes, in Margince an AI assistant can ask to make a company a partner, with a **Partner role**, a **Relationship stage** and a **Next step**. The request waits in the approvals inbox, and the program starts once someone who may change the company approves it.
 The assistant cannot choose the **Margin tier**, because it decides commission on every later deal. It stays **Not set** until someone sets it on the company's **Partner** tab.
 A partner program ends only when the company is archived, so an assistant cannot set one up on a company that already is a partner.
 Also called: let the assistant add a partner, AI partner onboarding.

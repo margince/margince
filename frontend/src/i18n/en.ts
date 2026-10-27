@@ -2611,6 +2611,8 @@ export const en = {
   "partner.marginTier": "Margin tier",
   "partner.marginTierHint":
     "The share the partner earns on each won deal they sourced. Intro: they only introduced the client. Active collaboration: the deal was worked together. Partner closed: they sold it themselves. Leave it unset when their agreement pays differently.",
+  "partner.marginTierRefused":
+    "Your role cannot set the margin tier. Ask an admin.",
   "partner.stage": "Relationship stage",
   "partner.nextStep": "Next step",
   "partner.nextStepDue": "Next step due",
@@ -3215,6 +3217,8 @@ export const en = {
   "co.health.reason.dealsNoneStalled_other":
     "{count} open deals, none stalled.",
   "company.partnerSetUp": "Set up partner program",
+  "company.partnerSetUpUnreadable":
+    "Your role cannot see partner programs. Ask an admin.",
   "signal.kind.stalled_deal": "Deal stalled",
   "signal.kind.champion_left": "Champion left",
   "signal.kind.reengagement": "Re-engagement",

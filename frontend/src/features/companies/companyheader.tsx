@@ -16,6 +16,7 @@ import { Button, OverflowMenu } from "../../design-system/atoms";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import { useT } from "../../i18n";
 import {
+  useCan,
   useCanWrite,
   useCanWriteRecord,
   useRecordWriteRefusal,
@@ -24,7 +25,7 @@ import { useClaimRecord } from "../../lib/claimrecord";
 import { useMemberName } from "../../lib/membernames";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
-import { useViewerId } from "../../lib/session";
+import { useMe, useViewerId } from "../../lib/session";
 import { ShareAction } from "../records/share";
 import { CompanyRejectAction } from "./companyreject";
 
@@ -277,6 +278,12 @@ export function CompanyActionBadges({
   const menuReasonId = archivedReasonId ?? ownReasonId;
   const refusedReason = useCompanyVerbRefusal(company);
   const refusedByState = refusedReason ? menuReasonId : undefined;
+  // The program opens on the Partner tab, which reads the partner register.
+  const partnerUnreadableId = useId();
+  const readsPartners = useCan("partner", "read");
+  const partnerUnreadable =
+    useMe().data?.authorization !== undefined && !readsPartners;
+  const isPartner = (company.relationship_types ?? []).includes("partner");
   return (
     <>
       {/* What the company IS to us, and whether it is archived, are drawn
@@ -338,8 +345,17 @@ export function CompanyActionBadges({
             for rather than offered. Below Full history rather than beside
             Merge: every row above is a verb EVERY record carries, in the order
             they all carry them, and every row below is this account's own. */}
-        {!(company.relationship_types ?? []).includes("partner") && (
-          <Button reasonId={refusedByState} onClick={onSetUpPartner}>
+        {!isPartner && partnerUnreadable && !refusedByState && (
+          <p id={partnerUnreadableId}>{t("company.partnerSetUpUnreadable")}</p>
+        )}
+        {!isPartner && (
+          <Button
+            reasonId={
+              refusedByState ??
+              (partnerUnreadable ? partnerUnreadableId : undefined)
+            }
+            onClick={onSetUpPartner}
+          >
             {t("company.partnerSetUp")}
           </Button>
         )}
