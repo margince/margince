@@ -62,12 +62,14 @@ function DealPage({ status }: Readonly<{ status: string }>) {
 }
 
 async function expectStatusPill(canvasElement: HTMLElement, words: string) {
-  await within(canvasElement).findByRole("heading", {
+  const name = await within(canvasElement).findByRole("heading", {
     level: 1,
     name: "Fleet retrofit",
   });
-  const pill = canvasElement.querySelector(".record-split-pills .badge");
-  await expect(pill?.textContent).toBe(words);
+  const header = name.closest("header");
+  if (header === null)
+    throw new Error("the deal's name sits outside its header");
+  await expect(within(header).getByText(words)).toBeVisible();
 }
 
 export const Open: Story = {

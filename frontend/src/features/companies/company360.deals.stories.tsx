@@ -68,8 +68,12 @@ const skewedView: Company360 = JSON.parse(
   }),
 );
 
-function statusBadgeOf(dealButton: HTMLElement) {
-  return dealButton.closest("tr")?.querySelector(".co-row-meta .badge");
+// The deal's row, found by the name it reads with, so a status word is read
+// from that row alone.
+async function rowOf(canvasElement: HTMLElement, deal: string) {
+  return within(
+    await within(canvasElement).findByRole("row", { name: new RegExp(deal) }),
+  );
 }
 
 export const OpenAndWon: Story = {
@@ -80,15 +84,11 @@ export const OpenAndWon: Story = {
     </StoryProviders>
   ),
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const open = statusBadgeOf(
-      await canvas.findByRole("button", { name: "Fleet retrofit" }),
-    );
-    await expect(open?.textContent).toBe("Open");
-    const won = statusBadgeOf(
-      canvas.getByRole("button", { name: "Phase one licence" }),
-    );
-    await expect(won?.textContent).toBe("Won");
+    const open = await rowOf(canvasElement, "Fleet retrofit");
+    await expect(open.getByText("Open")).toBeVisible();
+    await expect(open.queryByText("Won")).toBeNull();
+    const won = await rowOf(canvasElement, "Phase one licence");
+    await expect(won.getByText("Won")).toBeVisible();
   },
 };
 
@@ -100,11 +100,7 @@ export const UnknownStatus: Story = {
     </StoryProviders>
   ),
   play: async ({ canvasElement }) => {
-    const badge = statusBadgeOf(
-      await within(canvasElement).findByRole("button", {
-        name: "Fleet retrofit",
-      }),
-    );
-    await expect(badge?.textContent).toBe("on_hold");
+    const row = await rowOf(canvasElement, "Fleet retrofit");
+    await expect(row.getByText("on_hold")).toBeVisible();
   },
 };

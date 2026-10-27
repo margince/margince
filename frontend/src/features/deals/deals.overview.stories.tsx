@@ -58,8 +58,9 @@ async function expectStatusWord(
   const open = await within(canvasElement).findByRole("button", {
     name: title,
   });
-  const badge = open.closest("li")?.querySelector(".badge");
-  await expect(badge?.textContent).toBe(word);
+  const item = open.closest("li");
+  if (item === null) throw new Error("the offer sits outside its list item");
+  await expect(within(item).getByText(word)).toBeVisible();
 }
 
 export const DraftOffer: Story = {
