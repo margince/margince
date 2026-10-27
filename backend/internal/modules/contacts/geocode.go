@@ -13,11 +13,11 @@ package contacts
 // DIFFERENT address, and a radius query that read lat/lon alone would answer
 // with distances from where the company used to be, reporting success.
 //
-// geocode_status closes it. The writer stamps 'stale' in the same transaction
-// as the address change, the worker sets 'ok' when it catches up, and only
-// 'ok' is queryable. A company mid-move drops out of radius answers rather
-// than appearing in the wrong place — an omission a caller can be told about,
-// instead of a wrong answer they cannot see.
+// The point's status closes it (company_geocode_state.status). A trigger stamps
+// 'stale' in the same transaction as the address change, the worker sets 'ok'
+// when it catches up, and only 'ok' is queryable. A company mid-move drops out
+// of radius answers rather than appearing in the wrong place. A caller can be
+// told about an omission, and cannot see a wrong answer.
 
 import (
 	"context"
@@ -36,7 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// The statuses geocode_status carries, and what each says.
+// The statuses a company's point carries, and what each says.
 const (
 	// GeocodeOK — the coordinates match the address in the row. The ONLY
 	// status a radius query reads.
@@ -51,7 +51,7 @@ const (
 	GeocodeStale = "stale"
 )
 
-// GeocodeStatuses is every status geocode_status admits.
+// GeocodeStatuses is every status company_geocode_state.status admits.
 //
 // Held by: TestTheGeocodeStatusesAreTheColumnsCheck (backend/gates/geocodestatuses_test.go)
 func GeocodeStatuses() []string {
@@ -117,7 +117,7 @@ func (s *Store) AddressForGeocode(ctx context.Context, companyID ids.CompanyID) 
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT o.address_line1, o.address_line2, o.address_city, o.address_region,
-			       o.address_postal_code, o.address_country, o.geocode_input_hash, o.geocode_status,
+			       o.address_postal_code, o.address_country, g.input_hash, g.status,
 			       coalesce(g.attempts, 0), g.next_attempt_at
 			  FROM company o
 			  LEFT JOIN company_geocode_state g ON g.company_id = o.id
@@ -287,16 +287,14 @@ func (s *Store) recordGeocodeAfter(
 		//
 		// The worker read the address, left the process for seconds, and came
 		// back. An editor can have committed a new address in between. An
-		// unconditional write would then stamp status='ok' with the point of
-		// the PREVIOUS address onto a row that now holds a different one, and a
-		// radius query would answer from the old place while reporting success
-		// — the exact defect geocode_status exists to prevent, reintroduced by
-		// the code that clears it.
+		// unconditional write would then stamp status 'ok' with the point of
+		// the previous address. A radius query would answer from the old place
+		// while reporting success, the defect the status exists to prevent.
 		//
-		// The row is re-read and re-hashed rather than compared against
-		// geocode_input_hash: that column records what was last RESOLVED, so
+		// The row is re-read and re-hashed rather than compared against the
+		// point's input_hash. That column records what was last resolved, so
 		// matching it would accept a write for an address the row no longer
-		// has. The live columns are the only authority on what the address IS.
+		// has. The live columns are the only authority on what the address is.
 		current, err := addressHashInTx(ctx, tx, companyID)
 		if err != nil {
 			return err
@@ -307,25 +305,25 @@ func (s *Store) recordGeocodeAfter(
 			// the new address is what resolves it.
 			return nil
 		}
-		if _, err := tx.Exec(ctx, `
-			UPDATE company
-			   SET geocode_lat = $2, geocode_lon = $3, geocode_status = $4,
-			       geocode_provider = $5, geocode_input_hash = $6, geocoded_at = now()
-			 WHERE id = $1`,
-			companyID, lat, lon, status, provider, inputHash); err != nil {
-			return fmt.Errorf("recording the geocode: %w", err)
-		}
+		// The point and the attempt ledger are one row beside the company, so
+		// the answer never moves the company's version under an open form.
+		//
 		// A success RESETS the attempts. The next address change starts with a
 		// full budget, which is what makes reingestion a real backfill rather
 		// than a pass that skips everything that once failed.
 		if status == GeocodeOK {
 			_, err := tx.Exec(ctx, `
-				INSERT INTO company_geocode_state (company_id, attempts, last_outcome, updated_at)
-				VALUES ($1, 0, $2, now())
+				INSERT INTO company_geocode_state
+				       (company_id, attempts, last_outcome, updated_at, lat, lon, status, provider, input_hash, geocoded_at)
+				VALUES ($1, 0, $2, now(), $3, $4, $2, $5, $6, now())
 				ON CONFLICT (company_id) DO UPDATE
-				   SET attempts = 0, last_outcome = $2, next_attempt_at = NULL, updated_at = now()`,
-				companyID, status)
-			return err
+				   SET attempts = 0, last_outcome = $2, next_attempt_at = NULL, updated_at = now(),
+				       lat = $3, lon = $4, status = $2, provider = $5, input_hash = $6, geocoded_at = now()`,
+				companyID, status, lat, lon, provider, inputHash)
+			if err != nil {
+				return fmt.Errorf("recording the geocode: %w", err)
+			}
+			return nil
 		}
 		// The provider's own wait when it gave one, and a day otherwise. A day
 		// is deliberately long: a lookup that failed for any reason this code
@@ -337,14 +335,20 @@ func (s *Store) recordGeocodeAfter(
 		}
 		_, err = tx.Exec(ctx, `
 			INSERT INTO company_geocode_state
-			       (company_id, attempts, last_outcome, next_attempt_at, updated_at)
-			VALUES ($1, 1, $2, now() + $3::interval, now())
+			       (company_id, attempts, last_outcome, next_attempt_at, updated_at,
+			        lat, lon, status, provider, input_hash, geocoded_at)
+			VALUES ($1, 1, $2, now() + $3::interval, now(), $4, $5, $2, $6, $7, now())
 			ON CONFLICT (company_id) DO UPDATE
 			   SET attempts = company_geocode_state.attempts + 1,
 			       last_outcome = $2,
 			       next_attempt_at = now() + $3::interval,
-			       updated_at = now()`, companyID, status, next.String())
-		return err
+			       updated_at = now(),
+			       lat = $4, lon = $5, status = $2, provider = $6, input_hash = $7, geocoded_at = now()`,
+			companyID, status, next.String(), lat, lon, provider, inputHash)
+		if err != nil {
+			return fmt.Errorf("recording the geocode: %w", err)
+		}
+		return nil
 	})
 }
 
