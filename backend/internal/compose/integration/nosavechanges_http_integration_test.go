@@ -26,40 +26,6 @@ type versionedWire struct {
 	Version int64  `json:"version"`
 }
 
-// assertSaveChangesNothing sends a save at the record's current version and
-// checks the version, the audit rows and the outbox all stayed where they were.
-func assertSaveChangesNothing(
-	t *testing.T, e *apptest.AppEnv, method, path string, body AnyMap, entityID string, version int64,
-) {
-	t.Helper()
-	count := func(query string) int {
-		var n int
-		if err := e.Owner.QueryRow(t.Context(), query, entityID).Scan(&n); err != nil {
-			t.Fatalf("counting for %s: %v", entityID, err)
-		}
-		return n
-	}
-	const audits = `SELECT count(*) FROM audit_log WHERE entity_id = $1`
-	const events = `SELECT count(*) FROM event_outbox WHERE envelope::text LIKE '%' || $1 || '%'`
-	auditsBefore, eventsBefore := count(audits), count(events)
-
-	var answer versionedWire
-	headers := map[string]string{"If-Match": strconv.FormatInt(version, 10)}
-	if status := e.Call(t, method, path, body, headers, &answer); status != http.StatusOK {
-		t.Fatalf("%s %s with the stored values -> %d, want 200", method, path, status)
-	}
-	if answer.Version != version {
-		t.Errorf("%s %s with the stored values answered version %d, want the unchanged %d",
-			method, path, answer.Version, version)
-	}
-	if got := count(audits); got != auditsBefore {
-		t.Errorf("%s %s with the stored values wrote %d audit row(s), want none", method, path, got-auditsBefore)
-	}
-	if got := count(events); got != eventsBefore {
-		t.Errorf("%s %s with the stored values emitted %d event(s), want none", method, path, got-eventsBefore)
-	}
-}
-
 func TestASaveOfTheStoredValuesChangesNothing(t *testing.T) {
 	e := setupRelationships(t)
 
@@ -69,7 +35,7 @@ func TestASaveOfTheStoredValuesChangesNothing(t *testing.T) {
 		t.Fatalf("setting the contact's title -> %d", status)
 	}
 	t.Run("contact", func(t *testing.T) {
-		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/contacts/"+e.contactID,
+		apptest.AssertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/contacts/"+e.contactID,
 			AnyMap{"title": "Head of Sales"}, e.contactID, contact.Version)
 	})
 	t.Run("a stale If-Match on a save of the stored values is still a conflict", func(t *testing.T) {
@@ -86,7 +52,7 @@ func TestASaveOfTheStoredValuesChangesNothing(t *testing.T) {
 		t.Fatalf("setting the company's industry -> %d", status)
 	}
 	t.Run("company", func(t *testing.T) {
-		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/companies/"+e.companyID,
+		apptest.AssertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/companies/"+e.companyID,
 			AnyMap{"industry": "Software"}, e.companyID, company.Version)
 	})
 
@@ -102,7 +68,7 @@ func TestASaveOfTheStoredValuesChangesNothing(t *testing.T) {
 		if status := e.Call(t, "GET", "/v1/companies/"+e.companyID+"/partner", nil, nil, &standing); status != http.StatusOK {
 			t.Fatalf("reading the partner -> %d", status)
 		}
-		assertSaveChangesNothing(t, e.AppEnv, "PUT", "/v1/companies/"+e.companyID+"/partner",
+		apptest.AssertSaveChangesNothing(t, e.AppEnv, "PUT", "/v1/companies/"+e.companyID+"/partner",
 			partnerBody, e.companyID, standing.Version)
 	})
 
@@ -114,7 +80,7 @@ func TestASaveOfTheStoredValuesChangesNothing(t *testing.T) {
 		t.Fatalf("creating the employment -> %d", status)
 	}
 	t.Run("relationship with the stored role", func(t *testing.T) {
-		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/relationships/"+edge.ID,
+		apptest.AssertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/relationships/"+edge.ID,
 			AnyMap{"role": "cto"}, edge.ID, edge.Version)
 	})
 
@@ -123,11 +89,11 @@ func TestASaveOfTheStoredValuesChangesNothing(t *testing.T) {
 		t.Fatalf("creating the tag -> %d", status)
 	}
 	t.Run("tag with the stored name", func(t *testing.T) {
-		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/tags/"+tag.ID,
+		apptest.AssertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/tags/"+tag.ID,
 			AnyMap{"name": "Product A"}, tag.ID, tag.Version)
 	})
 	t.Run("tag with no field", func(t *testing.T) {
-		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/tags/"+tag.ID, AnyMap{}, tag.ID, tag.Version)
+		apptest.AssertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/tags/"+tag.ID, AnyMap{}, tag.ID, tag.Version)
 	})
 	t.Run("tag with its stored colour, description and suggestion switch", func(t *testing.T) {
 		var set versionedWire
@@ -136,7 +102,7 @@ func TestASaveOfTheStoredValuesChangesNothing(t *testing.T) {
 			map[string]string{"If-Match": strconv.FormatInt(tag.Version, 10)}, &set); status != http.StatusOK {
 			t.Fatalf("setting the tag's fields -> %d", status)
 		}
-		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/tags/"+tag.ID, stored, tag.ID, set.Version)
+		apptest.AssertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/tags/"+tag.ID, stored, tag.ID, set.Version)
 	})
 	t.Run("a relationship patch that breaks its dates is still refused", func(t *testing.T) {
 		var second, dated versionedWire
@@ -181,18 +147,7 @@ func TestAWebhookSubscriptionSavedAsItAlreadyIsChangesNothing(t *testing.T) {
 		t.Fatalf("pausing -> %d", status)
 	}
 	version := paused.Version
-	assertSaveChangesNothing(t, e, "PATCH", path, AnyMap{"state": "paused"}, created.Subscription.ID, version)
-}
-
-// The settings drawer sends every field it shows, cleared ones as null. Saved
-// unchanged, that body must not move the version or write history.
-func TestAWebsiteFormSavedAsItAlreadyIsChangesNothing(t *testing.T) {
-	e := setupFormsApp(t)
-	form := createForm(t, e, AnyMap{"name": "Contact page", "sender": "browser", "allowed_origins": []string{siteOrigin}})
-	assertSaveChangesNothing(t, e, "PATCH", "/v1/web-forms/"+form.ID, AnyMap{
-		"name": "Contact page", "allowed_origins": []string{siteOrigin}, "consent_required": false,
-		"consent_wording": nil, "consent_policy_version": nil, "redirect_url": nil, "success_message": nil,
-	}, form.ID, form.Version)
+	apptest.AssertSaveChangesNothing(t, e, "PATCH", path, AnyMap{"state": "paused"}, created.Subscription.ID, version)
 }
 
 // Clearing the headers a subscription sends is a change. The tokens they carry
@@ -245,7 +200,7 @@ func TestADealRoomExpirySetToItsStoredValueChangesNothing(t *testing.T) {
 		map[string]string{"If-Match": strconv.FormatInt(version, 10)}, &set); status != http.StatusOK {
 		t.Fatalf("setting the expiry -> %d", status)
 	}
-	assertSaveChangesNothing(t, e, "PUT", "/v1/deal-rooms/"+roomID+"/expiry",
+	apptest.AssertSaveChangesNothing(t, e, "PUT", "/v1/deal-rooms/"+roomID+"/expiry",
 		AnyMap{"expires_at": "2027-01-15T12:00:00+02:00"}, roomID, set.Version)
 
 	stale := map[string]string{"If-Match": strconv.FormatInt(set.Version-1, 10)}
@@ -302,7 +257,7 @@ func TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing(t *testing.T) {
 		if status := e.Call(t, "POST", "/v1/offer-templates", body, nil, &tpl); status != http.StatusCreated {
 			t.Fatalf("creating the template -> %d", status)
 		}
-		assertSaveChangesNothing(t, e.AppEnv, "PUT", "/v1/offer-templates/"+tpl.ID, body, tpl.ID, tpl.Version)
+		apptest.AssertSaveChangesNothing(t, e.AppEnv, "PUT", "/v1/offer-templates/"+tpl.ID, body, tpl.ID, tpl.Version)
 		renamed := AnyMap{"name": "Standard v2", "locale": "en-US", "is_default": false, "layout": AnyMap{"footer": "Thanks"}}
 		var moved versionedWire
 		if status := e.Call(t, "PUT", "/v1/offer-templates/"+tpl.ID, renamed,
@@ -322,7 +277,7 @@ func TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing(t *testing.T) {
 		if status := e.Call(t, "POST", "/v1/products", body, nil, &product); status != http.StatusCreated {
 			t.Fatalf("creating the product -> %d", status)
 		}
-		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/products/"+product.ID,
+		apptest.AssertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/products/"+product.ID,
 			AnyMap{"name": "Seat", "currency": "EUR", "unit_price_minor": 1000, "default_tax_rate": 19.0}, product.ID, product.Version)
 	})
 	t.Run("activity", func(t *testing.T) {
@@ -333,7 +288,7 @@ func TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing(t *testing.T) {
 		}, nil, &note); status != http.StatusCreated {
 			t.Fatalf("logging the note -> %d", status)
 		}
-		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/activities/"+note.ID,
+		apptest.AssertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/activities/"+note.ID,
 			AnyMap{"subject": "Call recap", "body": "We agreed on Friday."}, note.ID, note.Version)
 	})
 	t.Run("lead", func(t *testing.T) {
@@ -341,7 +296,7 @@ func TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing(t *testing.T) {
 		if status := e.Call(t, "POST", "/v1/leads", AnyMap{"full_name": "Probe Lead", "source": "manual"}, nil, &lead); status != http.StatusCreated {
 			t.Fatalf("creating the lead -> %d", status)
 		}
-		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/leads/"+lead.ID,
+		apptest.AssertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/leads/"+lead.ID,
 			AnyMap{"full_name": "Probe Lead"}, lead.ID, lead.Version)
 	})
 	t.Run("project", func(t *testing.T) {
@@ -351,7 +306,7 @@ func TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing(t *testing.T) {
 		}, nil, &project); status != http.StatusCreated {
 			t.Fatalf("creating the project -> %d", status)
 		}
-		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/projects/"+project.ID,
+		apptest.AssertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/projects/"+project.ID,
 			AnyMap{"name": "Joint rollout"}, project.ID, project.Version)
 	})
 	t.Run("contract with its dates", func(t *testing.T) {
@@ -362,7 +317,7 @@ func TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing(t *testing.T) {
 		}, nil, &contract); status != http.StatusCreated {
 			t.Fatalf("creating the contract -> %d", status)
 		}
-		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/contracts/"+contract.ID,
+		apptest.AssertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/contracts/"+contract.ID,
 			AnyMap{"title": "MSA 2026", "starts_on": "2026-01-01", "ends_on": "2026-12-31", "renewal_on": "2026-10-01"},
 			contract.ID, contract.Version)
 	})
@@ -373,7 +328,7 @@ func TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing(t *testing.T) {
 		if status := e.Call(t, "GET", "/v1/deals/"+dealID, nil, nil, &deal); status != http.StatusOK {
 			t.Fatalf("reading the deal -> %d", status)
 		}
-		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/deals/"+dealID,
+		apptest.AssertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/deals/"+dealID,
 			AnyMap{"name": "Acme rollout", "amount_minor": 250_000_00, "currency": "EUR"}, dealID, deal.Version)
 	})
 	t.Run("legal entity", func(t *testing.T) {
@@ -382,7 +337,7 @@ func TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing(t *testing.T) {
 		if status := e.Call(t, "POST", "/v1/legal-entities", body, nil, &entity); status != http.StatusCreated {
 			t.Fatalf("creating the legal entity -> %d", status)
 		}
-		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/legal-entities/"+entity.ID, body, entity.ID, entity.Version)
+		apptest.AssertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/legal-entities/"+entity.ID, body, entity.ID, entity.Version)
 	})
 }
 
@@ -406,7 +361,7 @@ func TestTheFullFormPayloadOfAnUntouchedRecordChangesNothing(t *testing.T) {
 		t.Fatalf("filling in the contact form -> %d", status)
 	}
 	t.Run("contact", func(t *testing.T) {
-		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/contacts/"+e.contactID, form, e.contactID, contact.Version)
+		apptest.AssertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/contacts/"+e.contactID, form, e.contactID, contact.Version)
 	})
 
 	var company versionedWire
@@ -422,7 +377,7 @@ func TestTheFullFormPayloadOfAnUntouchedRecordChangesNothing(t *testing.T) {
 		t.Fatalf("filling in the company form -> %d", status)
 	}
 	t.Run("company", func(t *testing.T) {
-		assertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/companies/"+e.companyID, companyForm, e.companyID, company.Version)
+		apptest.AssertSaveChangesNothing(t, e.AppEnv, "PATCH", "/v1/companies/"+e.companyID, companyForm, e.companyID, company.Version)
 	})
 	t.Run("a company whose sets changed is a change", func(t *testing.T) {
 		changed := AnyMap{

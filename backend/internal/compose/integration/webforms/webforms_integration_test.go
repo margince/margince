@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package integration
+package webforms
 
 // Website forms end to end. An admin sets a form up and an anonymous sender
 // posts to its address. The post lands as a lead with a timeline note, through
@@ -23,6 +23,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/compose/integration"
 
 	"github.com/jackc/pgx/v5"
 
@@ -48,7 +50,7 @@ func setupFormsApp(t *testing.T) *apptest.AppEnv {
 	return e
 }
 
-func createForm(t *testing.T, e *apptest.AppEnv, body AnyMap) createdForm {
+func createForm(t *testing.T, e *apptest.AppEnv, body integration.AnyMap) createdForm {
 	t.Helper()
 	var out createdForm
 	if status := e.Call(t, "POST", "/v1/web-forms", body, nil, &out); status != http.StatusCreated {
@@ -136,7 +138,7 @@ func notesOnLeadWithEmail(t *testing.T, e *apptest.AppEnv, email string) []strin
 
 func TestABrowserFormLandsALeadWithItsMessageOnTheTimeline(t *testing.T) {
 	e := setupFormsApp(t)
-	form := createForm(t, e, AnyMap{
+	form := createForm(t, e, integration.AnyMap{
 		"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin + "/contact"},
 		"consent_required": true, "consent_wording": "You may contact me about my enquiry.", "consent_policy_version": "2026-10",
 	})
@@ -166,7 +168,7 @@ func TestABrowserFormLandsALeadWithItsMessageOnTheTimeline(t *testing.T) {
 
 func TestASecondSubmissionFromAKnownEmailAddsToItsLead(t *testing.T) {
 	e := setupFormsApp(t)
-	form := createForm(t, e, AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
+	form := createForm(t, e, integration.AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	for i, message := range []string{"First question", "Second question"} {
 		answer := browserPost(t, e, form.FormKey, url.Values{"email": {"bob@visitor.example"}, "message": {message}}, siteOrigin)
 		if answer.Status != http.StatusAccepted {
@@ -182,11 +184,11 @@ func TestASecondSubmissionFromAKnownEmailAddsToItsLead(t *testing.T) {
 }
 
 func TestACustomFieldNameFillsTheLeadAndAValueThatDoesNotFitStaysOnTheNote(t *testing.T) {
-	e := apptest.SetupAppWithOptions(t, compose.WithKeyvault(keyvault.NewMemory()), compose.WithSchemaPool(SchemaPool(t)))
+	e := apptest.SetupAppWithOptions(t, compose.WithKeyvault(keyvault.NewMemory()), compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
-	budget := createCustomField(t, e, AnyMap{"object": "lead", "label": "Budget", "type": "number", "source": "manual"})
-	plan := createCustomField(t, e, AnyMap{"object": "lead", "label": "Plan", "type": "picklist", "options": []string{"Team", "Business"}, "source": "manual"})
-	form := createForm(t, e, AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
+	budget := apptest.CreateCustomField(t, e, integration.AnyMap{"object": "lead", "label": "Budget", "type": "number", "source": "manual"})
+	plan := apptest.CreateCustomField(t, e, integration.AnyMap{"object": "lead", "label": "Plan", "type": "picklist", "options": []string{"Team", "Business"}, "source": "manual"})
+	form := createForm(t, e, integration.AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	answer := browserPost(t, e, form.FormKey, url.Values{
 		"email": {"cf@visitor.example"}, budget: {"12000"}, plan: {"Enterprise"},
 	}, siteOrigin)
@@ -210,7 +212,7 @@ func TestACustomFieldNameFillsTheLeadAndAValueThatDoesNotFitStaysOnTheNote(t *te
 
 func TestABrowserFormRefusesWhatItShouldNotLand(t *testing.T) {
 	e := setupFormsApp(t)
-	form := createForm(t, e, AnyMap{
+	form := createForm(t, e, integration.AnyMap{
 		"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin},
 		"consent_required": true, "consent_wording": "You may contact me.",
 	})
@@ -243,7 +245,7 @@ func TestABrowserFormRefusesWhatItShouldNotLand(t *testing.T) {
 
 func TestAPlainHTMLPostIsSentToTheFormsRedirect(t *testing.T) {
 	e := setupFormsApp(t)
-	form := createForm(t, e, AnyMap{
+	form := createForm(t, e, integration.AnyMap{
 		"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin},
 		"redirect_url": "https://www.example.com/thanks",
 	})
@@ -257,7 +259,7 @@ func TestAPlainHTMLPostIsSentToTheFormsRedirect(t *testing.T) {
 
 func TestTheCORSPreflightAnswersOnlyTheFormsWebsite(t *testing.T) {
 	e := setupFormsApp(t)
-	form := createForm(t, e, AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
+	form := createForm(t, e, integration.AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	own := postForm(t, e, "OPTIONS", form.FormKey, "", nil, map[string]string{"Origin": siteOrigin, "Access-Control-Request-Method": "POST"})
 	if own.Status != http.StatusNoContent || own.Header.Get("Access-Control-Allow-Origin") != siteOrigin {
 		t.Fatalf("own website preflight → %d, allow-origin %q", own.Status, own.Header.Get("Access-Control-Allow-Origin"))
@@ -286,7 +288,7 @@ func serverHeaders(secret, key string, body []byte, nonce string) map[string]str
 
 func TestAServerFormTakesOnlySignedPostsAndLandsAReplayOnce(t *testing.T) {
 	e := setupFormsApp(t)
-	form := createForm(t, e, AnyMap{"name": "Website backend", "sender": "server"})
+	form := createForm(t, e, integration.AnyMap{"name": "Website backend", "sender": "server"})
 	if form.SigningSecret == nil || !strings.HasPrefix(*form.SigningSecret, "mwf_") {
 		t.Fatalf("a server form's create did not answer its secret: %+v", form)
 	}
@@ -324,7 +326,7 @@ func TestAServerFormTakesOnlySignedPostsAndLandsAReplayOnce(t *testing.T) {
 
 func TestATypeformWebhookLandsWithItsOwnSignature(t *testing.T) {
 	e := setupFormsApp(t)
-	form := createForm(t, e, AnyMap{"name": "Typeform", "sender": "typeform", "sender_secret": "tf-secret-of-some-length"})
+	form := createForm(t, e, integration.AnyMap{"name": "Typeform", "sender": "typeform", "sender_secret": "tf-secret-of-some-length"})
 	body := []byte(`{"event_id":"01TF","form_response":{"definition":{"fields":[{"id":"f1","title":"Name"}]},
 		"answers":[{"type":"text","text":"Tia","field":{"id":"f1"}},{"type":"email","email":"tia@visitor.example","field":{"id":"f2"}}]}}`)
 	mac := hmac.New(sha256.New, []byte("tf-secret-of-some-length"))
@@ -340,10 +342,10 @@ func TestATypeformWebhookLandsWithItsOwnSignature(t *testing.T) {
 
 func TestAPausedFormIsGoneAndAnArchivedOneIsAbsent(t *testing.T) {
 	e := setupFormsApp(t)
-	form := createForm(t, e, AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
+	form := createForm(t, e, integration.AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	fields := url.Values{"email": {"late@visitor.example"}}
 	headers := map[string]string{"If-Match": strconv.FormatInt(form.Version, 10)}
-	if status := e.Call(t, "PATCH", "/v1/web-forms/"+form.ID, AnyMap{"state": "paused"}, headers, nil); status != http.StatusOK {
+	if status := e.Call(t, "PATCH", "/v1/web-forms/"+form.ID, integration.AnyMap{"state": "paused"}, headers, nil); status != http.StatusOK {
 		t.Fatalf("pause → %d", status)
 	}
 	if answer := browserPost(t, e, form.FormKey, fields, siteOrigin); answer.Status != http.StatusGone {
@@ -362,7 +364,7 @@ func TestAPausedFormIsGoneAndAnArchivedOneIsAbsent(t *testing.T) {
 
 func TestAFormNeverAnswersItsSecretOnARead(t *testing.T) {
 	e := setupFormsApp(t)
-	form := createForm(t, e, AnyMap{"name": "Backend", "sender": "server"})
+	form := createForm(t, e, integration.AnyMap{"name": "Backend", "sender": "server"})
 	var raw map[string]any
 	if status := e.Call(t, "GET", "/v1/web-forms/"+form.ID, nil, nil, &raw); status != http.StatusOK {
 		t.Fatalf("get → %d", status)
