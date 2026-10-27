@@ -15,6 +15,8 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -144,6 +146,32 @@ func TestOnlyAClaimedDomainMatchesALead(t *testing.T) {
 	}
 }
 
+// The installation's own company is never offered by the domain it claims.
+func TestTheAnchorCompanyIsNeverOfferedByDomain(t *testing.T) {
+	e := setupCapturePrivacy(t)
+	ctx := e.linker(e.owner, principal.RowScopeOwn)
+	anchor := e.factCompany(ctx, t, CreateCompanyInput{
+		DisplayName: "Our Own GmbH", Domains: []CompanyDomainInput{{Domain: "our-own.test", IsPrimary: true}},
+	})
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE company SET is_anchor = true WHERE id = $1`, anchor)
+		return err
+	}); err != nil {
+		t.Fatalf("make the company the installation's own: %v", err)
+	}
+	lead := e.factLead(ctx, t, e.owner, CreateLeadInput{
+		Email: new("vera@our-own.test"), CompanyName: new("Someone Else"), CandidateCompanyKey: new("our-own.test"),
+	})
+
+	offered, err := e.store.GetLead(ctx, lead, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if offered.CompanyMatch != nil {
+		t.Errorf("company_match = %+v, want no offer of the installation's own company", offered.CompanyMatch)
+	}
+}
+
 func TestALeadListsUnderTheFactsOfItsLinkedCompanyElseItsOwnIndustry(t *testing.T) {
 	e := setupCapturePrivacy(t)
 	ctx := e.linker(e.owner, principal.RowScopeOwn)
@@ -249,6 +277,17 @@ func TestACompanyOutsideTheRowScopeLendsTheLeadNoFacts(t *testing.T) {
 	if read.CompanyFacts != nil || read.CompanyId != nil {
 		t.Errorf("a company outside the row scope showed as %v with facts %+v", read.CompanyId, read.CompanyFacts)
 	}
+	for _, sort := range []*string{nil, new("created_at")} {
+		rows, _, err := e.store.ListLeads(teammate, ListLeadsInput{Sort: sort})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, row := range rows {
+			if ids.UUID(row.Id) == lead.UUID && (row.CompanyFacts != nil || row.CompanyId != nil) {
+				t.Errorf("sort %v: the list row showed company %v with facts %+v", sort, row.CompanyId, row.CompanyFacts)
+			}
+		}
+	}
 	for _, tc := range []struct {
 		filters LeadCompanyFactFilters
 		want    []ids.UUID
@@ -269,35 +308,67 @@ func TestACompanyOutsideTheRowScopeLendsTheLeadNoFacts(t *testing.T) {
 
 func TestQualifyingCarriesTheTypedIndustryOnlyToACompanyWithNone(t *testing.T) {
 	e := setupCapturePrivacy(t)
-	ctx := e.linker(e.owner, principal.RowScopeOwn)
+	owner := e.linker(e.owner, principal.RowScopeOwn)
+	readOnlyCompany := e.linkerWith(e.owner, principal.RowScopeOwn, map[string]principal.ObjectGrant{
+		"contact":      {Create: true, Read: true, Update: true},
+		"company":      {Read: true},
+		"lead":         {Create: true, Read: true, Update: true},
+		"relationship": {Create: true, Read: true, Update: true},
+	})
 	for _, tc := range []struct {
-		name string
-		held *string
-		want string
+		name     string
+		promoter context.Context
+		held     *string
+		want     *string
 	}{
-		{"a company with no industry", nil, "healthcare"},
-		{"a company with one", new("education"), "education"},
+		{"a company with no industry", owner, nil, new("healthcare")},
+		{"a company with one", owner, new("education"), new("education")},
+		{"a promoter who may not change the company", readOnlyCompany, nil, nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			company := e.factCompany(ctx, t, CreateCompanyInput{DisplayName: "Clinic " + tc.want, Industry: tc.held})
-			lead := e.factLead(ctx, t, e.owner, CreateLeadInput{
-				Email: new(tc.want + "@clinic.test"), CompanyName: new("Clinic " + tc.want), Industry: new("Healthcare"),
+			company := e.factCompany(owner, t, CreateCompanyInput{DisplayName: "Clinic " + tc.name, Industry: tc.held})
+			lead := e.factLead(owner, t, e.owner, CreateLeadInput{
+				Email: new(ids.NewV7().String() + "@clinic.test"), CompanyName: new("Clinic " + tc.name), Industry: new("Healthcare"),
 			})
-			if _, err := e.store.LinkLeadCompany(ctx, lead, company); err != nil {
+			if _, err := e.store.LinkLeadCompany(owner, lead, company); err != nil {
 				t.Fatalf("link: %v", err)
 			}
-			if _, err := e.store.QualifyLead(ctx, lead, PromoteLeadInput{Trigger: string(TriggerHumanQualify)}); err != nil {
+			audits := e.industryAudits(owner, t, company)
+			correlation := ids.NewV7()
+			if _, err := e.store.QualifyLead(principal.WithCorrelationID(tc.promoter, correlation), lead,
+				PromoteLeadInput{Trigger: string(TriggerHumanQualify)}); err != nil {
 				t.Fatalf("promote: %v", err)
 			}
-			after, err := e.store.GetCompany(ctx, company, storekit.LiveOnly)
+			after, err := e.store.GetCompany(owner, company, storekit.LiveOnly)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if after.Industry == nil || string(*after.Industry) != tc.want {
-				t.Errorf("the company's industry = %v, want %s", after.Industry, tc.want)
+			if deref((*string)(after.Industry)) != deref(tc.want) {
+				t.Errorf("the company's industry = %v, want %v", after.Industry, tc.want)
+			}
+			carried := tc.held == nil && tc.want != nil
+			wrote := e.industryAudits(owner, t, company) - audits
+			emitted := slices.Contains(e.eventTypesOf(owner, t, correlation), "company.updated")
+			if (wrote == 1) != carried || wrote > 1 || emitted != carried {
+				t.Errorf("the promotion wrote %d industry audit row(s) and company.updated %v, want them only when it carried the industry (%v)",
+					wrote, emitted, carried)
 			}
 		})
 	}
+}
+
+// industryAudits counts the company's audit rows that wrote its industry.
+func (e *privacyEnv) industryAudits(ctx context.Context, t *testing.T, company ids.CompanyID) int {
+	t.Helper()
+	var n int
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT count(*) FROM audit_log
+			 WHERE entity_type = 'company' AND entity_id = $1 AND after ? 'industry'`, company).Scan(&n)
+	}); err != nil {
+		t.Fatalf("count the company's industry audits: %v", err)
+	}
+	return n
 }
 
 // A lead's typed industry is written and cleared through the lead's own update

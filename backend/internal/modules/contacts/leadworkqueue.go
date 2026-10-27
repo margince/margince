@@ -155,21 +155,13 @@ func leadQueueWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalo
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	shared := listFilters{
-		IncludeArchived: in.IncludeArchived, CapturedByKind: in.CapturedByKind,
-		AiWritten: in.AiWritten, entity: leadEntity, OwnerID: in.OwnerID,
-		OwnerTeamID: in.OwnerTeamID, Unassigned: in.Unassigned, Query: nil,
-	}
-	filters, err := shared.clauses(ctx, active, defaultSort, arg)
+	// The queue pages by its own keyset, so the sorted page's cursor is not its filter.
+	in.Cursor = nil
+	filters, err := leadListWhere(ctx, in, active, defaultSort, policy, arg)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	narrowed, err := leadNarrowing(ctx, in, policy, arg)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	where = append(append(where, filters...), narrowed...)
-	return where, &args, arg, nil
+	return append(where, filters...), &args, arg, nil
 }
 
 // leadQueueRank renders the SLA band as a CASE over the lead's own columns.

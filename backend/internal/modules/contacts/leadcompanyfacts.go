@@ -16,14 +16,11 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 const (
 	leadIndustryField = "industry"
 	filterCountry     = "country"
-	// leadFactCompany is the alias every filter reaches the linked company by.
-	leadFactCompany = "fact_company"
 )
 
 // leadCompanyFacts pairs each fact with its company column. The read and the
@@ -89,25 +86,16 @@ func (f LeadCompanyFactFilters) clauses(ctx context.Context, arg func(any) int) 
 	if err != nil {
 		return nil, err
 	}
-	if !auth.ReadGranted(ctx, companyEntity) {
-		return nil, apperrors.ErrPermissionDenied
-	}
 	var where []string
 	for _, fact := range leadCompanyFacts {
 		operand, asked := operands[fact.field]
 		if !asked {
 			continue
 		}
-		scope, err := auth.ScopeClauseFor(ctx, companyEntity, leadFactCompany, arg)
+		value, err := storekit.LinkedCompanyColumn(ctx, "lead.company_id", fact.column, arg)
 		if err != nil {
 			return nil, err
 		}
-		if scope == "" {
-			scope = scopeAllRows
-		}
-		// NULL where the lead links no company or the row scope does not reach it.
-		value := "(SELECT " + leadFactCompany + "." + fact.column + " FROM company " + leadFactCompany +
-			" WHERE " + leadFactCompany + ".id = lead.company_id AND " + scope + ")"
 		if fact.field == filterIndustry {
 			value = leadIndustrySQL(value)
 		}

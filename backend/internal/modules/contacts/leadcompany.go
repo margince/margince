@@ -274,8 +274,8 @@ func leadDomain(key *string) string {
 	return domain.String()
 }
 
-// domainCompanyMatch is the live company the reader can open that claims
-// domain, or nil. A domain belongs to at most one company.
+// domainCompanyMatch is the live company the reader can open that claims domain, never the
+// installation's own. uq_company_domain lets one company at most hold a live domain.
 func domainCompanyMatch(ctx context.Context, tx pgx.Tx, domain string) (*crmcontracts.LeadCompanyMatch, error) {
 	if domain == "" {
 		return nil, nil //nolint:nilnil // a lead with no domain names no company by one
@@ -284,7 +284,7 @@ func domainCompanyMatch(ctx context.Context, tx pgx.Tx, domain string) (*crmcont
 	if err != nil || len(owners) == 0 {
 		return nil, err
 	}
-	matches, err := liveVisibleCompanies(ctx, tx, `id = $1`, owners[0])
+	matches, err := liveVisibleCompanies(ctx, tx, `id = $1 AND NOT is_anchor`, owners[0])
 	if err != nil || len(matches) == 0 {
 		return nil, err
 	}

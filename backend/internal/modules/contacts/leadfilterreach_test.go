@@ -68,7 +68,7 @@ func TestTheReachProbeWalksEveryLeadListFilter(t *testing.T) {
 		if err := leadListFilters.Apply(&in, map[string]string{probe.Parameter: probe.Operand}); err != nil {
 			t.Fatalf("the probe's %s operand does not bind: %v", probe.Parameter, err)
 		}
-		if _, err := leadNarrowing(everyRow, in, leadSLAPolicy{}, func(any) int { return 1 }); err != nil {
+		if _, err := leadListWhere(everyRow, in, nil, nil, leadSLAPolicy{}, func(any) int { return 1 }); err != nil {
 			t.Errorf("the probe's %s operand faults for a reader of every row: %v", probe.Parameter, err)
 		}
 	}

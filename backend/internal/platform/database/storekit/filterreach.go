@@ -25,8 +25,8 @@ type FilterReach struct {
 	Refused   bool
 }
 
-// ProbeFilterReach sends each filter of set the first operand that binds and that narrow,
-// the list's own resolution and clauses, takes without an operand fault. Only a role-wide refusal counts.
+// ProbeFilterReach runs each filter of set through narrow, the list's own clauses, with the
+// first operand narrow accepts. A filter is refused when narrow answers 403 or a masked field.
 func ProbeFilterReach[I any](ctx context.Context, set FilterSet[I], operands []string,
 	narrow func(context.Context, *I) error,
 ) ([]FilterReach, error) {

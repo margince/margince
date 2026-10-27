@@ -20,7 +20,7 @@ import (
 // leadProbeOperands are tried on each filter in turn: one of each kind a
 // filter binds, then the codes a clause checks for itself.
 var leadProbeOperands = []string{
-	ids.Nil.String(), strconv.FormatBool(true), strconv.Itoa(0),
+	ids.Nil.String(), strconv.FormatBool(true), strconv.Itoa(0), string(crmcontracts.ListLeadsParamsCapturedByKindHuman),
 	string(crmcontracts.ListLeadsParamsIndustryAgriculture), string(crmcontracts.ListLeadsParamsSizeBandN110),
 	storekit.ProbeCountry,
 }
@@ -38,7 +38,7 @@ func LeadListFilterReach(ctx context.Context, members storekit.ListMemberFilterR
 			return err
 		}
 		in.Membership = membership
-		_, err = leadNarrowing(ctx, *in, leadSLAPolicy{}, func(any) int { return 1 })
+		_, err = leadListWhere(ctx, *in, nil, nil, leadSLAPolicy{}, func(any) int { return 1 })
 		return err
 	})
 }

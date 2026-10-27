@@ -137,22 +137,7 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 		columns: leadColumns,
 		fields:  leadListFields,
 		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
-			where, err := listFilters{
-				IncludeArchived: in.IncludeArchived,
-				CapturedByKind:  in.CapturedByKind,
-				AiWritten:       in.AiWritten,
-				entity:          leadEntity,
-				OwnerID:         in.OwnerID,
-				OwnerTeamID:     in.OwnerTeamID,
-				Unassigned:      in.Unassigned,
-				Query:           nil,
-				Cursor:          in.Cursor,
-			}.clauses(ctx, active, sorted, arg)
-			if err != nil {
-				return nil, err
-			}
-			narrowed, err := leadNarrowing(ctx, in, policy, arg)
-			return append(where, narrowed...), err
+			return leadListWhere(ctx, in, active, sorted, policy, arg)
 		},
 		scan: func(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.ListSort) ([]crmcontracts.Lead, []*string, error) {
 			return scanLeadPage(rows, active, sorted, policy)
@@ -211,6 +196,29 @@ type ListLeadsInput struct {
 	MemberOf *ids.UUID
 	// CompanyFacts narrows by what the linked company records (leadcompanyfacts.go).
 	CompanyFacts LeadCompanyFactFilters
+}
+
+// leadListWhere builds a lead list read's `WHERE`: the shared chain, then the lead's own
+// filters. The sorted page, the work queue and the filter-reach probe all call it.
+func leadListWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalog.Column, sorted *storekit.ListSort,
+	policy leadSLAPolicy, arg func(any) int,
+) ([]string, error) {
+	where, err := listFilters{
+		IncludeArchived: in.IncludeArchived,
+		CapturedByKind:  in.CapturedByKind,
+		AiWritten:       in.AiWritten,
+		entity:          leadEntity,
+		OwnerID:         in.OwnerID,
+		OwnerTeamID:     in.OwnerTeamID,
+		Unassigned:      in.Unassigned,
+		Query:           nil,
+		Cursor:          in.Cursor,
+	}.clauses(ctx, active, sorted, arg)
+	if err != nil {
+		return nil, err
+	}
+	narrowed, err := leadNarrowing(ctx, in, policy, arg)
+	return append(where, narrowed...), err
 }
 
 // leadNarrowing is the lead's own filters, after the shared chain. Both reads

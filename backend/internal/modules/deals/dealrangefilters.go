@@ -13,7 +13,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -174,27 +173,14 @@ func refuseMaskedValue(ctx context.Context, f RangeFilters) error {
 }
 
 // countryFilterClause narrows to deals whose company's address is in the
-// country, and only through companies the caller may read.
-//
-// The country is the company's attribute, so a seat without company.read is
-// refused, and the row scope rides inside the EXISTS. Without either, the page
-// would tell the caller where a company it cannot open is.
+// country, read only through companies the caller may open (LinkedCompanyColumn).
 func countryFilterClause(ctx context.Context, country string, arg func(any) int) (string, error) {
 	if err := auth.RefuseMaskedFilter(ctx, maskObject, filterCountry, filterCompanyID); err != nil {
 		return "", err
 	}
-	if !auth.ReadGranted(ctx, "company") {
-		return "", apperrors.ErrPermissionDenied
-	}
-	clause := storekit.SQLf(
-		"EXISTS (SELECT 1 FROM company country_ref WHERE country_ref.id = deal.company_id AND country_ref.address_country = $%d",
-		arg(country))
-	scope, err := auth.ScopeClauseFor(ctx, "company", "country_ref", arg)
+	value, err := storekit.LinkedCompanyColumn(ctx, "deal.company_id", "address_country", arg)
 	if err != nil {
 		return "", err
 	}
-	if scope != "" {
-		clause += " AND " + scope
-	}
-	return clause + ")", nil
+	return storekit.SQLf("%s = $%d", value, arg(country)), nil
 }
