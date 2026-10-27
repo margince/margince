@@ -2604,6 +2604,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "partner.marginTier": "Mức hoa hồng đối tác",
   "partner.marginTierHint":
     "Tỷ lệ đối tác nhận trên mỗi deal thắng do đối tác mang về. Giới thiệu: đối tác chỉ giới thiệu khách hàng. Hợp tác tích cực: hai bên cùng làm deal. Đối tác tự chốt: đối tác tự bán. Để trống khi thỏa thuận với đối tác trả theo cách khác.",
+  "partner.writeRefused":
+    "Vai trò của bạn không thể thay đổi chương trình đối tác của công ty này. Liên hệ quản trị viên.",
+  "partner.marginTierRefused":
+    "Vai trò của bạn không thể chọn mức hoa hồng đối tác. Liên hệ quản trị viên.",
   "partner.stage": "Giai đoạn quan hệ",
   "partner.nextStep": "Bước tiếp theo",
   "partner.nextStepDue": "Hạn bước tiếp theo",
@@ -3143,6 +3147,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.health.reason.dealsNoneStalled_other":
     "{count} deal đang mở, không deal nào bị đình trệ.",
   "company.partnerSetUp": "Thiết lập chương trình đối tác",
+  "company.partnerSetUpUnreadable":
+    "Vai trò của bạn không thể xem chương trình đối tác. Liên hệ quản trị viên.",
   "signal.kind.stalled_deal": "Deal bị đình trệ",
   "signal.kind.champion_left": "Người ủng hộ đã rời đi",
   "signal.kind.reengagement": "Nối lại liên hệ",

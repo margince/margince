@@ -18,8 +18,14 @@ import { QueryGate } from "../../design-system/querystates";
 import { FieldGuard } from "../../design-system/rbac";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
+import {
+  useCanWrite,
+  useGrantRefused,
+  useWriteRefusal,
+} from "../../lib/capability";
 import { isOption } from "../../lib/options";
 import { throwProblem, unwrap } from "../../lib/problem";
+import { useMe } from "../../lib/session";
 import { PartnerCommissions } from "./partnercommissions";
 import { PartnerDeals } from "./partnerdeals";
 import {
@@ -74,7 +80,12 @@ function defaultFormValues(partner?: Partner): PartnerFormValues {
   };
 }
 
-function buildUpsertBody(values: PartnerFormValues): UpsertPartnerRequest {
+// A seat without the partner grant leaves the tier out of the body. The server
+// takes the grant for any tier the body names, a null included.
+function buildUpsertBody(
+  values: PartnerFormValues,
+  setsTier: boolean,
+): UpsertPartnerRequest {
   const segments = values.served_segments
     .split(",")
     .map((segment) => segment.trim())
@@ -82,7 +93,7 @@ function buildUpsertBody(values: PartnerFormValues): UpsertPartnerRequest {
   return {
     partner_role: values.partner_role,
     cert_status: values.cert_status,
-    margin_tier: values.margin_tier || null,
+    ...(setsTier ? { margin_tier: values.margin_tier || null } : {}),
     relationship_stage: values.relationship_stage,
     next_step: values.next_step.trim() || undefined,
     next_step_due_at: values.next_step_due_at || undefined,
@@ -115,6 +126,8 @@ function PartnerForm({
   const [values, setValues] = useState<PartnerFormValues>(() =>
     defaultFormValues(partner),
   );
+  const setsTier = useCanWrite("partner", "update");
+  const tierRefused = useGrantRefused({ object: "partner", action: "update" });
 
   const mutation = useMutation({
     // The prior row rides the variables rather than the closure, and its
@@ -130,7 +143,7 @@ function PartnerForm({
               ? {}
               : ifMatch(requireVersion(prior.version))),
           },
-          body: buildUpsertBody(values),
+          body: buildUpsertBody(values, setsTier),
         }),
       );
     },
@@ -179,10 +192,16 @@ function PartnerForm({
           />
         )}
       </Field>
-      <Field label={t("partner.marginTier")} hint={t("partner.marginTierHint")}>
+      <Field
+        label={t("partner.marginTier")}
+        hint={t(
+          tierRefused ? "partner.marginTierRefused" : "partner.marginTierHint",
+        )}
+      >
         {(control) => (
           <Select
             {...control}
+            disabled={!setsTier}
             value={values.margin_tier}
             onChange={(value) =>
               setValues({
@@ -301,10 +320,12 @@ function MarginTierRow({ partner }: Readonly<{ partner: Partner }>) {
 function PartnerDetail({
   companyId,
   partner,
+  refusal,
   onSaved,
 }: Readonly<{
   companyId: string;
   partner: Partner;
+  refusal: string | undefined;
   onSaved: () => void;
 }>) {
   const t = useT();
@@ -332,7 +353,11 @@ function PartnerDetail({
     <Panel
       title={t("tab.partner")}
       titleAction={
-        <Button onClick={() => setEditing(true)} data-testid="edit-partner">
+        <Button
+          onClick={() => setEditing(true)}
+          reason={refusal}
+          data-testid="edit-partner"
+        >
           {t("record.edit")}
         </Button>
       }
@@ -377,6 +402,13 @@ function PartnerDetail({
 export function PartnerTab({ companyId }: Readonly<{ companyId: string }>) {
   const t = useT();
   const queryClient = useQueryClient();
+  // Every partner write needs the company grant; the tier alone also needs
+  // the partner grant, which the form asks for itself.
+  const writeRefusal = useWriteRefusal("company", "update", {
+    seat: t("settings.seatRefused"),
+    grant: t("partner.writeRefused"),
+  });
+  const refusal = useMe().data?.authorization ? writeRefusal : undefined;
   const query = useQuery({
     queryKey: ["partner", companyId],
     queryFn: () => fetchPartner(companyId),
@@ -405,6 +437,7 @@ export function PartnerTab({ companyId }: Readonly<{ companyId: string }>) {
             <PartnerDetail
               companyId={companyId}
               partner={partner}
+              refusal={refusal}
               onSaved={invalidateAfterSave}
             />
             {/* The work, then the money it produced. These deals belong to the
@@ -424,11 +457,15 @@ export function PartnerTab({ companyId }: Readonly<{ companyId: string }>) {
             </PanelBody>
             <PanelBody>
               <SectionHeader title={t("partner.setup")} />
-              <PartnerForm
-                companyId={companyId}
-                intent="create"
-                onSaved={invalidateAfterSave}
-              />
+              {refusal ? (
+                <p>{refusal}</p>
+              ) : (
+                <PartnerForm
+                  companyId={companyId}
+                  intent="create"
+                  onSaved={invalidateAfterSave}
+                />
+              )}
             </PanelBody>
           </Panel>
         )

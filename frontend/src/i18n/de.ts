@@ -2678,6 +2678,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "partner.marginTier": "Margenstaffel",
   "partner.marginTierHint":
     "Der Anteil, den der Partner an jedem gewonnenen Deal erhält, den er gebracht hat. Intro: Er hat den Kunden nur vorgestellt. Aktive Zusammenarbeit: Der Deal wurde gemeinsam bearbeitet. Abschluss durch Partner: Er hat ihn selbst verkauft. Leer lassen, wenn die Vereinbarung mit ihm anders vergütet.",
+  "partner.writeRefused":
+    "Deine Rolle darf das Partnerprogramm dieses Unternehmens nicht ändern. Frage einen Admin.",
+  "partner.marginTierRefused":
+    "Deine Rolle darf die Margenstaffel nicht festlegen. Frage einen Admin.",
   "partner.stage": "Beziehungsphase",
   "partner.nextStep": "Nächster Schritt",
   "partner.nextStepDue": "Nächster Schritt fällig",
@@ -3234,6 +3238,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.health.reason.dealsNoneStalled_other":
     "{count} offene Deals, keiner stockt.",
   "company.partnerSetUp": "Partnerprogramm einrichten",
+  "company.partnerSetUpUnreadable":
+    "Deine Rolle darf keine Partnerprogramme sehen. Frage einen Admin.",
   "signal.kind.stalled_deal": "Deal stockt",
   "signal.kind.champion_left": "Champion ausgeschieden",
   "signal.kind.reengagement": "Wieder aktiv",
@@ -3930,7 +3936,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // Die Prüfliste und die Reichweiten-Tabelle (ADR-0078 §2.1b).
   "companyReach.title": "Wer dich vorstellen kann",
   "companyReach.sub":
-    "Teammitglieder, deren LinkedIn-Kontakte hier arbeiten. Nur eine Anzahl, nie die Namen. Frag sie nach einer Vorstellung.",
+    "Teammitglieder, deren LinkedIn-Kontakte hier arbeiten. Nur eine Anzahl, nie die Namen. Frage sie nach einer Vorstellung.",
   "companyReach.colleaguesLabel": "Teammitglieder mit Kontakten hier",
   "companyReach.colleague": "Teammitglied",
   "companyReach.you": "Du",
@@ -5992,7 +5998,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.leadHeld.body":
     "Jemand ist ein Lead oder ein Kontakt, nie beides. Wandle den Lead in einen Kontakt um; der Verlauf des Leads geht mit.",
   "contact.leadHeld.noConvert":
-    "Frag das Mitglied, dem der Lead gehört, ihn umzuwandeln.",
+    "Frage das Mitglied, dem der Lead gehört, ihn umzuwandeln.",
   "contact.leadHeld.convert": "Lead umwandeln",
   "contact.leadHeld.open": "Lead öffnen",
   "approval.preview.leadHoldsEmail":
@@ -7736,7 +7742,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Datenrichtlinien deines Unternehmens für Connectors gelten auch für Margince.",
   "aiAccess.copilot.openAgent":
     "Öffne Copilot in Teams oder Microsoft 365 und wähle den Agenten mit Margince.",
-  "aiAccess.copilot.ask": "Frag ihn nach einem deiner Deals.",
+  "aiAccess.copilot.ask": "Frage ihn nach einem deiner Deals.",
   "aiAccess.copilot.allow":
     "Wenn er fragt, melde dich bei Margince an und wähle Autorisieren. Fertig.",
   "aiAccess.copilot.ownUnavailable":
@@ -9108,7 +9114,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Tägliche Aufzeichnung wichtiger gefährdeter Deals",
   "pipeline.new": "Neue Pipeline",
   "pipeline.createRefused":
-    "Deine Rolle darf keine Pipelines anlegen. Frag einen Admin.",
+    "Deine Rolle darf keine Pipelines anlegen. Frage einen Admin.",
   "pipeline.name": "Name",
   "pipeline.default": "Standard",
   "pipeline.notDefault": "Kein Standard",
@@ -9149,7 +9155,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Reihenfolge nicht gespeichert. Bitte versuche es erneut oder lade die Seite neu.",
   "stage.new": "Neue Phase",
   "stage.createRefused":
-    "Deine Rolle darf keine Phasen hinzufügen. Frag einen Admin.",
+    "Deine Rolle darf keine Phasen hinzufügen. Frage einen Admin.",
   "stage.edit": "Phase bearbeiten",
   "stage.name": "Name",
   "stage.semantic": "Phasentyp",
@@ -11337,7 +11343,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.readOnlyPageTitle": "Schreibgeschützte Einstellungen",
   "settings.readOnlyPage": "Deine Rolle darf diese Einstellungen nicht ändern.",
   "settings.seatRefused":
-    "Du hast einen Leseplatz. Frag einen Admin nach einem vollen Platz.",
+    "Du hast einen Leseplatz. Frage einen Admin nach einem vollen Platz.",
   "settings.saveFailed": "Änderung nicht gespeichert",
   "settings.mintFailed": "Passport nicht erstellt",
   "settings.search.label": "Einstellungen durchsuchen",

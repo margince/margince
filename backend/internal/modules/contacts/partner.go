@@ -182,10 +182,10 @@ func applyPartnerFitOverride(current partnerFitState, score *int16, reason *stri
 }
 
 // UpsertPartner writes a company's partner terms, promoting the company to a
-// partner if it is not one yet. Promotion is a company mutation as much as a
-// partner one, so both write grants are required.
+// partner if it is not one yet. Promotion is a company mutation, so the write
+// takes the company grant; setting the margin tier also takes the partner one.
 func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmcontracts.Partner, error) {
-	if err := requirePartnerWriteGrants(ctx); err != nil {
+	if err := requirePartnerWriteGrant(ctx); err != nil {
 		return crmcontracts.Partner{}, err
 	}
 	if err := refuseUnclearablePartnerFields(in.Cleared); err != nil {
@@ -200,11 +200,8 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmco
 	}
 	var out crmcontracts.Partner
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		// The company reference is a client-supplied FK argument (H1), probed for
-		// WRITE authority rather than sight: the object gate above says the
-		// partner grant must not become a side door onto companies, and a
-		// `read` share of one is that same side door a level down — visibility
-		// alone would let its holder reclassify the company.
+		// The company reference comes from the client, so it is probed for write
+		// authority. A `read` share must not let its holder reclassify the company.
 		if err := auth.EnsureWritable(ctx, tx, "company", in.CompanyID.UUID); err != nil {
 			return err
 		}
@@ -219,6 +216,9 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmco
 			return err
 		}
 		in.Cleared = cleared
+		if err := requireMarginTierGrant(ctx, in); err != nil {
+			return err
+		}
 		if in.MustCreate {
 			if err := checkPartnerSetUp(ctx, tx, in.CompanyID); err != nil {
 				return err
