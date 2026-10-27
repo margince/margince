@@ -34,7 +34,7 @@ function MineList() {
       columns={[
         {
           key: "name",
-          header: "contacts.name",
+          header: t("contacts.name"),
           cell: (row: Row) => row.name,
         },
       ]}

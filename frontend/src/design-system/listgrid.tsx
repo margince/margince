@@ -5,12 +5,12 @@
 // biome-ignore-all lint/a11y/noRedundantRoles: display:block drops implicit table roles
 // biome-ignore-all lint/a11y/useSemanticElements: the semantic element is already in use
 
-import type { ReactNode, RefObject } from "react";
+import { type ReactNode, type RefObject, useRef } from "react";
 import { useT } from "../i18n";
-import { Checkbox, type useScrollRegion } from "./atoms";
+import { Checkbox } from "./atoms";
 import { opensRow } from "./datatable";
 import type { ListColumn, ListSelection } from "./listcolumn";
-import { focusListHome } from "./listfocus";
+import { useListFocusHandoff } from "./listfocus";
 import { HeaderCell } from "./listheader";
 import type { SortControl } from "./listsurface";
 import { CELL_STRIP_CLASS } from "./listtable.floors";
@@ -135,7 +135,12 @@ export function ListGrid<Row>({
   children,
 }: Readonly<{
   scrollerRef: (node: HTMLDivElement | null) => void;
-  region: ReturnType<typeof useScrollRegion>;
+  region: Readonly<{
+    tabIndex: 0 | -1;
+    role: "region";
+    "aria-label"?: string;
+    "aria-labelledby"?: string;
+  }>;
   frozen: ReturnType<typeof useFrozenEdge>;
   head: RefObject<HTMLTableElement | null>;
   dense: boolean;
@@ -331,16 +336,7 @@ export function EmptyRow({
       {filtered && (
         <>
           {" "}
-          <button
-            type="button"
-            className="lt-linkish"
-            onClick={(event) => {
-              focusListHome(event.currentTarget);
-              onClear();
-            }}
-          >
-            {t("table.clearFilters")}
-          </button>
+          <ClearFilters onClear={onClear} label={t("table.clearFilters")} />
         </>
       )}
       {/* Under either line, because which emptiness a note explains is the
@@ -348,6 +344,19 @@ export function EmptyRow({
           narrowed list. */}
       {emptyNote && <p className="lt-empty-note">{emptyNote}</p>}
     </>
+  );
+}
+
+function ClearFilters({
+  onClear,
+  label,
+}: Readonly<{ onClear: () => void; label: string }>) {
+  const button = useRef<HTMLButtonElement>(null);
+  useListFocusHandoff(button);
+  return (
+    <button ref={button} type="button" className="lt-linkish" onClick={onClear}>
+      {label}
+    </button>
   );
 }
 

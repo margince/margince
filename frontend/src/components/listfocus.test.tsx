@@ -34,6 +34,17 @@ describe("a press that takes its own button away", () => {
     await pressAndExpectTitleFocused("Clear filters");
   });
 
+  it("hands focus to the list's named rows when it has no title", async () => {
+    const user = userEvent.setup();
+    render(<ListTableHarness fetchPage={fetchPage} />);
+    await user.click(
+      await screen.findByRole("button", { name: "Clear filters" }),
+    );
+    expect(
+      screen.getByRole("region", { name: translate("en", "nav.contacts") }),
+    ).toHaveFocus();
+  });
+
   it("hands focus to the list's title from Show all", async () => {
     window.location.hash = "#/contacts?owner_id=u-1";
     render(
