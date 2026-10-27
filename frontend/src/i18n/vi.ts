@@ -5020,8 +5020,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "assignments.kindTeam": "Nhóm",
   "assignments.who": "Ai",
   "assignments.findColleague": "Tìm đồng nghiệp",
-  "assignments.invited":
-    "Đã mời, chưa đăng nhập",
+  "assignments.invited": "Đã mời, chưa đăng nhập",
   "assignments.noColleagueFound":
     "Không tìm thấy đồng nghiệp. Chỉ đồng nghiệp có tài khoản Margince mới được giao. Liên hệ quản trị viên để mời họ.",
   "assignments.findTeam": "Tìm nhóm",
