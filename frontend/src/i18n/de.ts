@@ -11248,7 +11248,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.page.knowledge.sub":
     "Dokumente, die Entwürfe und Antworten verwenden dürfen.",
   "settings.page.web-forms.sub":
-    "Formulare auf deiner Website, die jede Anfrage als Lead senden.",
+    "Formulare auf deiner Website, die jede Anfrage als Lead senden, oder als Notiz am Lead oder Kontakt, von dem sie kommt.",
   "settings.page.import.sub":
     "Datensätze aus einer Datei importieren, ein Lauf nach dem anderen.",
   "settings.page.models.sub":
@@ -14063,7 +14063,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eine Adresse pro Zeile. Sendungen von anderen Websites werden abgelehnt.",
   "webForms.field.originsPlaceholder": "https://www.example.com",
   "webForms.field.senderSecret": "Signaturschlüssel",
-  "webForms.field.senderSecretHint": "Der Signaturschlüssel, den Webflow beim Anlegen des Webhooks zurückgibt. Lass das Feld leer, bis du ihn hast: Bis dahin nimmt das Formular nichts an.",
+  "webForms.field.senderSecretHint": "Der Signaturschlüssel, den Webflow zeigt, wenn du den Webhook in Webflow anlegst. Einen Webhook, den eine OAuth-App anlegt, signiert stattdessen das Client Secret dieser App. Lass das Feld leer, bis du ihn hast: Bis dahin nimmt das Formular nichts an.",
   "webForms.field.senderSecretKeep":
     "Leer lassen, um den gespeicherten Signaturschlüssel zu behalten.",
   "webForms.field.consentRequired":
@@ -14104,7 +14104,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.steps.browser.code": "Baust du die Seite selbst? Füge stattdessen diesen Code dort ein, wo das Formular hin soll.",
   "webForms.steps.endpoint": "Füge die Formularadresse als Adresse des Webhooks ein.",
   "webForms.steps.typeform.open": "Öffne in Typeform das Formular, geh zu Connect, dann Webhooks, und wähle Add a webhook.",
-  "webForms.steps.typeform.secret": "Schalte in den Einstellungen des Webhooks Secret ein und füge den Signaturschlüssel des Formulars ein.",
+  "webForms.steps.typeform.secret": "Schalte in den Einstellungen des Webhooks Secret ein, füge den Signaturschlüssel des Formulars ein und speichere. Schalte dann den Webhook ein: Typeform legt ihn ausgeschaltet an.",
   "webForms.steps.tally.open": "Öffne in Tally das Formular, geh zu Integrations und verbinde Webhooks.",
   "webForms.steps.tally.secret": "Füge den Signaturschlüssel des Formulars unter Signing secret ein und speichere.",
   "webForms.steps.server.secret": "Speichere den Signaturschlüssel des Formulars auf dem Server deiner Website als {name}.",
@@ -14112,7 +14112,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.steps.server.code": "Dieser Code signiert jede Sendung. Dein Entwickler kann ihn so verwenden.",
   "webForms.steps.webflow.create": "Lege den Webhook über die API von Webflow an, mit der Formularadresse als URL.",
   "webForms.steps.webflow.secret": "Webflow gibt den Signaturschlüssel des Webhooks einmal zurück. Füge ihn unter Bearbeiten an diesem Formular bei Signaturschlüssel ein.",
-  "webForms.steps.test": "Sende eine Testanfrage. Der neue Lead erscheint unter Leads.",
+  "webForms.steps.test": "Sende eine Testanfrage. Die Anfrage erscheint als neuer Lead unter Leads, oder als Notiz am Lead oder Kontakt, der diese E-Mail-Adresse schon hat.",
   "webForms.steps.secretShownOnce": "Der Signaturschlüssel wurde einmal angezeigt, als das Formular angelegt wurde. Verloren? Wähle im Menü ⋯ des Formulars Neuen Signaturschlüssel erstellen.",
 
   "webhooks.title": "Webhooks",

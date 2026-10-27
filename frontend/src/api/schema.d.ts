@@ -22190,7 +22190,8 @@ export interface components {
          * @description Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
          *     allowed website, with spam checks. `server`: a server signing with this form's secret.
          *     `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
-         *     builder computes with the secret stored as `sender_secret`.
+         *     builder computes with the form's stored secret: the `sender_secret` pasted, or for `typeform`
+         *     and `tally` one this installation minted when none was.
          * @enum {string}
          */
         WebFormSender: "browser" | "server" | "webflow" | "typeform" | "tally";
@@ -66893,7 +66894,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The created form, plus its one-time signing secret for a `server` form. */
+            /** @description The created form, plus the signing secret once whenever this installation minted it. */
             201: {
                 headers: {
                     [name: string]: unknown;

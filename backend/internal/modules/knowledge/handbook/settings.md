@@ -44,7 +44,7 @@ Things for the whole company in Margince each have one settings page.
 - Change the company name, time zone, base currency, date format, time format or exchange rates: **Company profile**.
 - Set up single sign-on, the Google and Microsoft apps or the app an extension signs in to, or require two-step sign-in: **Sign-in and apps**.
 - Mark your own email domains, or refuse a domain: **Capture rules**.
-- Set up webhooks, a provider of contact data, or the company's Telegram bot: **Integrations**.
+- Set up webhooks, a provider of contact data, the accounting source, or the company's Telegram bot: **Integrations**.
 
 ### Which settings page do I need for sales and data?
 Sales and data settings in Margince each have one page.

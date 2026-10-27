@@ -10951,7 +10951,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.page.knowledge.sub":
     "Tài liệu mà bản nháp và câu trả lời có thể dùng.",
   "settings.page.web-forms.sub":
-    "Biểu mẫu trên trang web gửi mỗi yêu cầu vào thành một lead.",
+    "Biểu mẫu trên trang web gửi mỗi yêu cầu vào thành một lead, hoặc thành ghi chú trên lead hay liên hệ đã gửi nó.",
   "settings.page.import.sub": "Nhập hồ sơ từ tệp, mỗi lần một đợt.",
   "settings.page.models.sub":
     "Nhà cung cấp nào xử lý từng loại việc, và nhà cung cấp đó có khả dụng không.",
@@ -13706,7 +13706,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.field.originsHint": "Mỗi dòng một địa chỉ. Bài gửi từ trang web khác bị từ chối.",
   "webForms.field.originsPlaceholder": "https://www.example.com",
   "webForms.field.senderSecret": "Khóa ký",
-  "webForms.field.senderSecretHint": "Khóa ký Webflow trả về khi tạo webhook. Để trống cho đến khi có: trước đó biểu mẫu không nhận bài gửi nào.",
+  "webForms.field.senderSecretHint": "Khóa ký Webflow hiện khi bạn tạo webhook trong Webflow. Webhook do một ứng dụng OAuth tạo thì được ký bằng client secret của ứng dụng đó. Để trống cho đến khi có: trước đó biểu mẫu không nhận bài gửi nào.",
   "webForms.field.senderSecretKeep": "Để trống để giữ khóa đã lưu.",
   "webForms.field.consentRequired": "Yêu cầu đồng ý trước khi nhận bài gửi",
   "webForms.field.consentWording": "Nội dung đồng ý",
@@ -13738,7 +13738,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.steps.browser.code": "Tự viết trang? Thay vào đó, dán đoạn mã này vào chỗ đặt biểu mẫu.",
   "webForms.steps.endpoint": "Dán địa chỉ biểu mẫu làm địa chỉ của webhook.",
   "webForms.steps.typeform.open": "Trong Typeform, mở biểu mẫu, vào Connect, rồi Webhooks, và chọn Add a webhook.",
-  "webForms.steps.typeform.secret": "Bật Secret trong cài đặt webhook và dán khóa ký biểu mẫu.",
+  "webForms.steps.typeform.secret": "Bật Secret trong cài đặt webhook, dán khóa ký biểu mẫu rồi lưu. Sau đó bật webhook: Typeform tạo nó ở trạng thái tắt.",
   "webForms.steps.tally.open": "Trong Tally, mở biểu mẫu, vào Integrations và kết nối Webhooks.",
   "webForms.steps.tally.secret": "Dán khóa ký biểu mẫu vào Signing secret, rồi lưu.",
   "webForms.steps.server.secret": "Lưu khóa ký biểu mẫu trên máy chủ trang web dưới tên {name}.",
@@ -13746,7 +13746,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.steps.server.code": "Đoạn mã này ký mỗi bài gửi. Lập trình viên của bạn có thể dùng nguyên như vậy.",
   "webForms.steps.webflow.create": "Tạo webhook bằng API của Webflow, với địa chỉ biểu mẫu làm URL.",
   "webForms.steps.webflow.secret": "Webflow trả về khóa ký của webhook một lần. Dán nó vào Khóa ký trong mục Sửa của biểu mẫu này.",
-  "webForms.steps.test": "Gửi một yêu cầu thử. Nó hiện thành một lead mới trong mục Lead.",
+  "webForms.steps.test": "Gửi một yêu cầu thử. Nó hiện thành một lead mới trong mục Lead, hoặc thành ghi chú trên lead hay liên hệ đã có email đó.",
   "webForms.steps.secretShownOnce": "Khóa ký chỉ hiện một lần, khi tạo biểu mẫu. Bị mất? Chọn Tạo khóa ký mới trong menu ⋯ của biểu mẫu.",
 
   "webhooks.title": "Webhook",

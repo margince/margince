@@ -37860,7 +37860,8 @@ type CreateWebFormRequest struct {
 	// Sender Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
 	// allowed website, with spam checks. `server`: a server signing with this form's secret.
 	// `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
-	// builder computes with the secret stored as `sender_secret`.
+	// builder computes with the form's stored secret: the `sender_secret` pasted, or for `typeform`
+	// and `tally` one this installation minted when none was.
 	Sender WebFormSender `json:"sender"`
 
 	// SenderSecret The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow's secret is pasted. Refused for any other sender.
@@ -54880,7 +54881,8 @@ type WebForm struct {
 	// Sender Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
 	// allowed website, with spam checks. `server`: a server signing with this form's secret.
 	// `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
-	// builder computes with the secret stored as `sender_secret`.
+	// builder computes with the form's stored secret: the `sender_secret` pasted, or for `typeform`
+	// and `tally` one this installation minted when none was.
 	Sender         WebFormSender `json:"sender"`
 	State          WebFormState  `json:"state"`
 	SuccessMessage *string       `json:"success_message,omitempty"`
@@ -54928,7 +54930,8 @@ type WebFormCreated struct {
 	// Sender Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
 	// allowed website, with spam checks. `server`: a server signing with this form's secret.
 	// `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
-	// builder computes with the secret stored as `sender_secret`.
+	// builder computes with the form's stored secret: the `sender_secret` pasted, or for `typeform`
+	// and `tally` one this installation minted when none was.
 	Sender WebFormSender `json:"sender"`
 
 	// SigningSecret The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once.
@@ -54973,7 +54976,8 @@ type WebFormReceiptStatus string
 // WebFormSender Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
 // allowed website, with spam checks. `server`: a server signing with this form's secret.
 // `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
-// builder computes with the secret stored as `sender_secret`.
+// builder computes with the form's stored secret: the `sender_secret` pasted, or for `typeform`
+// and `tally` one this installation minted when none was.
 type WebFormSender string
 
 // WebhookBodyContentType The Content-Type of a templated body; null means application/json.

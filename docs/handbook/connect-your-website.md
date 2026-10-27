@@ -56,8 +56,8 @@ Also called: Webflow form, Webflow action, Webflow webhook.
 To connect Typeform or Tally, choose that tool under **Where is your form?** and choose **Create form**. Margince makes the form's secret and shows it once in the **Connect** dialog.
 1. In Typeform, open the form and go to **Connect**, then **Webhooks**. In Tally, open the form and go to **Integrations**, then **Webhooks**.
 2. Paste the **Form address** as the address of the webhook.
-3. Paste the form secret: in Typeform under **Secret**, in Tally under **Signing secret**.
-4. Send a test answer. It shows up as a new lead under **Leads**.
+3. Paste the form secret: in Typeform under **Secret**, in Tally under **Signing secret**. Save the webhook. Typeform makes a new webhook switched off, so switch it on.
+4. Send a test answer. It shows up as a new lead under **Leads**. An email Margince already has gets a note on that record instead.
 
 A post whose secret does not match is refused. If the secret is lost, choose **Make a new secret** in the row's **⋯** menu and paste the new one in the tool.
 Also called: Typeform webhook, Tally webhook, form builder.

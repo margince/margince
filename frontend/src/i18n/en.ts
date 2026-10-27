@@ -11348,7 +11348,7 @@ export const en = {
     "Systems this installation exchanges records with.",
   "settings.page.knowledge.sub": "Documents that drafts and answers may use.",
   "settings.page.web-forms.sub":
-    "Forms on your website that send each enquiry in as a lead.",
+    "Forms on your website that send each enquiry in as a lead, or as a note on the lead or contact it comes from.",
   "settings.page.import.sub": "Import records from a file, one run at a time.",
   "settings.page.models.sub":
     "Which provider handles each kind of work, and whether it is available.",
@@ -14096,7 +14096,7 @@ export const en = {
   "webForms.field.originsPlaceholder": "https://www.example.com",
   "webForms.field.senderSecret": "Signing secret",
   "webForms.field.senderSecretHint":
-    "The secret Webflow answers when the webhook is made. Leave it empty until you have it: the form takes no posts until then.",
+    "The secret Webflow shows when you make the webhook in Webflow. A webhook an OAuth app makes is signed with that app’s client secret instead. Leave it empty until you have it: the form takes no posts until then.",
   "webForms.field.senderSecretKeep": "Leave empty to keep the stored secret.",
   "webForms.field.consentRequired":
     "Require consent before a submission is taken",
@@ -14139,7 +14139,7 @@ export const en = {
   "webForms.steps.typeform.open":
     "In Typeform, open the form, go to Connect, then Webhooks, and choose Add a webhook.",
   "webForms.steps.typeform.secret":
-    "Turn on Secret in the webhook’s settings and paste the form secret.",
+    "Turn on Secret in the webhook’s settings, paste the form secret and save. Then switch the webhook on: Typeform makes it off.",
   "webForms.steps.tally.open":
     "In Tally, open the form, go to Integrations, and connect Webhooks.",
   "webForms.steps.tally.secret":
@@ -14155,7 +14155,7 @@ export const en = {
   "webForms.steps.webflow.secret":
     "Webflow answers the webhook’s secret once. Paste it in Signing secret under Edit on this form.",
   "webForms.steps.test":
-    "Send a test enquiry. It shows up as a new lead under Leads.",
+    "Send a test enquiry. It shows up as a new lead under Leads, or as a note on the lead or contact that already has its email.",
   "webForms.steps.secretShownOnce":
     "The secret was shown once, when the form was made. Lost it? Choose Make a new secret in the form’s ⋯ menu.",
 
