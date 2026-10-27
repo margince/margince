@@ -85,10 +85,11 @@ func contactWith(fields string) *patchingProvider {
 	})}
 }
 
-func titleTo(t *testing.T, p *patchingProvider, title string) json.RawMessage {
+// promoteToCTO is the patch every test here sends: one field, title.
+func promoteToCTO(t *testing.T, p *patchingProvider) json.RawMessage {
 	t.Helper()
 	in, err := json.Marshal(map[string]any{
-		"record_type": "contact", "id": p.record.Ref.ID, "fields": map[string]any{"title": title},
+		"record_type": "contact", "id": p.record.Ref.ID, "fields": map[string]any{"title": "CTO"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -110,7 +111,7 @@ func TestAnUpdateNamesEachFieldFromWhatItReplaced(t *testing.T) {
 	seen := &wordsSeen{}
 	tool := updateRecord{p: p, ownership: noConflicts{}, staging: &recordingApprovals{}, words: seen.words}
 
-	out, err := tool.Handle(context.Background(), titleTo(t, p, "CTO"))
+	out, err := tool.Handle(context.Background(), promoteToCTO(t, p))
 	if err != nil {
 		t.Fatalf("Handle err = %v", err)
 	}
@@ -185,7 +186,7 @@ func TestChangesThatCannotBeNamedLeaveTheWriteStandingAndSaySo(t *testing.T) {
 	r := NewRegistry(&recordingApprovals{}, auth.NewGate(fullSeatAuthority{}))
 	r.Register(updateRecord{p: p, ownership: noConflicts{}, staging: r.approvals, words: seen.words})
 
-	out, err := r.Invoke(agentCtx(), "update_record", titleTo(t, p, "CTO"))
+	out, err := r.Invoke(agentCtx(), "update_record", promoteToCTO(t, p))
 	if err != nil {
 		t.Fatalf("Invoke err = %v, want the write to stand", err)
 	}
@@ -209,7 +210,7 @@ func TestAWholeHeldPatchCarriesTheChoiceBesideItsRefusal(t *testing.T) {
 		p: p, ownership: fixedOwnership{conflicts: []string{"title"}}, staging: r.approvals, words: seen.words,
 	})
 
-	_, err := r.Invoke(agentCtx(), "update_record", titleTo(t, p, "CTO"))
+	_, err := r.Invoke(agentCtx(), "update_record", promoteToCTO(t, p))
 	var staged *workflow.StagedApprovalError
 	if !errors.As(err, &staged) {
 		t.Fatalf("Invoke err = %v, want the staged refusal", err)
@@ -233,7 +234,7 @@ func TestTheDispatcherServesAHeldPatchAsARefusalWithItsChoice(t *testing.T) {
 	r.Register(updateRecord{p: p, ownership: fixedOwnership{conflicts: []string{"title"}}, staging: r.approvals})
 	d := NewDispatcher(r, bindAuthenticated, "margince-crm", "test").WithLogger(discardLog())
 
-	params, err := json.Marshal(map[string]any{"name": "update_record", "arguments": titleTo(t, p, "CTO")})
+	params, err := json.Marshal(map[string]any{"name": "update_record", "arguments": promoteToCTO(t, p)})
 	if err != nil {
 		t.Fatal(err)
 	}
