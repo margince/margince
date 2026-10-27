@@ -244,6 +244,31 @@ describe("Assess again", () => {
     );
   });
 
+  it("calls a reading unchanged when only the run's time moved", async () => {
+    await show(ABSTAINED);
+    serving({ ...ABSTAINED, generated_at: "2026-08-09T10:00:00Z" });
+    screen.getByRole("button", { name: "Assess again" }).click();
+    expect((await screen.findByRole("status")).textContent).toMatch(
+      /Result unchanged/,
+    );
+  });
+
+  it("calls a reading new when the counts hold but the missing inputs moved", async () => {
+    await show(ABSTAINED);
+    serving({
+      ...ABSTAINED,
+      data_completeness: {
+        present: 2,
+        expected: 7,
+        missing: ["industry", "technology"],
+      },
+    });
+    screen.getByRole("button", { name: "Assess again" }).click();
+    expect((await screen.findByRole("status")).textContent).toMatch(
+      /^Assessed again\. New result: /,
+    );
+  });
+
   it("names the new result when the reading moved", async () => {
     await show(ABSTAINED);
     serving({

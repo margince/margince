@@ -4920,7 +4920,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "assignments.emptyDetail":
     "Weise ein Teammitglied oder ein Team zu, um festzuhalten, wer sich um diese Arbeit kümmert.",
   "assignments.emptyReadOnly":
-    "Wer sich um diesen Datensatz kümmert, kann nur ändern, wer ihn bearbeiten darf.",
+    "Die Zuständigkeit für diesen Datensatz kann nur ändern, wer ihn bearbeiten darf.",
   "assignments.roleRetired": "(stillgelegte Rolle)",
   "assignments.teamSuffix": "(Team)",
   "assignments.subjectInactive": "(inaktiv)",

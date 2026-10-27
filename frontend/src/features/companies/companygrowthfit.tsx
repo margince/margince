@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  hashKey,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -261,11 +266,7 @@ function useReassess(companyId: string) {
       const before = queryClient.getQueryData<GrowthFit>(key);
       const { present, expected } = data.data_completeness;
       setOutcome({
-        changed:
-          !before ||
-          before.band !== data.band ||
-          before.data_completeness.present !== present ||
-          before.data_completeness.expected !== expected,
+        changed: !before || readingKey(before) !== readingKey(data),
         band: data.band,
         present,
         expected,
@@ -274,6 +275,13 @@ function useReassess(companyId: string) {
     },
   });
   return { reassess, outcome };
+}
+
+// The time and author of a run change on every press. The reading is the
+// rest, so "unchanged" means the panel shows the same thing.
+function readingKey(fit: GrowthFit): string {
+  const { generated_at, generated_by, ...reading } = fit;
+  return hashKey([reading]);
 }
 
 function ReassessOutcome({ outcome }: Readonly<{ outcome: Reassessed }>) {
