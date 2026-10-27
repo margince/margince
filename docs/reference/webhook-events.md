@@ -30,6 +30,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 |---|---|---|---|
 | `entity.id` | string (uuid) | yes | Stable identifier of the entity. |
 | `entity.name` | string | no | The record's name when the event was delivered, for a deal, company or project. Absent for a contact or lead; open the link to see who it is. |
+| `entity.owner_name` | string | no | The display name of the record's owner when the event was delivered, for a deal, company or project. Absent when the record has no owner. |
 | `entity.type` | string | yes | Entity kind (e.g. deal, contact, company). |
 | `entity.url` | string (uri) | no | A link to the record in the app, when the record has a page and the installation has a public base URL. |
 

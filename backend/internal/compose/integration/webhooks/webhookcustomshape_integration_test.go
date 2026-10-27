@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 const fakeToken = "Bearer test-token-not-real"
@@ -356,5 +357,48 @@ func TestAContactIsLinkedButNotNamed(t *testing.T) {
 	want := fmt.Sprintf(`{"name": "", "link": "https://crm.example.test/#/contacts/%s"}`, contactID)
 	if string(hits[0].body) != want {
 		t.Errorf("body = %s, want %s: a contact's name stays out of stored deliveries", hits[0].body, want)
+	}
+}
+
+func TestADeliveryNamesTheRecordsOwnerAndLeavesItEmptyWithoutOne(t *testing.T) {
+	we := setupWebhooks(t)
+	rcv := newReceiver(t, http.StatusOK)
+	now := clocktest.Now(t)
+	deliverer := newTestDeliverer(we, &now, rcv.server.Client())
+	we.createShaped(t, integration.AnyMap{
+		"target_url": rcv.server.URL + "/hook", "event_types": []string{"deal.created", "company.created"},
+		"body_template": `{"owner": "{{ entity.owner_name }}"}`,
+	})
+	dealID := mustParseUUID(t, apptest.CreateOpenDeal(t, we.AppEnv, apptest.DiscoverSeededPipeline(t, we.AppEnv)))
+	ownerID := ids.NewV7()
+	we.execInWorkspace(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Shayne Owner')`,
+		ownerID, "owner-"+ownerID.String()+"@webhooks.test")
+	var companyID ids.UUID
+	we.inWorkspaceTx(t, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`UPDATE deal SET owner_id = $2 WHERE id = $1 RETURNING company_id`, dealID, ownerID).Scan(&companyID)
+	})
+	we.execInWorkspace(t, `UPDATE company SET owner_id = $2 WHERE id = $1`, companyID, ownerID)
+
+	deliver := func(eventType, entityType string, id ids.UUID) {
+		env := makeEnvelopeFor(we.wsID, eventType, entityType)
+		env.Entity.ID = id
+		if err := deliverer.HandleEvent(context.Background(), env); err != nil {
+			t.Fatal(err)
+		}
+	}
+	deliver("deal.created", "deal", dealID)
+	deliver("company.created", "company", companyID)
+	we.execInWorkspace(t, `UPDATE deal SET owner_id = NULL WHERE id = $1`, dealID)
+	deliver("deal.created", "deal", dealID)
+
+	hits := rcv.snapshot()
+	if len(hits) != 3 {
+		t.Fatalf("got %d POSTs, want 3", len(hits))
+	}
+	for i, want := range []string{`{"owner": "Shayne Owner"}`, `{"owner": "Shayne Owner"}`, `{"owner": ""}`} {
+		if string(hits[i].body) != want {
+			t.Errorf("delivery %d: body = %s, want %s", i+1, hits[i].body, want)
+		}
 	}
 }

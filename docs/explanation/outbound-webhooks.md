@@ -277,9 +277,10 @@ An attempt reads the headers of the *current* subscription, like the URL and sec
 token reaches the retries already waiting.
 
 **The body template.** A template is text with fields to fill from the public envelope (§3.3). A
-field is `{{ path }}` or `{{ path | json }}`. The path starts at `event_id`, `type`, `version`,
+field is `{{ path }}`, `{{ path | json }}` or `{{ path | money currency_path }}`. The path starts at `event_id`, `type`, `version`,
 `occurred_at`, `actor`, `entity`, `correlation_id` or `data`. The content type is
 `application/json`, `text/plain` or `application/x-www-form-urlencoded`, where each value is made safe for a URL.
+`money` writes text: a stored money number and its currency as `56,830.20 USD` (`values.MajorUnits`).
 
 For JSON, the check at save follows the JSON strings. `{{ path }}` must sit inside quotes, where it
 fills in text made safe for a string. `{{ path | json }}` must sit outside them, where it writes
