@@ -44,7 +44,7 @@ Things for the whole company in Margince each have one settings page.
 - Change the company name, time zone, base currency, date format, time format or exchange rates: **Company profile**.
 - Set up single sign-on, the Google and Microsoft apps or the app an extension signs in to, or require two-step sign-in: **Sign-in and apps**.
 - Mark your own email domains, or refuse a domain: **Capture rules**.
-- Set up webhooks, a provider of contact data, or the company's Telegram bot: **Integrations**.
+- Set up website forms, webhooks, a provider of contact data, or the company's Telegram bot: **Integrations**.
 
 ### Which settings page do I need for sales and data?
 Sales and data settings in Margince each have one page.
@@ -165,7 +165,7 @@ The Members, Teams, Roles and permissions, and Seats and license pages sit in th
 
 The Integrations page in Settings (group **Data**) shows what the installation is connected to, as against what one colleague connected.
 
-**Contact data** is a licensed provider of contact data, with its budget and a policy for how often it refreshes the data. **Accounting source** connects the system your invoices come from and links its customers to companies; see [Contracts and invoices](contracts-and-invoices.md#how-do-i-connect-my-accounting-system). **Webhooks** send a signed message to another system when events you picked happen. You can look at each one sent and send it again. How to set one up, such as a message to a chat channel when a deal is won: [Sending events to other tools](sending-events-to-other-tools.md).
+**Contact data** is a licensed provider of contact data, with its budget and a policy for how often it refreshes the data. **Accounting source** connects the system your invoices come from and links its customers to companies; see [Contracts and invoices](contracts-and-invoices.md#how-do-i-connect-my-accounting-system). **Website forms** turn each form sent on your website into a lead; see [Connecting your website](connect-your-website.md). **Webhooks** send a signed message to another system when events you picked happen. You can look at each one sent and send it again. How to set one up, such as a message to a chat channel when a deal is won: [Sending events to other tools](sending-events-to-other-tools.md).
 
 **Telegram bot** is the one bot that sends and receives messages for the whole
 company. Admin and Ops connect or change it; other readers see which bot it is.

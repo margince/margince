@@ -6645,6 +6645,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/forms/{form_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                form_key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Land one website form submission as a lead (anonymous).
+         * @description The intake address of one website form. What admits a request depends on the form's
+         *     `sender`: a `browser` form takes posts only from its allowed websites (the `Origin`
+         *     header) and runs the spam checks; a `server` form takes posts signed with
+         *     `X-Margince-Timestamp`, `X-Margince-Nonce` and `X-Margince-Signature`; a builder form
+         *     checks the builder's own signature header.
+         *
+         *     A new email becomes a lead with the form's origin; an email an open lead already holds adds
+         *     the message to that lead's timeline instead. The answer is the same in both cases and for
+         *     a submission the spam checks dropped, so the address tells nobody who is in the CRM.
+         *
+         *     A request whose `Accept` asks for HTML (a plain `<form>` post) is answered with a redirect
+         *     to the form's `redirect_url`, or a short thank-you page.
+         */
+        post: operations["submitWebForm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/rooms/peek": {
         parameters: {
             query?: never;
@@ -9184,6 +9217,81 @@ export interface paths {
          *     anything it has ever sent, and every message it received would be skipped silently.
          */
         patch: operations["replaceChannelToken"];
+        trace?: never;
+    };
+    "/web-forms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the website forms that land leads in this installation. */
+        get: operations["listWebForms"];
+        put?: never;
+        /**
+         * Create a website form (returns a server signing secret once).
+         * @description Mints the form's public key, the last segment of its intake address
+         *     `POST /v1/public/forms/{form_key}`. A `server` form answers its own signing secret in
+         *     `signing_secret`, once; no read returns it again. A builder form (`webflow`, `typeform`,
+         *     `tally`) stores the secret the builder signs with, sent in `sender_secret`. Both need a
+         *     secret store on this installation; without one they answer 422 on `sender`.
+         */
+        post: operations["createWebForm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/web-forms/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get one website form. */
+        get: operations["getWebForm"];
+        put?: never;
+        post?: never;
+        /** Archive a website form; its address stops taking submissions. */
+        delete: operations["archiveWebForm"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a website form, pause it or resume it.
+         * @description A partial update. The sender kind and the form key never change: a form a website already
+         *     points at keeps its address. `sender_secret` replaces a builder form's stored secret.
+         */
+        patch: operations["updateWebForm"];
+        trace?: never;
+    };
+    "/web-forms/{id}/rotate-secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rotate a server form's signing secret (returns the new secret once).
+         * @description Only a `server` form has a secret this installation minted; any other sender answers 422 on
+         *     `sender`. The old secret stops verifying at once.
+         */
+        post: operations["rotateWebFormSecret"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/webhook-subscriptions": {
@@ -21980,6 +22088,122 @@ export interface components {
              * @description Defaults to today; must not be in the past (append-forward).
              */
             effective_date?: string;
+        };
+        /**
+         * @description Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
+         *     allowed website, with spam checks. `server`: a server signing with this form's secret.
+         *     `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
+         *     builder computes with the secret stored as `sender_secret`.
+         * @enum {string}
+         */
+        WebFormSender: "browser" | "server" | "webflow" | "typeform" | "tally";
+        /** @description A website form (`web_form`): a public intake address that turns a submission into a lead. No secret is ever returned here; `secret_configured` says one is stored. */
+        WebForm: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description The last segment of the intake address. Public; it is an address, not a credential. */
+            form_key: string;
+            sender: components["schemas"]["WebFormSender"];
+            /** @description The websites a `browser` form takes posts from, as origins (`https://example.com`). */
+            allowed_origins: string[];
+            /** @description The `/lead-origins` key every lead from this form carries. */
+            lead_origin?: string | null;
+            /**
+             * Format: uuid
+             * @description Who owns the leads this form creates; null leaves them in the unassigned queue.
+             */
+            owner_id?: string | null;
+            /** @description The sender's field names mapped to lead fields, for names the defaults do not already read. */
+            field_map: {
+                [key: string]: string;
+            };
+            /** @description A submission without `consent` ticked is refused with 422. */
+            consent_required: boolean;
+            consent_policy_version?: string | null;
+            /** @description The consent wording the form shows, written on each lead's timeline as evidence. */
+            consent_wording?: string | null;
+            /** @description Where a plain HTML post is sent after a submission. */
+            redirect_url?: string | null;
+            success_message?: string | null;
+            /** @enum {string} */
+            state: "active" | "paused";
+            secret_configured: boolean;
+            /**
+             * Format: int64
+             * @description Optimistic-concurrency version; echo it in If-Match on update.
+             */
+            version: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: date-time */
+            archived_at?: string | null;
+        };
+        WebFormCreated: components["schemas"]["WebForm"] & {
+            /** @description A `server` form's signing secret, shown this once. */
+            signing_secret?: string;
+        };
+        WebFormListResponse: {
+            data: components["schemas"]["WebForm"][];
+            /** @description Whether this installation can store a secret, which every sender but `browser` needs. */
+            secrets_available: boolean;
+        };
+        CreateWebFormRequest: {
+            name: string;
+            sender: components["schemas"]["WebFormSender"];
+            /** @description The secret a builder signs with. Required for `webflow`, `typeform` and `tally`; refused for any other sender. */
+            sender_secret?: string;
+            /** @description Required, and only allowed, for a `browser` form. */
+            allowed_origins?: string[];
+            lead_origin?: string | null;
+            /** Format: uuid */
+            owner_id?: string | null;
+            field_map?: {
+                [key: string]: string;
+            };
+            /** @default false */
+            consent_required: boolean;
+            consent_policy_version?: string | null;
+            consent_wording?: string | null;
+            redirect_url?: string | null;
+            success_message?: string | null;
+        };
+        UpdateWebFormRequest: {
+            name?: string;
+            sender_secret?: string;
+            allowed_origins?: string[];
+            lead_origin?: string | null;
+            /** Format: uuid */
+            owner_id?: string | null;
+            field_map?: {
+                [key: string]: string;
+            };
+            consent_required?: boolean;
+            consent_policy_version?: string | null;
+            consent_wording?: string | null;
+            redirect_url?: string | null;
+            success_message?: string | null;
+            /** @enum {string} */
+            state?: "active" | "paused";
+        };
+        /**
+         * @description The submitted fields. Read by name: `email` (required), `full_name` or `first_name` and
+         *     `last_name`, `phone`, `company`, `title`, `message`, `consent`, plus `page_url`,
+         *     `referrer` and `utm_*`. Common spellings (`name`, `e-mail`, `your-email`) read too, and
+         *     the form's `field_map` names the rest. Every other field is kept on the lead's timeline.
+         *     Fields starting `_mrg_` steer the spam checks and are never stored.
+         */
+        WebFormFields: {
+            [key: string]: unknown;
+        };
+        WebFormReceipt: {
+            /** @enum {string} */
+            status: "received";
+            /** @description The form's success message. */
+            message?: string | null;
+            redirect_url?: string | null;
         };
         /** @description An outbound webhook subscription (`webhook_subscription`): a tenant-configured target URL that receives signed HTTP POSTs for a chosen subset of the published event catalog. The signing secret is NEVER returned here — it is surfaced once, at create/rotate, in `WebhookSubscriptionCreated`. */
         WebhookSubscription: {
@@ -61411,6 +61635,89 @@ export interface operations {
             502: components["responses"]["CalendarUnavailable"];
         };
     };
+    submitWebForm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                form_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["WebFormFields"];
+                "multipart/form-data": components["schemas"]["WebFormFields"];
+                "application/json": components["schemas"]["WebFormFields"];
+            };
+        };
+        responses: {
+            /** @description The thank-you page, for a plain HTML post on a form with no redirect. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description Received. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebFormReceipt"];
+                };
+            };
+            /** @description Redirect to the form's `redirect_url`, for a plain HTML post. */
+            303: {
+                headers: {
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A server or builder form's signature did not verify. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A browser form was posted from a website not on its list. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description The form is paused. */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description Rate-limited; a webhook sender retries. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     peekDealRoomCredential: {
         parameters: {
             query?: never;
@@ -66298,6 +66605,181 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    listWebForms: {
+        parameters: {
+            query?: {
+                /** @description Include soft-deleted (archived) rows. Default false. */
+                include_archived?: components["parameters"]["IncludeArchived"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Website forms, newest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebFormListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    createWebForm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWebFormRequest"];
+            };
+        };
+        responses: {
+            /** @description The created form, plus its one-time signing secret for a `server` form. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebFormCreated"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getWebForm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The form. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebForm"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    archiveWebForm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The archived form. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebForm"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    updateWebForm: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateWebFormRequest"];
+            };
+        };
+        responses: {
+            /** @description The updated form. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebForm"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    rotateWebFormSecret: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The form plus its new one-time signing secret. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebFormCreated"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listWebhookSubscriptions: {

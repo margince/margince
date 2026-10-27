@@ -198,6 +198,8 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// have already run, and a reset that cannot reach the vault leaves the
 		// sealed credentials of the installation it just wiped resident.
 		s.dataResetHandlers.vault = vault
+		// A signed website form keeps the secret it verifies against here.
+		s.webFormsHandlers = s.webFormsHandlers.WithFormSecrets(vault)
 		// The confirm link is sealed in the same vault (controllermailwiring.go).
 		s.rewireConfirmationLane(pool)
 		// The BYOK credential surface exists only where there is somewhere to

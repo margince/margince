@@ -440,6 +440,9 @@ var tableOwners = map[string]string{
 	"knowledge_chunk":      "internal/modules/knowledge",
 	"webhook_subscription": "internal/modules/webhooks",
 	"webhook_delivery":     "internal/modules/webhooks",
+	// webforms (the website form; a submission lands as a lead and its
+	// timeline note, which contacts and activities own)
+	"web_form": "internal/modules/webforms",
 	// comms (outbound delivery machinery; the activity row is the
 	// user-visible fact and stays owned by activities)
 	"comms_outbound": "internal/modules/comms",
