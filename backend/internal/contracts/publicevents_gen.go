@@ -1845,6 +1845,9 @@ type PublicEventEntityRef struct {
 	// Name The record's name when the event was delivered, for a deal, company or project. Absent for a contact or lead; open the link to see who it is.
 	Name *string `json:"name,omitempty"`
 
+	// OwnerName The display name of the record's owner when the event was delivered, for a deal, company or project. Absent when the record has no owner.
+	OwnerName *string `json:"owner_name,omitempty"`
+
 	// Type Entity kind (e.g. deal, contact, company).
 	Type string `json:"type"`
 

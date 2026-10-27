@@ -199,6 +199,11 @@ components:
           description: >-
             The record's name when the event was delivered, for a deal, company or
             project. Absent for a contact or lead; open the link to see who it is.
+        owner_name:
+          type: string
+          description: >-
+            The display name of the record's owner when the event was delivered,
+            for a deal, company or project. Absent when the record has no owner.
         url:
           type: string
           format: uri

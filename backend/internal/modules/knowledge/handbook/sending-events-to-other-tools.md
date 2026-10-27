@@ -16,8 +16,8 @@ To post to Slack or Microsoft Teams when a deal moves, open **Settings → Integ
 Also called: deal won notification, Slack alert, chat message, Teams message.
 
 ### How do I change what a message says?
-To change a message body in Margince, edit the subscription and set **Body format** to **Custom template**, then write the message in the template. A template fills `{{ entity.name }}` with the name of a deal, company or project, and `{{ entity.url }}` with a link to its page. For a contact or lead, `{{ entity.name }}` is empty and the message carries the link. **Insert variable** lists every field the chosen event has, and the ⓘ beside an event in **Add events** shows them too.
-Also called: customise the webhook body, message text, payload, fields, deal name in the message.
+To change a message body in Margince, edit the subscription and set **Body format** to **Custom template**, then write the message in the template. A template fills `{{ entity.name }}` with the name of a deal, company or project, `{{ entity.owner_name }}` with its owner, and `{{ entity.url }}` with a link to its page. For a contact or lead, both names are empty and the message carries the link. To show a deal's amount when it moves, write `{{ data.amount_minor_at_change | money data.currency_at_change }}`, which reads as `56,830.20 USD`. **Insert variable** lists every field the chosen event has, and the ⓘ beside an event in **Add events** shows them too.
+Also called: customise the webhook body, message text, payload, fields, deal name in the message, deal owner, deal amount.
 
 ### Does a sent message keep a contact's name?
 Yes, if the message carries it. The event's own fields can name a contact: a new contact's event carries `{{ data.full_name }}`. Margince keeps each sent message, even after the contact is erased. Leave a name out of the template when the link is enough.
