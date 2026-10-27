@@ -193,7 +193,7 @@ A pair someone has dismissed or reopened is never closed this way. A closed pair
 Also called: duplicate gone, shorter duplicate list, fewer duplicates.
 
 ### Does Margince find duplicates that were already there before?
-Yes. Every night Margince compares each company and contact that changed that day with all the others. It lists each new pair it finds on the duplicate list. When very many records changed, it carries on where it stopped the next time it runs. An upgrade compares every record once.
+Yes. Every night Margince compares each company and contact that changed that day with all the others. It lists each new pair it finds on the duplicate list. When many records changed, it carries on where it stopped the next time it runs. An upgrade compares every record once.
 
 So two companies that one import wrote at the same time are listed, and so are records written before a matching rule existed. A pair someone has dismissed or merged is never listed again. Margince never merges a pair by itself.
 Also called: old duplicates, duplicates from before, duplicates not found, existing duplicates.
