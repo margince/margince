@@ -473,6 +473,49 @@
 .brief-rail .brief-readings {
   margin: 0;
 }
+/* Each block of the rail is one pane, so the figures and the meetings read as
+   two cards beside the work instead of lines floating on the page ground. A
+   section's rows are its own children, so they draw the pane between them:
+   the first takes the top edge, the last the bottom one. */
+.brief-rail .brief-readings .stat-strip {
+  padding-inline: var(--padCard);
+  border: 1px solid var(--paneEdge);
+  border-radius: var(--r-lg);
+  background: var(--pane);
+  box-shadow: var(--shadow-rest);
+}
+.brief-rail .brief-section {
+  gap: 0;
+}
+.brief-rail .brief-section > :not(.brief-section-label) {
+  padding: var(--space-3) var(--space-4);
+  border-inline: 1px solid var(--paneEdge);
+  border-block-start: 1px solid var(--borderSubtle);
+  background: var(--pane);
+}
+.brief-rail .brief-section-label + * {
+  margin-block-start: var(--space-2);
+  border-block-start-color: var(--paneEdge);
+  border-start-start-radius: var(--r-lg);
+  border-start-end-radius: var(--r-lg);
+}
+.brief-rail .brief-section > :last-child:not(.brief-section-label) {
+  border-block-end: 1px solid var(--paneEdge);
+  border-end-start-radius: var(--r-lg);
+  border-end-end-radius: var(--r-lg);
+}
+.brief-rail .stat-strip > .stat-card {
+  border-inline: 0;
+  border-radius: 0;
+}
+.brief-rail .stat-strip .stat-card-value {
+  /* ds:ignore the rail's figures sit beside the work, one rung under a reading card's */
+  font: var(--fontHeadingMedium);
+  margin-block-end: 0;
+}
+.brief-rail .stat-strip > :last-child {
+  border-block-end: 0;
+}
 
 .brief-wrap > .record-details-toggle {
   margin-left: auto;

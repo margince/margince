@@ -208,27 +208,33 @@
 .brief-triage-queue-head {
   display: block;
   margin: 0;
-  padding: 0 0 var(--space-1);
+  padding: 0 0 var(--space-2);
 }
+/* The rest of the order sits on one pane with hairlines between its rows, the
+   same surface as the card in hand, so the column reads as one list. */
 .brief-focus-list {
   display: flex;
   flex-direction: column;
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--paneEdge);
+  border-radius: var(--r-lg);
+  background: var(--pane);
+  box-shadow: var(--shadow-rest);
 }
-.brief-focus-list > li {
-  border-block-end: 1px solid var(--borderSubtle);
+.brief-focus-list > li + li {
+  border-block-start: 1px solid var(--borderSubtle);
 }
 
 /* One row is ONE PRESS that puts it in hand: the rank, the name, and whose it
    is with why on the far edge, the name lit under the pointer. */
 .brief-focus-item {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-4);
+  align-items: center;
+  gap: var(--space-3);
   width: 100%;
-  padding: var(--space-4) var(--space-1);
+  padding: var(--space-3) var(--space-2);
   border: 0;
   background: none;
   color: inherit;
@@ -244,10 +250,20 @@
   outline: var(--focus-ring);
   outline-offset: -2px;
 }
+/* The rank as a small disc, so the column of numbers reads as order rather
+   than as part of each title. */
 .brief-focus-rank {
   flex: none;
-  min-inline-size: var(--space-4);
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--space-6);
+  block-size: var(--space-6);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--bgChip);
   color: var(--textSecondary);
+  font: var(--fontBodySmall);
+  font-variant-numeric: tabular-nums;
 }
 .brief-focus-item-title {
   flex: 1;
