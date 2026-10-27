@@ -64202,7 +64202,7 @@ type ListTeamsParams struct {
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
-	// Q Case-insensitive match over team name.
+	// Q Case-insensitive match over team name that ignores diacritics on both sides.
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
 }
 
@@ -64221,16 +64221,15 @@ type ListUsersParams struct {
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
-	// Q Case-insensitive match over display_name/email.
+	// Q Case-insensitive match over display_name/email that ignores diacritics on both sides.
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
 
 	// IncludeInactive Admin management view — include deactivated/suspended members. Honored only for an admin caller.
 	IncludeInactive *bool `form:"include_inactive,omitempty" json:"include_inactive,omitempty"`
 
-	// IncludeInvited Also list invited seats — members who have not signed in yet. Naming the colleagues a record
-	// already points at is `GET /users/names`, which answers id and display name alone; a roster row
-	// carries the member's email and seat status with it.
-	// Pickers leave it off, so nobody is offered work they cannot open.
+	// IncludeInvited Also list invited seats — members who have not signed in yet. Each row's `status` says so.
+	// A picker that may hand an invited colleague work, such as a record responsibility, asks for them.
+	// Naming the colleagues a record already points at is `GET /users/names`.
 	IncludeInvited *bool `form:"include_invited,omitempty" json:"include_invited,omitempty"`
 }
 
