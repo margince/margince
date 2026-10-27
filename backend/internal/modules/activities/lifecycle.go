@@ -206,7 +206,7 @@ func (in UpdateActivityInput) movesAField(current crmcontracts.Activity) bool {
 	if in.Body != nil {
 		p.Set("body", current.Body, *in.Body)
 	}
-	if in.OccurredAt != nil {
+	if in.OccurredAt != nil && !SameStoredStart(*in.OccurredAt, current.OccurredAt) {
 		p.Set("occurred_at", current.OccurredAt, *in.OccurredAt)
 	}
 	if in.OccurredPrecision != nil {

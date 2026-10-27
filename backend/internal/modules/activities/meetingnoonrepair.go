@@ -95,9 +95,9 @@ func CountNoonMeetingsTx(ctx context.Context, q pgx.Tx, zone string, limit int64
 
 // RestoreMeetingStartTx puts a meeting's start back through the module's own
 // update, and on its history rows. That update locks the row, bumps the version,
-// audits, emits the event and moves the last-activity clocks. An outcome
-// whose restored start has not come yet goes back to booked, as any move does.
-// It answers false and writes nothing when the row changed since it was read.
+// audits, emits the event and moves the last-activity clocks. An outcome whose
+// restored start has not come yet goes back to booked, as a calendar or provider
+// move does. It answers false, writing nothing, when the row changed after the read.
 func RestoreMeetingStartTx(ctx context.Context, tx pgx.Tx, m NoonMeeting) (bool, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return false, err
@@ -136,10 +136,11 @@ func restoreMeetingHistoryStartTx(ctx context.Context, tx pgx.Tx, m NoonMeeting)
 }
 
 // restoreArchivedMeetingStartTx puts back the start of a meeting archived after
-// the damage, and a non-nil status. A later restore of the record then shows the
-// meeting when it was. The live update refuses an archived row, so this writes
-// the audit row and event that update would write. An archived meeting moves no
-// last-activity clock. It answers false and writes nothing when the row changed.
+// the damage, and writes status when it is non-nil. Restoring the record then
+// shows the meeting when it was. The live update refuses an archived row, so
+// this writes the audit row and event that update would write. An archived
+// meeting moves no last-activity clock. It answers false and writes nothing
+// when the row changed.
 func restoreArchivedMeetingStartTx(ctx context.Context, tx pgx.Tx, m NoonMeeting, status *string) (bool, error) {
 	if _, err := storekit.LockRow(ctx, tx, "activity", m.ID, storekit.IncludeArchived); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {

@@ -49,7 +49,7 @@ func refuseOutcomeBeforeStart(ctx context.Context, tx pgx.Tx, current crmcontrac
 	if in.OccurredPrecision != nil {
 		precision = *in.OccurredPrecision
 	}
-	moved := !sameStoredStart(start, current.OccurredAt) || precision != string(current.OccurredPrecision)
+	moved := !SameStoredStart(start, current.OccurredAt) || precision != string(current.OccurredPrecision)
 	if status == nil && moved && current.MeetingStatus != nil {
 		status = new(string(*current.MeetingStatus))
 	}
@@ -95,9 +95,9 @@ func statusAfterMove(ctx context.Context, tx pgx.Tx, status *string, start time.
 	return status, err
 }
 
-// sameStoredStart is whether start lands on stored once written: timestamptz
-// keeps microseconds, a calendar appointment keeps nanoseconds.
-func sameStoredStart(start, stored time.Time) bool {
+// SameStoredStart is whether start lands on stored once written: a Go time
+// keeps nanoseconds; the column keeps microseconds.
+func SameStoredStart(start, stored time.Time) bool {
 	return start.Truncate(time.Microsecond).Equal(stored)
 }
 

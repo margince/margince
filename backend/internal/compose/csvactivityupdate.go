@@ -144,5 +144,5 @@ func sameOccurrence(stored storedActivity, typed map[string]any, zone *time.Loca
 		storedAt := occurredday.Moment{At: stored.OccurredAt, DateOnly: occurredday.IsDay(stored.OccurredPrecision)}
 		return occurredday.DateIn(storedAt, zone).Equal(at)
 	}
-	return !occurredday.IsDay(stored.OccurredPrecision) && stored.OccurredAt.Equal(at)
+	return !occurredday.IsDay(stored.OccurredPrecision) && activities.SameStoredStart(at, stored.OccurredAt)
 }

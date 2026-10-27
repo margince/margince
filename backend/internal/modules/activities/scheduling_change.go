@@ -203,7 +203,7 @@ func (s *Store) settleInvitation(ctx context.Context, tx pgx.Tx, row invitationR
 	status := new(string(crmcontracts.ActivityMeetingStatusBooked))
 	stored := meetingStatusString(current.MeetingStatus)
 	// A reschedule that moves the start leaves its outcome with the old slot.
-	if isMeetingOutcome(&stored) && (!rescheduled || sameStoredStart(row.Appointment.Start, current.OccurredAt)) {
+	if isMeetingOutcome(&stored) && (!rescheduled || SameStoredStart(row.Appointment.Start, current.OccurredAt)) {
 		status = &stored
 	}
 	status, err = statusAfterMove(ctx, tx, status, row.Appointment.Start, PrecisionInstant, &at)

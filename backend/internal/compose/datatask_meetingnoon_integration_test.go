@@ -168,7 +168,9 @@ func TestTheNoonTaskRestoresOnlyStartsAnOutcomeSaveMovedBeforeTheCutoff(t *testi
 		t.Fatalf("the contact's last activity before the repair = %s, want the noon of the save", got)
 	}
 
-	runMachineAddressTask(ctx, t, e, meetingNoonStartsDataTask())
+	task, previous := meetingNoonStartsDataTask(), meetingNoonStartsDataTask()
+	previous.Version--
+	runMachineAddressTask(ctx, t, e, previous)
 
 	if got, want := f.start(damaged), "2026-07-15T07:00:00.123Z"; got != want {
 		t.Errorf("the damaged meeting starts at %s, want %s", got, want)
@@ -203,9 +205,13 @@ func TestTheNoonTaskRestoresOnlyStartsAnOutcomeSaveMovedBeforeTheCutoff(t *testi
 	}
 
 	versions := f.version(damaged)
-	runMachineAddressTask(ctx, t, e, meetingNoonStartsDataTask())
+	runMachineAddressTask(ctx, t, e, task)
 	if got := f.version(damaged); got != versions {
 		t.Errorf("a second run changed the restored meeting to version %d", got)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM data_task_run WHERE task_id = $1
+		AND task_version = $2 AND status = 'done' AND scanned = 0`, task.ID, task.Version); n != 1 {
+		t.Errorf("finished runs at version %d that inspected nothing = %d, want 1", task.Version, n)
 	}
 }
 

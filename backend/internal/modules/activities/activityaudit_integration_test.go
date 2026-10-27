@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -114,6 +115,32 @@ func TestAnUntouchedFieldStaysOutOfBothImages(t *testing.T) {
 	}
 	if _, carried := after["body"]; carried {
 		t.Errorf("body reached the after image on a subject-only edit: %v", after)
+	}
+}
+
+// The column keeps microseconds, so a start resent with nanoseconds below the
+// stored one names the instant the row holds, and saving it moves nothing.
+func TestAStartDifferingBelowAMicrosecondIsNoMove(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	id := ids.From[ids.ActivityKind](ids.UUID(loggedNote(ctx, t, e).Id))
+	start := time.Date(2026, 7, 15, 7, 0, 0, 123_456_000, time.UTC)
+	placed, err := e.store(nil).UpdateActivity(ctx, id, UpdateActivityInput{OccurredAt: &start})
+	if err != nil {
+		t.Fatalf("placing the start: %v", err)
+	}
+	events := eventKinds(t, e, id)
+
+	resent := start.Add(500 * time.Nanosecond)
+	saved, err := e.store(nil).UpdateActivity(ctx, id, UpdateActivityInput{OccurredAt: &resent})
+	if err != nil {
+		t.Fatalf("resending the start: %v", err)
+	}
+	if *saved.Version != *placed.Version {
+		t.Errorf("version = %d, want %d: the resent start moved nothing", *saved.Version, *placed.Version)
+	}
+	if got := eventKinds(t, e, id); len(got) != len(events) {
+		t.Errorf("events = %v, want %v: the resent start announced a change", got, events)
 	}
 }
 
