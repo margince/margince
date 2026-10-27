@@ -6,6 +6,7 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { undoAction, useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { EditMember } from "./users-edit";
 import { HandoverModal, HandoverSummary } from "./users-handover";
 import {
   memberAnchorId,
@@ -16,6 +17,7 @@ import {
   useMemberRefresh,
 } from "./users-members";
 import { PasswordLinkModal, usePasswordLink } from "./users-password-link";
+import { RetireMember } from "./users-retire";
 
 // Order matters: a service member is also an agent row.
 function deactivateBodyKey(member: User) {
@@ -29,11 +31,16 @@ function deactivateBodyKey(member: User) {
 
 // A member's verbs behind one menu. Nothing to offer draws nothing: a trigger
 // over an empty panel is a promise the row cannot keep.
-export function MemberVerbs({ member }: Readonly<{ member: User }>) {
+export function MemberVerbs({
+  member,
+  members = [],
+}: Readonly<{ member: User; members?: readonly User[] }>) {
   const t = useT();
   const toast = useToast();
   const refresh = useMemberRefresh();
   const pending = useMemberBusy(member.id);
+  const [editOpen, setEditOpen] = useState(false);
+  const [retirement, setRetirement] = useState<"merge" | "remove" | null>(null);
   const [confirmOff, setConfirmOff] = useState(false);
   const [confirmFactor, setConfirmFactor] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
@@ -97,6 +104,9 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
     },
   });
 
+  const canEdit = offers(member, "edit");
+  const canMerge = offers(member, "merge");
+  const canRemove = offers(member, "remove");
   const canMintLink = offers(member, "issue_password_link");
   const canRemoveFactor = offers(member, "remove_mfa");
   const canDeactivate = offers(member, "deactivate");
@@ -106,16 +116,21 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
   const canHandOver = offers(member, "hand_over");
   const focusMember = () => document.getElementById(memberAnchorId(member.id));
   if (
-    !(
-      canMintLink ||
-      canRemoveFactor ||
-      canDeactivate ||
-      canReactivate ||
-      canHandOver ||
-      linkOpen ||
-      confirmOff ||
-      confirmFactor
-    )
+    ![
+      canEdit,
+      canMerge,
+      canRemove,
+      editOpen,
+      retirement,
+      canMintLink,
+      canRemoveFactor,
+      canDeactivate,
+      canReactivate,
+      canHandOver,
+      linkOpen,
+      confirmOff,
+      confirmFactor,
+    ].some(Boolean)
   ) {
     return null;
   }
@@ -124,6 +139,21 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
       <OverflowMenu
         label={t("table.rowActions", { name: member.display_name })}
       >
+        {canEdit && (
+          <Button disabled={pending} onClick={() => setEditOpen(true)}>
+            {t("users.edit")}
+          </Button>
+        )}
+        {canMerge && (
+          <Button disabled={pending} onClick={() => setRetirement("merge")}>
+            {t("users.merge")}
+          </Button>
+        )}
+        {canRemove && (
+          <Button disabled={pending} onClick={() => setRetirement("remove")}>
+            {t("users.remove")}
+          </Button>
+        )}
         {canMintLink && (
           <Button disabled={pending} onClick={openLink}>
             {t("users.link.action")}
@@ -153,6 +183,14 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
           </Button>
         )}
       </OverflowMenu>
+      <AccountDialogs
+        member={member}
+        members={members}
+        editOpen={editOpen}
+        retirement={retirement}
+        closeEdit={() => setEditOpen(false)}
+        closeRetirement={() => setRetirement(null)}
+      />
       <ConfirmModal
         open={confirmOff}
         onClose={() => setConfirmOff(false)}
@@ -217,6 +255,36 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
             passwordLink.clear();
             setLinkOpen(false);
           }}
+        />
+      )}
+    </>
+  );
+}
+
+function AccountDialogs({
+  member,
+  members,
+  editOpen,
+  retirement,
+  closeEdit,
+  closeRetirement,
+}: Readonly<{
+  member: User;
+  members: readonly User[];
+  editOpen: boolean;
+  retirement: "merge" | "remove" | null;
+  closeEdit: () => void;
+  closeRetirement: () => void;
+}>) {
+  return (
+    <>
+      {editOpen && <EditMember member={member} onClose={closeEdit} />}
+      {retirement && (
+        <RetireMember
+          member={member}
+          members={members}
+          merge={retirement === "merge"}
+          onClose={closeRetirement}
         />
       )}
     </>

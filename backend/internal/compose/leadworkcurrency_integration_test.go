@@ -194,7 +194,9 @@ func TestUndatedContactArrivalStillReachesItsOwnersWorklist(t *testing.T) {
 	l := setupLeadForContact(t)
 	reader := l.e.As(l.e.Rep1, nil, integration.AdminPerms)
 	_, _, err := l.store.CreateLead(reader, contacts.CreateLeadInput{FullName: new("Contact submission"), Email: &l.address, Source: "web_form"})
-	requireContactHeld(t, err, "submission")
+	if held := requireContactHeld(t, err, "submission"); held.Field != "email" {
+		t.Fatalf("the submission was held on %q, want the contact's email", held.Field)
+	}
 	owner := l.e.As(l.e.Rep2, nil, integration.AdminPerms)
 	now := time.Date(2026, 10, 27, 12, 0, 0, 0, time.UTC)
 	tasks := attentionTasks{store: l.e.Activities.WithClock(func() time.Time { return now })}

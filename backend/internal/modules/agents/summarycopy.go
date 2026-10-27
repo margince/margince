@@ -32,7 +32,7 @@ type summaryCopy struct {
 	onDeal, applyTag, addLineItem, updateLineItem, removeLineItem,
 	setStakeholder, removeStakeholder, setCompany, removeCompany,
 	confirmFact, updateFact, createFact, deleteFact, confirmProfileField, updateProfileField,
-	mergeTags, changeList, dismissDuplicate, reopenDuplicate, setUpPartner string
+	mergeTags, mergeMembers, changeList, dismissDuplicate, reopenDuplicate, setUpPartner string
 
 	// Lifecycle moves. A deal's target and source are stage semantics and pass
 	// through.
@@ -95,6 +95,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		confirmProfileField: "Confirm profile field %s on company %s",
 		updateProfileField:  "Update profile field %s on company %s",
 		mergeTags:           "Fold tag %q into %q, releasing the name %q",
+		mergeMembers:        "Merge member %q (%s) into %q (%s). The duplicate is removed, and personal record access and correspondence follow the surviving account.",
 		setUpPartner:        "Set up a partner program on company %s (role: %s), with no margin tier",
 		promoteLead:         "Promote lead %s to a contact (%s)",
 		disqualifyLead:      "Disqualify lead %s",
@@ -170,6 +171,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		confirmProfileField: "Profilfeld %s zum Unternehmen %s bestätigen",
 		updateProfileField:  "Profilfeld %s zum Unternehmen %s ändern",
 		mergeTags:           "Tag %q in %q überführen und den Namen %q freigeben",
+		mergeMembers:        "Mitglied %q (%s) mit %q (%s) zusammenführen. Das Duplikat wird entfernt und der persönliche Zugriff auf Datensätze und Korrespondenz geht auf das verbleibende Konto über.",
 		setUpPartner:        "Partnerprogramm für Firma %s einrichten (Rolle: %s), ohne Margenstufe",
 		promoteLead:         "Lead %s zum Kontakt überführen (%s)",
 		disqualifyLead:      "Lead %s disqualifizieren",
@@ -245,6 +247,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		confirmProfileField: "Xác nhận trường hồ sơ %s của công ty %s",
 		updateProfileField:  "Cập nhật trường hồ sơ %s của công ty %s",
 		mergeTags:           "Gộp thẻ %q vào %q, giải phóng tên %q",
+		mergeMembers:        "Gộp thành viên %q (%s) vào %q (%s). Tài khoản trùng bị xóa và tài khoản giữ lại kế thừa quyền truy cập bản ghi cá nhân cùng thư từ.",
 		setUpPartner:        "Thiết lập chương trình đối tác cho công ty %s (vai trò: %s), chưa có bậc biên lợi nhuận",
 		promoteLead:         "Chuyển lead %s thành liên hệ (%s)",
 		disqualifyLead:      "Loại lead %s",

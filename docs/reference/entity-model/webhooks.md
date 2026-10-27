@@ -93,3 +93,4 @@ The 2 tables owned by `webhooks`, as the migrations build them. [Back to the ent
 **Triggers**
 
 - `trg_webhook_subscription_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
+- `webhook_subscription_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.state = 'active')))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`

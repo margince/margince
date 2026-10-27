@@ -159,7 +159,8 @@ const (
 // instantTimeNames are the names that are never an activity's time, wherever a
 // schema declares them, each with the reason.
 var instantTimeNames = gatekit.Waive(map[string]string{
-	"created_at": rowStamp, "updated_at": rowStamp, "archived_at": rowStamp, "restricted_at": rowStamp,
+	"expected_updated_at": rowStamp,
+	"created_at":          rowStamp, "updated_at": rowStamp, "archived_at": rowStamp, "restricted_at": rowStamp,
 	"content_erased_at": rowStamp, "superseded_at": rowStamp, "revoked_at": rowStamp, "suspended_at": rowStamp,
 	"activated_at": rowStamp, "enabled_at": rowStamp, "added_at": rowStamp, "entered_at": rowStamp,
 	"captured_at": rowStamp, "recorded_at": rowStamp, "set_at": rowStamp, "changed_at": rowStamp,

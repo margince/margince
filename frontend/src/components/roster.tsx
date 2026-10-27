@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
+import { readMemberPage } from "../lib/memberpages";
 import { unwrap } from "../lib/problem";
 
 // The workspace roster as the frontend reads it: one walk over `/users` or
@@ -61,18 +62,7 @@ async function readRosterPage(
   // The two endpoints answer differently-typed rows, so each arm reads its own
   // — a shared call would have to assert one shape onto the other.
   if (kind === "user") {
-    const data = unwrap(
-      await api.GET("/users", {
-        params: {
-          query: {
-            limit: ROSTER_PAGE_SIZE,
-            ...(cursor ? { cursor } : {}),
-            ...(everyone ? { include_inactive: true } : {}),
-          },
-        },
-      }),
-    );
-    return { entries: data.data, next: data.page.next_cursor ?? null };
+    return readMemberPage(cursor, everyone);
   }
   const data = unwrap(
     await api.GET("/teams", {

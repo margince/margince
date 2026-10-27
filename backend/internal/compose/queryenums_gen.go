@@ -220,6 +220,9 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "resolution_state", Values: []string{"resolved", "low_confidence", "unresolved", "dropped"}, Array: false, Explode: true},
 		{Name: "status", Values: []string{"open", "acknowledged", "resolved", "dismissed"}, Array: false, Explode: true},
 	},
+	"GET /v1/users/{id}/retirement-preview": {
+		{Name: "mode", Values: []string{"merge", "remove"}, Array: false, Explode: true},
+	},
 	"GET /v1/views": {
 		{Name: "resource", Values: []string{"contacts", "companies", "deals", "activities", "leads", "partners", "projects"}, Array: false, Explode: true},
 	},

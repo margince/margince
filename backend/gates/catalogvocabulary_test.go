@@ -62,6 +62,7 @@ var accountWord = regexp.MustCompile(`(?i)(^|[^a-z])(accounts?)([^a-z]|$)`)
 // asked again, which is the direction that matters. A quote no catalog string
 // carries any more is reported below rather than left standing.
 var otherSenses = gatekit.Waive(map[string]string{
+	"merge_member_accounts": "the action consolidates sign-in identities for one colleague; it never merges customer company records",
 	"account_notice": "a communication_context: a notice about the customer's ACCOUNT WITH US — their subscription, their billing " +
 		"relationship — which is a consent category in the published enum and not the CRM record type. Renaming it would " +
 		"change what a sender is claiming about a message",

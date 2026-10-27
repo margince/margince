@@ -162,6 +162,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
+- `activity_assignee_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.assignee_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.kind = 'task') AND (NOT new.is_done)))) EXECUTE FUNCTION refuse_retired_member_work('assignee_id')`
 - `activity_last_activity`: `AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision))) EXECUTE FUNCTION trg_activity_last_activity()`
 - `activity_no_company_meeting_on_rekind`: `BEFORE UPDATE OF kind FOR EACH ROW EXECUTE FUNCTION activity_refuses_becoming_a_company_meeting()`
 - `activity_project_last_activity`: `AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision))) EXECUTE FUNCTION trg_activity_project_last_activity()`
@@ -870,6 +871,10 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 - `booking_page_slug_key`: `unique, btree (slug)`
 - `idx_booking_page_host_user`: `btree (host_user_id)`
 
+**Triggers**
+
+- `booking_page_host_user_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND true)) EXECUTE FUNCTION refuse_retired_member_work('host_user_id')`
+
 ## deal_document_hide
 
 4 columns · primary key `(deal_id, attachment_id)` · referenced by 0 foreign keys
@@ -932,6 +937,10 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 - `mail_draft_one_per_anchor`: `unique, btree (author_id, anchor_type, anchor_id)`
 - `mail_draft_pkey`: `unique, btree (id)`
 
+**Triggers**
+
+- `mail_draft_author_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.author_id IS NOT NULL) AND true)) EXECUTE FUNCTION refuse_retired_member_work('author_id')`
+
 ## meeting_invitation
 
 19 columns · primary key `(activity_id)` · referenced by 1 foreign key
@@ -981,6 +990,10 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 - `meeting_invitation_pkey`: `unique, btree (activity_id)`
 - `meeting_invitation_public_intent`: `unique, btree (((public_intent ->> 'key_hash'))) WHERE (public_intent IS NOT NULL)`
 
+**Triggers**
+
+- `meeting_invitation_host_user_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND ((new.status <> ALL (ARRAY['canceled', 'erased'])) OR (NOT new.cleanup_complete)))) EXECUTE FUNCTION refuse_retired_member_work('host_user_id')`
+
 ## meeting_proposal
 
 9 columns · primary key `(activity_id)` · referenced by 0 foreign keys
@@ -1013,6 +1026,10 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 - `meeting_proposal_pkey`: `unique, btree (activity_id)`
 - `meeting_proposal_token_hash_key`: `unique, btree (token_hash)`
+
+**Triggers**
+
+- `meeting_proposal_host_user_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND true)) EXECUTE FUNCTION refuse_retired_member_work('host_user_id')`
 
 ## scheduled_send
 
@@ -1072,6 +1089,10 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 - `idx_scheduled_send_owner`: `btree (scheduled_by, status, scheduled_at DESC)`
 - `scheduled_send_one_held_message_per_seat`: `unique, btree (held_reason, scheduled_by, principal_kind, payload_version, origin_kind, agent_actor_id, agent_passport_id, anchor_activity_id, md5((COALESCE(origin_links, '[]'))), md5((COALESCE(also_links, '[]'))), md5((payload))) NULLS NOT DISTINCT WHERE ((status = 'held') AND (held_reason = 'send_refused'))`
 - `scheduled_send_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `scheduled_send_scheduled_by_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.scheduled_by IS NOT NULL) AND (new.status = ANY (ARRAY['scheduled', 'held', 'sending'])))) EXECUTE FUNCTION refuse_retired_member_work('scheduled_by')`
 
 ## transcript_read
 

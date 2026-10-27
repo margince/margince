@@ -194,8 +194,7 @@ var (
 // expression: spelling the namespace inline to keep it constant is exactly the
 // second copy the helper exists to prevent.
 var byUrgencyHumanFirst = sectionOrder(
-	"(CASE WHEN " + activities.SystemMintedExpr("a") + " THEN 1 ELSE 0 END) ASC, " +
-		storekit.TaskDueSQL("a") + " ASC NULLS LAST, a.occurred_at ASC, a.id ASC",
+	"(CASE WHEN " + activities.SystemMintedExpr("a") + " THEN 1 ELSE 0 END) ASC, " + string(byUrgency),
 )
 
 // sectionPage is the section's edge in the activities list's own cursor
@@ -262,12 +261,12 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	// The SELECT list and its scan are the activities module's, so there is no
 	// list here to fall behind that one.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT `+activities.ActivityProjection(contentArm)+`
+		SELECT %s
 		FROM activity a
 		WHERE a.archived_at IS NULL AND %s AND (%s)%s %s
 		ORDER BY %s
 		LIMIT %d`,
-		fmt.Sprintf(contactReachesActivity, bind(contactPos)),
+		activities.ActivityProjection(contentArm), fmt.Sprintf(contactReachesActivity, bind(contactPos)),
 		scope, projectScope(opts, arg), extra, order, sectionCap+1), args...)
 	if err != nil {
 		return nil, false, err

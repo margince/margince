@@ -279,13 +279,10 @@ func (s *Store) ArchiveSignal(ctx context.Context, id ids.SignalID) (crmcontract
 		if _, err := readSignal(ctx, tx, id, storekit.LiveOnly); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx,
-			`UPDATE signal SET archived_at = now() WHERE id = $1 AND archived_at IS NULL`, id); err != nil {
-			return fmt.Errorf("archive signal: %w", err)
+		if err := archiveSignalTx(ctx, tx, id.UUID); err != nil {
+			return err
 		}
-		if _, err := storekit.Audit(ctx, tx, "archive", "signal", id.UUID, nil, nil); err != nil {
-			return fmt.Errorf("audit signal archive: %w", err)
-		}
+
 		var err error
 		if out, err = readSignal(ctx, tx, id, storekit.IncludeArchived); err != nil {
 			return fmt.Errorf("read archived signal: %w", err)
@@ -379,4 +376,16 @@ func uuidPtr(id *ids.UUID) *openapi_types.UUID {
 	}
 	converted := openapi_types.UUID(*id)
 	return &converted
+}
+
+func archiveSignalTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	tag, err := tx.Exec(ctx, `UPDATE signal SET archived_at = now() WHERE id = @id AND archived_at IS NULL`, pgx.StrictNamedArgs{"id": id})
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return nil
+	}
+	_, err = storekit.Audit(ctx, tx, "archive", "signal", id, nil, nil)
+	return err
 }
