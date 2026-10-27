@@ -61,7 +61,18 @@ func New() extension.Extension {
 		// Reports and Home for a seat that may read the kind.
 		ReportCounts:     []extension.ReportCount{{Name: "ledger_accounts", Label: "Ledger accounts", Population: "ledger_account"}},
 		ReportBreakdowns: []extension.ReportBreakdown{{Name: "accounts_by_name", Label: "Ledger accounts by name", Population: "ledger_account", By: "name"}},
-		Migrations:       migrations,
+		// A signal type the unit can file about a company, deal, contact or
+		// project, with the evidence core checks it against. The reporter's name
+		// is personal data and leaves the signal when its contact is erased.
+		SignalTypes: []extension.SignalTypeDeclaration{{
+			Kind:  "ledger_loss",
+			Label: "Loss reported on a ledger account",
+			Evidence: []extension.SignalEvidenceField{
+				{Name: "amount", Label: "Amount", Type: extension.SignalFieldNumber, Required: true},
+				{Name: "reporter", Label: "Reporter", Type: extension.SignalFieldText, Personal: true},
+			},
+		}},
+		Migrations: migrations,
 		FinanceSources: []extension.FinanceSource{{
 			Provider:    "offline_demo",
 			Check:       check,

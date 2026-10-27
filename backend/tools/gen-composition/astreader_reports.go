@@ -27,6 +27,8 @@ type declaredReport struct {
 type reportDecls struct {
 	ReportCounts     []declaredReport `json:"report_counts,omitempty"`
 	ReportBreakdowns []declaredReport `json:"report_breakdowns,omitempty"`
+	// SignalTypes ride here because the manifest struct is at its size limit.
+	SignalTypes []declaredSignalType `json:"signal_types,omitempty"`
 }
 
 // readReportsInto reads the one of the two slice fields that field names.

@@ -66,6 +66,26 @@
       "by": "name"
     }
   ],
+  "signal_types": [
+    {
+      "kind": "ledger_loss",
+      "label": "Loss reported on a ledger account",
+      "evidence": [
+        {
+          "name": "amount",
+          "label": "Amount",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "reporter",
+          "label": "Reporter",
+          "type": "text",
+          "personal": true
+        }
+      ]
+    }
+  ],
   "oauth_apps": [
     {
       "provider": "offline_demo",

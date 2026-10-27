@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/signaltypes"
 )
 
 type CreateSignalInput struct {
@@ -54,6 +55,11 @@ func (s *Store) CreateSignal(ctx context.Context, in CreateSignalInput) (crmcont
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return crmcontracts.Signal{}, err
+	}
+	if signaltypes.IsExtensionName(in.Kind) {
+		// The kind check admits the spelling, so this path must refuse it: only
+		// the declaring unit's seam checks the layout, owner and fingerprint.
+		return crmcontracts.Signal{}, &InvalidExtensionSignalError{Field: signalKindArg, Reason: "an extension kind is filed only by the extension that declares it"}
 	}
 	if strings.TrimSpace(in.Summary) == "" {
 		return crmcontracts.Signal{}, &RequiredFieldError{Field: "summary"}
@@ -133,7 +139,7 @@ func deriveSignalDefaults(in CreateSignalInput) (signalDefaults, error) {
 		detectedAt:      time.Now().UTC(),
 	}
 	if d.sourceChannel == "" {
-		d.sourceChannel = "derived"
+		d.sourceChannel = channelDerived
 	}
 	if d.severity == "" {
 		d.severity = "info"
@@ -143,6 +149,9 @@ func deriveSignalDefaults(in CreateSignalInput) (signalDefaults, error) {
 	}
 	if in.DetectedAt != nil {
 		d.detectedAt = in.DetectedAt.UTC()
+	}
+	if err := refuseReservedEvidence(in.Evidence); err != nil {
+		return signalDefaults{}, err
 	}
 	evidence := in.Evidence
 	if evidence == nil {
@@ -238,13 +247,21 @@ func (s *Store) UpdateSignal(ctx context.Context, id ids.SignalID, in UpdateSign
 		// so an erasure of the subject withholds them (privacy.tombstoneSubjectSignals).
 		// A client echoing the kind it read is not a correction, so only a move is checked.
 		if in.Kind != nil {
-			if *in.Kind != string(current.Kind) && !slices.Contains(correctableKinds, *in.Kind) {
+			// An extension signal keeps its kind: moved to a core kind it would
+			// keep its layout members, which the erasure path finds by kind.
+			if *in.Kind != string(current.Kind) &&
+				(signaltypes.IsExtensionName(string(current.Kind)) || !slices.Contains(correctableKinds, *in.Kind)) {
 				return &InvalidSignalKindError{}
 			}
 			p.Set("kind", string(current.Kind), *in.Kind)
 		}
 		if in.Evidence != nil {
-			p.Set("evidence", current.Evidence, *in.Evidence)
+			// An extension signal's evidence follows its declared layout and
+			// carries core's provenance, which a replacement would drop.
+			if err := refuseReservedEvidence(*in.Evidence); err != nil || signaltypes.IsExtensionName(string(current.Kind)) {
+				return &InvalidExtensionSignalError{Field: signalEvidenceArg, Reason: "the evidence of an extension signal cannot be replaced, and a request may not carry fields or provenance"}
+			}
+			p.Set(signalEvidenceArg, current.Evidence, *in.Evidence)
 		}
 		if in.Status != nil {
 			p.Set("status", string(current.Status), *in.Status)
@@ -364,7 +381,7 @@ func scanSignal(row pgx.Row) (crmcontracts.Signal, error) {
 		return sig, fmt.Errorf("signal evidence is not the contract shape: %w", err)
 	}
 	sig.Id = openapi_types.UUID(id)
-	sig.Kind = crmcontracts.SignalKind(kind)
+	sig.Kind = kind
 	sig.SourceChannel = crmcontracts.SignalSourceChannel(sourceChannel)
 	sig.ResolutionState = crmcontracts.SignalResolutionState(resolutionState)
 	sig.Severity = crmcontracts.SignalSeverity(severity)

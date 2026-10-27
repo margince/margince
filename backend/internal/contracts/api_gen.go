@@ -18043,66 +18043,6 @@ func (e SignalEntityType) Valid() bool {
 	}
 }
 
-// Defines values for SignalKind.
-const (
-	SignalKindBuyingIntent     SignalKind = "buying_intent"
-	SignalKindChampionLeft     SignalKind = "champion_left"
-	SignalKindCommitmentMade   SignalKind = "commitment_made"
-	SignalKindContractEnded    SignalKind = "contract_ended"
-	SignalKindExpansion        SignalKind = "expansion"
-	SignalKindFunding          SignalKind = "funding"
-	SignalKindGhostedThread    SignalKind = "ghosted_thread"
-	SignalKindLeadershipChange SignalKind = "leadership_change"
-	SignalKindNewOpportunity   SignalKind = "new_opportunity"
-	SignalKindOther            SignalKind = "other"
-	SignalKindProductLaunch    SignalKind = "product_launch"
-	SignalKindProjectGoneQuiet SignalKind = "project_gone_quiet"
-	SignalKindReengagement     SignalKind = "reengagement"
-	SignalKindRisk             SignalKind = "risk"
-	SignalKindStalledDeal      SignalKind = "stalled_deal"
-	SignalKindTechnicalChange  SignalKind = "technical_change"
-)
-
-// Valid indicates whether the value is a known member of the SignalKind enum.
-func (e SignalKind) Valid() bool {
-	switch e {
-	case SignalKindBuyingIntent:
-		return true
-	case SignalKindChampionLeft:
-		return true
-	case SignalKindCommitmentMade:
-		return true
-	case SignalKindContractEnded:
-		return true
-	case SignalKindExpansion:
-		return true
-	case SignalKindFunding:
-		return true
-	case SignalKindGhostedThread:
-		return true
-	case SignalKindLeadershipChange:
-		return true
-	case SignalKindNewOpportunity:
-		return true
-	case SignalKindOther:
-		return true
-	case SignalKindProductLaunch:
-		return true
-	case SignalKindProjectGoneQuiet:
-		return true
-	case SignalKindReengagement:
-		return true
-	case SignalKindRisk:
-		return true
-	case SignalKindStalledDeal:
-		return true
-	case SignalKindTechnicalChange:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SignalResolutionState.
 const (
 	SignalResolutionStateDropped       SignalResolutionState = "dropped"
@@ -52013,7 +51953,14 @@ type Signal struct {
 	Evidence []SignalEvidence   `json:"evidence"`
 	Id       openapi_types.UUID `json:"id"`
 
-	// Kind The first six are what a human files by hand. The rest are what the producers
+	// Kind One of core's sixteen kinds, or `ext:<unit>:<kind>` for a kind an extension declares.
+	// A client must treat a value it does not know as a kind of its own, never as an error.
+	// Core's kinds are `stalled_deal`, `champion_left`, `reengagement`, `buying_intent`,
+	// `risk`, `other`, `contract_ended`, `new_opportunity`, `commitment_made`,
+	// `ghosted_thread`, `project_gone_quiet`, `funding`, `leadership_change`, `expansion`,
+	// `product_launch` and `technical_change`.
+	//
+	// Among core's, the first six are what a human files by hand. The rest are what the producers
 	// raise (SIG-F-3): `contract_ended`, `new_opportunity` and `commitment_made` are read
 	// out of a settled conversation by the `signal_extract` site, each citing the message
 	// it is stated in; `ghosted_thread` is a comparison rather than a judgment — the newest
@@ -52022,7 +51969,7 @@ type Signal struct {
 	// pursued or delivered and nothing has been filed against it for 30 days (the
 	// `projects-gone-quiet` report's own rule). Its subject is the project
 	// (`entity_type: project`), attributed to the project's company.
-	Kind SignalKind `json:"kind"`
+	Kind string `json:"kind"`
 
 	// RawRef Pointer to the raw source payload the resolver works from: an email address/handle, a domain, a URL, or a company mention.
 	RawRef *string `json:"raw_ref,omitempty"`
@@ -52063,17 +52010,6 @@ type Signal struct {
 // SignalEntityType The subject record the signal is about; null until a raw signal resolves (both entity fields set together).
 type SignalEntityType string
 
-// SignalKind The first six are what a human files by hand. The rest are what the producers
-// raise (SIG-F-3): `contract_ended`, `new_opportunity` and `commitment_made` are read
-// out of a settled conversation by the `signal_extract` site, each citing the message
-// it is stated in; `ghosted_thread` is a comparison rather than a judgment — the newest
-// interaction is ours, nobody answered it, and the account is one worth chasing;
-// `project_gone_quiet` is the same kind of comparison on a project — it is being
-// pursued or delivered and nothing has been filed against it for 30 days (the
-// `projects-gone-quiet` report's own rule). Its subject is the project
-// (`entity_type: project`), attributed to the project's company.
-type SignalKind string
-
 // SignalResolutionState The raw→entity match outcome: an ambiguous match is `low_confidence` (surfaced, never silently asserted); an unattributable one is `dropped`.
 type SignalResolutionState string
 
@@ -52094,10 +52030,17 @@ type SignalEvidence struct {
 	// CommercialRole The commercial role supported by the cited source, independent of recipient order.
 	CommercialRole *SignalEvidenceCommercialRole `json:"commercial_role,omitempty"`
 
+	// Fields The members of an extension signal type's evidence layout. Only core writes it, when an
+	// extension files a signal. A request that carries it is refused.
+	Fields *map[string]interface{} `json:"fields,omitempty"`
+
 	// LifecycleScope Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
 	LifecycleScope *SignalEvidenceLifecycleScope `json:"lifecycle_scope,omitempty"`
-	Snippet        string                        `json:"snippet"`
-	SourceId       *string                       `json:"source_id,omitempty"`
+
+	// Provenance Where an extension signal came from. Core stamps it from the filing extension and the signed-in seat. A request that carries it is refused.
+	Provenance *SignalProvenance `json:"provenance,omitempty"`
+	Snippet    string            `json:"snippet"`
+	SourceId   *string           `json:"source_id,omitempty"`
 
 	// SourceQuote A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the entire normalized source message.
 	SourceQuote *SourceQuoteProof         `json:"source_quote,omitempty"`
@@ -52155,6 +52098,15 @@ type SignalIntroPathNextMoveKind string
 type SignalListResponse struct {
 	Data []Signal `json:"data"`
 	Page PageInfo `json:"page"`
+}
+
+// SignalProvenance Where an extension signal came from. Core stamps it from the filing extension and the signed-in seat. A request that carries it is refused.
+type SignalProvenance struct {
+	// CapturedBy The user or agent whose invocation filed it.
+	CapturedBy string `json:"captured_by"`
+
+	// Unit The extension that filed the signal.
+	Unit string `json:"unit"`
 }
 
 // SignalResolution A human's answer on one signal. `outcome` is the status they set,

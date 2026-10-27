@@ -25,6 +25,7 @@
 1792998607_a_service_member_reads_installation_settings.up.sql | role | one UPDATE of the single service_ingest system role, which exists only once a service member was declared
 1792998607_a_service_member_reads_installation_settings.down.sql | role | one UPDATE of the single service_ingest system role, which exists only once a service member was declared
 1793150011_a_record_kind_may_come_from_an_extension.down.sql | activity_link, attachment, dedupe_candidate, embedding, field_provenance, list, list_live_member, list_member, list_member_event, record_grant, saved_view, signal, taggable, user_record_view | only rows naming an ext: kind are deleted, and those exist only once an installed extension declared a record kind and a user linked, tagged or listed one of its records, so each set is small
+1793150022_the_signal_kind_check_is_validated.down.sql | signal | runs only on a rollback and archives only rows naming an ext: kind, which exist only once an installed extension declared a signal type and filed one, so the set is small
 1792863000_every_sender_may_direct_a_send.up.sql | role | updates only the fixed set of system roles, at most three rows per workspace
 1792863000_every_sender_may_direct_a_send.down.sql | role | updates only the fixed set of system roles, at most three rows per workspace
 1792887435_the_sender_kind_check_knows_vendor_pitch.down.sql | capture_pending_counterparty | runs only on a rollback and rewrites only rows judged vendor_pitch since the upgrade, one per sender address
