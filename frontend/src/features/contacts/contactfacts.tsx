@@ -8,7 +8,7 @@ import { rosterOwnerName } from "../../components/entityref";
 import { ContactLink } from "../../design-system/contactlink";
 import { OffsiteLink } from "../../design-system/offsitelink";
 import { Popover } from "../../design-system/popover";
-import { provenanceOf } from "../../design-system/provenanceof";
+import { provenanceOf, withCreator } from "../../design-system/provenanceof";
 import { Fact, RecordFacts } from "../../design-system/recordfacts";
 import { ProvenanceTag } from "../../design-system/trust";
 import { primaryPhone } from "../../format/contacturi";
@@ -21,6 +21,7 @@ import { useViewerId } from "../../lib/session";
 import { buyingRoleLabel } from "../companies/companycontacts/summary";
 
 type Contact = components["schemas"]["Contact"];
+type PrincipalAttribution = components["schemas"]["PrincipalAttribution"];
 
 // The fixed word claims the destination is LinkedIn, and a crawl or connector
 // can write any host into `social`. So the host is checked before the anchor
@@ -123,19 +124,25 @@ export function ContactFacts({
  * source. The popover behind it answers which one, which for a mailbox capture
  * is a message id no reader should have to scan past.
  */
-export function ContactSource({ contact }: Readonly<{ contact: Contact }>) {
+export function ContactSource({
+  contact,
+  createdBy,
+}: Readonly<{ contact: Contact; createdBy?: PrincipalAttribution }>) {
   const t = useT();
   const viewerId = useViewerId();
   return (
     <Popover
       label={
         <ProvenanceTag
-          provenance={provenanceOf(
-            contact.captured_by,
-            viewerId,
-            contact.author,
-            contact.source,
-            contact.imported_from,
+          provenance={withCreator(
+            provenanceOf(
+              contact.captured_by,
+              viewerId,
+              contact.author,
+              contact.source,
+              contact.imported_from,
+            ),
+            createdBy,
           )}
         />
       }

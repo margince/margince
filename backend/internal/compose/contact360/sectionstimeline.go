@@ -166,9 +166,9 @@ func (s *Service) nextStepsSection(ctx context.Context, tx pgx.Tx, contactID ids
 // section does when it runs out of room.
 type sectionOrder string
 
-const (
+var (
 	byRecency sectionOrder = "a.occurred_at DESC, a.id DESC"
-	byUrgency sectionOrder = "a.due_at ASC NULLS LAST, a.occurred_at ASC, a.id ASC"
+	byUrgency sectionOrder = sectionOrder(storekit.TaskDueSQL("a") + " ASC NULLS LAST, a.occurred_at ASC, a.id ASC")
 )
 
 // byUrgencyHumanFirst is byUrgency with work a colleague filed ahead of work
@@ -195,7 +195,7 @@ const (
 // second copy the helper exists to prevent.
 var byUrgencyHumanFirst = sectionOrder(
 	"(CASE WHEN " + activities.SystemMintedExpr("a") + " THEN 1 ELSE 0 END) ASC, " +
-		"a.due_at ASC NULLS LAST, a.occurred_at ASC, a.id ASC",
+		storekit.TaskDueSQL("a") + " ASC NULLS LAST, a.occurred_at ASC, a.id ASC",
 )
 
 // sectionPage is the section's edge in the activities list's own cursor

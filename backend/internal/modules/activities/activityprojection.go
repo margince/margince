@@ -24,6 +24,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -111,7 +112,7 @@ var activityProjection = []activityColumn{
 	{"a.occurred_at", func(s *activityScan) any { return &s.a.OccurredAt }},
 	{"a.occurred_precision", func(s *activityScan) any { return &s.occurredPrecision }},
 	{"a.direction", func(s *activityScan) any { return &s.direction }},
-	{"a.due_at", func(s *activityScan) any { return &s.a.DueAt }},
+	{storekit.TaskDueSQL("a"), func(s *activityScan) any { return &s.a.DueAt }},
 	{"a.remind_at", func(s *activityScan) any { return &s.a.RemindAt }},
 	{"a.assignee_id", func(s *activityScan) any { return &s.assigneeID }},
 	{"a.is_done", func(s *activityScan) any { return &s.a.IsDone }},

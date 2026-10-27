@@ -28,10 +28,10 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 332 |
-| Columns | 3923 |
-| Foreign keys | 548 |
-| Owning areas | 36 |
+| Tables | 333 |
+| Columns | 3943 |
+| Foreign keys | 550 |
+| Owning areas | 37 |
 
 ## The 12 records everything else hangs off
 
@@ -39,7 +39,7 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 32 | 143 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 32 | 144 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 45 | 49 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 35 | 49 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 68 | 38 |
@@ -124,6 +124,7 @@ erDiagram
 | [reporting](reporting.md) | 12 |
 | [search](search.md) | 4 |
 | [signals](signals.md) | 2 |
+| [webforms](webforms.md) | 1 |
 | [webhooks](webhooks.md) | 2 |
 | [weeklyplan](weeklyplan.md) | 2 |
 
@@ -166,7 +167,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 32 | 143 |
+| [`app_user`](identity.md#app_user) | identity | 32 | 144 |
 | [`approval`](approvals.md#approval) | approvals | 35 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
@@ -325,7 +326,7 @@ erDiagram
 | [`lead`](contacts.md#lead) | contacts | 41 | 18 |
 | [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 11 | 1 |
 | [`lead_manual_signal`](contacts.md#lead_manual_signal) | contacts | 12 | 0 |
-| [`lead_origin`](contacts.md#lead_origin) | contacts | 13 | 1 |
+| [`lead_origin`](contacts.md#lead_origin) | contacts | 13 | 2 |
 | [`lead_privacy_notice`](consent.md#lead_privacy_notice) | consent | 12 | 0 |
 | [`lead_score_history`](contacts.md#lead_score_history) | contacts | 9 | 0 |
 | [`lead_source`](contacts.md#lead_source) | contacts | 10 | 0 |
@@ -444,6 +445,7 @@ erDiagram
 | [`voice_profile`](ai.md#voice_profile) | ai | 18 | 5 |
 | [`voice_profile_delta`](ai.md#voice_profile_delta) | ai | 10 | 0 |
 | [`voice_profile_version`](ai.md#voice_profile_version) | ai | 24 | 5 |
+| [`web_form`](webforms.md#web_form) | webforms | 20 | 0 |
 | [`webhook_delivery`](webhooks.md#webhook_delivery) | webhooks | 18 | 0 |
 | [`webhook_subscription`](webhooks.md#webhook_subscription) | webhooks | 13 | 1 |
 | [`weekly_plan`](weeklyplan.md#weekly_plan) | weeklyplan | 12 | 1 |

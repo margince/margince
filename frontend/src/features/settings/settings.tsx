@@ -73,6 +73,7 @@ import { SystemHealthPage } from "./settings.systemhealth";
 import { AuditLogCard } from "./settings-audit";
 import { TeamsCard } from "./users-access";
 import { UsersAdminCard } from "./users-admin";
+import { WebFormsCard } from "./webforms";
 import { WebhooksCard } from "./webhooks";
 import "./settings.css";
 
@@ -312,7 +313,7 @@ function ConnectionsTab() {
 }
 
 // What the INSTALLATION is wired to: one shared contact-data credential, the
-// outbound subscriptions and the workspace's Telegram bot. Each is shared by
+// website forms, the outbound subscriptions and the workspace's Telegram bot. Each is shared by
 // everybody, which is why they sit under the company heading and the personal
 // connections do not.
 function IntegrationsTab() {
@@ -320,6 +321,7 @@ function IntegrationsTab() {
     <>
       <ProviderCard />
       <FinanceSourceCard />
+      <WebFormsCard />
       <WebhooksCard />
       <TelegramConnectorsPanel />
       {/* A unit whose secret is `workspace`-scoped holds the installation's

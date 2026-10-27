@@ -197,11 +197,13 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// workspace-scoped call like any other /v1 route, and mounting it on the
 	// operational mux instead would win the longest-pattern match against
 	// "/v1/" and serve without a session. See extensionEdge.
-	publicEdge := publicConfirm(newPublicConfirmLimiters())(
-		publicPreferences(consent.NewStore(InstallationDB(pool)), newPublicPreferenceLimiters())(
-			publicBooking(activities.NewStore(InstallationDB(pool)), identity.NewService(pool), newPublicBookingLimiters())(
-				publicDealRoom(dealrooms.NewStore(InstallationDB(pool)), newPublicDealRoomLimiters())(
-					extensionEdge(srv, log)(api),
+	publicEdge := publicForms(srv.webFormsHandlers, newPublicFormLimiters())(
+		publicConfirm(newPublicConfirmLimiters())(
+			publicPreferences(consent.NewStore(InstallationDB(pool)), newPublicPreferenceLimiters())(
+				publicBooking(activities.NewStore(InstallationDB(pool)), identity.NewService(pool), newPublicBookingLimiters())(
+					publicDealRoom(dealrooms.NewStore(InstallationDB(pool)), newPublicDealRoomLimiters())(
+						extensionEdge(srv, log)(api),
+					),
 				),
 			),
 		),

@@ -120,11 +120,11 @@ type ListOpenTasksInput struct {
 // boundary changes its position in an over-long list, never the verdict shown.
 func openTasksOrder(slippedFirst bool) string {
 	if slippedFirst {
-		return `(a.due_at IS NOT NULL AND a.due_at < now()) DESC,
-		         CASE WHEN a.due_at < now() THEN a.due_at END DESC,
-		         a.due_at ASC NULLS LAST, a.created_at ASC, a.id ASC`
+		return `(` + storekit.TaskDueSQL("a") + ` IS NOT NULL AND ` + storekit.TaskDueSQL("a") + ` < now()) DESC,
+		         CASE WHEN ` + storekit.TaskDueSQL("a") + ` < now() THEN ` + storekit.TaskDueSQL("a") + ` END DESC,
+		         ` + storekit.TaskDueSQL("a") + ` ASC NULLS LAST, a.created_at ASC, a.id ASC`
 	}
-	return `a.due_at ASC NULLS LAST, a.id ASC`
+	return storekit.TaskDueSQL("a") + ` ASC NULLS LAST, a.id ASC`
 }
 
 // openTasksDefaultLimit and openTasksMaxLimit bound one sweep. The read is a
@@ -187,7 +187,7 @@ func listOpenTasks(ctx context.Context, tx pgx.Tx, in ListOpenTasksInput) ([]Ope
 	if err != nil {
 		return nil, false, err
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id, coalesce(a.subject, ''), a.due_at,
+	rows, err := tx.Query(ctx, `SELECT a.id, coalesce(a.subject, ''), `+storekit.TaskDueSQL("a")+`,
 			a.assignee_id, coalesce(u.display_name, ''), a.created_at
 		FROM activity a
 		LEFT JOIN app_user u ON u.id = a.assignee_id

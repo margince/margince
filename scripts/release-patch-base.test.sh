@@ -1,98 +1,97 @@
 #!/usr/bin/env bash
-# The base resolver's own test, over a real repository.
+# The patch base adapter's own test: the records the release CLI's
+# resolve-patch-base writes, and the records it must refuse.
 #
-# Every case is built as commits rather than mocked, because the question is
-# what git resolves: a tag that moved, a tag that never existed, a `before` the
-# history no longer reaches. A stub of `git rev-parse` would assert this file's
-# idea of those answers rather than git's.
-#
-# The case that matters most is the THIRD one — publish at N-1, skip at N,
-# publish at N+1 — because it is the defect. The base must be N-1, so the patch
-# carries N's files; a base of N is what dropped them, and it looks identical
-# from the publishing side.
+# A refused record exits 1 and prints nothing on stdout, because the workflow
+# reads stdout as shell values and an empty answer must never read as a base.
 #
 # Usage: bash scripts/release-patch-base.test.sh
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-RESOLVE="$SCRIPT_DIR/release-patch-base.sh"
+ADAPT="$SCRIPT_DIR/release-patch-base.sh"
 
 FAILURES=0
-WORK="$(mktemp -d)"
-trap 'rm -rf "$WORK"' EXIT
+SHA1="3f786850e387550fdab836ed7e6dc881de23001b"
+SHA256="9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
 
-# expect <name> <want> <published> <before> <fallback>
+# expect <name> <want-stdout> <stdin>
 expect() {
 	local name="$1" want="$2" got
-	shift 2
-	got="$(cd "$WORK" && bash "$RESOLVE" "$@")"
+	if ! got="$(printf '%s' "$3" | bash "$ADAPT" 2>/dev/null)"; then
+		printf 'FAIL: %s — refused a record it must accept\n' "$name"
+		FAILURES=$((FAILURES + 1))
+		return
+	fi
 	if [[ "$got" != "$want" ]]; then
-		printf 'FAIL: %s — base %s, want %s\n' "$name" "${got:-<none>}" "${want:-<none>}"
+		printf 'FAIL: %s — printed\n%s\nwant\n%s\n' "$name" "$got" "$want"
 		FAILURES=$((FAILURES + 1))
 		return
 	fi
 	printf 'ok    %s\n' "$name"
 }
 
-cd "$WORK"
-git init -q .
-git config user.email gate@example.test
-git config user.name "Release Gate"
-for n in 1 2 3 4; do
-	echo "$n" >"file$n"
-	git add "file$n"
-	git commit -qm "commit $n"
-	eval "C$n=$(git rev-parse HEAD)"
-done
-
-# THE DEFECT. Published at commit 2, the lane at commit 3 did not publish, and
-# commit 4 is releasing now. The base has to be 2 — the tree a consumer holds —
-# so the patch carries commit 3's file. `before` says 3, which is what dropped it.
-git tag released "$C2"
-expect "a skipped lane leaves its files in the next patch" "$C2" released "$C3" HEAD~1
-
-# The ordinary case is the same rule, and it reads the same: every lane
-# published, so the tag and the previous tip agree.
-git tag -f released "$C3" >/dev/null 2>&1
-expect "an unbroken sequence resolves to the previous release" "$C3" released "$C3" HEAD~1
-
-# NOTHING PUBLISHED YET. The first release of a repository has no previous
-# state, and the previous tip is the best remaining answer rather than a
-# failure — it is right whenever the lane before this one published.
-git tag -d released >/dev/null 2>&1
-expect "no recorded release falls back to the previous tip" "$C3" released "$C3" HEAD~1
-
-# Branch creation carries an all-zeros before, which is not a commit and must
-# not be treated as one.
-expect "branch creation falls through to the fallback" "$C3" released "0000000000000000000000000000000000000000" HEAD~1
-
-# A manual dispatch carries no before at all.
-expect "a manual dispatch falls through to the fallback" "$C3" released "" HEAD~1
-
-# A force-push discards its old tip: `before` names a commit a full fetch of the
-# new tip cannot resolve. Not an error — simply not a base.
-expect "an unreachable before is skipped, not reported" "$C3" released "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef" HEAD~1
-
-# And the honest empty answer: a first release with nothing behind it at all.
-(
-	cd "$WORK"
-	git init -q first
-	cd first
-	git config user.email gate@example.test
-	git config user.name "Release Gate"
-	echo one >file
-	git add file
-	git commit -qm "the first commit"
-	got="$(bash "$RESOLVE" released "" HEAD~1)"
-	if [[ -n "$got" ]]; then
-		printf 'FAIL: a first commit resolved a base (%s) — a release with nothing behind it owes no patch\n' "$got"
-		exit 1
+# refuse <name> <stdin>
+refuse() {
+	local name="$1" got status=0
+	got="$(printf '%s' "$2" | bash "$ADAPT" 2>/dev/null)" || status=$?
+	if [[ "$status" -ne 1 || -n "$got" ]]; then
+		printf 'FAIL: %s — exit %d with stdout %q, want exit 1 and no stdout\n' "$name" "$status" "$got"
+		FAILURES=$((FAILURES + 1))
+		return
 	fi
-	printf 'ok    a repository with one commit resolves no base at all\n'
-) || FAILURES=$((FAILURES + 1))
+	printf 'ok    %s\n' "$name"
+}
+
+expect "a resolved base gives its version and revision" \
+	"$(printf 'first_release=false\nbase_version=1970.41.0\nbase_revision=%s' "$SHA1")" \
+	"{\"event\":\"patch-base-resolved\",\"version\":\"1970.41.0\",\"revision\":\"$SHA1\"}
+"
+
+expect "a SHA-256 revision and a patch level are a base too" \
+	"$(printf 'first_release=false\nbase_version=2028.0.3-p2\nbase_revision=%s' "$SHA256")" \
+	"{\"event\":\"patch-base-resolved\",\"version\":\"2028.0.3-p2\",\"revision\":\"$SHA256\"}
+"
+
+expect "no release went out: the first release" \
+	"first_release=true" \
+	'{"event":"first-release"}
+'
+
+refuse "the CLI's error record is no answer" \
+	'{"event":"error","message":"read the release list: dist answered 401 Unauthorized"}
+'
+refuse "an unknown event is no answer" \
+	"{\"event\":\"patch-base-guessed\",\"version\":\"1970.41.0\",\"revision\":\"$SHA1\"}
+"
+refuse "a base without a revision" \
+	'{"event":"patch-base-resolved","version":"1970.41.0"}
+'
+refuse "a base without a version" \
+	"{\"event\":\"patch-base-resolved\",\"revision\":\"$SHA1\"}
+"
+refuse "a malformed version" \
+	"{\"event\":\"patch-base-resolved\",\"version\":\"v1970.41\",\"revision\":\"$SHA1\"}
+"
+refuse "a version that carries shell" \
+	"{\"event\":\"patch-base-resolved\",\"version\":\"1970.41.0\$(id)\",\"revision\":\"$SHA1\"}
+"
+refuse "an abbreviated revision" \
+	'{"event":"patch-base-resolved","version":"1970.41.0","revision":"3f78685"}
+'
+refuse "a revision that is a ref name" \
+	'{"event":"patch-base-resolved","version":"1970.41.0","revision":"main"}
+'
+refuse "two records" \
+	"{\"event\":\"first-release\"}
+{\"event\":\"patch-base-resolved\",\"version\":\"1970.41.0\",\"revision\":\"$SHA1\"}
+"
+refuse "no record at all" ""
+refuse "a line that is not JSON" 'patch base 1970.41.0
+'
 
 if [[ "$FAILURES" -ne 0 ]]; then
 	printf '\nrelease-patch-base: %d case(s) failed\n' "$FAILURES" >&2
 	exit 1
 fi
-echo "OK: release-patch-base — every case, including the skipped lane that made this a defect"
+echo "OK: release-patch-base — every record the release CLI writes, and every one it must refuse"

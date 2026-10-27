@@ -8,6 +8,8 @@ The Overview tab puts recorded context and real work first. A new contact must n
 
 A moment that needs action, an open task or a promise still owed comes first. Otherwise the relationship brief comes first. When no brief exists, a plain line that states the recorded identity takes its place. Source and the date the record was created show beside the owner in the header. A failed brief has its own retry; a failure does not turn into an empty profile.
 
+For a contact an agent created, the source names the tool and the colleague it worked for, each when the create audit row records it. `captured_by` names only the passport, so `created_by` reads them from that row.
+
 The `thin_relationship` rule needs an activity timeline that loaded and is empty, and no recorded colleague connections. Its label is `No interactions recorded`. It supplies no made-up evidence that the relationship changed. The `thin_relationship` result shows as a short line that states what the record covers, not as a next step. They cover the records the reader can see, not everything anyone knows about the contact.
 
 An empty block, whether for reading, for promises or for a conversation, does not show on the Overview tab. Real tasks still show when a moment is dismissed, and they open the shared task window. The link to the full work queue says that it opens the whole queue. What the system knows about past conversations shows once; the History tab holds the full story in time order. The sidebar does not show the newest activity a second time.

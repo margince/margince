@@ -55,7 +55,8 @@ import "./trust.css";
 // correspondence. The author is the only field on the row that knows better,
 // so where it is present it is what the tag says.
 export type Provenance =
-  | { kind: "agent"; agent?: string; job?: string }
+  // `forName` is the colleague the agent worked for, when the record says.
+  | { kind: "agent"; agent?: string; job?: string; forName?: string }
   | { kind: "connector"; connector: string }
   | { kind: "system"; job?: string }
   | { kind: "human"; self: boolean; userId?: string; author?: SourceAuthor }
@@ -111,6 +112,12 @@ export function provenanceLabel(
         (provenance.job &&
           (jobLabel("agentJob", provenance.job, t) ??
             extensionJobLabel(provenance.job)));
+      const name = provenance.forName;
+      if (name) {
+        return agent
+          ? t("trust.agentFor", { agent, name })
+          : t("trust.agentUnnamedFor", { name });
+      }
       return agent ? t("trust.agentTag", { agent }) : t("trust.agentUnnamed");
     }
     case "system": {
@@ -140,8 +147,12 @@ export function importLabel(
   provenance: Extract<Provenance, { kind: "import" }>,
   t: Translator,
 ): string {
+  // A connector import is named by the system's key ("hubspot"); the reader
+  // sees the product's own spelling, the same one an author's "via" gets.
   return provenance.uploadName
-    ? t("trust.importedFrom", { uploadName: provenance.uploadName })
+    ? t("trust.importedFrom", {
+        uploadName: sourceSystemName(provenance.uploadName),
+      })
     : t("trust.imported");
 }
 
