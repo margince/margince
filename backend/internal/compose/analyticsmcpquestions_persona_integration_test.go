@@ -8,8 +8,8 @@ package compose
 // The persona half of the canonical corpus: a team manager reading their own
 // team, a rep reading their own work, management reading the company.
 //
-// Every team proof over deals seeds a teammate and one off-team owner, so a lens
-// that shrinks to the caller or leaks outward changes the answer.
+// Every team proof over deals seeds a teammate and one off-team owner.
+// A lens that shrinks to the caller, or leaks outward, changes the answer.
 //
 // Every group clears analyticsquery.DefaultFloor, so a withheld group never
 // stands in for a wrong number.
