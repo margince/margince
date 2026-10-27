@@ -233,9 +233,8 @@ function nextFrame(run: HTMLElement): Promise<number> {
   );
 }
 
-// Each page glides, and a press during the glide restarts it short. Two reads
-// in one frame always agree, so the glide has ended once three frames in a row
-// hold one offset. `scrollend` would skip a glide the edge clamps to nothing.
+// A press mid-glide restarts it short, so this waits for three frames in a row
+// to hold one offset. `scrollend` skips a glide the edge clamps to nothing.
 async function glideEnds(run: HTMLElement) {
   let held = 0;
   let last = await nextFrame(run);
