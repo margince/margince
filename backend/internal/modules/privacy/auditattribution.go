@@ -8,7 +8,9 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -39,6 +41,56 @@ func attributionOf(row recordAuditRow) AuditAttribution {
 		PassportID:     row.passportID,
 		AgentClient:    row.agentClientName,
 	}
+}
+
+// Wire carries the attribution onto the contract, so every surface that names
+// who acted spells it the same way.
+func (a AuditAttribution) Wire() *crmcontracts.PrincipalAttribution {
+	out := &crmcontracts.PrincipalAttribution{
+		ActorType:      crmcontracts.PrincipalAttributionActorType(a.ActorType),
+		ActorId:        a.ActorID,
+		ActorName:      a.ActorName,
+		OnBehalfOfName: a.OnBehalfOfName,
+		AgentClient:    a.AgentClient,
+	}
+	if a.OnBehalfOf != nil {
+		id := openapi_types.UUID(*a.OnBehalfOf)
+		out.OnBehalfOf = &id
+	}
+	if a.PassportID != nil {
+		id := openapi_types.UUID(*a.PassportID)
+		out.PassportId = &id
+	}
+	return out
+}
+
+// CreationAttributionTx is who created the record: its earliest create audit
+// row, read through the same projection as AuditAttributionsTx. Nil when no
+// create row survives, which the caller reads as unknown, not as the system.
+// The caller has already read the record, the gate the record History holds.
+func CreationAttributionTx(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID) (*AuditAttribution, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT `+recordAuditColumns+`
+		FROM audit_log a`+auditActorNameJoins+agentClientNameJoin+`
+		WHERE a.entity_type = $1 AND a.entity_id = $2 AND a.action = 'create'
+		ORDER BY a.occurred_at, a.id
+		LIMIT 1`, entityType, entityID)
+	if err != nil {
+		return nil, fmt.Errorf("privacy: reading a creation attribution: %w", err)
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		if err := rows.Err(); err != nil {
+			return nil, fmt.Errorf("privacy: reading a creation attribution: %w", err)
+		}
+		return nil, nil
+	}
+	var row recordAuditRow
+	if err := scanRecordAuditRow(rows, &row); err != nil {
+		return nil, fmt.Errorf("privacy: reading a creation attribution: %w", err)
+	}
+	attribution := attributionOf(row)
+	return &attribution, nil
 }
 
 // AuditAttributionsTx resolves the attribution of the given audit rows in one

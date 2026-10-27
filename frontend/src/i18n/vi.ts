@@ -1686,6 +1686,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "trust.importedFrom": "Đã nhập từ {uploadName}",
   "trust.agentTag": "Tự động: {agent}",
   "trust.agentUnnamed": "Do AI tạo",
+  "trust.agentFor": "{agent} tạo cho {name}",
+  "trust.agentUnnamedFor": "Do AI tạo cho {name}",
   "trust.systemTag": "Tác vụ hệ thống: {job}",
   "trust.systemUnnamed": "Tác vụ hệ thống",
   "systemJob.agent_resume": "Tiếp tục lần chạy của trợ lý AI",

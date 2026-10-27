@@ -1,4 +1,7 @@
+import type { components } from "../api/schema";
 import type { Provenance, SourceAuthor } from "./trust";
+
+type PrincipalAttribution = components["schemas"]["PrincipalAttribution"];
 
 // captured_by is server-stamped from the authenticated principal, so it carries
 // that principal's kind. The contract lists four
@@ -94,6 +97,25 @@ export function provenanceOf(
 // nothing on this side, so the tag says only that an agent acted. A named tool
 // (`agent:signal-scan`) is handed on as `job`, which the tag reads through the
 // catalogue; the identifier itself is never printed.
+/**
+ * An agent's tag with what the record's create audit row adds: the tool it
+ * was typed through and the colleague it worked for. captured_by names only
+ * a passport, so without the row the tag can say neither.
+ */
+export function withCreator(
+  provenance: Provenance,
+  createdBy: PrincipalAttribution | undefined,
+): Provenance {
+  if (provenance.kind !== "agent" || createdBy?.actor_type !== "agent") {
+    return provenance;
+  }
+  return {
+    ...provenance,
+    agent: createdBy.agent_client ?? provenance.agent,
+    forName: createdBy.on_behalf_of_name ?? undefined,
+  };
+}
+
 function agentProvenance(rest: string): Provenance {
   const named = rest === "" || OPAQUE_ID.test(rest) ? undefined : rest;
   return { kind: "agent", job: named };

@@ -29754,6 +29754,13 @@ export interface components {
              */
             as_of: string;
             contact: components["schemas"]["Contact"];
+            /**
+             * @description Who created the contact, from its earliest create audit row: for an agent, the
+             *     colleague it worked for and the tool it was typed through, which `captured_by`
+             *     cannot say. Absent when no create row is known; a reader says "unknown" for an
+             *     absent value and never "System".
+             */
+            created_by?: components["schemas"]["PrincipalAttribution"];
             /** @description The project this was narrowed to, when the request named one. */
             scope?: components["schemas"]["ProjectScope"];
             /**

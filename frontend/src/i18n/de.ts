@@ -1731,6 +1731,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "trust.importedFrom": "Importiert aus {uploadName}",
   "trust.agentTag": "Automatisiert durch {agent}",
   "trust.agentUnnamed": "Automatisiert durch einen Agenten",
+  "trust.agentFor": "Von {agent} für {name} erstellt",
+  "trust.agentUnnamedFor": "Von einem Agenten für {name} erstellt",
   "trust.systemTag": "Systemaufgabe: {job}",
   "trust.systemUnnamed": "Systemaufgabe",
   "systemJob.agent_resume": "Fortsetzung von Agentenläufen",

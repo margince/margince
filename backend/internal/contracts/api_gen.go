@@ -35151,6 +35151,12 @@ type Contact360 struct {
 	// ConversationMemory Threads and meetings as ENTITIES, condensed — what the conversation was about, not the transport events it was made of (ADR-0097 D3). The Activity tab remains the complete raw ledger; a summary never replaces it and never leaks a withheld activity.
 	ConversationMemory *[]ConversationMemoryEntry `json:"conversation_memory,omitempty"`
 
+	// CreatedBy Who created the contact, from its earliest create audit row: for an agent, the
+	// colleague it worked for and the tool it was typed through, which `captured_by`
+	// cannot say. Absent when no create row is known; a reader says "unknown" for an
+	// absent value and never "System".
+	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
+
 	// DeadAddresses The contact's email addresses whose latest delivery hard-bounced with no clean delivery since — derived from the send ledger at read time, never stored, so a later send that arrives clears the mark on its own. Lowercased, as contact emails are stored. Absent when the caller has no activity grant, named in `sections_omitted`.
 	DeadAddresses *[]string `json:"dead_addresses,omitempty"`
 	DealRoles     *struct {
