@@ -25,12 +25,12 @@ const fetchPage = async () => emptyPage();
 async function pressAndExpectTitleFocused(name: string) {
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name }));
-  expect(screen.getByRole("heading", { name: "People" })).toHaveFocus();
+  expect(screen.getByRole("heading", { name: "Contacts" })).toHaveFocus();
 }
 
 describe("a press that takes its own button away", () => {
   it("hands focus to the list's title from Clear filters", async () => {
-    render(<ListTableHarness title="People" fetchPage={fetchPage} />);
+    render(<ListTableHarness title="Contacts" fetchPage={fetchPage} />);
     await pressAndExpectTitleFocused("Clear filters");
   });
 
@@ -49,7 +49,7 @@ describe("a press that takes its own button away", () => {
     window.location.hash = "#/contacts?owner_id=u-1";
     render(
       <ListTableHarness
-        title="People"
+        title="Contacts"
         fetchPage={fetchPage}
         emptyNote={(state) =>
           mineEmptyNote({
@@ -67,7 +67,7 @@ describe("a press that takes its own button away", () => {
   it("hands focus to the list's title from a refused filter's Remove", async () => {
     render(
       <ListTableHarness
-        title="People"
+        title="Contacts"
         fetchPage={fetchPage}
         emptyNote={() => (
           <RefusedFiltersNote
