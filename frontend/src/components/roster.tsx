@@ -4,6 +4,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
+import { Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
 import { readMemberPage } from "../lib/memberpages";
 import { unwrap } from "../lib/problem";
@@ -189,6 +191,21 @@ export function useRosterPartialHint(partial: boolean): string | undefined {
 }
 
 /**
+ * The hint a picker's `Field` owes its reader about the roster behind it: that
+ * the read failed, or that it stopped short. The string form of
+ * `RosterFailedLine` and `RosterPartialNote`, for a hint slot that owns its
+ * own paragraph and cannot hold either line.
+ */
+export function useRosterHint(
+  roster: Readonly<{ isError: boolean }>,
+  partial: boolean,
+): string | undefined {
+  const t = useT();
+  const partialHint = useRosterPartialHint(partial);
+  return roster.isError ? t("owner.rosterFailed") : partialHint;
+}
+
+/**
  * The caveat as its own line, for a picker with room for one beside it.
  *
  * Takes the FACT rather than reading the roster itself — `useRosterPartial` at
@@ -215,5 +232,38 @@ export function RosterPartialNote({
     <p className="t-caption" id={id} aria-live="off">
       {hint}
     </p>
+  );
+}
+
+/** What `RosterFailedLine` reads of a roster query. */
+export type RosterRead = Readonly<{ isError: boolean; refetch: () => unknown }>;
+
+/**
+ * The line a surface owes its reader when the roster read failed.
+ *
+ * A failed walk leaves `data` undefined, and a picker built on `data ?? []`
+ * then offers nobody: an empty list that reads as a workspace with no
+ * colleagues, under a Save that stays disabled for no stated reason. Takes the
+ * query the surface already holds, like `RosterPartialNote`, so it never arms a
+ * read the surface deferred. Renders nothing unless that read failed.
+ */
+export function RosterFailedLine({
+  kind,
+  roster,
+}: Readonly<{ kind: RosterKind; roster: RosterRead }>) {
+  const t = useT();
+  if (!roster.isError) {
+    return null;
+  }
+  return (
+    <ErrorLine
+      actions={
+        <Button variant="ghost" onClick={() => roster.refetch()}>
+          {t("common.retry")}
+        </Button>
+      }
+    >
+      {t(kind === "user" ? "roster.failedUsers" : "roster.failedTeams")}
+    </ErrorLine>
   );
 }

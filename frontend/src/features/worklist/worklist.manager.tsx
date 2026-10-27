@@ -16,8 +16,9 @@
 import { useState } from "react";
 import { useAssignableUserOptions } from "../../components/assigneepicker";
 import {
+  RosterFailedLine,
+  useRosterHint,
   useRosterPartial,
-  useRosterPartialHint,
 } from "../../components/entityref";
 import {
   Button,
@@ -81,21 +82,20 @@ export function OwnerPicker({
   scope: WorklistScope;
 }>) {
   const t = useT();
-  const contacts = useAssignableUserOptions();
-  // A ROSTER THAT STOPPED SHORT IS SAID SO. The walk is bounded, so past its
+  const { options: contacts, roster } = useAssignableUserOptions();
+  // A ROSTER THAT FAILED OR STOPPED SHORT IS SAID SO. The walk is bounded, so past its
   // reach this list is part of the workspace rather than the workspace — and a
   // picker missing colleagues looks exactly like a workspace that has none, on
   // the one control a lead uses to reach somebody. The words are the roster's
   // own, and the `Field` wires them into the control's `aria-describedby`.
-  const partial = useRosterPartial("user", true);
-  const partialHint = useRosterPartialHint(partial);
+  const rosterHint = useRosterHint(roster, useRosterPartial("user", true));
   // Naming nobody follows the scope dial, so the empty choice says which
   // population that is; "My Worklist" over the whole team misstates it.
   const options = [{ value: "", label: t(NOBODY_NAMED[scope]) }, ...contacts];
   return (
     <Field
       label={t("worklist.owner.visibleLabel")}
-      hint={partialHint}
+      hint={rosterHint}
       className="worklist-owner-field"
     >
       {(control) => (
@@ -113,9 +113,11 @@ export function OwnerPicker({
 // Who the reader may hand work to: the contacts, less whoever holds the task
 // already. Why the holder is excluded is the caller's own note below.
 function useAssigneeOptions(exclude: string | undefined) {
-  return useAssignableUserOptions().filter(
-    (option) => option.value !== exclude,
-  );
+  const { options, roster } = useAssignableUserOptions();
+  return {
+    options: options.filter((option) => option.value !== exclude),
+    roster,
+  };
 }
 
 // Hand one task to somebody else, in a form the row opens from its menu.
@@ -147,7 +149,7 @@ export function ReassignForm({
   // the contact already holding the task. An empty list is the honest state of a
   // question not yet answered; a self-reassignment is a write that changes
   // nothing and looks on screen exactly like one that did.
-  const options = useAssigneeOptions(holder);
+  const { options, roster } = useAssigneeOptions(holder);
   const settled = holder !== undefined;
   const reassign = useReassignTask();
 
@@ -197,6 +199,7 @@ export function ReassignForm({
       >
         {t("worklist.manager.reassignConfirm")}
       </Button>
+      <RosterFailedLine kind="user" roster={roster} />
     </div>
   );
 }

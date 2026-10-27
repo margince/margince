@@ -2646,6 +2646,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.loading": "Đang tải…",
   "ref.nameLoadFailed": "Không thể tải tên",
   "ref.memberLeft": "{name} (đã nghỉ)",
+  "roster.failedUsers": "Không thể tải danh sách thành viên.",
+  "roster.failedTeams": "Không thể tải danh sách nhóm.",
   "owner.rosterFailed":
     "Không thể tải danh sách thành viên. Hãy tải lại trang để chọn một người.",
   "ref.notInRoster":

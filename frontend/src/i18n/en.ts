@@ -2721,6 +2721,8 @@ export const en = {
   // a destination.
   "ref.nameLoadFailed": "Name did not load",
   "ref.memberLeft": "{name} (left)",
+  "roster.failedUsers": "Colleagues did not load.",
+  "roster.failedTeams": "Teams did not load.",
   "owner.rosterFailed": "Colleagues did not load. Reload the page to pick one.",
   "ref.notInRoster": "Currently assigned (no longer in the user list)",
 

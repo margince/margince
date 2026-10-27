@@ -3,19 +3,24 @@ export { searchProjects as searchProjectReferences } from "../companies/companyp
 import { useRecordOwnerOptions } from "../../components/assigneepicker";
 import {
   rosterOwnerName,
-  useRoster,
+  useRosterHint,
   useRosterPartial,
-  useRosterPartialHint,
 } from "../../components/entityref";
 import { useT } from "../../i18n";
 import { useMemberName } from "../../lib/membernames";
 import { useMe } from "../../lib/session";
 
 // Only colleagues the server says the reader may make an owner, so the picker
-// never offers somebody the save then refuses.
-export function useRecordOwners(ownerId: string | null | undefined) {
+// never offers somebody the save then refuses. The hint is the caveat a picker
+// owes when the roster failed or stopped short: without it a failed walk reads
+// as a workspace of one.
+export function useRecordOwners(ownerId: string | null | undefined): {
+  options: { value: string; label: string }[];
+  hint?: string;
+} {
   const t = useT();
-  const options = useRecordOwnerOptions();
+  const { options, roster } = useRecordOwnerOptions();
+  const hint = useRosterHint(roster, useRosterPartial("user", true));
   const missing =
     Boolean(ownerId) && !options.some((entry) => entry.value === ownerId);
   // Named by id: the current owner may be invited or deactivated, and the
@@ -26,25 +31,20 @@ export function useRecordOwners(ownerId: string | null | undefined) {
       value: ownerId,
       label: rosterOwnerName(ownerId, ownerName, t, t("ref.notInRoster")),
     });
-  return options;
+  return { options, hint };
 }
 
-// The owners, the reader, and the caveat a picker owes when the roster
-// failed or stopped short. Without the caveat a failed walk reads as a
-// workspace of one.
+// The owners, the reader, and the roster's caveat.
 export function useOwnerPicker(ownerId: string | null | undefined): {
   owners: { value: string; label: string }[];
   me: string;
   hint?: string;
 } {
-  const t = useT();
   const me = useMe();
   const owners = useRecordOwners(ownerId);
-  const roster = useRoster("user", true);
-  const partialHint = useRosterPartialHint(useRosterPartial("user", true));
   return {
-    owners,
+    owners: owners.options,
     me: me.data?.user.id ?? "",
-    hint: roster.isError ? t("owner.rosterFailed") : partialHint,
+    hint: owners.hint,
   };
 }

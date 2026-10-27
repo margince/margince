@@ -6,11 +6,7 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useRecordOwnerOptions } from "../../components/assigneepicker";
-import {
-  useRoster,
-  useRosterPartial,
-  useRosterPartialHint,
-} from "../../components/entityref";
+import { useRosterHint, useRosterPartial } from "../../components/entityref";
 import { Field } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
@@ -109,13 +105,14 @@ export function HandoverModal({
   // One key per opening, so a retried Hand over replays the first answer.
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const owned = useMemberHandover(member.id, open);
-  const options = useRecordOwnerOptions(open).filter(
-    (option) => option.value !== member.id,
-  );
+  const owners = useRecordOwnerOptions(open);
+  const options = owners.options.filter((option) => option.value !== member.id);
   // A roster that failed or stopped short is said so: a picker missing
   // colleagues looks just like a team without them.
-  const roster = useRoster("user", open);
-  const partialHint = useRosterPartialHint(useRosterPartial("user", open));
+  const rosterHint = useRosterHint(
+    owners.roster,
+    useRosterPartial("user", open),
+  );
   const receiverName =
     options.find((option) => option.value === receiver)?.label ?? receiver;
 
@@ -176,10 +173,7 @@ export function HandoverModal({
         </p>
       )}
       {owned.isError && <ErrorLine error={owned.error} />}
-      <Field
-        label={t("users.handover.receiver")}
-        hint={roster.isError ? t("owner.rosterFailed") : partialHint}
-      >
+      <Field label={t("users.handover.receiver")} hint={rosterHint}>
         {(control) => (
           <Select
             {...control}

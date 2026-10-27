@@ -82,6 +82,7 @@ export function useConversationNames(
   entityId: string,
 ) {
   const viewerId = useViewerId(open);
+  // roster-failure: names only; a miss reads as an unnamed colleague.
   const roster = useRoster("user", open);
   const namesCompany = useCompany360(entityType === "company" ? entityId : "");
   const colleagues = new Map(
