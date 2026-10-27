@@ -1434,9 +1434,10 @@ docs-describing:
 test-docs-describing:
 	@./scripts/check-docs-describing.test.sh
 
-## test-release-patch-base — prove the release workflow reads only a checked
-## patch base from the release CLI's record: a base, or the first-release mark.
-## Every other record fails the release before a patch is cut.
+## test-release-patch-base — prove the patch base reader the release workflow
+## calls accepts only a checked record from the release CLI: a base, or the
+## first-release mark. Every other record fails before a patch is cut. It feeds
+## the reader fixed records; it runs neither the workflow nor the CLI.
 test-release-patch-base:
 	@./scripts/release-patch-base.test.sh
 
