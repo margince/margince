@@ -157,8 +157,8 @@ func TestAnEmploymentEdgeLivesItsWholeLifeThroughTheToolSurface(t *testing.T) {
 		t.Errorf("role = %v after an unrelated patch, want the human's own cto", patched.Role)
 	}
 
-	// A field a human wrote applies at once too, for an edge like any other
-	// record: the audit row and Undo are the safety net, and nothing waits.
+	// A field a human wrote applies at once, for an edge as for any record.
+	// The audit row and Undo put a wrong edit back, so nothing waits.
 	overwritten, err := registry.Invoke(ctx, "update_record", json.RawMessage(fmt.Sprintf(
 		`{"record_type":"relationship","id":%q,"fields":{"role":"vp_sales"}}`, edgeID)))
 	if err != nil {
