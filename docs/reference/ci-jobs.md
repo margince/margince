@@ -1,7 +1,9 @@
 <!-- prose:plain -->
 # The jobs of the merge gate
 
-What each job of `ci.yml` checks. Which jobs a change reaches, and why the gate is shaped this way:
+What each job of [`ci.yml`](../../.github/workflows/ci.yml) checks, with the jobs of its lanes
+([`_lane-integration.yml`](../../.github/workflows/_lane-integration.yml),
+[`_lane-frontend.yml`](../../.github/workflows/_lane-frontend.yml)); those files declare the jobs. Which jobs a change reaches, and why the gate is shaped this way:
 [ci-pipeline.md](../explanation/ci-pipeline.md). The workflows outside the gate:
 [ci-workflows.md](ci-workflows.md).
 
@@ -17,7 +19,7 @@ What each job of `ci.yml` checks. Which jobs a change reaches, and why the gate 
 | `integration shard (k/6)` | `make test-integration` with `INTEGRATION_SHARD=k/6`: a fixed part of the whole integration lane. Each package's tests are handed out slowest first, by the times in `scripts/integration-test-timing.txt`, so slow tests do not land on one shard. Refresh that file from a green run with `scripts/refresh-integration-test-timing.sh <run-id>`; a stale file makes the parts less even, but never drops a test. It runs with `INTEGRATION_JOBS=16`. It boots the dev compose stack (`make db-up`: Postgres 16 (pgvector) pinned by digest + Redis 7 + MinIO + the app role; one stack file, and no GH services mirrored by hand). Each shard builds its own `margince_test` template with migrations run, and copies it per package. While the template builds, it compiles the lane once with the flags each package uses, so the packages that start together do not each compile the same code. It uploads the manifest of its part, the run time of each of its tests, and each binary coverage pod |
 | `integration unit coverage` | The unit `-cover` pass over every package, with a binary coverage pod only. No services (the test lanes gate checks that tests with no tag open no real DB) |
 | `integration` | The fan-in that the `ci` aggregate reads, standing for the whole sharded lane. It checks that every shard + the unit pass passed; a failed shard turns it red, not skipped. Then `scripts/test-integration-reconcile.sh` proves the parts add up: every shard is there, they found the same tests, and together they cover all with no overlap. It merges every coverage pod into `coverage.out`, and uploads `go-coverage` |
-| `integration (extension migration gate)` | `make check-ext-migrations`, beside the shards rather than after them, because it reads the tree and no shard output. It starts the dev compose stack only when an enabled unit declares `migrations/`. It belongs to the same lane as the shards, so the `ci` aggregate reads its result too |
+| `integration (extension migration gate)` | `make check-ext-migrations`, beside the shards rather than after them, because it reads the tree and no shard output. The dev compose stack starts only when an enabled unit declares `migrations/`. Being in the same lane as the shards, its result reaches the `ci` aggregate too |
 | `images (build only)` | `docker buildx bake` of the default group (the three roles), pushing nothing; runs on the `images` scope |
 | `vuln` | `make vuln` (govulncheck over all packages). **Advisory**: it sits outside the `ci` aggregate, so a red one does not stop a merge. It runs on every backend change, and `scheduled.yml` runs it daily on `main` |
 | `license gate` | `make test-sbom-census`, then `make sbom-gate`: `make sbom`, then `make sbom-check`, both run again when grant refuses a package, up to three runs. It holds the license policy for dependencies (`grant`, policy in `.grant.yaml`), over the resolved dependency graph, not each manifest. It is gated at the job level, so a path skip reports as passing. It runs on `merge_group` as well as `pull_request`. It is the **only** run of this policy that starts on its own; `sbom.yml` runs only by hand |
