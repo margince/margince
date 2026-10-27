@@ -2,15 +2,15 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Panel } from "../design-system/panel";
 import { translate } from "../i18n";
 import { emptyPage, ListTableHarness, render } from "./listquery.testkit";
 import { mineEmptyNote } from "./recordlist";
 import { RefusedFiltersNote } from "./refusedfiltersnote";
 
-// Each press below empties the list's note and takes its own button away. Focus
-// goes to the list's title, or the panel's around it, not to the page.
+// Each press below takes its own button away. Focus goes to the list's title,
+// its panel's title or its search box, never to the page.
 
 beforeEach(() => {
   window.location.hash = "#/contacts?status=new&owner_id=u-1";
@@ -18,6 +18,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   window.location.hash = "";
 });
 
@@ -64,11 +65,20 @@ describe("a press that takes its own button away", () => {
 
   it("hands focus to the search box of a list with no title and no panel", async () => {
     window.location.hash = "#/contacts?q=zzz";
+    // The rows overflow, so their scroll box is a named region the search box
+    // must still win over.
+    vi.spyOn(HTMLDivElement.prototype, "scrollWidth", "get").mockReturnValue(
+      900,
+    );
+    vi.spyOn(HTMLDivElement.prototype, "clientWidth", "get").mockReturnValue(
+      300,
+    );
     const user = userEvent.setup();
     render(<ListTableHarness fetchPage={fetchPage} />);
     await user.click(
       await screen.findByRole("button", { name: "Clear filters" }),
     );
+    expect(screen.getByRole("region")).toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "Search" })).toHaveFocus();
   });
 
