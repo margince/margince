@@ -51,6 +51,13 @@ const (
 	GeocodeStale = "stale"
 )
 
+// GeocodeStatuses is every status geocode_status admits.
+//
+// Held by: TestTheGeocodeStatusesAreTheColumnsCheck (backend/gates/geocodestatuses_test.go)
+func GeocodeStatuses() []string {
+	return []string{GeocodeOK, GeocodeFailed, GeocodeNoMatch, GeocodeStale}
+}
+
 // geocodeMaxAttempts bounds how often one company's address is re-asked after
 // a failure. Past it the row waits for its address to change, which is the
 // only thing that could make the answer different.

@@ -44,7 +44,7 @@ func newDealStatusService(pool *pgxpool.Pool, now func() time.Time) *dealstatus.
 	return dealstatus.NewService(
 		pool, deals.NewStore(db, DealsInstallation()),
 		activities.NewStore(db), dealrooms.NewStore(db), now,
-	).WithSeats(dealSeatReader(pool))
+	).WithSeats(dealSeatReader(pool)).WithMailCoverage(mailCaptureCoverageReader(db))
 }
 
 // dealSeatReader reads the deal's seats with their roles and names.

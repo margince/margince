@@ -109,8 +109,7 @@ function targetSentence(
   const target = won?.target;
   const actual = won?.target_actual;
   if (
-    !won ||
-    won.coverage.status !== "ok" ||
+    won?.coverage.status !== "ok" ||
     target == null ||
     target <= 0 ||
     actual == null ||
@@ -135,7 +134,7 @@ function landingSentence(
   landing: Metric | undefined,
   words: Words,
 ): string | null {
-  if (!landing || landing.coverage.status !== "ok" || landing.value == null) {
+  if (landing?.coverage.status !== "ok" || landing.value == null) {
     return null;
   }
   return words.t("reporting.writtenLanding", {
@@ -150,12 +149,7 @@ function openSentence(
   words: Words,
 ): string | null {
   const count = open?.coverage.eligible_count;
-  if (
-    !open ||
-    open.coverage.status !== "ok" ||
-    open.value == null ||
-    count == null
-  ) {
+  if (open?.coverage.status !== "ok" || open.value == null || count == null) {
     return null;
   }
   return words.plural("reporting.writtenOpen", count, {

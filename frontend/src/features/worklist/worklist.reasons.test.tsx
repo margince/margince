@@ -319,7 +319,7 @@ describe("a row says its deadline once", () => {
 });
 
 describe("a follow-up row says why it is there", () => {
-  it("says how long the reader's message has gone unanswered", async () => {
+  it("dates the message without a recorded reply", async () => {
     const { container } = draw([
       {
         occurred_precision: "instant",
@@ -340,7 +340,7 @@ describe("a follow-up row says why it is there", () => {
     await screen.findByText(/Pricing for the pilot/);
     const line = container.querySelector(".worklist-row-because")?.textContent;
     expect(line).toMatch(/you wrote last/);
-    expect(line).toMatch(/no reply for 6 days/);
+    expect(line).toMatch(/no reply recorded for 6 days/);
   });
 
   // The row a meeting with nobody on file leaves behind offers no "Draft
@@ -367,7 +367,7 @@ describe("a follow-up row says why it is there", () => {
     await screen.findByText(/Call with Acme and Dana/);
     const line = container.querySelector(".worklist-row-because")?.textContent;
     expect(line).toMatch(/met 1 day ago/);
-    expect(line).toMatch(/nothing sent since/);
+    expect(line).toMatch(/no outgoing message recorded since/);
     expect(line).toMatch(/no attendee on file/);
   });
 });
