@@ -3505,6 +3505,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /companies/{id}/logo:
     parameters:
@@ -9265,6 +9266,7 @@ paths:
             image/png:
               schema: { type: string, format: binary }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         default:
           description: The logo could not be read.
           content:
@@ -23825,6 +23827,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /users/names:
     get:
       tags: [Identity]
