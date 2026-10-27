@@ -54,7 +54,7 @@ function numericPlaces(shown: readonly SizedColumn[]): string {
 
 /**
  * The widest figure each numeric column holds on screen now. It raises `held`,
- * which never falls, so paging to smaller figures leaves the columns still.
+ * which never falls, so smaller figures paged in leave undragged columns still.
  */
 function readFigures(
   table: HTMLTableElement,
