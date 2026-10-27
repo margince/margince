@@ -8,8 +8,6 @@ import (
 	"testing"
 )
 
-func ptr[T any](v T) *T { return &v }
-
 // refusedField is the field a refusal names, or "" when the input was taken.
 func refusedField(err error) string {
 	if bad, ok := errors.AsType[*BadInputError](err); ok {
@@ -20,7 +18,7 @@ func refusedField(err error) string {
 
 func TestANewFormIsRefusedOnTheFieldItGotWrong(t *testing.T) {
 	site := []string{"https://www.example.com"}
-	secret := ptr("a-builder-secret-of-length")
+	secret := new("a-builder-secret-of-length")
 	for name, tc := range map[string]struct {
 		in    CreateInput
 		field string
@@ -32,7 +30,7 @@ func TestANewFormIsRefusedOnTheFieldItGotWrong(t *testing.T) {
 		"builder without its secret":  {CreateInput{Name: "F", Sender: SenderTally}, "sender_secret"},
 		"server with a pasted secret": {CreateInput{Name: "F", Sender: SenderServer, SenderSecret: secret}, "sender_secret"},
 		"consent without wording":     {CreateInput{Name: "F", Sender: SenderBrowser, AllowedOrigins: site, ConsentRequired: true}, colConsentWording},
-		"plain http redirect":         {CreateInput{Name: "F", Sender: SenderBrowser, AllowedOrigins: site, RedirectURL: ptr("http://example.com/thanks")}, colRedirectURL},
+		"plain http redirect":         {CreateInput{Name: "F", Sender: SenderBrowser, AllowedOrigins: site, RedirectURL: new("http://example.com/thanks")}, colRedirectURL},
 		"map onto no lead field":      {CreateInput{Name: "F", Sender: SenderBrowser, AllowedOrigins: site, FieldMap: map[string]string{"x": "salary"}}, "field_map"},
 		"a builder form":              {CreateInput{Name: "F", Sender: SenderTally, SenderSecret: secret}, ""},
 	} {
@@ -55,7 +53,7 @@ func TestANewFormLandsLeadsAsWebsiteLeadsUnlessToldOtherwise(t *testing.T) {
 func TestAnUpdateIsCheckedAgainstTheFormItLeaves(t *testing.T) {
 	browser := Form{
 		Sender: SenderBrowser, AllowedOrigins: []string{"https://www.example.com"},
-		RedirectURL: ptr("https://www.example.com/thanks"), ConsentWording: ptr("You may answer me."),
+		RedirectURL: new("https://www.example.com/thanks"), ConsentWording: new("You may answer me."),
 	}
 	server := Form{Sender: SenderServer}
 	for name, tc := range map[string]struct {
@@ -63,13 +61,13 @@ func TestAnUpdateIsCheckedAgainstTheFormItLeaves(t *testing.T) {
 		in    UpdateInput
 		field string
 	}{
-		"blank name":                   {browser, UpdateInput{Name: ptr(" ")}, "name"},
+		"blank name":                   {browser, UpdateInput{Name: new(" ")}, "name"},
 		"every website removed":        {browser, UpdateInput{AllowedOrigins: &[]string{}}, "allowed_origins"},
 		"a website on a server form":   {server, UpdateInput{AllowedOrigins: &[]string{"https://www.example.com"}}, "allowed_origins"},
-		"a pasted secret on a server":  {server, UpdateInput{SenderSecret: ptr("a-builder-secret-of-length")}, "sender_secret"},
-		"a state that is not one":      {browser, UpdateInput{State: ptr("deleted")}, "state"},
-		"consent once wording cleared": {browser, UpdateInput{ConsentRequired: ptr(true), Clear: []string{colConsentWording}}, colConsentWording},
-		"a pause":                      {browser, UpdateInput{State: ptr(StatePaused)}, ""},
+		"a pasted secret on a server":  {server, UpdateInput{SenderSecret: new("a-builder-secret-of-length")}, "sender_secret"},
+		"a state that is not one":      {browser, UpdateInput{State: new("deleted")}, "state"},
+		"consent once wording cleared": {browser, UpdateInput{ConsentRequired: new(true), Clear: []string{colConsentWording}}, colConsentWording},
+		"a pause":                      {browser, UpdateInput{State: new(StatePaused)}, ""},
 	} {
 		_, err := tc.in.merged(tc.form)
 		if got := refusedField(err); got != tc.field {
@@ -81,11 +79,11 @@ func TestAnUpdateIsCheckedAgainstTheFormItLeaves(t *testing.T) {
 func TestAClearedSettingIsGoneFromTheMergedForm(t *testing.T) {
 	form := Form{
 		Sender: SenderBrowser, AllowedOrigins: []string{"https://www.example.com"},
-		LeadOrigin: ptr("website"), RedirectURL: ptr("https://www.example.com/thanks"),
-		SuccessMessage: ptr("Thanks"), ConsentPolicyVersion: ptr("v1"),
+		LeadOrigin: new("website"), RedirectURL: new("https://www.example.com/thanks"),
+		SuccessMessage: new("Thanks"), ConsentPolicyVersion: new("v1"),
 	}
 	in := UpdateInput{
-		Name: ptr("Renamed"), SuccessMessage: ptr("Danke"),
+		Name: new("Renamed"), SuccessMessage: new("Danke"),
 		Clear: []string{colLeadOrigin, colOwnerID, colRedirectURL, colConsentPolicyVersion, colConsentWording, colSuccessMessage},
 	}
 	got, err := in.merged(form)
