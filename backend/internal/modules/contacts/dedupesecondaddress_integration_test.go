@@ -361,7 +361,7 @@ func (e *dedupeEnv) beginHeldAddressCreate(t *testing.T, name, email string) (pg
 		t.Fatalf("insert the in-flight contact: %v", err)
 	}
 	if err := insertContactEmails(ctx, tx, ids.From[ids.WorkspaceKind](e.ws), id, "manual", "human:x",
-		[]ContactEmailInput{{Email: email, EmailType: "work", IsPrimary: true}}, storekit.RefuseErased); err != nil {
+		[]ContactEmailInput{{Email: email, EmailType: "work", IsPrimary: true}}, storekit.RefuseErased, nil); err != nil {
 		t.Fatalf("insert the in-flight address: %v", err)
 	}
 	return tx, id, pid

@@ -79,6 +79,18 @@ func estimateLeadFiling(ctx context.Context, t *testing.T, l *leadMailEnv, maxim
 	return estimated, more
 }
 
+func historicalImportedLead(t *testing.T, l *leadMailEnv, address string) ids.LeadID {
+	t.Helper()
+	lead := l.importedLead(t, ids.NewV7().String()+"@fixture.example")
+	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `UPDATE lead SET email = lower($2), owner_id = $3 WHERE id = $1`, lead, address, l.owner)
+		return err
+	}); err != nil {
+		t.Fatalf("restore the historical imported address: %v", err)
+	}
+	return lead
+}
+
 func TestTheLeadFilingTaskFilesEarlierMailOnceAndReplaysSafely(t *testing.T) {
 	l := setupLeadMail(t)
 	ctx := principal.SystemActing(l.e.Admin(), "system:datatask-test")
@@ -96,7 +108,7 @@ func TestTheLeadFilingTaskFilesEarlierMailOnceAndReplaysSafely(t *testing.T) {
 	roleMail := l.mail(t, owedMail{from: "info@prospect.example", to: l.seat, subject: "Enquiry", at: l.at.AddDate(0, 0, -30)}, true)
 	l.moveAddress(t, "info@prospect.example", "bob@prospect.example")
 	carol := l.lead(t, "info@prospect.example")
-	lead := l.importedLead(t, "lena@prospect.example")
+	lead := historicalImportedLead(t, l, "lena@prospect.example")
 	infrastructure := l.lead(t, "dse@eu.docusign.net")
 	asLeadReadingSeat(t, l)
 
@@ -140,7 +152,11 @@ func TestTheLeadFilingTaskFilesEarlierMailOnceAndReplaysSafely(t *testing.T) {
 	if changed := leadFilingPass(ctx, t, l, false); changed != 0 {
 		t.Fatalf("a second pass changed %d activities, want none", changed)
 	}
-	if n := l.e.WsCount(t, `SELECT count(*) FROM activity_link WHERE lead_id = $1`, lead); n != 3 {
+	if n := l.e.WsCount(t, `SELECT count(*) FROM activity_link l JOIN activity a ON a.id = l.activity_id
+		WHERE l.lead_id = $1 AND a.kind <> 'task'`, lead); n != 3 {
 		t.Errorf("the lead holds %d links after the replay, want each of its three activities once", n)
+	}
+	if n := l.qualifyAsks(t, lead, l.owner); n != 1 {
+		t.Errorf("the repaired inbound mail left %d open qualify tasks, want one", n)
 	}
 }

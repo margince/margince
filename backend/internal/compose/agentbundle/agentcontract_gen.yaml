@@ -302,6 +302,15 @@ paths:
       tags: [Contacts]
       operationId: updateContact
       summary: Update a contact (partial).
+      description: |-
+        An email or a LinkedIn profile that the edit gives the contact, and that a live lead
+        holds, answers 409 `lead_holds_email` with the same details as on `createContact`.
+        Send the edit again with `convert_lead_ids` to convert those leads into this contact.
+        An address or profile the contact already holds is not asked about again.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/IfMatch'
@@ -321,12 +330,6 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
-      description: |-
-        Update a contact (partial).
-
-        Needs the passport permission Change records.
-
-        Runs at once.
     delete:
       tags: [Contacts]
       operationId: archiveContact
@@ -3436,10 +3439,11 @@ paths:
             of them, `all` a record carrying every one, `none` a record carrying not one.
         - name: from_contact_id
           in: query
+          deprecated: true
           schema: {type: string, format: uuid}
           description: |-
-            Only the leads worked from this contact (`from_contact_id` on the lead). The contact
-            page asks it to find the open lead a contact is already worked through.
+            Only older leads that retain this historical contact link. New leads cannot be
+            created from contacts.
       responses:
         '200':
           description: A page of leads.
@@ -3461,6 +3465,8 @@ paths:
         for idempotent re-import. A `project_id` that names no project the caller can read
         answers 422 naming `project_id`, the same for a missing project and for one hidden by row scope.
         An `email` on the erasure list answers 422 naming `email` with code `address_erased`.
+        A lead for somebody who is already a contact is refused with 409 `contact_holds_email`:
+        open a deal on the contact instead.
 
         Needs the passport permission Change records.
 
@@ -3493,7 +3499,8 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '409':
-          description: A live lead already owns this email.
+          description: |-
+            A live lead already owns this email (`duplicate_email`).
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -3665,6 +3672,8 @@ paths:
           description: |-
             Lead already promoted, or its email belongs to a contact the caller cannot read
             (`contact_held_by_colleague` with `share_requested`, as on `createContact`).
+            An email or LinkedIn profile the edit gives the lead that a live contact holds answers
+            `contact_holds_email`, with the details `createLead` gives.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -3743,7 +3752,10 @@ paths:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
         '422':
-          description: The promoted contact owns a deal — the reversal is refused rather than orphaning it.
+          description: |-
+            The promoted contact owns a deal (`contact_has_deal`), or must stay live
+            (`demote_keeps_contact`): the reversal is refused rather than orphaning a deal or
+            leaving the lead beside its contact.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -8829,7 +8841,7 @@ components:
       description: 'What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.'
     ImportReasonCode:
       type: string
-      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_unreadable]
+      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_unreadable]
       description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.'
     CreateImportRunRequest:
       type: object
@@ -9826,6 +9838,16 @@ components:
         source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
+        convert_lead_ids:
+          type: array
+          items: {type: string, format: uuid}
+          description: |-
+            The live leads to convert into this contact, sent after a 409 `lead_holds_email`
+            named them. The set must equal the leads that hold an email or the LinkedIn profile when the
+            write runs; otherwise the answer is that 409 again. Each lead is then converted
+            into the contact in the same write, and a conversion the server refuses fails the
+            whole write. An agent sending this field is refused with 422
+            `convert_needs_a_human`: an agent converts with `promote_lead`.
       additionalProperties: true
     ContactEmailInput:
       type: object
@@ -9889,6 +9911,16 @@ components:
             replaces addresses. A number that has been reassigned is corrected by sending
             the set that should stand; an append-only field could never remove the one
             that now reaches somebody else.
+        convert_lead_ids:
+          type: array
+          items: {type: string, format: uuid}
+          description: |-
+            The live leads to convert into this contact, sent after a 409 `lead_holds_email`
+            named them. The set must equal the leads that hold an email or the LinkedIn profile this edit gives the contact when the
+            write runs; otherwise the answer is that 409 again. Each lead is then converted
+            into the contact in the same write, and a conversion the server refuses fails the
+            whole write. An agent sending this field is refused with 422
+            `convert_needs_a_human`: an agent converts with `promote_lead`.
       additionalProperties: true
     ContactListResponse:
       type: object
@@ -16173,7 +16205,7 @@ components:
           format: uuid
           readOnly: true
           description: >-
-            The existing contact this lead was created from (`contact_id` on the create), and null for any other lead. While this lead is live, a second create from the same contact answers 409 `duplicate_contact_lead` naming this lead.
+            The contact an older lead was created from, and null for every newly created lead.
         merged_into_id:
           type: [string, 'null']
           format: uuid
@@ -16246,8 +16278,9 @@ components:
         contact_id:
           type: [string, 'null']
           format: uuid
+          deprecated: true
           description: >-
-            An existing contact this lead is worked from. Its name, primary email, title, LinkedIn profile and current employer fill whichever of those fields this request leaves out, so a lead for a contact the CRM already holds is never retyped or left unnamed. The contact must be one the caller may read (422 otherwise). The lead records it as `from_contact_id`, and the contact itself is not changed. A contact already worked through a live lead answers 409 `duplicate_contact_lead` with that lead's id. Not combinable with `source_system` (422): a lead filled from a contact is not an import.
+            Older clients may still send this field. The request is refused with 409 `contact_holds_email`; open a deal when a contact has a new opportunity.
         status: {type: string, enum: [new, contacted, engaged, promoted, disqualified], default: new, description: 'The activity-driven ladder: new → contacted (we reached out) → engaged (they answered or a meeting is booked/held) → promoted (qualified: a contact exists) | disqualified. contacted and engaged are set by the system from captured activity and may be set by hand.'}
         owner_id: {type: [string, 'null'], format: uuid}
         source_system: {type: [string, 'null']}
@@ -16375,9 +16408,9 @@ components:
           enum: [reversed, merge_lineage_only]
           description: |-
             `reversed` — the promotion had created a contact, which is now archived and the
-            lead restored to `engaged`. `merge_lineage_only` — the promotion had merged into
-            a pre-existing contact, which is left untouched; only the lineage pointers are
-            nulled.
+            lead restored to `engaged`. `merge_lineage_only` is no longer answered: a demote whose
+            contact must stay is refused with 422 `demote_keeps_contact`. The value stays so a
+            client reading an older response still parses it.
         contact_id:
           type: [string, 'null']
           format: uuid

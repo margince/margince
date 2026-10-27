@@ -88,6 +88,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithFeedbackCarryReader(ai.NewFeedbackStore(InstallationDB(pool))).
 		WithGrantCarrier(identity.NewServiceFor(InstallationDB(pool))).
 		WithShareRequests(contactShareRequests(pool)).
+		WithLeadArrivals(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
 		WithInstallationRenamer(installationRenamer(pool))
 }
 
@@ -100,6 +101,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	// subsystem is shaped to prevent.
 	gate := consentGateFor(pool)
 	return activities.NewHandlers(InstallationDB(pool)).
+		WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithRecordZone(installationZoneTx).
 		WithSettings(StoredConfig(pool)).
@@ -113,7 +115,9 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		// The public booking capture seams (feedback/14): contacts is the
 		// idempotent-on-email contact path, consent records the
 		// passthrough — both injected here, never sibling imports.
-		WithPublicBooking(contacts.NewStore(InstallationDB(pool)), bookingConsentAdapter{store: consent.NewStore(InstallationDB(pool))}).
+		WithPublicBooking(contacts.NewStore(InstallationDB(pool)), bookingConsentAdapter{
+			store: consent.NewStore(InstallationDB(pool)),
+		}).
 		// The RFC 8058 unsubscribe linker (B-E11.32): consent mints the
 		// preference token behind the List-Unsubscribe URL.
 		WithUnsubscribe(preferenceLinkAdapter{store: consent.NewStore(InstallationDB(pool))}).

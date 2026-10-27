@@ -83,7 +83,10 @@ func SeedBookingPageTx(ctx context.Context, tx pgx.Tx, hostUserID ids.UserID) (s
 // ContactEnsurer is the contacts seam of the public capture path (compose
 // injects it — activities never imports a sibling).
 type ContactEnsurer interface {
-	EnsureContactByEmail(ctx context.Context, fullName, email, source string, erasure storekit.ErasureAdmission) (ids.UUID, error)
+	// EnsureBookerByEmail answers the contact holding the address, or the live
+	// lead holding it when no contact does. It creates a contact only when
+	// neither does. One of the two ids is set.
+	EnsureBookerByEmail(ctx context.Context, fullName, email, source string, erasure storekit.ErasureAdmission) (ids.UUID, ids.LeadID, error)
 }
 
 // BookingConsent is the CaptureConsent passthrough: the purpose and the
@@ -188,6 +191,10 @@ type ConsentCapturer interface {
 	// thing that happened. Called only from the PUBLIC door, since a rep
 	// booking on somebody's behalf is not that somebody initiating contact.
 	RecordBookingInquiry(ctx context.Context, contactID, activityID ids.UUID) error
+	// CaptureLeadBookingConsent records the operational grant for a booker who
+	// is a live lead. A newsletter tick is not asked about: its confirmation
+	// link is minted against a contact's own address, and a lead has none.
+	CaptureLeadBookingConsent(ctx context.Context, leadID ids.LeadID, consent BookingConsent) (MarketingOutcome, error)
 }
 
 // MarketingOutcome says what became of a booking form's newsletter tick.
@@ -348,20 +355,23 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		return
 	}
 
-	contactID, ok := h.ensureBooker(w, r, req)
+	contactID, leadID, ok := h.ensureBooker(w, r, req)
 	if !ok {
+		return
+	}
+	bookingConsent := BookingConsent{
+		PurposeID: purposeID, PolicyVersion: req.Consent.PolicyVersion,
+		Wording: *req.Consent.Wording, Marketing: marketing,
+	}
+	if !leadID.IsZero() {
+		h.bookPublicMeetingForLead(w, r, page, req, leadID, bookingConsent, intent)
 		return
 	}
 	if err := h.store.calendar.CheckRecipient(r.Context(), page.HostUserID, contactID, string(req.Booker.Email)); err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
-	marketingOutcome, err := h.publicConsent.CaptureBookingConsent(r.Context(), contactID, BookingConsent{
-		PurposeID:     purposeID,
-		PolicyVersion: req.Consent.PolicyVersion,
-		Wording:       *req.Consent.Wording,
-		Marketing:     marketing,
-	})
+	marketingOutcome, err := h.publicConsent.CaptureBookingConsent(r.Context(), contactID, bookingConsent)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -370,19 +380,35 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 	h.bookPublicInvitation(w, r, page, req, contactID, marketingOutcome, intent)
 }
 
-// ensureBooker is the contact the booking lands on, or the refusal written.
-func (h Handlers) ensureBooker(w http.ResponseWriter, r *http.Request, req crmcontracts.BookPublicMeetingJSONRequestBody) (ids.UUID, bool) {
-	contactID, err := h.publicContacts.EnsureContactByEmail(r.Context(), req.Booker.Name, string(req.Booker.Email), "public_booking", storekit.AdmitSelfBooking)
+// ensureBooker is the contact or the live lead the booking lands on, or the
+// refusal written.
+func (h Handlers) ensureBooker(w http.ResponseWriter, r *http.Request, req crmcontracts.BookPublicMeetingJSONRequestBody) (ids.UUID, ids.LeadID, bool) {
+	contactID, leadID, err := h.publicContacts.EnsureBookerByEmail(r.Context(), req.Booker.Name, string(req.Booker.Email), "public_booking", storekit.AdmitSelfBooking)
 	if badValue, ok := errors.AsType[*values.ParseError](err); ok {
 		// The contacts store names its own field; this form's address is booker.email.
 		httperr.Write(w, r, httperr.Validation("booker.email", badValue.Code, badValue.Message))
-		return ids.Nil, false
+		return ids.Nil, ids.LeadID{}, false
 	}
 	if err != nil {
 		writeStoreErr(w, r, err)
-		return ids.Nil, false
+		return ids.Nil, ids.LeadID{}, false
 	}
-	return contactID, true
+	return contactID, leadID, true
+}
+
+// bookPublicMeetingForLead files the meeting on the live lead. The lead's
+// owner decides when to qualify them.
+func (h Handlers) bookPublicMeetingForLead(w http.ResponseWriter, r *http.Request, page BookingPage, req crmcontracts.BookPublicMeetingJSONRequestBody, lead ids.LeadID, consent BookingConsent, intent *publicBookingIntent) {
+	marketing, err := h.publicConsent.CaptureLeadBookingConsent(r.Context(), lead, consent)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	out, ok := h.reservePublicInvitation(w, r, page, req, ids.Nil, invitationIntent{Public: intent, DescriptionFromBooker: true, Lead: lead}, marketing)
+	if !ok {
+		return
+	}
+	writePublicInvitation(w, out, marketing)
 }
 
 // admitBookingMarketing settles the marketing tick BEFORE any write: it refuses

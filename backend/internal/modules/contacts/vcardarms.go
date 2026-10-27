@@ -199,8 +199,9 @@ func vcardRecordAddress(entry VCardEntry) *crmcontracts.Address {
 
 // skipHeldCard answers a card whose address a colleague's contact holds. The
 // colleague is asked to share it, and the card is skipped with the refusal's
-// own words. Any other error passes through.
-func (s *Store) skipHeldCard(ctx context.Context, err error, index int, name string) (VCardResult, error) {
+// own words. Any other error passes through. A mailed card is the machine's
+// work: a live lead's card is skipped with the reason and offers no convert.
+func (s *Store) skipHeldCard(ctx context.Context, err error, index int, name string, mailed bool) (VCardResult, error) {
 	err = s.AskHolderToShare(ctx, err)
 	if held, ok := errors.AsType[*ContactHeldByColleagueError](err); ok {
 		return VCardResult{Index: index, FullName: name, Outcome: VCardSkipped, Reason: held.Error()}, nil
@@ -208,8 +209,26 @@ func (s *Store) skipHeldCard(ctx context.Context, err error, index int, name str
 	if _, erased := errors.AsType[*storekit.ErasedIdentifierError](err); erased {
 		return VCardResult{Index: index, FullName: name, Outcome: VCardSkipped, Reason: vcardErasedAddress}, nil
 	}
+	if held, ok := errors.AsType[*LeadHoldsIdentityError](err); ok {
+		if mailed {
+			return VCardResult{Index: index, FullName: name, Outcome: VCardSkipped, Reason: vcardLeadHoldsMailed}, nil
+		}
+		skipped := VCardResult{Index: index, FullName: name, Outcome: VCardSkipped, Reason: vcardLeadHolds}
+		if len(held.LeadIDs) > 0 {
+			skipped.LeadID = &held.LeadIDs[0]
+		}
+		return skipped, nil
+	}
 	return VCardResult{}, err
 }
+
+// vcardLeadHolds is the reason a card for somebody who is already a lead creates
+// nothing. Somebody is a lead or a contact, never both.
+const vcardLeadHolds = "this card names somebody who is already a lead; convert the lead instead"
+
+// vcardLeadHoldsMailed is the same skip for a card that came with mail, which
+// nobody is there to answer. The lead is left as it is.
+const vcardLeadHoldsMailed = "this card names somebody who is already a lead, so it was not imported"
 
 // vcardExistsReason is what a model-read card gets when its address already
 // belongs to a contact. A reading of a photo is a guess about the print, and a

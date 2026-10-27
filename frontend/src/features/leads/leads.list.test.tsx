@@ -434,6 +434,42 @@ describe("LeadsScreen — rich create (P-15)", () => {
     await userEvent.click(screen.getByText("View existing record"));
     expect(window.location.hash).toBe("#/leads/existing-lead");
   });
+
+  it("sends a lead for an existing contact to the contact, and says a new opportunity is a deal", async () => {
+    stubFetch(async (url, method) => {
+      if (method === "POST" && url.includes("/leads")) {
+        return new Response(
+          JSON.stringify({
+            code: "contact_holds_email",
+            status: 409,
+            detail: "they are already a contact",
+            details: {
+              existing_id: "held-contact",
+              field: "email",
+              owner_notified: true,
+            },
+          }),
+          {
+            status: 409,
+            headers: { "Content-Type": "application/problem+json" },
+          },
+        );
+      }
+      return emptyPage();
+    });
+    const user = userEvent.setup();
+    render(<LeadsScreen />);
+    await user.click(await screen.findByTestId("new-record"));
+    await user.type(screen.getByLabelText("Full name *"), "Mara Held");
+    await user.type(screen.getByLabelText("Email"), "mara@customer.example");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(
+      await screen.findByText(/open a deal on the contact/),
+    ).toBeInTheDocument();
+    await user.click(screen.getByText("View existing record"));
+    expect(window.location.hash).toBe("#/contacts/held-contact");
+  });
 });
 
 describe("LeadsScreen — archived marking (P-3)", () => {

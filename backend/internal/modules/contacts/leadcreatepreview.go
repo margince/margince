@@ -5,7 +5,6 @@ package contacts
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -45,11 +44,7 @@ func (s *Store) PreviewLeadCreationForActor(ctx context.Context, in CreateLeadIn
 	if err := auth.Require(ctx, leadEntity, principal.ActionCreate); err != nil {
 		return out, err
 	}
-	in, err := s.previewLeadContactDefaults(ctx, in)
-	if err != nil {
-		return out, err
-	}
-	in, _, err = s.readyLeadCreate(principal.WithActor(ctx, creator), in)
+	in, _, err := s.readyLeadCreate(principal.WithActor(ctx, creator), in)
 	if err != nil {
 		return out, err
 	}
@@ -132,29 +127,4 @@ func (s *Store) previewCreatedLeadMatch(ctx context.Context, tx pgx.Tx, in Creat
 		return nil, err
 	}
 	return &lead, nil
-}
-
-func (s *Store) previewLeadContactDefaults(ctx context.Context, in CreateLeadInput) (CreateLeadInput, error) {
-	if in.FromContactID == nil {
-		return in, nil
-	}
-	contact, err := s.GetContact(ctx, *in.FromContactID, storekit.LiveOnly)
-	if err != nil {
-		return CreateLeadInput{}, err
-	}
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return CreateLeadInput{}, apperrors.ErrPermissionDenied
-	}
-	inherited := map[string]*string{
-		contactNameColumn: in.FullName, fieldTitle: in.Title, fieldEmail: in.Email, "primary_email": in.Email, contactEmailsField: in.Email,
-		"employer": in.CompanyName, "social": in.LinkedInURL,
-	}
-	for _, field := range auth.MaskedFields(actor, contactEntity, contact.Writable != nil && *contact.Writable) {
-		supplied, relevant := inherited[field]
-		if relevant && strings.TrimSpace(deref(supplied)) == "" {
-			return CreateLeadInput{}, apperrors.ErrPermissionDenied
-		}
-	}
-	return leadFromContactDefaults(in, contact), nil
 }

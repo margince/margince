@@ -50,7 +50,7 @@ func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in 
 		return PromoteOutcome{}, err
 	}
 
-	contactID, mergeFields, err := s.promoteTarget(ctx, tx, lead, by, candidate, lanes, &out.Merged)
+	contactID, mergeFields, err := s.promoteTarget(ctx, tx, lead, by, candidate, lanes, in.intoCandidate, &out.Merged)
 	if err != nil {
 		return PromoteOutcome{}, err
 	}

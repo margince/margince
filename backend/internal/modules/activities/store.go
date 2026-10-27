@@ -122,6 +122,19 @@ type Store struct {
 	// catalog answers the activity custom fields; nil reads and writes core
 	// columns only (WithFieldCatalog).
 	catalog FieldCatalog
+	// leadQualifyTasks commits the owner follow-up with a lead's booking.
+	leadQualifyTasks LeadQualifyTasks
+}
+
+// LeadQualifyTasks writes the follow-up for a booking filed on a lead.
+type LeadQualifyTasks interface {
+	FileLeadBookingTx(context.Context, pgx.Tx, ids.LeadID, ids.UUID) error
+}
+
+// WithLeadQualifyTasks wires the booking follow-up writer.
+func (s *Store) WithLeadQualifyTasks(tasks LeadQualifyTasks) *Store {
+	s.leadQualifyTasks = tasks
+	return s
 }
 
 // NewStore opens this module's store on a handle already bound to the

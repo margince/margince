@@ -286,6 +286,35 @@ func TestAnAddressAnotherLeadHoldsKeepsNothingFromTheWebsite(t *testing.T) {
 	}
 }
 
+// The address became a contact's while the proposal waited. The accept asks again:
+// no lead, no notice, and the decider is told they are already a contact.
+func TestAWebsiteLeadForAnExistingContactKeepsNothing(t *testing.T) {
+	l := setupNoticeLane(t)
+	e := l.e
+	id := l.stage(t, annaOnTheTeamPage)
+	if _, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
+		FullName: "Anna M.", Source: "manual",
+		Emails: []contacts.ContactEmailInput{{Email: annasAddress, EmailType: "work", IsPrimary: true}},
+	}); err != nil {
+		t.Fatalf("creating the contact: %v", err)
+	}
+	if err := l.accept(id); !errors.Is(err, errSiteLeadIsAContact) {
+		t.Fatalf("accepting a website lead for an existing contact = %v, want the already-a-contact refusal", err)
+	}
+	for what, query := range map[string]string{
+		"lead":        `SELECT count(*) FROM lead`,
+		"notice mail": `SELECT count(*) FROM comms_outbound`,
+		"task":        `SELECT count(*) FROM activity WHERE kind = 'task'`,
+	} {
+		if n := e.WsCount(t, query); n != 0 {
+			t.Errorf("%d %s rows after accepting a website lead for a contact, want 0", n, what)
+		}
+	}
+	if got := l.noticeRecord(t, id); got != "failed/collision" {
+		t.Fatalf("the record of the untold notice = %q, want failed/collision", got)
+	}
+}
+
 func TestAFailedRecordOfAnUntoldLeadIsRetriedByDecidingAgain(t *testing.T) {
 	l := setupNoticeLane(t)
 	unaddressed := annaOnTheTeamPage

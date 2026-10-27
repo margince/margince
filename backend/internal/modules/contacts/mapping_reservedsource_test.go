@@ -224,16 +224,19 @@ func TestTheRecordImporterDoorsAdmitTheirNamespaceAndNothingElse(t *testing.T) {
 	}
 }
 
-// A lead filled from a contact is not an import: the importer's replay cannot
-// promise the same lead when the contact may change between two runs.
-func TestALeadFromAContactNamesNoSourceSystem(t *testing.T) {
+// The retired contact field reaches the store so every transport receives the
+// same contact-held refusal instead of diverging at its mapper.
+func TestALeadFromAContactReachesTheStoreRefusal(t *testing.T) {
 	namespaced := "mirror:hubspot"
 	contact := openapi_types.UUID(ids.NewV7())
-	_, err := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{
+	in, err := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{
 		Source:    new("manual"),
 		ContactId: &contact, SourceSystem: &namespaced, SourceId: new("501"),
 	})
-	if err == nil {
-		t.Fatal("a lead naming both a contact and a source system was admitted")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if in.RequestedContactID == nil || in.RequestedContactID.UUID != ids.UUID(contact) {
+		t.Fatal("the deprecated contact id did not reach the store refusal")
 	}
 }

@@ -34,7 +34,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -96,14 +98,19 @@ const adoptStrandedPerTick = 200
 func (w *linkReconcileWorker) reconcileLinksForWorkspace(ctx context.Context, workspace ids.UUID) error {
 	ctx = principal.WithWorkspaceID(ctx, workspace)
 	sweepCtx := w.systemContext(ctx, workspace)
+	leadsFiled, leadErr := w.repairLeadFilings(sweepCtx)
+	if leadErr == nil && leadsFiled > 0 {
+		w.log.InfoContext(ctx, "link reconcile: captured mail put back on its leads",
+			"workspace", workspace.String(), "activities", leadsFiled)
+	}
 	owed, err := w.store.ContactsOwedACohortRepair(sweepCtx, linkReconcileContactsPerTick)
 	if err != nil {
-		return jobs.FaultContext(ctx, errors.Join(err,
+		return jobs.FaultContext(ctx, errors.Join(leadErr, err,
 			w.receipts.skipped(sweepCtx, capture.SweepFiledMeetingHolds),
 			w.receipts.skipped(sweepCtx, capture.SweepStrandedContacts)))
 	}
 	var linked, promoted int64
-	var failed error
+	var failed error = leadErr
 	for _, contact := range owed {
 		// Per contact, each on its own transaction, so one contact whose repair
 		// fails — a lock it could not take, a row a concurrent merge moved —
@@ -177,6 +184,21 @@ func (w *linkReconcileWorker) reconcileLinksForWorkspace(ctx context.Context, wo
 			"workspace", workspace.String(), "messages", adopted)
 	}
 	return jobs.FaultContext(ctx, errors.Join(failed, w.attachDomainBacklogs(sweepCtx, workspace)))
+}
+
+func (w *linkReconcileWorker) repairLeadFilings(ctx context.Context) (int, error) {
+	tasks := newLeadWorkTasks(InstallationDB(w.pool), w.log)
+	repair := capture.LeadFilingRepair{
+		Authority: identity.NewService(w.pool),
+		Filer:     ActivityLeadFiler{Tasks: &tasks},
+	}
+	var out datatask.BatchOut
+	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		var err error
+		out, err = repair.BatchTx(ctx, tx, datatask.BatchIn{Limit: linkReconcileContactsPerTick})
+		return err
+	})
+	return out.Changed, err
 }
 
 // askAboutStrandedContactsPerTick bounds the drain, on the same reasoning as

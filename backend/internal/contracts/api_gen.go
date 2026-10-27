@@ -11716,6 +11716,7 @@ const (
 	ImportReasonCodeContactDuplicateFound        ImportReasonCode = "contact_duplicate_found"
 	ImportReasonCodeContactDuplicateSkipped      ImportReasonCode = "contact_duplicate_skipped"
 	ImportReasonCodeContactEmailHeld             ImportReasonCode = "contact_email_held"
+	ImportReasonCodeContactHoldsLead             ImportReasonCode = "contact_holds_lead"
 	ImportReasonCodeContactNotFound              ImportReasonCode = "contact_not_found"
 	ImportReasonCodeContactNotFoundDropped       ImportReasonCode = "contact_not_found_dropped"
 	ImportReasonCodeContactUnnamed               ImportReasonCode = "contact_unnamed"
@@ -11865,6 +11866,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeContactDuplicateSkipped:
 		return true
 	case ImportReasonCodeContactEmailHeld:
+		return true
+	case ImportReasonCodeContactHoldsLead:
 		return true
 	case ImportReasonCodeContactNotFound:
 		return true
@@ -36684,15 +36687,23 @@ type CreateContactEnrichmentRunRequest struct {
 // CreateContactRequest defines model for CreateContactRequest.
 type CreateContactRequest struct {
 	// Address Structured postal address.
-	Address   *Address                `json:"address,omitempty"`
-	Emails    *[]ContactEmailInput    `json:"emails,omitempty"`
-	FirstName *string                 `json:"first_name,omitempty"`
-	FullName  string                  `json:"full_name"`
-	LastName  *string                 `json:"last_name,omitempty"`
-	OwnerId   *openapi_types.UUID     `json:"owner_id,omitempty"`
-	Phones    *[]ContactPhoneInput    `json:"phones,omitempty"`
-	Social    *map[string]interface{} `json:"social,omitempty"`
-	Source    string                  `json:"source"`
+	Address *Address `json:"address,omitempty"`
+
+	// ConvertLeadIds The live leads to convert into this contact, sent after a 409 `lead_holds_email`
+	// named them. The set must equal the leads that hold an email or the LinkedIn profile when the
+	// write runs; otherwise the answer is that 409 again. Each lead is then converted
+	// into the contact in the same write, and a conversion the server refuses fails the
+	// whole write. An agent sending this field is refused with 422
+	// `convert_needs_a_human`: an agent converts with `promote_lead`.
+	ConvertLeadIds *[]openapi_types.UUID   `json:"convert_lead_ids,omitempty"`
+	Emails         *[]ContactEmailInput    `json:"emails,omitempty"`
+	FirstName      *string                 `json:"first_name,omitempty"`
+	FullName       string                  `json:"full_name"`
+	LastName       *string                 `json:"last_name,omitempty"`
+	OwnerId        *openapi_types.UUID     `json:"owner_id,omitempty"`
+	Phones         *[]ContactPhoneInput    `json:"phones,omitempty"`
+	Social         *map[string]interface{} `json:"social,omitempty"`
+	Source         string                  `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -37032,7 +37043,8 @@ type CreateLeadRequest struct {
 	CandidateCompanyKey *string `json:"candidate_company_key,omitempty"`
 	CompanyName         *string `json:"company_name,omitempty"`
 
-	// ContactId An existing contact this lead is worked from. Its name, primary email, title, LinkedIn profile and current employer fill whichever of those fields this request leaves out, so a lead for a contact the CRM already holds is never retyped or left unnamed. The contact must be one the caller may read (422 otherwise). The lead records it as `from_contact_id`, and the contact itself is not changed. A contact already worked through a live lead answers 409 `duplicate_contact_lead` with that lead's id. Not combinable with `source_system` (422): a lead filled from a contact is not an import.
+	// ContactId Older clients may still send this field. The request is refused with 409 `contact_holds_email`; open a deal when a contact has a new opportunity.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ContactId *openapi_types.UUID  `json:"contact_id,omitempty"`
 	Email     *openapi_types.Email `json:"email,omitempty"`
 	FullName  *string              `json:"full_name,omitempty"`
@@ -38817,16 +38829,16 @@ type DemoteLeadResponse struct {
 	Lead Lead `json:"lead"`
 
 	// Unwind `reversed` — the promotion had created a contact, which is now archived and the
-	// lead restored to `engaged`. `merge_lineage_only` — the promotion had merged into
-	// a pre-existing contact, which is left untouched; only the lineage pointers are
-	// nulled (formulas §26).
+	// lead restored to `engaged`. `merge_lineage_only` is no longer answered: a demote whose
+	// contact must stay is refused with 422 `demote_keeps_contact`. The value stays so a
+	// client reading an older response still parses it.
 	Unwind DemoteLeadResponseUnwind `json:"unwind"`
 }
 
 // DemoteLeadResponseUnwind `reversed` — the promotion had created a contact, which is now archived and the
-// lead restored to `engaged`. `merge_lineage_only` — the promotion had merged into
-// a pre-existing contact, which is left untouched; only the lineage pointers are
-// nulled (formulas §26).
+// lead restored to `engaged`. `merge_lineage_only` is no longer answered: a demote whose
+// contact must stay is refused with 422 `demote_keeps_contact`. The value stays so a
+// client reading an older response still parses it.
 type DemoteLeadResponseUnwind string
 
 // DirectCommunicationSendRequest A designated human's decision that one refused message goes out anyway. Every field is frozen
@@ -42868,7 +42880,7 @@ type Lead struct {
 	// FirstResponseAt First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. A cold-outbound auto-touch does NOT satisfy it.
 	FirstResponseAt *time.Time `json:"first_response_at,omitempty"`
 
-	// FromContactId The existing contact this lead was created from (`contact_id` on the create), and null for any other lead. While this lead is live, a second create from the same contact answers 409 `duplicate_contact_lead` naming this lead.
+	// FromContactId The contact an older lead was created from, and null for every newly created lead.
 	FromContactId *openapi_types.UUID `json:"from_contact_id,omitempty"`
 	FullName      *string             `json:"full_name,omitempty"`
 	Id            openapi_types.UUID  `json:"id"`
@@ -47739,6 +47751,14 @@ type QuickCaptureContactRequest struct {
 
 	// CompanyName A new employer to create, when no existing record was picked.
 	CompanyName *string `json:"company_name,omitempty"`
+
+	// ConvertLeadIds The live leads to convert into this contact, sent after a 409 `lead_holds_email`
+	// named them. The set must equal the leads that hold the email or the profile URL when the
+	// write runs; otherwise the answer is that 409 again. Each lead is then converted
+	// into the contact in the same write, and a conversion the server refuses fails the
+	// whole write. An agent sending this field is refused with 422
+	// `convert_needs_a_human`: an agent converts with `promote_lead`.
+	ConvertLeadIds *[]openapi_types.UUID `json:"convert_lead_ids,omitempty"`
 
 	// Email Refused with 422 `email_names_no_one` when the local part names a sending system, as ContactEmailInput.email is.
 	Email    *openapi_types.Email `json:"email,omitempty"`
@@ -52868,6 +52888,14 @@ type UpdateContactRequest struct {
 	// Address Structured postal address.
 	Address *Address `json:"address,omitempty"`
 
+	// ConvertLeadIds The live leads to convert into this contact, sent after a 409 `lead_holds_email`
+	// named them. The set must equal the leads that hold an email or the LinkedIn profile this edit gives the contact when the
+	// write runs; otherwise the answer is that 409 again. Each lead is then converted
+	// into the contact in the same write, and a conversion the server refuses fails the
+	// whole write. An agent sending this field is refused with 422
+	// `convert_needs_a_human`: an agent converts with `promote_lead`.
+	ConvertLeadIds *[]openapi_types.UUID `json:"convert_lead_ids,omitempty"`
+
 	// Emails REPLACES the contact's addresses with exactly this list, which is what a
 	// correction needs: a bounced address is fixed by sending the set that should
 	// stand, and an append-only field could never remove the one that is dead.
@@ -54028,6 +54056,11 @@ type VCardImportResult struct {
 
 	// Index The card's position in the file, from 0.
 	Index int `json:"index"`
+
+	// LeadId For `skipped`: the live lead that holds the card's address or LinkedIn profile.
+	// Nothing was created; convert the lead instead. Set only when the caller may read
+	// that lead.
+	LeadId *openapi_types.UUID `json:"lead_id,omitempty"`
 
 	// Outcome `created` — nobody matched, so the card became a contact, their company and the edge
 	// between them. `updated` — an exact match: what the card states replaces an older value, which
@@ -61040,8 +61073,8 @@ type ListLeadsParams struct {
 	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
 	TagMode *ListLeadsParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
 
-	// FromContactId Only the leads worked from this contact (`from_contact_id` on the lead). The contact
-	// page asks it to find the open lead a contact is already worked through.
+	// FromContactId Only older leads that retain this historical contact link. New leads cannot be
+	// created from contacts.
 	FromContactId *openapi_types.UUID `form:"from_contact_id,omitempty" json:"from_contact_id,omitempty"`
 }
 
@@ -68426,6 +68459,14 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "address")
 	}
 
+	if raw, found := object["convert_lead_ids"]; found {
+		err = json.Unmarshal(raw, &a.ConvertLeadIds)
+		if err != nil {
+			return fmt.Errorf("error reading 'convert_lead_ids': %w", err)
+		}
+		delete(object, "convert_lead_ids")
+	}
+
 	if raw, found := object["emails"]; found {
 		err = json.Unmarshal(raw, &a.Emails)
 		if err != nil {
@@ -68553,6 +68594,13 @@ func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 		object["address"], err = json.Marshal(a.Address)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'address': %w", err)
+		}
+	}
+
+	if a.ConvertLeadIds != nil {
+		object["convert_lead_ids"], err = json.Marshal(a.ConvertLeadIds)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'convert_lead_ids': %w", err)
 		}
 	}
 
@@ -74179,6 +74227,14 @@ func (a *UpdateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "address")
 	}
 
+	if raw, found := object["convert_lead_ids"]; found {
+		err = json.Unmarshal(raw, &a.ConvertLeadIds)
+		if err != nil {
+			return fmt.Errorf("error reading 'convert_lead_ids': %w", err)
+		}
+		delete(object, "convert_lead_ids")
+	}
+
 	if raw, found := object["emails"]; found {
 		err = json.Unmarshal(raw, &a.Emails)
 		if err != nil {
@@ -74282,6 +74338,13 @@ func (a UpdateContactRequest) MarshalJSON() ([]byte, error) {
 		object["address"], err = json.Marshal(a.Address)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'address': %w", err)
+		}
+	}
+
+	if a.ConvertLeadIds != nil {
+		object["convert_lead_ids"], err = json.Marshal(a.ConvertLeadIds)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'convert_lead_ids': %w", err)
 		}
 	}
 

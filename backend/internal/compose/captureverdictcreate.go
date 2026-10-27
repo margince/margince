@@ -117,9 +117,6 @@ type counterpartyCreation struct {
 	// a record capture minted owner-scoped; a narrowing verdict sets it, so the
 	// record is made, the promotion does not happen, and the reason is kept.
 	NarrowedBecause contacts.NarrowingReason
-	// SkipLeadPromotion leaves a lead holding the address where it is, for a
-	// human accept whose decider may not promote one.
-	SkipLeadPromotion bool
 	// Mark is the relationship mark a contact this creation makes is born with;
 	// it is stamped as set by CapturedBy. Empty marks nothing.
 	Mark relationshipmark.Mark
@@ -139,6 +136,7 @@ type counterpartyCreated struct {
 	// TriageDomain names the domain still owed a company verdict, empty
 	// when there is none.
 	TriageDomain string
+	ContactID    ids.ContactID
 }
 
 // createCounterpartyRecords is the ONE spelling of what a `real` answer does,
@@ -154,17 +152,16 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *contacts.S
 	filer *connectorTagFiler, in counterpartyCreation,
 ) (counterpartyCreated, error) {
 	res, err := store.EnsureCounterpartyTx(ctx, tx, contacts.EnsureCounterpartyInput{
-		Email:             in.Email,
-		DisplayName:       in.DisplayName,
-		Domain:            in.Domain,
-		OwnerID:           in.OwnerID,
-		ActivityID:        ids.From[ids.ActivityKind](in.ActivityID),
-		Source:            in.Source,
-		CapturedBy:        in.CapturedBy,
-		OwnerScoped:       in.NarrowedBecause != "",
-		NarrowedBecause:   in.NarrowedBecause,
-		SkipLeadPromotion: in.SkipLeadPromotion,
-		RelationshipMark:  in.Mark,
+		Email:            in.Email,
+		DisplayName:      in.DisplayName,
+		Domain:           in.Domain,
+		OwnerID:          in.OwnerID,
+		ActivityID:       ids.From[ids.ActivityKind](in.ActivityID),
+		Source:           in.Source,
+		CapturedBy:       in.CapturedBy,
+		OwnerScoped:      in.NarrowedBecause != "",
+		NarrowedBecause:  in.NarrowedBecause,
+		RelationshipMark: in.Mark,
 	})
 	if errors.Is(err, contacts.ErrCounterpartyIsSeat) {
 		return counterpartyCreated{Suppressed: true, SeatAddress: true}, nil
@@ -174,6 +171,11 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *contacts.S
 	}
 	if err != nil {
 		return counterpartyCreated{}, err
+	}
+	// A live lead holds the address. The mail is already filed on the lead, and
+	// no contact exists for a cohort, a tag or a backfill credit to name.
+	if !res.LeadID.IsZero() {
+		return counterpartyCreated{}, nil
 	}
 	// The ensure links the message that raised the question; the sender may have
 	// written more while it was open, and all of them belong on this contact's
@@ -201,7 +203,7 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *contacts.S
 	}); err != nil {
 		return counterpartyCreated{}, err
 	}
-	out := counterpartyCreated{}
+	out := counterpartyCreated{ContactID: res.ContactID}
 	if res.TriagePending {
 		out.TriageDomain = res.TriageDomain
 	}

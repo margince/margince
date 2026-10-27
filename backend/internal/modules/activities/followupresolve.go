@@ -202,8 +202,12 @@ func (w followUpAutoResolve) Apply(ctx context.Context, ev workflow.Event, eff w
 		}
 		completed += done
 	}
+	complete := w.store.CompleteOpenSystemTasksForLead
+	if w.leadsFromLinks {
+		complete = w.store.CompleteFollowUpsTouchingLead
+	}
 	for _, leadID := range leads {
-		done, err := w.store.CompleteOpenSystemTasksForLead(ctx, leadID)
+		done, err := complete(ctx, leadID)
 		if err != nil {
 			return workflow.RunResult{}, fmt.Errorf("resolving follow-ups on lead %s: %w", leadID, err)
 		}

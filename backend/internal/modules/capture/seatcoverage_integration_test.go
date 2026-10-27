@@ -126,28 +126,50 @@ func TestSeatCoverage(t *testing.T) {
 		wantSeat   bool
 		wantInvite bool
 	}{
-		{name: "an invited seat on an unattested Cc line", status: "invited",
-			thread: seatThread{kind: "email", audience: "workspace"}, wantSeat: true, wantInvite: true},
-		{name: "an active seat with no mailbox is a permitted positive", status: "active",
-			thread: seatThread{kind: "email", audience: "workspace"}, wantSeat: true},
-		{name: "a meeting known by its date says so", status: "active",
-			thread: seatThread{kind: "meeting", audience: "workspace", attested: true, day: true}, wantSeat: true},
-		{name: "an invited organiser of an attested meeting is found by user_id", status: "invited",
-			thread: seatThread{kind: "meeting", audience: "workspace", attested: true}, wantSeat: true, wantInvite: true},
-		{name: "a seat with a connected mailbox is covered", status: "active",
-			thread: seatThread{kind: "email", audience: "workspace"}, connect: "gmail"},
-		{name: "a seat with only a calendar connection still has no mailbox", status: "active",
-			thread: seatThread{kind: "email", audience: "workspace"}, connect: "gcal", wantSeat: true},
-		{name: "a limited message discloses nothing", status: "active",
-			thread: seatThread{kind: "email", audience: "participants"}},
-		{name: "an archived activity discloses nothing", status: "active",
-			thread: seatThread{kind: "email", audience: "workspace", archived: true}},
-		{name: "an address on a Bcc line is not matched to a seat", status: "active",
-			thread: seatThread{kind: "email", audience: "workspace", role: "bcc"}},
-		{name: "a seat invited after the thread was captured is not on it", status: "active", seatLater: true,
-			thread: seatThread{kind: "email", audience: "workspace"}},
-		{name: "a deactivated seat is not noticed", status: "active", deactivate: true,
-			thread: seatThread{kind: "email", audience: "workspace"}},
+		{
+			name: "an invited seat on an unattested Cc line", status: "invited",
+			thread: seatThread{kind: "email", audience: "workspace"}, wantSeat: true, wantInvite: true,
+		},
+		{
+			name: "an active seat with no mailbox is a permitted positive", status: "active",
+			thread: seatThread{kind: "email", audience: "workspace"}, wantSeat: true,
+		},
+		{
+			name: "a meeting known by its date says so", status: "active",
+			thread: seatThread{kind: "meeting", audience: "workspace", attested: true, day: true}, wantSeat: true,
+		},
+		{
+			name: "an invited organiser of an attested meeting is found by user_id", status: "invited",
+			thread: seatThread{kind: "meeting", audience: "workspace", attested: true}, wantSeat: true, wantInvite: true,
+		},
+		{
+			name: "a seat with a connected mailbox is covered", status: "active",
+			thread: seatThread{kind: "email", audience: "workspace"}, connect: "gmail",
+		},
+		{
+			name: "a seat with only a calendar connection still has no mailbox", status: "active",
+			thread: seatThread{kind: "email", audience: "workspace"}, connect: "gcal", wantSeat: true,
+		},
+		{
+			name: "a limited message discloses nothing", status: "active",
+			thread: seatThread{kind: "email", audience: "participants"},
+		},
+		{
+			name: "an archived activity discloses nothing", status: "active",
+			thread: seatThread{kind: "email", audience: "workspace", archived: true},
+		},
+		{
+			name: "an address on a Bcc line is not matched to a seat", status: "active",
+			thread: seatThread{kind: "email", audience: "workspace", role: "bcc"},
+		},
+		{
+			name: "a seat invited after the thread was captured is not on it", status: "active", seatLater: true,
+			thread: seatThread{kind: "email", audience: "workspace"},
+		},
+		{
+			name: "a deactivated seat is not noticed", status: "active", deactivate: true,
+			thread: seatThread{kind: "email", audience: "workspace"},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -229,8 +251,10 @@ func TestSeatCoverageCountsASeatOnSeveralThreadsOnce(t *testing.T) {
 		thread := seatThread{kind: "email", audience: "workspace", seatEmail: email}
 		thread.contactID = seedThread(ctx, t, tx, thread)
 		seedThread(ctx, t, tx, thread)
-		seedThread(ctx, t, tx, seatThread{kind: "meeting", audience: "workspace", attested: true,
-			seatEmail: email, contactID: thread.contactID})
+		seedThread(ctx, t, tx, seatThread{
+			kind: "meeting", audience: "workspace", attested: true,
+			seatEmail: email, contactID: thread.contactID,
+		})
 
 		got := seatGaps(ctx, t, tx, thread.contactID)
 		if len(got.Seats) != 1 || got.Seats[0].UserID != seat || got.Total != 1 {

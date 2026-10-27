@@ -214,3 +214,31 @@ func shareRequesterOf(ctx context.Context) (ids.UUID, bool) {
 	}
 	return ids.Nil, false
 }
+
+// ensureContactEmailsUnclaimed is the dedupe pre-check, so the 409 can carry
+// the existing id. The unique index still decides a race. The id is disclosed
+// only when the caller could read that row; others get the held refusal.
+func ensureContactEmailsUnclaimed(ctx context.Context, tx pgx.Tx, emails []ContactEmailInput) error {
+	return ensureContactEmailsUnclaimedExcept(ctx, tx, ids.ContactID{}, emails)
+}
+
+// ensureContactEmailsUnclaimedExcept is the same probe, ignoring one contact's
+// own rows, so an update may re-state an address the contact already holds.
+// That is the one difference from the create case.
+func ensureContactEmailsUnclaimedExcept(ctx context.Context, tx pgx.Tx, self ids.ContactID, emails []ContactEmailInput) error {
+	for _, e := range emails {
+		var existing ids.ContactID
+		err := tx.QueryRow(ctx,
+			`SELECT contact_id FROM contact_email
+			  WHERE email = lower($1) AND archived_at IS NULL AND contact_id <> $2`,
+			e.Email, self.UUID).Scan(&existing)
+		if errors.Is(err, pgx.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("probe email dedupe: %w", err)
+		}
+		return claimedEmailRefusal(ctx, tx, e.Email, existing)
+	}
+	return nil
+}

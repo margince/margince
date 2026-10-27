@@ -75,6 +75,9 @@ type EnsureChannelCounterpartyInput struct {
 type EnsureChannelCounterpartyResult struct {
 	ContactID      ids.ContactID
 	ContactCreated bool
+	// LeadID is the live lead holding the vouched address when no live contact
+	// does. No contact was made, and the message is filed on the lead.
+	LeadID         ids.LeadID
 	DedupeRecorded bool
 	// Conflict is non-nil only when a later exact lane named a different
 	// contact than the one routing chose (dedupe.go's routeExact). It is a
@@ -155,6 +158,21 @@ func (s *Store) ensureChannelCounterpartyTx(ctx context.Context, tx pgx.Tx, in E
 	if err := s.resolveChannelContact(ctx, tx, in, &res); err != nil {
 		return EnsureChannelCounterpartyResult{}, err
 	}
+	if !res.LeadID.IsZero() {
+		allowed, err := mayReadLead(ctx)
+		if err != nil || !allowed {
+			return res, err
+		}
+		if err := linkActivityToLead(ctx, tx, in.ActivityID, res.LeadID); err != nil {
+			return EnsureChannelCounterpartyResult{}, err
+		}
+		if s.leadQualifyTasks != nil {
+			if err := s.leadQualifyTasks.FileLeadReplyTx(ctx, tx, res.LeadID, in.ActivityID.UUID); err != nil {
+				return EnsureChannelCounterpartyResult{}, err
+			}
+		}
+		return res, nil
+	}
 	if err := refreshChannelUsername(ctx, tx, in.Identity); err != nil {
 		return EnsureChannelCounterpartyResult{}, err
 	}
@@ -222,6 +240,14 @@ func (s *Store) resolveChannelContact(ctx context.Context, tx pgx.Tx, in EnsureC
 		res.ContactID = match.ContactID
 		res.Conflict = match.Conflict
 		return nil
+	}
+
+	// The mail path's decision: a live lead holding the vouched address is the
+	// record, and no contact is made beside it.
+	if in.CorroboratingEmail != "" {
+		if res.LeadID, err = CounterpartyLeadTx(ctx, tx, in.CorroboratingEmail); err != nil || !res.LeadID.IsZero() {
+			return err
+		}
 	}
 
 	// Nothing resolved, so a contact has to be offered — inside a savepoint,

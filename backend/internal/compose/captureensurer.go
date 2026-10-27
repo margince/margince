@@ -50,6 +50,7 @@ func newCounterpartyStore(pool *pgxpool.Pool) *contacts.Store {
 	// no longer that record-less thing once it does. activities owns the
 	// derivation, contacts may not import it, so compose hands it over.
 	return contacts.NewStore(InstallationDB(pool)).
+		WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
 		WithConsumerMail(capture.MatcherTx).
 		WithAudienceRecompute(activities.RecomputeAudienceTx).
 		WithVatCheckEnqueue(boundVatCheckEnqueue()).
@@ -112,6 +113,10 @@ func (p contactsEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensu
 	}
 	if err != nil {
 		return capture.EnsureOutcome{}, err
+	}
+	// The sender is a lead. Filing and its qualify task committed in the ensure.
+	if !res.LeadID.IsZero() {
+		return capture.EnsureOutcome{}, nil
 	}
 	// The ensure left this domain's company question open. Nothing is
 	// created until it is answered, so queueing the read that answers it is not
@@ -188,6 +193,9 @@ func (p contactsEnsurer) EnsureChannelCounterparty(ctx context.Context, in captu
 	}
 	if err != nil {
 		return capture.EnsureOutcome{}, err
+	}
+	if !res.LeadID.IsZero() {
+		return capture.EnsureOutcome{}, nil
 	}
 	if res.Conflict != nil {
 		p.raiseIdentityConflict(ctx, *res.Conflict, in.Source, in.CapturedBy)

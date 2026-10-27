@@ -19,3 +19,9 @@ export const ACTION_PARAM = "action";
  * from the record they were already reading.
  */
 export const CALL_ACTION = "call";
+
+/**
+ * Arrive with the Qualify dialog open, from a surface that found somebody is
+ * already a lead and offers to convert them.
+ */
+export const QUALIFY_ACTION = "qualify";

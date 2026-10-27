@@ -39,6 +39,13 @@ func seedLead(t *testing.T, e *Env, name, email string, owner *ids.UUID) ids.Lea
 	return leadIDOf(ids.UUID(l.Id))
 }
 
+func seedHistoricalLeadAtContactEmail(t *testing.T, e *Env, name, email string, owner *ids.UUID) ids.LeadID {
+	t.Helper()
+	leadID := seedLead(t, e, name, ids.NewV7().String()+"@fixture.example", owner)
+	e.WsExec(t, `UPDATE lead SET email = $2 WHERE id = $1`, leadID, email)
+	return leadID
+}
+
 func TestPromoteCreatesAContactCarryingProvenance(t *testing.T) {
 	e := Setup(t)
 	leadID := seedLead(t, e, "Ada Prospect", "ada@prospect.test", &e.Rep1)
@@ -129,7 +136,7 @@ func TestPromoteMergesIntoAnExistingContactNotADuplicate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	leadID := seedLead(t, e, "G. Known", "grace@known.test", &e.Rep2)
+	leadID := seedHistoricalLeadAtContactEmail(t, e, "G. Known", "grace@known.test", &e.Rep2)
 
 	contact, merged, err := e.Contacts.PromoteLead(admin, leadID, contacts.PromoteLeadInput{Trigger: "meeting_booked"})
 	if err != nil {
@@ -165,7 +172,7 @@ func TestPromoteDoesNotDiscloseAnOutOfScopeMergeTarget(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	leadID := seedLead(t, e, "Mine", "match@foreign.test", &e.Rep1)
+	leadID := seedHistoricalLeadAtContactEmail(t, e, "Mine", "match@foreign.test", &e.Rep1)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, repPermsWithCapture())
 	if _, _, err := e.Contacts.PromoteLead(rep, leadID, contacts.PromoteLeadInput{Trigger: "inbound_reply"}); !errors.Is(err, apperrors.ErrConflict) {

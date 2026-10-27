@@ -4,7 +4,7 @@ import { saveIndependentEdit } from "../lib/independentedit";
 import { unwrap } from "../lib/problem";
 import { companyEditComparison } from "./companyform";
 import { contactEditComparison } from "./contactformfields";
-import type { FieldRecord } from "./recordfields";
+import type { FieldRecord } from "./recordfieldtypes";
 
 // Core and custom fields use the same conditional write and recovery policy.
 export function saveRecordEdit(

@@ -165,6 +165,13 @@ func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row, t
 	if takenLinkedIn {
 		return predictUnwritable, linkedInClaimedWhy, nil
 	}
+	contactHeld, err := w.leadRowContactHeld(ctx, row, typed)
+	if err != nil {
+		return predictCreate, migration.Reason{}, err
+	}
+	if contactHeld {
+		return predictUnwritable, contactHoldsLeadWhy, nil
+	}
 	collides, err := w.collidesWithExisting(ctx, row)
 	if err != nil {
 		return predictCreate, migration.Reason{}, err

@@ -16,9 +16,10 @@ import { RecordBack } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../../lib/attachmentupload";
+import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
 import { postMultipart } from "../../lib/multipart";
 import { problemMessageOf } from "../../lib/problem";
-import { routeHash } from "../../lib/router";
+import { navigate, routeHash } from "../../lib/router";
 import "./vcard-import.css";
 
 type VCardReport = components["schemas"]["VCardImportReport"];
@@ -270,6 +271,7 @@ function ImportReport({ report }: Readonly<{ report: VCardReport }>) {
               {outcome ? t(outcome.label) : card.outcome}
             </span>
             {card.reason && <span className="t-sub">{card.reason}</span>}
+            {card.lead_id && <HeldLeadVerbs leadId={card.lead_id} />}
             {card.fields && card.fields.length > 0 && (
               <CardFields fields={card.fields} />
             )}
@@ -277,6 +279,35 @@ function ImportReport({ report }: Readonly<{ report: VCardReport }>) {
         );
       })}
     </ul>
+  );
+}
+
+/** HeldLeadVerbs answers a card skipped because its contact is already a lead.
+ * Nothing was created. The reader converts the lead in its Qualify dialog, or
+ * opens it. */
+function HeldLeadVerbs({ leadId }: Readonly<{ leadId: string }>) {
+  const t = useT();
+  return (
+    <>
+      <Button
+        type="button"
+        onClick={() =>
+          navigate(
+            { screen: "leads", id: leadId },
+            new Map([[ACTION_PARAM, QUALIFY_ACTION]]),
+          )
+        }
+      >
+        {t("contact.leadHeld.convert")}
+      </Button>
+      <Button
+        type="button"
+        variant="link"
+        onClick={() => navigate({ screen: "leads", id: leadId })}
+      >
+        {t("contact.leadHeld.open")}
+      </Button>
+    </>
   );
 }
 

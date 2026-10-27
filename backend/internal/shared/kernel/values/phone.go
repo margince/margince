@@ -55,12 +55,16 @@ func ParsePhone(raw string) (Phone, error) {
 		cleaned = "+" + cleaned[len(InternationalDialPrefix):]
 	}
 	if !strings.HasPrefix(cleaned, "+") {
-		return Phone{}, &ParseError{Field: "phone", Code: "phone_needs_country_code",
-			Message: "the number needs its country prefix (+49…, 0049…)"}
+		return Phone{}, &ParseError{
+			Field: "phone", Code: "phone_needs_country_code",
+			Message: "the number needs its country prefix (+49…, 0049…)",
+		}
 	}
 	if !e164.MatchString(cleaned) {
-		return Phone{}, &ParseError{Field: "phone", Code: "phone_malformed",
-			Message: "not an E.164 number (+ and 8–15 digits)"}
+		return Phone{}, &ParseError{
+			Field: "phone", Code: "phone_malformed",
+			Message: "not an E.164 number (+ and 8–15 digits)",
+		}
 	}
 	return Phone{s: cleaned}, nil
 }

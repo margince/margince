@@ -104,6 +104,9 @@ func fillLinkedIn(ctx context.Context, tx pgx.Tx, subject ids.UUID, _ string, v 
 		// this contact's profile: an empty answer, not a fault to fail on.
 		return nothingFilled, nil //nolint:nilerr // an unreadable answer is an empty answer
 	}
+	if held, err := leadHolds(ctx, tx, storekit.IdentityKeys{LinkedInURLs: []string{handle}}); err != nil || held {
+		return nothingFilled, err
+	}
 	rowID, landed, err := insertSocialHandle(ctx, tx, subject, SocialLinkedIn, handle)
 	if err != nil || !landed {
 		return nothingFilled, err
@@ -168,6 +171,11 @@ func fillEmail(ctx context.Context, tx pgx.Tx, subject ids.UUID, providerName st
 	}
 	if refuseMachineAddress(address.String()) != nil {
 		return nothingFilled, nil
+	}
+	// A live lead's address stays the lead's: a provider never makes one human
+	// a lead and a contact. The erasure check above took the subject lock.
+	if held, err := leadHolds(ctx, tx, storekit.IdentityKeys{Emails: []string{address.String()}}); err != nil || held {
+		return nothingFilled, err
 	}
 	// The base lock before the address is written. The hand-off already holds
 	// the subject's row, and a create of this address must not hold the lane

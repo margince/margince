@@ -56,15 +56,19 @@ func TestAScanCitationSettlesByTheWorklistsRule(t *testing.T) {
 	if o.settled(t, ask) {
 		t.Fatal("an ask nobody answered reads settled")
 	}
-	o.weWrite(t, owedMail{to: "pat@customer.example", subject: "Re: Listing details",
-		inReplyTo: o.messageIDOf(t, ask), at: o.now.Add(-5 * time.Hour)})
+	o.weWrite(t, owedMail{
+		to: "pat@customer.example", subject: "Re: Listing details",
+		inReplyTo: o.messageIDOf(t, ask), at: o.now.Add(-5 * time.Hour),
+	})
 	if !o.settled(t, ask) {
 		t.Error("an unconfirmed ask our reply in its thread answered still reads open")
 	}
 
 	confirmed := o.askOf(t, "Signed contract", o.now.Add(-4*time.Hour))
-	o.weWrite(t, owedMail{to: "pat@customer.example", subject: "Re: Signed contract",
-		inReplyTo: o.messageIDOf(t, confirmed), at: o.now.Add(-3 * time.Hour)})
+	o.weWrite(t, owedMail{
+		to: "pat@customer.example", subject: "Re: Signed contract",
+		inReplyTo: o.messageIDOf(t, confirmed), at: o.now.Add(-3 * time.Hour),
+	})
 	if o.settled(t, confirmed) == o.owed(t, confirmed) {
 		t.Fatal("the scan and the Worklist disagree about the confirmed ask")
 	}
@@ -91,15 +95,21 @@ func TestAScanCitationOfOurPromiseSettlesOnOurFollowUp(t *testing.T) {
 	o := setupOwed(t)
 	pat := o.contact(t, "Pat Buyer", "pat@customer.example")
 	o.contact(t, "Lee Other", "lee@other.example")
-	promise := o.weWrite(t, owedMail{to: "pat@customer.example", subject: "Listing details",
-		body: "I will send the listing details this week.", at: o.now.Add(-6 * time.Hour)})
-	o.weWrite(t, owedMail{to: "lee@other.example", subject: "Re: Listing details",
-		inReplyTo: o.messageIDOf(t, promise), at: o.now.Add(-5 * time.Hour)})
+	promise := o.weWrite(t, owedMail{
+		to: "pat@customer.example", subject: "Listing details",
+		body: "I will send the listing details this week.", at: o.now.Add(-6 * time.Hour),
+	})
+	o.weWrite(t, owedMail{
+		to: "lee@other.example", subject: "Re: Listing details",
+		inReplyTo: o.messageIDOf(t, promise), at: o.now.Add(-5 * time.Hour),
+	})
 	if o.settled(t, promise, pat) {
 		t.Fatal("mail to someone else on the thread kept the promise")
 	}
-	o.weWrite(t, owedMail{to: "pat@customer.example", subject: "Re: Listing details",
-		inReplyTo: o.messageIDOf(t, promise), at: o.now.Add(-4 * time.Hour)})
+	o.weWrite(t, owedMail{
+		to: "pat@customer.example", subject: "Re: Listing details",
+		inReplyTo: o.messageIDOf(t, promise), at: o.now.Add(-4 * time.Hour),
+	})
 	if !o.settled(t, promise, pat) {
 		t.Error("our follow-up to the contact promised did not keep the promise")
 	}
@@ -111,10 +121,14 @@ func TestAPromiseIsKeptOnlyForTheAccountItsFollowUpReached(t *testing.T) {
 	o := setupOwed(t)
 	alice := o.contact(t, "Alice Ahrens", "alice@a.example")
 	bob := o.contact(t, "Bob Berg", "bob@b.example")
-	promise := o.weWrite(t, owedMail{to: "alice@a.example", cc: "bob@b.example", subject: "Price sheet",
-		body: "I will send both of you the price sheet tomorrow.", at: o.now.Add(-6 * time.Hour)})
-	o.weWrite(t, owedMail{to: "bob@b.example", subject: "Re: Price sheet",
-		inReplyTo: o.messageIDOf(t, promise), at: o.now.Add(-4 * time.Hour)})
+	promise := o.weWrite(t, owedMail{
+		to: "alice@a.example", cc: "bob@b.example", subject: "Price sheet",
+		body: "I will send both of you the price sheet tomorrow.", at: o.now.Add(-6 * time.Hour),
+	})
+	o.weWrite(t, owedMail{
+		to: "bob@b.example", subject: "Re: Price sheet",
+		inReplyTo: o.messageIDOf(t, promise), at: o.now.Add(-4 * time.Hour),
+	})
 	if o.settled(t, promise, alice) {
 		t.Error("a follow-up to Bob kept the promise for Alice's account")
 	}
@@ -129,8 +143,10 @@ func TestOnlyAReplyTheReaderMayReadSettlesTheirCitation(t *testing.T) {
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	ask := o.customerWrites(t, "pat@customer.example", "Listing details", o.now.Add(-6*time.Hour))
-	reply := o.weWrite(t, owedMail{to: "pat@customer.example", subject: "Re: Listing details",
-		inReplyTo: o.messageIDOf(t, ask), at: o.now.Add(-5 * time.Hour)})
+	reply := o.weWrite(t, owedMail{
+		to: "pat@customer.example", subject: "Re: Listing details",
+		inReplyTo: o.messageIDOf(t, ask), at: o.now.Add(-5 * time.Hour),
+	})
 	colleague := o.e.As(o.e.Rep2, nil, integration.AdminPerms)
 	if !o.settledAs(colleague, t, ask) {
 		t.Fatal("a reply the colleague may read did not settle the ask; the case below proves nothing")

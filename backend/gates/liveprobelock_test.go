@@ -68,8 +68,10 @@ const (
 // says why at length — routing it through the mutation door would answer a
 // product question as a side effect of a concurrency fix).
 var unlockedLiveWrites = gatekit.Waive(withPromotionEdgeWriters(map[string]string{
-	"internal/modules/dealrooms:Store.OpenThread": "the SELLER side of a deal-room thread: it builds threadAuthor{userID: &userID}, so every comment it writes carries author_user_id and a NULL author_participant_id. The erasure's delete is keyed on author_participant_id, so no row this function writes is one an erasure clears, and there is no row for a racing erasure to restore. The buyer's own reply path writes the participant author instead, and reaches this census through a different probe helper than the one it walks, so its own race is not answered by this declaration",
-	"internal/modules/dealrooms:Store.Reply":      "the same seller-side author on the reply rather than the opening comment, threadAuthor{userID: &userID} at thread_write.go:382, so the same reasoning holds: author_participant_id is NULL and the erasure's delete cannot name the row",
+	"internal/modules/contacts:Store.EnsureBookerByEmail":             "the call graph reaches contact_phone only through CreateContact, but this booking seam supplies no phone. Its existing-contact arm writes nothing, and its create arm makes the subject and email in one transaction, so no erased phone can be restored",
+	"internal/modules/contacts:Store.MergeExistingLeadContactPairsTx": "the cleanup reaches contact_email through the ordinary promotion engine. That engine locks the target contact and source lead before it carries any child row, so an erasure or archive cannot pass the promotion and leave restored residue",
+	"internal/modules/dealrooms:Store.OpenThread":                     "the SELLER side of a deal-room thread: it builds threadAuthor{userID: &userID}, so every comment it writes carries author_user_id and a NULL author_participant_id. The erasure's delete is keyed on author_participant_id, so no row this function writes is one an erasure clears, and there is no row for a racing erasure to restore. The buyer's own reply path writes the participant author instead, and reaches this census through a different probe helper than the one it walks, so its own race is not answered by this declaration",
+	"internal/modules/dealrooms:Store.Reply":                          "the same seller-side author on the reply rather than the opening comment, threadAuthor{userID: &userID} at thread_write.go:382, so the same reasoning holds: author_participant_id is NULL and the erasure's delete cannot name the row",
 
 	"internal/modules/contacts:Store.RecordOfferedValues": "the erasure of an employee deletes a company's offered values by the employment edge, and a feed call racing it can write an offer back. That offer is the feed's own current value for the company and names no subject the erasure was clearing; the company row is the one locked live, and the next feed run would write the same offer",
 
@@ -92,16 +94,15 @@ func withPromotionEdgeWriters(declared map[string]string) map[string]string {
 		"CreateContact",
 		"CreateContactTx",
 		"EnsureContactByEmail",
-		"EnsureCounterparty",
-		"EnsureCounterpartyTx",
-		"PromoteHeldLeadsOnReplyTx",
 		"PromoteLead",
 		"QualifyLead",
+		"ReassignContactTx",
+		"UpdateContact",
+		"convertEditedLeads",
+		"convertLeadsIntoTx",
 		"createContactInTx",
-		"promoteHeldLeadTx",
-		"promoteHeldLeadsTx",
 		"promoteLeadTx",
-		"promoteLeadsByMailTx",
+		"updateContactInTx",
 	} {
 		declared["internal/modules/contacts:Store."+name] = promotionEdgeReason
 	}

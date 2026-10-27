@@ -104,6 +104,12 @@ func NewHandlers(db *database.DB) Handlers {
 	return Handlers{store: NewStore(db)}
 }
 
+// WithLeadQualifyTasks wires the task committed with a lead's booking.
+func (h Handlers) WithLeadQualifyTasks(tasks LeadQualifyTasks) Handlers {
+	h.store = h.store.WithLeadQualifyTasks(tasks)
+	return h
+}
+
 // WithTranscriptEnqueue lets a transcript POSTED to this transport start its
 // own reading, the same way one written over the tool surface does.
 //

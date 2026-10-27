@@ -721,3 +721,16 @@ describe("LeadScreen — the header's Email verb", () => {
     ).toBeTruthy();
   });
 });
+
+// A surface that met this lead while creating a contact sends the reader here.
+// The Qualify dialog is already open.
+describe("LeadScreen — arriving to qualify", () => {
+  it("opens the Qualify dialog when the address asks for it", async () => {
+    stubFetch(async () => jsonResponse(lead));
+    window.location.hash = "#/leads/l-1?action=qualify";
+    render(<LeadScreen id="l-1" />);
+    expect(
+      await screen.findByRole("dialog", { name: /^Qualify / }),
+    ).toBeTruthy();
+  });
+});

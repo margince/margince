@@ -53,7 +53,6 @@ const PREVIEW_EFFECT_LABELS: Record<string, MessageKey> = {
   record_confirmation_only: "approval.preview.confirmationOnly",
   create_contact_record: "approval.preview.createContact",
   record_contact_acquisition: "approval.preview.recordAcquisition",
-  create_promote_matching_leads: "approval.preview.createPromotions",
   create_offer_draft: "approval.preview.createOffer",
   assign_offer_number: "approval.preview.assignOfferNumber",
   create_offer_template: "approval.preview.createTemplate",
@@ -278,6 +277,7 @@ const PREVIEW_CONFLICT_LABELS: Record<string, MessageKey> = {
   sender_signature_private: "approval.preview.signaturePrivate",
   import_scope_unavailable: "approval.preview.importScopeUnavailable",
   email_names_no_one: "approval.preview.machineAddress",
+  lead_holds_email: "approval.preview.leadHoldsEmail",
 };
 
 export function commercialPreviewDisplay(

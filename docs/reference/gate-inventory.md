@@ -451,7 +451,9 @@ The eight shapes, what each is for, and how each one silently passes:
 | `erasuresuppressionreach_test.go` | H2 | Every writer of an address or channel account asks the erasure list. |
 | `erasuretallysavepoint_test.go` | H2 | The erasure counts its work on a tallyTx (privacy/erasuretally.go), and a savepoint opened on it runs on the wrapped transaction, where nothing counts. |
 | `gopinsrenovatereach_test.go` | H3 | Every Go pin this tree holds is one Renovate can move, and it moves them together. |
+| `identityholdersreach_test.go` | H2 | Nobody is a lead and a contact at once. |
 | `importheavywork_test.go` | H2 | An import's rows are written only by the worker. |
+| `linkedinnormalizerreach_test.go` | H2 | Leads and contacts share the LinkedIn profile as an identity key. |
 | `liveprobelock_test.go` | H2 | A live-probed write of a held row locks its subject. |
 | `messagingpackreach_test.go` | H2 | Every messaging rule set a shipped unit declares is one the boot registers. |
 | `moduleaudits_test.go` | H2 | A module that owns tables writes their history. |

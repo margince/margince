@@ -13,7 +13,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -50,9 +49,9 @@ type CreateLeadInput struct {
 	// CustomFields carries the request body's cf_* keys. A key no active catalog
 	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
-	// FromContactID names a contact whose identity fills the fields left
-	// out (leadfromcontact.go).
-	FromContactID *ids.ContactID
+	// RequestedContactID is the deprecated contact_id request field. It is
+	// retained only to return the contact-held refusal older clients understand.
+	RequestedContactID *ids.ContactID
 }
 
 // CreateLead inserts into the segregated lead table — never contact, never
@@ -61,10 +60,6 @@ type CreateLeadInput struct {
 // existing row instead of erroring, so bulk sourcing can re-run.
 func (s *Store) CreateLead(ctx context.Context, in CreateLeadInput) (crmcontracts.Lead, bool, error) {
 	if err := auth.Require(ctx, "lead", principal.ActionCreate); err != nil {
-		return crmcontracts.Lead{}, false, err
-	}
-	in, err := s.fillLeadFromContact(ctx, in)
-	if err != nil {
 		return crmcontracts.Lead{}, false, err
 	}
 	in, by, err := s.readyLeadCreate(ctx, in)
@@ -86,7 +81,19 @@ func (s *Store) CreateLead(ctx context.Context, in CreateLeadInput) (crmcontract
 		}
 		return s.recordLeadNearMatch(ctx, tx, out, by)
 	})
-	return out, created, err
+	return out, created, s.TellContactOwnerOfLead(ctx, err, in, arrivalOrigin(ctx, in.Source))
+}
+
+// arrivalOrigin names the door a lead came through, for the contact owner's
+// task: an agent, or the source the request declared.
+func arrivalOrigin(ctx context.Context, source string) string {
+	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalAgent {
+		return "an agent"
+	}
+	if source == "" {
+		return "the API"
+	}
+	return source
 }
 
 // CreateLeadTx is CreateLead inside a transaction the caller opened, whose own
@@ -101,12 +108,6 @@ func (s *Store) CreateLeadTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput,
 	}
 	if err := refuseUncataloguedCustomFields(in.CustomFields, cols); err != nil {
 		return crmcontracts.Lead{}, false, err
-	}
-	// Reading the contact takes a connection of its own, which is what this
-	// seam exists not to do; a caller holding a transaction fills the lead itself.
-	if in.FromContactID != nil {
-		return crmcontracts.Lead{}, false, httperr.Validation(contactIDField, "unsupported",
-			"a lead created inside another write cannot be filled from a contact")
 	}
 	in, by, err := s.readyLeadCreate(ctx, in)
 	if err != nil {
@@ -211,7 +212,7 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 	authorCols, authorHolders, base := storekit.AuthorInsertFragments(in.Author, []any{
 		id, in.FullName, in.Email, in.Title, in.CompanyName, in.CandidateCompanyKey,
 		in.LinkedInURL, in.Status, fit.Score, in.OwnerID, in.ProjectID, in.SourceSystem, in.SourceID, in.Source, by,
-		in.FromContactID, in.Phone, in.Origin, in.OriginDetail,
+		in.Phone, in.Origin, in.OriginDetail,
 	})
 	cfCols, cfHolders, args, err := storekit.InsertFragments(active, in.CustomFields, base)
 	if err != nil {
@@ -220,8 +221,8 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 	_, err = tx.Exec(ctx,
 		`INSERT INTO lead (id, full_name, email, title, company_name, candidate_company_key,
 		                   linkedin_url, status, score, owner_id, project_id, source_system, source_id, source, captured_by,
-		                   from_contact_id, phone, origin, origin_detail`+authorCols+cfCols+`)
-		 VALUES ($1, $2, lower($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19`+authorHolders+cfHolders+`)`,
+		                   phone, origin, origin_detail`+authorCols+cfCols+`)
+		 VALUES ($1, $2, lower($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18`+authorHolders+cfHolders+`)`,
 		args...)
 	if err != nil {
 		// Race behind the pre-checks: the constraint name tells an
@@ -455,9 +456,6 @@ func leadUniqueViolation(err error, email *string) (error, bool) {
 	if name == "uq_lead_email_dedupe" {
 		return &DuplicateLeadError{Email: deref(email)}, true
 	}
-	if name == "uq_lead_from_contact_live" {
-		return &DuplicateContactLeadError{}, true
-	}
 	return apperrors.ErrConflict, true
 }
 
@@ -469,6 +467,9 @@ func deref(s *string) string {
 }
 
 func admitLeadCreate(ctx context.Context, tx pgx.Tx, in CreateLeadInput) error {
+	if err := refuseRequestedContact(ctx, tx, in.RequestedContactID, leadKeys(in.Email, in.LinkedInURL)); err != nil {
+		return err
+	}
 	if err := lockLeadLinkedInIdentity(ctx, tx, in.LinkedInURL); err != nil {
 		return err
 	}
@@ -478,10 +479,7 @@ func admitLeadCreate(ctx context.Context, tx pgx.Tx, in CreateLeadInput) error {
 	if err := ensureLeadLinkedInUnclaimed(ctx, tx, in.LinkedInURL); err != nil {
 		return err
 	}
-	if err := ensureContactNotWorked(ctx, tx, in.FromContactID, nil); err != nil {
-		return err
-	}
-	if err := ensureContactStillLive(ctx, tx, in.FromContactID); err != nil {
+	if err := refuseContactHolders(ctx, tx, leadKeys(in.Email, in.LinkedInURL), nil); err != nil {
 		return err
 	}
 

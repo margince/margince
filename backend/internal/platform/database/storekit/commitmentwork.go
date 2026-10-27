@@ -79,6 +79,8 @@ var taskSourceFamilies = map[string]taskCurrency{
 	provenance.LeadQualifyTaskSource:    currentByItsWriter,
 	provenance.AssuranceTaskSource:      currentByItsWriter,
 	provenance.OvernightReconcileSource: currentByItsWriter,
+	provenance.LeadRepliedSource:        currentByItsWriter,
+	provenance.LeadForContactSource:     currentByItsWriter,
 	provenance.WhichDealSource:          currentBySourceMail,
 }
 

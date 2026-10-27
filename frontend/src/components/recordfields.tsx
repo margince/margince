@@ -36,31 +36,14 @@ import {
 } from "./create";
 import { prefillFromRecord, prefillRowsFromRecord } from "./edit.prefill";
 import { useDetailsFieldTarget } from "./pageaside";
+import type {
+  FieldGroup,
+  FieldRecord,
+  RecordFieldSave,
+} from "./recordfieldtypes";
+import { rawRecord } from "./recordfieldtypes";
 import { dateDisplay, groupValue, selectOptions } from "./recordfieldvalues";
 import { useUnsavedGuard } from "./unsaved";
-
-export type FieldRecord = Record<string, unknown> & {
-  id: string;
-  version?: number;
-};
-// Conflict comparisons use the original API values before form projection.
-export function rawRecord(opened: FieldRecord): FieldRecord {
-  const original = opened.original;
-  if (
-    original &&
-    typeof original === "object" &&
-    "id" in original &&
-    typeof original.id === "string"
-  )
-    return { ...original, id: original.id };
-  return opened;
-}
-export type RecordFieldSave = (
-  values: Record<string, string>,
-  rows: FormRows,
-  opened: FieldRecord,
-) => Promise<unknown>;
-export type FieldGroup = { label: string; keys: string[] };
 
 type Props = {
   onValuesChange?: (values: Record<string, string>) => void;
@@ -85,6 +68,12 @@ type Props = {
   readOnlyFields?: Readonly<Record<string, string>>;
   save: RecordFieldSave;
   resolveExisting?: (code: string, id: string) => Route;
+  // See CreateAction: a refusal this screen answers with its own verbs.
+  refusalNotice?: (
+    error: unknown,
+    resend: (extra: Record<string, unknown>) => void,
+    pending: boolean,
+  ) => ReactNode | null;
   // Rows the caller adds under the record's own fields, in the same grid:
   // facts that live on the record but are not fields of it, such as tags.
   extraRows?: ReactNode;
@@ -163,12 +152,18 @@ function RecordField({
       rows,
       baseline,
       save,
+      extra,
     }: {
       values: Record<string, string>;
       rows: FormRows;
       baseline: FieldRecord;
       save: RecordFieldSave;
-    }) => save(values, rows, baseline),
+      extra?: Record<string, unknown>;
+    }) =>
+      // An ordinary save carries no extra fields, only a refusal's resend does.
+      extra
+        ? save(values, rows, baseline, extra)
+        : save(values, rows, baseline),
     onSuccess: async () => {
       await Promise.all([
         invalidateRecord(qc, props.kind, props.record.id, {
@@ -224,6 +219,14 @@ function RecordField({
             opened={opened.current}
             pending={mutation.isPending}
             error={mutation.error}
+            onResend={(extra) => {
+              const last = mutation.variables;
+              if (last)
+                mutation.mutate(
+                  { ...last, extra },
+                  { onSuccess: () => onEditingChange(false) },
+                );
+            }}
             onDirtyChange={setDirty}
             onClose={() => onEditingChange(false)}
             onSubmit={(submitted, rows) =>
@@ -427,6 +430,7 @@ function RecordFieldForm({
   opened,
   pending,
   error,
+  onResend,
   onClose,
   onDirtyChange,
   onSubmit,
@@ -436,6 +440,7 @@ function RecordFieldForm({
     opened: FieldRecord;
     pending: boolean;
     error: unknown;
+    onResend: (extra: Record<string, unknown>) => void;
     onClose: () => void;
     onDirtyChange: (dirty: boolean) => void;
     onSubmit: (values: Record<string, string>, rows?: FormRows) => void;
@@ -474,6 +479,7 @@ function RecordFieldForm({
             : null
         }
         resolveExisting={props.resolveExisting}
+        notice={error ? props.refusalNotice?.(error, onResend, pending) : null}
         onSubmit={(submitted, submittedRows) => {
           const original = prefillFromRecord(props.fields, opened);
           const originalRows = prefillRowsFromRecord(props.fields, opened);

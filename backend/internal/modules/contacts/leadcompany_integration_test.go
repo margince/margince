@@ -213,7 +213,11 @@ func TestLinkingALeadLeavesTheContactItsEmailNamesAlone(t *testing.T) {
 		t.Fatal(err)
 	}
 	contact := ids.From[ids.ContactKind](ids.UUID(existing.Id))
-	lead := e.linkLead(ctx, t, e.owner, "lena@boreal.test", "Boreal Freight")
+	ownerID := ids.From[ids.UserKind](e.owner)
+	lead := seedHistoricalLeadWithEmail(ctx, t, e.store, CreateLeadInput{
+		FullName: new("Lena Lead"), CompanyName: new("Boreal Freight"), Title: new("Buyer"),
+		OwnerID: &ownerID, Source: "manual",
+	}, "lena@boreal.test")
 	before, err := e.store.GetContact(ctx, contact, storekit.LiveOnly)
 	if err != nil {
 		t.Fatal(err)
