@@ -154,6 +154,9 @@ func meetingConversionSpec() reportSpec {
 		grants: map[string]string{
 			fieldBecameOpportunity: tableLead,
 		},
+		// The credited seat is read off the meeting's own participant rows.
+		// Its scope is the meeting's, which the activity walk already applies.
+		scopeVia: map[string]string{fieldMeetingHost: "t.id"},
 		// The count alone, deliberately. A distinct-deal figure beside it would
 		// answer a real question — two meetings handed on into ONE deal are two
 		// conversions and one opportunity — and this engine has no count_distinct
