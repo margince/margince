@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import { NextTaskProvider } from "../../components/nexttaskslot";
+import { Button } from "../../design-system/atoms";
 import {
   installFetchStub,
   jsonResponse,
@@ -11,7 +13,11 @@ import { DealStatusCardPanel } from "./dealstatus";
 type WrittenBy = components["schemas"]["WrittenBy"];
 type Situation = "task" | "request" | "covered";
 
-function panel(writer: WrittenBy, situation: Situation = "task") {
+function panel(
+  writer: WrittenBy,
+  situation: Situation = "task",
+  withNextTask = false,
+) {
   const request = situation !== "task";
   const next = request
     ? {
@@ -69,12 +75,18 @@ function panel(writer: WrittenBy, situation: Situation = "task") {
     });
     return (
       <StoryProviders>
-        <DealStatusCardPanel
-          deal={{
-            id: "demo-deal",
-            name: request ? "Won account" : "Demo proposal",
-          }}
-        />
+        <NextTaskProvider
+          value={
+            withNextTask ? <Button variant="ghost">Next task</Button> : null
+          }
+        >
+          <DealStatusCardPanel
+            deal={{
+              id: "demo-deal",
+              name: request ? "Won account" : "Demo proposal",
+            }}
+          />
+        </NextTaskProvider>
       </StoryProviders>
     );
   };
@@ -86,6 +98,7 @@ type Story = StoryObj;
 
 export const ExistingTask: Story = { render: panel("model") };
 export const ComposedBrief: Story = { render: panel("deterministic") };
+export const WithNextTask: Story = { render: panel("model", "task", true) };
 export const ExistingTaskDark: Story = {
   globals: { theme: "dark" },
   render: panel("model"),
