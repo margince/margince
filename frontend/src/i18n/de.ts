@@ -1031,7 +1031,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Offene Deals je Unternehmen und ihr Anteil an der Pipeline, unter Pipeline.",
   "reporting.prepared.deliveryTitle": "Umsetzung",
   "reporting.prepared.deliveryPurpose":
-    "Projektzusagen, ruhende Projekte und Phasen, unter Umsetzung.",
+    "Offene Projektaufgaben, ruhende Projekte und Phasen, unter Umsetzung.",
   "reporting.noSalesWon": "Keine gewonnenen Abschlüsse",
   "reporting.openPipelineAsOf": "Stand {at}",
   "reporting.openPipelineBasis_one": "Offener Deal: {count} · Stand {at}",
@@ -6540,10 +6540,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.last_activity_at": "Letzte Aktivität",
   "analytics.field.lost_reason": "Verlustgrund",
   "analytics.field.meeting_status": "Terminstatus",
-  "analytics.field.open_commitments": "Offene Zusagen",
+  "analytics.field.open_commitments": "Offene Aufgaben",
   "analytics.field.open_deal_value_minor": "Offener Deal-Wert",
   "analytics.field.open_deal_unpriced": "Nicht bewertete offene Deals",
-  "analytics.field.overdue_commitments": "Überfällige Zusagen",
+  "analytics.field.overdue_commitments": "Überfällige Aufgaben",
   "analytics.field.close_month": "Abschlussmonat",
   "analytics.field.owner_id": "Verantwortlich",
   "analytics.field.partner_company_id": "Partnerunternehmen",
@@ -6675,14 +6675,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.q.withheldGroups_one": "1 Gruppe verborgen",
   "analytics.q.withheldGroups_other": "{count} Gruppen verborgen",
   "analytics.reportProjectsByPhase": "Projekte nach Phase",
-  "analytics.reportProjectCommitments": "Projektzusagen",
+  "analytics.reportProjectTasks": "Offene Projektaufgaben",
   "analytics.reportProjectsGoneQuiet": "Projekte ohne Aktivität seit 30 Tagen",
   "analytics.projects": "Projekte",
   "analytics.project": "Projekt",
   "analytics.openDealValue": "Offener Deal-Wert · {currency}",
   "analytics.wonDealValue": "Gewonnener Deal-Wert · {currency}",
-  "analytics.openCommitments": "Offene Zusagen",
-  "analytics.overdueCommitments": "Überfällige Zusagen",
+  "analytics.openTasks": "Offene Aufgaben",
+  "analytics.overdueTasks": "Überfällige Aufgaben",
   "analytics.quietSince": "Ruhig seit",
   "analytics.nothingQuiet": "Kein Projekt in Umsetzung ist verstummt.",
   "analytics.noProjectsYet":
@@ -11586,7 +11586,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "companyTriage.sub":
     "Geprüfte E-Mail-Domains und das Ergebnis jeder Prüfung.",
   "companyTriage.empty":
-    "Für dieses Unternehmen wurde keine E-Mail-Domain geprüft. Das Unternehmen wurde manuell erstellt oder importiert.",
+    "Dieses Unternehmen wurde nicht aus E-Mails angelegt. Die Zeile Quelle sagt, woher es stammt.",
   "companyTriage.checkedAt": "geprüft {when}",
   "pipeline.reason.no_named_reader":
     "dieser Thread hat keine Lesenden, an die sich ein Befund richten ließe",
@@ -15580,6 +15580,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.record.loading": "Listen werden geladen",
   "lists.record.empty": "Auf keiner Liste, die du finden kannst.",
   "lists.record.check": "Live-Liste pr\u00fcfen",
+  "lists.record.checkHint":
+    "Eine Live-Liste aktualisiert sich selbst nach ihren Filtern. Wähle eine, um zu sehen, ob dieser Datensatz passt und warum.",
   "lists.record.checkPick": "Live-Liste ausw\u00e4hlen",
   "lists.record.truncated": "Und weitere Listen, die hier nicht stehen.",
   "lists.record.takenOff": "Von {name} entfernt",
@@ -15935,6 +15937,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.documents.empty":
     "An diesem Projekt hängt keine Datei. Dateien an den Deals des Projekts bleiben bei den Deals.",
   "record.commitments": "Zusagen",
+  "project.openTasks": "Offene Aufgaben",
   "project.commitments.empty":
     "Unter diesem Projekt ist keine offene Aufgabe abgelegt. Verknüpfte Aufgaben erscheinen hier, die am frühesten fällige zuerst.",
   "project.commitments.overdue": "Überfällig",

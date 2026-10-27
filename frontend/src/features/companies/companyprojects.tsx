@@ -37,17 +37,22 @@ type Company360Project = components["schemas"]["Company360Project"];
 // by and what company_id resolves to.
 export const COMPANY_ROLES = ["partner", "subcontractor", "customer"] as const;
 
-// The message key for one role, spelled once so the picker and any row that
-// renders a role cannot disagree about the words.
-export function roleKey(role: string): MessageKey {
-  switch (role) {
-    case "customer":
-      return "projectRole.customer";
-    case "subcontractor":
-      return "projectRole.subcontractor";
-    default:
-      return "projectRole.partner";
-  }
+type CompanyRole = (typeof COMPANY_ROLES)[number];
+
+// The words for each role, spelled once so the picker and every row that
+// renders a role agree. Keyed by the role list, so a new role fails the build
+// until it has words.
+export const COMPANY_ROLE_LABEL: Readonly<Record<CompanyRole, MessageKey>> = {
+  partner: "projectRole.partner",
+  subcontractor: "projectRole.subcontractor",
+  customer: "projectRole.customer",
+};
+
+// A role this build has no words for reads as itself rather than as some other
+// role.
+export function companyRoleLabel(role: string): MessageKey | undefined {
+  const known = COMPANY_ROLES.find((value) => value === role);
+  return known && COMPANY_ROLE_LABEL[known];
 }
 
 export function CompanyProjects({
@@ -123,7 +128,10 @@ export function CompanyProjects({
     // the edge this section writes.
     allowsMany: true,
     search: searchProjects,
-    roles: COMPANY_ROLES.map((value) => ({ value, label: t(roleKey(value)) })),
+    roles: COMPANY_ROLES.map((value) => ({
+      value,
+      label: t(COMPANY_ROLE_LABEL[value]),
+    })),
     attach: (projectId, role) => attach.mutateAsync({ projectId, role }),
     detach: (projectId) => detach.mutateAsync(projectId),
     create,

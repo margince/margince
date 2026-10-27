@@ -7,6 +7,7 @@ import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { FieldGuard } from "../../design-system/rbac";
+import { dealStatusLabel } from "../../format/dealstatus";
 import { formatMoney } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
@@ -142,9 +143,14 @@ function SourcedDeals({
           {
             key: "status",
             header: t("partnerDeals.column.status"),
-            render: (deal) => (
-              <Badge tone={dealStatusTone(deal.status)}>{deal.status}</Badge>
-            ),
+            render: (deal) => {
+              const statusKey = dealStatusLabel(deal.status);
+              return (
+                <Badge tone={dealStatusTone(deal.status)}>
+                  {statusKey ? t(statusKey) : deal.status}
+                </Badge>
+              );
+            },
           },
         ]}
       />

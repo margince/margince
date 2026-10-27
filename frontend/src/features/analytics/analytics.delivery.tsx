@@ -167,7 +167,7 @@ export function ProjectCommitmentsTable({
   }
   return (
     <DataTable
-      label={t("analytics.reportProjectCommitments")}
+      label={t("analytics.reportProjectTasks")}
       columns={[
         {
           key: "project",
@@ -190,13 +190,13 @@ export function ProjectCommitmentsTable({
         },
         {
           key: "open",
-          header: t("analytics.openCommitments"),
+          header: t("analytics.openTasks"),
           align: "end",
           render: (row: ProjectListRow) => formatNumber(row.open, locale),
         },
         {
           key: "overdue",
-          header: t("analytics.overdueCommitments"),
+          header: t("analytics.overdueTasks"),
           align: "end",
           render: (row: ProjectListRow) => formatNumber(row.overdue, locale),
         },

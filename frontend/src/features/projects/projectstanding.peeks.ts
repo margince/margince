@@ -8,9 +8,9 @@ import type { Project360 } from "./projectsections";
 import { commitmentsReading, dealsReading, timeUsed } from "./projectstanding";
 
 /**
- * The open tasks the Commitments reading and the Open commitments figure count,
- * soonest due first as the server sends them. `open` is where a row leads (the
- * Commitments card); the rollup counts every open task, so a page cut short
+ * The open tasks the Open tasks reading and figure count, soonest due first as
+ * the server sends them. `open` is where a row leads (the Open tasks card); the
+ * rollup counts every open task, so a page cut short
  * says how many it shows.
  */
 export function commitmentsPeek(

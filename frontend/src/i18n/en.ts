@@ -1002,7 +1002,7 @@ export const en = {
     "Open deals per company and each one’s share of the pipeline, in Pipeline.",
   "reporting.prepared.deliveryTitle": "Delivery review",
   "reporting.prepared.deliveryPurpose":
-    "Project commitments, quiet projects and phases, in Delivery.",
+    "Open project tasks, quiet projects and phases, in Delivery.",
   "reporting.noSalesWon": "No sales won",
   "reporting.openPipelineAsOf": "As of {at}",
   "reporting.openPipelineBasis_one": "Open deal: {count} · as of {at}",
@@ -6587,10 +6587,10 @@ export const en = {
   "analytics.field.last_activity_at": "Last activity",
   "analytics.field.lost_reason": "Lost reason",
   "analytics.field.meeting_status": "Meeting status",
-  "analytics.field.open_commitments": "Open commitments",
+  "analytics.field.open_commitments": "Open tasks",
   "analytics.field.open_deal_value_minor": "Open deal value",
   "analytics.field.open_deal_unpriced": "Open deals not priced",
-  "analytics.field.overdue_commitments": "Overdue commitments",
+  "analytics.field.overdue_commitments": "Overdue tasks",
   "analytics.field.close_month": "Close month",
   "analytics.field.owner_id": "Owner",
   "analytics.field.partner_company_id": "Partner company",
@@ -6718,14 +6718,14 @@ export const en = {
   "analytics.q.withheldGroups_one": "1 group withheld",
   "analytics.q.withheldGroups_other": "{count} groups withheld",
   "analytics.reportProjectsByPhase": "Projects by phase",
-  "analytics.reportProjectCommitments": "Project commitments",
+  "analytics.reportProjectTasks": "Open project tasks",
   "analytics.reportProjectsGoneQuiet": "Projects inactive for 30 days",
   "analytics.projects": "Projects",
   "analytics.project": "Project",
   "analytics.openDealValue": "Open deal value · {currency}",
   "analytics.wonDealValue": "Won deal value · {currency}",
-  "analytics.openCommitments": "Open commitments",
-  "analytics.overdueCommitments": "Overdue commitments",
+  "analytics.openTasks": "Open tasks",
+  "analytics.overdueTasks": "Overdue tasks",
   "analytics.quietSince": "Quiet since",
   "analytics.nothingQuiet": "No project in delivery has gone quiet.",
   "analytics.noProjectsYet":
@@ -11625,7 +11625,7 @@ export const en = {
   "companyTriage.title": "Company origin",
   "companyTriage.sub": "Mail domains checked and the result of each check.",
   "companyTriage.empty":
-    "No mail domain was checked for this company. It was created manually or imported.",
+    "This company was not created from mail. Its Source line says where it came from.",
   "companyTriage.checkedAt": "checked {when}",
   "pipeline.reason.no_named_reader":
     "this thread has no reader a finding could be addressed to",
@@ -15529,6 +15529,8 @@ export const en = {
   "lists.record.loading": "Loading lists",
   "lists.record.empty": "Not on any list you can find.",
   "lists.record.check": "Check a Live List",
+  "lists.record.checkHint":
+    "A Live List updates itself from its filters. Pick one to see whether this record matches, and why.",
   "lists.record.checkPick": "Pick a Live List",
   "lists.record.truncated": "And more lists not shown here.",
   "lists.record.takenOff": "Taken off {name}",
@@ -15892,6 +15894,7 @@ export const en = {
   "project.documents.empty":
     "No file is attached to this project. Files attached to its deals stay on the deals.",
   "record.commitments": "Commitments",
+  "project.openTasks": "Open tasks",
   "project.commitments.empty":
     "No open task is filed under this project. Linked tasks appear here, soonest due first.",
   "project.commitments.overdue": "Overdue",
