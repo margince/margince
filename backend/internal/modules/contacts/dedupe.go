@@ -221,7 +221,25 @@ type contactCandidateRow struct {
 //
 //nolint:cyclop // the rename added no branch: this body is what it was under the old noun.
 func fuzzyContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactResolution, error) {
+	// candidate gathers the ids each arm of the `WHERE` below can name, one
+	// indexed read per arm. The arms are joined with `OR` across contact and
+	// relationship, which no index answers. Without candidate, every read
+	// scores every live contact. The `WHERE` still decides; candidate only
+	// bounds what it reads.
 	rows, err := tx.Query(ctx, `
+		WITH candidate AS (
+		  SELECT p.id FROM contact p
+		   WHERE p.archived_at IS NULL AND f_fold_apostrophes(lower(p.full_name)) % f_fold_apostrophes(lower($1))
+		  UNION
+		  SELECT p.id FROM contact p
+		   WHERE p.archived_at IS NULL AND `+exactNameKeySQL("p.full_name")+` = `+exactNameKeySQL("$1")+`
+		  UNION
+		  SELECT p.id FROM contact p
+		   WHERE p.archived_at IS NULL AND `+exactDigraphNameKeySQL("p.full_name")+` = `+exactDigraphNameKeySQL("$1")+`
+		  UNION
+		  SELECT r.contact_id FROM relationship r
+		   WHERE $2::uuid IS NOT NULL AND r.company_id = $2 AND r.kind = 'employment'
+		     AND `+employment.CurrentPrimarySQL("r")+` AND r.archived_at IS NULL)
 		SELECT p.id, p.full_name, r.company_id, od.domain,
 		       -- EVERY live address, not an unordered LIMIT 1: a contact with a
 		       -- work and a personal address has two primaries as far as this
@@ -239,6 +257,7 @@ func fuzzyContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactRe
 		  LEFT JOIN company_domain od
 		    ON od.company_id = r.company_id AND od.archived_at IS NULL
 		 WHERE p.archived_at IS NULL
+		   AND p.id IN (SELECT id FROM candidate)
 		   AND ($3::uuid IS NULL OR p.id <> $3)
 		   AND (f_fold_apostrophes(lower(p.full_name)) % f_fold_apostrophes(lower($1))
 		        OR ($2::uuid IS NOT NULL AND r.company_id = $2)

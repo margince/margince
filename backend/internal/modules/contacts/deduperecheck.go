@@ -67,7 +67,7 @@ func (s *Store) RecheckOpenDedupeCandidates(ctx context.Context) (DedupeRecheckR
 	}
 	var result DedupeRecheckResult
 	after := ids.Nil
-	for {
+	for !dedupeRunOutOfTime(ctx) {
 		examined, closed, last, err := s.recheckBatch(ctx, after)
 		if err != nil {
 			return result, fmt.Errorf("contacts: re-check open dedupe candidates: %w", err)
