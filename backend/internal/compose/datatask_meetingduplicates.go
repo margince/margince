@@ -66,12 +66,6 @@ func retireMeetingDuplicatesBatch(ctx context.Context, tx pgx.Tx, meetings *acti
 	if err != nil {
 		return datatask.BatchOut{}, fmt.Errorf("compose: listing calendar copies of meetings: %w", err)
 	}
-	type calendarCopy struct {
-		original ids.UUID
-		meeting  ids.UUID
-		seat     *ids.UUID
-		payload  []byte
-	}
 	copies, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (calendarCopy, error) {
 		var c calendarCopy
 		return c, row.Scan(&c.original, &c.meeting, &c.seat, &c.payload)
@@ -83,44 +77,55 @@ func retireMeetingDuplicatesBatch(ctx context.Context, tx pgx.Tx, meetings *acti
 	survivors := []ids.ActivityID{}
 	for _, c := range copies {
 		scanned = append(scanned, c.original)
-		if c.seat == nil {
-			continue
-		}
-		survivor, calendar, found, err := meetingTheCopyBindsTo(ctx, tx, *c.seat, c.payload)
+		survivor, retired, err := retireCalendarCopy(ctx, tx, meetings, c)
 		if err != nil {
 			return datatask.BatchOut{}, err
 		}
-		duplicate := ids.From[ids.ActivityKind](c.meeting)
-		if !found || survivor == duplicate {
-			continue
+		if retired {
+			survivors = append(survivors, survivor)
 		}
-		live, err := lockLiveSurvivor(ctx, tx, survivor)
-		if err != nil {
-			return datatask.BatchOut{}, err
-		}
-		if !live {
-			continue
-		}
-		retirable, err := copyRetiresCleanly(ctx, tx, duplicate, survivor, *c.seat, calendar)
-		if err != nil {
-			return datatask.BatchOut{}, err
-		}
-		if !retirable {
-			continue
-		}
-		if err := capture.CarryMeetingImportTx(ctx, tx, duplicate, survivor, *c.seat); err != nil {
-			return datatask.BatchOut{}, err
-		}
-		if err := meetings.ArchiveActivityTx(ctx, tx, duplicate, nil); err != nil {
-			return datatask.BatchOut{}, err
-		}
-		survivors = append(survivors, survivor)
 	}
 	// The survivors' audiences follow the seats now recorded on them.
 	if err := activities.RecomputeAudiencesTx(ctx, tx, survivors); err != nil {
 		return datatask.BatchOut{}, err
 	}
 	return datatask.AdvanceUUID(in, scanned, len(survivors))
+}
+
+type calendarCopy struct {
+	original ids.UUID
+	meeting  ids.UUID
+	seat     *ids.UUID
+	payload  []byte
+}
+
+// retireCalendarCopy archives one copy when a sync for its seat binds the
+// event to another live meeting and retiring the copy loses nothing. It
+// answers the survivor and whether the copy was retired.
+func retireCalendarCopy(ctx context.Context, tx pgx.Tx, meetings *activities.Store, c calendarCopy) (ids.ActivityID, bool, error) {
+	if c.seat == nil {
+		return ids.ActivityID{}, false, nil
+	}
+	survivor, calendar, found, err := meetingTheCopyBindsTo(ctx, tx, *c.seat, c.payload)
+	duplicate := ids.From[ids.ActivityKind](c.meeting)
+	if err != nil || !found || survivor == duplicate {
+		return ids.ActivityID{}, false, err
+	}
+	live, err := lockLiveSurvivor(ctx, tx, survivor)
+	if err != nil || !live {
+		return ids.ActivityID{}, false, err
+	}
+	retirable, err := copyRetiresCleanly(ctx, tx, duplicate, survivor, *c.seat, calendar)
+	if err != nil || !retirable {
+		return ids.ActivityID{}, false, err
+	}
+	if err := capture.CarryMeetingImportTx(ctx, tx, duplicate, survivor, *c.seat); err != nil {
+		return ids.ActivityID{}, false, err
+	}
+	if err := meetings.ArchiveActivityTx(ctx, tx, duplicate, nil); err != nil {
+		return ids.ActivityID{}, false, err
+	}
+	return survivor, true, nil
 }
 
 // lockLiveSurvivor locks the meeting a copy binds to and answers whether it is
