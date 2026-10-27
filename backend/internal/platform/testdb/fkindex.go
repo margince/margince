@@ -13,7 +13,7 @@ import (
 )
 
 // The delete actions a foreign-key census asks about, as a predicate over the
-// constraint aliased c.
+// constraint aliased c. A cascade deletes the child, while the rest only find it.
 const (
 	CascadingKeys = `c.confdeltype = 'c'`
 	OtherKeys     = `c.confdeltype <> 'c'`

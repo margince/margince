@@ -28,12 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
-// The two halves of the schema's foreign keys, by what a parent delete does to the
-// child. Spelled as clauses because the covered-ness query above is one statement and
-// only its corpus differs: a cascade DELETES the child and must never scan for it,
-// while the rest only have to FIND it — SET NULL then updates it, RESTRICT and NO
-// ACTION refuse on it.
-
 func TestEveryCascadingKeyCanFindItsChildren(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
