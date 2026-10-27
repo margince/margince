@@ -128,7 +128,7 @@ func needsDealMove(item crmcontracts.WorklistItem) (ids.UUID, bool) {
 // Held by: TestAnUnansweredMailReachesTheRowAsAReply and
 // TestAMeetingFollowUpReachesTheRowAsAFreshMessage (dealmoves_test.go)
 func worklistMoveOf(decided crmcontracts.DealStatusCardMove) *crmcontracts.WorklistMove {
-	out := &crmcontracts.WorklistMove{Action: crmcontracts.WorklistMoveAction(decided.Action)}
+	out := &crmcontracts.WorklistMove{Action: crmcontracts.WorklistMoveAction(decided.Action), Basis: decided.Basis}
 	if decided.Arguments == nil {
 		return out
 	}

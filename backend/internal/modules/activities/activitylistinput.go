@@ -164,7 +164,9 @@ type ListActivitiesInput struct {
 	// WaitingReply asks for the same narrowing judged now. The store reads its
 	// own clock, so the wait and its page judge one snapshot.
 	WaitingReply bool
-	// RequestReviewAsOf reads confirmed obligations independently of queue priority.
+	// RequestCurrentAsOf admits confirmed current requests before the page limit.
+	RequestCurrentAsOf *time.Time
+	// RequestReviewAsOf reads request evidence independently of current-work admission.
 	RequestReviewAsOf *time.Time
 	// ownDomains is the colleague-domain snapshot the waiting walk tests senders
 	// against. Unexported and set by the store beside the transaction it reads

@@ -21,7 +21,7 @@ import (
 
 func storedVerdict(t *testing.T, verdict *crmcontracts.DealStatusCardVerdict) []byte {
 	t.Helper()
-	payload, err := json.Marshal(stored{Card: crmcontracts.DealStatusCard{Verdict: verdict}})
+	payload, err := json.Marshal(stored{ProjectionVersion: ProjectionVersion, Card: crmcontracts.DealStatusCard{Verdict: verdict}})
 	if err != nil {
 		t.Fatalf("encoding a stored card: %v", err)
 	}

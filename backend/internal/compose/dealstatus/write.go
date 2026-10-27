@@ -53,6 +53,7 @@ func composeDeterministic(f facts, mv crmcontracts.DealStatusCardMove) crmcontra
 	if inbound, ok := unansweredInbound(f); ok {
 		id := inbound.Id
 		out.ReplyTo = &id
+		out.RequestBasis = requestBasis(f, inbound, basisCurrentRequest)
 	}
 	return out
 }
@@ -193,7 +194,7 @@ func writtenMove(mv crmcontracts.DealStatusCardMove, w WrittenStatus, f facts) *
 		return nil
 	}
 	written := mv
-	if w.MoveReason.Text == "" {
+	if w.MoveReason.Text == "" || (mv.Basis != nil && mv.Basis.Kind == basisRequestReview) || citesReviewRequest(w.MoveReason.Evidence, requestStates(f)) {
 		return &written
 	}
 	// The sentence AND what it rests on. Every other sentence on this card is
@@ -257,7 +258,7 @@ func wire(lines []WrittenLine, f facts) []sentence {
 // citedRecord finds the record one citation names. An open task is an activity
 // row like any other, so it cites as one and the reader opens it the same way.
 func citedRecord(f facts, id string) (crmcontracts.Activity, bool) {
-	for _, a := range f.requests {
+	for _, a := range factActivities(f) {
 		if a.Id.String() == id {
 			return a, true
 		}

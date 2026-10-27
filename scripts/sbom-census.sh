@@ -90,7 +90,7 @@ for i in "${!names[@]}"; do
 	pairs+=("${names[$i]}" "/src/${work#"$root"/}/$((i + 1)).yaml")
 done
 docker run --rm -v "$root":/src:ro -w /src --platform=linux/amd64 "$image" bash -c '
-	pip install --require-hashes --quiet --no-cache-dir --disable-pip-version-check --root-user-action=ignore -r "$1" >&2 \
+	bash scripts/install-sbom-python.sh "$1" >&2 \
 		|| { echo "FAIL: could not install the pinned YAML reader" >&2; exit 1; }
 	program="$2"
 	shift 2

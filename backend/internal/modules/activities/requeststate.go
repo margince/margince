@@ -111,3 +111,10 @@ func reviewableRequestSQL(asOf string) string {
    OR (a.thread_key IS NOT NULL AND NOT ` + calendarCopySQL + `
        AND NOT ` + answeredSQL("a", asOf) + `))))`
 }
+
+// Current work needs confirmed intent and a responsible seat. Review remains broader.
+func currentRequestSQL(asOf, days, identities string, arg func(any) int) string {
+	admitted := "(" + owedSQL(asOf, neverRelaxed, neverRelaxed, neverRelaxed) + ") AND (" + confirmedRequestSQL + ") AND " +
+		withinWaitingHorizonSQL(asOf, days) + " AND " + personalMailResponsibilitySQL(nil, identities, arg)
+	return "((" + admitted + ") OR (" + requestUnsettledSQL + " AND " + heldRequestSQL() + "))"
+}

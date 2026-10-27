@@ -27,11 +27,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// projectionVersion changes when the PROJECTION changes — the shape the facts
-// are rendered into, which is Go code and so the half a digest cannot reach. It
-// rides the fingerprint so a card built from the old shape is rewritten rather
-// than served forever.
-const projectionVersion = "deal-status-projection-7"
+// ProjectionVersion invalidates all card readers when the evidence interpretation changes.
+const ProjectionVersion = "deal-status-projection-8"
 
 // promptVersion is DERIVED from the prompt as it is SENT — boundary rule
 // included — so rewording it rewrites the cards whether or not anybody
@@ -71,6 +68,12 @@ func moveKey(move crmcontracts.DealStatusCardMove) string {
 		keySb65.WriteString(" [contact:" + id.String() + "]")
 	}
 	key += keySb65.String()
+	if basis := move.Basis; basis != nil {
+		if basis.SourceVersion != nil {
+			key += " [source-version:" + fmt.Sprint(*basis.SourceVersion) + "]"
+		}
+		key += " [basis:" + basis.Kind + ":" + basis.Scope + ":" + basis.SourceActivityId.String() + ":" + basis.PolicyVersion + "]"
+	}
 	return key + evidenceKey(move.Evidence)
 }
 
@@ -116,7 +119,7 @@ func operandActivity(move crmcontracts.DealStatusCardMove) (ids.UUID, bool) {
 // caller may read reaches it: the facts were gathered under their row scope,
 // and a withheld row gives up its words here.
 func project(f facts, move crmcontracts.DealStatusCardMove) StatusInput {
-	in := StatusInput{Deal: dealIn(f.deal), RecommendedMove: moveKey(move)}
+	in := StatusInput{Deal: dealIn(f.deal), RecommendedMove: moveKey(move), RequestStates: requestStates(f)}
 	in.Health = healthIn(f.health)
 	for _, a := range f.timeline {
 		if len(in.Timeline) == maxTimelineRows {
@@ -143,15 +146,17 @@ func project(f facts, move crmcontracts.DealStatusCardMove) StatusInput {
 	in.Room = roomIn(f)
 	if inbound, ok := unansweredInbound(f); ok {
 		in.ReplyTo = inbound.Id.String()
+	}
+	if request, _, ok := requestForMove(f); ok {
 		found := false
 		for _, row := range in.Timeline {
-			found = found || row.ID == in.ReplyTo
+			found = found || row.ID == request.Id.String()
 		}
 		if !found {
 			if len(in.Timeline) >= maxTimelineRows {
 				in.Timeline = in.Timeline[:maxTimelineRows-1]
 			}
-			in.Timeline = append(in.Timeline, actIn(inbound, f.now, f.loc))
+			in.Timeline = append(in.Timeline, actIn(request, f.now, f.loc))
 		}
 	}
 	return in
@@ -340,7 +345,7 @@ func Fingerprint(in StatusInput, userID ids.UUID, routingVersion string, now tim
 		Zone     string      `json:"zone"`
 		Language string      `json:"language"`
 	}{
-		In: in, Prompt: projectionVersion + "\x00" + promptVersion, Routing: routingVersion,
+		In: in, Prompt: ProjectionVersion + "\x00" + promptVersion, Routing: routingVersion,
 		Reader: userID.String(), Day: elapsed.CalendarDay(now, loc).Format("2006-01-02"),
 		Zone:     loc.String(),
 		Language: lang,

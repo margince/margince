@@ -281,7 +281,8 @@ func seedCachedMove(t *testing.T, e *SearchEnv, userID, deal, activity ids.UUID,
 func seedCachedCard(t *testing.T, e *SearchEnv, userID, deal ids.UUID, move crmcontracts.DealStatusCardMove) {
 	t.Helper()
 	payload, err := json.Marshal(map[string]any{
-		"card": crmcontracts.DealStatusCard{Next: &move},
+		"projection_version": dealstatus.ProjectionVersion,
+		"card":               crmcontracts.DealStatusCard{Next: &move},
 	})
 	if err != nil {
 		t.Fatalf("encoding the cached card: %v", err)

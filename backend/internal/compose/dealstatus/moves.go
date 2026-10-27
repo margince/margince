@@ -50,7 +50,6 @@ package dealstatus
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -462,7 +461,7 @@ func NamedActivity(move crmcontracts.DealStatusCardMove) (ids.UUID, bool) {
 // it would be a second place spelling the same rule.
 func moveFromPayload(payload []byte) (crmcontracts.DealStatusCardMove, bool) {
 	var card stored
-	if err := json.Unmarshal(payload, &card); err != nil {
+	if !decodeStored(payload, &card) {
 		return crmcontracts.DealStatusCardMove{}, false
 	}
 	move := card.Card.Next
