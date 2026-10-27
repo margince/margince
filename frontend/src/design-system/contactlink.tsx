@@ -153,8 +153,8 @@ export function EmailFace({ address }: Readonly<{ address: string }>) {
   if (at <= 0) {
     return address;
   }
-  // The two halves are flex items, which a name built from content parts
-  // with a space; a reader hears the address whole from the hidden copy.
+  // A name built from flex items puts a space between them. So the halves
+  // are hidden from it, and a reader hears the whole address once.
   return (
     <span className="contactlink-email" title={address}>
       <span className="contactlink-email-local" aria-hidden="true">

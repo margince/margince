@@ -149,9 +149,9 @@ const TRANSPORT_ROWS: Record<
   }),
 };
 
-// Paired with consentWord's table, with the same fallback: a verdict is a
-// state and reads as a badge, and a verdict off a newer server than this build
-// reads as unknown, which is missing information and stays grey text.
+// Paired with consentWord's table, with the same fallback. A verdict is a
+// state, so it reads as a badge. A verdict off a newer server reads as
+// unknown, which is a gap and stays grey text.
 const VERDICT_BADGE = {
   allowed: { tone: "success", icon: Check },
   blocked: { tone: "warning", icon: Ban },

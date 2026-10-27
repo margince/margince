@@ -374,8 +374,8 @@ export const BoughtPhonePhone: Story = {
 
 const LONG_ADDRESS = "sebastian.sachsinger@straight.de";
 
-// An address wider than the column keeps one line: the mailbox name gives
-// way and the domain stays whole, so the reader still sees whose it is.
+// An address wider than the column keeps one line. The mailbox name gives
+// way, and the domain stays whole to say whose address it is.
 export const LongAddress: Story = {
   name: "Long address, phone",
   render: () =>
