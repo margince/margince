@@ -47,22 +47,15 @@
  * laid open (`display: contents`), so the card orders the row's parts among
  * its own without a second row layout.
  *
- * Its edge turns slowly through the accent and the agent's indigo, because
- * the agent put this card first. A reader who asked for less motion gets the
- * edge at rest. */
-@property --brief-ring-angle {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: 0deg;
-}
+ * Its edge carries the accent and the agent's indigo, because the agent put
+ * this card first. The edge holds still: a turning ring beside the work pulled
+ * the eye off the words it frames. */
 .brief-triage-frame {
-  --brief-ring-angle: 0deg;
   position: relative;
   isolation: isolate;
   border-radius: var(--r-lg);
 }
-.brief-triage-frame::before,
-.brief-triage-frame::after {
+.brief-triage-frame::before {
   content: "";
   position: absolute;
   z-index: -1;
@@ -72,21 +65,14 @@
 .brief-triage-frame::before {
   inset: -1px;
   background: conic-gradient(
-    from var(--brief-ring-angle),
+    from 0deg,
     transparent 0deg,
     var(--ai) 60deg,
     transparent 140deg,
     var(--accent) 220deg,
     transparent 300deg
   );
-  opacity: 0.4;
-}
-/* The soft light the card stands in. */
-.brief-triage-frame::after {
-  inset: 8% 4% -10%;
-  background: linear-gradient(90deg, var(--accent), var(--ai));
-  filter: blur(40px);
-  opacity: 0.08;
+  opacity: 0.25;
 }
 .brief-triage-frame:focus {
   outline: none;
@@ -96,16 +82,8 @@
   outline-offset: 2px;
 }
 @media (prefers-reduced-motion: no-preference) {
-  .brief-triage-frame {
-    animation: brief-ring-turn 9s linear infinite;
-  }
   .brief-triage-lead {
     animation: brief-card-off-the-stack var(--dur-move) var(--ease-out);
-  }
-}
-@keyframes brief-ring-turn {
-  to {
-    --brief-ring-angle: 360deg;
   }
 }
 @keyframes brief-card-off-the-stack {
@@ -121,10 +99,10 @@
   align-items: start;
   gap: var(--space-4);
   min-width: 0;
-  padding: var(--space-8);
+  padding: var(--space-6) var(--space-8);
   border: 0;
   border-radius: var(--r-lg);
-  box-shadow: var(--shadow-pop);
+  box-shadow: var(--shadow-rest);
 }
 /* THE HEAD: why the row is here, whose it is, where it sits and when, as one
    caption line split by dots. */
@@ -173,7 +151,7 @@
    A waiting message names itself by its subject, at the same rung. */
 .brief-triage-lead p.worklist-row-title,
 .brief-triage-lead .emailentry__subject {
-  font: var(--fontHeadingXXLarge);
+  font: var(--fontHeadingLarge);
   white-space: normal;
   overflow-wrap: anywhere;
   text-wrap: balance;
@@ -181,7 +159,7 @@
 .brief-triage-lead .worklist-row-context,
 .brief-triage-lead .worklist-row-detail,
 .brief-triage-lead .worklist-row-verdict {
-  font: var(--fontBodyLarge);
+  font: var(--fontBody);
 }
 .brief-triage-lead .worklist-row-facts {
   font: var(--fontBody);
@@ -215,7 +193,7 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   line-clamp: 3;
-  font: var(--fontBodyLarge);
+  font: var(--fontBody);
   color: var(--textSecondary);
   white-space: normal;
   text-wrap: pretty;
@@ -274,7 +252,7 @@
 .brief-focus-item-title {
   flex: 1;
   min-width: 0;
-  font: var(--fontBodyLarge);
+  font: var(--fontBody);
   font-weight: var(--fontWeightMedium);
   overflow: hidden;
   text-overflow: ellipsis;

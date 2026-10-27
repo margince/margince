@@ -73,8 +73,8 @@ the window, because the head is the one line a reader sees whole when the page o
 | Token | For |
 |---|---|
 | `--fontDisplayXLarge` | The greeting that fills the window once a day. |
-| `--fontDisplayLarge` | The greeting at the head of Home, and the weekly report's title. |
-| `--fontDisplayMedium` | A figure under the full-window greeting. |
+| `--fontDisplayLarge` | The weekly report's title, and its greeting. |
+| `--fontDisplayMedium` | The greeting at the head of Home's Today view, and a figure under the full-window greeting. |
 | `--fontLead` | The sentence under the greeting. Its line is tall enough to hold a large `RecordChip`. |
 
 **A heading's level comes from the structure.** A user of a screen reader moves through a page by

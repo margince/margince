@@ -169,8 +169,11 @@ export const Headings: Story = {
 
 const DISPLAY: ReadonlyArray<{ token: string; context: string }> = [
   { token: "--fontDisplayXLarge", context: "the full-window greeting" },
-  { token: "--fontDisplayLarge", context: "the Morning view's greeting" },
-  { token: "--fontDisplayMedium", context: "a figure under the greeting" },
+  { token: "--fontDisplayLarge", context: "the weekly report's head" },
+  {
+    token: "--fontDisplayMedium",
+    context: "the Today greeting, and a figure under it",
+  },
   { token: "--fontLead", context: "the sentence under the greeting" },
 ];
 

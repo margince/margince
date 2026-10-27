@@ -255,7 +255,7 @@
   gap: var(--space-3);
 }
 .brief-morning .glance-greeting {
-  font: var(--fontDisplayLarge);
+  font: var(--fontDisplayMedium);
 }
 .brief-morning .glance-sentence {
   font: var(--fontLead);

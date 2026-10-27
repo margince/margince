@@ -634,11 +634,11 @@
   /* The full-window greeting. */
   --fontDisplayXLarge:
     var(--fontWeightBold) clamp(3.25rem, 8vw, 7rem) / 1 var(--fontFamilyHeading);
-  /* The greeting at the head of the page. */
+  /* The weekly report's head. */
   --fontDisplayLarge:
     var(--fontWeightBold) clamp(2.75rem, 5.4vw, 4.25rem) / 1.05
     var(--fontFamilyHeading);
-  /* A figure under the full-window greeting. */
+  /* The Today greeting, and a figure under the full-window greeting. */
   --fontDisplayMedium:
     var(--fontWeightBold) clamp(2.125rem, 4vw, 3.25rem) / 1.05
     var(--fontFamilyHeading);
