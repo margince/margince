@@ -83,6 +83,8 @@ type DeliveryRole =
 // alone, so it takes the sentence-case keys; `co.role.*` is the same word for
 // the middle of a phrase ("Thiếu {role}").
 const DEAL_ROLE_LABELS: Record<
+  // Typed from the project request, whose roles are the deal vocabulary plus
+  // the delivery roles: a role added to that request alone fails tsc here.
   Exclude<ProjectStakeholderRole, DeliveryRole>,
   MessageKey
 > = {
@@ -172,7 +174,7 @@ export function isProjectStakeholderRole(
   return Object.hasOwn(PROJECT_ROLE_LABELS, value);
 }
 
-/** The project seats in the order the contract declares them. */
+/** The project seats, in the order this map lists them. */
 export const PROJECT_STAKEHOLDER_ROLES: readonly ProjectStakeholderRole[] =
   Object.keys(PROJECT_ROLE_LABELS).filter(isProjectStakeholderRole);
 
@@ -203,7 +205,7 @@ export function isBillingContactRole(
   return Object.hasOwn(BILLING_ROLE_LABELS, value);
 }
 
-/** The billing capacities a form offers, in the order an invoice meets them. */
+/** The billing capacities a form offers, in the order this map lists them. */
 export const BILLING_CONTACT_ROLES: readonly BillingContactRole[] =
   Object.keys(BILLING_ROLE_LABELS).filter(isBillingContactRole);
 

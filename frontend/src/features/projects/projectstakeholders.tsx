@@ -43,7 +43,7 @@ type SetProjectStakeholderRequest =
   components["schemas"]["SetProjectStakeholderRequest"];
 type ProjectStakeholderRole = SetProjectStakeholderRequest["role"];
 
-// The seat the dialog opens on, first in the contract's list.
+// The seat the dialog opens on, first in the order the label map lists them.
 const FIRST_SEAT: ProjectStakeholderRole = "champion";
 
 // The one key the project page reads under (project360.tsx). A guess here
