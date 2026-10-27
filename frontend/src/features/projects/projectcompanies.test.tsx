@@ -4,7 +4,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { LocaleProvider } from "../../i18n";
+import { type Locale, LocaleProvider } from "../../i18n";
+import { vi } from "../../i18n/vi";
 import { parseHash } from "../../lib/router";
 import { ProjectCompanies } from "./projectcompanies";
 
@@ -14,14 +15,18 @@ import { ProjectCompanies } from "./projectcompanies";
 // prefix the router does not answer. The oracle is parseHash — the router's own
 // entry point — so the assertion cannot drift from the route table the way a
 // hard-coded list of prefixes would.
-function renderSection(companies: readonly unknown[], readOnly = true) {
+function renderSection(
+  companies: readonly unknown[],
+  readOnly = true,
+  locale: Locale = "en",
+) {
   render(
     <QueryClientProvider
       client={
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <LocaleProvider>
+      <LocaleProvider initial={locale}>
         <ProjectCompanies
           projectId="01a02e25-a5ac-7099-8099-581cbf001a99"
           companies={
@@ -69,5 +74,26 @@ describe("the companies on a project", () => {
     expect(
       screen.getByRole("button", { name: "Detach netcare" }),
     ).toBeInTheDocument();
+  });
+
+  it("names each company's role in the reader's language", () => {
+    renderSection(
+      [
+        netcare,
+        {
+          ...netcare,
+          company_id: "c-2",
+          display_name: "relay",
+          role: "reseller",
+        },
+      ],
+      true,
+      "vi",
+    );
+
+    expect(screen.getByText(vi["projectRole.customer"])).toBeInTheDocument();
+    expect(screen.queryByText("customer")).not.toBeInTheDocument();
+    // A role this build has no words for reads as itself, not as a partner.
+    expect(screen.getByText("reseller")).toBeInTheDocument();
   });
 });

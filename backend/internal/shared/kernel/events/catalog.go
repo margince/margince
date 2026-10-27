@@ -296,6 +296,7 @@ var catalog = map[string]struct {
 	// detection lifecycle rides the capture stream (events.md §5.11
 	// stream-routing rule).
 	"signal.detected": {captureStreamEntity, 1},
+	"signal.updated":  {captureStreamEntity, 1},
 	"signal.resolved": {captureStreamEntity, 1},
 
 	"coldstart.read_back_proposed": {coldstartStreamEntity, 1},
@@ -308,6 +309,7 @@ var catalog = map[string]struct {
 	// identity-owned facts, so they ride the identity stream rather than gaining
 	// per-entity streams of their own. A subscriber watching one seat's access
 	// reads them in one place and in order.
+	"user.updated":              {identityStreamEntity, 1},
 	"user.invited":              {identityStreamEntity, 1},
 	"user.activated":            {identityStreamEntity, 1},
 	"user.password_link_issued": {identityStreamEntity, 1},

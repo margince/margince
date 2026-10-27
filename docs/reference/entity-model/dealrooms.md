@@ -46,6 +46,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `deal_room_steward_user_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.steward_user_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.state <> ALL (ARRAY['closed', 'expired']))))) EXECUTE FUNCTION refuse_retired_member_work('steward_user_id')`
 - `deal_room_touch`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## deal_room_comment

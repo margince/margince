@@ -380,9 +380,9 @@ func writeAuthorityPredicateAs(p principal.Principal, table, alias string, arg f
 		   WHERE rg.record_type = '%s' AND rg.record_id = %s.id
 		     AND rg.access = '%s'
 		     AND (rg.expires_at IS NULL OR rg.expires_at > now())
-		     AND ((rg.subject_type = 'user' AND rg.subject_id = $%d)
+		     AND ((rg.subject_type = 'user' AND rg.subject_id IN (%s))
 		       OR (rg.subject_type = 'team' AND rg.subject_id = ANY($%d)))))`,
-		owner, table, alias, grantAccessWrite, me, teams)
+		owner, table, alias, grantAccessWrite, memberIdentitySQL(me), teams)
 }
 
 // EnsureClaimable is the gate in front of taking ownership of a row. A claim

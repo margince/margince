@@ -66,6 +66,10 @@ var vaultWriters = map[string]string{
 	// the link would put a live credential in the audit log.
 	"internal/modules/consent/confirmstage.go": "audit_log, under the confirm_token create verb",
 
+	// Sealed before the form write that holds its ref. That write's own audit
+	// entry is the record, and it carries neither the secret nor the ref.
+	"internal/modules/webforms/secrets.go": "audit_log, under the web_form create, update and rotate verbs",
+
 	// Sealed when a TOTP enrolment STARTS, before any factor guards the account:
 	// the pending user_mfa row holds only the ref, and the act that changes what
 	// guards a sign-in — the factor becoming live — is what ConfirmTOTP records.

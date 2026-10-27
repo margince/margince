@@ -96,7 +96,7 @@ function OpenCommitmentsCell({ view }: Readonly<{ view: Project360 }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const label = t("record.commitments");
+  const label = t("project.openTasks");
   const zone = useRecordZone();
   const reading = commitmentsReading(view);
   if (!reading) {

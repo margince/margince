@@ -9,7 +9,6 @@ import {
 import type { components } from "../../api/schema";
 import { SendPermission } from "../../components/sendpermission";
 import { useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import type { Transport } from "../../lib/contacttransports";
 import { useVoiceProfile } from "../../lib/voice-profile";
 import {
@@ -25,13 +24,13 @@ import {
 import { ComposeBlockers } from "./composeblockers";
 import { type ComposeDock, ComposeDockContext } from "./composedockcontext";
 import { useComposeFields } from "./composefields";
-import { useComposeRecords } from "./composefiling";
+import { useAccountRecipient, useComposeRecords } from "./composefiling";
 import { useRecipientOffer } from "./composerecipientoffer";
 import type { RelinkKind } from "./composerelink";
 import { useSavedDraft } from "./composesaveddraft";
 import type { SavedDraftFields } from "./composesaveddraftcalls";
 import { ScheduleDialog } from "./composeschedule";
-import { useComposeSend } from "./composesend";
+import { sendWording, useComposeSend } from "./composesend";
 import {
   useAnswerTarget,
   useConversationSwitch,
@@ -59,27 +58,6 @@ export type VoiceProfile = components["schemas"]["VoiceProfile"];
 // One frozen empty list for the default. A fresh array would remake the
 // transport lookup on each keystroke's render.
 const NO_TRANSPORTS: readonly Transport[] = [];
-
-// What the dialog promises. A scheduled message waits and can be withdrawn,
-// so its title and body say so; a channel reply has no send-later field.
-function sendWording(
-  isChannelReply: boolean,
-  scheduling: boolean,
-): Readonly<{ title: MessageKey; body: MessageKey }> {
-  if (isChannelReply) {
-    return {
-      title: "compose.sendMessageConfirmTitle",
-      body: "compose.sendMessageBody",
-    };
-  }
-  if (scheduling) {
-    return {
-      title: "compose.scheduleConfirmTitle",
-      body: "compose.scheduleBody",
-    };
-  }
-  return { title: "compose.sendConfirmTitle", body: "compose.sendBody" };
-}
 
 /** What a surface hands the composer: where it writes from, and what to. */
 export type ComposeProps = Readonly<{
@@ -215,7 +193,6 @@ export function ComposeWindow({
   const fields = useComposeFields({
     initialMessage,
     askedIntent,
-    contactId,
     edit,
   });
   const { answering, choose } = useAnswerTarget({
@@ -236,11 +213,19 @@ export function ComposeWindow({
   const [pickingMoment, setPickingMoment] = useState(false);
   // The foot's place for the editor's marks, so they sit beside Send.
   const [markRow, setMarkRow] = useState<HTMLDivElement | null>(null);
+  // The account-started path is keyed on the resolved anchor: a record with
+  // earlier mail answers it rather than asking for a recipient.
+  const groundable = !answering && entityType === "company" && !isChannelReply;
+  const accountCompanyId = groundable ? entityId : undefined;
+  const account = useAccountRecipient(accountCompanyId, fields.to, {
+    contactId,
+    recordAddress,
+  });
   const offer = useRecipientOffer({
     open,
     isChannelReply,
     answering,
-    recordAddress,
+    recordAddress: account.offeredAddress,
     setTo: fields.setTo,
   });
   const names = useConversationNames(open, entityType, entityId);
@@ -254,15 +239,12 @@ export function ComposeWindow({
     nameOf: names.nameOf,
     setSubject: fields.setSubject,
   });
-  // The account-started path is keyed on the resolved anchor: a record with
-  // earlier mail answers it rather than asking for a recipient.
-  const groundable = !answering && entityType === "company" && !isChannelReply;
   const records = useComposeRecords({
     open,
     isChannelReply,
     entityType,
     entityId,
-    recipientId: fields.account.recipientId,
+    recipientId: account.recipientId,
     answering,
     subject: fields.subject,
     setSubject: fields.setSubject,
@@ -311,7 +293,13 @@ export function ComposeWindow({
     files: attached.files,
     carriageBlocked: carriageBlocks.length > 0,
     anchorActivity: thread.anchorActivity,
-    grounding: groundable ? { ...fields.account.grounding, projectId } : null,
+    grounding: groundable
+      ? {
+          ...fields.account.grounding,
+          recipientId: account.recipientId,
+          projectId,
+        }
+      : null,
     projectId,
     savedDraft,
     onSent,
@@ -326,6 +314,7 @@ export function ComposeWindow({
     entityId,
     followUp,
     projectId,
+    recipient: account,
     groundable,
     thread,
     bodyId,
@@ -420,7 +409,7 @@ export function ComposeWindow({
                 nameOf={names.nameOf}
                 activityId={activityId}
                 records={records}
-                accountCompanyId={groundable ? entityId : undefined}
+                accountCompanyId={accountCompanyId}
                 flagged={send.flagged}
                 rejectionInFlight={voice.rejectionInFlight}
                 onToEditing={settle}

@@ -427,8 +427,8 @@ func healthActivityEvidence(ctx context.Context, tx pgx.Tx, now time.Time, in *d
   SELECT a.id FROM activity a
   JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
   WHERE a.kind = 'task' AND a.is_done = false AND a.archived_at IS NULL
-   AND a.due_at IS NOT NULL AND a.due_at < $2 AND `+current+`
-  ORDER BY a.due_at, a.id`, args...))
+   AND `+storekit.TaskDueSQL("a")+` IS NOT NULL AND `+storekit.TaskDueSQL("a")+` < $2 AND `+current+`
+  ORDER BY `+storekit.TaskDueSQL("a")+`, a.id`, args...))
 	if err != nil {
 		return err
 	}

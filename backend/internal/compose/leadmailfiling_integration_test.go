@@ -91,7 +91,7 @@ func (l *leadMailEnv) mail(t *testing.T, m owedMail, readsLeads bool) ids.UUID {
 		t.Fatalf("parsing %s: %v", m.messageID, err)
 	}
 	parsed = parsed.AttestSentByOwner(m.from == l.seat)
-	ref, err := newCaptureSink(l.e.Pool, CaptureConfig{}).Upsert(l.connectorCtx(t, "gmail", readsLeads), parsed.ToRecord("gmail", m.raw()))
+	ref, err := newCaptureSink(l.e.Pool, CaptureConfig{Now: func() time.Time { return l.at.Add(5 * time.Minute) }}).Upsert(l.connectorCtx(t, "gmail", readsLeads), parsed.ToRecord("gmail", m.raw()))
 	if err != nil {
 		t.Fatalf("capturing %s: %v", m.messageID, err)
 	}

@@ -13879,6 +13879,150 @@ func (e MeetingResponse) Valid() bool {
 	}
 }
 
+// Defines values for MemberRetirementBlocker.
+const (
+	MemberRetirementBlockerAnalyticsShares        MemberRetirementBlocker = "analytics_shares"
+	MemberRetirementBlockerApprovalDecisions      MemberRetirementBlocker = "approval_decisions"
+	MemberRetirementBlockerAutomations            MemberRetirementBlocker = "automations"
+	MemberRetirementBlockerBookingPages           MemberRetirementBlocker = "booking_pages"
+	MemberRetirementBlockerChooseReceiver         MemberRetirementBlocker = "choose_receiver"
+	MemberRetirementBlockerChooseSurvivor         MemberRetirementBlocker = "choose_survivor"
+	MemberRetirementBlockerDataRequests           MemberRetirementBlocker = "data_requests"
+	MemberRetirementBlockerDeactivateFirst        MemberRetirementBlocker = "deactivate_first"
+	MemberRetirementBlockerDealRooms              MemberRetirementBlocker = "deal_rooms"
+	MemberRetirementBlockerHandoffs               MemberRetirementBlocker = "handoffs"
+	MemberRetirementBlockerIntroductions          MemberRetirementBlocker = "introductions"
+	MemberRetirementBlockerLists                  MemberRetirementBlocker = "lists"
+	MemberRetirementBlockerMailDrafts             MemberRetirementBlocker = "mail_drafts"
+	MemberRetirementBlockerMeetingInvitations     MemberRetirementBlocker = "meeting_invitations"
+	MemberRetirementBlockerMeetingProposals       MemberRetirementBlocker = "meeting_proposals"
+	MemberRetirementBlockerPrivacyNotices         MemberRetirementBlocker = "privacy_notices"
+	MemberRetirementBlockerPrivateTasks           MemberRetirementBlocker = "private_tasks"
+	MemberRetirementBlockerRecordResponsibilities MemberRetirementBlocker = "record_responsibilities"
+	MemberRetirementBlockerReportSchedules        MemberRetirementBlocker = "report_schedules"
+	MemberRetirementBlockerReports                MemberRetirementBlocker = "reports"
+	MemberRetirementBlockerSavedViews             MemberRetirementBlocker = "saved_views"
+	MemberRetirementBlockerScheduledMail          MemberRetirementBlocker = "scheduled_mail"
+	MemberRetirementBlockerSelfSurvivor           MemberRetirementBlocker = "self_survivor"
+	MemberRetirementBlockerSourceUsed             MemberRetirementBlocker = "source_used"
+	MemberRetirementBlockerStateChanged           MemberRetirementBlocker = "state_changed"
+	MemberRetirementBlockerStewardedLists         MemberRetirementBlocker = "stewarded_lists"
+	MemberRetirementBlockerVoiceProfiles          MemberRetirementBlocker = "voice_profiles"
+	MemberRetirementBlockerWebForms               MemberRetirementBlocker = "web_forms"
+	MemberRetirementBlockerWebhooks               MemberRetirementBlocker = "webhooks"
+	MemberRetirementBlockerWeeklyPlans            MemberRetirementBlocker = "weekly_plans"
+	MemberRetirementBlockerWorkNotTransferable    MemberRetirementBlocker = "work_not_transferable"
+)
+
+// Valid indicates whether the value is a known member of the MemberRetirementBlocker enum.
+func (e MemberRetirementBlocker) Valid() bool {
+	switch e {
+	case MemberRetirementBlockerAnalyticsShares:
+		return true
+	case MemberRetirementBlockerApprovalDecisions:
+		return true
+	case MemberRetirementBlockerAutomations:
+		return true
+	case MemberRetirementBlockerBookingPages:
+		return true
+	case MemberRetirementBlockerChooseReceiver:
+		return true
+	case MemberRetirementBlockerChooseSurvivor:
+		return true
+	case MemberRetirementBlockerDataRequests:
+		return true
+	case MemberRetirementBlockerDeactivateFirst:
+		return true
+	case MemberRetirementBlockerDealRooms:
+		return true
+	case MemberRetirementBlockerHandoffs:
+		return true
+	case MemberRetirementBlockerIntroductions:
+		return true
+	case MemberRetirementBlockerLists:
+		return true
+	case MemberRetirementBlockerMailDrafts:
+		return true
+	case MemberRetirementBlockerMeetingInvitations:
+		return true
+	case MemberRetirementBlockerMeetingProposals:
+		return true
+	case MemberRetirementBlockerPrivacyNotices:
+		return true
+	case MemberRetirementBlockerPrivateTasks:
+		return true
+	case MemberRetirementBlockerRecordResponsibilities:
+		return true
+	case MemberRetirementBlockerReportSchedules:
+		return true
+	case MemberRetirementBlockerReports:
+		return true
+	case MemberRetirementBlockerSavedViews:
+		return true
+	case MemberRetirementBlockerScheduledMail:
+		return true
+	case MemberRetirementBlockerSelfSurvivor:
+		return true
+	case MemberRetirementBlockerSourceUsed:
+		return true
+	case MemberRetirementBlockerStateChanged:
+		return true
+	case MemberRetirementBlockerStewardedLists:
+		return true
+	case MemberRetirementBlockerVoiceProfiles:
+		return true
+	case MemberRetirementBlockerWebForms:
+		return true
+	case MemberRetirementBlockerWebhooks:
+		return true
+	case MemberRetirementBlockerWeeklyPlans:
+		return true
+	case MemberRetirementBlockerWorkNotTransferable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MemberRetirementConsequence.
+const (
+	MemberRetirementConsequenceConnectorsReconnect      MemberRetirementConsequence = "connectors_reconnect"
+	MemberRetirementConsequenceCrmPrivateRecordsMove    MemberRetirementConsequence = "crm_private_records_move"
+	MemberRetirementConsequenceEmailReserved            MemberRetirementConsequence = "email_reserved"
+	MemberRetirementConsequenceOriginalAttribution      MemberRetirementConsequence = "original_attribution"
+	MemberRetirementConsequencePrivateAlertsArchived    MemberRetirementConsequence = "private_alerts_archived"
+	MemberRetirementConsequencePrivateAudiencesRetained MemberRetirementConsequence = "private_audiences_retained"
+	MemberRetirementConsequenceSourceSignedOut          MemberRetirementConsequence = "source_signed_out"
+	MemberRetirementConsequenceSurvivorAccess           MemberRetirementConsequence = "survivor_access"
+	MemberRetirementConsequenceSurvivorInactive         MemberRetirementConsequence = "survivor_inactive"
+)
+
+// Valid indicates whether the value is a known member of the MemberRetirementConsequence enum.
+func (e MemberRetirementConsequence) Valid() bool {
+	switch e {
+	case MemberRetirementConsequenceConnectorsReconnect:
+		return true
+	case MemberRetirementConsequenceCrmPrivateRecordsMove:
+		return true
+	case MemberRetirementConsequenceEmailReserved:
+		return true
+	case MemberRetirementConsequenceOriginalAttribution:
+		return true
+	case MemberRetirementConsequencePrivateAlertsArchived:
+		return true
+	case MemberRetirementConsequencePrivateAudiencesRetained:
+		return true
+	case MemberRetirementConsequenceSourceSignedOut:
+		return true
+	case MemberRetirementConsequenceSurvivorAccess:
+		return true
+	case MemberRetirementConsequenceSurvivorInactive:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MorningBriefFactorsOmitted.
 const (
 	MorningBriefFactorsOmittedWarmth MorningBriefFactorsOmitted = "warmth"
@@ -19828,6 +19972,24 @@ func (e UpdateTagRequestColor) Valid() bool {
 	}
 }
 
+// Defines values for UpdateWebFormRequestState.
+const (
+	UpdateWebFormRequestStateActive UpdateWebFormRequestState = "active"
+	UpdateWebFormRequestStatePaused UpdateWebFormRequestState = "paused"
+)
+
+// Valid indicates whether the value is a known member of the UpdateWebFormRequestState enum.
+func (e UpdateWebFormRequestState) Valid() bool {
+	switch e {
+	case UpdateWebFormRequestStateActive:
+		return true
+	case UpdateWebFormRequestStatePaused:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateWebhookSubscriptionRequestState.
 const (
 	UpdateWebhookSubscriptionRequestStateActive UpdateWebhookSubscriptionRequestState = "active"
@@ -19955,9 +20117,12 @@ func (e UpsertPartnerRequestRelationshipStage) Valid() bool {
 const (
 	UserAllowedActionsChangeRole        UserAllowedActions = "change_role"
 	UserAllowedActionsDeactivate        UserAllowedActions = "deactivate"
+	UserAllowedActionsEdit              UserAllowedActions = "edit"
 	UserAllowedActionsHandOver          UserAllowedActions = "hand_over"
 	UserAllowedActionsIssuePasswordLink UserAllowedActions = "issue_password_link"
+	UserAllowedActionsMerge             UserAllowedActions = "merge"
 	UserAllowedActionsReactivate        UserAllowedActions = "reactivate"
+	UserAllowedActionsRemove            UserAllowedActions = "remove"
 	UserAllowedActionsRemoveMfa         UserAllowedActions = "remove_mfa"
 )
 
@@ -19968,11 +20133,17 @@ func (e UserAllowedActions) Valid() bool {
 		return true
 	case UserAllowedActionsDeactivate:
 		return true
+	case UserAllowedActionsEdit:
+		return true
 	case UserAllowedActionsHandOver:
 		return true
 	case UserAllowedActionsIssuePasswordLink:
 		return true
+	case UserAllowedActionsMerge:
+		return true
 	case UserAllowedActionsReactivate:
+		return true
+	case UserAllowedActionsRemove:
 		return true
 	case UserAllowedActionsRemoveMfa:
 		return true
@@ -20620,6 +20791,84 @@ func (e VoiceProfileVersionStatus) Valid() bool {
 	case VoiceProfileVersionStatusRejected:
 		return true
 	case VoiceProfileVersionStatusSuperseded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebFormState.
+const (
+	WebFormStateActive WebFormState = "active"
+	WebFormStatePaused WebFormState = "paused"
+)
+
+// Valid indicates whether the value is a known member of the WebFormState enum.
+func (e WebFormState) Valid() bool {
+	switch e {
+	case WebFormStateActive:
+		return true
+	case WebFormStatePaused:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebFormCreatedState.
+const (
+	WebFormCreatedStateActive WebFormCreatedState = "active"
+	WebFormCreatedStatePaused WebFormCreatedState = "paused"
+)
+
+// Valid indicates whether the value is a known member of the WebFormCreatedState enum.
+func (e WebFormCreatedState) Valid() bool {
+	switch e {
+	case WebFormCreatedStateActive:
+		return true
+	case WebFormCreatedStatePaused:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebFormReceiptStatus.
+const (
+	WebFormReceiptStatusReceived WebFormReceiptStatus = "received"
+)
+
+// Valid indicates whether the value is a known member of the WebFormReceiptStatus enum.
+func (e WebFormReceiptStatus) Valid() bool {
+	switch e {
+	case WebFormReceiptStatusReceived:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebFormSender.
+const (
+	WebFormSenderBrowser  WebFormSender = "browser"
+	WebFormSenderServer   WebFormSender = "server"
+	WebFormSenderTally    WebFormSender = "tally"
+	WebFormSenderTypeform WebFormSender = "typeform"
+	WebFormSenderWebflow  WebFormSender = "webflow"
+)
+
+// Valid indicates whether the value is a known member of the WebFormSender enum.
+func (e WebFormSender) Valid() bool {
+	switch e {
+	case WebFormSenderBrowser:
+		return true
+	case WebFormSenderServer:
+		return true
+	case WebFormSenderTally:
+		return true
+	case WebFormSenderTypeform:
+		return true
+	case WebFormSenderWebflow:
 		return true
 	default:
 		return false
@@ -24898,6 +25147,24 @@ func (e ListSignalsParamsResolutionState) Valid() bool {
 	case ListSignalsParamsResolutionStateResolved:
 		return true
 	case ListSignalsParamsResolutionStateUnresolved:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PreviewMemberRetirementParamsMode.
+const (
+	PreviewMemberRetirementParamsModeMerge  PreviewMemberRetirementParamsMode = "merge"
+	PreviewMemberRetirementParamsModeRemove PreviewMemberRetirementParamsMode = "remove"
+)
+
+// Valid indicates whether the value is a known member of the PreviewMemberRetirementParamsMode enum.
+func (e PreviewMemberRetirementParamsMode) Valid() bool {
+	switch e {
+	case PreviewMemberRetirementParamsModeMerge:
+		return true
+	case PreviewMemberRetirementParamsModeRemove:
 		return true
 	default:
 		return false
@@ -35151,6 +35418,12 @@ type Contact360 struct {
 	// ConversationMemory Threads and meetings as ENTITIES, condensed — what the conversation was about, not the transport events it was made of (ADR-0097 D3). The Activity tab remains the complete raw ledger; a summary never replaces it and never leaks a withheld activity.
 	ConversationMemory *[]ConversationMemoryEntry `json:"conversation_memory,omitempty"`
 
+	// CreatedBy Who created the contact, from its earliest create audit row: for an agent, the
+	// colleague it worked for and the tool it was typed through, each when the row
+	// records it, which `captured_by` cannot say. Absent when no create row is known; a reader says "unknown" for an
+	// absent value and never "System".
+	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
+
 	// DeadAddresses The contact's email addresses whose latest delivery hard-bounced with no clean delivery since — derived from the send ledger at read time, never stored, so a later send that arrives clears the mark on its own. Lowercased, as contact emails are stored. Absent when the caller has no activity grant, named in `sections_omitted`.
 	DeadAddresses *[]string `json:"dead_addresses,omitempty"`
 	DealRoles     *struct {
@@ -37569,6 +37842,30 @@ type CreateVoiceBuildRequestReason string
 // CreateVoiceProfileRequest defines model for CreateVoiceProfileRequest.
 type CreateVoiceProfileRequest struct {
 	PersonalityMd *string `json:"personality_md,omitempty"`
+}
+
+// CreateWebFormRequest defines model for CreateWebFormRequest.
+type CreateWebFormRequest struct {
+	// AllowedOrigins Required, and only allowed, for a `browser` form.
+	AllowedOrigins       *[]string           `json:"allowed_origins,omitempty"`
+	ConsentPolicyVersion *string             `json:"consent_policy_version,omitempty"`
+	ConsentRequired      *bool               `json:"consent_required,omitempty"`
+	ConsentWording       *string             `json:"consent_wording,omitempty"`
+	FieldMap             *map[string]string  `json:"field_map,omitempty"`
+	LeadOrigin           *string             `json:"lead_origin,omitempty"`
+	Name                 string              `json:"name"`
+	OwnerId              *openapi_types.UUID `json:"owner_id,omitempty"`
+	RedirectUrl          *string             `json:"redirect_url,omitempty"`
+
+	// Sender Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
+	// allowed website, with spam checks. `server`: a server signing with this form's secret.
+	// `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
+	// builder computes with the secret stored as `sender_secret`.
+	Sender WebFormSender `json:"sender"`
+
+	// SenderSecret The secret a builder signs with. Required for `webflow`, `typeform` and `tally`; refused for any other sender.
+	SenderSecret   *string `json:"sender_secret,omitempty"`
+	SuccessMessage *string `json:"success_message,omitempty"`
 }
 
 // CreateWebhookSubscriptionRequest defines model for CreateWebhookSubscriptionRequest.
@@ -40604,7 +40901,8 @@ type HealthDimension struct {
 	// dimension the client rates itself.
 	//
 	// - `never_written`: no message from them and no meeting with them, ever.
-	// - `quiet`: no message from them and no meeting with them for `days` days.
+	// - `quiet`: no message from them and no meeting with them for `days` days, counted from
+	//   `at`, the last of the two.
 	// - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
 	// - `last_met`: in touch through a meeting `days` days ago.
 	// - `single_threaded`: in touch, but one contact carries the whole account.
@@ -40624,15 +40922,16 @@ type HealthDimensionRating string
 // HealthDimensionReasonCode Which sentence `reason` is, so a client can say it in the reader's language. Absent on a
 // dimension the client rates itself.
 //
-// - `never_written`: no message from them and no meeting with them, ever.
-// - `quiet`: no message from them and no meeting with them for `days` days.
-// - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
-// - `last_met`: in touch through a meeting `days` days ago.
-// - `single_threaded`: in touch, but one contact carries the whole account.
-// - `several_contacts`: `count` contacts here are in touch with us.
-// - `deals_all_stalled`: all `count` open deals have stalled.
-// - `deals_some_stalled`: `count` of `total` open deals have stalled.
-// - `deals_none_stalled`: `count` open deals, none stalled.
+//   - `never_written`: no message from them and no meeting with them, ever.
+//   - `quiet`: no message from them and no meeting with them for `days` days, counted from
+//     `at`, the last of the two.
+//   - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
+//   - `last_met`: in touch through a meeting `days` days ago.
+//   - `single_threaded`: in touch, but one contact carries the whole account.
+//   - `several_contacts`: `count` contacts here are in touch with us.
+//   - `deals_all_stalled`: all `count` open deals have stalled.
+//   - `deals_some_stalled`: `count` of `total` open deals have stalled.
+//   - `deals_none_stalled`: `count` open deals, none stalled.
 type HealthDimensionReasonCode string
 
 // HealthDimensionReasonParams The values the reason names. Each code lists which it reads.
@@ -45065,6 +45364,33 @@ type MeetingProposalRequest struct {
 // MeetingResponse A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
 type MeetingResponse string
 
+// MemberRetirementBlocker defines model for MemberRetirementBlocker.
+type MemberRetirementBlocker string
+
+// MemberRetirementConsequence defines model for MemberRetirementConsequence.
+type MemberRetirementConsequence string
+
+// MemberRetirementPreview defines model for MemberRetirementPreview.
+type MemberRetirementPreview struct {
+	Blockers     []MemberRetirementBlocker     `json:"blockers"`
+	Consequences []MemberRetirementConsequence `json:"consequences"`
+
+	// Owned Live records per kind.
+	Owned         HandoverCounts       `json:"owned"`
+	SignalCount   int                  `json:"signal_count"`
+	SourceEmail   openapi_types.Email  `json:"source_email"`
+	SourceName    string               `json:"source_name"`
+	SurvivorEmail *openapi_types.Email `json:"survivor_email,omitempty"`
+	SurvivorName  *string              `json:"survivor_name,omitempty"`
+	Token         string               `json:"token"`
+}
+
+// MergeMembersRequest defines model for MergeMembersRequest.
+type MergeMembersRequest struct {
+	PreviewToken string             `json:"preview_token"`
+	ToUserId     openapi_types.UUID `json:"to_user_id"`
+}
+
 // MergeTagsRequest defines model for MergeTagsRequest.
 type MergeTagsRequest struct {
 	// IntoTagId The tag that survives. Must be live, and must not be this tag.
@@ -48648,6 +48974,12 @@ type RelinkThreadRequest struct {
 type RemovalUndo struct {
 	// AuditId The removal's own history entry, which kept who added the link and when, so the restore puts it back as it was.
 	AuditId openapi_types.UUID `json:"audit_id"`
+}
+
+// RemoveMemberRequest defines model for RemoveMemberRequest.
+type RemoveMemberRequest struct {
+	PreviewToken string              `json:"preview_token"`
+	ToUserId     *openapi_types.UUID `json:"to_user_id,omitempty"`
 }
 
 // RenameCustomFieldRequest Merge-PATCH of the settings a live field may change: `label`, `show_in_create` and `reportable`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused.
@@ -53697,6 +54029,19 @@ type UpdateListRequest struct {
 // UpdateListRequestSharing defines model for UpdateListRequest.Sharing.
 type UpdateListRequestSharing string
 
+// UpdateMemberRequest defines model for UpdateMemberRequest.
+type UpdateMemberRequest struct {
+	DisplayName string `json:"display_name"`
+
+	// Email May change only before the account has been used to sign in.
+	Email             openapi_types.Email `json:"email"`
+	ExpectedUpdatedAt time.Time           `json:"expected_updated_at"`
+
+	// Role Omit to keep the current roles.
+	Role    *string               `json:"role,omitempty"`
+	TeamIds *[]openapi_types.UUID `json:"team_ids,omitempty"`
+}
+
 // UpdateOfferLineItemRequest Any subset; omit a field to leave it unchanged. Totals are derived and not settable (422).
 type UpdateOfferLineItemRequest struct {
 	// BillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
@@ -53960,6 +54305,25 @@ type UpdateVoiceProfileRequest struct {
 	PersonalityMd       *string `json:"personality_md,omitempty"`
 }
 
+// UpdateWebFormRequest defines model for UpdateWebFormRequest.
+type UpdateWebFormRequest struct {
+	AllowedOrigins       *[]string                  `json:"allowed_origins,omitempty"`
+	ConsentPolicyVersion *string                    `json:"consent_policy_version,omitempty"`
+	ConsentRequired      *bool                      `json:"consent_required,omitempty"`
+	ConsentWording       *string                    `json:"consent_wording,omitempty"`
+	FieldMap             *map[string]string         `json:"field_map,omitempty"`
+	LeadOrigin           *string                    `json:"lead_origin,omitempty"`
+	Name                 *string                    `json:"name,omitempty"`
+	OwnerId              *openapi_types.UUID        `json:"owner_id,omitempty"`
+	RedirectUrl          *string                    `json:"redirect_url,omitempty"`
+	SenderSecret         *string                    `json:"sender_secret,omitempty"`
+	State                *UpdateWebFormRequestState `json:"state,omitempty"`
+	SuccessMessage       *string                    `json:"success_message,omitempty"`
+}
+
+// UpdateWebFormRequestState defines model for UpdateWebFormRequest.State.
+type UpdateWebFormRequestState string
+
 // UpdateWebhookSubscriptionRequest A partial update; omitted fields keep their stored value. `custom_headers` replaces the whole set; `body_template: null` returns to the standard envelope.
 type UpdateWebhookSubscriptionRequest struct {
 	// BodyContentType The Content-Type of a templated body; null means application/json.
@@ -54013,6 +54377,9 @@ type User struct {
 	DisplayName string              `json:"display_name"`
 	Email       openapi_types.Email `json:"email"`
 
+	// EmailEditable Whether this unused member's sign-in email can still be corrected. Present only on the administration view.
+	EmailEditable *bool `json:"email_editable,omitempty"`
+
 	// GreetingName The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster.
 	GreetingName *string            `json:"greeting_name,omitempty"`
 	Id           openapi_types.UUID `json:"id"`
@@ -54027,6 +54394,9 @@ type User struct {
 	// Locale The language this contact chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS contact sees.
 	// Absent is not the same as `en`. A contact who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
 	Locale *UserLocale `json:"locale,omitempty"`
+
+	// MergedFrom Original account identities consolidated into this member, present only on the administration view.
+	MergedFrom *[]SeatName `json:"merged_from,omitempty"`
 
 	// Roles This member's assigned system role keys. Present ONLY for an admin caller — the roster is readable by every authenticated member (it feeds the share/assignee pickers), and a rep has no business enumerating who holds `admin`. Normally exactly one key: `inviteUser` assigns one and `changeUserRole` replaces the whole set with one. Clients that render a single current role must still handle the empty and multi-key cases. Deliberately absent on `MeResponse.user`, whose sibling `MeResponse.roles` is the one authority for the caller's own roles — the same fact spelled twice could disagree.
 	Roles *[]string `json:"roles,omitempty"`
@@ -54473,6 +54843,137 @@ type VoiceReviewReason struct {
 	Text   string             `json:"text"`
 	Values map[string]float64 `json:"values"`
 }
+
+// WebForm A website form (`web_form`): a public intake address that turns a submission into a lead. No secret is ever returned here; `secret_configured` says one is stored.
+type WebForm struct {
+	// AllowedOrigins The websites a `browser` form takes posts from, as origins (`https://example.com`).
+	AllowedOrigins       []string   `json:"allowed_origins"`
+	ArchivedAt           *time.Time `json:"archived_at,omitempty"`
+	ConsentPolicyVersion *string    `json:"consent_policy_version,omitempty"`
+
+	// ConsentRequired A submission without `consent` ticked is refused with 422.
+	ConsentRequired bool `json:"consent_required"`
+
+	// ConsentWording The consent wording the form shows, written on each lead's timeline as evidence.
+	ConsentWording *string   `json:"consent_wording,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+
+	// FieldMap The sender's field names mapped to lead fields, for names the defaults do not already read.
+	FieldMap map[string]string `json:"field_map"`
+
+	// FormKey The last segment of the intake address. Public; it is an address, not a credential.
+	FormKey string             `json:"form_key"`
+	Id      openapi_types.UUID `json:"id"`
+
+	// LeadOrigin The `/lead-origins` key every lead from this form carries.
+	LeadOrigin *string `json:"lead_origin,omitempty"`
+	Name       string  `json:"name"`
+
+	// OwnerId Who owns the leads this form creates; null leaves them in the unassigned queue.
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// RedirectUrl Where a plain HTML post is sent after a submission.
+	RedirectUrl      *string `json:"redirect_url,omitempty"`
+	SecretConfigured bool    `json:"secret_configured"`
+
+	// Sender Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
+	// allowed website, with spam checks. `server`: a server signing with this form's secret.
+	// `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
+	// builder computes with the secret stored as `sender_secret`.
+	Sender         WebFormSender `json:"sender"`
+	State          WebFormState  `json:"state"`
+	SuccessMessage *string       `json:"success_message,omitempty"`
+	UpdatedAt      time.Time     `json:"updated_at"`
+
+	// Version Optimistic-concurrency version; echo it in If-Match on update.
+	Version int64 `json:"version"`
+}
+
+// WebFormState defines model for WebForm.State.
+type WebFormState string
+
+// WebFormCreated defines model for WebFormCreated.
+type WebFormCreated struct {
+	// AllowedOrigins The websites a `browser` form takes posts from, as origins (`https://example.com`).
+	AllowedOrigins       []string   `json:"allowed_origins"`
+	ArchivedAt           *time.Time `json:"archived_at,omitempty"`
+	ConsentPolicyVersion *string    `json:"consent_policy_version,omitempty"`
+
+	// ConsentRequired A submission without `consent` ticked is refused with 422.
+	ConsentRequired bool `json:"consent_required"`
+
+	// ConsentWording The consent wording the form shows, written on each lead's timeline as evidence.
+	ConsentWording *string   `json:"consent_wording,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+
+	// FieldMap The sender's field names mapped to lead fields, for names the defaults do not already read.
+	FieldMap map[string]string `json:"field_map"`
+
+	// FormKey The last segment of the intake address. Public; it is an address, not a credential.
+	FormKey string             `json:"form_key"`
+	Id      openapi_types.UUID `json:"id"`
+
+	// LeadOrigin The `/lead-origins` key every lead from this form carries.
+	LeadOrigin *string `json:"lead_origin,omitempty"`
+	Name       string  `json:"name"`
+
+	// OwnerId Who owns the leads this form creates; null leaves them in the unassigned queue.
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// RedirectUrl Where a plain HTML post is sent after a submission.
+	RedirectUrl      *string `json:"redirect_url,omitempty"`
+	SecretConfigured bool    `json:"secret_configured"`
+
+	// Sender Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
+	// allowed website, with spam checks. `server`: a server signing with this form's secret.
+	// `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
+	// builder computes with the secret stored as `sender_secret`.
+	Sender WebFormSender `json:"sender"`
+
+	// SigningSecret A `server` form's signing secret, shown this once.
+	SigningSecret  *string             `json:"signing_secret,omitempty"`
+	State          WebFormCreatedState `json:"state"`
+	SuccessMessage *string             `json:"success_message,omitempty"`
+	UpdatedAt      time.Time           `json:"updated_at"`
+
+	// Version Optimistic-concurrency version; echo it in If-Match on update.
+	Version int64 `json:"version"`
+}
+
+// WebFormCreatedState defines model for WebFormCreated.State.
+type WebFormCreatedState string
+
+// WebFormFields The submitted fields. Read by name: `email` (required), `full_name` or `first_name` and
+// `last_name`, `phone`, `company`, `title`, `message`, `consent`, plus `page_url`,
+// `referrer` and `utm_*`. Common spellings (`name`, `e-mail`, `your-email`) read too, and
+// the form's `field_map` names the rest. Every other field is kept on the lead's timeline.
+// Fields starting `_mrg_` steer the spam checks and are never stored.
+type WebFormFields map[string]interface{}
+
+// WebFormListResponse defines model for WebFormListResponse.
+type WebFormListResponse struct {
+	Data []WebForm `json:"data"`
+
+	// SecretsAvailable Whether this installation can store a secret, which every sender but `browser` needs.
+	SecretsAvailable bool `json:"secrets_available"`
+}
+
+// WebFormReceipt defines model for WebFormReceipt.
+type WebFormReceipt struct {
+	// Message The form's success message.
+	Message     *string              `json:"message,omitempty"`
+	RedirectUrl *string              `json:"redirect_url,omitempty"`
+	Status      WebFormReceiptStatus `json:"status"`
+}
+
+// WebFormReceiptStatus defines model for WebFormReceipt.Status.
+type WebFormReceiptStatus string
+
+// WebFormSender Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
+// allowed website, with spam checks. `server`: a server signing with this form's secret.
+// `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
+// builder computes with the secret stored as `sender_secret`.
+type WebFormSender string
 
 // WebhookBodyContentType The Content-Type of a templated body; null means application/json.
 type WebhookBodyContentType string
@@ -63617,6 +64118,47 @@ type HandOverUserWorkParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// MergeMembersParams defines parameters for MergeMembers.
+type MergeMembersParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
+	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
+// PreviewMemberRetirementParams defines parameters for PreviewMemberRetirement.
+type PreviewMemberRetirementParams struct {
+	Mode     *PreviewMemberRetirementParamsMode `form:"mode,omitempty" json:"mode,omitempty"`
+	ToUserId *openapi_types.UUID                `form:"to_user_id,omitempty" json:"to_user_id,omitempty"`
+}
+
+// PreviewMemberRetirementParamsMode defines parameters for PreviewMemberRetirement.
+type PreviewMemberRetirementParamsMode string
+
 // ListSavedViewsParams defines parameters for ListSavedViews.
 type ListSavedViewsParams struct {
 	Resource *SavedViewResource `form:"resource,omitempty" json:"resource,omitempty"`
@@ -63918,6 +64460,22 @@ type RollbackVoiceProfileVersionParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ListWebFormsParams defines parameters for ListWebForms.
+type ListWebFormsParams struct {
+	// IncludeArchived Include soft-deleted (archived) rows. Default false.
+	IncludeArchived *IncludeArchived `form:"include_archived,omitempty" json:"include_archived,omitempty"`
+}
+
+// UpdateWebFormParams defines parameters for UpdateWebForm.
+type UpdateWebFormParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
 // ListWebhookSubscriptionsParams defines parameters for ListWebhookSubscriptions.
@@ -65024,6 +65582,15 @@ type BookPublicMeetingJSONRequestBody BookPublicMeetingJSONBody
 // SubmitConfirmDetailsJSONRequestBody defines body for SubmitConfirmDetails for application/json ContentType.
 type SubmitConfirmDetailsJSONRequestBody SubmitConfirmDetailsJSONBody
 
+// SubmitWebFormJSONRequestBody defines body for SubmitWebForm for application/json ContentType.
+type SubmitWebFormJSONRequestBody = WebFormFields
+
+// SubmitWebFormFormdataRequestBody defines body for SubmitWebForm for application/x-www-form-urlencoded ContentType.
+type SubmitWebFormFormdataRequestBody = WebFormFields
+
+// SubmitWebFormMultipartRequestBody defines body for SubmitWebForm for multipart/form-data ContentType.
+type SubmitWebFormMultipartRequestBody = WebFormFields
+
 // ChangePublicMeetingInvitationJSONRequestBody defines body for ChangePublicMeetingInvitation for application/json ContentType.
 type ChangePublicMeetingInvitationJSONRequestBody = MeetingInvitationChange
 
@@ -65180,11 +65747,20 @@ type CreateFormerMemberJSONRequestBody = FormerMemberRequest
 // DeclareServiceMemberJSONRequestBody defines body for DeclareServiceMember for application/json ContentType.
 type DeclareServiceMemberJSONRequestBody = ServiceMemberRequest
 
+// UpdateMemberJSONRequestBody defines body for UpdateMember for application/json ContentType.
+type UpdateMemberJSONRequestBody = UpdateMemberRequest
+
 // DeactivateUserJSONRequestBody defines body for DeactivateUser for application/json ContentType.
 type DeactivateUserJSONRequestBody = DeactivateUserRequest
 
 // HandOverUserWorkJSONRequestBody defines body for HandOverUserWork for application/json ContentType.
 type HandOverUserWorkJSONRequestBody = HandOverUserWorkRequest
+
+// MergeMembersJSONRequestBody defines body for MergeMembers for application/json ContentType.
+type MergeMembersJSONRequestBody = MergeMembersRequest
+
+// RemoveMemberJSONRequestBody defines body for RemoveMember for application/json ContentType.
+type RemoveMemberJSONRequestBody = RemoveMemberRequest
 
 // ChangeUserRoleJSONRequestBody defines body for ChangeUserRole for application/json ContentType.
 type ChangeUserRoleJSONRequestBody = ChangeUserRoleRequest
@@ -65215,6 +65791,12 @@ type PreviewVoiceCorpusSourceJSONRequestBody = VoiceCorpusPreviewRequest
 
 // UpdateVoiceCorpusSourceJSONRequestBody defines body for UpdateVoiceCorpusSource for application/json ContentType.
 type UpdateVoiceCorpusSourceJSONRequestBody = UpdateVoiceCorpusSourceRequest
+
+// CreateWebFormJSONRequestBody defines body for CreateWebForm for application/json ContentType.
+type CreateWebFormJSONRequestBody = CreateWebFormRequest
+
+// UpdateWebFormJSONRequestBody defines body for UpdateWebForm for application/json ContentType.
+type UpdateWebFormJSONRequestBody = UpdateWebFormRequest
 
 // CreateWebhookSubscriptionJSONRequestBody defines body for CreateWebhookSubscription for application/json ContentType.
 type CreateWebhookSubscriptionJSONRequestBody = CreateWebhookSubscriptionRequest
@@ -78392,6 +78974,9 @@ type ServerInterface interface {
 	// Submit corrections and a marketing answer (anonymous, token-authed).
 	// (POST /public/confirm/{token})
 	SubmitConfirmDetails(w http.ResponseWriter, r *http.Request, token string)
+	// Land one website form submission as a lead (anonymous).
+	// (POST /public/forms/{form_key})
+	SubmitWebForm(w http.ResponseWriter, r *http.Request, formKey string)
 	// Read one invitation using its private management capability.
 	// (GET /public/meeting/{token})
 	GetPublicMeetingInvitation(w http.ResponseWriter, r *http.Request, token string)
@@ -78761,6 +79346,12 @@ type ServerInterface interface {
 	// Retire a service member. Installation admin only, human only.
 	// (POST /users/service-members/{id}/archive)
 	ArchiveServiceMember(w http.ResponseWriter, r *http.Request, id Id)
+	// Read a member for administration.
+	// (GET /users/{id})
+	GetMember(w http.ResponseWriter, r *http.Request, id Id)
+	// Edit a member's identity, role and teams.
+	// (PATCH /users/{id})
+	UpdateMember(w http.ResponseWriter, r *http.Request, id Id)
 	// What this member sees and may do today, from their roles and teams.
 	// (GET /users/{id}/access)
 	GetUserAccess(w http.ResponseWriter, r *http.Request, id Id)
@@ -78773,6 +79364,9 @@ type ServerInterface interface {
 	// Move every live record a member owns to a colleague. Member administration, human-only.
 	// (POST /users/{id}/handover)
 	HandOverUserWork(w http.ResponseWriter, r *http.Request, id Id, params HandOverUserWorkParams)
+	// Merge a duplicate into the selected surviving member.
+	// (POST /users/{id}/merge)
+	MergeMembers(w http.ResponseWriter, r *http.Request, id Id, params MergeMembersParams)
 	// Remove a member's second factor. Admin-only, human-only.
 	// (DELETE /users/{id}/mfa)
 	RemoveUserMfa(w http.ResponseWriter, r *http.Request, id Id)
@@ -78782,6 +79376,12 @@ type ServerInterface interface {
 	// Reactivate a deactivated member. Admin-only, human-only.
 	// (POST /users/{id}/reactivate)
 	ReactivateUser(w http.ResponseWriter, r *http.Request, id Id)
+	// Retire an account while preserving historical attribution.
+	// (POST /users/{id}/remove)
+	RemoveMember(w http.ResponseWriter, r *http.Request, id Id)
+	// Preview removing a member or merging them into another account.
+	// (GET /users/{id}/retirement-preview)
+	PreviewMemberRetirement(w http.ResponseWriter, r *http.Request, id Id, params PreviewMemberRetirementParams)
 	// Set a member's system role. Admin-only, human-only.
 	// (PATCH /users/{id}/role)
 	ChangeUserRole(w http.ResponseWriter, r *http.Request, id Id)
@@ -78866,6 +79466,24 @@ type ServerInterface interface {
 	// Restore an earlier artifact byte-for-byte as a new forward active version.
 	// (POST /voice-profiles/{id}/versions/{profileVersion}/rollback)
 	RollbackVoiceProfileVersion(w http.ResponseWriter, r *http.Request, id Id, profileVersion VoiceProfileVersionNumber, params RollbackVoiceProfileVersionParams)
+	// List the website forms that land leads in this installation.
+	// (GET /web-forms)
+	ListWebForms(w http.ResponseWriter, r *http.Request, params ListWebFormsParams)
+	// Create a website form (returns a server signing secret once).
+	// (POST /web-forms)
+	CreateWebForm(w http.ResponseWriter, r *http.Request)
+	// Archive a website form; its address stops taking submissions.
+	// (DELETE /web-forms/{id})
+	ArchiveWebForm(w http.ResponseWriter, r *http.Request, id Id)
+	// Get one website form.
+	// (GET /web-forms/{id})
+	GetWebForm(w http.ResponseWriter, r *http.Request, id Id)
+	// Change a website form, pause it or resume it.
+	// (PATCH /web-forms/{id})
+	UpdateWebForm(w http.ResponseWriter, r *http.Request, id Id, params UpdateWebFormParams)
+	// Rotate a server form's signing secret (returns the new secret once).
+	// (POST /web-forms/{id}/rotate-secret)
+	RotateWebFormSecret(w http.ResponseWriter, r *http.Request, id Id)
 	// List the workspace's outbound webhook subscriptions.
 	// (GET /webhook-subscriptions)
 	ListWebhookSubscriptions(w http.ResponseWriter, r *http.Request, params ListWebhookSubscriptionsParams)
@@ -83300,6 +83918,12 @@ func (_ Unimplemented) SubmitConfirmDetails(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Land one website form submission as a lead (anonymous).
+// (POST /public/forms/{form_key})
+func (_ Unimplemented) SubmitWebForm(w http.ResponseWriter, r *http.Request, formKey string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Read one invitation using its private management capability.
 // (GET /public/meeting/{token})
 func (_ Unimplemented) GetPublicMeetingInvitation(w http.ResponseWriter, r *http.Request, token string) {
@@ -84038,6 +84662,18 @@ func (_ Unimplemented) ArchiveServiceMember(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Read a member for administration.
+// (GET /users/{id})
+func (_ Unimplemented) GetMember(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Edit a member's identity, role and teams.
+// (PATCH /users/{id})
+func (_ Unimplemented) UpdateMember(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // What this member sees and may do today, from their roles and teams.
 // (GET /users/{id}/access)
 func (_ Unimplemented) GetUserAccess(w http.ResponseWriter, r *http.Request, id Id) {
@@ -84062,6 +84698,12 @@ func (_ Unimplemented) HandOverUserWork(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Merge a duplicate into the selected surviving member.
+// (POST /users/{id}/merge)
+func (_ Unimplemented) MergeMembers(w http.ResponseWriter, r *http.Request, id Id, params MergeMembersParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Remove a member's second factor. Admin-only, human-only.
 // (DELETE /users/{id}/mfa)
 func (_ Unimplemented) RemoveUserMfa(w http.ResponseWriter, r *http.Request, id Id) {
@@ -84077,6 +84719,18 @@ func (_ Unimplemented) IssueUserPasswordLink(w http.ResponseWriter, r *http.Requ
 // Reactivate a deactivated member. Admin-only, human-only.
 // (POST /users/{id}/reactivate)
 func (_ Unimplemented) ReactivateUser(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Retire an account while preserving historical attribution.
+// (POST /users/{id}/remove)
+func (_ Unimplemented) RemoveMember(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Preview removing a member or merging them into another account.
+// (GET /users/{id}/retirement-preview)
+func (_ Unimplemented) PreviewMemberRetirement(w http.ResponseWriter, r *http.Request, id Id, params PreviewMemberRetirementParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -84245,6 +84899,42 @@ func (_ Unimplemented) RejectVoiceProfileVersion(w http.ResponseWriter, r *http.
 // Restore an earlier artifact byte-for-byte as a new forward active version.
 // (POST /voice-profiles/{id}/versions/{profileVersion}/rollback)
 func (_ Unimplemented) RollbackVoiceProfileVersion(w http.ResponseWriter, r *http.Request, id Id, profileVersion VoiceProfileVersionNumber, params RollbackVoiceProfileVersionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the website forms that land leads in this installation.
+// (GET /web-forms)
+func (_ Unimplemented) ListWebForms(w http.ResponseWriter, r *http.Request, params ListWebFormsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a website form (returns a server signing secret once).
+// (POST /web-forms)
+func (_ Unimplemented) CreateWebForm(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Archive a website form; its address stops taking submissions.
+// (DELETE /web-forms/{id})
+func (_ Unimplemented) ArchiveWebForm(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get one website form.
+// (GET /web-forms/{id})
+func (_ Unimplemented) GetWebForm(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change a website form, pause it or resume it.
+// (PATCH /web-forms/{id})
+func (_ Unimplemented) UpdateWebForm(w http.ResponseWriter, r *http.Request, id Id, params UpdateWebFormParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Rotate a server form's signing secret (returns the new secret once).
+// (POST /web-forms/{id}/rotate-secret)
+func (_ Unimplemented) RotateWebFormSecret(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -115006,6 +115696,32 @@ func (siw *ServerInterfaceWrapper) SubmitConfirmDetails(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// SubmitWebForm operation middleware
+func (siw *ServerInterfaceWrapper) SubmitWebForm(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "form_key" -------------
+	var formKey string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "form_key", chi.URLParam(r, "form_key"), &formKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "form_key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SubmitWebForm(w, r, formKey)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetPublicMeetingInvitation operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicMeetingInvitation(w http.ResponseWriter, r *http.Request) {
 
@@ -120307,6 +121023,70 @@ func (siw *ServerInterfaceWrapper) ArchiveServiceMember(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// GetMember operation middleware
+func (siw *ServerInterfaceWrapper) GetMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMember(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateMember operation middleware
+func (siw *ServerInterfaceWrapper) UpdateMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateMember(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetUserAccess operation middleware
 func (siw *ServerInterfaceWrapper) GetUserAccess(w http.ResponseWriter, r *http.Request) {
 
@@ -120459,6 +121239,83 @@ func (siw *ServerInterfaceWrapper) HandOverUserWork(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// MergeMembers operation middleware
+func (siw *ServerInterfaceWrapper) MergeMembers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params MergeMembersParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	// ------------- Optional header parameter "X-Approval-Token" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
+		var XApprovalToken ApprovalToken
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
+			return
+		}
+
+		params.XApprovalToken = &XApprovalToken
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MergeMembers(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RemoveUserMfa operation middleware
 func (siw *ServerInterfaceWrapper) RemoveUserMfa(w http.ResponseWriter, r *http.Request) {
 
@@ -120546,6 +121403,101 @@ func (siw *ServerInterfaceWrapper) ReactivateUser(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ReactivateUser(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveMember operation middleware
+func (siw *ServerInterfaceWrapper) RemoveMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveMember(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewMemberRetirement operation middleware
+func (siw *ServerInterfaceWrapper) PreviewMemberRetirement(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PreviewMemberRetirementParams
+
+	// ------------- Optional query parameter "mode" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "mode", r.URL.Query(), &params.Mode, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "mode"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "mode", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "to_user_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to_user_id", r.URL.Query(), &params.ToUserId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to_user_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to_user_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewMemberRetirement(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -121919,6 +122871,217 @@ func (siw *ServerInterfaceWrapper) RollbackVoiceProfileVersion(w http.ResponseWr
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RollbackVoiceProfileVersion(w, r, id, profileVersion, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListWebForms operation middleware
+func (siw *ServerInterfaceWrapper) ListWebForms(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListWebFormsParams
+
+	// ------------- Optional query parameter "include_archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_archived", r.URL.Query(), &params.IncludeArchived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_archived", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListWebForms(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateWebForm operation middleware
+func (siw *ServerInterfaceWrapper) CreateWebForm(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateWebForm(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveWebForm operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveWebForm(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveWebForm(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetWebForm operation middleware
+func (siw *ServerInterfaceWrapper) GetWebForm(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetWebForm(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateWebForm operation middleware
+func (siw *ServerInterfaceWrapper) UpdateWebForm(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateWebFormParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateWebForm(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RotateWebFormSecret operation middleware
+func (siw *ServerInterfaceWrapper) RotateWebFormSecret(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RotateWebFormSecret(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -125306,6 +126469,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/public/confirm/{token}", wrapper.SubmitConfirmDetails)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/public/forms/{form_key}", wrapper.SubmitWebForm)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/meeting/{token}", wrapper.GetPublicMeetingInvitation)
 	})
 	r.Group(func(r chi.Router) {
@@ -125675,6 +126841,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/users/service-members/{id}/archive", wrapper.ArchiveServiceMember)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/users/{id}", wrapper.GetMember)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/users/{id}", wrapper.UpdateMember)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users/{id}/access", wrapper.GetUserAccess)
 	})
 	r.Group(func(r chi.Router) {
@@ -125687,6 +126859,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/users/{id}/handover", wrapper.HandOverUserWork)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/users/{id}/merge", wrapper.MergeMembers)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/users/{id}/mfa", wrapper.RemoveUserMfa)
 	})
 	r.Group(func(r chi.Router) {
@@ -125694,6 +126869,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/{id}/reactivate", wrapper.ReactivateUser)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/users/{id}/remove", wrapper.RemoveMember)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/users/{id}/retirement-preview", wrapper.PreviewMemberRetirement)
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/users/{id}/role", wrapper.ChangeUserRole)
@@ -125778,6 +126959,24 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/voice-profiles/{id}/versions/{profileVersion}/rollback", wrapper.RollbackVoiceProfileVersion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/web-forms", wrapper.ListWebForms)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/web-forms", wrapper.CreateWebForm)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/web-forms/{id}", wrapper.ArchiveWebForm)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/web-forms/{id}", wrapper.GetWebForm)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/web-forms/{id}", wrapper.UpdateWebForm)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/web-forms/{id}/rotate-secret", wrapper.RotateWebFormSecret)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/webhook-subscriptions", wrapper.ListWebhookSubscriptions)

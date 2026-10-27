@@ -163,6 +163,7 @@ export const SETTINGS_SECTIONS = {
   integrations: [
     "provider.title",
     "financeSource.title",
+    "webForms.title",
     "webhooks.title",
     "connectors.telegramTitle",
   ],

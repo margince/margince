@@ -25,6 +25,7 @@ type NotOffered = Readonly<{
 const DRAWN_NOT_OFFERED: Partial<
   Record<SettingsPageId, readonly NotOffered[]>
 > = {
+  members: [{ key: "users.search", why: "record-filter" }],
   "capture-activity": [{ key: "captureActivity.scope.label", why: "grant" }],
   "model-calls": [
     { key: "aicalls.filter.search", why: "record-filter" },

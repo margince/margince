@@ -19,6 +19,7 @@ import {
   type DetailSection,
   RecordDetails,
 } from "../../design-system/recorddetails";
+import { countryBeyondCity } from "../../format/address";
 import { INDUSTRY_CODES, industryOptions } from "../../format/industry";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -289,9 +290,10 @@ function useAboutRows(
 // "Munich, DE": the city and the country, the one line the design reads.
 function addressLine(company: Company): string | undefined {
   const address = company.address;
-  const parts = [address?.city, address?.country].filter(
-    (part): part is string => Boolean(part?.trim()),
-  );
+  const parts = [
+    address?.city,
+    countryBeyondCity(address?.city, address?.country),
+  ].filter((part): part is string => Boolean(part?.trim()));
   if (parts.length > 0) {
     return parts.join(", ");
   }

@@ -29,12 +29,13 @@ func (changeState) routeField() string { return actionArg }
 
 func (changeState) routeTargets() map[string]string {
 	return map[string]string{
-		"qualify":        "qualify_lead",
-		"promote":        "promote_lead",
-		"disqualify":     "disqualify_lead",
-		"demote":         "demote_lead",
-		"move_deal":      "progress_deal",
-		"move_project":   "advance_project_phase",
-		"set_up_partner": setUpPartnerToolName,
+		"qualify":               "qualify_lead",
+		"promote":               "promote_lead",
+		"disqualify":            "disqualify_lead",
+		"demote":                "demote_lead",
+		"move_deal":             "progress_deal",
+		"move_project":          "advance_project_phase",
+		"set_up_partner":        setUpPartnerToolName,
+		"merge_member_accounts": toolMergeMembers,
 	}
 }

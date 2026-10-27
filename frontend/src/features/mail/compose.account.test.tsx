@@ -3,7 +3,6 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { messageText } from "../../design-system/richtext-testing";
-import { pickOption } from "../../design-system/select-testing";
 import { draftButton } from "../../testing/composedraft.testkit";
 import { ComposeModal } from "./compose";
 import {
@@ -90,9 +89,9 @@ describe("ComposeModal started from an account", () => {
 
   // The grounded account-started draft (ADR-0087) needs a recipient before it
   // can say anything. That is the one thing it knows that an empty compose box
-  // does not. The button is disabled with the picker directly above it. It does
-  // not run and come back with a refusal about a field already on screen.
-  it("will not draft from an account until a recipient is chosen", async () => {
+  // does not. The button is disabled and says what it waits for. It does not
+  // run and come back with a refusal about a field already on screen.
+  it("will not draft from an account until a recipient is in To", async () => {
     const sent = stubRoutes({});
     render(
       <ComposeModal
@@ -105,17 +104,21 @@ describe("ComposeModal started from an account", () => {
 
     const drafting = draftButton();
     expect(drafting).toHaveProperty("disabled", true);
+    expect(
+      screen.getByText(
+        "To draft with AI, add a contact from this company to To.",
+      ),
+    ).toBeTruthy();
     expect(sent.some((r) => r.key.includes("draft-email"))).toBe(false);
     // Undraftable is not unsendable: the rep writes it themselves and sends.
     expect(screen.getByRole("button", { name: "Send" })).toBeTruthy();
   });
 
-  // A draft belongs to the pair it was written for. A message to B that carries
-  // A's words, disclosure and reasons is a mistake nobody catches before Send.
-  // Re-drafting could not repair it, because the fill never clobbers a
-  // non-empty field.
-  it("retires the draft when the recipient changes", async () => {
-    stubRoutes({
+  // Who the draft is for is said once, in To. The model writes to the first
+  // address there that belongs to one of the account's contacts. No second
+  // picker can disagree with the To line.
+  it("drafts for the account contact the rep puts in To", async () => {
+    const sent = stubRoutes({
       "GET /companies/company-1/360": () =>
         jsonResponse({
           state: "ready",
@@ -134,6 +137,7 @@ describe("ComposeModal started from an account", () => {
               {
                 contact_id: "p-1",
                 full_name: "Sarah Cole",
+                primary_email: "sarah@acme.test",
                 strength: {
                   score: 40,
                   bucket: "moderate",
@@ -150,6 +154,7 @@ describe("ComposeModal started from an account", () => {
               {
                 contact_id: "p-2",
                 full_name: "Mark Hughes",
+                primary_email: "mark@acme.test",
                 strength: {
                   score: 20,
                   bucket: "weak",
@@ -189,28 +194,52 @@ describe("ComposeModal started from an account", () => {
     );
 
     const user = userEvent.setup();
-    await pickOption(
-      user,
-      await screen.findByRole("combobox", { name: "Draft to" }),
-      "Sarah Cole",
+    await user.type(await screen.findByLabelText("To"), "sarah@acme.test");
+    await user.keyboard("{Enter}");
+    await waitFor(() =>
+      expect(draftButton()).toHaveProperty("disabled", false),
     );
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
     await waitFor(() =>
       expect(messageText("Body")).toBe("Hi Sarah, shall we pick this up?"),
     );
-    expect(screen.getByText(/Based on/)).toBeTruthy();
+    const request = sent.find(
+      (r) => r.key === "POST /companies/company-1/draft-email",
+    );
+    expect(request?.body).toMatchObject({ contact_id: "p-1" });
+  });
 
-    await pickOption(
-      user,
-      screen.getByRole("combobox", { name: "Draft to" }),
-      "Mark Hughes",
+  // A verb that names a contact on the account opens the composer addressed to
+  // them, the way a contact's own page does.
+  it("addresses the contact the rep started from", async () => {
+    stubRoutes({
+      "GET /companies/company-1/360": () =>
+        jsonResponse({
+          company: { id: "company-1", display_name: "Acme" },
+          contacts: {
+            data: [
+              {
+                contact_id: "p-2",
+                full_name: "Mark Hughes",
+                primary_email: "mark@acme.test",
+              },
+            ],
+          },
+        }),
+    });
+    render(
+      <ComposeModal
+        entityType="company"
+        entityId="company-1"
+        contactId="p-2"
+        open
+        onClose={vi.fn()}
+      />,
     );
 
-    // Sarah's draft, her address, her disclosure and her reasons all go with
-    // her. The rep drafts again for Mark, or writes it themselves.
-    await waitFor(() => expect(messageText("Body")).toBe(""));
-    expect(screen.queryByText(/Based on/)).toBeNull();
-    expect(screen.queryByText(/AI assistance/)).toBeNull();
+    // The token reads as the contact, with the address beside the name.
+    expect(await screen.findByText("Mark Hughes")).toBeTruthy();
+    expect(screen.getByText("mark@acme.test")).toBeTruthy();
   });
 
   // A check-in mail to an account nobody has written to in a while is the first
@@ -259,7 +288,7 @@ describe("ComposeModal started from an account", () => {
     // The dead end is about the draft, not about which body of work the
     // message is for.
     expect(
-      await screen.findByRole("combobox", { name: /Project/ }),
+      await screen.findByRole("combobox", { name: "Related to" }),
     ).toBeTruthy();
   });
 });

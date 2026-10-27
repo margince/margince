@@ -377,6 +377,9 @@ func partsAndRetirement(ctx context.Context, t *testing.T, registry *agents.Regi
 // listed here and then made reachable fails as loudly as one that was never
 // covered, so the list cannot quietly outlive its reason.
 var unreachableInThisLane = gatekit.Waive(map[string]string{
+	"preview_member_retirement": "requires a live literal-admin role; this fixture stamps object grants only. TestAMemberMergeStagesReviewsApprovesAndRedeemsThroughTheToolDoor validates the real preview result against its schema",
+	"merge_members":             "requires the same live administrator and a reviewed retirement token. TestAMemberMergeStagesReviewsApprovesAndRedeemsThroughTheToolDoor validates the approved result against its schema",
+
 	"read_view": "runs a route through the API server's router, and this lane's registry is built with no server; " +
 		"TestReadViewAnswersAsItsRoutes (readviewdoors_integration_test.go) calls it on the served MCP surface and compares it to the route",
 	"relink_thread": "refused for an assistant at every destination and however it is called, so it has no answer to hold to a schema; " +

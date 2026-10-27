@@ -4,7 +4,6 @@
 package compose
 
 // The inventory: which transport handler sets the contract surface is made of.
-//
 import (
 	"context"
 	"io"
@@ -142,6 +141,7 @@ type Server struct {
 	embedReindexHandlers
 	rateRefreshHandlers
 	webhooksHandlers
+	webFormsHandlers
 	dataResetHandlers
 	jobHealthHandlers
 	dataTaskHandlers

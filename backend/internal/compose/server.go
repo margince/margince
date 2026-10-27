@@ -324,6 +324,9 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// key, wired by WithWebhookSigningKey (the api role sources it from
 		// the environment). Without it those paths answer an honest 503.
 		webhooksHandlers: newWebhookHandlers(pool, nil, log),
+		// Website forms: browser forms work everywhere; a signed sender needs
+		// the secret store WithKeyvault binds.
+		webFormsHandlers: newWebFormHandlers(pool, log),
 		log:              log,
 		dealsStore:       deals.NewStore(InstallationDB(pool), DealsInstallation()),
 		// Fail-closed until WithAgentVolume rebinds it. A role serving the agent surface

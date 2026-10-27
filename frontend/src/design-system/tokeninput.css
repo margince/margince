@@ -86,6 +86,15 @@
   white-space: nowrap;
 }
 
+/* A named value: the name first, the value it stands for dimmed after it. */
+.token-label {
+  font-weight: var(--fontWeightMedium);
+}
+.token-detail {
+  margin-inline-start: var(--space-1);
+  color: var(--textSecondary);
+}
+
 /* The mark stays 12px — a bigger cross inside a token pill would out-draw the
    value it removes — and the BOX grows around it to the 24px floor WCAG 2.2 AA
    2.5.8 sets. A floor rather than a size, so the glyph keeps the middle of it

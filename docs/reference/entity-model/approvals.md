@@ -78,6 +78,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `approval_requested_decider_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.requested_decider_id IS NOT NULL) AND (new.status = 'pending'))) EXECUTE FUNCTION refuse_retired_member_work('requested_decider_id')`
 - `trg_approval_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## approval_autonomy_policy

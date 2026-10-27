@@ -87,14 +87,14 @@ func ownerPredicate(p principal.Principal, arg func(any) int, unowned unownedRow
 	if p.Permissions.RowScope == principal.RowScopeTeam {
 		teams := arg(p.TeamIDs)
 		return func(alias string) string {
-			return fmt.Sprintf(`(`+nullArm+`%[1]s = $%[2]d OR %[1]s IN (
+			return fmt.Sprintf(`(`+nullArm+`%[1]s IN (%[2]s) OR %[1]s IN (
 			   SELECT tm.user_id FROM team_membership tm WHERE tm.team_id = ANY($%[3]d)))`,
-				col(alias), me, teams)
+				col(alias), memberIdentitySQL(me), teams)
 		}
 	}
 	// own — and the zero value: an unresolved scope never widens.
 	return func(alias string) string {
-		return fmt.Sprintf(`(`+nullArm+`%[1]s = $%[2]d)`, col(alias), me)
+		return fmt.Sprintf(`(`+nullArm+`%[1]s IN (%[2]s))`, col(alias), memberIdentitySQL(me))
 	}
 }
 
@@ -261,8 +261,8 @@ func predicateFor(p principal.Principal, table string, arg func(any) int,
 	if private {
 		inner := visible
 		visible = func(alias string) string {
-			return fmt.Sprintf(`((%s <> 'owner' AND %s) OR %s = $%d)`,
-				col(alias, "visibility"), inner(alias), col(alias, "owner_id"), me)
+			return fmt.Sprintf(`((%s <> 'owner' AND %s) OR %s IN (%s))`,
+				col(alias, "visibility"), inner(alias), col(alias, "owner_id"), memberIdentitySQL(me))
 		}
 	}
 	if !shareable {
@@ -279,9 +279,9 @@ func predicateFor(p principal.Principal, table string, arg func(any) int,
 		   SELECT 1 FROM record_grant rg
 		   WHERE rg.record_type = '%s' AND rg.record_id = %s%s
 		     AND (rg.expires_at IS NULL OR rg.expires_at > now())
-		     AND ((rg.subject_type = 'user' AND rg.subject_id = $%d)
+		     AND ((rg.subject_type = 'user' AND rg.subject_id IN (%s))
 		       OR (rg.subject_type = 'team' AND rg.subject_id = ANY($%d)))))`,
-			inner(alias), table, col(alias, "id"), access, me, teams)
+			inner(alias), table, col(alias, "id"), access, memberIdentitySQL(me), teams)
 	}
 }
 

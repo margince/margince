@@ -139,12 +139,19 @@ func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	destPos := arg(dest)
 
+	status := "status"
+	if consolidatingInto(ctx, dest) {
+		if err := Require(ctx, "user_admin", principal.ActionDelete); err != nil {
+			return err
+		}
+		status = "CASE WHEN status IN ('invited','deactivated') THEN 'active' ELSE status END AS status"
+	}
 	var permitted bool
 	if err := tx.QueryRow(ctx, fmt.Sprintf(
 		`SELECT EXISTS (SELECT 1 FROM (
-		   SELECT id AS owner_id, status, archived_at, is_agent, seat_type
-		   FROM app_user WHERE id = $%d) u WHERE %s)`,
-		destPos, eligible(p, "u", arg)), args...).Scan(&permitted); err != nil {
+		   SELECT id AS owner_id, %s, archived_at, is_agent, seat_type
+		   FROM app_user WHERE id = $%d AND removed_at IS NULL FOR KEY SHARE) u WHERE %s)`,
+		status, destPos, eligible(p, "u", arg)), args...).Scan(&permitted); err != nil {
 		return err
 	}
 	return refuseIneligibleAssignee(permitted)

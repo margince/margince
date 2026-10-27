@@ -76,7 +76,7 @@ export function projectVerdict(view: Project360, ctx: Ctx): StandingVerdict {
 }
 
 function commitmentsDim(view: Project360, ctx: Ctx): StandingDim {
-  const label = ctx.t("record.commitments");
+  const label = ctx.t("project.openTasks");
   const reading = commitmentsReading(view);
   if (!reading) {
     return {

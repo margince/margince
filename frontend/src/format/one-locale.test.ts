@@ -496,6 +496,10 @@ function findingsIn(
 // expected output moved with the reader's browser would assert nothing.
 const pinnedLocales: { file: string; why: string }[] = [
   {
+    file: "format/address.ts",
+    why: "countryBeyondCity names a country code in EVERY locale this build speaks to compare it with a city, whichever language the city was typed in. The names are matched, never shown.",
+  },
+  {
     file: "format/format.dates.ts",
     why: "hourInZone reads an hour back as a number. The output is never shown, so the pinned tag fixes the parsing and not the wording.",
   },

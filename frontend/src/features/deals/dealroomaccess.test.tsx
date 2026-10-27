@@ -3,10 +3,11 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { type WriteTo, WriteToProvider } from "../../lib/writeto";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { DealRoomAccess } from "./dealroomaccess";
 
@@ -31,7 +32,11 @@ const ROOM: DealRoom = {
 
 type Participant = components["schemas"]["DealRoomParticipant"];
 
-function drawWithDownloads(downloads: number, seat: Partial<Participant> = {}) {
+function drawWithDownloads(
+  downloads: number,
+  seat: Partial<Participant> = {},
+  writeTo: WriteTo | null = null,
+) {
   installFetchStub({
     "GET /deal-rooms/room-1/participants": () =>
       jsonResponse({
@@ -61,7 +66,9 @@ function drawWithDownloads(downloads: number, seat: Partial<Participant> = {}) {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <DealRoomAccess room={ROOM} mayManage={false} />
+        <WriteToProvider writeTo={writeTo}>
+          <DealRoomAccess room={ROOM} mayManage={false} />
+        </WriteToProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -100,5 +107,22 @@ describe("where a seat stands", () => {
   ])("badges a seat that is %s", async (_case, seat, badge) => {
     drawWithDownloads(0, seat);
     expect(await screen.findByText(badge)).toBeTruthy();
+  });
+});
+
+describe("a seat's address", () => {
+  it("opens the composer filed under the room's deal", async () => {
+    const writeTo = vi.fn();
+    drawWithDownloads(0, {}, writeTo);
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "dana.buyer@brandt-automotive.example",
+      }),
+    );
+    expect(writeTo).toHaveBeenCalledWith({
+      entityType: "deal",
+      entityId: "deal-1",
+      address: "dana.buyer@brandt-automotive.example",
+    });
   });
 });

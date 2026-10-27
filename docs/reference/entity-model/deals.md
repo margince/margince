@@ -185,6 +185,7 @@ The 23 tables owned by `deals`, as the migrations build them. [Back to the entit
 **Triggers**
 
 - `deal_last_activity`: `AFTER UPDATE OF company_id FOR EACH ROW WHEN ((old.company_id IS DISTINCT FROM new.company_id)) EXECUTE FUNCTION trg_deal_last_activity()`
+- `deal_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 - `trg_deal_project_same_company`: `AFTER INSERT OR UPDATE OF company_id, project_id DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION assert_deal_project_same_company()`
 - `trg_deal_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 

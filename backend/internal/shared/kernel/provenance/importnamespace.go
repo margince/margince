@@ -74,6 +74,11 @@ const WhichDealSource = "which_deal"
 // notice, held until the notice is through, and deleted when it fails.
 const WebsiteLeadSource = "siteread"
 
+// WebFormSource names a lead or note a website form wrote. Its source_id is
+// the form and the submission's key, so a sender's retry lands once. That
+// holds only while no client can spell it.
+const WebFormSource = "web_form"
+
 // internalSourceSystems are the exact identities only an internal writer may
 // spell. Exact names rather than a second prefix: these are already written
 // into rows, and renaming them to fit a namespace would strand every row that
@@ -87,6 +92,7 @@ var internalSourceSystems = map[string]bool{
 	WhichDealSource:          true,
 	LeadRepliedSource:        true,
 	LeadForContactSource:     true,
+	WebFormSource:            true,
 }
 
 // ReservedSourceSystem reports whether a client-supplied source system

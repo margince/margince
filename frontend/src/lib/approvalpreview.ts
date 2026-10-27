@@ -21,10 +21,15 @@ import { previewFieldLabel } from "./approvalpreviewfields";
 import { importPreviewFields } from "./approvalpreviewimport";
 import { mergeValueLabel } from "./approvalpreviewmergevalues";
 import { contextOptions } from "./compose-context";
+import {
+  MEMBER_RETIREMENT_EFFECT_LABELS,
+  memberRetirementBlocker,
+} from "./memberretirement";
 import { KIND_LABELS } from "./relationshipkinds";
 import { WON_REASON_LABELS } from "./winreason";
 
 const PREVIEW_EFFECT_LABELS: Record<string, MessageKey> = {
+  ...MEMBER_RETIREMENT_EFFECT_LABELS,
   create_activity_record: "approval.import.createActivity",
   import_close_deal: "approval.import.closeDeal",
   rearm_held_message: "approval.scheduled.rearm",
@@ -295,7 +300,12 @@ export function commercialPreviewDisplay(
       label: t("approval.preview.conflict"),
       value: label
         ? t(label)
-        : conflict.summary.trim() || t("approval.preview.incompleteEvidence"),
+        : conflict.kind.startsWith("member_retirement_")
+          ? memberRetirementBlocker(
+              conflict.kind.slice("member_retirement_".length),
+              t,
+            )
+          : conflict.summary.trim() || t("approval.preview.incompleteEvidence"),
       comparison: null,
     };
   });

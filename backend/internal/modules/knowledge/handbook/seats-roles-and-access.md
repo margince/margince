@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go -->
+<!-- describes: frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go -->
 # Seats, roles and who can see what
 
 What you can do in Margince is decided by three things, and one cannot stand in for another:
@@ -31,17 +31,36 @@ To change a colleague's role in Margince, open **Settings → Members** and choo
 Choosing a role takes the place of every role they held. Only an Admin can give or take away the Admin role.
 Also called: promote, demote, change permissions, make admin.
 
+### How do I find and edit a colleague?
+
+Open **Settings → Members**. The list loads every member, including invited and deactivated colleagues. Use **Search members** to find a name or email address.
+
+Open the colleague's actions menu and choose **Edit member**. Change their name, email, role or teams, then choose **Save member**. You can correct an email before the account has been used to sign in. Used sign-in addresses are protected. Team membership changes require an Admin.
+
+If another administrator changed the account while you were editing, choose **Reload member**, review the current values and apply your changes again.
+
 ### How do I remove a user from Margince?
-To remove a colleague from Margince, open **Settings → Members** and choose **Deactivate** on their row.
-1. Open **Settings → Members**.
-2. Open the **Actions for {name}** menu on their row.
-3. Choose **Deactivate**, then confirm **Deactivate** in the **Deactivate {name}?** box.
-They are signed out everywhere and their agent passports end at once. Margince does not delete user accounts. A user you deactivate stays in the list and frees their seat. You cannot deactivate the last active admin.
-Also called: delete a user, offboard, remove a teammate, disable an account.
+
+To stop a colleague signing in while keeping their account in the list, choose **Deactivate** in their actions menu. You can bring it back, and it frees their seat.
+
+To remove the account from the member list, deactivate it first, then choose **Remove member**. Choose a colleague to receive any remaining CRM work and review the preview. Resolve the listed items before confirming.
+
+Personal alerts are archived. Private contacts and companies move to the receiving colleague. Activity reader lists stay the same; activity already shared with the readers of a record may become visible to its new owner. The original names stay in history.
+
+You cannot remove your own account or the last active admin. Removal cannot be undone. The email address stays in use to keep the names on past work. Use Deactivate when the colleague may return. It does not erase past work.
+
+### How do I merge duplicate accounts for the same colleague?
+
+Open the duplicate account's actions menu and choose **Merge duplicate**. Select the **Account to keep**, review the work and items, then confirm.
+The source must be an imported or invited account that has never been used to sign in. You cannot select your own account as the account to keep. The duplicate leaves the member list.
+
+The surviving account keeps its name, email, roles, teams and sign-in settings, and retains the original account’s private records and mail. Connected accounts must be reconnected under the surviving member. Use this only for two accounts belonging to the same colleague. If the account you keep is deactivated, reactivate it after merging.
+The surviving member's editor lists the accounts merged into it. The original names stay in history.
 
 ### How do I reactivate a deactivated user?
 To bring back a colleague you deactivated, open **Settings → Members**. Open the **Actions for {name}** menu on their row and choose **Reactivate**.
-They must sign in again after that. Bringing them back takes a full seat again, so it is refused when the licence is full.
+
+A colleague without a password returns to **Invited**, meaning sign-in setup is pending. You can still edit their name, role and teams before their first sign-in. A colleague who already has a password returns to **Active** and must sign in again. Bringing them back takes a full seat again, so it is refused when the licence is full.
 Also called: restore a user, re-enable an account.
 
 ### A colleague left: who gets their deals, and how do I reassign their records?
@@ -50,7 +69,7 @@ When a colleague leaves and you deactivate them in Margince, they stay the owner
 2. Open the **Actions for {name}** menu on their row and choose **Hand over work**.
 3. The box says what they still own. Pick the colleague under **Give it to** and press **Hand over**.
 
-Every lead, contact, company, deal and project you may change moves to that colleague. Their tasks, automations and Deal Rooms stay where they are. The **Deactivate {name}?** box also says what they still own and offers **Hand over work**.
+Every lead, contact, company, deal, project and open task you may change moves to that colleague. Automations and Deal Rooms stay where they are. The **Deactivate {name}?** box also says what they still own and offers **Hand over work**.
 
 Some contacts and companies only the colleague who left could see. They move too once the colleague is deactivated, and stay visible to the new owner alone. Before that, they stay with the colleague.
 
@@ -81,7 +100,7 @@ To create a team in Margince, open **Settings → Teams** and choose **New team*
 2. Choose **New team**.
 3. Fill **Team name** (required), for example "DACH Sales".
 4. Choose **Create team**.
-To add colleagues, an Admin chooses the team's name and picks them under **Add member**. The remove button beside a member takes them off the team. You can add only active human users. A role that may only read the page sees **Read-only settings** and no **New team**.
+To add colleagues, an Admin chooses the team's name and picks them under **Add member**. The remove button beside a member takes them off the team. You can add active or invited human users. A role that may only read the page sees **Read-only settings** and no **New team**.
 Also called: group, squad, sales team.
 
 ### How do I change someone's seat from read to full?

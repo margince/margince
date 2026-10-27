@@ -3,6 +3,8 @@
 
 package auth
 
+import "github.com/margince/margince/backend/internal/shared/kernel/provenance"
+
 // The audience rule for a reader that COUNTS messages rather than showing them.
 //
 // A held message is not only unreadable — it must not be visible in the shape
@@ -31,5 +33,5 @@ package auth
 // discloses the difference between them. The question an aggregate asks is
 // "may EVERYONE see this", and the answer is the same for everybody.
 func AudienceWorkspaceOnly(alias string) string {
-	return " AND " + alias + ".audience = 'workspace' AND (" + alias + ".kind <> 'task' OR " + alias + ".source_activity_id IS NULL OR EXISTS (SELECT 1 FROM activity follow_up_source WHERE follow_up_source.id = " + alias + ".source_activity_id AND follow_up_source.audience = 'workspace' AND follow_up_source.restricted_at IS NULL))"
+	return " AND " + alias + ".audience = 'workspace' AND (" + alias + ".kind <> 'task' OR " + alias + ".source_activity_id IS NULL AND coalesce(" + alias + ".source_system, '') <> '" + provenance.LeadRepliedSource + "' OR EXISTS (SELECT 1 FROM activity follow_up_source WHERE follow_up_source.id = " + provenance.TaskSourceActivitySQL(alias) + " AND follow_up_source.audience = 'workspace' AND follow_up_source.restricted_at IS NULL))"
 }
