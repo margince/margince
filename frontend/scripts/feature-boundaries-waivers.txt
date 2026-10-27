@@ -332,7 +332,6 @@ reach features/projects/projects.create.ts features/records/recordreferences.ts
 reach features/projects/projects.tsx app/pagemeta.ts
 reach features/projects/projects.tsx features/lists/savedviews.tsx
 reach features/projects/projectsections.tsx features/records/record360/index.ts
-reach features/projects/projectstakeholders.tsx features/records/record360/index.ts
 reach features/records/activityfiles.tsx features/voice-knowledge/adddocument.tsx
 reach features/records/bulkchange.lists.test.tsx features/companies/companies.tsx
 reach features/records/bulkchange.lists.test.tsx features/contacts/contacts.tsx
