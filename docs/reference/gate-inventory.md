@@ -425,6 +425,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `suppressionauthority_test.go` | H2 | Every kind of suppression says who decided it. |
 | `tablelistpointer_test.go` | H1 | Every module names its entity-model page as its table list, and no Go comment copies that list. |
 | `tableownershipdiscovery_test.go` | H2 | Which packages the ownership gate walks, derived rather than remembered. |
+| `taskdeadlinereaders_test.go` | H2 | _(no doc comment)_ |
 | `uiautonomyclaims_test.go` | H2 | No shipped UI string promises that nothing sends without a human's approval while the generated policy table says the send verbs auto-execute. |
 | `undoreasoncensus_test.go` | H2 | One refusal set, three spellings. |
 | `uniquenessclaimscorpus_test.go` | H2 | Where the claim sweep looks, as against what it looks for. |

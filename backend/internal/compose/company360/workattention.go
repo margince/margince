@@ -226,7 +226,7 @@ func overdueTasksBy(
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT DISTINCT ON (l.%[1]s)
-		       l.%[1]s, coalesce(a.subject, ''), coalesce(u.display_name, ''), a.due_at,
+		       l.%[1]s, coalesce(a.subject, ''), coalesce(u.display_name, ''), `+storekit.TaskDueSQL("a")+`,
 		       coalesce((%[5]s), false) AS visible,
 		       bool_or(NOT coalesce((%[5]s), false)) OVER (PARTITION BY l.%[1]s) AS dropped
 		  FROM activity a
@@ -234,9 +234,9 @@ func overdueTasksBy(
 		  LEFT JOIN app_user u ON u.id = a.assignee_id
 		         AND `+identity.LiveMemberSQL("u")+`
 		 WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL
-		   AND a.due_at IS NOT NULL AND a.due_at < $%[4]d
+		   AND `+storekit.TaskDueSQL("a")+` IS NOT NULL AND `+storekit.TaskDueSQL("a")+` < $%[4]d
 		   AND %[6]s AND %[7]s
-		 ORDER BY l.%[1]s, coalesce((%[5]s), false) DESC, a.due_at, a.id`,
+		 ORDER BY l.%[1]s, coalesce((%[5]s), false) DESC, `+storekit.TaskDueSQL("a")+`, a.id`,
 		linkColumn, keysPos, companyPos, nowPos, activityScope,
 		activities.CompanyLinkedActivityExists(companyPos), activities.CurrentTaskClause("a", now, identities, arg)), args...)
 	if err != nil {

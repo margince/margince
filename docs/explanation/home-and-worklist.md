@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx -->
+<!-- describes: backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx -->
 # Home and the Worklist: how the day is ranked
 
 Home has one ranking engine behind three views: the Worklist, the **First** section on Morning, and the
@@ -79,6 +79,16 @@ Editing the displayed body cannot change that evidence.
 The request writer and current task readers share the recipient rule and mail horizon.
 Reads hide old automatic work even before a background job runs.
 A later email to a contact does not show that a task or promise was done.
+
+Advice to review a lead uses the source event's time and the same horizon.
+An answered inbound stops being a new reply; that does not settle a separate request.
+A booked meeting keeps its state, including a future meeting or one called off.
+Filing old mail keeps the source without making the advice new.
+
+The writer and open-task readers share this admission, so stale tasks cannot block a new reply.
+A task to review a lead or report a new arrival has no generated deadline.
+The date of an old task that no human changed is not an overdue date.
+Human changes keep their chosen deadlines.
 
 ## Focus is a cut of the same ranking
 

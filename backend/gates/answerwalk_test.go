@@ -7,9 +7,8 @@ package gates
 
 // Only the answer predicate walks a thread for our reply.
 //
-// Every other SQL statement that joins an outbound row to a thread either calls
-// activities/answered.go's answeredSQL or is named below with the different
-// question it asks.
+// Other outbound thread walks call the shared answer predicate.
+// Exceptions below name the different question they ask.
 
 import (
 	"fmt"
@@ -29,7 +28,7 @@ import (
 )
 
 // answerWalkOwner is where the one answer lives.
-const answerWalkOwner = "internal/modules/activities/answered.go:threadAnswerArm"
+const answerWalkOwner = "internal/platform/database/storekit/answered.go:threadAnswerArm"
 
 // answerWalksAdmitted are the thread walks that ask something other than
 // "was this inbound answered", keyed by file and declaration.
@@ -230,7 +229,7 @@ func kernelFragments(t *testing.T) map[string]fragment {
 }
 
 // answerWalkOwnerFile is the file whose helpers are the one answer.
-const answerWalkOwnerFile = "internal/modules/activities/answered.go"
+const answerWalkOwnerFile = "internal/platform/database/storekit/answered.go"
 
 // walksForOutbound reports a statement that pins rows to a thread and asks
 // for our own sent message. It does not require the two to name the same
@@ -287,7 +286,7 @@ func TestOnlyTheAnswerPredicateWalksAThreadForOurReply(t *testing.T) {
 		}
 		if !answerWalksAdmitted.Waived(t, site) {
 			t.Errorf("%s walks a thread for an outbound row. Whether an inbound was answered is "+
-				"answeredSQL in activities/answered.go; call it, or name this walk in "+
+				"answeredSQL in platform/database/storekit/answered.go; call it, or name this walk in "+
 				"answerWalksAdmitted with the question it asks instead", site)
 		}
 	}

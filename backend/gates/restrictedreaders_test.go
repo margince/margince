@@ -275,6 +275,7 @@ const senderStampReader = "the sender_is_machine repair reads only the id and se
 // ClassifyBacklogPredicate, which filters archived rows. A reason a gate can
 // work out is better computed than written down.
 var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/platform/database/storekit/leadengagement.go:humanSetDueSQL":                       "a correlated boolean over whether a human audit names the date field, not an audit image value; the enclosing task readers apply the activity content or aggregate gate",
 	"internal/platform/database/storekit/requestintent.go:HumanReviewedOwedClause":               "returns only whether a human reviewed the owed verdict; it checks an audit key and exposes no image value or activity content. Current source readers separately enforce activity visibility and availability. A held record retains its review evidence without becoming readable",
 	"internal/modules/deals/evidenceauthorship.go:reconcileEvidenceAuthorshipTx":                 "pages the stage evidence whose activity did not go out from here, reading only the activity's direction. The stage policy reads a held activity's evidence too, so its author side must follow the own domains as well. No content leaves the query",
 	"internal/modules/deals/evidenceauthorship.go:judgeActivityAuthor":                           "reads only the direction of an evidence source to judge its author side again. A held source's evidence still counts in the stage policy, so it is judged too. No content leaves the query",

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/activities/answered.go backend/internal/modules/activities/requeststate.go backend/internal/modules/activities/requestsettlement.go backend/internal/modules/activities/owedverdict.go backend/internal/modules/activities/emailrequesttasks.go backend/internal/modules/activities/requesttask.go -->
+<!-- describes: backend/internal/platform/database/storekit/answered.go backend/internal/modules/activities/answered.go backend/internal/modules/activities/requeststate.go backend/internal/modules/activities/requestsettlement.go backend/internal/modules/activities/owedverdict.go backend/internal/modules/activities/emailrequesttasks.go backend/internal/modules/activities/requesttask.go -->
 # Customer requests last longer than pipeline stages
 
 A captured request and a sales deal have different lives. When a deal closes, Margince stops telling
@@ -53,10 +53,10 @@ snooze, `not_mine` or `handled`, that changes their own queue, not what is owed 
 
 ## Whether a reply is still owed
 
-One check answers this for every surface. The surfaces are the needs-reply badge on the timeline, the
-contact page and the agent tools, the waiting lane, request review and the response time. It lives in
-`activities/answered.go`, and `backend/gates/answerwalk_test.go` fails a second walk of a thread for our
-reply.
+The timeline badge, contact page, agent tools, waiting lane, request review and response time
+use the same reply evidence. It lives in `platform/database/storekit/answered.go`.
+`backend/gates/answerwalk_test.go` fails a second walk of a thread for our reply.
+Request state still decides whether the original ask stays owed.
 
 A message that is not a request is answered by any of:
 
