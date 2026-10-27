@@ -39,7 +39,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.retirement.scheduled_mail": "Hủy các email đã lên lịch của thành viên này.",
   "users.retirement.handoffs": "Giao lại các lượt bàn giao đang mở của thành viên này.",
   "users.retirement.voice_profiles": "Chuyển các hồ sơ giọng văn của thành viên này vào kho lưu trữ.",
-  "users.retirement.web_forms": "Tạm dừng hoặc chuyển giao biểu mẫu website của thành viên này.",
+  "users.retirement.web_forms": "Tạm dừng hoặc chuyển giao biểu mẫu trang web của thành viên này.",
   "users.retirement.webhooks": "Giao lại hoặc tắt các webhook của thành viên này.",
   "users.retirement.weekly_plans": "Đóng các kế hoạch tuần đang mở của thành viên này.",
   "users.retirement.analytics_shares": "Thu hồi các liên kết chia sẻ phân tích đang hoạt động theo thành viên này.",
