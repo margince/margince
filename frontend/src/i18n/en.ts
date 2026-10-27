@@ -1167,7 +1167,6 @@ export const en = {
   "scheduling.videoTeamsHelp": "Needs a work or school Microsoft 365 account.",
   "scheduling.unsaved": "You have unsaved changes",
   "scheduling.discard": "Discard",
-  "scheduling.brand": "Company name and logo",
   "scheduling.back": "Back to Margince",
   "scheduling.prepare": "Prepare for this meeting",
   "scheduling.timezone": "Time zone",
@@ -17325,9 +17324,10 @@ export const en = {
   "scheduling.guestView": "What guests see",
   "scheduling.previewLabel": "Preview of your public booking page",
   "scheduling.companyRow": "Company name and logo",
-  "scheduling.companyRowHelp": "From the company profile.",
+  "scheduling.companyRowHelp":
+    "{company}. An admin assigns the company you work for.",
   "scheduling.companyNoLogo":
-    "From the company profile. No logo is uploaded yet, so guests see the name only.",
+    "{company} has no logo yet, so guests see the name only. An admin assigns the company you work for.",
   "scheduling.companyNoName":
     "Not set in the company profile yet, so guests see your name only.",
   "scheduling.addLogo": "Add logo",

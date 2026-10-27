@@ -246,8 +246,8 @@ send invitations; reconnect it and allow invitation access.
 **What guests see** puts a small preview of the public booking page beside
 three rows:
 
-- **Company name and logo** comes from the company profile, with **Change** or
-  **Add logo**. With no company name set, guests see your name only.
+- **Company name and logo** names the company an Admin assigns you to, with
+  **Change** or **Add logo**. With no company name set, guests see your name only.
 - **Your name** comes from your account, with **Change**.
 - **Reminder email** goes out one hour before each meeting, from your connected
   mailbox. So it needs a mailbox under Connections.

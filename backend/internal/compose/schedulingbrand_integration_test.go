@@ -234,12 +234,12 @@ func TestBookingBrandFollowsTheLegalEntityTheHostWorksFor(t *testing.T) {
 	anchorHost := profileOf(e.Admin())
 	if anchorHost.CompanyName == nil || *anchorHost.CompanyName != "Acme GmbH" ||
 		anchorHost.LogoUrl == nil || *anchorHost.LogoUrl != "/v1/public/booking/company-logo" {
-		t.Fatalf("a default-entity host: %v %v, want the anchor's name and logo", anchorHost.CompanyName, anchorHost.LogoUrl)
+		t.Fatalf("a default-entity host: %q %q, want the anchor's name and logo", deref(anchorHost.CompanyName), deref(anchorHost.LogoUrl))
 	}
 	viennaHost := profileOf(e.As(e.Rep1, nil, integration.AdminPerms))
 	if viennaHost.CompanyName == nil || *viennaHost.CompanyName != "Wien" ||
 		viennaHost.LogoUrl == nil || *viennaHost.LogoUrl != "/v1/public/booking/company-logo?entity="+vienna.ID.String() {
-		t.Fatalf("a Vienna host: %v %v, want Wien and its own logo", viennaHost.CompanyName, viennaHost.LogoUrl)
+		t.Fatalf("a Vienna host: %q %q, want Wien and its own logo", deref(viennaHost.CompanyName), deref(viennaHost.LogoUrl))
 	}
 
 	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), WithBlobstore(blob))
@@ -254,7 +254,7 @@ func TestBookingBrandFollowsTheLegalEntityTheHostWorksFor(t *testing.T) {
 	}
 	bare := profileOf(e.As(e.Rep1, nil, integration.AdminPerms))
 	if bare.CompanyName == nil || *bare.CompanyName != "Wien" || bare.LogoUrl != nil {
-		t.Fatalf("an entity with no logo: %v %v, want its name and no logo", bare.CompanyName, bare.LogoUrl)
+		t.Fatalf("an entity with no logo: %q %q, want its name and no logo", deref(bare.CompanyName), deref(bare.LogoUrl))
 	}
 	gone := httptest.NewRecorder()
 	server.ServeHTTP(gone, httptest.NewRequest(http.MethodGet, *viennaHost.LogoUrl, nil))

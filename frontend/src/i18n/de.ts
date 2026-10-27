@@ -1203,7 +1203,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Benötigt ein Microsoft-365-Geschäfts- oder Schulkonto.",
   "scheduling.unsaved": "Du hast ungespeicherte Änderungen",
   "scheduling.discard": "Verwerfen",
-  "scheduling.brand": "Unternehmensname und Logo",
   "scheduling.back": "Zurück zu Margince",
   "scheduling.prepare": "Auf diesen Termin vorbereiten",
   "scheduling.timezone": "Zeitzone",
@@ -17415,9 +17414,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.guestView": "Was Gäste sehen",
   "scheduling.previewLabel": "Vorschau deiner öffentlichen Buchungsseite",
   "scheduling.companyRow": "Unternehmensname und Logo",
-  "scheduling.companyRowHelp": "Aus dem Unternehmensprofil.",
+  "scheduling.companyRowHelp":
+    "{company}. Für welches Unternehmen du arbeitest, legt ein Admin fest.",
   "scheduling.companyNoLogo":
-    "Aus dem Unternehmensprofil. Noch ist kein Logo hochgeladen, daher sehen Gäste nur den Namen.",
+    "{company} hat noch kein Logo, daher sehen Gäste nur den Namen. Für welches Unternehmen du arbeitest, legt ein Admin fest.",
   "scheduling.companyNoName":
     "Im Unternehmensprofil noch nicht gesetzt, daher sehen Gäste nur deinen Namen.",
   "scheduling.addLogo": "Logo hinzufügen",

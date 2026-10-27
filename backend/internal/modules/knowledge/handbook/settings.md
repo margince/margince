@@ -127,9 +127,9 @@ Seeing the rates needs the permission to read exchange rates. The Admin and Ops 
 ### How do I add a second company we work under?
 <!-- opens: settings/company -->
 
-**Legal entities** lists the companies you work under. Every installation starts with one, marked **Default**. It takes its name, address, VAT ID and logo from the company above, so you change those on the company form. A colleague nobody has assigned works for the default.
+**Legal entities** lists the companies you work under. Every installation starts with one, marked **Default**. It takes its name, address, VAT ID and logo from the company above, so you change those on the company form. A colleague nobody has assigned works for the default. A colleague's booking page shows the company they work for.
 
-To add another, an Admin chooses **New legal entity** and types its name, its legal name and a two-letter code such as AT. Of the roles Margince ships, only Admin may change them, and a custom role can be given that permission too. Every other role sees the list and cannot change it. The ones you add can also say what they sell and to whom. On a company you can then choose which of them its fit rating is measured against. A colleague's booking page shows the company they work for. Offers and signatures still show the default.
+To add another, an Admin chooses **New legal entity** and types its name, its legal name and a two-letter code such as AT. Of the roles Margince ships, only Admin may change them, and a custom role can be given that permission too. Every other role sees the list and cannot change it. The ones you add can also say what they sell and to whom. On a company you can then choose which of them its fit rating is measured against. Offers and signatures still show the default.
 
 ## Sign-in and apps
 
