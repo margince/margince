@@ -388,6 +388,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/embeddings/reindex/preview":                                    {Op: "EmbedReindexPreview", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/embeddings/reindex/status":                                     {Op: "EmbedReindexStatus", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/exports/bundle":                                                {Op: "downloadExportBundle", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/extension-history":                                             {Op: "listExtensionHistory", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/extension-reports":                                             {Op: "listExtensionReports", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/extensions":                                                    {Op: "listExtensions", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/extensions/{name}/settings":                                    {Op: "getExtensionSettings", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

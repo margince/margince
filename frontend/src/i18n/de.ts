@@ -4023,6 +4023,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.kind.task": "Aufgabe",
   "timeline.kind.message": "Nachricht",
   "timeline.kind.change": "Datensatz",
+  "timeline.kind.extension": "Erweiterung",
+  "timeline.kind.signal": "Signal",
   "timeline.withheld": "Inhalt nur für Teilnehmende",
   "compose.deadRecipients":
     "E-Mails an {addresses} kommen nicht an: Die letzte Zustellung wurde abgelehnt, und seitdem war keine erfolgreich. Sende trotzdem oder verwende eine andere Adresse.",

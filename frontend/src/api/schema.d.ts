@@ -5403,6 +5403,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/extension-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What installed extensions add to one core record's History.
+         * @description Two kinds of entry, newest first, for one contact, company or deal. A `record` entry is a
+         *     row of an extension's own table that references the record, as far as the extension declared
+         *     a timeline for its kind. A `signal` entry is a signal of an extension kind (`ext:<unit>:<kind>`)
+         *     that is about the record. Core builds both, so an extension writes no timeline entry.
+         *
+         *     A kind the caller holds no read right on is left out, and a signal outside the caller's row
+         *     scope is left out. A record outside the caller's row scope answers 404, like every
+         *     single-record read. Each source is capped at 50 entries. Empty when nothing applies.
+         */
+        get: operations["listExtensionHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/extension-reports": {
         parameters: {
             query?: never;
@@ -35520,6 +35547,27 @@ export interface components {
             /** @description The extension that declared the type. */
             unit: string;
         };
+        ExtensionHistoryResponse: {
+            data: components["schemas"]["ExtensionHistoryEntry"][];
+        };
+        ExtensionHistoryEntry: {
+            /**
+             * Format: uuid
+             * @description The row's own id in the extension's table, or the signal's id.
+             */
+            id: string;
+            /** @enum {string} */
+            source: "record" | "signal";
+            /** @description The record kind of a `record` entry, or the signal kind of a `signal` entry. */
+            kind: string;
+            /** @description The declared label field of the row, or the signal's summary. */
+            title: string;
+            /**
+             * Format: date-time
+             * @description The declared time column of the row, or the signal's detection time.
+             */
+            at: string;
+        };
         /** @description The counts and breakdowns installed extensions add that this caller may read, ordered by name. */
         ExtensionReportDirectory: {
             data: components["schemas"]["ExtensionReport"][];
@@ -59717,6 +59765,32 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+        };
+    };
+    listExtensionHistory: {
+        parameters: {
+            query: {
+                entity_type: "contact" | "company" | "deal";
+                entity_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The entries, newest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtensionHistoryResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listExtensionReports: {

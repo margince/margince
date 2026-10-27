@@ -10273,6 +10273,24 @@ func (e ExcuseNoticeCaseState) Valid() bool {
 	}
 }
 
+// Defines values for ExtensionHistoryEntrySource.
+const (
+	ExtensionHistoryEntrySourceRecord ExtensionHistoryEntrySource = "record"
+	ExtensionHistoryEntrySourceSignal ExtensionHistoryEntrySource = "signal"
+)
+
+// Valid indicates whether the value is a known member of the ExtensionHistoryEntrySource enum.
+func (e ExtensionHistoryEntrySource) Valid() bool {
+	switch e {
+	case ExtensionHistoryEntrySourceRecord:
+		return true
+	case ExtensionHistoryEntrySourceSignal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ExtensionIngestRefusalRefusal.
 const (
 	ExtensionIngestRefusalRefusalActivity     ExtensionIngestRefusalRefusal = "activity"
@@ -24211,6 +24229,27 @@ func (e ListDedupeCandidatesParamsEntityType) Valid() bool {
 	case ListDedupeCandidatesParamsEntityTypeContact:
 		return true
 	case ListDedupeCandidatesParamsEntityTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListExtensionHistoryParamsEntityType.
+const (
+	ListExtensionHistoryParamsEntityTypeCompany ListExtensionHistoryParamsEntityType = "company"
+	ListExtensionHistoryParamsEntityTypeContact ListExtensionHistoryParamsEntityType = "contact"
+	ListExtensionHistoryParamsEntityTypeDeal    ListExtensionHistoryParamsEntityType = "deal"
+)
+
+// Valid indicates whether the value is a known member of the ListExtensionHistoryParamsEntityType enum.
+func (e ListExtensionHistoryParamsEntityType) Valid() bool {
+	switch e {
+	case ListExtensionHistoryParamsEntityTypeCompany:
+		return true
+	case ListExtensionHistoryParamsEntityTypeContact:
+		return true
+	case ListExtensionHistoryParamsEntityTypeDeal:
 		return true
 	default:
 		return false
@@ -40136,6 +40175,30 @@ type ExtOAuthConnectResponse struct {
 // ExtensionDirectory The composed extension set, sorted by name. Not paginated, for the same reason `RoleDirectory` is not: the set is fixed at build time and small by construction.
 type ExtensionDirectory struct {
 	Extensions []ComposedExtension `json:"extensions"`
+}
+
+// ExtensionHistoryEntry defines model for ExtensionHistoryEntry.
+type ExtensionHistoryEntry struct {
+	// At The declared time column of the row, or the signal's detection time.
+	At time.Time `json:"at"`
+
+	// Id The row's own id in the extension's table, or the signal's id.
+	Id openapi_types.UUID `json:"id"`
+
+	// Kind The record kind of a `record` entry, or the signal kind of a `signal` entry.
+	Kind   string                      `json:"kind"`
+	Source ExtensionHistoryEntrySource `json:"source"`
+
+	// Title The declared label field of the row, or the signal's summary.
+	Title string `json:"title"`
+}
+
+// ExtensionHistoryEntrySource defines model for ExtensionHistoryEntry.Source.
+type ExtensionHistoryEntrySource string
+
+// ExtensionHistoryResponse defines model for ExtensionHistoryResponse.
+type ExtensionHistoryResponse struct {
+	Data []ExtensionHistoryEntry `json:"data"`
 }
 
 // ExtensionIngestHealth Which composed units are handing the core records it cannot express, for an
@@ -61600,6 +61663,15 @@ type ExtOauthCallbackParams struct {
 	Error *string `form:"error,omitempty" json:"error,omitempty"`
 }
 
+// ListExtensionHistoryParams defines parameters for ListExtensionHistory.
+type ListExtensionHistoryParams struct {
+	EntityType ListExtensionHistoryParamsEntityType `form:"entity_type" json:"entity_type"`
+	EntityId   openapi_types.UUID                   `form:"entity_id" json:"entity_id"`
+}
+
+// ListExtensionHistoryParamsEntityType defines parameters for ListExtensionHistory.
+type ListExtensionHistoryParamsEntityType string
+
 // GetFieldHistoryParams defines parameters for GetFieldHistory.
 type GetFieldHistoryParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -78695,6 +78767,9 @@ type ServerInterface interface {
 	// Start an admin's consent to an extension unit's OAuth app.
 	// (POST /ext-oauth/{provider}/connect)
 	ConnectExtOauth(w http.ResponseWriter, r *http.Request, provider ExtOAuthProvider)
+	// What installed extensions add to one core record's History.
+	// (GET /extension-history)
+	ListExtensionHistory(w http.ResponseWriter, r *http.Request, params ListExtensionHistoryParams)
 	// The counts and breakdowns installed extensions add to Reports and Home, answered for this caller.
 	// (GET /extension-reports)
 	ListExtensionReports(w http.ResponseWriter, r *http.Request)
@@ -82895,6 +82970,12 @@ func (_ Unimplemented) ExtOauthCallback(w http.ResponseWriter, r *http.Request, 
 // Start an admin's consent to an extension unit's OAuth app.
 // (POST /ext-oauth/{provider}/connect)
 func (_ Unimplemented) ConnectExtOauth(w http.ResponseWriter, r *http.Request, provider ExtOAuthProvider) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What installed extensions add to one core record's History.
+// (GET /extension-history)
+func (_ Unimplemented) ListExtensionHistory(w http.ResponseWriter, r *http.Request, params ListExtensionHistoryParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -106224,6 +106305,58 @@ func (siw *ServerInterfaceWrapper) ConnectExtOauth(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// ListExtensionHistory operation middleware
+func (siw *ServerInterfaceWrapper) ListExtensionHistory(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListExtensionHistoryParams
+
+	// ------------- Required query parameter "entity_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "entity_type", r.URL.Query(), &params.EntityType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "entity_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "entity_id", r.URL.Query(), &params.EntityId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListExtensionHistory(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListExtensionReports operation middleware
 func (siw *ServerInterfaceWrapper) ListExtensionReports(w http.ResponseWriter, r *http.Request) {
 
@@ -126333,6 +126466,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/ext-oauth/{provider}/connect", wrapper.ConnectExtOauth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/extension-history", wrapper.ListExtensionHistory)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/extension-reports", wrapper.ListExtensionReports)
