@@ -289,7 +289,7 @@ The side column of a project page in Margince holds **Companies**, **Responsibil
 ### How do I edit or rename a project?
 To edit or rename a project in Margince, open it from **Projects** and choose **More actions** → **Edit project**. Change the fields and choose **Save**.
 You can change **Project name** (required), **Owner**, **Description**, **Target end date** and custom fields. It confirms "“{name}” saved". Emptying **Description** or **Target end date** clears it.
-To change one of **Owner**, **Description** or **Target end date** alone, click its value in the project's **Details** panel. It changes in place.
+To change only **Owner**, **Description** or **Target end date**, click its value in the project's **Details** panel instead.
 
 The company is not in this form: add or take off companies in the project's **Companies** panel. The phase moves on the **Phase** bar. An archived project takes no changes.
 Also called: update a project, change the project's end date.
