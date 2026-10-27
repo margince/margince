@@ -92,6 +92,30 @@ export function dealRoleLabel(role: string, t: (key: MessageKey) => string) {
   return key ? t(key) : role.replace(/_/g, " ");
 }
 
+/** A role's words as a reader may type them: any case, any run of spaces. */
+function roleWords(text: string): string {
+  return text.normalize("NFC").trim().replace(/\s+/gu, " ").toLocaleLowerCase();
+}
+
+/**
+ * The role a reader typed, as the key of the deal role or `offered` role whose
+ * label or key it spells. The coverage rules count keys; other text goes trimmed.
+ */
+export function roleFromTyped(
+  text: string,
+  t: (key: MessageKey) => string,
+  offered: readonly string[] = [],
+): string {
+  const typed = roleWords(text);
+  const known = [...Object.keys(DEAL_ROLE_LABELS), ...offered];
+  const role = known.find(
+    (candidate) =>
+      roleWords(dealRoleLabel(candidate, t)) === typed ||
+      roleWords(candidate) === typed,
+  );
+  return role ?? text.trim();
+}
+
 // The delivery roles a project adds to the deal-stakeholder vocabulary. The
 // five deal roles fall through to their own labels below, so one word names a
 // champion on a deal and on the project it became.

@@ -3,7 +3,7 @@ import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { LocaleProvider, translate } from "../../i18n";
+import { type Locale, LocaleProvider, translate } from "../../i18n";
 import { renderWithQueryClient } from "../../testing/queryrender";
 import { jsonResponse, stubWithSession } from "../../testing/story-utils";
 import {
@@ -235,7 +235,10 @@ describe("adding a relationship", () => {
 
   // The committee's gap offers its missing seat. The reader reads the role in
   // their own words; the server counts the seat by its key.
-  async function seatMaiAsChampion(retype?: string): Promise<unknown[]> {
+  async function seatMaiAsChampion(
+    retype?: string,
+    locale: Locale = "vi",
+  ): Promise<unknown[]> {
     vi.useFakeTimers({ shouldAdvanceTime: true, advanceTimeDelta: 5 });
     const posted: unknown[] = [];
     stubWithSession(
@@ -254,7 +257,7 @@ describe("adding a relationship", () => {
     );
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWithQueryClient(
-      <LocaleProvider initial="vi">
+      <LocaleProvider initial={locale}>
         <AddRelationshipAction scope={dealScope} seatRole="champion" />
       </LocaleProvider>,
     );
@@ -262,18 +265,18 @@ describe("adding a relationship", () => {
     await user.click(screen.getByTestId("add-relationship"));
     const dialog = within(screen.getByRole("dialog"));
     const role = dialog.getByRole("textbox", {
-      name: translate("vi", "rel.role"),
+      name: translate(locale, "rel.role"),
     });
     expect(role).toHaveProperty(
       "value",
-      translate("vi", "co.roleLabel.champion"),
+      translate(locale, "co.roleLabel.champion"),
     );
     if (retype !== undefined) {
       await user.clear(role);
       await user.type(role, retype);
     }
     await user.type(
-      dialog.getByPlaceholderText(translate("vi", "merge.searchPlaceholder")),
+      dialog.getByPlaceholderText(translate(locale, "merge.searchPlaceholder")),
       "mai",
     );
     act(() => {
@@ -296,6 +299,18 @@ describe("adding a relationship", () => {
     );
     expect(posted[0]).toMatchObject({ role: "champion" });
   });
+
+  it.each(["en", "de", "vi"] as const)(
+    "seats another deal role by its key, typed in any case and spacing (%s)",
+    async (locale) => {
+      const label = translate(locale, "co.roleLabel.economic_buyer");
+      const posted = await seatMaiAsChampion(
+        label.toLocaleUpperCase().replaceAll(" ", "  "),
+        locale,
+      );
+      expect(posted[0]).toMatchObject({ role: "economic_buyer" });
+    },
+  );
 
   it("sends a role the reader typed in place of the offered one as typed", async () => {
     const posted = await seatMaiAsChampion("Người ủng hộ nội bộ");

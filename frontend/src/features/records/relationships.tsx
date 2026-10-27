@@ -20,7 +20,7 @@ import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isOption } from "../../lib/options";
 import { unwrap } from "../../lib/problem";
-import { dealRoleLabel } from "../../lib/recordlabels";
+import { dealRoleLabel, roleFromTyped } from "../../lib/recordlabels";
 import {
   type Candidate,
   searchByEntity,
@@ -80,6 +80,32 @@ export type RelationshipScope =
 // picker offering the kind would not compile.
 export type CreatableRelationshipKind = CreateRelationshipRequest["kind"];
 
+// A stakeholder's role is a deal role, shown in the reader's words and sent as
+// its key. Any other edge's role is free text, such as a job title.
+export function roleShown(
+  rel: Pick<Relationship, "kind" | "role">,
+  t: (key: MessageKey) => string,
+): string {
+  if (!rel.role) {
+    return "";
+  }
+  return rel.kind === "deal_stakeholder"
+    ? dealRoleLabel(rel.role, t)
+    : rel.role;
+}
+
+/** The role a form sends for `typed`; `offered` holds the role it opened with. */
+export function roleSent(
+  kind: Relationship["kind"],
+  typed: string,
+  t: (key: MessageKey) => string,
+  offered: readonly string[] = [],
+): string {
+  return kind === "deal_stakeholder"
+    ? roleFromTyped(typed, t, offered)
+    : typed.trim();
+}
+
 const SEARCH_DEBOUNCE_MS = 250;
 
 // The "add relationship" affordance: kind + role + start date, plus the
@@ -133,11 +159,10 @@ export function AddRelationshipAction({
   const [typedRole, setTypedRole] = useState<string | null>(null);
   const seatLabel = seatRole ? dealRoleLabel(seatRole, t) : "";
   const role = typedRole ?? seatLabel;
-  // The offered label typed back is still that seat, so it goes as the key.
   const sentRole =
-    typedRole === null || (seatRole && typedRole.trim() === seatLabel)
+    typedRole === null
       ? (seatRole ?? "")
-      : typedRole;
+      : roleSent(kind, typedRole, t, seatRole ? [seatRole] : []);
   const [startedAt, setStartedAt] = useState<ISODate | "">("");
   const [term, setTerm] = useState("");
   const [candidates, setCandidates] = useState<Candidate[]>([]);
