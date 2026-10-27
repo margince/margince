@@ -112,12 +112,13 @@ export function RecordTeamAssign({
     [offered],
   );
 
-  // Kept on the kind alone. RecordPicker treats a new `searchTargets` identity
-  // as a new search space and clears what it is showing, so anything that
-  // changes while the reader types would empty the list under them.
+  // Kept on the kind and a string. RecordPicker reads a new `searchTargets`
+  // as a new search space and clears its list, which would empty it as the
+  // reader types.
+  const invitedDetail = t("assignments.invited");
   const searchTargets = useCallback(
-    (q: string) => searchSubjects(subjectKind, q, t("assignments.invited")),
-    [subjectKind, t],
+    (q: string) => searchSubjects(subjectKind, q, invitedDetail),
+    [subjectKind, invitedDetail],
   );
 
   function close() {
