@@ -13,6 +13,8 @@ import (
 	"strings"
 	"testing"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -160,7 +162,7 @@ func walkVocabularyCopies(node any, where string, visit func(where, name string,
 
 // schemaEnums collects the enums a schema admits through, following $ref, allOf,
 // oneOf, anyOf and an array's items. following holds the refs on the current path.
-func schemaEnums(t *testing.T, doc, schema map[string]any, where string, following map[string]bool) [][]any {
+func schemaEnums(t testing.TB, doc, schema map[string]any, where string, following map[string]bool) [][]any {
 	t.Helper()
 	if raw, ok := schema["enum"].([]any); ok {
 		return [][]any{raw}
@@ -193,4 +195,30 @@ func schemaEnums(t *testing.T, doc, schema map[string]any, where string, followi
 		found = append(found, schemaEnums(t, doc, items, where, following)...)
 	}
 	return found
+}
+
+// A $ref chain that reaches itself stops the walk by name. One ref reached from
+// two sibling branches is no cycle, and both of its enums count.
+func TestTheIndustryEnumWalkStopsAtARefCycleAndNotAtASharedRef(t *testing.T) {
+	var doc map[string]any
+	if err := yaml.Unmarshal([]byte(`
+components:
+  schemas:
+    Loop: { allOf: [{ $ref: '#/components/schemas/Loop' }] }
+    Bands: { enum: ['1-10'] }
+    Twice: { allOf: [{ $ref: '#/components/schemas/Bands' }, { $ref: '#/components/schemas/Bands' }] }
+`), &doc); err != nil {
+		t.Fatal(err)
+	}
+	schema := func(name string) map[string]any { return descendContract(t, doc, "components", "schemas", name) }
+
+	rec := &fatalRecorder{}
+	rec.run(func() { schemaEnums(rec, doc, schema("Loop"), "Loop", map[string]bool{}) })
+	if !rec.fatal || !strings.Contains(rec.message, "again through its own $ref chain") {
+		t.Errorf("a self-referring schema answered %q, want the cycle named", rec.message)
+	}
+
+	if found := schemaEnums(t, doc, schema("Twice"), "Twice", map[string]bool{}); len(found) != 2 {
+		t.Errorf("two branches reaching one ref found %d enums, want 2", len(found))
+	}
 }
