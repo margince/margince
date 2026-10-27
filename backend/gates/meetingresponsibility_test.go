@@ -50,6 +50,7 @@ var attendanceRoles = regexp.MustCompile(`(?i)role\s+IN\s*\(\s*'(?:organizer'\s*
 // meetingHostReaders are the files allowed to read the host column or the
 // attendance roles without the rule, each with the question it asks instead.
 var meetingHostReaders = gatekit.Waive(map[string]string{
+	"internal/compose/memberreferences.go": "classifies foreign keys and blocks retirement while calendar credentials or invitations still depend on that member; it does not attribute meeting attendance",
 	"internal/platform/auth/activitywritescope.go": "asks who may change the row; the host may edit a meeting " +
 		"whatever the attendance evidence says",
 	"internal/modules/activities/scheduling.go": "asks which slots the host's booking calendar already holds; " +

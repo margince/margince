@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -29,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // displayNameField is the name this answers to on every surface: the audit
@@ -62,8 +60,8 @@ func (s *Service) SaveMyDisplayName(ctx context.Context, name string) (Seat, err
 	// Trimmed before it is judged, so a name that is only spaces is refused
 	// rather than stored as a blank a colleague cannot address.
 	name = strings.TrimSpace(name)
-	if !values.HasVisibleText(name) || utf8.RuneCountInString(name) > displayNameMaxRunes {
-		return Seat{}, &InvalidDisplayNameError{MaxRunes: displayNameMaxRunes}
+	if err := validateDisplayName(name); err != nil {
+		return Seat{}, err
 	}
 
 	seat := Seat{UserID: ids.From[ids.UserKind](human), DisplayName: name}

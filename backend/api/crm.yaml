@@ -23898,6 +23898,122 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /users/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Identity]
+      operationId: getMember
+      summary: Read a member for administration.
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The current member profile and access assignments.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    patch:
+      tags: [Identity]
+      operationId: updateMember
+      summary: Edit a member's identity, role and teams.
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateMemberRequest' }
+      responses:
+        '204': { description: Saved atomically. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /users/{id}/retirement-preview:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Identity]
+      operationId: previewMemberRetirement
+      summary: Preview removing a member or merging them into another account.
+      x-mcp-tool: { verb: preview_member_retirement, tier: auto_execute, scope: read, served_by: registry }
+      parameters:
+        - name: mode
+          in: query
+          schema: { type: string, enum: [merge, remove], default: remove }
+        - name: to_user_id
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The work, unresolved dependencies and confirmation token.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberRetirementPreview' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+
+  /users/{id}/merge:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Identity]
+      operationId: mergeMembers
+      summary: Merge a duplicate into the selected surviving member.
+      description: The source must be an unused imported or invited identity. The acting administrator cannot be the survivor.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
+      x-mcp-tool: { verb: merge_members, tier: confirmation_required, record_type: user_admin, scope: write, served_by: registry }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MergeMembersRequest' }
+      responses:
+        '200':
+          description: Work transferred and duplicate removed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [merged]
+                properties:
+                  merged: { type: boolean }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /users/{id}/remove:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Identity]
+      operationId: removeMember
+      summary: Retire an account while preserving historical attribution.
+      description: Removal is permanent. The original email remains reserved for historical attribution. Deactivate an account that may return instead.
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RemoveMemberRequest' }
+      responses:
+        '204': { description: Member removed from the roster. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /users/assignable-roles:
     get:
       tags: [Identity]
@@ -24005,8 +24121,8 @@ paths:
         reads that put a name on a timeline row, and a former member exists precisely so
         their name still appears on the work they did.
 
-        Admin-only (`role: admin`); an agent may never provision a human. A duplicate email
-        answers 409 `email_taken` — if that member is merely deactivated they are already
+        Admin-only (`role: admin`); an agent may never provision a human. An email merged into another member returns the live surviving account with status 200. Removed identities without a live survivor answer 409 `removed_member_email`. Other duplicate emails
+        answer 409 `email_taken` — if that member is merely deactivated they are already
         what this route would create, and if they are active this is the wrong route.
 
         Emits no event: the closed V1 catalog carries `user.invited`, which announces an
@@ -24018,6 +24134,12 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/FormerMemberRequest' }
       responses:
+        "200":
+          description: The live surviving member for an already merged import identity.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
         '201':
           description: The former member's seat.
           content:
@@ -53987,6 +54109,57 @@ components:
           enum: [csv, json]
 
     # ---- Identity (User / Team / Role) ----
+    UpdateMemberRequest:
+      type: object
+      additionalProperties: false
+      required: [display_name, email, expected_updated_at]
+      properties:
+        display_name: { type: string, minLength: 1, maxLength: 255 }
+        email: { type: string, format: email, description: May change only before the account has been used to sign in. }
+        role: { type: string, description: Omit to keep the current roles. }
+        team_ids:
+          type: array
+          maxItems: 2000
+          items: { type: string, format: uuid }
+        expected_updated_at: { type: string, format: date-time }
+    MemberRetirementBlocker:
+      type: string
+      enum: [approval_decisions, automations, booking_pages, data_requests, deal_rooms, introductions, lists, stewarded_lists, mail_drafts, meeting_invitations, meeting_proposals, privacy_notices, record_responsibilities, reports, report_schedules, saved_views, scheduled_mail, handoffs, voice_profiles, web_forms, webhooks, weekly_plans, analytics_shares, source_used, self_survivor, deactivate_first, choose_survivor, choose_receiver, private_tasks, work_not_transferable, state_changed]
+    MemberRetirementConsequence:
+      type: string
+      enum: [source_signed_out, connectors_reconnect, survivor_access, original_attribution, private_alerts_archived, crm_private_records_move, private_audiences_retained, email_reserved, survivor_inactive]
+    MemberRetirementPreview:
+      type: object
+      required: [owned, signal_count, blockers, token, source_name, source_email, consequences]
+      properties:
+        owned: { $ref: '#/components/schemas/HandoverCounts' }
+        signal_count: { type: integer, minimum: 0 }
+        blockers:
+          type: array
+          items: { $ref: '#/components/schemas/MemberRetirementBlocker' }
+        consequences:
+          type: array
+          items: { $ref: '#/components/schemas/MemberRetirementConsequence' }
+        token: { type: string }
+        source_name: { type: string }
+        source_email: { type: string, format: email }
+        survivor_name: { type: string }
+        survivor_email: { type: string, format: email }
+    MergeMembersRequest:
+      type: object
+      additionalProperties: false
+      required: [to_user_id, preview_token]
+      properties:
+        to_user_id: { type: string, format: uuid }
+        preview_token: { type: string, minLength: 1 }
+    RemoveMemberRequest:
+      type: object
+      additionalProperties: false
+      required: [preview_token]
+      properties:
+        to_user_id: { type: string, format: uuid }
+        preview_token: { type: string, minLength: 1 }
+
     User:
       type: object
       description: A seat — human or first-party agent. Mirrors `app_user`.
@@ -54063,11 +54236,18 @@ components:
             user because the share and assignee pickers read it, and who is in which team is
             not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no
             scope and no share, so listing one would describe access the user does not have.
+        email_editable:
+          type: boolean
+          description: Whether this unused member's sign-in email can still be corrected. Present only on the administration view.
+        merged_from:
+          type: array
+          items: { $ref: '#/components/schemas/SeatName' }
+          description: Original account identities consolidated into this member, present only on the administration view.
         allowed_actions:
           type: array
           items:
             type: string
-            enum: [change_role, issue_password_link, remove_mfa, deactivate, reactivate, hand_over]
+            enum: [change_role, issue_password_link, remove_mfa, deactivate, reactivate, hand_over, edit, merge, remove]
           description: >
             The member verbs the CALLER would be admitted to on this user right now, computed by
             the same checks those endpoints run: the `user_admin` verb each takes, a seat that may
@@ -58213,6 +58393,7 @@ components:
           enum:
             - activity
             - app_user
+            - user_admin
             - commission
             - custom_field
             - data_subject_request

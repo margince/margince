@@ -143,6 +143,7 @@ components:
         - retention.applied
         - retention.restricted
         - signal.detected
+        - signal.updated
         - signal.resolved
         - voice.profile_created
         - voice.profile_updated
@@ -151,6 +152,7 @@ components:
         - voice.build_changed
         - voice.version_changed
         - voice.draft_outcome_recorded
+        - user.updated
         - user.invited
         - user.activated
         - user.password_link_issued
@@ -4073,6 +4075,28 @@ components:
           minimum: 0
           description: How many live sessions of the member the removal ended.
       additionalProperties: false
+
+    PublicEventSignalUpdated:
+      type: object
+      x-event-type: signal.updated
+      x-version: 1
+      x-entity-type: signal
+      additionalProperties: false
+      required: [signal_id, owner_id]
+      properties:
+        signal_id: { type: string, format: uuid }
+        owner_id: { type: string, format: uuid }
+
+    PublicEventUserUpdated:
+      type: object
+      x-event-type: user.updated
+      x-version: 1
+      x-entity-type: user
+      additionalProperties: false
+      required: [user_id, by]
+      properties:
+        user_id: { type: string, format: uuid }
+        by: { type: string, format: uuid }
 
     PublicEventUserDeactivated:
       type: object

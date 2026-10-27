@@ -629,6 +629,7 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
+- `data_subject_request_assignee_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.assignee_id IS NOT NULL) AND (new.status = ANY (ARRAY['open', 'in_progress'])))) EXECUTE FUNCTION refuse_retired_member_work('assignee_id')`
 - `trg_dsr_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## lead_privacy_notice
@@ -759,6 +760,10 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 - `privacy_notice_case_delivery`: `btree (delivery_id) WHERE (delivery_id IS NOT NULL)`
 - `privacy_notice_case_due`: `btree (due_at, id) WHERE (state = ANY (ARRAY['open', 'assigned', 'queued', 'delivery_failed', 'blocked']))`
 - `privacy_notice_case_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `privacy_notice_case_owner_user_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_user_id IS NOT NULL) AND (new.state = ANY (ARRAY['open', 'assigned', 'queued', 'delivery_failed', 'blocked'])))) EXECUTE FUNCTION refuse_retired_member_work('owner_user_id')`
 
 ## privacy_request_proof
 

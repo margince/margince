@@ -3403,6 +3403,14 @@ func (stubs) ArchiveServiceMember(w nethttp.ResponseWriter, r *nethttp.Request, 
 	httperr.NotImplemented(w, r, "ArchiveServiceMember")
 }
 
+func (stubs) GetMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetMember")
+}
+
+func (stubs) UpdateMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "UpdateMember")
+}
+
 func (stubs) GetUserAccess(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetUserAccess")
 }
@@ -3419,6 +3427,10 @@ func (stubs) HandOverUserWork(w nethttp.ResponseWriter, r *nethttp.Request, id c
 	httperr.NotImplemented(w, r, "HandOverUserWork")
 }
 
+func (stubs) MergeMembers(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.MergeMembersParams) {
+	httperr.NotImplemented(w, r, "MergeMembers")
+}
+
 func (stubs) RemoveUserMfa(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RemoveUserMfa")
 }
@@ -3429,6 +3441,14 @@ func (stubs) IssueUserPasswordLink(w nethttp.ResponseWriter, r *nethttp.Request,
 
 func (stubs) ReactivateUser(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ReactivateUser")
+}
+
+func (stubs) RemoveMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RemoveMember")
+}
+
+func (stubs) PreviewMemberRetirement(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.PreviewMemberRetirementParams) {
+	httperr.NotImplemented(w, r, "PreviewMemberRetirement")
 }
 
 func (stubs) ChangeUserRole(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

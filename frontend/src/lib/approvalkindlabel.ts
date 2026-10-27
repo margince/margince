@@ -31,6 +31,7 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   progress_deal: "approval.kind.advance_deal",
   promote_lead: "approval.kind.promote_lead",
   archive_record: "approval.kind.archive_record",
+  merge_members: "approval.kind.merge_members",
   merge_records: "approval.kind.merge_records",
   // Not a second spelling of merge_records: that folds one RECORD into another
   // and keeps a pointer home, this folds a vocabulary WORD and releases its

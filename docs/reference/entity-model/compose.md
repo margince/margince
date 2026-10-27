@@ -222,6 +222,10 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `idx_analytics_share_snapshot`: `btree (snapshot_id)`
 - `uq_analytics_share_token`: `unique, btree (token_hash)`
 
+**Triggers**
+
+- `analytics_share_scope_user_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.scope_id IS NOT NULL) AND ((new.scope_kind = 'owner') AND (new.revoked_at IS NULL) AND (new.expires_at > now())))) EXECUTE FUNCTION refuse_retired_member_work('scope_id')`
+
 ## brief_item
 
 15 columns · primary key `(id)` · referenced by 0 foreign keys

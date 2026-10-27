@@ -6332,6 +6332,66 @@ paths:
               schema: {$ref: '#/components/schemas/UserListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /users/{id}/retirement-preview:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Identity]
+      operationId: previewMemberRetirement
+      summary: Preview removing a member or merging them into another account.
+      parameters:
+        - name: mode
+          in: query
+          schema: {type: string, enum: [merge, remove], default: remove}
+        - name: to_user_id
+          in: query
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: The work, unresolved dependencies and confirmation token.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MemberRetirementPreview'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '409': {$ref: '#/components/responses/VersionConflict'}
+      description: Preview removing a member or merging them into another account.
+  /users/{id}/merge:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Identity]
+      operationId: mergeMembers
+      summary: Merge a duplicate into the selected surviving member.
+      description: |-
+        The source must be an unused imported or invited identity. The acting administrator cannot be the survivor.
+
+        Needs the passport permission Change records.
+
+        Waits for a human to approve.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/MergeMembersRequest'}
+      responses:
+        '200':
+          description: Work transferred and duplicate removed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [merged]
+                properties:
+                  merged: {type: boolean}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/VersionConflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /users/names:
     get:
       tags: [Identity]
@@ -14507,6 +14567,17 @@ components:
       properties:
         to_phase: {type: string, enum: [initiative, pursuing, delivering, closed]}
         reason: {type: [string, 'null'], description: 'Required when to_phase=closed (422 closed_reason_required); recorded on the phase-history row either way.'}
+    HandoverCounts:
+      type: object
+      description: Live records per kind.
+      required: [lead, contact, company, deal, project, task]
+      properties:
+        lead: {type: integer, minimum: 0}
+        contact: {type: integer, minimum: 0}
+        company: {type: integer, minimum: 0}
+        deal: {type: integer, minimum: 0}
+        project: {type: integer, minimum: 0}
+        task: {type: integer, minimum: 0, description: Open tasks assigned to the member.}
     BulkRecordType:
       type: string
       description: |-
@@ -18626,6 +18697,36 @@ components:
             $ref: '#/components/schemas/ReportingExecution'
         next_cursor:
           type: string
+    MemberRetirementBlocker:
+      type: string
+      enum: [approval_decisions, automations, booking_pages, data_requests, deal_rooms, introductions, lists, stewarded_lists, mail_drafts, meeting_invitations, meeting_proposals, privacy_notices, record_responsibilities, reports, report_schedules, saved_views, scheduled_mail, handoffs, voice_profiles, web_forms, webhooks, weekly_plans, analytics_shares, source_used, self_survivor, deactivate_first, choose_survivor, choose_receiver, private_tasks, work_not_transferable, state_changed]
+    MemberRetirementConsequence:
+      type: string
+      enum: [source_signed_out, connectors_reconnect, survivor_access, original_attribution, private_alerts_archived, crm_private_records_move, private_audiences_retained, email_reserved, survivor_inactive]
+    MemberRetirementPreview:
+      type: object
+      required: [owned, signal_count, blockers, token, source_name, source_email, consequences]
+      properties:
+        owned: {$ref: '#/components/schemas/HandoverCounts'}
+        signal_count: {type: integer, minimum: 0}
+        blockers:
+          type: array
+          items: {$ref: '#/components/schemas/MemberRetirementBlocker'}
+        consequences:
+          type: array
+          items: {$ref: '#/components/schemas/MemberRetirementConsequence'}
+        token: {type: string}
+        source_name: {type: string}
+        source_email: {type: string, format: email}
+        survivor_name: {type: string}
+        survivor_email: {type: string, format: email}
+    MergeMembersRequest:
+      type: object
+      additionalProperties: false
+      required: [to_user_id, preview_token]
+      properties:
+        to_user_id: {type: string, format: uuid}
+        preview_token: {type: string, minLength: 1}
     User:
       type: object
       description: A seat — human or first-party agent.
@@ -18670,11 +18771,18 @@ components:
           items: {type: string, format: uuid}
           description: >-
             The live teams this user belongs to, ordered by team name. Present ONLY for an admin caller, on the same terms as `roles`: the roster answers every authenticated user because the share and assignee pickers read it, and who is in which team is not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no scope and no share, so listing one would describe access the user does not have.
+        email_editable:
+          type: boolean
+          description: Whether this unused member's sign-in email can still be corrected. Present only on the administration view.
+        merged_from:
+          type: array
+          items: {$ref: '#/components/schemas/SeatName'}
+          description: Original account identities consolidated into this member, present only on the administration view.
         allowed_actions:
           type: array
           items:
             type: string
-            enum: [change_role, issue_password_link, remove_mfa, deactivate, reactivate, hand_over]
+            enum: [change_role, issue_password_link, remove_mfa, deactivate, reactivate, hand_over, edit, merge, remove]
           description: >-
             The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
         last_active_at:

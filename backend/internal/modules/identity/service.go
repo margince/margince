@@ -38,6 +38,7 @@ const (
 // Service owns identity: the singleton company, users, opaque
 // server-side sessions.
 type Service struct {
+	memberWork MemberWork
 	// db binds the installation's workspace, resolved through this service's
 	// own InstallationWorkspace — which reads no tenant table, so a service
 	// holding a handle that resolves through it is not circular at runtime

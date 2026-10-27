@@ -246,6 +246,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterDuplicateTools(r, stubDuplicateQueue{})
 	RegisterListTools(r, &stubLists{})
 	RegisterImportTools(r, stubImports{})
+	RegisterMemberTools(r, seamProbeMembers{})
 	RegisterListTool(r, nil, probeVocabulary{})
 	RegisterRecordPartsTool(r, seamProbeRecordParts{})
 	RegisterReadViewTool(r, probeViews, nil)

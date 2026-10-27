@@ -124,6 +124,16 @@ type DerivedEvidence struct {
 // unchanged account is the normal case, not a failure, and the fingerprint
 // index covers dismissed rows so a dismissal is never undone by the next pass.
 func RecordDerived(ctx context.Context, tx pgx.Tx, in DerivedSignal, detectedAt time.Time) (bool, error) {
+	if !in.PrivateTo.IsZero() {
+		owner, found, err := auth.ConsolidatedMemberTx(ctx, tx, in.PrivateTo)
+		if err != nil {
+			return false, err
+		}
+		if !found {
+			return false, nil
+		}
+		in.PrivateTo = owner
+	}
 	evidence, err := json.Marshal(derivedEvidenceRows(in.Evidence))
 	if err != nil {
 		return false, fmt.Errorf("encode derived signal evidence: %w", err)

@@ -16,6 +16,8 @@ import type { User } from "./users-members";
 const ago = (hours: number) =>
   new Date(Date.now() - hours * 3_600_000).toISOString();
 const EVERY_VERB: User["allowed_actions"] = [
+  "edit",
+  "merge",
   "change_role",
   "issue_password_link",
   "deactivate",
@@ -81,7 +83,7 @@ const RETIRED: User = {
   team_ids: [],
   last_active_at: ago(24 * 60),
   created_at: "2026-01-20T09:00:00Z",
-  allowed_actions: ["change_role", "reactivate"],
+  allowed_actions: ["edit", "merge", "remove", "change_role", "reactivate"],
 };
 
 const HELD: User = {
