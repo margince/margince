@@ -36489,6 +36489,12 @@ export interface components {
          * @enum {string}
          */
         MailDraftAnchorType: "activity" | "contact" | "company" | "deal" | "lead" | "project";
+        /** @description One record the draft was written from. A saved agent draft keeps these so the composer files the sent mail where the draft was grounded, rather than rebuilding links from whichever page it was opened on. */
+        MailDraftGround: {
+            anchor_type: components["schemas"]["MailDraftAnchorType"];
+            /** Format: uuid */
+            anchor_id: string;
+        };
         /**
          * @description The composer's fields as they stand. Every content field is optional and an omitted
          *     one saves as empty, because a draft is whatever the rep had typed so far.
@@ -36512,6 +36518,8 @@ export interface components {
             anchor_type: components["schemas"]["MailDraftAnchorType"];
             /** Format: uuid */
             anchor_id: string;
+            /** @description The records this draft was written from, which an agent draft records and a human draft leaves empty. The composer files a sent draft under these, so a draft grounded in a deal reaches that deal's timeline even when it is opened from the contact page. */
+            readonly grounding?: components["schemas"]["MailDraftGround"][];
             to: string[];
             cc: string[];
             bcc: string[];
