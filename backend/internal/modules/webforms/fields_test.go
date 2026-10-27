@@ -16,10 +16,17 @@ var testFormID = ids.MustParse("018f0000-0000-7000-8000-000000000001")
 
 func TestCommonFieldSpellingsReadAsLeadFields(t *testing.T) {
 	e := readEnquiry([]field{
-		{"your-email", "Ada@Example.com"}, {"Vorname", "Ada"}, {"Nachname", "Lovelace"},
-		{"Telefon", "+49 30 1234"}, {"Firma", "Engines Ltd"}, {"your-message", "Hi there"},
-		{"Datenschutz", "on"}, {"utm_source", "spring-mailing"}, {"budget", "10k"},
-		{"_mrg_hp", ""}, {"_mrg_ts", "1"},
+		{"your-email", "Ada@Example.com"},
+		{"Vorname", "Ada"},
+		{"Nachname", "Lovelace"},
+		{"Telefon", "+49 30 1234"},
+		{"Firma", "Engines Ltd"},
+		{"your-message", "Hi there"},
+		{"Datenschutz", "on"},
+		{"utm_source", "spring-mailing"},
+		{"budget", "10k"},
+		{"_mrg_hp", ""},
+		{"_mrg_ts", "1"},
 	}, nil)
 	if e.Email != "ada@example.com" || e.FullName != "Ada Lovelace" || e.Phone != "+49 30 1234" ||
 		e.Company != "Engines Ltd" || e.Message != "Hi there" || !e.Consent {

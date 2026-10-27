@@ -36,14 +36,25 @@ type UpdateInput struct {
 	IfVersion            *int64
 }
 
+// The web_form columns an update may clear, named once for the patch, the
+// clear list and the audit image.
+const (
+	colLeadOrigin           = "lead_origin"
+	colOwnerID              = "owner_id"
+	colConsentPolicyVersion = "consent_policy_version"
+	colConsentWording       = "consent_wording"
+	colRedirectURL          = "redirect_url"
+	colSuccessMessage       = "success_message"
+)
+
 func clearableColumns(f Form) map[string]storekit.Clearable {
 	return map[string]storekit.Clearable{
-		"lead_origin":            {Column: "lead_origin", Current: f.LeadOrigin},
-		"owner_id":               {Column: "owner_id", Current: f.OwnerID},
-		"consent_policy_version": {Column: "consent_policy_version", Current: f.ConsentPolicyVersion},
-		"consent_wording":        {Column: "consent_wording", Current: f.ConsentWording},
-		"redirect_url":           {Column: "redirect_url", Current: f.RedirectURL},
-		"success_message":        {Column: "success_message", Current: f.SuccessMessage},
+		colLeadOrigin:           {Column: colLeadOrigin, Current: f.LeadOrigin},
+		colOwnerID:              {Column: colOwnerID, Current: f.OwnerID},
+		colConsentPolicyVersion: {Column: colConsentPolicyVersion, Current: f.ConsentPolicyVersion},
+		colConsentWording:       {Column: colConsentWording, Current: f.ConsentWording},
+		colRedirectURL:          {Column: colRedirectURL, Current: f.RedirectURL},
+		colSuccessMessage:       {Column: colSuccessMessage, Current: f.SuccessMessage},
 	}
 }
 
@@ -96,17 +107,17 @@ func assign[T any](dst **T, v *T) {
 
 func clearField(f *Form, field string) {
 	switch field {
-	case "lead_origin":
+	case colLeadOrigin:
 		f.LeadOrigin = nil
-	case "owner_id":
+	case colOwnerID:
 		f.OwnerID = nil
-	case "consent_policy_version":
+	case colConsentPolicyVersion:
 		f.ConsentPolicyVersion = nil
-	case "consent_wording":
+	case colConsentWording:
 		f.ConsentWording = nil
-	case "redirect_url":
+	case colRedirectURL:
 		f.RedirectURL = nil
-	case "success_message":
+	case colSuccessMessage:
 		f.SuccessMessage = nil
 	}
 }
@@ -190,7 +201,7 @@ func (s *Store) UpdateForm(ctx context.Context, id ids.UUID, in UpdateInput) (Fo
 // one while holding another is how a busy pool deadlocks.
 func (s *Store) replacementSecret(ctx context.Context, id ids.UUID, pasted *string) (*string, error) {
 	if pasted == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // no secret pasted means no replacement, which is no failure
 	}
 	current, err := s.GetForm(ctx, id)
 	if err != nil {
@@ -213,18 +224,18 @@ func patchFor(current, next Form) *storekit.Patch {
 	p.Set("consent_required", current.ConsentRequired, next.ConsentRequired)
 	p.Set("state", current.State, next.State)
 	for column, pair := range map[string][2]*string{
-		"lead_origin":            {current.LeadOrigin, next.LeadOrigin},
-		"consent_policy_version": {current.ConsentPolicyVersion, next.ConsentPolicyVersion},
-		"consent_wording":        {current.ConsentWording, next.ConsentWording},
-		"redirect_url":           {current.RedirectURL, next.RedirectURL},
-		"success_message":        {current.SuccessMessage, next.SuccessMessage},
+		colLeadOrigin:           {current.LeadOrigin, next.LeadOrigin},
+		colConsentPolicyVersion: {current.ConsentPolicyVersion, next.ConsentPolicyVersion},
+		colConsentWording:       {current.ConsentWording, next.ConsentWording},
+		colRedirectURL:          {current.RedirectURL, next.RedirectURL},
+		colSuccessMessage:       {current.SuccessMessage, next.SuccessMessage},
 	} {
 		if pair[1] != nil {
 			p.Set(column, pair[0], pair[1])
 		}
 	}
 	if next.OwnerID != nil {
-		p.Set("owner_id", current.OwnerID, next.OwnerID)
+		p.Set(colOwnerID, current.OwnerID, next.OwnerID)
 	}
 	return p
 }

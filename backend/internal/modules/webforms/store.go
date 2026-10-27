@@ -101,7 +101,7 @@ func checkSettings(fieldMap map[string]string, consentRequired bool, wording, re
 	if err := checkRedirect(redirect); err != nil {
 		return err
 	}
-	if err := checkBounded("success_message", success, maxSuccessMessage); err != nil {
+	if err := checkBounded(colSuccessMessage, success, maxSuccessMessage); err != nil {
 		return err
 	}
 	return checkSenderSecret(secret)
@@ -166,7 +166,7 @@ func checkReferences(ctx context.Context, tx pgx.Tx, origin *string, owner *ids.
 			return err
 		}
 		if !known {
-			return badInput("lead_origin", "%q is not an active lead origin; list them at /v1/lead-origins", *origin)
+			return badInput(colLeadOrigin, "%q is not an active lead origin; list them at /v1/lead-origins", *origin)
 		}
 	}
 	if owner != nil {
@@ -180,9 +180,9 @@ func checkReferences(ctx context.Context, tx pgx.Tx, origin *string, owner *ids.
 func auditImage(f Form) map[string]any {
 	return map[string]any{
 		"name": f.Name, "sender": f.Sender, "allowed_origins": f.AllowedOrigins,
-		"lead_origin": f.LeadOrigin, "owner_id": f.OwnerID, "field_map": f.FieldMap,
-		"consent_required": f.ConsentRequired, "consent_policy_version": f.ConsentPolicyVersion,
-		"redirect_url": f.RedirectURL, "state": f.State,
+		colLeadOrigin: f.LeadOrigin, colOwnerID: f.OwnerID, "field_map": f.FieldMap,
+		"consent_required": f.ConsentRequired, colConsentPolicyVersion: f.ConsentPolicyVersion,
+		colRedirectURL: f.RedirectURL, "state": f.State,
 	}
 }
 

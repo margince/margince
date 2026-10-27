@@ -186,7 +186,7 @@ func checkRedirect(raw *string) error {
 	}
 	u, err := url.Parse(*raw)
 	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil {
-		return badInput("redirect_url", "must be an https address")
+		return badInput(colRedirectURL, "must be an https address")
 	}
 	return nil
 }
@@ -211,7 +211,7 @@ func checkBounded(field string, value *string, limit int) error {
 // say what the visitor agreed to, or the note on the lead proves nothing.
 func checkConsent(required bool, wording *string) error {
 	if required && (wording == nil || strings.TrimSpace(*wording) == "") {
-		return badInput("consent_wording", "is required when consent_required is true")
+		return badInput(colConsentWording, "is required when consent_required is true")
 	}
-	return checkBounded("consent_wording", wording, maxConsentWordingLength)
+	return checkBounded(colConsentWording, wording, maxConsentWordingLength)
 }

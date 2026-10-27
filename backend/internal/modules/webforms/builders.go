@@ -13,7 +13,7 @@ import (
 // is read as one, whatever its label says.
 
 type webflowBody struct {
-	TriggerType string `json:"triggerType"`
+	TriggerType string `json:"triggerType"` //nolint:tagliatelle // Webflow's wire format (camelCase)
 	Payload     struct {
 		ID   string                     `json:"id"`
 		Data map[string]json.RawMessage `json:"data"`
@@ -122,20 +122,22 @@ func typeformPayload(body []byte) (builderPayload, error) {
 }
 
 type tallyBody struct {
-	EventID   string `json:"eventId"`
-	EventType string `json:"eventType"`
+	EventID   string `json:"eventId"`   //nolint:tagliatelle // Tally's wire format (camelCase)
+	EventType string `json:"eventType"` //nolint:tagliatelle // Tally's wire format (camelCase)
 	Data      struct {
 		Fields []struct {
 			Key     string          `json:"key"`
 			Label   string          `json:"label"`
 			Type    string          `json:"type"`
 			Value   json.RawMessage `json:"value"`
-			Options []struct {
-				ID   string `json:"id"`
-				Text string `json:"text"`
-			} `json:"options"`
+			Options []tallyOption   `json:"options"`
 		} `json:"fields"`
 	} `json:"data"`
+}
+
+type tallyOption struct {
+	ID   string `json:"id"`
+	Text string `json:"text"`
 }
 
 func tallyPayload(body []byte) (builderPayload, error) {
@@ -164,10 +166,7 @@ func tallyPayload(body []byte) (builderPayload, error) {
 	return builderPayload{Fields: out, ID: in.EventID}, nil
 }
 
-func optionTexts(chosen []string, options []struct {
-	ID   string `json:"id"`
-	Text string `json:"text"`
-}) []string {
+func optionTexts(chosen []string, options []tallyOption) []string {
 	texts := make([]string, 0, len(chosen))
 	for _, id := range chosen {
 		for _, o := range options {

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/webforms"
@@ -43,7 +44,7 @@ func (l webFormLeads) Land(ctx context.Context, landing webforms.Landing) error 
 	subject := "Website form: " + landing.FormName
 	body := webFormNote(landing)
 	_, _, err = l.activities.LogActivity(ctx, activities.LogActivityInput{
-		Kind: "note", Subject: &subject, Body: &body, Links: []activities.ActivityLinkInput{*target},
+		Kind: string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Links: []activities.ActivityLinkInput{*target},
 		SourceSystem: &system, SourceID: &key, Source: webFormLeadSource,
 	})
 	if err != nil {
@@ -76,18 +77,18 @@ func (l webFormLeads) lead(ctx context.Context, landing webforms.Landing) (*acti
 		lead, _, err = l.leads.CreateLead(ctx, in)
 	}
 	if duplicate, ok := errors.AsType[*contacts.DuplicateLeadError](err); ok {
-		return &activities.ActivityLinkInput{EntityType: "lead", EntityID: duplicate.ExistingID.UUID}, nil
+		return &activities.ActivityLinkInput{EntityType: string(recordTypeLead), EntityID: duplicate.ExistingID.UUID}, nil
 	}
 	if held, ok := errors.AsType[*contacts.ContactHoldsIdentityError](err); ok {
 		if held.ContactID.IsZero() {
-			return nil, nil
+			return nil, nil //nolint:nilnil // a contact this principal may not read has no note target, and that is no failure
 		}
-		return &activities.ActivityLinkInput{EntityType: "contact", EntityID: held.ContactID.UUID}, nil
+		return &activities.ActivityLinkInput{EntityType: string(recordTypeContact), EntityID: held.ContactID.UUID}, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	return &activities.ActivityLinkInput{EntityType: "lead", EntityID: ids.UUID(lead.Id)}, nil
+	return &activities.ActivityLinkInput{EntityType: string(recordTypeLead), EntityID: ids.UUID(lead.Id)}, nil
 }
 
 func webFormLeadInput(landing webforms.Landing) contacts.CreateLeadInput {
