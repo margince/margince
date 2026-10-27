@@ -80,17 +80,6 @@ type sawRequest struct {
 	released bool
 }
 
-// probeCounter records whether the per-field ownership split ran. A redeemed
-// retry must not be re-split: it carries exactly the sub-patch a human released,
-// and probing it again would stage a second approval for the overwrite that was
-// just approved.
-type probeCounter struct{ probes int }
-
-func (p *probeCounter) HumanOwnedConflicts(context.Context, string, ids.UUID, json.RawMessage) ([]string, error) {
-	p.probes++
-	return nil, nil
-}
-
 // autoExecutedMove runs one open→open deal move — a move the tier gate admits
 // 🟢, reading the deal at version 12 — carrying the token and the caller
 // If-Match given, and answers what the handler saw plus the status the door
@@ -259,16 +248,13 @@ func TestADisagreementBetweenTheTwoServerPinsIsForwardedAndReported(t *testing.T
 	}
 }
 
-// Where the gate read no record — a static auto-execute tier — the approval's
-// own pin is what conditions the write, and the redeemed retry goes straight to
-// the handler: it carries exactly the sub-patch a human released, so re-running
-// the ownership split over it would stage a second approval for the overwrite
-// just approved.
-func TestAReleasedRetryOnAStaticTierIsPinnedAndNotResplit(t *testing.T) {
+// Where the gate read no record, on a static auto-execute tier, the approval's
+// own pin conditions the write. The redeemed retry goes straight to the handler.
+func TestAReleasedRetryOnAStaticTierIsPinned(t *testing.T) {
 	contact := ids.NewV7()
 	pol := agentPolicies["PATCH /v1/contacts/{id}"]
 	if pol.Tier != tierAutoExecute || pol.Tool != "update_record" {
-		t.Fatalf("PATCH /v1/contacts/{id} is %q on %s — this case is about a redeemed retry of the split", pol.Tier, pol.Tool)
+		t.Fatalf("PATCH /v1/contacts/{id} is %q on %s — this case is about a redeemed retry of an update", pol.Tier, pol.Tool)
 	}
 	body := []byte(`{"display_name":"Ada"}`)
 	r := httptest.NewRequest(http.MethodPatch, "/v1/contacts/"+contact.String(), http.NoBody)
@@ -281,16 +267,15 @@ func TestAReleasedRetryOnAStaticTierIsPinnedAndNotResplit(t *testing.T) {
 	next := http.HandlerFunc(func(_ http.ResponseWriter, got *http.Request) {
 		saw = sawRequest{ran: true, ifMatch: got.Header.Get("If-Match"), released: agents.ApprovalRedeemed(got.Context())}
 	})
-	ownership := &probeCounter{}
 	reg := agents.NewRegistry(nil, auth.NewGate(fullSeat{}))
-	agents.RegisterCoreTools(reg, seamRecord{}, nil, nil, nil, nil, nil, nil)
+	agents.RegisterCoreTools(reg, seamRecord{}, nil, nil, nil, nil, nil)
 	spec, _, ok := operationSpec(pol, reg)
 	if !ok {
 		t.Fatal("the registry serves no update_record spec for the REST twin to admit against")
 	}
 	admitAgentCall(httptest.NewRecorder(), r, next, admissionOutcome{
-		staging: &countingRedeemer{pin: 7, pinned: true}, ownership: ownership,
-		pol: pol, body: body, commands: restCommandDeps{records: seamRecord{}},
+		staging: &countingRedeemer{pin: 7, pinned: true},
+		pol:     pol, body: body, commands: restCommandDeps{records: seamRecord{}},
 		spec: spec, registry: reg,
 	})
 
@@ -300,10 +285,6 @@ func TestAReleasedRetryOnAStaticTierIsPinnedAndNotResplit(t *testing.T) {
 	if saw.ifMatch != "7" {
 		t.Errorf("forwarded If-Match = %q, want \"7\" — with no version read at admission the approval's "+
 			"own pin is the only one anything proved", saw.ifMatch)
-	}
-	if ownership.probes != 0 {
-		t.Errorf("the ownership split ran %d times on a redeemed retry — it would stage a second approval "+
-			"for the overwrite a human just approved", ownership.probes)
 	}
 }
 
@@ -350,7 +331,7 @@ func gateCallCharges(t *testing.T, sourceSemantic, token string, redeemErr error
 	charger := &countingCharges{spent: map[agentvolume.Counter]int{}}
 
 	reg := agents.NewRegistry(nil, auth.NewGate(fullSeat{}), agents.WithVolumeCharger(charger))
-	agents.RegisterCoreTools(reg, records, stages, nil, nil, nil, nil, nil)
+	agents.RegisterCoreTools(reg, records, stages, nil, nil, nil, nil)
 
 	r := httptest.NewRequest(http.MethodPost, "/v1/deals/"+deal.String()+"/advance",
 		strings.NewReader(`{"to_stage_id":"`+target.String()+`"}`))
@@ -366,7 +347,7 @@ func gateCallCharges(t *testing.T, sourceSemantic, token string, redeemErr error
 	recorder := httptest.NewRecorder()
 	// nil tags: this walk redeems a deal advance, and a nil seam is a legal
 	// wiring for every command that does not name a tag.
-	gate := agentGate(reg, staging, stages, records, nil, nil, nil, auth.NewGate(fullSeat{}))
+	gate := agentGate(reg, staging, stages, records, nil, nil, auth.NewGate(fullSeat{}))
 	gate(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})).ServeHTTP(recorder, r)

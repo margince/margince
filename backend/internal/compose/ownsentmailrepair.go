@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -110,10 +111,7 @@ func selectOwnSentMailCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]o
 		  JOIN capture_import ci ON ci.activity_id = a.id
 		  JOIN unnest($4::uuid[], $5::text[]) AS proved(seat, address)
 		    ON proved.seat = ci.user_id AND proved.address = a.counterparty_email
-		  JOIN raw_capture rc
-		    ON rc.id = a.raw_capture_id
-		    OR (a.raw_capture_id IS NULL
-		        AND rc.source_system = a.source_system AND rc.source_id = a.source_id)
+		  JOIN raw_capture rc ON `+storekit.StoredOriginalSQL("a", "rc")+`
 		  LEFT JOIN activity_own_sent_mail_repair r ON r.activity_id = a.id
 		 WHERE a.kind = 'email' AND a.direction = 'inbound'
 		   AND a.archived_at IS NULL AND a.restricted_at IS NULL

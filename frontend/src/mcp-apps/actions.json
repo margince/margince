@@ -1,5 +1,4 @@
 {
   "approval": ["decide_approvals"],
-  "field-conflict": ["decide_approvals", "update_record"],
   "create-followups": ["resolve_duplicates", "change_tags"]
 }
