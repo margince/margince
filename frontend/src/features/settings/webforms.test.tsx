@@ -379,14 +379,27 @@ describe("web form settings", () => {
     ]);
   });
 
-  it("names only the entries a path, query or fragment would narrow", () => {
+  it("names only the entries saved as another spelling of their website", () => {
     const draft = {
       ...draftFor(),
       origins:
-        "https://a.example\nhttps://b.example/\nhttps://c.example/x?y\nnot a url",
+        "https://a.example\nhttps://b.example/\nhttps://c.example/x?y\nhttps://d.example:443\nnot a url",
     };
     expect(narrowedOrigins(draft)).toEqual([
       { entry: "https://c.example/x?y", origin: "https://c.example" },
+      { entry: "https://d.example:443", origin: "https://d.example" },
+    ]);
+  });
+
+  it("sends each website as a post's Origin header spells it", () => {
+    const draft = {
+      ...draftFor(),
+      origins: "https://c.example/x?y\nhttps://d.example:443\nnot-a-url",
+    };
+    expect(webFormBodyOf(draft).allowed_origins).toEqual([
+      "https://c.example",
+      "https://d.example",
+      "not-a-url",
     ]);
   });
 

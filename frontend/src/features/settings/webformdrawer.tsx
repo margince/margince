@@ -98,28 +98,37 @@ export function missingFields(
   return missing;
 }
 
+// The website an entry names, as a post's Origin header spells it: scheme, host
+// and a port only when it is not the default. Null for text that is no address.
+function websiteOf(entry: string): string | null {
+  if (!URL.canParse(entry)) {
+    return null;
+  }
+  const { origin } = new URL(entry);
+  return origin === "null" ? null : origin;
+}
+
 /**
- * The entries that name a page rather than a website, and the website each is
- * kept as. A post's Origin header carries only scheme, host and port, so a
- * path cannot narrow who may post. The reader is told so before saving.
+ * The entries saved as some other spelling of their website, such as a page
+ * address or a default port. A path cannot narrow who may post, so the reader
+ * is told before saving.
  */
 export function narrowedOrigins(
   draft: WebFormDraft,
 ): { entry: string; origin: string }[] {
   return originsOf(draft).flatMap((entry) => {
-    if (!URL.canParse(entry)) {
-      return [];
-    }
-    const { origin, pathname, search, hash } = new URL(entry);
-    const page = pathname !== "/" || search !== "" || hash !== "";
-    return origin !== "null" && page ? [{ entry, origin }] : [];
+    const origin = websiteOf(entry);
+    const same = origin === entry || `${origin}/` === entry;
+    return origin !== null && !same ? [{ entry, origin }] : [];
   });
 }
 
 // The settings create and update share. A builder's secret is sent only when
 // one was typed, so an edit that leaves the field empty keeps the stored one.
 export function webFormBodyOf(draft: WebFormDraft) {
-  const origins = originsOf(draft);
+  // Sent as the Origin header spells it, so a stored `:443` never refuses the
+  // site. Text that is no address goes as typed, for the server to refuse.
+  const origins = originsOf(draft).map((entry) => websiteOf(entry) ?? entry);
   return {
     name: draft.name.trim(),
     ...(draft.sender === "browser" ? { allowed_origins: origins } : {}),
