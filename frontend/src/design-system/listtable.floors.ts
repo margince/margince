@@ -5,7 +5,8 @@
 // the column layout takes as that column's floor.
 
 import { type RefObject, useLayoutEffect, useRef, useState } from "react";
-import type { SizedColumn } from "./listtable.layout";
+import { flushSync } from "react-dom";
+import type { NumericFloors, SizedColumn } from "./listtable.layout";
 
 /**
  * The class of `CellStrip`. A strip ends in an ellipsis by design, so a cell
@@ -52,18 +53,19 @@ function numericPlaces(shown: readonly SizedColumn[]): string {
 }
 
 /**
- * Raises `held` to the widest figure each numeric column holds in the table.
- * It only rises, so paging to smaller figures does not move the columns.
+ * The widest figure each numeric column holds on screen now. It raises `held`,
+ * which never falls, so paging to smaller figures leaves the columns still.
  */
-function raiseFloors(
+function readFigures(
   table: HTMLTableElement,
   places: string,
   held: Record<string, number>,
-) {
+): Record<string, number> {
+  const onScreen: Record<string, number> = {};
   const rows = table.tBodies[0]?.rows;
-  // Without layout (jsdom) a range has no box, and nothing is raised.
+  // Without layout (jsdom) a range has no box, and nothing is read.
   if (!rows || typeof Range.prototype.getBoundingClientRect !== "function") {
-    return;
+    return onScreen;
   }
   for (const place of places.split(" ")) {
     const colon = place.indexOf(":");
@@ -71,16 +73,17 @@ function raiseFloors(
     for (const row of rows) {
       const cell = row.cells[Number(place.slice(0, colon))];
       if (cell && !cell.querySelector(`.${CELL_STRIP_CLASS}`)) {
-        held[key] = Math.max(held[key] ?? 0, inkWidth(cell));
+        onScreen[key] = Math.max(onScreen[key] ?? 0, inkWidth(cell));
       }
     }
+    held[key] = Math.max(held[key] ?? 0, onScreen[key] ?? 0);
   }
+  return onScreen;
 }
 
 /**
- * Measures the table now and again whenever its text changes or it resizes:
- * a new page, search or locale, or a font arriving. Observers report before
- * the frame paints. Returns what stops the watch.
+ * Measures the table now and again when its text changes or it resizes: a new
+ * page, search or locale, or a font arriving. Returns what stops the watch.
  */
 function watchFloors(
   table: HTMLTableElement,
@@ -89,18 +92,25 @@ function watchFloors(
 ): () => void {
   const held: Record<string, number> = {};
   const read = () => {
-    raiseFloors(table, places, held);
-    publish(JSON.stringify(held));
+    const onScreen = readFigures(table, places, held);
+    return JSON.stringify({ held, onScreen } satisfies NumericFloors);
   };
-  read();
-  const mutations = new MutationObserver(read);
+  publish(read());
+  // Renders before the frame paints, so new rows show no figure cut short. A
+  // resize stays scheduled, since rendering inside it resizes the table again.
+  const mutations = new MutationObserver(() => {
+    const floors = read();
+    flushSync(() => publish(floors));
+  });
   mutations.observe(table, {
     childList: true,
     subtree: true,
     characterData: true,
   });
   const resizes =
-    typeof ResizeObserver === "undefined" ? null : new ResizeObserver(read);
+    typeof ResizeObserver === "undefined"
+      ? null
+      : new ResizeObserver(() => publish(read()));
   resizes?.observe(table);
   return () => {
     mutations.disconnect();
@@ -154,4 +164,7 @@ export function useNumericFloors(
   return floors;
 }
 
-const NO_FLOORS = "{}";
+const NO_FLOORS = JSON.stringify({
+  held: {},
+  onScreen: {},
+} satisfies NumericFloors);
