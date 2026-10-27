@@ -35,6 +35,7 @@ import {
 } from "../../lib/leadorigins";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
+import { heldRefusedDials } from "../../lib/refusedfilters";
 import { useMe } from "../../lib/session";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
 import { listQueryParams } from "../../lib/tagfilter";
@@ -47,8 +48,6 @@ import { leadColumns } from "./leads.columns";
 import {
   leadCompanyChips,
   RefusedDialsNote,
-  refusedLeadDials,
-  sendableLeadQuery,
   useRefusalOf,
   useWithheldLeadDials,
 } from "./leads.companydials";
@@ -181,9 +180,9 @@ function LeadsWorkbench({
     initialFilters: opensOnAll ? {} : { owner_id: viewerId },
     // A withheld dial in the address would be refused, so its list is not asked for.
     fetchPage: (query, cursor) =>
-      refusedLeadDials(query, withheld, undefined).length > 0
+      heldRefusedDials(query.filters, withheld).length > 0
         ? Promise.resolve(NO_LEADS)
-        : fetchLeadsPage(sendableLeadQuery(query, withheld), cursor),
+        : fetchLeadsPage(query, cursor),
     // Board or table is this screen's own, so the codec must not read it as a
     // lead filter: unheld it was spread onto `GET /leads?view=board`, counted
     // as a narrowing, and cleared by "clear filters" — which flipped the board

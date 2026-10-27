@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQueryClient } from "@tanstack/react-query";
-import { type Dispatch, type SetStateAction, useEffect, useMemo } from "react";
+import { type Dispatch, type SetStateAction, useMemo } from "react";
 import {
   formatSizeBand,
   SIZE_BAND_OPTIONS,
@@ -13,8 +12,8 @@ import type { ListChip } from "../../design-system/listsurface";
 import { countryOptions } from "../../format/assignedcountries";
 import { industryOptions } from "../../format/industry";
 import { type Locale, type Translator, useT } from "../../i18n";
-import { withoutWithheldDials } from "../../lib/dealranges";
 import { problemStatus } from "../../lib/problem";
+import { heldRefusedDials, useReReadMeWhen } from "../../lib/refusedfilters";
 import { useMe } from "../../lib/session";
 
 // The lead list's dials that read the linked company: what it does, where it
@@ -75,50 +74,33 @@ export function leadCompanyChips(
   );
 }
 
-// A refusal /me did not foresee names no dial, so every company dial the
-// refused query held is the suspect.
-export function refusedLeadDials(
-  query: ListQuery,
-  withheld: ReadonlySet<string>,
-  error: unknown,
-): CompanyDial[] {
-  const held = COMPANY_DIALS.filter((dial) => Boolean(query.filters[dial]));
-  const named = held.filter((dial) => withheld.has(dial));
-  if (named.length > 0) {
-    return named;
+function refusedDialLabel(dial: string, t: Translator): string {
+  if (dial === "list_id") {
+    return t("lists.record.title");
   }
-  return problemStatus(error) === 403 ? held : [];
+  const company = COMPANY_DIALS.find((known) => known === dial);
+  return company ? dialLabel(company, t) : dial;
 }
 
 export function refusedDialNames(
-  dials: readonly CompanyDial[],
+  dials: readonly string[],
   t: Translator,
 ): string {
-  return dials.map((dial) => dialLabel(dial, t)).join(", ");
+  return dials.map((dial) => refusedDialLabel(dial, t)).join(", ");
 }
 
-export function sendableLeadQuery(
-  query: ListQuery,
-  withheld: ReadonlySet<string>,
-): ListQuery {
-  const filters = withoutWithheldDials(query.filters, withheld);
-  return filters === query.filters ? query : { ...query, filters };
-}
-
-// No rows rather than rows the refused dial did not narrow. A refusal /me did
-// not foresee reads /me again, which then withholds the dial.
+// A 403 names no dial, so it only re-reads /me; the dials /me then refuses are
+// named, and a refusal for any other cause stays the list's own error.
 export function useRefusalOf<Row>(
   listQuery: ListState<Row>,
   withheld: ReadonlySet<string>,
-): { refused: CompanyDial[]; state: ListState<Row> } {
-  const refused = refusedLeadDials(listQuery.query, withheld, listQuery.error);
-  const staleRefusal = listQuery.isError && refused.length > 0;
-  const queryClient = useQueryClient();
-  useEffect(() => {
-    if (staleRefusal) {
-      queryClient.invalidateQueries({ queryKey: ["me"] });
-    }
-  }, [staleRefusal, queryClient]);
+): { refused: string[]; state: ListState<Row> } {
+  const refused = heldRefusedDials(listQuery.query.filters, withheld);
+  useReReadMeWhen(
+    refused.length === 0 &&
+      listQuery.isError &&
+      problemStatus(listQuery.error) === 403,
+  );
   const state =
     refused.length > 0
       ? { ...listQuery, rows: [], isError: false, hasMore: false, total: 0 }
@@ -130,7 +112,7 @@ export function RefusedDialsNote({
   dials,
   setQuery,
 }: Readonly<{
-  dials: readonly CompanyDial[];
+  dials: readonly string[];
   setQuery: Dispatch<SetStateAction<ListQuery>>;
 }>) {
   const t = useT();

@@ -38,6 +38,7 @@ import { ProblemError } from "../../lib/problem";
 import { useRecordTags } from "../../lib/tags.queries";
 import { LeadCompany, useLeadCompanyFactsSection } from "./leadcompany";
 import { LeadOwnerControl, statusSetBy } from "./leadheader";
+import { leadIndustry } from "./leadindustry";
 import { LeadProjectAttachButton } from "./leadraillinks";
 import type { Lead, LeadWriter } from "./leads";
 import { mapLeadUpdate } from "./leads.form";
@@ -194,7 +195,7 @@ function useAboutRows(
     },
     text("title", "create.contactTitle"),
     // The linked company's industry speaks for the lead, and shows under it.
-    ...(lead.company_facts?.industry
+    ...(leadIndustry(lead)?.from === "company"
       ? []
       : [
           {

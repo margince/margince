@@ -188,8 +188,8 @@ const LONG_CHIPS = [
   },
 ];
 
-// An applied filter longer than a phone's line: its value gives way, and the
-// "⋮" that removes the filter stays inside the toolbar.
+// An applied filter longer than a phone's line: its value wraps at its spaces,
+// whole, and the "⋮" that removes the filter stays inside the toolbar.
 export const LongAppliedFilterPhone: Story = {
   name: "Long applied filter, phone",
   globals: { viewport: { value: "phone" } },
@@ -215,13 +215,19 @@ export const LongAppliedFilterPhone: Story = {
     for (const row of rows) {
       const tools = row.closest(".lt-tools");
       const menu = row.querySelector(".lt-frow-more");
-      if (!(tools instanceof HTMLElement) || !(menu instanceof HTMLElement)) {
+      const value = row.querySelector(".lt-frow-value");
+      if (
+        !(tools instanceof HTMLElement) ||
+        !(menu instanceof HTMLElement) ||
+        !(value instanceof HTMLElement)
+      ) {
         throw new Error("the applied filter did not render in the toolbar");
       }
-      const edge = tools.getBoundingClientRect().right;
-      await expect(menu.getBoundingClientRect().right).toBeLessThanOrEqual(
-        edge,
-      );
+      const edge = tools.getBoundingClientRect();
+      const box = menu.getBoundingClientRect();
+      await expect(box.left).toBeGreaterThanOrEqual(edge.left);
+      await expect(box.right).toBeLessThanOrEqual(edge.right);
+      await expect(value.scrollWidth).toBeLessThanOrEqual(value.clientWidth);
     }
   },
 };

@@ -23,6 +23,7 @@ import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { leadWriteKeys } from "../../lib/leadkeys";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { leadIndustry } from "./leadindustry";
 
 type Lead = components["schemas"]["Lead"];
 
@@ -153,11 +154,12 @@ export function useLeadCompanyFactsSection(
   const name = useLeadCompanyName(lead);
   const facts = lead.company_facts;
   const rows: DetailRow[] = [];
-  if (facts?.industry) {
+  const industry = leadIndustry(lead);
+  if (industry?.from === "company") {
     rows.push({
       key: "company_industry",
       term: t("create.industry"),
-      value: industryWords(t, facts.industry),
+      value: industryWords(t, industry.code),
     });
   }
   if (facts?.country) {

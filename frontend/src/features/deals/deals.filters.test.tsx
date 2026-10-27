@@ -364,7 +364,7 @@ describe("DealsScreen range dials the reader cannot use", () => {
     expect(urls.some((url) => url.includes("value_max"))).toBe(false);
   });
 
-  it("holds back a country the server refuses a reader who cannot read companies", async () => {
+  it("names a country the role refuses, and asks for no wider list", async () => {
     const urls: string[] = [];
     window.location.hash = ADDRESS;
     vi.stubGlobal(
@@ -381,10 +381,15 @@ describe("DealsScreen range dials the reader cannot use", () => {
         <DealsScreen />
       </SignedIn>,
     );
-    await waitFor(() =>
-      expect(urls.some((url) => url.includes("value_max=5000000"))).toBe(true),
+    expect(
+      await screen.findByText(
+        "Your role cannot narrow deals by Country. Remove that filter to see the list.",
+      ),
+    ).toBeTruthy();
+    expect(urls.filter((url) => new URL(url).pathname === "/v1/deals")).toEqual(
+      [],
     );
-    expect(urls.some((url) => url.includes("country="))).toBe(false);
+    expect(screen.queryByText("Fleet retrofit")).toBeNull();
   });
 
   // The role's refusal is known before any deal loads, so the menu never

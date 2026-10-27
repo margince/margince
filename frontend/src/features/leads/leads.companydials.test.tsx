@@ -30,21 +30,27 @@ const COMPANY_DIALS = ["industry", "country", "size_band"];
 const onePage = () =>
   jsonResponse({ data: [lead], page: { next_cursor: null, has_more: false } });
 
-// The list as a seat sees it: `refused` is what /me names, and `listAnswer`
-// stands in for the server's answer to a narrowed list.
+// The list as a seat sees it: `refused` is what /me names (per read, when it
+// changes between reads), and `listAnswer` stands in for the narrowed list.
 function serve({
   refused,
   listAnswer = onePage,
-}: Readonly<{ refused?: string[]; listAnswer?: (url: string) => Response }>) {
+}: Readonly<{
+  refused?: string[] | ((read: number) => string[]);
+  listAnswer?: (url: string) => Response;
+}>) {
+  let reads = 0;
   return stubFetch(async (url) => {
     if (url.endsWith("/v1/me")) {
+      reads += 1;
       return jsonResponse({
         user: { id: "u-9", display_name: "Me" },
         roles: ["rep"],
         teams: [],
         authorization: meFixture({
           allow: { ...LEAD_GRANTS, company: ["read"] },
-          refusedLeadFilters: refused,
+          refusedLeadFilters:
+            typeof refused === "function" ? refused(reads) : refused,
         }).authorization,
       });
     }
@@ -118,13 +124,30 @@ describe("the lead list's company dials", () => {
     );
   });
 
-  it("names the dial the server refused before /me knew the role, and reads /me again", async () => {
+  it("names a refused list an old link narrows by, and asks for no wider list", async () => {
+    window.location.hash =
+      "#/leads?list_id=0b1e2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
+    const { urls } = serve({ refused: ["list_id"] });
+    render(<LeadsScreen />);
+    expect(
+      await screen.findByText("Your role cannot narrow leads by Lists.", {
+        exact: false,
+      }),
+    ).toBeTruthy();
+    expect(leadListQueries(urls)).toEqual([]);
+    expect(screen.queryByText("Jonas Petersen")).toBeNull();
+  });
+
+  const forbidden = (url: string) =>
+    url.includes("country=DE")
+      ? jsonResponse({ status: 403, title: "Forbidden" }, 403)
+      : onePage();
+
+  it("reads /me again on a refusal it did not foresee, and names the dial /me then refuses", async () => {
     window.location.hash = "#/leads?country=DE";
     const { urls } = serve({
-      listAnswer: (url) =>
-        url.includes("country=DE")
-          ? jsonResponse({ status: 403, title: "Forbidden" }, 403)
-          : onePage(),
+      refused: (read) => (read > 1 ? COMPANY_DIALS : []),
+      listAnswer: forbidden,
     });
     render(<LeadsScreen />);
     expect(
@@ -132,9 +155,22 @@ describe("the lead list's company dials", () => {
         exact: false,
       }),
     ).toBeTruthy();
+    expect(urls.filter((url) => url.endsWith("/v1/me")).length).toBe(2);
+  });
+
+  it("does not blame a held dial for a refusal /me still does not explain", async () => {
+    window.location.hash = "#/leads?country=DE";
+    const { urls } = serve({ listAnswer: forbidden });
+    render(<LeadsScreen />);
     await waitFor(() =>
       expect(urls.filter((url) => url.endsWith("/v1/me")).length).toBe(2),
     );
+    expect(
+      await screen.findByText("Could not load this view. Reload the page."),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText("Your role cannot narrow leads by", { exact: false }),
+    ).toBeNull();
   });
 });
 

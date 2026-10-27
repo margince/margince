@@ -5,7 +5,7 @@ import {
   MoreVertical,
   Plus,
 } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { Fragment, useEffect, useId, useRef, useState } from "react";
 import { useT } from "../i18n";
 import { Button, Radio } from "./atoms";
 import { ChipValueList } from "./listfiltervalues";
@@ -270,7 +270,7 @@ export function FilterRow({
           aria-expanded={openSegment === "value"}
           onClick={() => onToggleSegment("value")}
         >
-          {valueLabel}
+          <WholeWords text={valueLabel} />
         </button>
         <Menu open={openSegment === "value"} head={chip.label}>
           <ChipValueList chip={chip} value={value} onPick={onPick} />
@@ -294,4 +294,20 @@ export function FilterRow({
       </span>
     </fieldset>
   );
+}
+
+// A short line may break the value only at its spaces: "1001–5000" would
+// otherwise break at its dash and read as two figures.
+function WholeWords({ text }: Readonly<{ text: string }>) {
+  let offset = 0;
+  return text.split(" ").map((word, index) => {
+    const key = offset;
+    offset += word.length + 1;
+    return (
+      <Fragment key={key}>
+        {index > 0 && " "}
+        <span className="lt-frow-word">{word}</span>
+      </Fragment>
+    );
+  });
 }

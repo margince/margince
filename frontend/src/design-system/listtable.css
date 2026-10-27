@@ -272,7 +272,7 @@
   align-items: center;
   /* The row's segments are controls and this one is the name they belong to, so
      it stands at the control height rather than at whatever its own text makes. */
-  block-size: var(--controlHeight);
+  min-block-size: var(--controlHeight);
   padding: 0 var(--space-3);
   background: var(--accentLight);
   color: var(--accentText);
@@ -298,24 +298,38 @@
 .lt-frow-value {
   color: var(--textPrimary);
 }
-/* Only the value gives way on a short line, so the "⋮" stays reachable; the
- * fieldset's name and the value step still carry the whole value. */
+/* Only the value gives way on a short line, wrapping at its spaces, so the "⋮"
+ * stays on the row; a single word wider than the row is the one thing cut. */
 .lt-frow {
   max-inline-size: 100%;
+  flex-wrap: wrap;
 }
 .lt-frow > * {
   flex: none;
 }
 .lt-frow > .lt-menu-wrap:has(> .lt-frow-value) {
-  flex: 0 1 auto;
-  min-inline-size: 0;
+  flex: 1 1 0;
+  max-inline-size: calc(100% - var(--space-6));
+  margin-inline-end: var(--space-6);
+}
+/* Drawn over the value's end margin, so a line too short for both moves the
+ * value down with its "⋮" rather than leaving the "⋮" on a line of its own. */
+.lt-frow > .lt-menu-wrap:has(> .lt-frow-more) {
+  margin-inline-start: calc(-1 * var(--space-6));
 }
 .lt-frow-seg.lt-frow-value {
   display: block;
   align-content: center;
   min-inline-size: 0;
+  padding-block: var(--space-1);
   overflow: hidden;
+  white-space: normal;
+  overflow-wrap: normal;
+  text-align: start;
   text-overflow: ellipsis;
+}
+.lt-frow-word {
+  white-space: nowrap;
 }
 
 .lt-frow-more {
@@ -324,7 +338,7 @@
   justify-content: center;
   /* Fills the row like the segment beside it. Its wrapper centres rather than
    * stretches, so without this the button is as tall as its glyph — 15px, under
-   * the 24px a pointer target owes — and the ratio below squares THAT. */
+   * the 24px a pointer target owes. */
   height: 100%;
   /* And a floor under that, because the height above is a PERCENTAGE of a
    * wrapper the row stretches: whenever that chain gives way the target shrinks
@@ -338,11 +352,9 @@
   min-inline-size: var(--space-6);
   min-block-size: var(--space-6);
   padding: 0;
-  /* Square by construction, not by arithmetic. The row stretches this segment
-   * to its own inner height; the ratio turns that into the width, so the "⋮"
-   * cannot become a rectangle when the row's height or its border moves. A
-   * written-down width could only agree with a written-down height by luck. */
-  aspect-ratio: 1;
+  /* A set width, not a square: the value's end margin reserves exactly this
+   * much, and a row a wrapped value made taller must not widen the "⋮". */
+  inline-size: var(--space-6);
   border: 0;
   border-left: 1px solid var(--borderSubtle);
   background: transparent;

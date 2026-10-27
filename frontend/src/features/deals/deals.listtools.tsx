@@ -2,6 +2,7 @@ import { type Dispatch, type SetStateAction, useMemo } from "react";
 import { admittedDealFilters } from "../../components/dealdials";
 import { searchCompanies } from "../../components/filterreference";
 import {
+  type FilterSpec,
   LIST_PAGE_SIZES,
   type ListQuery,
   listPageOf,
@@ -15,15 +16,20 @@ import { SegmentedControl } from "../../design-system/atoms";
 import type { ListChip } from "../../design-system/listsurface";
 import type { ListSelection } from "../../design-system/listtable";
 import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
+import { type Translator, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
-import { withheldDealDials, withoutWithheldDials } from "../../lib/dealranges";
+import {
+  dialOfParameter,
+  withheldDealDials,
+  withoutWithheldDials,
+} from "../../lib/dealranges";
 import {
   DEAL_SCREEN_DIALS,
   type DealFilters,
   PIPELINE_PARAM,
   VIEW_PARAM,
 } from "../../lib/deals.queries";
+import { heldRefusedDials } from "../../lib/refusedfilters";
 import { useMe } from "../../lib/session";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { currentParams, replaceDial, useUrlParams } from "../../lib/urlstate";
@@ -205,19 +211,23 @@ export function useDealScreenDials({
       }),
     [baseCurrency, readsCompanies, refused],
   );
-  const query = useMemo(() => {
+  const { query, refusedDials } = useMemo(() => {
     const read = listQueryFromParams(
       withoutScreenDials(params, DEAL_SCREEN_DIALS),
       opening,
       true,
     );
+    const admitted = admittedDealFilters(read.filters);
     // The address keeps a withheld dial, so it applies again once readable.
-    const filters = withoutWithheldDials(
-      admittedDealFilters(read.filters),
-      withheld,
-    );
-    return filters === read.filters ? read : { ...read, filters };
-  }, [params, opening, withheld]);
+    const filters = withoutWithheldDials(admitted, withheld);
+    return {
+      query: filters === read.filters ? read : { ...read, filters },
+      refusedDials: heldRefusedDials(
+        admitted,
+        roleRefusedDealDials(readsCompanies, refused ?? []),
+      ),
+    };
+  }, [params, opening, withheld, readsCompanies, refused]);
   const setQuery = (update: SetStateAction<ListQuery>) => {
     const live = currentParams();
     const next =
@@ -264,6 +274,7 @@ export function useDealScreenDials({
 
   return {
     query,
+    refusedDials,
     setQuery,
     baseCurrency,
     withheld,
@@ -354,4 +365,40 @@ export function savableDealQuery(
   return narrowsTheDealList(query)
     ? { ...query, filters: { ...query.filters, pipeline_id: pipelineId } }
     : query;
+}
+
+// A value with no base currency is withheld by the installation, not the role,
+// so it is dropped quietly rather than named as refused.
+function roleRefusedDealDials(
+  readsCompanies: boolean,
+  refused: readonly string[],
+): ReadonlySet<string> {
+  const dials = new Set(refused.map(dialOfParameter));
+  if (!readsCompanies) dials.add("company_id");
+  return dials;
+}
+
+// The names of the refused dials, as their chips show them. A refused partner
+// dial is stripped from the query, so its chip is asked for by the dial itself.
+export function refusedDealLabel(
+  dials: readonly (string | undefined)[],
+  {
+    dataChips,
+    surfaceOf,
+    t,
+  }: Readonly<{
+    dataChips: readonly ListChip[];
+    surfaceOf: (partnerApplied: string | undefined) => readonly FilterSpec[];
+    t: Translator;
+  }>,
+): string | undefined {
+  const held = dials.filter((dial): dial is string => Boolean(dial));
+  const chips = surfaceOf(held.find((dial) => dial === "partner_company_id"));
+  const names = held.map((dial) => {
+    const named = dataChips.find((chip) => chip.key === dial);
+    if (named) return named.label;
+    const spec = chips.find((chip) => chip.key === dial);
+    return spec ? t(spec.label) : dial;
+  });
+  return names.length > 0 ? [...new Set(names)].join(", ") : undefined;
 }
