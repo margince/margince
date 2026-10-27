@@ -18,23 +18,22 @@ import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { formatNumber } from "../../format/format";
+import { formatDateTime, formatNumber } from "../../format/format";
 import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
+import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { ENTITY, isEntityKind } from "../../lib/entity";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
+import { type Receipt, useHandledForYou } from "../worklist/worklist.queries";
+import { ReceiptReview } from "../worklist/worklist.receiptreview";
 import { type MagicLine, magicKey } from "./magic.queries";
 import { MagicUndoButton } from "./magic.undo";
 import "../brief/brief.css";
 
 type MagicLineRecord = components["schemas"]["MagicLineRecord"];
 type MagicFieldChange = components["schemas"]["MagicFieldChange"];
-
-// The longest value drawn in full. A company's offer summary can run to a
-// paragraph, and the list is for recognising a change, not reading it.
-const VALUE_CHARS = 140;
 
 function useLineRecords(lineId: string, since: string, open: boolean) {
   return useInfiniteQuery({
@@ -143,6 +142,7 @@ function LineRecordsList({
 
 function RecordRow({ record }: Readonly<{ record: MagicLineRecord }>) {
   const t = useT();
+  const { locale } = useLocale();
   const entity = record.entity;
   const label = entity.label ?? t("magic.noRecord");
   const href = isEntityKind(entity.type)
@@ -152,14 +152,41 @@ function RecordRow({ record }: Readonly<{ record: MagicLineRecord }>) {
     <li className="magic-record">
       <div className="magic-record-head">
         {href ? <a href={href}>{label}</a> : <span>{label}</span>}
-        <MagicUndoButton
-          undo={record.undo}
-          entityType={entity.type}
-          entityId={entity.id}
-        />
+        <RecordActions record={record} />
       </div>
+      <time className="t-caption" dateTime={record.occurred_at}>
+        {formatDateTime(record.occurred_at, locale, viewerZone())}
+      </time>
       <ChangeList changes={record.changes} />
     </li>
+  );
+}
+
+// A grouped change keeps the verbs its receipt has on its own. A reviewed deal
+// change offers Accept or Keep date beside Undo; any other offers its restore.
+function RecordActions({ record }: Readonly<{ record: MagicLineRecord }>) {
+  const reviewed = useReviewedReceipt(record.receipt_id);
+  if (reviewed) {
+    return <ReceiptReview receipt={reviewed} />;
+  }
+  return (
+    <MagicUndoButton
+      undo={record.undo}
+      entityType={record.entity.type}
+      entityId={record.entity.id}
+    />
+  );
+}
+
+// Only off a read that answered now. A refetch that failed keeps the old list
+// cached, and its review verbs may no longer be this reader's to press.
+function useReviewedReceipt(id: string | undefined): Receipt | undefined {
+  const handled = useHandledForYou();
+  if (!id || !handled.isSuccess) {
+    return undefined;
+  }
+  return handled.data.receipts?.find(
+    (receipt) => receipt.id === id && receipt.review !== undefined,
   );
 }
 
@@ -189,7 +216,8 @@ export function ChangeList({
 }
 
 // A stored value as text a reader recognises. Absent and empty read as "empty",
-// a list as its items, anything structured as its JSON, all cut to a length.
+// a list as its items, anything structured as its JSON. Never cut: two long
+// values that differ only at the end must still read as different.
 function valueText(
   field: string,
   value: unknown,
@@ -198,13 +226,11 @@ function valueText(
   if (value === null || value === undefined || value === "") {
     return t("magic.records.empty_value");
   }
-  const text =
-    field === INDUSTRY_FIELD && typeof value === "string"
-      ? industryWords(t, value)
-      : Array.isArray(value)
-        ? value.map((item) => String(item)).join(", ")
-        : typeof value === "object"
-          ? JSON.stringify(value)
-          : String(value);
-  return text.length > VALUE_CHARS ? `${text.slice(0, VALUE_CHARS)}…` : text;
+  if (field === INDUSTRY_FIELD && typeof value === "string") {
+    return industryWords(t, value);
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item)).join(", ");
+  }
+  return typeof value === "object" ? JSON.stringify(value) : String(value);
 }
