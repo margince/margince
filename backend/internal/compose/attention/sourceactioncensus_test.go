@@ -63,8 +63,9 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// writes meeting_status through PATCH /activities/{id}.
 	"meeting_outcome": {"decide"},
 	// The task's own verbs. `complete` acts in place through TaskComplete;
-	// `snooze` opens the record, where the due date lives.
-	"task": {"complete", "snooze", "open"},
+	// `snooze` opens the record, where the due date lives. `take` assigns the
+	// task to the reader through TakeVerb.
+	"task": {"complete", "snooze", "open", "take"},
 	// Answered inline: the decision card is on the row itself.
 	"approval": {"decide", "open"},
 	// Both answered by PairDecision in worklist.pair.tsx, and each on its own

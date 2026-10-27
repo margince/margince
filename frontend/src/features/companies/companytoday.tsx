@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import { NextTaskSlot } from "../../components/nexttaskslot";
 import { TodayPanel } from "../records/record360";
 import "./company360.css";
 import type { TodayReading } from "./companytoday.reading";
@@ -25,11 +26,18 @@ export function NeedsList({
   onOpenTasks?: () => void;
 }>) {
   if (reading.state !== "ready") {
-    return <TodayPanel state={reading.state} onOpenTasks={onOpenTasks} />;
+    return (
+      <TodayPanel
+        state={reading.state}
+        onOpenTasks={onOpenTasks}
+        nextTask={<NextTaskSlot />}
+      />
+    );
   }
   return (
     <TodayPanel
       onOpenTasks={onOpenTasks}
+      nextTask={<NextTaskSlot />}
       footer={reading.footer}
       notice={reading.notice}
       complete={reading.complete}

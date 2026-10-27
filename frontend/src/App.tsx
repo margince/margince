@@ -34,6 +34,7 @@ import {
   fetchSetupStatus,
   SetupClaimScreen,
 } from "./features/sign-in/setupclaim";
+import { NextTaskHost } from "./features/worklist/worklist.nexttask";
 import { useLocale } from "./i18n";
 import { useInstallationDescribed } from "./lib/installationcompany";
 import { RecordZoneProvider, useConfiguredRecordZone } from "./lib/recordzone";
@@ -304,9 +305,15 @@ function AuthedApp({
           the product's, not the reader's mail client's. */}
         <WriteToHost>
           <CallLogHost>
-            <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
-              <ScreenView screen={route.screen} id={route.id} id2={route.id2} />
-            </AuthedShell>
+            <NextTaskHost>
+              <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
+                <ScreenView
+                  screen={route.screen}
+                  id={route.id}
+                  id2={route.id2}
+                />
+              </AuthedShell>
+            </NextTaskHost>
           </CallLogHost>
         </WriteToHost>
         <CommandPalette

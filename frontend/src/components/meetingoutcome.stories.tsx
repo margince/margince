@@ -3,17 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { meFixture } from "../../testing/mefixture";
+import { meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
-} from "../../testing/story-utils";
-import { MeetingOutcome } from "./worklist.meetingoutcome";
-// The line the verbs stand on belongs to the ROW rather than to the screen, so
-// a story mounting them without it draws a bare inline flow with no gap.
-import "./worklist.css";
-import "./worklist.row.css";
+} from "../testing/story-utils";
+import { MeetingOutcome } from "./meetingoutcome";
 
 // What a rep does with a meeting that already happened.
 //
@@ -56,7 +52,7 @@ function stubRoutes(meeting: unknown = CAPTURED_MEETING): void {
 }
 
 const meta: Meta<typeof MeetingOutcome> = {
-  title: "Records/Worklist/Meeting outcome",
+  title: "Records/Meeting outcome",
   component: MeetingOutcome,
   parameters: { layout: "padded" },
 };
@@ -81,11 +77,12 @@ export const TwoVerbs: Story = {
     stubRoutes();
     return (
       <StoryProviders>
-        <div className="worklist-row-acts">
+        <div>
           <MeetingOutcome
             id={MEETING_ID}
             version={3}
             title="Discovery call with Turbinenbau"
+            invalidateKeys={[]}
           />
         </div>
       </StoryProviders>
@@ -105,11 +102,12 @@ export const ComposerOpen: Story = {
     stubRoutes();
     return (
       <StoryProviders>
-        <div className="worklist-row-acts">
+        <div>
           <MeetingOutcome
             id={MEETING_ID}
             version={3}
             title="Discovery call with Turbinenbau"
+            invalidateKeys={[]}
           />
         </div>
       </StoryProviders>
@@ -128,11 +126,12 @@ export const NothingCapturedYet: Story = {
     stubRoutes({ ...CAPTURED_MEETING, body: null });
     return (
       <StoryProviders>
-        <div className="worklist-row-acts">
+        <div>
           <MeetingOutcome
             id={MEETING_ID}
             version={3}
             title="Discovery call with Turbinenbau"
+            invalidateKeys={[]}
           />
         </div>
       </StoryProviders>

@@ -2463,6 +2463,7 @@ const (
 	AttentionItemActionsRetry        AttentionItemActions = "retry"
 	AttentionItemActionsSetAside     AttentionItemActions = "set_aside"
 	AttentionItemActionsSnooze       AttentionItemActions = "snooze"
+	AttentionItemActionsTake         AttentionItemActions = "take"
 	AttentionItemActionsUndo         AttentionItemActions = "undo"
 )
 
@@ -2498,6 +2499,8 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsSetAside:
 		return true
 	case AttentionItemActionsSnooze:
+		return true
+	case AttentionItemActionsTake:
 		return true
 	case AttentionItemActionsUndo:
 		return true
@@ -21231,6 +21234,7 @@ const (
 	WorklistItemActionsRetry        WorklistItemActions = "retry"
 	WorklistItemActionsSetAside     WorklistItemActions = "set_aside"
 	WorklistItemActionsSnooze       WorklistItemActions = "snooze"
+	WorklistItemActionsTake         WorklistItemActions = "take"
 	WorklistItemActionsUndo         WorklistItemActions = "undo"
 )
 
@@ -21266,6 +21270,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsSetAside:
 		return true
 	case WorklistItemActionsSnooze:
+		return true
+	case WorklistItemActionsTake:
 		return true
 	case WorklistItemActionsUndo:
 		return true
@@ -28824,6 +28830,9 @@ type AttentionItem struct {
 	// Actions What this item offers. `decide` and `merge` mean the verb is irreversible and a
 	// contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
 	// the read-only fallback for a receipt.
+	//
+	// `take` is offered on a task nobody holds that the caller may change. It sets
+	// `assignee_id` to the caller through `PATCH /activities/{id}`, pinned with `If-Match`.
 	//
 	// Domain questions offer `keep`, `discard`, and `reopen` where allowed. Keeping creates a
 	// company or matches the supplied `company_id`; forwarded identity requires an

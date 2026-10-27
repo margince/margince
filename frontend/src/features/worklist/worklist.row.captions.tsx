@@ -8,7 +8,7 @@ import { briefSubjectLabel, subjectHref } from "./worklist.copy";
 import { employerOf } from "./worklist.meetingparties";
 import type { HeldTouch } from "./worklist.pane";
 import type { WorklistItem } from "./worklist.queries";
-import { withWorklistReturn } from "./worklist.return";
+import { useDrawerDials, withWorklistReturn } from "./worklist.return";
 import type { RowReadings } from "./worklist.row.compact";
 
 // The frame already carries the date; the row retains its evidence and figures.
@@ -29,6 +29,12 @@ export function shapedReadings(
 // the contact's page is spelled once.
 export function contactHref(contact: NonNullable<WorklistItem["contact"]>) {
   return routeHash(ENTITY.contact.route(contact.id));
+}
+
+/** `href` as a row links it inside a Worklist: carrying that list's way back. */
+export function useListedHref(href: string | undefined): string | undefined {
+  const drawer = useDrawerDials();
+  return href && withWorklistReturn(href, drawer);
 }
 
 /**

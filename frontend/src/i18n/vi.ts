@@ -1518,6 +1518,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.bandCount_other": "{count} việc",
   "brief.focus.context": "Xem chi tiết",
   "brief.queue.back": "Quay lại Danh sách công việc",
+  "brief.queue.next": "Việc tiếp theo",
+  "brief.queue.nextDone": "Đã hết việc",
   "brief.queue.title": "Danh sách công việc",
   "brief.queue.show": "Xem Danh sách công việc",
   "brief.queue.hide": "Ẩn Danh sách công việc",
@@ -15769,9 +15771,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.scope.mine": "Của tôi",
   "worklist.sourceUnavailable":
     "Nguồn không khả dụng hoặc chưa được chia sẻ với bạn",
-  "worklist.scope.unassigned": "Chưa giao",
+  "worklist.scope.unassigned": "Chưa nhận",
   "worklist.scope.team": "Nhóm",
   "worklist.scope.all": "Tất cả",
+  "worklist.scope.unassignedHint": "Việc trong nhóm chưa có người phụ trách.",
+  "worklist.take.action": "Nhận việc",
+  "worklist.take.done": "Đã nhận việc",
+  "worklist.take.failed": "Không thể nhận việc này. Thử lại.",
   "worklist.owner.shared": "Cùng phụ trách: {names}",
   "worklist.owner.left":
     "{name} đã nghỉ. Việc này cần người chịu trách nhiệm mới.",

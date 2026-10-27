@@ -328,18 +328,13 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 		Source:  crmcontracts.AttentionItemSource("task"),
 		Title:   &subject,
 		Subject: subjectOf(task.LinkType, task.LinkID), MayBeDone: task.MayBeDone,
-		Actions: []crmcontracts.AttentionItemActions{"complete", "snooze"},
+		Actions: taskActions(task),
 	}
 	if task.SourceActivityID != nil {
 		item.SourceRecord = subjectOf("activity", *task.SourceActivityID)
 	}
 	if len(task.Recipients) > 0 {
 		item.PromiseRecipients = &task.Recipients
-	}
-	// Both verbs PATCH the task, so a reader who may not change it is offered
-	// neither.
-	if task.ReadOnly {
-		item.Actions = []crmcontracts.AttentionItemActions{}
 	}
 	if task.LeadResponseEscalation {
 		kind := "lead_response_escalation"

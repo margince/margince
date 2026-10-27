@@ -25,6 +25,23 @@ export function drawerScope(
   return requestedScope(params.get("queue_scope"));
 }
 
+/**
+ * The queue a drawer's dials name: the same read the drawer makes from them,
+ * for a record continuing that queue after the drawer has closed.
+ */
+export function drawerQueue(params: ReadonlyMap<string, string>): Readonly<{
+  scope: WorklistScope;
+  filter: WorklistFilter;
+  owner: string;
+}> {
+  const owner = params.get("owner") ?? "";
+  return {
+    scope: requestedScope(params.get("queue_scope"), owner),
+    filter: worklistFilterFrom(params),
+    owner,
+  };
+}
+
 function requestedScope(
   value: string | undefined,
   opensOn?: string,

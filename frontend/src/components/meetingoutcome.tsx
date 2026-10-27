@@ -31,33 +31,78 @@
 // the capture upsert is `ON CONFLICT (source_system, source_id) DO NOTHING`, so
 // a second sync of the same event returns the incumbent row untouched.
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryKey,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useId, useState } from "react";
-import { api } from "../../api/client";
-import { ifMatch, requireVersion } from "../../api/version";
-import { ActivityBodyField } from "../../components/activitybodyfield";
-import { useMeetingOutcome } from "../../components/taskactions";
-import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
-import { DateInput, isoOrBlank } from "../../design-system/dateinput";
-import { ErrorLine } from "../../design-system/errorline";
-import { refuseUnreadableField } from "../../design-system/formvalidity";
-import { Heading } from "../../design-system/heading";
-import { Select } from "../../design-system/select";
-import { useToast } from "../../design-system/toast";
-import { isTranscriptActivity } from "../../design-system/transcriptread";
+import { api } from "../api/client";
+import type { components } from "../api/schema";
+import { ifMatch, requireVersion } from "../api/version";
+import { Button, Field, Modal, TextInput } from "../design-system/atoms";
+import { DateInput, isoOrBlank } from "../design-system/dateinput";
+import { ErrorLine } from "../design-system/errorline";
+import { refuseUnreadableField } from "../design-system/formvalidity";
+import { Heading } from "../design-system/heading";
+import { Select } from "../design-system/select";
+import { useToast } from "../design-system/toast";
+import { isTranscriptActivity } from "../design-system/transcriptread";
 import {
   type ActivityMoment,
   activityDate,
+  activityHasHappened,
   movedActivityStart,
   type OccurredPrecision,
-} from "../../format/activitywhen";
-import { calendarDay } from "../../format/calendarday";
-import { useT } from "../../i18n";
-import { outgoingBody } from "../../lib/activitybody";
-import { useActivity } from "../../lib/activityread";
-import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
-import { worklistKey } from "./worklist.queries";
+} from "../format/activitywhen";
+import { calendarDay } from "../format/calendarday";
+import { useNow } from "../format/now";
+import { useT } from "../i18n";
+import { outgoingBody } from "../lib/activitybody";
+import { useActivity } from "../lib/activityread";
+import { useCanWriteRecord } from "../lib/capability";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { ActivityBodyField } from "./activitybodyfield";
+import { useMeetingOutcome } from "./taskactions";
+
+type Activity = components["schemas"]["Activity"];
+
+/**
+ * The outcome choice for a meeting on a record: offered for a meeting that has
+ * begun, has no status yet and that the reader may write. `asOf` is the read's
+ * own clock where the page has one; without it the mount time stands.
+ */
+export function RecordMeetingOutcome({
+  activity,
+  invalidateKeys,
+  asOf,
+}: Readonly<{
+  activity: Activity;
+  invalidateKeys: readonly QueryKey[];
+  asOf?: number;
+}>) {
+  const writable = useCanWriteRecord("activity", activity);
+  const zone = useRecordZone();
+  const mountedAt = useNow(0);
+  const open =
+    activity.kind === "meeting" &&
+    !activity.meeting_status &&
+    activity.content_state !== "withheld" &&
+    writable &&
+    activityHasHappened(activity, asOf ?? mountedAt, zone);
+  if (!open) {
+    return null;
+  }
+  return (
+    <MeetingOutcome
+      id={activity.id}
+      version={activity.version}
+      title={activity.subject ?? undefined}
+      invalidateKeys={invalidateKeys}
+    />
+  );
+}
 
 // The two statuses the dialog can record. `canceled` is deliberately absent:
 // the card's own verb writes it, and offering it here as well would give one
@@ -119,9 +164,12 @@ export function MeetingOutcome({
   id,
   version,
   title,
+  invalidateKeys,
 }: Readonly<{
   id: string;
   version: number | undefined;
+  // The reads that show this meeting, so each surface refreshes its own list.
+  invalidateKeys: readonly QueryKey[];
   // What the row already calls this meeting, so the dialog can name it before
   // its own read answers. The row has it; asking the server for a heading the
   // caller is already displaying would leave the dialog briefly untitled.
@@ -130,7 +178,7 @@ export function MeetingOutcome({
   const t = useT();
   const toast = useToast();
   const [open, setOpen] = useState(false);
-  const record = useMeetingOutcome([worklistKey]);
+  const record = useMeetingOutcome(invalidateKeys);
   return (
     <>
       <Button pending={record.isPending} onClick={() => setOpen(true)}>
@@ -160,6 +208,7 @@ export function MeetingOutcome({
         <MeetingOutcomeDialog
           id={id}
           title={title}
+          invalidateKeys={invalidateKeys}
           onClose={() => setOpen(false)}
         />
       )}
@@ -178,8 +227,14 @@ export function MeetingOutcome({
 function MeetingOutcomeDialog({
   id,
   title,
+  invalidateKeys,
   onClose,
-}: Readonly<{ id: string; title: string | undefined; onClose: () => void }>) {
+}: Readonly<{
+  id: string;
+  title: string | undefined;
+  invalidateKeys: readonly QueryKey[];
+  onClose: () => void;
+}>) {
   const t = useT();
   const toast = useToast();
   const titleId = useId();
@@ -248,7 +303,9 @@ function MeetingOutcomeDialog({
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: worklistKey });
+      for (const queryKey of invalidateKeys) {
+        queryClient.invalidateQueries({ queryKey });
+      }
       queryClient.invalidateQueries({ queryKey: ["activity", id] });
       toast.show(t("worklist.verb.meetingOutcomeRecorded"));
       onClose();

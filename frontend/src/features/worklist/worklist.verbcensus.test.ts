@@ -80,6 +80,8 @@ const ANSWERED_BY = {
   // handled panel is where a change nobody was asked about is told, so it is
   // also where the way back belongs. Routing it would send the reader to the
   // deal's history to find the entry themselves.
+  // Taking a task nobody holds writes its assignee where the reader stands.
+  take: { how: "inline", file: "worklist.take.tsx" },
   undo: {
     how: "inline",
     file: "worklist.receiptundo.tsx",

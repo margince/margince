@@ -29,6 +29,7 @@ import {
 import { ReassignForm } from "./worklist.manager";
 import { usePinRow, type WorklistItem } from "./worklist.queries";
 import { replyIsTheMove } from "./worklist.reply";
+import { TakeVerb } from "./worklist.take";
 
 /** Every verb a row carries: Done, the lane's answer, then the row's menu. */
 export function RowActs({
@@ -89,7 +90,10 @@ export function RowActs({
   );
   const pins = allowPin && !item.batch;
   // Only a task carries an assignee, and a group row names no single activity.
-  const handsOff = item.source === "task" && !item.batch;
+  // The server withholds Done from a task the reader may not change, and the
+  // hand-off's write would be refused there the same way.
+  const handsOff =
+    item.source === "task" && !item.batch && item.actions.includes("complete");
   // One write for Done and the menu's lines, so the two cannot write twice.
   const write = useRowPutDown(item);
   const putsDown = write.offered.some(
@@ -108,6 +112,7 @@ export function RowActs({
       {context}
       {reviews && onReview && <BatchVerb onReview={onReview} />}
       {equals}
+      <TakeVerb item={item} />
       <DoneVerb write={write} />
     </>
   );
@@ -375,6 +380,7 @@ const VERB_LABEL: Record<
   // routes it nowhere and this label is never the one a reader sees — it is
   // here because the map is total over the contract's actions.
   undo: (t) => t("history.undo.action"),
+  take: (t) => t("worklist.take.action"),
 };
 
 // The reader's own override: this row leads their day, whatever the ranking

@@ -185,6 +185,14 @@ export const ATasksMenu: Story = {
   },
 };
 
+/** A task nobody holds that the reader may change: Take it stands before Done. */
+export const AnUnheldTask: Story = {
+  args: {
+    ...ATaskAnsweredLast.args,
+    item: { ...taskRow(), actions: ["complete", "snooze", "take"] },
+  },
+};
+
 /**
  * A buyer waiting: the row with the most verbs, on one line.
  *

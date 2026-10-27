@@ -66,8 +66,9 @@ To hand a task on in Margince, press **More actions** on its Worklist row and ch
 2. Press **More actions** at the end of the row and choose **Reassign**.
 3. Pick a colleague under **Reassign to** and press **Reassign**. **Cancel** keeps the task yours.
 
-The task leaves your list once the change is saved ("Reassigned"). Only tasks can be handed on. If
-it fails: "Item was not reassigned. Retry." Also called: give to someone else, assign to someone else.
+The task leaves your list once the change is saved ("Reassigned"). Only tasks can be handed on, and only a task you may change offers **Reassign**. If it fails: "Item was not reassigned. Retry." Also called: give to someone else, assign to someone else.
+
+A task nobody holds shows **Take it** on its row when you may change it. Switch **Whose work** to **Unassigned**, press **Take it**, and the task moves to **Mine** ("Assigned to you"). If it fails: "Task was not assigned to you. Retry." Also called: take a task, claim a task, assign to me.
 
 ### How do I remove something from my worklist?
 To take an item off your Worklist in Margince, press **Done** on its row. For **Not mine** or **Not

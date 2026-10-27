@@ -142,6 +142,7 @@ describe("a row's verbs are one line with the row's menu last", () => {
         id: "task-1",
         source: "task",
         title: "Send the quote",
+        actions: ["complete"],
         dispositions: ["not_mine"],
       }),
     );

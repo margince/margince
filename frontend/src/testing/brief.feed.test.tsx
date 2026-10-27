@@ -260,7 +260,7 @@ it("names why the row in hand is first, whose it is, and its inbox", () => {
   expect(head?.textContent).toContain(en["visibility.team"]);
   expect(
     screen.getByRole("link", { name: "Sonya Beck" }).getAttribute("href"),
-  ).toBe("#/contacts/contact-sonya");
+  ).toBe("#/contacts/contact-sonya?from=worklist");
 });
 
 it("names the sender of a thread filed under a deal", () => {
@@ -273,7 +273,7 @@ it("names the sender of a thread filed under a deal", () => {
   render(<BriefFeed day={readingsDay({}, [row])} state="ready" />);
   expect(
     screen.getByRole("link", { name: "Sonya Beck" }).getAttribute("href"),
-  ).toBe("#/contacts/contact-sonya");
+  ).toBe("#/contacts/contact-sonya?from=worklist");
 });
 
 it("claims no moments when the server withheld them", () => {
