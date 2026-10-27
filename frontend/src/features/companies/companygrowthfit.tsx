@@ -1,10 +1,5 @@
-import {
-  hashKey,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import {
@@ -34,6 +29,7 @@ import {
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import { ReassessOutcome, useReassess } from "./companygrowthfit.reassess";
 
 type GrowthFit = components["schemas"]["CompanyGrowthFit"];
 type Band = GrowthFit["band"];
@@ -230,7 +226,10 @@ export function GrowthFitPanel({
       <div role="status">
         {outcome && (
           <PanelBody>
-            <ReassessOutcome outcome={outcome} />
+            <ReassessOutcome
+              outcome={outcome}
+              bandLabel={t(BAND_LABELS[outcome.band])}
+            />
           </PanelBody>
         )}
       </div>
@@ -240,78 +239,6 @@ export function GrowthFitPanel({
         </PanelBody>
       )}
     </Panel>
-  );
-}
-
-type Reassessed = Readonly<{
-  companyId: string;
-  changed: boolean;
-  band: Band;
-  present: number;
-  expected: number;
-}>;
-
-// What "Assess again" did, said once it answers. With the same inputs the
-// model gives the same reading, and a card that only moves its timestamp reads
-// as a press that did nothing.
-function useReassess(companyId: string) {
-  const queryClient = useQueryClient();
-  const key = ["company-growth-fit", companyId];
-  const [outcome, setOutcome] = useState<Reassessed | null>(null);
-  const reassess = useMutation({
-    mutationFn: async () => {
-      return unwrap(
-        await api.POST("/companies/{id}/growth-fit", {
-          params: { path: { id: companyId } },
-        }),
-      );
-    },
-    onMutate: () => setOutcome(null),
-    onSuccess: async (data) => {
-      // A background read started before the press would land after this
-      // write and put the older reading back.
-      await queryClient.cancelQueries({ queryKey: key });
-      const before = queryClient.getQueryData<GrowthFit>(key);
-      const { present, expected } = data.data_completeness;
-      setOutcome({
-        companyId,
-        changed: !before || readingKey(before) !== readingKey(data),
-        band: data.band,
-        present,
-        expected,
-      });
-      queryClient.setQueryData(key, data);
-    },
-  });
-  // A panel kept across a move to another company must not carry the first
-  // company's outcome.
-  return {
-    reassess,
-    outcome: outcome?.companyId === companyId ? outcome : null,
-  };
-}
-
-// The time and author of a run change on every press. The reading is the
-// rest, so "unchanged" means the panel shows the same thing.
-function readingKey(fit: GrowthFit): string {
-  const { generated_at, generated_by, ...reading } = fit;
-  return hashKey([reading]);
-}
-
-function ReassessOutcome({ outcome }: Readonly<{ outcome: Reassessed }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const values = {
-    band: t(BAND_LABELS[outcome.band]),
-    present: formatNumber(outcome.present, locale),
-    expected: formatNumber(outcome.expected, locale),
-  };
-  return (
-    <p className="t-caption">
-      {outcome.changed
-        ? t("co.growthFit.reassessedChanged", values)
-        : t("co.growthFit.reassessedSame", values)}
-    </p>
   );
 }
 
