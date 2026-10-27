@@ -43,6 +43,8 @@ type reachFunctionVocabulary struct {
 // reachFunctions is checked in this order, and the first match wins. Every
 // department comes before management, so "Head of IT" counts as IT, which is
 // what a rep picking a colleague to ask needs to know.
+//
+//nolint:goconst // job-title words; the same words as industries or test data elsewhere in the package must not move with them
 var reachFunctions = []reachFunctionVocabulary{
 	{
 		function: crmcontracts.LinkedInReachFunctionIt,

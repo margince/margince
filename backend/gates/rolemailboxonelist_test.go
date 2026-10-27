@@ -97,7 +97,8 @@ func TestOnlyOnePackageDeclaresRoleMailboxes(t *testing.T) {
 	found := roleMailboxListsIn(t, "internal", "../extensions", "cmd", "tools", "pkg")
 	var lists []string
 	for _, finding := range found {
-		if notRoleMailboxLists.Waived(t, filepath.ToSlash(finding[:strings.Index(finding, ":")])) {
+		path, _, _ := strings.Cut(finding, ":")
+		if notRoleMailboxLists.Waived(t, filepath.ToSlash(path)) {
 			continue
 		}
 		lists = append(lists, finding)
