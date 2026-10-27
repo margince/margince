@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -106,8 +107,9 @@ func colleagueTx(ctx context.Context, tx pgx.Tx, address string) (ids.UUID, erro
 	}
 	_, seat := capturePrincipal(ctx)
 	var colleague ids.UUID
-	err = tx.QueryRow(ctx, `SELECT id FROM app_user
-		 WHERE lower(email) = $1 AND id <> $2 AND archived_at IS NULL`, foldAddress(address), seat).Scan(&colleague)
+	err = tx.QueryRow(ctx, `SELECT u.id FROM app_user u
+		 WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$3")+` AND u.id <> $2 AND u.archived_at IS NULL`,
+		foldAddress(address), seat, owndomain.OfAddress(address)).Scan(&colleague)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.Nil, nil
 	}
@@ -211,8 +213,9 @@ func insertCounterpartyParticipant(
 // seat does not count.
 func recipientColleagueTx(ctx context.Context, tx pgx.Tx, address string, owner ids.UUID) (ids.UUID, error) {
 	var seat ids.UUID
-	err := tx.QueryRow(ctx, `SELECT id FROM app_user WHERE lower(email) = $1 AND id <> $2 AND archived_at IS NULL`,
-		address, owner).Scan(&seat)
+	err := tx.QueryRow(ctx, `SELECT u.id FROM app_user u
+		 WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$3")+` AND u.id <> $2 AND u.archived_at IS NULL`,
+		address, owner, owndomain.OfAddress(address)).Scan(&seat)
 	if err == nil {
 		return seat, nil
 	}
