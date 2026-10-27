@@ -5908,6 +5908,48 @@ paths:
             of them, `all` a record carrying every one, `none` a record carrying not one.
 
             Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
+        - name: close_from
+          in: query
+          schema: { type: string, format: date }
+          description: |
+            Deals whose close day is on or after this calendar day. The close day is the one the
+            list's Close column shows and `sort=close_day` orders by: the day a won or lost deal
+            closed, read in the installation's time zone, or an open deal's expected close date.
+            A deal with no close day is outside every range. A `close_from` after `close_to` is
+            `422`.
+        - name: close_to
+          in: query
+          schema: { type: string, format: date }
+          description: Deals whose close day is on or before this calendar day (inclusive). See `close_from`.
+        - name: value_min
+          in: query
+          schema: { type: integer, format: int64, minimum: 0 }
+          description: |
+            Deals worth at least this much, in minor units of the installation's base currency.
+            The value is the one `sort=amount_minor` orders by: the deal's amount converted on
+            today's rate, or the amount frozen at close. A deal with no amount, or one in a currency
+            with no rate, is outside every range. A role that withholds the amount or the currency
+            is refused with `422` `field_masked`. A `value_min` above `value_max` is `422`.
+        - name: value_max
+          in: query
+          schema: { type: integer, format: int64, minimum: 0 }
+          description: Deals worth at most this much (inclusive), in minor units of the base currency. See `value_min`.
+        - name: currency
+          in: query
+          schema: { type: string, pattern: '^[A-Za-z]{3}$' }
+          description: >-
+            Deals priced in this ISO-4217 currency, in either case. A code that is not three letters
+            is refused with `422` `currency_malformed`. A role that withholds the currency is refused
+            with `422` `field_masked`.
+        - name: country
+          in: query
+          schema: { type: string, pattern: '^[A-Za-z]{2}$' }
+          description: |
+            Deals whose company's address is in this ISO-3166 alpha-2 country, in either case. A code
+            that is not two letters is refused with `422` `country_malformed`. A deal naming no
+            company, or a company outside the caller's row scope, is not returned. A seat that may
+            not read companies is refused with `403`, and a role that withholds the deal's company
+            with `422` `field_masked`.
         - name: source_system
           in: query
           schema: { type: string, maxLength: 128 }
@@ -43915,6 +43957,16 @@ components:
         engaged:
           type: boolean
           description: 'A two-way exchange in the window — both directions, not just our sends.'
+        last_inbound_at:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            When this contact last wrote to us, over all history, from the same fold as the
+            contact's relationship strength. Absent when nothing inbound was captured, and for a
+            caller without the activity grant, so its absence is not a claim that they never wrote.
+        last_inbound_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `last_inbound_at`, from the activity it names. Absent when that is absent.
 
     DealCoverageRisk:
       type: object
@@ -44819,7 +44871,14 @@ components:
       properties:
         deal_id:      { type: string, format: uuid }
         stakeholders: { type: array, items: { $ref: '#/components/schemas/DealCoverageSeat' } }
-        our_side:     { type: array, items: { $ref: '#/components/schemas/ContactNetworkColleague' } }
+        our_side:
+          type: array
+          description: |
+            One entry per colleague with recorded interaction with the deal's seats, warmest
+            first. `interactions_90d` sums the colleague's exchanges with every seat, and the
+            score is their warmest single relationship. `single_threaded_ours` reads the same
+            entries, so its colleague is always one of them.
+          items: { $ref: '#/components/schemas/ContactNetworkColleague' }
         risks:        { type: array, items: { $ref: '#/components/schemas/DealCoverageRisk' } }
         sections_omitted:
           type: array
@@ -50734,6 +50793,7 @@ components:
       properties:
         key: { type: string, description: 'Stable within a template. An answer is filed under it and a frozen response keeps both, so rewording a label never orphans an answer.' }
         label: { type: string, description: 'What the question asks, worded as the reader sees it.' }
+        label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
         type: { type: string, enum: [text, multiselect], description: 'Text answers use answers; multiple-choice answers use choice_answers.' }
         options: { type: array, items: { type: string }, description: 'Allowed choices, required for multiselect. Frozen alongside the question in each submitted review.' }
         required: { type: boolean }
@@ -50745,6 +50805,7 @@ components:
         id: { type: string, format: uuid }
         key: { type: string }
         label: { type: string }
+        label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
         outcome: { type: string, enum: [won, lost], description: 'Which outcome this template is for. A win review and a loss review ask different questions, and offering both at one close is asking somebody to do filing the record can do itself.' }
         questions: { type: array, items: { $ref: '#/components/schemas/ReviewQuestion' } }
         version: { $ref: '#/components/schemas/RowVersion' }
@@ -50816,6 +50877,7 @@ components:
             The stable identifier stored on the deal. Lowercase, never changes once created —
             relabelling edits `label`, so a report keyed on the key survives the rename.
         label: { type: string, description: What readers see. }
+        label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
         sort_order: { type: integer, description: Display order in pickers and settings. }
         active:
           type: boolean
@@ -50877,6 +50939,7 @@ components:
             The stable identifier. Lowercase, never changes once created — relabelling
             edits `label`, so a report keyed on the role survives the rename.
         label: { type: string, description: What readers see. }
+        label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
         record_types:
           type: array
           minItems: 1
@@ -50987,6 +51050,7 @@ components:
         role_id: { type: string, format: uuid }
         role_key: { type: string, readOnly: true }
         role_label: { type: string, readOnly: true }
+        role_label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
         role_active:
           type: boolean
           readOnly: true
@@ -51028,6 +51092,7 @@ components:
         id: { type: string, format: uuid }
         key: { type: string, description: 'Lowercase stable key, the stored value. Never changes after creation.' }
         label: { type: string }
+        label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
         intent: { $ref: '#/components/schemas/LeadSourceIntent' }
         sort_order: { type: integer }
         active: { type: boolean, description: 'A retired origin leaves the create form and is refused for a new assignment; leads carrying it keep the value.' }
@@ -51116,6 +51181,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         label: { type: string }
+        label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
         sort_order: { type: integer }
         active: { type: boolean }
         system: { type: boolean, readOnly: true }
@@ -55673,6 +55739,19 @@ components:
             This does not let a client decide which rows it gets — the server's scope clauses
             do that on every query. It is what a client needs to EXPLAIN the answer it got, and
             to label a setting as reaching only the reader, their team, or the company.
+        refused_deal_filters:
+          type: array
+          items: { type: string }
+          description: >
+            The `listDeals` query parameters this caller is refused whatever their value: `422`
+            `field_masked` where the role masks the column on any deal, `403` where a grant the
+            filter reads is missing, `list_id` included where the caller may not read lists.
+            Computed by the list resolution and clauses the list runs, so a client withholds
+            exactly the dials the list would refuse.
+
+            A mask that withholds a reference only on some rows, such as a deal's private
+            company, refuses no filter and is not listed. Absent from a server that does not
+            compute it, and empty when nothing is refused.
 
     InstallationBrand:
       type: object
@@ -59512,6 +59591,14 @@ components:
             so it is still pending and can be declined or decided later.
 
     # ---- Optimistic concurrency ----
+    ShippedLabelKey:
+      type: [string, 'null']
+      readOnly: true
+      description: >-
+        The catalog key a screen renders a built-in value from, in the reader's language. Set
+        only on a value still worded as the product shipped it; null once an administrator
+        relabels it, so their own words show instead of `label`'s translation. `label` keeps the
+        English text for every reader that has no catalog, such as an export or an agent.
     RowVersion:
       type: integer
       format: int64

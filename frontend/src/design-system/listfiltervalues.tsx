@@ -157,8 +157,8 @@ function AsyncFilterValueList({
   );
 }
 
-/** Either value step a filter row's value segment can open, keyed by whether
- * the chip declares a search source. */
+/** The value step a filter row's value segment opens: the chip's own editor,
+ * a search, or its options. */
 export function ChipValueList({
   chip,
   value,
@@ -168,6 +168,9 @@ export function ChipValueList({
   value: string;
   onPick: (value: string, label: string) => void;
 }>) {
+  if (chip.editor) {
+    return chip.editor(value, onPick);
+  }
   return chip.search ? (
     <AsyncFilterValueList chip={chip} value={value} onPick={onPick} />
   ) : (

@@ -216,6 +216,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
 
   // "deal", "pipeline" and "lead" are loanwords Vietnamese keeps.
   "board.count_one",
+  "lead.boardCount_one",
   "deals.pipeline",
   "deal.fcPipeline",
   "filters.field.pipeline_id",
@@ -239,6 +240,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "leadSources.leads_one",
   "acqSources.deals_one",
   "users.handover.leads_one",
+  "brief.agenda.leads_one",
   "users.handover.deals_one",
   "contracts.renew.deal",
   "contracts.deal",
@@ -315,6 +317,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
 
   // Other cases verified individually against the source.
   "shell.logoAria",
+  // A product's own name, the built-in lead origin.
+  "leadOrigins.builtin.linkedin",
 
   // Worked examples of a German commercial register entry, the shape the
   // legal-notice read actually parses regardless of which locale a reader

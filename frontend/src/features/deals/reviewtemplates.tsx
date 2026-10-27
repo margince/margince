@@ -8,6 +8,7 @@ import { QueryStates } from "../../design-system/querystates";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { shippedLabel } from "../../lib/shippedlabels";
 import {
   type ReviewTemplate,
   useReviewTemplates,
@@ -67,7 +68,7 @@ function TemplatePanel({
   const headId = useId();
   return (
     <Panel
-      title={<span id={headId}>{template.label}</span>}
+      title={<span id={headId}>{shippedLabel(template, t)}</span>}
       titleAction={
         <span className="reviewtemplate-head-end">
           {/* Retired templates stay listed. An old review names the template it
@@ -94,7 +95,9 @@ function TemplatePanel({
             >
               {formatNumber(index + 1, locale)}
             </span>
-            <span className="reviewtemplate-label">{question.label}</span>
+            <span className="reviewtemplate-label">
+              {shippedLabel(question, t)}
+            </span>
             {question.required && (
               <Badge>{t("reviewTemplates.required")}</Badge>
             )}

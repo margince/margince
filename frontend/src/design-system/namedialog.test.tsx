@@ -121,3 +121,32 @@ it("closes on Escape at once while the name is unchanged", async () => {
   await user.keyboard("{Escape}");
   expect(onClose).toHaveBeenCalledOnce();
 });
+
+// The list editors seed a rename with the label in the reader's language. An
+// unchanged save stores nothing, and a rename sends what was typed.
+it("writes nothing for an unchanged name and sends the typed one", async () => {
+  const onSave = vi.fn();
+  const user = userEvent.setup({ delay: null });
+  render(
+    <LocaleProvider initial="de">
+      <NameDialog
+        open
+        onClose={() => undefined}
+        title="Umbenennen"
+        label="Name"
+        initial="Eingehend"
+        confirmLabel="Speichern"
+        onSave={onSave}
+      />
+    </LocaleProvider>,
+  );
+  const field = await screen.findByRole("textbox", { name: "Name" });
+
+  await user.type(field, " {Enter}");
+  await user.click(screen.getByRole("button", { name: "Speichern" }));
+  expect(onSave).not.toHaveBeenCalled();
+
+  await user.clear(field);
+  await user.type(field, "Eingehende Anfragen{Enter}");
+  expect(onSave).toHaveBeenCalledExactlyOnceWith("Eingehende Anfragen");
+});

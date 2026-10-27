@@ -7,13 +7,16 @@ import { useLocale, useT } from "../i18n";
 import { Badge, Button } from "./atoms";
 import { type ReadingTone, readingColours } from "./readingtone";
 import type { StageStep } from "./stageladder";
+import { LadderRun } from "./stageladder.run";
 
 type BarVars = CSSProperties & Record<`--${string}`, string | number>;
 
 /**
  * The `bars` shape of `StageLadder`: where the record stands in words, the
  * move to the next stage, the ways out, then one bar per open stage. The
- * current stage stays a marker, never a button, as in the chevron shape.
+ * current stage stays a marker, never a button, as in the chevron shape. A
+ * bar is never narrower than its stage's name, so a run too long for the
+ * card scrolls the way the chevron run does.
  */
 export function LadderBars({
   label,
@@ -29,7 +32,6 @@ export function LadderBars({
   const run = steps.filter((step) => !step.terminal);
   const exits = steps.filter((step) => step.terminal);
   const vars: BarVars = {
-    "--stage-ladder-count": Math.max(run.length, 1),
     "--stage-ladder-here": readingColours(tone).mark,
   };
   return (
@@ -44,18 +46,20 @@ export function LadderBars({
           ))}
         </ul>
       </div>
-      <ol className="stage-ladder-bars">
-        {run.map((step) => (
-          <li
-            key={step.key}
-            className={
-              step.done ? "stage-ladder-bar is-done" : "stage-ladder-bar"
-            }
-          >
-            <BarStep step={step} />
-          </li>
-        ))}
-      </ol>
+      <LadderRun label={label} steps={steps}>
+        <ol className="stage-ladder-bars">
+          {run.map((step) => (
+            <li
+              key={step.key}
+              className={
+                step.done ? "stage-ladder-bar is-done" : "stage-ladder-bar"
+              }
+            >
+              <BarStep step={step} />
+            </li>
+          ))}
+        </ol>
+      </LadderRun>
       {hint && <p className="t-caption stage-ladder-hint">{hint}</p>}
     </fieldset>
   );

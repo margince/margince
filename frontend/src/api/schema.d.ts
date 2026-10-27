@@ -31044,6 +31044,13 @@ export interface components {
             role: string;
             /** @description A two-way exchange in the window — both directions, not just our sends. */
             engaged: boolean;
+            /**
+             * Format: date-time
+             * @description When this contact last wrote to us, over all history, from the same fold as the contact's relationship strength. Absent when nothing inbound was captured, and for a caller without the activity grant, so its absence is not a claim that they never wrote.
+             */
+            last_inbound_at?: string | null;
+            /** @description How to read `last_inbound_at`, from the activity it names. Absent when that is absent. */
+            last_inbound_precision?: components["schemas"]["OccurredPrecision"];
         };
         /**
          * @description One finding, with the records behind it. `kind` names the rule so a surface can
@@ -31764,6 +31771,12 @@ export interface components {
             /** Format: uuid */
             deal_id: string;
             stakeholders: components["schemas"]["DealCoverageSeat"][];
+            /**
+             * @description One entry per colleague with recorded interaction with the deal's seats, warmest
+             *     first. `interactions_90d` sums the colleague's exchanges with every seat, and the
+             *     score is their warmest single relationship. `single_threaded_ours` reads the same
+             *     entries, so its colleague is always one of them.
+             */
             our_side: components["schemas"]["ContactNetworkColleague"][];
             risks: components["schemas"]["DealCoverageRisk"][];
             /**
@@ -36973,6 +36986,7 @@ export interface components {
             key: string;
             /** @description What the question asks, worded as the reader sees it. */
             label: string;
+            label_key?: components["schemas"]["ShippedLabelKey"];
             /**
              * @description Text answers use answers; multiple-choice answers use choice_answers.
              * @enum {string}
@@ -36987,6 +37001,7 @@ export interface components {
             id: string;
             key: string;
             label: string;
+            label_key?: components["schemas"]["ShippedLabelKey"];
             /**
              * @description Which outcome this template is for. A win review and a loss review ask different questions, and offering both at one close is asking somebody to do filing the record can do itself.
              * @enum {string}
@@ -37089,6 +37104,7 @@ export interface components {
             key: string;
             /** @description What readers see. */
             label: string;
+            label_key?: components["schemas"]["ShippedLabelKey"];
             /** @description Display order in pickers and settings. */
             sort_order: number;
             /** @description False is retired: still readable and still filterable on deals that carry it, but refused for a new assignment. */
@@ -37127,6 +37143,7 @@ export interface components {
             key: string;
             /** @description What readers see. */
             label: string;
+            label_key?: components["schemas"]["ShippedLabelKey"];
             /** @description Which record kinds this role may be held on. */
             record_types: components["schemas"]["AssignmentRecordType"][];
             /** @description Whether a user, a team, or either may hold this role. */
@@ -37194,6 +37211,7 @@ export interface components {
             role_id: string;
             readonly role_key: string;
             readonly role_label: string;
+            role_label_key?: components["schemas"]["ShippedLabelKey"];
             /** @description False when the role has since been retired. The assignment remains valid. */
             readonly role_active: boolean;
             /** @description What wrote this assignment. */
@@ -37230,6 +37248,7 @@ export interface components {
             /** @description Lowercase stable key, the stored value. Never changes after creation. */
             key: string;
             label: string;
+            label_key?: components["schemas"]["ShippedLabelKey"];
             intent: components["schemas"]["LeadSourceIntent"];
             sort_order: number;
             /** @description A retired origin leaves the create form and is refused for a new assignment; leads carrying it keep the value. */
@@ -37311,6 +37330,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             label: string;
+            label_key?: components["schemas"]["ShippedLabelKey"];
             sort_order: number;
             active: boolean;
             readonly system: boolean;
@@ -40443,6 +40463,11 @@ export interface components {
              * @enum {string}
              */
             row_scope: "own" | "team" | "all";
+            /**
+             * @description The `listDeals` query parameters this caller is refused whatever their value: `422` `field_masked` where the role masks the column on any deal, `403` where a grant the filter reads is missing, `list_id` included where the caller may not read lists. Computed by the list resolution and clauses the list runs, so a client withholds exactly the dials the list would refuse.
+             *     A mask that withholds a reference only on some rows, such as a deal's private company, refuses no filter and is not listed. Absent from a server that does not compute it, and empty when nothing is refused.
+             */
+            refused_deal_filters?: string[];
         };
         /** @description The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it. */
         InstallationBrand: {
@@ -43308,6 +43333,8 @@ export interface components {
              */
             outcome: "decided" | "already_decided" | "expired" | "effect_failed" | "refused";
         };
+        /** @description The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent. */
+        ShippedLabelKey: string | null;
         /**
          * Format: int64
          * @description Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
@@ -56427,6 +56454,36 @@ export interface operations {
                  *     Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
                  */
                 tag_mode?: "any" | "all" | "none";
+                /**
+                 * @description Deals whose close day is on or after this calendar day. The close day is the one the
+                 *     list's Close column shows and `sort=close_day` orders by: the day a won or lost deal
+                 *     closed, read in the installation's time zone, or an open deal's expected close date.
+                 *     A deal with no close day is outside every range. A `close_from` after `close_to` is
+                 *     `422`.
+                 */
+                close_from?: string;
+                /** @description Deals whose close day is on or before this calendar day (inclusive). See `close_from`. */
+                close_to?: string;
+                /**
+                 * @description Deals worth at least this much, in minor units of the installation's base currency.
+                 *     The value is the one `sort=amount_minor` orders by: the deal's amount converted on
+                 *     today's rate, or the amount frozen at close. A deal with no amount, or one in a currency
+                 *     with no rate, is outside every range. A role that withholds the amount or the currency
+                 *     is refused with `422` `field_masked`. A `value_min` above `value_max` is `422`.
+                 */
+                value_min?: number;
+                /** @description Deals worth at most this much (inclusive), in minor units of the base currency. See `value_min`. */
+                value_max?: number;
+                /** @description Deals priced in this ISO-4217 currency, in either case. A code that is not three letters is refused with `422` `currency_malformed`. A role that withholds the currency is refused with `422` `field_masked`. */
+                currency?: string;
+                /**
+                 * @description Deals whose company's address is in this ISO-3166 alpha-2 country, in either case. A code
+                 *     that is not two letters is refused with `422` `country_malformed`. A deal naming no
+                 *     company, or a company outside the caller's row scope, is not returned. A seat that may
+                 *     not read companies is refused with `403`, and a role that withholds the deal's company
+                 *     with `422` `field_masked`.
+                 */
+                country?: string;
                 /**
                  * @description Deals that came from this outside system, matched exactly. Send `source_id` too to
                  *     find the one deal holding that id there. A deal that is archived without

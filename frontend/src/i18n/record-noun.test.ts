@@ -204,7 +204,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // A colleague, a user, an admin, an operator — somebody with a seat here.
     "common.permissionDenied",
     "confirm.done.body",
-    "coverage.risk.single_threaded_ours",
     "deal.notYoursToChange",
     "deals.totalsOwnerNotMeasurable",
     "lead.notYoursToChange",
@@ -671,7 +670,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "co.overview.noEconomicBuyer",
     "co.aside.visibleEveryone",
     "co.aside.visibleOnlyOwner",
-    "deal.committee.gap.singleThreaded",
+    "deal.committee.missing.champion",
     "deal.committee.foot",
     "contact.card.noEconomicBuyer",
     "contact.card.committee_one",

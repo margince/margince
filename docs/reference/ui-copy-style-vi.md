@@ -214,7 +214,7 @@ the reviewer in the sense its row gives.
 | The legal entity behind an installation | pháp nhân | `thực thể pháp lý`; tổ chức for the legal entity |
 | A human record | liên hệ; the contact as someone who acts is người liên hệ or người này | `đầu mối`; người for the record, and the retired record nouns in [record-vocabulary.md](record-vocabulary.md) |
 | Sales object | deal | `thương vụ`; giao dịch or cơ hội for a deal (email giao dịch, tên giao dịch and the company lifecycle stage keep theirs) |
-| Lead | lead | khách hàng tiềm năng or khách tiềm năng for a lead (the Prospect lifecycle stage keeps it) |
+| Lead | lead | `khách hàng tiềm năng` or `khách tiềm năng` for a lead (the Prospect lifecycle stage keeps it) |
 | Lead handling (settings) | Quản lý lead | xử lý lead for the settings surface |
 | Ordered stages | pipeline | `phễu`; quy trình bán hàng for the pipeline |
 | Commercial motion; sales motion | hình thức bán hàng (deal field); cách bán hàng (company profile) | |

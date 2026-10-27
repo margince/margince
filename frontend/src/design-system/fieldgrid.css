@@ -143,11 +143,10 @@
 .fieldgrid-handle > .callaction-number {
   min-inline-size: fit-content;
 }
-/* A number's chat links take their own line under the number and its kind, so
-   the kind sits in one place on every row. */
+/* The chat glyph ends the line, after the number's kind. */
 .fieldgrid-handle > .callaction-chats {
   order: 1;
-  flex-basis: 100%;
+  flex: none;
   margin-inline-start: 0;
 }
 /* Only the address gives way: the column's inherited `anywhere` would

@@ -14,6 +14,11 @@ const catalogue: SizedColumn[] = [
 
 const px = (width: string | undefined) => Number.parseFloat(width ?? "NaN");
 
+const figures = (price: number) => ({
+  held: { price },
+  onScreen: { price },
+});
+
 describe("columnLayout", () => {
   it("gives a row menu its narrow fixed width", () => {
     const layout = columnLayout(catalogue, {}, 707);
@@ -76,5 +81,43 @@ describe("columnLayout", () => {
     const layout = columnLayout(catalogue, { name: 300 }, 1000);
     expect(layout.widthOf(catalogue[0])).toBe("300px");
     expect(layout.floor).toBeCloseTo(1000);
+  });
+
+  // "₫450,000,000,000" is wider than a numeric column's share; cut short, it
+  // reads as a different number.
+  it("never sets a numeric column narrower than the widest figure it holds", () => {
+    const layout = columnLayout(catalogue, {}, 400, figures(150));
+    expect(px(layout.widthOf(catalogue[1]))).toBe(150);
+    expect(layout.floor).toBe(666);
+  });
+
+  it("lets a figure wider than the numeric cap widen its column past it", () => {
+    const layout = columnLayout(catalogue, {}, 1800, figures(260));
+    expect(px(layout.widthOf(catalogue[1]))).toBe(260);
+    expect(layout.floor).toBeCloseTo(1800);
+  });
+
+  it("holds a dragged numeric column at its figure, not under it", () => {
+    const layout = columnLayout(catalogue, { price: 90 }, 1000, figures(150));
+    expect(layout.widthOf(catalogue[1])).toBe("150px");
+  });
+
+  // A search showed a wide figure and was cleared; the narrow page now on
+  // screen does not hold the reader's drag at that figure.
+  it("holds a dragged numeric column only at the figures on screen now", () => {
+    const floors = { held: { price: 160 }, onScreen: { price: 80 } };
+    const layout = columnLayout(catalogue, { price: 90 }, 1000, floors);
+    expect(layout.widthOf(catalogue[1])).toBe("90px");
+    expect(
+      px(columnLayout(catalogue, {}, 400, floors).widthOf(catalogue[1])),
+    ).toBe(160);
+  });
+
+  // A reader may drag any column under its default minimum; the cell then ends
+  // its text in an ellipsis.
+  it("keeps a width the reader set under the column's default minimum", () => {
+    const layout = columnLayout(catalogue, { name: 100, price: 60 }, 1000);
+    expect(layout.widthOf(catalogue[0])).toBe("100px");
+    expect(layout.widthOf(catalogue[1])).toBe("60px");
   });
 });

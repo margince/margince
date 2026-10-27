@@ -1,9 +1,20 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { dealStatusFilter, forecastCategoryFilter } from "../format/dealstatus";
+import { useNow } from "../format/now";
+import { dayInZone } from "../format/timezone";
 import type { MessageKey } from "../i18n/en";
+import {
+  CLOSE_DAY_DIAL,
+  closeDayRange,
+  type DayRange,
+  narrowsByRange,
+  rangeQueryParams,
+} from "./dealranges";
 import { throwProblem, unwrap } from "./problem";
+import { useRecordZone } from "./recordzone";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
+import { useInstallationSettings } from "./uploadlimit";
 
 /**
  * The pipeline a record belongs to, falling back to the default.
@@ -41,6 +52,8 @@ export type DealFilters = {
   sort: string;
   includeArchived: boolean;
   filters: Record<string, string>;
+  /** The close-day dial read as days, which needs today and the fiscal year. */
+  closeDay?: DayRange;
 };
 
 // Drawing mode and pipeline selection are URL dials, not deal-list filters.
@@ -92,7 +105,17 @@ export function dealsQueryParams(f: DealFilters) {
       parseTagIDs(filters.tag_id),
       parseTagMode(filters.tag_mode),
     ),
+    ...rangeQueryParams(filters, f.closeDay),
   };
+}
+
+// The close-day dial as days. "This quarter" is the fiscal quarter holding
+// today in the installation's zone, the one the reports count.
+function useCloseDay(value: string | undefined): DayRange | undefined {
+  const today = dayInZone(useNow(0), useRecordZone());
+  const fiscalStart =
+    useInstallationSettings().data?.fiscal_year_start_month ?? 1;
+  return closeDayRange(value, today, fiscalStart);
 }
 
 /**
@@ -105,8 +128,11 @@ export function dealsQueryParams(f: DealFilters) {
  * above six cards is what a pipeline view must not do.
  */
 export function useDeals(f: DealFilters) {
+  const closeDay = useCloseDay(f.filters[CLOSE_DAY_DIAL]);
   return useInfiniteQuery({
-    queryKey: ["deals", f],
+    // The days, not the dial's word: a list opened after the quarter turns
+    // never reuses the old quarter's cached page. Today is read at mount.
+    queryKey: ["deals", f, closeDay],
     // `as` steers useInfiniteQuery's TPageParam generic to the cursor type: a
     // bare `undefined` infers TPageParam=undefined and the string cursor no
     // longer type-checks.
@@ -114,7 +140,12 @@ export function useDeals(f: DealFilters) {
     queryFn: async ({ pageParam }) => {
       return unwrap(
         await api.GET("/deals", {
-          params: { query: { ...dealsQueryParams(f), cursor: pageParam } },
+          params: {
+            query: {
+              ...dealsQueryParams({ ...f, closeDay }),
+              cursor: pageParam,
+            },
+          },
         }),
       );
     },
@@ -167,6 +198,7 @@ export function totalsWithheldBecause(f: DealFilters): MessageKey | undefined {
   if (f.filters.owner_team_id || f.filters.unassigned === "true") {
     return "deals.totalsNoTeamFilter";
   }
+  if (narrowsByRange(f.filters)) return "deals.totalsNoRangeFilter";
   return undefined;
 }
 

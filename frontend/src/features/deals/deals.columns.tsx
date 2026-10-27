@@ -1,3 +1,4 @@
+import { DealStatusBadge } from "../../components/dealstatusbadge";
 import { EntityRef, type OwnerNaming } from "../../components/entityref";
 import { ownerColumn, tagsColumn } from "../../components/recordlist";
 import { Badge } from "../../design-system/atoms";
@@ -200,9 +201,7 @@ export function dealColumns(
     {
       key: "status",
       header: t("lead.status"),
-      cell: (deal) => (
-        <Badge tone={dealStatusTone(deal.status)}>{deal.status}</Badge>
-      ),
+      cell: (deal) => <DealStatusBadge status={deal.status} />,
       // By the stored value, so the three groups sit together. Alphabetical
       // (`lost`, `open`, `won`) rather than by lifecycle, because `deal.status`
       // is a text column. The machinery orders by the column, not by a
@@ -210,20 +209,4 @@ export function dealColumns(
       sort: "status",
     },
   ];
-}
-
-// Won reads success, lost reads danger, an open deal carries no status tone.
-// Exported so the partner page's sourced-deals panel reads a deal's status the
-// same way the board and the deal record do. A second mapping would render one
-// status in two colours on two screens.
-export function dealStatusTone(
-  status: Deal["status"],
-): "success" | "danger" | undefined {
-  if (status === "won") {
-    return "success";
-  }
-  if (status === "lost") {
-    return "danger";
-  }
-  return undefined;
 }

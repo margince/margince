@@ -4,7 +4,7 @@ import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { LocaleProvider } from "../../../i18n";
+import { type Locale, LocaleProvider } from "../../../i18n";
 import { meFixture } from "../../../testing/mefixture";
 import { OutcomeReviewPanel } from "./outcomereview";
 
@@ -69,13 +69,13 @@ function stubFetch(reviews: unknown[], canWrite = true) {
   );
 }
 
-function render(ui: ReactNode) {
+function render(ui: ReactNode, locale?: Locale) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return rtlRender(
     <QueryClientProvider client={qc}>
-      <LocaleProvider>{ui}</LocaleProvider>
+      <LocaleProvider initial={locale}>{ui}</LocaleProvider>
     </QueryClientProvider>,
   );
 }
@@ -161,6 +161,36 @@ it("renders the questions frozen onto the review, not today's template", async (
   // The template is editable. Rendering today's wording over an old answer
   // would put words in the author's mouth.
   expect(await screen.findByText("AS ASKED THEN")).toBeTruthy();
+  expect(screen.queryByText("Why did we win?")).toBeNull();
+});
+
+it("asks a built-in question in the reader's language, a reworded one as written", async () => {
+  stubFetch([
+    {
+      ...REVIEW,
+      questions: [
+        {
+          key: "why_we_won",
+          label: "Why did we win?",
+          label_key: "reviewTemplates.builtin.question.why_we_won",
+          type: "text",
+          required: true,
+        },
+        { key: "else", label: "Who else?", type: "text", required: false },
+      ],
+      answers: { why_we_won: "Price." },
+    },
+  ]);
+  render(
+    <OutcomeReviewPanel
+      dealId="d-1"
+      status="won"
+      closingOccurrenceId={CLOSING}
+    />,
+    "vi",
+  );
+  expect(await screen.findByText("Vì sao thắng deal này?")).toBeTruthy();
+  expect(screen.getByText("Who else?")).toBeTruthy();
   expect(screen.queryByText("Why did we win?")).toBeNull();
 });
 

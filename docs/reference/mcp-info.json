@@ -10,16 +10,16 @@
   "totals": {
     "tools": 37,
     "resources": 9,
-    "tool_catalog_bytes": 133339,
+    "tool_catalog_bytes": 133516,
     "resource_catalog_bytes": 3657,
-    "approx_wire_tokens_total": 34249,
+    "approx_wire_tokens_total": 34293,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
       "description_bytes": 33327,
-      "input_schema_bytes": 61981,
+      "input_schema_bytes": 62158,
       "output_schema_bytes": 29103,
-      "description_plus_input_schema_bytes": 95308
+      "description_plus_input_schema_bytes": 95485
     }
   },
   "tools": {
@@ -2781,10 +2781,22 @@
                 "channel_provider": {
                   "type": "string"
                 },
+                "close_from": {
+                  "type": "string"
+                },
+                "close_to": {
+                  "type": "string"
+                },
                 "commercial_motion": {
                   "type": "string"
                 },
                 "company_id": {
+                  "type": "string"
+                },
+                "country": {
+                  "type": "string"
+                },
+                "currency": {
                   "type": "string"
                 },
                 "deal_id": {
@@ -2932,6 +2944,12 @@
                   "type": "string"
                 },
                 "unassigned": {
+                  "type": "string"
+                },
+                "value_max": {
+                  "type": "string"
+                },
+                "value_min": {
                   "type": "string"
                 },
                 "waiting_reply": {

@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 130.2 KB |
+| Tool catalog | 130.4 KB |
 | Resource catalog | 3.6 KB |
-| Approx. wire tokens | 34249 |
+| Approx. wire tokens | 34293 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 28.4 KB | 21% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 32.5 KB | 24% | Yes, every step |
-| Input schemas | 60.5 KB | 46% | Yes, every step |
+| Input schemas | 60.7 KB | 46% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 6% | Partly |
-| **Description + input schema** | **93.1 KB** | **71%** | **the recurring cost** |
+| **Description + input schema** | **93.2 KB** | **71%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -73,7 +73,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1738 |
+| [`find_records`](#find_records) | Find records | yes |  | 1782 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
@@ -3209,10 +3209,22 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
         "channel_provider": {
           "type": "string"
         },
+        "close_from": {
+          "type": "string"
+        },
+        "close_to": {
+          "type": "string"
+        },
         "commercial_motion": {
           "type": "string"
         },
         "company_id": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "currency": {
           "type": "string"
         },
         "deal_id": {
@@ -3360,6 +3372,12 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
           "type": "string"
         },
         "unassigned": {
+          "type": "string"
+        },
+        "value_max": {
+          "type": "string"
+        },
+        "value_min": {
           "type": "string"
         },
         "waiting_reply": {

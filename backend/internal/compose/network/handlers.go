@@ -166,6 +166,11 @@ func (h Reads) GetDealCoverage(w http.ResponseWriter, r *http.Request, id crmcon
 		if err != nil {
 			return err
 		}
+		// Only this page shows when a seat last wrote. So the status card, the
+		// assistant and the intro paths neither pay for that read nor fail on it.
+		if coverage.SeatsInbound, err = readSeatsInbound(ctx, tx, coverage.Stakeholders, now); err != nil {
+			return err
+		}
 		names, err := UserNames(ctx, tx, coverageUsers(coverage))
 		if err != nil {
 			return err
@@ -247,9 +252,13 @@ func wireCoverage(
 		if name, ok := contacts[s.ContactID]; ok {
 			seat.ContactName = &name
 		}
+		if inbound, ok := c.SeatsInbound[s.ContactID]; ok {
+			seat.LastInboundAt = &inbound.At
+			seat.LastInboundPrecision = activitywhen.Stated(inbound.Precision)
+		}
 		out.Stakeholders = append(out.Stakeholders, seat)
 	}
-	for _, e := range c.OurSide {
+	for _, e := range OurColleagues(c.OurSide) {
 		colleague := crmcontracts.ContactNetworkColleague{
 			UserId:          openapi_types.UUID(e.UserID),
 			DisplayName:     names[e.UserID],

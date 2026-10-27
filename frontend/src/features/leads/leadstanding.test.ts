@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { UTC_ZONE, viewerZone } from "../../format/timezone";
-import type { Translator } from "../../i18n";
-import { leadStanding } from "./leadstanding";
+import { type Translator, translate } from "../../i18n";
+import { withShippedLabels } from "../../lib/shippedlabels";
+import type { LeadDisqualifyReason } from "./leadhandling";
+import { leadStanding, standingReasons } from "./leadstanding";
 
 type Lead = components["schemas"]["Lead"];
 
@@ -45,6 +47,7 @@ describe("leadStanding", () => {
       "en",
       zone,
       zone,
+      [],
     );
     expect(merged).toEqual({
       word: "lead.standing.merged",
@@ -66,6 +69,7 @@ describe("leadStanding", () => {
         "en",
         zone,
         zone,
+        [],
       );
       expect(standing).toEqual({
         word: "lead.status.new",
@@ -82,6 +86,7 @@ describe("leadStanding", () => {
       "en",
       zone,
       zone,
+      [],
     );
     expect(answered.word).toBe("lead.standing.theirMove");
     expect(answered.tone).toBe("success");
@@ -100,6 +105,7 @@ describe("leadStanding", () => {
       "en",
       UTC_ZONE,
       UTC_ZONE,
+      [],
     );
     expect(engaged.word).toBe("lead.standing.inMotion");
     expect(engaged.sentence).toBe(
@@ -123,6 +129,7 @@ describe("leadStanding", () => {
       "en",
       "America/Los_Angeles",
       "Asia/Ho_Chi_Minh",
+      [],
     );
     expect(engaged.sentence).toBe(
       'lead.standing.meetingHeldOn:{"name":"Jonas Weber","at":"23 Aug 2026"}',
@@ -138,6 +145,7 @@ describe("leadStanding", () => {
       "en",
       zone,
       zone,
+      [],
     );
     expect(engaged).toEqual({
       word: "lead.status.engaged",
@@ -153,6 +161,7 @@ describe("leadStanding", () => {
       "en",
       zone,
       zone,
+      [],
     );
     expect(qualified.word).toBe("lead.standing.qualified");
     expect(qualified.tone).toBe("success");
@@ -166,6 +175,7 @@ describe("leadStanding", () => {
       "en",
       zone,
       zone,
+      [],
     );
     expect(closed.word).toBe("lead.standing.closed");
     // Neutral, not the all-clear: a closed lead is not good news dressed green.
@@ -174,4 +184,86 @@ describe("leadStanding", () => {
       'lead.standing.closedFor:{"reason":"No budget this year"}',
     );
   });
+
+  // The server's `disqualify_reason` is the stored English label, so the
+  // sentence names the reason the list carries in the reader's language.
+  it("names a built-in reason in the reader's language and an edited one as typed", () => {
+    const de: Translator = (key, params) => translate("de", key, params);
+    const reasons = withShippedLabels(
+      [
+        reason("r-1", "No budget", "leadReasons.builtin.no_budget"),
+        reason("r-2", "Budget frozen until Q3", null),
+      ],
+      de,
+    );
+    const closedFor = (id: string, stored: string) =>
+      leadStanding(
+        lead({
+          status: "disqualified",
+          disqualify_reason_id: id,
+          disqualify_reason: stored,
+        }),
+        de,
+        "de",
+        zone,
+        zone,
+        reasons,
+      ).sentence;
+
+    expect(closedFor("r-1", "No budget")).toBe(
+      "Geschlossen: Kein Budget. Der Datensatz bleibt als Verlauf erhalten.",
+    );
+    expect(closedFor("r-2", "Budget frozen until Q3")).toBe(
+      "Geschlossen: Budget frozen until Q3. Der Datensatz bleibt als Verlauf erhalten.",
+    );
+    // A reason the list does not hold keeps the server's label.
+    expect(closedFor("r-9", "Removed reason")).toBe(
+      "Geschlossen: Removed reason. Der Datensatz bleibt als Verlauf erhalten.",
+    );
+  });
+
+  // The stored label is English. While the list loads, a German reader sees
+  // no reason rather than that one; once the list failed, it is all there is.
+  it("holds the reason back until the list answers, and falls back to the stored one if it fails", () => {
+    const de: Translator = (key, params) => translate("de", key, params);
+    const closedWhile = (read: Parameters<typeof standingReasons>[0]) =>
+      leadStanding(
+        lead({
+          status: "disqualified",
+          disqualify_reason_id: "r-1",
+          disqualify_reason: "No budget",
+        }),
+        de,
+        "de",
+        zone,
+        zone,
+        standingReasons(read),
+      ).sentence;
+
+    expect(closedWhile({ data: undefined, isError: false })).toBe(
+      "Geschlossen. Der Datensatz bleibt als Verlauf erhalten.",
+    );
+    expect(closedWhile({ data: undefined, isError: true })).toBe(
+      "Geschlossen: No budget. Der Datensatz bleibt als Verlauf erhalten.",
+    );
+  });
 });
+
+function reason(
+  id: string,
+  label: string,
+  labelKey: string | null,
+): LeadDisqualifyReason {
+  return {
+    id,
+    label,
+    label_key: labelKey,
+    sort_order: 10,
+    active: true,
+    system: labelKey !== null,
+    lead_count: 1,
+    version: 1,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+}

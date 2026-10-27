@@ -6,13 +6,22 @@ import { INTL_LOCALE } from "./format";
 // the country's own name in their language, from the platform's region table,
 // so no list of countries lives in this tree.
 
+const regionNames = new Map<Locale, Intl.DisplayNames>();
+
+function regionNamesFor(locale: Locale): Intl.DisplayNames {
+  const held = regionNames.get(locale);
+  if (held) {
+    return held;
+  }
+  const made = new Intl.DisplayNames(INTL_LOCALE[locale], { type: "region" });
+  regionNames.set(locale, made);
+  return made;
+}
+
 /** The country a pack code names, in the reader's language. */
 export function jurisdictionName(code: string, locale: Locale): string {
   try {
-    const names = new Intl.DisplayNames(INTL_LOCALE[locale], {
-      type: "region",
-    });
-    return names.of(code.toUpperCase()) ?? code.toUpperCase();
+    return regionNamesFor(locale).of(code.toUpperCase()) ?? code.toUpperCase();
   } catch {
     // A code the platform table does not know (a reserved one in a test
     // build) is still a code the reader can quote.

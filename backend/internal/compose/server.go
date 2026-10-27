@@ -99,6 +99,8 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	}
 	srv.applySendPath(pool)
 	srv.publishListsAvailability(pool)
+	// After the lists switch, so /me probes list_id through the resolver the deal list holds.
+	srv.authHandlers = srv.WithRefusedDealFilters(srv.RefusedListFilters)
 	// The tool registry is built HERE, after the options, on the Server that is
 	// actually served — so every engine an option installed is one the tools can
 	// reach. The rebuild each option performs keeps a half-configured Server

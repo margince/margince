@@ -1283,13 +1283,16 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead_disqualify_reason
 
-8 columns · primary key `(id)` · referenced by 1 foreign key
+11 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `active` | `boolean`, default `true` | yes |  |
 | `label` | `text` | yes |  |
+| `label_key` | `text`, generated as `label_key_while_shipped(label, shipped_label, shipped_label_key)` |  | Computed by the database. It cannot be written directly. |
+| `shipped_label` | `text` |  |  |
+| `shipped_label_key` | `text` |  |  |
 | `sort_order` | `integer`, default `0` | yes |  |
 | `system` | `boolean`, default `false` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -1354,7 +1357,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead_origin
 
-10 columns · primary key `(id)` · referenced by 1 foreign key
+13 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1363,6 +1366,9 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `intent` | `text`, default `'neutral'::text` | yes | One of `high`, `neutral`, `low`. |
 | `key` | `text` | yes | Lowercase stable key, the stored value. |
 | `label` | `text` | yes |  |
+| `label_key` | `text`, generated as `label_key_while_shipped(label, shipped_label, shipped_label_key)` |  | Computed by the database. It cannot be written directly. |
+| `shipped_label` | `text` |  |  |
+| `shipped_label_key` | `text` |  |  |
 | `sort_order` | `integer`, default `0` | yes |  |
 | `system` | `boolean`, default `false` | yes | Built-in. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |

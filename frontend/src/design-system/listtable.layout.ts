@@ -10,10 +10,12 @@ import {
   type UIEvent,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
 import { readStoredJson, STORAGE_KEYS, writeStored } from "../lib/storage";
+import { useNumericFloors } from "./listtable.floors";
 
 /**
  * How the table divides its width when the reader has not resized anything.
@@ -82,6 +84,20 @@ export function widthWorthAdopting(
   return next !== current && next !== beforeThat;
 }
 
+/**
+ * A column's size, raised to its floor. The floor is the widest figure a
+ * numeric column holds, so no figure is cut short to fit a share.
+ */
+function boundsOf(column: SizedColumn, floors: Widths): ColumnSize {
+  const size = sizeOf(column);
+  const floor = floors[column.key] ?? 0;
+  return {
+    share: size.share,
+    min: Math.max(size.min, floor),
+    max: size.max === undefined ? undefined : Math.max(size.max, floor),
+  };
+}
+
 function sizeOf(column: SizedColumn): ColumnSize {
   if (column.fixed) {
     return COLUMN_SIZES.identity;
@@ -133,6 +149,16 @@ function widthsIn(value: unknown): Record<string, number> | null {
   );
 }
 
+function floorsIn(value: unknown): NumericFloors {
+  if (typeof value !== "object" || value === null) {
+    return NO_FLOORS;
+  }
+  return {
+    held: widthsIn(Reflect.get(value, "held")) ?? {},
+    onScreen: widthsIn(Reflect.get(value, "onScreen")) ?? {},
+  };
+}
+
 function writeWidths(key: string | undefined, widths: Record<string, number>) {
   if (!key) {
     return;
@@ -144,6 +170,14 @@ function writeWidths(key: string | undefined, widths: Record<string, number>) {
 }
 
 type Widths = Readonly<Record<string, number>>;
+
+/**
+ * The widest figure of each numeric column: held since the table mounted, and
+ * on screen now. A dragged width answers only to the figures on screen.
+ */
+export type NumericFloors = Readonly<{ held: Widths; onScreen: Widths }>;
+
+const NO_FLOORS: NumericFloors = { held: {}, onScreen: {} };
 
 /** Every shown column's width, and where the row stops shrinking. */
 export type ColumnLayout = Readonly<{
@@ -165,11 +199,15 @@ export function columnLayout(
   shown: readonly SizedColumn[],
   widths: Widths,
   available: number,
+  floors: NumericFloors = NO_FLOORS,
 ): ColumnLayout {
+  const sizeOf = (column: SizedColumn) => boundsOf(column, floors.held);
   const fixedWidth = (column: SizedColumn) => {
     const resized = widths[column.key];
+    // A width the reader set is theirs. A figure on screen raises it, since a
+    // figure cut short reads as a different number.
     if (resized) {
-      return resized;
+      return Math.max(resized, floors.onScreen[column.key] ?? 0);
     }
     const { share, min } = sizeOf(column);
     return share === null ? min : undefined;
@@ -343,7 +381,9 @@ export function useColumnWidths(
   };
   const { widths, ...resize } = useResizedWidths(widthsKey, measured);
   const available = useAvailableWidth(refs.scroller, drawsOwnTable);
-  return { ...columnLayout(shown, widths, available), ...resize };
+  const floorsRead = useNumericFloors(shown, refs.head);
+  const floors = useMemo(() => floorsIn(JSON.parse(floorsRead)), [floorsRead]);
+  return { ...columnLayout(shown, widths, available, floors), ...resize };
 }
 
 /**

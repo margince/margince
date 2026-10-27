@@ -96,8 +96,12 @@ var listRecordFilters = map[string][]listFilter{
 	},
 	"deal": {
 		{Name: "acquisition_source", Type: "string"},
+		{Name: "close_from", Type: "string"},
+		{Name: "close_to", Type: "string"},
 		{Name: "commercial_motion", Type: "string", Enum: []string{"new_business", "renewal", "upsell", "cross_sell", "expansion", "existing_business", "unset"}},
 		{Name: "company_id", Type: "string"},
+		{Name: "country", Type: "string"},
+		{Name: "currency", Type: "string"},
 		{Name: "forecast_category", Type: "string", Enum: []string{"commit", "best_case", "pipeline", "omitted"}},
 		{Name: "include_archived", Type: "boolean"},
 		{Name: "list_id", Type: "string"},
@@ -118,6 +122,8 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "tag_id", Type: "array"},
 		{Name: "tag_mode", Type: "string", Enum: []string{"any", "all", "none"}},
 		{Name: "unassigned", Type: "boolean"},
+		{Name: "value_max", Type: "integer"},
+		{Name: "value_min", Type: "integer"},
 	},
 	"lead": {
 		{Name: "ai_written", Type: "boolean"},

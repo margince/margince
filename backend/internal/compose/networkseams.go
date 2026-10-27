@@ -196,7 +196,7 @@ func toAgentCoverage(c network.DealCoverage, names, seated map[ids.UUID]string) 
 			Role: s.Role, Engaged: s.Engaged,
 		})
 	}
-	for _, e := range c.OurSide {
+	for _, e := range network.OurColleagues(c.OurSide) {
 		colleague := agents.KnownColleague{
 			UserID: e.UserID, DisplayName: names[e.UserID],
 			StrengthBucket: e.Strength.Bucket, Interactions90d: e.Count90d,

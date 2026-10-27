@@ -14,6 +14,8 @@
 // truthy check, and renders as an empty badge — which reads exactly like a
 // record with no role at all.
 
+import type { components } from "../api/schema";
+import { foldForMatch } from "../format/collate";
 import type { MessageKey } from "../i18n/en";
 
 // What each signal kind is, in words. Keyed by plain string, matching how the
@@ -65,11 +67,26 @@ export function signalTone(severity: string): "warning" | "danger" | undefined {
     : undefined;
 }
 
+type ProjectStakeholderRole =
+  components["schemas"]["SetProjectStakeholderRequest"]["role"];
+
+// The roles a project seats beyond a deal's. The rest of the project request's
+// roles are the deal vocabulary, so the contract types both maps.
+type DeliveryRole =
+  | "sponsor"
+  | "project_lead"
+  | "delivery_lead"
+  | "subject_matter_expert";
+
+// Typed from the project request, whose roles are the deal vocabulary plus
+// the delivery roles: a role added to that request alone fails tsc here.
+type DealRole = Exclude<ProjectStakeholderRole, DeliveryRole>;
+
 // The deal-stakeholder roles worth a word. `role` is free text on the wire
 // (the enum is an unminted contract extension, DEAL-EXT-5). A label stands
 // alone, so it takes the sentence-case keys; `co.role.*` is the same word for
 // the middle of a phrase ("Thiếu {role}").
-const DEAL_ROLE_LABELS: Record<string, MessageKey> = {
+const DEAL_ROLE_LABELS: Record<DealRole, MessageKey> = {
   champion: "co.roleLabel.champion",
   economic_buyer: "co.roleLabel.economic_buyer",
   blocker: "co.roleLabel.blocker",
@@ -86,16 +103,46 @@ const DEAL_ROLE_LABELS: Record<string, MessageKey> = {
  * about companies.
  */
 export function dealRoleLabel(role: string, t: (key: MessageKey) => string) {
-  const key = Object.hasOwn(DEAL_ROLE_LABELS, role)
-    ? DEAL_ROLE_LABELS[role]
-    : undefined;
+  const labels: Readonly<Record<string, MessageKey>> = DEAL_ROLE_LABELS;
+  const key = Object.hasOwn(labels, role) ? labels[role] : undefined;
   return key ? t(key) : role.replace(/_/g, " ");
 }
 
-// The delivery roles a project adds to the deal-stakeholder vocabulary. The
-// five deal roles fall through to their own labels below, so one word names a
-// champion on a deal and on the project it became.
-const PROJECT_ROLE_LABELS: Record<string, MessageKey> = {
+/** A role's words as a reader may type them: any case, any run of spaces. */
+function roleWords(text: string): string {
+  return foldForMatch(text.normalize("NFC").trim().replace(/\s+/gu, " "));
+}
+
+/** The role keys a reader's words may name, and the words each one shows as. */
+export type RoleVocabulary = Readonly<{
+  keys: readonly string[];
+  label: (role: string, t: (key: MessageKey) => string) => string;
+}>;
+
+/**
+ * The key of the `offered` or `vocabulary` role that `text` spells by label or
+ * key, else `text` trimmed. `offered` goes first, so an untouched save keeps it.
+ */
+export function roleFromTyped(
+  text: string,
+  t: (key: MessageKey) => string,
+  vocabulary: RoleVocabulary,
+  offered: readonly string[] = [],
+): string {
+  const typed = roleWords(text);
+  const known = [...offered, ...vocabulary.keys];
+  const role = known.find(
+    (candidate) =>
+      roleWords(vocabulary.label(candidate, t)) === typed ||
+      roleWords(candidate) === typed,
+  );
+  return role ?? text.trim();
+}
+
+// Keyed by the request's own role, so tsc fails when the contract adds or drops
+// one. The deal roles keep their labels: one word names a champion on both.
+const PROJECT_ROLE_LABELS: Record<ProjectStakeholderRole, MessageKey> = {
+  ...DEAL_ROLE_LABELS,
   sponsor: "project.role.sponsor",
   project_lead: "project.role.project_lead",
   delivery_lead: "project.role.delivery_lead",
@@ -114,8 +161,64 @@ export function projectRoleLabel(
   role: string,
   t: (key: MessageKey) => string,
 ): string {
-  const key = Object.hasOwn(PROJECT_ROLE_LABELS, role)
-    ? PROJECT_ROLE_LABELS[role]
-    : undefined;
+  const labels: Readonly<Record<string, MessageKey>> = PROJECT_ROLE_LABELS;
+  const key = Object.hasOwn(labels, role) ? labels[role] : undefined;
   return key ? t(key) : dealRoleLabel(role, t);
 }
+
+/** Whether `value` names a seat the project stakeholder request accepts. */
+export function isProjectStakeholderRole(
+  value: string,
+): value is ProjectStakeholderRole {
+  return Object.hasOwn(PROJECT_ROLE_LABELS, value);
+}
+
+/** The project seats, in the order this map lists them. */
+export const PROJECT_STAKEHOLDER_ROLES: readonly ProjectStakeholderRole[] =
+  Object.keys(PROJECT_ROLE_LABELS).filter(isProjectStakeholderRole);
+
+type BillingContactRole = components["schemas"]["BillingContactRole"];
+
+// A billing contact's capacities, in the order an invoice moves through them:
+// addressed to somebody, approved by somebody, then paid by somebody.
+const BILLING_ROLE_LABELS: Record<BillingContactRole, MessageKey> = {
+  recipient: "billing.role.recipient",
+  approver: "billing.role.approver",
+  accounts_payable: "billing.role.accountsPayable",
+};
+
+/** billingRoleLabel names the capacity a billing contact holds. */
+export function billingRoleLabel(
+  role: string,
+  t: (key: MessageKey) => string,
+): string {
+  const labels: Readonly<Record<string, MessageKey>> = BILLING_ROLE_LABELS;
+  const key = Object.hasOwn(labels, role) ? labels[role] : undefined;
+  return key ? t(key) : role;
+}
+
+/** Whether `value` names a capacity the billing contact contract accepts. */
+export function isBillingContactRole(
+  value: string,
+): value is BillingContactRole {
+  return Object.hasOwn(BILLING_ROLE_LABELS, value);
+}
+
+/** The billing capacities a form offers, in the order this map lists them. */
+export const BILLING_CONTACT_ROLES: readonly BillingContactRole[] =
+  Object.keys(BILLING_ROLE_LABELS).filter(isBillingContactRole);
+
+export const DEAL_ROLES: RoleVocabulary = {
+  keys: Object.keys(DEAL_ROLE_LABELS),
+  label: dealRoleLabel,
+};
+
+export const PROJECT_ROLES: RoleVocabulary = {
+  keys: PROJECT_STAKEHOLDER_ROLES,
+  label: projectRoleLabel,
+};
+
+export const BILLING_ROLES: RoleVocabulary = {
+  keys: BILLING_CONTACT_ROLES,
+  label: billingRoleLabel,
+};
