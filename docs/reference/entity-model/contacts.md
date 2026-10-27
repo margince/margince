@@ -1176,7 +1176,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead
 
-41 columns · primary key `(id)` · referenced by 18 foreign keys
+42 columns · primary key `(id)` · referenced by 18 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1191,6 +1191,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `first_response_at` | `timestamp with time zone` |  | First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. |
 | `from_contact_id` | `uuid` |  | The contact an older lead was created from, and null for every newly created lead. |
 | `full_name` | `text` |  |  |
+| `industry` | `text` |  | The industry typed on the lead, one of the fixed codes, or null. |
 | `linkedin_url` | `text` |  | Normalized LinkedIn profile URL; the exact-match dedupe key. |
 | `merged_into_id` | `uuid` |  | Set when this lead was merged away into another, and null otherwise. |
 | `origin` | `text` |  | Where the lead came from, a key from `/lead-origins`. |

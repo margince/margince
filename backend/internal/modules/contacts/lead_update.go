@@ -32,6 +32,8 @@ type UpdateLeadInput struct {
 	Title               *string
 	CompanyName         *string
 	CandidateCompanyKey *string
+	// Industry is a code or a label of one (leadIndustryWrite); blank clears it.
+	Industry *string
 	// LinkedInURL sets the profile URL in its normalized spelling.
 	LinkedInURL *string
 	Status      *string // only new ↔ working here; terminal states have their own paths
@@ -101,36 +103,6 @@ func (e *ScoreOverrideWithoutScoreError) Error() string {
 // FieldFault names the score, which is the input that is missing.
 func (e *ScoreOverrideWithoutScoreError) FieldFault() (field, code, message string) {
 	return leadScoreField, codeRequired, e.Error()
-}
-
-// ScoreOverrideReasonEmptyError rejects an empty-string reason: the
-// contract's clear gesture is JSON null (minLength 1 on the field), so a
-// blank reason is neither a written justification nor a clear — it is
-// invalid input.
-type ScoreOverrideReasonEmptyError struct{}
-
-func (e *ScoreOverrideReasonEmptyError) Error() string {
-	return "score_override_reason must not be empty; pass null to clear the override"
-}
-
-// FieldFault refuses a score-override reason that is present but blank.
-func (e *ScoreOverrideReasonEmptyError) FieldFault() (field, code, message string) {
-	return leadScoreOverrideReasonField, "min_length", e.Error()
-}
-
-// ScoreOverrideClearConflictError rejects a null score arriving together
-// with a written reason: null says "drop the override", the reason says
-// "keep one" — honoring either would silently discard the other half of
-// the request.
-type ScoreOverrideClearConflictError struct{}
-
-func (e *ScoreOverrideClearConflictError) Error() string {
-	return "a null score clears the override; it cannot be combined with a score_override_reason"
-}
-
-// FieldFault refuses setting and clearing the same override in one request.
-func (e *ScoreOverrideClearConflictError) FieldFault() (field, code, message string) {
-	return leadScoreField, "clear_conflict", e.Error()
 }
 
 func (s *Store) UpdateLead(ctx context.Context, id ids.LeadID, in UpdateLeadInput) (crmcontracts.Lead, error) {
@@ -300,7 +272,7 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	if err := unlinkRenamedCompany(ctx, tx, id, p); err != nil {
+	if err := unlinkRenamedCompany(ctx, tx, id, current.CandidateCompanyKey, p); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	if p.Empty() {
@@ -408,6 +380,13 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 	}
 	if in.CompanyName != nil {
 		p.Set("company_name", current.CompanyName, *in.CompanyName)
+	}
+	if in.Industry != nil {
+		industry, err := leadIndustryWrite(in.Industry)
+		if err != nil {
+			return nil, false, err
+		}
+		p.Set(leadIndustryField, current.Industry, industry)
 	}
 	if in.LinkedInURL != nil {
 		normalized, err := leadLinkedInForUpdate(*in.LinkedInURL, current.LinkedinUrl)

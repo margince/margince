@@ -6,6 +6,7 @@
 package gates
 
 import (
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -38,9 +39,15 @@ func readFrontendFile(t *testing.T, elems ...string) string {
 // any of the others lacks, or holds twice, fails here.
 func TestTheIndustryListIsOneSetInTheContractTheOwnerAndTheClient(t *testing.T) {
 	t.Parallel()
-	contract := contractEnum(t, loadContractDocument(t), "Company", "industry")
+	doc := loadContractDocument(t)
+	contract := contractEnum(t, doc, "Company", "industry")
 	if len(contract) < 20 || len(contract) > 40 {
 		t.Fatalf("the contract lists %d industries, want between 20 and 40", len(contract))
+	}
+	for _, schema := range []string{"Lead", "LeadCompanyFacts"} {
+		if copied := contractEnum(t, doc, schema, "industry"); !maps.Equal(copied, contract) {
+			t.Errorf("%s.industry admits %v, want the company's list %v", schema, copied, contract)
+		}
 	}
 	owner := contacts.IndustryCodes()
 	if len(owner) != len(contract) {

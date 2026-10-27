@@ -9,8 +9,6 @@ package deals
 
 import (
 	"context"
-	"regexp"
-	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -81,7 +79,7 @@ func appendRangeFilters(ctx context.Context, where []string, f RangeFilters, arg
 		where = appendBounds(where, valueInBaseSQL(f.valuation, arg), "bigint", f.ValueMin, f.ValueMax, arg)
 	}
 	if f.Currency != nil {
-		currency, err := codeOperand(*f.Currency, filterCurrency, values.ValidCurrency, "a three-letter ISO-4217 code, such as EUR")
+		currency, err := storekit.CodeOperand(*f.Currency, filterCurrency, values.ValidCurrency, "a three-letter ISO-4217 code, such as EUR")
 		if err != nil {
 			return nil, err
 		}
@@ -91,7 +89,7 @@ func appendRangeFilters(ctx context.Context, where []string, f RangeFilters, arg
 		where = append(where, storekit.SQLf("currency = $%d", arg(currency)))
 	}
 	if f.Country != nil {
-		country, err := codeOperand(*f.Country, filterCountry, countryShape.MatchString, "a two-letter ISO 3166-1 code, such as DE")
+		country, err := storekit.CountryOperand(*f.Country, filterCountry)
 		if err != nil {
 			return nil, err
 		}
@@ -102,28 +100,6 @@ func appendRangeFilters(ctx context.Context, where []string, f RangeFilters, arg
 		where = append(where, clause)
 	}
 	return where, nil
-}
-
-// countryShape is the alpha-2 shape the company address column stores.
-var countryShape = regexp.MustCompile(`^[A-Z]{2}$`)
-
-// codeOperand upper-cases a currency or country dial and refuses one of the
-// wrong shape. It could match no deal, and the empty page would read as "none".
-func codeOperand(raw, field string, shaped func(string) bool, shape string) (string, error) {
-	code := strings.Map(upperASCII, raw)
-	if shaped(code) {
-		return code, nil
-	}
-	return "", &values.ParseError{Field: field, Code: field + "_malformed", Message: field + " must be " + shape}
-}
-
-// upperASCII folds an ASCII letter alone. strings.ToUpper also folds some
-// non-ASCII letters into ASCII ones, which would pass a non-code as a code.
-func upperASCII(r rune) rune {
-	if 'a' <= r && r <= 'z' {
-		return r - ('a' - 'A')
-	}
-	return r
 }
 
 // appendBounds adds `expr >= low` and `expr <= high` for each bound given. A

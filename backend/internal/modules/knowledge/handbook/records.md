@@ -47,7 +47,7 @@ Many users get two of these wrong.
 
 **A deal does not need a company.** Name, pipeline, stage and source are required. Value, company and expected close date are not. Value and currency go together: you cannot give one without the other. A deal with no value has no currency either. Qualifying a lead creates a deal with no company, also for a lead linked to a company.
 
-A lead's company is plain text until you link it, so imported leads do not create half-filled companies in your CRM. When only one company you can open has the name the lead names, the lead page offers **Link to** that company. Linking makes the company name on the lead open the company. If you later change the lead's company to a name that is not the linked company, the link is removed. Linking creates no contact, and the lead keeps its status: someone is a lead or a contact, never both. When you qualify the lead, the contact it becomes gets a job link to the linked company.
+A lead's company is plain text until you link it, so imported leads do not create half-filled companies in your CRM. The lead page offers **Link to** a company you can open: the one holding the lead's domain, else the only one with that name. Linking makes the company name on the lead open the company. If you later change the lead's company to a name that is not the linked company, the link is removed. Linking creates no contact, and the lead keeps its status: someone is a lead or a contact, never both. When you qualify the lead, the contact it becomes gets a job link to the linked company.
 
 ## Contacts
 

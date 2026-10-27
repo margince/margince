@@ -186,7 +186,7 @@ func ensureLeadUpdateAuthority(ctx context.Context, tx pgx.Tx, id ids.LeadID, in
 func ownershipOnlyLeadUpdate(in UpdateLeadInput) bool {
 	return len(in.Clear) == 0 && len(in.CustomFields) == 0 &&
 		in.FullName == nil && in.Email == nil && in.Phone == nil && in.Title == nil &&
-		in.CompanyName == nil && in.LinkedInURL == nil && in.CandidateCompanyKey == nil &&
+		in.CompanyName == nil && in.LinkedInURL == nil && in.CandidateCompanyKey == nil && in.Industry == nil &&
 		in.Status == nil && in.Source == nil && in.Score == nil &&
 		in.ScoreOverrideReason == nil && !in.ClearScoreOverride &&
 		in.ProjectID == nil

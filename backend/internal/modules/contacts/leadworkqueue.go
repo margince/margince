@@ -164,8 +164,11 @@ func leadQueueWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalo
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	where = append(where, filters...)
-	where = append(where, leadNarrowing(ctx, in, policy, arg)...)
+	narrowed, err := leadNarrowing(ctx, in, policy, arg)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	where = append(append(where, filters...), narrowed...)
 	return where, &args, arg, nil
 }
 

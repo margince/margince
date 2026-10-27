@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -110,23 +111,28 @@ func refusedDealFilters(t *testing.T, e *apptest.AppEnv) []string {
 	return *me.Authorization.RefusedDealFilters
 }
 
-// assertSnapshotMatchesTheList sends each deal list filter over HTTP, so the
-// snapshot is held to what the list answers, wherever the list refuses it.
+// assertSnapshotMatchesTheList holds the deal snapshot to what the deal list answers.
 func assertSnapshotMatchesTheList(t *testing.T, e *apptest.AppEnv, refused []string) {
 	t.Helper()
-	probed := probedDealFilters(t)
-	enums := listDealsEnums(t)
+	assertListSnapshot(t, e, "/deals", probedDealFilters(t), refused)
+}
+
+// assertListSnapshot sends each filter of one list over HTTP, so the snapshot
+// is held to what the list answers, wherever the list refuses it.
+func assertListSnapshot(t *testing.T, e *apptest.AppEnv, path string, probed []storekit.FilterReach, refused []string) {
+	t.Helper()
+	enums := listEnums(t, path)
 	for _, filter := range probed {
 		operand := admittedOperand(filter, enums)
-		listRefuses := theListRefuses(t, e, filter.Parameter, operand)
+		listRefuses := theListRefuses(t, e, path, filter.Parameter, operand)
 		if listRefuses != slices.Contains(refused, filter.Parameter) {
-			t.Errorf("the list refuses %s=%s: %v, and /me lists it as refused: %v",
-				filter.Parameter, operand, listRefuses, slices.Contains(refused, filter.Parameter))
+			t.Errorf("%s refuses %s=%s: %v, and /me lists it as refused: %v",
+				path, filter.Parameter, operand, listRefuses, slices.Contains(refused, filter.Parameter))
 		}
 	}
 	for _, parameter := range refused {
-		if !slices.ContainsFunc(probed, func(probe deals.FilterReach) bool { return probe.Parameter == parameter }) {
-			t.Errorf("/me refuses %s, which the deal list does not bind", parameter)
+		if !slices.ContainsFunc(probed, func(probe storekit.FilterReach) bool { return probe.Parameter == parameter }) {
+			t.Errorf("/me refuses %s, which %s does not bind", parameter, path)
 		}
 	}
 }
@@ -135,12 +141,12 @@ func assertSnapshotMatchesTheList(t *testing.T, e *apptest.AppEnv, refused []str
 // bare string, and the probe's operand names no column.
 const sortOperand = "created_at"
 
-// listDealsEnums is each deal list query parameter the contract closes to an
+// listEnums is each query parameter of one list the contract closes to an
 // enum, with its members as the wire spells them.
-func listDealsEnums(t *testing.T) map[string][]string {
+func listEnums(t *testing.T, path string) map[string][]string {
 	t.Helper()
 	enums := map[string][]string{}
-	for _, parameter := range loadContract(t).Paths.Value("/deals").Get.Parameters {
+	for _, parameter := range loadContract(t).Paths.Value(path).Get.Parameters {
 		if parameter.Value.Schema == nil {
 			continue
 		}
@@ -153,14 +159,14 @@ func listDealsEnums(t *testing.T) map[string][]string {
 		}
 	}
 	if len(enums) == 0 {
-		t.Fatal("the contract's deal list closes no parameter to an enum, so the operands were read from nothing")
+		t.Fatalf("the contract's %s list closes no parameter to an enum, so the operands were read from nothing", path)
 	}
 	return enums
 }
 
 // admittedOperand is the probe's operand where the contract admits it, and
 // otherwise a word it does: the contract's operand fault answers before any grant.
-func admittedOperand(filter deals.FilterReach, enums map[string][]string) string {
+func admittedOperand(filter storekit.FilterReach, enums map[string][]string) string {
 	if filter.Parameter == "sort" {
 		return sortOperand
 	}
@@ -171,13 +177,13 @@ func admittedOperand(filter deals.FilterReach, enums map[string][]string) string
 	return members[0]
 }
 
-// theListRefuses reads one filtered deal list. A 403 or a masked field refuses
-// the caller; a page or an id that names nothing does not. An operand fault
-// fails the test, since it answers before the list checks a grant.
-func theListRefuses(t *testing.T, e *apptest.AppEnv, parameter, operand string) bool {
+// theListRefuses reads one filtered list. A 403 or a masked field refuses the
+// caller; a page or an id that names nothing does not. An operand fault fails
+// the test, since it answers before the list checks a grant.
+func theListRefuses(t *testing.T, e *apptest.AppEnv, path, parameter, operand string) bool {
 	t.Helper()
 	var problem codeRefusal
-	status := e.Call(t, "GET", "/v1/deals?"+url.Values{parameter: {operand}}.Encode(), nil, nil, &problem)
+	status := e.Call(t, "GET", "/v1"+path+"?"+url.Values{parameter: {operand}}.Encode(), nil, nil, &problem)
 	fault := problem.Details.Errors
 	switch {
 	case status == http.StatusForbidden:
@@ -187,7 +193,7 @@ func theListRefuses(t *testing.T, e *apptest.AppEnv, parameter, operand string) 
 	case status == http.StatusOK || status == http.StatusNotFound:
 		return false
 	}
-	t.Errorf("GET /v1/deals?%s=%s = %d %+v, want a page or a refusal", parameter, operand, status, fault)
+	t.Errorf("GET /v1%s?%s=%s = %d %+v, want a page or a refusal", path, parameter, operand, status, fault)
 	return false
 }
 

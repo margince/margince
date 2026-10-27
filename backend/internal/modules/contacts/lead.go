@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -30,12 +31,14 @@ type CreateLeadInput struct {
 	Title               *string
 	CompanyName         *string
 	CandidateCompanyKey *string
-	LinkedInURL         *string
-	Status              string
-	OwnerID             *ids.UserID
-	ProjectID           *ids.ProjectID
-	SourceSystem        *string
-	SourceID            *string
+	// Industry is a code by the time it reaches the column (leadIndustryWrite).
+	Industry     *string
+	LinkedInURL  *string
+	Status       string
+	OwnerID      *ids.UserID
+	ProjectID    *ids.ProjectID
+	SourceSystem *string
+	SourceID     *string
 	// Source is how the row reached Margince; it never scores.
 	Source string
 	// Origin is where the lead came from: a lead_origin key. OriginHint is
@@ -209,11 +212,15 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
 		return ids.LeadID{}, err
 	}
-	authorCols, authorHolders, base := storekit.AuthorInsertFragments(in.Author, []any{
+	fixed := []any{
 		id, in.FullName, in.Email, in.Title, in.CompanyName, in.CandidateCompanyKey,
 		in.LinkedInURL, in.Status, fit.Score, in.OwnerID, in.ProjectID, in.SourceSystem, in.SourceID, in.Source, by,
-		in.Phone, in.Origin, in.OriginDetail,
-	})
+		in.Phone, in.Origin, in.OriginDetail, in.Industry,
+	}
+	holders := strings.Split(storekit.Placeholders(fixed), ",")
+	// The email is the third bind: lower() holds the dedupe key's spelling at the column, whatever door wrote it.
+	holders[2] = "lower(" + holders[2] + ")"
+	authorCols, authorHolders, base := storekit.AuthorInsertFragments(in.Author, fixed)
 	cfCols, cfHolders, args, err := storekit.InsertFragments(active, in.CustomFields, base)
 	if err != nil {
 		return ids.LeadID{}, err
@@ -221,8 +228,8 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 	_, err = tx.Exec(ctx,
 		`INSERT INTO lead (id, full_name, email, title, company_name, candidate_company_key,
 		                   linkedin_url, status, score, owner_id, project_id, source_system, source_id, source, captured_by,
-		                   phone, origin, origin_detail`+authorCols+cfCols+`)
-		 VALUES ($1, $2, lower($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18`+authorHolders+cfHolders+`)`,
+		                   phone, origin, origin_detail, `+leadIndustryField+authorCols+cfCols+`)
+		 VALUES (`+strings.Join(holders, ", ")+authorHolders+cfHolders+`)`,
 		args...)
 	if err != nil {
 		// Race behind the pre-checks: the constraint name tells an
@@ -278,6 +285,11 @@ func normalizedCreateLeadInput(in CreateLeadInput) (CreateLeadInput, error) {
 		}
 		in.LinkedInURL = &normalized
 	}
+	industry, err := leadIndustryWrite(in.Industry)
+	if err != nil {
+		return CreateLeadInput{}, err
+	}
+	in.Industry = industry
 	return in, nil
 }
 
@@ -391,57 +403,6 @@ func (s *Store) GetLead(ctx context.Context, id ids.LeadID, archived storekit.Ar
 		return err
 	})
 	return out, err
-}
-
-type ListLeadsInput struct {
-	Cursor *string
-	Limit  *int
-	Status *string
-	// OwnerID, OwnerTeamID and Unassigned are the owner dials every
-	// owner-scoped list carries (DM-VOCAB-OWN-1), bound through
-	// storekit.OwnershipClause as contact and company bind them.
-	OwnerID         *ids.UserID
-	OwnerTeamID     *ids.TeamID
-	Unassigned      *bool
-	Query           *string
-	IncludeArchived bool
-	// CapturedByKind filters on the captured_by prefix (ADR-0075/A121 §3a).
-	CapturedByKind *string
-	// AiWritten filters on whether an AI wrote into the record (§3a).
-	AiWritten *bool
-	// MinScore is the triage floor: a lead list is read to work the warmest
-	// rows first, so a reader asking for a score keeps the colder rows off
-	// the page rather than scanning past them.
-	MinScore *int
-	// OwedAReply keeps only the leads nobody has answered.
-	//
-	// A QUERY dial rather than something a caller filters afterwards, and the
-	// difference is the whole point: the page is bounded, so a caller cutting
-	// answered rows off the end of it loses the unanswered leads that were
-	// behind them — and reports the shortfall as "none owed" rather than as a
-	// page that was cut.
-	OwedAReply *bool
-	// Source narrows to how the row was written (import, crawl, manual,
-	// `connector:<name>`).
-	Source *string
-	// Origin narrows to one origin key, or `unset` for the unclassified.
-	Origin *string
-	// TagIDs narrows to the leads carrying these tags, combined by TagMode.
-	TagIDs  []ids.UUID
-	TagMode storekit.TagMode
-	// FromContactID narrows to the leads worked from one contact.
-	FromContactID *ids.ContactID
-	// SLAState narrows to leads in one first-response state (formulas
-	// §18.1); breached is the overdue queue.
-	SLAState *crmcontracts.ListLeadsParamsSlaState
-	// Sort is the contract's sort spec, validated against the lead
-	// vocabulary plus the workspace's active cf_ columns.
-	Sort *string
-	// Membership narrows to one list's members (list_id).
-	Membership storekit.ListMemberFilter
-	// MemberOf is the list a seam caller narrowed to; the provider resolves it
-	// into Membership before the read.
-	MemberOf *ids.UUID
 }
 
 // leadUniqueViolation maps a lead write's unique-index violation to the

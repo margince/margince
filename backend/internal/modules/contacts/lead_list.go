@@ -147,12 +147,12 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 				Unassigned:      in.Unassigned,
 				Query:           nil,
 				Cursor:          in.Cursor,
-				Membership:      in.Membership,
 			}.clauses(ctx, active, sorted, arg)
 			if err != nil {
 				return nil, err
 			}
-			return append(where, leadNarrowing(ctx, in, policy, arg)...), nil
+			narrowed, err := leadNarrowing(ctx, in, policy, arg)
+			return append(where, narrowed...), err
 		},
 		scan: func(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.ListSort) ([]crmcontracts.Lead, []*string, error) {
 			return scanLeadPage(rows, active, sorted, policy)
@@ -164,11 +164,70 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 	})
 }
 
+// ListLeadsInput is one read of the lead list: its page, its sort and what it narrows by.
+type ListLeadsInput struct {
+	Cursor *string
+	Limit  *int
+	Status *string
+	// OwnerID, OwnerTeamID and Unassigned are the owner dials every
+	// owner-scoped list carries (DM-VOCAB-OWN-1), bound through
+	// storekit.OwnershipClause as contact and company bind them.
+	OwnerID         *ids.UserID
+	OwnerTeamID     *ids.TeamID
+	Unassigned      *bool
+	Query           *string
+	IncludeArchived bool
+	// CapturedByKind filters on the captured_by prefix (ADR-0075).
+	CapturedByKind *string
+	// AiWritten filters on whether an AI wrote into the record.
+	AiWritten *bool
+	// MinScore is the triage floor. A reader working the warmest leads first
+	// keeps the colder ones off the page rather than scanning past them.
+	MinScore *int
+	// OwedAReply keeps only the leads nobody has answered. The page is bounded,
+	// so a caller cutting answered rows off it would lose the unanswered leads
+	// behind them.
+	OwedAReply *bool
+	// Source narrows to how the row was written (import, crawl, manual,
+	// `connector:<name>`).
+	Source *string
+	// Origin narrows to one origin key, or `unset` for the unclassified.
+	Origin *string
+	// TagIDs narrows to the leads carrying these tags, combined by TagMode.
+	TagIDs  []ids.UUID
+	TagMode storekit.TagMode
+	// FromContactID narrows to the leads worked from one contact.
+	FromContactID *ids.ContactID
+	// SLAState narrows to leads in one first-response state; breached is the
+	// overdue queue.
+	SLAState *crmcontracts.ListLeadsParamsSlaState
+	// Sort is the contract's sort spec, validated against the lead
+	// vocabulary plus the workspace's active cf_ columns.
+	Sort *string
+	// Membership narrows to one list's members (list_id).
+	Membership storekit.ListMemberFilter
+	// MemberOf is the list a seam caller narrowed to; the provider resolves it
+	// into Membership before the read.
+	MemberOf *ids.UUID
+	// CompanyFacts narrows by what the linked company records (leadcompanyfacts.go).
+	CompanyFacts LeadCompanyFactFilters
+}
+
 // leadNarrowing is the lead's own filters, after the shared chain. Both reads
 // of the list — the sorted page and the default work queue — narrow by it, so
 // a filter added here reaches both or neither.
-func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy, arg func(any) int) []string {
-	var where []string
+func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy, arg func(any) int) ([]string, error) {
+	where, err := in.CompanyFacts.clauses(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	if in.Membership != nil {
+		member, err := in.Membership(leadEntity+".id", arg)
+		if err != nil {
+			return nil, err
+		}
+		where = append(where, member)
+	}
 	if in.Query != nil && *in.Query != "" {
 		where = append(where, leadQuickFindClause(*in.Query, arg))
 	}
@@ -196,7 +255,7 @@ func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy,
 	if in.FromContactID != nil {
 		where = append(where, storekit.SQLf("lead.from_contact_id = $%d", arg(*in.FromContactID)))
 	}
-	return where
+	return where, nil
 }
 
 // attachLeadRows is what a page of leads owes each row beyond its own columns:
