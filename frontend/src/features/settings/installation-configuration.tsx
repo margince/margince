@@ -58,7 +58,7 @@ const SCOPE_LABEL: Record<Scope, MessageKey> = {
   default: "configuration.source.default",
 };
 
-function scopeOf(dial: string | null): Scope {
+function scopeOf(dial: string | undefined): Scope {
   return SCOPES.find((scope) => scope === dial) ?? "all";
 }
 
