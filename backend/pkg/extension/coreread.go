@@ -101,7 +101,7 @@ type CustomField struct {
 	// Name is the key the field's value carries on the record and in a query's
 	// CustomFields.
 	Name string
-	// Type is text, number, date, currency, picklist, multiselect or boolean.
+	// Type is text, number, date, currency, picklist, multiselect, boolean or record.
 	Type    string
 	Options []string
 }

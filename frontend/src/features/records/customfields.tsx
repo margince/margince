@@ -22,6 +22,7 @@ import { useCan, useCanWrite } from "../../lib/capability";
 import {
   CF_OBJECTS,
   type CfObject,
+  type CfType,
   columnName,
   slug,
 } from "../../lib/customfields.logic";
@@ -57,10 +58,13 @@ function createBody(
     source: "manual",
     show_in_create: draft.showInCreate,
     ...(draft.type === "currency" ? { currency: draft.currency } : {}),
-    ...(draft.type === "picklist" || draft.type === "multiselect"
-      ? { options: cleanOptions(draft.options) }
-      : {}),
+    ...(hasOptions(draft.type) ? { options: cleanOptions(draft.options) } : {}),
   };
+}
+
+// A record field keeps the kind it points at in its single option.
+function hasOptions(type: CfType): boolean {
+  return type === "picklist" || type === "multiselect" || type === "record";
 }
 
 // A picklist ships only its real choices: blank / whitespace-only rows (the
@@ -94,10 +98,7 @@ function stagedField(draft: NewFieldDraft, createdBy: string): CustomField {
     status: "active",
     column_name: columnName(draft.label),
     currency: draft.type === "currency" ? draft.currency : null,
-    options:
-      draft.type === "picklist" || draft.type === "multiselect"
-        ? cleanOptions(draft.options)
-        : null,
+    options: hasOptions(draft.type) ? cleanOptions(draft.options) : null,
     show_in_create: draft.showInCreate,
     reportable: false,
     created_by: createdBy,

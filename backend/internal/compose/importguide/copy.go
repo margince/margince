@@ -267,6 +267,11 @@ var Custom = map[string]Column{
 		De: "Ein benutzerdefiniertes Feld. Einer oder mehrere der erlaubten Werte des Felds, durch Semikolons getrennt.",
 		Vi: "Trường tùy chỉnh. Một hoặc nhiều giá trị cho phép của trường, phân cách bằng dấu chấm phẩy.",
 	}, Example: same("A; B")},
+	fieldcatalog.TypeRecord: {Description: langcopy.Phrase{
+		En: "A custom field. The id of a record of the kind the field points at.",
+		De: "Ein benutzerdefiniertes Feld. Die ID eines Datensatzes der Art, auf die das Feld verweist.",
+		Vi: "Trường tùy chỉnh. Mã của một bản ghi thuộc loại mà trường trỏ tới.",
+	}, Example: same("0f9e8d7c-6b5a-4c3d-8e2f-1a0b9c8d7e6f")},
 	fieldcatalog.TypeBoolean: {Description: langcopy.Phrase{
 		En: "A custom field. Yes or no: true, yes or 1, or false, no or 0.",
 		De: "Ein benutzerdefiniertes Feld. Ja oder nein: true, yes oder 1, oder false, no oder 0.",

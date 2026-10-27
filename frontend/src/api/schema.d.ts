@@ -38919,7 +38919,7 @@ export interface components {
              *     a folded value has no fragment to match against.
              * @enum {string}
              */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "id" | "domain" | "distance";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record" | "id" | "domain" | "distance";
             /**
              * @description The operator subset this field's type admits (LVS-PARAM-1), in one
              *     stable order. An operator absent here is one the engine refuses for
@@ -41897,10 +41897,10 @@ export interface components {
             /** @description Admin-facing key the column_name derives from. */
             slug: string;
             /**
-             * @description The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. Immutable once created.
+             * @description The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. Immutable once created.
              * @enum {string}
              */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record";
             /**
              * @description retired = soft: hidden from the API and filtering, column and values preserved.
              * @enum {string}
@@ -41959,7 +41959,7 @@ export interface components {
             object: "contact" | "company" | "deal" | "lead" | "project" | "contract" | "activity";
             label: string;
             /** @enum {string} */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record";
             currency?: string | null;
             options?: string[] | null;
             source: string;

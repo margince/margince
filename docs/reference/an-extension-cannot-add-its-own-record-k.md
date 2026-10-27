@@ -21,7 +21,7 @@ are done.
 | 4 | Extension report breakdowns and counts | Declare a count or a breakdown in an extension. See it on Reports and Home, under the seat's row scope, field masks and the group floor. A multi-select custom field can be split by. | [Extension report breakdowns and counts](#extension-report-breakdowns-and-counts) | done |
 | 5 | Extension signal types with structured evidence | Declare a signal type in an extension, with an evidence layout that marks personal data. File a signal of it. The same event reported twice leaves one signal. Erasing a contact removes the personal members. | [Extension signal types with structured evidence](#extension-signal-types-with-structured-evidence) | done |
 | 6 | Panels and tabs on record pages | Draw a component of the unit's own on a contact, company or deal page, with the record the page shows. A reader needs `read` on the panel's object. | [Panels and tabs on record pages](#panels-and-tabs-on-record-pages) | done |
-| 7 | "Pick a record" field type | Nothing yet. | None yet | planned |
+| 7 | "Pick a record" field type | Add a custom field of type `record` that points at one record of a kind an extension declared. Set and read it on the record pages and in the settings table. | ["Pick a record" field type](#pick-a-record-field-type) | done |
 | 8 | Record page with merged history for extension kinds | Nothing yet. | None yet | planned |
 | 9 | Search and lists for extension kinds | Nothing yet. | None yet | planned |
 | 10 | Suggested-link resolver | Nothing yet. | None yet | planned |
@@ -238,3 +238,27 @@ The Go list is `extension.PanelSlots()` in `backend/pkg/extension/panel.go`. The
 `backend/gates/frontendentryslots_test.go` fails when the two differ or when a slot is not mounted on a page. A panel
 imports only published `@margince/frontend` subpaths, so the `ext-imports` gate holds it to the same surface as the rest
 of the unit. The header entries and the Log activity entry are unchanged.
+
+## "Pick a record" field type
+
+An admin can add a custom field that points at one record of a kind an extension declared, such as a visit. The field
+type is `record`. It joins the closed list of custom field types before the published contract is frozen, because a
+published list that grows later breaks clients that switch on the old one. The general rules for custom fields are in
+[What a custom field may be](../explanation/custom-fields.md#what-a-custom-field-may-be-the-closed-sets).
+
+| Part | What it does |
+|---|---|
+| Type | `record` is added to the `custom_field_type_check` constraint, to `FieldTypes` in `engine.go`, to `fieldcatalog.Types()` and to the mirrored list in `frontend/src/lib/customfields.logic.ts`. The `type` enums of `CustomField` and `CreateCustomFieldRequest` in `backend/api/crm.yaml` gain the value. |
+| Kind | The field's single `options` entry names the kind. The create is refused with `invalid_record_kind` on `options` unless it is one kind some unit declared and nothing else. |
+| Storage | One nullable `text` column that holds the record id. A write whose value is not a UUID is a 422 `invalid_value`. |
+| Filters and import | The field is filtered and sorted as text, and a CSV import reads the id as text. |
+| Admin screen | The builder offers the type only when an installed extension declares a kind, and asks which kind. The settings table names the type, and a type the build does not know shows its own name with a plain icon. |
+| Record screens | The create and edit forms and the record pages show the field as a text control that holds the id. |
+
+An extension that reads the field through `pkg/extension` sees `Type` `record` and the kind in `Options`.
+
+What this feature does not do yet:
+
+- The value is not checked against the extension's table, so an id that names no row is stored. The check needs a
+  row lookup through the registry, and no record page or search exists for the kinds yet. See features 8 and 9.
+- The control takes the id as text. A picker that lists the kind's records waits for search over extension kinds.

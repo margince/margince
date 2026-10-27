@@ -290,7 +290,7 @@ func refuseTakenLabel(ctx context.Context, tx pgx.Tx, object string, id ids.UUID
 // column; non-picklist fields store NULL (a nil []byte binds as SQL
 // NULL), not an empty array.
 func optionsJSON(spec FieldSpec) ([]byte, error) {
-	if !hasOptions(spec.Type) {
+	if !hasOptions(spec.Type) && spec.Type != TypeRecord {
 		return nil, nil
 	}
 	return marshalOptions(spec.Options)
