@@ -85,11 +85,9 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		if err := dealListFilters.Apply(&in, filters); err != nil {
 			return nil, "", false, err
 		}
-		membership, err := storekit.ResolveListMembership(ctx, in.MemberOf, p.listMembers, dealListEntity)
-		if err != nil {
+		if err := narrowToList(ctx, &in, p.listMembers); err != nil {
 			return nil, "", false, err
 		}
-		in.Membership = membership
 		rows, page, err := p.store.ListDeals(ctx, in)
 		if err != nil {
 			return nil, "", false, err

@@ -5,10 +5,14 @@ package deals
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -53,7 +57,7 @@ func TestRefusedListFiltersNamesWhatTheListWouldRefuse(t *testing.T) {
 		{"a seat without company.read", teamReader(map[string]principal.ObjectGrant{maskObject: {Read: true}}), []string{filterCountry}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := RefusedListFilters(tc.ctx)
+			got, err := refusedListFilters(tc.ctx, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -67,7 +71,7 @@ func TestRefusedListFiltersNamesWhatTheListWouldRefuse(t *testing.T) {
 // With nobody bound, the probe meets a fault and never a refusal. Read as a
 // refusal, it would offer or withhold dials at random.
 func TestRefusedListFiltersReturnsAFaultThatIsNoRefusal(t *testing.T) {
-	if _, err := RefusedListFilters(context.Background()); err == nil {
+	if _, err := refusedListFilters(context.Background(), nil); err == nil {
 		t.Error("probing with no caller bound answered, want the missing actor as an error")
 	}
 }
@@ -85,7 +89,7 @@ func narrowestReader() context.Context {
 // The probe walks the list's own filter set. A filter added there is probed,
 // and its refusal lands here with nothing else to update.
 func TestTheReachProbeWalksEveryDealListFilter(t *testing.T) {
-	reach, err := ListFilterReach(narrowestReader())
+	reach, err := ListFilterReach(narrowestReader(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,5 +117,36 @@ func TestTheReachProbeWalksEveryDealListFilter(t *testing.T) {
 	}
 	if !slices.Equal(refused, want) {
 		t.Errorf("the narrowest reader is refused %v, want %v", refused, want)
+	}
+}
+
+// list_id is refused where the deal list resolves the list, before any deal
+// clause runs. The probe resolves it through the same resolver.
+func TestTheReachProbeResolvesTheListFilterThroughTheListResolver(t *testing.T) {
+	answering := func(err error) storekit.ListMemberFilterResolver {
+		return func(context.Context, ids.UUID, string) (storekit.ListMemberFilter, error) { return nil, err }
+	}
+	for _, tc := range []struct {
+		name    string
+		members storekit.ListMemberFilterResolver
+		want    []string
+	}{
+		{"lists switched off", nil, []string{}},
+		{"a reader who finds no such list", answering(apperrors.ErrNotFound), []string{}},
+		{"a reader refused the list", answering(apperrors.ErrPermissionDenied), []string{filterListID}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := refusedListFilters(teamReader(dealAndCompanyRead), tc.members)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !slices.Equal(got, tc.want) {
+				t.Errorf("refused %v, want %v", got, tc.want)
+			}
+		})
+	}
+	fault := errors.New("the list catalogue is unreachable")
+	if _, err := refusedListFilters(teamReader(dealAndCompanyRead), answering(fault)); !errors.Is(err, fault) {
+		t.Errorf("a resolver fault came back as %v, want it returned", err)
 	}
 }

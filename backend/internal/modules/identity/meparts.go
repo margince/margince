@@ -17,7 +17,7 @@ import (
 type InstallationBrand func(context.Context) (*crmcontracts.InstallationBrand, error)
 
 // RefusedDealFilters names the deal list filters the caller bound on the
-// context would be refused, asked of the deal list's own clauses.
+// context would be refused, asked of the deal list's own list resolution and clauses.
 type RefusedDealFilters func(context.Context) ([]string, error)
 
 // WithInstallationBrand binds the brand read /me carries. Without it /me omits

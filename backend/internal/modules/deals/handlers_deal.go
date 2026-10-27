@@ -94,10 +94,12 @@ func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmco
 	}
 	in.SourceSystem, in.SourceID = params.SourceSystem, params.SourceId
 	if params.ListId != nil {
-		if in.Membership, err = h.memberFilter(r.Context(), *params.ListId); err != nil {
-			writeStoreErr(w, r, err)
-			return
-		}
+		member := ids.UUID(*params.ListId)
+		in.MemberOf = &member
+	}
+	if err := narrowToList(r.Context(), &in, h.listMembers); err != nil {
+		writeStoreErr(w, r, err)
+		return
 	}
 
 	deals, page, err := h.store.ListDeals(r.Context(), in)

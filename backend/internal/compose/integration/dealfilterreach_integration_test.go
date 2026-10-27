@@ -8,18 +8,29 @@ package integration
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"slices"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// refusableDealFilters reads, with the probe's operand, the deal filters
-// refused to a role that reads deals and withholds every deal field.
-func refusableDealFilters(t *testing.T) []deals.FilterReach {
+// reachApp boots the app with lists on, so list_id is resolved, and refused,
+// where the deal list resolves it.
+func reachApp(t *testing.T) *apptest.AppEnv {
+	t.Helper()
+	e := apptest.SetupAppWithOptions(t, compose.WithListsEnabled(true))
+	e.BootstrapWorkspace(t)
+	return e
+}
+
+// probedDealFilters is each filter the deal list binds, with the operand the
+// probe sends it. A role that withholds every deal field shows the refusable ones.
+func probedDealFilters(t *testing.T) []deals.FilterReach {
 	t.Helper()
 	var masks []principal.FieldMask
 	for _, field := range fieldmask.Maskable(fieldmask.Deal) {
@@ -32,15 +43,14 @@ func refusableDealFilters(t *testing.T) []deals.FilterReach {
 			Objects:    map[string]principal.ObjectGrant{fieldmask.Deal: {Read: true}},
 			FieldMasks: masks,
 		},
-	}))
+	}), nil)
 	if err != nil {
 		t.Fatalf("probing the deal list filters: %v", err)
 	}
-	refusable := slices.DeleteFunc(reach, func(probe deals.FilterReach) bool { return !probe.Refused })
-	if len(refusable) == 0 {
+	if !slices.ContainsFunc(reach, func(probe deals.FilterReach) bool { return probe.Refused }) {
 		t.Fatal("no deal list filter is refusable, so the snapshot would be checked against nothing")
 	}
-	return refusable
+	return reach
 }
 
 // narrowSignedInRole moves the signed-in admin onto a role of its own: the
@@ -100,25 +110,44 @@ func refusedDealFilters(t *testing.T, e *apptest.AppEnv) []string {
 	return *me.Authorization.RefusedDealFilters
 }
 
-// assertSnapshotMatchesTheList asks the list itself for every refusable filter,
-// so the snapshot is held to what the list answers, refused or not.
+// assertSnapshotMatchesTheList sends each deal list filter over HTTP, so the
+// snapshot is held to what the list answers, wherever the list refuses it.
 func assertSnapshotMatchesTheList(t *testing.T, e *apptest.AppEnv, refused []string) {
 	t.Helper()
-	for _, filter := range refusableDealFilters(t) {
-		parameter, sample := filter.Parameter, filter.Operand
-		var problem codeRefusal
-		status := e.Call(t, "GET", "/v1/deals?"+parameter+"="+sample, nil, nil, &problem)
-		masked := status == http.StatusUnprocessableEntity && len(problem.Details.Errors) == 1 &&
-			problem.Details.Errors[0].Code == "field_masked"
-		listRefuses := masked || status == http.StatusForbidden
-		if !listRefuses && status != http.StatusOK {
-			t.Errorf("GET /v1/deals?%s=%s = %d, want 200 or a refusal of the caller's reach", parameter, sample, status)
-		}
-		if listRefuses != slices.Contains(refused, parameter) {
-			t.Errorf("the list refuses %s: %v (status %d), and /me lists it as refused: %v",
-				parameter, listRefuses, status, slices.Contains(refused, parameter))
+	probed := probedDealFilters(t)
+	for _, filter := range probed {
+		listRefuses := theListRefuses(t, e, filter.Parameter, filter.Operand)
+		if listRefuses != slices.Contains(refused, filter.Parameter) {
+			t.Errorf("the list refuses %s=%s: %v, and /me lists it as refused: %v",
+				filter.Parameter, filter.Operand, listRefuses, slices.Contains(refused, filter.Parameter))
 		}
 	}
+	for _, parameter := range refused {
+		if !slices.ContainsFunc(probed, func(probe deals.FilterReach) bool { return probe.Parameter == parameter }) {
+			t.Errorf("/me refuses %s, which the deal list does not bind", parameter)
+		}
+	}
+}
+
+// theListRefuses reads one filtered deal list. A 403 or a masked field refuses
+// the caller; a page, an id that names nothing or a malformed operand does not.
+func theListRefuses(t *testing.T, e *apptest.AppEnv, parameter, operand string) bool {
+	t.Helper()
+	var problem codeRefusal
+	status := e.Call(t, "GET", "/v1/deals?"+url.Values{parameter: {operand}}.Encode(), nil, nil, &problem)
+	fault := problem.Details.Errors
+	switch {
+	case status == http.StatusForbidden:
+		return true
+	case status == http.StatusUnprocessableEntity && len(fault) == 1 && fault[0].Code == "field_masked":
+		return true
+	case status == http.StatusOK || status == http.StatusNotFound:
+		return false
+	case status == http.StatusUnprocessableEntity && len(fault) == 1 && fault[0].Field == parameter:
+		return false
+	}
+	t.Errorf("GET /v1/deals?%s=%s = %d %+v, want a page, a refusal or a fault in the operand", parameter, operand, status, fault)
+	return false
 }
 
 func assertRefuses(t *testing.T, refused []string, want ...string) {
@@ -133,8 +162,7 @@ func assertRefuses(t *testing.T, refused []string, want ...string) {
 // A role that masks the amount on every deal is refused the value dials, and
 // /me says so before the reader picks one.
 func TestMeNamesTheValueFiltersARoleMaskRefuses(t *testing.T) {
-	e := apptest.SetupApp(t)
-	e.BootstrapWorkspace(t)
+	e := reachApp(t)
 	narrowSignedInRole(t, e, "reach_amount_mask", `{}`)
 	maskDealField(t, e, "reach_amount_mask", "amount_minor", "always")
 
@@ -146,8 +174,7 @@ func TestMeNamesTheValueFiltersARoleMaskRefuses(t *testing.T) {
 // A mask that lifts on the deals the reader may change still withholds the
 // rest. So the value dials are refused, even on a page of the reader's own deals.
 func TestMeNamesTheValueFiltersAWriteConditionedMaskRefuses(t *testing.T) {
-	e := apptest.SetupApp(t)
-	e.BootstrapWorkspace(t)
+	e := reachApp(t)
 	pipelineID, stageID, _ := companyRollupOpenStage(t, e)
 	createSearchableDeal(t, e, pipelineID, stageID, "The reader's own deal", "")
 	narrowSignedInRole(t, e, "reach_write_mask", `{}`)
@@ -161,8 +188,7 @@ func TestMeNamesTheValueFiltersAWriteConditionedMaskRefuses(t *testing.T) {
 // A deal whose company is private to its captor masks company_id on that row
 // alone. The role withholds nothing, so the country dial stays offered.
 func TestAPrivateCompanyOnOneDealRefusesNoFilter(t *testing.T) {
-	e := apptest.SetupApp(t)
-	e.BootstrapWorkspace(t)
+	e := reachApp(t)
 	pipelineID, stageID, _ := companyRollupOpenStage(t, e)
 	var company struct {
 		ID string `json:"id"`
@@ -217,11 +243,32 @@ func TestAPrivateCompanyOnOneDealRefusesNoFilter(t *testing.T) {
 // The country is the company's, so a seat that may not read companies is
 // refused it. The company_id filter stays the list's to answer.
 func TestMeNamesTheCountryFilterForASeatWithoutCompanyRead(t *testing.T) {
-	e := apptest.SetupApp(t)
-	e.BootstrapWorkspace(t)
+	e := reachApp(t)
 	narrowSignedInRole(t, e, "reach_no_company_read", `{"company": {"create": false, "read": false, "update": false, "delete": false}}`)
 
 	refused := refusedDealFilters(t, e)
 	assertRefuses(t, refused, "country")
+	assertSnapshotMatchesTheList(t, e, refused)
+}
+
+// A seat that may not read lists is refused list_id where the list is resolved,
+// before any deal clause runs. /me names it all the same.
+func TestMeNamesTheListFilterForASeatWithoutListRead(t *testing.T) {
+	e := reachApp(t)
+	narrowSignedInRole(t, e, "reach_no_list_read", `{"list": {"create": false, "read": false, "update": false, "delete": false}}`)
+
+	refused := refusedDealFilters(t, e)
+	assertRefuses(t, refused, "list_id")
+	assertSnapshotMatchesTheList(t, e, refused)
+}
+
+// The signed-in admin, unnarrowed, is refused nothing, and the list agrees.
+func TestMeRefusesNoDealFilterToTheAdmin(t *testing.T) {
+	e := reachApp(t)
+
+	refused := refusedDealFilters(t, e)
+	if len(refused) != 0 {
+		t.Errorf("/me refused the admin %v, want none", refused)
+	}
 	assertSnapshotMatchesTheList(t, e, refused)
 }

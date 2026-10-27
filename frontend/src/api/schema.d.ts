@@ -40394,7 +40394,7 @@ export interface components {
              */
             row_scope: "own" | "team" | "all";
             /**
-             * @description The `listDeals` query parameters this caller is refused whatever their value: `422` `field_masked` where the role masks the column on any deal, `403` where a grant the filter reads is missing. Computed by the clauses the list runs, so a client withholds exactly the dials the list would refuse.
+             * @description The `listDeals` query parameters this caller is refused whatever their value: `422` `field_masked` where the role masks the column on any deal, `403` where a grant the filter reads is missing, `list_id` included where the caller may not read lists. Computed by the list resolution and clauses the list runs, so a client withholds exactly the dials the list would refuse.
              *     A mask that withholds a reference only on some rows, such as a deal's private company, refuses no filter and is not listed. Absent from a server that does not compute it, and empty when nothing is refused.
              */
             refused_deal_filters?: string[];
