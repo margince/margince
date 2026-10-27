@@ -365,10 +365,7 @@ var retiredCoreFields = map[string]map[string]bool{
 // export handler through this same exported method, not a package-level lookup of
 // its own — so the vocabulary cannot differ between what a filter is allowed to
 // say, what it selects, and what an export of it contains (LVS-AC-2, one engine).
-//
-// ok is false for a resource with no engine at all (activities and partners are
-// not predicate-leaf resources); the caller decides what that means.
-func (s *Store) SegmentEngine(ctx context.Context, resource string) (storekit.Query, bool, error) {
+func (s *Store) coreSegmentEngine(ctx context.Context, resource string) (storekit.Query, bool, error) {
 	core, ok := segmentEngines[resource]
 	if !ok {
 		return storekit.Query{}, false, nil

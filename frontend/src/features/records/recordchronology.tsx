@@ -245,7 +245,7 @@ export function useRecordChronology({
 /**
  * mergeNewestFirst places each extra entry before the first older one, so the
  * activities keep the order the server gave them. While the activity feed has
- * a next page, an extra older than the oldest loaded activity waits: shown
+ * a next page, an extra older than the oldest loaded activity waits. Shown
  * now, it would sit above activities not loaded yet.
  */
 function mergeNewestFirst(
@@ -254,7 +254,7 @@ function mergeNewestFirst(
   baseHasMore: boolean,
 ): TimelineEntry[] {
   const merged = [...base];
-  const oldest = base.length ? Date.parse(base[base.length - 1].atIso) : 0;
+  const oldest = Date.parse(base.at(-1)?.atIso ?? "") || 0;
   for (const entry of extra) {
     const at = Date.parse(entry.atIso);
     if (baseHasMore && at < oldest) {

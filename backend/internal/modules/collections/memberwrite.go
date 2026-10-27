@@ -219,7 +219,7 @@ func admitShortlistChange(ctx context.Context, tx pgx.Tx, listID ids.ListID, ent
 		return &BadInputError{Field: "list", Reason: "a Live List's members follow its filter; only a Shortlist takes members by hand"}
 	}
 	if entityType != list.EntityType {
-		return &BadInputError{Field: entityTypeField, Reason: "must match the list's entity_type " + list.EntityType}
+		return &BadInputError{Field: entityTypeField, Code: "entity_type_mismatch", Reason: "must match the list's entity_type " + list.EntityType}
 	}
 	return nil
 }

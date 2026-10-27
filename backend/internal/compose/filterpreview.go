@@ -121,7 +121,7 @@ func (h filterPreviewHandlers) PreviewFilter(w http.ResponseWriter, r *http.Requ
 		writeFilterPreviewError(w, r, err)
 		return
 	}
-	preview.Resource = crmcontracts.FilterPreviewResource(req.Resource)
+	preview.Resource = req.Resource
 	httperr.WriteJSON(w, http.StatusOK, preview)
 }
 
@@ -168,11 +168,7 @@ func (h filterPreviewHandlers) preview(
 		if err != nil {
 			return err
 		}
-		columns, err := exportableColumns(ctx, tx, engine.Table)
-		if err != nil {
-			return err
-		}
-		rows, err := readRowsByID(ctx, tx, engine.Table, columns, matched)
+		columns, rows, err := previewProjection(ctx, tx, engine, matched)
 		if err != nil {
 			return err
 		}

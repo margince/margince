@@ -198,7 +198,7 @@ func (s *Store) HistoryPage(ctx context.Context, id ids.ListID, limit int, curso
 func wireList(l listSummary) crmcontracts.List {
 	out := crmcontracts.List{
 		Id: openapi_types.UUID(l.ID.UUID), Name: l.Name, Purpose: l.Purpose,
-		EntityType: crmcontracts.ListEntityType(l.EntityType), ListType: crmcontracts.ListListType(l.ListType),
+		EntityType: l.EntityType, ListType: crmcontracts.ListListType(l.ListType),
 		Sharing: crmcontracts.ListSharing(l.Sharing), Version: l.Version,
 		OwnerId: userUUID(l.OwnerID), StewardId: userUUID(l.StewardID), StewardName: l.StewardName,
 		VisibleCount: l.VisibleCount, Health: crmcontracts.ListHealth(l.Health), CanEdit: l.CanEdit,
@@ -286,7 +286,7 @@ func userUUID(id *ids.UserID) *openapi_types.UUID {
 func wireMember(m memberRow) crmcontracts.ListMember {
 	out := crmcontracts.ListMember{
 		Id: openapi_types.UUID(m.ID), ListId: openapi_types.UUID(m.ListID.UUID),
-		EntityType: crmcontracts.ListMemberEntityType(m.EntityType), EntityId: openapi_types.UUID(m.EntityID),
+		EntityType: m.EntityType, EntityId: openapi_types.UUID(m.EntityID),
 		AddedBy: &m.AddedBy, Note: m.Note,
 	}
 	// A computed Live List member carries no added-at instant; only a

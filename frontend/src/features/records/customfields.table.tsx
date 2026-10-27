@@ -57,7 +57,7 @@ function reportableField(object: CfObject, field: CustomField): boolean {
 }
 
 // Decorative: every use is aria-hidden, and the Type column names the type.
-// Partial on purpose: a newer server may send a type this build has no icon for.
+// Partial because a newer server may send a type this build has no icon for.
 const TYPE_ICON: Partial<Record<CfType, LucideIcon>> = {
   text: Type,
   number: Hash,

@@ -754,6 +754,25 @@ declaration. They must be about a contact, company or deal. A reader sees one on
 `GET /v1/extension-history` serves both; the History tab merges them with the activities in time order. The Changes cut
 stays the record's own field changes.
 
+### Find a kind in search, lists and saved views
+
+A declared kind needs no extra code to show up in search or to be listed and filtered. Core reads your declaration.
+
+| Where | What core does with the kind |
+|---|---|
+| `GET /v1/search` | Takes `ext:<unit>:<kind>` in `types`, and returns hits of that `type`. The title is the `LabelField` of the `Timeline`, or else the first `NaturalKey` field. A hit has no snippet. A seat with no `read` right on the kind gets no hit of it. An archived row is never a hit. |
+| `GET /v1/filters/vocabulary` and `POST /v1/filters/preview` | Take the kind as `resource`. Every declared field is a text field. A preview shows `id` and the declared fields as columns. |
+| Lists | A Shortlist or a Live List takes the kind as its `entity_type`. A member of another type is refused with `entity_type_mismatch`. |
+| Saved views | Take the kind as `resource`. A kind no unit declares is refused. |
+| Filters screen | Offers each kind the seat may read after the four core record types. |
+
+`GET /v1/search` without `types` searches every kind the seat may read, yours included. Retrieval and the agent
+search tool keep to core's types.
+
+Search takes an optional `exclude_ids` list of record ids, of any type. Those records are dropped before ranking, so a
+page stays full and `types_with_more` counts only what remains. The agent tool `search_records` takes the same
+argument. The list members endpoint has no such parameter. It takes `entity_id`, which keeps only the ids named.
+
 ## Declare a report count or breakdown
 
 A unit can add a number to Reports and Home. A count says how many live records a population holds. A breakdown splits

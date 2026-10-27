@@ -88,7 +88,7 @@ var referencedTables = map[Reference]string{RefCompany: "company", RefProject: "
 // Explain evaluates the filter for one record the caller can see. A record
 // outside the caller's row scope, or absent, answers ErrNotFound.
 func (q Query) Explain(ctx context.Context, tx pgx.Tx, p Predicate, recordID ids.UUID) (Explanation, error) {
-	if err := auth.Require(ctx, q.Table, principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, q.object(), principal.ActionRead); err != nil {
 		return Explanation{}, err
 	}
 	var args []any
@@ -116,7 +116,7 @@ func (q Query) Explain(ctx context.Context, tx pgx.Tx, p Predicate, recordID ids
 		}
 	}
 	where := fmt.Sprintf("t.id = $%d", arg(recordID))
-	scope, err := auth.ScopeClauseFor(ctx, q.Table, "t", arg)
+	scope, err := q.rowScope(ctx, arg)
 	if err != nil {
 		return Explanation{}, err
 	}
@@ -219,7 +219,7 @@ func (q Query) shownValue(ctx context.Context, name string, field Field) (string
 	// against arguments of its own and thrown away with them: registering
 	// them in the statement would leave parameters no SQL names.
 	var discarded []any
-	_, masked, err := auth.MaskExcludedClause(ctx, q.Table, name, "t", func(v any) int {
+	_, masked, err := auth.MaskExcludedClause(ctx, q.object(), name, "t", func(v any) int {
 		discarded = append(discarded, v)
 		return len(discarded)
 	})

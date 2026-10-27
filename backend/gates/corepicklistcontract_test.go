@@ -35,6 +35,7 @@ package gates
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -151,6 +152,9 @@ func vocabularyResources(t *testing.T, doc map[string]any) []string {
 		if !isMap {
 			t.Fatal("the resource parameter carries no schema")
 		}
+		if ref, isRef := schema["$ref"].(string); isRef {
+			schema = descendContract(t, doc, "components", "schemas", strings.TrimPrefix(ref, "#/components/schemas/"))
+		}
 		return enumStrings(t, schema, "the resource parameter")
 	}
 	t.Fatal("GET /filters/vocabulary declares no resource parameter")
@@ -196,6 +200,10 @@ func contractEnum(t *testing.T, doc map[string]any, schema, property string) map
 func enumStrings(t *testing.T, node map[string]any, subject string) []string {
 	t.Helper()
 	raw, ok := node["enum"].([]any)
+	if !ok {
+		// A set a unit may extend spells its core values as x-extensible-enum.
+		raw, ok = node["x-extensible-enum"].([]any)
+	}
 	if !ok {
 		t.Fatalf("%s carries no enum", subject)
 	}

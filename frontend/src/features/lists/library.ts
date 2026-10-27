@@ -13,12 +13,14 @@ import {
   stable,
 } from "../../format/collate";
 import type { Locale } from "../../i18n";
+import { isExtensionEntityKind } from "../../lib/entity";
 import type { FilterResource } from "../../lib/filterdata";
 import {
+  type CoreLibraryType,
   type LibraryType,
   libraryTypeOfList,
   type ObjectTab,
-  RESOURCE_OF,
+  resourceOf as resourceOfTab,
   tabOfViewResource,
 } from "../../lib/filtersaddress";
 import type { List } from "../../lib/lists.queries";
@@ -35,7 +37,7 @@ export type LibraryGroup = "mine" | "shared";
 /** The cut the address holds: the search, the pressed pill, the archived toggle. */
 export type LibraryCut = Readonly<{
   q: string;
-  type: LibraryType | "all";
+  type: CoreLibraryType | "all";
   archived: boolean;
 }>;
 
@@ -89,7 +91,7 @@ export function typeOf(item: LibraryItem): LibraryType {
 
 /** The record type whose vocabulary names this row's fields. */
 export function resourceOf(item: LibraryItem): FilterResource {
-  return item.kind === "view" ? RESOURCE_OF[item.tab] : item.list.entity_type;
+  return item.kind === "view" ? resourceOfTab(item.tab) : item.list.entity_type;
 }
 
 /** The filter a row selects by, or null for a Shortlist or an unreadable one. */
@@ -152,7 +154,7 @@ export function cutLibrary(
   );
 }
 
-export type PillCounts = Readonly<Record<LibraryType | "all", number>>;
+export type PillCounts = Readonly<Record<CoreLibraryType | "all", number>>;
 
 /**
  * How many rows each pill holds, ignoring the search so a pill keeps saying
@@ -178,7 +180,11 @@ export function pillCounts(
   for (const item of items) {
     if (archived || !isArchived(item)) {
       counts.all += 1;
-      counts[typeOf(item)] += 1;
+      // An extension's kind has no pill, so it counts under All alone.
+      const type = typeOf(item);
+      if (!isExtensionEntityKind(type)) {
+        counts[type] += 1;
+      }
     }
   }
   return counts;

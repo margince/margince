@@ -15,7 +15,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -82,7 +81,7 @@ func (s listSeam) previewDefinition(ctx context.Context, q agents.ListRead) (jso
 	if err != nil {
 		return nil, err
 	}
-	out.Resource = crmcontracts.FilterPreviewResource(q.EntityType)
+	out.Resource = q.EntityType
 	return json.Marshal(out)
 }
 

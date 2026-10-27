@@ -56,6 +56,56 @@ function nothingMatches(tree: Group) {
   );
 }
 
+describe("a filter over an extension's kind", () => {
+  it("heads each column with the label the kind declares", async () => {
+    installFetchStub({
+      "GET /record-kinds": () =>
+        jsonResponse({
+          data: [
+            {
+              name: "ext:hotel:room",
+              unit: "hotel",
+              kind: "room",
+              display_name: "Room",
+              fields: [{ name: "room_no", label: "Room number" }],
+              natural_key: ["room_no"],
+              delete_policy: "archive_only",
+              actions: ["read"],
+            },
+          ],
+        }),
+      "POST /filters/preview": () =>
+        jsonResponse({
+          resource: "ext:hotel:room",
+          match_count: 1,
+          columns: ["id", "room_no", "floor"],
+          rows: [{ id: "r1", room_no: "101", floor: "1" }],
+          truncated: false,
+        }),
+    });
+    render(
+      <StoryProviders>
+        <FilterOutcome
+          tab="ext:hotel:room"
+          tree={newGroup("and", [newLeaf("room_no", "eq", "101")])}
+          vocabulary={{
+            data: { resource: "ext:hotel:room", fields: [] },
+            isPending: false,
+            isError: false,
+          }}
+        />
+      </StoryProviders>,
+    );
+    expect(
+      await screen.findByRole("columnheader", { name: "Room number" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "floor" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("1 Room record matches")).toBeInTheDocument();
+  });
+});
+
 const switchToOr = en["filters.noMatches"].replace("{records}", "contacts");
 const loosen = en["filters.noMatchesLoosen"].replace("{records}", "contacts");
 

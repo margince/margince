@@ -16,6 +16,7 @@ import { isComplete, type Node } from "../../lib/segmentpredicate";
 import {
   ExportFilterItems,
   ExportProgress,
+  exportObjectOf,
   type FilterExportRun,
 } from "./filterexport";
 import { proposedCount } from "./filterproposal";
@@ -149,7 +150,7 @@ function FootVerbs({
   }
   return (
     <>
-      {complete && (
+      {complete && (mode.kind === "list" || exportObjectOf(resource)) && (
         <OverflowMenu label={t("filters.footMore")}>
           {mode.kind === "list" && (
             <Button onClick={onSave}>{t("filters.saveAsNew")}</Button>

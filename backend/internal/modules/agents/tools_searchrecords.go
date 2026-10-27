@@ -36,6 +36,8 @@ type RecordSearchQuery struct {
 	Cursor        string
 	PerType       *int
 	WithEmployees bool
+	// Exclude drops these records, of any type, before ranking.
+	Exclude []ids.UUID
 	// NearMatches asks an empty first page for names spelt close to the words.
 	NearMatches bool
 }
@@ -174,9 +176,10 @@ func (t searchRecords) Spec() mcp.ToolSpec {
 			"record_types":{"type":"array","items":{"type":"string","enum":%[1]s},"description":"Search these types, in place of record_type. Omit both for contact, company, deal, lead and project."},
 			"with_employees":{"type":"boolean","description":"Also find the contacts who work at a matching company; each carries match.works_at."},
 			"per_type":{"type":"integer","minimum":1,"maximum":20,"description":"Answer up to this many of each type instead of one ranked list, at most %[2]d records in all. Takes no cursor or limit; types_with_more names the types holding more."},
+			"exclude_ids":{"type":"array","maxItems":%[4]d,"items":{"type":"string","format":"uuid"},"description":"Record ids, of any type, to leave out. They are dropped before ranking, so a page stays full."},
 			"limit":{"type":"integer","minimum":1,"maximum":%[2]d,"description":"Records on one page; %[3]d when left out."},
 			"cursor":{"type":"string","description":"next_cursor from the previous page."}},
-			"additionalProperties":false}`, types, recordSearchMaxLimit, recordSearchDefaultLimit)),
+			"additionalProperties":false}`, types, recordSearchMaxLimit, recordSearchDefaultLimit, recordSearchMaxExcluded)),
 		OutputSchema: schemaFor[SearchRecordsResult](),
 	}
 }
@@ -195,6 +198,28 @@ type searchRecordsArgs struct {
 	PerType       *int     `json:"per_type"`
 	Limit         int      `json:"limit"`
 	Cursor        string   `json:"cursor"`
+	ExcludeIDs    []string `json:"exclude_ids"`
+}
+
+// recordSearchMaxExcluded is how many record ids one search may leave out, as
+// GET /v1/search publishes it.
+const recordSearchMaxExcluded = 100
+
+// excluded reads the ids a search leaves out. An id that is not one is the
+// caller's to fix, so it is named rather than skipped.
+func (a searchRecordsArgs) excluded() ([]ids.UUID, error) {
+	if len(a.ExcludeIDs) > recordSearchMaxExcluded {
+		return nil, &BadArgsError{Field: "exclude_ids", Cause: fmt.Errorf("name at most %d ids", recordSearchMaxExcluded)}
+	}
+	out := make([]ids.UUID, 0, len(a.ExcludeIDs))
+	for _, raw := range a.ExcludeIDs {
+		id, err := ids.Parse(raw)
+		if err != nil {
+			return nil, &BadArgsError{Field: "exclude_ids", Cause: fmt.Errorf("%q is not a record id", raw)}
+		}
+		out = append(out, id)
+	}
+	return out, nil
 }
 
 func (t searchRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
@@ -253,8 +278,12 @@ func (a searchRecordsArgs) query(ctx context.Context) (RecordSearchQuery, error)
 				"ask for at most %d, or name fewer record types", len(named), recordSearchMaxLimit,
 			recordSearchMaxLimit/len(named))}
 	}
+	exclude, err := a.excluded()
+	if err != nil {
+		return RecordSearchQuery{}, err
+	}
 	return RecordSearchQuery{
-		Text: a.Q, Types: named, Limit: limit, Cursor: a.Cursor,
+		Text: a.Q, Types: named, Limit: limit, Cursor: a.Cursor, Exclude: exclude,
 		PerType: a.PerType, WithEmployees: a.WithEmployees, NearMatches: true,
 	}, nil
 }

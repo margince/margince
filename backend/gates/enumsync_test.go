@@ -126,7 +126,6 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"provider_connection.mode":                {"internal/contracts", "ProviderConnectionMode"},
 	"provider_connection.status":              {"internal/contracts", "ProviderConnectionStatus"},
 	"retention_policy.action":                 {"internal/contracts", "RetentionAction"},
-	"saved_view.resource":                     {"internal/contracts", "SavedViewResource"},
 
 	// One vocabulary, six columns. Every derived narrative row records whether a
 	// human template or a model wrote it, and WrittenBy is the word the contract
@@ -294,6 +293,29 @@ func goConstSet(t *testing.T, pkgDir, typeName string) []string {
 	}
 	sort.Strings(vals)
 	return vals
+}
+
+// A saved view's resource is the CHECK's closed list plus the `ext:` spelling.
+// The contract lists the closed part as an x-extensible-enum beside a pattern.
+// The list must equal the CHECK's, and the pattern must admit it and an
+// extension kind.
+func TestSavedViewTargetIsTheResourceCheck(t *testing.T) {
+	t.Parallel()
+	want, ok := tableCheckSets(t)["saved_view.resource"]
+	if !ok {
+		t.Fatal("no CHECK (resource IN (…)) found for saved_view in the migrations — broken derivation")
+	}
+	spelling := spellingOf(contractSchema(t, "SavedViewTarget"))
+	sort.Strings(spelling.Enum)
+	if fmt.Sprint(spelling.Enum) != fmt.Sprint(want) {
+		t.Errorf("SavedViewTarget lists %v but the schema CHECK stores %v — change both together", spelling.Enum, want)
+	}
+	pattern := regexp.MustCompile(spelling.Pattern)
+	for _, resource := range append(spelling.Enum, "ext:finance-demo:invoice") {
+		if !pattern.MatchString(resource) {
+			t.Errorf("SavedViewTarget's pattern refuses %q", resource)
+		}
+	}
 }
 
 func TestEveryDomainEnumMatchesItsSchemaCheck(t *testing.T) {

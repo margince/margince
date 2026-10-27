@@ -176,7 +176,11 @@ export function useCaptions(
       .filter((item) => treeOf(item) !== null && !purposeOf(item))
       .map(resourceOf),
   );
-  const vocabularies: Readonly<Record<FilterResource, VocabularyRead>> = {
+  // Core types only. An extension's kind has no wording here, so its rows are
+  // counted rather than named.
+  const vocabularies: Readonly<
+    Partial<Record<FilterResource, VocabularyRead>>
+  > = {
     contact: useFilterVocabulary("contact", wanted.has("contact")),
     company: useFilterVocabulary("company", wanted.has("company")),
     deal: useFilterVocabulary("deal", wanted.has("deal")),
@@ -190,7 +194,11 @@ export function useCaptions(
     }
     const tree = treeOf(item);
     return tree
-      ? filterSentence(tree, vocabularies[resourceOf(item)].data?.fields, words)
+      ? filterSentence(
+          tree,
+          vocabularies[resourceOf(item)]?.data?.fields,
+          words,
+        )
       : "";
   };
 }

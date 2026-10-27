@@ -10,16 +10,16 @@
   "totals": {
     "tools": 37,
     "resources": 9,
-    "tool_catalog_bytes": 133429,
+    "tool_catalog_bytes": 133640,
     "resource_catalog_bytes": 3541,
-    "approx_wire_tokens_total": 34242,
+    "approx_wire_tokens_total": 34295,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
       "description_bytes": 33525,
-      "input_schema_bytes": 62759,
+      "input_schema_bytes": 62970,
       "output_schema_bytes": 28225,
-      "description_plus_input_schema_bytes": 96284
+      "description_plus_input_schema_bytes": 96495
     }
   },
   "tools": {
@@ -2768,6 +2768,15 @@
                 "search"
               ],
               "type": "string"
+            },
+            "exclude_ids": {
+              "description": "search only: Record ids, of any type, to leave out. They are dropped before ranking, so a page stays full.",
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "maxItems": 100,
+              "type": "array"
             },
             "filters": {
               "additionalProperties": false,

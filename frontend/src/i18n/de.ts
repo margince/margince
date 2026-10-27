@@ -15831,6 +15831,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.tab.leads": "Leads",
   "filters.matchLeads_one": "Passender Lead: {count}",
   "filters.matchLeads_other": "Passende Leads: {count}",
+  "filters.matchExtension_one": "Passender Datensatz ({kind}): {count}",
+  "filters.matchExtension_other": "Passende Datensätze ({kind}): {count}",
+  "filters.new.extension": "Neuer Filter: {kind}",
+  "filters.switch.body.extension":
+    "Die Bedingungen werden gelöscht, da sie Felder einer Datensatzart nennen.",
+  "unit.extension": "Datensätze ({kind})",
   "filters.date.on": "An einem Datum",
   "filters.date.daysAgo": "Vor Tagen",
   "filters.date.mode": "Wie das Datum angegeben wird",

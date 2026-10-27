@@ -14,6 +14,20 @@ export function useRecordKindDirectory() {
   });
 }
 
+// The headings a kind's declared fields carry, by column name, so a table over
+// its rows says "Room" where the column is `room`. A column the kind does not
+// declare has no entry and keeps its own name.
+export function kindColumnLabels(
+  name: string,
+  directory: readonly {
+    name: string;
+    fields: readonly { name: string; label: string }[];
+  }[],
+): Readonly<Record<string, string>> {
+  const fields = directory.find((entry) => entry.name === name)?.fields ?? [];
+  return Object.fromEntries(fields.map((field) => [field.name, field.label]));
+}
+
 // What a screen prints for an extension's kind: the declared display name. A
 // row can still name a kind whose unit was removed or that this seat may no
 // longer read. That kind prints its own name, so a reader never sees `ext:<unit>:`.

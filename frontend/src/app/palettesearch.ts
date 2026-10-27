@@ -21,7 +21,7 @@ import {
 import { useRecordZone } from "../lib/recordzone";
 import {
   groupSearchHits,
-  SEARCH_GROUP_KEY,
+  searchGroupHeading,
   searchHitDestination,
   searchHitHasCard,
 } from "../lib/searchkinds";
@@ -179,7 +179,9 @@ export function useSearchCommands(query: string): SearchArm {
                   logo: hit.logo_url,
                 }
               : undefined,
-            group: t(SEARCH_GROUP_KEY[group]),
+            // An extension's hit has no destination and never reaches this
+            // row, so no directory is needed to name its group.
+            group: searchGroupHeading(group, t, []),
             type: "record",
             route,
           },

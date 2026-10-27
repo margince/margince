@@ -40,9 +40,16 @@ export type UnusedPhrase = components["schemas"]["FilterProposalUnsupported"];
 type ProposalResource =
   components["schemas"]["FilterProposalRequest"]["resource"];
 
-/** The record types a proposal may be asked for: the builder's, minus project. */
+const PROPOSAL_RESOURCES = [
+  "contact",
+  "company",
+  "deal",
+  "lead",
+] as const satisfies readonly ProposalResource[];
+
+/** The record types a proposal may be asked for: the core builder's, minus project. */
 function proposalResource(resource: FilterResource): ProposalResource | null {
-  return resource === "project" ? null : resource;
+  return PROPOSAL_RESOURCES.find((known) => known === resource) ?? null;
 }
 
 type ProposalAsk = Readonly<{

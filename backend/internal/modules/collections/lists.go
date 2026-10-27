@@ -348,9 +348,6 @@ func (s *Store) checkNewList(ctx context.Context, in *CreateListInput) error {
 	if !acceptsEntityType(in.EntityType) {
 		return &BadInputError{Field: entityTypeField, Reason: "must be " + memberEntityVocabulary}
 	}
-	if in.ListType == listTypeDynamic && recordkinds.IsExtensionName(in.EntityType) {
-		return &BadInputError{Field: listTypeField, Reason: "a Live List follows a filter core can evaluate; an extension kind takes a Shortlist"}
-	}
 	if in.ListType == "" {
 		in.ListType = listTypeStatic
 	}
@@ -485,11 +482,16 @@ func ensureListVisible(ctx context.Context, tx pgx.Tx, id ids.ListID) error {
 type BadInputError struct {
 	Field  string
 	Reason string
+	// Code is the contract's name for the refusal; empty is the general `invalid`.
+	Code string
 }
 
 func (e *BadInputError) Error() string { return "collections: " + e.Field + ": " + e.Reason }
 
 // FieldFault names the list or tag argument that was rejected.
 func (e *BadInputError) FieldFault() (field, code, message string) {
+	if e.Code != "" {
+		return e.Field, e.Code, e.Reason
+	}
 	return e.Field, "invalid", e.Reason
 }

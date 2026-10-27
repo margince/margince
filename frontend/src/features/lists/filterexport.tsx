@@ -17,6 +17,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../../api/client";
+import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
@@ -25,6 +26,25 @@ import { downloadBytes, filenameFromDisposition } from "../../lib/download";
 import type { FilterResource } from "../../lib/filterdata";
 import { throwProblem } from "../../lib/problem";
 import { encode, isComplete, type Node } from "../../lib/segmentpredicate";
+
+type ExportObject = NonNullable<
+  components["schemas"]["FilteredExportRequest"]["object"]
+>;
+
+const EXPORT_OBJECTS = [
+  "contact",
+  "company",
+  "deal",
+  "lead",
+  "project",
+] as const satisfies readonly ExportObject[];
+
+/** The export's object for a resource, absent for a kind it cannot export. */
+export function exportObjectOf(
+  resource: FilterResource,
+): ExportObject | undefined {
+  return EXPORT_OBJECTS.find((object) => object === resource);
+}
 
 /** The formats the contract offers. Closed — the server enumerates these two. */
 const FORMATS = ["csv", "json"] as const;
@@ -67,7 +87,7 @@ export function useFilterExport() {
     mutationFn: async (
       input: Readonly<{
         format: Format;
-        resource: FilterResource;
+        resource: ExportObject;
         tree: Node;
       }>,
     ) => {
@@ -108,13 +128,17 @@ export function ExportFilterItems({
   tree,
 }: Readonly<{ run: FilterExportRun; resource: FilterResource; tree: Node }>) {
   const t = useT();
+  const object = exportObjectOf(resource);
+  if (!object) {
+    return null;
+  }
   return (
     <>
       {FORMATS.map((format) => (
         <Button
           key={format}
           disabled={run.isPending}
-          onClick={() => run.mutate({ format, resource, tree })}
+          onClick={() => run.mutate({ format, resource: object, tree })}
         >
           {t(LABEL[format])}
         </Button>

@@ -133,7 +133,7 @@ func TestTypesWithMoreIsPresentOnAGroupedPageAlone(t *testing.T) {
 	}
 	cut := wirePage(Page{TypesWithMore: []string{"activity"}})
 	if cut.TypesWithMore == nil || len(*cut.TypesWithMore) != 1 ||
-		(*cut.TypesWithMore)[0] != crmcontracts.SearchResponseTypesWithMoreActivity {
+		(*cut.TypesWithMore)[0] != "activity" {
 		t.Errorf("a grouped page that cut activities rendered %v", cut.TypesWithMore)
 	}
 }

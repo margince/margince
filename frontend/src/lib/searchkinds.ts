@@ -1,9 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { components } from "../api/schema";
+import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { ENTITY, type EntityKind, isEntityKind } from "./entity";
+import {
+  ENTITY,
+  type EntityKind,
+  type ExtensionEntityKind,
+  isEntityKind,
+  isExtensionEntityKind,
+} from "./entity";
+import { recordKindLabel } from "./recordkinds";
 import type { Route } from "./router";
 import { settingsHref } from "./settingsrouting";
 
@@ -15,9 +22,21 @@ import { settingsHref } from "./settingsrouting";
 // tag, and the results screen's group list quietly omitted `project` so a hit
 // the server returned was dropped on the floor. Two readings of one vocabulary
 // is one reading too many, and the second one is always the stale one.
-export type SearchHitType = NonNullable<
-  components["schemas"]["SearchResult"]["type"]
->;
+//
+// The contract types a hit's `type` as free text, because extensions add kinds.
+// The core set is spelled here so every table keyed on it stays exhaustive.
+export type CoreSearchHitType =
+  | "contact"
+  | "company"
+  | "deal"
+  | "lead"
+  | "project"
+  | "product"
+  | "offer_template"
+  | "activity"
+  | "tag";
+
+export type SearchHitType = CoreSearchHitType | ExtensionEntityKind;
 
 // What a reader calls a hit, which is not always its wire type. An activity
 // that is a message is an EMAIL to anybody scanning the results, and filing it
@@ -41,20 +60,34 @@ export const SEARCH_GROUP_ORDER = [
   "email",
   "activity",
   "tag",
-] as const satisfies readonly SearchHitGroup[];
+] as const satisfies readonly (CoreSearchHitType | "email")[];
 
 // The types a reader can narrow to, in the same order. An email narrows as the
 // activity it is, so it has no pill of its own.
-export const SEARCH_HIT_ORDER: readonly SearchHitType[] =
+export const SEARCH_HIT_ORDER: readonly CoreSearchHitType[] =
   SEARCH_GROUP_ORDER.filter(
-    (group): group is SearchHitType => group !== "email",
+    (group): group is CoreSearchHitType => group !== "email",
   );
+
+const CORE_TYPES: ReadonlySet<string> = new Set(SEARCH_HIT_ORDER);
+
+function isCoreSearchHitType(type: string): type is CoreSearchHitType {
+  return CORE_TYPES.has(type);
+}
+
+/** The type a wire word names, or undefined for one this build does not know. */
+export function searchHitType(type: string): SearchHitType | undefined {
+  if (isCoreSearchHitType(type) || isExtensionEntityKind(type)) {
+    return type;
+  }
+  return undefined;
+}
 
 /** Which group a hit is drawn in: its type, unless it is a message. */
 export function searchHitGroup(
-  hit: Readonly<{ type: SearchHitType; email_summary?: unknown }>,
-): SearchHitGroup {
-  return hit.email_summary ? "email" : hit.type;
+  hit: Readonly<{ type: string; email_summary?: unknown }>,
+): SearchHitGroup | undefined {
+  return hit.email_summary ? "email" : searchHitType(hit.type);
 }
 
 /** The type a group narrows to, and the type the server counts it under. */
@@ -67,43 +100,84 @@ export function searchGroupType(group: SearchHitGroup): SearchHitType {
  * two records a chip stands for — on the results page and in the palette.
  */
 export type SearchRecordCardType = "contact" | "company";
-export function searchHitHasCard(
-  type: SearchHitType,
-): type is SearchRecordCardType {
+export function searchHitHasCard(type: string): type is SearchRecordCardType {
   return type === "contact" || type === "company";
 }
 
+// Extension kinds sit after the core records and before what was said about
+// them, so the core order never moves when an extension is installed.
+const RECORD_GROUP_COUNT = SEARCH_GROUP_ORDER.indexOf("email");
+
 /**
  * A page of hits, grouped and in SEARCH_GROUP_ORDER, each group in the order
- * the server ranked it. Empty groups are absent.
+ * the server ranked it. Empty groups are absent, and a type this build does
+ * not know is dropped rather than drawn under a heading it cannot name.
  */
 export function groupSearchHits<
-  Hit extends Readonly<{ type: SearchHitType; email_summary?: unknown }>,
+  Hit extends Readonly<{ type: string; email_summary?: unknown }>,
 >(hits: readonly Hit[]): { group: SearchHitGroup; hits: Hit[] }[] {
-  return SEARCH_GROUP_ORDER.map((group) => ({
-    group,
-    hits: hits.filter((hit) => searchHitGroup(hit) === group),
-  })).filter(({ hits: members }) => members.length > 0);
+  const extensionKinds = [
+    ...new Set(hits.map((hit) => hit.type).filter(isExtensionEntityKind)),
+  ].sort();
+  const order: readonly SearchHitGroup[] = [
+    ...SEARCH_GROUP_ORDER.slice(0, RECORD_GROUP_COUNT),
+    ...extensionKinds,
+    ...SEARCH_GROUP_ORDER.slice(RECORD_GROUP_COUNT),
+  ];
+  return order
+    .map((group) => ({
+      group,
+      hits: hits.filter((hit) => searchHitGroup(hit) === group),
+    }))
+    .filter(({ hits: members }) => members.length > 0);
+}
+
+/** The directory's entries, as far as a heading needs them. */
+type KindDirectory = readonly { name: string; display_name: string }[];
+
+/** The heading of a group: its catalog text, or an extension's declared name. */
+export function searchGroupHeading(
+  group: SearchHitGroup,
+  t: Translator,
+  directory: KindDirectory,
+): string {
+  return isExtensionEntityKind(group)
+    ? recordKindLabel(group, directory)
+    : t(SEARCH_GROUP_KEY[group]);
+}
+
+/** The label of the pill that narrows to a type. */
+export function searchFilterLabel(
+  type: SearchHitType,
+  t: Translator,
+  directory: KindDirectory,
+): string {
+  return isExtensionEntityKind(type)
+    ? recordKindLabel(type, directory)
+    : t(SEARCH_FILTER_KEY[type]);
 }
 
 // The heading a group of these hits carries. One key per member of the contract
 // enum, so a type the server learns to return cannot reach the screen without a
 // name to file it under — the failure that dropped project hits.
-export const SEARCH_HIT_GROUP_KEY: Readonly<Record<SearchHitType, MessageKey>> =
-  {
-    contact: "search.group.contact",
-    company: "search.group.company",
-    deal: "search.group.deal",
-    project: "search.group.project",
-    product: "search.group.product",
-    offer_template: "search.group.offerTemplate",
-    activity: "search.group.activity",
-    lead: "search.group.lead",
-    tag: "search.group.tag",
-  };
+export const SEARCH_HIT_GROUP_KEY: Readonly<
+  Record<CoreSearchHitType, MessageKey>
+> = {
+  contact: "search.group.contact",
+  company: "search.group.company",
+  deal: "search.group.deal",
+  project: "search.group.project",
+  product: "search.group.product",
+  offer_template: "search.group.offerTemplate",
+  activity: "search.group.activity",
+  lead: "search.group.lead",
+  tag: "search.group.tag",
+};
 
 // The heading of each group a hit can be drawn in.
-export const SEARCH_GROUP_KEY: Readonly<Record<SearchHitGroup, MessageKey>> = {
+export const SEARCH_GROUP_KEY: Readonly<
+  Record<CoreSearchHitType | "email", MessageKey>
+> = {
   ...SEARCH_HIT_GROUP_KEY,
   email: "search.group.email",
 };
@@ -111,7 +185,9 @@ export const SEARCH_GROUP_KEY: Readonly<Record<SearchHitGroup, MessageKey>> = {
 // The label of each pill that narrows to a type. The activity pill narrows to
 // emails AND the calls, notes and meetings beside them, and says so; every
 // other pill reads as its group's heading.
-export const SEARCH_FILTER_KEY: Readonly<Record<SearchHitType, MessageKey>> = {
+export const SEARCH_FILTER_KEY: Readonly<
+  Record<CoreSearchHitType, MessageKey>
+> = {
   ...SEARCH_HIT_GROUP_KEY,
   activity: "search.filter.activity",
 };
@@ -129,18 +205,19 @@ export const SEARCH_FILTER_KEY: Readonly<Record<SearchHitType, MessageKey>> = {
 // or Contacts, and `company` as Company or Company, is one open
 // decision across both surfaces, and a key added here is not the place to
 // settle it by half.
-export const SEARCH_HIT_KIND_KEY: Readonly<Record<SearchHitType, MessageKey>> =
-  {
-    contact: "search.kind.contact",
-    company: "search.kind.company",
-    deal: "search.kind.deal",
-    project: "search.kind.project",
-    product: "search.kind.product",
-    offer_template: "search.kind.offerTemplate",
-    activity: "search.kind.activity",
-    lead: "search.kind.lead",
-    tag: "search.kind.tag",
-  };
+export const SEARCH_HIT_KIND_KEY: Readonly<
+  Record<CoreSearchHitType, MessageKey>
+> = {
+  contact: "search.kind.contact",
+  company: "search.kind.company",
+  deal: "search.kind.deal",
+  project: "search.kind.project",
+  product: "search.kind.product",
+  offer_template: "search.kind.offerTemplate",
+  activity: "search.kind.activity",
+  lead: "search.kind.lead",
+  tag: "search.kind.tag",
+};
 
 /**
  * Where a hit of this type goes, or null when it has no page to open.
@@ -158,9 +235,10 @@ export const SEARCH_HIT_KIND_KEY: Readonly<Record<SearchHitType, MessageKey>> =
  *
  * An ACTIVITY returns null: it has no page, and opens in a panel on the
  * results screen instead. Which panel is a question about the hit rather than
- * about its type, so searchHitDestination below answers it.
+ * about its type, so searchHitDestination below answers it. An extension's
+ * kind and a type this build does not know return null as well.
  */
-export function searchHitRoute(type: SearchHitType, id: string): Route | null {
+export function searchHitRoute(type: string, id: string): Route | null {
   if (isEntityKind(type)) {
     return ENTITY[type as EntityKind].route(id);
   }
@@ -225,7 +303,7 @@ export function searchActivityRoute(query: string, activityId: string): Route {
  */
 export function searchHitDestination(
   hit: Readonly<{
-    type: SearchHitType;
+    type: string;
     id: string;
     email_summary?: Readonly<{ activity_id: string }> | null;
   }>,
