@@ -19,12 +19,13 @@ package migrations_test
 
 import (
 	"context"
-	"fmt"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // The two halves of the schema's foreign keys, by what a parent delete does to the
@@ -32,72 +33,6 @@ import (
 // only its corpus differs: a cascade DELETES the child and must never scan for it,
 // while the rest only have to FIND it — SET NULL then updates it, RESTRICT and NO
 // ACTION refuse on it.
-const (
-	cascadeAction = `c.confdeltype = 'c'`
-	otherActions  = `c.confdeltype <> 'c'`
-)
-
-// uncoveredKeysTemplate finds foreign keys, of whichever action the caller asks for,
-// whose referencing columns are
-// not the LEADING columns of some usable index on the child table. Leading, not
-// merely present: an index on (b, a) does not serve a key on (a) alone — Postgres
-// will happily scan that index end to end instead, which is the sequential scan
-// again with more pages.
-//
-// Leading as a SET, though, not in the constraint's order. The referential probe
-// equality-constrains every one of the key's columns at once, so a btree on (b, a)
-// seeks just as directly for a key on (a, b); order would only matter for a column
-// the probe left unconstrained, and it leaves none. No key in the schema is covered
-// this way today — the comparison is a set because the rule is, not to admit one.
-//
-// Usable excludes an invalid index, which is never read, and a partial one,
-// whose predicate the cascade's `col = $1` does not imply — `WHERE archived_at
-// IS NULL` leaves out the rows an erasure still has to delete. `col IS NOT NULL`
-// is the one predicate equality does imply, so those indexes count.
-const uncoveredKeysTemplate = `
-WITH fk AS (
-  SELECT c.oid, c.conrelid AS childoid, c.conrelid::regclass::text AS child,
-         c.confrelid::regclass::text AS parent, c.conkey, c.conname
-    FROM pg_constraint c
-    JOIN pg_class t ON t.oid = c.conrelid
-    JOIN pg_namespace n ON n.oid = t.relnamespace
-   WHERE c.contype = 'f' AND n.nspname = 'public' AND %s
-), covered AS (
-  SELECT DISTINCT fk.oid
-    FROM fk
-    JOIN pg_index i ON i.indrelid = fk.childoid
-   WHERE i.indisvalid
-     -- indkey carries the INCLUDE columns too, and those are payload: an index on
-     -- (b) INCLUDE (a) stores a but cannot seek on it. No index in the schema has
-     -- any today, so this guard is here for the first one that does.
-     AND i.indnkeyatts >= array_length(fk.conkey, 1)
-     AND (i.indpred IS NULL
-          OR (array_length(fk.conkey, 1) = 1
-              AND pg_get_expr(i.indpred, i.indrelid)
-                  = '(' || (SELECT att.attname FROM pg_attribute att
-                             WHERE att.attrelid = fk.childoid AND att.attnum = fk.conkey[1])
-                    || ' IS NOT NULL)'))
-     AND (SELECT array_agg(k ORDER BY k) FROM unnest(fk.conkey) AS u(k))
-         = (SELECT array_agg(a ORDER BY a)
-              FROM unnest(i.indkey::int2[]) WITH ORDINALITY AS x(a, ord)
-             WHERE ord <= array_length(fk.conkey, 1))
-)
-SELECT fk.child || '.' || fk.conname,
-       fk.child || ' (' || (SELECT string_agg(att.attname, ', ' ORDER BY u.ord)
-          FROM unnest(fk.conkey) WITH ORDINALITY AS u(k, ord)
-          JOIN pg_attribute att ON att.attrelid = fk.childoid AND att.attnum = u.k) || ')',
-       fk.parent
-  FROM fk
- WHERE fk.oid NOT IN (SELECT oid FROM covered)
- ORDER BY 1`
-
-// keyCountTemplate tallies the keys of one action, indexed or not. It is the
-// floor that stops this passing by reading nothing.
-const keyCountTemplate = `
-SELECT count(*) FROM pg_constraint c
-  JOIN pg_class t ON t.oid = c.conrelid
-  JOIN pg_namespace n ON n.oid = t.relnamespace
- WHERE c.contype = 'f' AND n.nspname = 'public' AND %s`
 
 func TestEveryCascadingKeyCanFindItsChildren(t *testing.T) {
 	ownerDSN, _ := dsns(t)
@@ -105,9 +40,9 @@ func TestEveryCascadingKeyCanFindItsChildren(t *testing.T) {
 	headSchema(t, conn)
 	ctx := context.Background()
 
-	var cascades int
-	if err := conn.QueryRow(ctx, fmt.Sprintf(keyCountTemplate, cascadeAction)).Scan(&cascades); err != nil {
-		t.Fatalf("counting cascading keys: %v", err)
+	cascades, err := testdb.ForeignKeyCount(ctx, conn, "public", testdb.CascadingKeys)
+	if err != nil {
+		t.Fatal(err)
 	}
 	// The schema declared 232 when this landed. A count that collapses means the
 	// query stopped recognising them, and every one would then read as covered.
@@ -116,13 +51,13 @@ func TestEveryCascadingKeyCanFindItsChildren(t *testing.T) {
 			"stopped recognising them rather than the schema having given them up", cascades)
 	}
 
-	if uncovered := readUncovered(ctx, t, conn, cascadeAction); len(uncovered) > 0 {
+	if uncovered := uncoveredIn(ctx, t, conn, testdb.CascadingKeys); len(uncovered) > 0 {
 		t.Errorf("%d cascading foreign key(s) have no index their delete can use:\n\t%s\n"+
 			"Deleting the parent scans the whole child table, inside the parent's transaction "+
 			"and holding its locks. Add an index on the referencing columns in the constraint's "+
 			"own order — it is instant on an empty table and a CONCURRENTLY with a maintenance "+
 			"window once there is data.",
-			len(uncovered), strings.Join(describeAll(uncovered), "\n\t"))
+			len(uncovered), strings.Join(described(uncovered), "\n\t"))
 	}
 }
 
@@ -173,57 +108,31 @@ SELECT i.indexrelid::regclass::text, fk.child || '.' || fk.conname
 		t.Fatalf("dropping %s: %v", index, err)
 	}
 
-	uncovered := readUncovered(ctx, t, tx, cascadeAction)
-	if !slices.ContainsFunc(uncovered, func(u uncoveredKey) bool { return u.constraint == key }) {
+	uncovered := uncoveredIn(ctx, t, tx, testdb.CascadingKeys)
+	if !slices.ContainsFunc(uncovered, func(u testdb.UncoveredKey) bool { return u.Constraint == key }) {
 		t.Errorf("dropped %s, the only index serving the cascade on %s, and the query still "+
 			"reported it covered — it is matching something other than a usable index, so a "+
 			"schema with no index at all would read as clean", index, key)
 	}
 }
 
-// uncoveredKey is one foreign key no usable index serves. constraint is its
-// identity, child.conname, because two keys on the same columns to different
-// parents read alike in columns.
-type uncoveredKey struct {
-	constraint, columns, parent string
-}
-
-func (u uncoveredKey) String() string {
-	return u.columns + " -> " + u.parent + " [" + u.constraint + "]"
-}
-
-func describeAll(keys []uncoveredKey) []string {
-	described := make([]string, 0, len(keys))
-	for _, key := range keys {
-		described = append(described, key.String())
-	}
-	return described
-}
-
-// readUncovered runs uncoveredKeysTemplate against whatever the caller has — the
-// connection, or a transaction holding a withdrawn index.
-func readUncovered(ctx context.Context, t *testing.T, q interface {
-	Query(context.Context, string, ...any) (pgx.Rows, error)
-}, action string,
-) []uncoveredKey {
+// uncoveredIn reads the public schema's uncovered keys of one action, through a
+// connection or a transaction holding a withdrawn index.
+func uncoveredIn(ctx context.Context, t *testing.T, q testdb.Querier, action string) []testdb.UncoveredKey {
 	t.Helper()
-	rows, err := q.Query(ctx, fmt.Sprintf(uncoveredKeysTemplate, action))
+	keys, err := testdb.UncoveredForeignKeys(ctx, q, "public", action)
 	if err != nil {
-		t.Fatalf("reading uncovered cascades: %v", err)
+		t.Fatal(err)
 	}
-	defer rows.Close()
-	var uncovered []uncoveredKey
-	for rows.Next() {
-		var one uncoveredKey
-		if err := rows.Scan(&one.constraint, &one.columns, &one.parent); err != nil {
-			t.Fatalf("scanning: %v", err)
-		}
-		uncovered = append(uncovered, one)
+	return keys
+}
+
+func described(keys []testdb.UncoveredKey) []string {
+	out := make([]string, 0, len(keys))
+	for _, key := range keys {
+		out = append(out, key.String())
 	}
-	if err := rows.Err(); err != nil {
-		t.Fatalf("reading uncovered cascades: %v", err)
-	}
-	return uncovered
+	return out
 }
 
 // TestEveryOtherForeignKeyIsIndexedOrMeasured holds the keys the cascade gate
@@ -238,9 +147,9 @@ func TestEveryOtherForeignKeyIsIndexedOrMeasured(t *testing.T) {
 	headSchema(t, conn)
 	ctx := context.Background()
 
-	var others int
-	if err := conn.QueryRow(ctx, fmt.Sprintf(keyCountTemplate, otherActions)).Scan(&others); err != nil {
-		t.Fatalf("counting non-cascading keys: %v", err)
+	others, err := testdb.ForeignKeyCount(ctx, conn, "public", testdb.OtherKeys)
+	if err != nil {
+		t.Fatal(err)
 	}
 	// The schema declared 218 when this landed. A collapse means the query stopped
 	// recognising them, and every one would then read as covered.
@@ -249,10 +158,10 @@ func TestEveryOtherForeignKeyIsIndexedOrMeasured(t *testing.T) {
 			"has stopped recognising them rather than the schema having given them up", others)
 	}
 
-	uncovered := readUncovered(ctx, t, conn, otherActions)
+	uncovered := uncoveredIn(ctx, t, conn, testdb.OtherKeys)
 	for _, key := range uncovered {
-		_, parentMeasured := foreignKeyNoIndexNeeded[key.parent]
-		_, keyMeasured := foreignKeyScanAccepted[key.constraint]
+		_, parentMeasured := foreignKeyNoIndexNeeded[key.Parent]
+		_, keyMeasured := foreignKeyScanAccepted[key.Constraint]
 		switch {
 		case parentMeasured && keyMeasured:
 			t.Errorf("%s is in foreignKeyScanAccepted and under a parent foreignKeyNoIndexNeeded "+
@@ -264,7 +173,7 @@ func TestEveryOtherForeignKeyIsIndexedOrMeasured(t *testing.T) {
 		}
 	}
 	for key := range foreignKeyScanAccepted {
-		if !slices.ContainsFunc(uncovered, func(u uncoveredKey) bool { return u.constraint == key }) {
+		if !slices.ContainsFunc(uncovered, func(u testdb.UncoveredKey) bool { return u.Constraint == key }) {
 			t.Errorf("foreignKeyScanAccepted measures %s, which is indexed now or no longer "+
 				"exists: delete the entry, so what remains is a judgement about the schema as it is", key)
 		}
@@ -272,7 +181,7 @@ func TestEveryOtherForeignKeyIsIndexedOrMeasured(t *testing.T) {
 	// A parent whose keys all gained an index, or which no longer has an
 	// uncovered key at all, is a measurement with nothing left to answer for.
 	for parent := range foreignKeyNoIndexNeeded {
-		if !slices.ContainsFunc(uncovered, func(u uncoveredKey) bool { return u.parent == parent }) {
+		if !slices.ContainsFunc(uncovered, func(u testdb.UncoveredKey) bool { return u.Parent == parent }) {
 			t.Errorf("foreignKeyNoIndexNeeded measures %q, which has no uncovered key left: "+
 				"delete the entry, so what remains is a judgement about the schema as it is", parent)
 		}
