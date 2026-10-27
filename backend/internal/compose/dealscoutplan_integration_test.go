@@ -22,6 +22,7 @@ type planNode struct {
 	NodeType  string     `json:"Node Type"`  //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
 	Alias     string     `json:"Alias"`      //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
 	IndexName string     `json:"Index Name"` //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
+	IndexCond string     `json:"Index Cond"` //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
 	Plans     []planNode `json:"Plans"`      //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
 }
 
@@ -36,6 +37,14 @@ func (n planNode) reachedBy(index string) (usesIndex, scansSeq bool) {
 		scansSeq = scansSeq || childSeq
 	}
 	return usesIndex, scansSeq
+}
+
+// walkPlan visits the node and every node beneath it.
+func (n planNode) walkPlan(visit func(planNode)) {
+	visit(n)
+	for _, child := range n.Plans {
+		child.walkPlan(visit)
+	}
 }
 
 // citedLookups collects the nodes that read the scout's citation alias.
