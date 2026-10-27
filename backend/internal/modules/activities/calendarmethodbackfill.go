@@ -107,9 +107,7 @@ func calendarMethodWalkTx(ctx context.Context, tx pgx.Tx, direction string, limi
 		  JOIN activity src ON src.id = w.id
 		  LEFT JOIN LATERAL (
 		       SELECT r.id FROM raw_capture r
-		        WHERE r.id = src.raw_capture_id
-		           OR (src.raw_capture_id IS NULL
-		               AND r.source_system = src.source_system AND r.source_id = src.source_id)
+		        WHERE `+storekit.StoredOriginalSQL("src", "r")+`
 		        LIMIT 1) rc ON true
 		 ORDER BY w.created_at, w.id`, limit, CalendarMethodMigration, direction)
 	if err != nil {
