@@ -78,16 +78,15 @@ type DeliveryRole =
   | "delivery_lead"
   | "subject_matter_expert";
 
+// Typed from the project request, whose roles are the deal vocabulary plus
+// the delivery roles: a role added to that request alone fails tsc here.
+type DealRole = Exclude<ProjectStakeholderRole, DeliveryRole>;
+
 // The deal-stakeholder roles worth a word. `role` is free text on the wire
 // (the enum is an unminted contract extension, DEAL-EXT-5). A label stands
 // alone, so it takes the sentence-case keys; `co.role.*` is the same word for
 // the middle of a phrase ("Thiếu {role}").
-const DEAL_ROLE_LABELS: Record<
-  // Typed from the project request, whose roles are the deal vocabulary plus
-  // the delivery roles: a role added to that request alone fails tsc here.
-  Exclude<ProjectStakeholderRole, DeliveryRole>,
-  MessageKey
-> = {
+const DEAL_ROLE_LABELS: Record<DealRole, MessageKey> = {
   champion: "co.roleLabel.champion",
   economic_buyer: "co.roleLabel.economic_buyer",
   blocker: "co.roleLabel.blocker",
