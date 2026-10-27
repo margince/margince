@@ -36,11 +36,26 @@ func promotionContactSpec(lead crmcontracts.Lead, name, by string) ContactSpec {
 		Title:               lead.Title,
 		OwnerID:             ownerFromUUID(uuidPtrToIDs(lead.OwnerId)),
 		ConvertedFromLeadID: &leadID,
+		converting:          []ids.LeadID{ids.From[ids.LeadKind](leadID)},
 		Emails:              leadEmails,
 		Phones:              leadPhones,
 		Source:              lead.Source,
 		CapturedBy:          by,
 	}
+}
+
+// promotionAcquisition preserves what the lead's address proves about its
+// origin. The lead is still live while this evidence is read.
+func promotionAcquisition(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead) (Acquisition, error) {
+	if lead.Email == nil {
+		return Acquisition{Kind: AcquiredUnknownLegacy}, nil
+	}
+	email := string(*lead.Email)
+	kind, err := acquiredFromCaptureTx(ctx, tx, false, email)
+	if err != nil {
+		return Acquisition{}, err
+	}
+	return acquisitionFromCapture(ctx, tx, kind, email, ids.ActivityID{}), nil
 }
 
 func promotionContactChange(lead crmcontracts.Lead, current crmcontracts.Contact) (crmcontracts.Contact, *storekit.Patch) {

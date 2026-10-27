@@ -8,9 +8,11 @@ import {
   mapContactUpdate,
 } from "../../components/contactformfields";
 import { rosterOwnerName } from "../../components/entityref";
+import { leadHeldNoticeFor } from "../../components/leadheldnotice";
 import { RecordCustomFields } from "../../components/recordcustomfields";
 import { saveRecordEdit } from "../../components/recordedit";
-import { RecordFields, rawRecord } from "../../components/recordfields";
+import { RecordFields } from "../../components/recordfields";
+import { rawRecord } from "../../components/recordfieldtypes";
 import { TagsPanel } from "../../components/tagspanel";
 import { Badge } from "../../design-system/atoms";
 import { ContactLink } from "../../design-system/contactlink";
@@ -363,12 +365,12 @@ export function ContactDetails({
           "social.linkedin": linkedin,
         }}
         resolveExisting={(_code, id) => ({ screen: "contacts", id })}
-        save={async (values, rows, opened) => {
-          return saveRecordEdit(
-            "contact",
-            rawRecord(opened),
-            mapContactUpdate(values, rows, opened),
-          );
+        refusalNotice={leadHeldNoticeFor}
+        save={async (values, rows, opened, extra) => {
+          return saveRecordEdit("contact", rawRecord(opened), {
+            ...mapContactUpdate(values, rows, opened),
+            ...extra,
+          });
         }}
       />
       <RecordCustomFields kind="contact" record={contact} />

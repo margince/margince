@@ -387,11 +387,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Cho phép bên đề xuất tạo bản ghi liên hệ này một lần với các giá trị hiển thị. Quyền hiện tại và danh tính trùng được kiểm tra lại.",
   "approval.preview.recordAcquisition":
     "Ghi lại thông tin nguồn thu thập hiển thị. Việc này không cấp quyền gửi tin nhắn.",
-  "approval.preview.createPromotions":
-    "Chuyển các lead được nêu vào bản ghi liên hệ này rồi lưu trữ chúng. Bổ sung trường và số điện thoại còn thiếu, hợp nhất lịch sử, giữ các lần rút đồng ý và hạn chế liên lạc áp dụng.",
   "approval.preview.acquisition": "Lý do tạo bản ghi liên hệ này",
   "approval.preview.acquiredAt": "Ngày thu thập",
-  "approval.preview.promotedLead": "Lead sẽ chuyển đổi",
   "approval.preview.sourceActivity": "Lịch sử gắn với lead nguồn này",
   "approval.preview.sourceWithheldActivities":
     "Lịch sử khác của lead nguồn này mà bạn không thể đọc",
@@ -1749,7 +1746,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.installation_setup_read": "Kiểm tra thiết lập",
   "systemJob.intro_advance": "Việc tiếp theo cho lời giới thiệu",
   "systemJob.introduction_expiry": "Hết hạn lời giới thiệu",
-  "systemJob.lead_qualify_scan": "Kiểm tra lead đủ điều kiện",
+  "systemJob.lead_for_contact":
+    "Lead cho liên hệ đã có",
+  "systemJob.lead_replied":
+    "Theo dõi phản hồi của lead",
   "systemJob.lead_router": "Phân bổ lead",
   "systemJob.lead_sla_scan": "Kiểm tra thời gian phản hồi lead",
   "systemJob.link_reconcile": "Sửa liên kết hồ sơ",
@@ -2546,8 +2546,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một công ty khác đã có tên miền này, nên tên miền chưa được lưu ở đây.",
   "common.duplicate.linkedinUrl":
     "Một lead khác đã có hồ sơ LinkedIn này, nên hồ sơ chưa được lưu ở đây.",
-  "common.duplicate.contactLead":
-    "Liên hệ này đã có một lead đang mở, nên không tạo thêm lead thứ hai.",
   "common.duplicate.slotTaken":
     "Khung giờ này không còn trống. Chọn một thời gian khác.",
   "common.retry": "Thử lại",
@@ -5670,6 +5668,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "field.yes": "Có",
   "field.no": "Không",
 
+  "common.duplicate.leadHolds": "Một lead đã có địa chỉ email hoặc hồ sơ LinkedIn này, nên chưa tạo liên hệ nào.",
+  "common.duplicate.contactHolds":
+    "Một liên hệ đã có địa chỉ email hoặc hồ sơ LinkedIn này, nên chưa tạo lead nào. Với cơ hội mới, hãy tạo một deal cho liên hệ đó.",
+  "contact.leadHeld.title": "Đây đã là một lead.",
+  "contact.leadHeld.body": "Ai cũng chỉ là lead hoặc liên hệ, không bao giờ là cả hai. Hãy chuyển đổi lead thành liên hệ; lịch sử của lead sẽ đi theo.",
+  "contact.leadHeld.noConvert": "Hãy nhờ chủ sở hữu lead chuyển đổi lead này.",
+  "contact.leadHeld.convert": "Chuyển đổi lead",
+  "contact.leadHeld.open": "Mở lead",
+  "approval.preview.leadHoldsEmail": "Một lead đã có địa chỉ email hoặc hồ sơ LinkedIn này. Hãy chuyển đổi lead thay vì tạo liên hệ.",
   "dedupe.viewExisting": "Xem hồ sơ hiện có",
 
   "co.spine.exchangeCount": "{count} tin nh\u1eafn",
@@ -6315,6 +6322,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Việc này được tạo vì lead này chưa được trả lời trong thời hạn phản hồi. Trả lời lead, rồi đánh dấu việc này là xong.",
   "tasks.origin.lead_qualify":
     "Việc này được tạo vì lead này vẫn mở mà chưa có quyết định. Xác nhận lead đủ điều kiện hoặc đóng lead.",
+  "tasks.origin.lead_for_contact":
+    "Việc này được tạo vì có một lead mới cho liên hệ này. Không lead nào được tạo; việc này ghi những gì đã đến và từ đâu.",
+  "tasks.origin.lead_replied":
+    "Việc này được tạo vì lead này đã gửi thư hoặc đặt lịch hẹn. Một câu trả lời không tự chuyển đổi ai: hãy xác nhận lead đủ điều kiện khi họ sẵn sàng.",
   "tasks.origin.assurance":
     "Bước kiểm tra dự báo hằng đêm đã tạo việc này: dữ liệu đầu vào của deal này cần xem lại. Trang deal liệt kê các dữ liệu đó.",
   "tasks.origin.overnight_reconcile":
@@ -7692,6 +7703,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã có liên hệ khớp với hàng này trong CRM và lần nhập này được yêu cầu bỏ qua bản trùng.",
   "import.reason.contact_email_held":
     "Địa chỉ email này đã có trong CRM nên hàng không thể tạo liên hệ thứ hai với nó.",
+  "import.reason.contact_holds_lead":
+    "Địa chỉ này đã thuộc về một liên hệ nên hàng không tạo lead. Chủ sở hữu liên hệ được báo; việc kinh doanh mới với một liên hệ là một deal.",
   "import.reason.contact_unnamed":
     "Hàng không có tên lẫn email nên không xác định được liên hệ nào.",
   "import.reason.currency_unset":
@@ -14523,8 +14536,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "callAction.openChat": "Mở cuộc trò chuyện trong {app}",
   "contact.action.noPhone": "Liên hệ này chưa có số điện thoại.",
   "contact.action.meetings": "Cuộc họp",
-  "contact.action.workAsLead": "Xử lý như lead",
-  "contact.action.openLead": "Mở lead",
   "contact.action.addTask": "Thêm việc cần làm",
   "contact.action.research": "Tìm hiểu",
   "contact.action.importActivities": "Nhập hoạt động",

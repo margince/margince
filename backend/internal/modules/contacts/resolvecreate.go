@@ -137,6 +137,10 @@ type ContactSpec struct {
 	Active []fieldcatalog.Column
 
 	erasure storekit.ErasureAdmission
+	// converting are the live leads this transaction converts into the new
+	// contact, which may share their keys with it. Unexported: only promotion
+	// and a typed create converting the leads it was refused over set it.
+	converting []ids.LeadID
 }
 
 // createContact is the one INSERT INTO contact.
@@ -175,10 +179,10 @@ func createContact(ctx context.Context, tx pgx.Tx, match ContactResolution, spec
 		args); err != nil {
 		return ids.ContactID{}, fmt.Errorf("insert contact: %w", err)
 	}
-	if err := replaceContactSocial(ctx, tx, wsID, id, spec.Social); err != nil {
+	if err := replaceContactSocial(ctx, tx, wsID, id, spec.Social, spec.converting); err != nil {
 		return ids.ContactID{}, err
 	}
-	if err := insertContactEmails(ctx, tx, wsID, id, spec.Source, spec.CapturedBy, spec.Emails, spec.erasure); err != nil {
+	if err := insertContactEmails(ctx, tx, wsID, id, spec.Source, spec.CapturedBy, spec.Emails, spec.erasure, spec.converting); err != nil {
 		return ids.ContactID{}, err
 	}
 	if err := insertContactPhones(ctx, tx, id, spec.Source, spec.CapturedBy, spec.Phones); err != nil {

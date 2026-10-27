@@ -63,11 +63,9 @@ func TestPromotionContactPreviewMatchesTheFillOnlyMerge(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			lead, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{FullName: new("Incoming buyer"), Email: new("merge@example.test"), Phone: new("+84912345678"), Title: new("Director"), Source: "manual"})
-			if err != nil {
-				t.Fatal(err)
-			}
-			id := ids.From[ids.LeadKind](ids.UUID(lead.Id))
+			id := seedHistoricalLeadWithEmail(e.ctx, t, e.store, CreateLeadInput{
+				FullName: new("Incoming buyer"), Phone: new("+84912345678"), Title: new("Director"), Source: "manual",
+			}, "merge@example.test")
 			change, err := e.store.PreviewLeadContactChange(e.ctx, id, PromoteLeadInput{Trigger: "human_qualify"})
 			if err != nil {
 				t.Fatal(err)

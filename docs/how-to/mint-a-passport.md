@@ -71,7 +71,7 @@ Only a session can download it; a passport is refused. The ZIP holds one folder,
 
 No passport is in the ZIP, so one download serves every passport. `README.md`, `SKILL.md` and
 `openapi.yaml` name the API address of this install;
-[configuration.md](../reference/configuration.md#public-base-url) says where it comes from. For Claude
+[configuration.md](../reference/programs.md#public-base-url) says where it comes from. For Claude
 Code, open the ZIP and move the `margince` folder to `~/.claude/skills/margince/`. The other tools are in
 its `README.md`.
 

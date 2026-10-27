@@ -28,8 +28,8 @@ import (
 //   - It is all-or-nothing. A partial reservation rolls back with the
 //     transaction and the run is skipped, never half-submitted.
 func (s *Store) reserve(ctx context.Context, tx pgx.Tx, desc provider.Descriptor,
-	conn admittedConnection, runID string, cats []provider.Category) (provider.SkipReason, error) {
-
+	conn admittedConnection, runID string, cats []provider.Category,
+) (provider.SkipReason, error) {
 	cost, err := desc.WorstCase(cats)
 	if err != nil {
 		return "", fmt.Errorf("integrations: pricing the run: %w", err)
@@ -168,8 +168,8 @@ func unreportedPoolCharge(desc provider.Descriptor, reserved int) int {
 // once for a run that matched nothing, and once per pool for a run that matched
 // some categories and not others.
 func (s *Store) reconcile(ctx context.Context, tx pgx.Tx, desc provider.Descriptor,
-	runID string, spend map[provider.Pool]int, matched bool) error {
-
+	runID string, spend map[provider.Pool]int, matched bool,
+) error {
 	if desc.Billing == provider.BillingPerSuccessfulResult && !matched {
 		// Nothing was bought, so nothing is owed: release the whole hold.
 		if _, err := tx.Exec(ctx, `

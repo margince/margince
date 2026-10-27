@@ -11,6 +11,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"slices"
 	"time"
 
@@ -79,6 +80,7 @@ func NewProviderFor(db *database.DB) *Provider {
 			WithFeedbackCarryReader(ai.NewFeedbackStore(db)).
 			WithGrantCarrier(identity.NewServiceFor(db)).
 			WithShareRequests(contactShareRequests(pool)).
+			WithLeadArrivals(newLeadWorkTasks(db, slog.Default())).
 			WithInstallationRenamer(installationRenamer(pool)),
 		deals:       deals.NewProvider(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
 		projects:    projects.ProviderOver(ProjectsStoreOver(db)),

@@ -306,7 +306,9 @@ func (f *settingRowTx) QueryRow(_ context.Context, sql string, _ ...any) pgx.Row
 func (f *settingRowTx) Begin(context.Context) (pgx.Tx, error) {
 	panic("settingRowTx: Begin not implemented")
 }
+
 func (f *settingRowTx) Commit(context.Context) error { panic("settingRowTx: Commit not implemented") }
+
 func (f *settingRowTx) Rollback(context.Context) error {
 	panic("settingRowTx: Rollback not implemented")
 }

@@ -403,11 +403,13 @@ func TestFragmentCannotReachInsideACoreNode(t *testing.T) {
 	// actually composed before the fix.
 	t.Run("against the committed crm.yaml", func(t *testing.T) {
 		_, committed := committedBaseRoot(t)
-		frags := []contractFragment{{Unit: "u", Source: "extensions/u/api/crm.yaml",
+		frags := []contractFragment{{
+			Unit: "u", Source: "extensions/u/api/crm.yaml",
 			Actions: []overlayAction{{
 				Target: "$.components.schemas.Deal.properties.hijacked",
 				Update: yaml.Node{Kind: yaml.ScalarNode, Tag: "!!bool", Value: "true"},
-			}}}}
+			}},
+		}}
 		if _, err := mergeContract(committed["crm.yaml"], frags); err == nil {
 			t.Fatal("a field was injected into the committed Deal schema")
 		} else if !strings.Contains(err.Error(), "components.schemas.Deal") {

@@ -30,13 +30,11 @@ func TestPromotionPreviewNamesMovedAndDuplicateActivityLinks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	lead, _, err := e.Contacts.CreateLead(ctx, contacts.CreateLeadInput{FullName: new("Dana Buyer"), Email: new("dana@example.test"), Source: "manual"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	leadID := seedHistoricalLeadAtContactEmail(t, e, ctx,
+		contacts.CreateLeadInput{FullName: new("Dana Buyer"), Source: "manual"}, "dana@example.test")
 	expected := map[ids.UUID]bool{}
 	for _, duplicate := range []bool{false, true} {
-		links := []activities.ActivityLinkInput{{EntityType: "lead", EntityID: ids.UUID(lead.Id)}}
+		links := []activities.ActivityLinkInput{{EntityType: "lead", EntityID: leadID.UUID}}
 		if duplicate {
 			links = append(links, activities.ActivityLinkInput{EntityType: "contact", EntityID: ids.UUID(contact.Id)})
 		}
@@ -46,7 +44,6 @@ func TestPromotionPreviewNamesMovedAndDuplicateActivityLinks(t *testing.T) {
 		}
 		expected[ids.UUID(activity.Id)] = duplicate
 	}
-	leadID := ids.From[ids.LeadKind](ids.UUID(lead.Id))
 	in := contacts.PromoteLeadInput{Trigger: "human_qualify"}
 	preview, err := e.Contacts.PreviewLeadContactChange(ctx, leadID, in)
 	if err != nil {
@@ -75,7 +72,7 @@ func TestPromotionPreviewNamesMovedAndDuplicateActivityLinks(t *testing.T) {
 		if n := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id = @activity AND contact_id = @contact`, pgx.NamedArgs{"activity": activity, "contact": contact.Id}); n != 1 {
 			t.Fatalf("contact link count: %d", n)
 		}
-		if n := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id = @activity AND lead_id = @lead`, pgx.NamedArgs{"activity": activity, "lead": lead.Id}); n != 0 {
+		if n := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id = @activity AND lead_id = @lead`, pgx.NamedArgs{"activity": activity, "lead": leadID}); n != 0 {
 			t.Fatalf("lead link count: %d", n)
 		}
 	}

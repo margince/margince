@@ -387,11 +387,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erlaubt dem vorschlagenden Aufrufer, diesen Kontakt einmal mit den angezeigten Werten anzulegen. Aktuelle Berechtigungen und doppelte Identitäten werden erneut geprüft.",
   "approval.preview.recordAcquisition":
     "Erfasst die angezeigten Angaben zur Herkunft. Das erlaubt noch keinen Nachrichtenversand.",
-  "approval.preview.createPromotions":
-    "Übernimmt die genannten Leads in diesen Kontakt und archiviert sie. Ergänzt fehlende Kontaktfelder und Telefonnummern, führt den Verlauf zusammen und erhält Widerrufe und geltende Kommunikationsbeschränkungen.",
   "approval.preview.acquisition": "Warum dieser Kontakt angelegt wird",
   "approval.preview.acquiredAt": "Erfasst am",
-  "approval.preview.promotedLead": "Zu übernehmender Lead",
   "approval.preview.sourceActivity": "Verlauf dieses Quell-Leads",
   "approval.preview.sourceWithheldActivities":
     "Weiterer Verlauf dieses Quell-Leads, den du nicht lesen kannst",
@@ -1797,7 +1794,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.installation_setup_read": "Einrichtungsprüfung",
   "systemJob.intro_advance": "Weiterführung von Vorstellungen",
   "systemJob.introduction_expiry": "Ablauf von Vorstellungen",
-  "systemJob.lead_qualify_scan": "Prüfung der Lead-Qualifizierung",
+  "systemJob.lead_for_contact": "Lead für einen bestehenden Kontakt",
+  "systemJob.lead_replied": "Nachfassen bei Lead-Antworten",
   "systemJob.lead_router": "Lead-Zuweisung",
   "systemJob.lead_sla_scan": "Prüfung der Lead-Reaktionszeit",
   "systemJob.link_reconcile": "Reparatur von Datensatzverknüpfungen",
@@ -2621,8 +2619,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Domain wurde hier nicht gespeichert, da ein anderes Unternehmen sie schon hat.",
   "common.duplicate.linkedinUrl":
     "Das LinkedIn-Profil wurde hier nicht gespeichert, da ein anderer Lead es schon hat.",
-  "common.duplicate.contactLead":
-    "Es wurde kein zweiter Lead erstellt, da es für diesen Kontakt schon einen aktiven Lead gibt.",
   "common.duplicate.slotTaken":
     "Dieser Zeitpunkt ist nicht mehr verfügbar. Wähle einen anderen Zeitpunkt.",
   "common.retry": "Erneut versuchen",
@@ -5811,6 +5807,19 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "field.yes": "Ja",
   "field.no": "Nein",
 
+  "common.duplicate.leadHolds":
+    "Ein Lead hat diese E-Mail-Adresse oder dieses LinkedIn-Profil schon, daher wurde kein Kontakt angelegt.",
+  "common.duplicate.contactHolds":
+    "Ein Kontakt hat diese E-Mail-Adresse oder dieses LinkedIn-Profil schon, daher wurde kein Lead angelegt. Für ein neues Geschäft mit ihm lege beim Kontakt einen Deal an.",
+  "contact.leadHeld.title": "Das ist schon ein Lead.",
+  "contact.leadHeld.body":
+    "Jemand ist ein Lead oder ein Kontakt, nie beides. Wandle den Lead in einen Kontakt um; der Verlauf des Leads geht mit.",
+  "contact.leadHeld.noConvert":
+    "Frag das Mitglied, dem der Lead gehört, ihn umzuwandeln.",
+  "contact.leadHeld.convert": "Lead umwandeln",
+  "contact.leadHeld.open": "Lead öffnen",
+  "approval.preview.leadHoldsEmail":
+    "Ein Lead hat diese E-Mail-Adresse oder dieses LinkedIn-Profil schon. Wandle den Lead um, statt einen Kontakt anzulegen.",
   "dedupe.viewExisting": "Vorhandenen Datensatz ansehen",
 
   "co.spine.exchangeCount": "{count} Nachrichten",
@@ -6484,6 +6493,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erstellt, weil dieser Lead innerhalb seiner Antwortfrist keine Antwort bekam. Antworte dem Lead und markiere die Aufgabe dann als erledigt.",
   "tasks.origin.lead_qualify":
     "Erstellt, weil dieser Lead ohne Entscheidung offen geblieben ist. Qualifiziere den Lead oder schließe ihn.",
+  "tasks.origin.lead_for_contact":
+    "Erstellt, weil für diesen Kontakt ein neuer Lead eingegangen ist. Es wurde kein Lead angelegt; die Aufgabe nennt, was eingegangen ist und woher.",
+  "tasks.origin.lead_replied":
+    "Erstellt, weil dieser Lead geschrieben oder einen Termin gebucht hat. Eine Antwort wandelt niemanden um: Qualifiziere den Lead, wenn er so weit ist.",
   "tasks.origin.assurance":
     "Erstellt von der nächtlichen Prognoseprüfung: Angaben zu diesem Deal brauchen Aufmerksamkeit. Die Deal-Seite listet sie auf.",
   "tasks.origin.overnight_reconcile":
@@ -7914,6 +7927,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jemand, der zu dieser Zeile passt, ist bereits im CRM, und dieser Lauf soll Duplikate überspringen.",
   "import.reason.contact_email_held":
     "Diese E-Mail-Adresse ist im CRM bereits vergeben, daher kann die Zeile keinen zweiten Kontakt damit anlegen.",
+  "import.reason.contact_holds_lead":
+    "Mit dieser Adresse gibt es bereits einen Kontakt, daher legt die Zeile keinen Lead an. Wer für den Kontakt verantwortlich ist, wird informiert; ein neues Geschäft mit einem Kontakt ist ein Deal.",
   "import.reason.contact_unnamed":
     "Die Zeile enthält weder einen Namen noch eine E-Mail-Adresse und benennt daher keinen Kontakt.",
   "import.reason.currency_unset":
@@ -14922,8 +14937,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "callAction.openChat": "Chat in {app} öffnen",
   "contact.action.noPhone": "Dieser Kontakt hat keine Telefonnummer.",
   "contact.action.meetings": "Termine",
-  "contact.action.workAsLead": "Als Lead bearbeiten",
-  "contact.action.openLead": "Lead öffnen",
   "contact.action.addTask": "Aufgabe hinzufügen",
   "contact.action.research": "Recherche",
   "contact.action.importActivities": "Aktivitäten importieren",

@@ -6,6 +6,7 @@ import {
 } from "../../components/contactformfields";
 import { CreateAction, type FormRows } from "../../components/create";
 import { useObjectCustomFields } from "../../components/customfields.form";
+import { leadHeldNoticeFor } from "../../components/leadheldnotice";
 import { QuickCaptureAction } from "../../components/quickcapture";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -19,11 +20,16 @@ async function createContact(
   customFields: Record<string, unknown>,
   t: (key: MessageKey) => string,
   idempotencyKey: string,
+  extra?: Record<string, unknown>,
 ): Promise<Contact> {
   return unwrap(
     await api.POST("/contacts", {
       params: { header: { "Idempotency-Key": idempotencyKey } },
-      body: { ...mapContactBody(values, rows ?? {}), ...customFields },
+      body: {
+        ...mapContactBody(values, rows ?? {}),
+        ...customFields,
+        ...extra,
+      },
     }),
     t,
   );
@@ -40,10 +46,11 @@ export function ContactCreateActions() {
         label={t("create.contact")}
         invalidate="contacts"
         screen="contacts"
-        create={(values, rows, key) =>
-          createContact(values, rows, cf.toBody(values), t, key)
+        create={(values, rows, key, extra) =>
+          createContact(values, rows, cf.toBody(values), t, key, extra)
         }
         resolveExisting={(_code, id) => ({ screen: "contacts", id })}
+        refusalNotice={leadHeldNoticeFor}
         fields={[...contactCreateFields(t), ...cf.formFields]}
       />
     </>

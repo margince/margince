@@ -26,6 +26,9 @@ import (
 // make the next attempt resolve it as already imported.
 var errImportReplayed = errors.New("import: the record replayed under its natural key")
 
+// leadImportOrigin is where a contact's owner reads a refused import row came from.
+const leadImportOrigin = "a CSV import"
+
 func (w *csvWriters) createLead(ctx context.Context, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
 	in := leadCreateFrom(textFields(row.Fields), typed, w.sourceSystem, row.ExternalID, w.provenanceOf(row.ExternalID))
 	err := w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
@@ -41,6 +44,12 @@ func (w *csvWriters) createLead(ctx context.Context, row migration.Row, typed ma
 		}
 		return ids.UUID(lead.Id), nil
 	})
+	// The row's own transaction has ended, so the owner of a contact the row
+	// names is told, as on every other lead door.
+	err = w.contacts.TellContactOwnerOfLead(ctx, err, in, leadImportOrigin)
+	if _, held := errors.AsType[*contacts.ContactHoldsIdentityError](err); held {
+		return skippedFor(contactHoldsLeadWhy), nil
+	}
 	if _, held := errors.AsType[*contacts.DuplicateLeadError](err); held || errors.Is(err, errImportReplayed) {
 		return skippedFor(naturalKeyTakenWhy), nil
 	}
@@ -73,6 +82,33 @@ func (w *csvWriters) leadEmailAlreadyHeld(ctx context.Context, row migration.Row
 	})
 	if err != nil {
 		return false, fmt.Errorf("import: checking whether %q is already held: %w", email, err)
+	}
+	return held, nil
+}
+
+// leadRowContactHeld is the contact-held refusal CreateLeadTx would make, asked
+// before the write so the preview skips the row the commit will. Like the lead
+// probes beside it, it is not visibility-filtered: the outcome is the same
+// whoever holds the key.
+func (w *csvWriters) leadRowContactHeld(ctx context.Context, row migration.Row, typed map[string]any) (bool, error) {
+	if w.object != migration.ObjectLead {
+		return false, nil
+	}
+	var keys storekit.IdentityKeys
+	if email := strings.TrimSpace(textFields(row.Fields)[fieldEmail]); email != "" {
+		keys.Emails = []string{email}
+	}
+	if url, ok := typed[fieldLinkedIn].(string); ok && url != "" {
+		keys.LinkedInURLs = []string{url}
+	}
+	var held bool
+	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		holders, err := storekit.IdentityHoldersOf(ctx, tx, keys)
+		held = len(holders.Contacts) > 0
+		return err
+	})
+	if err != nil {
+		return false, fmt.Errorf("import: checking whether a contact holds this lead row: %w", err)
 	}
 	return held, nil
 }

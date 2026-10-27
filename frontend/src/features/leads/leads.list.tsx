@@ -249,7 +249,13 @@ function LeadsWorkbench({
             invalidate="leads"
             screen="leads"
             create={(values) => createLead(values, cf.toBody(values), t)}
-            resolveExisting={(_code, id) => ({ screen: "leads", id })}
+            // A contact holding the lead's email or profile opens as the
+            // contact: a new opportunity with them is a deal on that contact.
+            resolveExisting={(code, id) =>
+              code === "contact_holds_email"
+                ? { screen: "contacts", id }
+                : { screen: "leads", id }
+            }
             fields={[
               ...leadIdentityFields,
               {

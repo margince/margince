@@ -98,14 +98,27 @@ func (h Handlers) ChangePublicMeetingInvitation(w http.ResponseWriter, r *http.R
 }
 
 func (h Handlers) bookPublicInvitation(w http.ResponseWriter, r *http.Request, page BookingPage, req crmcontracts.BookPublicMeetingJSONRequestBody, contact ids.UUID, marketing MarketingOutcome, intent *publicBookingIntent) {
+	out, ok := h.reservePublicInvitation(w, r, page, req, contact, invitationIntent{Public: intent, DescriptionFromBooker: true}, marketing)
+	if !ok {
+		return
+	}
+	if err := h.publicConsent.RecordBookingInquiry(r.Context(), contact, ids.UUID(out.Id)); err != nil {
+		slog.WarnContext(r.Context(), "booking: inquiry basis could not be recorded", "activity_id", out.Id, "err", err)
+	}
+	writePublicInvitation(w, out, marketing)
+}
+
+// reservePublicInvitation reserves the booked slot for the contact, or for the
+// lead the intent names, and writes the refusal when it cannot.
+func (h Handlers) reservePublicInvitation(w http.ResponseWriter, r *http.Request, page BookingPage, req crmcontracts.BookPublicMeetingJSONRequestBody, contact ids.UUID, booking invitationIntent, marketing MarketingOutcome) (crmcontracts.MeetingInvitation, bool) {
 	profile, err := h.store.hostSchedulingProfile(r.Context(), page.HostUserID)
 	if err != nil {
 		writeStoreErr(w, r, err)
-		return
+		return crmcontracts.MeetingInvitation{}, false
 	}
 	if !profile.Enabled || req.End.Sub(req.Start) != time.Duration(profile.DurationMinutes)*time.Minute {
 		httperr.Write(w, r, apperrors.ErrPermissionDenied)
-		return
+		return crmcontracts.MeetingInvitation{}, false
 	}
 	in := crmcontracts.MeetingInvitationRequest{
 		ContactId: crmcontracts.Id(contact), AttendeeEmail: req.Booker.Email,
@@ -114,18 +127,15 @@ func (h Handlers) bookPublicInvitation(w http.ResponseWriter, r *http.Request, p
 	if req.Subject != nil {
 		in.Description = *req.Subject
 	}
-	if intent != nil {
-		intent.Marketing = marketing
+	if booking.Public != nil {
+		booking.Public.Marketing = marketing
 	}
-	out, err := h.store.reserveAndQueueInvitation(r.Context(), page.HostUserID, in, invitationIntent{Public: intent, DescriptionFromBooker: true})
+	out, err := h.store.reserveAndQueueInvitation(r.Context(), page.HostUserID, in, booking)
 	if err != nil {
 		writeStoreErr(w, r, err)
-		return
+		return crmcontracts.MeetingInvitation{}, false
 	}
-	if err := h.publicConsent.RecordBookingInquiry(r.Context(), contact, ids.UUID(out.Id)); err != nil {
-		slog.WarnContext(r.Context(), "booking: inquiry basis could not be recorded", "activity_id", out.Id, "err", err)
-	}
-	writePublicInvitation(w, out, marketing)
+	return out, true
 }
 
 func writePublicInvitation(w http.ResponseWriter, out crmcontracts.MeetingInvitation, marketing MarketingOutcome) {

@@ -87,7 +87,6 @@ describe("the contact page on an archived row", () => {
     for (const verb of [
       en["contact.action.research"],
       en["lists.addToShortlist"],
-      en["contact.action.workAsLead"],
     ]) {
       refused(await screen.findByRole("button", { name: verb }));
     }

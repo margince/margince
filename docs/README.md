@@ -85,6 +85,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [add-an-endpoint.md](how-to/add-an-endpoint.md): add or change an API call.
 - [add-a-module.md](how-to/add-a-module.md): add a module, or link two modules.
 - [add-a-job.md](how-to/add-a-job.md): add a job.
+- [add-a-setting.md](how-to/add-a-setting.md): add, rename or remove a setting.
 - [add-an-rbac-object.md](how-to/add-an-rbac-object.md): add a new kind of record to RBAC.
 - [create-a-workflow.md](how-to/create-a-workflow.md): add a new starter workflow.
 - [apply-migrations.md](how-to/apply-migrations.md): write and run a database migration.
@@ -185,6 +186,16 @@ ready before we need it, because the first date comes 24 hours after we learn of
   write one.
 - [gate-inventory.md](reference/gate-inventory.md): every check in `backend/`, by kind. Generated.
 - [configuration.md](reference/configuration.md): every setting of each program.
+- [what-each-feature-needs.md](reference/what-each-feature-needs.md): the settings each feature needs,
+  and what you see while one is missing.
+- [programs.md](reference/programs.md): what each program reads that is not a setting.
+- [operator-endpoints.md](reference/operator-endpoints.md) and [job-surfaces.md](reference/job-surfaces.md):
+  the checks and numbers the api and the worker serve.
+- [worker-diagnostics.md](reference/worker-diagnostics.md): profile the worker, read one site, stop it.
+- [feature-settings.md](reference/feature-settings.md), [connectors-and-sign-in.md](reference/connectors-and-sign-in.md),
+  [storage-secrets-and-license.md](reference/storage-secrets-and-license.md),
+  [data-reset.md](reference/data-reset.md) and [model-binding.md](reference/model-binding.md): how each
+  feature reads its settings.
 - [extension-doors-for-core-data.md](reference/extension-doors-for-core-data.md): what an extension can read
   and write in core records, one row for each feature, and which are built.
 - [rest-api.md](reference/rest-api.md): the rules every REST call follows, and where its OpenAPI document is.

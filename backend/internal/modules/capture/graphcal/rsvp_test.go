@@ -83,8 +83,10 @@ func TestADeclinedInvitationSettlesAsACancellation(t *testing.T) {
 func TestEachAttendeesAnswerIsMappedOffTheirStatus(t *testing.T) {
 	t.Parallel()
 	attendee := func(address, response string) map[string]any {
-		return map[string]any{"type": "required", "emailAddress": map[string]string{"address": address},
-			"status": map[string]string{"response": response}}
+		return map[string]any{
+			"type": "required", "emailAddress": map[string]string{"address": address},
+			"status": map[string]string{"response": response},
+		}
 	}
 	raw, err := json.Marshal(map[string]any{
 		"id": "evt-answers", "subject": "Review", "isCancelled": false,

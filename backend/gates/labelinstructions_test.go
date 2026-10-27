@@ -192,8 +192,10 @@ func TestTheMatcherReadsEveryShapeALabelIsHandedOverIn(t *testing.T) {
 		{"remove flag", `gh issue edit 5 --remove-label "status: in progress"`, []string{"status: in progress"}},
 		{"comma list", `gh issue edit 5 --add-label "bug,area: deals"`, []string{"area: deals", "bug"}},
 		{"bare comma list", `gh issue create --label bug,enhancement`, []string{"bug", "enhancement"}},
-		{"wrapped onto the next line", "a command spelled `--add-label\n\"status: in progress\"` in prose",
-			[]string{"status: in progress"}},
+		{
+			"wrapped onto the next line", "a command spelled `--add-label\n\"status: in progress\"` in prose",
+			[]string{"status: in progress"},
+		},
 		{"negated search term", `--search 'no:assignee -label:"status: in progress"'`, []string{"status: in progress"}},
 		{"bare search term", `gh issue list --search "label:bug"`, []string{"bug"}},
 		{"sentence punctuation", `Run gh issue edit 5 --add-label bug.`, []string{"bug"}},

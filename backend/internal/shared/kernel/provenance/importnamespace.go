@@ -57,6 +57,11 @@ const (
 	LeadQualifyTaskSource    = "lead_qualify"
 	AssuranceTaskSource      = "assurance"
 	OvernightReconcileSource = "overnight-reconcile"
+	// LeadRepliedSource asks a lead's owner to qualify a lead who wrote or
+	// booked. LeadForContactSource tells a contact's owner about a lead that
+	// arrived for their contact and was not created.
+	LeadRepliedSource    = "lead_replied"
+	LeadForContactSource = "lead_for_contact"
 )
 
 // WhichDealSource names the one "Which deal is this about?" task capture raises
@@ -80,6 +85,8 @@ var internalSourceSystems = map[string]bool{
 	CommitmentTaskSource:     true,
 	WebsiteLeadSource:        true,
 	WhichDealSource:          true,
+	LeadRepliedSource:        true,
+	LeadForContactSource:     true,
 }
 
 // ReservedSourceSystem reports whether a client-supplied source system
@@ -115,6 +122,10 @@ const ReminderAnchorSeparator = ":anchor:"
 func EngineReminderSources() []string {
 	return []string{NoActivityReminderSource, CheckInCadenceSource}
 }
+
+// RetiredTaskSources are automatic task families whose writers were removed.
+// Their rows remain current until a user completes them.
+func RetiredTaskSources() []string { return []string{LeadQualifyTaskSource} }
 
 // InternalSourceSystems lists the exact reserved identities, sorted. It is the
 // one place that knows the membership, so the refusal message and any census

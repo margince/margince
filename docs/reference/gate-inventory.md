@@ -297,7 +297,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `emptypatchrefusal_test.go` | H2 | A request body whose schema, or one of its nested objects, says `minProperties` promises an empty object is refused. |
 | `enteredatwriters_test.go` | H2 | Nothing writes when a record entered the installation. |
 | `entitymodelowners_test.go` | H3 | The ownership map and the schema name the same tables. |
-| `envcontract_test.go` | H3 | The MARGINCE\_\* variables the code reads, configuration.md names and an entrypoint requires agree with each other. |
+| `envcontract_test.go` | H3 | The MARGINCE\_\* variables the code reads, the reference pages name and an entrypoint requires agree with each other. |
 | `erasurecascadereach_test.go` | H2 | Every file the Art. 17 cascade executes SQL from is one the PII censuses read. |
 | `errtaxonomy_test.go` | H2 | Every error sentinel must have a verdict, on every surface. |
 | `eventtypeownership_test.go` | H3 | One module owns an event type. |
@@ -453,7 +453,9 @@ The eight shapes, what each is for, and how each one silently passes:
 | `erasuresuppressionreach_test.go` | H2 | Every writer of an address or channel account asks the erasure list. |
 | `erasuretallysavepoint_test.go` | H2 | The erasure counts its work on a tallyTx (privacy/erasuretally.go), and a savepoint opened on it runs on the wrapped transaction, where nothing counts. |
 | `gopinsrenovatereach_test.go` | H3 | Every Go pin this tree holds is one Renovate can move, and it moves them together. |
+| `identityholdersreach_test.go` | H2 | Nobody is a lead and a contact at once. |
 | `importheavywork_test.go` | H2 | An import's rows are written only by the worker. |
+| `linkedinnormalizerreach_test.go` | H2 | Leads and contacts share the LinkedIn profile as an identity key. |
 | `liveprobelock_test.go` | H2 | A live-probed write of a held row locks its subject. |
 | `messagingpackreach_test.go` | H2 | Every messaging rule set a shipped unit declares is one the boot registers. |
 | `moduleaudits_test.go` | H2 | A module that owns tables writes their history. |

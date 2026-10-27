@@ -74,9 +74,9 @@ func TestDemoteReversesAPromotionThatCreatedTheContact(t *testing.T) {
 	}
 }
 
-// A promotion that MERGED into a contact we already had leaves that contact
-// exactly as they are — only the lineage pointer is nulled.
-func TestDemoteOfAMergeTouchesOnlyTheLineage(t *testing.T) {
+// A promotion merged into an incumbent is not undone. Restoring its lead would
+// leave both records live, so nothing moves.
+func TestDemoteOfAMergeIntoAnExistingContactIsRefused(t *testing.T) {
 	e := setupPromoteConsent(t)
 	const shared = "known@example.test"
 	existing, err := e.store.CreateContact(e.ctx, CreateContactInput{
@@ -95,34 +95,39 @@ func TestDemoteOfAMergeTouchesOnlyTheLineage(t *testing.T) {
 		t.Fatal("promotion did not record the lineage on the incumbent; the test cannot see it removed")
 	}
 
-	preview, err := e.store.PreviewLeadDemotion(e.ctx, lead)
-	if err != nil {
+	if _, err := e.store.PreviewLeadDemotion(e.ctx, lead); !isContactStays(err, true) {
+		t.Fatalf("preview of a merged demote = %v, want the merged refusal", err)
+	}
+	if _, err := e.store.DemoteLead(e.ctx, lead, "not the same contact after all"); !isContactStays(err, true) {
+		t.Fatalf("demote of a merge = %v, want the merged refusal", err)
+	}
+	if archived, from := e.contactState(t, ids.UUID(existing.Id)); archived || from == nil {
+		t.Errorf("incumbent archived=%t converted_from=%v; want it live and still converted", archived, from)
+	}
+	e.requirePromoted(t, lead)
+}
+
+// isContactStays reports a refused demote whose contact stays live.
+func isContactStays(err error, merged bool) bool {
+	stays, ok := errors.AsType[*ContactStaysError](err)
+	return ok && stays.Merged == merged
+}
+
+// requirePromoted fails unless the lead is still promoted.
+func (e *promoteConsentEnv) requirePromoted(t *testing.T, lead ids.LeadID) {
+	t.Helper()
+	var status string
+	if err := e.owner.QueryRow(context.Background(), `SELECT status FROM lead WHERE id = $1`, lead.UUID).Scan(&status); err != nil {
 		t.Fatal(err)
 	}
-	out, err := e.store.DemoteLead(e.ctx, lead, "not the same contact after all")
-	if err != nil {
-		t.Fatalf("demote: %v", err)
-	}
-	if preview.Unwind != out.Unwind || out.ContactId == nil || preview.ContactID.UUID != ids.UUID(*out.ContactId) {
-		t.Fatalf("preview %+v differs from demotion %+v", preview, out)
-	}
-	if out.Unwind != crmcontracts.DemoteLeadResponseUnwindDemoteUnwindMergeLineageOnly {
-		t.Errorf("unwind = %q, want merge_lineage_only", out.Unwind)
-	}
-	archived, from := e.contactState(t, ids.UUID(existing.Id))
-	if archived || from != nil {
-		t.Errorf("incumbent archived=%t converted_from=%v; want live and unlinked — a merge is never un-merged", archived, from)
-	}
-	if out.Lead.Status != crmcontracts.LeadStatusEngaged || out.Lead.ArchivedAt != nil {
-		t.Errorf("restored lead = %q archived=%v; want engaged and live", out.Lead.Status, out.Lead.ArchivedAt)
+	if status != "promoted" {
+		t.Errorf("lead status after a refused demote = %q, want promoted", status)
 	}
 }
 
-// A contact merge repoints the lead's outcome pointer to the survivor while
-// the promote audit row still says "created". Archiving that survivor would
-// destroy the merged-in person's history, so the demote downgrades to
-// lineage-only — whatever the promotion originally did.
-func TestDemoteNeverArchivesAMergeSurvivor(t *testing.T) {
+// A contact merge repoints the promotion outcome to its survivor. Archiving
+// that survivor would destroy merged history, so the demotion is refused.
+func TestDemoteOfAMergeSurvivorIsRefused(t *testing.T) {
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "created@example.test")
 	created, merged, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "human_qualify"})
@@ -142,24 +147,16 @@ func TestDemoteNeverArchivesAMergeSurvivor(t *testing.T) {
 		t.Fatalf("merge: %v", err)
 	}
 
-	preview, err := e.store.PreviewLeadDemotion(e.ctx, lead)
-	if err != nil {
-		t.Fatal(err)
+	if _, err := e.store.PreviewLeadDemotion(e.ctx, lead); !isContactStays(err, false) {
+		t.Fatalf("preview of a survivor's demote = %v, want the refusal", err)
 	}
-	out, err := e.store.DemoteLead(e.ctx, lead, "wrong prospect")
-	if err != nil {
-		t.Fatalf("demote: %v", err)
+	if _, err := e.store.DemoteLead(e.ctx, lead, "wrong prospect"); !isContactStays(err, false) {
+		t.Fatalf("demote of a survivor = %v, want the refusal", err)
 	}
-	if preview.Unwind != out.Unwind || out.ContactId == nil || preview.ContactID.UUID != ids.UUID(*out.ContactId) {
-		t.Fatalf("preview %+v differs from demotion %+v", preview, out)
+	if archived, _ := e.contactState(t, ids.UUID(created.Id)); archived {
+		t.Error("the survivor was archived")
 	}
-	if out.Unwind != crmcontracts.DemoteLeadResponseUnwindDemoteUnwindMergeLineageOnly {
-		t.Errorf("unwind = %q, want merge_lineage_only: the contact is a merge survivor", out.Unwind)
-	}
-	archived, from := e.contactState(t, ids.UUID(created.Id))
-	if archived || from != nil {
-		t.Errorf("survivor archived=%t converted_from=%v; want live and unlinked", archived, from)
-	}
+	e.requirePromoted(t, lead)
 }
 
 // The hard block: a contact who is a stakeholder on a live deal keeps their
@@ -362,10 +359,9 @@ func TestDemoteNeedsNoArchiveGrantToUndoACreatedContact(t *testing.T) {
 	}
 }
 
-// A contact that a SECOND lead has since promoted into is no longer only what
-// the first promotion minted: archiving it would strand the second lead's
-// contact, so the first lead's demote unwinds lineage-only.
-func TestDemoteKeepsAContactAnotherLeadPromotedInto(t *testing.T) {
+// A contact that another lead has joined no longer belongs only to the first
+// promotion, so the first lead's demotion is refused.
+func TestDemoteOfAContactAnotherLeadPromotedIntoIsRefused(t *testing.T) {
 	e := setupPromoteConsent(t)
 	const shared = "twice@example.test"
 	first := e.seedLead(t, shared)
@@ -378,25 +374,14 @@ func TestDemoteKeepsAContactAnotherLeadPromotedInto(t *testing.T) {
 		t.Fatalf("second promote: err=%v merged=%t, want a merge into the first's contact", err, merged)
 	}
 
-	out, err := e.store.DemoteLead(e.ctx, first, "the first capture was wrong")
-	if err != nil {
-		t.Fatalf("demote first: %v", err)
-	}
-	if out.Unwind != crmcontracts.DemoteLeadResponseUnwindDemoteUnwindMergeLineageOnly {
-		t.Errorf("unwind = %q, want merge_lineage_only: another lead depends on this contact", out.Unwind)
+	if _, err := e.store.DemoteLead(e.ctx, first, "the first capture was wrong"); !isContactStays(err, false) {
+		t.Fatalf("demote first = %v, want the refusal: another lead depends on this contact", err)
 	}
 	if archived, _ := e.contactState(t, ids.UUID(contact.Id)); archived {
 		t.Error("the contact the second lead promoted into must stay live")
 	}
-	var secondStatus string
-	var secondContact *ids.UUID
-	if err := e.owner.QueryRow(context.Background(),
-		`SELECT status, promoted_contact_id FROM lead WHERE id = $1`, second).Scan(&secondStatus, &secondContact); err != nil {
-		t.Fatal(err)
-	}
-	if secondStatus != "promoted" || secondContact == nil || *secondContact != ids.UUID(contact.Id) {
-		t.Errorf("second lead = %q -> %v; its promotion must be untouched", secondStatus, secondContact)
-	}
+	e.requirePromoted(t, first)
+	e.requirePromoted(t, second)
 }
 
 // The preview returns a contact, so it needs the contact READ grant as well as

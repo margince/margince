@@ -4,7 +4,8 @@
 Each setting has one name in YAML, one in the environment and sometimes a flag. The
 [configuration reference](../reference/configuration.md) lists them all. Read
 [where a value comes from](../reference/configuration.md#where-a-value-comes-from) for the order in
-which the sources win.
+which the sources win. To add, rename or remove a setting in the code, read
+[add-a-setting.md](add-a-setting.md).
 
 ## Find the file
 

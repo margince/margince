@@ -1,4 +1,10 @@
-import { type FormEvent, useEffect, useId, useState } from "react";
+import {
+  type FormEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+  useState,
+} from "react";
 import { Button, Field } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { refuseUnreadableField } from "../design-system/formvalidity";
@@ -41,6 +47,7 @@ export function RecordFormBody({
   fieldRefusals,
   existing,
   resolveExisting,
+  notice,
   onSubmit,
   onClose,
   intent,
@@ -59,6 +66,9 @@ export function RecordFormBody({
   // present, the "view existing" link renders under the error.
   existing?: { id: string; code: string } | null;
   resolveExisting?: (code: string, id: string) => Route;
+  // A refusal the screen answers with its own verbs, drawn in place of the
+  // error line and the "view existing" link.
+  notice?: ReactNode;
   onSubmit: (values: Record<string, string>, rows?: FormRows) => void;
   onClose: () => void;
   intent: SubmitIntent;
@@ -190,8 +200,9 @@ export function RecordFormBody({
       })}
       {/* Announced: nothing moves when a submit is refused, and the server's
           reason is the only thing saying why the form is still open. */}
-      {error && <ErrorLine>{error}</ErrorLine>}
-      {existing && resolveExisting && (
+      {notice}
+      {!notice && error && <ErrorLine>{error}</ErrorLine>}
+      {!notice && existing && resolveExisting && (
         <Button
           type="button"
           className="create-view-existing"

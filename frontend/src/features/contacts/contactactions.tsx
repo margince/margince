@@ -23,7 +23,6 @@ import { EmailVerb } from "../records/recordemail";
 import { ShareAction } from "../records/share";
 import { openContactTab } from "../worklist/worklist.return";
 import { ImportActivitiesAction } from "./contactimportaction";
-import { WorkAsLeadAction } from "./contactleadaction";
 import { ContactRecordActions } from "./contactrecordactions";
 
 // The header's verbs on the contact record page (contactpage.tsx): writing,
@@ -243,7 +242,6 @@ export function ContactActions({
                 entityId={contactId}
                 reasonId={archived}
               />
-              <WorkAsLeadAction contactId={contactId} reasonId={archived} />
               <Button onClick={() => openContactTab(contactId, "timeline")}>
                 {t("record.fullHistory")}
               </Button>

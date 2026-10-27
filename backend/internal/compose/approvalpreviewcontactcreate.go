@@ -52,6 +52,13 @@ func (r approvalPreviewReader) contactCreationPreview(ctx context.Context, appro
 		out.Conflicts = &[]crmcontracts.ApprovalPreviewConflict{{Kind: refused.Code, Summary: refused.Message, BlocksApproval: true}}
 		return out, nil
 	}
+	// The create the agent proposed would make a second record for a live lead,
+	// so the writer refuses it, and the preview says the same.
+	if _, held := errors.AsType[*contacts.LeadHoldsIdentityError](err); held {
+		out.State = previewIncompleteState
+		out.Conflicts = &[]crmcontracts.ApprovalPreviewConflict{{Kind: contacts.CodeLeadHoldsEmail, Summary: err.Error(), BlocksApproval: true}}
+		return out, nil
+	}
 	if previewUnavailable(err) {
 		return out, nil
 	}
@@ -97,29 +104,6 @@ func (r approvalPreviewReader) contactCreationDetails(ctx context.Context, plan 
 		}
 		details = append(details, crmcontracts.ApprovalPreviewDetail{Field: previewCreationDuplicate, Value: value})
 		effects = append(effects, "queue_duplicate_review")
-	}
-	for _, promotion := range plan.Promotions {
-		value, err := r.referenceValue(ctx, "lead_id", promotion.LeadID.String())
-		if err != nil {
-			return nil, nil, err
-		}
-		details = append(details, crmcontracts.ApprovalPreviewDetail{Field: "creation_promoted_lead", Value: value})
-		changes, err := r.creationFieldDetails(ctx, string(recordTypeContact), promotion.Patch.After())
-		if err != nil {
-			return nil, nil, err
-		}
-		details = append(details, changes...)
-		for _, phone := range promotion.Phones {
-			details = append(details, previewDetail("promotion_contact_phone", phone.Phone))
-		}
-		carried, err := r.promotionCarryDetails(ctx, promotion.SourceCarry, true)
-		if err != nil {
-			return nil, nil, err
-		}
-		details = append(details, carried...)
-	}
-	if len(plan.Promotions) > 0 {
-		effects = append(effects, "create_promote_matching_leads")
 	}
 	return details, effects, nil
 }

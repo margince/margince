@@ -13,7 +13,7 @@ declaration says which.
 
 To *add* a job, see [how-to/add-a-job.md](../how-to/add-a-job.md). How an operator reads the same fleet
 is in
-[reference/configuration.md#reading-the-job-surfaces](../reference/configuration.md#reading-the-job-surfaces).
+[reference/configuration.md#reading-the-job-surfaces](../reference/job-surfaces.md#reading-the-job-surfaces).
 The write shape every workspace pass commits through is in [write-backbone.md](write-backbone.md).
 
 ## The whole shape
@@ -480,7 +480,7 @@ it carries a **scope written by hand**. Two readers that wrote that scope in two
 the operator surface and the admin surface give different answers about one table.
 
 Some things are written once, for operators, in
-[reference/configuration.md#reading-the-job-surfaces](../reference/configuration.md#reading-the-job-surfaces).
+[reference/configuration.md#reading-the-job-surfaces](../reference/job-surfaces.md#reading-the-job-surfaces).
 They cover what `/metrics` reports and its labels, and the counts that show how much of a sweep has run.
 They also cover the list derived from the declaration, and the points to watch for when you read a
 kind's rows. They are not copied here.
@@ -583,7 +583,7 @@ for rows the schedule half will never queue.
 
 - Adding a kind: [how-to/add-a-job.md](../how-to/add-a-job.md).
 - Running the fleet (what `/metrics` reports, `job-health`, and the settings that set a cadence):
-  [reference/configuration.md](../reference/configuration.md#reading-the-job-surfaces).
+  [reference/configuration.md](../reference/job-surfaces.md#reading-the-job-surfaces).
 - The write shape a workspace pass commits through: [write-backbone.md](write-backbone.md).
 - The workflows on a clock that the `time_scan` pass runs: [automation.md](automation.md).
 - How compose wires seams and edges between modules:

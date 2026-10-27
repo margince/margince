@@ -36,6 +36,10 @@ import (
 // question into two answers for no gain a reader could name.
 const quickCaptureSource = "manual"
 
+// quickCaptureEmailField is this request's one address, where a contact create
+// carries a list.
+const quickCaptureEmailField = "email"
+
 // profileURLField is where a stated profile address lives on a contact. The
 // wire's `social` map is open, and `linkedin` is the key the rail reads and
 // the site read writes — a second key would leave the rail blind to the value
@@ -63,6 +67,9 @@ type QuickCaptureInput struct {
 	ProfileURL  *string
 	Email       *string
 	Phone       *string
+	// ConvertLeadIDs are the live leads holding the email or the profile, which
+	// the user chose to convert into the new contact.
+	ConvertLeadIDs []ids.LeadID
 }
 
 // QuickCaptureResult is the contact that landed, plus the employer they were
@@ -166,10 +173,16 @@ func (s *Store) employerForQuickCapture(
 
 // nameProfileURLField reports a refused LinkedIn value under the field this
 // request carries, so a client can bind the refusal to its profile_url input.
+// A lead-held refusal names this request's email or profile_url the same way.
 func nameProfileURLField(err error) error {
 	if parseErr, ok := errors.AsType[*values.ParseError](err); ok && parseErr.Field == linkedinURLField {
 		renamed := *parseErr
 		renamed.Field = profileURLRequestField
+		return &renamed
+	}
+	if held, ok := errors.AsType[*LeadHoldsIdentityError](err); ok {
+		renamed := *held
+		renamed.Field = map[string]string{fieldEmails: quickCaptureEmailField, fieldSocialLinkedIn: profileURLRequestField}[held.Field]
 		return &renamed
 	}
 	return err
@@ -177,9 +190,10 @@ func nameProfileURLField(err error) error {
 
 func contactFromQuickCapture(in QuickCaptureInput) CreateContactInput {
 	contact := CreateContactInput{
-		FullName: strings.TrimSpace(in.FullName),
-		Title:    in.Title,
-		Source:   quickCaptureSource,
+		FullName:       strings.TrimSpace(in.FullName),
+		Title:          in.Title,
+		Source:         quickCaptureSource,
+		ConvertLeadIDs: in.ConvertLeadIDs,
 	}
 	if url := profileURLWithScheme(trimmedValue(in.ProfileURL)); url != "" {
 		contact.Social = map[string]any{profileURLField: url}

@@ -138,7 +138,7 @@ func (r approvalPreviewReader) leadCreationDetails(ctx context.Context, plan con
 	fields := map[string]any{
 		fieldFullName: in.FullName, fieldEmail: in.Email, fieldPhone: in.Phone, fieldTitle: in.Title,
 		companyNameField: in.CompanyName, "candidate_company_key": in.CandidateCompanyKey, "linkedin_url": in.LinkedInURL,
-		previewFieldStatus: in.Status, bulkParamOwner: in.OwnerID, refColProject: in.ProjectID, companionContactField: in.FromContactID,
+		previewFieldStatus: in.Status, bulkParamOwner: in.OwnerID, refColProject: in.ProjectID,
 		previewFieldSourceSystem: in.SourceSystem, "source_id": in.SourceID, fieldSource: in.Source, "score": plan.Score,
 		"origin": in.Origin, "origin_detail": in.OriginDetail,
 		previewFieldSourceAuthorName: in.Author.AuthorName, previewFieldSourceAuthorID: in.Author.AuthorID,

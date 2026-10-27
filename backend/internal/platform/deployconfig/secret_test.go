@@ -17,12 +17,12 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 )
 
-// The variable names in these tests are the OPERATOR's to choose — an ${env:}
+// The variable names in these tests are the operator's to choose. An ${env:}
 // reference names whatever a deployment called its secret, and the product
-// reads none of them. They are assembled rather than written out because
+// reads none of them. They are assembled rather than written out, because
 // TestEveryEnvVarIsDocumented reads any MARGINCE_* literal in Go as a variable
-// the code consumes and demands a row in configuration.md; documenting these
-// would claim the product reads a variable it has never heard of.
+// the code consumes. A row in the reference for these would claim the product
+// reads a variable it has never heard of.
 var absentVar = envNamespace + "ABSENT"
 
 const envNamespace = "MARGINCE" + "_"

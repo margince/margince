@@ -7,7 +7,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { LocaleProvider } from "../i18n";
 import { PageAsideProvider, PageAsideToggle, usePageAside } from "./pageaside";
-import { type RecordFieldSave, RecordFields } from "./recordfields";
+import { RecordFields } from "./recordfields";
+import type { RecordFieldSave } from "./recordfieldtypes";
 import { UnsavedGuard, useUnsavedGuard } from "./unsaved";
 
 afterEach(cleanup);

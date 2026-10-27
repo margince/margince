@@ -77,13 +77,9 @@ func TestAPromotionTakesALinkThatLandedBeforeItsLeadLockCompanyFirst(t *testing.
 	}
 	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
 	contact := e.createContactWithEmail(t, "Lena Lead", "lena@papa.test")
-	created, _, err := e.store.CreateLead(as, CreateLeadInput{
-		FullName: new("Lena Lead"), Email: new("lena@papa.test"), CompanyName: new("Papa Plastics"), Source: "manual",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	lead := ids.From[ids.LeadKind](ids.UUID(created.Id))
+	lead := seedHistoricalLeadWithEmail(as, t, e.store, CreateLeadInput{
+		FullName: new("Lena Lead"), CompanyName: new("Papa Plastics"), Source: "manual",
+	}, "lena@papa.test")
 
 	holder, holderPid := beginOn(t)
 	if _, err := holder.Exec(ctx, `SELECT id FROM contact WHERE id = $1 FOR UPDATE`, contact); err != nil {

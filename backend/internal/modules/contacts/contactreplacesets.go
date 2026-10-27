@@ -77,14 +77,14 @@ func replaceContactSets(ctx context.Context, tx pgx.Tx, id ids.ContactID, in Upd
 		return err
 	}
 	if in.Social != nil {
-		if err := replaceContactSocial(ctx, tx, workspaceID(ctx), id, in.Social); err != nil {
+		if err := replaceContactSocial(ctx, tx, workspaceID(ctx), id, in.Social, in.converting); err != nil {
 			return err
 		}
 	}
 	if in.Emails == nil && in.Phones == nil {
 		return nil
 	}
-	if err := replaceContactEmails(ctx, tx, workspaceID(ctx), id, in.Source, by, in.Emails); err != nil {
+	if err := replaceContactEmails(ctx, tx, workspaceID(ctx), id, in.Source, by, in.Emails, in.converting); err != nil {
 		return err
 	}
 	return replaceContactPhones(ctx, tx, id, in.Source, by, in.Phones)

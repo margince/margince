@@ -117,6 +117,7 @@ func (s *Store) criterionSettledNow(
 	}
 	return false, nil
 }
+
 func matchProgressionCriteria(proposed []ProposedCriterion, current []crmcontracts.StageExitCriterion) error {
 	if len(proposed) == 0 {
 		return apperrors.ErrInvalidArgument

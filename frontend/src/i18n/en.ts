@@ -373,11 +373,8 @@ export const en = {
     "Authorizes the proposing caller to create this contact once with the displayed values. Current permissions and duplicate identities are checked again.",
   "approval.preview.recordAcquisition":
     "Records the displayed acquisition history. This does not grant permission to send messages.",
-  "approval.preview.createPromotions":
-    "Promotes the named leads into this contact and archives them. Fills missing contact fields, adds missing phones, consolidates history, and preserves withdrawals and applicable communication restrictions.",
   "approval.preview.acquisition": "Why this contact is being created",
   "approval.preview.acquiredAt": "Acquired on",
-  "approval.preview.promotedLead": "Lead to promote",
   "approval.preview.sourceActivity": "History linked to this source lead",
   "approval.preview.sourceWithheldActivities":
     "Further history on this source lead you cannot read",
@@ -1747,7 +1744,8 @@ export const en = {
   "systemJob.installation_setup_read": "Setup check",
   "systemJob.intro_advance": "Introduction follow-up",
   "systemJob.introduction_expiry": "Introduction expiry",
-  "systemJob.lead_qualify_scan": "Lead qualification check",
+  "systemJob.lead_for_contact": "Lead for an existing contact",
+  "systemJob.lead_replied": "Lead reply follow-up",
   "systemJob.lead_router": "Lead routing",
   "systemJob.lead_sla_scan": "Lead response time check",
   "systemJob.link_reconcile": "Record link repair",
@@ -2582,8 +2580,6 @@ export const en = {
     "Another company already has this domain, so it was not saved here.",
   "common.duplicate.linkedinUrl":
     "Another lead already has this LinkedIn profile, so it was not saved here.",
-  "common.duplicate.contactLead":
-    "This contact already has a live lead, so no second one was created.",
   "common.duplicate.slotTaken":
     "This time is no longer available. Choose another time.",
   "common.retry": "Retry",
@@ -4673,7 +4669,7 @@ export const en = {
   "lead.evidenceNote": "Evidence note (optional)",
   "lead.segregationTitle": "Leads are kept separate from contacts",
   "lead.segregation":
-    "Qualifying a lead makes it a contact. To work a contact you already have, open it and choose Work as a lead.",
+    "Qualifying a lead makes it a contact. Open a deal when a contact has new business.",
   "lead.segregationDismiss": "Dismiss this notice",
   "list.emptyMine": "No {unit} owned by you.",
   "list.showAll": "Show all",
@@ -5883,6 +5879,18 @@ export const en = {
   "field.yes": "Yes",
   "field.no": "No",
 
+  "common.duplicate.leadHolds":
+    "A lead already has this email address or LinkedIn profile, so no contact was created.",
+  "common.duplicate.contactHolds":
+    "A contact already has this email address or LinkedIn profile, so no lead was created. For new business with them, open a deal on the contact.",
+  "contact.leadHeld.title": "This is already a lead.",
+  "contact.leadHeld.body":
+    "Somebody is a lead or a contact, never both. Convert the lead to make them a contact; the lead’s history moves with them.",
+  "contact.leadHeld.noConvert": "Ask the lead’s owner to convert the lead.",
+  "contact.leadHeld.convert": "Convert the lead",
+  "contact.leadHeld.open": "Open the lead",
+  "approval.preview.leadHoldsEmail":
+    "A lead already has this email address or LinkedIn profile. Convert the lead instead of creating a contact.",
   "dedupe.viewExisting": "View existing record",
 
   "co.spine.exchangeCount": "{count} messages",
@@ -6540,6 +6548,10 @@ export const en = {
     "Created because this lead had no answer within its response time. Answer the lead, then mark the task done.",
   "tasks.origin.lead_qualify":
     "Created because this lead stayed open without a decision. Qualify the lead or close it.",
+  "tasks.origin.lead_for_contact":
+    "Created because a new lead arrived for this contact. No lead was made; the task says what arrived and where from.",
+  "tasks.origin.lead_replied":
+    "Created because this lead wrote in or booked a meeting. A reply converts nobody: qualify the lead when they are ready.",
   "tasks.origin.assurance":
     "Created by the nightly forecast check: inputs on this deal need attention. The deal page lists them.",
   "tasks.origin.overnight_reconcile":
@@ -7992,6 +8004,8 @@ export const en = {
     "Someone matching this row is already in the CRM, and this run was asked to skip duplicates.",
   "import.reason.contact_email_held":
     "This email address is already held in the CRM, so the row cannot create a second contact under it.",
+  "import.reason.contact_holds_lead":
+    "Somebody with this address is already a contact, so the row does not create a lead. The contact’s owner is told; new business with a contact is a deal.",
   "import.reason.contact_unnamed":
     "The row carries neither a name nor an email, so it names no contact.",
   "import.reason.currency_unset":
@@ -14871,8 +14885,6 @@ export const en = {
   "callAction.openChat": "Open chat in {app}",
   "contact.action.noPhone": "No phone number on this contact.",
   "contact.action.meetings": "Meetings",
-  "contact.action.workAsLead": "Work as a lead",
-  "contact.action.openLead": "Open the lead",
   "contact.action.addTask": "Add task",
   "contact.action.research": "Research",
   "contact.action.importActivities": "Import activities",

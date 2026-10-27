@@ -137,6 +137,33 @@ describe("VCardImport", () => {
     expect(screen.getByTestId("unsaved")).toHaveTextContent("clean");
   });
 
+  it("offers to convert the lead a skipped card names", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          results: [
+            {
+              index: 0,
+              full_name: "Vera Card",
+              outcome: "skipped",
+              reason:
+                "this card names somebody who is already a lead; convert the lead instead",
+              lead_id: "lead-7",
+            },
+          ],
+        }),
+      ),
+    );
+    render(<VCardImportPage />);
+    await upload(user);
+    await user.click(
+      await screen.findByRole("button", { name: "Convert the lead" }),
+    );
+    expect(window.location.hash).toBe("#/leads/lead-7?action=qualify");
+  });
+
   it("names every card and what became of it", async () => {
     const user = userEvent.setup();
     vi.stubGlobal(

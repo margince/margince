@@ -22,6 +22,7 @@ var (
 	linkedInClaimedWhy      = migration.Why(migration.ReasonLinkedinHeld)
 	domainClaimedWhy        = migration.Why(migration.ReasonDomainHeld)
 	contactEmailClaimedWhy  = migration.Why(migration.ReasonContactEmailHeld)
+	contactHoldsLeadWhy     = migration.Why(migration.ReasonContactHoldsLead)
 	addressErasedWhy        = migration.Why(migration.ReasonAddressErased)
 	duplicateEmailWhy       = migration.Why(migration.ReasonDuplicateEmail)
 	naturalKeyTakenWhy      = migration.Why(migration.ReasonNaturalKeyTaken)
