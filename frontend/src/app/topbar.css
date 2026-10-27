@@ -282,6 +282,20 @@
 /* The setup reminder: a ghost Button whose count Badge carries the progress. */
 .setup-reminder {
   white-space: nowrap;
+  min-width: 0;
+}
+/* The words give way, never the count. The strip squeezes this chip before the
+   bell and the account chip, and German asks about a third more room for the
+   same sentence, so something has to yield at 1440px that does not at 1280.
+   The count is the whole point of the chip; the words repeat what the panel
+   says when it opens. */
+.setup-reminder-word {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.setup-reminder .badge {
+  flex: 0 0 auto;
 }
 /* No room for the words at phone width: the count stays, and the words stay
    in the accessible name. */
