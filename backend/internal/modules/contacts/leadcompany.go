@@ -201,29 +201,43 @@ func (s *Store) carryLeadCompany(ctx context.Context, tx pgx.Tx, leadID ids.Lead
 // carryLeadIndustry writes the lead's typed industry to its linked company when that has
 // none. A company the promoter may not change keeps its value and does not stop the promotion.
 func (s *Store) carryLeadIndustry(ctx context.Context, tx pgx.Tx, company *ids.CompanyID, industry *crmcontracts.LeadIndustry) error {
+	code, err := leadIndustryCarry(ctx, tx, company, industry, true)
+	if err != nil || code == nil {
+		return err
+	}
+	_, err = s.updateCompanyInTx(ctx, tx, *company, UpdateCompanyInput{Industry: code}, nil)
+	return err
+}
+
+// leadIndustryCarry is the code a promotion writes to the lead's linked company, or nil. The
+// writer locks the row so no company edit lands between this check and the write; a preview does not.
+func leadIndustryCarry(ctx context.Context, tx pgx.Tx, company *ids.CompanyID, industry *crmcontracts.LeadIndustry, lock bool,
+) (*string, error) {
 	if company == nil || industry == nil || !auth.ReadGranted(ctx, companyEntity) ||
 		!auth.Allows(ctx, companyEntity, principal.ActionUpdate) {
-		return nil
+		return nil, nil //nolint:nilnil // nothing to carry is an answer, not a failure
 	}
 	err := auth.EnsureChangeable(ctx, tx, companyEntity, company.UUID)
 	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
-		return nil
+		return nil, nil //nolint:nilnil // a company the promoter may not change keeps its value
 	}
 	if err != nil {
-		return err
+		return nil, err
+	}
+	read := `SELECT industry FROM company WHERE id = $1 AND archived_at IS NULL AND merged_into_id IS NULL`
+	if lock {
+		read += ` FOR UPDATE`
 	}
 	var held *string
-	err = tx.QueryRow(ctx, `SELECT industry FROM company WHERE id = $1 AND archived_at IS NULL AND merged_into_id IS NULL`,
-		company).Scan(&held)
+	err = tx.QueryRow(ctx, read, company).Scan(&held)
 	if errors.Is(err, pgx.ErrNoRows) || held != nil {
-		return nil
+		return nil, nil //nolint:nilnil // a gone company, or one with an industry, takes none
 	}
 	if err != nil {
-		return fmt.Errorf("read the industry of the company a lead is promoted at: %w", err)
+		return nil, fmt.Errorf("read the industry of the company a lead is promoted at: %w", err)
 	}
 	code := string(*industry)
-	_, err = s.updateCompanyInTx(ctx, tx, *company, UpdateCompanyInput{Industry: &code}, nil)
-	return err
+	return &code, nil
 }
 
 // readLeadOffered is the lead GET /leads/{id} answers: the lead, with the
@@ -346,22 +360,26 @@ func liveVisibleCompanies[T ids.CompanyID | string](ctx context.Context, tx pgx.
 	return matches, nil
 }
 
-// unlinkRenamedCompany drops the link when a rename stops naming the linked company and the
-// company claims no domain the lead holds. key is the lead's candidate key before p.
-func unlinkRenamedCompany(ctx context.Context, tx pgx.Tx, id ids.LeadID, key *string, p *storekit.Patch) error {
+// unlinkUnnamedCompany drops the link when p moves the lead's company name or candidate key
+// so neither names the linked company. name and key are the lead's values before p.
+func unlinkUnnamedCompany(ctx context.Context, tx pgx.Tx, id ids.LeadID, name, key *string, p *storekit.Patch) error {
 	moved := p.Moved()
-	renamed, touched := moved[leadCompanyColumn]
-	if !touched {
+	renamed, nameMoved := moved[leadCompanyColumn]
+	rekeyed, keyMoved := moved[candidateCompanyKey]
+	if !nameMoved && !keyMoved {
 		return nil
 	}
 	linked, err := leadLinkedCompany(ctx, tx, id)
 	if err != nil || linked == nil {
 		return err
 	}
-	if rekeyed, ok := moved[candidateCompanyKey]; ok {
+	if nameMoved {
+		name = textOrNil(renamed)
+	}
+	if keyMoved {
 		key = textOrNil(rekeyed)
 	}
-	stillNamed, err := namesCompany(ctx, tx, *linked, textOrNil(renamed), key)
+	stillNamed, err := namesCompany(ctx, tx, *linked, name, key)
 	if err != nil {
 		return err
 	}

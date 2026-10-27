@@ -31,7 +31,7 @@ func reachApp(t *testing.T) *apptest.AppEnv {
 
 // probedDealFilters is each filter the deal list binds, with the operand the
 // probe sends it. A role that withholds every deal field shows the refusable ones.
-func probedDealFilters(t *testing.T) []deals.FilterReach {
+func probedDealFilters(t *testing.T) []storekit.FilterReach {
 	t.Helper()
 	var masks []principal.FieldMask
 	for _, field := range fieldmask.Maskable(fieldmask.Deal) {
@@ -48,7 +48,7 @@ func probedDealFilters(t *testing.T) []deals.FilterReach {
 	if err != nil {
 		t.Fatalf("probing the deal list filters: %v", err)
 	}
-	if !slices.ContainsFunc(reach, func(probe deals.FilterReach) bool { return probe.Refused }) {
+	if !slices.ContainsFunc(reach, func(probe storekit.FilterReach) bool { return probe.Refused }) {
 		t.Fatal("no deal list filter is refusable, so the snapshot would be checked against nothing")
 	}
 	return reach

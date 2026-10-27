@@ -49,6 +49,9 @@ func TestTheIndustryListIsOneSetInTheContractTheOwnerAndTheClient(t *testing.T) 
 			t.Errorf("%s.industry admits %v, want the company's list %v", schema, copied, contract)
 		}
 	}
+	if copied := queryEnum(t, doc, "/leads", "industry"); !maps.Equal(copied, contract) {
+		t.Errorf("listLeads industry admits %v, want the company's list %v", copied, contract)
+	}
 	owner := contacts.IndustryCodes()
 	if len(owner) != len(contract) {
 		t.Errorf("the owner holds %d codes and the contract %d", len(owner), len(contract))
@@ -102,4 +105,47 @@ func TestEveryIndustryCodeIsWordedTheSameInGoAndInEveryClientCatalog(t *testing.
 			}
 		}
 	}
+}
+
+// The lead's company size reads the company's, so every copy of the band list is
+// the company's own.
+func TestTheLeadSizeBandsAreTheCompanyBands(t *testing.T) {
+	t.Parallel()
+	doc := loadContractDocument(t)
+	bands := contractEnum(t, doc, "Company", "size_band")
+	if len(bands) == 0 {
+		t.Fatal("Company.size_band read as empty, so this compared nothing")
+	}
+	if copied := contractEnum(t, doc, "LeadCompanyFacts", "size_band"); !maps.Equal(copied, bands) {
+		t.Errorf("LeadCompanyFacts.size_band admits %v, want the company's bands %v", copied, bands)
+	}
+	if copied := queryEnum(t, doc, "/leads", "size_band"); !maps.Equal(copied, bands) {
+		t.Errorf("listLeads size_band admits %v, want the company's bands %v", copied, bands)
+	}
+}
+
+// queryEnum is the enum one list's query parameter admits.
+func queryEnum(t *testing.T, doc map[string]any, path, name string) map[string]bool {
+	t.Helper()
+	params, ok := descendContract(t, doc, "paths", path, "get")["parameters"].([]any)
+	if !ok {
+		t.Fatalf("GET %s declares no parameters", path)
+	}
+	for _, raw := range params {
+		param, isMap := raw.(map[string]any)
+		if !isMap || param["name"] != name {
+			continue
+		}
+		schema, isMap := param["schema"].(map[string]any)
+		if !isMap {
+			t.Fatalf("GET %s %s carries no schema", path, name)
+		}
+		admitted := map[string]bool{}
+		for _, value := range enumStrings(t, schema, path+" "+name) {
+			admitted[value] = true
+		}
+		return admitted
+	}
+	t.Fatalf("GET %s declares no %s parameter", path, name)
+	return nil
 }

@@ -272,7 +272,7 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	if err := unlinkRenamedCompany(ctx, tx, id, current.CandidateCompanyKey, p); err != nil {
+	if err := unlinkUnnamedCompany(ctx, tx, id, current.CompanyName, current.CandidateCompanyKey, p); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	if p.Empty() {

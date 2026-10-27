@@ -119,6 +119,38 @@ func TestTheLinkOfferMatchesTheClaimedDomainBeforeTheName(t *testing.T) {
 	}
 }
 
+// A link kept by a domain is re-checked when the lead's key moves or is cleared, as when its name moves.
+func TestALinkByDomainFollowsTheLeadsKey(t *testing.T) {
+	e := setupCapturePrivacy(t)
+	ctx := e.linker(e.owner, principal.RowScopeOwn)
+	company := e.factCompany(ctx, t, CreateCompanyInput{
+		DisplayName: "Gull Shipping", Domains: []CompanyDomainInput{{Domain: "gull.test", IsPrimary: true}},
+	})
+	for _, tc := range []struct {
+		name  string
+		patch UpdateLeadInput
+	}{
+		{"the key moves to another domain", UpdateLeadInput{CandidateCompanyKey: new("tern.test")}},
+		{"the key is cleared", UpdateLeadInput{Clear: []string{"candidate_company_key"}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			lead := e.factLead(ctx, t, e.owner, CreateLeadInput{
+				Email: new(ids.NewV7().String() + "@gull.test"), CompanyName: new("Gull Logistics"), CandidateCompanyKey: new("gull.test"),
+			})
+			if _, err := e.store.LinkLeadCompany(ctx, lead, company); err != nil {
+				t.Fatalf("link: %v", err)
+			}
+			moved, err := e.store.UpdateLead(ctx, lead, tc.patch)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if moved.CompanyId != nil || moved.CompanyFacts != nil {
+				t.Errorf("the lead kept company %v with facts %+v after its key stopped naming it", moved.CompanyId, moved.CompanyFacts)
+			}
+		})
+	}
+}
+
 // Only a claim counts: a domain written on no company, or one the company
 // released, leaves the offer to the name.
 func TestOnlyAClaimedDomainMatchesALead(t *testing.T) {
@@ -186,6 +218,13 @@ func TestALeadListsUnderTheFactsOfItsLinkedCompanyElseItsOwnIndustry(t *testing.
 		t.Fatalf("link: %v", err)
 	}
 	typed := e.factLead(ctx, t, e.owner, CreateLeadInput{Email: new("tia@typed.test"), Industry: new("manufacturing")})
+	silent := e.factCompany(ctx, t, CreateCompanyInput{DisplayName: "Quiet Yard"})
+	fallback := e.factLead(ctx, t, e.owner, CreateLeadInput{
+		Email: new("ola@quiet.test"), CompanyName: new("Quiet Yard"), Industry: new("construction"),
+	})
+	if _, err := e.store.LinkLeadCompany(ctx, fallback, silent); err != nil {
+		t.Fatalf("link: %v", err)
+	}
 	bare := e.factLead(ctx, t, e.owner, CreateLeadInput{Email: new("bo@bare.test")})
 
 	read, err := e.store.GetLead(ctx, linked, storekit.LiveOnly)
@@ -206,6 +245,7 @@ func TestALeadListsUnderTheFactsOfItsLinkedCompanyElseItsOwnIndustry(t *testing.
 	}{
 		{"the company's industry", LeadCompanyFactFilters{Industry: new("logistics_transport")}, []ids.UUID{linked.UUID}},
 		{"a typed industry the company overrides", LeadCompanyFactFilters{Industry: new("manufacturing")}, []ids.UUID{typed.UUID}},
+		{"a typed industry beside a company with none", LeadCompanyFactFilters{Industry: new("construction")}, []ids.UUID{fallback.UUID}},
 		{"the company's country, in either case", LeadCompanyFactFilters{Country: new("de")}, []ids.UUID{linked.UUID}},
 		{"the company's size band", LeadCompanyFactFilters{SizeBand: new("51-200")}, []ids.UUID{linked.UUID}},
 		{"a country no company is in", LeadCompanyFactFilters{Country: new("FR")}, []ids.UUID{}},
@@ -315,22 +355,31 @@ func TestQualifyingCarriesTheTypedIndustryOnlyToACompanyWithNone(t *testing.T) {
 		"lead":         {Create: true, Read: true, Update: true},
 		"relationship": {Create: true, Read: true, Update: true},
 	})
+	teammate := e.linker(e.teammate, principal.RowScopeTeam)
+	teammateID := ids.From[ids.UserKind](e.teammate)
 	for _, tc := range []struct {
 		name     string
 		promoter context.Context
 		held     *string
 		want     *string
+		// outOfScope gives the company to the teammate, whom the promoter's own row scope does not reach.
+		outOfScope bool
 	}{
-		{"a company with no industry", owner, nil, new("healthcare")},
-		{"a company with one", owner, new("education"), new("education")},
-		{"a promoter who may not change the company", readOnlyCompany, nil, nil},
+		{"a company with no industry", owner, nil, new("healthcare"), false},
+		{"a company with one", owner, new("education"), new("education"), false},
+		{"a promoter who may not change the company", readOnlyCompany, nil, nil, false},
+		{"a company outside the promoter's row scope", owner, nil, nil, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			company := e.factCompany(owner, t, CreateCompanyInput{DisplayName: "Clinic " + tc.name, Industry: tc.held})
+			keeper, in := owner, CreateCompanyInput{DisplayName: "Clinic " + tc.name, Industry: tc.held}
+			if tc.outOfScope {
+				keeper, in.OwnerID = teammate, &teammateID
+			}
+			company := e.factCompany(keeper, t, in)
 			lead := e.factLead(owner, t, e.owner, CreateLeadInput{
 				Email: new(ids.NewV7().String() + "@clinic.test"), CompanyName: new("Clinic " + tc.name), Industry: new("Healthcare"),
 			})
-			if _, err := e.store.LinkLeadCompany(owner, lead, company); err != nil {
+			if _, err := e.store.LinkLeadCompany(keeper, lead, company); err != nil {
 				t.Fatalf("link: %v", err)
 			}
 			audits := e.industryAudits(owner, t, company)
@@ -339,7 +388,7 @@ func TestQualifyingCarriesTheTypedIndustryOnlyToACompanyWithNone(t *testing.T) {
 				PromoteLeadInput{Trigger: string(TriggerHumanQualify)}); err != nil {
 				t.Fatalf("promote: %v", err)
 			}
-			after, err := e.store.GetCompany(owner, company, storekit.LiveOnly)
+			after, err := e.store.GetCompany(keeper, company, storekit.LiveOnly)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -27,17 +27,13 @@ var probeOperands = []string{
 	attributionSourced, probeCurrency, storekit.ProbeCountry,
 }
 
-// FilterReach is one deal list filter as the probe sent it, and whether the
-// caller is refused it.
-type FilterReach = storekit.FilterReach
-
 // ListFilterReach probes every filter the deal list binds for the caller on
 // ctx, through the list narrowing and the clause builder the list itself runs.
 // The members resolver is the one the deal list holds; nil while lists are off.
 //
 // Only a role-wide refusal counts. A mask that withholds a reference on some
 // rows, such as a private company, narrows those rows and refuses no filter.
-func ListFilterReach(ctx context.Context, members storekit.ListMemberFilterResolver) ([]FilterReach, error) {
+func ListFilterReach(ctx context.Context, members storekit.ListMemberFilterResolver) ([]storekit.FilterReach, error) {
 	return storekit.ProbeFilterReach(ctx, dealListFilters, probeOperands, func(ctx context.Context, in *ListDealsInput) error {
 		err := narrowToList(ctx, in, members)
 		// The probe's list id names no list. Not found answers for that id and refuses no dial.
