@@ -99,9 +99,8 @@ func TestEveryIndustryCodeIsWordedTheSameInGoAndInEveryClientCatalog(t *testing.
 	}
 }
 
-// Every enum the contract declares for an industry or a size band, on a schema
-// property or a query parameter, is the company's own list. The walk matches by
-// name, so a copy under another name, such as company_industry, is out of scope.
+// Every enum on a schema property or query parameter named industry or size_band
+// is the company's own list.
 func TestEveryIndustryAndSizeBandEnumIsTheCompanys(t *testing.T) {
 	t.Parallel()
 	doc := loadContractDocument(t)
@@ -111,7 +110,7 @@ func TestEveryIndustryAndSizeBandEnumIsTheCompanys(t *testing.T) {
 	}
 	census := map[string][]string{}
 	walkVocabularyCopies(doc, "", func(where, name string, schema map[string]any) {
-		for _, raw := range schemaEnums(t, doc, schema, where) {
+		for _, raw := range schemaEnums(t, doc, schema, where, map[string]bool{}) {
 			census[name] = append(census[name], where)
 			admitted := map[string]bool{}
 			for _, value := range enumStrings(t, map[string]any{"enum": raw}, where) {
@@ -160,8 +159,8 @@ func walkVocabularyCopies(node any, where string, visit func(where, name string,
 }
 
 // schemaEnums collects the enums a schema admits through, following $ref, allOf,
-// oneOf, anyOf and an array's items.
-func schemaEnums(t *testing.T, doc, schema map[string]any, where string) [][]any {
+// oneOf, anyOf and an array's items. following holds the refs on the current path.
+func schemaEnums(t *testing.T, doc, schema map[string]any, where string, following map[string]bool) [][]any {
 	t.Helper()
 	if raw, ok := schema["enum"].([]any); ok {
 		return [][]any{raw}
@@ -171,7 +170,12 @@ func schemaEnums(t *testing.T, doc, schema map[string]any, where string) [][]any
 		if !local {
 			t.Fatalf("%s refers outside the contract: %s", where, ref)
 		}
-		return schemaEnums(t, doc, descendContract(t, doc, strings.Split(path, "/")...), where)
+		if following[ref] {
+			t.Fatalf("%s reaches %s again through its own $ref chain", where, ref)
+		}
+		following[ref] = true
+		defer delete(following, ref)
+		return schemaEnums(t, doc, descendContract(t, doc, strings.Split(path, "/")...), where, following)
 	}
 	var found [][]any
 	for _, combinator := range []string{"allOf", "oneOf", "anyOf"} {
@@ -181,12 +185,12 @@ func schemaEnums(t *testing.T, doc, schema map[string]any, where string) [][]any
 		}
 		for _, branch := range branches {
 			if sub, ok := branch.(map[string]any); ok {
-				found = append(found, schemaEnums(t, doc, sub, where)...)
+				found = append(found, schemaEnums(t, doc, sub, where, following)...)
 			}
 		}
 	}
 	if items, ok := schema["items"].(map[string]any); ok {
-		found = append(found, schemaEnums(t, doc, items, where)...)
+		found = append(found, schemaEnums(t, doc, items, where, following)...)
 	}
 	return found
 }
