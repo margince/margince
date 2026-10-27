@@ -107,6 +107,16 @@ const (
 // report can group by it.
 var joinMeetingCredit = "LEFT JOIN LATERAL (SELECT " + storekit.MeetingCreditedSeatSQL("t") + " AS id) credited_seat ON true"
 
+// activityOwnRowFields names, per report, each dimension or filter read off
+// the base activity's own rows (its participants, its invitations) through a
+// correlated join. Those rows carry the activity's scope. The activity walk
+// applies it to t, so a report listed here must walk activities.
+var activityOwnRowFields = map[string]map[string]string{
+	"meeting-conversion": {
+		fieldMeetingHost: "the credited seat is read off the meeting's own participant and invitation rows",
+	},
+}
+
 // meetingConversionSpec is the held-meeting-to-accepted-opportunity key.
 //
 // The grain is ONE ROW PER HELD MEETING, so a meeting counts once whether the
@@ -154,9 +164,6 @@ func meetingConversionSpec() reportSpec {
 		grants: map[string]string{
 			fieldBecameOpportunity: tableLead,
 		},
-		// The credited seat is read off the meeting's own participant rows.
-		// Its scope is the meeting's, which the activity walk already applies.
-		scopeVia: map[string]string{fieldMeetingHost: "t.id"},
 		// The count alone, deliberately. A distinct-deal figure beside it would
 		// answer a real question — two meetings handed on into ONE deal are two
 		// conversions and one opportunity — and this engine has no count_distinct
