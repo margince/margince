@@ -84,8 +84,8 @@ func TestADriftSweepWhoseWorkerDiedDoesNotBlockTheNextOrLeaveItsRowRunning(t *te
 	var killed int
 	if err := e.Pool.QueryRow(ctx, `
 		SELECT count(*) FROM (
-		  SELECT pg_terminate_backend(pid) FROM pg_locks
-		  WHERE locktype = 'advisory' AND granted
+		  SELECT pg_terminate_backend(pid, 5000) FROM pg_locks
+		  WHERE locktype = 'advisory' AND granted AND objsubid = 1
 		    AND ((classid::bigint << 32) | (objid::bigint & 4294967295)) = hashtextextended($1, 0)
 		) AS ended`, embedDriftSweepLock).Scan(&killed); err != nil || killed != 1 {
 		t.Fatalf("ending the holder's connection: ended=%d err=%v", killed, err)
@@ -129,7 +129,7 @@ func poisonedPool(t *testing.T, e *integration.Env) *pgxpool.Pool {
 		t.Fatalf("reading its backend pid: %v", err)
 	}
 	conn.Release()
-	if _, err := e.Pool.Exec(ctx, `SELECT pg_terminate_backend($1)`, pid); err != nil {
+	if _, err := e.Pool.Exec(ctx, `SELECT pg_terminate_backend($1, 5000)`, pid); err != nil {
 		t.Fatalf("ending the idle connection: %v", err)
 	}
 	return pool
