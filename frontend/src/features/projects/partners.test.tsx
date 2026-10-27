@@ -191,6 +191,42 @@ describe("PartnerTab — a company editor without the partner grant", () => {
   });
 });
 
+describe("PartnerTab — a seat without the company grant", () => {
+  const PARTNER_ONLY = meFixture({
+    allow: { company: ["read"], partner: ["read", "update"] },
+  });
+  const REFUSAL =
+    "Your role cannot change this company’s partner program. Ask an admin.";
+
+  it("offers no set-up form, and says why", async () => {
+    stubFetch(async (url, method) => {
+      if (url.includes("/companies/o-1/partner") && method === "GET") {
+        return jsonResponse({ title: "Not found", detail: "no partner" }, 404);
+      }
+      throw new Error(`unexpected request ${method} ${url}`);
+    }, PARTNER_ONLY);
+    render(<PartnerTab companyId="o-1" />);
+
+    expect(await screen.findByText(REFUSAL)).toBeTruthy();
+    expect(screen.queryByLabelText("Margin tier")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Create" })).toBeNull();
+  });
+
+  it("refuses the edit, and says why", async () => {
+    stubFetch(async (url, method) => {
+      if (url.includes("/companies/o-1/partner") && method === "GET") {
+        return jsonResponse(partner);
+      }
+      throw new Error(`unexpected request ${method} ${url}`);
+    }, PARTNER_ONLY);
+    render(<PartnerTab companyId="o-1" />);
+
+    const edit = await screen.findByTestId("edit-partner");
+    await waitFor(() => expect(edit).toBeDisabled());
+    expect(edit).toHaveAccessibleDescription(REFUSAL);
+  });
+});
+
 describe("PartnerTab — existing partner", () => {
   it("shows its fields and edits with If-Match", async () => {
     let putHeader: string | null = null;

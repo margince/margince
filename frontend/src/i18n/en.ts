@@ -2611,6 +2611,8 @@ export const en = {
   "partner.marginTier": "Margin tier",
   "partner.marginTierHint":
     "The share the partner earns on each won deal they sourced. Intro: they only introduced the client. Active collaboration: the deal was worked together. Partner closed: they sold it themselves. Leave it unset when their agreement pays differently.",
+  "partner.writeRefused":
+    "Your role cannot change this company’s partner program. Ask an admin.",
   "partner.marginTierRefused":
     "Your role cannot set the margin tier. Ask an admin.",
   "partner.stage": "Relationship stage",
