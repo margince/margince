@@ -3780,6 +3780,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Teammitglieder, deren LinkedIn-Kontakte hier arbeiten. Nur eine Anzahl, nie die Namen. Frag sie nach einer Vorstellung.",
   "companyReach.colleaguesLabel": "Teammitglieder mit Kontakten hier",
   "companyReach.colleague": "Teammitglied",
+  "companyReach.you": "Du",
   "companyReach.connections": "Kontakte hier",
   "companyReach.none":
     "Für dieses Unternehmen wird keine Reichweite im Team angezeigt.",
@@ -14636,7 +14637,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.graph.withheldAccount":
     "Einige Kontakte dieses Unternehmens werden nicht angezeigt.",
   "contact.intro.askFirstName": "{name} um eine Vorstellung bitten",
-  "contact.intro.leadRouteBadge": "Starker Weg",
   "contact.intro.heroDirect": "kennt den Kontakt direkt",
   "contact.intro.heroIndirect": "erreicht den Kontakt über {through}",
   "contact.intro.heroYou": "Du",
@@ -14719,6 +14719,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.useThisRoute": "Diesen Weg nutzen",
   "contact.intro.mapRegion": "Wege zu diesem Kontakt",
   "contact.intro.edgeDirect": "{name} korrespondiert direkt mit diesem Kontakt",
+  "contact.intro.edgeDirectYou": "Du korrespondierst direkt mit diesem Kontakt",
   "contact.intro.edgeAccount": "arbeitet mit {name}",
   "contact.intro.routesSub":
     "Bester Weg zuerst. Alternativen greifen, wenn der beste Weg nicht verfügbar ist.",

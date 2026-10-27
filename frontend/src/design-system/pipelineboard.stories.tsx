@@ -39,7 +39,10 @@ function boardDeal(
     companyId: "o-1",
     valueMinor,
     currency: "EUR",
-    ageMs: ageDays * DAY_MS,
+    idleSince: new Date(
+      Date.parse("2026-09-15T12:00:00Z") - ageDays * DAY_MS,
+    ).toISOString(),
+    measuredAt: Date.parse("2026-09-15T12:00:00Z"),
     ...extra,
   };
 }

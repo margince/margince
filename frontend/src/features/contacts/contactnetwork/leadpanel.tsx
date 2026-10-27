@@ -14,6 +14,7 @@ import { Eyebrow } from "../../../design-system/eyebrow";
 import { Panel } from "../../../design-system/panel";
 import { formatNumber } from "../../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../../i18n";
+import { BAND_BADGE } from "../companygraph";
 import {
   evidenceSentence,
   lastContactBucket,
@@ -68,8 +69,16 @@ export function LeadPanel({
       tone="accent"
       title={verdict(route, mine, t)}
       titleAction={
-        <Badge tone={blocked ? undefined : "success"}>
-          {blocked ?? t("contact.intro.leadRouteBadge")}
+        // The route's own band, in the map's words. The lead is the best-ranked
+        // route, which need not be a strong one.
+        <Badge
+          tone={
+            blocked || route.strength_bucket !== "strong"
+              ? undefined
+              : "success"
+          }
+        >
+          {blocked ?? t(BAND_BADGE[route.strength_bucket ?? "none"])}
         </Badge>
       }
     >

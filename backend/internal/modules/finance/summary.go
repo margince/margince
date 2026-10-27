@@ -399,7 +399,7 @@ func scanRecentInvoice(rows pgx.Rows, now time.Time) (crmcontracts.FinanceInvoic
 	} else if open > 0 && deadline.Passed(due, now) {
 		// Still open and past due: lateness is measured against today rather
 		// than against a settlement that has not happened.
-		running := int(now.Sub(*due).Hours() / 24)
+		running := daysBetween(*due, now)
 		out.DaysLate = &running
 	}
 	return out, nil

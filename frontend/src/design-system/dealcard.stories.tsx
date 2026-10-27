@@ -29,7 +29,10 @@ function boardDeal(extra?: Partial<BoardDeal>): BoardDeal {
     companyId: "o-1",
     valueMinor: 33_000,
     currency: "EUR",
-    ageMs: 9 * DAY_MS,
+    idleSince: new Date(
+      Date.parse("2026-09-15T12:00:00Z") - 9 * DAY_MS,
+    ).toISOString(),
+    measuredAt: Date.parse("2026-09-15T12:00:00Z"),
     ...extra,
   };
 }
@@ -66,7 +69,10 @@ const states: { label: string; deal: BoardDeal }[] = [
     deal: boardDeal({
       stalled: true,
       singleThreaded: true,
-      ageMs: 23 * DAY_MS,
+      idleSince: new Date(
+        Date.parse("2026-09-15T12:00:00Z") - 23 * DAY_MS,
+      ).toISOString(),
+      measuredAt: Date.parse("2026-09-15T12:00:00Z"),
       closeDate: "2027-04-30",
       closeDateProvisional: true,
       lastEmail: lastEmailAgo(23 * DAY_MS, "outbound"),
@@ -78,12 +84,29 @@ const states: { label: string; deal: BoardDeal }[] = [
     deal: boardDeal({
       stalled: true,
       singleThreaded: true,
-      ageMs: 23 * DAY_MS,
+      idleSince: new Date(
+        Date.parse("2026-09-15T12:00:00Z") - 23 * DAY_MS,
+      ).toISOString(),
+      measuredAt: Date.parse("2026-09-15T12:00:00Z"),
       lastEmail: {
         at: "2025-09-14T12:00:00Z",
         precision: "day",
         measuredAt: Date.parse("2026-09-15T12:00:00Z"),
         direction: "outbound",
+      },
+    }),
+  },
+  {
+    label: "The same calendar age on both badges",
+    deal: boardDeal({
+      stalled: true,
+      idleSince: "2025-01-01T22:30:00Z",
+      measuredAt: Date.parse("2025-03-12T10:00:00Z"),
+      lastEmail: {
+        at: "2025-01-01T22:30:00Z",
+        precision: "instant",
+        measuredAt: Date.parse("2025-03-12T10:00:00Z"),
+        direction: "inbound",
       },
     }),
   },
@@ -174,4 +197,24 @@ export const BoardCardMailFlyout: StoryObj = {
       expect(document.body.querySelector(".popover-panel")).toBeInTheDocument(),
     );
   },
+};
+
+export const CalendarAgeAgreement: StoryObj = {
+  render: () => (
+    <DealCard
+      deal={boardDeal({
+        stalled: true,
+        idleSince: "2025-01-01T22:30:00Z",
+        measuredAt: Date.parse("2025-03-12T10:00:00Z"),
+        lastEmail: {
+          at: "2025-01-01T22:30:00Z",
+          precision: "instant",
+          measuredAt: Date.parse("2025-03-12T10:00:00Z"),
+          direction: "inbound",
+        },
+      })}
+      href="#/deals/d2"
+      zone="Europe/Berlin"
+    />
+  ),
 };

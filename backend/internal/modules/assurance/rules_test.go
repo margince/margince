@@ -274,3 +274,20 @@ func TestNoRuleCopiesFreeTextIntoAFinding(t *testing.T) {
 		}
 	}
 }
+
+func TestBuyerSilenceCountsDatesAcrossTheShortDay(t *testing.T) {
+	zone, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	asOf := time.Date(2026, 3, 30, 0, 5, 0, 0, zone)
+	subject := healthy()
+	last := time.Date(2026, 3, 29, 0, 5, 0, 0, zone)
+	subject.LastInboundAt = &last
+	cfg := DefaultConfig()
+	cfg.SilentDays = 1
+	finding := ask(t, TypeBuyerSilent, asOf, subject, cfg)
+	if finding == nil || finding.Observed["silent_days"] != 1 {
+		t.Fatalf("finding = %+v, want one calendar day of silence", finding)
+	}
+}

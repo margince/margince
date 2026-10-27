@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
+import type { MessageKey } from "../../i18n/en";
 import { throwProblem } from "../../lib/problem";
 
 // The account's one-hop connection graph, as data.
@@ -44,3 +45,15 @@ export function useCompanyGraph(id: string, enabled = true) {
  * the wire.
  */
 export type StrengthBucket = "none" | "weak" | "moderate" | "strong";
+
+/**
+ * The words for one band, on every card that labels a route by strength. The
+ * map draws the same bands in these words, so a badge, a card and the drawing
+ * never name one relationship two ways.
+ */
+export const BAND_BADGE: Readonly<Record<StrengthBucket, MessageKey>> = {
+  strong: "co.routeIn.bandBadge.strong",
+  moderate: "co.routeIn.bandBadge.some",
+  weak: "co.routeIn.bandBadge.faint",
+  none: "co.routeIn.bandBadge.unknown",
+};

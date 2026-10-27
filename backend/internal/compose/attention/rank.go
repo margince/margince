@@ -398,14 +398,9 @@ func moneyValue(r ranked) *crmcontracts.WorklistValue {
 	return value
 }
 
-// daysSince is how many whole days ago `from` was, against `asOf` —
-// deadline.DaysPast read backwards, since "whole days past" and "whole days
-// ago" are the same arithmetic on two instants. Zero when `from` is not
-// before `asOf` — a row read before its own occurrence or deadline, under
-// clock skew between two reads of one page, is not aged from the future.
+// daysSince reads the calendar carried by the page's assembly instant.
 func daysSince(from, asOf time.Time) int {
-	days, _ := deadline.DaysPast(&from, asOf)
-	return days
+	return calendarDaysSince(occurredday.Moment{At: from}, asOf, asOf.Location())
 }
 
 // calendarDaysSince counts calendar days in loc from the activity's date to

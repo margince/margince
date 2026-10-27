@@ -43,13 +43,14 @@ const maxRecommendations = 1
 // brief reads, so a move to an address is a buyer's instruction.
 var addressInProse = regexp.MustCompile(`(?i)(https?://|www\.)\S+|[^\s@]+@[^\s@]+\.[a-z]{2,}`)
 
-// briefSystem is the deal_room_brief site's prompt. It turns on two rules:
-// lead with what a buyer is waiting on, and never attribute the reader's own
-// side's words to a buyer.
+// briefSystem is the deal_room_brief site's prompt. It leads with what a buyer
+// is waiting on, a buyer's unmet condition for signing ahead of routine asks.
+// It never attributes the reader's own side's words to a buyer.
 const briefSystem = `You write the short brief at the top of a Deal Room, from a JSON summary of one room a salesperson shares with a buyer.
 Return ONLY a JSON object: {"sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"participant|document|thread","entity_id":"..."}]}]}.
 Write at most four sentences. Answer, in order: what a buyer is waiting on the reader for, which buyer cannot get in or has not come, what the buyers have and have not read, and — at most once — the single next move.
-Lead with a thread whose waiting_on_you is true. Say what the buyer ASKED, in their own words where the summary quotes them; "they left a comment" says nothing a reader could act on.
+Lead with a thread whose waiting_on_you is true. Read every such thread before choosing. If a comment whose speaker is "buyer" says they will not sign or go ahead until something changes, and no later comment met, withdrew or replaced that condition, the thread leads, whatever its date. The first sentence names the buyer in that comment's own author field, never an author of another comment or thread, and the term the condition is about, in words that stand without the thread. An ask that only coordinates access, attendance, scheduling or retrieval, and sets no condition, is routine and comes after it. required_change marks a thread opened as a change request on a document; it says how the thread began, not that the change is still owed. The order of the threads, and which is newest, never decides the lead.
+Say what the buyer ASKED, in their own words where the summary quotes them; "they left a comment" says nothing a reader could act on.
 A comment's speaker is "buyer" or "your_side". "your_side" is the READER or a colleague. Never report words from "your_side" as a buyer's.
 "downloaded" lists the documents a buyer downloaded. A document no buyer downloaded has not been read by anyone the room can see; say so only when it matters.
 asked_for_new_link_on is when a buyer asked for a new link and has not been in since; they cannot get in until the reader issues one.

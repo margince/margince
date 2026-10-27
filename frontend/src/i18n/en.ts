@@ -3777,6 +3777,7 @@ export const en = {
     "Colleagues whose LinkedIn connections work here. A count, never the names. Ask them for an introduction.",
   "companyReach.colleaguesLabel": "Colleagues with connections here",
   "companyReach.colleague": "Colleague",
+  "companyReach.you": "You",
   "companyReach.connections": "Connections here",
   "companyReach.none": "No colleague reach is shown for this company.",
   "companyReach.readFailed": "This reach list could not be read",
@@ -14580,7 +14581,6 @@ export const en = {
   "contact.graph.withheldAccount":
     "Some contacts at this company are not shown.",
   "contact.intro.askFirstName": "Ask {name} to introduce you",
-  "contact.intro.leadRouteBadge": "Strong route",
   "contact.intro.heroDirect": "knows them directly",
   "contact.intro.heroIndirect": "reaches them through {through}",
   "contact.intro.heroYou": "You",
@@ -14663,6 +14663,7 @@ export const en = {
   "contact.intro.useThisRoute": "Use this route",
   "contact.intro.mapRegion": "Routes to this contact",
   "contact.intro.edgeDirect": "{name} corresponds with them directly",
+  "contact.intro.edgeDirectYou": "You correspond with them directly",
   "contact.intro.edgeAccount": "works with {name}",
   "contact.intro.routesSub":
     "Best route first. Alternatives apply when the first is unavailable.",

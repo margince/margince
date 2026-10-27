@@ -109,3 +109,30 @@ it("says the list could not be read when the read is refused", async () => {
   ).toBeInTheDocument();
   expect(screen.queryByRole("table")).toBeNull();
 });
+
+// The reader's own reach is a way in they hold already. It stays, reads "You"
+// rather than their own name, and leads the list.
+it("names the reader's own row You, first", async () => {
+  const me = meFixture();
+  renderCard({
+    colleagues: [
+      {
+        user_id: "018f3a1b-0000-7000-8000-0000000000u2",
+        display_name: "Minh Tran",
+        connections: 1,
+      },
+      {
+        user_id: me.user.id,
+        display_name: me.user.display_name,
+        connections: 8,
+      },
+    ],
+  });
+
+  const table = await screen.findByRole("table");
+  const [, ...rows] = within(table).getAllByRole("row");
+  const firstCell = await within(rows[0]).findByText("You");
+  expect(firstCell).toBeInTheDocument();
+  expect(within(table).queryByText(me.user.display_name)).toBeNull();
+  expect(within(rows[1]).getByText("Minh Tran")).toBeInTheDocument();
+});

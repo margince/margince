@@ -20,8 +20,12 @@ const owner = join(srcRoot, "format", "format.dates.ts");
 // Files whose day floor counts elapsed time, not a calendar. Each
 // entry must still contain a floor, so one cannot outlive its reason.
 const elapsedSpans: Record<string, string> = {
-  "format/format.ts":
-    "formatDuration shows an idle or SLA span already computed as milliseconds from two instants; it is a duration, not a count of dates.",
+  "format/format.ts:formatDuration":
+    "formatDuration renders elapsed durations for timers; record ages use formatAge with a zone.",
+  "format/now.ts:formatSpan":
+    "Countdowns show remaining elapsed time, so midnight cannot consume a day of the deadline.",
+  "format/now.ts:formatElapsed":
+    "Duration callers count complete days; activityAgo supplies the record calendar count explicitly.",
 };
 
 const DAY_LITERAL = "86400000";
@@ -32,9 +36,11 @@ function isUtcLiteral(node: ts.Expression): boolean {
 
 function isDayDivisor(node: ts.Expression): boolean {
   if (ts.isNumericLiteral(node)) {
-    return node.text.replaceAll("_", "") === DAY_LITERAL;
+    return [DAY_LITERAL, "24"].includes(node.text.replaceAll("_", ""));
   }
-  return ts.isIdentifier(node) && node.text === "DAY_MS";
+  return (
+    ts.isIdentifier(node) && ["DAY_MS", "HOURS_PER_DAY"].includes(node.text)
+  );
 }
 
 function zonelessDayCounts(file: ts.SourceFile): string[] {
@@ -102,21 +108,35 @@ describe("a day count names its zone", () => {
   });
 
   it("finds no count in UTC beside a zoned date", () => {
-    const findings = sourcesUnderTest()
-      .filter((path) => !(relative(srcRoot, path) in elapsedSpans))
-      .flatMap((path) => findingsIn(path, readFileSync(path, "utf8")));
+    const findings = sourcesUnderTest().flatMap((path) => {
+      const file = parsed(path);
+      return file.statements.flatMap((statement) => {
+        const key = `${relative(srcRoot, path)}:${ts.isFunctionDeclaration(statement) ? statement.name?.text : ""}`;
+        const found = findingsIn(path, statement.getText(file));
+        return key in elapsedSpans ? [] : found;
+      });
+    });
     expect(findings).toEqual([]);
   });
 
   it("keeps each elapsed-span exemption live", () => {
-    for (const file of Object.keys(elapsedSpans)) {
+    for (const key of Object.keys(elapsedSpans)) {
+      const [path, name] = key.split(":");
+      const file = parsed(join(srcRoot, path));
+      const statement = file.statements.find(
+        (node) => ts.isFunctionDeclaration(node) && node.name?.text === name,
+      );
+      expect(statement, key).toBeDefined();
       expect(
-        zonelessDayCounts(parsed(join(srcRoot, file))).length,
+        findingsIn(path, statement?.getText(file) ?? "").length,
+        key,
       ).toBeGreaterThan(0);
     }
   });
 
   it.each([
+    ["hours floor", "Math.floor(hours / 24);"],
+    ["named hours floor", "Math.floor(hours / HOURS_PER_DAY);"],
     ["no zone", "calendarDaysBetween(a, b);"],
     ["a UTC literal", 'calendarDaysBetween(a, b, "UTC");'],
     ["a hand floor", "Math.floor(a.getTime() / 86_400_000);"],

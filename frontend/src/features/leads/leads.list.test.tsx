@@ -572,6 +572,38 @@ describe("LeadsScreen — the one ownership dial (DM-VOCAB-OWN-1)", () => {
   });
 });
 
+describe("LeadsScreen — Back from a lead", () => {
+  it("returns to All when the rep left the list on All", async () => {
+    const { urls } = stubFetchWithMe(async (url) => {
+      if (url.includes("/leads")) {
+        return jsonResponse({
+          data: [lead],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      if (url.includes("/teams")) {
+        return jsonResponse({ data: [], page: { next_cursor: null } });
+      }
+      return undefined;
+    });
+    const first = render(<LeadsScreen />);
+    await screen.findByText("Jonas Petersen");
+    await userEvent.click(screen.getByRole("button", { name: "All" }));
+    await waitFor(() => expect(window.location.hash).toContain("owner_id=all"));
+
+    // Opening a lead unmounts the list; Back mounts it again on that address.
+    first.unmount();
+    urls.length = 0;
+    render(<LeadsScreen />);
+    await screen.findByText("Jonas Petersen");
+
+    const leadReads = urls.filter((url) => url.includes("/leads?"));
+    expect(leadReads.length).toBeGreaterThan(0);
+    expect(leadReads.some((url) => url.includes("owner_id"))).toBe(false);
+    expect(window.location.hash).toContain("owner_id=all");
+  });
+});
+
 describe("LeadsScreen — dedupe view-existing link (P-16)", () => {
   it("renders a link to the collided record on a duplicate_email 409", async () => {
     stubFetch(async (url, method) => {
