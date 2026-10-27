@@ -4,11 +4,12 @@ import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch } from "../../api/version";
-import { Button, Field, TextInput } from "../../design-system/atoms";
+import { Button, Field } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { Select } from "../../design-system/select";
+import { clockOrBlank, TimeInput } from "../../design-system/timeinput";
 import { formatNumber, INTL_LOCALE } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
@@ -183,10 +184,9 @@ export function ReportingScheduleDialog({
         </Field>
         <Field label={t("reporting.time")} required>
           {(field) => (
-            <TextInput
+            <TimeInput
               {...field}
-              type="time"
-              value={definition.local_time}
+              value={clockOrBlank(definition.local_time)}
               onChange={(event) =>
                 setDefinition({
                   ...definition,
