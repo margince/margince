@@ -6,7 +6,9 @@ The Overview tab puts recorded context and real work first. A new contact must n
 
 ## Reading order
 
-A moment that needs action, an open task or a promise still owed comes first. Otherwise the relationship brief comes first. When no brief exists, a plain line that states the recorded identity takes its place. Source and the date the record was created show beside the owner in the header. For a contact an agent created, the source names the tool and the colleague it worked for. `captured_by` names only the passport, so `created_by` reads them from the create audit row. A failed brief has its own retry; a failure does not turn into an empty profile.
+A moment that needs action, an open task or a promise still owed comes first. Otherwise the relationship brief comes first. When no brief exists, a plain line that states the recorded identity takes its place. Source and the date the record was created show beside the owner in the header. A failed brief has its own retry; a failure does not turn into an empty profile.
+
+For a contact an agent created, the source names the tool and the colleague it worked for. `captured_by` names only the passport, so `created_by` reads them from the create audit row.
 
 The `thin_relationship` rule needs an activity timeline that loaded and is empty, and no recorded colleague connections. Its label is `No interactions recorded`. It supplies no made-up evidence that the relationship changed. The `thin_relationship` result shows as a short line that states what the record covers, not as a next step. They cover the records the reader can see, not everything anyone knows about the contact.
 
