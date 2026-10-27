@@ -2,6 +2,10 @@ import { Sparkles } from "lucide-react";
 import type { components } from "../../api/schema";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
+import {
+  type PickableProject,
+  projectLabel,
+} from "../../design-system/projectpicker";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { useCompany360 } from "../companies/company360";
@@ -9,95 +13,72 @@ import { Citations } from "../records/record360";
 import type { DraftUnavailable } from "./composedraftcall";
 
 // The account-started draft: choosing what a message is about before a model
-// writes it, and showing what the model read. Extracted from compose.tsx
-// unchanged.
+// writes it, and showing what the model read.
 //
-// It hangs together because it answers one question — what does this draft
-// stand on — from three sides: the pickers that say which record it is about,
-// the reasons panel that says what was read, and the offer that turns a refusal
-// into a next step.
-//
-// MOVED, NOT REWRITTEN, for composeschedule.tsx's reason.
+// It answers one question from three sides: what does this draft stand on?
+// The picker says which record it is about, the reasons panel says what was
+// read, and the offer turns a refusal into a next step.
 
-// The account-started path's three choices: who this is to, which open deal
-// it is about, and which project it belongs to.
+// What an account-started message is about, as one choice beside the subject:
+// one of the account's projects, one of its open deals, or nothing specific.
 //
-// All are read off the account's own 360 rather than a fresh search, for the
-// reason the whole draft is: the endpoint grounds itself in the caller's view
-// of the account, so a contact this picker offers that the view does not carry
-// would be one the draft then refuses.
-export function AccountDraftContext({
+// A project puts its key in the subject; a deal has no key, so choosing one
+// takes the key out. The send links the choice and the draft reads it. Both
+// lists come from the account's 360, the view the draft grounds itself in.
+export function RelatedFiling({
   companyId,
-  recipientId,
-  onRecipientChange,
+  projects,
+  projectId,
+  onProjectChange,
   dealId,
   onDealChange,
 }: Readonly<{
   companyId: string;
-  recipientId: string;
-  onRecipientChange: (next: string) => void;
+  projects: readonly PickableProject[];
+  projectId: string;
+  onProjectChange: (next: string) => void;
   dealId: string;
   onDealChange: (next: string) => void;
 }>) {
   const t = useT();
-  const query = useCompany360(companyId);
-  const view = query.data;
-  const contacts = view?.contacts?.data ?? [];
-  const deals = view?.deals?.data ?? [];
-
-  // No contact on the account is an honest dead end for the DRAFT — the model
-  // has no relationship to write from — and saying so beats an empty picker the
-  // rep tries and cannot use. They can still type an address into To and write
-  // the mail themselves.
-  //
-  // The PROJECT picker survives that dead end, and must: which body of work a
-  // message is about has nothing to do with whether the account has a contact
-  // yet. Returning early here took the project choice away from exactly the
-  // message that most needs it — a check-in to an account nobody has spoken to
-  // in a while, which is the first mail on a fresh delivery and the one with no
-  // thread to inherit a project from. It would land unfiled, and the ladder
-  // would ask about it in Approvals afterwards instead.
-  if (query.isSuccess && contacts.length === 0) {
-    return <p>{t("compose.noGroundableRecipient")}</p>;
-  }
+  const deals = useCompany360(companyId).data?.deals?.data ?? [];
+  const choose = (next: string) => {
+    const [kind, id = ""] = next.split(":");
+    onDealChange(kind === "deal" ? id : "");
+    onProjectChange(kind === "project" ? id : "");
+  };
   return (
-    <>
-      <Field label={t("compose.draftTo")}>
-        {(control) => (
-          <Select
-            {...control}
-            options={[
-              { value: "", label: t("compose.draftToUnset") },
-              ...contacts.map((contact) => ({
-                value: contact.contact_id,
-                label: contact.full_name,
-              })),
-            ]}
-            value={recipientId}
-            onChange={onRecipientChange}
-          />
-        )}
-      </Field>
-      {deals.length > 0 && (
-        <Field label={t("compose.relatedTo")}>
-          {(control) => (
-            <Select
-              {...control}
-              options={[
-                { value: "", label: t("compose.relatedToNone") },
-                ...deals.map((deal) => ({
-                  value: deal.deal_id,
-                  label: deal.name,
-                })),
-              ]}
-              value={dealId}
-              onChange={onDealChange}
-            />
-          )}
-        </Field>
+    <Field label={t("compose.relatedTo")} labelHidden>
+      {(control) => (
+        <Select
+          {...control}
+          options={[
+            { value: "", label: t("compose.relatedToNone") },
+            ...projects.map((project) => ({
+              value: `project:${project.project_id}`,
+              label: projectLabel(project),
+            })),
+            ...deals.map((deal) => ({
+              value: `deal:${deal.deal_id}`,
+              label: t("compose.relatedDeal", { name: deal.name }),
+            })),
+          ]}
+          value={relatedValue(dealId, projectId)}
+          onChange={choose}
+          disabled={projects.length + deals.length === 0}
+        />
       )}
-    </>
+    </Field>
   );
+}
+
+// A deal names the message more narrowly than a project, so it is the face
+// when a restored message carries both.
+function relatedValue(dealId: string, projectId: string): string {
+  if (dealId) {
+    return `deal:${dealId}`;
+  }
+  return projectId ? `project:${projectId}` : "";
 }
 
 // What the draft was written from, in the two shapes State D draws: a "Based
@@ -168,6 +149,10 @@ export type PendingAction = Readonly<{
   error: string | null;
 }>;
 
+// What holds an account draft back that the rep can supply. That is a contact
+// of the account in To, or a contact on the account at all.
+export type DraftNeed = "recipient" | "contacts" | null;
+
 // The ask for a draft: what the rep wants said, and the one control that asks
 // for it. It stays once a draft exists, so a changed steer can ask again.
 //
@@ -179,12 +164,15 @@ export function DraftOffer({
   onIntentChange,
   draft,
   unavailable,
+  need = null,
 }: Readonly<{
   replying?: boolean;
   intent: string;
   onIntentChange: (next: string) => void;
   draft: PendingAction;
   unavailable: DraftUnavailable | null;
+  /** Who the draft still needs before it can be asked for. */
+  need?: DraftNeed;
 }>) {
   const t = useT();
   const ask = replying ? "compose.replyIntent" : "compose.newIntent";
@@ -232,6 +220,15 @@ export function DraftOffer({
           {unavailable === "no_model"
             ? t("compose.draftUnavailable")
             : t("compose.draftUnsupportedHere")}
+        </p>
+      )}
+      {need && (
+        <p className="t-caption">
+          {t(
+            need === "contacts"
+              ? "compose.noGroundableRecipient"
+              : "compose.draftNeedsRecipient",
+          )}
         </p>
       )}
       {!unavailable && draft.error && <ErrorLine>{draft.error}</ErrorLine>}

@@ -82,18 +82,30 @@
   color: var(--textPrimary);
 }
 
-/* The email row: the address on one line, cut with an ellipsis, and its edit
-   verb only while the row is pointed at or holds focus. */
+/* The email row: the address and its copy glyph on one line, cut with an
+   ellipsis, and its edit verb only while the row is pointed at or holds
+   focus. A verb with no room beside the address drops under it, so the
+   address keeps the column's width. */
 .lead-row-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-2);
+  min-inline-size: 0;
+}
+
+.lead-row-email {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   min-inline-size: 0;
+  max-inline-size: 100%;
 }
 
 .lead-row-link {
   display: block;
   min-inline-size: 0;
+  padding-inline: 0;
   max-inline-size: 100%;
   text-align: start;
   overflow: hidden;
@@ -104,6 +116,7 @@
 .lead-row-verb {
   flex: none;
   max-inline-size: 0;
+  max-block-size: 0;
   overflow: hidden;
 }
 
@@ -117,6 +130,7 @@
 .factlist-row:hover .lead-row-verb,
 .lead-row-verb:focus-within {
   max-inline-size: none;
+  max-block-size: none;
 }
 
 @media (max-width: 720px) {

@@ -114,6 +114,8 @@ security:
 tags:
   - name: Webhooks
     description: Outbound webhook subscriptions (E10/S-E10.6) — signed, retried delivery of published domain events to a tenant-owned HTTPS endpoint.
+  - name: WebForms
+    description: Website forms — a public intake address per form that turns a website's form submission into a lead.
   - name: Integrations
     description: Licensed data-provider connections and the runs they execute (ADR-0101) — an installation-owned connection per provider, a metered run ledger, and the contact-scoped enrichment runs domain surfaces queue against it.
   - name: Contacts
@@ -10004,6 +10006,76 @@ paths:
         '502': { $ref: '#/components/responses/CalendarUnavailable' }
 
 
+  /public/forms/{form_key}:
+    parameters:
+      - { name: form_key, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [WebForms]
+      operationId: submitWebForm
+      security: []   # anonymous: a website's visitor or a form builder's webhook
+      x-agent-access: human-only
+      summary: Land one website form submission as a lead (anonymous).
+      description: |
+        The intake address of one website form. What admits a request depends on the form's
+        `sender`: a `browser` form takes posts only from its allowed websites (the `Origin`
+        header) and runs the spam checks; a `server` form takes posts signed with
+        `X-Margince-Timestamp`, `X-Margince-Nonce` and `X-Margince-Signature`; a builder form
+        checks the builder's own signature header.
+
+        A new email becomes a lead with the form's origin; an email an open lead or a contact
+        already holds adds the message to that record's timeline instead. The answer is the same in
+        every case and for
+        a submission the spam checks dropped, so the address tells nobody who is in the CRM.
+
+        A request whose `Accept` asks for HTML (a plain `<form>` post) is answered with a redirect
+        to the form's `redirect_url`, or a short thank-you page.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: '#/components/schemas/WebFormFields' }
+          multipart/form-data:
+            schema: { $ref: '#/components/schemas/WebFormFields' }
+          application/json:
+            schema: { $ref: '#/components/schemas/WebFormFields' }
+      responses:
+        '202':
+          description: Received.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebFormReceipt' }
+        '200':
+          description: The thank-you page, for a plain HTML post on a form with no redirect.
+          content:
+            text/html:
+              schema: { type: string }
+        '303':
+          description: Redirect to the form's `redirect_url`, for a plain HTML post.
+          headers:
+            Location: { schema: { type: string } }
+        '401':
+          description: A server or builder form's signature did not verify.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '403':
+          description: A browser form was posted from a website not on its list.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '410':
+          description: The form is paused.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: Rate-limited; a webhook sender retries.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   # ---- Deal Room buyer edge ----
   # The buyer's side of a Deal Room. No room id ever appears in a path: the
   # credential (exchange, peek) or the session Bearer (everything else) is the
@@ -14438,6 +14510,137 @@ paths:
   # approval (BYO-WIRE-6, UC-E10-04 E4); a human does it directly. Rotating a
   # secret and replaying a delivery are human-only (secret exposure /
   # operational). The signing secret is returned exactly once, at create/rotate.
+  /web-forms:
+    get:
+      tags: [WebForms]
+      operationId: listWebForms
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: List the website forms that land leads in this installation.
+      parameters:
+        - $ref: '#/components/parameters/IncludeArchived'
+      responses:
+        '200':
+          description: Website forms, newest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebFormListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [WebForms]
+      operationId: createWebForm
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Create a website form (returns a server signing secret once).
+      description: |
+        Mints the form's public key, the last segment of its intake address
+        `POST /v1/public/forms/{form_key}`. A `server` form answers its own signing secret in
+        `signing_secret`, once; no read returns it again. A builder form (`webflow`, `typeform`,
+        `tally`) stores the secret the builder signs with, sent in `sender_secret`. Both need a
+        secret store on this installation; without one they answer 422 on `sender`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateWebFormRequest' }
+      responses:
+        '201':
+          description: The created form, plus its one-time signing secret for a `server` form.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebFormCreated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /web-forms/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [WebForms]
+      operationId: getWebForm
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Get one website form.
+      responses:
+        '200':
+          description: The form.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebForm' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    patch:
+      tags: [WebForms]
+      operationId: updateWebForm
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Change a website form, pause it or resume it.
+      description: |
+        A partial update. The sender kind and the form key never change: a form a website already
+        points at keeps its address. `sender_secret` replaces a builder form's stored secret.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateWebFormRequest' }
+      responses:
+        '200':
+          description: The updated form.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebForm' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [WebForms]
+      operationId: archiveWebForm
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Archive a website form; its address stops taking submissions.
+      responses:
+        '200':
+          description: The archived form.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebForm' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /web-forms/{id}/rotate-secret:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [WebForms]
+      operationId: rotateWebFormSecret
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Rotate a server form's signing secret (returns the new secret once).
+      description: |
+        Only a `server` form has a secret this installation minted; any other sender answers 422 on
+        `sender`. The old secret stops verifying at once.
+      responses:
+        '200':
+          description: The form plus its new one-time signing secret.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebFormCreated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /webhook-subscriptions:
     get:
       tags: [Webhooks]
@@ -32694,6 +32897,130 @@ components:
           description: Defaults to today; must not be in the past (append-forward).
 
     # ---- outbound webhooks (E10/S-E10.6, A51; BYO-DDL-3/4) ----
+    WebFormSender:
+      type: string
+      enum: [browser, server, webflow, typeform, tally]
+      description: |
+        Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
+        allowed website, with spam checks. `server`: a server signing with this form's secret.
+        `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
+        builder computes with the secret stored as `sender_secret`.
+
+    WebForm:
+      type: object
+      description: >-
+        A website form (`web_form`): a public intake address that turns a submission into a lead.
+        No secret is ever returned here; `secret_configured` says one is stored.
+      required: [id, name, form_key, sender, allowed_origins, field_map, consent_required, state, secret_configured, version, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        form_key: { type: string, description: 'The last segment of the intake address. Public; it is an address, not a credential.' }
+        sender: { $ref: '#/components/schemas/WebFormSender' }
+        allowed_origins:
+          type: array
+          items: { type: string }
+          description: The websites a `browser` form takes posts from, as origins (`https://example.com`).
+        lead_origin: { type: [string, 'null'], description: 'The `/lead-origins` key every lead from this form carries.' }
+        owner_id: { type: [string, 'null'], format: uuid, description: 'Who owns the leads this form creates; null leaves them in the unassigned queue.' }
+        field_map:
+          type: object
+          additionalProperties: { type: string }
+          description: The sender's field names mapped to lead fields, for names the defaults do not already read.
+        consent_required: { type: boolean, description: 'A submission without `consent` ticked is refused with 422.' }
+        consent_policy_version: { type: [string, 'null'] }
+        consent_wording: { type: [string, 'null'], description: 'The consent wording the form shows, written on each lead''s timeline as evidence.' }
+        redirect_url: { type: [string, 'null'], description: 'Where a plain HTML post is sent after a submission.' }
+        success_message: { type: [string, 'null'] }
+        state: { type: string, enum: [active, paused] }
+        secret_configured: { type: boolean }
+        version: { type: integer, format: int64, description: 'Optimistic-concurrency version; echo it in If-Match on update.' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        archived_at: { type: [string, 'null'], format: date-time }
+
+    WebFormCreated:
+      allOf:
+        - $ref: '#/components/schemas/WebForm'
+        - type: object
+          properties:
+            signing_secret:
+              type: string
+              description: A `server` form's signing secret, shown this once.
+
+    WebFormListResponse:
+      type: object
+      required: [data, secrets_available]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/WebForm' }
+        secrets_available: { type: boolean, description: 'Whether this installation can store a secret, which every sender but `browser` needs.' }
+
+    CreateWebFormRequest:
+      type: object
+      required: [name, sender]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        sender: { $ref: '#/components/schemas/WebFormSender' }
+        sender_secret: { type: string, minLength: 16, maxLength: 512, description: 'The secret a builder signs with. Required for `webflow`, `typeform` and `tally`; refused for any other sender.' }
+        allowed_origins:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 300 }
+          description: Required, and only allowed, for a `browser` form.
+        lead_origin: { type: [string, 'null'] }
+        owner_id: { type: [string, 'null'], format: uuid }
+        field_map:
+          type: object
+          maxProperties: 40
+          additionalProperties: { type: string }
+        consent_required: { type: boolean, default: false }
+        consent_policy_version: { type: [string, 'null'], maxLength: 200 }
+        consent_wording: { type: [string, 'null'], maxLength: 2000 }
+        redirect_url: { type: [string, 'null'], maxLength: 2000 }
+        success_message: { type: [string, 'null'], maxLength: 500 }
+
+    UpdateWebFormRequest:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        sender_secret: { type: string, minLength: 16, maxLength: 512 }
+        allowed_origins:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 300 }
+        lead_origin: { type: [string, 'null'] }
+        owner_id: { type: [string, 'null'], format: uuid }
+        field_map:
+          type: object
+          maxProperties: 40
+          additionalProperties: { type: string }
+        consent_required: { type: boolean }
+        consent_policy_version: { type: [string, 'null'], maxLength: 200 }
+        consent_wording: { type: [string, 'null'], maxLength: 2000 }
+        redirect_url: { type: [string, 'null'], maxLength: 2000 }
+        success_message: { type: [string, 'null'], maxLength: 500 }
+        state: { type: string, enum: [active, paused] }
+
+    WebFormFields:
+      type: object
+      description: |
+        The submitted fields. Read by name: `email` (required), `full_name` or `first_name` and
+        `last_name`, `phone`, `company`, `title`, `message`, `consent`, plus `page_url`,
+        `referrer` and `utm_*`. Common spellings (`name`, `e-mail`, `your-email`) read too, and
+        the form's `field_map` names the rest. Every other field is kept on the lead's timeline.
+        Fields starting `_mrg_` steer the spam checks and are never stored.
+      additionalProperties: true
+
+    WebFormReceipt:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [received] }
+        message: { type: [string, 'null'], description: 'The form''s success message.' }
+        redirect_url: { type: [string, 'null'] }
+
     WebhookSubscription:
       type: object
       description: >-
@@ -40892,7 +41219,8 @@ components:
         dimension the client rates itself.
 
         - `never_written`: no message from them and no meeting with them, ever.
-        - `quiet`: no message from them and no meeting with them for `days` days.
+        - `quiet`: no message from them and no meeting with them for `days` days, counted from
+          `at`, the last of the two.
         - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
         - `last_met`: in touch through a meeting `days` days ago.
         - `single_threaded`: in touch, but one contact carries the whole account.
@@ -42079,6 +42407,13 @@ components:
           format: date-time
           description: The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
         contact: { $ref: '#/components/schemas/Contact' }
+        created_by:
+          allOf: [{ $ref: '#/components/schemas/PrincipalAttribution' }]
+          description: |
+            Who created the contact, from its earliest create audit row: for an agent, the
+            colleague it worked for and the tool it was typed through, each when the row
+            records it, which `captured_by` cannot say. Absent when no create row is known; a reader says "unknown" for an
+            absent value and never "System".
         scope:
           $ref: '#/components/schemas/ProjectScope'
           description: The project this was narrowed to, when the request named one.

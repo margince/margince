@@ -1031,7 +1031,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Offene Deals je Unternehmen und ihr Anteil an der Pipeline, unter Pipeline.",
   "reporting.prepared.deliveryTitle": "Umsetzung",
   "reporting.prepared.deliveryPurpose":
-    "Projektzusagen, ruhende Projekte und Phasen, unter Umsetzung.",
+    "Offene Projektaufgaben, ruhende Projekte und Phasen, unter Umsetzung.",
   "reporting.noSalesWon": "Keine gewonnenen Abschlüsse",
   "reporting.openPipelineAsOf": "Stand {at}",
   "reporting.openPipelineBasis_one": "Offener Deal: {count} · Stand {at}",
@@ -1731,6 +1731,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "trust.importedFrom": "Importiert aus {uploadName}",
   "trust.agentTag": "Automatisiert durch {agent}",
   "trust.agentUnnamed": "Automatisiert durch einen Agenten",
+  "trust.agentFor": "Von {agent} für {name} erstellt",
+  "trust.agentUnnamedFor": "Von einem Agenten für {name} erstellt",
   "trust.systemTag": "Systemaufgabe: {job}",
   "trust.systemUnnamed": "Systemaufgabe",
   "systemJob.agent_resume": "Fortsetzung von Agentenläufen",
@@ -1823,6 +1825,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.public_booking": "Öffentliche Buchungsseite",
   "systemJob.public_confirm": "Öffentliche Bestätigung der Angaben",
   "systemJob.public_preferences": "Öffentliche Einstellungsseite",
+  "systemJob.public_web_form": "Website-Formular",
   "systemJob.rbac_defaults": "Anfangsberechtigungen der Erweiterungen",
   "systemJob.release_version": "Versionsprüfung",
   "systemJob.report_schedule": "Geplante Berichte",
@@ -3066,6 +3069,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Seit {days} Tag keine Antwort und kein Termin.",
   "co.health.reason.quiet_other":
     "Seit {days} Tagen keine Antwort und kein Termin.",
+  "co.health.reason.quietSince_one":
+    "Seit {at} ({days} Tag) keine Antwort und kein Termin.",
+  "co.health.reason.quietSince_other":
+    "Seit {at} ({days} Tagen) keine Antwort und kein Termin.",
   "co.health.reason.meetingBooked": "Ein Termin ist für den {at} angesetzt.",
   "co.health.reason.lastMetToday": "Heute getroffen.",
   "co.health.reason.lastMet_one": "Zuletzt vor {days} Tag getroffen.",
@@ -4849,6 +4856,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.standing.figure.next": "Nächster Schritt",
   "standing.noneYet": "Noch keiner",
   "deal.standing.figure.daysInStage": "Tage in der Phase",
+  "deal.standing.figure.daysToClose": "Tage bis Abschluss",
+  "deal.standing.figure.openedOn": "eröffnet am {date}",
+  "deal.standing.figure.final": "Ergebnis",
+  "deal.standing.closedOn": "Abgeschlossen am {date}",
   "standing.timeline.label": "{name} im Zeitverlauf",
   "standing.noReply": "keine Antwort",
   "deal.standing.timeline.booked": "gebucht",
@@ -6245,10 +6256,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Projektschlüssel in den Betreff einfügen (hilft beim Ablegen)",
   "compose.noGroundableRecipient":
     "Noch keine Kontakte bei diesem Unternehmen. Schreibe die Nachricht selbst oder erstelle zuerst einen Kontakt.",
-  "compose.draftTo": "Entwurf an",
-  "compose.draftToUnset": "Kontakt wählen",
   "compose.relatedTo": "Bezug",
-  "compose.relatedToNone": "Gesamtes Unternehmen",
+  "compose.relatedToNone": "Nichts Bestimmtes",
+  "compose.relatedDeal": "Deal: {name}",
+  "compose.draftNeedsRecipient":
+    "Für einen KI-Entwurf füge unter „An“ einen Kontakt dieses Unternehmens hinzu.",
   "compose.project": "Projekt",
   "compose.projectNone": "Kein Projekt",
   "compose.scopedToCounted":
@@ -6608,10 +6620,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.last_activity_at": "Letzte Aktivität",
   "analytics.field.lost_reason": "Verlustgrund",
   "analytics.field.meeting_status": "Terminstatus",
-  "analytics.field.open_commitments": "Offene Zusagen",
+  "analytics.field.open_commitments": "Offene Aufgaben",
   "analytics.field.open_deal_value_minor": "Offener Deal-Wert",
   "analytics.field.open_deal_unpriced": "Nicht bewertete offene Deals",
-  "analytics.field.overdue_commitments": "Überfällige Zusagen",
+  "analytics.field.overdue_commitments": "Überfällige Aufgaben",
   "analytics.field.close_month": "Abschlussmonat",
   "analytics.field.owner_id": "Verantwortlich",
   "analytics.field.partner_company_id": "Partnerunternehmen",
@@ -6743,14 +6755,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.q.withheldGroups_one": "1 Gruppe verborgen",
   "analytics.q.withheldGroups_other": "{count} Gruppen verborgen",
   "analytics.reportProjectsByPhase": "Projekte nach Phase",
-  "analytics.reportProjectCommitments": "Projektzusagen",
+  "analytics.reportProjectTasks": "Offene Projektaufgaben",
   "analytics.reportProjectsGoneQuiet": "Projekte ohne Aktivität seit 30 Tagen",
   "analytics.projects": "Projekte",
   "analytics.project": "Projekt",
   "analytics.openDealValue": "Offener Deal-Wert · {currency}",
   "analytics.wonDealValue": "Gewonnener Deal-Wert · {currency}",
-  "analytics.openCommitments": "Offene Zusagen",
-  "analytics.overdueCommitments": "Überfällige Zusagen",
+  "analytics.openTasks": "Offene Aufgaben",
+  "analytics.overdueTasks": "Überfällige Aufgaben",
   "analytics.quietSince": "Ruhig seit",
   "analytics.nothingQuiet": "Kein Projekt in Umsetzung ist verstummt.",
   "analytics.noProjectsYet":
@@ -11655,7 +11667,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "companyTriage.sub":
     "Geprüfte E-Mail-Domains und das Ergebnis jeder Prüfung.",
   "companyTriage.empty":
-    "Für dieses Unternehmen wurde keine E-Mail-Domain geprüft. Das Unternehmen wurde manuell erstellt oder importiert.",
+    "Dieses Unternehmen wurde nicht aus E-Mails angelegt. Die Zeile Quelle sagt, woher es stammt.",
   "companyTriage.checkedAt": "geprüft {when}",
   "pipeline.reason.no_named_reader":
     "dieser Thread hat keine Lesenden, an die sich ein Befund richten ließe",
@@ -13909,6 +13921,112 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "financeSource.findCompany": "Unternehmen suchen",
   "financeSource.cancel": "Abbrechen",
 
+  "webForms.title": "Website-Formulare",
+  "webForms.sub":
+    "Formulare auf deiner Website. Jede Anfrage wird ein Lead oder eine Notiz am Lead oder Kontakt mit dieser E-Mail.",
+  "webForms.readOnly":
+    "Nur Lesen: Nur eine Rolle mit der Berechtigung für Integrationen kann Website-Formulare ändern.",
+  "webForms.new": "Neues Website-Formular",
+  "webForms.state.active": "Aktiv",
+  "webForms.state.paused": "Pausiert",
+  "webForms.sender.browser": "Website",
+  "webForms.sender.server": "Website-Server",
+  "webForms.sender.webflow": "Webflow",
+  "webForms.sender.typeform": "Typeform",
+  "webForms.sender.tally": "Tally",
+  "webForms.senderLine.browser": "Sendungen von den eingetragenen Websites",
+  "webForms.senderLine.server": "Signierte Sendungen vom Server deiner Website",
+  "webForms.senderLine.webflow": "Signierter Webhook von Webflow",
+  "webForms.senderLine.typeform": "Signierter Webhook von Typeform",
+  "webForms.senderLine.tally": "Signierter Webhook von Tally",
+  "webForms.row.consent": "Einwilligung nötig",
+  "webForms.setup": "Einrichtung zeigen",
+  "webForms.edit": "Bearbeiten",
+  "webForms.pause": "Formular pausieren",
+  "webForms.resume": "Formular fortsetzen",
+  "webForms.rotate": "Signaturschlüssel rotieren",
+  "webForms.rotateConfirm.title": "Signaturschlüssel des Formulars rotieren?",
+  "webForms.rotateConfirm.body":
+    "Der aktuelle Signaturschlüssel gilt sofort nicht mehr, und der neue wird einmal angezeigt. Aktualisiere den Server deiner Website sofort.",
+  "webForms.archive": "Archivieren",
+  "webForms.archiveConfirm":
+    "Nach dem Archivieren nimmt dieses Formular keine Sendungen mehr an. Das lässt sich nicht rückgängig machen.",
+  "webForms.archiveDone": "Website-Formular archiviert",
+  "webForms.drawer.editTitle": "Website-Formular bearbeiten",
+  "webForms.drawer.sub":
+    "Jede Sendung wird ein Lead mit der Anfrage als Notiz. Hat ein Lead oder Kontakt die E-Mail schon, bekommt er die Notiz.",
+  "webForms.drawer.cancel": "Abbrechen",
+  "webForms.drawer.save": "Formular speichern",
+  "webForms.drawer.create": "Formular anlegen",
+  "webForms.field.name": "Name",
+  "webForms.field.nameHint":
+    "Steht in der Notiz jedes Leads, zum Beispiel Kontaktseite.",
+  "webForms.field.sender": "Gesendet von",
+  "webForms.field.senderFixed":
+    "Steht fest, sobald das Formular existiert. Lege für eine Änderung ein neues an.",
+  "webForms.senderHint.browser":
+    "Ein Formular auf deiner Website sendet direkt aus dem Browser des Besuchers.",
+  "webForms.senderHint.server":
+    "Der Server deiner Website leitet jede Sendung weiter, signiert mit einem Signaturschlüssel.",
+  "webForms.senderHint.webflow":
+    "Webflow sendet jede Formularsendung als signierten Webhook.",
+  "webForms.senderHint.typeform":
+    "Typeform sendet jede Antwort als signierten Webhook.",
+  "webForms.senderHint.tally":
+    "Tally sendet jede Antwort als signierten Webhook.",
+  "webForms.field.origins": "Websites",
+  "webForms.field.originsHint":
+    "Eine Adresse pro Zeile. Sendungen von anderen Websites werden abgelehnt.",
+  "webForms.field.originsPlaceholder": "https://www.example.com",
+  "webForms.field.senderSecret": "Signaturschlüssel",
+  "webForms.field.senderSecretHint":
+    "Der Signaturschlüssel aus den Webhook-Einstellungen des Tools, mindestens 16 Zeichen.",
+  "webForms.field.senderSecretKeep":
+    "Leer lassen, um den gespeicherten Signaturschlüssel zu behalten.",
+  "webForms.field.consentRequired":
+    "Einwilligung verlangen, bevor eine Sendung angenommen wird",
+  "webForms.field.consentWording": "Einwilligungstext",
+  "webForms.field.consentWordingHint":
+    "Der Text, den du neben der Checkbox zeigst. Jede angehakte Sendung hält ihn als Nachweis in ihrer Notiz fest.",
+  "webForms.field.consentPolicyVersion": "Version der Datenschutzerklärung",
+  "webForms.field.consentPolicyVersionHint":
+    "Die Version der Erklärung, auf die der Text verweist.",
+  "webForms.field.redirectUrl": "Danke-Seite",
+  "webForms.field.redirectUrlHint":
+    "Wohin ein Besucher nach dem Senden geht. Leer zeigt die Erfolgsmeldung.",
+  "webForms.field.redirectUrlPlaceholder": "https://www.example.com/danke",
+  "webForms.field.successMessage": "Erfolgsmeldung",
+  "webForms.field.successMessageHint":
+    "Wird dem Besucher nach dem Senden gezeigt.",
+  "webForms.setup.title": "{name} verbinden",
+  "webForms.setup.how.browser":
+    "Füge dieses Formular in deine Website ein, oder richte dein eigenes Formular auf die Adresse und behalte die Feldnamen.",
+  "webForms.setup.how.server":
+    "Dein Server sendet jede Sendung an diese Adresse, signiert wie im Code unten.",
+  "webForms.setup.how.webflow":
+    "Lege in Webflow einen Webhook für Formularsendungen an, der an diese Adresse sendet.",
+  "webForms.setup.how.typeform":
+    "Lege in Typeform unter Connect einen Webhook an, der an diese Adresse sendet.",
+  "webForms.setup.how.tally":
+    "Lege in Tally unter Integrations einen Webhook an, der an diese Adresse sendet.",
+  "webForms.setup.address": "Formularadresse",
+  "webForms.setup.secret": "Signaturschlüssel des Formulars",
+  "webForms.setup.secretWarning":
+    "Dieser Signaturschlüssel wird einmal angezeigt. Speichere ihn auf deinem Server als {name}.",
+  "webForms.setup.snippet": "Code zum Einfügen",
+  "webForms.setup.builderSecret":
+    "Verwende dort denselben Signaturschlüssel, den du an diesem Formular gespeichert hast.",
+  "webForms.setup.customFields":
+    "Ein Feld mit dem Namen eines eigenen Lead-Felds füllt es: {fields}. Ein Wert, den es nicht annimmt, kommt in die Notiz.",
+  "webForms.setup.copy": "Code kopieren",
+  "webForms.setup.copySecret": "Schlüssel kopieren",
+  "webForms.setup.copied": "Kopiert",
+  "webForms.setup.copyFailed":
+    "Markiere den Text oben und kopiere ihn von Hand.",
+  "webForms.setup.leaveWarning":
+    "Beim Schließen geht die einzige Kopie dieses Signaturschlüssels verloren. Kopiere ihn zuerst.",
+  "webForms.setup.done": "Fertig",
+
   "webhooks.title": "Webhooks",
   "webhooks.readOnly":
     "Nur Lesezugriff: Nur Admins und Operations können Abonnements ändern.",
@@ -15654,6 +15772,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.record.loading": "Listen werden geladen",
   "lists.record.empty": "Auf keiner Liste, die du finden kannst.",
   "lists.record.check": "Live-Liste pr\u00fcfen",
+  "lists.record.checkHint":
+    "Eine Live-Liste aktualisiert sich selbst nach ihren Filtern. Wähle eine, um zu sehen, ob dieser Datensatz passt und warum.",
   "lists.record.checkPick": "Live-Liste ausw\u00e4hlen",
   "lists.record.truncated": "Und weitere Listen, die hier nicht stehen.",
   "lists.record.takenOff": "Von {name} entfernt",
@@ -16009,6 +16129,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.documents.empty":
     "An diesem Projekt hängt keine Datei. Dateien an den Deals des Projekts bleiben bei den Deals.",
   "record.commitments": "Zusagen",
+  "project.openTasks": "Offene Aufgaben",
   "project.commitments.empty":
     "Unter diesem Projekt ist keine offene Aufgabe abgelegt. Verknüpfte Aufgaben erscheinen hier, die am frühesten fällige zuerst.",
   "project.commitments.overdue": "Überfällig",

@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -219,7 +220,7 @@ func assertProjection(t *testing.T, got crmcontracts.Activity, index map[string]
 		got    *time.Time
 	}{
 		{"a.occurred_at", &got.OccurredAt},
-		{"a.due_at", got.DueAt},
+		{storekit.TaskDueSQL("a"), got.DueAt},
 		{"a.remind_at", got.RemindAt},
 		{"a.done_at", got.DoneAt},
 		{"a.created_at", &got.CreatedAt},

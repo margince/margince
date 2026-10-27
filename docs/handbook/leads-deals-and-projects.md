@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/leads frontend/src/features/deals frontend/src/features/projects backend/internal/modules/contacts/leadstatus.go backend/internal/modules/contacts/leadscore.go backend/internal/modules/contacts/leadcompanyfacts.go backend/internal/modules/deals/deal_create.go backend/internal/modules/deals/deal_update.go backend/internal/modules/projects -->
+<!-- describes: backend/internal/compose/leadworktasks.go frontend/src/features/leads frontend/src/features/deals frontend/src/features/projects backend/internal/modules/contacts/leadstatus.go backend/internal/modules/contacts/leadscore.go backend/internal/modules/contacts/leadcompanyfacts.go backend/internal/modules/deals/deal_create.go backend/internal/modules/deals/deal_update.go backend/internal/modules/projects -->
 # Leads, deals and projects
 
 A lead is someone you may sell to. A deal is one opportunity with one company, and a project is work a deal may belong to. See [Records](records.md) for contacts, companies, archiving, undo, custom fields and tags.
@@ -70,10 +70,11 @@ Either way the lead's history and activities come with it, and the lead is
 marked qualified and archived. You can preview which of the two
 will happen before you confirm.
 
-Margince does not qualify a lead on its own. Mail and chat from a lead stay on
-the lead, and a booking is filed there too. A reply or booking gives the lead's
-owner a task to review the lead and qualify them when that is the right next
-step.
+Margince does not qualify a lead on its own. Mail and chat stay on the lead, and a booking is filed there too.
+A current reply or booking gives the lead's owner a task to review the lead and qualify them
+when that is the right next step.
+
+This advice has no automatic deadline. Old imported mail creates no new task. A reply you already answered creates no new task. A task you kept remains your work.
 
 When you add or edit a contact with an email or LinkedIn profile held by a
 live lead, Margince asks whether to convert the lead. Nothing is written until
@@ -282,8 +283,8 @@ Also called: add a project to a client.
 ### What is on a project page?
 A project page in Margince brings together everything filed under the work. Its phase and key are beside the name, and the **Phase** bar runs under the top of the page. **More actions** holds **Edit project**, **Share**, **Assign to a colleague** and **Archive project**.
 
-The large column opens with the figures **Open deals**, **Won deals**, **Open commitments** and **Activity**. Then come **Delivery health**, and the **Deals** card with **New deal**.
-Then comes **Open commitments**: open tasks filed under the project, soonest due first, late ones marked **Overdue**. The timeline follows.
+The large column opens with the figures **Open deals**, **Won deals**, **Open tasks** and **Activity**. Then come **Delivery health**, and the **Deals** card with **New deal**.
+Then comes **Open tasks**: the open tasks filed under the project, soonest due first, late ones marked **Overdue**. The timeline follows.
 
 The side column of a project page in Margince holds **Companies**, **Responsibilities**, **Stakeholders**, **Contracts**, **Documents** and **Phase history**. **Phase history** records every phase move, with who made it and the reason. A move an AI agent made names the colleague it worked for and the tool, as in "Anna Weber, via Claude, moved it". If nobody recorded who made a move, Phase history says so; it is never shown as **System**. Files attached to the project's deals stay on the deals.
 

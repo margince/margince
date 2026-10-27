@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { WriteToProvider } from "../../lib/writeto";
 import { ContactBillingRoles } from "../contacts/contactbillingroles";
 import { type BillingContact, BillingContactsPanel } from "./billingcontacts";
 
@@ -52,6 +53,21 @@ it("renders each billing contact with their capacity and address", () => {
   expect(screen.getByText("Pat Okafor")).toBeTruthy();
   expect(screen.getByText("Invoice recipient")).toBeTruthy();
   expect(screen.getByRole("link", { name: "pat@acme.test" })).toBeTruthy();
+});
+
+it("writes to a billing contact on the account the invoice is about", async () => {
+  const writeTo = vi.fn();
+  render(
+    <WriteToProvider writeTo={writeTo}>
+      <BillingContactsPanel contacts={[PAT]} companyId={COMPANY} />
+    </WriteToProvider>,
+  );
+  await userEvent.click(screen.getByRole("button", { name: "pat@acme.test" }));
+  expect(writeTo).toHaveBeenCalledWith({
+    entityType: "company",
+    entityId: COMPANY,
+    address: "pat@acme.test",
+  });
 });
 
 it("says so when a named recipient has nowhere to send the invoice", () => {

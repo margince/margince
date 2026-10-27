@@ -6,26 +6,19 @@ import type { components } from "../../api/schema";
 import type { ProjectScope } from "../../design-system/projectpicker";
 import { paragraphsFrom } from "../../design-system/richtext";
 import type { CommunicationContext } from "../../lib/compose-context";
-import type {
-  DraftProvenance,
-  DraftUnavailable,
-  Grounding,
-} from "./composedraftcall";
+import type { DraftProvenance, DraftUnavailable } from "./composedraftcall";
 import type { SavedDraftFields } from "./composesaveddraftcalls";
 import type { EditSeed } from "./schedulededit";
 
 type DraftReason = components["schemas"]["AccountDraftReason"];
 
-// The account-started path's grounding: the recipient, the deal and the
-// project a draft is written for, with what the server said it wrote from.
+// The account-started path's grounding: the deal and the project a draft is
+// written for, with what the server said it wrote from. The recipient is not
+// held here: it is whoever from the account stands first in To.
 function useAccountGrounding(
-  contactId: string | undefined,
   edit: EditSeed | undefined,
   onGroundingChanged: () => void,
 ) {
-  const [recipientId, setRecipientId] = useState(
-    edit?.recipientId || (contactId ?? ""),
-  );
   const [dealId, setDealId] = useState(edit?.dealId ?? "");
   // The project scopes the draft's grounding and files the sent message.
   const [projectId, setProjectId] = useState(edit?.projectId ?? "");
@@ -33,7 +26,7 @@ function useAccountGrounding(
   // The server's scope report for the draft on screen, retired with the
   // reasons because it describes the same read.
   const [scope, setScope] = useState<ProjectScope | undefined>(undefined);
-  // A new recipient or deal retires the draft written for the previous pair.
+  // A new project retires the draft written for the previous one.
   // A re-draft could not repair it, because the fill leaves a full field alone.
   const reground = (apply: (next: string) => void) => (next: string) => {
     apply(next);
@@ -42,13 +35,14 @@ function useAccountGrounding(
     onGroundingChanged();
   };
   return {
-    recipientId,
-    setRecipientId: reground(setRecipientId),
+    // A deal is chosen beside the project, among what the message is about.
+    // The words stay: they are the rep's to read again, and a draft still in
+    // flight for the old deal is dropped when it lands.
     dealId,
-    setDealId: reground(setDealId),
+    setDealId,
     projectId,
     setProjectId: reground(setProjectId),
-    grounding: { recipientId, dealId, projectId } satisfies Grounding,
+    grounding: { dealId, projectId },
     reasoning,
     setReasoning,
     scope,
@@ -105,12 +99,10 @@ function holdsCopies(edit: EditSeed | undefined): boolean {
 export function useComposeFields({
   initialMessage,
   askedIntent,
-  contactId,
   edit,
 }: Readonly<{
   initialMessage?: Readonly<{ subject: string; body: string }>;
   askedIntent?: string;
-  contactId?: string;
   /** A scheduled message being written again; read once, when the composer mounts. */
   edit?: EditSeed;
 }>) {
@@ -162,7 +154,7 @@ export function useComposeFields({
   const [draftKept, setDraftKept] = useState(false);
   // A new grounding clears drafted text alone. `draftRef` and `provenance`
   // are set by the fill, so a rep's own typed message stays.
-  const account = useAccountGrounding(contactId, edit, () => {
+  const account = useAccountGrounding(edit, () => {
     if (!provenance && !draftRef) {
       return;
     }

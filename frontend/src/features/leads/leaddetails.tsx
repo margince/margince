@@ -108,7 +108,7 @@ function EmailValue({
   return (
     <span className="lead-row-value">
       {!editing && (
-        <>
+        <span className="lead-row-email">
           <ContactLink
             kind="email"
             value={lead.email}
@@ -120,7 +120,7 @@ function EmailValue({
             <EmailFace address={lead.email} />
           </ContactLink>
           <CopyEmail address={lead.email} />
-        </>
+        </span>
       )}
       {canEdit && (
         <span className={editing ? undefined : "lead-row-verb"}>

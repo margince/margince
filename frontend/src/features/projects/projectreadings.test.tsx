@@ -41,7 +41,7 @@ describe("the project's figures", () => {
         "134 days",
       ),
     ).toBeTruthy();
-    const commitments = cell(strip, en["record.commitments"]);
+    const commitments = cell(strip, en["project.openTasks"]);
     expect(within(commitments).getByText("3 open")).toBeTruthy();
     expect(within(commitments).getByText("1 overdue")).toBeTruthy();
     const documents = cell(strip, en["project.documents.title"]);
@@ -56,7 +56,7 @@ describe("the project's figures", () => {
       }),
     );
     expect(
-      within(cell(strip, en["record.commitments"])).getByText(
+      within(cell(strip, en["project.openTasks"])).getByText(
         en["project.standing.noneOpen"],
       ),
     ).toBeTruthy();
@@ -72,7 +72,7 @@ describe("the project's figures", () => {
       project360({ sections_omitted: ["commitments"], commitments: undefined }),
     );
     expect(
-      within(cell(strip, en["record.commitments"])).getByText(
+      within(cell(strip, en["project.openTasks"])).getByText(
         en["state.withheld"],
       ),
     ).toBeTruthy();

@@ -118,6 +118,16 @@ describe("the deals a partner brought", () => {
     expect(within(panel).queryByText("—")).toBeNull();
   });
 
+  it("names a deal's status in words rather than its stored value", async () => {
+    stubDeals([{ ...sourced, status: "won" }]);
+
+    render(<PartnerDeals companyId="o-1" />);
+    const panel = await screen.findByTestId("partner-deals");
+
+    expect(within(panel).getByText("Won")).toBeTruthy();
+    expect(within(panel).queryByText("won")).toBeNull();
+  });
+
   it("shows the deal value and what the partner's part was", async () => {
     stubDeals([sourced]);
 

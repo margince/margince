@@ -15,7 +15,7 @@ import type { ComposeThread } from "./composeanchor";
 import type { DraftAsk, FollowUp } from "./composedraftcall";
 
 import { fillFromDraft, keptTag, useDraftMutation } from "./composedraftcall";
-import type { PendingAction } from "./composedraftcontext";
+import type { DraftNeed, PendingAction } from "./composedraftcontext";
 import type { ComposeFields } from "./composefields";
 import type { RelinkKind } from "./composerelink";
 
@@ -58,6 +58,18 @@ function draftBlocked(
   );
 }
 
+// An account draft is written for one of the account's contacts, so it waits
+// for one in To. An account with none has nobody to write it for.
+function draftNeed(
+  groundable: boolean,
+  recipient: Readonly<{ recipientId: string; noContacts: boolean }>,
+): DraftNeed {
+  if (!groundable || recipient.recipientId) {
+    return null;
+  }
+  return recipient.noContacts ? "contacts" : "recipient";
+}
+
 // A 404 on a reply is the anchor being gone: the activity read still answers
 // 200 for an archived row. Without an anchor, a 404 means the record is gone.
 function draftErrorOf(
@@ -88,6 +100,7 @@ export function useVoiceDraft({
   entityId,
   followUp,
   projectId,
+  recipient,
   groundable,
   thread,
   bodyId,
@@ -102,6 +115,8 @@ export function useVoiceDraft({
   followUp?: FollowUp;
   /** The project the picker holds, which grounds the draft. */
   projectId: string;
+  /** Whom an account draft is written for: the account contact first in To. */
+  recipient: Readonly<{ recipientId: string; noContacts: boolean }>;
   groundable: boolean;
   thread: ComposeThread;
   bodyId: string;
@@ -110,6 +125,7 @@ export function useVoiceDraft({
 }>) {
   const t = useT();
   const { account, draftEpoch, body, html, intent } = fields;
+  const { recipientId } = recipient;
 
   // A draft raises the provenance band above the body and pushes the words
   // past the fold. After the paint, the body scrolls back into view.
@@ -160,7 +176,7 @@ export function useVoiceDraft({
       ask.activityId === answering &&
       ask.entityId === entityId &&
       ask.entityType === entityType &&
-      ask.grounding.recipientId === account.recipientId &&
+      ask.grounding.recipientId === recipientId &&
       ask.grounding.dealId === account.dealId &&
       ask.grounding.projectId === projectId,
     t,
@@ -215,7 +231,7 @@ export function useVoiceDraft({
     body,
     html,
     servedBody: fields.servedBody,
-    grounding: { ...account.grounding, projectId },
+    grounding: { ...account.grounding, recipientId, projectId },
     ...(instruction === undefined ? {} : { instruction }),
   });
   const control: PendingAction = {
@@ -226,7 +242,7 @@ export function useVoiceDraft({
       answering,
       intent,
       anchorActivity: thread.anchorActivity,
-      needsRecipient: groundable && !account.recipientId,
+      needsRecipient: groundable && !recipientId,
     }),
     error: draftErrorOf(draft, thread.anchorRead.failed, answering, t),
   };
@@ -243,6 +259,7 @@ export function useVoiceDraft({
     control,
     discardControl,
     rejectionInFlight,
+    need: draftNeed(groundable, recipient),
     // A rewrite replaces the body, so it waits for any draft in flight.
     rewrite: (instruction: string) => draft.mutate(ask(instruction)),
   };

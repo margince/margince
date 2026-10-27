@@ -15,6 +15,7 @@ import {
   activityIsAhead,
 } from "../../../format/activitywhen";
 import {
+  calendarDaysBetween,
   formatDayMonth,
   formatMoneyCompact,
   formatNumber,
@@ -72,7 +73,11 @@ export function DealFigures({
     <StatStrip density="plate">
       <ValueFigure inputs={inputs} words={words} />
       <ProbabilityFigure inputs={inputs} words={words} />
-      <DaysInStageFigure inputs={inputs} words={words} />
+      {inputs.deal.status === "open" ? (
+        <DaysInStageFigure inputs={inputs} words={words} />
+      ) : (
+        <DaysToCloseFigure inputs={inputs} words={words} />
+      )}
       <NextStepFigure inputs={inputs} words={words} />
     </StatStrip>
   );
@@ -107,9 +112,20 @@ function ValueFigure({ inputs, words }: FigureProps) {
 }
 
 // The stage's own default, which is what the pipeline says a deal there is
-// worth; nothing on the deal states a probability of its own.
+// worth; nothing on the deal states a probability of its own. A closed deal's
+// outcome is settled, so it is certain either way.
 function ProbabilityFigure({ inputs, words }: FigureProps) {
   const { t, locale } = words;
+  const { status } = inputs.deal;
+  if (status !== "open") {
+    return (
+      <StatCard
+        label={t("deal.standing.figure.probability")}
+        value={formatPercent(status === "won" ? 1 : 0, locale)}
+        detail={t("deal.standing.figure.final")}
+      />
+    );
+  }
   const stage = inputs.stages.find((each) => each.id === inputs.deal.stage_id);
   return (
     <StatCard
@@ -125,8 +141,8 @@ function ProbabilityFigure({ inputs, words }: FigureProps) {
 }
 
 // Whole days since the deal arrived in its current stage, from the stage
-// history. A closed deal stands in no open stage. A reader the history is
-// refused to has no entry. Both read as not shown rather than as zero.
+// history. A reader the history is refused to has no entry, which reads as not
+// shown rather than as zero.
 function DaysInStageFigure({ inputs, words }: FigureProps) {
   const { t, plural, locale } = words;
   const times = useStageTimes(inputs);
@@ -145,6 +161,33 @@ function DaysInStageFigure({ inputs, words }: FigureProps) {
         count: formatNumber(days, locale),
       })}
       detail={stage?.name}
+    />
+  );
+}
+
+// How long the deal took, from the day it was opened to the day it closed. An
+// imported close with no day has no span to count. Nor does a corrected close
+// day that falls before the deal was opened.
+function DaysToCloseFigure({ inputs, words }: FigureProps) {
+  const { t, plural, locale, zone } = words;
+  const { created_at: opened, closed_at: closed } = inputs.deal;
+  const label = t("deal.standing.figure.daysToClose");
+  if (!closed) {
+    return <StatCard label={label} value={t("field.unset")} />;
+  }
+  const days = calendarDaysBetween(new Date(opened), new Date(closed), zone);
+  if (days < 0) {
+    return <StatCard label={label} value={t("field.unset")} />;
+  }
+  return (
+    <StatCard
+      label={label}
+      value={plural("standing.days", days, {
+        count: formatNumber(days, locale),
+      })}
+      detail={t("deal.standing.figure.openedOn", {
+        date: formatDayMonth(opened, locale, zone),
+      })}
     />
   );
 }
@@ -327,6 +370,12 @@ function lastWord(
 
 // The close is the day the deal closed once it is won or lost, and the horizon
 // ahead while it is open.
+const CLOSE_TITLE: Record<DealStandingInputs["deal"]["status"], MessageKey> = {
+  open: "deals.close",
+  won: "deals.statusWon",
+  lost: "deals.statusLost",
+};
+
 function closeEvent(
   deal: DealStandingInputs["deal"],
   day: (iso: string) => string,
@@ -340,7 +389,7 @@ function closeEvent(
     {
       key: "close",
       at: closeDay,
-      title: t("deals.close"),
+      title: t(CLOSE_TITLE[deal.status]),
       sub: day(closeDay),
       kind: "end",
     },
