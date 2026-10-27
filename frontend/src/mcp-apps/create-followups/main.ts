@@ -18,9 +18,9 @@ import {
   declareActions,
 } from "../actions";
 import actions from "../actions.json";
-import { el, onResult } from "../bridge";
+import { el } from "../bridge";
 import { fieldLabel } from "../fieldlabels";
-import { button, keepFocus, panel, panelBody } from "../parts";
+import { button, panel, panelBody, viewRenderer } from "../parts";
 import {
   changeTable,
   nameField,
@@ -34,7 +34,6 @@ import {
   asList,
   asRecord,
   asText,
-  NO_CALL,
   type ToolCall,
   type Warning,
 } from "../types";
@@ -117,14 +116,7 @@ function settled(text: string, undo?: HTMLElement): HTMLElement {
 }
 
 /** render draws the card, keeping the reader's place across a redraw. */
-export function render(
-  root: HTMLElement,
-  data: unknown,
-  warnings: Warning[],
-  call: ToolCall = NO_CALL,
-): void {
-  keepFocus(root, () => draw(root, data, warnings, call));
-}
+export const render = viewRenderer(draw);
 
 function draw(
   root: HTMLElement,
@@ -299,8 +291,3 @@ async function run(
       : { kind: "failed", reason: result.reason, unknown: result.unknown },
   );
 }
-
-onResult((data, warnings, call) => {
-  const root = document.getElementById("root");
-  if (root !== null) render(root, data, warnings, call);
-});
