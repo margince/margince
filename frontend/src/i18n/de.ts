@@ -3783,6 +3783,18 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "companyReach.none":
     "Für dieses Unternehmen wird keine Reichweite im Team angezeigt.",
   "companyReach.readFailed": "Diese Liste konnte nicht gelesen werden",
+  "companyReach.functions": "Wo ihre Kontakte arbeiten",
+  "companyReach.functionCount": "{function} · {connections}",
+  "companyReach.ask": "Um Vorstellung bitten",
+  "companyReach.askNamed": "{name} um eine Vorstellung bitten",
+  "companyReach.function.management": "Geschäftsführung",
+  "companyReach.function.it": "IT",
+  "companyReach.function.finance": "Finanzen",
+  "companyReach.function.sales": "Vertrieb",
+  "companyReach.function.marketing": "Marketing",
+  "companyReach.function.hr": "Personal",
+  "companyReach.function.operations": "Betrieb",
+  "companyReach.function.procurement": "Einkauf",
   "linkedinReach.title": "LinkedIn-Netzwerk",
   "linkedinReach.sub":
     "Erfasste Unternehmen, bei denen du jemanden kennst, die meisten Verbindungen zuerst.",
@@ -4086,6 +4098,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Aus den Nachrichten des Kontakts gelesen",
   "co.intro.title": "Vorstellung anfragen",
   "co.intro.who": "{colleague} wird gebeten, dich {contact} vorzustellen.",
+  "co.intro.whoAccount":
+    "{colleague} wird gebeten, dich jemandem bei {company} vorzustellen.",
+  "co.intro.function": "Jemand aus dem Bereich",
+  "co.intro.functionAny": "Jeder Bereich",
   "co.intro.write": "Nachricht entwerfen",
   "co.intro.writing": "Wird geschrieben…",
   "co.intro.fromTemplate":

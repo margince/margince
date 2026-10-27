@@ -341,7 +341,7 @@ func TestTheIntroDraftIsRefusedWithoutTheContactGrant(t *testing.T) {
 	})
 	_, err := svc.IntroRequestDraft(noContacts, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{
-			ContactID: ids.From[ids.ContactKind](contact),
+			ContactID: new(ids.From[ids.ContactKind](contact)),
 			ViaUserID: ids.From[ids.UserKind](e.Rep2),
 		})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -377,7 +377,7 @@ func TestTheIntroDraftAdmitsASeatHoldingTheContactGrant(t *testing.T) {
 	})
 	_, err := svc.IntroRequestDraft(granted, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{
-			ContactID: ids.From[ids.ContactKind](contact),
+			ContactID: new(ids.From[ids.ContactKind](contact)),
 			ViaUserID: ids.From[ids.UserKind](e.Rep2),
 		})
 	if errors.Is(err, apperrors.ErrPermissionDenied) {

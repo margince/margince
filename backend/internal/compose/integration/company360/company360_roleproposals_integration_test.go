@@ -596,7 +596,7 @@ func TestAnIntroRequestRefusesADealTheCallerCannotRead(t *testing.T) {
 	blind := e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoDealPerms)
 	_, err := svc.IntroRequestDraft(blind, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{
-			ContactID: ids.From[ids.ContactKind](contact),
+			ContactID: new(ids.From[ids.ContactKind](contact)),
 			ViaUserID: ids.From[ids.UserKind](e.Rep2),
 			DealID:    ptrDeal(deal),
 		})
@@ -628,7 +628,7 @@ func TestAnIntroRequestWithoutADealStillDraftsForTheSameCaller(t *testing.T) {
 	blind := e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoDealPerms)
 	draft, err := svc.IntroRequestDraft(blind, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{
-			ContactID: ids.From[ids.ContactKind](contact),
+			ContactID: new(ids.From[ids.ContactKind](contact)),
 			ViaUserID: ids.From[ids.UserKind](e.Rep2),
 		})
 	if err != nil {
@@ -668,7 +668,7 @@ func TestAnIntroRequestRefusesTheReaderAsTheirOwnIntroducer(t *testing.T) {
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoDealPerms)
 	_, err := svc.IntroRequestDraft(reader, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{
-			ContactID: ids.From[ids.ContactKind](contact),
+			ContactID: new(ids.From[ids.ContactKind](contact)),
 			ViaUserID: ids.From[ids.UserKind](e.Rep1),
 		})
 	if !errors.Is(err, apperrors.ErrInvalidArgument) {

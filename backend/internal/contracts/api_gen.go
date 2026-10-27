@@ -13075,6 +13075,42 @@ func (e LifecyclePreviewEvidenceScope) Valid() bool {
 	}
 }
 
+// Defines values for LinkedInReachFunction.
+const (
+	LinkedInReachFunctionFinance     LinkedInReachFunction = "finance"
+	LinkedInReachFunctionHr          LinkedInReachFunction = "hr"
+	LinkedInReachFunctionIt          LinkedInReachFunction = "it"
+	LinkedInReachFunctionManagement  LinkedInReachFunction = "management"
+	LinkedInReachFunctionMarketing   LinkedInReachFunction = "marketing"
+	LinkedInReachFunctionOperations  LinkedInReachFunction = "operations"
+	LinkedInReachFunctionProcurement LinkedInReachFunction = "procurement"
+	LinkedInReachFunctionSales       LinkedInReachFunction = "sales"
+)
+
+// Valid indicates whether the value is a known member of the LinkedInReachFunction enum.
+func (e LinkedInReachFunction) Valid() bool {
+	switch e {
+	case LinkedInReachFunctionFinance:
+		return true
+	case LinkedInReachFunctionHr:
+		return true
+	case LinkedInReachFunctionIt:
+		return true
+	case LinkedInReachFunctionManagement:
+		return true
+	case LinkedInReachFunctionMarketing:
+		return true
+	case LinkedInReachFunctionOperations:
+		return true
+	case LinkedInReachFunctionProcurement:
+		return true
+	case LinkedInReachFunctionSales:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListEntityType.
 const (
 	ListEntityTypeCompany ListEntityType = "company"
@@ -33799,8 +33835,14 @@ type CompanyLinkedInReachColleague struct {
 	Connections int `json:"connections"`
 
 	// DisplayName The colleague to ask.
-	DisplayName string             `json:"display_name"`
-	UserId      openapi_types.UUID `json:"user_id"`
+	DisplayName string `json:"display_name"`
+
+	// Functions Which functions those connections work in, read from their job titles, most
+	// first and then by function. A function with fewer than two connections is left
+	// out, and so is a title no function matches. Two is the floor because on a small
+	// account one title can name one contact. Never the titles themselves.
+	Functions []LinkedInReachFunctionCount `json:"functions"`
+	UserId    openapi_types.UUID           `json:"user_id"`
 }
 
 // CompanyLinkedInReachResponse defines model for CompanyLinkedInReachResponse.
@@ -43769,6 +43811,22 @@ type LinkedInReachAccount struct {
 	// know at this account who are not in the CRM.
 	ContactsOnFile int    `json:"contacts_on_file"`
 	DisplayName    string `json:"display_name"`
+}
+
+// LinkedInReachFunction The function a connection's job title names. A title that names a department and
+// a rank counts as the department: "Head of IT" is `it`, and only a title that names
+// no department, such as "Managing Director", is `management`.
+type LinkedInReachFunction string
+
+// LinkedInReachFunctionCount defines model for LinkedInReachFunctionCount.
+type LinkedInReachFunctionCount struct {
+	// Connections How many of the colleague's connections there work in this function.
+	Connections int `json:"connections"`
+
+	// Function The function a connection's job title names. A title that names a department and
+	// a rank counts as the department: "Head of IT" is `it`, and only a title that names
+	// no department, such as "Managing Director", is `management`.
+	Function LinkedInReachFunction `json:"function"`
 }
 
 // LinkedInReachResponse defines model for LinkedInReachResponse.
@@ -58824,13 +58882,16 @@ type GetCompanyHierarchyRollupParamsScope string
 
 // DraftIntroRequestJSONBody defines parameters for DraftIntroRequest.
 type DraftIntroRequestJSONBody struct {
-	// ContactId The contact to be introduced TO. Must be somebody the caller can see on this account; a contact they cannot read is `404`, the same answer a direct read gives.
-	ContactId openapi_types.UUID `json:"contact_id"`
+	// ContactId The contact to be introduced TO. Must be somebody the caller can see on this account; a contact they cannot read is `404`, the same answer a direct read gives. Absent asks for somebody at the account instead.
+	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
 
 	// DealId Which open deal the introduction is for. Absent draws on the account as a whole, which is the honest shape when the rep is opening a conversation rather than moving a transaction.
 	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
 
-	// ViaUserId The colleague being asked. Must hold a recorded route to that contact — asking somebody with no relationship to trade on is a favour they cannot do, and a draft that claims one would be describing a closeness the account's own page does not show.
+	// Function Only with no `contact_id`, and optional there: the function the somebody works in. Must be one of the colleague's `functions` on the reach answer, or it is `422`, because the draft would ask for an introduction the colleague's connections cannot give.
+	Function *LinkedInReachFunction `json:"function,omitempty"`
+
+	// ViaUserId The colleague being asked. Must hold a recorded route to that contact — asking somebody with no relationship to trade on is a favour they cannot do, and a draft that claims one would be describing a closeness the account's own page does not show. With no `contact_id`, must be a colleague with LinkedIn reach into this account, or it is `404`.
 	ViaUserId openapi_types.UUID `json:"via_user_id"`
 }
 
