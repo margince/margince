@@ -356,14 +356,14 @@ func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, sourc
 // refuseUnreadableSource refuses a create that names a record the caller
 // cannot read.
 //
-// It sits at the two doors that assert the create right, not in the shared
-// creation path: a visibility probe there makes that function read as this
-// package's row resolution, and every writer through it reads as a write that
-// resolved its row the wrong way.
+// It sits at the two doors that assert the create right.
 //
-// EnsureVisibleExisting rather than EnsureVisible, so an id no row holds is
-// refused instead of stored as a link to nothing. Out of scope answers not
-// found, so naming a record cannot tell the caller one exists.
+// Not in the shared creation path: a visibility probe there makes that
+// function read as this package's row resolution. Every writer through it is
+// then a write that resolved its row the wrong way.
+//
+// EnsureVisibleExisting rather than EnsureVisible: an id no row holds is
+// refused instead of stored as a link to nothing.
 func refuseUnreadableSource(ctx context.Context, tx pgx.Tx, source *ids.UUID) error {
 	if source == nil {
 		return nil
