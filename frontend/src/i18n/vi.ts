@@ -13628,7 +13628,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.setup.secretWarning": "Khóa này chỉ hiện một lần. Lưu nó trên máy chủ của bạn dưới tên {name}.",
   "webForms.setup.snippet": "Mã để dán",
   "webForms.setup.builderSecret": "Dùng cùng khóa ký mà bạn đã lưu trên biểu mẫu này.",
-  "webForms.setup.customFields": "Trường mang tên của một trường tùy chỉnh của khách hàng tiềm năng sẽ điền vào trường đó: {fields}. Giá trị không hợp lệ sẽ được ghi vào ghi chú.",
+  "webForms.setup.customFields": "Trường mang tên một trường tùy chỉnh của lead sẽ điền vào trường đó: {fields}. Giá trị mà trường đó không nhận sẽ được ghi vào ghi chú.",
   "webForms.setup.copy": "Sao chép mã",
   "webForms.setup.copySecret": "Sao chép khóa",
   "webForms.setup.copied": "Đã sao chép",
