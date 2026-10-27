@@ -13804,7 +13804,8 @@ export const en = {
 
   "webForms.title": "Website forms",
   "webForms.sub": "Forms on your website that turn each enquiry into a lead.",
-  "webForms.readOnly": "Read-only: only a role with the integrations permission can change website forms.",
+  "webForms.readOnly":
+    "Read-only: only a role with the integrations permission can change website forms.",
   "webForms.new": "New website form",
   "webForms.state.active": "Active",
   "webForms.state.paused": "Paused",
@@ -13825,56 +13826,79 @@ export const en = {
   "webForms.resume": "Resume form",
   "webForms.rotate": "Rotate secret",
   "webForms.rotateConfirm.title": "Rotate form secret?",
-  "webForms.rotateConfirm.body": "The current secret stops working at once and the new one is shown once. Update your website’s server right away.",
+  "webForms.rotateConfirm.body":
+    "The current secret stops working at once and the new one is shown once. Update your website’s server right away.",
   "webForms.archive": "Archive",
-  "webForms.archiveConfirm": "Archiving stops this form from taking submissions. This cannot be undone.",
+  "webForms.archiveConfirm":
+    "Archiving stops this form from taking submissions. This cannot be undone.",
   "webForms.archiveDone": "Website form archived",
   "webForms.drawer.editTitle": "Edit website form",
-  "webForms.drawer.sub": "Each submission becomes a lead, with the enquiry as a note on its timeline.",
+  "webForms.drawer.sub":
+    "Each submission becomes a lead, with the enquiry as a note on its timeline.",
   "webForms.drawer.cancel": "Cancel",
   "webForms.drawer.save": "Save form",
   "webForms.drawer.create": "Create form",
   "webForms.field.name": "Name",
-  "webForms.field.nameHint": "Shown on each lead’s note, for example Contact page.",
+  "webForms.field.nameHint":
+    "Shown on each lead’s note, for example Contact page.",
   "webForms.field.sender": "Sent by",
-  "webForms.field.senderFixed": "Fixed once the form exists. Create a new form to change it.",
-  "webForms.senderHint.browser": "A form on your website posts straight from the visitor’s browser.",
-  "webForms.senderHint.server": "Your website’s server forwards each submission, signed with a secret.",
-  "webForms.senderHint.webflow": "Webflow sends each form submission as a signed webhook.",
-  "webForms.senderHint.typeform": "Typeform sends each response as a signed webhook.",
+  "webForms.field.senderFixed":
+    "Fixed once the form exists. Create a new form to change it.",
+  "webForms.senderHint.browser":
+    "A form on your website posts straight from the visitor’s browser.",
+  "webForms.senderHint.server":
+    "Your website’s server forwards each submission, signed with a secret.",
+  "webForms.senderHint.webflow":
+    "Webflow sends each form submission as a signed webhook.",
+  "webForms.senderHint.typeform":
+    "Typeform sends each response as a signed webhook.",
   "webForms.senderHint.tally": "Tally sends each response as a signed webhook.",
   "webForms.field.origins": "Websites",
-  "webForms.field.originsHint": "One address per line. Posts from any other website are refused.",
+  "webForms.field.originsHint":
+    "One address per line. Posts from any other website are refused.",
   "webForms.field.originsPlaceholder": "https://www.example.com",
   "webForms.field.senderSecret": "Signing secret",
-  "webForms.field.senderSecretHint": "The secret from the tool’s webhook settings, at least 16 characters.",
+  "webForms.field.senderSecretHint":
+    "The secret from the tool’s webhook settings, at least 16 characters.",
   "webForms.field.senderSecretKeep": "Leave empty to keep the stored secret.",
-  "webForms.field.consentRequired": "Require consent before a submission is taken",
+  "webForms.field.consentRequired":
+    "Require consent before a submission is taken",
   "webForms.field.consentWording": "Consent wording",
-  "webForms.field.consentWordingHint": "The exact text beside the checkbox, kept on each lead as evidence.",
+  "webForms.field.consentWordingHint":
+    "The exact text beside the checkbox, kept on each lead as evidence.",
   "webForms.field.consentPolicyVersion": "Privacy policy version",
-  "webForms.field.consentPolicyVersionHint": "The version of the policy the wording links to.",
+  "webForms.field.consentPolicyVersionHint":
+    "The version of the policy the wording links to.",
   "webForms.field.redirectUrl": "Thank-you page",
-  "webForms.field.redirectUrlHint": "Where a visitor goes after sending. Empty shows the success message.",
+  "webForms.field.redirectUrlHint":
+    "Where a visitor goes after sending. Empty shows the success message.",
   "webForms.field.redirectUrlPlaceholder": "https://www.example.com/thanks",
   "webForms.field.successMessage": "Success message",
   "webForms.field.successMessageHint": "Shown to the visitor after sending.",
   "webForms.setup.title": "Connect {name}",
-  "webForms.setup.how.browser": "Paste this form into your website, or point your own form at the address and keep its field names.",
-  "webForms.setup.how.server": "Your server posts each submission to this address, signed as the code below shows.",
-  "webForms.setup.how.webflow": "In Webflow, add a form submission webhook that sends to this address.",
-  "webForms.setup.how.typeform": "In Typeform, add a webhook under Connect that sends to this address.",
-  "webForms.setup.how.tally": "In Tally, add a webhook under Integrations that sends to this address.",
+  "webForms.setup.how.browser":
+    "Paste this form into your website, or point your own form at the address and keep its field names.",
+  "webForms.setup.how.server":
+    "Your server posts each submission to this address, signed as the code below shows.",
+  "webForms.setup.how.webflow":
+    "In Webflow, add a form submission webhook that sends to this address.",
+  "webForms.setup.how.typeform":
+    "In Typeform, add a webhook under Connect that sends to this address.",
+  "webForms.setup.how.tally":
+    "In Tally, add a webhook under Integrations that sends to this address.",
   "webForms.setup.address": "Form address",
   "webForms.setup.secret": "Form secret",
-  "webForms.setup.secretWarning": "This secret is shown once. Store it on your server as {name}.",
+  "webForms.setup.secretWarning":
+    "This secret is shown once. Store it on your server as {name}.",
   "webForms.setup.snippet": "Code to paste",
-  "webForms.setup.builderSecret": "Use the same signing secret there that you saved on this form.",
+  "webForms.setup.builderSecret":
+    "Use the same signing secret there that you saved on this form.",
   "webForms.setup.copy": "Copy code",
   "webForms.setup.copySecret": "Copy secret",
   "webForms.setup.copied": "Copied",
   "webForms.setup.copyFailed": "Select the text above and copy it manually.",
-  "webForms.setup.leaveWarning": "Closing destroys the only copy of this secret. Copy it first.",
+  "webForms.setup.leaveWarning":
+    "Closing destroys the only copy of this secret. Copy it first.",
   "webForms.setup.done": "Done",
 
   "webhooks.title": "Webhooks",
