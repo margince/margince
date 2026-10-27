@@ -9238,12 +9238,14 @@ export interface paths {
         get: operations["listWebForms"];
         put?: never;
         /**
-         * Create a website form (returns a server signing secret once).
+         * Create a website form (returns a minted signing secret once).
          * @description Mints the form's public key, the last segment of its intake address
          *     `POST /v1/public/forms/{form_key}`. A `server` form answers its own signing secret in
-         *     `signing_secret`, once; no read returns it again. A builder form (`webflow`, `typeform`,
-         *     `tally`) stores the secret the builder signs with, sent in `sender_secret`. Both need a
-         *     secret store on this installation; without one they answer 422 on `sender`.
+         *     `signing_secret`, once; no read returns it again. So does a `typeform` or `tally` form
+         *     sent without `sender_secret`: the secret is then typed into the builder's webhook. A
+         *     `webflow` form stores the secret Webflow issued, sent in `sender_secret` now or on a
+         *     later update; until then it refuses every post. Every signed
+         *     sender needs a secret store on this installation; without one it answers 422 on `sender`.
          */
         post: operations["createWebForm"];
         delete?: never;
@@ -9291,9 +9293,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Rotate a server form's signing secret (returns the new secret once).
-         * @description Only a `server` form has a secret this installation minted; any other sender answers 422 on
-         *     `sender`. The old secret stops verifying at once.
+         * Rotate a form's minted signing secret (returns the new secret once).
+         * @description A `server`, `typeform` or `tally` form gets a new secret this installation mints; a
+         *     `browser` or `webflow` form answers 422 on `sender`. The old secret stops verifying at once.
          */
         post: operations["rotateWebFormSecret"];
         delete?: never;
@@ -22188,7 +22190,8 @@ export interface components {
          * @description Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
          *     allowed website, with spam checks. `server`: a server signing with this form's secret.
          *     `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
-         *     builder computes with the secret stored as `sender_secret`.
+         *     builder computes with the form's stored secret: the `sender_secret` pasted, or for `typeform`
+         *     and `tally` one this installation minted when none was.
          * @enum {string}
          */
         WebFormSender: "browser" | "server" | "webflow" | "typeform" | "tally";
@@ -22237,7 +22240,7 @@ export interface components {
             archived_at?: string | null;
         };
         WebFormCreated: components["schemas"]["WebForm"] & {
-            /** @description A `server` form's signing secret, shown this once. */
+            /** @description The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once. */
             signing_secret?: string;
         };
         WebFormListResponse: {
@@ -22248,7 +22251,7 @@ export interface components {
         CreateWebFormRequest: {
             name: string;
             sender: components["schemas"]["WebFormSender"];
-            /** @description The secret a builder signs with. Required for `webflow`, `typeform` and `tally`; refused for any other sender. */
+            /** @description The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow's secret is pasted. Refused for any other sender. */
             sender_secret?: string;
             /** @description Required, and only allowed, for a `browser` form. */
             allowed_origins?: string[];
@@ -66899,7 +66902,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The created form, plus its one-time signing secret for a `server` form. */
+            /** @description The created form, plus the signing secret once whenever this installation minted it. */
             201: {
                 headers: {
                     [name: string]: unknown;
