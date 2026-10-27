@@ -6,8 +6,8 @@
 package integration
 
 // captured_by on a contact an agent wrote names only the passport. The page
-// names the colleague the agent worked for from the create audit row, and it
-// must say what the record History says about that same row.
+// names the colleague the agent worked for from the create audit row. It must
+// say what the record History says about that same row.
 
 import (
 	"encoding/json"

@@ -93,10 +93,6 @@ export function provenanceOf(
   return { kind: "unknown" };
 }
 
-// What an `agent:<rest>` principal is called on screen. A passport uuid names
-// nothing on this side, so the tag says only that an agent acted. A named tool
-// (`agent:signal-scan`) is handed on as `job`, which the tag reads through the
-// catalogue; the identifier itself is never printed.
 /**
  * An agent's tag with what the record's create audit row adds: the tool it
  * was typed through and the colleague it worked for. captured_by names only
@@ -116,6 +112,10 @@ export function withCreator(
   };
 }
 
+// What an `agent:<rest>` principal is called on screen. A passport uuid names
+// nothing on this side, so the tag says only that an agent acted. A named tool
+// (`agent:signal-scan`) is handed on as `job`, which the tag reads through the
+// catalogue; the identifier itself is never printed.
 function agentProvenance(rest: string): Provenance {
   const named = rest === "" || OPAQUE_ID.test(rest) ? undefined : rest;
   return { kind: "agent", job: named };
