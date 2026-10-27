@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { forReader } from "../../format/collate";
-import { jurisdictionName } from "../../format/jurisdiction";
-import type { Locale } from "../../i18n";
+import type { Locale } from "../i18n";
+import { forReader } from "./collate";
+import { jurisdictionName } from "./jurisdiction";
 
 // The ISO 3166-1 alpha-2 codes the server accepts as an address country. A
 // mirror of the contacts module's countrycodes.go;
@@ -262,7 +262,7 @@ export const ASSIGNED_COUNTRIES: readonly string[] = [
 
 type CountryOption = Readonly<{ value: string; label: string }>;
 
-// Built once per language: every deal list render asks for all of them.
+// Built once per language: every render of a list with the filter asks for all of them.
 const optionsByLocale = new Map<Locale, readonly CountryOption[]>();
 
 /**

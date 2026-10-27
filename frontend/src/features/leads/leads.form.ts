@@ -28,6 +28,7 @@ export function mapLeadUpdate(
     phone: field("phone"),
     title: field("title"),
     company_name: field("company_name"),
+    industry: field("industry"),
     origin: field("origin"),
     origin_detail: field("origin_detail"),
     candidate_company_key: field("candidate_company_key"),

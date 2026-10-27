@@ -21,6 +21,7 @@ import {
   RecordDetails,
 } from "../../design-system/recorddetails";
 import { formatDateAbbrev } from "../../format/format";
+import { industryOptions, industryWords } from "../../format/industry";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -35,7 +36,7 @@ import {
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { ProblemError } from "../../lib/problem";
 import { useRecordTags } from "../../lib/tags.queries";
-import { LeadCompany } from "./leadcompany";
+import { LeadCompany, useLeadCompanyFactsSection } from "./leadcompany";
 import { LeadOwnerControl, statusSetBy } from "./leadheader";
 import { LeadProjectAttachButton } from "./leadraillinks";
 import type { Lead, LeadWriter } from "./leads";
@@ -62,7 +63,7 @@ function isBlank(value: string | null | undefined): boolean {
 function useFieldSave(lead: Lead) {
   const t = useT();
   const queryClient = useQueryClient();
-  return (key: TextKey | "origin", required = false) =>
+  return (key: TextKey | "origin" | "industry", required = false) =>
     async (next: string) => {
       if (required && !next.trim()) {
         throw new ProblemError({ detail: t("record.fieldRequired") });
@@ -182,6 +183,8 @@ function useAboutRows(
   const rows: DetailRow[] = [
     {
       ...companyName,
+      // A domain can match a company the lead never named, and the offer must show.
+      empty: companyName.empty && !(lead.company_match && canEdit),
       value: (
         <>
           {companyName.value}
@@ -190,6 +193,33 @@ function useAboutRows(
       ),
     },
     text("title", "create.contactTitle"),
+    // The linked company's industry speaks for the lead, and shows under it.
+    ...(lead.company_facts?.industry
+      ? []
+      : [
+          {
+            key: "industry",
+            term: t("create.industry"),
+            empty: !lead.industry,
+            value: (
+              <InlineChoice
+                label={t("create.industry")}
+                hideLabel
+                value={lead.industry ?? ""}
+                options={[
+                  { value: "", label: t("field.unset") },
+                  ...industryOptions(t, locale),
+                ]}
+                render={(value) =>
+                  value === "" ? t("field.unset") : industryWords(t, value)
+                }
+                canEdit={canEdit}
+                readOnlyReason={reason}
+                onSave={save("industry")}
+              />
+            ),
+          },
+        ]),
     {
       key: "email",
       term: t("create.email"),
@@ -341,6 +371,7 @@ function LeadDetailsBody({
     writer.readOnly ? terminalReasonId : undefined,
   );
   const setBy = statusSetBy(lead, t);
+  const companyFacts = useLeadCompanyFactsSection(lead);
   const sections: DetailSection[] = [
     {
       key: "about",
@@ -348,6 +379,7 @@ function LeadDetailsBody({
       // A lead nobody may change has no blank to fill, so it has none to show.
       rows: writer.readOnly ? about.filter((row) => !row.empty) : about,
     },
+    ...(companyFacts ? [companyFacts] : []),
     {
       key: "ownership",
       label: t("record.details.ownership"),

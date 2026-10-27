@@ -50,6 +50,7 @@ export function meFixture({
   rowScope = "own",
   settingsAvailability = {},
   refusedDealFilters,
+  refusedLeadFilters,
 }: {
   roles?: string[];
   seat?: "full" | "read";
@@ -75,6 +76,8 @@ export function meFixture({
   settingsAvailability?: Partial<SettingsAvailability> | null;
   /** The deal list filters the server says this role is refused. */
   refusedDealFilters?: string[];
+  /** The lead list filters the server says this role is refused. */
+  refusedLeadFilters?: string[];
 } = {}): MeResponse {
   const objects: Record<string, RbacObjectGrant> = {};
   for (const [object, actions] of Object.entries(allow)) {
@@ -105,6 +108,7 @@ export function meFixture({
       objects,
       row_scope: rowScope,
       refused_deal_filters: refusedDealFilters,
+      refused_lead_filters: refusedLeadFilters,
     },
     settings_availability:
       settingsAvailability === null

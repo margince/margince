@@ -25,6 +25,7 @@ import { SegmentedControl } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { QueryGate } from "../../design-system/querystates";
 import { useOwnToast } from "../../design-system/toast";
+import { industryOptions } from "../../format/industry";
 import { leadIdentityName } from "../../format/leadname";
 import { useLocale, useT } from "../../i18n";
 import {
@@ -43,6 +44,14 @@ import { LeadBulkBar } from "./leadbulk";
 import { useLeadSettings } from "./leadhandling";
 import { LEAD_STATUS_FILTER_OPTIONS, LeadBoard } from "./leadpresentation";
 import { leadColumns } from "./leads.columns";
+import {
+  leadCompanyChips,
+  RefusedDialsNote,
+  refusedLeadDials,
+  sendableLeadQuery,
+  useRefusalOf,
+  useWithheldLeadDials,
+} from "./leads.companydials";
 import { leadIdentityFields } from "./leads.contactoffers";
 import "./leads.css";
 import { createLead, UNASSIGNED_OWNER } from "./leads.list.queries";
@@ -67,6 +76,11 @@ const LEAD_SLA_STATES = [
   { value: "at_risk", label: "lead.sla.atRisk" },
   { value: "within_target", label: "lead.sla.withinTarget" },
 ] as const;
+
+const NO_LEADS: ListPage<Lead> = {
+  data: [],
+  page: { next_cursor: null, has_more: false, total: 0 },
+};
 
 export async function fetchLeadsPage(
   query: ListQuery,
@@ -160,17 +174,23 @@ function LeadsWorkbench({
   // and their versions have moved.
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const cf = useObjectCustomFields("lead", "create");
-  const state = useListQuery<Lead>({
+  const withheld = useWithheldLeadDials();
+  const listQuery = useListQuery<Lead>({
     key: "leads",
     initialSort: "",
     initialFilters: opensOnAll ? {} : { owner_id: viewerId },
-    fetchPage: fetchLeadsPage,
+    // A withheld dial in the address would be refused, so its list is not asked for.
+    fetchPage: (query, cursor) =>
+      refusedLeadDials(query, withheld, undefined).length > 0
+        ? Promise.resolve(NO_LEADS)
+        : fetchLeadsPage(sendableLeadQuery(query, withheld), cursor),
     // Board or table is this screen's own, so the codec must not read it as a
     // lead filter: unheld it was spread onto `GET /leads?view=board`, counted
     // as a narrowing, and cleared by "clear filters" — which flipped the board
     // back to a table.
     screenDials: LEAD_SCREEN_DIALS,
   });
+  const { refused, state } = useRefusalOf(listQuery, withheld);
   // The segregation notice, said once under the header: it explains a rule,
   // and a rule read once stays read until its reader signs out.
   const [noteDismissed, setNoteDismissed] = useState(
@@ -225,13 +245,19 @@ function LeadsWorkbench({
       )}
       <ListTable
         title={pageName}
-        emptyNote={mineEmptyNote({ t, state, viewerId, unit: "unit.leads" })}
+        emptyNote={
+          refused.length > 0 ? (
+            <RefusedDialsNote dials={refused} setQuery={state.setQuery} />
+          ) : (
+            mineEmptyNote({ t, state, viewerId, unit: "unit.leads" })
+          )
+        }
         // The board renders INSIDE the surface, so the search, the chips and
         // the saved views stay above it. A board that replaced the surface
         // took the filter bar with it, leaving the reader looking at a
         // narrowed answer with no way to see or change what narrowed it.
         body={
-          view === "board" ? (
+          view === "board" && refused.length === 0 ? (
             <LeadBoard
               rows={state.rows}
               onMoved={() => state.refetch()}
@@ -240,7 +266,7 @@ function LeadsWorkbench({
             />
           ) : undefined
         }
-        bodyOwnsPaging={view === "board"}
+        bodyOwnsPaging={view === "board" && refused.length === 0}
         state={state}
         unit="unit.leads"
         action={
@@ -258,6 +284,12 @@ function LeadsWorkbench({
             }
             fields={[
               ...leadIdentityFields,
+              {
+                key: "industry",
+                label: "create.industry",
+                type: "select",
+                options: industryOptions(t, locale),
+              },
               {
                 key: "owner_id",
                 label: "lead.ownerLabel",
@@ -384,7 +416,7 @@ function LeadsWorkbench({
         ]}
         // The one ownership dial every record list carries (DM-VOCAB-OWN-1):
         // mine, my team's, the unowned queue.
-        dataChips={ownerChips}
+        dataChips={[...ownerChips, ...leadCompanyChips(t, locale, withheld)]}
         views={[
           ...standardViews(viewerId, { sort: "", mineFirst: !opensOnAll }),
           // The unassigned queue as a VIEW, not only a chip. It was reachable

@@ -107,6 +107,13 @@
   overflow: hidden;
 }
 
+/* The offer's label names a company, so a second line reads from the left. */
+.lead-company-offer.btn {
+  justify-content: flex-start;
+  padding-inline: 0;
+  text-align: start;
+}
+
 .factlist-row:hover .lead-row-verb,
 .lead-row-verb:focus-within {
   max-inline-size: none;
