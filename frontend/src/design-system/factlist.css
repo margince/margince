@@ -94,10 +94,24 @@
 }
 /* A value that is a link starts where a plain value does; the link
  * affordance's own side padding would push it in. A handle (a link with its
- * kind, mark or glyph) leads with its link the same way. */
-.factlist-flat .factlist-value > :is(.btn.btn-link, .cell-link, .link-button),
+ * kind, mark or glyph) leads with its link the same way. An inline edit
+ * already starts there: its negative margin pays back its padding. */
+.factlist-flat
+  .factlist-value
+  > :is(.btn.btn-link, .cell-link, .link-button):not(.inline-editable),
 .factlist-flat .factlist-value > .fieldgrid-handle > .link-button:first-child {
   padding-inline: 0;
+}
+/* A value that opens its edit is a button, and a button holds one centred
+ * line. Here it wraps from its start edge, so a long address stays in view. */
+.factlist-flat .factlist-value .inline-editable {
+  justify-content: flex-start;
+  white-space: normal;
+}
+/* A handle spans the column, so a link that runs long shortens inside it
+ * and never pushes its glyphs past the card's edge. */
+.factlist-flat .factlist-value > .fieldgrid-handle {
+  display: flex;
 }
 .factlist-flat .factlist-row-block {
   grid-template-columns: minmax(0, 1fr);

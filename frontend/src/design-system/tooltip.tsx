@@ -125,11 +125,15 @@ function useTipFrame(
   return frame;
 }
 
-// A tip is worth showing only for a string the row could not fit. Repeating a
-// name the reader can already read in full is noise, and on a page of short
-// names it would be noise on every row.
-function clipped(element: HTMLElement | null): boolean {
-  return element !== null && element.scrollWidth > element.clientWidth;
+// A tip is worth showing only for a string the row could not fit. A name the
+// reader can already read in full needs no tip. A string drawn in parts (an
+// address's mailbox and domain) is cut when any part is.
+function clipped(element: Element | null): boolean {
+  return (
+    element !== null &&
+    (element.scrollWidth > element.clientWidth ||
+      Array.from(element.children).some(clipped))
+  );
 }
 
 /** A control's own name is always worth showing: it is not on screen at all. */

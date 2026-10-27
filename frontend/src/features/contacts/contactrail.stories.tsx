@@ -391,15 +391,21 @@ export const LongAddress: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   play: async ({ canvasElement }) => {
-    const face = await within(canvasElement).findByTitle(LONG_ADDRESS);
-    const domain = face.querySelector<HTMLElement>(".contactlink-email-domain");
-    if (!domain) {
+    const link = await within(canvasElement).findByRole("link", {
+      name: LONG_ADDRESS,
+    });
+    const face = link.querySelector<HTMLElement>(".contactlink-email");
+    const domain = face?.querySelector<HTMLElement>(
+      ".contactlink-email-domain",
+    );
+    const column = link.closest(".factlist-value");
+    if (!face || !domain || !column) {
       throw new Error("the address lost its domain");
     }
     await expect(face.getClientRects()).toHaveLength(1);
     await expect(domain.scrollWidth).toBeLessThanOrEqual(domain.clientWidth);
     await expect(domain.getBoundingClientRect().right).toBeLessThanOrEqual(
-      document.documentElement.clientWidth,
+      column.getBoundingClientRect().right,
     );
   },
 };
