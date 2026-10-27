@@ -30,6 +30,10 @@
 
 .factlist-term {
   margin: 0;
+  min-width: 0;
+  /* A custom field's label can be one long word; it must wrap inside its
+   * column instead of running under the value. */
+  overflow-wrap: anywhere;
 }
 
 .factlist-value {
