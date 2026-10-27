@@ -5,12 +5,16 @@ import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { ArchiveAction } from "../../components/archive";
-import { mayOwnRecords } from "../../components/assigneepicker";
+import { useRecordOwnerOptions } from "../../components/assigneepicker";
 import {
   patchCompanyField,
   searchCompanyTargets,
 } from "../../components/companyform";
-import { rosterOwnerName, useRoster } from "../../components/entityref";
+import {
+  rosterOwnerName,
+  useRosterHint,
+  useRosterPartial,
+} from "../../components/entityref";
 import { MergeAction } from "../../components/merge";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { InlineChoice } from "../../design-system/inlinechoice";
@@ -153,13 +157,9 @@ export function CompanyOwnerControl({
   const patch = useCompanyFieldPatch(company);
   const claim = useClaimRecord("company", company.id, company.version);
   const viewerId = useViewerId();
-  const roster = useRoster("user", true);
+  const { options: owners, roster } = useRecordOwnerOptions();
+  const rosterHint = useRosterHint(roster, useRosterPartial("user", true));
   const ownerName = useMemberName(company.owner_id);
-  const owners = (roster.data ?? []).flatMap((entry) =>
-    "display_name" in entry && mayOwnRecords(entry)
-      ? [{ value: entry.id, label: entry.display_name }]
-      : [],
-  );
   // The current owner may not be offerable (invited, deactivated, or past the
   // walk), and a select whose value is no option renders blank. Named by id
   // regardless: `rosterOwnerName` says the true sentence for the rest.
@@ -202,6 +202,7 @@ export function CompanyOwnerControl({
       options={options}
       canEdit={canUpdate && !readOnlyReason}
       readOnlyReason={readOnlyReason}
+      hint={rosterHint}
       // The closed control reads off the SAME labels the open one offers, so
       // the header cannot name the owner one way and the editor another. That
       // is also what keeps the uuid out: reading the owner through the generic

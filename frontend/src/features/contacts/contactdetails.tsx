@@ -365,7 +365,8 @@ export function ContactDetails({
             required: contact.visibility === "owner",
             label: "list.owner",
             type: "select",
-            options: owners,
+            options: owners.options,
+            hint: owners.hint,
           },
         ]}
         groups={[
