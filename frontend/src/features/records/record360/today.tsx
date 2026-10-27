@@ -48,7 +48,6 @@ export function TodayPanel({
   state = "ready",
   onOpenTasks,
   tasksLabel,
-  nextTask,
   footer,
   notice,
   complete = true,
@@ -59,8 +58,6 @@ export function TodayPanel({
   // own to open.
   onOpenTasks?: () => void;
   tasksLabel?: string;
-  // The way on to the next task on another record, beside the head's link.
-  nextTask?: ReactNode;
   // The band under the rows: what the day counts down to, and what the day was
   // read from. It is a band and not a line in the head — a caller hands in a
   // commitment badge, a truncation count and the read's own provenance, and
@@ -96,25 +93,14 @@ export function TodayPanel({
   return (
     <Panel
       tone="ai"
-      // `co-lead` is the company lead's two-column move: the claim on the
-      // left, the verbs opposite it. Without it a contact's verbs fell UNDER
-      // the claim, right-aligned, and the whole width beside them was empty.
+      // `co-lead` sets the claim left and the verbs opposite it.
       className="co-lead"
       title={t("today.title")}
-      // The controls, handed in bare: `Button`'s link variant is the text
-      // affordance the head wants, and panel.css already holds everything
-      // after the title at its natural width, so there is nothing left for a
-      // strip around it to lay out.
       titleAction={
-        onOpenTasks || nextTask ? (
-          <>
-            {onOpenTasks && (
-              <Button variant="link" onClick={onOpenTasks}>
-                {tasksLabel ?? t("co.suggest.viewTasks")}
-              </Button>
-            )}
-            {nextTask}
-          </>
+        onOpenTasks ? (
+          <Button variant="link" onClick={onOpenTasks}>
+            {tasksLabel ?? t("co.suggest.viewTasks")}
+          </Button>
         ) : undefined
       }
       footer={footer}

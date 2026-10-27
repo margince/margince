@@ -20,8 +20,7 @@ import { NextTaskButton, NextTaskHost } from "./worklist.nexttask";
 import type { WorklistItem } from "./worklist.queries";
 import { WorklistReturnLink } from "./worklist.return";
 
-// Next task on a record opened from the Worklist, drawn where a record page
-// draws it: through the slot the shell hosts, at the end of the next bar.
+// Next task as a record page draws it: through the shell's slot, at the next bar's end.
 
 function onContact(id: string, title: string): WorklistItem {
   return {

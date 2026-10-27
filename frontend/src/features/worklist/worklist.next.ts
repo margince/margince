@@ -21,10 +21,7 @@ export function continuedList(params: UrlParams) {
   return { ...drawerQueue(carried), carried };
 }
 
-/**
- * The address of the first row in `rows` on a record other than the one on
- * screen, carrying the list on, or undefined when no row is on another record.
- */
+/** The address of the first row on another record than the one on screen, or undefined. */
 export function nextTaskHref(
   rows: readonly WorklistItem[],
   onScreen: Route,

@@ -1,35 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Recording what came of a meeting, from the row that asked.
-//
-// The row used to offer three verbs — held, no-show, cancelled — and nothing
-// else. Each wrote one word and closed the card, so the one moment a human
-// knows what actually happened was the moment the product could be told the
-// least: a status, and not a sentence of what was said or what to do next.
-//
-// So the row offers TWO verbs now. "Cancelled" is the one answer that needs no
-// prose — the meeting did not happen, and there is nothing to write down — and
-// it writes the status straight from the card. "Update" opens the composer the
-// record pages already use, bound to THIS meeting, so the outcome is typed
-// where the reader is standing.
-//
-// WHY THE DIALOG PATCHES RATHER THAN POSTING, which is the whole difference
-// from LogActivityForm beside it: the meeting already exists. It arrived from a
-// calendar with its subject, its start and its attendee list, and logging a
-// second activity to say how it went would leave the original sitting in the
-// queue unanswered, with the account's timeline carrying two rows for one
-// meeting. `activityRequestBody` cannot serve this: it always sends `kind`,
-// `links` and `source`, none of which a patch may carry.
-//
-// EDITING THE BODY IS SAFE, and it is worth saying why rather than leaving the
-// next reader to work it out. A captured meeting's body is an excerpt the
-// calendar mapper composed — `Organizer: …`, `Attendees: …`, then the event
-// description (capture/meetingmap.buildBody). It is not the record of who
-// attended: those are `activity_participant` rows, written beside it and read
-// by every query that asks who was there. And a re-pull cannot undo an edit —
-// the capture upsert is `ON CONFLICT (source_system, source_id) DO NOTHING`, so
-// a second sync of the same event returns the incumbent row untouched.
+// "Cancelled" writes the status from the card; "Update" opens a dialog that PATCHES
+// the existing meeting, because a second activity would leave the original unanswered.
 
 import {
   type QueryKey,
@@ -68,11 +41,7 @@ import { useMeetingOutcome } from "./taskactions";
 
 type Activity = components["schemas"]["Activity"];
 
-/**
- * The outcome choice for a meeting on a record: offered for a meeting that has
- * begun, has no status yet and that the reader may write. `asOf` is the read's
- * own clock where the page has one; without it the mount time stands.
- */
+/** The outcome choice for a meeting that has begun, has no status and is writable. `asOf` defaults to mount time. */
 export function RecordMeetingOutcome({
   activity,
   invalidateKeys,
@@ -170,9 +139,7 @@ export function MeetingOutcome({
   version: number | undefined;
   // The reads that show this meeting, so each surface refreshes its own list.
   invalidateKeys: readonly QueryKey[];
-  // What the row already calls this meeting, so the dialog can name it before
-  // its own read answers. The row has it; asking the server for a heading the
-  // caller is already displaying would leave the dialog briefly untitled.
+  // The row's own heading for the meeting, so the dialog is titled before its read answers.
   title: string | undefined;
 }>) {
   const t = useT();
@@ -250,9 +217,8 @@ function MeetingOutcomeDialog({
   // that invalidates ["activity", id] refreshes whichever of the two is open.
   const meeting = useActivity(id);
   const transcript = meeting.data ? isTranscriptActivity(meeting.data) : false;
-  // Seeded from the read, once, during render rather than in an effect — an
-  // effect paints the empty form first, and a reader who types into that frame
-  // has their words replaced when the seed lands.
+  // Seeded during render, not in an effect: an effect paints an empty form first
+  // and replaces words typed into that frame.
   if (draft === null && meeting.data) {
     const day = activityDate(
       meeting.data.occurred_at,
@@ -275,9 +241,7 @@ function MeetingOutcomeDialog({
     });
   }
   const save = useMutation({
-    // Every field travels as a VARIABLE. A mutationFn closing over render state
-    // runs against the last committed render, and what this one decides is what
-    // gets stored on a customer's meeting.
+    // Fields travel as variables: a closure would read the last committed render.
     mutationFn: async (input: {
       draft: OutcomeDraft;
       seed: OutcomeSeed;

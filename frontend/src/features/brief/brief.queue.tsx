@@ -33,10 +33,7 @@ export function WorklistRedirect({ opensOn }: Readonly<{ opensOn?: string }>) {
   return null;
 }
 
-/**
- * Home's own list is the Worklist at its default dials, so a record opened
- * from it keeps the way back and the next task the drawer's rows give.
- */
+/** Home's list is the Worklist at default dials, so records opened from it keep the way back. */
 export function HomeListReturnScope({
   children,
 }: Readonly<{ children: ReactNode }>) {

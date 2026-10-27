@@ -270,21 +270,6 @@ export const NothingNeedsYou: Story = {
   ),
 };
 
-export const WithNextTask: Story = {
-  // The head's link and the way on to the next record's task, at phone width.
-  tags: ["uat-phone"],
-  render: () => (
-    <StoryProviders>
-      <div style={{ maxWidth: 390 }}>
-        <TodayPanel
-          onOpenTasks={() => {}}
-          nextTask={<Button variant="ghost">Next task</Button>}
-        />
-      </div>
-    </StoryProviders>
-  ),
-};
-
 export const StillReading: Story = {
   render: () => (
     <StoryProviders>

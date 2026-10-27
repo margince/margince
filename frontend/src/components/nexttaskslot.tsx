@@ -3,8 +3,7 @@
 
 import { createContext, type ReactNode, useContext } from "react";
 
-// A record page draws the way on to the next Worklist task without importing
-// the Worklist: the shell mounts the one that reads it, and this draws it.
+// Record pages draw the shell's next-task control without importing the Worklist.
 const NextTask = createContext<ReactNode>(null);
 
 export const NextTaskProvider = NextTask.Provider;

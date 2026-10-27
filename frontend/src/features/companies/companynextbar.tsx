@@ -1,4 +1,5 @@
 import type { components } from "../../api/schema";
+import { NextTaskSlot } from "../../components/nexttaskslot";
 import { NextBar } from "../../design-system/nextbar";
 import { formatNumber } from "../../format/format";
 import { calendarDaysBetween, formatDayMonth } from "../../format/format.dates";
@@ -160,6 +161,7 @@ export function CompanyNextBar({
         }
         snooze={defer && { onSnooze: defer.onDefer, pending: defer.pending }}
         more={more}
+        onward={<NextTaskSlot />}
       />
     );
   }
@@ -176,6 +178,7 @@ export function CompanyNextBar({
       }
       action={task ? fallback : undefined}
       more={more}
+      onward={<NextTaskSlot />}
     />
   );
 }
