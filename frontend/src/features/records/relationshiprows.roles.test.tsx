@@ -12,12 +12,19 @@ import { RelationshipsTab } from "./relationshiprows";
 
 const DEAL = "01a02e25-a5ac-7099-8099-581cbf001a99";
 const CONTACT = "01a02be9-2293-75d2-9dd2-3027d9b63dc2";
+const COMPANY = "01a02e25-b6bd-7099-8099-581cbf001b77";
+const PROJECT = "01a02e25-c7ce-7099-8099-581cbf001c55";
 
-function seat(role: string) {
+type RoleKind = "deal_stakeholder" | "project_stakeholder" | "billing_contact";
+
+function seat(role: string, kind: RoleKind = "deal_stakeholder") {
   return {
     id: "rel-1",
-    kind: "deal_stakeholder",
-    deal_id: DEAL,
+    kind,
+    ...(kind === "deal_stakeholder"
+      ? { deal_id: DEAL }
+      : { company_id: COMPANY }),
+    ...(kind === "project_stakeholder" ? { project_id: PROJECT } : {}),
     contact_id: CONTACT,
     role,
     is_current_primary: false,
@@ -35,21 +42,26 @@ afterEach(() => {
 });
 
 // Opens the edit form on one seated role, optionally retypes it, and saves.
+// A deal seat opens from the deal's tab, the other kinds from the company's.
 async function editSeat(
   locale: Locale,
   stored: string,
   retype?: string,
+  kind: RoleKind = "deal_stakeholder",
 ): Promise<{ shown: string; patched: unknown }> {
   const patched: unknown[] = [];
   stubWithSession(
     {
       "GET /relationships": () =>
-        jsonResponse({ data: [seat(stored)], page: { next_cursor: null } }),
+        jsonResponse({
+          data: [seat(stored, kind)],
+          page: { next_cursor: null },
+        }),
       [`GET /contacts/${CONTACT}`]: () =>
         jsonResponse({ id: CONTACT, full_name: "Mai Trần" }),
       "PATCH /relationships/rel-1": (body) => {
         patched.push(body);
-        return jsonResponse({ ...seat(stored), version: 2 });
+        return jsonResponse({ ...seat(stored, kind), version: 2 });
       },
     },
     { relationship: ["read", "create", "update", "delete"] },
@@ -57,7 +69,13 @@ async function editSeat(
   const user = userEvent.setup();
   renderWithQueryClient(
     <LocaleProvider initial={locale}>
-      <RelationshipsTab scope={{ deal_id: DEAL }} />
+      <RelationshipsTab
+        scope={
+          kind === "deal_stakeholder"
+            ? { deal_id: DEAL }
+            : { company_id: COMPANY }
+        }
+      />
     </LocaleProvider>,
   );
   await user.click(await screen.findByTestId("edit-record"));
@@ -107,4 +125,59 @@ describe("editing a stakeholder's role", () => {
     expect(shown).toBe("technical lead");
     expect(patched).toMatchObject({ role: "technical_lead" });
   });
+
+  // A role typed before the vocabulary may spell a deal role's words.
+  it.each(["Champion", "economic buyer"])(
+    "keeps the stored spelling %s when saved untouched",
+    async (stored) => {
+      const { shown, patched } = await editSeat("en", stored);
+      expect(shown).toBe(stored);
+      expect(patched).toMatchObject({ role: stored });
+    },
+  );
+});
+
+// The server judges these roles against closed lists, so a label sent back
+// as typed would be refused.
+describe("editing a project or billing role from a company", () => {
+  it.each(["en", "de", "vi"] as const)(
+    "shows a project role in the reader's words and keeps its key (%s)",
+    async (locale) => {
+      const { shown, patched } = await editSeat(
+        locale,
+        "delivery_lead",
+        undefined,
+        "project_stakeholder",
+      );
+      expect(shown).toBe(translate(locale, "project.role.delivery_lead"));
+      expect(patched).toMatchObject({ role: "delivery_lead" });
+    },
+  );
+
+  it.each(["en", "de", "vi"] as const)(
+    "saves a project role typed in the reader's words by its key (%s)",
+    async (locale) => {
+      const { patched } = await editSeat(
+        locale,
+        "sponsor",
+        translate(locale, "project.role.project_lead"),
+        "project_stakeholder",
+      );
+      expect(patched).toMatchObject({ role: "project_lead" });
+    },
+  );
+
+  it.each(["en", "de", "vi"] as const)(
+    "shows a billing capacity in the reader's words and keeps its key (%s)",
+    async (locale) => {
+      const { shown, patched } = await editSeat(
+        locale,
+        "accounts_payable",
+        translate(locale, "billing.role.approver"),
+        "billing_contact",
+      );
+      expect(shown).toBe(translate(locale, "billing.role.accountsPayable"));
+      expect(patched).toMatchObject({ role: "approver" });
+    },
+  );
 });

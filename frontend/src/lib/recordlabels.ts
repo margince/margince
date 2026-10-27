@@ -14,6 +14,7 @@
 // truthy check, and renders as an empty badge — which reads exactly like a
 // record with no role at all.
 
+import type { components } from "../api/schema";
 import { foldForMatch } from "../format/collate";
 import type { MessageKey } from "../i18n/en";
 
@@ -98,20 +99,27 @@ function roleWords(text: string): string {
   return foldForMatch(text.normalize("NFC").trim().replace(/\s+/gu, " "));
 }
 
+/** The role keys a reader's words may name, and the words each one shows as. */
+export type RoleVocabulary = Readonly<{
+  keys: readonly string[];
+  label: (role: string, t: (key: MessageKey) => string) => string;
+}>;
+
 /**
- * The role a reader typed, as the key of the deal role or `offered` role whose
- * label or key it spells. The coverage rules count keys; other text goes trimmed.
+ * The key of the `offered` or `vocabulary` role that `text` spells by label or
+ * key, else `text` trimmed. `offered` goes first, so an untouched save keeps it.
  */
 export function roleFromTyped(
   text: string,
   t: (key: MessageKey) => string,
+  vocabulary: RoleVocabulary,
   offered: readonly string[] = [],
 ): string {
   const typed = roleWords(text);
-  const known = [...Object.keys(DEAL_ROLE_LABELS), ...offered];
+  const known = [...offered, ...vocabulary.keys];
   const role = known.find(
     (candidate) =>
-      roleWords(dealRoleLabel(candidate, t)) === typed ||
+      roleWords(vocabulary.label(candidate, t)) === typed ||
       roleWords(candidate) === typed,
   );
   return role ?? text.trim();
@@ -144,3 +152,38 @@ export function projectRoleLabel(
     : undefined;
   return key ? t(key) : dealRoleLabel(role, t);
 }
+
+// A billing contact's capacities, which the server refuses a fourth of.
+const BILLING_ROLE_LABELS: Record<
+  components["schemas"]["BillingContactRole"],
+  MessageKey
+> = {
+  recipient: "billing.role.recipient",
+  approver: "billing.role.approver",
+  accounts_payable: "billing.role.accountsPayable",
+};
+
+/** billingRoleLabel names the capacity a billing contact holds. */
+export function billingRoleLabel(
+  role: string,
+  t: (key: MessageKey) => string,
+): string {
+  const labels: Readonly<Record<string, MessageKey>> = BILLING_ROLE_LABELS;
+  const key = Object.hasOwn(labels, role) ? labels[role] : undefined;
+  return key ? t(key) : role;
+}
+
+export const DEAL_ROLES: RoleVocabulary = {
+  keys: Object.keys(DEAL_ROLE_LABELS),
+  label: dealRoleLabel,
+};
+
+export const PROJECT_ROLES: RoleVocabulary = {
+  keys: [...Object.keys(PROJECT_ROLE_LABELS), ...Object.keys(DEAL_ROLE_LABELS)],
+  label: projectRoleLabel,
+};
+
+export const BILLING_ROLES: RoleVocabulary = {
+  keys: Object.keys(BILLING_ROLE_LABELS),
+  label: billingRoleLabel,
+};

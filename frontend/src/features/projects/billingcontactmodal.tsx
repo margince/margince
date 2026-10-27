@@ -16,9 +16,9 @@ import "../../design-system/querystates.css";
 
 // The three capacities, in the order an invoice moves through them: it is
 // addressed to somebody, approved by somebody, then paid by somebody. Spelled
-// here as well as in the panel because these are the PICKABLE ones and the
-// panel's map is the readable ones — the same list today, and the server would
-// refuse a fourth either way.
+// here as well as in recordlabels.ts because these are the PICKABLE ones and
+// its map is the readable ones. The two lists match, and the server refuses a
+// fourth.
 const ROLE_OPTIONS: { value: BillingContactRole; label: MessageKey }[] = [
   { value: "recipient", label: "billing.role.recipient" },
   { value: "approver", label: "billing.role.approver" },
