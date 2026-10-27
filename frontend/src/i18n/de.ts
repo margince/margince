@@ -1590,7 +1590,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro Million Tokens",
 
   "brief.weekly.tasksCompleted": "Aufgaben erledigt",
-  "brief.weekly.noMeetings": "Keine Termine",
+  "brief.weekly.noMeetings": "Keine Termine erfasst",
   "brief.weekly.noLeads": "Keine eingegangen",
   "brief.weekly.noCommitments": "Keine fällig",
   "brief.weekly.basis":
@@ -3151,15 +3151,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.health.payment.paidOnTime_other":
     "{count} von {total} Rechnungen pünktlich bezahlt",
   "co.health.reason.neverWritten":
-    "Noch nie eine Nachricht von ihnen und noch kein Termin.",
+    "Keine Nachricht dieses Kontakts und kein Termin erfasst.",
   "co.health.reason.quiet_one":
-    "Seit {days} Tag keine Antwort und kein Termin.",
+    "Seit {days} Tag keine Antwort und kein Termin erfasst.",
   "co.health.reason.quiet_other":
-    "Seit {days} Tagen keine Antwort und kein Termin.",
+    "Seit {days} Tagen keine Antwort und kein Termin erfasst.",
   "co.health.reason.quietSince_one":
-    "Seit {at} ({days} Tag) keine Antwort und kein Termin.",
+    "Seit {at} ({days} Tag) keine Antwort und kein Termin erfasst.",
   "co.health.reason.quietSince_other":
-    "Seit {at} ({days} Tagen) keine Antwort und kein Termin.",
+    "Seit {at} ({days} Tagen) keine Antwort und kein Termin erfasst.",
   "co.health.reason.meetingBooked": "Ein Termin ist für den {at} angesetzt.",
   "co.health.reason.lastMetToday": "Heute getroffen.",
   "co.health.reason.lastMet_one": "Zuletzt vor {days} Tag getroffen.",
@@ -3191,7 +3191,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "signal.kind.contract_ended": "Vertrag läuft aus",
   "signal.kind.new_opportunity": "Möglicher neuer Deal",
   "signal.kind.commitment_made": "Zusage gegeben",
-  "signal.kind.ghosted_thread": "Keine Antwort",
+  "signal.kind.ghosted_thread": "Keine Antwort erfasst",
   "signal.kind.project_gone_quiet": "Projekt verstummt",
   "signal.kind.funding": "Finanzierung",
   "signal.kind.leadership_change": "Führungswechsel",
@@ -3798,7 +3798,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Keiner der Datensätze, auf die du Zugriff hast, beantwortet diese Frage.",
   "co.ask.failed":
     "Die Frage konnte nicht beantwortet werden. Bitte versuche es erneut.",
-  "co.suggest.kind.no_reply": "Keine Antwort",
+  "co.suggest.kind.no_reply": "Keine Antwort erfasst",
   "co.suggest.kind.stalled_deal": "Stockender Deal",
   "co.suggest.kind.no_next_step": "Kein nächster Schritt",
   "co.suggest.kind.lifecycle_conflict": "Widerspruch im Lebenszyklus",
@@ -4240,7 +4240,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.contacts.board.change": "Rolle ändern",
   "co.reach.waiting": "Antwort nötig",
   "co.reach.answered": "Beantwortet",
-  "co.reach.silent": "Keine Antwort",
+  "co.reach.silent": "Keine Antwort erfasst",
   "co.reach.lapsed": "Verstummt",
   "co.reach.untried": "Nicht kontaktiert",
   "co.role.champion": "Champion",
@@ -9652,7 +9652,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.reconnectToSend":
     "Verbinde dieses Postfach neu, um daraus zu senden. Ein Postfach, das vor Einführung des Versands verbunden wurde, lässt sich nicht nachträglich erweitern. Der Anbieter erteilt die Sendeberechtigung nur bei einer neuen Verbindung.",
   "connectors.lastSynced": "Zuletzt synchronisiert {at}",
-  "connectors.neverSynced": "Wartet auf erste Synchronisierung",
+  "connectors.neverSynced": "Keine erfolgreiche Synchronisierung erfasst",
   "connectors.notConfigured":
     "Die E-Mail-Erfassung ist in dieser Installation nicht konfiguriert.",
   "connectors.reconnect": "Neu verbinden",
@@ -14882,13 +14882,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.verdictDirect":
     "Frage {name}. Das Teammitglied steht bereits im Austausch mit diesem Kontakt.",
   "contact.intro.verdictOneSided":
-    "Frage {name}. Das Teammitglied hat diesem Kontakt geschrieben, noch ohne Antwort.",
+    "Frage {name}. Das Teammitglied hat diesem Kontakt geschrieben. Eine Antwort ist nicht erfasst.",
   "contact.intro.verdictVia":
     "Frage {name}. Das Teammitglied erreicht diesen Kontakt über {through}.",
   "contact.intro.verdictDirectYou":
     "Du stehst bereits im Austausch mit diesem Kontakt.",
   "contact.intro.verdictOneSidedYou":
-    "Du hast diesem Kontakt geschrieben, noch ohne Antwort.",
+    "Du hast diesem Kontakt geschrieben. Eine Antwort ist nicht erfasst.",
   "contact.intro.verdictViaYou": "Du erreichst den Kontakt über {through}.",
   "contact.intro.ownRouteNoAsk":
     "Es gibt niemanden, den du fragen kannst. Schreibe diesem Kontakt direkt.",
@@ -15245,7 +15245,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.standing.direction.inboundOnly":
     "Bisher hat nur der Kontakt geschrieben. Dein Team hat noch nichts gesendet.",
   "contact.standing.direction.outboundOnly":
-    "Bisher hat nur dein Team geschrieben. Noch keine Antwort.",
+    "Nur ausgehende Nachrichten deines Teams sind erfasst. Eine Antwort ist nicht erfasst.",
   "contact.standing.direction.none":
     "Noch keine Nachrichten, in keiner Richtung.",
   "contact.subtitle.at": "bei",
@@ -16780,21 +16780,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.because.meeting_unprepared": "nichts vorbereitet",
   "worklist.because.outcome_unrecorded": "kein Ergebnis erfasst",
   "worklist.because.you_wrote_last": "du hast zuletzt geschrieben",
-  "worklist.because.no_reply_days": "keine Antwort",
-  "worklist.because.no_reply_days.value_one": "seit {value} Tag keine Antwort",
+  "worklist.because.no_reply_days": "keine Antwort erfasst",
+  "worklist.because.no_reply_days.value_one": "seit {value} Tag keine Antwort erfasst",
   "worklist.because.no_reply_days.value_other":
-    "seit {value} Tagen keine Antwort",
+    "seit {value} Tagen keine Antwort erfasst",
   "worklist.because.met_days_ago": "getroffen",
   "worklist.because.met_days_ago.value_one": "vor {value} Tag getroffen",
   "worklist.because.met_days_ago.value_other": "vor {value} Tagen getroffen",
-  "worklist.because.nothing_sent_since": "seitdem nichts gesendet",
+  "worklist.because.nothing_sent_since": "seitdem keine ausgehende Nachricht erfasst",
   "worklist.because.no_attendee_on_file": "keine Teilnehmenden erfasst",
   "worklist.because.response_overdue": "Antwort überfällig",
   "worklist.because.response_due_soon": "Antwort bald fällig",
   "worklist.because.response_due_soon.value": "Antwort fällig bis {value}",
   "worklist.because.unassigned": "niemand zuständig",
   "worklist.because.stale": "wartet schon lange",
-  "worklist.because.no_reply_history": "keine bisherigen Antworten",
+  "worklist.because.no_reply_history": "keine bisherigen Antworten erfasst",
   "worklist.because.asks_nothing": "fordert nichts an",
   "worklist.because.addressed_elsewhere": "an jemand anderen im Team gerichtet",
   "worklist.because.bcc_from_stranger":
@@ -17290,7 +17290,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Geschlossen. Der Datensatz bleibt als Verlauf erhalten.",
   "lead.standing.noResponse": "Keine erste Antwort erfasst.",
   "lead.standing.theirMove": "Wartet auf den Lead",
-  "lead.standing.answeredOn": "Am {at} beantwortet. Noch keine Rückmeldung.",
+  "lead.standing.answeredOn": "Antwort am {at} erfasst. Keine spätere Rückmeldung erfasst.",
   "lead.standing.inMotion": "In Bewegung",
   "lead.standing.engagedBecause":
     "Der Lead hat geantwortet, oder ein Termin ist geplant.",
@@ -18255,4 +18255,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.standing.peek.started": "Arbeit begonnen",
   "project.standing.peek.today": "Heute",
   "project.standing.peek.documents": "Dateien dieses Projekts, neueste zuerst",
+  "mailCoverage.title": "Der E-Mail-Verlauf kann unvollständig sein",
+  "mailCoverage.unknown": "Die E-Mail-Erfassung bestätigt diesen Zeitraum nicht vollständig. Diese Daten beschreiben erfasste Nachrichten; eine Antwort kann außerhalb dieses Datensatzes vorliegen.",
+  "mailCoverage.partial": "Die Erfassung war erfolgreich. Ein vollständiger Verlauf von Posteingang und gesendeten Nachrichten ist jedoch nicht bestätigt. Eine fehlende erfasste Nachricht beweist nicht, dass niemand geantwortet hat.",
+  "mailCoverage.unavailable": "Die E-Mail-Erfassung ist für einen Teil dieses Verlaufs nicht verfügbar. Eine Antwort kann außerhalb dieses Datensatzes vorliegen.",
+  "mailCoverage.withheld": "Du darfst den Umfang der E-Mail-Erfassung nicht prüfen. Eine fehlende erfasste Nachricht beweist nicht, dass niemand geantwortet hat.",
+  "mailCoverage.connections": "Verbindungen prüfen",
+  "connectors.syncTimeUnknown": "Zeitpunkt der letzten erfolgreichen Synchronisierung unbekannt",
 };

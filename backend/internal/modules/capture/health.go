@@ -94,7 +94,7 @@ func (r *Registry) HealthConcerns(ctx context.Context) ([]Concern, error) {
 			concern.AccountLabel = *view.AccountLabel
 		}
 		concern.FailingSince = view.FailingSince
-		concern.LastSyncedAt = view.LastSyncedAt
+		concern.LastSyncedAt = view.LastSuccessAt
 		concerns = append(concerns, concern)
 	}
 	return concerns, nil

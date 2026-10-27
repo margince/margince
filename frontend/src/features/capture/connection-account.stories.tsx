@@ -35,6 +35,7 @@ const gmail: CaptureConnection = {
     "https://www.googleapis.com/auth/gmail.send",
   ],
   last_synced_at: "2026-07-23T09:52:00Z",
+  last_success_at: "2026-07-23T09:52:00Z",
   created_at: "2026-07-23T08:38:00Z",
   backfill: {
     state: "done",
@@ -74,6 +75,7 @@ const imap: CaptureConnection = {
   account_label: "sales@example.org",
   scopes: [],
   last_synced_at: "2026-07-23T09:00:00Z",
+  last_success_at: "2026-07-23T09:00:00Z",
   backfill: { state: "none" },
 };
 
@@ -272,7 +274,9 @@ async function openBringsIn(canvasElement: HTMLElement) {
     await canvas.findByRole("button", { name: "More actions for Google" }),
   );
   await userEvent.click(
-    await canvas.findByRole("button", { name: "Change what it brings in" }),
+    await within(canvasElement.ownerDocument.body).findByRole("button", {
+      name: "Change what it brings in",
+    }),
   );
 }
 
