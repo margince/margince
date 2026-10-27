@@ -44,7 +44,10 @@ describe("DealCard + PipelineBoard", () => {
     companyId: "o-1",
     valueMinor: 4_800_000,
     currency: "EUR",
-    ageMs: 62 * 86_400_000,
+    idleSince: new Date(
+      Date.parse("2026-09-15T12:00:00Z") - 62 * 86_400_000,
+    ).toISOString(),
+    measuredAt: Date.parse("2026-09-15T12:00:00Z"),
     stalled: true,
   };
   // The card's figure as the compact formatter writes it, asked rather than

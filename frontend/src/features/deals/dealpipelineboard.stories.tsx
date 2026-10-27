@@ -26,7 +26,10 @@ function deal(extra: Partial<BoardDeal> & Pick<BoardDeal, "id" | "name">) {
     companyId: "o-1",
     valueMinor: 660_000,
     currency: "EUR",
-    ageMs: 2 * DAY_MS,
+    idleSince: new Date(
+      Date.parse("2026-09-15T12:00:00Z") - 2 * DAY_MS,
+    ).toISOString(),
+    measuredAt: Date.parse("2026-09-15T12:00:00Z"),
     owner: { id: "u-1", name: "Dana Albers" },
     ...extra,
   } satisfies BoardDeal;
@@ -64,7 +67,10 @@ const proposal: BoardMoneyColumn = {
       closeDate: "2027-04-30",
       closeDateProvisional: true,
       stalled: true,
-      ageMs: 23 * DAY_MS,
+      idleSince: new Date(
+        Date.parse("2026-09-15T12:00:00Z") - 23 * DAY_MS,
+      ).toISOString(),
+      measuredAt: Date.parse("2026-09-15T12:00:00Z"),
       lastEmail: lastEmailAgo(23 * DAY_MS, "outbound"),
     }),
   ],

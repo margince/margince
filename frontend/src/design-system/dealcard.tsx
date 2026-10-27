@@ -6,8 +6,8 @@ import { type ReactNode, type RefObject, useRef } from "react";
 import { type ActivityMoment, activityAgo } from "../format/activitywhen";
 import { calendarDay } from "../format/calendarday";
 import {
+  formatAge,
   formatDayMonthNearYear,
-  formatDuration,
   formatMoneyCompact,
   MONEY_ABSENT,
 } from "../format/format";
@@ -229,7 +229,8 @@ function DealCloses({
 export function DealMailChip({
   mail,
   aside,
-}: Readonly<{ mail: BoardDealMail; aside?: ReactNode }>) {
+  zone,
+}: Readonly<{ mail: BoardDealMail; aside?: ReactNode; zone: string }>) {
   const t = useT();
   const { locale } = useLocale();
   const shortDay = (at: string, dayLocale: Locale, zone: string) =>
@@ -240,7 +241,7 @@ export function DealMailChip({
     <>
       <span className="sr-only">{t("deal.lastMail")}: </span>
       <Chip icon={mail.direction === "outbound" ? Send : Mail} dense>
-        {activityAgo(mail, mail.measuredAt, t, locale, shortDay)}
+        {activityAgo(mail, mail.measuredAt, t, locale, zone, shortDay)}
       </Chip>
     </>
   );
@@ -264,11 +265,13 @@ export function DealMailChip({
  * moved every slot under it.
  */
 function DealCardFoot({
+  zone,
   deal,
   mailAside,
   actions,
 }: Readonly<{
   deal: BoardDeal;
+  zone: string;
   mailAside?: (deal: BoardDeal) => ReactNode;
   actions?: DealCardActions;
 }>) {
@@ -291,12 +294,16 @@ function DealCardFoot({
             {/* How long it has sat is the size of the stall, and only then: on
                 a healthy card the number is a fact nobody acts on. */}
             <span className="deal-age">
-              {formatDuration(deal.ageMs, locale)}
+              {formatAge(deal.idleSince, deal.measuredAt, locale, zone)}
             </span>
           </span>
         )}
         {deal.lastEmail && (
-          <DealMailChip mail={deal.lastEmail} aside={mailAside?.(deal)} />
+          <DealMailChip
+            zone={zone}
+            mail={deal.lastEmail}
+            aside={mailAside?.(deal)}
+          />
         )}
         {deal.singleThreaded && (
           <Badge tone="danger">{t("deal.singleThreaded")}</Badge>
@@ -379,12 +386,7 @@ export function DealCard({
   dragHandlers,
 }: Readonly<{
   deal: BoardDeal;
-  /**
-   * The IANA zone the close date is read in. A close date is a calendar day,
-   * and a day formatted as if it were an instant lands on the previous date
-   * for every reader west of Greenwich — so the card takes the zone the record
-   * lives in, the same way the timeline does, rather than the browser's.
-   */
+  /** The record calendar for close dates and ages, shared with the timeline. */
   zone: string;
   /**
    * The deal's own address.
@@ -494,7 +496,12 @@ export function DealCard({
           <span className="deal-closes">{t("deal.undated")}</span>
         )}
       </span>
-      <DealCardFoot deal={deal} mailAside={mailAside} actions={actions} />
+      <DealCardFoot
+        zone={zone}
+        deal={deal}
+        mailAside={mailAside}
+        actions={actions}
+      />
     </div>
   );
 }

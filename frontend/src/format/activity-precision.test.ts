@@ -875,10 +875,10 @@ describe("an activity's time reaches a clock only through its precision", () => 
       "function When23(p: { at: string; precision: OccurredPrecision }) { return formatActivityWhen(p.at, p.precision, 'en', zone); } void (<When23 at={activity.occurred_at} precision='instant' />);",
       "const when24 = (iso: string) => formatDateTime(iso, 'en', zone); function Card24({ when }: { when: (iso: string) => string }) { return when(activity.occurred_at); } void (<Card24 when={when24} />);",
       "function Inner25({ when }: { when: (iso: string) => string }) { return when(activity.occurred_at); } function Outer25({ when }: { when: (iso: string) => string }) { return <Inner25 when={when} />; } void (<Outer25 when={(iso) => formatTimeOfDay(iso, 'en', zone)} />);",
-      "activityAgo({ at: activity.occurred_at, precision: 'instant' }, Date.now(), t, 'en');",
+      "activityAgo({ at: activity.occurred_at, precision: 'instant' }, Date.now(), t, 'en', zone);",
       "function instantOf(): OccurredPrecision { return 'instant'; } formatActivityWhen(activity.occurred_at, instantOf(), 'en', zone);",
       "const KNOWN = { precision: 'instant' } as const; formatActivityWhen(activity.occurred_at, KNOWN.precision, 'en', zone);",
-      "function moment29(at: string) { return { at, precision: 'instant' as const }; } activityAgo(moment29(activity.occurred_at), Date.now(), t, 'en');",
+      "function moment29(at: string) { return { at, precision: 'instant' as const }; } activityAgo(moment29(activity.occurred_at), Date.now(), t, 'en', zone);",
       "const times30 = [activity].map((a) => a.occurred_at); formatDateTime(times30[0] ?? '', 'en', zone);",
       "formatDate(activity.occurred_at, 'en', zone);",
       "new Date(activity.occurred_at).toLocaleString('en', { month: 'long' });",
@@ -893,7 +893,7 @@ describe("an activity's time reaches a clock only through its precision", () => 
     ];
     const sound = [
       "formatActivityWhen(activity.occurred_at, activity.occurred_precision, 'en', zone);",
-      "activityAgo({ at: activity.occurred_at, precision: activity.occurred_precision }, Date.now(), t, 'en');",
+      "activityAgo({ at: activity.occurred_at, precision: activity.occurred_precision }, Date.now(), t, 'en', zone);",
       "activityDay(activity.occurred_at, activity.occurred_precision, 'en', zone, formatDayMonth);",
       "formatDateTime(activity.created_at, 'en', zone);",
       "formatDateTime(activity.due_at ?? '', 'en', zone);",

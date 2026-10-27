@@ -22,7 +22,11 @@
 // assume the other party remembers an earlier exchange.
 package convstate
 
-import "time"
+import (
+	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
+)
 
 // Band is where a correspondence stands. Closed, because each value is a
 // distinct set of sentences a draft may write, and an unrecognized band would
@@ -75,7 +79,7 @@ const (
 // spoke last.
 type State struct {
 	Band Band
-	// SilenceDays is whole days since the last message in either direction.
+	// SilenceDays counts calendar days in the installation zone since the last message.
 	// Zero at BandNone, where there is no last message to count from.
 	SilenceDays int
 	// LastDirection is who sent that last message.
@@ -92,7 +96,7 @@ type State struct {
 // A timestamp in the future is treated as now rather than as negative silence.
 // Clock skew between a mail host and this one is ordinary, and the honest
 // reading of "the last message is dated tomorrow" is that it just arrived.
-func Classify(now, lastIn, lastOut time.Time) State {
+func Classify(now, lastIn, lastOut time.Time, zone *time.Location) State {
 	last := lastIn
 	direction := DirectionInbound
 	if last.IsZero() || (!lastOut.IsZero() && lastOut.After(last)) {
@@ -103,7 +107,7 @@ func Classify(now, lastIn, lastOut time.Time) State {
 		return State{Band: BandNone, SilenceDays: 0, LastDirection: DirectionNone}
 	}
 
-	days := wholeDaysBetween(last, now)
+	days := max(elapsed.Days(last, now, zone), 0)
 	return State{Band: bandForDays(days), SilenceDays: days, LastDirection: direction}
 }
 
@@ -118,14 +122,6 @@ func bandForDays(days int) Band {
 	default:
 		return BandMonths
 	}
-}
-
-// wholeDaysBetween counts elapsed days, floored, and never returns a negative.
-func wholeDaysBetween(from, to time.Time) int {
-	if !to.After(from) {
-		return 0
-	}
-	return int(to.Sub(from).Hours() / 24)
 }
 
 // AssumesSharedMemory reports whether a draft in this state may write as if

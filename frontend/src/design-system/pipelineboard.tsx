@@ -74,7 +74,8 @@ export type BoardDeal = BoardRecord & {
    */
   valueMinor: number | null;
   currency: string | null;
-  ageMs: number;
+  idleSince: string;
+  measuredAt: number;
   /**
    * When the deal is expected to close, as the calendar day the record holds.
    * Null on a deal nobody has dated, and the card then states no date rather
@@ -93,8 +94,7 @@ export type BoardDeal = BoardRecord & {
   owner?: Readonly<{ id: string; name: string }> | null;
   /**
    * The newest email on the deal that the whole workspace may see, as how long
-   * ago it was and which way it went. A span rather than an instant, for the
-   * reason `ageMs` is one: the caller owns the clock. A card that read
+   * ago it was and which way it went. The caller owns the clock. A card that read
    * `Date.now()` would be a card no test could pin. Absent or null on a deal
    * nobody has mailed about, and the card then draws no mail line at all.
    * "No mail yet" is a fact the timeline states, not one worth a row on every

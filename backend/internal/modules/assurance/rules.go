@@ -6,6 +6,8 @@ package assurance
 import (
 	"fmt"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 )
 
 // Subject is one deal as a rule sees it, already assembled by the seam.
@@ -314,7 +316,7 @@ func buyerSilent() Rule {
 			// deal created today has no inbound either.
 			return nil
 		}
-		silentFor := int(day(asOf).Sub(day(*s.LastInboundAt)).Hours() / 24)
+		silentFor := elapsed.Days(*s.LastInboundAt, asOf, asOf.Location())
 		if silentFor < cfg.SilentDays {
 			return nil
 		}

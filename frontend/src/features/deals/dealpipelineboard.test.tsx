@@ -32,7 +32,8 @@ const openDeal: BoardDeal = {
   companyId: "",
   valueMinor: 4_800_000,
   currency: "EUR",
-  ageMs: 0,
+  idleSince: "2026-09-15T12:00:00Z",
+  measuredAt: Date.parse("2026-09-15T12:00:00Z"),
 };
 const archivedDeal: BoardDeal = {
   ...openDeal,

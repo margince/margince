@@ -11,6 +11,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -78,19 +79,12 @@ func orUTC(loc *time.Location) *time.Location {
 	return loc
 }
 
-// dayIn reduces an instant to its calendar day in the given zone, so the span
-// counts the days a reader would count rather than 24-hour blocks.
-func dayIn(at time.Time, loc *time.Location) time.Time {
-	y, m, d := at.In(loc).Date()
-	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
-}
-
 // quietFor is the elapsed span, in the unit a contact would say it in. Days up to
 // a fortnight, then weeks: "38 days" makes a reader do arithmetic to learn what
 // "5 weeks" says outright.
 func (said quietCopy) quietFor(since, today time.Time, loc *time.Location) string {
 	zone := orUTC(loc)
-	days := max(int(dayIn(today, zone).Sub(dayIn(since, zone)).Hours()/24), 0)
+	days := max(elapsed.Days(since, today, zone), 0)
 	switch {
 	case days == 0:
 		return said.Say(quietWords.Today)

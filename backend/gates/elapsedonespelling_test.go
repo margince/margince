@@ -1,155 +1,126 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-//gate:kind claim H1
+//gate:kind census H2
 
 package gates
 
-// "How many days of silence" is spelled once.
-//
-// It was spelled twice, and the two disagreed ON SCREEN: the deal card's move
-// said "They wrote 96 days ago" while the coverage chip beside it said "95
-// days", about the same mail, in the same second. One counted calendar days,
-// the other elapsed hours over 24, so they drifted apart for most of every day
-// and agreed only around midnight.
-//
-// Neither was obviously wrong to its own author, which is the point — this is
-// not a bug a reviewer catches by reading one file. What catches it is a gate
-// that fails when the second spelling appears.
-//
-// WHAT THIS GATE CAN AND CANNOT SEE. It greps for the arithmetic that divides
-// a duration by 24, which is the shape both old spellings had. It cannot see a
-// count written some other way — a day-granularity SQL date_part, say — so it
-// is a net under the known failure rather than a proof of uniqueness.
-//
-// AND IT IS SCOPED, with a cost worth naming precisely. The trees carry other
-// sites with the same arithmetic, and they are not all the same rule:
-// deals/health.go and contacts/leadscore.go return a FLOAT because they feed
-// decay curves, where a fractional day is the quantity and rounding it to a
-// calendar boundary would change what the product scores. finance/summary.go
-// counts invoice lateness against a due DATE, and search/graphtrust.go decays
-// a score. Those are duration questions, and converting them blind is a
-// different change with its own risk.
-//
-// So this gate governs the packages whose day count a contact READS in a
-// sentence, and every one of those has been converted. The first version of
-// the comment here said "nine more sites" when there were twenty-three, and
-// justified the scope by pointing only at the float curves — while
-// meetingbrief/sections.go was printing "Last touch was %d days ago" with the
-// very arithmetic this change exists to remove. Both are fixed: the count is
-// measured rather than remembered, and meetingbrief, contact360 and company360 are
-// governed here.
-//
-// The cost that remains: a NEW reader-facing count in an ungoverned package
-// still passes. governedSurfaces is the list to extend when one appears.
-
 import (
-	"os"
-	"path/filepath"
-	"regexp"
-	"strings"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"strconv"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// The shape both old spellings had: a duration in hours, divided by 24. Written
-// as a pattern rather than a literal so `Hours()/24`, `Hours() / 24` and
-// `Hours()/hoursPerDay` all match — the last is what one of them actually said,
-// and a check that missed it would have passed the day the bug shipped.
-var durationOverADay = regexp.MustCompile(`\.Hours\(\)\s*/\s*(24|hoursPerDay)\b`)
-
-// governedSurfaces are the files whose day count a reader reads on a screen,
-// where two spellings disagreeing is a defect they can SEE. Named rather than
-// derived because "does a reader see this number?" is not a question a
-// syntactic walk can answer, and a gate over every site would have to waive
-// the float-valued scoring maths one by one.
-var governedSurfaces = []string{
-	"internal/compose/dealstatus",
-	"internal/compose/network",
-	"internal/compose/meetingbrief",
-	"internal/compose/contact360",
-	"internal/compose/company360",
-}
-
+// Every duration-to-day division is reviewed, including sites outside display
+// packages. Exceptions name a function so another reader in its file is gated.
 func TestOnlyElapsedCountsDaysOfSilence(t *testing.T) {
 	t.Parallel()
-	found := offenders(t)
-	for _, where := range found {
-		t.Errorf("%s divides a duration by 24 to count days. That is the second spelling of a rule "+
-			"shared/kernel/elapsed owns, and the two last disagreed by a day on one screen. "+
-			"Call elapsed.Days(from, to, loc) with the reader zone instead", where)
+	waivers := gatekit.Waive(map[string]string{
+		"internal/shared/kernel/elapsed/elapsed.go:Days":                          "The calendar owner subtracts dates anchored at UTC midnight, so DST cannot shorten a day.",
+		"internal/shared/kernel/elapsed/elapsed.go:FullDaysUntil":                 "Remaining time promises complete periods, so a midnight boundary cannot consume a deadline day.",
+		"internal/compose/briefs/briefscore.go:briefTimingScore":                  "Both operands are date columns anchored at UTC midnight; today was resolved in the installation zone before ranking.",
+		"internal/modules/activities/waitinghorizon.go:derivedWaitingHorizonDays": "The horizon is learned from elapsed reply latencies; calendar rounding would distort the measured distribution.",
+		"internal/modules/activities/scheduledsend.go:validateSchedule":           "The label names a fixed scheduling duration limit, not an activity age or a date difference.",
+		"internal/modules/consent/reviewcontext.go:refuseAnExchangeTooOldToCount": "The refusal names a configured duration window; it does not count dates since the exchange.",
+		"internal/modules/deals/stageprogressionreport.go:observationDays":        "Qualification requires complete observation periods; crossing midnight must not satisfy the minimum evidence window early.",
+		"internal/modules/deals/health.go:daysBetween":                            "Fractional elapsed days feed the health decay curve; rounding to calendar boundaries would change the score discontinuously.",
+		"internal/modules/contacts/leadscore.go:ScoreLeadDetail":                  "Fractional elapsed days feed behavioral decay; a local midnight cannot change the age of a signal abruptly.",
+		"internal/modules/search/graphtrust.go:rankScore":                         "Search freshness is continuous exponential decay rather than a displayed calendar age.",
+		"internal/shared/kernel/relstrength/relstrength.go:Compute":               "Relationship strength decays with elapsed time, so a calendar boundary cannot change its score abruptly.",
+	})
+	defer waivers.AssertAllMatched(t)
+	files := (gatekit.Scope{
+		Roots:   []string{"internal"},
+		Subject: func(_ string, file *ast.File) bool { return len(durationDayFunctions(file)) > 0 },
+	}).Files(t)
+	if len(files) < 10 {
+		t.Fatalf("duration census found only %d source files", len(files))
+	}
+	for _, file := range files {
+		for _, name := range durationDayFunctions(file.File) {
+			key := file.Path + ":" + name
+			if !waivers.Waived(t, key) {
+				t.Errorf("%s divides elapsed hours into days; use elapsed.Days with the record zone or justify this duration", key)
+			}
+		}
 	}
 }
 
-// TestTheGateCanStillSeeItsOwnSubject is the vacuity check.
-//
-// The gate passes by finding nothing, which is also what it does if it walks
-// the wrong tree, compiles a pattern that matches nothing, or is handed a
-// regexp somebody loosened into uselessness. So it asserts that the pattern
-// still recognises the shape it was written for — the exact line the coverage
-// rule used to carry — rather than only that today's tree is clean.
+func durationDayFunctions(file *ast.File) []string {
+	var found []string
+	for _, decl := range file.Decls {
+		name := "package"
+		if fn, ok := decl.(*ast.FuncDecl); ok {
+			name = fn.Name.Name
+		}
+		ast.Inspect(decl, func(node ast.Node) bool {
+			division, ok := node.(*ast.BinaryExpr)
+			if !ok || division.Op != token.QUO || !dayDivisor(division.Y) {
+				return true
+			}
+			call, ok := ast.Unparen(division.X).(*ast.CallExpr)
+			if !ok || len(call.Args) != 0 {
+				return true
+			}
+			method, ok := call.Fun.(*ast.SelectorExpr)
+			if ok && method.Sel.Name == "Hours" {
+				found = append(found, name)
+			}
+			return true
+		})
+	}
+	return found
+}
+
+func dayDivisor(expr ast.Expr) bool {
+	if paren, ok := expr.(*ast.ParenExpr); ok {
+		return dayDivisor(paren.X)
+	}
+	if name, ok := expr.(*ast.Ident); ok {
+		return name.Name == "hoursPerDay"
+	}
+	literal, ok := expr.(*ast.BasicLit)
+	if !ok || (literal.Kind != token.INT && literal.Kind != token.FLOAT) {
+		return false
+	}
+	if literal.Kind == token.INT {
+		value, err := strconv.ParseInt(literal.Value, 0, 64)
+		return err == nil && value == 24
+	}
+	value, err := strconv.ParseFloat(literal.Value, 64)
+	return err == nil && value == 24
+}
+
 func TestTheGateCanStillSeeItsOwnSubject(t *testing.T) {
 	t.Parallel()
-	wasReal := `	days := int(now.Sub(c.LastTouchAt).Hours() / hoursPerDay)`
-	if !durationOverADay.MatchString(wasReal) {
-		t.Error("the pattern no longer matches the line this gate was written to catch, so it is guarding nothing")
-	}
-	if !durationOverADay.MatchString("d.Hours()/24") {
-		t.Error("the pattern no longer matches a bare Hours()/24")
-	}
-	// The walk must reach real files. A governedSurfaces entry pointing at a
-	// directory that no longer exists makes the gate pass by reading nothing,
-	// which is the one way a census fails: it reports the same word, PASS,
-	// over a smaller tree, and no assertion notices.
-	for _, tree := range governedSurfaces {
-		entries, err := os.ReadDir(tree)
+	for _, body := range []string{
+		"d.Hours()/24", "(d.Hours()) / 0x18", "d.Hours() / 2_4", "d.Hours() / hoursPerDay", "d.Hours() / (24)",
+		"d.Hours() / 2.4e1", "d.Hours() /\n24", "func() float64 { return d.Hours()/24 }()",
+	} {
+		file, err := parser.ParseFile(token.NewFileSet(), "seed.go", "package p\nfunc age() { _ = "+body+" }", 0)
 		if err != nil {
-			t.Errorf("governedSurfaces names %s, which cannot be read: %v", tree, err)
-			continue
+			t.Fatal(err)
 		}
-		if !carriesGo(entries) {
-			t.Errorf("governedSurfaces names %s, which holds no Go files: this gate is walking nothing", tree)
-		}
-	}
-}
-
-// carriesGo reports whether a directory holds any Go source at all.
-func carriesGo(entries []os.DirEntry) bool {
-	for _, e := range entries {
-		if !e.IsDir() && strings.HasSuffix(e.Name(), ".go") {
-			return true
+		if len(durationDayFunctions(file)) != 1 {
+			t.Errorf("missed %s", body)
 		}
 	}
-	return false
-}
-
-// offenders walks the governed trees and names every file carrying the shape.
-func offenders(t *testing.T) []string {
-	t.Helper()
-	var out []string
-	for _, tree := range governedSurfaces {
-		err := filepath.WalkDir(tree, func(path string, d os.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			// Test files may legitimately spell the arithmetic to check it.
-			// elapsed's own file needs no exclusion: it lives in
-			// shared/kernel, which no governed package walk reaches.
-			if d.IsDir() || !strings.HasSuffix(path, ".go") ||
-				strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
-				return nil
-			}
-			raw, err := os.ReadFile(path)
-			if err != nil {
-				return err
-			}
-			if durationOverADay.Match(raw) {
-				out = append(out, path)
-			}
-			return nil
-		})
-		if err != nil {
-			t.Fatalf("walking %s: %v", tree, err)
-		}
+	initializer, err := parser.ParseFile(token.NewFileSet(), "seed.go", "package p\nvar age = d.Hours()/24", 0)
+	if err != nil {
+		t.Fatal(err)
 	}
-	return out
+	if got := durationDayFunctions(initializer); len(got) != 1 || got[0] != "package" {
+		t.Fatalf("missed package initializer: %v", got)
+	}
+	file, err := parser.ParseFile(token.NewFileSet(), "seed.go", "package p\n// d.Hours()/24\nfunc age() { _ = d.Hours()/12 }", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(durationDayFunctions(file)) != 0 {
+		t.Error("flagged a comment or an hourly conversion")
+	}
 }

@@ -286,7 +286,7 @@ func TestADateComparisonIsNeverOfferedBetweenInstantsThatReadAlike(t *testing.T)
 // a reader could check — even hours apart, which the old minute-resolution
 // guard would have let through as two different-looking clock times.
 func TestOccurrenceOffersNoValuesWhenTheTwoInstantsReadAlike(t *testing.T) {
-	base := rankInstant.Add(-90*24*time.Hour + 12*time.Hour)
+	base := rankInstant.AddDate(0, 0, -90)
 	first := candidate("a", levelWaiting)
 	first.occurredAt = base
 	second := candidate("b", levelWaiting)

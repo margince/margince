@@ -82,6 +82,7 @@ describe("how long ago an activity happened", () => {
         now,
         t,
         "en",
+        "UTC",
       ),
     ).toBe('elapsed.hours:{"hours":"3"}');
   });
@@ -91,8 +92,8 @@ describe("how long ago an activity happened", () => {
       at: dayOccurredAt("2026-09-14"),
       precision: "day",
     } as const;
-    expect(activityAgo(moment, now, t, "en")).toBe("14/09/2026");
-    expect(activityAgo(moment, now, t, "en", formatDayMonth)).toBe(
+    expect(activityAgo(moment, now, t, "en", "UTC")).toBe("14/09/2026");
+    expect(activityAgo(moment, now, t, "en", "UTC", formatDayMonth)).toBe(
       formatDayMonth(moment.at, "en", "UTC"),
     );
   });

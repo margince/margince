@@ -4,7 +4,7 @@ import { Badge } from "../../design-system/atoms";
 import { CellStrip, type ListColumn } from "../../design-system/listtable";
 import type { BoardMoneyColumn } from "../../design-system/pipelineboard";
 import { FieldGuard } from "../../design-system/rbac";
-import { formatDate, formatDuration, formatMoney } from "../../format/format";
+import { formatAge, formatDate, formatMoney } from "../../format/format";
 import type { Locale, useT } from "../../i18n";
 import { closeDayOf } from "../../lib/closeday";
 import type { StageTotals } from "../../lib/deals.queries";
@@ -186,10 +186,7 @@ export function dealColumns(
         deal.last_activity_at ? (
           <CellStrip>
             <span>
-              {formatDuration(
-                Math.max(0, Date.now() - Date.parse(deal.last_activity_at)),
-                locale,
-              )}
+              {formatAge(deal.last_activity_at, Date.now(), locale, recordZone)}
             </span>
             {deal.stalled && (
               <Badge tone="warning">{t("deal.stalledBadge")}</Badge>
@@ -199,7 +196,7 @@ export function dealColumns(
           <span>{t("deals.lastSignalNone")}</span>
         ),
     },
-    lastMailColumn(t),
+    lastMailColumn(t, recordZone),
     {
       key: "status",
       header: t("lead.status"),
