@@ -13,6 +13,7 @@ import {
 } from "../../components/customfields.form";
 import { EditAction } from "../../components/edit";
 import { LogActivityAction } from "../../components/logactivity.action";
+import { useOwnerPicker } from "../../components/recordowners";
 import { RecordTeam } from "../../components/recordteam";
 import {
   snoozedDueAt,
@@ -33,7 +34,6 @@ import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { NewDealAction } from "../companies/companyactions";
-import { useOwnerPicker } from "../records/recordreferences";
 import { ShareAction } from "../records/share";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
 import { project360Key } from "./project360.key";
