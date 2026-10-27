@@ -163,9 +163,9 @@ func (e *Engine) estimateStep(ctx context.Context, tx pgx.Tx, task Task, step St
 }
 
 // boundedEstimate is the estimate a batch reads before a step's first rows. The
-// count only shows an operator how far the step has to go, so one that cannot
-// finish within estimateLimit leaves the step unestimated, answering
-// measured=false, instead of failing every batch of the step. It runs in a
+// count only shows an operator how far the step has to go. One that cannot
+// finish within estimateLimit leaves the step unestimated and answers
+// measured=false. It does not fail every batch of the step. It runs in a
 // savepoint because a stopped statement aborts the transaction around it.
 func (e *Engine) boundedEstimate(ctx context.Context, tx pgx.Tx, task Task, step Step, p Progress) (estimate int64, capped, measured bool, err error) {
 	if task.Manual {

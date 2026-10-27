@@ -135,9 +135,9 @@ func (e *Engine) Seed(ctx context.Context) error {
 }
 
 // seedStep records a step and nothing more. Its estimate waits for the step's
-// first batch: every new step shares this one transaction, so a count read here
-// for each of them adds up past its ceiling on a large installation, and then
-// no step is recorded and none can start.
+// first batch. Every new step shares this one transaction. A count for each of
+// them adds up past its ceiling on a large installation. Then no step is
+// recorded and none can start.
 func (e *Engine) seedStep(ctx context.Context, tx pgx.Tx, task Task, step Step) error {
 	_, err := tx.Exec(ctx, `INSERT INTO data_task_run
  (task_id,step,run_id,task_version,batch_limit,first_release)
