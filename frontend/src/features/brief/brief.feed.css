@@ -72,7 +72,7 @@
     var(--accent) 220deg,
     transparent 300deg
   );
-  opacity: 0.25;
+  opacity: 0.55;
 }
 .brief-triage-frame:focus {
   outline: none;
@@ -103,6 +103,7 @@
   border: 0;
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-rest);
+  background-image: linear-gradient(180deg, var(--aiLight), transparent 45%);
 }
 /* THE HEAD: why the row is here, whose it is, where it sits and when, as one
    caption line split by dots. */
@@ -245,6 +246,11 @@
 }
 .brief-focus-item:hover {
   color: var(--accentText);
+  background: var(--bgHover);
+}
+.brief-focus-list > li {
+  border-radius: var(--r-sm);
+  overflow: hidden;
 }
 .brief-focus-item:focus-visible {
   outline: var(--focus-ring);
@@ -260,9 +266,10 @@
   block-size: var(--space-6);
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgChip);
-  color: var(--textSecondary);
+  background: var(--accentLight);
+  color: var(--accentText);
   font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
   font-variant-numeric: tabular-nums;
 }
 .brief-focus-item-title {

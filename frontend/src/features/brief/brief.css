@@ -254,6 +254,19 @@
 .brief-morning .glance {
   gap: var(--space-3);
 }
+/* The head is the page's one lit surface: a pane with the shell's two lights,
+   emerald from the near corner and indigo from the far one, so the first
+   thing a reader sees after signing in has a little warmth. */
+.brief-morning > .brief-main > .brief-head {
+  padding: var(--space-8);
+  border: 1px solid var(--paneEdge);
+  border-radius: var(--r-lg);
+  background:
+    radial-gradient(70% 160% at 0% 0%, var(--accentMed), transparent 70%),
+    radial-gradient(60% 160% at 100% 0%, var(--aiChip), transparent 70%),
+    var(--pane);
+  box-shadow: var(--shadow-rest);
+}
 .brief-morning .glance-greeting {
   font: var(--fontDisplayMedium);
 }
