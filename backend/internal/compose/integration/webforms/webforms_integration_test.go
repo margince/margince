@@ -24,11 +24,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
-
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/pkg/extension"
