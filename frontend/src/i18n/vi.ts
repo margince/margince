@@ -162,7 +162,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.mergeRecords":
     "Chuyển các hồ sơ và giá trị được hiển thị sang hồ sơ giữ lại rồi lưu trữ hồ sơ nguồn. Giá trị hiện có của hồ sơ giữ lại được ưu tiên ở những mục được chỉ rõ.",
   "approval.preview.fillLead":
-    "Chỉ điền các trường trống của khách hàng tiềm năng được hiển thị ở trên. Giá trị hiện có và địa chỉ email được giữ nguyên; không tạo hồ sơ thứ hai.",
+    "Chỉ điền các trường trống của lead được hiển thị ở trên. Giá trị hiện có và địa chỉ email được giữ nguyên; không tạo hồ sơ thứ hai.",
   "approval.preview.companyPrivateReadings":
     "Nếu một người có bản tóm tắt cho cả hai công ty, bản của công ty giữ lại được giữ nguyên. Đề xuất đã bỏ qua trên công ty bị loại bỏ có thể xuất hiện lại trên công ty giữ lại.",
   "approval.preview.companyReceipts":
@@ -303,7 +303,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.merge.support_collapsed": "Nguồn gốc dữ liệu trùng lặp bị loại bỏ",
   "approval.merge.support_fields": "Nguồn gốc dữ liệu được chuyển",
   "approval.merge.support_resolutions": "Kết quả xác minh việc làm được chuyển",
-  "approval.capture.target": "Khách hàng tiềm năng hiện có",
+  "approval.capture.target": "Lead hiện có",
   "approval.capture.full_name": "Tên đã ghi nhận",
   "approval.capture.company_name": "Công ty đã ghi nhận",
   "approval.capture.title": "Chức vụ đã ghi nhận",
@@ -566,9 +566,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Khi gửi, hệ thống thêm liên kết hủy đăng ký riêng nếu người nhận có bản ghi tùy chọn phù hợp. Liên kết riêng được tạo khi thực hiện, không phải khi xem xét.",
   "approval.preview.disclosureText": "Thông tin công bố được thêm khi gửi",
   "approval.preview.demoteArchive":
-    "Khôi phục khách hàng tiềm năng về trạng thái Đã tương tác và xóa các liên kết xác định đủ điều kiện. Lưu trữ liên hệ, địa chỉ email, số điện thoại, danh tính kênh và các mối quan hệ; xóa thẻ và tư cách thành viên danh sách. Hoạt động giữ nguyên liên kết.",
+    "Khôi phục lead về trạng thái Đã tương tác và xóa các liên kết xác định đủ điều kiện. Lưu trữ liên hệ, địa chỉ email, số điện thoại, danh tính kênh và các mối quan hệ; xóa thẻ và tư cách thành viên danh sách. Hoạt động giữ nguyên liên kết.",
   "approval.preview.demotePreserve":
-    "Khôi phục khách hàng tiềm năng về trạng thái Đã tương tác và xóa các liên kết xác định đủ điều kiện. Giữ liên hệ hiện có và lịch sử; xóa liên kết ngược đến khách hàng tiềm năng này. Hoạt động giữ nguyên liên kết.",
+    "Khôi phục lead về trạng thái Đã tương tác và xóa các liên kết xác định đủ điều kiện. Giữ liên hệ hiện có và lịch sử; xóa liên kết ngược đến lead này. Hoạt động giữ nguyên liên kết.",
   "approval.preview.relinkPreserve":
     "Các liên kết khác được giữ nguyên. Người tham gia thuộc liên kết liên hệ bị thay thế được chuyển sang liên hệ đích; các mục trùng khớp được gộp.",
   "approval.preview.relinkRetention":
@@ -683,11 +683,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.import.contextTag": "Gắn bản ghi mới vào",
   "approval.import.linkCompany": "Liên kết với công ty",
   "approval.import.linkContact": "Liên kết với liên hệ",
-  "approval.import.linkLead": "Liên kết với khách hàng tiềm năng",
+  "approval.import.linkLead": "Liên kết với lead",
   "approval.import.linkDeal": "Liên kết với cơ hội",
   "approval.import.companyRow": "Liên kết với công ty từ dòng nhập",
   "approval.import.contactRow": "Liên kết với liên hệ từ dòng nhập",
-  "approval.import.leadRow": "Liên kết với khách hàng tiềm năng từ dòng nhập",
+  "approval.import.leadRow": "Liên kết với lead từ dòng nhập",
   "approval.import.dealRow": "Liên kết với cơ hội từ dòng nhập",
   "approval.import.droppedLink": "Bỏ liên kết không xác định được",
   "approval.import.createActivity":
@@ -5382,8 +5382,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.agenda.summary": "{agenda}",
   "brief.agenda.customer_waiting_one": "{count} yêu cầu của khách hàng",
   "brief.agenda.customer_waiting_other": "{count} yêu cầu của khách hàng",
-  "brief.agenda.leads_one": "{count} khách hàng tiềm năng",
-  "brief.agenda.leads_other": "{count} khách hàng tiềm năng",
+  "brief.agenda.leads_one": "{count} lead",
+  "brief.agenda.leads_other": "{count} lead",
   "brief.agenda.deals_at_risk_one": "{count} cơ hội cần xử lý",
   "brief.agenda.deals_at_risk_other": "{count} cơ hội cần xử lý",
   "brief.agenda.meetings_one": "{count} cuộc họp",
@@ -7060,8 +7060,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agent.ticker.read.dealOffers": "Đang tải báo giá của deal",
   "agent.ticker.read.deals": "Đang tải pipeline",
   "agent.ticker.read.dsrs": "Đang tải yêu cầu về quyền riêng tư",
-  "agent.ticker.read.lead": "Đang tải khách hàng tiềm năng",
-  "agent.ticker.read.leads": "Đang tải danh sách khách hàng tiềm năng",
+  "agent.ticker.read.lead": "Đang tải lead",
+  "agent.ticker.read.leads": "Đang tải danh sách lead",
   "agent.ticker.read.contacts": "Đang tải danh bạ",
   "agent.ticker.read.contact": "Đang tải liên hệ",
   "agent.ticker.read.contact360": "Đang tải tổng quan liên hệ",
@@ -7100,7 +7100,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agent.ticker.writeNamed.enrich": "Đang bổ sung thông tin cho {name}",
   "agent.ticker.write.ingest": "Đang nhập dữ liệu",
   "agent.ticker.writeNamed.ingest": "Đang nhập {name}",
-  "agent.ticker.write.leadEdit": "Đang sửa khách hàng tiềm năng",
+  "agent.ticker.write.leadEdit": "Đang sửa lead",
   "agent.ticker.writeNamed.leadEdit": "Đang sửa {name}",
   "agent.ticker.write.siteRead": "Đang đọc trang web",
   "agent.ticker.writeNamed.siteRead": "Đang đọc trang web của {name}",
@@ -16760,7 +16760,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.action.approval_send_email": "Xem xét tin nhắn",
   "magic.action.approval_advance_deal": "Xem xét chuyển giai đoạn",
   "magic.action.approval_promote_lead":
-    "Xem xét chuyển khách hàng tiềm năng thành cơ hội",
+    "Xem xét chuyển đổi lead",
   "magic.action.approval_overnight": "Xem xét đề xuất",
   "approval.commitment.proposalExpiresIn": "Đề xuất hết hạn sau {countdown}",
   "approval.commitment.noDueDay": "Chưa nêu ngày",

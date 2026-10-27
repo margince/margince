@@ -239,6 +239,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "leadSources.leads_one",
   "acqSources.deals_one",
   "users.handover.leads_one",
+  "brief.agenda.leads_one",
   "users.handover.deals_one",
   "contracts.renew.deal",
   "contracts.deal",
