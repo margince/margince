@@ -4,8 +4,12 @@
 package activities
 
 import (
+	"context"
+	"errors"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -101,5 +105,23 @@ func TestOnlyAnOpenUnarchivedReminderIsMoved(t *testing.T) {
 func TestTheReminderClauseQuotesItsAlias(t *testing.T) {
 	if clause := openReminderClause("task alias"); !strings.Contains(clause, `"task alias".kind`) {
 		t.Errorf("the alias is not quoted:\n%s", clause)
+	}
+}
+
+// A caller with no standing moves no reminder.
+//
+// The guard runs before the transaction is touched.
+//
+// That is what lets this test pass a nil one. A refusal reaching the database
+// would be a refusal that had already done work.
+func TestOnlyTheSystemMovesAReminder(t *testing.T) {
+	err := RecomputeRequestReminderReachTx(context.Background(), nil, ids.ActivityID{})
+	if err == nil {
+		t.Fatal("a caller with no standing moved a reminder")
+	}
+	// Either shape is the caller's standing. A bound principal that is not the
+	// system is denied; an unbound one has no standing at all.
+	if !errors.Is(err, apperrors.ErrPermissionDenied) && !strings.Contains(err.Error(), "actor") {
+		t.Errorf("the refusal reads %v, want it about the caller's standing", err)
 	}
 }
