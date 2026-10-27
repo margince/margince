@@ -164,17 +164,6 @@ func createContact(ctx context.Context, tx pgx.Tx, match ContactResolution, spec
 	if err := storekit.RefuseUnknownSeat(ctx, tx, spec.Author); err != nil {
 		return ids.ContactID{}, err
 	}
-	// The source is checked here, where every creation path meets, rather than
-	// at each door. A caller who cannot read the record cannot name it either:
-	// storing it would let them learn an id exists by reading the contact back.
-	//
-	// EnsureVisibleExisting rather than EnsureVisible, so an id no row holds is
-	// refused instead of stored as a link to nothing.
-	if spec.CreatedFromActivityID != nil {
-		if err := auth.EnsureVisibleExisting(ctx, tx, "activity", *spec.CreatedFromActivityID); err != nil {
-			return ids.ContactID{}, err
-		}
-	}
 	provenanceCols, provenanceHolders, base := storekit.ProvenanceInsertFragments(spec.SourceID, spec.Author, []any{
 		id, spec.FullName, spec.FirstName, spec.LastName, spec.Title, spec.OwnerID,
 		addr.Line1, addr.Line2, addr.City, addr.Region, addr.PostalCode, addr.Country,

@@ -547,7 +547,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact
 
-35 columns · primary key `(id)` · referenced by 49 foreign keys
+36 columns · primary key `(id)` · referenced by 49 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -559,6 +559,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `address_postal_code` | `text` |  |  |
 | `address_region` | `text` |  |  |
 | `converted_from_lead_id` | `uuid` |  | Canonical origin pointer if promoted from a lead. |
+| `created_from_activity_id` | `uuid` |  | The note, mail or quick capture this contact was read out of, where one was named at creation. |
 | `entered_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `first_name` | `text` |  |  |
 | `full_name` | `text` | yes | Always present (display name). |
@@ -592,6 +593,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `converted_from_lead_id` | `lead` | deleting the parent keeps this row and clears the link |
+| `created_from_activity_id` | `activity` | deleting the parent keeps this row and clears the link |
 | `merged_into_id` | `contact` | deleting the parent keeps this row and clears the link |
 | `owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `source_author_id` | `app_user` | deleting the parent keeps this row and clears the link |
@@ -612,6 +614,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `contact_pkey`: `unique, btree (id)`
+- `idx_contact_created_from`: `btree (created_from_activity_id) WHERE (created_from_activity_id IS NOT NULL)`
 - `idx_contact_created_keyset`: `btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_contact_dedupe_scan`: `btree (updated_at, id) WHERE (archived_at IS NULL)`
 - `idx_contact_exact_digraph_name_key`: `btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(replace(replace(replace(NORMALIZE(lower(full_name), NFC), 'ä', 'ae'), 'ö', 'oe'), 'ü', 'ue'))), 'ς', 'σ'), '\s+', ' ', 'g'))) WHERE (archived_at IS NULL)`

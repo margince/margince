@@ -116,6 +116,9 @@ func (s *Store) CreateContact(ctx context.Context, in CreateContactInput) (crmco
 
 	var out crmcontracts.Contact
 	err = s.tx(ctx, func(tx pgx.Tx) error {
+		if err := refuseUnreadableSource(ctx, tx, in.CreatedFromActivityID); err != nil {
+			return err
+		}
 		var err error
 		out, err = s.createContactInTx(ctx, tx, in, by, active)
 		return err
@@ -138,6 +141,9 @@ func (s *Store) CreateContactTx(ctx context.Context, tx pgx.Tx, in CreateContact
 	}
 	by, err := s.readyContactCreate(ctx, &in)
 	if err != nil {
+		return crmcontracts.Contact{}, err
+	}
+	if err := refuseUnreadableSource(ctx, tx, in.CreatedFromActivityID); err != nil {
 		return crmcontracts.Contact{}, err
 	}
 	return s.createContactInTx(ctx, tx, in, by, cols.cols)
@@ -345,4 +351,22 @@ func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, sourc
 		}
 	}
 	return ids.Nil, err
+}
+
+// refuseUnreadableSource refuses a create that names a record the caller
+// cannot read.
+//
+// It sits at the two doors that assert the create right, not in the shared
+// creation path: a visibility probe there makes that function read as this
+// package's row resolution, and every writer through it reads as a write that
+// resolved its row the wrong way.
+//
+// EnsureVisibleExisting rather than EnsureVisible, so an id no row holds is
+// refused instead of stored as a link to nothing. Out of scope answers not
+// found, so naming a record cannot tell the caller one exists.
+func refuseUnreadableSource(ctx context.Context, tx pgx.Tx, source *ids.UUID) error {
+	if source == nil {
+		return nil
+	}
+	return auth.EnsureVisibleExisting(ctx, tx, "activity", *source)
 }
