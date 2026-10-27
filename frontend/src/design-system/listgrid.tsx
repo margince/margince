@@ -10,6 +10,7 @@ import { useT } from "../i18n";
 import { Checkbox, type useScrollRegion } from "./atoms";
 import { opensRow } from "./datatable";
 import type { ListColumn, ListSelection } from "./listcolumn";
+import { focusListHome } from "./listfocus";
 import { HeaderCell } from "./listheader";
 import type { SortControl } from "./listsurface";
 import { CELL_STRIP_CLASS } from "./listtable.floors";
@@ -330,7 +331,14 @@ export function EmptyRow({
       {filtered && (
         <>
           {" "}
-          <button type="button" className="lt-linkish" onClick={onClear}>
+          <button
+            type="button"
+            className="lt-linkish"
+            onClick={(event) => {
+              focusListHome(event.currentTarget);
+              onClear();
+            }}
+          >
             {t("table.clearFilters")}
           </button>
         </>

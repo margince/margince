@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
+import { focusListHome } from "../design-system/listfocus";
 import type { ListChip } from "../design-system/listsurface.dials";
 import type { ListColumn } from "../design-system/listtable";
 import { RowTags } from "../design-system/rowtags";
@@ -202,12 +203,13 @@ export function mineEmptyNote<Row>({
     <span>
       {t("list.emptyMine", { unit: t(unit) })}{" "}
       <Button
-        onClick={() =>
+        onClick={(event) => {
+          focusListHome(event.currentTarget);
           state.setQuery((query) => {
             const { owner_id: _mine, ...rest } = query.filters;
             return { ...query, filters: rest };
-          })
-        }
+          });
+        }}
       >
         {t("list.showAll")}
       </Button>

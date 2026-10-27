@@ -380,7 +380,7 @@ export function savableDealQuery(
 
 // The refused dials a chip names, with those names. A dial no chip names is
 // left to the list's own refusal; a stripped partner dial still finds its chip.
-export function refusedDealLabel(
+function refusedDealLabel(
   dials: readonly (string | undefined)[],
   {
     dataChips,
@@ -427,7 +427,10 @@ export function useDealChips({
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
-  const companyName = useAppliedCompanyName(query.filters.company_id);
+  // A company this reader may not search for is not looked up either.
+  const companyName = useAppliedCompanyName(
+    withheld.has("company_id") ? undefined : query.filters.company_id,
+  );
   const leading = useLeadingCurrencies();
   const offered = (chip: { key: string }) => !withheld.has(chip.key);
   const everyDealChip = dealFilterChips(stages, t, companyName);

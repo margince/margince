@@ -184,6 +184,7 @@ function LeadsWorkbench({
     screenDials: LEAD_SCREEN_DIALS,
   });
   const { refused, state } = useRefusalOf(listQuery, withheld);
+  const refusedNames = refusedDialNames(refused, t);
   // The segregation notice, said once under the header: it explains a rule,
   // and a rule read once stays read until its reader signs out.
   const [noteDismissed, setNoteDismissed] = useState(
@@ -241,11 +242,9 @@ function LeadsWorkbench({
         emptyNote={
           refused.length > 0 ? (
             <RefusedFiltersNote
-              message={t("lead.filterRefused", {
-                dial: refusedDialNames(refused, t),
-              })}
+              message={t("lead.filterRefused", { dial: refusedNames })}
               dials={refused}
-              names={refusedDialNames(refused, t)}
+              names={refusedNames}
             />
           ) : (
             mineEmptyNote({ t, state, viewerId, unit: "unit.leads" })

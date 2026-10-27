@@ -7,6 +7,7 @@ import {
   type FilterSpec,
   type ListPage,
   type ListQuery,
+  type ListState,
   ListTable,
   type SavedViewTab,
   useListQuery,
@@ -39,6 +40,8 @@ export function ListTableHarness({
   dataChips,
   scopeKey,
   initialFilters,
+  title,
+  emptyNote,
 }: Readonly<{
   fetchPage: (
     query: ListQuery,
@@ -51,6 +54,8 @@ export function ListTableHarness({
   dataChips?: readonly ListChip[];
   scopeKey?: string;
   initialFilters?: Readonly<Record<string, string>>;
+  title?: string;
+  emptyNote?: (state: ListState<Row>) => ReactNode;
 }>) {
   const state = useListQuery<Row>({
     key: "list-table-harness",
@@ -60,6 +65,8 @@ export function ListTableHarness({
   });
   return (
     <ListTable
+      title={title}
+      emptyNote={emptyNote?.(state)}
       state={state}
       unit="nav.contacts"
       columns={[

@@ -399,6 +399,28 @@ describe("DealsScreen range dials the reader cannot use", () => {
     expect(dealLists().some((url) => url.includes("country="))).toBe(false);
   });
 
+  it("looks up no company a seat without company read cannot open", async () => {
+    const urls: string[] = [];
+    window.location.hash = "#/deals?view=table&company_id=o1";
+    vi.stubGlobal(
+      "fetch",
+      backend({ baseCurrency: "EUR", readsCompanies: false, urls }),
+    );
+    render(
+      <SignedIn>
+        <DealsScreen />
+      </SignedIn>,
+    );
+    expect(
+      await screen.findByText("Your role cannot narrow deals by Company.", {
+        exact: false,
+      }),
+    ).toBeTruthy();
+    expect(
+      urls.filter((url) => new URL(url).pathname.startsWith("/v1/companies")),
+    ).toEqual([]);
+  });
+
   it("leaves a refused dial no chip names to the list's own refusal", async () => {
     window.location.hash = "#/deals?view=table&owner_team_id=t-9";
     vi.stubGlobal(

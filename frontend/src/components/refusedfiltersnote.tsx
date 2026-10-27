@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Button } from "../design-system/atoms";
+import { focusListHome } from "../design-system/listfocus";
 import { useT } from "../i18n";
 import { currentParams, replaceParams } from "../lib/urlstate";
 
@@ -24,7 +25,12 @@ export function RefusedFiltersNote({
   return (
     <span>
       {message}{" "}
-      <Button onClick={() => withoutDials(dials)}>
+      <Button
+        onClick={(event) => {
+          focusListHome(event.currentTarget);
+          withoutDials(dials);
+        }}
+      >
         {t("list.filterRefusedRemove", { dial: names })}
       </Button>
     </span>
