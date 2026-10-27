@@ -14,9 +14,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// A tool write names the people and records it changed as the inbox does. A
+// A tool write names the seats and records it changed as the inbox does. A
 // view in a chat host has no way to look them up.
-func TestAToolWriteNamesThePeopleAndRecordsItChanged(t *testing.T) {
+func TestAToolWriteNamesTheSeatsAndRecordsItChanged(t *testing.T) {
 	e := integration.Setup(t)
 	seats := identity.NewServiceFor(e.DB())
 	for seat, name := range map[ids.UUID]string{e.Rep1: "Ana Rep", e.Rep2: "Sam Rep"} {

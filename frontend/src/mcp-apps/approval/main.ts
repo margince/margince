@@ -69,9 +69,9 @@ const PROPOSERS: Readonly<Record<string, string>> = {
 function proposerOf(proposedBy: string, onBehalfOf: unknown): string {
   const kind = proposedBy.split(":")[0] ?? "";
   const who = PROPOSERS[kind] ?? "someone";
-  const person = asRecord(onBehalfOf);
-  if (person.is_you === true) return `${who} for you`;
-  const name = asText(person.name);
+  const behalf = asRecord(onBehalfOf);
+  if (behalf.is_you === true) return `${who} for you`;
+  const name = asText(behalf.name);
   return name === "" ? who : `${who} for ${name}`;
 }
 

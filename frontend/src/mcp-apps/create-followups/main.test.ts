@@ -380,7 +380,7 @@ describe("a create with nothing to decide", () => {
     after: { kind, text },
   });
 
-  it("names a created task and each field it set, people by name", () => {
+  it("names a created task and each field it set, owners by name", () => {
     const root = created({
       record_type: "activity",
       id: LEAD,

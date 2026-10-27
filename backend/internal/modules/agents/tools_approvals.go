@@ -72,7 +72,7 @@ type StagedApproval struct {
 	// TargetLabel is what the target was called when the change was staged,
 	// the name the decision is taken against.
 	TargetLabel string `json:"target_label,omitempty"`
-	// OnBehalfOf is the person the proposer acted for. read_approval names them.
+	// OnBehalfOf is the seat the proposer acted for. read_approval names them.
 	OnBehalfOf *RecordOwner `json:"on_behalf_of,omitempty"`
 	// Changes names each field the staged change would set, before and after.
 	// It is the inbox's own preview of the change. read_approval carries it
@@ -254,26 +254,26 @@ func (t readApprovalTool) Handle(ctx context.Context, in json.RawMessage) (json.
 		staged.Changes[i].Label = FieldLabel(lang, staged.Changes[i].Field)
 	}
 	if staged.OnBehalfOf != nil {
-		staged.OnBehalfOf = t.namePerson(ctx, staged.OnBehalfOf.ID)
+		staged.OnBehalfOf = t.nameSeat(ctx, staged.OnBehalfOf.ID)
 	}
 	return json.Marshal(staged)
 }
 
-// namePerson names the seat an approval was proposed for. A failed lookup
+// nameSeat names the seat an approval was proposed for. A failed lookup
 // leaves the id and says so, as an unnamed record owner does.
-func (t readApprovalTool) namePerson(ctx context.Context, seat ids.UUID) *RecordOwner {
+func (t readApprovalTool) nameSeat(ctx context.Context, seat ids.UUID) *RecordOwner {
 	me, haveSeat := callerSeat(ctx)
-	person := &RecordOwner{ID: seat, IsYou: haveSeat && seat == me}
+	behalf := &RecordOwner{ID: seat, IsYou: haveSeat && seat == me}
 	if t.seats == nil {
-		return person
+		return behalf
 	}
 	names, err := t.seats(ctx, []ids.UUID{seat})
 	if err != nil {
 		noteWarning(ctx, CodeOwnerNamesUnavailable, ownerNamesUnavailableDetail)
-		return person
+		return behalf
 	}
-	person.Name = names[seat]
-	return person
+	behalf.Name = names[seat]
+	return behalf
 }
 
 // --- decide_approval (🟢 write) ---

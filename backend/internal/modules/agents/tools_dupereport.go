@@ -145,8 +145,8 @@ type createdRecord struct {
 	// TagOffer is present only when the caller proposed a word with offer_tag
 	// and it can be offered. It records an offer; nothing was applied.
 	TagOffer *TagOffer `json:"tag_offer,omitempty"`
-	// Changes is every field the call set, as the record now holds it. Absent
-	// when the fields could not be named, which a warning then says.
+	// Changes names the fields the call set, as the record now holds them.
+	// Absent when the fields could not be named, which a warning then says.
 	Changes []FieldChange `json:"changes,omitempty"`
 }
 
