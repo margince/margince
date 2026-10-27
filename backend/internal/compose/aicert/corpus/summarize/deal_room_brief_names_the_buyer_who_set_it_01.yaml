@@ -4,8 +4,8 @@ site: deal_room_brief
 source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
 # Two buyers in one thread, one of whom sets the unmet condition. A brief that
-# names the wrong buyer sends the seller to the wrong person, and the words
-# alone do not say which one it was.
+# names the wrong buyer sends the seller to the wrong one of them, and the
+# words alone do not say which it was.
 fixture:
   title: Clinical records migration
   state: live
