@@ -213,9 +213,9 @@ describe("ContactLink's labelled email verb", () => {
   });
 });
 
-// A `mailto:` built from an address sends the message around the composer, so
-// ContactLink is the one place allowed to build one, for a reader with no
-// mailbox. Every product source file is read, so a new surface cannot slip by.
+// A `mailto:` built from an address sends the message around the composer.
+// Only ContactLink may build one, for a reader with no mailbox. Every product
+// source file is read, so a new surface cannot slip by.
 describe("an address to write to", () => {
   it("becomes a mailto only inside ContactLink", () => {
     const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
