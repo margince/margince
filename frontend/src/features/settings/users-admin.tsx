@@ -283,6 +283,7 @@ function MembersTable({
 }
 
 function useTeamNames(enabled: boolean): ReadonlyMap<string, string> {
+  // roster-failure: names a member's teams only; nothing here is picked.
   const teams = useRoster("team", enabled);
   const names = new Map<string, string>();
   for (const entry of teams.data ?? []) {

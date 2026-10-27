@@ -58,6 +58,7 @@ const READER = {
 // not carry, not a broken stub.
 function stub(
   roster: ReadonlyArray<{ id: string; display_name: string; status?: string }>,
+  reader = READER,
 ) {
   vi.stubGlobal(
     "fetch",
@@ -66,7 +67,7 @@ function stub(
       // The details card also reads the record's tags; a roster handed back
       // there would draw colleagues as tags.
       const body = pathname.endsWith("/me")
-        ? { user: { id: "u-reader", display_name: "The Reader" }, ...READER }
+        ? { user: { id: "u-reader", display_name: "The Reader" }, ...reader }
         : pathname.includes("/tags")
           ? { data: [], page: { has_more: false, next_cursor: null } }
           : { data: roster, page: { has_more: false, next_cursor: null } };
@@ -397,6 +398,44 @@ describe("the marks under an account's name", () => {
 // answer is legible only if each group keeps its own shape. A menu row that
 // grows a glyph puts its words on a second left edge; a header button that
 // loses its glyph becomes a link among three buttons. Both had happened here.
+// The program opens on the Partner tab, which reads the partner register. A
+// seat that may edit the company but not read partners is told so up front.
+describe("setting up a partner program", () => {
+  async function setUpItem(partner: Array<"read" | "update">) {
+    stub([{ id: "u-owner", display_name: "Mira Voss" }], {
+      authorization: meFixture({
+        allow: { company: ["read", "update"], partner },
+      }).authorization,
+    });
+    const user = userEvent.setup();
+    renderInApp(
+      <CompanyActionBadges
+        company={COMPANY}
+        onOpenHistory={() => undefined}
+        onSetUpPartner={() => undefined}
+      />,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "More actions" }),
+    );
+    return screen.findByRole("button", { name: en["company.partnerSetUp"] });
+  }
+
+  it("is open to a company editor who reads partners, without the partner grant", async () => {
+    const item = await setUpItem(["read"]);
+    await waitFor(() => expect(item.hasAttribute("disabled")).toBe(false));
+  });
+
+  it("is refused, with the reason, to a seat that cannot read partners", async () => {
+    const item = await setUpItem([]);
+    await waitFor(() => expect(item.hasAttribute("disabled")).toBe(true));
+    const describedBy = item.getAttribute("aria-describedby");
+    expect(document.getElementById(describedBy ?? "")?.textContent).toBe(
+      en["company.partnerSetUpUnreadable"],
+    );
+  });
+});
+
 describe("the shape of the header's verbs", () => {
   // The order every record type carries: the four verbs common to all of them
   // first, then what is particular to an account, then the one verb a reader

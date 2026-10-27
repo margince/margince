@@ -1762,6 +1762,7 @@ public.capture_connection.signature_enrich_enabled boolean gen=- def=-
 public.capture_connection.status text NOT NULL gen=- def='disconnected'::text
 public.capture_connection.sync_anchor timestamp with time zone gen=- def=-
 public.capture_connection.sync_cursor jsonb gen=- def=-
+public.capture_connection.sync_revision bigint NOT NULL gen=- def=0
 public.capture_connection.unread_from timestamp with time zone gen=- def=-
 public.capture_connection.unread_to timestamp with time zone gen=- def=-
 public.capture_connection.user_id uuid NOT NULL gen=- def=-
@@ -8501,7 +8502,7 @@ public.web_form.success_message text gen=- def=-
 public.web_form.trg_web_form_updated CREATE TRIGGER trg_web_form_updated BEFORE UPDATE ON public.web_form FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.web_form.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.web_form.version bigint NOT NULL gen=- def=1
-public.web_form.web_form_admission CHECK ((((sender = 'browser'::text) AND (secret_ref IS NULL) AND (cardinality(allowed_origins) > 0)) OR ((sender <> 'browser'::text) AND (secret_ref IS NOT NULL) AND (cardinality(allowed_origins) = 0))))
+public.web_form.web_form_admission CHECK ((((sender = 'browser'::text) AND (secret_ref IS NULL) AND (cardinality(allowed_origins) > 0)) OR ((sender <> 'browser'::text) AND ((secret_ref IS NOT NULL) OR (sender = 'webflow'::text)) AND (cardinality(allowed_origins) = 0))))
 public.web_form.web_form_consent_wording_bounded CHECK (((consent_wording IS NULL) OR (length(consent_wording) <= 2000)))
 public.web_form.web_form_field_map_object CHECK ((jsonb_typeof(field_map) = 'object'::text))
 public.web_form.web_form_form_key_key UNIQUE (form_key)

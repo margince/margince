@@ -77,14 +77,23 @@ function cardStory(forms: WebForm[], allow: GrantSpec = OPERATOR) {
 }
 
 const meta: Meta<typeof WebFormsCard> = {
-  title: "Settings/Data/Integrations/Website forms",
+  title: "Settings/Data/Website forms/Website forms",
   component: WebFormsCard,
 };
 export default meta;
 type Story = StoryObj<typeof WebFormsCard>;
 
+const webflowWaiting: WebForm = {
+  ...serverForm,
+  id: "wf-webflow",
+  name: "Webflow webhook",
+  form_key: "V2ViZmxvd0Zvcm1LZXlTdG9yeTE",
+  sender: "webflow",
+  secret_configured: false,
+};
+
 export const Forms: Story = {
-  render: cardStory([contactForm, serverForm, typeformForm]),
+  render: cardStory([contactForm, serverForm, typeformForm, webflowWaiting]),
 };
 
 export const FormsPhone: Story = {
@@ -126,6 +135,19 @@ export const ServerSetupWithSecret: Story = {
       <WebFormSetupModal
         form={serverForm}
         secret="mwf_c3Rvcnktb25seS1ub3QtYS1yZWFsLXNlY3JldA"
+        origin="https://crm.acme.test"
+        onClose={() => {}}
+      />
+    </StoryProviders>
+  ),
+};
+
+export const TallySetupWithSecret: Story = {
+  render: () => (
+    <StoryProviders>
+      <WebFormSetupModal
+        form={{ ...typeformForm, name: "Tally survey", sender: "tally" }}
+        secret="mwf_dGFsbHktc3Rvcnktb25seS1ub3QtYS1zZWNyZXQ"
         origin="https://crm.acme.test"
         onClose={() => {}}
       />

@@ -340,8 +340,10 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 	// credential (ADR-0063).
 	if _, err := tx.Exec(ctx, `
 		UPDATE capture_sync_state
-		SET next_sync_at = now(), consecutive_failures = 0, last_error_class = NULL
-		WHERE connection_id = $1`, id); err != nil {
+		SET next_sync_at = now(), consecutive_failures = 0, last_error_class = NULL, failing_since = NULL,
+		    last_synced_at = CASE WHEN @rebound THEN NULL ELSE last_synced_at END,
+		    last_success_at = CASE WHEN @rebound THEN NULL ELSE last_success_at END
+		WHERE connection_id = @id`, pgx.NamedArgs{"id": id, "rebound": rebound}); err != nil {
 		return ids.Nil, nil, err
 	}
 	return id, priorRef, nil

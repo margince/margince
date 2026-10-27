@@ -52,7 +52,7 @@ test("names each engagement state in its own words", async () => {
   // those collapses.
   expect(await screen.findByText("Needs reply")).not.toBeNull();
   expect(screen.getByText("Answered")).not.toBeNull();
-  expect(screen.getByText("No reply")).not.toBeNull();
+  expect(screen.getByText("No reply recorded")).not.toBeNull();
   expect(screen.getByText("Not contacted")).not.toBeNull();
   expect(screen.getByText("Went quiet")).not.toBeNull();
 });

@@ -1,4 +1,5 @@
 import type { components } from "../../api/schema";
+import { MailCoverageNotice } from "../../components/mailcoveragenotice";
 import type { ContactTab } from "../../lib/contacttab";
 import { useUrlParams } from "../../lib/urlstate";
 import {
@@ -44,6 +45,7 @@ export function ContactOverview({
         onOpenTasks={openQueue}
       />
       <ContactHowItStands view={view} />
+      <MailCoverageNotice coverage={view.mail_coverage} />
       <div className="pe-overview-grid">
         <div className="pe-overview-column">
           <ContactCommitmentsCard
