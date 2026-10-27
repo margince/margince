@@ -131,6 +131,7 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
   ["decided_by_level", "history.field.decided_by_level"],
   ["disposition", "history.field.disposition"],
   ["link_suggestion", "history.field.link_suggestion"],
+  ["record_link", "history.field.record_link"],
   ["domain", "history.field.domain"],
   ["merged_from_id", "history.field.merged_from_id"],
   ["merged_into_id", "history.field.merged_into_id"],

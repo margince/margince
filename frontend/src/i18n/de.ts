@@ -2218,6 +2218,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.corrected": "Ergebnis korrigiert",
   "history.field.disposition": "Einstufung",
   "history.field.link_suggestion": "Verknüpfungsvorschlag",
+  "history.field.record_link": "Verknüpfung",
   "history.field.domain": "Domain",
   "history.field.merged_from_id": "Zusammengeführt aus",
   "history.field.merged_into_id": "Zusammengeführt in",
@@ -5286,6 +5287,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.filterPriorityAll": "Alle Prioritäten",
   "deals.filterAcquisition": "Quelle",
   "deals.filterAcquisitionAll": "Alle Quellen",
+  "deals.filterLinkType": "Verknüpft als",
+  "deals.filterLinkTypeAll": "Jede Verknüpfungsart",
   "deals.filterForecast": "Prognose",
   "deals.filterForecastAll": "Alle Prognosekategorien",
   "deals.filterStatus": "Status",
@@ -6805,6 +6808,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.host_user_id": "Organisiert von",
   "analytics.field.kind": "Aktivitätstyp",
   "analytics.field.last_activity_at": "Letzte Aktivität",
+  "analytics.field.link_type": "Verknüpft als",
   "analytics.field.lost_reason": "Verlustgrund",
   "analytics.field.meeting_status": "Terminstatus",
   "analytics.field.open_commitments": "Offene Aufgaben",
@@ -14541,6 +14545,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Verknüpfungsvorschlag gemacht oder entschieden",
   "webhooks.event.activity.link_suggestion_changed.when":
     "Eine Erweiterung schlägt vor, zu welchem Datensatz eine Nachricht gehört, oder jemand nimmt einen Vorschlag an oder lehnt ihn ab.",
+  "webhooks.event.record_link.changed.label":
+    "Verknüpfung hinzugefügt oder entfernt",
+  "webhooks.event.record_link.changed.when":
+    "Jemand verknüpft einen Deal, ein Unternehmen oder einen Kontakt mit einem anderen Datensatz oder entfernt eine Verknüpfung.",
   "linkSuggestions.title": "Verknüpfungsvorschläge",
   "linkSuggestions.reason": "{unit}: {reason}",
   "linkSuggestions.target": "{subject} zu {record} ({kind})",
@@ -16508,6 +16516,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.aside.partnerNone": "Keiner",
   "deal.editDetails": "Details bearbeiten",
   "deal.committee.card": "Gremium",
+  "deal.links.card": "Verknüpfungen",
+  "deal.links.add": "Verknüpfung hinzufügen",
+  "deal.links.none": "Dieser Deal ist mit keinem anderen Datensatz verknüpft.",
+  "deal.links.unavailable": "Die Verknüpfungen konnten nicht geladen werden.",
+  "deal.links.outgoing": "Von diesem Deal: {type}",
+  "deal.links.incoming": "Zu diesem Deal: {type}",
+  "deal.links.remove": "Entfernen",
+  "deal.links.type": "Verknüpfungsart",
+  "deal.links.typePlaceholder": "Art wählen",
+  "deal.links.search": "Datensatz zum Verknüpfen suchen",
+  "deal.links.cancel": "Abbrechen",
 
   // The Worklist's own words: the ranked queue, its dials, and the phrase
   // for every fact the server sends as a closed vocabulary.

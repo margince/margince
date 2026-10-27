@@ -633,6 +633,7 @@ const (
 	ProjectCreated                        SubscribableEventType = "project.created"
 	ProjectPhaseChanged                   SubscribableEventType = "project.phase_changed"
 	ProjectUpdated                        SubscribableEventType = "project.updated"
+	RecordLinkChanged                     SubscribableEventType = "record_link.changed"
 	RelationshipNudgeDecided              SubscribableEventType = "relationship_nudge.decided"
 	RetentionApplied                      SubscribableEventType = "retention.applied"
 	RetentionRestricted                   SubscribableEventType = "retention.restricted"
@@ -892,6 +893,8 @@ func (e SubscribableEventType) Valid() bool {
 	case ProjectPhaseChanged:
 		return true
 	case ProjectUpdated:
+		return true
+	case RecordLinkChanged:
 		return true
 	case RelationshipNudgeDecided:
 		return true
@@ -2373,6 +2376,17 @@ type PublicEventProjectUpdated struct {
 	ChangedFields map[string]interface{} `json:"changed_fields"`
 }
 
+// PublicEventRecordLinkChanged Payload for record_link.changed. A typed link was made or removed. The subject is the record the link starts on (deal, company or contact), so only a subscriber who may see that record gets the event. It names the link and its type. It does not name the record on the other end, which that subscriber may not be allowed to see.
+type PublicEventRecordLinkChanged struct {
+	LinkId openapi_types.UUID `json:"link_id"`
+
+	// LinkType A core type word, or `ext:<unit>:<type>`.
+	LinkType string `json:"link_type"`
+
+	// Status One of added or removed.
+	Status string `json:"status"`
+}
+
 // PublicEventRelationshipNudgeDecided Payload for relationship_nudge.decided. A rep set a lapsed contact aside so their own Worklist stops raising them, or put them back (the contacts module's nudge dismissal). The entity is the contact, which is what the judgement is about. Whose morning it was is not on the wire, for the same reason as in activity.disposition_recorded. A dismissal binds a single reader. A consumer reading it as a workspace-wide fact would report one rep's private decision as the contact's own state. The reader stays on the row, for a caller entitled to it.
 type PublicEventRelationshipNudgeDecided struct {
 	// Action What was decided. The undo, `restored`, is carried rather than inferred from a row going quiet. A decision withdrawn is itself a decision. A consumer counting how often reps put relationships down has to see it happen.
@@ -3274,6 +3288,10 @@ func (PublicEventProjectUpdated) EventType() string { return "project.updated" }
 
 func (PublicEventProjectUpdated) EntityType() string { return "project" }
 
+func (PublicEventRecordLinkChanged) EventType() string { return "record_link.changed" }
+
+func (PublicEventRecordLinkChanged) EntityType() string { return "dynamic" }
+
 func (PublicEventRelationshipNudgeDecided) EventType() string { return "relationship_nudge.decided" }
 
 func (PublicEventRelationshipNudgeDecided) EntityType() string { return "contact" }
@@ -3516,6 +3534,7 @@ var PublicEventVersions = map[string]int{
 	"project.created":                           1,
 	"project.phase_changed":                     1,
 	"project.updated":                           1,
+	"record_link.changed":                       1,
 	"relationship_nudge.decided":                1,
 	"retention.applied":                         1,
 	"retention.restricted":                      1,
@@ -3664,6 +3683,7 @@ var PublicEventSamples = map[string]string{
 	"project.created":                           "{\"company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"key\":\"Sample key\",\"name\":\"Sample name\",\"owner_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"phase\":\"Sample phase\"}",
 	"project.phase_changed":                     "{\"from_phase\":\"Sample from phase\",\"reason\":\"Sample reason\",\"to_phase\":\"Sample to phase\"}",
 	"project.updated":                           "{\"changed_fields\":{}}",
+	"record_link.changed":                       "{\"link_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"link_type\":\"Sample link type\",\"status\":\"Sample status\"}",
 	"relationship_nudge.decided":                "{\"action\":\"dismissed\",\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"dismissed_until\":\"2026-10-14T09:12:00Z\",\"permanent\":true}",
 	"retention.applied":                         "{\"action\":\"archive\",\"policy\":\"0190a7f2-0000-7000-8000-000000000010\",\"reason\":\"Sample reason\"}",
 	"retention.restricted":                      "{\"action\":\"restrict\",\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"restricted_until\":\"2026-10-14T09:12:00Z\",\"retention_class\":\"Sample retention class\"}",

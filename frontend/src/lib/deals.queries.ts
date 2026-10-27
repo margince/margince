@@ -98,6 +98,7 @@ export function dealsQueryParams(f: DealFilters) {
     stalled: filters.stalled === "true" ? true : undefined,
     forecast_category: forecastCategoryFilter(filters.forecast_category),
     partner_sourced: filters.partner_sourced === "true" ? true : undefined,
+    link_type: filters.link_type || undefined,
     // Several ids and their mode, out of the one comma-joined string the
     // address carries them in. Spelled by the shared encoder rather than here,
     // so this board and the three lists cannot read one address two ways.

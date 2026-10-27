@@ -25,7 +25,7 @@ are done.
 | 8 | Record page with merged history for extension kinds | Declare a timeline for a record kind. Its rows that reference a contact, company or deal, and the unit's signals about it, show in that record's History beside activities and field changes. | [Record page with merged history for extension kinds](#record-page-with-merged-history-for-extension-kinds) | done |
 | 9 | Search and lists for extension kinds | Find a kind's rows in search. List them in a Shortlist or a Live List, filter them in the Filters screen and keep a saved view over them. | [Search and lists for extension kinds](#search-and-lists-for-extension-kinds) | done |
 | 10 | Suggested-link resolver | Propose which deal, company, contact or project a message belongs to. A reader accepts or rejects each suggestion in a queue on the Worklist. Nothing is filed until they accept. | [Suggested-link resolver](#suggested-link-resolver) | done |
-| 11 | Typed links between core records | Nothing yet. | None yet | planned |
+| 11 | Typed links between core records | Link a deal, company or contact to another with a type from core or from an extension. See the links on the deal page, filter the deal list by link type and group deals by it in Reports. | [Typed links between core records](#typed-links-between-core-records) | done |
 | 12 | Let an unattended extension run land a signal through Ingest | Nothing yet. | None yet | planned |
 
 ```mermaid
@@ -383,3 +383,19 @@ What this feature does not do yet:
   the proposal for that reason.
 - One piece the plan named as a dependency is not in the tree, and nothing here builds it. The seam uses what exists.
 - The queue shows at most 50 suggestions and has no paging.
+
+## Typed links between core records
+
+A user can link a deal, a company or a contact to another with a named type. Core declares three types, and an
+extension declares its own as `ext:<unit>:<type>`, in the registry the record kinds use. The details are in
+[Typed links between records](record-links.md), and the steps are in
+[Declare a link type](../how-to/add-an-extension.md#declare-a-link-type).
+
+| Part | What it does |
+|---|---|
+| `Extension.LinkTypes` | The unit declares a short name, a label and the ends it may join. |
+| `record_link` | One row holds the type and both ends. A link needs write authority over the record it starts on. |
+| Archive and erase | Archiving an end hides the link. Erasing a contact deletes its links. |
+| Screens | A Links card on the deal Overview, a Linked as list filter and a Linked as report split. |
+
+Not done yet: a merge does not carry links to the record that stays, and the filter reads deal links only.

@@ -97,6 +97,7 @@ func sqlLiterals(t *testing.T, path string) []string {
 // sweep satisfy "Art. 17 reaches this table" is exactly the confusion this test
 // exists to prevent.
 var erasureCascadeFiles = []string{
+	"internal/modules/privacy/erasure_links.go",
 	"internal/modules/privacy/commitmentlegacy.go",
 	"internal/modules/privacy/activityerase.go",
 	"internal/modules/privacy/commitmenterasure.go",

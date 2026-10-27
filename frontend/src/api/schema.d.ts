@@ -5773,6 +5773,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/link-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The types a link between two records may have.
+         * @description Core's types, then each extension's, with the records each may start and end on. An
+         *     extension's type is named `ext:<unit>:<type>`.
+         */
+        get: operations["listLinkTypes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/record-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The links of one deal, company or contact, in both directions.
+         * @description Every link that starts or ends on the record, newest first. A link is left out when the
+         *     caller may not read the record on its other end, or when that record is archived, so the
+         *     list never names a record the caller could not open. Archiving the other end hides the link
+         *     and unarchiving brings it back.
+         */
+        get: operations["listRecordLinks"];
+        put?: never;
+        /**
+         * Link one record to another with a type.
+         * @description The caller needs the right to update the record the link starts on, and to read the record
+         *     it ends on. A record the caller cannot read answers `404`. The type must allow both
+         *     records, so `follow_up_of` joins any two, and an extension's type may be narrower.
+         *     Linking a pair that already holds the type is the same success, and linking a record to
+         *     itself is refused.
+         */
+        post: operations["createRecordLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/record-links/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a link.
+         * @description The caller needs the right to update the record the link starts on and must be able to read
+         *     the record it ends on. The link row is deleted and the audit log keeps what it joined.
+         */
+        delete: operations["deleteRecordLink"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/link-suggestions": {
         parameters: {
             query?: never;
@@ -36020,6 +36096,49 @@ export interface components {
              */
             permanent?: boolean;
         };
+        /** @enum {string} */
+        LinkedRecordType: "deal" | "company" | "contact";
+        LinkType: {
+            /** @description A core word, or `ext:<unit>:<type>` for an extension's. */
+            name: string;
+            label: string;
+            /** @description The extension that declared it. Absent for core's own. */
+            unit?: string | null;
+            from: components["schemas"]["LinkedRecordType"][];
+            to: components["schemas"]["LinkedRecordType"][];
+        };
+        LinkTypeList: {
+            data: components["schemas"]["LinkType"][];
+        };
+        NewRecordLink: {
+            from_type: components["schemas"]["LinkedRecordType"];
+            /** Format: uuid */
+            from_id: string;
+            to_type: components["schemas"]["LinkedRecordType"];
+            /** Format: uuid */
+            to_id: string;
+            link_type: string;
+        };
+        RecordLink: {
+            /** Format: uuid */
+            id: string;
+            from_type: components["schemas"]["LinkedRecordType"];
+            /** Format: uuid */
+            from_id: string;
+            /** @description The name of the record the link starts on, for the screen. Absent on a write's answer. */
+            from_name?: string | null;
+            to_type: components["schemas"]["LinkedRecordType"];
+            /** Format: uuid */
+            to_id: string;
+            /** @description The name of the record the link ends on, for the screen. Absent on a write's answer. */
+            to_name?: string | null;
+            link_type: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        RecordLinkList: {
+            data: components["schemas"]["RecordLink"][];
+        };
         LinkSuggestion: {
             /** Format: uuid */
             id: string;
@@ -57263,6 +57382,8 @@ export interface operations {
                 priority?: "low" | "medium" | "high" | "unset";
                 /** @description An acquisition-source key, or `unset` for unclassified deals. A retired key still filters, so history stays reachable after the source leaves the picker. */
                 acquisition_source?: string;
+                /** @description A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter. */
+                link_type?: string;
                 /**
                  * @description Narrow to the records carrying these tags. Repeat the parameter for several.
                  *
@@ -60494,6 +60615,108 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listLinkTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every link type. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkTypeList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listRecordLinks: {
+        parameters: {
+            query: {
+                record_type: "deal" | "company" | "contact";
+                record_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The links of the record the caller may see. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordLinkList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    createRecordLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewRecordLink"];
+            };
+        };
+        responses: {
+            /** @description The link, new or already there. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordLink"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    deleteRecordLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The link is gone. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

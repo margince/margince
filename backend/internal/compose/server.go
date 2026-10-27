@@ -38,6 +38,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/modules/recordlinks"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
@@ -273,6 +274,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		weeklyPlanHandlers: weeklyplan.NewHandlers(
 			weeklyPlanStore(pool), func() time.Time { return time.Now().UTC() },
 		),
+		recordLinksHandlers: recordlinks.NewHandlers(recordlinks.NewStore(InstallationDB(pool))),
 		// The forecast owns its arithmetic and nothing about deals, so the deal
 		// rows and the fiscal window arrive as seams. Row scope is applied in
 		// ForecastDeals, where the caller's authority already sits.

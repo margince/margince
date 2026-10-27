@@ -231,6 +231,7 @@ var dynamicProbeResolved = gatekit.Waive(map[string]string{
 	"consent.changed":     "subject is contact XOR lead (consent/store.go stamps sub.entityType) — both hit the row-scope probe branch",
 	"list.member_added":   "subject is the Shortlist member record — contact, company, deal, lead or project — each hitting the row-scope probe branch, so a subscriber learns of a membership only for a record they may see",
 	"list.member_removed": "subject is the Shortlist member record, as for list.member_added",
+	"record_link.changed": "subject is the record the link starts on — deal, company or contact — each hitting the row-scope probe branch, so a subscriber learns of a link only for a record they may see, and the event names no record on the other end",
 	"retention.applied":   "subject is contact/lead/deal/activity for policy-driven sweeps (all row-scope probed); its ownerless ai_call/ai_call_payload/voice_learning_signal telemetry subjects are the deferredDeliveryEntities half",
 })
 

@@ -233,6 +233,9 @@ func purgeAnonymizedContactJudgments(ctx context.Context, tx pgx.Tx, id ids.UUID
 	if err := purgeSubjectBriefCache(ctx, tx, ids.From[ids.ContactKind](id)); err != nil {
 		return err
 	}
+	if err := deleteSubjectRecordLinks(ctx, tx, id); err != nil {
+		return err
+	}
 	var err error
 	// The JUDGEMENTS made about them: what a classifier concluded their replies
 	// meant with every human correction of it, what was read out of their

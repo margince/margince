@@ -28,10 +28,10 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 334 |
-| Columns | 3965 |
+| Tables | 335 |
+| Columns | 3973 |
 | Foreign keys | 552 |
-| Owning areas | 37 |
+| Owning areas | 38 |
 
 ## The 12 records everything else hangs off
 
@@ -121,6 +121,7 @@ erDiagram
 | [platform](platform.md) | 13 |
 | [privacy](privacy.md) | 2 |
 | [projects](projects.md) | 3 |
+| [recordlinks](recordlinks.md) | 1 |
 | [reporting](reporting.md) | 12 |
 | [search](search.md) | 4 |
 | [signals](signals.md) | 2 |
@@ -380,6 +381,7 @@ erDiagram
 | [`raw_capture`](capture.md#raw_capture) | capture | 7 | 1 |
 | [`record_assignment`](assignments.md#record_assignment) | assignments | 13 | 0 |
 | [`record_grant`](identity.md#record_grant) | identity | 16 | 0 |
+| [`record_link`](recordlinks.md#record_link) | recordlinks | 8 | 0 |
 | [`record_role`](assignments.md#record_role) | assignments | 14 | 1 |
 | [`relationship`](contacts.md#relationship) | contacts | 22 | 1 |
 | [`relationship_nudge_dismissal`](contacts.md#relationship_nudge_dismissal) | contacts | 5 | 0 |

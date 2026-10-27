@@ -934,6 +934,30 @@ outcome, err := tx.Core().LinkSuggestions().Propose(ctx, extension.LinkSuggestio
 The details are in the
 [package overview](../reference/an-extension-cannot-add-its-own-record-k.md#suggested-link-resolver).
 
+## Declare a link type
+
+A unit can name a way to link two core records, such as a deal that follows up another deal. Users then link records
+with it on the deal page, in the deal list filter and in Reports. Declare it as data:
+
+```go
+LinkTypes: []extension.LinkType{{
+	Type:  "follow_up_of",
+	Label: "Follow-up of",
+	From:  []string{"deal"},
+	To:    []string{"deal"},
+}},
+```
+
+- `Type` is a lower-case letter, then lower-case letters, digits or `_`, up to 32 characters. It is stored as
+  `ext:<unit>:<type>`, so two units can use the same word.
+- `From` and `To` name the records the type may join: `deal`, `company` or `contact`. An empty list allows all three.
+- The boot and `make gen` refuse a bad name, a missing label, a wrong end and a type you declare twice.
+- A user links under the rights of both records. Your unit gets no extra right.
+- A report may split a deal population by `link_type`.
+
+The reference unit declares one in `extensions/finance-demo`. The details are in
+[Typed links between records](../reference/record-links.md).
+
 ## Own scheduled jobs
 
 Declare **two kinds** in `api/jobs.yaml`. One is a `dispatcher` on a clock that fans out over every workspace.

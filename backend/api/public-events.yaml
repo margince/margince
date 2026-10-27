@@ -47,6 +47,7 @@ components:
         - list.member_added
         - list.member_removed
         - list.evaluated
+        - record_link.changed
         - commission.accrued
         - commission.decided
         - contract.created
@@ -902,6 +903,27 @@ components:
       required: [reason]
       properties:
         reason: { type: string, description: 'chosen or bulk.' }
+      additionalProperties: false
+
+    PublicEventRecordLinkChanged:
+      type: object
+      x-event-type: record_link.changed
+      x-entity-type: dynamic
+      x-version: 1
+      description: >-
+        Payload for record_link.changed. A typed link was made or removed. The subject is the
+        record the link starts on (deal, company or contact), so only a subscriber who may see
+        that record gets the event. It names the link and its type. It does not name the record
+        on the other end, which that subscriber may not be allowed to see.
+      required: [link_id, link_type, status]
+      properties:
+        link_id: { type: string, format: uuid }
+        link_type:
+          type: string
+          description: A core type word, or `ext:<unit>:<type>`.
+        status:
+          type: string
+          description: One of added or removed.
       additionalProperties: false
 
     PublicEventListEvaluated:

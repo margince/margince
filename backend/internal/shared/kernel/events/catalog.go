@@ -191,6 +191,9 @@ var catalog = map[string]struct {
 	"list.member_added":   {contactStreamEntity, 1},
 	"list.member_removed": {contactStreamEntity, 1},
 	"list.evaluated":      {contactStreamEntity, 1},
+	// A typed link was made or removed. Its subject is the record it starts on,
+	// a deal, company or contact. It rides the contact stream as list events do.
+	"record_link.changed": {contactStreamEntity, 1},
 
 	"reporting.changed":    {identityStreamEntity, 1},
 	"booking_page.updated": {identityStreamEntity, 1},

@@ -2146,6 +2146,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.corrected": "Đã sửa kết quả",
   "history.field.disposition": "Kết quả xử lý",
   "history.field.link_suggestion": "Liên kết gợi ý",
+  "history.field.record_link": "Liên kết",
   "history.field.domain": "Tên miền",
   "history.field.merged_from_id": "Gộp vào từ",
   "history.field.merged_into_id": "Đã gộp vào",
@@ -5153,6 +5154,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.filterPriorityAll": "Mọi mức ưu tiên",
   "deals.filterAcquisition": "Nguồn",
   "deals.filterAcquisitionAll": "Mọi nguồn",
+  "deals.filterLinkType": "Liên kết dạng",
+  "deals.filterLinkTypeAll": "Mọi loại liên kết",
   "deals.filterForecast": "Dự báo",
   "deals.filterForecastAll": "Mọi danh mục dự báo",
   "deals.filterStatus": "Trạng thái",
@@ -6634,6 +6637,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.field.host_user_id": "Chủ trì cuộc họp",
   "analytics.field.kind": "Loại hoạt động",
   "analytics.field.last_activity_at": "Hoạt động gần nhất",
+  "analytics.field.link_type": "Liên kết dạng",
   "analytics.field.lost_reason": "Lý do thua",
   "analytics.field.meeting_status": "Trạng thái cuộc họp",
   "analytics.field.open_commitments": "Việc cần làm đang mở",
@@ -14173,6 +14177,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã đề xuất hoặc quyết định một liên kết gợi ý",
   "webhooks.event.activity.link_suggestion_changed.when":
     "Một tiện ích mở rộng gợi ý thư thuộc bản ghi nào, hoặc có ai đó chấp nhận hay từ chối một gợi ý.",
+  "webhooks.event.record_link.changed.label": "Liên kết được thêm hoặc gỡ",
+  "webhooks.event.record_link.changed.when":
+    "Có ai đó liên kết một deal, công ty hoặc liên hệ với bản ghi khác, hoặc gỡ một liên kết.",
   "linkSuggestions.title": "Liên kết gợi ý",
   "linkSuggestions.reason": "{unit} cho biết: {reason}",
   "linkSuggestions.target": "{subject} vào {record} ({kind})",
@@ -16093,6 +16100,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.aside.partnerNone": "Không có",
   "deal.editDetails": "Sửa chi tiết",
   "deal.committee.card": "Hội đồng mua",
+  "deal.links.card": "Liên kết",
+  "deal.links.add": "Thêm liên kết",
+  "deal.links.none": "Deal này chưa liên kết với bản ghi nào khác.",
+  "deal.links.unavailable": "Không tải được các liên kết.",
+  "deal.links.outgoing": "Từ deal này: {type}",
+  "deal.links.incoming": "Tới deal này: {type}",
+  "deal.links.remove": "Gỡ",
+  "deal.links.type": "Loại liên kết",
+  "deal.links.typePlaceholder": "Chọn loại",
+  "deal.links.search": "Tìm bản ghi cần liên kết",
+  "deal.links.cancel": "Hủy",
 
   // The Worklist's own words: the ranked queue, its dials, and the phrase
   // for every fact the server sends as a closed vocabulary.

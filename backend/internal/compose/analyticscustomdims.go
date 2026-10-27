@@ -18,6 +18,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -80,6 +81,23 @@ func analyticsCatalog(ctx context.Context, tx pgx.Tx) (map[string]reportSpec, er
 		out[key] = spec
 	}
 	return out, nil
+}
+
+// dimensionLinkType is the name a report groups deals by their typed links under.
+const dimensionLinkType = "link_type"
+
+// init gives every deal population the link types a deal holds as a dimension
+// and a filter, because a report's dimension is always one too.
+// The expression reads only links to other live deals, so the deal read right
+// the report already requires covers both ends.
+func init() {
+	for _, spec := range prebuiltReports {
+		if spec.entity == datasource.EntityDeal && spec.table == tableDeal {
+			expr := storekit.DealLinkTypesExpr(colRowID)
+			spec.dimensions[dimensionLinkType] = expr
+			spec.filters[dimensionLinkType] = expr
+		}
+	}
 }
 
 // withCustomDimensions copies a deal spec and adds each column as a dimension

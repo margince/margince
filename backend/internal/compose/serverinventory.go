@@ -183,9 +183,9 @@ type Server struct {
 	// under. Its authority is the parent record's own, so it wires no
 	// permission of its own.
 	assignmentHandlers
-	// The week ahead: the rep's own plan, and the one write their lead has on
-	// it. The week just gone is weeklyHandlers, which shares no table with it.
+	// The week ahead: the rep's own plan. The week just gone is weeklyHandlers.
 	weeklyPlanHandlers
+	recordLinksHandlers
 	forecastHandlers
 	// The share routes. In compose rather than in forecasting because
 	// analytics_share is a compose-owned table and the recompute a snapshot

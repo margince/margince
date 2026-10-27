@@ -17,6 +17,9 @@ import (
 // the kind name. validateExtensionSet already refuses two units whose
 // namespaces open one another, the only way two kinds could share an RBAC object.
 func preflightRecordKinds(exts []extension.Extension) error {
+	if err := preflightLinkTypes(exts); err != nil {
+		return err
+	}
 	for _, e := range exts {
 		seen := make(map[string]bool, len(e.RecordKinds))
 		for _, k := range e.RecordKinds {
@@ -35,6 +38,7 @@ func preflightRecordKinds(exts []extension.Extension) error {
 // registerRecordKinds fills the registry the platform and modules validate
 // against.
 func registerRecordKinds(exts []extension.Extension) {
+	registerLinkTypes(exts)
 	for _, e := range exts {
 		recordkinds.Register(e.Name, e.RecordKinds)
 	}
