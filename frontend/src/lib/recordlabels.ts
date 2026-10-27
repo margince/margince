@@ -67,11 +67,25 @@ export function signalTone(severity: string): "warning" | "danger" | undefined {
     : undefined;
 }
 
+type ProjectStakeholderRole =
+  components["schemas"]["SetProjectStakeholderRequest"]["role"];
+
+// The roles a project seats beyond a deal's. The rest of the project request's
+// roles are the deal vocabulary, so the contract types both maps.
+type DeliveryRole =
+  | "sponsor"
+  | "project_lead"
+  | "delivery_lead"
+  | "subject_matter_expert";
+
 // The deal-stakeholder roles worth a word. `role` is free text on the wire
 // (the enum is an unminted contract extension, DEAL-EXT-5). A label stands
 // alone, so it takes the sentence-case keys; `co.role.*` is the same word for
 // the middle of a phrase ("Thiếu {role}").
-const DEAL_ROLE_LABELS: Record<string, MessageKey> = {
+const DEAL_ROLE_LABELS: Record<
+  Exclude<ProjectStakeholderRole, DeliveryRole>,
+  MessageKey
+> = {
   champion: "co.roleLabel.champion",
   economic_buyer: "co.roleLabel.economic_buyer",
   blocker: "co.roleLabel.blocker",
@@ -88,9 +102,8 @@ const DEAL_ROLE_LABELS: Record<string, MessageKey> = {
  * about companies.
  */
 export function dealRoleLabel(role: string, t: (key: MessageKey) => string) {
-  const key = Object.hasOwn(DEAL_ROLE_LABELS, role)
-    ? DEAL_ROLE_LABELS[role]
-    : undefined;
+  const labels: Readonly<Record<string, MessageKey>> = DEAL_ROLE_LABELS;
+  const key = Object.hasOwn(labels, role) ? labels[role] : undefined;
   return key ? t(key) : role.replace(/_/g, " ");
 }
 
@@ -125,10 +138,10 @@ export function roleFromTyped(
   return role ?? text.trim();
 }
 
-// The delivery roles a project adds to the deal-stakeholder vocabulary. The
-// five deal roles fall through to their own labels below, so one word names a
-// champion on a deal and on the project it became.
-const PROJECT_ROLE_LABELS: Record<string, MessageKey> = {
+// Keyed by the request's own role, so tsc fails when the contract adds or drops
+// one. The deal roles keep their labels: one word names a champion on both.
+const PROJECT_ROLE_LABELS: Record<ProjectStakeholderRole, MessageKey> = {
+  ...DEAL_ROLE_LABELS,
   sponsor: "project.role.sponsor",
   project_lead: "project.role.project_lead",
   delivery_lead: "project.role.delivery_lead",
@@ -147,11 +160,21 @@ export function projectRoleLabel(
   role: string,
   t: (key: MessageKey) => string,
 ): string {
-  const key = Object.hasOwn(PROJECT_ROLE_LABELS, role)
-    ? PROJECT_ROLE_LABELS[role]
-    : undefined;
+  const labels: Readonly<Record<string, MessageKey>> = PROJECT_ROLE_LABELS;
+  const key = Object.hasOwn(labels, role) ? labels[role] : undefined;
   return key ? t(key) : dealRoleLabel(role, t);
 }
+
+/** Whether `value` names a seat the project stakeholder request accepts. */
+export function isProjectStakeholderRole(
+  value: string,
+): value is ProjectStakeholderRole {
+  return Object.hasOwn(PROJECT_ROLE_LABELS, value);
+}
+
+/** The project seats in the order the contract declares them. */
+export const PROJECT_STAKEHOLDER_ROLES: readonly ProjectStakeholderRole[] =
+  Object.keys(PROJECT_ROLE_LABELS).filter(isProjectStakeholderRole);
 
 // A billing contact's capacities, which the server refuses a fourth of.
 const BILLING_ROLE_LABELS: Record<
@@ -179,7 +202,7 @@ export const DEAL_ROLES: RoleVocabulary = {
 };
 
 export const PROJECT_ROLES: RoleVocabulary = {
-  keys: [...Object.keys(PROJECT_ROLE_LABELS), ...Object.keys(DEAL_ROLE_LABELS)],
+  keys: PROJECT_STAKEHOLDER_ROLES,
   label: projectRoleLabel,
 };
 
