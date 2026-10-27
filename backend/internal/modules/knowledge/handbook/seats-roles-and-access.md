@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go -->
+<!-- describes: frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx -->
 # Seats, roles and who can see what
 
 What you can do in Margince is decided by three things, and one cannot stand in for another:
@@ -206,6 +206,8 @@ A responsibility role controls nothing:
 - It gives no access to the record, and takes none away.
 - It does not change the owner. Nothing links the owner to the **Account manager** role, so the owner may hold it, or someone else may.
 - A role you turn off stays on the records that carry it, but nobody can be given it again.
+
+You can give a responsibility to a colleague who was invited but has not signed in yet. The **Who** search marks them "Invited, not signed in yet". It finds a name with or without its marks, so "Thang" finds "Thắng". Only a colleague with a Margince account can be given a responsibility, so ask an admin to invite anyone the search does not find.
 
 Margince comes with these responsibility roles: **Account manager**, **Sales engineer**, **Delivery lead**, **Project manager**, **Technical contact**, **Executive sponsor** and **Support team**. Admin and Ops can rename them and add more. **Settings → Responsibility roles** marks each one **Built-in** when it comes with Margince, or **Custom** when someone added it.
 

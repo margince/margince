@@ -44,6 +44,7 @@ func toContractConnection(v capture.ConnectionView) crmcontracts.CaptureConnecti
 		c.SyncCursor = &s
 	}
 	c.LastSyncedAt = v.LastSyncedAt
+	c.LastSuccessAt = v.LastSuccessAt
 	c.LastSyncErrorClass = v.LastErrorClass
 	c.SyncFailingSince = v.FailingSince
 	c.NextSyncDueAt = v.NextSyncDueAt

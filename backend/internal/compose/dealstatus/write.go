@@ -36,10 +36,11 @@ type sentence = crmcontracts.CompanyBriefSentence
 // section of this card nobody could check.
 func composeDeterministic(f facts, mv crmcontracts.DealStatusCardMove) crmcontracts.DealStatusCard {
 	out := crmcontracts.DealStatusCard{
-		DealId:      f.deal.Id,
-		GeneratedAt: f.now,
-		GeneratedBy: crmcontracts.WrittenByDeterministic,
-		Story:       crmcontracts.DealStatusCardSection{Sentences: storyLines(f)},
+		DealId:       f.deal.Id,
+		MailCoverage: f.mailCoverage,
+		GeneratedAt:  f.now,
+		GeneratedBy:  crmcontracts.WrittenByDeterministic,
+		Story:        crmcontracts.DealStatusCardSection{Sentences: storyLines(f)},
 	}
 	if blocker := blockerLines(f); len(blocker) > 0 {
 		out.Blocker = &crmcontracts.DealStatusCardSection{Sentences: blocker}

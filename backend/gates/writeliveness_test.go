@@ -183,7 +183,6 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	// THE WRITE CANNOT REACH A RETIRED ROW, because of what it is rather than
 	// because of a predicate. Each says which fact makes that true.
 	"internal/modules/capture:limitLinkLessAudience":      "the activity was INSERTed by this same transaction a few statements earlier, so there is no archived row for it to find — the function's own check is that exactly one row moved",
-	"internal/modules/capture:commitSyncCursor":           "fenced by the generation, not by liveness: withdrawing a connection bumps it, so a sync that started before the withdrawal finds its generation gone and reports itself superseded instead of writing a watermark onto a retired grant",
 	"internal/modules/capture:AdvanceChannelPollOffsetTx": "the poller's watermark for a connection its own live selection handed it, and the statement only ever moves the offset FORWARD (`poll_offset < $3`), so a late write from a retired cycle matches nothing",
 	"internal/modules/capture:backfillWorkspace":          "a one-time relocation of credential material out of the `auth` column and into the vault. It MUST reach withdrawn connections: leaving their secrets in a column the vault was introduced to empty is the defect, and the row is claimed with `credential_ref IS NULL` so two boots relocate once",
 

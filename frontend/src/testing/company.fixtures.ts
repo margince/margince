@@ -241,6 +241,7 @@ export async function withSession(answer: Response): Promise<Response> {
         deal: ["read", "create", "update"],
         relationship: ["read", "create", "update", "delete"],
         activity: ["read", "create"],
+        partner: ["read"],
       },
     }),
   );

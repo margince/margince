@@ -5,13 +5,14 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { EmptyState, Field, TextInput } from "../../design-system/atoms";
+import { EmptyState, Field } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ChoiceList } from "../../design-system/choicelist";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { useSaveDraft } from "../../design-system/savepage";
 import { StatusBadge } from "../../design-system/statusbadge";
+import { clockOrBlank, TimeInput } from "../../design-system/timeinput";
 import { TimezoneSelect } from "../../design-system/timezoneselect";
 import { useToast } from "../../design-system/toast";
 import { timezoneOption, viewerZone } from "../../format/timezone";
@@ -247,10 +248,9 @@ function HoursFields({
       <div className="form-row meeting-hours">
         <Field label={t("workingHours.from")}>
           {(control) => (
-            <TextInput
+            <TimeInput
               {...control}
-              type="time"
-              value={value.start_time}
+              value={clockOrBlank(value.start_time)}
               onChange={(event) =>
                 onChange({ ...value, start_time: event.target.value })
               }
@@ -259,10 +259,10 @@ function HoursFields({
         </Field>
         <Field label={t("workingHours.until")}>
           {(control) => (
-            <TextInput
+            <TimeInput
               {...control}
-              type="time"
-              value={value.end_time}
+              untilMidnight
+              value={clockOrBlank(value.end_time, true)}
               onChange={(event) =>
                 onChange({ ...value, end_time: event.target.value })
               }

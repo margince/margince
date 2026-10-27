@@ -28,7 +28,8 @@ func requestForMove(f facts) (crmcontracts.Activity, bool, bool) {
 func requestBasis(f facts, source crmcontracts.Activity, kind string) *crmcontracts.WorkEvidenceBasis {
 	return &crmcontracts.WorkEvidenceBasis{
 		Kind: kind, Scope: linkDeal, SourceActivityId: source.Id,
-		SourceAt: source.OccurredAt, SourcePrecision: source.OccurredPrecision,
+		MailCoverage: f.mailCoverage,
+		SourceAt:     source.OccurredAt, SourcePrecision: source.OccurredPrecision,
 		SourceVersion: source.Version, EvaluatedAt: f.now, PolicyVersion: ProjectionVersion,
 	}
 }
