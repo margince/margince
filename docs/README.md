@@ -85,6 +85,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [add-an-endpoint.md](how-to/add-an-endpoint.md): add or change an API call.
 - [add-a-module.md](how-to/add-a-module.md): add a module, or link two modules.
 - [add-a-job.md](how-to/add-a-job.md): add a job.
+- [add-a-setting.md](how-to/add-a-setting.md): add, rename or remove a setting.
 - [add-an-rbac-object.md](how-to/add-an-rbac-object.md): add a new kind of record to RBAC.
 - [create-a-workflow.md](how-to/create-a-workflow.md): add a new starter workflow.
 - [apply-migrations.md](how-to/apply-migrations.md): write and run a database migration.
