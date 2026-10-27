@@ -19828,6 +19828,24 @@ func (e UpdateTagRequestColor) Valid() bool {
 	}
 }
 
+// Defines values for UpdateWebFormRequestState.
+const (
+	UpdateWebFormRequestStateActive UpdateWebFormRequestState = "active"
+	UpdateWebFormRequestStatePaused UpdateWebFormRequestState = "paused"
+)
+
+// Valid indicates whether the value is a known member of the UpdateWebFormRequestState enum.
+func (e UpdateWebFormRequestState) Valid() bool {
+	switch e {
+	case UpdateWebFormRequestStateActive:
+		return true
+	case UpdateWebFormRequestStatePaused:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateWebhookSubscriptionRequestState.
 const (
 	UpdateWebhookSubscriptionRequestStateActive UpdateWebhookSubscriptionRequestState = "active"
@@ -20620,6 +20638,84 @@ func (e VoiceProfileVersionStatus) Valid() bool {
 	case VoiceProfileVersionStatusRejected:
 		return true
 	case VoiceProfileVersionStatusSuperseded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebFormState.
+const (
+	WebFormStateActive WebFormState = "active"
+	WebFormStatePaused WebFormState = "paused"
+)
+
+// Valid indicates whether the value is a known member of the WebFormState enum.
+func (e WebFormState) Valid() bool {
+	switch e {
+	case WebFormStateActive:
+		return true
+	case WebFormStatePaused:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebFormCreatedState.
+const (
+	WebFormCreatedStateActive WebFormCreatedState = "active"
+	WebFormCreatedStatePaused WebFormCreatedState = "paused"
+)
+
+// Valid indicates whether the value is a known member of the WebFormCreatedState enum.
+func (e WebFormCreatedState) Valid() bool {
+	switch e {
+	case WebFormCreatedStateActive:
+		return true
+	case WebFormCreatedStatePaused:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebFormReceiptStatus.
+const (
+	WebFormReceiptStatusReceived WebFormReceiptStatus = "received"
+)
+
+// Valid indicates whether the value is a known member of the WebFormReceiptStatus enum.
+func (e WebFormReceiptStatus) Valid() bool {
+	switch e {
+	case WebFormReceiptStatusReceived:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebFormSender.
+const (
+	WebFormSenderBrowser  WebFormSender = "browser"
+	WebFormSenderServer   WebFormSender = "server"
+	WebFormSenderTally    WebFormSender = "tally"
+	WebFormSenderTypeform WebFormSender = "typeform"
+	WebFormSenderWebflow  WebFormSender = "webflow"
+)
+
+// Valid indicates whether the value is a known member of the WebFormSender enum.
+func (e WebFormSender) Valid() bool {
+	switch e {
+	case WebFormSenderBrowser:
+		return true
+	case WebFormSenderServer:
+		return true
+	case WebFormSenderTally:
+		return true
+	case WebFormSenderTypeform:
+		return true
+	case WebFormSenderWebflow:
 		return true
 	default:
 		return false
@@ -35151,6 +35247,12 @@ type Contact360 struct {
 	// ConversationMemory Threads and meetings as ENTITIES, condensed — what the conversation was about, not the transport events it was made of (ADR-0097 D3). The Activity tab remains the complete raw ledger; a summary never replaces it and never leaks a withheld activity.
 	ConversationMemory *[]ConversationMemoryEntry `json:"conversation_memory,omitempty"`
 
+	// CreatedBy Who created the contact, from its earliest create audit row: for an agent, the
+	// colleague it worked for and the tool it was typed through, each when the row
+	// records it, which `captured_by` cannot say. Absent when no create row is known; a reader says "unknown" for an
+	// absent value and never "System".
+	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
+
 	// DeadAddresses The contact's email addresses whose latest delivery hard-bounced with no clean delivery since — derived from the send ledger at read time, never stored, so a later send that arrives clears the mark on its own. Lowercased, as contact emails are stored. Absent when the caller has no activity grant, named in `sections_omitted`.
 	DeadAddresses *[]string `json:"dead_addresses,omitempty"`
 	DealRoles     *struct {
@@ -37569,6 +37671,30 @@ type CreateVoiceBuildRequestReason string
 // CreateVoiceProfileRequest defines model for CreateVoiceProfileRequest.
 type CreateVoiceProfileRequest struct {
 	PersonalityMd *string `json:"personality_md,omitempty"`
+}
+
+// CreateWebFormRequest defines model for CreateWebFormRequest.
+type CreateWebFormRequest struct {
+	// AllowedOrigins Required, and only allowed, for a `browser` form.
+	AllowedOrigins       *[]string           `json:"allowed_origins,omitempty"`
+	ConsentPolicyVersion *string             `json:"consent_policy_version,omitempty"`
+	ConsentRequired      *bool               `json:"consent_required,omitempty"`
+	ConsentWording       *string             `json:"consent_wording,omitempty"`
+	FieldMap             *map[string]string  `json:"field_map,omitempty"`
+	LeadOrigin           *string             `json:"lead_origin,omitempty"`
+	Name                 string              `json:"name"`
+	OwnerId              *openapi_types.UUID `json:"owner_id,omitempty"`
+	RedirectUrl          *string             `json:"redirect_url,omitempty"`
+
+	// Sender Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
+	// allowed website, with spam checks. `server`: a server signing with this form's secret.
+	// `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
+	// builder computes with the secret stored as `sender_secret`.
+	Sender WebFormSender `json:"sender"`
+
+	// SenderSecret The secret a builder signs with. Required for `webflow`, `typeform` and `tally`; refused for any other sender.
+	SenderSecret   *string `json:"sender_secret,omitempty"`
+	SuccessMessage *string `json:"success_message,omitempty"`
 }
 
 // CreateWebhookSubscriptionRequest defines model for CreateWebhookSubscriptionRequest.
@@ -40604,7 +40730,8 @@ type HealthDimension struct {
 	// dimension the client rates itself.
 	//
 	// - `never_written`: no message from them and no meeting with them, ever.
-	// - `quiet`: no message from them and no meeting with them for `days` days.
+	// - `quiet`: no message from them and no meeting with them for `days` days, counted from
+	//   `at`, the last of the two.
 	// - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
 	// - `last_met`: in touch through a meeting `days` days ago.
 	// - `single_threaded`: in touch, but one contact carries the whole account.
@@ -40624,15 +40751,16 @@ type HealthDimensionRating string
 // HealthDimensionReasonCode Which sentence `reason` is, so a client can say it in the reader's language. Absent on a
 // dimension the client rates itself.
 //
-// - `never_written`: no message from them and no meeting with them, ever.
-// - `quiet`: no message from them and no meeting with them for `days` days.
-// - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
-// - `last_met`: in touch through a meeting `days` days ago.
-// - `single_threaded`: in touch, but one contact carries the whole account.
-// - `several_contacts`: `count` contacts here are in touch with us.
-// - `deals_all_stalled`: all `count` open deals have stalled.
-// - `deals_some_stalled`: `count` of `total` open deals have stalled.
-// - `deals_none_stalled`: `count` open deals, none stalled.
+//   - `never_written`: no message from them and no meeting with them, ever.
+//   - `quiet`: no message from them and no meeting with them for `days` days, counted from
+//     `at`, the last of the two.
+//   - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
+//   - `last_met`: in touch through a meeting `days` days ago.
+//   - `single_threaded`: in touch, but one contact carries the whole account.
+//   - `several_contacts`: `count` contacts here are in touch with us.
+//   - `deals_all_stalled`: all `count` open deals have stalled.
+//   - `deals_some_stalled`: `count` of `total` open deals have stalled.
+//   - `deals_none_stalled`: `count` open deals, none stalled.
 type HealthDimensionReasonCode string
 
 // HealthDimensionReasonParams The values the reason names. Each code lists which it reads.
@@ -53960,6 +54088,25 @@ type UpdateVoiceProfileRequest struct {
 	PersonalityMd       *string `json:"personality_md,omitempty"`
 }
 
+// UpdateWebFormRequest defines model for UpdateWebFormRequest.
+type UpdateWebFormRequest struct {
+	AllowedOrigins       *[]string                  `json:"allowed_origins,omitempty"`
+	ConsentPolicyVersion *string                    `json:"consent_policy_version,omitempty"`
+	ConsentRequired      *bool                      `json:"consent_required,omitempty"`
+	ConsentWording       *string                    `json:"consent_wording,omitempty"`
+	FieldMap             *map[string]string         `json:"field_map,omitempty"`
+	LeadOrigin           *string                    `json:"lead_origin,omitempty"`
+	Name                 *string                    `json:"name,omitempty"`
+	OwnerId              *openapi_types.UUID        `json:"owner_id,omitempty"`
+	RedirectUrl          *string                    `json:"redirect_url,omitempty"`
+	SenderSecret         *string                    `json:"sender_secret,omitempty"`
+	State                *UpdateWebFormRequestState `json:"state,omitempty"`
+	SuccessMessage       *string                    `json:"success_message,omitempty"`
+}
+
+// UpdateWebFormRequestState defines model for UpdateWebFormRequest.State.
+type UpdateWebFormRequestState string
+
 // UpdateWebhookSubscriptionRequest A partial update; omitted fields keep their stored value. `custom_headers` replaces the whole set; `body_template: null` returns to the standard envelope.
 type UpdateWebhookSubscriptionRequest struct {
 	// BodyContentType The Content-Type of a templated body; null means application/json.
@@ -54473,6 +54620,137 @@ type VoiceReviewReason struct {
 	Text   string             `json:"text"`
 	Values map[string]float64 `json:"values"`
 }
+
+// WebForm A website form (`web_form`): a public intake address that turns a submission into a lead. No secret is ever returned here; `secret_configured` says one is stored.
+type WebForm struct {
+	// AllowedOrigins The websites a `browser` form takes posts from, as origins (`https://example.com`).
+	AllowedOrigins       []string   `json:"allowed_origins"`
+	ArchivedAt           *time.Time `json:"archived_at,omitempty"`
+	ConsentPolicyVersion *string    `json:"consent_policy_version,omitempty"`
+
+	// ConsentRequired A submission without `consent` ticked is refused with 422.
+	ConsentRequired bool `json:"consent_required"`
+
+	// ConsentWording The consent wording the form shows, written on each lead's timeline as evidence.
+	ConsentWording *string   `json:"consent_wording,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+
+	// FieldMap The sender's field names mapped to lead fields, for names the defaults do not already read.
+	FieldMap map[string]string `json:"field_map"`
+
+	// FormKey The last segment of the intake address. Public; it is an address, not a credential.
+	FormKey string             `json:"form_key"`
+	Id      openapi_types.UUID `json:"id"`
+
+	// LeadOrigin The `/lead-origins` key every lead from this form carries.
+	LeadOrigin *string `json:"lead_origin,omitempty"`
+	Name       string  `json:"name"`
+
+	// OwnerId Who owns the leads this form creates; null leaves them in the unassigned queue.
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// RedirectUrl Where a plain HTML post is sent after a submission.
+	RedirectUrl      *string `json:"redirect_url,omitempty"`
+	SecretConfigured bool    `json:"secret_configured"`
+
+	// Sender Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
+	// allowed website, with spam checks. `server`: a server signing with this form's secret.
+	// `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
+	// builder computes with the secret stored as `sender_secret`.
+	Sender         WebFormSender `json:"sender"`
+	State          WebFormState  `json:"state"`
+	SuccessMessage *string       `json:"success_message,omitempty"`
+	UpdatedAt      time.Time     `json:"updated_at"`
+
+	// Version Optimistic-concurrency version; echo it in If-Match on update.
+	Version int64 `json:"version"`
+}
+
+// WebFormState defines model for WebForm.State.
+type WebFormState string
+
+// WebFormCreated defines model for WebFormCreated.
+type WebFormCreated struct {
+	// AllowedOrigins The websites a `browser` form takes posts from, as origins (`https://example.com`).
+	AllowedOrigins       []string   `json:"allowed_origins"`
+	ArchivedAt           *time.Time `json:"archived_at,omitempty"`
+	ConsentPolicyVersion *string    `json:"consent_policy_version,omitempty"`
+
+	// ConsentRequired A submission without `consent` ticked is refused with 422.
+	ConsentRequired bool `json:"consent_required"`
+
+	// ConsentWording The consent wording the form shows, written on each lead's timeline as evidence.
+	ConsentWording *string   `json:"consent_wording,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+
+	// FieldMap The sender's field names mapped to lead fields, for names the defaults do not already read.
+	FieldMap map[string]string `json:"field_map"`
+
+	// FormKey The last segment of the intake address. Public; it is an address, not a credential.
+	FormKey string             `json:"form_key"`
+	Id      openapi_types.UUID `json:"id"`
+
+	// LeadOrigin The `/lead-origins` key every lead from this form carries.
+	LeadOrigin *string `json:"lead_origin,omitempty"`
+	Name       string  `json:"name"`
+
+	// OwnerId Who owns the leads this form creates; null leaves them in the unassigned queue.
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// RedirectUrl Where a plain HTML post is sent after a submission.
+	RedirectUrl      *string `json:"redirect_url,omitempty"`
+	SecretConfigured bool    `json:"secret_configured"`
+
+	// Sender Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
+	// allowed website, with spam checks. `server`: a server signing with this form's secret.
+	// `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
+	// builder computes with the secret stored as `sender_secret`.
+	Sender WebFormSender `json:"sender"`
+
+	// SigningSecret A `server` form's signing secret, shown this once.
+	SigningSecret  *string             `json:"signing_secret,omitempty"`
+	State          WebFormCreatedState `json:"state"`
+	SuccessMessage *string             `json:"success_message,omitempty"`
+	UpdatedAt      time.Time           `json:"updated_at"`
+
+	// Version Optimistic-concurrency version; echo it in If-Match on update.
+	Version int64 `json:"version"`
+}
+
+// WebFormCreatedState defines model for WebFormCreated.State.
+type WebFormCreatedState string
+
+// WebFormFields The submitted fields. Read by name: `email` (required), `full_name` or `first_name` and
+// `last_name`, `phone`, `company`, `title`, `message`, `consent`, plus `page_url`,
+// `referrer` and `utm_*`. Common spellings (`name`, `e-mail`, `your-email`) read too, and
+// the form's `field_map` names the rest. Every other field is kept on the lead's timeline.
+// Fields starting `_mrg_` steer the spam checks and are never stored.
+type WebFormFields map[string]interface{}
+
+// WebFormListResponse defines model for WebFormListResponse.
+type WebFormListResponse struct {
+	Data []WebForm `json:"data"`
+
+	// SecretsAvailable Whether this installation can store a secret, which every sender but `browser` needs.
+	SecretsAvailable bool `json:"secrets_available"`
+}
+
+// WebFormReceipt defines model for WebFormReceipt.
+type WebFormReceipt struct {
+	// Message The form's success message.
+	Message     *string              `json:"message,omitempty"`
+	RedirectUrl *string              `json:"redirect_url,omitempty"`
+	Status      WebFormReceiptStatus `json:"status"`
+}
+
+// WebFormReceiptStatus defines model for WebFormReceipt.Status.
+type WebFormReceiptStatus string
+
+// WebFormSender Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
+// allowed website, with spam checks. `server`: a server signing with this form's secret.
+// `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
+// builder computes with the secret stored as `sender_secret`.
+type WebFormSender string
 
 // WebhookBodyContentType The Content-Type of a templated body; null means application/json.
 type WebhookBodyContentType string
@@ -63920,6 +64198,22 @@ type RollbackVoiceProfileVersionParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ListWebFormsParams defines parameters for ListWebForms.
+type ListWebFormsParams struct {
+	// IncludeArchived Include soft-deleted (archived) rows. Default false.
+	IncludeArchived *IncludeArchived `form:"include_archived,omitempty" json:"include_archived,omitempty"`
+}
+
+// UpdateWebFormParams defines parameters for UpdateWebForm.
+type UpdateWebFormParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // ListWebhookSubscriptionsParams defines parameters for ListWebhookSubscriptions.
 type ListWebhookSubscriptionsParams struct {
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -65024,6 +65318,15 @@ type BookPublicMeetingJSONRequestBody BookPublicMeetingJSONBody
 // SubmitConfirmDetailsJSONRequestBody defines body for SubmitConfirmDetails for application/json ContentType.
 type SubmitConfirmDetailsJSONRequestBody SubmitConfirmDetailsJSONBody
 
+// SubmitWebFormJSONRequestBody defines body for SubmitWebForm for application/json ContentType.
+type SubmitWebFormJSONRequestBody = WebFormFields
+
+// SubmitWebFormFormdataRequestBody defines body for SubmitWebForm for application/x-www-form-urlencoded ContentType.
+type SubmitWebFormFormdataRequestBody = WebFormFields
+
+// SubmitWebFormMultipartRequestBody defines body for SubmitWebForm for multipart/form-data ContentType.
+type SubmitWebFormMultipartRequestBody = WebFormFields
+
 // ChangePublicMeetingInvitationJSONRequestBody defines body for ChangePublicMeetingInvitation for application/json ContentType.
 type ChangePublicMeetingInvitationJSONRequestBody = MeetingInvitationChange
 
@@ -65215,6 +65518,12 @@ type PreviewVoiceCorpusSourceJSONRequestBody = VoiceCorpusPreviewRequest
 
 // UpdateVoiceCorpusSourceJSONRequestBody defines body for UpdateVoiceCorpusSource for application/json ContentType.
 type UpdateVoiceCorpusSourceJSONRequestBody = UpdateVoiceCorpusSourceRequest
+
+// CreateWebFormJSONRequestBody defines body for CreateWebForm for application/json ContentType.
+type CreateWebFormJSONRequestBody = CreateWebFormRequest
+
+// UpdateWebFormJSONRequestBody defines body for UpdateWebForm for application/json ContentType.
+type UpdateWebFormJSONRequestBody = UpdateWebFormRequest
 
 // CreateWebhookSubscriptionJSONRequestBody defines body for CreateWebhookSubscription for application/json ContentType.
 type CreateWebhookSubscriptionJSONRequestBody = CreateWebhookSubscriptionRequest
@@ -78392,6 +78701,9 @@ type ServerInterface interface {
 	// Submit corrections and a marketing answer (anonymous, token-authed).
 	// (POST /public/confirm/{token})
 	SubmitConfirmDetails(w http.ResponseWriter, r *http.Request, token string)
+	// Land one website form submission as a lead (anonymous).
+	// (POST /public/forms/{form_key})
+	SubmitWebForm(w http.ResponseWriter, r *http.Request, formKey string)
 	// Read one invitation using its private management capability.
 	// (GET /public/meeting/{token})
 	GetPublicMeetingInvitation(w http.ResponseWriter, r *http.Request, token string)
@@ -78866,6 +79178,24 @@ type ServerInterface interface {
 	// Restore an earlier artifact byte-for-byte as a new forward active version.
 	// (POST /voice-profiles/{id}/versions/{profileVersion}/rollback)
 	RollbackVoiceProfileVersion(w http.ResponseWriter, r *http.Request, id Id, profileVersion VoiceProfileVersionNumber, params RollbackVoiceProfileVersionParams)
+	// List the website forms that land leads in this installation.
+	// (GET /web-forms)
+	ListWebForms(w http.ResponseWriter, r *http.Request, params ListWebFormsParams)
+	// Create a website form (returns a server signing secret once).
+	// (POST /web-forms)
+	CreateWebForm(w http.ResponseWriter, r *http.Request)
+	// Archive a website form; its address stops taking submissions.
+	// (DELETE /web-forms/{id})
+	ArchiveWebForm(w http.ResponseWriter, r *http.Request, id Id)
+	// Get one website form.
+	// (GET /web-forms/{id})
+	GetWebForm(w http.ResponseWriter, r *http.Request, id Id)
+	// Change a website form, pause it or resume it.
+	// (PATCH /web-forms/{id})
+	UpdateWebForm(w http.ResponseWriter, r *http.Request, id Id, params UpdateWebFormParams)
+	// Rotate a server form's signing secret (returns the new secret once).
+	// (POST /web-forms/{id}/rotate-secret)
+	RotateWebFormSecret(w http.ResponseWriter, r *http.Request, id Id)
 	// List the workspace's outbound webhook subscriptions.
 	// (GET /webhook-subscriptions)
 	ListWebhookSubscriptions(w http.ResponseWriter, r *http.Request, params ListWebhookSubscriptionsParams)
@@ -83300,6 +83630,12 @@ func (_ Unimplemented) SubmitConfirmDetails(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Land one website form submission as a lead (anonymous).
+// (POST /public/forms/{form_key})
+func (_ Unimplemented) SubmitWebForm(w http.ResponseWriter, r *http.Request, formKey string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Read one invitation using its private management capability.
 // (GET /public/meeting/{token})
 func (_ Unimplemented) GetPublicMeetingInvitation(w http.ResponseWriter, r *http.Request, token string) {
@@ -84245,6 +84581,42 @@ func (_ Unimplemented) RejectVoiceProfileVersion(w http.ResponseWriter, r *http.
 // Restore an earlier artifact byte-for-byte as a new forward active version.
 // (POST /voice-profiles/{id}/versions/{profileVersion}/rollback)
 func (_ Unimplemented) RollbackVoiceProfileVersion(w http.ResponseWriter, r *http.Request, id Id, profileVersion VoiceProfileVersionNumber, params RollbackVoiceProfileVersionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the website forms that land leads in this installation.
+// (GET /web-forms)
+func (_ Unimplemented) ListWebForms(w http.ResponseWriter, r *http.Request, params ListWebFormsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a website form (returns a server signing secret once).
+// (POST /web-forms)
+func (_ Unimplemented) CreateWebForm(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Archive a website form; its address stops taking submissions.
+// (DELETE /web-forms/{id})
+func (_ Unimplemented) ArchiveWebForm(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get one website form.
+// (GET /web-forms/{id})
+func (_ Unimplemented) GetWebForm(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change a website form, pause it or resume it.
+// (PATCH /web-forms/{id})
+func (_ Unimplemented) UpdateWebForm(w http.ResponseWriter, r *http.Request, id Id, params UpdateWebFormParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Rotate a server form's signing secret (returns the new secret once).
+// (POST /web-forms/{id}/rotate-secret)
+func (_ Unimplemented) RotateWebFormSecret(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -115006,6 +115378,32 @@ func (siw *ServerInterfaceWrapper) SubmitConfirmDetails(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// SubmitWebForm operation middleware
+func (siw *ServerInterfaceWrapper) SubmitWebForm(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "form_key" -------------
+	var formKey string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "form_key", chi.URLParam(r, "form_key"), &formKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "form_key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SubmitWebForm(w, r, formKey)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetPublicMeetingInvitation operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicMeetingInvitation(w http.ResponseWriter, r *http.Request) {
 
@@ -121928,6 +122326,217 @@ func (siw *ServerInterfaceWrapper) RollbackVoiceProfileVersion(w http.ResponseWr
 	handler.ServeHTTP(w, r)
 }
 
+// ListWebForms operation middleware
+func (siw *ServerInterfaceWrapper) ListWebForms(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListWebFormsParams
+
+	// ------------- Optional query parameter "include_archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_archived", r.URL.Query(), &params.IncludeArchived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_archived", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListWebForms(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateWebForm operation middleware
+func (siw *ServerInterfaceWrapper) CreateWebForm(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateWebForm(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveWebForm operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveWebForm(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveWebForm(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetWebForm operation middleware
+func (siw *ServerInterfaceWrapper) GetWebForm(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetWebForm(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateWebForm operation middleware
+func (siw *ServerInterfaceWrapper) UpdateWebForm(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateWebFormParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateWebForm(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RotateWebFormSecret operation middleware
+func (siw *ServerInterfaceWrapper) RotateWebFormSecret(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RotateWebFormSecret(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListWebhookSubscriptions operation middleware
 func (siw *ServerInterfaceWrapper) ListWebhookSubscriptions(w http.ResponseWriter, r *http.Request) {
 
@@ -125306,6 +125915,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/public/confirm/{token}", wrapper.SubmitConfirmDetails)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/public/forms/{form_key}", wrapper.SubmitWebForm)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/meeting/{token}", wrapper.GetPublicMeetingInvitation)
 	})
 	r.Group(func(r chi.Router) {
@@ -125778,6 +126390,24 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/voice-profiles/{id}/versions/{profileVersion}/rollback", wrapper.RollbackVoiceProfileVersion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/web-forms", wrapper.ListWebForms)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/web-forms", wrapper.CreateWebForm)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/web-forms/{id}", wrapper.ArchiveWebForm)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/web-forms/{id}", wrapper.GetWebForm)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/web-forms/{id}", wrapper.UpdateWebForm)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/web-forms/{id}/rotate-secret", wrapper.RotateWebFormSecret)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/webhook-subscriptions", wrapper.ListWebhookSubscriptions)

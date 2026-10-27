@@ -57,9 +57,14 @@ func rateRelationship(touch relstrength.InTouch, active int, single bool) *crmco
 		return dimension(crmcontracts.HealthDimensionRatingAtRisk, crmcontracts.HealthDimensionReasonCodeNeverWritten,
 			crmcontracts.HealthDimensionReasonParams{}, "No message from them and no meeting yet.")
 	case touch.Basis == relstrength.InTouchQuiet:
+		// The day it counts from, so the sentence and a timeline beside it that
+		// counts from another exchange cannot read as disagreeing.
+		quiet := crmcontracts.HealthDimensionReasonParams{Days: &touch.Days}
+		if touch.Since != nil {
+			quiet.At, quiet.AtPrecision = &touch.Since.At, activitywhen.PrecisionOf(*touch.Since)
+		}
 		return dimension(crmcontracts.HealthDimensionRatingAtRisk, crmcontracts.HealthDimensionReasonCodeQuiet,
-			crmcontracts.HealthDimensionReasonParams{Days: &touch.Days},
-			fmt.Sprintf("No reply and no meeting for %d days.", touch.Days))
+			quiet, fmt.Sprintf("No reply and no meeting for %d days.", touch.Days))
 	case touch.Basis == relstrength.InTouchBooked:
 		// The stored time and its precision. The client names an instant's day in
 		// the record's zone, which this read does not hold. A day names its date.

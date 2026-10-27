@@ -30,6 +30,7 @@ Settings in Margince, by page:
 - How do I change my password, display name, language or theme? → [Your own settings](your-own-settings.md)
 - How do I add an email signature or set up my writing voice? → [Your own settings](your-own-settings.md)
 - How do I connect my mailbox or calendar? → [Connecting your mailbox and calendar](connecting-mail-and-calendars.md)
+- How do I get the leads from my website's contact form into Margince? → [Connecting your website](connect-your-website.md)
 - How do I post to a chat channel when a deal is won? → [Sending events to other tools](sending-events-to-other-tools.md)
 - How do I book a meeting with a contact, move or cancel it, or fix an invitation that needs attention? → [Meetings and booking](meetings-and-booking.md)
 - My mailbox stopped syncing, or emails stopped coming in: what do I do? → [Connecting your mailbox and calendar](connecting-mail-and-calendars.md)
@@ -94,6 +95,9 @@ Records, deals and mail in Margince, by page:
   connecting Gmail, Outlook, an IMAP mailbox or a calendar. What to do when a
   mailbox stops syncing, and reconnecting and disconnecting. Importing your
   older mail.
+- [Connecting your website](connect-your-website.md): putting a contact form on
+  your website, or keeping your own, so each question lands as a lead. WordPress,
+  Webflow, Typeform, Tally, Payload and your own server, plus spam and consent.
 - [Capture](capture.md): how email, calendar and chat get in, and what happens
   to a message step by step. The rules that file it against the right contact,
   deal and project. What happens when nothing matches, and what capture refuses

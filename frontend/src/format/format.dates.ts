@@ -3,6 +3,7 @@ import { calendarDay, middayInstant } from "./calendarday";
 import { INTL_LOCALE } from "./intllocale";
 import {
   dateTimePreferences,
+  FIXED_DATE_PATTERNS,
   formatPreferredDate,
   hourCycle,
 } from "./preferences";
@@ -139,13 +140,30 @@ export function formatDayRange(
   }).formatRange(displayDay(from, zone), displayDay(to, zone));
 }
 
-/** A day and month for dates whose surrounding period already supplies the year. */
+/**
+ * A day and month for dates whose surrounding period already supplies the year.
+ * A fixed installation format writes it in that format's order without the
+ * year ("23.10"), so it reads like every full date beside it.
+ */
 export function formatDayMonth(
   utcIso: string,
   locale: Locale,
   zone: string,
 ): string {
   assertIanaZone(zone);
+  const format = dateTimePreferences().dateFormat;
+  if (format !== "locale") {
+    const parts = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+      timeZone: zone,
+      day: "2-digit",
+      month: "2-digit",
+    }).formatToParts(displayDay(utcIso, zone));
+    const { order, separator } = FIXED_DATE_PATTERNS[format];
+    return order
+      .filter((part) => part !== "year")
+      .map((type) => parts.find((part) => part.type === type)?.value ?? "")
+      .join(separator);
+  }
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
     timeZone: zone,
     day: "numeric",
