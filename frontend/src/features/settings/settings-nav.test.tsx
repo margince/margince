@@ -106,6 +106,8 @@ const EVERY_PAGE_GRANTED: GrantSpec = {
   product: ["read", "create", "update"],
   capture_settings: ["read", "update"],
   webhook_subscription: ["read", "create", "update"],
+  // Website forms, which ask the integrations write.
+  integrations: ["read", "create", "update"],
   knowledge_corpus: ["read", "create"],
   import_run: ["read", "create", "update"],
   ai_routing: ["read", "update"],

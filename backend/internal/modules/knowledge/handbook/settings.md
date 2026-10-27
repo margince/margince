@@ -17,7 +17,7 @@ Margince Settings puts its pages in these groups:
 - **Company**: Company profile, Sign-in and apps.
 - **People**: Members, Teams, Roles and permissions, Seats and license.
 - **Sales**: Pipelines, Stage automation, Lead handling, Acquisition sources, Outcome reviews, Responsibility roles, Fields, Tags, Products and offers.
-- **Data**: Capture rules, Integrations, Knowledge, Data import.
+- **Data**: Capture rules, Integrations, Website forms, Knowledge, Data import.
 - **AI**: AI usage, AI models, MCP, AI call log, Automations.
 - **Governance**: Privacy and retention, Audit log, System health, [Configuration](configuration.md), Extensions, Reset data.
 
@@ -44,7 +44,7 @@ Things for the whole company in Margince each have one settings page.
 - Change the company name, time zone, base currency, date format, time format or exchange rates: **Company profile**.
 - Set up single sign-on, the Google and Microsoft apps or the app an extension signs in to, or require two-step sign-in: **Sign-in and apps**.
 - Mark your own email domains, or refuse a domain: **Capture rules**.
-- Set up website forms, webhooks, a provider of contact data, or the company's Telegram bot: **Integrations**.
+- Set up webhooks, a provider of contact data, or the company's Telegram bot: **Integrations**.
 
 ### Which settings page do I need for sales and data?
 Sales and data settings in Margince each have one page.
@@ -54,6 +54,7 @@ Sales and data settings in Margince each have one page.
 - Won and lost questions: **Outcome reviews**.
 - Add a custom field: **Fields**. Rename a tag on every record: **Tags**.
 - The price list, rate card and offer templates: **Products and offers**.
+- Turn each question sent from a form on your website into a lead: **Website forms**.
 - Upload a document set to ask questions of: **Knowledge**.
 - Import companies, contacts or prospects from a ZIP of CSV files or one CSV: **Data import**.
 
@@ -165,10 +166,9 @@ The Members, Teams, Roles and permissions, and Seats and license pages sit in th
 
 The Integrations page in Settings (group **Data**) shows what the installation is connected to, as against what one colleague connected.
 
-**Contact data** is a licensed provider of contact data, with its budget and a policy for how often it refreshes the data. **Accounting source** connects the system your invoices come from and links its customers to companies; see [Contracts and invoices](contracts-and-invoices.md#how-do-i-connect-my-accounting-system). **Website forms** turn each form sent on your website into a lead. If a lead or contact already has that email, it gets a note instead; see [Connecting your website](connect-your-website.md). **Webhooks** send a signed message to another system when events you picked happen, and you can look at each one sent and send it again. How to set one up, such as a message to a chat channel when a deal is won: [Sending events to other tools](sending-events-to-other-tools.md).
+**Contact data** is a licensed provider of contact data, with its budget and a policy for how often it refreshes the data. **Accounting source** connects the system your invoices come from and links its customers to companies; see [Contracts and invoices](contracts-and-invoices.md#how-do-i-connect-my-accounting-system). **Webhooks** send a signed message to another system when events you picked happen, and you can look at each one sent and send it again. How to set one up, such as a message to a chat channel when a deal is won: [Sending events to other tools](sending-events-to-other-tools.md).
 
-**Telegram bot** is the one bot that sends and receives messages for the whole
-company. Admin and Ops connect or change it; other readers see which bot it is.
+**Telegram bot** is the one bot that sends and receives messages for the whole company. Admin and Ops connect or change it; other readers see which bot it is. Forms on your website have a page of their own, **Website forms**; see [Connecting your website](connect-your-website.md).
 
 ## Extensions
 

@@ -23,7 +23,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "settings.tab.mcp",
   "webhooks.eventGroup.voice_dna",
   "webhooks.field.targetUrlPlaceholder",
-  "webForms.sender.webflow",
   "webForms.sender.typeform",
   "webForms.sender.tally",
   "webForms.field.originsPlaceholder",

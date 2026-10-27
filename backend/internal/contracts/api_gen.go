@@ -37863,7 +37863,7 @@ type CreateWebFormRequest struct {
 	// builder computes with the secret stored as `sender_secret`.
 	Sender WebFormSender `json:"sender"`
 
-	// SenderSecret The secret a builder signs with. Required for `webflow`, `typeform` and `tally`; refused for any other sender.
+	// SenderSecret The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow's secret is pasted. Refused for any other sender.
 	SenderSecret   *string `json:"sender_secret,omitempty"`
 	SuccessMessage *string `json:"success_message,omitempty"`
 }
@@ -54931,7 +54931,7 @@ type WebFormCreated struct {
 	// builder computes with the secret stored as `sender_secret`.
 	Sender WebFormSender `json:"sender"`
 
-	// SigningSecret A `server` form's signing secret, shown this once.
+	// SigningSecret The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once.
 	SigningSecret  *string             `json:"signing_secret,omitempty"`
 	State          WebFormCreatedState `json:"state"`
 	SuccessMessage *string             `json:"success_message,omitempty"`
@@ -79496,7 +79496,7 @@ type ServerInterface interface {
 	// List the website forms that land leads in this installation.
 	// (GET /web-forms)
 	ListWebForms(w http.ResponseWriter, r *http.Request, params ListWebFormsParams)
-	// Create a website form (returns a server signing secret once).
+	// Create a website form (returns a minted signing secret once).
 	// (POST /web-forms)
 	CreateWebForm(w http.ResponseWriter, r *http.Request)
 	// Archive a website form; its address stops taking submissions.
@@ -79508,7 +79508,7 @@ type ServerInterface interface {
 	// Change a website form, pause it or resume it.
 	// (PATCH /web-forms/{id})
 	UpdateWebForm(w http.ResponseWriter, r *http.Request, id Id, params UpdateWebFormParams)
-	// Rotate a server form's signing secret (returns the new secret once).
+	// Rotate a form's minted signing secret (returns the new secret once).
 	// (POST /web-forms/{id}/rotate-secret)
 	RotateWebFormSecret(w http.ResponseWriter, r *http.Request, id Id)
 	// List the workspace's outbound webhook subscriptions.
@@ -84935,7 +84935,7 @@ func (_ Unimplemented) ListWebForms(w http.ResponseWriter, r *http.Request, para
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Create a website form (returns a server signing secret once).
+// Create a website form (returns a minted signing secret once).
 // (POST /web-forms)
 func (_ Unimplemented) CreateWebForm(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -84959,7 +84959,7 @@ func (_ Unimplemented) UpdateWebForm(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Rotate a server form's signing secret (returns the new secret once).
+// Rotate a form's minted signing secret (returns the new secret once).
 // (POST /web-forms/{id}/rotate-secret)
 func (_ Unimplemented) RotateWebFormSecret(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)

@@ -14506,13 +14506,15 @@ paths:
       operationId: createWebForm
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
-      summary: Create a website form (returns a server signing secret once).
+      summary: Create a website form (returns a minted signing secret once).
       description: |
         Mints the form's public key, the last segment of its intake address
         `POST /v1/public/forms/{form_key}`. A `server` form answers its own signing secret in
-        `signing_secret`, once; no read returns it again. A builder form (`webflow`, `typeform`,
-        `tally`) stores the secret the builder signs with, sent in `sender_secret`. Both need a
-        secret store on this installation; without one they answer 422 on `sender`.
+        `signing_secret`, once; no read returns it again. So does a `typeform` or `tally` form
+        sent without `sender_secret`: the secret is then typed into the builder's webhook. A
+        `webflow` form stores the secret Webflow issued, sent in `sender_secret` now or on a
+        later update; until then it refuses every post. Every signed
+        sender needs a secret store on this installation; without one it answers 422 on `sender`.
       requestBody:
         required: true
         content:
@@ -14599,10 +14601,10 @@ paths:
       operationId: rotateWebFormSecret
       security: [ { cookieAuth: [] } ]
       x-agent-access: human-only
-      summary: Rotate a server form's signing secret (returns the new secret once).
+      summary: Rotate a form's minted signing secret (returns the new secret once).
       description: |
-        Only a `server` form has a secret this installation minted; any other sender answers 422 on
-        `sender`. The old secret stops verifying at once.
+        A `server`, `typeform` or `tally` form gets a new secret this installation mints; a
+        `browser` or `webflow` form answers 422 on `sender`. The old secret stops verifying at once.
       responses:
         '200':
           description: The form plus its new one-time signing secret.
@@ -33041,7 +33043,7 @@ components:
           properties:
             signing_secret:
               type: string
-              description: A `server` form's signing secret, shown this once.
+              description: The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once.
 
     WebFormListResponse:
       type: object
@@ -33058,7 +33060,7 @@ components:
       properties:
         name: { type: string, minLength: 1, maxLength: 200 }
         sender: { $ref: '#/components/schemas/WebFormSender' }
-        sender_secret: { type: string, minLength: 16, maxLength: 512, description: 'The secret a builder signs with. Required for `webflow`, `typeform` and `tally`; refused for any other sender.' }
+        sender_secret: { type: string, minLength: 16, maxLength: 512, description: 'The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow''s secret is pasted. Refused for any other sender.' }
         allowed_origins:
           type: array
           maxItems: 20

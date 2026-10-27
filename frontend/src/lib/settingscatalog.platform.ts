@@ -70,6 +70,16 @@ export const PLATFORM_PAGES = [
     ),
   },
   {
+    id: "web-forms",
+    group: "data",
+    scope: "workspace",
+    // The write, as on Integrations: every seeded role reads the object, and
+    // putting a form on a website is admin and ops work.
+    requires: writes("integrations"),
+    // WebFormsCard creates, edits and archives forms on the one object.
+    changes: acts(writes("integrations"), destroys("integrations")),
+  },
+  {
     id: "knowledge",
     group: "data",
     scope: "workspace",

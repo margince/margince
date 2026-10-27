@@ -11347,6 +11347,8 @@ export const en = {
   "settings.page.integrations.sub":
     "Systems this installation exchanges records with.",
   "settings.page.knowledge.sub": "Documents that drafts and answers may use.",
+  "settings.page.web-forms.sub":
+    "Forms on your website that send each enquiry in as a lead.",
   "settings.page.import.sub": "Import records from a file, one run at a time.",
   "settings.page.models.sub":
     "Which provider handles each kind of work, and whether it is available.",
@@ -11553,6 +11555,7 @@ export const en = {
   "privacy.laneRestricted": "Held",
   "privacy.requestsEmpty": "No privacy requests yet.",
   "settings.tab.integrations": "Integrations",
+  "settings.tab.web-forms": "Website forms",
   "settings.tab.capture": "Capture rules",
   "settings.tab.knowledge": "Knowledge",
   "corpusAsk.title": "Ask your documents",
@@ -14042,9 +14045,9 @@ export const en = {
   "webForms.new": "New website form",
   "webForms.state.active": "Active",
   "webForms.state.paused": "Paused",
-  "webForms.sender.browser": "Website",
+  "webForms.sender.browser": "Your website",
   "webForms.sender.server": "Website server",
-  "webForms.sender.webflow": "Webflow",
+  "webForms.sender.webflow": "Webflow webhook",
   "webForms.sender.typeform": "Typeform",
   "webForms.sender.tally": "Tally",
   "webForms.senderLine.browser": "Posts from the listed websites",
@@ -14057,10 +14060,10 @@ export const en = {
   "webForms.edit": "Edit",
   "webForms.pause": "Pause form",
   "webForms.resume": "Resume form",
-  "webForms.rotate": "Rotate secret",
-  "webForms.rotateConfirm.title": "Rotate form secret?",
+  "webForms.rotate": "Make a new secret",
+  "webForms.rotateConfirm.title": "Make a new form secret?",
   "webForms.rotateConfirm.body":
-    "The current secret stops working at once and the new one is shown once. Update your website’s server right away.",
+    "The current secret stops working at once, and the new one is shown once. Paste it where the old one was right away.",
   "webForms.archive": "Archive",
   "webForms.archiveConfirm":
     "Archiving stops this form from taking submissions. This cannot be undone.",
@@ -14074,25 +14077,26 @@ export const en = {
   "webForms.field.name": "Name",
   "webForms.field.nameHint":
     "Shown on each lead’s note, for example Contact page.",
-  "webForms.field.sender": "Sent by",
+  "webForms.field.sender": "Where is your form?",
   "webForms.field.senderFixed":
     "Fixed once the form exists. Create a new form to change it.",
   "webForms.senderHint.browser":
-    "A form on your website posts straight from the visitor’s browser.",
+    "A form on your own pages, or in WordPress, Webflow or another site builder that lets you set where a form sends to. No developer needed.",
   "webForms.senderHint.server":
-    "Your website’s server forwards each submission, signed with a secret.",
+    "For developers: your website’s server forwards each enquiry, signed with a secret.",
   "webForms.senderHint.webflow":
-    "Webflow sends each form submission as a signed webhook.",
+    "For developers: a webhook made with Webflow’s API. For a Webflow form, choose Your website.",
   "webForms.senderHint.typeform":
-    "Typeform sends each response as a signed webhook.",
-  "webForms.senderHint.tally": "Tally sends each response as a signed webhook.",
+    "Each Typeform response comes in through a webhook. Margince makes the secret for you.",
+  "webForms.senderHint.tally":
+    "Each Tally response comes in through a webhook. Margince makes the secret for you.",
   "webForms.field.origins": "Websites",
   "webForms.field.originsHint":
     "One address per line. Posts from any other website are refused.",
   "webForms.field.originsPlaceholder": "https://www.example.com",
   "webForms.field.senderSecret": "Signing secret",
   "webForms.field.senderSecretHint":
-    "The secret from the tool’s webhook settings, at least 16 characters.",
+    "The secret Webflow answers when the webhook is made. Leave it empty until you have it: the form takes no posts until then.",
   "webForms.field.senderSecretKeep": "Leave empty to keep the stored secret.",
   "webForms.field.consentRequired":
     "Require consent before a submission is taken",
@@ -14109,23 +14113,9 @@ export const en = {
   "webForms.field.successMessage": "Success message",
   "webForms.field.successMessageHint": "Shown to the visitor after sending.",
   "webForms.setup.title": "Connect {name}",
-  "webForms.setup.how.browser":
-    "Paste this form into your website, or point your own form at the address and keep its field names.",
-  "webForms.setup.how.server":
-    "Your server posts each submission to this address, signed as the code below shows.",
-  "webForms.setup.how.webflow":
-    "In Webflow, add a form submission webhook that sends to this address.",
-  "webForms.setup.how.typeform":
-    "In Typeform, add a webhook under Connect that sends to this address.",
-  "webForms.setup.how.tally":
-    "In Tally, add a webhook under Integrations that sends to this address.",
   "webForms.setup.address": "Form address",
   "webForms.setup.secret": "Form secret",
-  "webForms.setup.secretWarning":
-    "This secret is shown once. Store it on your server as {name}.",
   "webForms.setup.snippet": "Code to paste",
-  "webForms.setup.builderSecret":
-    "Use the same signing secret there that you saved on this form.",
   "webForms.setup.customFields":
     "A field named after a lead custom field fills it: {fields}. A value it cannot take goes on the note.",
   "webForms.setup.copy": "Copy code",
@@ -14135,6 +14125,39 @@ export const en = {
   "webForms.setup.leaveWarning":
     "Closing destroys the only copy of this secret. Copy it first.",
   "webForms.setup.done": "Done",
+  "webForms.guide": "Step-by-step guide",
+  "webForms.row.secretMissing": "Waiting for its secret",
+  "webForms.setup.copyAddress": "Copy address",
+  "webForms.steps.browser.address": "Copy the form address.",
+  "webForms.steps.browser.builder":
+    "In Webflow, WordPress or another site builder, open your form’s settings. Set where it sends to (Webflow calls it Action) to this address, and the method to POST.",
+  "webForms.steps.browser.fields":
+    "Name the email field email. Margince also reads full_name, phone, company and message, and keeps every other field on the lead’s note.",
+  "webForms.steps.browser.code":
+    "Writing the page yourself? Paste this code where the form goes instead.",
+  "webForms.steps.endpoint": "Paste the form address as the webhook’s address.",
+  "webForms.steps.typeform.open":
+    "In Typeform, open the form, go to Connect, then Webhooks, and choose Add a webhook.",
+  "webForms.steps.typeform.secret":
+    "Turn on Secret in the webhook’s settings and paste the form secret.",
+  "webForms.steps.tally.open":
+    "In Tally, open the form, go to Integrations, and connect Webhooks.",
+  "webForms.steps.tally.secret":
+    "Paste the form secret in Signing secret, then save.",
+  "webForms.steps.server.secret":
+    "Store the form secret on your website’s server as {name}.",
+  "webForms.steps.server.address":
+    "Your server posts each enquiry to the form address.",
+  "webForms.steps.server.code":
+    "This code signs each post. Your developer can use it as it is.",
+  "webForms.steps.webflow.create":
+    "Create the webhook with Webflow’s API, with the form address as its URL.",
+  "webForms.steps.webflow.secret":
+    "Webflow answers the webhook’s secret once. Paste it in Signing secret under Edit on this form.",
+  "webForms.steps.test":
+    "Send a test enquiry. It shows up as a new lead under Leads.",
+  "webForms.steps.secretShownOnce":
+    "The secret was shown once, when the form was made. Lost it? Choose Make a new secret in the form’s ⋯ menu.",
 
   "webhooks.title": "Webhooks",
   "webhooks.readOnly":
