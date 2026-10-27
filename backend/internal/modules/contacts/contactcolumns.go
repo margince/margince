@@ -13,6 +13,10 @@ import (
 // reader's own activity audience, which needs the context and a placeholder.
 // The seat-name subselect was already built by a function.
 //
+// The projection is named, because a bare subselect of `src.id` reaches the
+// caller as a column called `id`, and the list's `ORDER BY "id"` is then
+// ambiguous against the contact's own.
+//
 // The source reads null to a reader who may not open that record, rather than
 // refusing the contact. A bare id would say a record exists that the reader
 // cannot reach, which is the disclosure the audience exists to prevent.
@@ -30,5 +34,6 @@ func contactColumns(ctx context.Context, arg func(any) int) (string, error) {
 	version, created_at, updated_at, archived_at, last_activity_at, legal_hold, relationship_mark,
 	(SELECT src.id FROM activity src
 	  WHERE src.id = contact.created_from_activity_id
-	    AND src.archived_at IS NULL AND ` + source + `)`, nil
+	    AND src.archived_at IS NULL AND ` + source + `)
+	  AS created_from_activity_id`, nil
 }
