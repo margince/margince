@@ -143,7 +143,7 @@ func TestASettlementFromAnExpiredAttemptWritesNothing(t *testing.T) {
 	}
 
 	// Now the FIRST attempt returns and settles. It must write nothing.
-	if err := settleClaim(ctx, e.Pool, stale, 200, `{"stale":true}`, "application/json", 0, true); err != nil {
+	if err := settleClaim(ctx, e.Pool, stale, 200, `{"stale":true}`, "application/json"); err != nil {
 		t.Fatalf("the stale settlement errored: %v", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM idempotency_key WHERE key = $1 AND response_status IS NULL`, key); n != 1 {
@@ -152,7 +152,7 @@ func TestASettlementFromAnExpiredAttemptWritesNothing(t *testing.T) {
 	}
 
 	// And its release must not free the live claim either.
-	if err := settleClaim(ctx, e.Pool, stale, 409, `{"code":"conflict"}`, "application/json", 0, false); err != nil {
+	if err := settleClaim(ctx, e.Pool, stale, 409, `{"code":"conflict"}`, "application/json"); err != nil {
 		t.Fatalf("the stale release errored: %v", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM idempotency_key WHERE key = $1`, key); n != 1 {
@@ -162,7 +162,7 @@ func TestASettlementFromAnExpiredAttemptWritesNothing(t *testing.T) {
 
 	// The live attempt still settles, which is what makes the above a
 	// predicate rather than a lock.
-	if err := settleClaim(ctx, e.Pool, live, 200, `{"live":true}`, "application/json", 0, true); err != nil {
+	if err := settleClaim(ctx, e.Pool, live, 200, `{"live":true}`, "application/json"); err != nil {
 		t.Fatalf("the live settlement errored: %v", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM idempotency_key WHERE key = $1 AND response_status = 200`, key); n != 1 {

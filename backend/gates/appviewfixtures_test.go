@@ -63,19 +63,9 @@ const envelopeDataMember = "data"
 
 // fixtureMemberOnlyInTheView ratifies a fixture member the schema does not
 // publish. A member the view reads and the tool does not answer is the defect
-// this gate is about, wearing the other direction, so each entry is a member the
-// schema cannot spell rather than one the tool lacks.
-//
-// The replay is the one: update_record's staged note carries the exact call that
-// redeems the approval as raw JSON, because its canonical bytes are what the
-// approval's hash was taken over. The schema therefore types it as an opaque
-// object, while the field-conflict view reads its fields to show the proposed
-// values and sends the object back unchanged.
-var fixtureMemberOnlyInTheView = gatekit.Waive(map[string]string{
-	"field-conflict:staged_approval.replay.fields":      "the replay is an opaque JSON object in the schema; the view reads the proposed values from it",
-	"field-conflict:staged_approval.replay.id":          "the replay is an opaque JSON object in the schema; the view sends it back unchanged",
-	"field-conflict:staged_approval.replay.record_type": "the replay is an opaque JSON object in the schema; the view sends it back unchanged",
-})
+// this gate looks for. Each entry is a member the schema cannot spell. None is
+// waived today.
+var fixtureMemberOnlyInTheView = gatekit.Waive(map[string]string{})
 
 // viewsWithoutAFixture ratifies a view that models no payload, keyed by the
 // tool that carries it.

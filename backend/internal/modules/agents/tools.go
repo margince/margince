@@ -66,10 +66,10 @@ type StageResolver interface {
 // Every verb the contract declares with `x-mcp-tool` is registered by one of
 // those functions. A declared verb with no tool is not a gap to describe here:
 // TestEveryDeclaredToolVerbIsRegistered fails the build for it.
-func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, ownership FieldOwnership, consumerMail ConsumerMail, duplicates OpenDuplicatesFor, tagOffer TagOfferFor) {
+func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, consumerMail ConsumerMail, duplicates OpenDuplicatesFor, tagOffer TagOfferFor) {
 	r.Register(readRecord{p: p, name: r.seats})
 	r.Register(createRecord{p: p, duplicates: duplicates, tagOffer: tagOffer, language: r.language, words: r.changeWords})
-	r.Register(updateRecord{p: p, ownership: ownership, staging: r.approvals, language: r.language, words: r.changeWords})
+	r.Register(updateRecord{p: p, language: r.language, words: r.changeWords})
 	r.Register(logActivity{p: p})
 	r.Register(createTask{p: p})
 	r.Register(advanceDeal{p: p, stages: stages, language: r.language})
@@ -78,15 +78,6 @@ func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages 
 	r.Register(archiveRecord{p: p, language: r.language})
 	r.Register(promoteLead{p: p, promoter: promoter, language: r.language})
 	r.Register(mergeRecords{p: p, language: r.language})
-}
-
-// FieldOwnership answers the human-edit-precedence question
-// (interfaces.md §2.1): which of a patch's fields hold a value whose
-// most recent write was HUMAN, with a differing proposed value. The
-// audit trail is the source of truth; compose implements this over it —
-// this module never reads storage directly.
-type FieldOwnership interface {
-	HumanOwnedConflicts(ctx context.Context, entityType string, id ids.UUID, patch json.RawMessage) ([]string, error)
 }
 
 // schema turns a hand-written JSON schema into the wire form, COMPACTED.

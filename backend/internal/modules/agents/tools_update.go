@@ -3,39 +3,28 @@
 
 package agents
 
-// The update_record tool: 🟢 by tier, with the per-field human-edit-
-// precedence split (interfaces.md §2.1) inside its Handle — human-owned
-// fields become a 🟡 staged approval, the remainder applies at the auto-execute tier in the
-// same call. The partition itself is SplitHumanOwned (precedence.go),
-// shared with the REST agent gate.
+// The update_record tool: 🟢 by tier. Every field applies in the one call, with
+// the audit row and Undo as the safety net. A contract floor that tightens an
+// operation to confirm-first stages the whole call through StageInfo instead.
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
-	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
-// --- update_record (🟢 write — human-edited fields split off as 🟡) ---
+// --- update_record (🟢 write) ---
 
 type updateRecord struct {
-	p         datasource.SystemOfRecordProvider
-	ownership FieldOwnership
-	// staging receives the per-field precedence split's 🟡 residue. Nil is
-	// the no-approvals composition: a conflicting patch is then refused
-	// outright rather than staged, never applied.
-	staging  Approvals
+	p        datasource.SystemOfRecordProvider
 	language baselanguage.Resolver
 	words    ChangeWords
 }
@@ -58,31 +47,14 @@ func (t updateRecord) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["record_type","id","fields"],"properties":{
 			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship","product","offer_template","offer"]},
 			"id":{"type":"string","format":"uuid"},
-			"fields":{"type":"object","description":` + jsonString("Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. "+recordFieldsDescription) + `},
+			"fields":{"type":"object","description":` + jsonString("Only sent fields change. "+recordFieldsDescription) + `},
 			"if_version":{"type":"integer","description":"Optimistic-concurrency guard: the last-seen record version"},
-			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after a human approved overwriting their edit; send it with exactly the staged replay arguments"}},
+			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after a human approved the staged call; send it with exactly the staged arguments"}},
 			"additionalProperties":false}`),
 		UnkeyedArguments: recordFieldsUnkeyed(),
-		OutputSchema:     schemaFor[UpdateWithStagedApprovalResult](),
-		// Both audiences: the card redeems an approved overwrite by sending this
-		// tool the replay the result carried, which is why apps/actions.json
-		// names it for the field-conflict view.
-		UI: &mcp.ToolUI{ResourceURI: apps.FieldConflictURI},
+		OutputSchema:     schemaFor[UpdateResult](),
+		UI:               &mcp.ToolUI{ResourceURI: apps.UpdateURI},
 	}
-}
-
-// stagedApprovalNote is how an update result names the part of the patch
-// a human still has to release: the staged fields, the approval to watch,
-// and the exact replay call that redeems it once approved (ADR-0036: the
-// staged sub-patch, not the original call, is the bound diff).
-type stagedApprovalNote struct {
-	ApprovalID ids.ApprovalID  `json:"approval_id"`
-	Fields     []string        `json:"fields"`
-	Replay     json.RawMessage `json:"replay"`
-	Message    string          `json:"message"`
-	// Changes names each withheld field as it stands and as the replay would
-	// set it.
-	Changes []FieldChange `json:"changes,omitempty"`
 }
 
 // StageInfo puts a patch the contract tightened to confirm-first in the inbox
@@ -92,14 +64,9 @@ type stagedApprovalNote struct {
 // refusals and the staged subject live in the resolver (command.go), where the
 // REST door reaches the same ones for the same operation.
 //
-// It stages the WHOLE call, not the per-field residue Handle's precedence split
-// stages. The two answer different questions and both are real: the split asks
-// "may a machine overwrite what a human typed", and applies everything else
-// meanwhile; the floor says this operation is confirm-first whatever the fields
-// hold, so nothing may apply until a human releases it. The floor is resolved
-// before admission, so a call that reaches here has already been judged the
-// second way, and an approved retry carries the ApprovalRedeemed marker that
-// sends Handle straight to the full apply.
+// It stages the whole call. The floor makes this operation confirm-first
+// whatever the fields hold, so nothing applies until a human releases it. An
+// approved retry carries the ApprovalRedeemed marker.
 func (t updateRecord) StageInfo(ctx context.Context, in json.RawMessage) (StageInfo, error) {
 	var args updateRecordArgs
 	if err := decodeArgs(in, &args); err != nil {
@@ -114,10 +81,8 @@ func (t updateRecord) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 	}))
 }
 
-// Handle is the per-field human-edit-precedence split (interfaces.md
-// §2.1): fields a human last wrote are staged 🟡 for approval, the rest
-// of the patch applies 🟢 in the same call — a machine does not silently
-// undo a contact, and a contact does not block the machine's own fields.
+// Handle applies the whole patch. A call a human released through the
+// confirm-first floor reaches the same apply, with its approval already spent.
 func (t updateRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args updateRecordArgs
 	if err := decodeArgs(in, &args); err != nil {
@@ -126,171 +91,7 @@ func (t updateRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	if err := rejectUnknownFields(updateWriteShapes, args.RecordType, args.Fields); err != nil {
 		return nil, err
 	}
-	if ApprovalRedeemed(ctx) {
-		// The dispatch layer consumed an approval bound to exactly this
-		// call — the human already released the overwrite it performs.
-		return t.apply(ctx, args, args.Fields)
-	}
-	split, err := SplitHumanOwned(ctx, t.ownership, args.RecordType, args.ID, args.Fields)
-	if err != nil {
-		return nil, err
-	}
-	if len(split.Conflicts) == 0 {
-		return t.apply(ctx, args, args.Fields)
-	}
-	// The residue meets the REST split's refusals before any half applies.
-	if err := NewPatchCall(t.p, t.language, PatchCommand{
-		RecordType: args.RecordType, ID: args.ID, Fields: split.Staged,
-	}).Guards(ctx); err != nil {
-		return nil, err
-	}
-	if t.staging == nil {
-		return nil, fmt.Errorf("fields %s were last edited by a human, and this surface has no approvals engine to stage the overwrite: %w",
-			strings.Join(split.Conflicts, ", "), apperrors.ErrRequiresApproval)
-	}
-	if split.AutoExecute == nil {
-		// Every touched field is human-owned: nothing applies, the whole
-		// call is the staged change — the approved retry IS this call.
-		canonical, hash, err := diffhash.Canonical(in)
-		if err != nil {
-			return nil, err
-		}
-		return nil, t.holdAll(ctx, args, split, canonical, hash)
-	}
-	return t.applySplit(ctx, args, split)
-}
-
-// holdAll stages a patch whose every field a human last edited. Nothing
-// applies, so the answer is the staged refusal. It carries the record as it
-// stands and the held fields, for a view to offer the choice on.
-func (t updateRecord) holdAll(ctx context.Context, args updateRecordArgs, split PatchSplit, canonical json.RawMessage, hash string) error {
-	staged, err := t.stageConflicts(ctx, args, split, canonical, hash)
-	if err != nil {
-		return err
-	}
-	current, err := readBackRecord(ctx, t.p, datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: args.ID})
-	if err != nil {
-		return err
-	}
-	answer, err := json.Marshal(UpdateWithStagedApprovalResult{
-		wireRecord:     current,
-		StagedApproval: t.heldNote(ctx, split, canonical, staged, current),
-	})
-	if err != nil {
-		return err
-	}
-	return &shownRefusal{staged: staged, answer: answer}
-}
-
-// heldNote is the result's account of the fields a human still has to release.
-func (t updateRecord) heldNote(ctx context.Context, split PatchSplit, replay json.RawMessage, staged *workflow.StagedApprovalError, current wireRecord) *stagedApprovalNote {
-	return &stagedApprovalNote{
-		ApprovalID: staged.ApprovalID,
-		Fields:     split.Conflicts,
-		Replay:     replay,
-		Message:    splitStagingNote(split.Conflicts, staged.ApprovalID, stagedState{AlreadyApproved: staged.AlreadyApproved, Releasable: staged.ReleasableByCaller}),
-		Changes:    t.words.describeUpdate(ctx, summaryIn(ctx, t.language).lang, split.Staged, current.Fields, split.Staged),
-	}
-}
-
-// applySplit handles the mixed patch: the auto-execute remainder lands
-// first, then the residue is staged against the post-write version — the
-// version the approving human actually sees, so the pin (ADR-0036 §2)
-// covers this call's own auto-execute half instead of being invalidated by
-// it.
-func (t updateRecord) applySplit(ctx context.Context, args updateRecordArgs, split PatchSplit) (json.RawMessage, error) {
-	before, applied, err := t.applyRecord(ctx, args, split.AutoExecute)
-	if err != nil {
-		return nil, err
-	}
-	replay, err := json.Marshal(map[string]any{
-		"record_type": args.RecordType, "id": args.ID, "fields": json.RawMessage(split.Staged),
-	})
-	if err != nil {
-		return nil, err
-	}
-	// Canonicalizing the replay call reproduces byte-for-byte what the
-	// dispatch layer will hash when the agent re-sends it with
-	// approval_id — the split sub-patch is redeemable on its own terms.
-	canonical, hash, err := diffhash.Canonical(replay)
-	if err != nil {
-		return nil, err
-	}
-	// The summary is dropped here and not repeated: this path answers with a
-	// structured note that already names the staged fields.
-	staged, err := t.stageConflicts(ctx, args, split, canonical, hash)
-	if err != nil {
-		return nil, fmt.Errorf("the other fields were updated, but staging the human-edited fields (%s) failed: %w",
-			strings.Join(split.Conflicts, ", "), err)
-	}
-	return json.Marshal(UpdateWithStagedApprovalResult{
-		wireRecord:     applied,
-		Changes:        t.words.describeUpdate(ctx, summaryIn(ctx, t.language).lang, split.AutoExecute, before.Fields, applied.Fields),
-		StagedApproval: t.heldNote(ctx, split, canonical, staged, applied),
-	})
-}
-
-// stagedState is what the note needs to know about the approval it names: whether
-// a human has already answered it, and whether this credential may release it.
-type stagedState struct{ AlreadyApproved, Releasable bool }
-
-// splitStagingNote is what the agent reads about the fields that were withheld.
-//
-// The already-approved half is not a nicety: an agent told to wait for a human
-// who has already answered re-sends the call, and each re-send is another
-// approval for the same withheld fields — so the line that says which of the two
-// happened is what keeps one act to one authority object.
-func splitStagingNote(conflicts []string, id ids.ApprovalID, state stagedState) string {
-	fields := strings.Join(conflicts, ", ")
-	if state.AlreadyApproved {
-		return fmt.Sprintf(
-			"fields %s were last edited by a human and were NOT applied; a human has already approved this exact overwrite as approval %s — call update_record with exactly the replay arguments plus \"approval_id\": %q",
-			fields, id, id.String())
-	}
-	who := "once a human approves it"
-	if state.Releasable {
-		who = "once the user says yes, release it with decide_approvals (or they approve it in the CRM)"
-	}
-	return fmt.Sprintf(
-		"fields %s were last edited by a human and were NOT applied; staged as approval %s — %s, call update_record with exactly the replay arguments plus \"approval_id\": %q",
-		fields, id, who, id.String())
-}
-
-// stageConflicts records the 🟡 residue of one split update. The read
-// here runs AFTER any auto-execute remainder landed, so the pinned version
-// (ADR-0036 §2) is the state the approving human will actually judge —
-// this call's own auto-execute half cannot invalidate its staged half.
-func (t updateRecord) stageConflicts(ctx context.Context, args updateRecordArgs, split PatchSplit, canonical json.RawMessage, hash string) (*workflow.StagedApprovalError, error) {
-	rec, err := t.p.Read(ctx, datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: args.ID})
-	if err != nil {
-		return nil, err
-	}
-	if err := refuseStagingElsewhere(rec); err != nil {
-		return nil, err
-	}
-	// Composed once and answered twice: the human's card and the caller's
-	// refusal describe one staged change, and a second wording of it would let
-	// the contact and the agent wait on two different descriptions.
-	said := summaryIn(ctx, t.language)
-	summary := fmt.Sprintf(said.overwriteHuman,
-		said.noun(args.RecordType), recordLabel(rec), FieldLabels(said.lang, split.Conflicts))
-	req := StageRequest{
-		Tool:           "update_record",
-		ProposedChange: canonical,
-		DiffHash:       hash,
-		TargetType:     args.RecordType,
-		TargetID:       args.ID,
-		TargetVersion:  &rec.Version,
-		Summary:        summary,
-	}
-	id, alreadyApproved, err := t.staging.StageCall(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	return &workflow.StagedApprovalError{
-		ApprovalID: id, AlreadyApproved: alreadyApproved, Summary: summary,
-		ReleasableByCaller: t.staging.ReleasableByCaller(ctx, req),
-	}, nil
+	return t.apply(ctx, args, args.Fields)
 }
 
 // apply writes the patch and answers with the post-write record.
@@ -299,7 +100,7 @@ func (t updateRecord) apply(ctx context.Context, args updateRecordArgs, patch js
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(UpdateWithStagedApprovalResult{
+	return json.Marshal(UpdateResult{
 		wireRecord: rec,
 		Changes:    t.words.describeUpdate(ctx, summaryIn(ctx, t.language).lang, patch, before.Fields, rec.Fields),
 	})
