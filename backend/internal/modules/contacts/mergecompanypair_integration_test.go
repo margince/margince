@@ -11,8 +11,8 @@ import (
 )
 
 // A merge made from a company page settles the open pair of the two companies
-// the way the queue does: the pair stays, marked merged by the caller, so the
-// merged list shows it and an undo is refused as not undoable.
+// the way the queue does. The pair stays, marked merged by the caller. The
+// merged list shows it, and an undo is refused as not undoable.
 func TestADirectCompanyMergeKeepsTheOpenPairAsMerged(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
