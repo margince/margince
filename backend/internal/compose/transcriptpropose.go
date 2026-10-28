@@ -10,9 +10,10 @@ package compose
 // contacts said. So a proposal here is always "somebody said they would do this",
 // never "this deal should move to negotiation" — the second is a conclusion
 // about the account, and nothing in a transcript states it. Every proposal
-// cites the lines it was read from and writes NOTHING until a human accepts it
-// (GATE-AI-2); accepting creates one task activity through the same RBAC-gated
-// write a rep's own "add task" takes.
+// cites the lines it was read from. The commitment dispatch writes a colleague's
+// task at once when the read clears its confidence floor, and proposes it
+// otherwise. Accepting a proposal creates one task activity through the same
+// RBAC-gated write a rep's own "add task" takes.
 //
 // It mirrors signalextract.go deliberately — same fenced prompt, same pure
 // request builder, same validator-then-floor split — because the two sites do
