@@ -9,6 +9,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
@@ -18,7 +19,8 @@ type contactCaseMerger struct{ store *contacts.Store }
 
 //nolint:ireturn // the seam is an interface by design: agents may not import the contacts module
 func contactCaseMergerSeam(db *database.DB) agents.ContactCaseMerger {
-	return contactCaseMerger{store: contacts.NewStore(db)}
+	return contactCaseMerger{store: withContactMergeCarriers(db, contacts.NewStore(db)).
+		WithFieldCatalog(customfields.NewService(db.Pool(), nil))}
 }
 
 func (m contactCaseMerger) PreviewContactCaseMerge(ctx context.Context, cmd agents.ContactCaseCommand) (crmcontracts.ContactCaseOutcome, error) {
