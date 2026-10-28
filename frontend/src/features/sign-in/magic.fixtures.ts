@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { MagicLine, MagicReceipt } from "./magic.queries";
+import type { MagicLine, MagicReceipt } from "../../lib/magic.queries";
 
 // A night as the receipt reports one: a mailbox sync filing in bulk after
 // midnight, readers enriching what it filed, agents booking and moving work
