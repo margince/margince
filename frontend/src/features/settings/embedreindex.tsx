@@ -38,12 +38,15 @@ import { settingsHref } from "../../lib/settingsrouting";
 // server-side too (embedding_reindex object's update grant).
 
 type ReindexStatus = components["schemas"]["EmbedReindexStatus"];
+type ReindexIdentities = components["schemas"]["EmbedReindexIdentities"];
 type ReindexPreview = components["schemas"]["EmbedReindexPreview"];
 type UtilizationImpact = NonNullable<ReindexPreview["utilization_impact"]>;
 
-// Shared by the settings card and the app-shell banner so a successful
-// confirm's setQueryData (below) updates both surfaces from the one write.
+// The settings card's status read. A successful confirm's setQueryData (below)
+// seeds it and the banner's identities from the one write.
 export const embedReindexStatusQueryKey = ["embed-reindex-status"];
+// The app-shell banner's read: the two identities alone, with no backlog scan.
+export const embedReindexIdentitiesQueryKey = ["embed-reindex-identities"];
 
 // Whether this installation has an embed lane bound. The status read answers
 // 501 without one, so both surfaces ask this before issuing it.
@@ -61,6 +64,24 @@ export function useEmbedReindexStatus(enabled: boolean, staleTime?: number) {
       const data = unwrap(await api.GET("/embeddings/reindex/status"));
       if (!data) {
         throw new Error("malformed reindex status response");
+      }
+      return data;
+    },
+  });
+}
+
+export function useEmbedReindexIdentities(
+  enabled: boolean,
+  staleTime?: number,
+) {
+  return useQuery({
+    queryKey: embedReindexIdentitiesQueryKey,
+    enabled,
+    staleTime,
+    queryFn: async (): Promise<ReindexIdentities> => {
+      const data = unwrap(await api.GET("/embeddings/reindex/identities"));
+      if (!data) {
+        throw new Error("malformed reindex identities response");
       }
       return data;
     },
@@ -293,9 +314,12 @@ export function EmbedReindexCard() {
     },
     onSuccess: (data) => {
       // The 202 body is the SAME status read the GET returns — seed the
-      // shared cache directly so the card and the banner both reflect
-      // "reembedding" without an extra round trip.
+      // card's cache and the banner's identities directly, with no extra round trip.
       qc.setQueryData(embedReindexStatusQueryKey, data);
+      qc.setQueryData<ReindexIdentities>(embedReindexIdentitiesQueryKey, {
+        configured_identity: data.configured_identity,
+        populated_identity: data.populated_identity,
+      });
       closeDialog();
     },
   });

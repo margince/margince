@@ -350,6 +350,30 @@ func TestEmbedReindexStatusAndPreviewReflectPendingEntities(t *testing.T) {
 	}
 }
 
+// The banner's identities read answers the status read's two identities under
+// the status read's own gate, so the shell can drop the backlog scan.
+func TestEmbedReindexIdentitiesMatchTheStatusUnderItsGate(t *testing.T) {
+	router := embedReindexRouter(t, "reindex-identities-v1")
+	e := setupEmbedReindex(t, router)
+	seedStaleEmbeddingRow(t, e, apptest.InstallationWorkspaceID(context.Background(), t, e.Owner))
+
+	_, st, _ := embedStatus(t, e)
+	status, got, _ := embedReindexDecode[embedReindexStatusWire](t, e, "GET", "/v1/embeddings/reindex/identities", nil)
+	if status != http.StatusOK {
+		t.Fatalf("admin identities -> %d, want 200", status)
+	}
+	if got.ConfiguredIdentity != st.ConfiguredIdentity || got.PopulatedIdentity != st.PopulatedIdentity {
+		t.Fatalf("identities = %q/%q, status = %q/%q; the banner must compare what the status read reports",
+			got.ConfiguredIdentity, got.PopulatedIdentity, st.ConfiguredIdentity, st.PopulatedIdentity)
+	}
+
+	demoteToRep(t, e)
+	status, _, problem := embedReindexDecode[embedReindexStatusWire](t, e, "GET", "/v1/embeddings/reindex/identities", nil)
+	if status != http.StatusForbidden || problem.Code != "permission_denied" {
+		t.Fatalf("rep identities -> %d %+v, want 403 permission_denied like the status read", status, problem)
+	}
+}
+
 // TestEmbedReindexConfirmRequiresAdminOrOps proves the object RBAC gate:
 // a rep (NO grant at all on embedding_reindex per migration 0115) is
 // refused status/preview AND confirm alike — discharging the

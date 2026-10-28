@@ -4,7 +4,7 @@
 import { Callout } from "../design-system/callout";
 import {
   useEmbedReindexAvailable,
-  useEmbedReindexStatus,
+  useEmbedReindexIdentities,
 } from "../features/settings/embedreindex";
 import { useT } from "../i18n";
 import { useCan } from "../lib/capability";
@@ -16,7 +16,7 @@ import { useCan } from "../lib/capability";
 // embed event) are NOT this banner's business: the worker drift sweep heals
 // them automatically. The settings card (features/settings/embedreindex.tsx) shows
 // the pending detail meanwhile. Keying off reindex_needed here would show an
-// admin a banner about drift the system is already fixing. The status read
+// admin a banner about drift the system is already fixing. The identities read
 // this banner needs is itself RBAC-gated (embedding_reindex:read, granted to
 // admin and ops alone), so the gate below is not a UX preference layered over
 // an open endpoint — it is the same grant the server checks, asked before
@@ -28,9 +28,9 @@ export function EmbedReindexBanner() {
   const canRead = useCan("embedding_reindex", "read");
   const bound = useEmbedReindexAvailable();
   const enabled = canRead && bound;
-  const query = useEmbedReindexStatus(enabled, 5 * 60_000);
-  // Advisory only: a failed status probe must not block the app shell. The
-  // settings card (features/settings/embedreindex.tsx) surfaces the same read's error
+  const query = useEmbedReindexIdentities(enabled, 5 * 60_000);
+  // Advisory only: a failed probe must not block the app shell. The settings
+  // card (features/settings/embedreindex.tsx) surfaces the status read's error
   // state to the accountable audience.
   // The mismatch ALONE keys the banner (SEARCH-AC-13) — deliberately not
   // status-qualified: suppressing during status="reembedding" would also

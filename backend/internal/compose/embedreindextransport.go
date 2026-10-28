@@ -181,6 +181,25 @@ func (e *embedReindexEngine) status(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, resp)
 }
 
+// identities answers the two identities the status body reports, without its
+// backlog scan; the app shell's banner compares only these.
+func (e *embedReindexEngine) identities(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if err := auth.Require(ctx, "embedding_reindex", principal.ActionRead); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	populated, _, _, err := e.store.PopulatedIdentity(ctx)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.EmbedReindexIdentities{
+		ConfiguredIdentity: e.currentIdentity(),
+		PopulatedIdentity:  populated,
+	})
+}
+
 // preview answers the scope-before-the-spend estimate (ADR-0020): the
 // same fleet-wide pending set status reports, priced at the current
 // embed binding's rate. Read-gated, same posture as status.
@@ -396,6 +415,14 @@ func (h embedReindexHandlers) EmbedReindexStatus(w http.ResponseWriter, r *http.
 		return
 	}
 	h.engine.status(w, r)
+}
+
+func (h embedReindexHandlers) EmbedReindexIdentities(w http.ResponseWriter, r *http.Request) {
+	if !h.serving() {
+		httperr.NotImplemented(w, r, "EmbedReindexIdentities")
+		return
+	}
+	h.engine.identities(w, r)
 }
 
 func (h embedReindexHandlers) EmbedReindexPreview(w http.ResponseWriter, r *http.Request) {
