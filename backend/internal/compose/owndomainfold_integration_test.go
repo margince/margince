@@ -181,9 +181,9 @@ func TestAReplyIsNeverAddressedToAColleagueAtAnInternationalOwnDomain(t *testing
 // in the unicode its administrator typed. A customer company claiming the
 // punycode spelling is claiming that same domain.
 //
-// The domains endpoint parses ASCII only, so punycode is the one spelling a
-// second company can be created on. The anchor is the one writer that stores
-// a unicode host.
+// The domains endpoint parses ASCII only, so a second company can be created
+// on the punycode spelling. A website reduces to whatever host it carried, so
+// the anchor's row keeps the unicode.
 func TestClaimingThePunycodeOfTheAnchorsDomainIsRefused(t *testing.T) {
 	e := integration.Setup(t)
 	website := "https://bücher.example"
