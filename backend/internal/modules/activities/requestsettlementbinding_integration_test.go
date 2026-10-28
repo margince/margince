@@ -99,7 +99,7 @@ func TestAVerdictOverChangedEvidenceIsDroppedForEveryOutcome(t *testing.T) {
 				change(t, e, request)
 				in := RequestSettlementInput{Request: candidate, Verdict: verdict, Confidence: 0.9, DecidedBy: "test-model"}
 				if verdict == RequestStillOwed {
-					in.Remaining = "Send the invoice"
+					in.Remaining = "send the report"
 				}
 				if err := storeKnowing(e).SettleRequest(asSettler(e), in); err != nil {
 					t.Fatal(err)
@@ -142,7 +142,7 @@ func settleThroughPass(t *testing.T, e *loadEnv, request ids.UUID, at time.Time,
 	}
 	in := RequestSettlementInput{Request: candidate, Verdict: verdict, Confidence: 0.9, DecidedBy: "test-model"}
 	if verdict == RequestStillOwed {
-		in.Remaining = "Send the second half"
+		in.Remaining = "send the report"
 	}
 	if err := storeKnowing(e).SettleRequest(asSettler(e), in); err != nil {
 		t.Fatal(err)
@@ -329,7 +329,7 @@ func TestAVerdictWaitsForAnAnswerEditInFlightAndDropsItself(t *testing.T) {
 			})
 			in := RequestSettlementInput{Request: candidate, Verdict: verdict, Confidence: 0.9, DecidedBy: "test-model"}
 			if verdict == RequestStillOwed {
-				in.Remaining = "Attach the report"
+				in.Remaining = "send the report"
 			}
 			settled := verdictBehind(t, e, holder, release, 1, in)
 			if err := release(); err != nil {
@@ -400,7 +400,7 @@ func TestAVerdictWaitsForAReplyBeingWrittenAndDropsItself(t *testing.T) {
 			})
 			in := RequestSettlementInput{Request: candidate, Verdict: verdict, Confidence: 0.9, DecidedBy: "test-model"}
 			if verdict == RequestStillOwed {
-				in.Remaining = "Send the rest"
+				in.Remaining = "send the report"
 			}
 			settled := verdictBehind(t, e, holder, release, 1, in)
 			if err := release(); err != nil {

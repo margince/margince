@@ -218,6 +218,35 @@ describe("the day's work on a contact", () => {
     expect(screen.queryByText(QUIET.headline)).toBeNull();
   });
 
+  it("shows the task's own words as one plain line under its subject", () => {
+    const worded = {
+      ...OPEN_TASK,
+      body: "**Send** the fleet numbers\n\nThen book the pricing call.",
+    };
+    show(
+      { ...VIEW, next_steps: { data: [worded], page: { has_more: false } } },
+      QUIET,
+    );
+
+    expect(screen.getByText("Send the fleet numbers")).toBeTruthy();
+    expect(screen.queryByText(/Then book the pricing call/)).toBeNull();
+  });
+
+  it("shows no words for a task the reader may not read", () => {
+    const withheld = {
+      ...OPEN_TASK,
+      body: "Send the fleet numbers",
+      content_state: "withheld" as const,
+    };
+    show(
+      { ...VIEW, next_steps: { data: [withheld], page: { has_more: false } } },
+      QUIET,
+    );
+
+    expect(screen.getByText(OPEN_TASK.subject)).toBeTruthy();
+    expect(screen.queryByText("Send the fleet numbers")).toBeNull();
+  });
+
   // The quiet rung is the answer to the bar's question, so it is answered
   // where the question is asked. Rendering nothing at all left a reader
   // unable to tell a quiet day from a pane that failed to load.

@@ -174,7 +174,7 @@ describe("Deal360 leads with the call", () => {
   it("shows the first line of the reasoning beside the call", async () => {
     serve({ standing: "drifting" });
     renderCard();
-    expect(await screen.findByText("Drifting")).toBeInTheDocument();
+    expect(await screen.findByText("Slipping")).toBeInTheDocument();
     // The head carries ONE line. The rest is in the fold, so a reader scanning
     // gets the call and its reason without the whole briefing.
     expect(await screen.findByText("Nobody sent the times.")).toBeVisible();
@@ -183,7 +183,7 @@ describe("Deal360 leads with the call", () => {
   it("keeps the full briefing behind a closed fold", async () => {
     serve({ standing: "live" });
     renderCard();
-    await screen.findByText("Live");
+    await screen.findByText("On track");
     const fold = document.querySelector("details.deal360-fold");
     expect(fold).not.toBeNull();
     // Closed, not absent: every word is still on the page and still cited.
@@ -272,13 +272,15 @@ describe("Deal360 leads with the call", () => {
     // neutral for everything would satisfy that assertion perfectly.
     serve({ standing: "live" });
     renderCard();
-    expect(washOf(await screen.findByText("Live"))).toBe("var(--successBg)");
+    expect(washOf(await screen.findByText("On track"))).toBe(
+      "var(--successBg)",
+    );
   });
 
   it("claims Margince as the source only when a model wrote the call", async () => {
     serve({ standing: "live", writer: "deterministic" });
     renderCard();
-    await screen.findByText("Live");
+    await screen.findByText("On track");
     expect(screen.getByText(en["standing.sources.records"])).toBeVisible();
     expect(screen.queryByText(/Margince ·/)).toBeNull();
   });

@@ -6,6 +6,7 @@ import { calendarDaysBetween, formatDayMonth } from "../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { tasksPeek } from "../../lib/standingpeeks";
+import { taskDetail } from "../../lib/taskdetail";
 import { useCompanySetAside } from "./companysetaside";
 import {
   MayBeDoneVerb,
@@ -150,6 +151,7 @@ export function CompanyNextBar({
         // server's sentence about it, kept for a moment that cites none.
         title={task?.subject ?? moment.headline}
         late={lateTag}
+        detail={task && taskDetail(task)}
         sub={moment.why_now}
         insight={momentBasis(moment)}
         action={
@@ -169,6 +171,7 @@ export function CompanyNextBar({
     <NextBar
       title={task?.subject}
       late={lateTag}
+      detail={task && taskDetail(task)}
       sub={
         task?.due_at
           ? t("co.next.due", {

@@ -15,8 +15,10 @@ import {
   usePlural,
   useT,
 } from "../../i18n";
+import { useSourceOpener } from "../../lib/opensource";
 import { useRecordZone } from "../../lib/recordzone";
 import { tasksPeek } from "../../lib/standingpeeks";
+import { taskDetail } from "../../lib/taskdetail";
 import { MoveButton } from "../records/movebutton";
 import { basisAddsARecord } from "../records/record360";
 import { MayBeDoneVerbs, useMomentSetAside } from "./contactmaybedone";
@@ -183,18 +185,22 @@ function MomentSource({
   onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
+  const openerFor = useSourceOpener(onOpenEmail);
   const item = moment.evidence.find((entry) => entry.type === "activity");
   if (!item) {
     return null;
   }
-  const open = () => {
-    const activity = view.activities?.data.find((row) => row.id === item.id);
-    if (activity?.kind === "email" && onOpenEmail && item.id) {
-      onOpenEmail(item.id);
-    } else {
-      openContactTab(view.contact.id, "timeline");
-    }
-  };
+  // A source the page has read opens in its reader. Any other source, or one
+  // no reader may open, leads to the History tab.
+  const activity = view.activities?.data.find((row) => row.id === item.id);
+  const inPlace =
+    activity &&
+    openerFor({
+      id: activity.id,
+      kind: activity.kind,
+      contentState: activity.content_state,
+    });
+  const open = inPlace ?? (() => openContactTab(view.contact.id, "timeline"));
   return (
     <>
       <span>{t("co.suggest.basedOn")}</span>{" "}
@@ -217,6 +223,7 @@ function TaskBar({
     <NextBar
       title={task.subject ?? t("task.untitled")}
       late={lateness(task.due_at, view, t, locale)}
+      detail={taskDetail(task)}
       sub={
         task.due_at
           ? t("co.next.due", { when: formatDate(task.due_at, locale, zone) })

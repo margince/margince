@@ -26,7 +26,6 @@ reach features/automations/agentallowances.tsx features/sign-in/installation-set
 reach features/automations/agentusage.tsx features/settings/settings-agents.css
 reach features/automations/approvaldrawer.tsx features/worklist/worklist.bundle.tsx
 reach features/automations/approvaldrawer.tsx features/worklist/worklist.queries.ts
-reach features/automations/approvalevidence.tsx features/voice-knowledge/activitydrawer.tsx
 reach features/automations/approvalsend.ts features/mail/compose.tsx
 reach features/automations/automations.recipe.ts features/settings/audit.tsx
 reach features/automations/connected-agents.test.tsx features/settings/settings.tsx
@@ -169,7 +168,6 @@ reach features/contacts/contactarchived.tsx features/records/history.tsx
 reach features/contacts/contactarchived.tsx features/records/recordaccess.tsx
 reach features/contacts/contactarchived.tsx features/worklist/worklist.return.tsx
 reach features/contacts/contactbillingroles.stories.tsx features/companies/company360.css
-reach features/contacts/contactcards.tsx features/records/claimdismiss.tsx
 reach features/contacts/contactconfirm.tsx features/worklist/worklist.return.tsx
 reach features/contacts/contactconsentpanel.tsx features/privacy/consent.tsx
 reach features/contacts/contactdealrooms.tsx features/deals/dealroomaccess.tsx

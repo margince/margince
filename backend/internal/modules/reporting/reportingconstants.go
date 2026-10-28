@@ -16,4 +16,5 @@ const (
 	reportingSuspended       = "suspended"
 	reportingTeam            = "team"
 	reportingManagedTeams    = "managed_teams"
+	reportingPrivate         = "private"
 )

@@ -121,7 +121,11 @@ describe("contactVerdict", () => {
   it("says no interactions yet for the none band, never a zero", () => {
     expect(
       contactVerdict({ ...VIEW, strength: strength("none", 0) }, t),
-    ).toEqual({ word: "No interactions yet", tone: "neutral" });
+    ).toEqual({
+      word: "No interactions yet",
+      sentence: t("contact.verdict.noExchange"),
+      tone: "neutral",
+    });
   });
 
   it("falls back to the quiet rung's word when the strength is withheld", () => {
@@ -136,6 +140,7 @@ describe("contactVerdict", () => {
       ),
     ).toEqual({
       word: t("contact.moment.rule.nothing_needed"),
+      sentence: t("contact.verdict.nothingOwed"),
       tone: "neutral",
     });
   });
