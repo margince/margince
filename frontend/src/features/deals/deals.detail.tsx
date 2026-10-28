@@ -2,6 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../../api/client";
 import { DealStatusBadge } from "../../components/dealstatusbadge";
+import {
+  LatestInboundLine,
+  useLatestInbound,
+} from "../../components/latestinbound";
 import { Badge } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { QueryGate } from "../../design-system/querystates";
@@ -36,7 +40,7 @@ import {
 } from "./deal360/confirmadvance";
 import { DealActions } from "./deal360/dealactions";
 import { DealSubtitle } from "./deal360/dealheaderfacts";
-import { DealHistoryTab } from "./deal360/dealhistorytab";
+import { DealHistoryTab, DealLatestInbound } from "./deal360/dealhistorytab";
 import { DealLegalTab } from "./deal360/deallegaltab";
 import { DealRoomTab } from "./deal360/dealroomtab";
 import { useDealTabCounts } from "./deal360/dealtabcounts";
@@ -201,6 +205,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // archived. So they are asked for only after the deal has said it is live.
   const live = dealQuery.isSuccess && !dealQuery.data.archived_at;
   const statusQuery = useDealStatusCard(id, live);
+  const latest = useLatestInbound("deal", id);
   const coverageRead = useDealCoverage(id, live);
   // How it stands reads the whole history, not what the History tab's own
   // filter has narrowed. A "no reply" read off a filtered view would be false.
@@ -300,6 +305,14 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   )}
                 />
               }
+              latest={
+                shownTab !== "overview" && (
+                  <LatestInboundLine
+                    latest={latest}
+                    onOpen={() => setTab("overview")}
+                  />
+                )
+              }
               actions={
                 <DealActions
                   deal={deal}
@@ -327,6 +340,9 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 />
               }
             >
+              {shownTab === "overview" && (
+                <DealLatestInbound latest={latest} dealId={deal.id} />
+              )}
               {shownTab === "overview" && (
                 <DealOverviewPane
                   inputs={{

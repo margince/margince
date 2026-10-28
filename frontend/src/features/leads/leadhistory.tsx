@@ -11,6 +11,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import type { components } from "../../api/schema";
+import {
+  type JustIn,
+  LatestInboundPanel,
+} from "../../components/latestinbound";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
   useRecordTimeline,
@@ -29,7 +33,7 @@ import {
   useChronologyFilter,
   useRecordChronology,
 } from "../records/recordchronology";
-import { TimelineActions } from "../records/timelineactions";
+import { RowAnswerActions, TimelineActions } from "../records/timelineactions";
 import { useLeadHistoryDials } from "./leadhistorydials";
 
 type Lead = components["schemas"]["Lead"];
@@ -154,5 +158,27 @@ export function LeadHistoryTab({
         )}
       </PanelBody>
     </Panel>
+  );
+}
+
+/**
+ * The newest unanswered thing the lead sent, the website form that brought
+ * them included, leading the Overview with the verbs its History row has.
+ */
+export function LeadLatestInbound({
+  latest,
+  leadId,
+}: Readonly<{ latest: JustIn | undefined; leadId: string }>) {
+  return (
+    <LatestInboundPanel
+      latest={latest}
+      actions={(activity) => (
+        <RowAnswerActions
+          activity={activity}
+          entityType="lead"
+          entityId={leadId}
+        />
+      )}
+    />
   );
 }

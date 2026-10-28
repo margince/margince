@@ -65,7 +65,7 @@ import { nextCommitment } from "./projectstanding";
 import { ProjectStanding } from "./projectstandingcard";
 import { ProjectTabs } from "./projecttabs";
 import "./projects.css";
-import { ProjectHistory } from "./project360.chronology";
+import { ProjectHistory, ProjectLatestInbound } from "./project360.chronology";
 import { ProjectCards } from "./projectcards";
 
 // The project page: one composite read (GET /projects/{id}/360) drawn as two
@@ -172,6 +172,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         ) : undefined
       }
     >
+      <ProjectLatestInbound projectId={project.id} />
       <ProjectNext view={view} onOpenTask={setOpenTask} {...nextVerbs} />
       <ProjectStanding
         view={view}
