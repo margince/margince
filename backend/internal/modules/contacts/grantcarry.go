@@ -45,7 +45,7 @@ func (s *Store) carryGrantsTx(ctx context.Context, tx pgx.Tx, recordType string,
 // refuses: the merge would otherwise take the record away from its owner.
 func (s *Store) carryOwnerAccessTx(ctx context.Context, tx pgx.Tx, survivor ids.ContactID, survivorOwner, formerOwner *ids.UUID, mergedFrom ids.UUID) (*authz.OwnerAccessCarry, error) {
 	if formerOwner == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // a contact nobody owned has no owner to keep access for
 	}
 	if sameOwner(survivorOwner, formerOwner) {
 		return &authz.OwnerAccessCarry{Owner: *formerOwner, Skipped: authz.OwnerCarryAlreadyOwner}, nil

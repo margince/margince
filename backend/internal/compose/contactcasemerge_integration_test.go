@@ -48,7 +48,7 @@ func TestAPreviewWritesNothingAndAnswersWhatTheMergeDoes(t *testing.T) {
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep2, c.e.Rep3)
 	c.setPolicy(t, true)
 	rep := c.rep(c.e.Rep1)
-	read := c.read(t, rep, members[0])
+	read := c.read(rep, t, members[0])
 	chosen := caseDecision(read, members, members[1], c.e.Rep1)
 
 	before := writtenState(t, c.e)
@@ -76,7 +76,7 @@ func TestAStaleRevisionWritesNothing(t *testing.T) {
 	c := setupCases(t)
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep1, c.e.Rep1)
 	rep := c.rep(c.e.Rep1)
-	read := c.read(t, rep, members[0])
+	read := c.read(rep, t, members[0])
 	// A colleague's edit moves a member's version, and with it the revision.
 	if _, err := c.store.UpdateContact(rep, ids.From[ids.ContactKind](members[2]), contacts.UpdateContactInput{Title: new("Countess")}); err != nil {
 		t.Fatalf("editing a member: %v", err)
@@ -95,7 +95,7 @@ func TestOfTwoRacingCaseMergesExactlyOneCommits(t *testing.T) {
 	c := setupCases(t)
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep1, c.e.Rep1)
 	admin := c.e.Admin()
-	read := c.read(t, admin, members[0])
+	read := c.read(admin, t, members[0])
 
 	// The barrier: hold every member's row, so both merges are waiting before
 	// either can read the case.
@@ -169,11 +169,10 @@ func TestAMergeThatFailsHalfwayLeavesNothing(t *testing.T) {
 		WithGrantCarrier(identity.NewServiceFor(c.e.DB())).
 		WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx).
 		WithSettings(configtest.StoredOver(t, c.e.Pool, contacts.ConfigSettings()))
-	read := c.read(t, c.e.Admin(), members[0])
+	read := c.read(c.e.Admin(), t, members[0])
 	before := writtenState(t, c.e)
 	_, err := halfWired.MergeContactCase(c.e.Admin(), members[0], caseDecision(read, members, members[0], c.e.Rep1))
-	var unwired *contacts.StopCarrierNotWiredError
-	if !errors.As(err, &unwired) {
+	if _, ok := errors.AsType[*contacts.StopCarrierNotWiredError](err); !ok {
 		t.Fatalf("the half-wired merge = %v, want the refusal to strand a stop", err)
 	}
 	if after := writtenState(t, c.e); after != before {
@@ -188,7 +187,7 @@ func TestEveryMergePathKeepsTheFormerOwnersAccess(t *testing.T) {
 	admin := c.e.Admin()
 
 	paired := c.seedCase(t, c.e.Rep1, c.e.Rep2)
-	pair := c.read(t, admin, paired[0]).Edges[0]
+	pair := c.read(admin, t, paired[0]).Edges[0]
 	winner := paired[0]
 	if _, err := c.store.DisposeDedupeCandidate(admin, ids.UUID(pair.PairId), "merge", &winner); err != nil {
 		t.Fatalf("merging through the pair queue: %v", err)
@@ -257,7 +256,7 @@ func TestAMergedSurvivorIsSharedWithItsFormerOwnerOnly(t *testing.T) {
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep2, c.e.Rep3)
 	c.setPolicy(t, true)
 	rep := c.rep(c.e.Rep1)
-	read := c.read(t, rep, members[0])
+	read := c.read(rep, t, members[0])
 	if _, err := c.store.MergeContactCase(rep, members[0], caseDecision(read, members[:2], members[0], c.e.Rep1)); err != nil {
 		t.Fatalf("merging: %v", err)
 	}

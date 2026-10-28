@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -83,19 +84,20 @@ func (c contactCase) confidence() float64 {
 // revision changes whenever a member, an owner, a version, a pair or the
 // policy changes; a decision refuses a stale one.
 func (c contactCase) revision(policy bool) string {
-	h := sha256.New()
+	var b strings.Builder
 	for _, m := range c.Members {
 		owner := ""
 		if m.OwnerID != nil {
 			owner = m.OwnerID.String()
 		}
-		fmt.Fprintf(h, "m:%s:%d:%s\n", m.ID, m.Version, owner)
+		b.WriteString("m:" + m.ID.String() + ":" + strconv.FormatInt(m.Version, 10) + ":" + owner + "\n")
 	}
 	for _, e := range c.Edges {
-		fmt.Fprintf(h, "p:%s:%s\n", e.ID, e.Disposition)
+		b.WriteString("p:" + e.ID.String() + ":" + e.Disposition + "\n")
 	}
-	fmt.Fprintf(h, "policy:%s\n", strconv.FormatBool(policy))
-	return hex.EncodeToString(h.Sum(nil))
+	b.WriteString("policy:" + strconv.FormatBool(policy) + "\n")
+	sum := sha256.Sum256([]byte(b.String()))
+	return hex.EncodeToString(sum[:])
 }
 
 // liveOwners are the distinct live owners of the given members, in id order.

@@ -5,6 +5,7 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -26,15 +27,7 @@ import (
 // when no single record retired.
 func (s *Service) CarryOwnerAccessTx(ctx context.Context, tx pgx.Tx, recordType string, record, owner, mergedFrom ids.UUID) (authz.OwnerAccessCarry, error) {
 	out := authz.OwnerAccessCarry{Owner: owner}
-	if !shareableRecordTypes[recordType] || record.IsZero() || owner.IsZero() {
-		return out, fmt.Errorf("identity: an owner carry needs a shareable record and an owner")
-	}
-	// The two questions a share asks of its grantor. Any principal may pass:
-	// keeping an owner's own access is part of a merge it may already make.
-	if err := auth.EnsureLinkTarget(ctx, tx, recordType, record); err != nil {
-		return out, err
-	}
-	if err := auth.EnsureCanGrant(ctx, tx, recordType, record); err != nil {
+	if err := admitOwnerCarry(ctx, tx, recordType, record, owner); err != nil {
 		return out, err
 	}
 	live, err := memberLive(ctx, tx, owner)
@@ -53,25 +46,13 @@ func (s *Service) CarryOwnerAccessTx(ctx context.Context, tx pgx.Tx, recordType 
 	if err := storekit.LockWriteIdentity(ctx, tx, "record_grant", grantIdentity(in)); err != nil {
 		return out, err
 	}
-	prior, held, err := replacedGrant(ctx, tx, in)
+	grantedBy, before, enough, err := foldPriorGrant(ctx, tx, &in, ownerCarryGrantor(ctx, owner))
 	if err != nil {
 		return out, err
 	}
-	grantedBy := ownerCarryGrantor(ctx, owner)
-	var before map[string]any
-	if held {
-		live, err := grantLiveNow(ctx, tx, prior)
-		if err != nil {
-			return out, err
-		}
-		if live {
-			if prior.Access == access || access != grantAccessWrite {
-				out.Skipped = authz.OwnerCarryAlreadyGranted
-				return out, nil
-			}
-			in.ExpiresAt, in.Reason, grantedBy = prior.ExpiresAt, prior.Reason, prior.GrantedBy
-		}
-		before = grantImage(prior)
+	if enough {
+		out.Skipped = authz.OwnerCarryAlreadyGranted
+		return out, nil
 	}
 	row, err := upsertGrant(ctx, tx, in, grantedBy)
 	if err != nil {
@@ -87,6 +68,41 @@ func (s *Service) CarryOwnerAccessTx(ctx context.Context, tx pgx.Tx, recordType 
 	}
 	out.Access = row.Access
 	return out, nil
+}
+
+// admitOwnerCarry asks the two questions a share asks of its grantor. Any
+// principal may pass: keeping an owner's own access is part of a merge it may
+// already make.
+func admitOwnerCarry(ctx context.Context, tx pgx.Tx, recordType string, record, owner ids.UUID) error {
+	if !shareableRecordTypes[recordType] || record.IsZero() || owner.IsZero() {
+		return errors.New("identity: an owner carry needs a shareable record and an owner")
+	}
+	if err := auth.EnsureLinkTarget(ctx, tx, recordType, record); err != nil {
+		return err
+	}
+	return auth.EnsureCanGrant(ctx, tx, recordType, record)
+}
+
+// foldPriorGrant reads the grant the owner may already hold. A live one keeps
+// its term, reason and grantor, and enough reports that it needs no raise.
+func foldPriorGrant(ctx context.Context, tx pgx.Tx, in *CreateGrantInput, grantor ids.UUID) (
+	grantedBy ids.UUID, before map[string]any, enough bool, err error,
+) {
+	prior, held, err := replacedGrant(ctx, tx, *in)
+	if err != nil || !held {
+		return grantor, nil, false, err
+	}
+	live, err := grantLiveNow(ctx, tx, prior)
+	if err != nil {
+		return grantor, nil, false, err
+	}
+	if live {
+		if prior.Access == in.Access || in.Access != grantAccessWrite {
+			return grantor, nil, true, nil
+		}
+		in.ExpiresAt, in.Reason, grantor = prior.ExpiresAt, prior.Reason, prior.GrantedBy
+	}
+	return grantor, grantImage(prior), false, nil
 }
 
 // grantAccessWrite is the wider of a grant's two access levels.

@@ -163,9 +163,15 @@ func (e *Eraser) eraseCommitmentTask(ctx context.Context, tx pgx.Tx, task ids.UU
 	return true, storekit.EmitEventForEntity(ctx, tx, auditID, "activity", task, retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, &act.collateralReason))
 }
 
+// The activity and evidence locator the erasure statements name.
+const (
+	commitmentSourceArg  = "source"
+	commitmentLocatorArg = "locator"
+)
+
 func eraseCommitmentClaims(ctx context.Context, tx pgx.Tx, item commitmentErasure) error {
 	rows, err := tx.Query(ctx, `DELETE FROM conversation_claim WHERE source_activity_id = @source
- AND evidence_fingerprint = @locator RETURNING id, contact_id`, pgx.NamedArgs{"source": item.source, "locator": item.locator})
+ AND evidence_fingerprint = @locator RETURNING id, contact_id`, pgx.NamedArgs{commitmentSourceArg: item.source, commitmentLocatorArg: item.locator})
 	if err != nil {
 		return err
 	}
@@ -195,7 +201,7 @@ func eraseCommitmentClaims(ctx context.Context, tx pgx.Tx, item commitmentErasur
 
 func eraseCommitmentDecision(ctx context.Context, tx pgx.Tx, item commitmentErasure) error {
 	tag, err := tx.Exec(ctx, `DELETE FROM activity_commitment_admission
- WHERE source_activity_id = @source AND locator = @locator`, pgx.NamedArgs{"source": item.source, "locator": item.locator})
+ WHERE source_activity_id = @source AND locator = @locator`, pgx.NamedArgs{commitmentSourceArg: item.source, commitmentLocatorArg: item.locator})
 	if err != nil {
 		return err
 	}
@@ -227,7 +233,7 @@ func redactCommitmentDecision(ctx context.Context, tx pgx.Tx, item commitmentEra
  current_work = prior.current_work AND NOT @unavailable
  WHERE prior.summary <> '' OR prior.source_quote <> '' OR prior.meaning IS NOT NULL
  OR (@unavailable AND (prior.outcome <> @reason OR prior.current_work))`, pgx.StrictNamedArgs{
-		"unavailable": unavailable, evidenceKeyReason: auth.CommitmentEvidenceUnavailable, "evidence_source": item.source, "locator": item.locator, "by": by,
+		"unavailable": unavailable, evidenceKeyReason: auth.CommitmentEvidenceUnavailable, "evidence_source": item.source, commitmentLocatorArg: item.locator, "by": by,
 	})
 	if err != nil {
 		return err

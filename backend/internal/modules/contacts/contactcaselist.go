@@ -5,6 +5,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 
@@ -134,7 +135,7 @@ type caseOwnership struct {
 func caseScopeFilter(ctx context.Context, scope string, recipient ids.UUID) (func([]caseOwnership) bool, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
-		return nil, fmt.Errorf("contacts: no actor bound to read cases for")
+		return nil, errors.New("contacts: no actor bound to read cases for")
 	}
 	if recipient.IsZero() {
 		recipient = actor.UserID

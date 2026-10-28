@@ -172,7 +172,7 @@ func requireDedupeReadOf(ctx context.Context, entityTypes []string) error {
 	}
 	for _, entityType := range entityTypes {
 		if entityType == "" {
-			return &DedupeInputError{Field: "entity_type", Msg: "must name a record type"}
+			return &DedupeInputError{Field: auditKeyEntityType, Msg: "must name a record type"}
 		}
 		if err := requireDedupeRead(ctx, entityType); err != nil {
 			return err

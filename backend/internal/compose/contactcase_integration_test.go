@@ -118,7 +118,7 @@ func itoa(n int) string {
 	return string(digits)
 }
 
-func (c *caseEnv) read(t *testing.T, ctx context.Context, member ids.UUID) crmcontracts.ContactCase {
+func (c *caseEnv) read(ctx context.Context, t *testing.T, member ids.UUID) crmcontracts.ContactCase {
 	t.Helper()
 	got, err := c.store.GetContactCase(ctx, member)
 	if err != nil {
@@ -132,8 +132,7 @@ func caseDecision(read crmcontracts.ContactCase, members []ids.UUID, survivor, o
 }
 
 func caseCode(err error) string {
-	var selection *contacts.CaseSelectionError
-	if errors.As(err, &selection) {
+	if selection, ok := errors.AsType[*contacts.CaseSelectionError](err); ok {
 		return selection.Code
 	}
 	type coded interface{ MessageFault() (string, string) }
@@ -159,7 +158,7 @@ func TestEveryOwnerSeesTheSameContactCase(t *testing.T) {
 	anchor := slices.MinFunc(members, func(a, b ids.UUID) int { return slices.Compare(a[:], b[:]) })
 
 	for i, owner := range []ids.UUID{c.e.Rep1, c.e.Rep2, c.e.Rep3} {
-		got := c.read(t, c.rep(owner), members[i])
+		got := c.read(c.rep(owner), t, members[i])
 		if ids.UUID(got.AnchorId) != anchor || len(got.Members) != 3 || len(got.Owners) != 3 {
 			t.Errorf("owner %d reads anchor %s with %d members and %d owners, want %s, 3 and 3",
 				i, got.AnchorId, len(got.Members), len(got.Owners), anchor)
@@ -178,7 +177,7 @@ func TestEveryOwnerSeesTheSameContactCase(t *testing.T) {
 	}
 
 	twice := c.seedCase(t, c.e.Rep1, c.e.Rep1)
-	got := c.read(t, c.rep(c.e.Rep1), twice[0])
+	got := c.read(c.rep(c.e.Rep1), t, twice[0])
 	if len(got.Owners) != 1 || len(got.Owners[0].MemberIds) != 2 {
 		t.Errorf("one owner of two members reads %d owner entries, want one naming both", len(got.Owners))
 	}
@@ -189,7 +188,7 @@ func TestACaseMergeOfColleaguesContactsNeedsThePolicy(t *testing.T) {
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep2, c.e.Rep3)
 	rep := c.rep(c.e.Rep1)
 
-	off := c.read(t, rep, members[0])
+	off := c.read(rep, t, members[0])
 	if off.MergeMode != crmcontracts.ContactCaseMergeModeNone || off.CanMerge {
 		t.Fatalf("with the policy off a rep reads merge_mode %s, want none", off.MergeMode)
 	}
@@ -199,7 +198,7 @@ func TestACaseMergeOfColleaguesContactsNeedsThePolicy(t *testing.T) {
 	}
 
 	c.setPolicy(t, true)
-	on := c.read(t, rep, members[0])
+	on := c.read(rep, t, members[0])
 	if on.MergeMode != crmcontracts.ContactCaseMergeModeDelegated {
 		t.Fatalf("with the policy on the owner reads merge_mode %s, want delegated", on.MergeMode)
 	}
@@ -275,7 +274,7 @@ func TestACaseMergeKeepsEachFormerOwnerAtTheirSeat(t *testing.T) {
 	}
 	c.setPolicy(t, true)
 	rep := c.rep(c.e.Rep1)
-	read := c.read(t, rep, members[0])
+	read := c.read(rep, t, members[0])
 	out, err := c.store.MergeContactCase(rep, members[0], caseDecision(read, members, members[0], c.e.Rep1))
 	if err != nil {
 		t.Fatalf("merging the case: %v", err)
@@ -299,7 +298,7 @@ func TestASubsetMergeLeavesTheRestAsAnOpenPairWithTheSurvivor(t *testing.T) {
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep2, c.e.Rep3)
 	c.setPolicy(t, true)
 	rep := c.rep(c.e.Rep1)
-	read := c.read(t, rep, members[0])
+	read := c.read(rep, t, members[0])
 	out, err := c.store.MergeContactCase(rep, members[0], caseDecision(read, members[:2], members[0], c.e.Rep1))
 	if err != nil {
 		t.Fatalf("merging two of three: %v", err)
@@ -310,7 +309,7 @@ func TestASubsetMergeLeavesTheRestAsAnOpenPairWithTheSurvivor(t *testing.T) {
 	if grantAccess(t, c.e, members[0], c.e.Rep3) != "" {
 		t.Error("the unselected member's owner was granted access")
 	}
-	residual := c.read(t, c.e.Admin(), members[2])
+	residual := c.read(c.e.Admin(), t, members[2])
 	if got := uuidsOf(memberIDs(residual)); len(got) != 2 || !slices.Contains(got, members[0]) {
 		t.Errorf("the residual case = %v, want the third member and the survivor", got)
 	}
@@ -338,7 +337,7 @@ func TestACaseMergeRefusesASelectionTheCaseCannotTake(t *testing.T) {
 	if _, err := c.store.ScanChangedForDuplicates(machineCtx(c.e)); err != nil {
 		t.Fatalf("scanning for duplicates: %v", err)
 	}
-	read := c.read(t, rep, members[0])
+	read := c.read(rep, t, members[0])
 	if len(read.Edges) != 3 {
 		t.Fatalf("the case holds %d pairs, want the triangle of 3", len(read.Edges))
 	}
@@ -346,7 +345,7 @@ func TestACaseMergeRefusesASelectionTheCaseCannotTake(t *testing.T) {
 	if _, err := c.store.DisposeDedupeCandidate(rep, ids.UUID(pair.PairId), "not_a_duplicate", nil); err != nil {
 		t.Fatalf("dismissing a pair: %v", err)
 	}
-	read = c.read(t, rep, members[0])
+	read = c.read(rep, t, members[0])
 	cases := []struct {
 		name   string
 		member []ids.UUID
@@ -380,7 +379,7 @@ func TestUndoingADismissalReshapesTheCase(t *testing.T) {
 	rep := c.rep(c.e.Rep1)
 	third := members[2]
 	var dismissed []ids.UUID
-	for _, edge := range c.read(t, rep, members[0]).Edges {
+	for _, edge := range c.read(rep, t, members[0]).Edges {
 		if ids.UUID(edge.LeftId) == third || ids.UUID(edge.RightId) == third {
 			if _, err := c.store.DisposeDedupeCandidate(rep, ids.UUID(edge.PairId), "not_a_duplicate", nil); err != nil {
 				t.Fatal(err)
@@ -388,13 +387,13 @@ func TestUndoingADismissalReshapesTheCase(t *testing.T) {
 			dismissed = append(dismissed, ids.UUID(edge.PairId))
 		}
 	}
-	if got := c.read(t, rep, members[0]); len(got.Members) != 2 {
+	if got := c.read(rep, t, members[0]); len(got.Members) != 2 {
 		t.Fatalf("after dismissing the third member's pairs the case holds %d members, want 2", len(got.Members))
 	}
 	if _, err := c.store.UndoDedupeDisposition(rep, dismissed[0]); err != nil {
 		t.Fatal(err)
 	}
-	if got := c.read(t, rep, members[0]); len(got.Members) != 3 {
+	if got := c.read(rep, t, members[0]); len(got.Members) != 3 {
 		t.Errorf("after the undo the case holds %d members, want 3 again", len(got.Members))
 	}
 }

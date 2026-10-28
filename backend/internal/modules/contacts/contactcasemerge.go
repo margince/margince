@@ -23,33 +23,12 @@ import (
 // member's merge then compares its former owner with the chosen one, so the
 // new owner gets no grant.
 func (s *Store) executeCaseMerge(ctx context.Context, tx pgx.Tx, plan caseMergePlan, active []fieldcatalog.Column) (crmcontracts.ContactCaseOutcome, error) {
-	actor, _ := principal.Actor(ctx)
-	// The decision already holds these; asking again here keeps every write
-	// below visibly behind its subject's lock.
-	for _, id := range plan.selected {
-		if err := auth.LockSubjectLive(ctx, tx, contactEntity, id); err != nil {
-			return crmcontracts.ContactCaseOutcome{}, err
-		}
-	}
-	for _, e := range plan.c.Edges {
-		if e.Disposition == dispositionOpen && slices.Contains(plan.selected, e.Left) && slices.Contains(plan.selected, e.Right) {
-			if err := setDedupeDispositionTx(ctx, tx, e.ID, dispositionMerged, actor.UserID); err != nil {
-				return crmcontracts.ContactCaseOutcome{}, err
-			}
-		}
+	if err := settleCasePairs(ctx, tx, plan); err != nil {
+		return crmcontracts.ContactCaseOutcome{}, err
 	}
 	carried := carriedOwners{}
-	previous := plan.survivor.OwnerID
-	if !sameOwner(previous, &plan.owner) {
-		owner := ids.From[ids.UserKind](plan.owner)
-		if _, err := s.updateContactInTx(ctx, tx, plan.survivorID(), UpdateContactInput{OwnerID: &owner}, active); err != nil {
-			return crmcontracts.ContactCaseOutcome{}, fmt.Errorf("contacts: handing the survivor to its owner: %w", err)
-		}
-		carry, err := s.carryOwnerAccessTx(ctx, tx, plan.survivorID(), &plan.owner, previous, ids.Nil)
-		if err != nil {
-			return crmcontracts.ContactCaseOutcome{}, err
-		}
-		carried.add(carry)
+	if err := s.handOverSurvivor(ctx, tx, plan, active, carried); err != nil {
+		return crmcontracts.ContactCaseOutcome{}, err
 	}
 	var merged []openapi_types.UUID
 	for _, id := range plan.selected {
@@ -68,7 +47,7 @@ func (s *Store) executeCaseMerge(ctx context.Context, tx pgx.Tx, plan caseMergeP
 	// beyond what each member's own merge row records.
 	if _, err := storekit.AuditEventWithEvidence(ctx, tx, "merge", contactEntity, plan.survivor.ID, nil,
 		map[string]any{"merge_case": map[string]any{
-			"members": plan.selected, "survivor": plan.survivor.ID, "owner": plan.owner,
+			"members": plan.selected, "survivor": plan.survivor.ID, "chosen_owner": plan.owner,
 			"shares": out.Shares, "mode": plan.mode, "policy": plan.policy,
 		}}); err != nil {
 		return crmcontracts.ContactCaseOutcome{}, fmt.Errorf("contacts: recording the case merge: %w", err)
@@ -79,6 +58,48 @@ func (s *Store) executeCaseMerge(ctx context.Context, tx pgx.Tx, plan caseMergeP
 	}
 	out.Survivor = &survivor
 	return out, nil
+}
+
+// settleCasePairs marks the open pairs among the selected members as merged.
+// The decision already holds each member's lock; asking again keeps every write
+// visibly behind its subject's lock.
+func settleCasePairs(ctx context.Context, tx pgx.Tx, plan caseMergePlan) error {
+	actor, _ := principal.Actor(ctx)
+	for _, id := range plan.selected {
+		if err := auth.LockSubjectLive(ctx, tx, contactEntity, id); err != nil {
+			return err
+		}
+	}
+	for _, e := range plan.c.Edges {
+		if e.Disposition == dispositionOpen && slices.Contains(plan.selected, e.Left) && slices.Contains(plan.selected, e.Right) {
+			if err := setDedupeDispositionTx(ctx, tx, e.ID, dispositionMerged, actor.UserID); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// handOverSurvivor gives the survivor to the chosen owner, and keeps the
+// previous owner's access.
+func (s *Store) handOverSurvivor(ctx context.Context, tx pgx.Tx, plan caseMergePlan, active []fieldcatalog.Column, carried carriedOwners) error {
+	previous := plan.survivor.OwnerID
+	if sameOwner(previous, &plan.owner) {
+		return nil
+	}
+	if err := auth.LockSubjectLive(ctx, tx, contactEntity, plan.survivor.ID); err != nil {
+		return err
+	}
+	owner := ids.From[ids.UserKind](plan.owner)
+	if _, err := s.updateContactInTx(ctx, tx, plan.survivorID(), UpdateContactInput{OwnerID: &owner}, active); err != nil {
+		return fmt.Errorf("contacts: handing the survivor to its owner: %w", err)
+	}
+	carry, err := s.carryOwnerAccessTx(ctx, tx, plan.survivorID(), &plan.owner, previous, ids.Nil)
+	if err != nil {
+		return err
+	}
+	carried.add(carry)
+	return nil
 }
 
 // outcome reports, per former owner other than the chosen one, the access they

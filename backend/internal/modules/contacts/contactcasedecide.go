@@ -44,16 +44,26 @@ func (e *CaseSelectionError) Error() string { return "contacts: " + e.Msg }
 func (e *CaseSelectionError) MessageFault() (code, message string) { return e.Code, e.Msg }
 
 var (
-	errCaseNotConnected = &CaseSelectionError{Code: "not_connected",
-		Msg: "the selected contacts are not all joined by open duplicate pairs in this case"}
-	errCaseDismissedPair = &CaseSelectionError{Code: "dismissed_pair_selected",
-		Msg: "two of the selected contacts were marked as different people; leave one of them out"}
-	errCaseOwnerNotEligible = &CaseSelectionError{Code: "owner_not_eligible",
-		Msg: "the owner must be a current owner of one of the selected contacts"}
-	errCaseTooLarge = &CaseSelectionError{Code: "too_large",
-		Msg: "this case has more contacts than one review may merge; decide its pairs one by one"}
-	errCaseChanged = &pairDecisionError{code: "case_changed",
-		msg: "the case changed since it was read; read it again and review the new version"}
+	errCaseNotConnected = &CaseSelectionError{
+		Code: "not_connected",
+		Msg:  "the selected contacts are not all joined by open duplicate pairs in this case",
+	}
+	errCaseDismissedPair = &CaseSelectionError{
+		Code: "dismissed_pair_selected",
+		Msg:  "two of the selected contacts were marked as different people; leave one of them out",
+	}
+	errCaseOwnerNotEligible = &CaseSelectionError{
+		Code: "owner_not_eligible",
+		Msg:  "the owner must be a current owner of one of the selected contacts",
+	}
+	errCaseTooLarge = &CaseSelectionError{
+		Code: "too_large",
+		Msg:  "this case has more contacts than one review may merge; decide its pairs one by one",
+	}
+	errCaseChanged = &pairDecisionError{
+		code: "case_changed",
+		msg:  "the case changed since it was read; read it again and review the new version",
+	}
 	// errCasePreview rolls a preview's transaction back once its outcome is built.
 	errCasePreview = errors.New("contacts: a case preview writes nothing")
 )

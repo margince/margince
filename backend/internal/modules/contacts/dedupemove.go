@@ -75,9 +75,9 @@ func moveDedupeCandidates(ctx context.Context, tx pgx.Tx, entityType string, sou
 }
 
 // settleOpenPairBetween marks the open pair of the two merging records as
-// merged, by the user behind this call. The dedupe queue and a case merge mark
-// their pairs first, so only a merge made from a record page finds one open;
-// without this it left no row for the merged list to show.
+// merged, by the user behind this call. The queue and a case merge mark their
+// pairs first. So only a merge from a record page finds one open, and without
+// this it left no row for the merged list to show.
 func settleOpenPairBetween(ctx context.Context, tx pgx.Tx, side dedupePairSide, sourceID, targetID ids.UUID) error {
 	var pairID ids.UUID
 	err := tx.QueryRow(ctx, fmt.Sprintf(`
