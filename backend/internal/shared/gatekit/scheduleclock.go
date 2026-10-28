@@ -148,7 +148,7 @@ func clampArguments(value string) ([]string, bool) {
 	if !ok || strings.TrimSpace(tail) != "" {
 		return nil, false
 	}
-	return splitTopLevel(group), true
+	return SplitSQLList(group), true
 }
 
 // storedColumn reports whether value is a plain column reference — a value the
@@ -245,7 +245,7 @@ func assignmentsTo(text, column string) []string {
 		if !ok || endsInIdentifier(before) {
 			continue
 		}
-		found = append(found, endOfExpression(splitTopLevel(rhs)[0]))
+		found = append(found, endOfExpression(SplitSQLList(rhs)[0]))
 	}
 	return found
 }
@@ -304,7 +304,7 @@ func insertedValuesFor(text, column string) []string {
 		if !ok {
 			continue
 		}
-		names, items := splitTopLevel(cols), splitTopLevel(vals)
+		names, items := SplitSQLList(cols), SplitSQLList(vals)
 		for i, name := range names {
 			if name == column && i < len(items) {
 				found = append(found, items[i])
@@ -336,12 +336,12 @@ func parenGroup(text string) (group, tail string, ok bool) {
 	return "", "", false
 }
 
-// splitTopLevel splits a comma-separated SQL list, ignoring commas nested in
+// SplitSQLList splits a comma-separated SQL list, ignoring commas nested in
 // parentheses or quotes. A workspace-GUC expression an INSERT opens with is ONE
 // item containing two commas of its own; a gate that split it into three would
 // misalign every position after it, and then report the misalignment as a clock
 // violation.
-func splitTopLevel(list string) []string {
+func SplitSQLList(list string) []string {
 	var items []string
 	depth, quoted, start := 0, false, 0
 	for i := 0; i < len(list); i++ {

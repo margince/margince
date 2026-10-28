@@ -239,6 +239,12 @@ type Receipt struct {
 	// already a decision somebody can revisit through the record, and a
 	// correction somebody has already reversed has no second undo in it.
 	Undo *ReceiptUndo
+	// Actor is who did it, as the audit trail spells them. A zero Type means
+	// the source could not say.
+	Actor ReceiptActor
+	// SourceActivityID is the message the act was read from; zero when it
+	// cites none.
+	SourceActivityID ids.UUID
 }
 
 // ReceiptUndo is what a receipt needs to offer a way back.

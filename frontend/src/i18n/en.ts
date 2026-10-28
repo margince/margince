@@ -3,6 +3,26 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "homeRepair.reason.taskChanged":
+    "The task changed while the preview was being built. Preview it again.",
+  "homeRepair.normalize": "Correct source or generated date",
+  "homeRepair.normalizeSummary_one":
+    "{count} automatic task has a source or date correction.",
+  "homeRepair.normalizeSummary_other":
+    "{count} automatic tasks have source or date corrections.",
+  "homeRepair.taskCorrectionPermission":
+    "You can review these tasks, but your role cannot apply all listed corrections.",
+  "homeRepair.reason.noLongerCurrent":
+    "Its source no longer establishes current work.",
+  "homeRepair.reason.restoreSource": "Restore the recorded source link.",
+  "homeRepair.reason.generatedDate": "Remove the generated notification date.",
+  "homeRepair.reason.restoreSourceAndDate":
+    "Restore the source link and remove the generated notification date.",
+  "worklist.relationships.optional": "Optional reconnections",
+  "worklist.relationships.optionalDetail":
+    "Silence alone is not work. Pin a contact to choose them for your day, or create a task on their record.",
+  "worklist.relationships.more":
+    "More optional contacts are outside this view.",
   "webhooks.event.signal.updated.label": "Alert owner changed",
   "webhooks.event.signal.updated.when":
     "When an alert moves to the surviving member during a duplicate merge.",
@@ -179,7 +199,7 @@ export const en = {
   "homeRepair.inspect": "Inspect",
   "dataTasks.blocked.review_required":
     "Review the proposed changes before starting.",
-  "homeRepair.archive": "Archive automatic reminder",
+  "homeRepair.archive": "Archive automatic task",
   "homeRepair.keepReview": "Keep for human review",
   "homeRepair.keepCurrent": "Keep current work",
   "homeRepair.reason.adopted":
@@ -187,7 +207,7 @@ export const en = {
   "homeRepair.reason.unverified":
     "The available evidence does not justify an automatic change.",
   "homeRepair.reason.unavailable":
-    "The source cannot be checked with your current access.",
+    "The source is missing or cannot be checked with your current access.",
   "homeRepair.reason.historical":
     "Historical source without a current deadline.",
   "homeRepair.reason.lateProposed":
@@ -212,11 +232,11 @@ export const en = {
     "The current admission rules still allow this work.",
   "homeRepair.unnamed": "Details unavailable",
   "homeRepair.explain":
-    "Only work you can currently inspect is included. Review up to 25 items at a time. Obsolete automatic reminders can be archived and duplicate or obsolete proposals withdrawn. Human work is preserved; nothing is marked completed.",
+    "Only work you can currently inspect is included. Review up to 25 items at a time. Obsolete automatic tasks can be archived and duplicate or obsolete proposals withdrawn. Human work is preserved; nothing is marked completed.",
   "homeRepair.preview": "Preview items",
   "homeRepair.next": "Review next page",
   "homeRepair.summary":
-    "Results to change: {reclassify}. Reminders to archive: {archive}. Proposals to withdraw: {withdraw}. Deal suggestions to retire: {supersede}. Keep for review: {review}; keep as current work: {keep}.",
+    "Results to change: {reclassify}. Automatic tasks to archive: {archive}. Proposals to withdraw: {withdraw}. Deal suggestions to retire: {supersede}. Keep for review: {review}; keep as current work: {keep}.",
   "homeRepair.apply_one": "Apply {count} reviewed change",
   "homeRepair.apply_other": "Apply {count} reviewed changes",
   "homeRepair.settlements": "Answered requests",
@@ -16601,6 +16621,11 @@ export const en = {
   "worklist.handled.wayBack": "Status",
   "worklist.handled.putBackDone": "Already undone",
   "worklist.handled.truncated": "List truncated. More items exist.",
+  "receipt.detail.summary": "Details",
+  "receipt.detail.by": "Done by",
+  "receipt.detail.when": "When",
+  "receipt.detail.source": "Source",
+  "worklist.handled.showMore": "Show more",
   "worklist.exceptions.empty": "No team exceptions.",
   "worklist.exceptions.loading": "Loading team…",
   "worklist.exceptions.count": "{count} need attention",
@@ -17441,7 +17466,7 @@ export const en = {
   // The machinery's receipt on Home: what ran while the reader was away, in
   // four lanes. The `magic.action.*` and `magic.consequence.*` families are
   // the client half of a mirror the server sends keys against. So the set is
-  // the contract (src/features/sign-in/magic.keys.ts), not one screen's copy.
+  // the contract (src/lib/magickeys.ts), not one screen's copy.
   "magic.heading.brief": "Since your last brief",
   "magic.loading": "Reading what the machinery did",
   "magic.lane.done": "Done for you",
@@ -17509,6 +17534,8 @@ export const en = {
   "magic.by.agent": "An agent",
   "magic.by.system": "Margince",
   "magic.by.data_correction": "Data correction",
+  "magic.by.member": "{name}",
+  "magic.by.colleague": "A colleague",
   "magic.failingSince": "Failing since {when}",
   "magic.noRecord": "No record named",
   "magic.undo.action": "Undo",
