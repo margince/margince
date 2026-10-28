@@ -100,7 +100,7 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	if err != nil {
 		return nil, "", nil, nil, err
 	}
-	reminders, err := dueRemindersArm(ctx, in, arg)
+	reminders, err := dueRemindersArm(ctx, in, scope != "", arg)
 	if err != nil {
 		return nil, "", nil, nil, err
 	}
@@ -196,17 +196,25 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 }
 
 // dueRemindersArm is the caller's due reminders as one clause, or empty when
-// the read asks for none. The widening arm carries the content gate itself,
-// because the rest of the Worklist read is discover-gated.
-func dueRemindersArm(ctx context.Context, in ListActivitiesInput, arg func(any) int) (string, error) {
+// the read asks for none. The widening arm must not read past the content gate.
+//
+// gated says whether the outer statement already scopes alias a. A content gate
+// there covers the arm whole. A discover gate leaves only its audience half to
+// add, since the content gate is discover and audience. Repeating the full gate
+// doubled the statement Postgres plans.
+func dueRemindersArm(ctx context.Context, in ListActivitiesInput, gated bool, arg func(any) int) (string, error) {
 	if !in.RemindersDue && !in.OrRemindersDue {
 		return "", nil
 	}
 	reminders := dueReminderClause("a", sprintf("$%d", arg(ReminderReader(ctx))), reminderClockOf(in), arg)
-	if !in.OrRemindersDue {
+	if !in.OrRemindersDue || (gated && filtersOnContent(in)) {
 		return reminders, nil
 	}
-	readable, err := auth.ActivityContentClause(ctx, "a", arg)
+	gate := auth.ActivityContentClause
+	if gated {
+		gate = auth.ActivityAudienceArm
+	}
+	readable, err := gate(ctx, "a", arg)
 	if err != nil || readable == "" {
 		return reminders, err
 	}
