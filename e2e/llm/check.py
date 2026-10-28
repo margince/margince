@@ -490,11 +490,11 @@ def tool_matches(called, want):
 # means in a must_mention entry, and it means the same thing here: this entry
 # holds when ANY of its alternatives does.
 #
-# It exists because some questions have more than one honest engine. Case 7 asks
-# for a count broken down by a dimension, and both run_report and
-# run_analytics_query produce it from the same population — so a scenario that
-# named one of them would be measuring which engine the model happened to pick
-# rather than whether the number came from a real aggregate. Separate entries
+# It exists because some questions have more than one honest engine. A count
+# broken down by a dimension comes from run_report or run_analytics_query over
+# the same population — so a scenario that named one of them would be measuring
+# which engine the model happened to pick rather than whether the number came
+# from a real aggregate. Separate entries
 # cannot say that: they are ANDed, and would demand both.
 #
 # The separator is `|` with NO surrounding space, because a scenario's list item

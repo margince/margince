@@ -1,3 +1,0 @@
-{"type": "system", "subtype": "init", "tools": ["mcp__margince__read_forecast"]}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_forecast", "input": {"view": "readings"}}]}}
-{"type": "result", "subtype": "success", "is_error": false, "result": "Seven deals are due to close this quarter and the weighted forecast comes to EUR 412,000.\n\nWeserbund Pilotphase has no amount entered, so it is in the count and not in the money. It has not been priced yet, and until somebody puts a figure on it the total cannot include it. There is no forecast value available for Weserbund until somebody prices it."}
