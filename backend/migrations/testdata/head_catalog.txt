@@ -3277,6 +3277,7 @@ public.contact_email.contact_email_version_js_safe CHECK (((version >= '-9007199
 public.contact_email.contact_id uuid NOT NULL gen=- def=-
 public.contact_email.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact_email.email text NOT NULL gen=- def=-
+public.contact_email.email_domain_folded text gen=- def=-
 public.contact_email.email_type text NOT NULL gen=- def='work'::text
 public.contact_email.from_correspondence boolean NOT NULL gen=- def=true
 public.contact_email.id uuid NOT NULL gen=- def=uuidv7()
@@ -4668,7 +4669,7 @@ public.idx_analytics_share_scope_user CREATE INDEX idx_analytics_share_scope_use
 public.idx_analytics_share_snapshot CREATE INDEX idx_analytics_share_snapshot ON public.analytics_share USING btree (snapshot_id)
 public.idx_aparticipant_address CREATE INDEX idx_aparticipant_address ON public.activity_participant USING btree (lower(address)) WHERE (address IS NOT NULL)
 public.idx_aparticipant_contact CREATE INDEX idx_aparticipant_contact ON public.activity_participant USING btree (contact_id, activity_id) WHERE (contact_id IS NOT NULL)
-public.idx_aparticipant_sender_host_reversed CREATE INDEX idx_aparticipant_sender_host_reversed ON public.activity_participant USING btree (reverse(split_part(lower(address), '@'::text, 2)) COLLATE "C") WHERE ((role = 'from'::text) AND (address IS NOT NULL))
+public.idx_aparticipant_sender_domain_reversed CREATE INDEX idx_aparticipant_sender_domain_reversed ON public.activity_participant USING btree (reverse(address_domain_folded) COLLATE "C") WHERE ((role = 'from'::text) AND (address_domain_folded IS NOT NULL))
 public.idx_aparticipant_user CREATE INDEX idx_aparticipant_user ON public.activity_participant USING btree (user_id, activity_id) WHERE (user_id IS NOT NULL)
 public.idx_app_user_live CREATE INDEX idx_app_user_live ON public.app_user USING btree (created_at, id) WHERE (archived_at IS NULL)
 public.idx_app_user_merge_target CREATE INDEX idx_app_user_merge_target ON public.app_user USING btree (merged_into_user_id) WHERE (merged_into_user_id IS NOT NULL)
@@ -5301,6 +5302,7 @@ public.lead.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead.disqualify_note text gen=- def=-
 public.lead.disqualify_reason_id uuid gen=- def=-
 public.lead.email text gen=- def=-
+public.lead.email_domain_folded text gen=- def=-
 public.lead.entered_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead.first_response_at timestamp with time zone gen=- def=-
 public.lead.from_contact_id uuid gen=- def=-
@@ -5831,6 +5833,15 @@ public.meeting_proposal.token_hash text NOT NULL gen=- def=-
 public.meeting_proposal.used_at timestamp with time zone gen=- def=-
 public.meeting_proposal_pkey CREATE UNIQUE INDEX meeting_proposal_pkey ON public.meeting_proposal USING btree (activity_id)
 public.meeting_proposal_token_hash_key CREATE UNIQUE INDEX meeting_proposal_token_hash_key ON public.meeting_proposal USING btree (token_hash)
+public.member_identity_family(member uuid) secdef=false cfg=- acl=- 
+  WITH RECURSIVE member_identities(id) AS (
+    SELECT member
+    UNION
+    SELECT retired.id FROM app_user retired JOIN member_identities survivor
+      ON retired.merged_into_user_id = survivor.id
+     WHERE retired.removed_at IS NOT NULL)
+  SELECT array_agg(id) FROM member_identities
+
 public.mfa_challenge_spent acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.mfa_challenge_spent.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.mfa_challenge_spent.jti text NOT NULL gen=- def=-

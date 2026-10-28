@@ -101,6 +101,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	// subsystem is shaped to prevent.
 	gate := consentGateFor(pool)
 	return activities.NewHandlers(InstallationDB(pool)).
+		WithTaskRecommendation(taskRecommendationReader(pool)).
 		WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithRecordZone(installationZoneTx).

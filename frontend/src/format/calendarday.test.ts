@@ -3,6 +3,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  AI_RATE_DAY_ZONE,
   calendarDay,
   calendarMonth,
   dueInstant,
@@ -12,15 +13,9 @@ import {
   localDateTimeValue,
   middayInstant,
   sameCalendarDay,
-  today,
+  todayIn,
 } from "./calendarday";
 import { displayDay } from "./format.dates";
-import { viewerZone } from "./timezone";
-
-vi.mock("./timezone", async (importOriginal) => {
-  const real = await importOriginal<typeof import("./timezone")>();
-  return { ...real, viewerZone: vi.fn(real.viewerZone) };
-});
 
 // The zone the machine running this suite happens to be in. Every assertion
 // below is written against it rather than against a fixed offset, because the
@@ -55,22 +50,18 @@ describe("sameCalendarDay", () => {
   });
 });
 
-describe("today", () => {
+describe("todayIn", () => {
   afterEach(() => {
     vi.useRealTimers();
-    vi.mocked(viewerZone).mockReset();
   });
 
-  // The reader's calendar, not UTC's: 02:00 UTC on the 5th is still the
-  // evening of the 4th in New York, and a date box floored on UTC's day would
-  // refuse the day that reader can see on their wall.
-  it("is the reader's own calendar day", () => {
+  // The day in the zone asked about, never the runner's: 02:00 UTC on the 5th
+  // is still the evening of the 4th in New York.
+  it("is the calendar day in the zone it is asked for", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-05T02:00:00Z"));
-    vi.mocked(viewerZone).mockReturnValue("America/New_York");
-    expect(today()).toBe("2026-07-04");
-    vi.mocked(viewerZone).mockReturnValue("Asia/Tokyo");
-    expect(today()).toBe("2026-07-05");
+    expect(todayIn("America/New_York")).toBe("2026-07-04");
+    expect(todayIn(AI_RATE_DAY_ZONE)).toBe("2026-07-05");
   });
 });
 

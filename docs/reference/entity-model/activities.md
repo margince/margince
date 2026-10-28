@@ -455,7 +455,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_participant_pkey`: `unique, btree (id)`
 - `idx_aparticipant_address`: `btree (lower(address)) WHERE (address IS NOT NULL)`
 - `idx_aparticipant_contact`: `btree (contact_id, activity_id) WHERE (contact_id IS NOT NULL)`
-- `idx_aparticipant_sender_host_reversed`: `btree (reverse(split_part(lower(address), '@', 2)) COLLATE "C") WHERE ((role = 'from') AND (address IS NOT NULL))`
+- `idx_aparticipant_sender_domain_reversed`: `btree (reverse(address_domain_folded) COLLATE "C") WHERE ((role = 'from') AND (address_domain_folded IS NOT NULL))`
 - `idx_aparticipant_user`: `btree (user_id, activity_id) WHERE (user_id IS NOT NULL)`
 - `uq_activity_participant`: `unique, btree (activity_id, role, user_id, contact_id, address, channel_user_id) NULLS NOT DISTINCT`
 

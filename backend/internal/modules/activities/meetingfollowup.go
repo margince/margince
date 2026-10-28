@@ -26,15 +26,15 @@ import (
 // customer had nothing from the reader since. Each ended at least the
 // follow-up window before asOf, inside the lookback. SentAt is when it started.
 func (s *Store) MeetingsAwaitingFollowUp(ctx context.Context, asOf time.Time) ([]AwaitingReply, error) {
-	return s.readMeetingFollowUps(ctx, asOf, func(func(any) int) string { return scopeUnbounded })
+	return s.readMeetingFollowUps(ctx, asOf, func(func(any) int) (string, error) { return scopeUnbounded, nil })
 }
 
 // MeetingsAwaitingFollowUpOnDeal is MeetingsAwaitingFollowUp narrowed to the
 // meetings filed under one deal, so the deal page and Home name the same ones.
 func (s *Store) MeetingsAwaitingFollowUpOnDeal(ctx context.Context, asOf time.Time, dealID ids.UUID) ([]AwaitingReply, error) {
-	return s.readMeetingFollowUps(ctx, asOf, func(arg func(any) int) string {
+	return s.readMeetingFollowUps(ctx, asOf, func(arg func(any) int) (string, error) {
 		return fmt.Sprintf(`EXISTS (SELECT 1 FROM activity_link on_deal
-		    WHERE on_deal.activity_id = a.id AND on_deal.deal_id = $%d)`, arg(dealID))
+		    WHERE on_deal.activity_id = a.id AND on_deal.deal_id = $%d)`, arg(dealID)), nil
 	})
 }
 
@@ -45,8 +45,8 @@ func (s *Store) MeetingsStillAwaitingFollowUp(ctx context.Context, asOf time.Tim
 	if len(meetingIDs) == 0 {
 		return owed, nil
 	}
-	rows, err := s.readMeetingFollowUps(ctx, asOf, func(arg func(any) int) string {
-		return fmt.Sprintf(`a.id = ANY($%d)`, arg(meetingIDs))
+	rows, err := s.readMeetingFollowUps(ctx, asOf, func(arg func(any) int) (string, error) {
+		return fmt.Sprintf(`a.id = ANY($%d)`, arg(meetingIDs)), nil
 	})
 	for _, row := range rows {
 		owed[row.ActivityID] = true
@@ -57,7 +57,7 @@ func (s *Store) MeetingsStillAwaitingFollowUp(ctx context.Context, asOf time.Tim
 // readMeetingFollowUps runs the one follow-up query; narrow renders the extra
 // predicate on alias a that limits which meetings it considers.
 func (s *Store) readMeetingFollowUps(
-	ctx context.Context, asOf time.Time, narrow func(arg func(any) int) string,
+	ctx context.Context, asOf time.Time, narrow func(arg func(any) int) (string, error),
 ) ([]AwaitingReply, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
@@ -75,43 +75,17 @@ func (s *Store) readMeetingFollowUps(
 }
 
 func (s *Store) queryMeetingFollowUps(
-	ctx context.Context, tx pgx.Tx, asOf time.Time, windowDays int, narrow func(arg func(any) int) string,
+	ctx context.Context, tx pgx.Tx, asOf time.Time, windowDays int, narrow func(arg func(any) int) (string, error),
 ) ([]AwaitingReply, error) {
-	args := []any{}
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	instant := arg(asOf)
-	g, err := followUpGatesFor(ctx, arg)
+	query, args, err := meetingFollowUpsStatement(ctx, asOf, windowDays, narrow, AwaitingReplyScanCap)
 	if err != nil {
 		return nil, err
 	}
-	addressable, err := addressableContactClause(ctx, arg)
-	if err != nil {
-		return nil, err
-	}
-	narrowed := narrow(arg)
-	at := fmt.Sprintf("$%d", instant)
-	rows, err := tx.Query(ctx, fmt.Sprintf(meetingFollowUpsSQL,
-		instant, g.content, g.links, arg(windowDays), AwaitingReplyLookbackDays,
-		g.later, relstrength.InteractionCountsSQL("later"), arg(readerOrNobody(ctx)),
-		messageSnoozeLiftedSQL(at, g.back), g.customer, AwaitingReplyScanCap,
-		meetingHeldSQL("a", at), addressable, maxActivityLinks, narrowed, occurredday.FromSQL("later", followUpFromSQL),
-	), args...)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading meetings the reader owes a follow-up: %w", err)
 	}
-	defer rows.Close()
-	var out []AwaitingReply
-	for rows.Next() {
-		var r AwaitingReply
-		if err := rows.Scan(&r.ActivityID, &r.Subject, &r.SentAt, &r.Recipients, &r.CompanyID, &r.DealID, &r.Precision); err != nil {
-			return nil, fmt.Errorf("activities: reading a meeting the reader owes a follow-up: %w", err)
-		}
-		if len(r.Recipients) > 0 {
-			r.ContactID = r.Recipients[0]
-		}
-		out = append(out, r)
-	}
-	return out, rows.Err()
+	return collectMeetingFollowUps(rows)
 }
 
 // addressableContactClause is which contacts under alias rc this reader may
@@ -221,4 +195,45 @@ var meetingFollowUpsSQL = `
 // no follow-up yet.
 func meetingHeldSQL(alias, now string) string {
 	return "(" + alias + ".meeting_status = 'held' AND " + occurredday.BegunSQL(alias, now) + ")"
+}
+
+func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays int, narrow func(func(any) int) (string, error), limit int) (string, []any, error) {
+	args := []any{}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	instant := arg(asOf)
+	g, err := followUpGatesFor(ctx, arg)
+	if err != nil {
+		return "", nil, err
+	}
+	addressable, err := addressableContactClause(ctx, arg)
+	if err != nil {
+		return "", nil, err
+	}
+	narrowed, err := narrow(arg)
+	if err != nil {
+		return "", nil, err
+	}
+	at := fmt.Sprintf("$%d", instant)
+	return fmt.Sprintf(meetingFollowUpsSQL,
+		instant, g.content, g.links, arg(windowDays), AwaitingReplyLookbackDays,
+		g.later, relstrength.InteractionCountsSQL("later"), arg(readerOrNobody(ctx)),
+		messageSnoozeLiftedSQL(at, g.back), g.customer, limit,
+		meetingHeldSQL("a", at), addressable, maxActivityLinks, narrowed, occurredday.FromSQL("later", followUpFromSQL),
+	), args, nil
+}
+
+func collectMeetingFollowUps(rows pgx.Rows) ([]AwaitingReply, error) {
+	defer rows.Close()
+	var out []AwaitingReply
+	for rows.Next() {
+		var r AwaitingReply
+		if err := rows.Scan(&r.ActivityID, &r.Subject, &r.SentAt, &r.Recipients, &r.CompanyID, &r.DealID, &r.Precision); err != nil {
+			return nil, fmt.Errorf("activities: reading a meeting the reader owes a follow-up: %w", err)
+		}
+		if len(r.Recipients) > 0 {
+			r.ContactID = r.Recipients[0]
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
 }

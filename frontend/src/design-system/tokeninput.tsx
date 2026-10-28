@@ -4,10 +4,23 @@
 import { X } from "lucide-react";
 import { type KeyboardEvent, useRef, useState } from "react";
 import { isImeCommit } from "../lib/imecommit";
+import { Avatar } from "./avatar";
+import { type PeekContent, usePeek } from "./peek";
 import { type Suggestion, SuggestPopup, useSuggestList } from "./suggestlist";
 import "./tokeninput.css";
 
-export type TokenSuggestion = Suggestion;
+/**
+ * An offer that names someone with a record. Its token draws their avatar, and its card is
+ * a contact card. The card holds the avatar, the name linked to `href`, the
+ * address, and `about` (title and company) under them.
+ */
+export type TokenCard = Readonly<{
+  identity: string;
+  href?: string;
+  about?: string;
+}>;
+
+export type TokenSuggestion = Suggestion & Readonly<{ card?: TokenCard }>;
 
 /**
  * A set of short values a reader builds one at a time — the control the `in`
@@ -121,10 +134,10 @@ export function TokenInput({
     setTyped("");
   };
 
-  // A committed value reads the way its suggestion did: an address the record
-  // knows shows its contact's name, with the address itself beside it.
-  const labels = new Map(
-    (suggestions ?? EMPTY).map((row) => [row.value, row.label]),
+  // A committed value an offer named reads as that name; what it stands for
+  // waits on the token's card.
+  const offers = new Map(
+    (suggestions ?? EMPTY).map((row) => [row.value, row] as const),
   );
 
   const list = useSuggestList({
@@ -177,18 +190,13 @@ export function TokenInput({
       className={`token-input input ${disabled ? "is-disabled" : ""}`.trim()}
     >
       {values.map((value) => (
-        <span key={value} className="token">
-          <TokenFace value={value} label={labels.get(value)} />
-          <button
-            type="button"
-            className="token-remove"
-            disabled={disabled}
-            aria-label={`Remove ${value}`}
-            onClick={() => onChange(values.filter((v) => v !== value))}
-          >
-            <X size={12} aria-hidden />
-          </button>
-        </span>
+        <TokenChip
+          key={value}
+          value={value}
+          offer={offers.get(value)}
+          disabled={disabled}
+          onRemove={() => onChange(values.filter((v) => v !== value))}
+        />
       ))}
       <input
         {...aria}
@@ -228,26 +236,83 @@ export function TokenInput({
   );
 }
 
-// The value alone, or a name and the value it stands for, dimmed after it.
-function TokenFace({
+// A named value shows the name alone, so a row of recipients stays one line
+// beside the field's own controls. The value it stands for waits on the card
+// the name opens on hover or focus.
+function TokenChip({
   value,
-  label,
-}: Readonly<{ value: string; label: string | undefined }>) {
-  if (!label || label === value) {
-    return value;
-  }
+  offer,
+  disabled,
+  onRemove,
+}: Readonly<{
+  value: string;
+  offer: TokenSuggestion | undefined;
+  disabled: boolean | undefined;
+  onRemove: () => void;
+}>) {
+  const label = offer?.label;
+  const named = label !== undefined && label !== "" && label !== value;
+  const card = named ? offer?.card : undefined;
+  const {
+    ref,
+    props: anchor,
+    panel,
+  } = usePeek<HTMLSpanElement>({
+    content: named ? tokenCard(value, label, card) : undefined,
+  });
   return (
     <>
-      <span className="token-label">{label}</span>
-      <span className="token-detail">{value}</span>
+      <span
+        ref={ref}
+        className={card ? "token token-has-face" : "token"}
+        {...anchor}
+      >
+        {card && <Avatar name={label ?? value} identity={card.identity} />}
+        <span className={named ? "token-label" : "token-value"}>
+          {named ? label : value}
+        </span>
+        <button
+          type="button"
+          className="token-remove"
+          disabled={disabled}
+          aria-label={`Remove ${value}`}
+          onClick={onRemove}
+        >
+          <X size={12} aria-hidden />
+        </button>
+      </span>
+      {panel}
     </>
   );
+}
+
+function tokenCard(
+  value: string,
+  label: string,
+  card: TokenCard | undefined,
+): PeekContent {
+  return {
+    head: label,
+    headHidden: true,
+    items: [
+      {
+        key: value,
+        lead: card && (
+          <Avatar name={label} identity={card.identity} size="md" />
+        ),
+        title: label,
+        sub: value,
+        href: card?.href,
+      },
+    ],
+    foot: card?.about || undefined,
+  };
 }
 
 // One frozen empty list rather than a fresh `[]` per render: the suggestion
 // hook filters on identity-stable input, and a new array each time would remake
 // the matches on every keystroke of a field that was given nothing to offer.
-const EMPTY: readonly Suggestion[] = [];
+const EMPTY: readonly TokenSuggestion[] = [];
 
 /**
  * The same tokens, WITHOUT a text box: a set somebody built somewhere else.

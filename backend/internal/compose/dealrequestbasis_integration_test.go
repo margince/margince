@@ -62,7 +62,7 @@ func TestCachedDealCardRefreshesTheRequestEvaluationWithoutRebuildingItsWords(t 
 	if second.RequestBasis == nil || second.RequestBasis.EvaluatedAt != at || second.RequestBasis.SourceActivityId != source.Id {
 		t.Fatalf("cached card reused an old evaluation: %+v", second.RequestBasis)
 	}
-	moves, err := cards.CachedMoves(reader, []ids.UUID{e.booked})
+	moves, err := cards.CurrentMoves(reader, []ids.UUID{e.booked})
 	if err != nil || len(moves) != 1 {
 		t.Fatalf("human cached move = %+v, %v", moves, err)
 	}
@@ -73,7 +73,7 @@ func TestCachedDealCardRefreshesTheRequestEvaluationWithoutRebuildingItsWords(t 
 	actor.Type, actor.ID = principal.PrincipalAgent, "agent:"+ids.NewV7().String()
 	actor.PassportID, actor.OnBehalfOf = ids.NewV7(), actor.UserID
 	agent := principal.WithActor(reader, actor)
-	moves, err = cards.CachedMoves(agent, []ids.UUID{e.booked})
+	moves, err = cards.CurrentMoves(agent, []ids.UUID{e.booked})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +96,7 @@ func TestCachedDealCardRefreshesTheRequestEvaluationWithoutRebuildingItsWords(t 
 	cards.WithMailCoverage(func(context.Context, *time.Time, time.Time) (crmcontracts.MailCaptureCoverage, error) {
 		return crmcontracts.MailCaptureCoverage{}, errors.New("fixture coverage boundary failed")
 	})
-	moves, err = cards.CachedMoves(reader, []ids.UUID{e.booked})
+	moves, err = cards.CurrentMoves(reader, []ids.UUID{e.booked})
 	if err != nil || len(moves) != 1 {
 		t.Fatalf("capture failure removed recorded work: %+v, %v", moves, err)
 	}

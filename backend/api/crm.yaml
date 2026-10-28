@@ -816,6 +816,11 @@ paths:
               properties:
                 version: {type: integer, format: int64, minimum: 1}
                 review: {$ref: '#/components/schemas/HomeRepairReview'}
+                reviewed_actions:
+                  type: array
+                  maxItems: 1000
+                  description: Supported action names in the displayed review's row order, required when requires_action_review is true.
+                  items: {type: string}
       responses:
         '204': {description: The bounded reviewed run was activated.}
         '401': {$ref: '#/components/responses/Unauthorized'}
@@ -18525,7 +18530,17 @@ paths:
 
         Read under the caller's own visibility and bounded, with `truncated` saying when
         the read stopped short. Nothing here is a claim about work the caller may not see.
+        A truncated page carries `next_cursor`, and the next page continues the same window.
       x-agent-access: human-only
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string }
+          description: >-
+            The `next_cursor` of the page before. It pins that page's window and instant, so
+            a receipt landing between two reads does not shift the list under the reader.
+            A token this server did not mint is refused with 422.
       responses:
         '200':
           description: What was done, newest first.
@@ -18534,6 +18549,7 @@ paths:
               schema: { $ref: '#/components/schemas/HandledForYou' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /worklist/exceptions:
     get:
       tags: [Brief]
@@ -29521,7 +29537,7 @@ paths:
         it had nothing to add.
 
         Written by the model from the deal's own facts — its stage and value, its
-        timeline, its open tasks, its health factors and what the buyer said in the
+        timeline, its open tasks and what the buyer said in the
         Deal Room — and assembled under the CALLER's row scope, so a record they
         cannot see never reaches a sentence.
 
@@ -29543,11 +29559,21 @@ paths:
         deterministically and `generated_by` says which wrote it. There is no blank
         AI card and no spinner that never resolves.
       parameters:
+        - name: if_recommendation
+          in: query
+          required: false
+          schema: { type: string, pattern: '^[0-9a-f]{64}$' }
+          description: Check this recommendation basis before opening its action. Requires if_rule and facts_only; a changed step returns version_skew.
+        - name: if_rule
+          in: query
+          required: false
+          schema: { type: string }
+          description: The recommendation rule being checked with if_recommendation.
         - name: facts_only
           in: query
           required: false
           schema: { type: boolean }
-          description: Refresh the card and shared action cache from current facts without model calls. Takes precedence over refresh.
+          description: Refresh the card and its current suggested step without model calls. Takes precedence over refresh.
         - name: refresh
           in: query
           required: false
@@ -29559,9 +29585,15 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DealStatusCard' }
+        '400':
+          description: The conditional recommendation parameters are invalid or facts_only is missing.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /deals/{id}/move/dismiss:
     parameters:
@@ -32867,7 +32899,7 @@ components:
         effective_date:
           type: string
           format: date
-          description: Defaults to today. A past date is accepted only when the currency has no rate yet or the date is earlier than every rate stored for it.
+          description: A calendar day in the installation's time zone. Defaults to today there. A past date is accepted only when the currency has no rate yet or the date is earlier than every rate stored for it.
     AiModelRate:
       type: object
       description: One effective-dated model price. The four buckets are USD per 1M tokens as decimal strings (the server stores µUSD integers). Transparency-only — never gates routing.
@@ -32985,7 +33017,7 @@ components:
         effective_date:
           type: string
           format: date
-          description: Defaults to today; must not be in the past (append-forward).
+          description: A UTC calendar day. Defaults to today's UTC date and must not be before it (append-forward).
 
     # ---- outbound webhooks (E10/S-E10.6, A51; BYO-DDL-3/4) ----
     WebFormSender:
@@ -44554,6 +44586,7 @@ components:
         to send; absent for `none`.
       required: [action, reason, evidence]
       properties:
+        recommendation: { $ref: '#/components/schemas/RecommendationReceipt' }
         mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         action: { type: string }
         reason: { type: string, description: "One sentence saying why this move and not another." }
@@ -44576,6 +44609,21 @@ components:
             the set-aside lifts when the card names a different move. Absent on a move with
             nothing to do (`none`).
       additionalProperties: false
+
+    RecommendationReceipt:
+      type: object
+      additionalProperties: false
+      description: >-
+        The rule and current facts behind a suggested action. The server checks
+        these facts again when accepting the suggestion; the receipt grants no authority.
+        Replaying the same accepted observation returns its original task.
+      required: [deal_id, rule, policy_version, basis_fingerprint, checked_at]
+      properties:
+        deal_id: { type: string, format: uuid }
+        rule: { type: string }
+        policy_version: { type: string }
+        basis_fingerprint: { type: string, pattern: '^[0-9a-f]{64}$' }
+        checked_at: { type: string, format: date-time, description: Evaluation instant identifying this observation. }
 
     MailCaptureCoverage:
       type: object
@@ -49130,6 +49178,7 @@ components:
       description: What a task needs. Stored as an activity of kind `task`.
       required: [subject, source]
       properties:
+        recommendation: { $ref: '#/components/schemas/RecommendationReceipt' }
         source_activity_id:
           type: string
           format: uuid
@@ -49168,6 +49217,7 @@ components:
       type: object
       required: [kind, source]
       properties:
+        recommendation: { $ref: '#/components/schemas/RecommendationReceipt' }
         source_activity_id:
           type: string
           format: uuid
@@ -57088,6 +57138,7 @@ components:
       additionalProperties: false
       required: [tasks, digest, rule_version, limit, as_of, counts]
       properties:
+        requires_action_review: {type: boolean, description: The client must acknowledge the actions it displayed when activating this page.}
         tasks:
           type: array
           maxItems: 1000
@@ -57111,7 +57162,7 @@ components:
         version: {type: integer, format: int64}
         action:
           type: string
-          enum: [archive_automatic_reminder, withdraw_proposal, supersede_suggestion, reclassify_message, human_review, leave_current, revalidate_settlement]
+          enum: [archive_automatic_reminder, normalize_automatic_task, withdraw_proposal, supersede_suggestion, reclassify_message, human_review, leave_current, revalidate_settlement]
         reason: {type: string}
 
     HomeRepairCounts:
@@ -57126,6 +57177,7 @@ components:
         review: {type: integer, minimum: 0}
         keep: {type: integer, minimum: 0}
         revalidate: {type: integer, minimum: 0, description: Older settled request verdicts the email-request settlement pass judges again.}
+        normalize: {type: integer, minimum: 0, description: Pristine automatic tasks with a proved source reference or generated notification date to correct.}
 
     DataTaskControl:
       type: object
@@ -65441,7 +65493,8 @@ components:
       description: |
         Up to six actionable priorities from the scoped day, selected before filtering
         or pagination and ordered by the queue's server ranking. Routine maintenance
-        and future tasks do not fill spare places. Pins remain explicit choices.
+        and future tasks do not fill spare places. Ordinary pins only order the queue;
+        pinning an optional reconnection explicitly chooses it for Focus.
         Source coverage and failures are reported on the enclosing worklist; these
         counts describe the candidates actually read, not an exhaustive installation.
       required: [items, total, urgent_remaining]
@@ -65535,6 +65588,16 @@ components:
           type: array
           items: { $ref: '#/components/schemas/WorklistItem' }
           description: 'Everything actionable, best-first. The order is the product of this endpoint.'
+        optional_relationships:
+          type: array
+          items: { $ref: '#/components/schemas/WorklistItem' }
+          description: |
+            Optional reconnections, outside the work queue, counts and Focus. An open
+            deal or relationship score does not establish an obligation. A reader may
+            pin a suggestion into their personal queue or create an explicit task.
+        optional_relationships_more_available:
+          type: boolean
+          description: 'More optional contacts exist beyond the existing relationship read bound.'
         focus:
           $ref: '#/components/schemas/WorklistFocus'
         sources_unavailable:
@@ -65800,6 +65863,34 @@ components:
         truncated:
           type: boolean
           description: 'True when more was done than was read. The list is a floor, not a total.'
+        next_cursor:
+          type: string
+          description: >-
+            Where the next page starts, present when `truncated` is true and the window can
+            be read further. Paging stops after the first 5,000 receipts of a window. Absent
+            on older responses, which a client reads as a list it cannot continue.
+
+    ReceiptActor:
+      type: object
+      description: |
+        Who did the act, and on whose behalf.
+
+        `label` is the name a reader reads, from the same owner that names the actor on
+        `/magic`: a background job by what it is, a member by their name. A colleague whose
+        seat the reader cannot name reads `magic.by.colleague`, never an id.
+      required: [type, id, label]
+      properties:
+        type:
+          type: string
+          enum: [human, agent, system, connector]
+          x-enum-varnames: [ReceiptActorHuman, ReceiptActorAgent, ReceiptActorSystem, ReceiptActorConnector]
+        id: { type: string, description: 'The actor as the audit trail records it. For the record, not for display.' }
+        on_behalf_of:
+          type: string
+          format: uuid
+          description: The seat whose authority the act was taken under, where it bound one.
+        label:
+          $ref: '#/components/schemas/MagicSentence'
 
     AppliedDealChangeReview:
       type: object
@@ -65855,6 +65946,25 @@ components:
           $ref: '#/components/schemas/AttentionSubject'
         review:
           $ref: '#/components/schemas/AppliedDealChangeReview'
+        actor:
+          allOf: [{ $ref: '#/components/schemas/ReceiptActor' }]
+          description: >-
+            Who did it: the member or agent that proposed an applied decision, or the job
+            that made a correction. Absent on older responses.
+        source_record:
+          allOf: [{ $ref: '#/components/schemas/AttentionSubject' }]
+          description: >-
+            The email, thread or meeting the act was read from, where it names one. Checked
+            against the reader's access on every read: a source the reader may not open is
+            left out, not named. Absent also when the act cites no message.
+        changes:
+          type: array
+          items: { $ref: '#/components/schemas/MagicFieldChange' }
+          description: >-
+            Every field the act moved, old value to new, read from the audit rows it wrote
+            and masked to what the reader may see on the record. Values travel whole, never
+            cut short. Absent when no audit row of the act can be read, which is not the
+            same as an act that moved nothing (an empty list).
         undo:
           allOf: [{ $ref: '#/components/schemas/AppliedUndo' }]
           description: >-
@@ -67328,20 +67438,10 @@ components:
     WorklistDealVerdict:
       type: object
       description: |
-        How the deal behind a row is STANDING, beside the move that acts on it.
-
-        The move says what to do; this says what the reader is walking into. A row
-        that names a step without saying whether the deal is alive asks the reader to
-        open the deal page to find out, which is the hand-off the queue exists to
-        remove.
-
-        NOTHING IS DECIDED HERE. compose/dealstatus already wrote a standing per deal
-        and cached it per reader; this carries that answer onto the row. A deal with
-        no cached card carries no verdict, and its row says what it said before.
-
-        `source` is what the reader is being shown, and a client's copy turns on it:
-        a deterministic rule stated as a belief is a lie about where the sentence came
-        from.
+        An earlier assessment of the deal, with the date it was written.
+        Current facts and actions are checked separately. These saved words never
+        establish that a task or reply is still owed and never change ranking.
+        Missing or inaccessible saved assessments are omitted.
       required: [line, source]
       properties:
         standing:
@@ -67356,7 +67456,7 @@ components:
             `live` — moving, with a next step both sides expect.
             `drifting` — nothing wrong, nothing happening; it dies of neglect.
             `blocked` — something specific is in the way.
-            `cold` — long silence after real engagement.
+            `cold` — recorded evidence that engagement ended, as assessed on `as_of`.
 
             The same four the deal page's own verdict carries, because they ARE that
             verdict. Held by backend/gates/worklistverdictstandings_test.go, which
@@ -67397,8 +67497,8 @@ components:
           type: string
           format: date-time
           description: |
-            When the reading behind this line was taken, so a stale one can be told from
-            a fresh one.
+            When the earlier assessment was written. Clients must display this date
+            and must not present the saved sentence as a current eligibility check.
 
     WorklistReason:
       type: object
@@ -67496,6 +67596,7 @@ components:
         for it.
       required: [action]
       properties:
+        recommendation: { $ref: '#/components/schemas/RecommendationReceipt' }
         mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         basis:
           allOf: [{ $ref: '#/components/schemas/WorkEvidenceBasis' }]
@@ -67749,8 +67850,8 @@ components:
         contributes_rows:
           type: boolean
           description: |
-            False for a side read that puts no row on the queue — `calendar` and
-            `next_meeting` — so its failure cannot hide a row, and a figure counted over
+            False for a side read that puts no row on the queue — `calendar`,
+            `next_meeting` and `deal_advice` — so its failure cannot hide a row, and a figure counted over
             the queue stays exact. True for a lane whose rows may be missing. Absent from
             an older server and from a surface that names only lanes, and a client reads
             absent as true.

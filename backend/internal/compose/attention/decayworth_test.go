@@ -3,17 +3,6 @@
 
 package attention
 
-// What a lapsed relationship was WORTH, and what the queue does with it.
-//
-// The lane could say only how long a silence had run, so the rep's strongest
-// contact going quiet and a cc drifting arrived as the same row at the same
-// rank. Both facts that tell them apart were already in the lane's hand and
-// discarded: the band is scored from the edge the projection loads, and the
-// open deal is one batched read over candidates it already narrowed to.
-//
-// These run the classifier directly. The question is what the facts BECOME —
-// the rank the row takes and the reason it states — not how they were measured.
-
 import (
 	"testing"
 
@@ -36,10 +25,7 @@ func decayItem(facts *crmcontracts.AttentionRelationshipFacts) crmcontracts.Atte
 	}
 }
 
-// The rank, across the whole band vocabulary plus the deal. This is the table
-// that decides which silences a rep sees above the routine tidying, so it is
-// written as one rather than as four tests that could each drift.
-func TestWhatALapsedRelationshipWasWorthDecidesItsRank(t *testing.T) {
+func TestRelationshipHistoryDoesNotCreateAnObligation(t *testing.T) {
 	for _, c := range []struct {
 		name  string
 		facts *crmcontracts.AttentionRelationshipFacts
@@ -48,16 +34,12 @@ func TestWhatALapsedRelationshipWasWorthDecidesItsRank(t *testing.T) {
 		{
 			name:  "a strong relationship going quiet",
 			facts: &crmcontracts.AttentionRelationshipFacts{Strength: new(crmcontracts.AttentionRelationshipFactsStrength("strong"))},
-			want:  levelAgreed,
+			want:  levelRoutine,
 		},
 		{
-			// Moderate counts, and that is the deliberate edge of this rule:
-			// §4's moderate threshold already means a real two-way history,
-			// and admitting only `strong` would leave the lane ranking almost
-			// nothing.
 			name:  "a moderate one, the edge of the rule",
 			facts: &crmcontracts.AttentionRelationshipFacts{Strength: new(crmcontracts.AttentionRelationshipFactsStrength("moderate"))},
-			want:  levelAgreed,
+			want:  levelRoutine,
 		},
 		{
 			name:  "a weak one with nothing resting on it",
@@ -65,12 +47,9 @@ func TestWhatALapsedRelationshipWasWorthDecidesItsRank(t *testing.T) {
 			want:  levelRoutine,
 		},
 		{
-			// The case the band alone would get wrong. A contact barely spoken
-			// to who still sits on an open deal is money going quiet, and it is
-			// exactly the silence nobody notices.
-			name:  "a weak one an open deal still rests on",
+			name:  "a weak contact linked to an open deal",
 			facts: &crmcontracts.AttentionRelationshipFacts{Strength: new(crmcontracts.AttentionRelationshipFactsStrength("weak")), HasOpenDeal: new(true)},
-			want:  levelAgreed,
+			want:  levelRoutine,
 		},
 		{
 			name:  "a relationship §4 scored at nothing",
@@ -78,10 +57,6 @@ func TestWhatALapsedRelationshipWasWorthDecidesItsRank(t *testing.T) {
 			want:  levelRoutine,
 		},
 		{
-			// A lane that sent no facts at all. Absent is not a claim: an
-			// installation whose seam predates these fields keeps the routine
-			// rank it has rather than having every silence promoted on a field
-			// nobody filled.
 			name:  "a lane that measured nothing",
 			facts: nil,
 			want:  levelRoutine,
@@ -96,22 +71,13 @@ func TestWhatALapsedRelationshipWasWorthDecidesItsRank(t *testing.T) {
 	}
 }
 
-// The row says why it outranks the routine ones. A rank a reader cannot account
-// for is the complaint this whole campaign started from.
-func TestALapsedRelationshipWithMoneyOnItSaysSo(t *testing.T) {
-	row := classifyDecay(decayItem(&crmcontracts.AttentionRelationshipFacts{
-		Strength: new(crmcontracts.AttentionRelationshipFactsStrength("weak")), HasOpenDeal: new(true),
-	}), rankInstant)
-
-	if !hasReason(row.item, "expected_revenue") {
-		t.Fatalf("a lapsed contact with an open deal states %v, want it to say money rests on this",
-			row.item.Because)
+func TestAnOpenDealDoesNotProveAReconnectionDependency(t *testing.T) {
+	row := classifyDecay(decayItem(&crmcontracts.AttentionRelationshipFacts{HasOpenDeal: new(true)}), rankInstant)
+	if hasReason(row.item, "expected_revenue") || row.item.Level != levelRoutine {
+		t.Fatalf("open-deal link manufactured work: %+v", row.item)
 	}
 }
 
-// And a silence with nothing on it does NOT say money rests on it. The reason
-// renders as "expected revenue" with no figure, so claiming it for a contact
-// carrying no deal is the row inventing a fact.
 func TestALapsedRelationshipWithNoDealClaimsNoRevenue(t *testing.T) {
 	row := classifyDecay(decayItem(&crmcontracts.AttentionRelationshipFacts{
 		Strength: new(crmcontracts.AttentionRelationshipFactsStrength("strong")), HasOpenDeal: new(false),
@@ -122,13 +88,6 @@ func TestALapsedRelationshipWithNoDealClaimsNoRevenue(t *testing.T) {
 	}
 }
 
-// The band moves the rank and states NOTHING. `no_champion` is the nearest word
-// the reason vocabulary has and it means the opposite here — an account with
-// nobody carrying it, rather than the contact who WAS carrying it going quiet.
-//
-// This is a test for a deliberate silence, so it is written to fail if somebody
-// reaches for that word: a reason that reads backwards is worse than a rank the
-// row does not explain.
 func TestAStrongLapsedRelationshipNeverClaimsTheAccountHasNoChampion(t *testing.T) {
 	row := classifyDecay(decayItem(&crmcontracts.AttentionRelationshipFacts{
 		Strength: new(crmcontracts.AttentionRelationshipFactsStrength("strong")),
@@ -139,10 +98,6 @@ func TestAStrongLapsedRelationshipNeverClaimsTheAccountHasNoChampion(t *testing.
 	}
 }
 
-// The wire mapping refuses a band this contract does not declare, rather than
-// casting it through. The two vocabularies are declared in different places, so
-// a cast would widen the wire silently the day either grows a term and reach a
-// reader as a word their client cannot translate.
 func TestABandThisContractDoesNotDeclareReachesNoReader(t *testing.T) {
 	if got := relationshipBand("legendary"); got != nil {
 		t.Fatalf("an undeclared band reached the wire as %q", *got)
@@ -154,11 +109,6 @@ func TestABandThisContractDoesNotDeclareReachesNoReader(t *testing.T) {
 	}
 }
 
-// A lapsed relationship offers something to DO with it.
-//
-// The row carried Open and Dismiss, so the only affirmative button made the
-// work disappear — a reader with a list of relationships worth reviving had no
-// way to act on one from the page.
 func TestALapsedRelationshipOffersADraftReconnect(t *testing.T) {
 	row := classifyDecay(crmcontracts.AttentionItem{
 		Source:       crmcontracts.AttentionItemSourceRelationshipDecay,
@@ -171,9 +121,6 @@ func TestALapsedRelationshipOffersADraftReconnect(t *testing.T) {
 	if row.item.Move.Action != crmcontracts.WorklistMoveActionDraftEmail {
 		t.Errorf("the move is %q, want draft_email", row.item.Move.Action)
 	}
-	// NO activity id. The contract reads a draft_email naming a record as a
-	// REPLY, and answering a message nobody sent is the defect worklistMoveOf
-	// exists to prevent.
 	if row.item.Move.ActivityId != nil {
 		t.Error("the reconnect names an activity, so the queue draws it as a reply " +
 			"to a message that does not exist")

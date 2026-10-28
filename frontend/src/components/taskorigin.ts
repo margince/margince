@@ -11,12 +11,13 @@ type Activity = components["schemas"]["Activity"];
 // Such a task often has no body. Without this sentence its drawer shows a
 // title and a date, and nothing a reader can act on.
 //
-// A mirror of the backend's automatic task families
+// A mirror of the backend's native task families
 // (storekit.TaskSourceFamilies); backend/gates/frontendtaskorigins_test.go
 // fails when the two stop naming the same sources.
 export const TASK_ORIGINS: Readonly<Record<string, MessageKey>> = {
   assurance: "tasks.origin.assurance",
   check_in_cadence: "tasks.origin.check_in_cadence",
+  accepted_recommendation: "tasks.origin.accepted_recommendation",
   commitment: "tasks.origin.commitment",
   email_request: "tasks.origin.email_request",
   lead_for_contact: "tasks.origin.lead_for_contact",
@@ -29,8 +30,8 @@ export const TASK_ORIGINS: Readonly<Record<string, MessageKey>> = {
 };
 
 /**
- * The sentence saying what made this task, or null for one a colleague or an
- * agent wrote. An automation with no family of its own still says it was one.
+ * The sentence saying what prepared this task, including an accepted suggestion.
+ * Freeform human work has no native origin; unnamed system work still says so.
  */
 export function taskOriginKey(task: Activity): MessageKey | null {
   // Own keys only: a caller's source_system such as `constructor` would

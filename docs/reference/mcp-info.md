@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 130.2 KB |
+| Tool catalog | 130.3 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 34214 |
+| Approx. wire tokens | 34230 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 27.6 KB | 21% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 32.7 KB | 25% | Yes, every step |
-| Input schemas | 61.2 KB | 46% | Yes, every step |
+| Input schemas | 61.2 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 6% | Partly |
-| **Description + input schema** | **93.9 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **94.0 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -89,7 +89,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 1891 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
-| [`read_view`](#read_view) | Read a view | yes |  | 993 |
+| [`read_view`](#read_view) | Read a view | yes |  | 1010 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 590 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 393 |
 | [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 469 |
@@ -6659,6 +6659,12 @@ view refuses an argument it does not take and names the ones it does.
     },
     "id": {
       "description": "one value; a list of values for name_seats",
+      "type": "string"
+    },
+    "if_recommendation": {
+      "type": "string"
+    },
+    "if_rule": {
       "type": "string"
     },
     "include_archived": {

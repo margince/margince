@@ -21,13 +21,14 @@ import {
   QueryStates,
   WriteRefused,
 } from "../../design-system/querystates";
-import { today } from "../../format/calendarday";
+import { todayIn } from "../../format/calendarday";
 import { forReader } from "../../format/collate";
 import { formatDate, formatUsdPerMTok } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCan, useCanUpsert } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
 import { providerName } from "../ai/ai-provider-names";
 import { isPricedProvider } from "./rate-manual";
@@ -195,9 +196,12 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
   const qc = useQueryClient();
   const labelId = useId();
   const formId = useId();
+  // The FX sheet counts its days in the installation's zone, so the form
+  // opens on the day the server will read as today.
+  const zone = useRecordZone();
   const [from, setFrom] = useState("");
   const [rate, setRate] = useState("");
-  const [effectiveDate, setEffectiveDate] = useState(today());
+  const [effectiveDate, setEffectiveDate] = useState(() => todayIn(zone));
   const [error, setError] = useState<string | null>(null);
 
   const save = useMutation({

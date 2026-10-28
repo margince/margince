@@ -97,7 +97,7 @@ func TestNativeStageReceiptHasTheSameIdentityOnBothHomeReaders(t *testing.T) {
 	now := clocktest.Now(t)
 	clock := func() time.Time { return now }
 	svc, approvalID := appliedStageReceipt(t, e, now, "Agreed project")
-	handled, err := newAttentionService(e.Pool, svc, clock).HandledForYou(ctx)
+	handled, err := newAttentionService(e.Pool, svc, clock).HandledForYou(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +162,7 @@ func TestDoneForYouHasOneWindowOnBothSurfaces(t *testing.T) {
 			handled, err := newAttentionService(e.Pool, svc, clock).
 				WithHandledWindow(func(ctx context.Context, asOf time.Time) (time.Time, error) {
 					return magic.ResolveWindow(ctx, brief, nil, asOf)
-				}).HandledForYou(ctx)
+				}).HandledForYou(ctx, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

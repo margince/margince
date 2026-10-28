@@ -29,8 +29,7 @@ To make your Worklist fill the window in Margince, press **Expand** at the top o
 3. This browser keeps the size you chose, from any way you open the Worklist. On a phone the panel
    always fills the screen.
 
-On a big screen the panel stops before its rows get too long to read. Also called: full screen, big
-worklist, wide view.
+On a big screen the panel stops before its rows get too long to read. Also called: full screen, big worklist, wide view.
 
 ### How do I snooze something on my worklist?
 To snooze a Worklist item in Margince, press **More actions** at the end of its row and choose
@@ -44,13 +43,14 @@ To snooze a Worklist item in Margince, press **More actions** at the end of its 
 A snooze changes your list only. A reply that came in before you snoozed does not end it. Also called: remind me later, postpone, hide for now.
 
 ### How do I pin an item to the top of my worklist?
-To pin a Worklist item in Margince, press **More actions** on its row and choose **Pin**. It moves to
-the top of your Worklist.
+To pin a Worklist item in Margince, press **More actions** on its row and choose **Pin**. It moves to the top of your Worklist.
 1. Open **Home** → **Show Worklist**.
 2. Press **More actions** at the end of the row and choose **Pin**. Choose **Unpin** there to put
    it back in its ranked place.
 
 A pin changes the order of your own list only, and changes nothing for colleagues; how urgent it is stays the same. You hold at most 50 pins: a newer one takes the place of your oldest. If it fails: "Item was not pinned. Retry." Also called: star, flag, keep on top.
+
+Quiet contacts under **Optional reconnections** stay outside work counts. An open deal alone does not make them work. Pin a contact to choose them for your day, or create a task on their record.
 
 ### Why is a task at the top of my worklist?
 A task leads your Worklist and the **First** card on **Home** when you hold it and its reminder time has come. The row says "your reminder is due". With browser notifications allowed, the browser also shows the task once while Margince is open in a tab. Press the notification to open the task on **Home**. Press **Done** when the work is finished, or move the task with **Snooze 1 day** or **Move to**. Moving the date ends a reminder whose time has passed.
@@ -188,10 +188,10 @@ Today names each source it could not read, with **Refresh brief**, and never sho
 
 The work counts come from the current Worklist read. The greeting's email count comes from the nightly run; it does not count today's decisions. Each part of Home can refresh at a different time. Another Worklist page keeps the same members but reads their current state; pages do not share one fixed time.
 
-**Since your last brief** says when some activity could not be counted. Its count then says how much it could count, and an empty list does not mean nothing happened.
+**Since your last brief** says when some activity could not be counted. Its count then says how much it could count, and an empty list does not mean nothing happened. A change that covers several records lists each record with its time and its full values, before and after. Each record keeps the review its change allows: **Keep date**, **Accept** or **Undo**.
 
 ### Check applied changes
-**Check applied changes**, on **Today**, lists deal changes you can still keep or undo. Each names the deal, what changed and when. Date estimates show their sales history when available. An undone or accepted change leaves this list.
+**Check applied changes**, on **Today**, lists deal changes you can still keep or undo. Each names the deal, what changed and when. Date estimates show their sales history when available. An undone or accepted change leaves this list. **Details** shows who made a change and when, each value before and after, and the email, call or meeting it came from. A source opens on a press, and one you cannot open is not named.
 
 **Keep date** keeps a date estimate; **Accept** keeps a stage change. Neither runs the change again or makes an estimate a customer promise. **Undo** puts the deal back. Past changes remain under **Change history** on the Worklist.
 
@@ -287,8 +287,9 @@ Each item shows its record, the current facts that call for action, and the acti
 A request can name who is waiting and when they asked. A task shows its due date.
 A deal can show days since the last recorded activity, a missing next step or a close date that needs review.
 
-A deal suggestion needs current facts before it enters this list. A score or a label such as
-“stalled” cannot put it here alone. **Review deal suggestions** opens the saved brief, including suggestions without those facts.
+Suggested deal steps are checked against current records before the list is cut. **Earlier assessment** shows saved words and their date. It does not change the order of work. A changed suggestion asks you to refresh before you can accept its task or open its prepared action. Tasks you create yourself keep their normal controls.
+
+A deal suggestion needs current facts before it enters this list. A score or a label such as “stalled” cannot put it here alone. **Review deal suggestions** opens the saved brief, including suggestions without those facts.
 
 The order comes from the same checks for Home and the Worklist. Pins, deadlines and customer work
 keep their order without a sentence comparing each item with the one below it.
@@ -348,8 +349,7 @@ The Worklist footer and **To review** panel count items, not cards: 8 possible d
 
 ### Change history
 
-**Change history**, on the Worklist, keeps the changes from the last 24 hours. Press
-**Show recent changes** to read the action, record, time and status.
+**Change history**, on the Worklist, keeps the changes from the last 24 hours. Press **Show recent changes** to read the action, record, time and status. **Details** on a change works as it does under **Check applied changes**. A long list ends in **Show more**, which loads the next changes.
 
 When there is nothing: "No actions taken on your behalf today."
 

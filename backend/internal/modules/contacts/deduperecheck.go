@@ -67,7 +67,7 @@ func (s *Store) RecheckOpenDedupeCandidates(ctx context.Context) (DedupeRecheckR
 	}
 	var result DedupeRecheckResult
 	after := ids.Nil
-	for {
+	for !dedupeRunOutOfTime(ctx) {
 		examined, closed, last, err := s.recheckBatch(ctx, after)
 		if err != nil {
 			return result, fmt.Errorf("contacts: re-check open dedupe candidates: %w", err)
@@ -243,18 +243,17 @@ func readContactSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (contactSide, 
 	err := tx.QueryRow(ctx, `
 		SELECT p.full_name,
 		       coalesce((SELECT array_agg(pe.email) FROM contact_email pe
-		                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL), '{}'),
-		       coalesce((SELECT array_agg(DISTINCT split_part(pe.email, '@', 2)) FROM contact_email pe
 		                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL), '{}')
 		  FROM contact p
 		 WHERE p.id = $1 AND p.archived_at IS NULL`, id).
-		Scan(&side.name, &side.emails, &side.mailDomains)
+		Scan(&side.name, &side.emails)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return contactSide{}, false, nil
 	}
 	if err != nil {
 		return contactSide{}, false, fmt.Errorf("read dedupe contact %s: %w", id, err)
 	}
+	side.mailDomains = mailDomainsOf(side.emails)
 	side.companyID, side.companyDomains, err = readCurrentEmployer(ctx, tx, id)
 	return side, true, err
 }

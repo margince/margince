@@ -12189,6 +12189,7 @@ export interface paths {
          *
          *     Read under the caller's own visibility and bounded, with `truncated` saying when
          *     the read stopped short. Nothing here is a claim about work the caller may not see.
+         *     A truncated page carries `next_cursor`, and the next page continues the same window.
          */
         get: operations["getHandledForYou"];
         put?: never;
@@ -20000,7 +20001,7 @@ export interface paths {
          *     it had nothing to add.
          *
          *     Written by the model from the deal's own facts — its stage and value, its
-         *     timeline, its open tasks, its health factors and what the buyer said in the
+         *     timeline, its open tasks and what the buyer said in the
          *     Deal Room — and assembled under the CALLER's row scope, so a record they
          *     cannot see never reaches a sentence.
          *
@@ -22076,7 +22077,7 @@ export interface components {
             rate: string;
             /**
              * Format: date
-             * @description Defaults to today. A past date is accepted only when the currency has no rate yet or the date is earlier than every rate stored for it.
+             * @description A calendar day in the installation's time zone. Defaults to today there. A past date is accepted only when the currency has no rate yet or the date is earlier than every rate stored for it.
              */
             effective_date?: string;
         };
@@ -22182,7 +22183,7 @@ export interface components {
             cache_write_per_mtok: string;
             /**
              * Format: date
-             * @description Defaults to today; must not be in the past (append-forward).
+             * @description A UTC calendar day. Defaults to today's UTC date and must not be before it (append-forward).
              */
             effective_date?: string;
         };
@@ -31493,6 +31494,7 @@ export interface components {
          *     to send; absent for `none`.
          */
         DealStatusCardMove: {
+            recommendation?: components["schemas"]["RecommendationReceipt"];
             mail_coverage?: components["schemas"]["MailCaptureCoverage"];
             action: string;
             /** @description One sentence saying why this move and not another. */
@@ -31511,6 +31513,19 @@ export interface components {
              *     nothing to do (`none`).
              */
             readonly fingerprint?: string;
+        };
+        /** @description The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task. */
+        RecommendationReceipt: {
+            /** Format: uuid */
+            deal_id: string;
+            rule: string;
+            policy_version: string;
+            basis_fingerprint: string;
+            /**
+             * Format: date-time
+             * @description Evaluation instant identifying this observation.
+             */
+            checked_at: string;
         };
         /**
          * @description The calling reader's mail capture for the requested interval. This does
@@ -35527,6 +35542,7 @@ export interface components {
         };
         /** @description What a task needs. Stored as an activity of kind `task`. */
         CreateTaskRequest: {
+            recommendation?: components["schemas"]["RecommendationReceipt"];
             /**
              * Format: uuid
              * @description The non-task activity this task follows from, including email and messages. The caller and assignee need access to the source content. The task preserves its audience and inherits its visible links when no links are supplied. This reference does not accept or settle a request.
@@ -35562,6 +35578,7 @@ export interface components {
         };
         /** @description The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. */
         CreateActivityRequest: {
+            recommendation?: components["schemas"]["RecommendationReceipt"];
             /**
              * Format: uuid
              * @description The non-task activity this task follows from, including email and messages. The caller and assignee need access to the source content. The task preserves its audience and inherits its visible links when no links are supplied. This reference does not accept or settle a request.
@@ -41359,6 +41376,8 @@ export interface components {
             next_after?: string;
         };
         HomeRepairReview: {
+            /** @description The client must acknowledge the actions it displayed when activating this page. */
+            requires_action_review?: boolean;
             tasks: components["schemas"]["HomeRepairTask"][];
             counts: components["schemas"]["HomeRepairCounts"];
             /** @description Reader-bound classification review token; expires after fifteen minutes and is consumed on activation. */
@@ -41382,7 +41401,7 @@ export interface components {
             /** Format: int64 */
             version: number;
             /** @enum {string} */
-            action: "archive_automatic_reminder" | "withdraw_proposal" | "supersede_suggestion" | "reclassify_message" | "human_review" | "leave_current" | "revalidate_settlement";
+            action: "archive_automatic_reminder" | "normalize_automatic_task" | "withdraw_proposal" | "supersede_suggestion" | "reclassify_message" | "human_review" | "leave_current" | "revalidate_settlement";
             reason: string;
         };
         HomeRepairCounts: {
@@ -41394,6 +41413,8 @@ export interface components {
             keep: number;
             /** @description Older settled request verdicts the email-request settlement pass judges again. */
             revalidate?: number;
+            /** @description Pristine automatic tasks with a proved source reference or generated notification date to correct. */
+            normalize?: number;
         };
         DataTaskControl: {
             task_id: string;
@@ -48600,7 +48621,8 @@ export interface components {
         /**
          * @description Up to six actionable priorities from the scoped day, selected before filtering
          *     or pagination and ordered by the queue's server ranking. Routine maintenance
-         *     and future tasks do not fill spare places. Pins remain explicit choices.
+         *     and future tasks do not fill spare places. Ordinary pins only order the queue;
+         *     pinning an optional reconnection explicitly chooses it for Focus.
          *     Source coverage and failures are reported on the enclosing worklist; these
          *     counts describe the candidates actually read, not an exhaustive installation.
          */
@@ -48691,6 +48713,14 @@ export interface components {
             summary: components["schemas"]["WorklistSummary"];
             /** @description Everything actionable, best-first. The order is the product of this endpoint. */
             queue: components["schemas"]["WorklistItem"][];
+            /**
+             * @description Optional reconnections, outside the work queue, counts and Focus. An open
+             *     deal or relationship score does not establish an obligation. A reader may
+             *     pin a suggestion into their personal queue or create an explicit task.
+             */
+            optional_relationships?: components["schemas"]["WorklistItem"][];
+            /** @description More optional contacts exist beyond the existing relationship read bound. */
+            optional_relationships_more_available?: boolean;
             focus?: components["schemas"]["WorklistFocus"];
             /** @description Sources that could not be included, and why. Empty is the honest common case. */
             sources_unavailable: components["schemas"]["WorklistSourceUnavailable"][];
@@ -48934,6 +48964,27 @@ export interface components {
             receipts: components["schemas"]["Receipt"][];
             /** @description True when more was done than was read. The list is a floor, not a total. */
             truncated: boolean;
+            /** @description Where the next page starts, present when `truncated` is true and the window can be read further. Paging stops after the first 5,000 receipts of a window. Absent on older responses, which a client reads as a list it cannot continue. */
+            next_cursor?: string;
+        };
+        /**
+         * @description Who did the act, and on whose behalf.
+         *
+         *     `label` is the name a reader reads, from the same owner that names the actor on
+         *     `/magic`: a background job by what it is, a member by their name. A colleague whose
+         *     seat the reader cannot name reads `magic.by.colleague`, never an id.
+         */
+        ReceiptActor: {
+            /** @enum {string} */
+            type: "human" | "agent" | "system" | "connector";
+            /** @description The actor as the audit trail records it. For the record, not for display. */
+            id: string;
+            /**
+             * Format: uuid
+             * @description The seat whose authority the act was taken under, where it bound one.
+             */
+            on_behalf_of?: string;
+            label: components["schemas"]["MagicSentence"];
         };
         /** @description The recorded automatic change and its current review state. */
         AppliedDealChangeReview: {
@@ -48989,6 +49040,12 @@ export interface components {
             occurred_at: string;
             subject?: components["schemas"]["AttentionSubject"];
             review?: components["schemas"]["AppliedDealChangeReview"];
+            /** @description Who did it: the member or agent that proposed an applied decision, or the job that made a correction. Absent on older responses. */
+            actor?: components["schemas"]["ReceiptActor"];
+            /** @description The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message. */
+            source_record?: components["schemas"]["AttentionSubject"];
+            /** @description Every field the act moved, old value to new, read from the audit rows it wrote and masked to what the reader may see on the record. Values travel whole, never cut short. Absent when no audit row of the act can be read, which is not the same as an act that moved nothing (an empty list). */
+            changes?: components["schemas"]["MagicFieldChange"][];
             /**
              * @description The way back, on a receipt for work that was APPLIED rather than approved.
              *     A receipt for an approval the system decided carries none: that decision is revisitable through the record it named. A change made without asking — the close-date sweep's corrections — has this receipt as its only telling, so the way back travels with it.
@@ -50248,27 +50305,17 @@ export interface components {
             version?: number;
         };
         /**
-         * @description How the deal behind a row is STANDING, beside the move that acts on it.
-         *
-         *     The move says what to do; this says what the reader is walking into. A row
-         *     that names a step without saying whether the deal is alive asks the reader to
-         *     open the deal page to find out, which is the hand-off the queue exists to
-         *     remove.
-         *
-         *     NOTHING IS DECIDED HERE. compose/dealstatus already wrote a standing per deal
-         *     and cached it per reader; this carries that answer onto the row. A deal with
-         *     no cached card carries no verdict, and its row says what it said before.
-         *
-         *     `source` is what the reader is being shown, and a client's copy turns on it:
-         *     a deterministic rule stated as a belief is a lie about where the sentence came
-         *     from.
+         * @description An earlier assessment of the deal, with the date it was written.
+         *     Current facts and actions are checked separately. These saved words never
+         *     establish that a task or reply is still owed and never change ranking.
+         *     Missing or inaccessible saved assessments are omitted.
          */
         WorklistDealVerdict: {
             /**
              * @description `live` — moving, with a next step both sides expect.
              *     `drifting` — nothing wrong, nothing happening; it dies of neglect.
              *     `blocked` — something specific is in the way.
-             *     `cold` — long silence after real engagement.
+             *     `cold` — recorded evidence that engagement ended, as assessed on `as_of`.
              *
              *     The same four the deal page's own verdict carries, because they ARE that
              *     verdict. Held by backend/gates/worklistverdictstandings_test.go, which
@@ -50307,8 +50354,8 @@ export interface components {
             source: "deal_status" | "brief_finding";
             /**
              * Format: date-time
-             * @description When the reading behind this line was taken, so a stale one can be told from
-             *     a fresh one.
+             * @description When the earlier assessment was written. Clients must display this date
+             *     and must not present the saved sentence as a current eligibility check.
              */
             as_of?: string;
         };
@@ -50406,6 +50453,7 @@ export interface components {
          *     for it.
          */
         WorklistMove: {
+            recommendation?: components["schemas"]["RecommendationReceipt"];
             mail_coverage?: components["schemas"]["MailCaptureCoverage"];
             /** @description The deal recommendation's evidence basis, preserved across surfaces. */
             basis?: components["schemas"]["WorkEvidenceBasis"];
@@ -50660,8 +50708,8 @@ export interface components {
             /** @enum {string} */
             reason: "withheld" | "failed";
             /**
-             * @description False for a side read that puts no row on the queue — `calendar` and
-             *     `next_meeting` — so its failure cannot hide a row, and a figure counted over
+             * @description False for a side read that puts no row on the queue — `calendar`,
+             *     `next_meeting` and `deal_advice` — so its failure cannot hide a row, and a figure counted over
              *     the queue stays exact. True for a lane whose rows may be missing. Absent from
              *     an older server and from a surface that names only lanes, and a client reads
              *     absent as true.
@@ -51773,6 +51821,8 @@ export interface operations {
                     /** Format: int64 */
                     version: number;
                     review: components["schemas"]["HomeRepairReview"];
+                    /** @description Supported action names in the displayed review's row order, required when requires_action_review is true. */
+                    reviewed_actions?: string[];
                 };
             };
         };
@@ -70887,7 +70937,10 @@ export interface operations {
     };
     getHandledForYou: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The `next_cursor` of the page before. It pins that page's window and instant, so a receipt landing between two reads does not shift the list under the reader. A token this server did not mint is refused with 422. */
+                cursor?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -70905,6 +70958,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getTeamExceptions: {
@@ -81848,7 +81902,11 @@ export interface operations {
     getDealStatus: {
         parameters: {
             query?: {
-                /** @description Refresh the card and shared action cache from current facts without model calls. Takes precedence over refresh. */
+                /** @description Check this recommendation basis before opening its action. Requires if_rule and facts_only; a changed step returns version_skew. */
+                if_recommendation?: string;
+                /** @description The recommendation rule being checked with if_recommendation. */
+                if_rule?: string;
+                /** @description Refresh the card and its current suggested step without model calls. Takes precedence over refresh. */
                 facts_only?: boolean;
                 /** @description Rewrite even when the fingerprint still matches. The reader asking for a second opinion. */
                 refresh?: boolean;
@@ -81871,9 +81929,19 @@ export interface operations {
                     "application/json": components["schemas"]["DealStatusCard"];
                 };
             };
+            /** @description The conditional recommendation parameters are invalid or facts_only is missing. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

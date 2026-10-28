@@ -170,8 +170,9 @@ func (s *Service) worklistIn(
 	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
 	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
 	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf, beside.zone)
+	withPins, adviceErr := withPins.readingDealMoves(ctx, day)
 	horizon := reader.meetingHorizon(ctx, day, beside.until)
-	failed := append(append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr}, awaitingErrs...), beside.failed...)
+	failed := append(append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr, adviceErr}, awaitingErrs...), beside.failed...)
 	out := withPins.worklistFrom(
 		ctx, day, resolved, filter, limit, waiting, cursor, append(failed, horizon.failed...))
 	out.Calendar, out.NextMeeting = horizon.calendar, horizon.next
@@ -188,15 +189,23 @@ func (s *Service) worklistIn(
 			return crmcontracts.Worklist{}, err
 		}
 	}
+	if out.OptionalRelationships != nil {
+		if err := withPins.nameWorklistRows(ctx, *out.OptionalRelationships, beside.night.findings); err != nil {
+			return crmcontracts.Worklist{}, err
+		}
+	}
 	return out, nil
 }
 
 // stampSources files each missing source under its category and says whether
 // it is a lane. Only a side read marks itself, so every unmarked entry is one.
-func stampSources(missing []crmcontracts.WorklistSourceUnavailable) []crmcontracts.WorklistSourceUnavailable {
+func (s *Service) stampSources(missing []crmcontracts.WorklistSourceUnavailable) []crmcontracts.WorklistSourceUnavailable {
 	for i := range missing {
 		category := string(categoryOfSource(crmcontracts.WorklistItemSource(missing[i].Source)))
 		missing[i].Category = &category
+		if missing[i].Source == string(sourceDecay) {
+			missing[i].ContributesRows = new(s.relationshipsChosen())
+		}
 		if missing[i].ContributesRows == nil {
 			lane := true
 			missing[i].ContributesRows = &lane
@@ -234,17 +243,6 @@ func (s *Service) worklistFrom(
 	// One unanswered message is one row: the deal it belongs to does not also
 	// appear as drifting.
 	rows = dropDealsAlreadyWaiting(rows)
-	// One CONTACT is one row. "Nobody has spoken to them in sixty days" and
-	// "they wrote last week and are waiting" are both true of the same contact
-	// and read as a contradiction side by side.
-	//
-	// Order does not matter among these three, and it is worth saying why
-	// rather than leaving the next reader to work it out: each drops rows of a
-	// source none of the others READS. This one decides on the waiting rows,
-	// and the pass above removes only `deal_at_risk` rows — so the set
-	// it judges against is the same wherever it sits. A fourth pass that
-	// removed waiting rows would break that, and would have to run last.
-	rows = dropDecayAlreadyWaiting(rows)
 	// Whose queue this is, applied to the rows the same way the lane applied it
 	// to the query. A row belonging to somebody else is not part of this
 	// contact's day, and leaving it in would make a manager's answer to "show me
@@ -255,6 +253,9 @@ func (s *Service) worklistFrom(
 	// nothing new: each filter is a per-row test, so a row it kept once it keeps
 	// again.
 	rows, rowNote := s.narrowToScope(ctx, rows, scope, s.taskOwner)
+	rows, optional, optionalRefused, optionalNote := s.relationshipChoices(ctx, day, rows, scope)
+	refused = append(refused, optionalRefused...)
+	rowNote = rowNote.merge(optionalNote)
 	// One deal is one row. A deal both the night and the day found arrives
 	// twice, and the surviving row keeps the brief's id and score.
 	//
@@ -267,6 +268,9 @@ func (s *Service) worklistFrom(
 	rows = dropDone(rows, s.marked, day.AsOf)
 	scoped := rowNote.merge(waitNote)
 	bounded := boundedSources(day)
+	if !s.relationshipsChosen() {
+		delete(bounded, sourceDecay)
+	}
 	// The same rule for the who-is-waiting source, and for the same reason it
 	// needed one: it is read beside the assembled day rather than as one of its
 	// lanes, so boundedSources never saw it and the page reported it complete
@@ -294,12 +298,12 @@ func (s *Service) worklistFrom(
 	// the count disagreeing — the defect these two filter values exist to fix. It
 	// costs one comparison per row against an instant this call already holds.
 	rows = markChangedSinceBrief(rows, s.briefCutoff)
-	// Focus is independent of queue filters and pins, so it always folds routine work.
+	// Queue filters do not hide Focus candidates. Explicitly chosen reconnections
+	// are admitted beside ordinary current work.
 	focusRows := dropDone(foldRoutineDecisionsBounded(rows, len(day.NeedsYou) >= batchScanDepth),
 		s.marked, day.AsOf)
 	focus := focusOf(focusRows, considered, day.AsOf, readerOf(ctx))
-	// Pins belong to the personal queue. Focus keeps the ordinary ranking and
-	// eligibility, including when this reader has saved pins on the queue.
+	// Ordinary pins order the queue without changing Focus eligibility.
 	rows = applyPins(rows, s.pinned)
 	// The fold, skipped for a narrowing that IS opening the group — foldAndRepin's
 	// own rule, and the reason it is conditional at all.
@@ -349,12 +353,7 @@ func (s *Service) worklistFrom(
 	// `buyer_replies` and `prospecting` count, so leaving them out let a refused
 	// lane print a confident zero — the one direction these figures must never
 	// fail in.
-	missing := append(unavailable(ctx, day), refused...)
-	for _, refusal := range besideTheDay {
-		if refusal != nil {
-			missing = append(missing, *refusal)
-		}
-	}
+	missing := s.worklistRefusals(ctx, day, refused, besideTheDay, scoped)
 	// Ranked ONCE, here, whichever way this page is served. A frozen walk takes
 	// its sequence from the snapshot and a fresh read takes it from this sort,
 	// but both need the comparator to have run: the snapshot's order IS a
@@ -363,7 +362,6 @@ func (s *Service) worklistFrom(
 	// decided over the rows that actually survive to the page: the folds above
 	// turn several rows into one, and a group is one thing to read rather than
 	// the three it was assembled from.
-	missing = withRosterRefusal(stampSources(missing), scoped)
 	rows = markCrowding(rows)
 	sortByRank(rows)
 	shown, more, reached, walk := s.pageOf(
@@ -384,9 +382,11 @@ func (s *Service) worklistFrom(
 	ordered := renderInOrder(stampAsOf(shown, day.AsOf), readerOf(ctx))
 	bands := bandsOf(ordered)
 	out := crmcontracts.Worklist{
-		AsOf:  day.AsOf,
-		Queue: ordered,
-		Focus: &focus,
+		AsOf:                               day.AsOf,
+		Queue:                              ordered,
+		Focus:                              &focus,
+		OptionalRelationships:              &optional,
+		OptionalRelationshipsMoreAvailable: new(boundedSources(day)[sourceDecay]),
 		// The headings, in draw order, over the rows this page actually holds.
 		Bands: &bands,
 		// The bar is re-derived rather than threaded out of classifyDay: it is a
@@ -451,6 +451,19 @@ func (s *Service) worklistFrom(
 		out.Walk = state
 	}
 	return out
+}
+
+func (s *Service) worklistRefusals(ctx context.Context, day crmcontracts.Attention,
+	refused []crmcontracts.WorklistSourceUnavailable, besideTheDay []*crmcontracts.WorklistSourceUnavailable,
+	scoped scopeNote,
+) []crmcontracts.WorklistSourceUnavailable {
+	missing := append(unavailable(ctx, day), refused...)
+	for _, refusal := range besideTheDay {
+		if refusal != nil {
+			missing = append(missing, *refusal)
+		}
+	}
+	return withRosterRefusal(s.stampSources(missing), scoped)
 }
 
 // rankedWaits ranks the customers waiting on us, newest wait last.
