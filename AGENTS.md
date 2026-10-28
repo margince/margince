@@ -172,9 +172,9 @@ Commands that only read (`git status`, `diff`, `log`) can run in the sandbox.
 3. Before you mark the PR ready, run `make check`, `frontend/` and `craft static --strict` included.
    With write access, `gh workflow run ci.yml --ref <branch>` runs the same gate on GitHub instead.
    It tests the branch head, so merge `origin/main` first. `check` does not reach the integration
-   lane: for a backend Go change, run `make test-it DIR=<pkg>` for each integration package it
-   touches, or let CI run the whole lane. CI runs it on a dispatch or a non-draft PR whose diff
-   touches `backend/`; `make check-all` runs it locally.
+   lane. For a Go change, run `make test-it DIR=<pkg>` for each integration package it touches, or
+   let CI run the lane. CI runs it from that command or on a non-draft PR whose diff touches
+   `backend/`; `make check-all` runs it locally.
 4. Mark the PR ready. The release notes print its title. Use `feat(scope): …`, `fix(scope): …` or
    `perf(scope): …` for what a user or operator notices. Add `!` (`fix(api)!: …`) when it breaks a
    setting, an API client or an upgrade; such a title lists under **Breaking**.
