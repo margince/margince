@@ -72,7 +72,7 @@ func NewProviderFor(db *database.DB) *Provider {
 			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
 			WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx).
 			WithProviderRunReader(integrations.ReadRunForContactTx).
-			WithMergeSignalReader(signals.PreviewSignalCarryTx).
+			WithMergeSignalReader(signals.PreviewSignalCarry(signalSummaryWords)).
 			WithMergeCommitmentReader(weeklyPlanStore(pool).PreviewCommitmentCarryTx).
 			WithMergeNoticeReader(notices.PreviewNoticeCarryTx).
 			WithMergeContentReader(activities.NewStore(db)).

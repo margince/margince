@@ -80,7 +80,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 			introductions.NewStore(InstallationDB(pool), time.Now)).
 		WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx).
 		WithProviderRunReader(integrations.ReadRunForContactTx).
-		WithMergeSignalReader(signals.PreviewSignalCarryTx).
+		WithMergeSignalReader(signals.PreviewSignalCarry(signalSummaryWords)).
 		WithMergeCommitmentReader(weeklyPlanStore(pool).PreviewCommitmentCarryTx).
 		WithMergeNoticeReader(notices.PreviewNoticeCarryTx).
 		WithMergeContentReader(activities.NewStore(InstallationDB(pool))).
@@ -405,7 +405,8 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// fields are not among them), so it needs no field catalog of its own.
 	s.importHandlers = importHandlers{db: InstallationDB(pool), uploadLimit: s.uploadLimits.CSVImport}
 	s.company360Svc = company360.NewService(pool, s.contactsStore, s.dealsStore, ProjectsStore(pool), NewApprovalsService(InstallationDB(pool)), time.Now).
-		WithActivityFields(activities.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)))
+		WithActivityFields(activities.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))).
+		WithSignalWords(signalSummaryWords)
 	s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.contactsStore, nil, "", time.Now).
 		WithEmailSummaries(emailRows(pool))
 	s.companyBriefHandlers = companybrief.NewHandlers(s.companyBriefSvc)

@@ -99,7 +99,7 @@ func (s *Store) CreateSignal(ctx context.Context, in CreateSignalInput) (crmcont
 		if err != nil {
 			return fmt.Errorf("audit signal create: %w", err)
 		}
-		if out, err = readSignal(ctx, tx, id, storekit.LiveOnly); err != nil {
+		if out, err = readSignalFor(ctx, tx, id, storekit.LiveOnly, s.words); err != nil {
 			return fmt.Errorf("read created signal: %w", err)
 		}
 		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, detectedPayload(out)); err != nil {
@@ -184,21 +184,22 @@ func (s *Store) GetSignal(ctx context.Context, id ids.SignalID, archived storeki
 	var out crmcontracts.Signal
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = ReadSignalTx(ctx, tx, id, archived)
+		out, err = ReadSignalTx(ctx, tx, id, archived, s.words)
 		return err
 	})
 	return out, err
 }
 
-// ReadSignalTx applies signal and source visibility within the caller transaction.
-func ReadSignalTx(ctx context.Context, tx pgx.Tx, id ids.SignalID, archived storekit.ArchivedFilter) (crmcontracts.Signal, error) {
+// ReadSignalTx applies signal and source visibility within the caller
+// transaction. Nil words keep the stored summary.
+func ReadSignalTx(ctx context.Context, tx pgx.Tx, id ids.SignalID, archived storekit.ArchivedFilter, words SummaryWords) (crmcontracts.Signal, error) {
 	if err := auth.Require(ctx, "signal", principal.ActionRead); err != nil {
 		return crmcontracts.Signal{}, err
 	}
 	if err := auth.EnsureSignalVisible(ctx, tx, id.UUID); err != nil {
 		return crmcontracts.Signal{}, err
 	}
-	return readSignal(ctx, tx, id, archived)
+	return readSignalFor(ctx, tx, id, archived, words)
 }
 
 type UpdateSignalInput struct {
@@ -226,7 +227,7 @@ func (s *Store) UpdateSignal(ctx context.Context, id ids.SignalID, in UpdateSign
 		if err := auth.EnsureSignalVisible(ctx, tx, id.UUID); err != nil {
 			return err
 		}
-		current, err := readSignal(ctx, tx, id, storekit.LiveOnly)
+		current, params, err := readSignalRow(ctx, tx, id, storekit.LiveOnly)
 		if err != nil {
 			return err
 		}
@@ -241,7 +242,7 @@ func (s *Store) UpdateSignal(ctx context.Context, id ids.SignalID, in UpdateSign
 			if err := storekit.EnsureIfMatch(ctx, tx, "signal", id.UUID, in.IfVersion); err != nil {
 				return err
 			}
-			out = current
+			out = s.words.reword(ctx, current, params)
 			return nil
 		}
 		if err := p.ApplyGuarded(ctx, tx, "signal", id.UUID, in.IfVersion); err != nil {
@@ -259,7 +260,7 @@ func (s *Store) UpdateSignal(ctx context.Context, id ids.SignalID, in UpdateSign
 		if _, err := storekit.Audit(ctx, tx, "update", "signal", id.UUID, p.Before(), p.After()); err != nil {
 			return fmt.Errorf("audit signal update: %w", err)
 		}
-		if out, err = readSignal(ctx, tx, id, storekit.LiveOnly); err != nil {
+		if out, err = readSignalFor(ctx, tx, id, storekit.LiveOnly, s.words); err != nil {
 			return fmt.Errorf("read updated signal: %w", err)
 		}
 		return nil
@@ -284,7 +285,7 @@ func (s *Store) ArchiveSignal(ctx context.Context, id ids.SignalID) (crmcontract
 		}
 
 		var err error
-		if out, err = readSignal(ctx, tx, id, storekit.IncludeArchived); err != nil {
+		if out, err = readSignalFor(ctx, tx, id, storekit.IncludeArchived, s.words); err != nil {
 			return fmt.Errorf("read archived signal: %w", err)
 		}
 		return nil
@@ -307,21 +308,35 @@ func signalColumns(alias string) string {
 	return strings.Join(cols, ", ") + ", " + signalResolutionColumns
 }
 
+// readSignal keeps the stored summary, for a caller that works from the text
+// rather than showing it.
 func readSignal(ctx context.Context, tx pgx.Tx, id ids.SignalID, archived storekit.ArchivedFilter) (crmcontracts.Signal, error) {
+	sig, _, err := readSignalRow(ctx, tx, id, archived)
+	return sig, err
+}
+
+// readSignalFor rewords the summary for the caller a client read answers.
+func readSignalFor(ctx context.Context, tx pgx.Tx, id ids.SignalID, archived storekit.ArchivedFilter, words SummaryWords) (crmcontracts.Signal, error) {
+	sig, params, err := readSignalRow(ctx, tx, id, archived)
+	if err != nil {
+		return crmcontracts.Signal{}, err
+	}
+	return words.reword(ctx, sig, params), nil
+}
+
+func readSignalRow(ctx context.Context, tx pgx.Tx, id ids.SignalID, archived storekit.ArchivedFilter) (crmcontracts.Signal, json.RawMessage, error) {
 	q := `SELECT ` + signalColumns("s") + ` FROM signal s` + signalResolutionJoin + ` WHERE s.id = $1`
 	if archived == storekit.LiveOnly {
 		q += ` AND s.archived_at IS NULL`
 	}
 	sig, params, err := scanSignal(tx.QueryRow(ctx, q, id))
 	if errors.Is(err, pgx.ErrNoRows) {
-		return crmcontracts.Signal{}, apperrors.ErrNotFound
+		return crmcontracts.Signal{}, nil, apperrors.ErrNotFound
 	}
 	if err != nil {
-		return crmcontracts.Signal{}, err
+		return crmcontracts.Signal{}, nil, err
 	}
-	read := []crmcontracts.Signal{sig}
-	wordForReader(ctx, tx, read, []json.RawMessage{params})
-	return read[0], nil
+	return sig, params, nil
 }
 
 // scanSignal answers the row and the parts its summary was worded from, nil

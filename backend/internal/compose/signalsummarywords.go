@@ -5,29 +5,14 @@ package compose
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 
-	"github.com/jackc/pgx/v5"
-
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// Wired at link time, so every binary that reads a signal words it alike. An
-// unwired reader would serve the stored text.
-func init() { signals.WordSummariesWith(signalSummaryWords{}) }
-
 // signalSummaryWords words a summary again from the parts its producer stored,
 // through the same function that producer wrote it with.
-type signalSummaryWords struct{}
-
-func (signalSummaryWords) ReaderLanguage(ctx context.Context, tx pgx.Tx) textlang.Lang {
-	return identity.ReaderLanguageForRecord(ctx, tx)
-}
-
-func (signalSummaryWords) Word(lang textlang.Lang, kind string, params json.RawMessage) (string, bool) {
+func signalSummaryWords(lang textlang.Lang, kind string, params json.RawMessage) (string, bool) {
 	switch kind {
 	case kindTechnicalChange:
 		parts, ok := decodeSummaryParts[technicalChangeParts](params)

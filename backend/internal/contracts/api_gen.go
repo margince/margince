@@ -33337,7 +33337,7 @@ type Company360StateStrip struct {
 		Kind     string                             `json:"kind"`
 		Severity Company360StateStripSignalSeverity `json:"severity"`
 
-		// Summary The signal's one sentence, in the words its producer wrote — the strip does not rephrase what a conversation said. A sentence the server words itself is in the reader's language, as `Signal.summary` says.
+		// Summary The signal's one sentence, in the language `Signal.summary` reads in. The strip does not rephrase what a conversation said.
 		Summary string `json:"summary"`
 	} `json:"signal,omitempty"`
 }
@@ -52298,9 +52298,9 @@ type Signal struct {
 	Status        SignalStatus        `json:"status"`
 
 	// Summary The signal's one sentence. A sentence the server words itself (`technical_change`,
-	// `ghosted_thread`, `project_gone_quiet`) is in the reader's display language, else the
-	// installation's base language. Every other summary, and one stored before the server
-	// kept the parts of its sentence, reads as it was written.
+	// `ghosted_thread`, `project_gone_quiet`) is in the reader's chosen display language, else
+	// the installation's base language. Every other summary, and a summary stored without its
+	// parts, reads as it was written.
 	Summary   string    `json:"summary"`
 	UpdatedAt time.Time `json:"updated_at"`
 

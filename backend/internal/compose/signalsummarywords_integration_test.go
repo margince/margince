@@ -12,6 +12,7 @@ package compose
 import (
 	"context"
 	"maps"
+	"strings"
 	"testing"
 	"time"
 
@@ -44,7 +45,7 @@ func TestATechnicalChangeReadsInEachReadersLanguage(t *testing.T) {
 		textlang.German:     "Setzt jetzt nginx ein",
 		textlang.Vietnamese: "Hiện đang dùng nginx",
 	} {
-		if got := readSummary(t, e, readerIn(t, e, lang), company, kindTechnicalChange); got != want {
+		if got := readSummary(t, e, readerIn(t, e, signalSeat(), lang), company, kindTechnicalChange); got != want {
 			t.Errorf("a %s reader reads %q, want %q", lang, got, want)
 		}
 	}
@@ -55,18 +56,57 @@ func TestTheAccountStripStatesTheWorstSignalInTheReadersLanguage(t *testing.T) {
 	company := e.SeedCompany(t, "Strip Co", nil)
 	startsUsingNginx(t, e, company)
 
-	now := time.Date(2026, 9, 2, 9, 0, 0, 0, time.UTC)
-	service := company360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects,
-		approvals.NewService(InstallationDB(e.Pool)), func() time.Time { return now })
-	page, err := service.Assemble(readerIn(t, e, textlang.Vietnamese), ids.From[ids.CompanyKind](company))
-	if err != nil {
-		t.Fatalf("assembling the account page: %v", err)
-	}
-	if page.StateStrip == nil || page.StateStrip.Signal == nil {
-		t.Fatal("the strip states no signal, want the technical change")
-	}
-	if got := page.StateStrip.Signal.Summary; got != "Hiện đang dùng nginx" {
+	if got := stripSummary(t, e, readerIn(t, e, signalSeat(), textlang.Vietnamese), company); got != "Hiện đang dùng nginx" {
 		t.Errorf("the strip states %q to a Vietnamese reader, want the Vietnamese sentence", got)
+	}
+}
+
+// A reader who chose no language gets the stored sentence, in the
+// installation's language, even on a seat that cannot read that setting.
+func TestAReaderWhoChoseNoLanguageReadsTheInstallationsLanguage(t *testing.T) {
+	e := integration.Setup(t)
+	integration.SetBaseLanguage(e.Admin(), t, e.Pool, "de")
+	company := e.SeedCompany(t, "Stapel GmbH", nil)
+	startsUsingNginx(t, e, company)
+
+	narrow := readerIn(t, e, principal.Permissions{
+		Objects: map[string]principal.ObjectGrant{
+			"company": {Read: true}, "signal": {Read: true},
+		},
+		RowScope: principal.RowScopeAll,
+	}, "")
+	if got := readSummary(t, e, narrow, company, kindTechnicalChange); got != "Setzt jetzt nginx ein" {
+		t.Errorf("the list reads %q, want the stored German sentence", got)
+	}
+	if got := stripSummary(t, e, readerIn(t, e, signalSeat(), ""), company); got != "Setzt jetzt nginx ein" {
+		t.Errorf("the strip states %q, want the stored German sentence", got)
+	}
+}
+
+// The intro draft goes to a contact outside the company, so its language
+// follows the stored summary, never the rep's display language.
+func TestAnIntroDraftKeepsTheStoredSummaryForAReaderInAnotherLanguage(t *testing.T) {
+	e := integration.Setup(t)
+	company := e.SeedCompany(t, "Route Co", nil)
+	employedAt(t, e, company, "Rae Route")
+	startsUsingNginx(t, e, company)
+	reader := readerIn(t, e, signalSeat(), textlang.Vietnamese)
+	store := signals.NewStore(e.DB(), signalStrength{contacts: e.Contacts}).WithSummaryWords(signalSummaryWords)
+	kind := kindTechnicalChange
+	listed, _, err := store.ListSignals(reader, signals.ListSignalsInput{CompanyID: &company, Kind: &kind})
+	if err != nil || len(listed) != 1 {
+		t.Fatalf("listing the account's signal: %v, %d rows", err, len(listed))
+	}
+
+	path, err := store.IntroPath(reader, ids.From[ids.SignalKind](ids.UUID(listed[0].Id)), time.Date(2026, 9, 2, 9, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("the intro path: %v", err)
+	}
+	if !strings.Contains(path.NextMove.DraftBody, "Now uses nginx") {
+		t.Errorf("the draft does not carry the stored English summary: %q", path.NextMove.DraftBody)
+	}
+	if !strings.HasPrefix(path.NextMove.DraftSubject, "Getting in touch about") {
+		t.Errorf("the draft subject %q is not the English one", path.NextMove.DraftSubject)
 	}
 }
 
@@ -90,7 +130,7 @@ func TestAGhostedThreadReadsInTheReadersLanguage(t *testing.T) {
 		textlang.German:     "Wir haben vor mindestens 14 Tagen geschrieben und niemand hat geantwortet.",
 		textlang.Vietnamese: "Chúng ta đã viết cách đây ít nhất 14 ngày và chưa ai trả lời.",
 	} {
-		if got := readSummary(t, e, readerIn(t, e, lang), company, kindGhostedThread); got != want {
+		if got := readSummary(t, e, readerIn(t, e, signalSeat(), lang), company, kindGhostedThread); got != want {
 			t.Errorf("a %s reader reads %q, want %q", lang, got, want)
 		}
 	}
@@ -120,7 +160,7 @@ func TestAQuietProjectReadsInTheReadersLanguage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got := readSummary(t, e, readerIn(t, e, textlang.Vietnamese), company, kindProjectGoneQuiet)
+	got := readSummary(t, e, readerIn(t, e, signalSeat(), textlang.Vietnamese), company, kindProjectGoneQuiet)
 	if want := "Không có gì được lưu cho ERP rollout trong ít nhất 30 ngày."; got != want {
 		t.Errorf("a Vietnamese reader reads %q, want %q", got, want)
 	}
@@ -131,14 +171,14 @@ func TestASignalWithoutPartsReadsAsItWasStored(t *testing.T) {
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Filed Co", nil)
 	subject := "company"
-	if _, err := signals.NewStore(e.DB(), nil).CreateSignal(readerIn(t, e, textlang.English), signals.CreateSignalInput{
+	if _, err := signals.NewStore(e.DB(), nil).CreateSignal(readerIn(t, e, signalSeat(), textlang.English), signals.CreateSignalInput{
 		Kind: kindTechnicalChange, EntityType: &subject, EntityID: &company,
 		Summary: "Now uses nginx", Source: "manual",
 	}); err != nil {
 		t.Fatalf("filing the signal: %v", err)
 	}
 
-	if got := readSummary(t, e, readerIn(t, e, textlang.Vietnamese), company, kindTechnicalChange); got != "Now uses nginx" {
+	if got := readSummary(t, e, readerIn(t, e, signalSeat(), textlang.Vietnamese), company, kindTechnicalChange); got != "Now uses nginx" {
 		t.Errorf("a Vietnamese reader reads %q, want the stored sentence", got)
 	}
 }
@@ -160,13 +200,18 @@ func startsUsingNginx(t *testing.T, e *integration.Env, company ids.UUID) {
 	}
 }
 
-// readerIn is an admin seat that may also read and file signals, reading in
-// a chosen display language.
-func readerIn(t *testing.T, e *integration.Env, lang textlang.Lang) context.Context {
-	t.Helper()
+// signalSeat is the admin seat, which may also read and file signals.
+func signalSeat() principal.Permissions {
 	perms := integration.AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)
 	perms.Objects["signal"] = principal.ObjectGrant{Create: true, Read: true}
+	return perms
+}
+
+// readerIn is a seat reading in a chosen display language, or in none when
+// lang is empty.
+func readerIn(t *testing.T, e *integration.Env, perms principal.Permissions, lang textlang.Lang) context.Context {
+	t.Helper()
 	ctx := e.As(e.AdminUser, nil, perms)
 	actor, ok := principal.Actor(ctx)
 	if !ok {
@@ -180,7 +225,7 @@ func readerIn(t *testing.T, e *integration.Env, lang textlang.Lang) context.Cont
 // the single read, which must agree.
 func readSummary(t *testing.T, e *integration.Env, reader context.Context, company ids.UUID, kind string) string {
 	t.Helper()
-	store := signals.NewStore(e.DB(), nil)
+	store := signals.NewStore(e.DB(), nil).WithSummaryWords(signalSummaryWords)
 	listed, _, err := store.ListSignals(reader, signals.ListSignalsInput{CompanyID: &company, Kind: &kind})
 	if err != nil {
 		t.Fatalf("listing the account's signals: %v", err)
@@ -196,4 +241,20 @@ func readSummary(t *testing.T, e *integration.Env, reader context.Context, compa
 		t.Errorf("the single read says %q and the list %q", one.Summary, listed[0].Summary)
 	}
 	return listed[0].Summary
+}
+
+func stripSummary(t *testing.T, e *integration.Env, reader context.Context, company ids.UUID) string {
+	t.Helper()
+	now := time.Date(2026, 9, 2, 9, 0, 0, 0, time.UTC)
+	service := company360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects,
+		approvals.NewService(InstallationDB(e.Pool)), func() time.Time { return now }).
+		WithSignalWords(signalSummaryWords)
+	page, err := service.Assemble(reader, ids.From[ids.CompanyKind](company))
+	if err != nil {
+		t.Fatalf("assembling the account page: %v", err)
+	}
+	if page.StateStrip == nil || page.StateStrip.Signal == nil {
+		t.Fatal("the strip states no signal, want the technical change")
+	}
+	return page.StateStrip.Signal.Summary
 }

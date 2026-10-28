@@ -49,6 +49,13 @@ type signalHeadline struct {
 	SummaryParams json.RawMessage
 }
 
+// WithSignalWords rewords the strip's signal in the reader's chosen language.
+// Without it the strip states the stored summary.
+func (s *Service) WithSignalWords(words signals.SummaryWords) *Service {
+	s.signalWords = words
+	return s
+}
+
 // readSignalFacts reads what the account's open signals say: the worst one
 // standing, and whether the contract ended. A caller who may not read signals
 // gets Readable false rather than an account with nothing standing.
