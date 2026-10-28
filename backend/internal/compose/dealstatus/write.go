@@ -48,6 +48,7 @@ func composeDeterministic(f facts, mv crmcontracts.DealStatusCardMove) crmcontra
 	if mv.Action != ActionNone {
 		out.Next = &mv
 	}
+	out.Verdict = floorVerdict(f)
 	// Set on the floor, so the model path inherits it: foldWritten starts from
 	// this card, and reply_to is a fact about the records rather than anything
 	// the lane may revise.
@@ -57,6 +58,37 @@ func composeDeterministic(f facts, mv crmcontracts.DealStatusCardMove) crmcontra
 		out.RequestBasis = requestBasis(f, inbound, basisCurrentRequest)
 	}
 	return out
+}
+
+// floorVerdict makes the call on an open deal from its health reading, so a
+// card no model wrote still says how the deal stands. It uses two of the
+// model's words only: the floor cannot name a blocker, and silence alone is
+// not evidence that the buyer has gone cold.
+func floorVerdict(f facts) *crmcontracts.DealStatusCardVerdict {
+	if f.health == nil || f.deal.Status != crmcontracts.DealStatusOpen {
+		return nil
+	}
+	reasons := deals.HealthReasons(*f.health, f.now, f.loc, f.lang)
+	standing, reason := "live", reasons[0]
+	if f.health.AtRisk || f.health.Evidence.Stalled || f.health.Evidence.LastActivityAt == nil {
+		standing, reason = "drifting", weakestReason(reasons)
+	}
+	return &crmcontracts.DealStatusCardVerdict{
+		Standing: standing,
+		Because:  crmcontracts.DealStatusCardSection{Sentences: []sentence{plain(reason.Reason)}},
+	}
+}
+
+// weakestReason is the factor pulling the score down most; on a tie the one
+// that weighs more, which HealthReasons lists first.
+func weakestReason(reasons []deals.HealthReason) deals.HealthReason {
+	weakest := reasons[0]
+	for _, r := range reasons[1:] {
+		if r.Value < weakest.Value {
+			weakest = r
+		}
+	}
+	return weakest
 }
 
 // storyLines say what has happened: the deal's own fields, then the last
