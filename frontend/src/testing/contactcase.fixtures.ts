@@ -90,6 +90,7 @@ function edge(
     right_id: right,
     confidence,
     status,
+    can_dismiss: true,
     evidence: [
       {
         field: "full_name",

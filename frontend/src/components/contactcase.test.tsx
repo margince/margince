@@ -333,17 +333,21 @@ describe("deciding one pair inside the review", () => {
     expect(screen.queryByText(/Retry\./)).toBeNull();
   });
 
-  it("offers no pair verbs to a reader who may not merge", async () => {
+  it("offers no pair verbs on a pair the server says the reader may not decide", async () => {
+    const refused = contactCase();
     stubWithSession(
       {
         [`GET ${CASE_PATH}`]: () =>
-          jsonResponse(
-            contactCase({
-              can_merge: false,
-              merge_mode: "none",
-              reason: "no_write_authority",
-            }),
-          ),
+          jsonResponse({
+            ...refused,
+            can_merge: false,
+            merge_mode: "none",
+            reason: "no_write_authority",
+            edges: refused.edges.map((edge) => ({
+              ...edge,
+              can_dismiss: false,
+            })),
+          }),
       },
       {},
     );

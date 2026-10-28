@@ -8,7 +8,7 @@ import { Eyebrow } from "../design-system/eyebrow";
 import { formatPercent } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { mayDecidePairs, PairActions } from "./contactcase.pair";
+import { mayDecidePair, PairActions } from "./contactcase.pair";
 import type { ContactCase, ContactCaseOutcome } from "./contactcase.queries";
 
 type Evidence = components["schemas"]["DedupeEvidence"];
@@ -47,7 +47,6 @@ export function CaseEvidence({
 }: Readonly<{ contactCase: ContactCase; onStale: () => void }>) {
   const t = useT();
   const { locale } = useLocale();
-  const decides = mayDecidePairs(contactCase);
   return (
     <section className="contactcase-section">
       <Eyebrow as="h3">{t("contactCase.evidence.title")}</Eyebrow>
@@ -81,7 +80,7 @@ export function CaseEvidence({
                 ))}
               </ul>
             )}
-            {decides && (
+            {mayDecidePair(edge) && (
               <PairActions
                 contactCase={contactCase}
                 edge={edge}

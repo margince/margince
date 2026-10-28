@@ -27,15 +27,12 @@ const FAILURE_MESSAGES = {
 >;
 
 /**
- * Whether this reader is offered the verbs on one pair. A too-large case
- * answers `can_merge: false` whatever the reader's authority, and its pairs
- * are the only place it can be decided. So it offers them too, and the server
- * refuses a reader without authority.
+ * Whether this reader is offered the verbs on one pair, as the server answers
+ * it per pair. Merging two in a too-large case needs more than a dismissal,
+ * so the server may still refuse that one.
  */
-export function mayDecidePairs(contactCase: ContactCase): boolean {
-  return (
-    contactCase.can_merge || contactCase.policy_enabled || contactCase.too_large
-  );
+export function mayDecidePair(edge: Edge): boolean {
+  return edge.can_dismiss;
 }
 
 function memberOf(contactCase: ContactCase, id: string) {
