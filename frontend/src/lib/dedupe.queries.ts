@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { problemCodeOf, problemStatus, unwrap } from "./problem";
+import { invalidateRecord } from "./recordwritekeys";
 import { contactCasesKey, worklistKey } from "./workkeys";
 
 export type PairDisposition = "merge" | "not_a_duplicate";
@@ -18,6 +19,24 @@ function invalidatePairReads(client: QueryClient): Promise<unknown> {
   return Promise.all([
     client.invalidateQueries({ queryKey: worklistKey }),
     client.invalidateQueries({ queryKey: contactCasesKey }),
+  ]);
+}
+
+/**
+ * The reads a contact merge reshapes: each named contact's own pages, the
+ * contact lists that showed the merged-away record, and the pair reads. The
+ * case merge and a merge of one contact pair both end here.
+ */
+export function invalidateAfterContactMerge(
+  client: QueryClient,
+  contactIds: Iterable<string>,
+): Promise<unknown> {
+  return Promise.all([
+    invalidatePairReads(client),
+    client.invalidateQueries({ queryKey: ["contacts"] }),
+    ...[...new Set(contactIds)].map((id) =>
+      invalidateRecord(client, "contact", id),
+    ),
   ]);
 }
 
@@ -40,6 +59,8 @@ export function useDedupeDisposition() {
       id: string;
       disposition: PairDisposition;
       winnerId?: string;
+      /** Both ends of a contact pair, so a merge stales their pages too. */
+      contactIds?: readonly string[];
     }) => {
       unwrap(
         await api.POST("/dedupe/candidates/{id}/disposition", {
@@ -48,7 +69,10 @@ export function useDedupeDisposition() {
         }),
       );
     },
-    onSuccess: () => invalidatePairReads(queryClient),
+    onSuccess: (_, input) =>
+      input.disposition === "merge" && input.contactIds
+        ? invalidateAfterContactMerge(queryClient, input.contactIds)
+        : invalidatePairReads(queryClient),
   });
 }
 

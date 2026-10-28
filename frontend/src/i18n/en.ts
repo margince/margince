@@ -18385,6 +18385,8 @@ export const en = {
     "Tick the contacts that are the same person. Then choose which record to keep and who owns it.",
   "contactCase.loading": "Loading possible duplicates…",
   "contactCase.none": "This contact has no open duplicates.",
+  "contactCase.settledElsewhere":
+    "A colleague already settled these duplicates. This contact remains.",
   "contactCase.withheld": "These duplicates are not visible to you.",
   "contactCase.stale":
     "The duplicates changed while you reviewed them. Check the selection again.",
@@ -18451,8 +18453,7 @@ export const en = {
   "contactCase.entry_other": "Possible duplicates ({count})",
   "worklist.contactCase.review": "Review",
   "worklist.contactCase.owners": "Owned by {names}.",
-  "worklist.contactCase.ownersAny":
-    "Owned by {names}. Any of them can merge these.",
+  "worklist.contactCase.yours": "You can merge these.",
   "worklist.contactCase.unowned": "No owner.",
   "worklist.contactCase.notYours":
     "You cannot merge these. The review says who can.",

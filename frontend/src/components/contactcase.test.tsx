@@ -3,6 +3,7 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
+import { QueryClient } from "@tanstack/react-query";
 import {
   cleanup,
   render,
@@ -33,6 +34,7 @@ import { defaultSelection, isConnected } from "./contactcase.selection";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 const CASE_PATH = `/dedupe/contact-cases/${ANA}`;
@@ -57,6 +59,22 @@ function mountWithToasts() {
 }
 
 const noContent = () => new Response(null, { status: 204 });
+
+// Answers 204 only to the one body the test expects, so a wrong request fails
+// the press instead of passing it.
+function expectBody(expected: unknown) {
+  return (body: unknown) =>
+    JSON.stringify(body) === JSON.stringify(expected)
+      ? noContent()
+      : jsonResponse({ title: "Unexpected body", status: 422 }, 422);
+}
+
+const TOO_LARGE = {
+  too_large: true,
+  can_merge: false,
+  merge_mode: "none",
+  reason: "too_large",
+} as const;
 
 function member(name: RegExp) {
   return screen.getByRole("checkbox", { name });
@@ -189,6 +207,81 @@ describe("the preview", () => {
 });
 
 describe("a case already settled", () => {
+  it("says a colleague settled it when the case is gone after a case change", async () => {
+    let reads = 0;
+    stubWithSession(
+      {
+        [`GET ${CASE_PATH}`]: () => {
+          reads += 1;
+          return reads === 1
+            ? jsonResponse(contactCase())
+            : jsonResponse({ title: "Not found", status: 404 }, 404);
+        },
+        [`POST ${CASE_PATH}/preview`]: () =>
+          jsonResponse(
+            { title: "Conflict", status: 409, code: "case_changed" },
+            409,
+          ),
+      },
+      {},
+    );
+    const user = userEvent.setup();
+    mount();
+    await user.click(
+      await screen.findByRole("button", { name: "Preview merge" }),
+    );
+    expect(
+      await screen.findByText(
+        "A colleague already settled these duplicates. This contact remains.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.queryByText("This contact has no open duplicates."),
+    ).toBeNull();
+  });
+
+  it("does not credit a colleague with a pair the reviewer merged here", async () => {
+    let reads = 0;
+    stubWithSession(
+      {
+        [`GET ${CASE_PATH}`]: () => {
+          reads += 1;
+          return reads === 1
+            ? jsonResponse(contactCase(TOO_LARGE))
+            : jsonResponse({ title: "Not found", status: 404 }, 404);
+        },
+        "POST /dedupe/candidates/p1/disposition": noContent,
+      },
+      {},
+    );
+    const user = userEvent.setup();
+    mountWithToasts();
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Merge these two: Mira Kovac and Mira Kovač",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Keep Mira Kovač" }));
+    expect(
+      await screen.findByText("This contact has no open duplicates."),
+    ).toBeVisible();
+    expect(screen.queryByText(/A colleague already settled/)).toBeNull();
+  });
+
+  it("says the contact has no duplicates when it never had a case", async () => {
+    stubWithSession(
+      {
+        [`GET ${CASE_PATH}`]: () =>
+          jsonResponse({ title: "Not found", status: 404 }, 404),
+      },
+      {},
+    );
+    mount();
+    expect(
+      await screen.findByText("This contact has no open duplicates."),
+    ).toBeVisible();
+  });
+
   it("says who merged it, and into which contact", async () => {
     stubWithSession(
       { [`GET ${CASE_PATH}`]: () => jsonResponse(resolvedCase()) },
@@ -251,26 +344,20 @@ describe("deciding one pair inside the review", () => {
     expect(posted).toEqual([{ disposition: "not_a_duplicate" }]);
   });
 
-  it("offers a too-large case's pairs a merge that names the kept contact", async () => {
+  it("merges a too-large case's pair into the kept contact, and stales both ends", async () => {
     const posted: unknown[] = [];
+    const merge = expectBody({ disposition: "merge", winner_id: BEN });
     stubWithSession(
       {
-        [`GET ${CASE_PATH}`]: () =>
-          jsonResponse(
-            contactCase({
-              too_large: true,
-              can_merge: false,
-              merge_mode: "none",
-              reason: "too_large",
-            }),
-          ),
+        [`GET ${CASE_PATH}`]: () => jsonResponse(contactCase(TOO_LARGE)),
         "POST /dedupe/candidates/p1/disposition": (body) => {
           posted.push(body);
-          return noContent();
+          return merge(body);
         },
       },
       {},
     );
+    const invalidated = vi.spyOn(QueryClient.prototype, "invalidateQueries");
     const user = userEvent.setup();
     mountWithToasts();
     expect(
@@ -282,9 +369,45 @@ describe("deciding one pair inside the review", () => {
       }),
     );
     await user.click(screen.getByRole("button", { name: "Keep Mira Kovač" }));
+    await waitFor(() => expect(posted).toHaveLength(1));
+    const keys = () =>
+      invalidated.mock.calls.map(([filters]) =>
+        JSON.stringify(filters?.queryKey),
+      );
     await waitFor(() =>
-      expect(posted).toEqual([{ disposition: "merge", winner_id: BEN }]),
+      expect(keys()).toEqual(
+        expect.arrayContaining([
+          JSON.stringify(["contact", ANA]),
+          JSON.stringify(["contact", BEN]),
+          JSON.stringify(["contacts"]),
+          JSON.stringify(["worklist"]),
+        ]),
+      ),
     );
+    expect(screen.queryByText("The pair was not saved. Retry.")).toBeNull();
+  });
+
+  it("offers a pair the reader may dismiss but not merge only the dismissal", async () => {
+    const large = contactCase(TOO_LARGE);
+    stubWithSession(
+      {
+        [`GET ${CASE_PATH}`]: () =>
+          jsonResponse({
+            ...large,
+            edges: large.edges.map((edge) => ({ ...edge, can_merge: false })),
+          }),
+      },
+      {},
+    );
+    mountWithToasts();
+    expect(
+      await screen.findByRole("button", {
+        name: "Not the same person: Mira Kovac and Mira Kovač",
+      }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: /Merge these two/ }),
+    ).toBeNull();
   });
 
   it("re-opens a pair marked as different people", async () => {

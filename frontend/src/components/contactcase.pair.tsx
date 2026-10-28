@@ -26,13 +26,18 @@ const FAILURE_MESSAGES = {
   MessageKey
 >;
 
+/** Whether this reader may merge this pair here: only a too-large case asks pair by pair. */
+function mayMergePair(contactCase: ContactCase, edge: Edge): boolean {
+  return contactCase.too_large && edge.can_merge;
+}
+
 /**
- * Whether this reader is offered the verbs on one pair, as the server answers
- * it per pair. Merging two in a too-large case needs more than a dismissal,
- * so the server may still refuse that one.
+ * Whether this reader is offered any verb on one pair, as the server answers
+ * it per pair. Dismissing and merging are asked for apart, because merging
+ * two needs more authority than saying they differ.
  */
-export function mayDecidePair(edge: Edge): boolean {
-  return edge.can_dismiss;
+export function mayDecidePair(contactCase: ContactCase, edge: Edge): boolean {
+  return edge.can_dismiss || mayMergePair(contactCase, edge);
 }
 
 function memberOf(contactCase: ContactCase, id: string) {
@@ -56,7 +61,13 @@ export function PairActions({
   contactCase,
   edge,
   onStale,
-}: Readonly<{ contactCase: ContactCase; edge: Edge; onStale: () => void }>) {
+  onMerged,
+}: Readonly<{
+  contactCase: ContactCase;
+  edge: Edge;
+  onStale: () => void;
+  onMerged: () => void;
+}>) {
   const t = useT();
   const toast = useToast();
   const decide = useDedupeDisposition();
@@ -84,6 +95,7 @@ export function PairActions({
   };
 
   if (edge.status === "not_a_duplicate") {
+    if (!edge.can_dismiss) return null;
     return (
       <ActionRow>
         <Button
@@ -113,8 +125,9 @@ export function PairActions({
                     id: edge.pair_id,
                     disposition: "merge",
                     winnerId: side?.id,
+                    contactIds: [edge.left_id, edge.right_id],
                   },
-                  { onError },
+                  { onError, onSuccess: onMerged },
                 )
               }
             >
@@ -131,7 +144,7 @@ export function PairActions({
   return (
     <ActionRow
       primary={
-        contactCase.too_large ? (
+        mayMergePair(contactCase, edge) ? (
           <Button
             disabled={pending}
             aria-label={`${t("contactCase.pair.mergeTwo")}: ${pairName}`}
@@ -142,18 +155,20 @@ export function PairActions({
         ) : undefined
       }
     >
-      <Button
-        pending={decide.isPending}
-        aria-label={`${t("contactCase.pair.notSame")}: ${pairName}`}
-        onClick={() =>
-          decide.mutate(
-            { id: edge.pair_id, disposition: "not_a_duplicate" },
-            { onError },
-          )
-        }
-      >
-        {t("contactCase.pair.notSame")}
-      </Button>
+      {edge.can_dismiss && (
+        <Button
+          pending={decide.isPending}
+          aria-label={`${t("contactCase.pair.notSame")}: ${pairName}`}
+          onClick={() =>
+            decide.mutate(
+              { id: edge.pair_id, disposition: "not_a_duplicate" },
+              { onError },
+            )
+          }
+        >
+          {t("contactCase.pair.notSame")}
+        </Button>
+      )}
     </ActionRow>
   );
 }

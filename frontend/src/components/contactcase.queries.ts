@@ -1,17 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import {
-  type QueryClient,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { invalidateAfterContactMerge } from "../lib/dedupe.queries";
 import { unwrap } from "../lib/problem";
-import { invalidateRecord } from "../lib/recordwritekeys";
-import { contactCasesKey, worklistKey } from "../lib/workkeys";
+import { contactCasesKey } from "../lib/workkeys";
 
 export type ContactCase = components["schemas"]["ContactCase"];
 export type ContactCaseMember = components["schemas"]["ContactCaseMember"];
@@ -67,22 +62,9 @@ export function useContactCaseMerge() {
         }),
       ),
     onSuccess: (outcome, { body }) =>
-      invalidateAfterMerge(client, body, outcome),
+      invalidateAfterContactMerge(client, [
+        ...body.member_ids,
+        outcome.survivor_id,
+      ]),
   });
-}
-
-// Every member page and list that showed a merged-away contact, plus the
-// Worklist rows and every cached case, since one merge reshapes all of them.
-function invalidateAfterMerge(
-  client: QueryClient,
-  body: ContactCaseDecision,
-  outcome: ContactCaseOutcome,
-): Promise<unknown> {
-  const touched = new Set([...body.member_ids, outcome.survivor_id]);
-  return Promise.all([
-    client.invalidateQueries({ queryKey: worklistKey }),
-    client.invalidateQueries({ queryKey: ["contacts"] }),
-    client.invalidateQueries({ queryKey: contactCasesKey }),
-    ...[...touched].map((id) => invalidateRecord(client, "contact", id)),
-  ]);
 }

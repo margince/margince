@@ -18047,6 +18047,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đánh dấu các liên hệ là cùng một người. Sau đó chọn hồ sơ giữ lại và người chịu trách nhiệm.",
   "contactCase.loading": "Đang tải liên hệ có thể trùng…",
   "contactCase.none": "Liên hệ này không có bản trùng nào đang chờ xử lý.",
+  "contactCase.settledElsewhere":
+    "Một đồng nghiệp đã xử lý các liên hệ trùng này. Liên hệ này vẫn được giữ lại.",
   "contactCase.withheld": "Bạn không xem được các liên hệ trùng này.",
   "contactCase.stale":
     "Các liên hệ trùng đã thay đổi trong lúc bạn xem lại. Kiểm tra lại lựa chọn.",
@@ -18114,8 +18116,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contactCase.entry_other": "Có thể trùng ({count})",
   "worklist.contactCase.review": "Xem lại",
   "worklist.contactCase.owners": "Người chịu trách nhiệm: {names}.",
-  "worklist.contactCase.ownersAny":
-    "Người chịu trách nhiệm: {names}. Bất kỳ ai trong số họ đều có thể gộp.",
+  "worklist.contactCase.yours": "Bạn có thể gộp các liên hệ này.",
   "worklist.contactCase.unowned": "Chưa giao cho ai.",
   "worklist.contactCase.notYours":
     "Bạn không thể gộp các liên hệ này. Phần xem lại cho biết ai có thể.",

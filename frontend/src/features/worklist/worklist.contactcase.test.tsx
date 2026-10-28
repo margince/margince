@@ -68,7 +68,7 @@ describe("a contact case on the Worklist", () => {
     expect(screen.getByText("m.kovac@northwind.de")).toBeVisible();
     expect(
       screen.getByText(
-        "Owned by Ana Owner and Ben Seller. Any of them can merge these.",
+        "Owned by Ana Owner and Ben Seller. You can merge these.",
       ),
     ).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Review" }));
@@ -76,6 +76,36 @@ describe("a contact case on the Worklist", () => {
       await screen.findByRole("button", { name: "Preview merge" }),
     ).toBeVisible();
   });
+
+  it.each([
+    ["ordinary", true, false, "You can merge these."],
+    ["delegated", true, false, "You can merge these."],
+    ["none", false, false, "You cannot merge these. The review says who can."],
+    [
+      "none",
+      false,
+      true,
+      "This group is too large to merge at once. Decide its pairs one at a time below.",
+    ],
+  ] as const)(
+    "speaks of the reader's own authority under merge mode %s (can merge %s, too large %s)",
+    (mergeMode, canMerge, tooLarge, authority) => {
+      const base = CASE_ROW.contact_case;
+      if (!base) throw new Error("CASE_ROW carries a contact case");
+      draw({
+        ...CASE_ROW,
+        contact_case: {
+          ...base,
+          merge_mode: mergeMode,
+          can_merge: canMerge,
+          too_large: tooLarge,
+        },
+      });
+      expect(
+        screen.getByText(`Owned by Ana Owner and Ben Seller. ${authority}`),
+      ).toBeVisible();
+    },
+  );
 
   it("mounts for a contact case only, and leaves a pair to the pair card", () => {
     expect(answerBelow(row({ contact_case: undefined }))).toBeUndefined();

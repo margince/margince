@@ -179,7 +179,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contactCase.ownerPlaceholder",
     "contactCase.notAllowed.noAuthority",
     "contactCase.preview.noShares",
-    "worklist.contactCase.ownersAny",
     // The meeting host and a booking guest are humans, not the CRM contact
     // record type.
     "scheduling.personalLinksFoot",
@@ -311,7 +310,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contactCase.notAllowed.noAuthority",
     "contactCase.preview.noShares",
     "worklist.contactCase.owners",
-    "worklist.contactCase.ownersAny",
     "sharedMergeReviews.switch",
     "linkedinReach.sub",
     // A colleague's LinkedIn acquaintances (người quen) are people, counted.

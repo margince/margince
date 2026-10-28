@@ -91,6 +91,7 @@ function edge(
     confidence,
     status,
     can_dismiss: true,
+    can_merge: true,
     evidence: [
       {
         field: "full_name",
