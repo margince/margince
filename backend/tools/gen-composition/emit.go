@@ -333,6 +333,10 @@ func composedWork(root string, units []extensionUnit) ([]byte, string, error) {
 		fmt.Fprintf(&b, "\t%s\n", modfile.AutoQuote(m))
 	}
 	b.WriteString(")\n")
+	// A downloaded unit keeps the replace of the backend it was built in, which
+	// points nowhere from its copy. The workspace's replace wins over every
+	// member's, so all of them build against this tree's backend.
+	fmt.Fprintf(&b, "\nreplace %s => ../../backend\n", backendModule)
 	return []byte(b.String()), goVersion, nil
 }
 
