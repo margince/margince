@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -67,10 +68,10 @@ func companyByDomain(ctx context.Context, tx pgx.Tx, domain string) (ids.Company
 		SELECT d.company_id
 		  FROM company_domain d
 		  JOIN company o ON o.id = d.company_id
-		 WHERE lower(d.domain) = lower($1)
+		 WHERE d.domain = ANY($1)
 		   AND d.archived_at IS NULL
 		   AND o.archived_at IS NULL
-		 LIMIT 1`, domain).Scan(&company)
+		 LIMIT 1`, owndomain.Spellings(domain)).Scan(&company)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.CompanyID{}, false, nil
 	}

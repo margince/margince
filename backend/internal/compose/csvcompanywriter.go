@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 )
 
 // companyDomainAlreadyHeld answers whether the estate already holds this row's
@@ -49,8 +50,9 @@ func (w *csvWriters) companyDomainAlreadyHeld(ctx context.Context, row migration
 	var held bool
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM company_domain WHERE domain = lower($1) AND archived_at IS NULL)`,
-			domain).Scan(&held)
+			`SELECT EXISTS (SELECT 1 FROM company_domain
+			   WHERE domain = ANY($1) AND archived_at IS NULL)`,
+			owndomain.Spellings(domain)).Scan(&held)
 	}); err != nil {
 		return false, fmt.Errorf("import: checking whether %q is already held: %w", domain, err)
 	}
