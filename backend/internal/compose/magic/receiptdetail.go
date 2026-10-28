@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"sort"
 
 	"github.com/jackc/pgx/v5"
@@ -80,9 +81,7 @@ func (s *Service) ReceiptChanges(ctx context.Context, records []ReceiptRecord) (
 			if err != nil {
 				return err
 			}
-			for id, moved := range changes {
-				out[id] = moved
-			}
+			maps.Copy(out, changes)
 		}
 		return nil
 	})
