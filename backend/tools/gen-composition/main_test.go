@@ -110,8 +110,8 @@ func TestEmittedWiringIsCanonicalGoSource(t *testing.T) {
 	})
 }
 
-// writeUnit lays out one extension dir under a temp extensions/ root and
-// requires it from the root's instance go.mod, the one switch that turns it on.
+// writeUnit lays out one extension dir under a temp extensions/ root. It also
+// requires the unit in the root's instance go.mod, which is what turns it on.
 func writeUnit(t *testing.T, root, name string, files map[string]string) {
 	t.Helper()
 	requireUnit(t, root, name)

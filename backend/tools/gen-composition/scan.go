@@ -43,10 +43,10 @@ type extensionUnit struct {
 	Frontend *unitFrontend
 }
 
-// scanExtensions reads the enabled set: exactly the extensions the instance's
-// go.mod requires (instanceUnits). A folder under extensions/ that go.mod does
-// not require is not turned on. A capability layer this composer cannot
-// compose yet is a hard error, not a silent drop; there are none left today
+// scanExtensions reads the enabled set: the extensions the instance's go.mod
+// requires (instanceUnits). A folder under extensions/ that go.mod does not
+// require is not turned on. A capability layer this composer cannot compose
+// yet is a hard error, not a silent drop. None are left today
 // (unbuiltCapabilityLayers is empty), and the rule outlives the list.
 func scanExtensions(root string) ([]extensionUnit, error) {
 	sources, err := instanceUnits(root)
