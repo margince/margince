@@ -80,6 +80,10 @@ func (s *Store) DisposeDedupeCandidate(ctx context.Context, id ids.UUID, disposi
 	}
 
 	switch disposition {
+	case "merge":
+		if err := s.disposeMerge(ctx, id, row, winnerID, actor.UserID); err != nil {
+			return DedupeCandidateRow{}, err
+		}
 	case dispositionNotDuplicate:
 		// Per arm, not before the switch. The merge arm takes its own
 		// write-authority probe through mergePair, with an asymmetry this one
@@ -90,10 +94,6 @@ func (s *Store) DisposeDedupeCandidate(ctx context.Context, id ids.UUID, disposi
 		if err := s.writePairDecision(ctx, row, func(ctx context.Context, tx pgx.Tx) error {
 			return setDedupeDispositionTx(ctx, tx, row.ID, dispositionNotDuplicate, actor.UserID)
 		}); err != nil {
-			return DedupeCandidateRow{}, err
-		}
-	case "merge":
-		if err := s.disposeMerge(ctx, id, row, winnerID, actor.UserID); err != nil {
 			return DedupeCandidateRow{}, err
 		}
 	default:

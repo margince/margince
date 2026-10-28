@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -305,7 +306,7 @@ func TestTheDigestCountsAGroupOfDuplicateContactsOnce(t *testing.T) {
 	if pairs := b.env.WsCount(t, `SELECT count(*) FROM dedupe_candidate WHERE entity_type = 'contact' AND disposition = 'open'`); pairs < 2 {
 		t.Fatalf("the three contacts are joined by %d pairs, want a group of at least two", pairs)
 	}
-	if _, open := b.buildCounts(t, readsContacts{}, time.Now().UTC()); open != 1 {
+	if _, open := b.buildCounts(t, readsContacts{}, clocktest.Now(t)); open != 1 {
 		t.Errorf("the digest reported %d duplicates to review, want the one group", open)
 	}
 }
