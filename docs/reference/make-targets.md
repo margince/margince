@@ -250,6 +250,7 @@ The time is not spread evenly. On a quiet laptop the frontend's core legs measur
 | `bench-daily-clean` | Drop the database `bench-daily` leaves behind. Nothing else drops it, and the next `bench-daily` recreates it from empty |
 | `perfdoc` | Re-render `docs/reference/performance-budgets.md` and `docs/reference/benchmark.md` from the committed benchmark records. Every `bench-*` target that writes a record runs it as its last step, so the page updates on every measurement; run it alone after editing the published-budget table in `backend/tools/gen-perfdoc` |
 | `config-gen` | Regenerate what the settings registry is the source of: the settings tables of `docs/reference/configuration.md`, `config/margince.example.yaml`, `config/margince.defaults.yaml`, `.env.example`, `config/margince.schema.json` and the routing schema the AI module serves. `gen` runs it, `drift` fails a stale output, and `gates/configgenerated_test.go` fails one in `make check` |
+| `extdoc-gen` / `extdoc-check` | Regenerate the tables of `docs/explanation/extensions-at-a-glance.md` from `backend/pkg/extension`: what a unit can do to each core record, every field of `Extension` and the slots on a core page. `extdoc-check` writes nothing and fails when the page differs. Neither runs in `check`, `gen`, `drift` or CI: run one when the extension surface changes |
 | `tidy` | `go mod tidy` |
 
 ### Weekly reviews and seed-reset

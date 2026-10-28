@@ -17,7 +17,9 @@ reasons behind the design are in [extensibility.md](extensibility.md).
         |
         |  make composition          reads every folder under extensions/
         v
- build/composition/             generated wiring, plus manifest.generated.json
+ build/composition/             generated wiring (ignored by git)
+        |
+        |  extensions/<name>/manifest.generated.json is written beside each unit
         |
         |  api and worker start
         v
@@ -73,24 +75,68 @@ call are in [declare-a-service-member.md](../how-to/declare-a-service-member.md)
 
 ## The tool bag: what a unit can do to each core record
 
-Read a row as "can a unit do this to that record?" A ✅ is a door the core offers. A · is no door.
+Read a row as "can a unit do this to that record?" A ✅ is a door the core offers. A · is no door. Every table
+in this section is written from the source of `backend/pkg/extension` by `make extdoc-gen`, and a gate fails a
+stale page.
+
+<!-- generated:extensions:start -->
+<!-- Written by tools/gen-extdoc from backend/pkg/extension: change the code, then run `make extdoc-gen`. -->
 
 | A unit can… | Company | Deal | Contact | Activity | Signal |
 |---|:-:|:-:|:-:|:-:|:-:|
-| **Land** it from its own system (create or update, by the id its system gave it) | ✅ | ✅ | · | ✅ | · |
+| **Land** it from its own system (create or update, by the id that system gave it) | ✅ | ✅ | · | ✅ | · |
 | **Move** it to another stage | · | ✅ | · | · | · |
 | **Create** it inside the unit's own transaction (`Tx.Core()`) | · | · | · | ✅ | · |
 | **Read** and list it, as the person who asked | ✅ | ✅ | · | ✅ | ✅ |
 | **Find** it by the id from its own system | ✅ | ✅ | · | · | · |
 | **Filter** it by an admin's custom field | ✅ | ✅ | · | ✅ | · |
 | **Tell** a member or a role about it (a notice) | ✅ | ✅ | ✅ | · | · |
-| **Hear** when it is erased or merged | ✅ | ✅ | · | · | · |
+| **Hear** its events | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Hear** that it was erased | ✅ | ✅ | · | · | · |
+| **Hear** that it was merged | ✅ | ✅ | ✅ | · | · |
 | **Add a button** to its page | ✅ | ✅ | ✅ | ✅ | · |
 | **Add a small note** to its page | ✅ | ✅ | ✅ | · | · |
 | **Add a card** to its page | · | ✅ | · | · | · |
-| **Keep its own data** beside it, in the unit's own table | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Delete** it | · | · | · | · | · |
-| **Add a column** to it, or **create a custom field** on it | · | · | · | · | · |
+
+### What else a unit can add
+
+Every field of `Extension` that brings something to the core.
+
+| Field | What the core says it is |
+|---|---|
+| `Jurisdictions` | Unit's jurisdiction packs (policy suppliers to the core retention engine, never actors). |
+| `Messaging` | Unit's outbound-messaging rule sets, the country rules the core authorization engine consults before a message goes out. |
+| `SubjectRights` | Unit's data-subject-request deadlines. |
+| `Documents` | Compliance documents the unit ships for its jurisdictions. |
+| `Tools` | Governed agent tools the unit contributes: named operations running at a requested risk tier. |
+| `Channels` | Messaging providers this unit supplies TRANSPORT for. |
+| `FinanceSources` | Accounting systems this unit can read into the core's finance mirror. |
+| `Secrets` | Secret keys the unit declares it will use, by name and scope. |
+| `Jobs` | Scheduled background jobs the unit contributes: named cadenced passes that fan out over the fleet, one workspace per tick. |
+| `Subscriptions` | Events the unit reacts to: named listeners over the installation's own event bus, each naming the types it wants and the function one delivery runs. |
+| `Ingress` | Providers this unit brings records IN from, and the record kinds it lands through the core's own capture pipeline. |
+| `Inbound` | Session-less HTTP edges this unit asks the core to mount: a signed POST from a party that holds no session and no seat. |
+| `OAuthApps` | Vendors whose consent flow the core runs for this unit. |
+| `SystemReads` | System reads the unit's jobs and subscriptions make. |
+| `Migrations` | Unit's SQL schema layer: a read-only filesystem holding the MigrationsDir directory of NNNN_name.up.sql/.down.sql pairs, which a unit supplies with `//go:embed migrations`. |
+| `FailureClasses` | Ways this unit's background jobs fail, named in the unit's own vocabulary, each with what an operator does about it. |
+| `Entries` | Unit's ways into its own screen from core screens: the Log activity form and the contact, company and deal headers. |
+| `Settings` | Values an admin can change for the unit, drawn by the core on the unit's card of the Extensions page. |
+| `Panels` | Unit's components drawn inline on core pages, such as a deal page's side column. |
+
+### Slots on a core page
+
+| Slot | Kind | Where it shows |
+|---|---|---|
+| `log_activity` | button | Log activity form, on any record it is opened on. |
+| `record_header.contact` | button | Verb row in a contact page's header. |
+| `record_header.company` | button | Verb row in a company page's header. |
+| `record_header.deal` | button | Verb row in a deal page's header. |
+| `record_mark.contact` | small note | Small note beside a contact page's header verbs. |
+| `record_mark.company` | small note | Small note beside a company page's header verbs. |
+| `record_mark.deal` | small note | Small note beside a deal page's header verbs. |
+| `record_panel.deal` | card | End of a deal page's Edit details drawer, after its lists. |
+<!-- generated:extensions:end -->
 
 What stops a unit, in each case:
 
@@ -100,28 +146,12 @@ What stops a unit, in each case:
 - **A contact** is never landed by a unit. The core makes one when it resolves the other party of an activity.
 - **`Tx.Core()`** carries the same rights check, audit row and event as a core write. It is refused on a job
   tick, because nobody is behind a tick to check the write against.
+- **Keeping its own data** beside a record needs no door. A unit writes its own `ext_<name>_…` table and joins it
+  by the record's id.
 - **Delete, a new column and a custom field** have no door. An admin adds custom fields, and a unit reads and
   filters on them.
 
-### What else a unit can add
-
-These are not tied to one record.
-
-| A unit can add… | It is for |
-|---|---|
-| A timer (`Jobs`) | Run something on a cadence set in the unit's contract fragment |
-| An event listener (`Subscriptions`) | React to events in Margince |
-| A source of records (`Ingress`, `Inbound`) | Bring records in from another system, or accept a signed call |
-| A messaging provider (`Channels`) | Send and receive messages |
-| A vendor sign-in (`OAuthApps`) | Sign an admin in to a vendor |
-| Secrets (`Secrets`) | Name the secrets the unit keeps. The core seals them. |
-| An agent tool (`Tools`) | A governed operation for people and agents |
-| Settings (`Settings`) | A switch or a line of text an admin can change |
-| An accounting source (`FinanceSources`) | Read an accounting system |
-| A country pack (`Jurisdictions`, `Messaging`, `SubjectRights`, `Documents`) | Retention floors, messaging rules, request deadlines, staff documents |
-| Tables (`Migrations`) | The unit's own `ext_<name>_…` tables |
-
-### Where a unit's screen can appear
+### Where the slots sit
 
 ```text
  deal page
@@ -132,13 +162,6 @@ These are not tied to one record.
  |                                | [ unit card ]             |   record_panel.deal    Panels
  +--------------------------------+---------------------------+
 ```
-
-| Slot | Kind | Where it shows |
-|---|---|---|
-| `log_activity` | button | The Log activity form |
-| `record_header.contact`, `.company`, `.deal` | button | The verb row in the page header |
-| `record_mark.contact`, `.company`, `.deal` | small note | On the record page, for readers who may read the unit's data |
-| `record_panel.deal` | card | The side column of a deal page |
 
 ## How far the core reaches into an extension
 
@@ -170,10 +193,13 @@ declaration one feature at a time. The state of each is in
 
 ## What every extension gets for free
 
-- **Its own address space.** Tables begin with `ext_<name>_`, API paths with `/v1/ext/<name>/`, and no unit can
-  reach another's.
-- **A manifest.** `make composition` writes `manifest.generated.json` from the declaration, so an operator can read
-  what a unit does without reading its code. A gate fails if the file is stale.
+- **Its own names.** Tables begin with `ext_<name>_` and API paths with `/v1/ext/<name>/`, so a unit's objects
+  cannot be mistaken for the core's or for another unit's. This is a naming rule, not access control: units share
+  the application database role today, and the Stability note in `backend/pkg/extension/extension.go` says what
+  will narrow that.
+- **A manifest.** `make composition` writes `manifest.generated.json` beside the unit from what it declares and
+  requests, such as its capabilities and risk tiers. An operator can read that list without opening the code. It
+  does not describe everything the code does. A gate fails if the file is stale.
 - **The core's checks.** A write through the core is checked for rights, audited and published as an event. A
   member's permissions apply to what the unit lands.
 - **A clean exit.** A bad declaration stops the boot before anything is applied.
