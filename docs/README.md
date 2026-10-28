@@ -318,7 +318,7 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 
 #### Extensions
 
-- [extensions-at-a-glance.md](explanation/extensions-at-a-glance.md): what an extension can bring, in one table.
+- [extensions-at-a-glance.md](explanation/extensions-at-a-glance.md): what an extension can add, in one table.
 - [extensibility.md](explanation/extensibility.md): how an extension adds to Margince, and the checks
   that keep it in line.
 

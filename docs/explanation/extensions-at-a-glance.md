@@ -1,4 +1,3 @@
-<!-- prose:plain -->
 <!-- describes: backend/pkg/extension extensions -->
 # Extensions at a glance
 
@@ -87,7 +86,7 @@ stale page.
 | **Land** it from its own system (create or update, by the id that system gave it) | ✅ | ✅ | · | ✅ | · |
 | **Move** it to another stage | · | ✅ | · | · | · |
 | **Create** it inside the unit's own transaction (`Tx.Core()`) | · | · | · | ✅ | · |
-| **Read** and list it, as the person who asked | ✅ | ✅ | · | ✅ | ✅ |
+| **Read** and list it, as the user who asked | ✅ | ✅ | · | ✅ | ✅ |
 | **Find** it by the id from its own system | ✅ | ✅ | · | · | · |
 | **Filter** it by an admin's custom field | ✅ | ✅ | · | ✅ | · |
 | **Tell** a member or a role about it (a notice) | ✅ | ✅ | ✅ | · | · |
@@ -142,7 +141,7 @@ What stops a unit, in each case:
 
 - **Landing and creating** run as a named member, and that member's rights apply. A field a user edited is left
   alone, and a value that is already filled is never overwritten.
-- **Reading** is done as the person who asked. A record outside that person's scope answers "not found".
+- **Reading** is done as the user who asked. A record outside that user's scope answers "not found".
 - **A contact** is never landed by a unit. The core makes one when it resolves the other party of an activity.
 - **`Tx.Core()`** carries the same rights check, audit row and event as a core write. It is refused on a job
   tick, because nobody is behind a tick to check the write against.

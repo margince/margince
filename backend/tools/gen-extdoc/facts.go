@@ -133,7 +133,7 @@ func deriveSlots(d doors) {
 
 func title(s string) string { return strings.ToUpper(s[:1]) + s[1:] }
 
-// columns is every kind the doors name that has a door of its own, the known
+// columns lists the kinds the doors name that have a door of their own, the known
 // kinds first.
 func (d doors) columns() []string {
 	var extra []string

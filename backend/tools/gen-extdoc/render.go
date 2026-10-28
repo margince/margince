@@ -25,7 +25,7 @@ var doorLabels = [doorCount]string{
 	doorLand:   "**Land** it from its own system (create or update, by the id that system gave it)",
 	doorMove:   "**Move** it to another stage",
 	doorCreate: "**Create** it inside the unit's own transaction (`Tx.Core()`)",
-	doorRead:   "**Read** and list it, as the person who asked",
+	doorRead:   "**Read** and list it, as the user who asked",
 	doorFind:   "**Find** it by the id from its own system",
 	doorFilter: "**Filter** it by an admin's custom field",
 	doorNotice: "**Tell** a member or a role about it (a notice)",
