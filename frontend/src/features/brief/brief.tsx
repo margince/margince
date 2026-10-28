@@ -21,6 +21,7 @@ import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { pillCount } from "../../lib/worklistcounts";
 import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
 import { MagicPanel } from "../sign-in/magic";
+import { useMagic } from "../sign-in/magic.queries";
 import {
   MeetingDetailModal,
   TaskDetailModal,
@@ -204,8 +205,10 @@ function PersonalMorning({
       ? "failed"
       : "ready";
   // Useful: the day's work is on screen, rows or a confirmed empty day.
-  // Complete: the brief and the handled receipts beside it have answered too.
-  const settled = !brief.isPending && !handled.isPending;
+  // Complete: the brief, the handled receipts and the overnight receipt beside
+  // it have answered too. A section that failed leaves the page incomplete.
+  const magic = useMagic();
+  const settled = brief.isSuccess && handled.isSuccess && magic.isSuccess;
   useEffect(() => {
     if (state === "failed") markJourney("home:failed");
     if (state !== "ready" || !day) return;

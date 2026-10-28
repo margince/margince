@@ -228,8 +228,7 @@ function AuthedApp({
 
   const { refusal, confinement } = useProbeAnswer(me);
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const gatesPending =
-    companyPending || recordZone.pending || progress.pending;
+  const gatesPending = companyPending || recordZone.pending || progress.pending;
   const shellReady = authed && !gatesPending;
   useEffect(() => {
     if (shellReady) {

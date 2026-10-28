@@ -762,11 +762,13 @@ bench-mobile:
 ## bench-home — R01: the first useful Home and its primary sections, on a
 ## production build against a running stack's api, timed by the app's own
 ## journey marks. BENCH_API_PORT is the api port that stack's banner prints.
-## It records nothing and `pnpm e2e` does not collect its spec.
+## It records nothing and `pnpm e2e` does not collect its spec. BASE_URL and
+## the mobile switch are cleared, so it always measures the build it made.
 bench-home:
 	@test -n "$(BENCH_API_PORT)" || { echo "bench-home: set BENCH_API_PORT to the api port of a running stack"; exit 2; }
 	cd frontend && pnpm install --frozen-lockfile && pnpm build && \
-		MARGINCE_BENCH_HOME=1 BACKEND_PORT=$(BENCH_API_PORT) pnpm exec playwright test
+		env -u BASE_URL -u MARGINCE_BENCH_MOBILE MARGINCE_BENCH_HOME=1 BACKEND_PORT=$(BENCH_API_PORT) \
+		pnpm exec playwright test
 
 ## bench-mobile-check — the same measurement, writing NOTHING: a check run by
 ## hand without touching the published page, as bench-perf-check is beside

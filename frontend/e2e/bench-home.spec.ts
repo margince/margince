@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { type JourneyMark, journeyMarkName } from "../src/lib/journeymarks";
+import { nearestRank } from "./quantile";
 
 /**
  * R01: the first useful Home within 2 s at p95, and its primary sections within
@@ -23,13 +24,6 @@ const LOAD_TIMEOUT_MS = 15_000;
 
 type Sample = Partial<Record<JourneyMark, number>>;
 
-/** Nearest-rank quantile, the method perf-mobile.spec.ts and the Go harness use. */
-function nearestRank(samples: number[], quantile: number): number {
-  const sorted = [...samples].sort((a, b) => a - b);
-  const rank = Math.ceil(sorted.length * quantile) - 1;
-  return sorted[Math.min(Math.max(rank, 0), sorted.length - 1)];
-}
-
 async function signIn(page: Page) {
   const response = await page.request.post("/v1/auth/login", {
     data: {
@@ -41,7 +35,8 @@ async function signIn(page: Page) {
   // A seeded account has never walked the onboarding wizard, and the app shows
   // the wizard instead of Home until its state says complete.
   const state = await page.request.get("/v1/onboarding/state");
-  if (state.status() !== 404) return;
+  if (state.ok()) return;
+  expect(state.status(), "reading the onboarding state").toBe(404);
   const finished = await page.request.put("/v1/onboarding/state", {
     headers: { "Idempotency-Key": `bench-home-${Date.now()}` },
     data: {
@@ -54,7 +49,10 @@ async function signIn(page: Page) {
       connect_skipped: true,
     },
   });
-  expect(finished.ok(), `finishing onboarding answered ${finished.status()}`).toBe(true);
+  expect(
+    finished.ok(),
+    `finishing onboarding answered ${finished.status()}`,
+  ).toBe(true);
 }
 
 /** One full load of Home, read back as the marks it set. */
@@ -88,7 +86,9 @@ async function loadHome(page: Page, sample: number): Promise<Sample> {
 test("Home becomes useful and complete within R01", async ({ page }) => {
   // The default buffer of 250 entries fills with the bundle's own files before
   // the worklist request is made.
-  await page.addInitScript(() => performance.setResourceTimingBufferSize(5_000));
+  await page.addInitScript(() =>
+    performance.setResourceTimingBufferSize(5_000),
+  );
   await signIn(page);
   // The first load fills the browser cache; it is not a sample.
   await loadHome(page, 0);
@@ -105,13 +105,17 @@ test("Home becomes useful and complete within R01", async ({ page }) => {
     }
   }
   for (const mark of MEASURED) {
-    const times = samples.flatMap((s) => (s[mark] === undefined ? [] : [s[mark]]));
+    const times = samples.flatMap((s) =>
+      s[mark] === undefined ? [] : [s[mark]],
+    );
     if (times.length === 0) continue;
     console.log(
       `bench-home: ${mark.padEnd(14)} p50 ${nearestRank(times, 0.5)} ms  p95 ${nearestRank(times, 0.95)} ms  over ${times.length}`,
     );
   }
-  console.log(`bench-home: ${samples.length} loaded, ${failed} failed, ${timedOut} timed out`);
+  console.log(
+    `bench-home: ${samples.length} loaded, ${failed} failed, ${timedOut} timed out`,
+  );
   // The last load's api requests, so a slow mark names the request it waited on.
   const requests = await page.evaluate(() =>
     performance
@@ -125,12 +129,19 @@ test("Home becomes useful and complete within R01", async ({ page }) => {
       .sort((a, b) => a.from - b.from),
   );
   for (const request of requests) {
-    console.log(`bench-home: request ${String(request.from).padStart(5)} → ${String(request.to).padStart(5)} ms  ${request.path}`);
+    console.log(
+      `bench-home: request ${String(request.from).padStart(5)} → ${String(request.to).padStart(5)} ms  ${request.path}`,
+    );
   }
   expect(failed, "Home loads that rendered the failed state").toBe(0);
-  expect(timedOut, `Home loads that set no mark within ${LOAD_TIMEOUT_MS} ms`).toBe(0);
+  expect(
+    timedOut,
+    `Home loads that set no mark within ${LOAD_TIMEOUT_MS} ms`,
+  ).toBe(0);
   for (const [mark, budget] of Object.entries(BUDGET_MS)) {
-    const times = samples.map((s) => s[mark as JourneyMark] ?? Number.POSITIVE_INFINITY);
+    const times = samples.map(
+      (s) => s[mark as JourneyMark] ?? Number.POSITIVE_INFINITY,
+    );
     expect(nearestRank(times, 0.95), `${mark} p95`).toBeLessThanOrEqual(budget);
   }
 });
