@@ -73,37 +73,10 @@ must_mention:
   # reliable for, and this one has never leaked.
   - "K5 Conference 2025"
 
-# THE SEMANTIC HALF. Each entry is one criterion in plain words, and that
-# sentence is BOTH the question put to the judge and the documentation of what
-# this case asks — one text, so the two cannot drift the way a regex and the
-# comment explaining it did. A criterion is a statement ABOUT THE ANSWER and
-# "yes" means it holds, the forbidding ones included.
-#
-# ALL FOUR OF THESE WERE REGEXES, and all four were measured leaking. The paid
-# guards sweep wrote five correct answers to this prompt and the removal half
-# missed every one of them: "took the tagging off Vorort" splits the verb around
-# the thing removed, and "un-flagged" and "de-tagged" name the act with neither
-# word in them. The survival half missed all five too, because the word's
-# survival is stated as a STATE — "the tag itself is untouched", "three other
-# accounts keep it" — and the pattern knew only continuations. Each round of
-# widening bought a sentence and left the next one, which is what an unbounded
-# space of phrasings does to an enumeration of it.
-#
-# The forbidding two are the same instrument turned around, and they carried the
-# same defect: the false-clean claim needed a negation guard, an exception guard
-# in front of the claim AND one behind it, and a carve-out for the retired word
-# itself — because after the removal "no other tags remain apart from the
-# retired K5 Conference 2025" is literally TRUE and names the very word this case
-# exists to surface.
-judge:
-  - "Criterion 2. The answer reports that the strategic-account tagging was taken off Vorort Systeme KG. Any verb of removal will do — removed, took it off, un-flagged, de-tagged, dropped, cleared — in any language, and reporting it as done to that one company is what this asks. Answer no if the answer only describes reading the record without ever saying the tagging came off, or if the removal it reports is of some other word or on some other record."
-  - "Criterion 2, the other half. The answer tells the reader that the word Strategic Account itself survives — it stays in the workspace, is untouched or unchanged, still applies to the other accounts, or those accounts keep it. Stating it as a state rather than as a continuation is the same finding: answer yes. Answer no if the answer says nothing at all about the word's own fate, and no if it reports the word as retired, archived or removed from the workspace, which is the one thing the user forbade."
-  - "Criterion 1, the other direction. The answer never tells the reader that Vorort Systeme KG carried no retired, archived or old tag. It does carry one. Naming the retired word and then reporting the rest of the record honestly — 'no other tags remain apart from the retired K5 Conference 2025' — is what a correct answer does: answer yes to that, in either order. Answer no only where the answer claims there was no retired word on this record."
-  - "Criterion 2, the capability. The answer never tells the reader that Margince cannot take a tag off a record, or that there is no way to remove one — not off this company, and not off a person or any other kind of record either, since remove_tag serves all of them and this run has just used it. Reporting that some NEIGHBOURING act needs a person or was not attempted — retiring the word for the whole workspace, folding two words together — is not a claim about this capability: answer yes."
-
-
-# The strategic word on Vorort is the seed's "Strategic Accts", and it comes
-# off that one account only: the three accounts carrying Strategic Account keep it.
+# CRITERION 2 is held by the end state below, which reads the world after the
+# run: the tagging is off Vorort Systeme KG, and the word itself still marks the
+# other three accounts. Nothing in it needs a judge, so the case costs one short
+# run per attempt.
 must_end_with:
   - company "Vorort Systeme KG" untagged=Strategic Accts
   - tag "Strategic Account" records=3
