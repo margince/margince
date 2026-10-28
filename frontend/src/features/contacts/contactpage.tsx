@@ -1,6 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useId, useState } from "react";
 import type { components } from "../../api/schema";
+import {
+  LatestInboundLine,
+  useLatestInbound,
+} from "../../components/latestinbound";
 import { liveProjects } from "../../design-system/projectpicker";
 import { RecordView } from "../../design-system/recordview";
 import { useT } from "../../i18n";
@@ -26,6 +30,7 @@ import { ContactOpening } from "./contactopening";
 import { ContactOverview } from "./contactoverview";
 import { ContactRail } from "./contactrail";
 import { ContactSubtitle } from "./contactsubtitle";
+import { ContactLatestInbound } from "./contacttabs";
 import "./contact360.css";
 import {
   navigateKeepingReturn,
@@ -93,6 +98,7 @@ export function ContactPageV2({
 
   const guard = useConsentGuard(id, live);
   const activity = useActivityGate();
+  const latest = useLatestInbound("contact", id);
   const writeRefusalId = useId();
 
   // Which drawer is open, if any. One at a time: two surfaces over the same
@@ -232,6 +238,14 @@ export function ContactPageV2({
             // to reach them are details, and live in the aside.
             nameBadge={<ContactSubtitle view={view.data} />}
             pulse={<ContactMarks view={view.data} />}
+            latest={
+              tab !== "overview" && (
+                <LatestInboundLine
+                  latest={latest}
+                  onOpen={() => openTab("overview")}
+                />
+              )
+            }
             actions={
               // refusedReasonId is the same sentence the band below states.
               // It is one write gate for the whole header, not a narrower one per
@@ -261,14 +275,21 @@ export function ContactPageV2({
               />
             }
           >
-            {tab === "overview" && <ContactFollowState contactId={id} />}
             {tab === "overview" && (
-              <ContactOverview
-                view={view.data}
-                onAction={runAction}
-                onOpenEmail={setOpenEmail}
-                onOpenTab={openTab}
-              />
+              <>
+                <ContactLatestInbound
+                  latest={latest}
+                  contactId={id}
+                  view={view.data}
+                />
+                <ContactFollowState contactId={id} />
+                <ContactOverview
+                  view={view.data}
+                  onAction={runAction}
+                  onOpenEmail={setOpenEmail}
+                  onOpenTab={openTab}
+                />
+              </>
             )}
 
             <ContactTabPanel

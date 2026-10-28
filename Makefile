@@ -786,7 +786,7 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 # scripts/lib-devstate.sh is bash (`local`, `[[ ]]`), and make's default shell
 # is /bin/sh — dash on most Linux images, where sourcing it fails before the
 # stack is resolved.
-## e2e-llm — the six use cases driven by a REAL assistant, against a dedicated
+## e2e-llm — every scenario in e2e/llm/scenarios driven by a REAL assistant, against a dedicated
 ## stack. This is the half the Go suite cannot answer: those tests pin the
 ## payloads, the refusals and the legibility fields; this asks whether a model
 ## can actually drive the surface and say something true.

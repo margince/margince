@@ -97,7 +97,7 @@ func (t attentionTasks) OpenForViewer(
 		return nil, nil
 	}
 	in.Limit = &limit
-	rows, _, err := t.store.ListActivities(ctx, in)
+	rows, err := t.listOpenTasks(ctx, in)
 	if err != nil {
 		return nil, err
 	}
@@ -107,6 +107,20 @@ func (t attentionTasks) OpenForViewer(
 		open = append(open, taskFromActivity(row, reader, asOf))
 	}
 	return t.markReadOnly(ctx, open, asOf)
+}
+
+// listOpenTasks reads one window of open tasks with each statement's generic
+// plan reused (database.ReuseGenericPlans). The window spells its partial-index
+// predicate as literals and caps with a literal LIMIT. The uncapped count beside
+// it does not opt in: its row count follows the assignee it is bound to.
+func (t attentionTasks) listOpenTasks(ctx context.Context, in activities.ListActivitiesInput) ([]crmcontracts.Activity, error) {
+	var rows []crmcontracts.Activity
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		var err error
+		rows, _, err = t.store.ListActivities(ctx, in)
+		return err
+	})
+	return rows, err
 }
 
 // UpcomingForViewer reads the work due after the day's end, to a horizon.
@@ -124,7 +138,7 @@ func (t attentionTasks) UpcomingForViewer(
 	}
 	in.OpenAndDueAfter = &from
 	in.Limit = &limit
-	rows, _, err := t.store.ListActivities(ctx, in)
+	rows, err := t.listOpenTasks(ctx, in)
 	if err != nil {
 		return nil, err
 	}

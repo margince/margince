@@ -55,6 +55,7 @@ func (s *Service) collect(ctx context.Context, l optionalLane, named laneRoll) l
 	if !l.bound {
 		return named
 	}
+	defer timeStage(l.name)()
 	var items []crmcontracts.AttentionItem
 	err := s.degradable(ctx, laneBudget, func(context.Context) error {
 		var err error
@@ -360,7 +361,11 @@ func fill(
 }
 
 func (s *Service) readRisk(ctx context.Context, out *crmcontracts.Attention) ([]crmcontracts.AttentionItem, error) {
-	risky, cut, err := s.atRisk.Quiet(ctx)
+	owners, err := s.recordOwners(ctx)
+	if err != nil {
+		return nil, err
+	}
+	risky, cut, err := s.atRisk.Quiet(ctx, owners)
 	if err != nil {
 		return nil, err
 	}

@@ -48,35 +48,29 @@ type Activity = components["schemas"]["Activity"];
 type ActivityAudience = components["schemas"]["ActivityAudience"];
 type AudienceMember = components["schemas"]["AudienceMember"];
 
-// The per-row action cluster the 360 timelines mount in each entry's action
-// slot.
-//
-// rowAnswer picks the verb: Reply on mail, Write email on any other row the
-// server says it can address (`offers_email`).
-//
-// Relink, because a row on a 360 timeline is already linked to the entity whose
-// timeline renders it. Re-filing it to the right record always means something.
-//
-// It owns the two open states so the timeline mapper stays presentational.
-//
-// `extra` holds the contact page's meeting brief and Call; it renders before
-// Relink, so the row's own verbs lead.
-export function TimelineActions({
-  activity,
-  entityType,
-  entityId,
-  contactId,
-  extra,
-}: Readonly<{
+type RowVerbProps = Readonly<{
   activity: Activity;
   entityType: RelinkKind;
   entityId: string;
   contactId?: string;
   extra?: (activity: Activity) => ReactNode;
-}>) {
+}>;
+
+// The verbs that answer one activity: open its task, reply to it or write
+// about it, take up its invitation, and the caller's own `extra`. A timeline
+// row leads with these. The "Just in" panel draws these alone: it asks how to
+// answer what came in, not where it is filed.
+//
+// rowAnswer picks the verb: Reply on mail, Write email on any other row the
+// server says it can address (`offers_email`).
+export function RowAnswerActions({
+  activity,
+  entityType,
+  entityId,
+  contactId,
+  extra,
+}: RowVerbProps) {
   const t = useT();
-  const [relink, setRelink] = useState(false);
-  const writable = useCanWriteRecord("activity", activity);
   return (
     <>
       {activity.kind === "task" && activity.content_state !== "withheld" && (
@@ -112,6 +106,28 @@ export function TimelineActions({
         invalidateKeys={entityTimelineKeys(entityType, entityId)}
       />
       {extra?.(activity)}
+    </>
+  );
+}
+
+// The per-row action cluster the 360 timelines mount in each entry's action
+// slot.
+//
+// Relink, because a row on a 360 timeline is already linked to the entity whose
+// timeline renders it. Re-filing it to the right record always means something.
+//
+// It owns the two open states so the timeline mapper stays presentational.
+//
+// `extra` holds the contact page's meeting brief and Call; it renders before
+// Relink, so the row's own verbs lead.
+export function TimelineActions(props: RowVerbProps) {
+  const { activity, entityType, entityId } = props;
+  const t = useT();
+  const [relink, setRelink] = useState(false);
+  const writable = useCanWriteRecord("activity", activity);
+  return (
+    <>
+      <RowAnswerActions {...props} />
       <ActivityFilesAction activity={activity} />
       <Button
         onClick={() => setRelink(true)}

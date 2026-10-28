@@ -220,7 +220,7 @@ Both services sit behind one reverse proxy / ingress, under **one host**:
 
 | path | service |
 | --- | --- |
-| `/v1`, `/healthz`, `/readyz`, `/metrics`; `/.well-known/security.txt` when [`web.security_txt`](../reference/feature-settings.md#securitytxt) is set | api |
+| `/v1`, `/setup/status`, `/setup/claim`, `/healthz`, `/readyz`, `/metrics`; `/.well-known/security.txt` when [`web.security_txt`](../reference/feature-settings.md#securitytxt) is set | api |
 | `/webhooks/gmail`, `/webhooks/graph` | api (present only where that receiver's own token is set, a separate switch from whether the connector itself is configured) |
 | `/oauth/`, `/mcp`, `/.well-known/oauth-authorization-server`, `/.well-known/oauth-protected-resource` (and its `/mcp`-suffixed form) | api (present only with the MCP connector declared) |
 | everything else, `/` included | web (the SPA, port 8080) |
