@@ -147,8 +147,8 @@ func TestTheDuplicateScanPairsContactsAlreadySharingALinkedInProfile(t *testing.
 	}
 }
 
-// More holders of one profile than one pass files: each later pass reaches the
-// pairs the first left out, until every pair is on the queue.
+// One profile has more holders than one pass files. Each later pass reaches
+// the pairs the first left out, until every pair is on the queue.
 func TestTheScanReachesEveryPairOfAProfileHeldPastTheCap(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()

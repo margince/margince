@@ -100,8 +100,8 @@ func fileLinkedInTwins(ctx context.Context, tx pgx.Tx, contact ids.ContactID, ha
 	if err != nil {
 		return 0, fmt.Errorf("dedupe contact linkedin: %w", err)
 	}
-	// The cap comes after the pairs the queue already holds, so a profile held
-	// by more than dedupeRivalLimit contacts reaches the later ones on a later pass.
+	// The cap comes after the pairs the queue already holds. A profile held by
+	// more than dedupeRivalLimit contacts reaches the later ones on a later pass.
 	holders, err = newRivals(ctx, tx, entityContact, &contact.UUID, holders,
 		func(h holder) ids.UUID { return h.id.UUID })
 	if err != nil {
