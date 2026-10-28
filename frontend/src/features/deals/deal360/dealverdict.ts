@@ -12,9 +12,9 @@ type Words = Readonly<{ t: Translator; locale: Locale; zone: string }>;
 
 /**
  * The word an open deal is headed with. A fact on the record that asks
- * something of the reader comes before the card's written call, because the
- * call can be a day old and the fact is current. A named blocker stays, since
- * no fact here says more than the blocker does.
+ * something of the reader comes before the card's written call. The call can
+ * be a day old, and the fact is current. A named blocker stays, since no fact
+ * here says more than the blocker does.
  */
 export function openDealVerdict(
   written: StandingVerdict,

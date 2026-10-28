@@ -3,7 +3,8 @@
 
 import type { components } from "../../api/schema";
 import { omitted } from "../../design-system/surfacestate";
-import { calendarDaysBetween, formatDayMonth } from "../../format/format.dates";
+import { activityDay, activityDaysAway } from "../../format/activitywhen";
+import { formatDayMonth } from "../../format/format.dates";
 import type { Locale, Translator } from "../../i18n";
 import type { CompanyVerdict } from "./companystanding";
 
@@ -30,8 +31,7 @@ export function companyActivityVerdict(
   if (omitted(view, "last_touch")) {
     return undefined;
   }
-  const asOf = new Date(view.as_of);
-  const last = view.last_contact?.at;
+  const last = view.last_contact;
   if (!last) {
     return {
       word: "co.verdict.noContact",
@@ -41,8 +41,20 @@ export function companyActivityVerdict(
       tone: "neutral",
     };
   }
-  const date = formatDayMonth(last, locale, zone);
-  const days = calendarDaysBetween(new Date(last), asOf, zone);
+  const date = activityDay(
+    last.at,
+    last.occurred_precision,
+    locale,
+    zone,
+    formatDayMonth,
+  );
+  const days = -activityDaysAway(
+    last.at,
+    last.occurred_precision,
+    Date.parse(view.as_of),
+    zone,
+    zone,
+  );
   if (days <= ACTIVE_DAYS) {
     return {
       word: "co.verdict.active",

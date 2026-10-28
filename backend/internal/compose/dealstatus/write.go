@@ -62,7 +62,7 @@ func composeDeterministic(f facts, mv crmcontracts.DealStatusCardMove) crmcontra
 
 // floorVerdict makes the call on an open deal from its health reading, so a
 // card no model wrote still says how the deal stands. It uses two of the
-// model's words only: the floor cannot name a blocker, and silence alone is
+// model's words only. The floor cannot name a blocker, and silence alone is
 // not evidence that the buyer has gone cold.
 func floorVerdict(f facts) *crmcontracts.DealStatusCardVerdict {
 	if f.health == nil || f.deal.Status != crmcontracts.DealStatusOpen {
