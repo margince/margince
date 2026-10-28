@@ -59,7 +59,7 @@ func ArchiveSeatContactsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit
 		if err := storekit.LockWriteIdentity(ctx, tx, employmentKind, contact.id.String()); err != nil {
 			return SeatEmploymentPage{}, err
 		}
-		worked, err := ColleagueWorkedOnSince(ctx, tx, contactEntity, contact.id.UUID, time.Time{}, ids.Nil)
+		worked, err := workedOnUnderLock(ctx, tx, contact.id)
 		if err != nil {
 			return SeatEmploymentPage{}, err
 		}
@@ -78,22 +78,43 @@ func ArchiveSeatContactsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit
 	return page, nil
 }
 
+// untouchedByPeopleSQL is the rule both reads below ask of one contact. No
+// audit row on the contact or its employment edges is by any actor but the
+// system or a connector.
+func untouchedByPeopleSQL(contact string) string {
+	return `NOT EXISTS (SELECT 1 FROM audit_log a
+		                WHERE a.entity_type = '` + contactEntity + `' AND a.entity_id = ` + contact + `
+		                  AND a.actor_type NOT IN ('system', 'connector'))
+		       AND NOT EXISTS (SELECT 1 FROM relationship r
+		                JOIN audit_log a ON a.entity_type = '` + tableRelationship + `' AND a.entity_id = r.id
+		                WHERE r.contact_id = ` + contact + ` AND a.actor_type NOT IN ('system', 'connector'))`
+}
+
+// workedOnUnderLock asks again, under the contact's employment lock, whether
+// anyone acted on it since the page was read. That is a person or an agent on
+// the contact or its edges, or a colleague's tag, list or link.
+func workedOnUnderLock(ctx context.Context, tx pgx.Tx, contact ids.ContactID) (bool, error) {
+	var untouched bool
+	if err := tx.QueryRow(ctx, `SELECT `+untouchedByPeopleSQL("$1"), contact).Scan(&untouched); err != nil {
+		return false, fmt.Errorf("contacts: re-reading whether anyone acted on a seat's contact: %w", err)
+	}
+	if !untouched {
+		return true, nil
+	}
+	return ColleagueWorkedOnSince(ctx, tx, contactEntity, contact.UUID, time.Time{}, ids.Nil)
+}
+
 // mintedContactPage reads one page of live contacts and the ones on it capture
 // minted and nobody else touched.
 func mintedContactPage(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) (SeatEmploymentPage, []mintedContact, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT p.id, p.version,
 		       p.captured_by LIKE 'connector:%'
-		       AND NOT EXISTS (SELECT 1 FROM audit_log a
-		                WHERE a.entity_type = $3 AND a.entity_id = p.id
-		                  AND a.actor_type NOT IN ('system', 'connector'))
-		       AND NOT EXISTS (SELECT 1 FROM relationship r
-		                JOIN audit_log a ON a.entity_type = $4 AND a.entity_id = r.id
-		                WHERE r.contact_id = p.id AND a.actor_type NOT IN ('system', 'connector'))
+		       AND `+untouchedByPeopleSQL("p.id")+`
 		  FROM contact p
 		 WHERE p.archived_at IS NULL AND p.merged_into_id IS NULL AND p.id > $1
 		 ORDER BY p.id
-		 LIMIT $2`, after, limit, contactEntity, tableRelationship)
+		 LIMIT $2`, after, limit)
 	if err != nil {
 		return SeatEmploymentPage{}, nil, fmt.Errorf("contacts: paging contacts for the seat repair: %w", err)
 	}

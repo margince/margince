@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/datatask"
@@ -55,6 +56,15 @@ func TestTheSeatEmploymentTaskRetiresOnlyMachineInferredEdgesOfSeatLoginsAndRepl
 	editedContact, edited := capturedEmployee(t, e, "edited@outside.test")
 	clientContact, client := capturedEmployee(t, e, "client@outside.test")
 	quiet, _ := capturedEmployee(t, e, "quiet@outside.test")
+	tagged, _ := capturedEmployee(t, e, "tagged@outside.test")
+	tags := collections.NewStore(e.DB())
+	tag, err := tags.CreateTag(e.Admin(), "Key account", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tags.ApplyTag(e.Admin(), tag.ID, "contact", tagged.UUID); err != nil {
+		t.Fatalf("tagging the contact: %v", err)
+	}
 	asserted, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
 		Kind: "employment", ContactID: &seat, CompanyID: new(ids.From[ids.CompanyKind](ids.UUID(other.Id))), Source: "manual",
 	})
@@ -69,6 +79,7 @@ func TestTheSeatEmploymentTaskRetiresOnlyMachineInferredEdgesOfSeatLoginsAndRepl
 	e.WsExec(t, `UPDATE app_user SET email = 'newhire@outside.test' WHERE id = $1`, e.Rep3)
 	e.WsExec(t, `UPDATE app_user SET email = 'edited@outside.test' WHERE id = $1`, e.Rep1)
 	e.WsExec(t, `UPDATE app_user SET email = 'quiet@outside.test' WHERE id = $1`, e.Rep2)
+	e.WsExec(t, `UPDATE app_user SET email = 'tagged@outside.test' WHERE id = $1`, e.AdminUser)
 	connectSeatMailbox(t, e, e.Rep2, "colleague@outside.test", "shared")
 
 	task := seatEmploymentDataTask()
@@ -100,8 +111,8 @@ func TestTheSeatEmploymentTaskRetiresOnlyMachineInferredEdgesOfSeatLoginsAndRepl
 			t.Errorf("%s was retired", name)
 		}
 	}
-	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'relationship' AND action = 'archive' AND evidence ? 'data_task_run'`); got != 2 {
-		t.Errorf("archive audit rows naming the run = %d, want the two inferred edges of seat logins nobody worked on", got)
+	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'relationship' AND action = 'archive' AND evidence ? 'data_task_run'`); got != 3 {
+		t.Errorf("archive audit rows naming the run = %d, want the three inferred edges of seat logins nobody worked on", got)
 	}
 	// The contact capture minted for a seat login, with nothing a colleague
 	// did on it, is archived. A seat contact whose edge a human made or edited,
@@ -112,6 +123,7 @@ func TestTheSeatEmploymentTaskRetiresOnlyMachineInferredEdgesOfSeatLoginsAndRepl
 	for name, contact := range map[string]ids.ContactID{
 		"the seat with a hand-made edge": seat, "the seat with a hand-edited edge": editedContact,
 		"a client": clientContact, "an address only a mailbox proves": mailboxContact,
+		"the seat a colleague tagged": tagged,
 	} {
 		if !contactLive(t, e, contact) {
 			t.Errorf("%s was archived", name)
