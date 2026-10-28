@@ -26,7 +26,8 @@ func TestAWorklistReadTimesEachOfItsStages(t *testing.T) {
 	after := attention.StageTimings()
 	for _, stage := range []string{
 		"end_of_day", "this_morning", "needs_you", "planned", "relationship_decay",
-		"done_for_you", "subject_labels", "price_day", "beside_reads", "rank", "row_names",
+		"done_for_you", "subject_labels", "price_day", "waiting_customers", "pins_and_done",
+		"plan", "awaiting", "deal_moves", "meeting_horizon", "rank", "row_names",
 	} {
 		if after[stage].Count() <= before[stage].Count() {
 			t.Errorf("stage %s was not timed by the read", stage)

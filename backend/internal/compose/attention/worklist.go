@@ -132,11 +132,13 @@ func (s *Service) worklistIn(
 		return crmcontracts.Worklist{}, err
 	}
 	priced()
-	besideReads := timeStage("beside_reads")
+	done := timeStage("waiting_customers")
 	// Read beside the assembled day rather than inside it: /attention has its
 	// own fourteen-lane promise and this source is not one of its lanes. A
 	// refused read is named, never folded into an empty answer.
 	waiting, waitingErr := reader.waitingCustomers(ctx, day.AsOf)
+	done()
+	done = timeStage("pins_and_done")
 	// The NARROWED service, not the shared one. The narrowing happens twice on
 	// this path — once when the lanes are read, once when the assembled rows are
 	// kept — and both halves read the same taskOwner. Projecting through `s`
@@ -164,6 +166,7 @@ func (s *Service) worklistIn(
 	if withPins, err = withPins.readingDone(ctx, day); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
+	done()
 	withPins = withPins.readingWalk(walk, walking)
 	// The night's scores, on the same per-read copy the pins and the walk ride.
 	// They are read by the classifier, which runs inside the projection below,
@@ -171,11 +174,18 @@ func (s *Service) worklistIn(
 	// must not sit on the shared service, for the reason feed.go's assembleDay
 	// gives about the findings.
 	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
+	done = timeStage("plan")
 	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
+	done()
+	done = timeStage("awaiting")
 	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf, beside.zone)
+	done()
+	done = timeStage("deal_moves")
 	withPins, adviceErr := withPins.readingDealMoves(ctx, day)
+	done()
+	done = timeStage("meeting_horizon")
 	horizon := reader.meetingHorizon(ctx, day, beside.until)
-	besideReads()
+	done()
 	failed := append(append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr, adviceErr}, awaitingErrs...), beside.failed...)
 	ranked := timeStage("rank")
 	out := withPins.worklistFrom(
