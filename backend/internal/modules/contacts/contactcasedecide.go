@@ -150,7 +150,7 @@ func (s *Store) decideContactCaseTx(ctx context.Context, tx pgx.Tx, contactID id
 	if err := s.lockMergingContacts(ctx, tx, selected); err != nil {
 		return crmcontracts.ContactCaseOutcome{}, err
 	}
-	c, err := walkContactCase(ctx, tx, contactID)
+	c, err := readContactCase(ctx, tx, contactID)
 	if err != nil {
 		return crmcontracts.ContactCaseOutcome{}, err
 	}

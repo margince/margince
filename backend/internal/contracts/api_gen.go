@@ -36410,7 +36410,9 @@ type ContactCaptureGap struct {
 // ContactCase One group of contacts that may be duplicates of one another: every live contact reachable from the
 // addressed contact over open duplicate pairs the caller can see. A case is read off the
 // pairs and is never stored, so dismissing, re-opening or merging a pair re-shapes it at once.
-// `anchor_id` is the lowest member id; every member id addresses the same case.
+// `anchor_id` is the lowest member id; every member id addresses the same case. A case of
+// more than 25 contacts is `too_large` and shows the 25 nearest the addressed contact over
+// its pairs, the addressed contact among them.
 type ContactCase struct {
 	AnchorId openapi_types.UUID `json:"anchor_id"`
 
@@ -36438,7 +36440,7 @@ type ContactCase struct {
 	// A caller who cannot see it reads `resolved` with no `resolution`.
 	Resolution *ContactCaseResolution `json:"resolution,omitempty"`
 
-	// Revision Changes whenever a member, an owner, a version or a pair changes. Preview and merge refuse a stale one with 409 case_changed.
+	// Revision Changes whenever a member, its version, its owner or that owner's seat, a pair, a share on a member or the policy changes. Preview and merge refuse a stale one with 409 case_changed.
 	Revision string `json:"revision"`
 
 	// Status `resolved` when the addressed contact was merged away; `resolution` says into which contact.

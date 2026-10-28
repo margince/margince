@@ -55,12 +55,15 @@ type caseEdge struct {
 }
 
 type contactCase struct {
-	Members  []caseMember
-	Edges    []caseEdge
-	TooLarge bool
+	// Anchor is the component's lowest member, whichever member addressed it.
+	Anchor ids.UUID
+	// Confidence is the strongest open pair in the component.
+	Confidence float64
+	Members    []caseMember
+	Edges      []caseEdge
+	Grants     []caseGrant
+	TooLarge   bool
 }
-
-func (c contactCase) anchor() ids.UUID { return c.Members[0].ID }
 
 func (c contactCase) member(id ids.UUID) (caseMember, bool) {
 	i := slices.IndexFunc(c.Members, func(m caseMember) bool { return m.ID == id })
@@ -70,19 +73,9 @@ func (c contactCase) member(id ids.UUID) (caseMember, bool) {
 	return c.Members[i], true
 }
 
-// confidence is the strongest open pair in the case.
-func (c contactCase) confidence() float64 {
-	best := 0.0
-	for _, e := range c.Edges {
-		if e.Disposition == dispositionOpen && e.Confidence > best {
-			best = e.Confidence
-		}
-	}
-	return best
-}
-
-// revision changes whenever a member, an owner, a version, a pair or the
-// policy changes; a decision refuses a stale one.
+// revision changes whenever anything the merge's outcome rests on changes: a
+// member, its version, its owner and that owner's seat, a pair, a grant on a
+// member, or the policy. A decision refuses a stale one.
 func (c contactCase) revision(policy bool) string {
 	var b strings.Builder
 	for _, m := range c.Members {
@@ -90,10 +83,13 @@ func (c contactCase) revision(policy bool) string {
 		if m.OwnerID != nil {
 			owner = m.OwnerID.String()
 		}
-		b.WriteString("m:" + m.ID.String() + ":" + strconv.FormatInt(m.Version, 10) + ":" + owner + "\n")
+		fmt.Fprintf(&b, "m:%s:%d:%s:%t:%s\n", m.ID, m.Version, owner, m.OwnerLive, m.OwnerSeat)
 	}
 	for _, e := range c.Edges {
 		b.WriteString("p:" + e.ID.String() + ":" + e.Disposition + "\n")
+	}
+	for _, g := range c.Grants {
+		fmt.Fprintf(&b, "g:%s:%d:%s:%t\n", g.ID, g.Version, g.Access, g.Live)
 	}
 	b.WriteString("policy:" + strconv.FormatBool(policy) + "\n")
 	sum := sha256.Sum256([]byte(b.String()))
@@ -119,7 +115,7 @@ func sortedUUIDs(in ...ids.UUID) []ids.UUID {
 	return in
 }
 
-// openContactPairs is the edge rule a case is walked over. A pair counts when
+// openContactPairs is the edge rule a case is read over. A pair counts when
 // it is open and both ends pass the queue's own live visibility clause.
 func openContactPairs(ctx context.Context, arg func(any) int) (string, error) {
 	visible, err := dedupeVisibilityClause(ctx, arg, true)
@@ -130,48 +126,33 @@ func openContactPairs(ctx context.Context, arg func(any) int) (string, error) {
 	    AND dedupe_candidate.archived_at IS NULL AND ` + visible, nil
 }
 
-// walkContactCase reads the case holding start. A contact in no open pair the
-// reader can see answers an empty case.
-func walkContactCase(ctx context.Context, tx pgx.Tx, start ids.UUID) (contactCase, error) {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	startPos := arg(start)
-	pairs, err := openContactPairs(ctx, arg)
+// readContactCase reads the case holding start, as start's reviewer sees it.
+// A contact in no open pair the reader can see answers an empty case.
+func readContactCase(ctx context.Context, tx pgx.Tx, start ids.UUID) (contactCase, error) {
+	components, err := readContactComponents(ctx, tx)
 	if err != nil {
 		return contactCase{}, err
 	}
-	bound := arg(contactCaseMaxMembers + 1)
-	// UNION drops a contact already walked, so a cycle of pairs ends. The LIMIT
-	// stops one past the bound, which marks the case as too large.
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		WITH RECURSIVE walked(id) AS (
-		  SELECT $%d::uuid
-		  UNION
-		  SELECT CASE WHEN dedupe_candidate.left_contact_id = walked.id
-		              THEN dedupe_candidate.right_contact_id ELSE dedupe_candidate.left_contact_id END
-		    FROM walked JOIN dedupe_candidate
-		      ON walked.id IN (dedupe_candidate.left_contact_id, dedupe_candidate.right_contact_id)
-		   WHERE %s)
-		SELECT id FROM walked LIMIT $%d`, startPos, pairs, bound), args...)
-	if err != nil {
-		return contactCase{}, fmt.Errorf("contacts: walking the duplicate case: %w", err)
-	}
-	memberIDs, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil {
-		return contactCase{}, fmt.Errorf("contacts: walking the duplicate case: %w", err)
-	}
-	if len(memberIDs) < 2 {
+	k, ok := componentHolding(components, start)
+	if !ok {
 		return contactCase{}, nil
 	}
-	c := contactCase{TooLarge: len(memberIDs) > contactCaseMaxMembers}
-	slices.SortFunc(memberIDs, compareUUID)
-	if c.TooLarge {
-		memberIDs = memberIDs[:contactCaseMaxMembers]
-	}
-	if c.Members, err = readCaseMembers(ctx, tx, memberIDs); err != nil {
+	return readComponentCase(ctx, tx, k, start)
+}
+
+// readComponentCase reads the members a review of the component shows from
+// the addressed member, with their pairs and the grants on them.
+func readComponentCase(ctx context.Context, tx pgx.Tx, k contactComponent, address ids.UUID) (contactCase, error) {
+	shown := k.shown(address)
+	c := contactCase{Anchor: k.anchor, Confidence: k.confidence, TooLarge: k.tooLarge()}
+	var err error
+	if c.Members, err = readCaseMembers(ctx, tx, shown); err != nil {
 		return contactCase{}, err
 	}
-	if c.Edges, err = readCaseEdges(ctx, tx, memberIDs); err != nil {
+	if c.Edges, err = readCaseEdges(ctx, tx, shown); err != nil {
+		return contactCase{}, err
+	}
+	if c.Grants, err = readCaseGrants(ctx, tx, shown); err != nil {
 		return contactCase{}, err
 	}
 	return c, nil
@@ -220,7 +201,7 @@ func readCaseMembers(ctx context.Context, tx pgx.Tx, memberIDs []ids.UUID) ([]ca
 
 // readCaseEdges reads the pairs between members that a reviewer weighs: open
 // ones, and dismissed ones so nobody merges what a colleague called different
-// contacts. The walk's visibility clause bounds both ends again.
+// contacts. The pairs' own visibility clause bounds both ends again.
 func readCaseEdges(ctx context.Context, tx pgx.Tx, memberIDs []ids.UUID) ([]caseEdge, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -244,6 +225,32 @@ func readCaseEdges(ctx context.Context, tx pgx.Tx, memberIDs []ids.UUID) ([]case
 		var e caseEdge
 		err := row.Scan(&e.ID, &e.Left, &e.Right, &e.Confidence, &e.Evidence, &e.Disposition)
 		return e, err
+	})
+}
+
+// caseGrant is one share on a member, as far as a merge's carry reads it.
+type caseGrant struct {
+	ID      ids.UUID
+	Version int64
+	Access  string
+	Live    bool
+}
+
+// readCaseGrants reads the shares on the members. A merge carries them and
+// folds each former owner's access into them, so a change to one changes what
+// the merge would write.
+func readCaseGrants(ctx context.Context, tx pgx.Tx, memberIDs []ids.UUID) ([]caseGrant, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT id, version, access, (expires_at IS NULL OR expires_at > now())
+		  FROM record_grant
+		 WHERE record_type = 'contact' AND record_id = ANY(@members)
+		 ORDER BY id`, pgx.NamedArgs{"members": memberIDs})
+	if err != nil {
+		return nil, fmt.Errorf("contacts: reading the shares on the case members: %w", err)
+	}
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (caseGrant, error) {
+		var g caseGrant
+		return g, row.Scan(&g.ID, &g.Version, &g.Access, &g.Live)
 	})
 }
 

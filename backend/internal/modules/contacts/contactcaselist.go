@@ -24,101 +24,42 @@ const (
 )
 
 // rankedContactCases answers every case the reader can see in one scope,
-// strongest first. The components are joined over the same edge rule the walk
-// uses, so a listed case reads back whole by its anchor.
+// strongest first, each addressed from the member its reader is shown it by.
 func rankedContactCases(ctx context.Context, tx pgx.Tx, scope string, recipient ids.UUID) ([]caseSummary, error) {
 	keep, err := caseScopeFilter(ctx, scope, recipient)
 	if err != nil {
 		return nil, err
 	}
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	pairs, err := openContactPairs(ctx, arg)
+	components, err := readContactComponents(ctx, tx)
 	if err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, `SELECT left_contact_id, right_contact_id, confidence FROM dedupe_candidate WHERE `+pairs, args...)
-	if err != nil {
-		return nil, fmt.Errorf("contacts: reading the open contact pairs: %w", err)
-	}
-	type pair struct {
-		left, right ids.UUID
-		confidence  float64
-	}
-	open, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (pair, error) {
-		var p pair
-		return p, row.Scan(&p.left, &p.right, &p.confidence)
-	})
-	if err != nil {
-		return nil, fmt.Errorf("contacts: reading the open contact pairs: %w", err)
-	}
-	root := map[ids.UUID]ids.UUID{}
-	var find func(ids.UUID) ids.UUID
-	find = func(id ids.UUID) ids.UUID {
-		parent, seen := root[id]
-		if !seen || parent == id {
-			root[id] = id
-			return id
-		}
-		top := find(parent)
-		root[id] = top
-		return top
-	}
-	for _, p := range open {
-		a, b := find(p.left), find(p.right)
-		if compareUUID(b, a) < 0 {
-			a, b = b, a
-		}
-		root[b] = a
-	}
-	byRoot := map[ids.UUID]*caseSummary{}
-	for _, p := range open {
-		top := find(p.left)
-		summary, ok := byRoot[top]
-		if !ok {
-			summary = &caseSummary{}
-			byRoot[top] = summary
-		}
-		summary.confidence = max(summary.confidence, p.confidence)
-	}
-	for id := range root {
-		summary := byRoot[find(id)]
-		summary.members = append(summary.members, id)
-	}
-	return keepRankedCases(ctx, tx, byRoot, keep)
-}
-
-// keepRankedCases settles each component's anchor, keeps those in scope and
-// ranks them.
-func keepRankedCases(ctx context.Context, tx pgx.Tx, byRoot map[ids.UUID]*caseSummary, keep func([]caseOwnership) bool) ([]caseSummary, error) {
 	var all []ids.UUID
-	for _, summary := range byRoot {
-		slices.SortFunc(summary.members, compareUUID)
-		summary.anchor = summary.members[0]
-		all = append(all, summary.members...)
+	for _, k := range components {
+		all = append(all, k.members...)
 	}
 	owners, err := readCaseOwnership(ctx, tx, all)
 	if err != nil {
 		return nil, err
 	}
 	var out []caseSummary
-	for _, summary := range byRoot {
-		held := make([]caseOwnership, 0, len(summary.members))
-		for _, id := range summary.members {
+	for _, k := range components {
+		held := make([]caseOwnership, 0, len(k.members))
+		for _, id := range k.members {
 			held = append(held, owners[id])
 		}
-		if keep(held) {
-			out = append(out, *summary)
+		if at, ok := keep(held); ok {
+			out = append(out, caseSummary{component: k, address: k.members[at]})
 		}
 	}
 	slices.SortFunc(out, func(a, b caseSummary) int {
-		if a.confidence != b.confidence {
-			if a.confidence > b.confidence {
+		if a.component.confidence != b.component.confidence {
+			if a.component.confidence > b.component.confidence {
 				return -1
 			}
 			return 1
 		}
-		return compareUUID(a.anchor, b.anchor)
+		return compareUUID(a.component.anchor, b.component.anchor)
 	})
 	return out, nil
 }
@@ -129,10 +70,11 @@ type caseOwnership struct {
 	live  bool
 }
 
-// caseScopeFilter answers whether a case belongs to the requested scope.
-// Mine holds a member the recipient owns; the recipient is the caller when
-// none is named. Unassigned holds no live owner.
-func caseScopeFilter(ctx context.Context, scope string, recipient ids.UUID) (func([]caseOwnership) bool, error) {
+// caseScopeFilter answers whether a case belongs to the requested scope, and
+// which member addresses it there. Mine holds a member the recipient owns,
+// and addresses it from the first one; the recipient is the caller when none
+// is named. Unassigned holds no live owner.
+func caseScopeFilter(ctx context.Context, scope string, recipient ids.UUID) (func([]caseOwnership) (int, bool), error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		return nil, errors.New("contacts: no actor bound to read cases for")
@@ -142,15 +84,16 @@ func caseScopeFilter(ctx context.Context, scope string, recipient ids.UUID) (fun
 	}
 	switch scope {
 	case "", contactCaseScopeMine:
-		return func(held []caseOwnership) bool {
-			return slices.ContainsFunc(held, func(o caseOwnership) bool { return o.owner != nil && *o.owner == recipient })
+		return func(held []caseOwnership) (int, bool) {
+			at := slices.IndexFunc(held, func(o caseOwnership) bool { return o.owner != nil && *o.owner == recipient })
+			return at, at >= 0
 		}, nil
 	case contactCaseScopeUnassigned:
-		return func(held []caseOwnership) bool {
-			return !slices.ContainsFunc(held, func(o caseOwnership) bool { return o.live })
+		return func(held []caseOwnership) (int, bool) {
+			return 0, !slices.ContainsFunc(held, func(o caseOwnership) bool { return o.live })
 		}, nil
 	case contactCaseScopeAll:
-		return func([]caseOwnership) bool { return true }, nil
+		return func([]caseOwnership) (int, bool) { return 0, true }, nil
 	}
 	return nil, &DedupeInputError{Field: "scope", Msg: "must be mine, unassigned or all"}
 }

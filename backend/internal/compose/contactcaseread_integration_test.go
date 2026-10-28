@@ -6,13 +6,16 @@
 package compose
 
 // What a case read tells each reader: where a merged contact went, and which
-// pairs this reader may merge one by one, and who owns a share of it.
+// pairs this reader may merge one by one, who owns a share of it, and which
+// members a large case shows.
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -79,5 +82,44 @@ func TestAnAgentSeatOwnsNoShareOfACase(t *testing.T) {
 	}
 	if got := grantAccess(t, c.e, members[0], agent); got != "" {
 		t.Errorf("the agent seat holds %q on the survivor, want no grant", got)
+	}
+}
+
+func TestALargeCaseReadsAlikeFromEveryMember(t *testing.T) {
+	c := setupCases(t)
+	owners := make([]ids.UUID, 27)
+	for i := range owners {
+		owners[i] = c.e.Rep1
+	}
+	owners[26] = c.e.Rep2
+	members := make([]ids.UUID, 0, len(owners))
+	for _, owner := range owners {
+		user := ids.From[ids.UserKind](owner)
+		created, err := c.store.CreateContact(c.e.Admin(), contacts.CreateContactInput{
+			FullName: "Mary Somerville", Source: "manual", OwnerID: &user,
+			Phones: []contacts.ContactPhoneInput{{Phone: "+493055527000", PhoneType: "work", IsPrimary: true, Position: 1}},
+		})
+		if err != nil {
+			t.Fatalf("creating a duplicate: %v", err)
+		}
+		members = append(members, ids.UUID(created.Id))
+	}
+	anchor := slices.MinFunc(members, compareUUIDs)
+	for _, member := range members {
+		got := c.read(c.e.Admin(), t, member)
+		if ids.UUID(got.AnchorId) != anchor || !got.TooLarge || len(got.Members) != 25 {
+			t.Errorf("from %s the case reads anchor %s, too_large %v and %d members, want %s, true and 25",
+				member, got.AnchorId, got.TooLarge, len(got.Members), anchor)
+		}
+		if !slices.Contains(uuidsOf(memberIDs(got)), member) {
+			t.Errorf("the case read from %s does not hold it", member)
+		}
+	}
+	page, _, err := c.store.ListContactCases(c.rep(c.e.Rep2), contacts.ContactCaseListInput{Scope: "mine"})
+	if err != nil || len(page) != 1 {
+		t.Fatalf("Rep2's own cases = %d (%v), want the one case", len(page), err)
+	}
+	if ids.UUID(page[0].AnchorId) != anchor || !slices.Contains(uuidsOf(memberIDs(page[0])), members[26]) {
+		t.Errorf("Rep2's listed case reads anchor %s without their member, want %s holding it", page[0].AnchorId, anchor)
 	}
 }

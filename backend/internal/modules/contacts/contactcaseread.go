@@ -31,7 +31,7 @@ func (s *Store) GetContactCase(ctx context.Context, contactID ids.UUID) (crmcont
 	}
 	var out crmcontracts.ContactCase
 	err := s.txSnapshot(ctx, func(tx pgx.Tx) error {
-		c, err := walkContactCase(ctx, tx, contactID)
+		c, err := readContactCase(ctx, tx, contactID)
 		if err != nil {
 			return err
 		}
@@ -58,8 +58,8 @@ func (s *Store) contactCaseView(ctx context.Context, tx pgx.Tx, c contactCase) (
 	}
 	mode := authority.mergeMode()
 	out := crmcontracts.ContactCase{
-		AnchorId: openapi_types.UUID(c.anchor()), Revision: c.revision(policy),
-		Status: crmcontracts.ContactCaseStatusOpen, Confidence: float32(c.confidence()),
+		AnchorId: openapi_types.UUID(c.Anchor), Revision: c.revision(policy),
+		Status: crmcontracts.ContactCaseStatusOpen, Confidence: float32(c.Confidence),
 		TooLarge: c.TooLarge, PolicyEnabled: policy, MergeMode: mode,
 		Members: make([]crmcontracts.ContactCaseMember, 0, len(c.Members)),
 		Edges:   make([]crmcontracts.ContactCaseEdge, 0, len(c.Edges)),
@@ -264,15 +264,15 @@ const (
 	contactCaseListMax     = 50
 )
 
-// caseSummary is one component as the list ranks it, before it is rendered.
+// caseSummary is one component as the list ranks it, before it is rendered,
+// and the member its reader is shown it from.
 type caseSummary struct {
-	anchor     ids.UUID
-	members    []ids.UUID
-	confidence float64
+	component contactComponent
+	address   ids.UUID
 }
 
 // ListContactCases pages the cases the reader can see in one scope,
-// strongest first. The page is rendered from the same walk a single read uses.
+// strongest first. The page is rendered from the components it ranked.
 func (s *Store) ListContactCases(ctx context.Context, in ContactCaseListInput) ([]crmcontracts.ContactCase, string, error) {
 	if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
 		return nil, "", err
@@ -305,12 +305,12 @@ func (s *Store) ListContactCases(ctx context.Context, in ContactCaseListInput) (
 		if len(ranked) > in.Limit {
 			ranked = ranked[:in.Limit]
 			last := ranked[in.Limit-1]
-			if next, err = storekit.EncodeOpaque(contactCaseCursor{Confidence: last.confidence, Anchor: last.anchor}); err != nil {
+			if next, err = storekit.EncodeOpaque(contactCaseCursor{Confidence: last.component.confidence, Anchor: last.component.anchor}); err != nil {
 				return err
 			}
 		}
 		for _, summary := range ranked {
-			c, err := walkContactCase(ctx, tx, summary.anchor)
+			c, err := readComponentCase(ctx, tx, summary.component, summary.address)
 			if err != nil {
 				return err
 			}
@@ -341,5 +341,6 @@ func (s *Store) CountContactCases(ctx context.Context, in ContactCaseListInput) 
 }
 
 func rankedAfter(c caseSummary, cur contactCaseCursor) bool {
-	return c.confidence < cur.Confidence || (c.confidence == cur.Confidence && compareUUID(c.anchor, cur.Anchor) > 0)
+	k := c.component
+	return k.confidence < cur.Confidence || (k.confidence == cur.Confidence && compareUUID(k.anchor, cur.Anchor) > 0)
 }

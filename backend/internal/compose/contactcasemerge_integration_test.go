@@ -278,3 +278,41 @@ func TestAMergedSurvivorIsSharedWithItsFormerOwnerOnly(t *testing.T) {
 		t.Errorf("shared_with_me with owner_id = %v, want the conflicting-filters refusal", err)
 	}
 }
+
+func TestASeatOrAShareChangedAfterThePreviewMakesTheRevisionStale(t *testing.T) {
+	changes := map[string]func(c *caseEnv, members []ids.UUID){
+		"an owner's seat moves to read": func(c *caseEnv, _ []ids.UUID) {
+			if _, err := integration.OwnerConn(t).Exec(context.Background(),
+				`UPDATE app_user SET seat_type = 'read' WHERE id = $1`, c.e.Rep3); err != nil {
+				t.Fatal(err)
+			}
+		},
+		"a member is shared": func(c *caseEnv, members []ids.UUID) {
+			if _, err := identity.NewServiceFor(c.e.DB()).CreateRecordGrant(c.e.Admin(), identity.CreateGrantInput{
+				RecordType: "contact", RecordID: members[0], SubjectType: "user", SubjectID: c.e.Rep2, Access: "read",
+			}); err != nil {
+				t.Fatal(err)
+			}
+		},
+	}
+	for name, change := range changes {
+		t.Run(name, func(t *testing.T) {
+			c := setupCases(t)
+			members := c.seedCase(t, c.e.Rep1, c.e.Rep2, c.e.Rep3)
+			c.setPolicy(t, true)
+			rep := c.rep(c.e.Rep1)
+			chosen := caseDecision(c.read(rep, t, members[0]), members, members[0], c.e.Rep1)
+			if _, err := c.store.PreviewContactCaseMerge(rep, members[0], chosen); err != nil {
+				t.Fatalf("previewing: %v", err)
+			}
+			change(c, members)
+			before := writtenState(t, c.e)
+			if _, err := c.store.MergeContactCase(rep, members[0], chosen); caseCode(err) != "case_changed" {
+				t.Fatalf("a merge after %s = %v, want case_changed", name, err)
+			}
+			if after := writtenState(t, c.e); after != before {
+				t.Errorf("a refused merge wrote:\nbefore %s\nafter  %s", before, after)
+			}
+		})
+	}
+}
