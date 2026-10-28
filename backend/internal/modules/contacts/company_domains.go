@@ -90,7 +90,7 @@ func claimedDomainOwner(
 	spellings := owndomain.Spellings(domain)
 
 	// `self` is excluded in SQL rather than compared afterwards. Both spellings
-	// can be live at once, so this has to answer with a rival and not with
+	// can be live at once. So this has to answer with a rival, never with
 	// whichever of the two the planner reached first.
 	err := tx.QueryRow(ctx,
 		`SELECT company_id FROM company_domain

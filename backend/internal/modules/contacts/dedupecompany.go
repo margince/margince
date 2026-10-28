@@ -168,9 +168,9 @@ func exactCompanyByDomain(ctx context.Context, tx pgx.Tx, domains []string, excl
 	if len(domains) == 0 {
 		return nil, nil
 	}
-	// Both spellings of each candidate. A contact's mail domain arrives folded
-	// by nothing, so a Unicode address would otherwise miss the company holding
-	// the punycode its own site was read under, and land on no company at all.
+	// Both spellings of each candidate, because a contact's mail domain arrives
+	// folded by nothing. A Unicode address otherwise misses the company holding
+	// the punycode its own site was read under, and lands on no company.
 	spellings := make([]string, 0, len(domains))
 	for _, d := range domains {
 		spellings = append(spellings, owndomain.Spellings(d)...)
