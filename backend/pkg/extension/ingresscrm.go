@@ -77,6 +77,11 @@ type DealFields struct {
 	// AmountMinor is the deal value in the smallest unit of Currency.
 	AmountMinor *int64
 	Currency    string
+	// CustomFields are the values of the installation's custom deal fields the
+	// unit offers, keyed by the field's `cf_` column name. A key no active field
+	// takes is refused. Like the amount, a value a user last edited is left as
+	// it is and named in Result.Withheld.
+	CustomFields map[string]any
 	// RelinkActivities has the same meaning as on CompanyFields.
 	RelinkActivities []string
 }
@@ -147,7 +152,27 @@ func (d DealFields) validate() error {
 	case !uuidShape.MatchString(d.PipelineID), !uuidShape.MatchString(d.StageID):
 		return errors.New("extension: a deal names its pipeline and stage by their ids")
 	}
+	if err := validateCustomFieldKeys(d.CustomFields); err != nil {
+		return err
+	}
 	return validateRelinkKeys(d.RelinkActivities)
+}
+
+// MaxLandedCustomFields caps the custom fields one landed record carries.
+const MaxLandedCustomFields = 50
+
+var customFieldKey = regexp.MustCompile(`^cf_[a-z0-9_]{1,60}$`)
+
+func validateCustomFieldKeys(values map[string]any) error {
+	if len(values) > MaxLandedCustomFields {
+		return fmt.Errorf("extension: the record offers %d custom fields, over the cap of %d", len(values), MaxLandedCustomFields)
+	}
+	for key := range values {
+		if !customFieldKey.MatchString(key) {
+			return fmt.Errorf("extension: %q is not a custom field column; name it as cf_ and lower snake_case", key)
+		}
+	}
+	return nil
 }
 
 func validateRelinkKeys(keys []string) error {

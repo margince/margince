@@ -10,7 +10,7 @@ A `Record` carries one payload. Set `Company` or `Deal` instead of `Activity`. `
 |---|---|---|
 | Outside id | `System` + `Key` on the record | `System` + `Key` on the record |
 | Required | `DisplayName` | `Name`, `PipelineID`, `StageID` (core ids) |
-| Optional values | `LegalName`, `Industry`, `Description`, `Domain` | `AmountMinor`, `Currency` |
+| Optional values | `LegalName`, `Industry`, `Description`, `Domain` | `AmountMinor`, `Currency`, `CustomFields` (`cf_*` keys of active custom fields, at most `extension.MaxLandedCustomFields`, which is 50) |
 | Natural key to adopt by | `AdoptOn: extension.AdoptKeyDomain`, which needs a non-empty `Domain` | none |
 | Stage move | none | a different `StageID`; `LostReason` for a lost stage |
 | Move activities onto it | `RelinkActivities` (activity keys, at most `extension.MaxRelinkActivities`, which is 50) | `RelinkActivities` (same cap) |
@@ -37,7 +37,7 @@ flowchart TD
 ```
 
 - **The pair is unique across the workspace.** `(source_system, source_id)` is one record, whoever may see it. A clash with a record the member may not see answers the same fixed conflict (`ErrConflict`) as any other taken pair. It reveals only that the pair is taken, and never the record, its owner or its name.
-- **Updates leave what a user edited.** The core writes the optional values you send, except a field a user last edited. It reads that from the audit trail, the same rule agents follow. The company fields it checks are `LegalName`, `Industry` and `Description`. The deal fields are `AmountMinor` and `Currency`. It never checks the stage.
+- **Updates leave what a user edited.** The core writes the optional values you send, except a field a user last edited. It reads that from the audit trail, the same rule agents follow. The company fields it checks are `LegalName`, `Industry` and `Description`. The deal fields are `AmountMinor`, `Currency` and each key of `CustomFields`. It never checks the stage.
 - **An amount and its currency go together.** If a user edited either one, even one you did not send, the core withholds both, so the user's amount is never re-priced in another currency.
 - **The withheld fields come back.** `Result.Withheld` lists them by name, for example `industry`, or `amount_minor` and `currency` together. It is empty when nothing was withheld. The record is still accepted: this is not the `Skipped` disposition, which drops the whole record.
 - **An admin can let a unit overwrite.** With the setting on, the core writes the field and `Withheld` stays empty. The core reads the setting on each call, before it checks the fields, so a change applies to the next record.

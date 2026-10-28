@@ -91,6 +91,30 @@ func TestACompanyOrDealPayloadIsHeldToItsGrammar(t *testing.T) {
 	}
 }
 
+func TestADealsCustomFieldsAreHeldToTheCfKeyGrammarAndCap(t *testing.T) {
+	ok := aDealRecord()
+	ok.Deal.CustomFields = map[string]any{"cf_route": "NBO-FRA", "cf_services": []string{"fuel"}}
+	if err := ok.Validate(); err != nil {
+		t.Fatalf("well-formed custom fields were refused: %v", err)
+	}
+	tooMany := make(map[string]any, extension.MaxLandedCustomFields+1)
+	for i := 0; i <= extension.MaxLandedCustomFields; i++ {
+		tooMany["cf_k"+strings.Repeat("a", i%10)+string(rune('a'+i/10))] = 1
+	}
+	for name, fields := range map[string]map[string]any{
+		"a core column name": {"name": "x"},
+		"an upper-case key":  {"cf_Route": "x"},
+		"a bare cf_":         {"cf_": "x"},
+		"too many keys":      tooMany,
+	} {
+		rec := aDealRecord()
+		rec.Deal.CustomFields = fields
+		if err := rec.Validate(); extension.RefusalOf(err) != extension.RefusalActivity {
+			t.Errorf("%s: err = %v, want a payload refusal", name, err)
+		}
+	}
+}
+
 func TestASourceMayDeclareCompanyAndDealKinds(t *testing.T) {
 	src := extension.IngressSource{System: "crm-x", Lands: []extension.RecordKind{extension.KindActivity, extension.KindCompany, extension.KindDeal}}
 	if err := src.Validate(); err != nil {
