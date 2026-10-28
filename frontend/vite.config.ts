@@ -6,6 +6,7 @@ import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
 import { defineConfig } from "vitest/config";
 import { serveMcpApps } from "./scripts/vite-inline-views.ts";
+import { materialSymbolsLicense } from "./scripts/vite-licenses.ts";
 import { pwa } from "./scripts/vite-pwa.ts";
 import { TEST_TIMEOUT_MS } from "./vitest.budget.ts";
 
@@ -79,6 +80,7 @@ export default defineConfig({
     // The Material files say 48px; without dimensions the glyph's `size` prop decides.
     svgr({ svgrOptions: { dimensions: false } }),
     serveMcpApps(),
+    materialSymbolsLicense(),
     pwa({ release }),
   ],
   // The release this bundle was built from, compiled IN.
