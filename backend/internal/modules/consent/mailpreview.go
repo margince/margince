@@ -56,7 +56,7 @@ func (s *Store) PreviewControllerMail(ctx context.Context, contactID ids.Contact
 		return ControllerMailPreview{}, err
 	}
 	if kind != LinkRecordConfirmation && kind != LinkPrivacyNotice {
-		return ControllerMailPreview{}, &ValidationError{Field: "kind", Reason: "preview a record confirmation or a privacy notice"}
+		return ControllerMailPreview{}, &ValidationError{Field: fieldKind, Reason: "preview a record confirmation or a privacy notice"}
 	}
 	if err := requireMailLanguage(language); err != nil {
 		return ControllerMailPreview{}, err
