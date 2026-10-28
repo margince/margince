@@ -20,7 +20,8 @@ import (
 
 // TestDailyUseBudgets times the screens a rep and a manager open every day,
 // over HTTP, as those seats. Its subtests share state and run in order (seats,
-// seed, first_load, latency, load), so run it whole; a broken step stops the run.
+// seed, home_sources, first_load, latency, load), so run it whole; a broken
+// step stops the run.
 func TestDailyUseBudgets(t *testing.T) {
 	scale, err := dailyScale()
 	if err != nil {
@@ -60,6 +61,11 @@ func TestDailyUseBudgets(t *testing.T) {
 		assertDailyContactScope(t, e, seats, corpus)
 	})
 
+	step("home_sources", func(t *testing.T) {
+		makeDailyBriefs(t, e, seats)
+		seedDailyAICalls(t, e, scale)
+	})
+
 	step("first_load", func(t *testing.T) {
 		worklist, palette := runFirstLoad(t, e, seats, corpus)
 		rows = append(rows, firstLoadRows(t, worklist, palette)...)
@@ -74,6 +80,8 @@ func TestDailyUseBudgets(t *testing.T) {
 				rows = append(rows, runDailyFlow(t, e, f, in)...)
 			}
 		}
+		admin := Seat{Name: "admin", Role: "admin", Client: e.Client}
+		rows = append(rows, runDailyFlow(t, e, dailyAdminFlow, dailyInput{Seat: admin, Team: seats.Teams[0]})...)
 		assertDailyReviewFocus(t, rows)
 	})
 

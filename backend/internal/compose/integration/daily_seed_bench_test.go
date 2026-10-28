@@ -189,12 +189,14 @@ func seedDailyCorpus(t *testing.T, e *apptest.AppEnv, seats Seats, scale float64
 	s.timed("capture_import", s.captureImports)
 	s.timed("activity_participant", s.participants)
 	s.analyze("activity_participant", "capture_import")
+	s.timed("graph_interaction_edge", s.interactionEdges)
 	s.timed("activity_link", s.links)
 	s.analyze("activity_link", "contact", "deal", "company", "relationship")
 	s.timed("last_activity_at", s.moveLastActivity)
 	s.timed("vacuum analyze", func() {
 		s.exec("vacuum", `VACUUM ANALYZE company, company_domain, contact, contact_email, relationship, deal,
-		      lead, project, activity, capture_import, activity_participant, activity_link`)
+		      lead, project, activity, capture_import, activity_participant, activity_link,
+		      graph_interaction_edge`)
 	})
 	t.Logf("seed total %s at scale %g", time.Since(start).Round(time.Millisecond), scale)
 
