@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -105,16 +106,15 @@ var bundleTaskSource = provenance.AssuranceTaskSource
 // activities.taskAssignee leaves the column NULL for a system principal that
 // names nobody, and an unassigned remediation task is one that reaches the
 // unassigned queue rather than the contact whose deal it is about.
+//
+// sourceID is the natural key that makes a retry a no-op:
+// activity.replayedActivity resolves it before inserting, against
+// uq_activity_source. runTaskKey and reviewTaskKey are the two keys.
 func mintBundleTask(
-	ctx context.Context, deps bundleDeps, runID ids.UUID, subject subjectFindings,
+	ctx context.Context, deps bundleDeps, sourceID string, subject subjectFindings, dueAt *time.Time,
 ) (ids.UUID, error) {
-	// The natural key that makes a River retry a no-op. It is the RUN, not the
-	// cycle: a retry that re-scans opens a fresh cycle with a new id, so a
-	// cycle-keyed name would differ on exactly the attempt it exists to
-	// deduplicate. activity.replayedActivity resolves this pair before
-	// inserting, against uq_activity_source.
-	sourceID := subject.kind + ":" + subject.id.String() + ":" + runID.String()
 	in := activities.LogActivityInput{
+		DueAt:        dueAt,
 		Kind:         activityKindTask,
 		Source:       systemActor,
 		SourceSystem: &bundleTaskSource,
@@ -169,6 +169,13 @@ func mintBundleTask(
 		return ids.UUID{}, fmt.Errorf("compose: minting the task unassigned: %w", err)
 	}
 	return task, nil
+}
+
+// runTaskKey keys an ordinary bundle task on the RUN, not the cycle: a retry
+// that re-scans opens a fresh cycle with a new id, so a cycle-keyed name would
+// differ on exactly the attempt it exists to deduplicate.
+func runTaskKey(subject subjectFindings, runID ids.UUID) string {
+	return subject.kind + ":" + subject.id.String() + ":" + runID.String()
 }
 
 // unassignableSeat reports whether the refusal was about WHO the task was aimed

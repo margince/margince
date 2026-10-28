@@ -5,6 +5,7 @@ package assurance
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -13,11 +14,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// SubjectsFunc reads the deals a run should examine.
+// SubjectsFunc reads the deals a run should examine, as of the run's own
+// instant and with the coverage the run recorded.
 //
 // Injected rather than imported: the deals live in another module and the read
-// spans stages and activities, which is the composition layer's business.
-type SubjectsFunc func(ctx context.Context, tx pgx.Tx) ([]Subject, error)
+// spans stages and activities, which is the composition layer's business. The
+// coverage arrives here so the viability assessment and the run's coverage line
+// stand on one reading of the mailbox, not two.
+type SubjectsFunc func(ctx context.Context, tx pgx.Tx, asOf time.Time, coverage []SourceCoverage) ([]Subject, error)
 
 // CoverageFunc answers which sources the run could reach.
 type CoverageFunc func(ctx context.Context, tx pgx.Tx, now time.Time) []SourceCoverage
@@ -92,12 +96,20 @@ func (w walked) findings() []Finding {
 }
 
 // askEveryRule asks every rule of every subject, once, and writes nothing.
-func askEveryRule(now time.Time, subjects []Subject, cfg Config) walked {
+//
+// A rule whose sources were not read tonight is not asked. Its finding would be
+// a claim about what nobody looked at: an unread mailbox shows silence on every
+// deal.
+func askEveryRule(now time.Time, subjects []Subject, cfg Config, coverage []SourceCoverage) walked {
 	var out walked
+	askable := sourcesRead(coverage)
 	for _, subject := range subjects {
 		out.deals = append(out.deals, subject.DealID)
 		out.eligible++
 		for _, rule := range Rules() {
+			if !askable(rule) {
+				continue
+			}
 			found := rule.Ask(now, subject, cfg)
 			if found == nil {
 				continue
@@ -146,7 +158,7 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 			}
 		}
 
-		subjects, err := s.subjects(ctx, tx)
+		subjects, err := s.subjects(ctx, tx, now, coverage)
 		if err != nil {
 			// The deals could not be read at all. The run still stands and
 			// says so, because a missing run is the one answer that tells
@@ -161,7 +173,7 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 			return s.store.FinishRun(ctx, tx, runID, 0, 0, 0, out.Status, out.Readiness)
 		}
 
-		pass := askEveryRule(now, subjects, s.cfg)
+		pass := askEveryRule(now, subjects, s.cfg, coverage)
 		out.EligibleSignals, err = s.askSignals(ctx, tx, now, &pass)
 		if err != nil {
 			out.Status = StatusIncomplete
@@ -174,6 +186,9 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 			if err := s.store.UpsertException(ctx, tx, r.finding, r.owner); err != nil {
 				return err
 			}
+		}
+		if err := s.store.RecordReceipts(ctx, tx, runID, now, s.cfg.ReceiptLifetime, subjects); err != nil {
+			return err
 		}
 		// Which findings THIS run saw, before the clearing below removes the
 		// ones it did not. Recorded from the same `seen` set that decides what
@@ -227,22 +242,36 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 // in absence: every source the rule needs was actually read. A rule with no
 // declared needs stands on the subjects read alone, which succeeding is what
 // got us here.
+//
+// A retired type is clearable on the same terms. No rule raises it, so a pass
+// that read its sources finds it absent everywhere it walked.
+//
+// A review type never clears in absence. A reply ends the silence and not the
+// review: only a person's validated outcome, or the deal leaving, closes it.
 func clearableTypes(coverage []SourceCoverage) []string {
-	checked := map[string]bool{}
-	for _, c := range coverage {
-		checked[c.Source] = c.State == CoverageChecked
-	}
+	read := sourcesRead(coverage)
 	var out []string
-	for _, rule := range Rules() {
-		clearable := true
-		for _, need := range rule.Needs {
-			if !checked[need] {
-				clearable = false
-			}
-		}
-		if clearable {
+	for _, rule := range append(Rules(), retiredRules...) {
+		if read(rule) && !slices.Contains(ReviewTypes(), rule.Type) {
 			out = append(out, rule.Type)
 		}
 	}
 	return out
+}
+
+// sourcesRead answers, for one rule, whether every source it needs was
+// actually read tonight. Raising and clearing ask this one question.
+func sourcesRead(coverage []SourceCoverage) func(Rule) bool {
+	checked := map[string]bool{}
+	for _, c := range coverage {
+		checked[c.Source] = c.State == CoverageChecked
+	}
+	return func(rule Rule) bool {
+		for _, need := range rule.Needs {
+			if !checked[need] {
+				return false
+			}
+		}
+		return true
+	}
 }

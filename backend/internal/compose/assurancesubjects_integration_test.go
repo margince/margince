@@ -125,10 +125,18 @@ func dressedDeal(t *testing.T, e *integration.Env) ids.UUID {
 
 func subjectsFor(t *testing.T, e *integration.Env) []assurance.Subject {
 	t.Helper()
+	return subjectsAt(t, e, time.Now().UTC())
+}
+
+// subjectsAt reads the subjects as a pass at asOf would, with every source read.
+func subjectsAt(t *testing.T, e *integration.Env, asOf time.Time) []assurance.Subject {
+	t.Helper()
 	var out []assurance.Subject
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
-		out, err = AssuranceSubjects(context.Background(), tx)
+		out, err = AssuranceSubjects(context.Background(), tx, asOf, []assurance.SourceCoverage{
+			{Source: sourceMail, State: assurance.CoverageChecked, CheckedThrough: &asOf},
+		})
 		return err
 	}); err != nil {
 		t.Fatalf("reading the subjects: %v", err)

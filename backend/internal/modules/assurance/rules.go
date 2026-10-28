@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
+	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
 // Subject is one deal as a rule sees it, already assembled by the seam.
@@ -27,10 +27,6 @@ type Subject struct {
 	CloseProvisional bool
 	Category         string
 	StageName        string
-	// The last time the BUYER said something, as distinct from the last time
-	// anybody touched the record. A rep emailing a silent prospect weekly keeps
-	// last_activity_at fresh while the buyer has said nothing for months.
-	LastInboundAt *time.Time
 	// The total of the most recent sent or accepted offer, when there is one.
 	OfferTotalMinor *int64
 	// The total of the signed contract, when there is one.
@@ -48,6 +44,22 @@ type Subject struct {
 	// evidence says are met. Zero for a stage that declares none, which is
 	// every stage until an installation configures one.
 	UnmetExitCriteria int
+	// Viability is the deals module's assessment of whether the customer still
+	// supports the deal. Nil where nobody assessed it, which raises nothing.
+	Viability *SubjectViability
+}
+
+// SubjectViability is one deal's viability assessment as the scan stores it.
+type SubjectViability struct {
+	Outcome    viability.Outcome
+	Reasons    []viability.Reason
+	SilentDays int
+	// NextChange is when the answer changes by the clock alone; nil when only
+	// new evidence can change it.
+	NextChange *time.Time
+	// Fingerprint is what the assessment read. The forecast compares it with
+	// the deal's current one before trusting the receipt.
+	Fingerprint string
 }
 
 // Finding is what a rule noticed, before it becomes a stored exception.
@@ -78,10 +90,23 @@ const (
 	TypeAmountVsContract = "amount_vs_contract"
 	TypeNoNextStep       = "no_next_step"
 	TypeNoEconomicBuyer  = "no_economic_buyer"
-	TypeBuyerSilent      = "buyer_silent"
 	TypeCommitUnpriced   = "commit_unpriced"
 	TypeStageExitUnmet   = "stage_exit_unmet"
+	TypeDealViability    = "deal_viability"
 )
+
+// TypeBuyerSilent is a RETIRED type: deal_viability asks its question with one
+// silence clock and the close-date check beside it. Stored findings keep the
+// type for their history, and a pass whose mailbox was read clears the open
+// ones, because no rule raises them any more.
+const TypeBuyerSilent = "buyer_silent"
+
+// retiredRules are types no rule raises, with the sources a pass must have read
+// before it may close their open findings in absence.
+var retiredRules = []Rule{{Type: TypeBuyerSilent, Version: "retired", Needs: []string{sourceMail}}}
+
+// sourceMail names the mailbox among the coverage sources.
+const sourceMail = "mail"
 
 // DealAmountTypes are the types whose claim and observed slots carry money that
 // discloses the deal's amount. That money is the amount itself, or the offer or
@@ -124,21 +149,21 @@ type Rule struct {
 	// or vanishing because a rule moved is not the business moving, and a
 	// reader comparing two nights has to be able to tell.
 	Version string
-	// Needs names the coverage sources this rule's absence claim stands on.
-	// A rule that reads only the deal graph needs none: the subjects read
-	// itself proves the graph was reachable. buyerSilent needs the mailbox —
-	// its finding must NOT be auto-cleared on a night the mailbox was not
-	// read, because "no silence observed" would then mean "nothing observed".
+	// Needs names the coverage sources this rule stands on, both to raise a
+	// finding and to clear one. A rule that reads only the deal graph needs
+	// none: the subjects read itself proves the graph was reachable. The
+	// viability rule needs the mailbox: on a night it was not read, silence was
+	// not observed, and "nothing arrived" would mean "nothing was read".
 	Needs []string
 	Ask   func(asOf time.Time, s Subject, cfg Config) *Finding
 }
 
 // Config is what an installation decides rather than the product.
 type Config struct {
-	// SilentDays is how long a buyer may say nothing before it is worth
-	// asking about. There is no segment-aware threshold today, and pretending
-	// otherwise would be a setting nobody set.
-	SilentDays int
+	// ReceiptLifetime is how long a viability receipt stands before the next
+	// scheduled check should have replaced it. Zero makes every receipt stale
+	// at once, which the qualified forecast reads as unknown.
+	ReceiptLifetime time.Duration
 	// MaterialMinor is the amount below which a discrepancy is not worth a
 	// contact's morning.
 	MaterialMinor int64
@@ -149,7 +174,7 @@ type Config struct {
 
 // DefaultConfig is what an installation gets before it decides otherwise.
 func DefaultConfig() Config {
-	return Config{SilentDays: 90, MaterialMinor: 100_000, MaxClosePushes: 2}
+	return Config{MaterialMinor: 100_000, MaxClosePushes: 2}
 }
 
 // Rules are the questions the nightly pass asks, in a fixed order.
@@ -164,7 +189,7 @@ func Rules() []Rule {
 	return []Rule{
 		closePast(), closeUnconfirmed(), closePushed(),
 		amountVsOffer(), amountVsContract(),
-		noNextStep(), noEconomicBuyer(), buyerSilent(), commitUnpriced(),
+		noNextStep(), noEconomicBuyer(), dealViability(), commitUnpriced(),
 		stageExitUnmet(),
 	}
 }
@@ -302,31 +327,25 @@ func noEconomicBuyer() Rule {
 	}}
 }
 
-// The buyer has said nothing for a long time.
+// The customer no longer supports the deal, or a review of it is still open.
 //
-// INBOUND only. last_activity_at includes outbound mail, so a rep emailing a
-// silent prospect weekly keeps that column fresh while the buyer has not
-// answered in ninety days — and the deal looks alive to every screen reading
-// it. This rule reads the buyer's own side.
-func buyerSilent() Rule {
-	return Rule{Type: TypeBuyerSilent, Version: "v1", Needs: []string{"mail"}, Ask: func(asOf time.Time, s Subject, cfg Config) *Finding {
-		if s.LastInboundAt == nil {
-			// Nobody has ever heard from them. A different finding from
-			// silence after a conversation, and not one this rule claims: a
-			// deal created today has no inbound either.
-			return nil
-		}
-		silentFor := elapsed.Days(*s.LastInboundAt, asOf, asOf.Location())
-		if silentFor < cfg.SilentDays {
-			return nil
-		}
-		return &Finding{
-			Type: TypeBuyerSilent, SubjectID: s.DealID, Severity: SeverityMedium,
-			Claim:         map[string]any{"silent_days_threshold": cfg.SilentDays},
-			Observed:      map[string]any{"silent_days": silentFor},
-			AffectedMinor: s.AmountMinor, Currency: s.Currency,
-		}
-	}}
+// The deals module judged it (deals.AssessViability); this rule only turns a
+// review_required answer into a finding. Customer progress only: a rep mailing
+// a silent prospect weekly keeps last_activity_at fresh while the customer has
+// not answered, and the close date is no evidence either way.
+func dealViability() Rule {
+	return Rule{Type: TypeDealViability, Version: viability.PolicyVersion, Needs: []string{sourceMail},
+		Ask: func(_ time.Time, s Subject, _ Config) *Finding {
+			if s.Viability == nil || s.Viability.Outcome != viability.OutcomeReviewRequired {
+				return nil
+			}
+			return &Finding{
+				Type: TypeDealViability, SubjectID: s.DealID, Severity: SeverityHigh,
+				Claim:         map[string]any{"policy_version": viability.PolicyVersion},
+				Observed:      map[string]any{"reasons": s.Viability.Reasons, "silent_days": s.Viability.SilentDays},
+				AffectedMinor: s.AmountMinor, Currency: s.Currency,
+			}
+		}}
 }
 
 // A committed deal with no price on it. It is counted as eligible pipeline and

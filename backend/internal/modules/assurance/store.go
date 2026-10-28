@@ -78,6 +78,19 @@ const ExceptionSubjectDeparted = "subject_departed"
 // would strand its findings with nothing failing.
 const reopenableStatuses = `'` + ExceptionConditionCleared + `', '` + ExceptionSubjectDeparted + `'`
 
+// reopensSQL is the upsert's test that a re-detected finding starts a new
+// episode. A closing nobody answered reopens, as above. A REVIEW finding also
+// reopens after somebody resolved it, once no suppression is still running:
+// the deal was revived and then went silent again, and that is a new question.
+// Every other type keeps its resolution, which re-detection must not un-ask.
+const reopensSQL = `(assurance_exception.status IN (` + reopenableStatuses + `)
+	OR (assurance_exception.type = '` + TypeDealViability + `'
+	    AND assurance_exception.status = 'resolved'
+	    AND NOT EXISTS (SELECT 1 FROM assurance_resolution r
+	                     WHERE r.exception_id = assurance_exception.id
+	                       AND r.outcome IN ('` + OutcomeValueCorrect + `', '` + OutcomeNotRelevant + `')
+	                       AND r.expires_at > now())))`
+
 // Source coverage states.
 const (
 	CoverageChecked           = "checked"
@@ -214,21 +227,24 @@ func (s *Store) UpsertException(ctx context.Context, tx pgx.Tx, f Finding, owner
 		ON CONFLICT (logical_key) DO UPDATE
 		SET last_seen_at = now(),
 		    updated_at = now(),
-		    -- A row CLOSED WITHOUT AN ANSWER reopens on re-detection: the scan
-		    -- closed it because the condition left the record, or because the
-		    -- record left the eligible set, and neither is a decision anybody
-		    -- made. A deal that is restored or reopened is walked again, so its
-		    -- old finding is the same finding and not a second one. A resolved
-		    -- row does not reopen — somebody answered that one, and
-		    -- re-detection must not un-ask them.
-		    status = CASE WHEN assurance_exception.status IN (` + reopenableStatuses + `)
-		                  THEN 'open' ELSE assurance_exception.status END,
+		    -- A reopened row is a new episode, and its task link belongs to the
+		    -- old one: the new episode's review is delivered afresh. Every SET
+		    -- reads the row as it was, so all four test the same old status.
+		    episode = CASE WHEN ` + reopensSQL + ` THEN assurance_exception.episode + 1
+		                   ELSE assurance_exception.episode END,
+		    task_activity_id = CASE WHEN ` + reopensSQL + ` THEN NULL
+		                            ELSE assurance_exception.task_activity_id END,
+		    status = CASE WHEN ` + reopensSQL + ` THEN 'open' ELSE assurance_exception.status END,
+		    -- The deal's owner tonight, not the one it had when first raised: a
+		    -- review of a deal that changed hands belongs to the new owner.
+		    owner_id = CASE WHEN assurance_exception.status = 'open' OR ` + reopensSQL + `
+		                    THEN EXCLUDED.owner_id ELSE assurance_exception.owner_id END,
 		    -- Only while it is still somebody's problem. A resolved row keeps
 		    -- the value it was resolved against, which is what lets a later
 		    -- scan tell "still true" from "changed since you answered".
-		    observed = CASE WHEN assurance_exception.status IN ('open', ` + reopenableStatuses + `)
+		    observed = CASE WHEN assurance_exception.status = 'open' OR ` + reopensSQL + `
 		                    THEN EXCLUDED.observed ELSE assurance_exception.observed END,
-		    severity = CASE WHEN assurance_exception.status IN ('open', ` + reopenableStatuses + `)
+		    severity = CASE WHEN assurance_exception.status = 'open' OR ` + reopensSQL + `
 		                    THEN EXCLUDED.severity ELSE assurance_exception.severity END`
 	if _, err := tx.Exec(ctx, query, args...); err != nil {
 		return fmt.Errorf("assurance: recording the finding: %w", err)

@@ -162,7 +162,7 @@ func (w *assuranceRunWorker) Work(ctx context.Context, job *river.Job[AssuranceR
 // that stopped changing.
 func (w *assuranceSweepWorker) check(ctx context.Context, ws ids.UUID, requestedBy *string) error {
 	store := assurance.NewStore(InstallationDB(w.pool))
-	scanner := assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, assurance.DefaultConfig()).WithSignalSubjects(AssuranceSignalSubjects)
+	scanner := assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, AssuranceConfig()).WithSignalSubjects(AssuranceSignalSubjects)
 	result, err := scanner.Scan(ctx, w.now(), requestedBy)
 	if err != nil {
 		return err
@@ -178,6 +178,7 @@ func (w *assuranceSweepWorker) check(ctx context.Context, ws ids.UUID, requested
 		bundles:    store,
 		activities: w.activities,
 		exceptions: bundleableFindings,
+		now:        w.now,
 	}, result.RunID)
 	if bundleErr != nil {
 		w.log.ErrorContext(ctx, "the findings were recorded but not bundled into tasks",
