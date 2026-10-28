@@ -6,7 +6,7 @@ package compose
 // What is waiting for one digest reader, counted the way the surfaces that
 // serve those queues count it.
 //
-// The numbers name records whose visibility is per-reader: a duplicate pair is
+// Both numbers name records whose visibility is per-reader: a duplicate pair is
 // shown only to someone who can open BOTH sides, and a staged proposal only to
 // someone who could decide it. The digest used to count each with a raw
 // workspace-wide subquery and write the same number into every reader's

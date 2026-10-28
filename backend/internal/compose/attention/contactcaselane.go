@@ -4,8 +4,8 @@
 package attention
 
 // Groups of contacts that may be duplicates. Contact pairs reach the queue as
-// these cases, never one pair at a time, and a case is raised for each live
-// owner of a member: it sits in every one of their own queues.
+// these cases, never one pair at a time. Each live owner of a member sees the
+// case in their own queue.
 
 import (
 	"context"

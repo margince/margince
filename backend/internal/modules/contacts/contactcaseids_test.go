@@ -11,8 +11,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// A case decision that leaves out its survivor or owner is refused naming the
-// field, before any lookup can read the zero id as a contact nobody named.
+// A case decision that leaves out its survivor or owner is refused, naming the
+// field. No lookup reads the zero id as a contact nobody named.
 func TestEveryRequiredCaseBodyIDIsNamedWhenAbsent(t *testing.T) {
 	t.Parallel()
 	a, b := ids.NewV7(), ids.NewV7()

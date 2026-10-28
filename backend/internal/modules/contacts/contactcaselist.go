@@ -127,9 +127,9 @@ type caseOwnership struct {
 	live  bool
 }
 
-// caseScopeFilter answers whether a case belongs to the requested scope:
-// mine holds a member the recipient owns, the caller when none is named, and
-// unassigned holds no live owner.
+// caseScopeFilter answers whether a case belongs to the requested scope.
+// Mine holds a member the recipient owns; the recipient is the caller when
+// none is named. Unassigned holds no live owner.
 func caseScopeFilter(ctx context.Context, scope string, recipient ids.UUID) (func([]caseOwnership) bool, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok {

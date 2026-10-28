@@ -12,8 +12,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// The Company sort reads for a reader who may see employers and for one who
-// may read the edge but not the company, whose sort binds no argument at all.
+// The Company sort reads for a reader who may see employers. It also reads for
+// one who may read the edge but not the company; that sort binds no argument.
 func TestTheEmployerSortReadsWithAndWithoutAVisibleEmployer(t *testing.T) {
 	e := setupCapturePrivacy(t)
 	seedContacts(t, e, e.owner, 3)

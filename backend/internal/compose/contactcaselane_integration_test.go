@@ -13,8 +13,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// The queue's case read binds the named recipient in the store, and its count
-// agrees with its page; contact pairs leave the pair lane, counted or listed.
+// The queue's case read binds the named recipient in the store. Its count
+// agrees with its page. Contact pairs are neither listed nor counted as pairs.
 func TestTheQueueReadsEachOwnersCasesAndNoContactPair(t *testing.T) {
 	c := setupCases(t)
 	shared := c.seedCase(t, c.e.Rep1, c.e.Rep2)
