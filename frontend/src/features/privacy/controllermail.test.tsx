@@ -126,6 +126,9 @@ describe("the preview of a mail the installation sends for a rep", () => {
     expect(within(dialog).getByText(RELAY_FROM)).toBeVisible();
     expect(within(dialog).getByText("lena@kps.test")).toBeVisible();
     expect(dialog).toHaveTextContent(previewMarker("de"));
+    expect(
+      within(dialog).getByText(en["controllerMail.relayTitle"]),
+    ).toBeVisible();
     expect(within(dialog).getByText(en["controllerMail.relay"])).toBeVisible();
     expect(
       within(dialog).getByText("The installation’s mail language is Deutsch."),

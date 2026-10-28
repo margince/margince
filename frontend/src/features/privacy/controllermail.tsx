@@ -105,7 +105,9 @@ export function ControllerMailDialog({
       }
       error={send.isError ? problemMessageOf(send.error, t) : null}
     >
-      <Callout title={t("controllerMail.relay")} />
+      <Callout title={t("controllerMail.relayTitle")}>
+        <p>{t("controllerMail.relay")}</p>
+      </Callout>
       {preview.isError ? (
         <ErrorLine
           error={preview.error}

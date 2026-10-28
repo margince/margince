@@ -8889,6 +8889,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notice.sendConfirm": "Hinweis senden",
   "controllerMail.confirmTitle": "Bestätigungsanfrage senden?",
   "controllerMail.confirmSend": "Anfrage senden",
+  "controllerMail.relayTitle": "Versand durch die Installation",
   "controllerMail.relay":
     "Margince sendet dies von der Adresse der Installation, nicht aus deinem Postfach.",
   "controllerMail.language": "Sprache",

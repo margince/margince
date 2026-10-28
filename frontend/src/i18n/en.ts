@@ -8948,6 +8948,7 @@ export const en = {
   "notice.sendConfirm": "Send notice",
   "controllerMail.confirmTitle": "Send confirmation request?",
   "controllerMail.confirmSend": "Send request",
+  "controllerMail.relayTitle": "Sent from the installation",
   "controllerMail.relay":
     "Margince sends this from the installation’s address, not from your mailbox.",
   "controllerMail.language": "Language",

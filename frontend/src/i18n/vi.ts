@@ -8656,6 +8656,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notice.sendConfirm": "Gửi thông báo",
   "controllerMail.confirmTitle": "Gửi yêu cầu xác nhận?",
   "controllerMail.confirmSend": "Gửi yêu cầu",
+  "controllerMail.relayTitle": "Gửi từ bản cài đặt",
   "controllerMail.relay":
     "Margince gửi thư này từ địa chỉ của bản cài đặt, không phải từ hộp thư của bạn.",
   "controllerMail.language": "Ngôn ngữ",
