@@ -12,6 +12,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -45,8 +46,11 @@ func (o *owedEnv) accountOf(t *testing.T, name, address string) ids.CompanyID {
 func (o *owedEnv) shareMailbox(t *testing.T, seat ids.UUID) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(),
+		tag, err := tx.Exec(context.Background(),
 			`UPDATE capture_connection SET mail_posture = 'shared' WHERE user_id = $1`, seat)
+		if err == nil && tag.RowsAffected() != 1 {
+			return fmt.Errorf("%d mailboxes shared, want the seat's one", tag.RowsAffected())
+		}
 		return err
 	}); err != nil {
 		t.Fatalf("sharing the colleague's mailbox: %v", err)
@@ -81,8 +85,8 @@ func (o *owedEnv) whoseMove(t *testing.T, company ids.CompanyID) (string, bool, 
 
 func TestCompany360ReadsWhoseMoveByTheBadgesRules(t *testing.T) {
 	o := setupOwed(t)
-	o.shareMailbox(t, o.e.Rep2)
 	colleague := seatAddress(t, o.e, o.e.Rep2)
+	o.shareMailbox(t, o.e.Rep2)
 	fortnight := o.now.Add(-14 * 24 * time.Hour)
 
 	colleagues := o.accountOf(t, "Colleague Wrote GmbH", "pat@colleague.example")
@@ -150,9 +154,13 @@ func TestCompany360DoesNotReadTheMoveOfAMailTheReaderMayNotRead(t *testing.T) {
 		t.Fatalf("judging the private mail: %v", err)
 	}
 
+	// Read by its verdict, the informing mail would leave the strip active. The
+	// reader's strength does not count a mail they may not read at all.
 	state, advised, engagement := o.whoseMove(t, company)
-	if state != "waiting_on_us" || engagement != crmcontracts.ContactEngagementWaiting || advised {
-		t.Errorf("the reader saw strip %q, contact %q, advice %v; want the direction's waiting_on_us and "+
-			"waiting, as for any mail whose words they may not read", state, engagement, advised)
+	if state != "waiting_on_us" || advised {
+		t.Errorf("the strip reads %q with advice %v, want the direction's waiting_on_us and no advice", state, advised)
+	}
+	if engagement != crmcontracts.ContactEngagementUntried {
+		t.Errorf("the contact reads %q, want untried: the reader's strength holds none of the private mail", engagement)
 	}
 }
