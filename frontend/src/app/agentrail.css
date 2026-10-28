@@ -171,6 +171,29 @@
   --coreHalo: 0.08;
   flex: none;
 }
+/* A pale ring around the drawn ball sets it into the rail's violet floor. It
+   hugs the ball the shader paints, and scales with it, so the reduced and
+   collapsed orbs keep its weight. */
+.rail .arorb::before {
+  content: "";
+  position: absolute;
+  --arRing: calc(var(--coreSize) * 0.05);
+  inset: calc(
+    (var(--coreSize) - var(--coreGlass) * var(--coreBall)) /
+    2 -
+    3px -
+    var(--arRing)
+  );
+  border: var(--arRing) solid
+    color-mix(in srgb, var(--bgElevated) 65%, transparent);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  pointer-events: none;
+}
+/* The still dress fills the whole glass box, so there the ring keeps its edge. */
+.rail .arorb.core-still::before {
+  inset: calc((var(--coreSize) - var(--coreGlass)) / 2 - 3px - var(--arRing));
+}
 
 .arwords {
   position: relative;
@@ -524,6 +547,10 @@
        to bloom against, and the bloom is what makes the well read as lit from
        the inside rather than as a grey disc with a marble in it. */
     --coreHalo: 0.4;
+  }
+  /* The well's own border is the edge here; a ring inside it is a second one. */
+  .rail .arorb::before {
+    content: none;
   }
   /* The sheet is destinations and nothing else. The agent is a cell of the BAR,
      and the bar is not on screen while the sheet is: a row for it in a list of

@@ -39,6 +39,9 @@
   max-height: min(var(--coreCap), var(--coreSize));
   --coreSize: 230px;
   --coreGlass: 172px;
+  /* The share of the glass box the shader's ball fills (see `.core-progress`),
+     declared here so anything drawn around the ball reads the one value. */
+  --coreBall: 0.627;
   /* The state triple, idle's by default: a Core with no data-core-state
      renders as rest rather than as nothing. */
   --coreC1: var(--orbGlow);
@@ -399,10 +402,9 @@
    about 63% of the glass box — and the rest of the box is the halo's room. A
    ring drawn at the box's edge therefore floated a third of the ball's width
    away from it, which read as a separate dial rather than as the orb's own
-   progress. `--coreBall` is that share, and it is the shader's constant
-   restated rather than a tuning: move the camera and this moves with it. */
+   progress. `--coreBall` (on `.core`) is that share, and it is the shader's
+   constant restated rather than a tuning: move the camera and this moves with it. */
 .core-progress {
-  --coreBall: 0.627;
   --coreRingGap: 4px;
   position: absolute;
   inset: calc(

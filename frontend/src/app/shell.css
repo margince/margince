@@ -354,8 +354,17 @@
 .rail {
   /* Glass over the glow: the pane's translucent ground with the blur that lets
      the emerald light behind it show through as a tint rather than as a shape.
-     The two glows are the chrome (DESIGN.md §2) — there is no coloured bar. */
-  background: var(--pane);
+     The two glows are the chrome (DESIGN.md §2) — there is no coloured bar.
+     The lower half warms toward the orb's violet, so the agent's foot reads as
+     the column's own light rather than a ball set on a neutral floor. */
+  background:
+    linear-gradient(
+      to bottom,
+      transparent 45%,
+      color-mix(in srgb, var(--orbMid) 6%, transparent) 75%,
+      color-mix(in srgb, var(--orbMid) 14%, transparent)
+    ),
+    var(--pane);
   backdrop-filter: blur(20px);
   /* One hairline, on the side that separates it from the content. No radius and
      no shadow: the sidebar is not a card floating on the page, it is the page's
@@ -644,6 +653,10 @@
   display: flex;
   align-items: center;
   height: 32px; /* ds:ignore the destination row's height, spelled in `.rail .navitem` */
+  /* Body S at medium weight: a size under the rows, so the label steps back
+     without taking the meta ink below AA. */
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
   color: var(--textSecondary);
   padding: 0 var(--space-2);
   /* It is a label, not a place to go. Sitting in a column of links it inherited
@@ -732,26 +745,43 @@
   background: color-mix(in srgb, var(--bgInset) 50%, transparent);
   color: var(--textPrimary);
 }
-/* The current row is one more pane on the glass: the pane's ground with the
-   pane's hairline as an EDGE, which is what makes it a surface with a boundary
-   rather than a smudge, and quieter than hover's tint so the two states are
-   never the same gesture read twice.
-   A ground alone is colour-only (WCAG 1.4.1, Level A), so semibold weight
-   goes with it. All of it is neutral: the current row says where the reader
-   is, and the accent is for the action. The opaque inset ground rather than
-   the chip fill, because the row's caption ink does not clear AA on the chip. */
+/* The current row is raised off the glass: the elevated ground with a hairline
+   edge drawn on a layer over it, so the row keeps its box and nothing shifts when the
+   current page changes. A ground alone is colour-only (WCAG 1.4.1, Level A), so
+   medium weight goes with it, and the glyph takes the row's full ink. All of it
+   stays neutral: the current row says where the reader is, and the accent is
+   for the action. */
 .rail .navitem.active {
-  background: var(--bgInset);
+  background: var(--bgElevated);
+  box-shadow: var(--shadow-rest);
   color: var(--textPrimary);
   font-weight: var(--fontWeightMedium);
 }
+.rail .navitem.active::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--borderSubtle);
+  pointer-events: none;
+}
 /* One icon size in both states. Animating the glyph's box relayouts the whole
    sidebar every frame, and a resizing icon is the jitter — 18px reads correctly
-   beside a 13.5px label and alone on the 56px rail. */
+   beside a 13.5px label and alone on the 56px rail. A lighter stroke in the
+   meta ink lets the labels lead; hover gives the glyph the row's full ink. */
 .rail .navitem svg {
   width: 18px;
   height: 18px;
   flex: none;
+  stroke-width: 1.6;
+  color: var(--textSecondary);
+  transition: color var(--dur-state) var(--ease-in-out);
+}
+.rail .navitem:hover svg {
+  color: var(--textPrimary);
+}
+.rail .navitem.active svg {
+  color: var(--textPrimary);
 }
 /* The label fades instead of unmounting, so expanding and collapsing is one
    continuous movement. A name longer than the row wraps and the row grows. */
@@ -1324,6 +1354,8 @@
   .rail.expanded,
   .rail.collapsed {
     position: fixed;
+    /* Plain glass: the bar has no foot for the violet wash to lead into. */
+    background: var(--pane);
     /* The page gutter, the same inset the strip and the content column stand on:
        the bar is the third edge of the same layout, and at 8px it sat visibly
        outside the column it belongs to. */
@@ -1366,6 +1398,13 @@
   .rail .navitem.active {
     background: var(--bgInset);
     border-color: transparent;
+    box-shadow: none;
+  }
+  .rail .navitem.active::after {
+    content: none;
+  }
+  .rail .navitem.active svg {
+    color: inherit;
   }
   /* The layer the sheet sits on. It fades in rather than appearing, because the
      page under it does not move and an instant dim reads as a flash. */
