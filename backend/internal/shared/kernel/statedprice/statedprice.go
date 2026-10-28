@@ -5,9 +5,9 @@
 // that is not the deal's value.
 //
 // It flags, it never corrects. A wrong flag costs a reader one look at the
-// quote; a missed one is the status quo. So every doubt answers "no flag": no
-// deal value, several sums, a sum in another currency, or a sum the words mark
-// as only part of the price.
+// quote; a missed one is the status quo. So every doubt answers "no flag".
+// Doubts are: no deal value, several sums, a sum in another currency, or a sum
+// the words mark as only part of the price.
 package statedprice
 
 import (

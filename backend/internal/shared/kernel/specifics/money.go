@@ -68,7 +68,7 @@ func MoneyIn(text string) []Amount {
 }
 
 // moneyMajor reads a written sum as one plain decimal. Unlike a bare figure,
-// a sum is not ambiguous: no currency this reader names has three minor
+// a sum is not ambiguous. No currency this reader names has three minor
 // digits, so one separator before three final digits groups thousands.
 func moneyMajor(raw string) string {
 	digits := strings.Map(func(r rune) rune {

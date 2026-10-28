@@ -16,10 +16,10 @@ import {
 } from "../../../testing/story-utils";
 import { DealCommitmentsCard } from "./dealcommitments";
 
-// The deal's customer commitments as the server judged them: the speaker
-// named once, a past-due promise asking whether it happened, and a stated
-// total the server found to differ from the deal. The card decides none of
-// these itself, so a row the server did not mark is drawn unmarked.
+// The deal's customer commitments as the server judged them. The speaker is
+// named once, and a past-due promise asks whether it happened. A stated total
+// the server found to differ from the deal is marked. The card decides none
+// of these itself, so a row the server did not mark is drawn unmarked.
 
 afterEach(() => {
   cleanup();
