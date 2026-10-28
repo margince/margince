@@ -1802,7 +1802,7 @@ type Company struct {
 	DisplayName string           `json:"display_name"`
 	Domains     *[]CompanyDomain `json:"domains,omitempty"`
 
-	// Email The general address, such as info@. It never creates or matches a contact.
+	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
 	Email *string `json:"email,omitempty"`
 	Id    string  `json:"id"`
 
@@ -1858,7 +1858,7 @@ type Company struct {
 	// forward-compatible.
 	Partner *Partner `json:"partner,omitempty"`
 
-	// Phone The company's main number, E.164 as a contact's number is. Never a contact's own number.
+	// Phone The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number.
 	Phone *string                 `json:"phone,omitempty"`
 	Raw   *map[string]interface{} `json:"raw,omitempty"`
 

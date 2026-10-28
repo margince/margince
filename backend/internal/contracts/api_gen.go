@@ -32685,7 +32685,7 @@ type Company struct {
 	DisplayName string           `json:"display_name"`
 	Domains     *[]CompanyDomain `json:"domains,omitempty"`
 
-	// Email The general address, such as info@. It never creates or matches a contact.
+	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
 	Email *openapi_types.Email `json:"email,omitempty"`
 	Id    openapi_types.UUID   `json:"id"`
 
@@ -32741,7 +32741,7 @@ type Company struct {
 	// forward-compatible.
 	Partner *Partner `json:"partner,omitempty"`
 
-	// Phone The company's main number, E.164 as a contact's number is. Never a contact's own number.
+	// Phone The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number.
 	Phone *string                 `json:"phone,omitempty"`
 	Raw   *map[string]interface{} `json:"raw,omitempty"`
 
@@ -37450,7 +37450,7 @@ type CreateCompanyRequest struct {
 	DisplayName string                `json:"display_name"`
 	Domains     *[]CompanyDomainInput `json:"domains,omitempty"`
 
-	// Email The general address, such as info@. It never creates or matches a contact.
+	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
 	Email *openapi_types.Email `json:"email,omitempty"`
 
 	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
@@ -37459,7 +37459,7 @@ type CreateCompanyRequest struct {
 	OwnerId         *openapi_types.UUID `json:"owner_id,omitempty"`
 	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
 
-	// Phone The company's main number, E.164 as a contact's number is. Never a contact's own number.
+	// Phone The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number.
 	Phone    *string                       `json:"phone,omitempty"`
 	SizeBand *CreateCompanyRequestSizeBand `json:"size_band,omitempty"`
 	Source   string                        `json:"source"`
@@ -53907,7 +53907,7 @@ type UpdateCompanyRequest struct {
 	// Domains Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains.
 	Domains *[]CompanyDomainInput `json:"domains,omitempty"`
 
-	// Email The general address, such as info@. It never creates or matches a contact.
+	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
 	Email *openapi_types.Email `json:"email,omitempty"`
 
 	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
@@ -53922,7 +53922,7 @@ type UpdateCompanyRequest struct {
 	OwnerId         *openapi_types.UUID `json:"owner_id,omitempty"`
 	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
 
-	// Phone The company's main number, E.164 as a contact's number is. Never a contact's own number.
+	// Phone The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number.
 	Phone *string `json:"phone,omitempty"`
 
 	// RelationshipTypes Replace-set of what the company is to us (add new, archive removed), the same shape as `domains`. Absent = untouched; an empty array clears every type. Removing `partner` while the company still has a `partner` extension row is refused with 422 — the invariant binds both ways, and an invariant nothing enforces is a comment.
