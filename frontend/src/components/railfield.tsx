@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Pencil } from "lucide-react";
-import { type ReactNode, useRef, useState } from "react";
+import { type ReactNode, useCallback, useRef, useState } from "react";
 import { Button } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
 import { InlineChoice } from "../design-system/inlinechoice";
@@ -81,14 +81,23 @@ type FieldProps = Props & Readonly<{ field: CreateField }>;
 
 function useRailWrite(edit: RailEdit) {
   const opened = useRef(edit.record);
+  const [editing, setEditing] = useState(false);
   const [dirty, setDirty] = useState(false);
   useUnsavedGuard(dirty, "details");
   const { mutation, pending } = useRecordFieldWrite(edit.kind, edit.record);
-  const onEditingChange = (editing: boolean) => {
-    if (editing) opened.current = edit.record;
-    else setDirty(false);
-  };
-  return { opened, mutation, pending, setDirty, onEditingChange };
+  // The baseline is the record as the editor opened on it. A refetch while it
+  // is open must not move it, or the save overwrites a concurrent change.
+  const onEditingChange = useCallback(
+    (next: boolean) => {
+      if (next && !editing) opened.current = edit.record;
+      setEditing(next);
+      if (!next) setDirty(false);
+    },
+    [editing, edit.record],
+  );
+  // A save elsewhere on the record pauses this field, never its own open editor.
+  const canEdit = !pending || editing;
+  return { opened, mutation, canEdit, setDirty, onEditingChange };
 }
 
 function RailText({ edit, field, label, text, beside }: FieldProps) {
@@ -113,7 +122,7 @@ function RailText({ edit, field, label, text, beside }: FieldProps) {
         }
         maxLength={field.maxLength}
         step={field.step ?? (field.type === "number" ? "any" : undefined)}
-        canEdit={!write.pending}
+        canEdit={write.canEdit}
         onEditingChange={write.onEditingChange}
         onDirtyChange={write.setDirty}
         onSave={async (next) => {
@@ -131,22 +140,26 @@ function RailText({ edit, field, label, text, beside }: FieldProps) {
   );
 }
 
-function RailChoice({ edit, field, label, beside }: FieldProps) {
+function RailChoice({ edit, field, label, reading, beside }: FieldProps) {
   const t = useT();
   const write = useRailWrite(edit);
   const values = prefillFromRecord([field], edit.record);
+  const stored = values[field.key] ?? "";
   const options = selectOptions(field, values, t);
   return (
     <>
       <InlineChoice
         label={label}
         hideLabel
-        value={values[field.key] ?? ""}
+        value={stored}
         options={options}
         render={(value) =>
-          options.find((option) => option.value === value)?.label ?? value
+          // The stored value keeps the column's own reading, warnings included.
+          stored && value === stored
+            ? reading
+            : (options.find((option) => option.value === value)?.label ?? value)
         }
-        canEdit={!write.pending}
+        canEdit={write.canEdit}
         onEditingChange={write.onEditingChange}
         onDirtyChange={write.setDirty}
         onSave={async (next) => {

@@ -219,6 +219,8 @@ function aboutRows(facts: Facts, stages: readonly Stage[]): DetailRow[] {
   const moneyKeys = deal.arr_source_offer_id
     ? ["expected_arr", "currency"]
     : ["amount", "expected_arr", "currency"];
+  // An offer sets the ARR and currency, so the amount then changes alone.
+  const valueKeys = deal.arr_source_offer_id ? ["amount"] : moneyKeys;
   const dayText = (value: string | null | undefined) => day(value, facts) ?? "";
   const account: DetailRow =
     deal.company_id && !deal.masked_fields?.includes("company_id")
@@ -236,7 +238,7 @@ function aboutRows(facts: Facts, stages: readonly Stage[]): DetailRow[] {
       "deals.amount",
       money(deal.amount_minor, deal.currency, locale),
       "amount_minor",
-      { keys: moneyKeys },
+      { keys: valueKeys },
     ),
     row(
       "expected_arr",
@@ -255,7 +257,10 @@ function aboutRows(facts: Facts, stages: readonly Stage[]): DetailRow[] {
       "deal.standing.close",
       day(closeDayOf(deal), facts),
       "expected_close_date",
-      { keys: ["expected_close_date"], text: dayText(closeDayOf(deal)) },
+      // A closed deal shows the day it closed, which is not the forecast field.
+      deal.status === "won" || deal.status === "lost"
+        ? undefined
+        : { keys: ["expected_close_date"], text: dayText(closeDayOf(deal)) },
     ),
     row(
       "forecast",

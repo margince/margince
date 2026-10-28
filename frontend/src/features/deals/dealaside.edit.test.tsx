@@ -65,3 +65,26 @@ it("offers no change to a reader without the update grant", async () => {
   await screen.findByText("Value");
   expect(screen.queryByRole("button", { name: "Change Value" })).toBeNull();
 });
+
+it("changes an open deal's forecast close day and leaves a won deal's close day alone", async () => {
+  const open = { ...deal, expected_close_date: "2026-12-01" };
+  mount(["read", "update"], open);
+  expect(
+    await screen.findByRole("button", { name: /^Change Close/ }),
+  ).toBeTruthy();
+  cleanup();
+  mount(["read", "update"], {
+    ...open,
+    status: "won",
+    closed_at: "2026-10-01T00:00:00Z",
+  });
+  await screen.findByRole("button", { name: "Change Value" });
+  expect(screen.queryByRole("button", { name: /^Change Close/ })).toBeNull();
+});
+
+it("changes the amount of a deal whose ARR an offer set", async () => {
+  mount(["read", "update"], { ...deal, arr_source_offer_id: "o1" });
+  expect(
+    await screen.findByRole("button", { name: "Change Value" }),
+  ).toBeTruthy();
+});
