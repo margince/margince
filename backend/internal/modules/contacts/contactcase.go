@@ -73,9 +73,9 @@ func (c contactCase) member(id ids.UUID) (caseMember, bool) {
 	return c.Members[i], true
 }
 
-// revision changes whenever anything the merge's outcome rests on changes: a
-// member, its version, its owner and that owner's seat, a pair, a grant on a
-// member, or the policy. A decision refuses a stale one.
+// revision changes whenever an input of the merge's outcome changes. Those are
+// each member, its version, owner and owner's seat, each pair, each grant on a
+// member, and the policy. A decision refuses a stale one.
 func (c contactCase) revision(policy bool) string {
 	var b strings.Builder
 	for _, m := range c.Members {
@@ -243,8 +243,8 @@ func readCaseGrants(ctx context.Context, tx pgx.Tx, memberIDs []ids.UUID) ([]cas
 	rows, err := tx.Query(ctx, `
 		SELECT id, version, access, (expires_at IS NULL OR expires_at > now())
 		  FROM record_grant
-		 WHERE record_type = 'contact' AND record_id = ANY(@members)
-		 ORDER BY id`, pgx.NamedArgs{"members": memberIDs})
+		 WHERE record_type = 'contact' AND record_id = ANY(@shared)
+		 ORDER BY id`, pgx.NamedArgs{"shared": memberIDs})
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading the shares on the case members: %w", err)
 	}

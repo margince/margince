@@ -178,8 +178,8 @@ func (s *Store) decideContactCaseTx(ctx context.Context, tx pgx.Tx, contactID id
 }
 
 // lockMergingContacts takes the stop locks of contacts about to merge in one
-// call, then holds each live one in id order: the order every contact merge
-// keeps, before any pair row. A contact already gone is left to the caller's
+// call, then holds each live one in id order. Every contact merge keeps this
+// order, before any pair row. A contact already gone is left to the caller's
 // own check. selected is sorted.
 func (s *Store) lockMergingContacts(ctx context.Context, tx pgx.Tx, selected []ids.UUID) error {
 	subjects := make([]commsauthz.StopSubject, 0, len(selected))

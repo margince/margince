@@ -5,9 +5,9 @@
 
 package compose
 
-// What a case read tells each reader: where a merged contact went, and which
-// pairs this reader may merge one by one, who owns a share of it, and which
-// members a large case shows.
+// What a case read tells each reader. It says where a merged contact went and
+// which pairs this reader may merge one by one. It names who owns a share of
+// the case, and which members a large case shows.
 
 import (
 	"context"

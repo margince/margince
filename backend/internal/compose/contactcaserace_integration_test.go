@@ -41,8 +41,8 @@ func (c *caseEnv) raceBehindABarrier(t *testing.T, members []ids.UUID, first, se
 	return [2]error{<-results[0], <-results[1]}
 }
 
-// oneMergeWon fails unless exactly one merge committed and the other was
-// refused for the merge already made.
+// oneMergeWon fails unless one merge committed and the other was refused for
+// the merge already made.
 func oneMergeWon(t *testing.T, errs [2]error) {
 	t.Helper()
 	committed := 0
