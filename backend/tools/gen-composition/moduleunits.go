@@ -134,13 +134,14 @@ func isCorePackage(importPath string) bool {
 }
 
 // listPackages asks the go command, inside the installation's module, where
-// each imported package is. It downloads what the cache lacks.
+// each imported package is. It downloads what the cache lacks and, like
+// `go get`, records the checked sums in the installation's go.sum.
 func listPackages(instanceDir string, imports []string) ([]listedPackage, error) {
 	goBin, err := goBinary()
 	if err != nil {
 		return nil, err
 	}
-	cmd := exec.Command(goBin, append([]string{"list", "-find", "-json"}, imports...)...) // #nosec G204 -- GOROOT/bin/go; the arguments are import paths parsed from Go source
+	cmd := exec.Command(goBin, append([]string{"list", "-mod=mod", "-find", "-json"}, imports...)...) // #nosec G204 -- GOROOT/bin/go; the arguments are import paths parsed from Go source
 	cmd.Dir = instanceDir
 	cmd.Env = append(os.Environ(), "GOWORK=off")
 	var stderr bytes.Buffer
