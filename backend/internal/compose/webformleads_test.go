@@ -14,7 +14,7 @@ import (
 // lines Margince itself wrote.
 func unquotedLines(note string) []string {
 	var out []string
-	for _, l := range strings.Split(note, "\n") {
+	for l := range strings.SplitSeq(note, "\n") {
 		if l != "" && !strings.HasPrefix(l, ">") {
 			out = append(out, l)
 		}
