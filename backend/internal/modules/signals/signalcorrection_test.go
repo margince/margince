@@ -11,8 +11,8 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-// The edit request reaches the store with the kind and the evidence next to
-// the fields it already carried, so a correction is not dropped on the way.
+// The edit request reaches the store with its kind and evidence. A correction
+// is not dropped on the way.
 func TestUpdateInputCarriesKindAndEvidence(t *testing.T) {
 	kind := crmcontracts.UpdateSignalRequestKindRisk
 	evidence := []crmcontracts.SignalEvidence{{Snippet: "the buyer asked to pause"}}

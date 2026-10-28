@@ -103,8 +103,8 @@ func (h Handlers) GetSignal(w http.ResponseWriter, r *http.Request, id crmcontra
 	httperr.WriteJSON(w, http.StatusOK, sig)
 }
 
-// updateInput carries every field of the request, so an edit of the kind or
-// the evidence reaches the store the same way a status change does.
+// updateInput carries every field of the request to the store. An edit of
+// the kind or the evidence travels the way a status change does.
 func updateInput(req crmcontracts.UpdateSignalRequest, ifVersion *int64) UpdateSignalInput {
 	return UpdateSignalInput{
 		Status:    (*string)(req.Status),
