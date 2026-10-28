@@ -110,8 +110,9 @@ func (t attentionTasks) OpenForViewer(
 }
 
 // listOpenTasks reads one window of open tasks with each statement's generic
-// plan reused. The window spells its partial-index predicate as literals, so
-// the plan needs none of the bound values (database.ReuseGenericPlans).
+// plan reused (database.ReuseGenericPlans). The window spells its partial-index
+// predicate as literals and caps with a literal LIMIT. The uncapped count beside
+// it does not opt in: its row count follows the assignee it is bound to.
 func (t attentionTasks) listOpenTasks(ctx context.Context, in activities.ListActivitiesInput) ([]crmcontracts.Activity, error) {
 	var rows []crmcontracts.Activity
 	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {

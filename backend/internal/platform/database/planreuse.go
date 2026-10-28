@@ -3,17 +3,10 @@
 
 package database
 
-// Plan reuse for a statement that plans slowly and runs fast.
-//
-// Row-scope clauses make some list statements slow to plan and fast to run: on
-// the daily bench the worklist's task lists planned for about 50 ms and ran in
-// under one. Postgres keeps planning such a statement at every execution,
-// because its generic plan looks costlier than a custom one.
-//
-// Reuse is opt-in per call. A generic plan cannot see a bound value, so it
-// cannot prove a partial index's predicate from `status = $1`. A statement may
-// opt in only when every partial-index predicate it relies on is spelled as a
-// literal, and its plan does not depend on a skewed parameter.
+// Plan reuse for a statement that plans slowly and runs fast. Row-scope clauses
+// make such a statement, and Postgres plans it at every execution because its
+// generic plan looks costlier. Reuse is opt-in: a generic plan cannot see a
+// bound value, so it cannot use a partial index whose predicate is `status = $1`.
 
 import (
 	"context"
@@ -23,10 +16,10 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// ReuseGenericPlans runs fn with every statement it issues on the ambient
-// snapshot reusing that statement's generic plan, and then restores the mode
-// the snapshot had, so a nested call leaves the outer one in force. With no ambient snapshot it only runs fn: a statement in a
-// transaction of its own is planned once anyway.
+// ReuseGenericPlans runs fn with each statement on the ambient snapshot reusing
+// its generic plan, then restores the snapshot's mode. A caller opts in only
+// when its statements spell every partial-index predicate as a literal. With no
+// ambient snapshot it only runs fn.
 func ReuseGenericPlans(ctx context.Context, fn func(context.Context) error) error {
 	tx, ok := snapshotOf(ctx)
 	if !ok || tx == nil {

@@ -17,9 +17,9 @@ import (
 // attentionAwaiting binds the follow-up lane to the activities module's own
 // gated read, and names each row's message so the composer can draft from it.
 //
-// Both scans reuse their generic plans (database.ReuseGenericPlans): each
-// spells its kind, direction and meeting status as literals, and caps its
-// rows with a literal LIMIT, so the plan needs none of the bound values.
+// Both scans reuse their generic plans (database.ReuseGenericPlans). Each spells
+// its kind, direction and meeting status as literals, so its partial indexes
+// hold without the bound values. Each caps with a literal LIMIT.
 type attentionAwaiting struct {
 	store *activities.Store
 }

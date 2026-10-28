@@ -388,13 +388,7 @@ func (t attentionTasks) CountOpenForViewer(
 	}
 	// The reminders the page lists ahead of the day are counted with it.
 	in.OrRemindersDue = scope == attention.TasksMine
-	var total int
-	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
-		var err error
-		total, err = t.store.CountActivities(ctx, in)
-		return err
-	})
-	return total, err
+	return t.store.CountActivities(ctx, in)
 }
 
 // attentionPins reads the acting reader's own pinned rows.
