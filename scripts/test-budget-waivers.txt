@@ -9,3 +9,4 @@
 # spare. A package measured just under the budget is one noisy run from being
 # over it, and dropping its ceiling there fails the next run.
 560 github.com/margince/margince/backend/gates
+360 github.com/margince/margince/backend/internal/compose
