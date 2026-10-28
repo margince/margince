@@ -9,6 +9,7 @@ import (
 	"slices"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type (
@@ -32,6 +33,13 @@ func WithContactCaseAdmission(ctx context.Context, members, grantees []ids.UUID)
 func admittedCaseMember(ctx context.Context, table string, id ids.UUID) bool {
 	admission, ok := ctx.Value(contactCaseKey{}).(contactCaseAdmission)
 	return ok && table == "contact" && slices.Contains(admission.members, id)
+}
+
+// admittedCaseMemberFor is admittedCaseMember for one of several principals a
+// batch admits: the admission is the acting principal's, never a colleague's.
+func admittedCaseMemberFor(ctx context.Context, p principal.Principal, table string, id ids.UUID) bool {
+	actor, ok := principal.Actor(ctx)
+	return ok && actor.ID == p.ID && admittedCaseMember(ctx, table, id)
 }
 
 func admittedCaseGrantee(ctx context.Context, dest ids.UUID) bool {
