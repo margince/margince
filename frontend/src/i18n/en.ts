@@ -17509,6 +17509,8 @@ export const en = {
   "magic.by.agent": "An agent",
   "magic.by.system": "Margince",
   "magic.by.data_correction": "Data correction",
+  "magic.by.person": "{name}",
+  "magic.by.colleague": "A colleague",
   "magic.failingSince": "Failing since {when}",
   "magic.noRecord": "No record named",
   "magic.undo.action": "Undo",

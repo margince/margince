@@ -87,7 +87,7 @@ export const MAGIC_WHY_KEYS = [
   "magic.why.retention",
 ] as const satisfies readonly MessageKey[];
 
-/** Every name `/magic` can give the job that acted. */
+/** Every name `/magic` or Done for you can give whoever acted. */
 export const MAGIC_BY_KEYS = [
   "magic.by.retention",
   "magic.by.mail_filing",
@@ -103,6 +103,8 @@ export const MAGIC_BY_KEYS = [
   "magic.by.agent",
   "magic.by.system",
   "magic.by.data_correction",
+  "magic.by.person",
+  "magic.by.colleague",
 ] as const satisfies readonly MessageKey[];
 
 /** Every consequence `/magic` can send for a line. */

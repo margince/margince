@@ -17618,6 +17618,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.by.agent": "Ein Agent",
   "magic.by.system": "Margince",
   "magic.by.data_correction": "Datenkorrektur",
+  "magic.by.person": "{name}",
+  "magic.by.colleague": "Ein Kollege oder eine Kollegin",
   "magic.failingSince": "Fehlerhaft seit {when}",
   "magic.noRecord": "Kein Datensatz genannt",
   "magic.undo.action": "Rückgängig",

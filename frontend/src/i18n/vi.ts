@@ -17168,6 +17168,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.by.agent": "Một trợ lý AI",
   "magic.by.system": "Margince",
   "magic.by.data_correction": "Hiệu chỉnh dữ liệu",
+  "magic.by.person": "{name}",
+  "magic.by.colleague": "Một đồng nghiệp",
   "magic.failingSince": "Bị lỗi từ {when}",
   "magic.noRecord": "Không nêu hồ sơ nào",
   "magic.undo.action": "Hoàn tác",
