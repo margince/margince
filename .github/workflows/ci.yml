@@ -248,6 +248,7 @@ jobs:
               # or edits a fragment skips this job entirely, which is a lane
               # skipping generation and passing silently: exactly the failure
               # mode the composed lane exists to catch.
+              - 'instance/**'
               - 'extensions/**'
               - 'fixtures/**'
               - 'composition/**'
@@ -291,6 +292,7 @@ jobs:
               - 'docker-compose.dev.yml'
               # live-boot boots COMPOSED (ADR-0120): the enabled extension
               # tree and the composition inputs shape the binary under test.
+              - 'instance/**'
               - 'extensions/**'
               - 'fixtures/**'
               - 'composition/**'
