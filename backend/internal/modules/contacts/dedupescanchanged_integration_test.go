@@ -96,6 +96,28 @@ func TestTheFirstNightlyScanReadsEverythingAndTheNextOnlyWhatChanged(t *testing.
 	}
 }
 
+// A pass short of time stops before its next batch. It leaves the rest to the
+// next run, so its job's deadline never cancels a batch.
+func TestANightlyScanShortOfTimeLeavesTheRestToTheNextRun(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	e.seedPreRuleDuplicates(ctx, t)
+	ageAllScannedRows(t)
+
+	short, cancel := context.WithTimeout(e.asScan(), dedupeRunReserve/2)
+	defer cancel()
+	got, err := e.store.ScanChangedForDuplicates(short)
+	if err != nil {
+		t.Fatalf("a pass short of time: %v", err)
+	}
+	if !got.Stopped || got.Examined != 0 || got.Filed != 0 {
+		t.Fatalf("a pass short of time = %+v, want it stopped before reading anything", got)
+	}
+	if got := e.scanChanged(t); got.Stopped || got.Filed != 3 {
+		t.Errorf("the next pass = %+v, want the 3 pairs the stopped pass left", got)
+	}
+}
+
 // A write's updated_at is its transaction's start, so it can commit behind
 // a pass that has already read past that time.
 func TestTheNightlyScanFindsAWriteThatCommittedBehindItsWatermark(t *testing.T) {
