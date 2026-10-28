@@ -16,9 +16,10 @@
 // their props and nothing else, and folding this in as a `variant` would put
 // two unrelated layouts behind one name for the sake of one shared signature.
 
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import { useT } from "../i18n";
 import { OptionCount } from "./atoms";
+import { type ClippedEdges, useClippedEdges } from "./scrollregion";
 import "./recordtabs.css";
 
 // What every strip carries, whatever it chooses between.
@@ -97,6 +98,8 @@ export function RecordTabs<Option extends string>({
 }: RecordTabsCommon<Option> &
   (RecordTabsChoice<Option> | RecordTabsLone<Option>)) {
   const t = useT();
+  const stripRef = useRef<HTMLFieldSetElement>(null);
+  const edges = useClippedEdges(stripRef);
 
   return (
     <div className="recordtabs">
@@ -107,7 +110,8 @@ export function RecordTabs<Option extends string>({
             A group of pressable buttons is what they are — and, where the
             record has one body, a group holding the label that names it. */}
         <fieldset
-          className="recordtabs-strip"
+          ref={stripRef}
+          className={stripClass(edges)}
           aria-label={label ?? t("record.tabs")}
         >
           {options.map((option) => {
@@ -148,4 +152,16 @@ export function RecordTabs<Option extends string>({
       </div>
     </div>
   );
+}
+
+// A scrolled-off end fades, so a tab cut at the edge reads as one of more
+// rather than as the last; the strip's scrollbar is hidden.
+function stripClass(edges: ClippedEdges) {
+  return [
+    "recordtabs-strip",
+    edges.start ? "is-clipped-start" : "",
+    edges.end ? "is-clipped-end" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 }

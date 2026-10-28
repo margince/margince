@@ -129,3 +129,34 @@ export const WithTrailingControl: Story = {
     />
   ),
 };
+
+// Analytics' own tabs at 390px: more than the phone holds. The strip scrolls
+// rather than wraps, so its far end fades over the cut tab to say more follow,
+// and the start, with nothing scrolled past it yet, does not.
+export const ScrollsAtPhoneWidth: Story = {
+  tags: ["uat-phone"],
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  render: () => (
+    <RecordTabs
+      label="Analytics"
+      options={["performance", "outcomes", "delivery", "pipeline", "team"]}
+      value="performance"
+      onChange={() => undefined}
+      labels={{
+        performance: "Performance",
+        outcomes: "My outcomes",
+        delivery: "Delivery",
+        pipeline: "Pipeline",
+        team: "Team",
+      }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const strip = canvasElement.querySelector(".recordtabs-strip");
+    if (!(strip instanceof HTMLElement)) throw new Error("no tab strip drawn");
+    await expect(strip.scrollWidth).toBeGreaterThan(strip.clientWidth);
+    await expect(strip).toHaveClass("is-clipped-end");
+    await expect(strip).not.toHaveClass("is-clipped-start");
+  },
+};
