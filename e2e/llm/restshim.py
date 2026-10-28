@@ -82,6 +82,16 @@ def read_skill_file(root, path, start, end, find=None):
     return f"{path} lines {first}-{last} of {len(lines)}\n{text}", False
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Answers a redirect as the redirect it is, so the passport goes only where the lane sent it."""
+
+    def redirect_request(self, *_args, **_kwargs):
+        return None
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect)
+
+
 def _whole(value, default):
     """A line number as a whole number, or the default for anything else."""
     try:
@@ -110,16 +120,16 @@ def call_api(base, token, method, path, body):
         "Authorization": f"Bearer {token}", "Content-Type": "application/json", "Accept": "application/json",
     })
     try:
-        with urllib.request.urlopen(request, timeout=60) as reply:
-            status, raw = reply.status, reply.read()
+        with _OPENER.open(request, timeout=60) as reply:
+            status, raw = reply.status, reply.read(MAX_BYTES + 1)
     except urllib.error.HTTPError as err:
-        status, raw = err.code, err.read()
+        status, raw = err.code, err.read(MAX_BYTES + 1)
     except (urllib.error.URLError, OSError) as err:
         return f"the stack could not be reached: {err}", True
     text = raw.decode("utf-8", "replace")
     if len(text) > MAX_BYTES:
         text = text[:MAX_BYTES] + "\n[cut]"
-    return f"HTTP {status}\n{text}", status >= 400
+    return f"HTTP {status}\n{text}", status >= 300
 
 
 def run_tool(name, arguments, root, base, token):

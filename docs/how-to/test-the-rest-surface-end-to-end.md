@@ -32,11 +32,13 @@ tools and nothing else. `e2e/llm/restshim.py` serves them.
 
 The scenarios name agent verbs, so each `http` call is read as the verb its operation declares
 in the contract. `e2e/llm/rest_ops.json` is that table, and the Go tests derive it from the contract.
-A verb that MCP lists behind a router is read as the router call. So `must_call` and
-`must_call_with` mean the same in both modes.
+A verb that MCP lists behind a router is read as the call to that router. So `must_call` holds the same in
+both modes, and so does a `must_call_with` on the argument that picks the action, such as `change_tags.action=remove`.
 
-The path and query parameters of a call become its arguments, and they keep the names of the
-path. A `must_call_with` that names an argument by its MCP name may not hold in REST mode.
+The path, query and body parameters of a call become its arguments. Two names change to the
+MCP names: `entity_type` becomes `record_type` and `entity_id` becomes `record_id`. Every other parameter keeps
+the name the REST route gives it. A `must_call_with` on one of those, such as `tag_id`, can then fail
+in REST mode when the assistant did the right thing. Read the transcript first.
 
 ## The verdicts
 

@@ -19,7 +19,13 @@ class _Api(BaseHTTPRequestHandler):
         _Api.seen.append((self.command, self.path, self.headers.get("Authorization"), self.rfile.read(length)))
         status = 404 if self.path.startswith("/v1/missing") else 200
         body = json.dumps({"path": self.path}).encode()
+        if self.path.startswith("/v1/moved"):
+            status = 301
+        if self.path.startswith("/v1/big"):
+            body = b"x" * (restshim.MAX_BYTES * 3)
         self.send_response(status)
+        if status == 301:
+            self.send_header("Location", "/v1/elsewhere")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -119,6 +125,18 @@ class ShimTest(unittest.TestCase):
         self.assertTrue(self.call("skill_file", {"path": "INDEX.md", "start_line": "first"})[0].startswith("INDEX.md lines 1-"))
         message = {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "http", "arguments": "oops"}}
         self.assertTrue(restshim.handle(message, self.root.name, self.base, "tok")["result"]["isError"])
+
+    def test_a_redirect_is_answered_and_not_followed_with_the_passport(self):
+        text, failed = self.call("http", {"method": "GET", "path": "/moved"})
+        self.assertTrue(failed)
+        self.assertTrue(text.startswith("HTTP 301"))
+        self.assertEqual([seen[1] for seen in _Api.seen], ["/v1/moved"])
+
+    def test_a_large_answer_is_cut_at_the_bound(self):
+        text, failed = self.call("http", {"method": "GET", "path": "/big"})
+        self.assertFalse(failed)
+        self.assertLessEqual(len(text), restshim.MAX_BYTES + 40)
+        self.assertTrue(text.endswith("[cut]"))
 
     def test_a_path_without_a_slash_is_refused_before_any_request(self):
         _text, failed = self.call("http", {"method": "GET", "path": "contacts"})
