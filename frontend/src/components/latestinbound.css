@@ -1,0 +1,110 @@
+/* "Just in": the newest unanswered thing they sent. The panel leads a record's
+   Overview in the accent tone; the line is the same item in the record's head,
+   for the tabs that do not draw the panel. */
+
+.latest-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.latest-title svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+.latest-when {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+
+.latest-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  min-inline-size: 0;
+}
+.latest-sender {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+.latest-subject {
+  margin: 0;
+  font: var(--fontHeadingSmall);
+  color: var(--textPrimary);
+  overflow-wrap: anywhere;
+}
+.latest-excerpt {
+  margin: 0;
+  font: var(--fontBody);
+  color: var(--textSecondary);
+  max-inline-size: 72ch;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+/* A form's note is the visitor's message over one answer per line, so the
+   lines are kept and a few more of them shown. */
+.latest-form {
+  white-space: pre-line;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+}
+
+.latest-line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  inline-size: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--accentMed);
+  border-radius: var(--r-sm);
+  background: var(--accentLight);
+  color: var(--textPrimary);
+  font: var(--fontBody);
+  text-align: start;
+  cursor: pointer;
+}
+.latest-line:hover {
+  border-color: var(--accentText);
+}
+.latest-line:focus-visible {
+  outline: var(--focus-ring);
+}
+.latest-line-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 24px;
+  block-size: 24px;
+  border-radius: 50%;
+  corner-shape: round;
+  background: var(--pane);
+  color: var(--accentText);
+}
+.latest-line-mark svg {
+  inline-size: 14px;
+  block-size: 14px;
+}
+.latest-line-text {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+.latest-line-kind {
+  font: var(--fontBodySmall);
+  color: var(--accentText);
+}
+.latest-line-kind .latest-when {
+  color: inherit;
+}
+.latest-line-subject {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

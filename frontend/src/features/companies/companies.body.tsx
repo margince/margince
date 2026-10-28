@@ -6,6 +6,7 @@ import { liveProjects } from "../../design-system/projectpicker";
 import type { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import type { CompanyTab } from "../../lib/companytab";
+import type { LatestInbound } from "../../lib/latestinbound";
 import { useRecordZone } from "../../lib/recordzone";
 import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { ComposeModal } from "../mail/compose";
@@ -15,6 +16,7 @@ import { PartnerTab } from "../projects/partners";
 import { openCitation } from "../records/record360";
 import type { Company, Company360View } from "./companies";
 import type { useCitedReceipt } from "./companies.chronology";
+import { CompanyLatestInbound } from "./companies.chronology";
 import { CompanyOverviewStack } from "./companies.overview";
 import { CompanyProfileTab } from "./companies.profile";
 import { CompanyDealsAndTasksTabs } from "./companies.tabs";
@@ -96,6 +98,7 @@ export function CompanyRecordBody({
   taskUpdate,
   onOpenHistory,
   refusedReasonId,
+  latest,
 }: Readonly<{
   company: Company;
   view?: Company360View;
@@ -123,6 +126,7 @@ export function CompanyRecordBody({
   // The page's one sentence about why this account takes no changes, by id,
   // for the profile tab's relationship edges.
   refusedReasonId?: string;
+  latest?: LatestInbound;
 }>) {
   // The anchor the composer is drawn from, kept after `composing` clears. The
   // drawer stays mounted to animate out, and dropping the anchor on close would
@@ -150,6 +154,7 @@ export function CompanyRecordBody({
       {tab === "overview" && (
         <div className="record-stack">
           {failed && <EmptyState>{t("co.partial")}</EmptyState>}
+          <CompanyLatestInbound latest={latest} companyId={company.id} />
           {/* What the rep must act on comes before what only reports state. It
               is built from sections the page already read: open tasks, the
               calendar, what changed since the last visit, and the suggestions.

@@ -10,6 +10,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import type { components } from "../../../api/schema";
+import { LatestInboundPanel } from "../../../components/latestinbound";
 import { Panel, PanelBody } from "../../../design-system/panel";
 import {
   useRecordTimeline,
@@ -19,6 +20,7 @@ import { GroupedTimelineList } from "../../../design-system/timeline";
 import { TimelineFilterBar } from "../../../design-system/timelinefilterbar";
 import { groupChronology } from "../../../design-system/timelinegroups";
 import { useLocale, useT } from "../../../i18n";
+import type { LatestInbound } from "../../../lib/latestinbound";
 import { invalidateRecord } from "../../../lib/recordwritekeys";
 import { useRecordZone } from "../../../lib/recordzone";
 import { RecordHistoryTab } from "../../records/history";
@@ -30,7 +32,10 @@ import {
   useChronologyFilter,
   useRecordChronology,
 } from "../../records/recordchronology";
-import { TimelineActions } from "../../records/timelineactions";
+import {
+  RowAnswerActions,
+  TimelineActions,
+} from "../../records/timelineactions";
 import { StartDeliveryPrompt } from "../dealproject";
 import { OutcomeReviewPanel } from "./outcomereview";
 
@@ -142,5 +147,27 @@ export function DealHistoryTab({
         </PanelBody>
       </Panel>
     </>
+  );
+}
+
+/**
+ * The newest unanswered thing anyone on the deal sent, leading the Overview
+ * with the verbs its History row has.
+ */
+export function DealLatestInbound({
+  latest,
+  dealId,
+}: Readonly<{ latest: LatestInbound | undefined; dealId: string }>) {
+  return (
+    <LatestInboundPanel
+      latest={latest}
+      actions={(activity) => (
+        <RowAnswerActions
+          activity={activity}
+          entityType="deal"
+          entityId={dealId}
+        />
+      )}
+    />
   );
 }
