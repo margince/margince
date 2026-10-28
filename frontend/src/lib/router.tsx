@@ -1,6 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { noteHistoryEntry } from "./historydepth";
 import { publishRecordAddress, restoreRecordAddress } from "./recordaddress";
+import { addressedAPathWeDoNotServe } from "./servedpath";
 import { hashWithParams, type UrlParams } from "./urlstate";
 // The screen union binds navigation and dispatch to the same route names.
 export const SCREENS = [
@@ -469,5 +470,7 @@ export function useRoute(): Route {
       );
     }
   }, [hash]);
-  return parseHash(hash);
+  return addressedAPathWeDoNotServe()
+    ? { screen: "not-found" }
+    : parseHash(hash);
 }
