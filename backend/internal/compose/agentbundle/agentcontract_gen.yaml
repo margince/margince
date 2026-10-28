@@ -9306,6 +9306,7 @@ components:
       properties:
         name: {type: string, description: 'The mapping target: a core field, or a custom field''s `cf_` key.'}
         label: {type: string, description: 'A custom field''s label. Absent for a core column.'}
+        field_label: {type: string, description: 'What the mapping step calls the field the column is mapped onto, in the caller''s language. Present for a core column.'}
         description: {type: string, description: 'What goes in the column.'}
         example: {type: string, description: 'An example value, or several separated by " · ".'}
         required_on_new_row: {type: boolean, description: 'Whether a row that creates a record needs this column filled.'}

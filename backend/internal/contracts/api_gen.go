@@ -41872,6 +41872,9 @@ type ImportFormatColumn struct {
 	// Example An example value, or several separated by " · ".
 	Example string `json:"example"`
 
+	// FieldLabel What the mapping step calls the field the column is mapped onto, in the caller's language. Present for a core column.
+	FieldLabel *string `json:"field_label,omitempty"`
+
 	// Label A custom field's label. Absent for a core column.
 	Label *string `json:"label,omitempty"`
 
