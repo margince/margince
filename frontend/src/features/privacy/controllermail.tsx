@@ -30,7 +30,6 @@ const COPY = {
 } as const;
 
 // The exact mail the installation's relay would send, sent only on the confirm.
-// Every door to the privacy notice and the confirmation request opens this.
 export function ControllerMailDialog({
   contactId,
   kind,

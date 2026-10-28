@@ -3,7 +3,12 @@ import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { ProvenanceTag } from "./provenance";
-import { provenanceOf, withControllerSend, withCreator } from "./provenanceof";
+import {
+  provenanceOf,
+  relayMemberFor,
+  withControllerSend,
+  withCreator,
+} from "./provenanceof";
 
 afterEach(() => {
   cleanup();
@@ -407,5 +412,14 @@ describe("withControllerSend", () => {
     const human = provenanceOf(`human:${REP}`, REP);
     expect(withControllerSend(human, null, REP)).toBe(human);
     expect(withControllerSend(human, undefined, REP)).toBe(human);
+  });
+});
+
+describe("relayMemberFor", () => {
+  it("says the reader only when the member is the reader, and guesses never", () => {
+    expect(relayMemberFor("u-1", "u-1")).toBe("self");
+    expect(relayMemberFor("u-1", "u-2")).toBe("colleague");
+    expect(relayMemberFor(undefined, "u-1")).toBe("unknown");
+    expect(relayMemberFor("u-1", undefined)).toBe("unknown");
   });
 });

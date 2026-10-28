@@ -250,8 +250,8 @@ button.evidence-chip:hover {
   transition-duration: var(--dur-tap);
 }
 
-/* A relay send's tag and its From address: one unit that wraps in a narrow
-   column, so the badge truncates inside it rather than past the row's edge. */
+/* A relay send's tag and its From line wrap as one unit in a narrow column,
+   so neither runs past the row's edge. */
 .provenance-relay {
   display: inline-flex;
   flex-wrap: wrap;

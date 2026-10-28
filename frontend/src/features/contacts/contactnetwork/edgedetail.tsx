@@ -14,7 +14,7 @@ import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { Badge, Button, Card } from "../../../design-system/atoms";
 import { ErrorLine } from "../../../design-system/errorline";
-import type { RelaySend } from "../../../design-system/trust";
+import { relayMemberFor } from "../../../design-system/provenanceof";
 import { formatNumber } from "../../../format/format";
 import { type Translator, useLocale, useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
@@ -94,7 +94,7 @@ export function EdgeDetail({
             {receipts.length > 0 ? (
               <ReceiptList
                 receipts={receipts}
-                relayMember={relayMemberOf(memberId, viewerId)}
+                relayMember={relayMemberFor(memberId, viewerId)}
                 onOpenEmail={onOpenEmail}
               />
             ) : (
@@ -166,16 +166,6 @@ function RecordWorksWith({
       )}
     </p>
   );
-}
-
-function relayMemberOf(
-  memberId: string | null | undefined,
-  viewerId: string | undefined,
-): RelaySend["member"] {
-  if (!memberId || viewerId === undefined) {
-    return "unknown";
-  }
-  return memberId === viewerId ? "self" : "colleague";
 }
 
 function nameFor(

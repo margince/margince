@@ -123,7 +123,8 @@ export function withControllerSend(
   if (!send) {
     return provenance;
   }
-  return relayProvenance(send, relayMember(provenance, viewerUserId));
+  const member = provenance.kind === "human" ? provenance.userId : undefined;
+  return relayProvenance(send, relayMemberFor(member, viewerUserId));
 }
 
 /** The relay arm for a caller that knows the member another way. */
@@ -134,14 +135,15 @@ export function relayProvenance(
   return { kind: "system", relay: { member, fromAddress: send.from_address } };
 }
 
-function relayMember(
-  provenance: Provenance,
-  viewerUserId: string | undefined,
+/** Whom a relay send was for: the reader only when the member is the reader. */
+export function relayMemberFor(
+  memberId: string | null | undefined,
+  viewerId: string | undefined,
 ): RelaySend["member"] {
-  if (provenance.kind !== "human" || !provenance.userId || !viewerUserId) {
+  if (!memberId || !viewerId) {
     return "unknown";
   }
-  return provenance.self ? "self" : "colleague";
+  return memberId === viewerId ? "self" : "colleague";
 }
 
 // What an `agent:<rest>` principal is called on screen. A passport uuid names

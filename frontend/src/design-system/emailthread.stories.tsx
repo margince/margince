@@ -114,7 +114,7 @@ const RELAYED: EmailPresentation = {
     counterparty: "Ana Sommer",
     delivery: { state: "pending" },
   },
-  body: "Wir haben personenbezogene Daten von Ihnen gespeichert.\n\n[Link]",
+  body: "Wir haben personenbezogene Daten von Ihnen gespeichert.\n\n[Persönlicher Link, nur an den Kontakt gesendet]",
   from: [
     {
       address: "lars@margince.example",

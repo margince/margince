@@ -11,7 +11,7 @@ import { translatePlural, useLocale, useT } from "../i18n";
 import { ENTITY } from "../lib/entity";
 import { routeHash } from "../lib/router";
 import { FileChip } from "./filechip";
-import { withControllerSend } from "./provenanceof";
+import { relayMemberFor, relayProvenance } from "./provenanceof";
 import type { Provenance } from "./trust";
 import "./emaildetail.css";
 
@@ -177,13 +177,7 @@ export function relaySendOf(
     return null;
   }
   const member = presentation.from.find((party) => party.user_id)?.user_id;
-  return withControllerSend(
-    member
-      ? { kind: "human", self: member === viewerUserId, userId: member }
-      : { kind: "unknown" },
-    send,
-    viewerUserId,
-  );
+  return relayProvenance(send, relayMemberFor(member, viewerUserId));
 }
 
 /**

@@ -26,6 +26,7 @@ import {
   mailPreview,
   NO_ADDRESS_PROBLEM,
   NO_MAIL_LANE_PROBLEM,
+  previewMarker,
   RELAY_FROM,
 } from "./controllermail.fixtures";
 
@@ -124,7 +125,7 @@ describe("the preview of a mail the installation sends for a rep", () => {
     ).toBeVisible();
     expect(within(dialog).getByText(RELAY_FROM)).toBeVisible();
     expect(within(dialog).getByText("lena@kps.test")).toBeVisible();
-    expect(within(dialog).getByText(/\[Link\]/)).toBeVisible();
+    expect(dialog).toHaveTextContent(previewMarker("de"));
     expect(within(dialog).getByText(en["controllerMail.relay"])).toBeVisible();
     expect(
       within(dialog).getByText("The installation’s mail language is Deutsch."),
