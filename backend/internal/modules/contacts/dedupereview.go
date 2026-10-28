@@ -5,9 +5,9 @@ package contacts
 
 // The review lanes' answer: every contact a lane paired the candidate with,
 // never only the first. Detection, the writers that file pairs and the nightly
-// re-check ask the same pair predicates (contactNamesCollide and
-// addressVariantPair). So the re-check keeps a filed pair until its evidence is
-// gone.
+// re-check ask the same pair predicates (contactNamesCollide,
+// addressVariantPair and linkedInProfilesMatch). So the re-check keeps a filed
+// pair until its evidence is gone.
 
 import (
 	"cmp"

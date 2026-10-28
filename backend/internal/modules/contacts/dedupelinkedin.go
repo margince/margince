@@ -5,7 +5,7 @@ package contacts
 
 // The LinkedIn lane. Two live contacts holding one LinkedIn profile are likely
 // one human, whatever their addresses and names say. It is a review lane and
-// never a key, because a pasted profile can be the wrong one: the write stands
+// never a key, because a pasted profile can be the wrong one. The write stands
 // and the pair goes on the review queue.
 
 import (

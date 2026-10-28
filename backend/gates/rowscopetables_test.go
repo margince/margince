@@ -601,5 +601,10 @@ const (
 	// The data task runs as the system principal over the workspace. A unique id
 	// goes only into promoteLeadTx, which locks both records and rechecks the
 	// promotion; several ids leave the lead untouched. No id reaches a caller.
-	modulesTierUnscopedCeiling = 144
+	//
+	// 145: contacts.fileLinkedInTwins finds every live contact holding the
+	// LinkedIn profile a write just set. The lane searches the whole workspace
+	// by design, as the address-variant lane does. The ids become review rows
+	// inside the write, and none is returned to its caller.
+	modulesTierUnscopedCeiling = 145
 )
