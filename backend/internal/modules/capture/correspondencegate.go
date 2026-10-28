@@ -62,9 +62,8 @@ func correspondencePositiveTx(ctx context.Context, tx pgx.Tx, email string) (boo
 	if normalizeEmail(email) == "" {
 		return false, nil
 	}
-	// Every spelling a stored counterparty_email may hold. The column keeps the
-	// address as its header spelled it, lowercased, so one logical address is
-	// stored under its unicode or its punycode domain depending on the message.
+	// Every spelling a stored counterparty_email may hold: the column keeps the
+	// address as its header spelled it, so one address has two stored forms.
 	return correspondedBeforeTx(ctx, tx, storedSpellings(email), time.Time{})
 }
 

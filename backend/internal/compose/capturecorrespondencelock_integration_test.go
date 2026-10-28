@@ -92,10 +92,10 @@ func TestTheCorrespondenceGuardAndAnAttestedSendSerializeOnOneKey(t *testing.T) 
 
 // The guard and the send meet on one key whichever spelling each carries.
 //
-// counterparty_email keeps the address as its header spelled it, so a verdict
+// counterparty_email keeps the address as its header spelled it. So a verdict
 // can read the unicode form while the send that would flip the answer carries
 // the punycode. Unfolded, the two took different keys and serialized on
-// nothing, which is the same stale archive this pair exists to prevent.
+// nothing, which is the stale archive this pair exists to prevent.
 func TestTheCorrespondenceKeyIsOneKeyForBothSpellingsOfADomain(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)

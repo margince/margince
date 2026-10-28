@@ -59,8 +59,8 @@ const lockKeyOwner = "internal/platform/mailidentity/mailidentity.go"
 //
 // The lock serializes a verdict that archives a sender's mail against the
 // insert proving the workspace writes to them. correspondence is tier 0 and
-// cannot fold IDNA, so its key alone gave two spellings of one domain two
-// keys, and the pair serialized on nothing while looking like code that did.
+// cannot fold IDNA. Its key alone gave two spellings of one domain two keys,
+// so the pair serialized on nothing while looking like code that did.
 func TestOnlyMailIdentitySpellsTheCorrespondenceLockKey(t *testing.T) {
 	t.Parallel()
 	const call = "correspondence.LockIdentity("
@@ -91,7 +91,7 @@ func TestOnlyMailIdentitySpellsTheCorrespondenceLockKey(t *testing.T) {
 			t.Fatalf("walking %s: %v", root, err)
 		}
 	}
-	// A walk that read nothing passes exactly like a clean tree.
+	// A walk that read nothing passes as a clean tree does.
 	if judged < 500 {
 		t.Fatalf("the census read only %d Go files, so it covered almost nothing", judged)
 	}
