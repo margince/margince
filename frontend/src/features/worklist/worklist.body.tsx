@@ -40,6 +40,7 @@ import {
 } from "./worklist.queue";
 import { QueueBand } from "./worklist.queuebands";
 import { WorklistReadings } from "./worklist.readings";
+import { OptionalRelationships } from "./worklist.relationships";
 import { rowIdentity } from "./worklist.rowidentity";
 import { DayUnread, dayPartlyRead } from "./worklist.unread";
 import { LoadMoreOfTheDay, WalkNotice } from "./worklist.walknotice";
@@ -341,6 +342,7 @@ export function WorklistBody({
           also the only panel here that asks for nothing. The receipt is why the
           acts above it are safe to take, and a receipt folded shut is one
           nobody checks. */}
+          <OptionalRelationships day={day} owner={owner} />
           <HandledForYouPanel />
         </div>
       </div>

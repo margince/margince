@@ -3,6 +3,11 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "worklist.relationships.optional": "Optional reconnections",
+  "worklist.relationships.optionalDetail":
+    "Silence alone is not work. Pin a contact to choose them for your day, or create a task on their record.",
+  "worklist.relationships.more":
+    "More optional contacts are outside this view.",
   "webhooks.event.signal.updated.label": "Alert owner changed",
   "webhooks.event.signal.updated.when":
     "When an alert moves to the surviving member during a duplicate merge.",

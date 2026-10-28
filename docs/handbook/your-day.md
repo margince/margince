@@ -29,8 +29,7 @@ To make your Worklist fill the window in Margince, press **Expand** at the top o
 3. This browser keeps the size you chose, from any way you open the Worklist. On a phone the panel
    always fills the screen.
 
-On a big screen the panel stops before its rows get too long to read. Also called: full screen, big
-worklist, wide view.
+On a big screen the panel stops before its rows get too long to read. Also called: full screen, big worklist, wide view.
 
 ### How do I snooze something on my worklist?
 To snooze a Worklist item in Margince, press **More actions** at the end of its row and choose
@@ -44,13 +43,14 @@ To snooze a Worklist item in Margince, press **More actions** at the end of its 
 A snooze changes your list only. A reply that came in before you snoozed does not end it. Also called: remind me later, postpone, hide for now.
 
 ### How do I pin an item to the top of my worklist?
-To pin a Worklist item in Margince, press **More actions** on its row and choose **Pin**. It moves to
-the top of your Worklist.
+To pin a Worklist item in Margince, press **More actions** on its row and choose **Pin**. It moves to the top of your Worklist.
 1. Open **Home** → **Show Worklist**.
 2. Press **More actions** at the end of the row and choose **Pin**. Choose **Unpin** there to put
    it back in its ranked place.
 
 A pin changes the order of your own list only, and changes nothing for colleagues; how urgent it is stays the same. You hold at most 50 pins: a newer one takes the place of your oldest. If it fails: "Item was not pinned. Retry." Also called: star, flag, keep on top.
+
+Quiet contacts under **Optional reconnections** stay outside work counts. An open deal alone does not make them work. Pin a contact to choose them for your day, or create a task on their record.
 
 ### Why is a task at the top of my worklist?
 A task leads your Worklist and the **First** card on **Home** when you hold it and its reminder time has come. The row says "your reminder is due". With browser notifications allowed, the browser also shows the task once while Margince is open in a tab. Press the notification to open the task on **Home**. Press **Done** when the work is finished, or move the task with **Snooze 1 day** or **Move to**. Moving the date ends a reminder whose time has passed.

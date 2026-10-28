@@ -14,6 +14,11 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
+  "worklist.relationships.optional": "Kết nối lại tùy chọn",
+  "worklist.relationships.optionalDetail":
+    "Im lặng không tự tạo công việc. Ghim một liên hệ vào ngày làm việc hoặc tạo nhiệm vụ trong hồ sơ của họ.",
+  "worklist.relationships.more":
+    "Còn các liên hệ tùy chọn khác ngoài chế độ xem này.",
   "webhooks.event.signal.updated.label": "Đổi thành viên phụ trách cảnh báo",
   "webhooks.event.signal.updated.when":
     "Khi cảnh báo được chuyển sang thành viên giữ lại lúc gộp tài khoản trùng.",
