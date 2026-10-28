@@ -71,7 +71,6 @@ func agentDraftsFixture(t *testing.T) agentDrafts {
 	}
 	registry := agents.NewRegistry(nil, auth.NewGate(seats))
 	agents.RegisterReportDraftTool(registry, reportDrafter(f.env.Pool))
-	agents.RegisterRouters(registry)
 	return agentDrafts{draftsFixture: f, registry: registry, seats: seats}
 }
 

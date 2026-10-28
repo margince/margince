@@ -27,9 +27,11 @@ type ReportDraftRequest struct {
 // screen uses, so the tool and the screen accept the same selections.
 type ReportDrafter func(context.Context, ReportDraftRequest) (crmcontracts.ReportingReport, error)
 
-// RegisterReportDraftTool adds draft_report, which change_reports fronts.
+// RegisterReportDraftTool adds draft_report and change_reports, the router
+// that fronts it.
 func RegisterReportDraftTool(registry *Registry, draft ReportDrafter) {
 	registry.Register(draftReport{draft: draft})
+	registry.Register(changeReports{})
 }
 
 type draftReport struct{ draft ReportDrafter }
