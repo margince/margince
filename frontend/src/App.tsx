@@ -38,6 +38,7 @@ import {
 import { NextTaskHost } from "./features/worklist/worklist.nexttask";
 import { useLocale } from "./i18n";
 import { useInstallationDescribed } from "./lib/installationcompany";
+import { markJourney } from "./lib/journeymarks";
 import { RecordZoneProvider, useConfiguredRecordZone } from "./lib/recordzone";
 import { SPA_RELEASE } from "./lib/release";
 import { navigateReplacing, type Screen } from "./lib/router";
@@ -170,6 +171,7 @@ function AuthedApp({
     if (me.data) {
       hadSession.current = true;
       setNotice(null);
+      markJourney("session");
       return;
     }
     if (
@@ -226,6 +228,14 @@ function AuthedApp({
 
   const { refusal, confinement } = useProbeAnswer(me);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const gatesPending =
+    companyPending || recordZone.pending || progress.pending;
+  const shellReady = authed && !gatesPending;
+  useEffect(() => {
+    if (shellReady) {
+      markJourney("gates");
+    }
+  }, [shellReady]);
   const commands = useBuiltinCommands();
   usePaletteHotkey(paletteOpen, setPaletteOpen);
   useTaskReminderNotifications(authed);
@@ -291,7 +301,7 @@ function AuthedApp({
   // The progress and rollout reads join the splash for the same reason the
   // company read does: a shell painted before they answer is a landing page the
   // gate then pulls away from under the reader.
-  if (companyPending || recordZone.pending || progress.pending) {
+  if (gatesPending) {
     return (
       <RaillessFrame>
         <AuthSplash />

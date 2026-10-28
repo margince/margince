@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useState } from "react";
 import { PageAsideToggle } from "../../components/pageaside";
 import { useTaskUpdate } from "../../components/taskactions";
 import { Modal } from "../../design-system/atoms";
@@ -12,6 +12,7 @@ import { PageZones } from "../../design-system/pagezones";
 import { greetingNameOf } from "../../format/greetingname";
 import { useNow } from "../../format/now";
 import { useT } from "../../i18n";
+import { markJourney } from "../../lib/journeymarks";
 import { isReviewableReceipt } from "../../lib/receiptreview";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
@@ -202,6 +203,15 @@ function PersonalMorning({
     : query.isError && !day
       ? "failed"
       : "ready";
+  // Useful: the day's work is on screen, rows or a confirmed empty day.
+  // Complete: the brief and the handled receipts beside it have answered too.
+  const settled = !brief.isPending && !handled.isPending;
+  useEffect(() => {
+    if (state === "failed") markJourney("home:failed");
+    if (state !== "ready" || !day) return;
+    markJourney("home:useful");
+    if (settled) markJourney("home:complete");
+  }, [state, day, settled]);
   return (
     <>
       {/* The brief and the work it names in one column; beside it, the
