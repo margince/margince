@@ -15,26 +15,46 @@ import (
 // Each change as the contacts lane builds it. A move names what it left, and
 // a departure names its value as both the current and the previous one.
 var technicalChangesTheLaneBuilds = map[string]contacts.TechnicalChange{
-	"mail moved": {Field: contacts.FactMailProvider, Kind: contacts.TechnicalMoved,
-		Value: "Microsoft 365", ValueKey: "microsoft365", Previous: "Own mail server", PreviousKey: techprofile.MailSelfHosted},
-	"mail set": {Field: contacts.FactMailProvider, Kind: contacts.TechnicalAppeared,
-		Value: "Another provider", ValueKey: techprofile.MailOther},
-	"mail gone": {Field: contacts.FactMailProvider, Kind: contacts.TechnicalGone,
-		Value: "Google Workspace", ValueKey: "google", Previous: "Google Workspace", PreviousKey: "google"},
-	"service new": {Field: contacts.FactOperatedService, Kind: contacts.TechnicalAppeared,
-		Value: "Careers page", ValueKey: techprofile.ServiceCareers},
-	"service gone": {Field: contacts.FactOperatedService, Kind: contacts.TechnicalGone,
-		Value: "Webshop", ValueKey: techprofile.ServiceWebshop, Previous: "Webshop", PreviousKey: techprofile.ServiceWebshop},
-	"hosting moved": {Field: contacts.FactHostingProvider, Kind: contacts.TechnicalMoved,
-		Value: "Hetzner", ValueKey: "hetzner", Previous: "AWS", PreviousKey: "aws"},
-	"hosting set": {Field: contacts.FactHostingProvider, Kind: contacts.TechnicalAppeared,
-		Value: "Hetzner", ValueKey: "hetzner"},
-	"hosting gone": {Field: contacts.FactHostingProvider, Kind: contacts.TechnicalGone,
-		Value: "AWS", ValueKey: "aws", Previous: "AWS", PreviousKey: "aws"},
-	"technology new": {Field: contacts.FactTechnology, Kind: contacts.TechnicalAppeared,
-		Value: "nginx", ValueKey: "nginx"},
-	"technology gone": {Field: contacts.FactTechnology, Kind: contacts.TechnicalGone,
-		Value: "WordPress", ValueKey: "wordpress", Previous: "WordPress", PreviousKey: "wordpress"},
+	"mail moved": {
+		Field: contacts.FactMailProvider, Kind: contacts.TechnicalMoved,
+		Value: "Microsoft 365", ValueKey: "microsoft365", Previous: "Own mail server", PreviousKey: techprofile.MailSelfHosted,
+	},
+	"mail set": {
+		Field: contacts.FactMailProvider, Kind: contacts.TechnicalAppeared,
+		Value: "Another provider", ValueKey: techprofile.MailOther,
+	},
+	"mail gone": {
+		Field: contacts.FactMailProvider, Kind: contacts.TechnicalGone,
+		Value: "Google Workspace", ValueKey: "google", Previous: "Google Workspace", PreviousKey: "google",
+	},
+	"service new": {
+		Field: contacts.FactOperatedService, Kind: contacts.TechnicalAppeared,
+		Value: "Careers page", ValueKey: techprofile.ServiceCareers,
+	},
+	"service gone": {
+		Field: contacts.FactOperatedService, Kind: contacts.TechnicalGone,
+		Value: "Webshop", ValueKey: techprofile.ServiceWebshop, Previous: "Webshop", PreviousKey: techprofile.ServiceWebshop,
+	},
+	"hosting moved": {
+		Field: contacts.FactHostingProvider, Kind: contacts.TechnicalMoved,
+		Value: "Hetzner", ValueKey: "hetzner", Previous: "AWS", PreviousKey: "aws",
+	},
+	"hosting set": {
+		Field: contacts.FactHostingProvider, Kind: contacts.TechnicalAppeared,
+		Value: "Hetzner", ValueKey: "hetzner",
+	},
+	"hosting gone": {
+		Field: contacts.FactHostingProvider, Kind: contacts.TechnicalGone,
+		Value: "AWS", ValueKey: "aws", Previous: "AWS", PreviousKey: "aws",
+	},
+	"technology new": {
+		Field: contacts.FactTechnology, Kind: contacts.TechnicalAppeared,
+		Value: "nginx", ValueKey: "nginx",
+	},
+	"technology gone": {
+		Field: contacts.FactTechnology, Kind: contacts.TechnicalGone,
+		Value: "WordPress", ValueKey: "wordpress", Previous: "WordPress", PreviousKey: "wordpress",
+	},
 }
 
 // The reader words the stored parts through the writer's own function, so in
@@ -89,8 +109,10 @@ func TestASignalReadsItsPartsInAnotherLanguage(t *testing.T) {
 	for _, c := range []struct {
 		kind, params, want string
 	}{
-		{kindTechnicalChange, `{"field":"mail_provider","kind":"moved","value":"Microsoft 365","value_key":"microsoft365","previous":"Own mail server","previous_key":"self_hosted"}`,
-			"Mail hiện chạy trên Microsoft 365 (trước đây là máy chủ mail riêng)"},
+		{
+			kindTechnicalChange, `{"field":"mail_provider","kind":"moved","value":"Microsoft 365","value_key":"microsoft365","previous":"Own mail server","previous_key":"self_hosted"}`,
+			"Mail hiện chạy trên Microsoft 365 (trước đây là máy chủ mail riêng)",
+		},
 		{kindGhostedThread, `{"days":14}`, "Chúng ta đã viết cách đây ít nhất 14 ngày và chưa ai trả lời."},
 		{kindProjectGoneQuiet, `{"project":"ERP rollout","days":30}`, "Không có gì được lưu cho ERP rollout trong ít nhất 30 ngày."},
 	} {

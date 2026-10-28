@@ -45,7 +45,7 @@ func TestATechnicalChangeReadsInEachReadersLanguage(t *testing.T) {
 		textlang.German:     "Setzt jetzt nginx ein",
 		textlang.Vietnamese: "Hiện đang dùng nginx",
 	} {
-		if got := readSummary(t, e, readerIn(t, e, signalSeat(), lang), company, kindTechnicalChange); got != want {
+		if got := readSummary(readerIn(t, e, signalSeat(), lang), t, e, company, kindTechnicalChange); got != want {
 			t.Errorf("a %s reader reads %q, want %q", lang, got, want)
 		}
 	}
@@ -56,7 +56,7 @@ func TestTheAccountStripStatesTheWorstSignalInTheReadersLanguage(t *testing.T) {
 	company := e.SeedCompany(t, "Strip Co", nil)
 	startsUsingNginx(t, e, company)
 
-	if got := stripSummary(t, e, readerIn(t, e, signalSeat(), textlang.Vietnamese), company); got != "Hiện đang dùng nginx" {
+	if got := stripSummary(readerIn(t, e, signalSeat(), textlang.Vietnamese), t, e, company); got != "Hiện đang dùng nginx" {
 		t.Errorf("the strip states %q to a Vietnamese reader, want the Vietnamese sentence", got)
 	}
 }
@@ -75,10 +75,10 @@ func TestAReaderWhoChoseNoLanguageReadsTheInstallationsLanguage(t *testing.T) {
 		},
 		RowScope: principal.RowScopeAll,
 	}, "")
-	if got := readSummary(t, e, narrow, company, kindTechnicalChange); got != "Setzt jetzt nginx ein" {
+	if got := readSummary(narrow, t, e, company, kindTechnicalChange); got != "Setzt jetzt nginx ein" {
 		t.Errorf("the list reads %q, want the stored German sentence", got)
 	}
-	if got := stripSummary(t, e, readerIn(t, e, signalSeat(), ""), company); got != "Setzt jetzt nginx ein" {
+	if got := stripSummary(readerIn(t, e, signalSeat(), ""), t, e, company); got != "Setzt jetzt nginx ein" {
 		t.Errorf("the strip states %q, want the stored German sentence", got)
 	}
 }
@@ -130,7 +130,7 @@ func TestAGhostedThreadReadsInTheReadersLanguage(t *testing.T) {
 		textlang.German:     "Wir haben vor mindestens 14 Tagen geschrieben und niemand hat geantwortet.",
 		textlang.Vietnamese: "Chúng ta đã viết cách đây ít nhất 14 ngày và chưa ai trả lời.",
 	} {
-		if got := readSummary(t, e, readerIn(t, e, signalSeat(), lang), company, kindGhostedThread); got != want {
+		if got := readSummary(readerIn(t, e, signalSeat(), lang), t, e, company, kindGhostedThread); got != want {
 			t.Errorf("a %s reader reads %q, want %q", lang, got, want)
 		}
 	}
@@ -160,7 +160,7 @@ func TestAQuietProjectReadsInTheReadersLanguage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got := readSummary(t, e, readerIn(t, e, signalSeat(), textlang.Vietnamese), company, kindProjectGoneQuiet)
+	got := readSummary(readerIn(t, e, signalSeat(), textlang.Vietnamese), t, e, company, kindProjectGoneQuiet)
 	if want := "Không có gì được lưu cho ERP rollout trong ít nhất 30 ngày."; got != want {
 		t.Errorf("a Vietnamese reader reads %q, want %q", got, want)
 	}
@@ -178,7 +178,7 @@ func TestASignalWithoutPartsReadsAsItWasStored(t *testing.T) {
 		t.Fatalf("filing the signal: %v", err)
 	}
 
-	if got := readSummary(t, e, readerIn(t, e, signalSeat(), textlang.Vietnamese), company, kindTechnicalChange); got != "Now uses nginx" {
+	if got := readSummary(readerIn(t, e, signalSeat(), textlang.Vietnamese), t, e, company, kindTechnicalChange); got != "Now uses nginx" {
 		t.Errorf("a Vietnamese reader reads %q, want the stored sentence", got)
 	}
 }
@@ -223,7 +223,7 @@ func readerIn(t *testing.T, e *integration.Env, perms principal.Permissions, lan
 
 // readSummary reads the account's one signal of this kind through the list and
 // the single read, which must agree.
-func readSummary(t *testing.T, e *integration.Env, reader context.Context, company ids.UUID, kind string) string {
+func readSummary(reader context.Context, t *testing.T, e *integration.Env, company ids.UUID, kind string) string {
 	t.Helper()
 	store := signals.NewStore(e.DB(), nil).WithSummaryWords(signalSummaryWords)
 	listed, _, err := store.ListSignals(reader, signals.ListSignalsInput{CompanyID: &company, Kind: &kind})
@@ -243,7 +243,7 @@ func readSummary(t *testing.T, e *integration.Env, reader context.Context, compa
 	return listed[0].Summary
 }
 
-func stripSummary(t *testing.T, e *integration.Env, reader context.Context, company ids.UUID) string {
+func stripSummary(reader context.Context, t *testing.T, e *integration.Env, company ids.UUID) string {
 	t.Helper()
 	now := time.Date(2026, 9, 2, 9, 0, 0, 0, time.UTC)
 	service := company360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects,
