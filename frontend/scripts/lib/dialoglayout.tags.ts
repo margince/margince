@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 import {
+  bindingOf,
   classVariants,
   declarationOf,
   type Given,
@@ -145,20 +146,17 @@ function handedThrough(x: ts.Expression): ts.Identifier | undefined {
   return first && ts.isIdentifier(first) ? first : undefined;
 }
 
-// What an alias names, read from the scope it sits in.
+// What an alias names, read from the scope it sits in. A name alone reads the
+// file's top level: for `const Glyph = Icon` in a component taking an `Icon`
+// prop, that is a top-level `Icon`, not the prop.
 //
-// `declarations` keeps one entry per name for a whole file, nested scopes
-// included. Following a name alone answered whichever declaration came first
-// in the text: for `const Glyph = Icon` in a component taking an `Icon` prop,
-// a top-level `Icon`.
-//
-// A name its own scope does not declare is an import, still followable, or a
-// binding this walk cannot enter and answers nothing for.
+// A name the file never binds is an import, still followable. A parameter or a
+// destructured name is a binding this walk cannot enter, and answers nothing.
 function alias(name: ts.Identifier, hops: number): ts.Node | undefined {
   const scoped = declarationOf(name);
   if (!scoped) {
     const source = name.getSourceFile();
-    return bindings(source).has(name.text)
+    return !bindingOf(name) && bindings(source).has(name.text)
       ? follow(source, name.text, hops)
       : undefined;
   }
@@ -207,8 +205,20 @@ export const definedName = (def: ts.Node) =>
 export const keyOf = (def: ts.Node) =>
   `${def.getSourceFile().fileName}#${definedName(def)}`;
 
-export const defOf = (n: ts.Node) =>
-  upper(n) ? definition(n.getSourceFile(), tag(n)) : undefined;
+export const defOf = (n: ts.Node) => {
+  const name = opening(n)?.tagName;
+  if (!upper(n) || !name) return undefined;
+  return ts.isIdentifier(name)
+    ? definitionOf(name)
+    : definition(n.getSourceFile(), tag(n));
+};
+
+// What a name means where it is written: its own scope first, then the file's
+// top level and imports, which `definition` caches.
+export const definitionOf = (name: ts.Identifier) =>
+  bindingOf(name)
+    ? alias(name, 6)
+    : definition(name.getSourceFile(), name.text);
 
 /** The key of what `name` is in `design-system/<file>.tsx`. */
 export function primitiveKey(file: string, name: string): string {

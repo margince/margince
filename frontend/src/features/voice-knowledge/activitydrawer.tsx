@@ -248,7 +248,11 @@ function ActivityBody({
               readOnly={!canUpdate || Boolean(activity.archived_at)}
               update={update}
               onClose={() => setOpened(null)}
-              onOpenSource={() => setOpened(null)}
+              // The follow-up's source is this activity, already open under
+              // it, so opening it returns there.
+              openerFor={(ref) =>
+                ref.id === activity.id ? () => setOpened(null) : undefined
+              }
             />
           )}
         </>

@@ -95,7 +95,6 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_company_dedupe_scan`: `btree (updated_at, id) WHERE (archived_at IS NULL)`
 - `idx_company_exact_legal_name_key`: `btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(legal_name)), 'ς', 'σ'), '\s+', ' ', 'g'))) WHERE (archived_at IS NULL)`
 - `idx_company_exact_name_key`: `btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(display_name)), 'ς', 'σ'), '\s+', ' ', 'g'))) WHERE (archived_at IS NULL)`
-- `idx_company_geocoded`: `btree (geocode_lat, geocode_lon) WHERE ((geocode_status = 'ok') AND (archived_at IS NULL))`
 - `idx_company_import_display_name`: `btree (f_fold_import_name(display_name)) WHERE ((archived_at IS NULL) AND (merged_into_id IS NULL))`
 - `idx_company_import_legal_name`: `btree (f_fold_import_name(legal_name)) WHERE ((legal_name IS NOT NULL) AND (archived_at IS NULL) AND (merged_into_id IS NULL))`
 - `idx_company_last_activity_keyset`: `btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
@@ -117,7 +116,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `company_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 - `company_refuse_anchor_retirement`: `BEFORE INSERT OR UPDATE OF merged_into_id, is_anchor FOR EACH ROW EXECUTE FUNCTION company_refuse_anchor_retirement()`
 - `trg_company_address_country_stale`: `AFTER UPDATE OF address_postal_code, address_city, address_country FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_address_country_goes_stale()`
-- `trg_company_geocode_stale`: `BEFORE UPDATE OF address_line1, address_line2, address_city, address_region, address_postal_code, address_country FOR EACH ROW WHEN (((old.address_line1 IS DISTINCT FROM new.address_line1) OR (old.address_line2 IS DISTINCT FROM new.address_line2) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_region IS DISTINCT FROM new.address_region) OR (old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_geocode_goes_stale()`
+- `trg_company_geocode_state_stale`: `AFTER UPDATE OF address_line1, address_line2, address_city, address_region, address_postal_code, address_country FOR EACH ROW WHEN (((old.address_line1 IS DISTINCT FROM new.address_line1) OR (old.address_line2 IS DISTINCT FROM new.address_line2) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_region IS DISTINCT FROM new.address_region) OR (old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_geocode_state_goes_stale()`
 - `trg_company_no_cycle`: `BEFORE INSERT OR UPDATE OF parent_company_id FOR EACH ROW WHEN ((new.parent_company_id IS NOT NULL)) EXECUTE FUNCTION company_no_ancestor_cycle()`
 - `trg_company_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
@@ -348,14 +347,20 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company_geocode_state
 
-5 columns · primary key `(company_id)` · referenced by 0 foreign keys
+11 columns · primary key `(company_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `attempts` | `integer`, default `0` | yes |  |
 | `company_id` | `uuid` | yes | Points at `company.id`. |
+| `geocoded_at` | `timestamp with time zone` |  |  |
+| `input_hash` | `text` |  |  |
 | `last_outcome` | `text` |  |  |
+| `lat` | `double precision` |  |  |
+| `lon` | `double precision` |  |  |
 | `next_attempt_at` | `timestamp with time zone` |  |  |
+| `provider` | `text` |  |  |
+| `status` | `text` |  | One of `ok`, `failed`, `no_match`, `stale`. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
@@ -364,9 +369,14 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 |---|---|---|
 | `company_id` | `company` | deleting the parent deletes this row |
 
+**Rules**
+
+- `company_geocode_state_status_check`: `CHECK (((status IS NULL) OR (status = ANY (ARRAY['ok', 'failed', 'no_match', 'stale']))))`
+
 **Indexes**
 
 - `company_geocode_state_pkey`: `unique, btree (company_id)`
+- `idx_company_geocode_state_point`: `btree (lat, lon) WHERE (status = 'ok')`
 
 ## company_offered_value
 

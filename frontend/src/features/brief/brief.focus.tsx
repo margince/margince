@@ -28,7 +28,7 @@ import {
 import { eyebrowKeyFor } from "../worklist/worklist.eyebrow";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { WorklistRow } from "../worklist/worklist.row";
-import { contactHref } from "../worklist/worklist.row.captions";
+import { contactHref, useListed } from "../worklist/worklist.row.captions";
 
 import "./brief.feed.css";
 
@@ -210,7 +210,9 @@ function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
   const label =
     contact?.label ??
     (briefSubjectLabel(item) ? undefined : item.subject?.label);
-  const href = contact?.label ? contactHref(contact) : subjectHref(item);
+  const listed = useListed();
+  const target = contact?.label ? contactHref(contact) : subjectHref(item);
+  const href = target && listed(target);
   const inbox = item.email_summary?.display_status;
   return (
     <>

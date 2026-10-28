@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
@@ -48,7 +49,7 @@ For EACH conversation emit exactly one verdict:
 
 still_owed and unsure are not the same answer. still_owed is for a reply whose words SHOW work left — a promise to come back, one of two asks answered. unsure is for a reply too thin to tell either way.
 
-Our reply may settle the request. A later message from the same correspondent may also explicitly confirm that the requested action is complete.
+Our reply may settle the request. Our messages keep the quoted history, so an answer written inline beneath a quoted line counts as our answer; quoted earlier words alone answer nothing. A later message from the same correspondent may also explicitly confirm that the requested action is complete.
 For a signature request, completion must refer to the same document or envelope identifier stated in the request and confirm completion of our required signing step. Another document, another signer's progress, or a merely sent/viewed document does not settle our request. Matching subjects alone prove nothing. If the identity or completion is unclear, answer unsure. Judge each request independently even when several requests share one conversation.
 A reply that DEFERS — "thanks, I will check", "let me come back to you", "I will clarify with the team and get back" — is still_owed: it names a next move of ours and does not make it.
 A reply too bare to defer OR deliver is unsure, not still_owed. "Ok." to "please send the documents" might mean they went in the same breath and might mean the ask was merely seen; a deferral says which, and a bare token does not. The line is whether OUR words name a next move of ours: if they do, still_owed; if they are too thin to say, unsure.
@@ -57,7 +58,7 @@ Declining settles it too. So does handing it to a colleague by name: the ask has
 If they wrote again after our reply repeating or re-asking, it is still_owed.
 Where a request asked two things and we answered one, it is still_owed.
 
-For still_owed, "remaining" is what WE still owe, in a few plain words from our own seat — "Send the quote", "Confirm the November dates". Never a sentence about them, never a restatement of their whole message.
+For still_owed, "remaining" is a short verbatim excerpt of at least two words from the FIRST message, their request, naming the ask still unanswered. Keep its spelling and language. Never quote their signature or the history quoted below their words. Never quote our own messages: a question WE asked them is work for THEM, never work we owe. If we delivered what they asked and then asked them something new, the request is settled.
 A still_owed verdict MUST name what is owed. An empty "remaining" tells the reader they owe something and not what, which is a worklist row nobody can act on.
 "due_at" is an ISO date, and ONLY when our own words named one. Never compute a date, never infer one from a phrase like "next week".`
 
@@ -76,6 +77,10 @@ const (
 	settleRemainingKey = "remaining"
 	settleDueKey       = "due_at"
 )
+
+// settleRemainingEvidence is the rule for "remaining", said in the prompt and
+// on the schema key so a constrained decoder reads it too.
+const settleRemainingEvidence = `For still_owed, "remaining" copies at least two adjacent words of their original request verbatim, punctuation and case included; escape quotation marks in JSON instead of dropping them.`
 
 type settleResult struct {
 	ID         string            `json:"id"`
@@ -100,8 +105,8 @@ type settlePayload struct {
 // each message inside it. No correspondent has seen the nonce, so no message
 // can close its own span and reach another conversation to have it judged.
 //
-//promptlang:exempt the reply is a closed verdict enum plus a short remaining phrase keyed by id; the phrase is written in the installation's own language by the surface that renders the task, and a language instruction here could only turn an enum into a parse failure.
-//promptvoice:exempt the reply is a verdict enum and a task title fragment, never a sentence addressed to anybody.
+//promptlang:exempt the reply is a closed verdict enum plus a verbatim quote of the customer's request; a translated quote would no longer match the words it must be found in.
+//promptvoice:exempt the reply is a verdict enum and a quote of the customer's own words, never a sentence addressed to anybody.
 func settleRequest(batch []settleCandidate) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder
@@ -110,13 +115,13 @@ func settleRequest(batch []settleCandidate) model.Request {
 		var conversation strings.Builder
 		for _, message := range candidate.Messages {
 			fmt.Fprintf(&conversation, "%s | %s\n%s\n\n",
-				settleSourceWord(message), message.Subject, message.Body)
+				settleSourceWord(message), message.Subject, settleMessageBody(message))
 		}
 		prompt.WriteString(fence.WrapAttr("source_id",
 			candidate.Request.RequestID.String(), conversation.String()) + "\n")
 	}
 	prompt.WriteString(`Return JSON: { "results": [ { "id", "verdict", "remaining", "due_at", "confidence" } ] } — ` +
-		`one entry per supplied id. "remaining" and "due_at" are empty strings unless the verdict is still_owed.`)
+		`one entry per supplied id. "remaining" and "due_at" are empty strings unless the verdict is still_owed. ` + settleRemainingEvidence)
 
 	return model.Request{
 		System:         settleSystemFor(fence),
@@ -125,6 +130,17 @@ func settleRequest(batch []settleCandidate) model.Request {
 		ResponseSchema: settleSchema(settleIDs(batch)),
 		SecretStripper: ai.NewSecretStripper(),
 	}
+}
+
+// settleMessageBody is what the model reads of one message. Their message
+// loses its quoted history and signature, so no quote of ours or of a third
+// party reads as their ask. Ours keeps it, because an inline answer sits
+// beneath the line it answers.
+func settleMessageBody(message threadMessage) string {
+	if message.Direction == string(crmcontracts.ActivityDirectionInbound) {
+		return textlang.MessageOpening(message.Body, extractBodyLimit)
+	}
+	return message.Body
 }
 
 // settleSourceWord says who a message is from and, for an answer from outside
@@ -194,10 +210,29 @@ func validateSettlePayload(payload settlePayload, batch []settleCandidate) strin
 		// is where it is said — putting the model through the retry with the
 		// reason, rather than storing an item nobody can act on.
 		if r.Verdict == activities.RequestStillOwed && strings.TrimSpace(r.Remaining) == "" {
-			return "a still_owed verdict carries no remaining phrase; name in a few plain words what we still owe"
+			return "a still_owed verdict carries no remaining phrase; quote the ask from their request that we still owe"
+		}
+		if r.Verdict == activities.RequestStillOwed && !settleRemainderGrounded(r, batch) {
+			return "remaining must quote at least two words of their original request verbatim, never our reply, quoted history or a signature"
 		}
 	}
 	return ""
+}
+
+// settleRemainderGrounded reports whether a still_owed result quotes the
+// request it answers: the first message of its conversation, which is theirs.
+func settleRemainderGrounded(result settleResult, batch []settleCandidate) bool {
+	for _, candidate := range batch {
+		if candidate.Request.RequestID.String() != result.ID {
+			continue
+		}
+		for _, message := range candidate.Messages {
+			if message.ID == candidate.Request.RequestID {
+				return activities.RequestRemainderGrounded(message.Body, result.Remaining)
+			}
+		}
+	}
+	return false
 }
 
 // settleIDs is the ids one batch asks about: what the schema lets the model
@@ -223,7 +258,7 @@ func settleSchema(requested []string) json.RawMessage {
 				map[string]schema.Node{
 					"id":                    requestedIDNode(requested),
 					settleVerdictKey:        schema.Enum(activities.RequestSettled, activities.RequestStillOwed, activities.RequestUnsure),
-					settleRemainingKey:      schema.String(),
+					settleRemainingKey:      schema.String().Describe(settleRemainingEvidence),
 					settleDueKey:            schema.String(),
 					extractionConfidenceKey: schema.Number(),
 				},

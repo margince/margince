@@ -527,7 +527,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_request_settlement
 
-10 columns · primary key `(request_activity_id)` · referenced by 0 foreign keys
+11 columns · primary key `(request_activity_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -540,6 +540,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 | `remaining` | `text` |  |  |
 | `request_activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `revalidation_requested_at` | `timestamp with time zone` |  |  |
+| `rule_version` | `text`, default `''::text` | yes |  |
 | `verdict` | `text` | yes | One of `settled`, `still_owed`, `unsure`. |
 
 **Points at**

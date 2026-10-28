@@ -35,3 +35,5 @@ On a small screen, `Details & permissions` opens the same sidebar content over t
 ## Focus and the work queue
 
 Focus chooses and orders entries the normal way, with no pin controls and no stored pins that change it. The separate full work queue keeps its pins as they work today. The backend chooses Focus before it applies personal pins to the queue. So old stored pins cannot pull a note that asks for no action into Focus, or change its order.
+
+The Next bar ends with **Next task** in every state, also when nothing is due on this contact. A reader working through the queue can then always go on to the next record. How it picks that record is in [home-and-worklist.md](home-and-worklist.md#addresses).

@@ -22,6 +22,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -389,7 +390,7 @@ func (s *Sink) upsertActivity(
 	// address against itself for nothing.
 	if rec.Counterparty.SentByOwner() {
 		if err := storekit.LockWriteIdentity(ctx, tx, correspondence.LockEntity,
-			correspondence.LockIdentity(rec.Counterparty.Email)); err != nil {
+			mailidentity.CorrespondenceLockKey(rec.Counterparty.Email)); err != nil {
 			return ids.ActivityID{}, false, err
 		}
 	}

@@ -23,7 +23,9 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -136,12 +138,28 @@ type queryFixture struct {
 // QUERY reads the columns correctly, not whether Nominatim answers.
 func (q *queryEnv) seedLocatedCompany(t *testing.T, name string, lat, lon float64) ids.UUID {
 	t.Helper()
-	return q.SeedID(t, `INSERT INTO company
-		(id, owner_id, display_name, address_line1, address_city,
-		 geocode_lat, geocode_lon, geocode_status, geocode_provider, geocode_input_hash,
-		 source, captured_by)
-		VALUES ($1, $2, $3, 'Teststrasse 1', 'Teststadt', $4, $5, 'ok', 'test', 'seeded', 'manual', 'human:x')`,
-		q.Rep1, name, lat, lon)
+	company := q.SeedID(t, `INSERT INTO company
+		(id, owner_id, display_name, address_line1, address_city, source, captured_by)
+		VALUES ($1, $2, $3, 'Teststrasse 1', 'Teststadt', 'manual', 'human:x')`,
+		q.Rep1, name)
+	q.recordGeocode(t, company, contacts.GeocodeOK, &lat, &lon)
+	return company
+}
+
+// recordGeocode writes the worker's answer for a company's current address,
+// through the writer the geocode worker calls.
+func (q *queryEnv) recordGeocode(t *testing.T, company ids.UUID, status string, lat, lon *float64) {
+	t.Helper()
+	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), q.WS), "system:geocode-test")
+	store := contacts.NewStore(database.BindTo(q.Pool, ids.From[ids.WorkspaceKind](q.WS)))
+	id := ids.From[ids.CompanyKind](company)
+	address, ok, err := store.AddressForGeocode(ctx, id)
+	if err != nil || !ok {
+		t.Fatalf("reading the address to geocode: ok=%v err=%v", ok, err)
+	}
+	if err := store.RecordGeocode(ctx, id, status, lat, lon, "test", address.InputHash); err != nil {
+		t.Fatalf("recording the geocode: %v", err)
+	}
 }
 
 // seedUnlocatedCompany inserts a company with an address and NO coordinates —
@@ -419,14 +437,13 @@ func TestQueryPlanAnUnanswerablePredicateReturnsItsNoteNotRows(t *testing.T) {
 // A radius over a workspace that has placed NOTHING answers the note, not a
 // clean empty page.
 //
-// The capability used to be settled against the schema alone — does the target
-// carry coordinate columns — while the statement requires geocode_status 'ok'
-// per row. An installation whose companies are all unresolved therefore ran the
-// query, matched nothing, and answered coverage complete_exact with an empty
-// notes array: a search that failed short wearing the shape of a complete,
-// exact one. What a caller does with that is report that nobody is near the
-// place asked about, which is a claim about the customers made from a fact
-// about the geocoder.
+// A capability check against the schema alone asks whether the target carries
+// a point. The statement also requires the point status 'ok' per row. An
+// installation whose companies are all unresolved then runs the query, matches
+// nothing, and answers coverage complete_exact with an empty notes array. That
+// is a search that failed short wearing the shape of a complete, exact one. A
+// caller then reports that nobody is near the place asked about: a claim about
+// the customers made from a fact about the geocoder.
 //
 // The companion above proves the other direction — a workspace that HAS placed
 // rows must not carry this note — so the pair fails if the check is dropped and
@@ -473,12 +490,11 @@ func TestQueryPlanARadiusNoteFollowsWhatTheCallerCanRead(t *testing.T) {
 	q.seedFixture(t)
 	// The only geocoded company in the workspace is an unpromoted capture of
 	// Rep1's, which capture privacy keeps from every other seat.
-	q.SeedID(t, `INSERT INTO company
-		(id, owner_id, display_name, visibility, address_line1, address_city,
-		 geocode_lat, geocode_lon, geocode_status, geocode_provider, geocode_input_hash,
-		 source, captured_by)
-		VALUES ($1, $2, 'Radius Privat GmbH', 'owner', 'Teststrasse 1', 'Teststadt',
-		        48.7758, 9.1829, 'ok', 'test', 'seeded', 'manual', 'human:x')`, q.Rep1)
+	private := q.SeedID(t, `INSERT INTO company
+		(id, owner_id, display_name, visibility, address_line1, address_city, source, captured_by)
+		VALUES ($1, $2, 'Radius Privat GmbH', 'owner', 'Teststrasse 1', 'Teststadt', 'manual', 'human:x')`, q.Rep1)
+	lat, lon := 48.7758, 9.1829
+	q.recordGeocode(t, private, contacts.GeocodeOK, &lat, &lon)
 
 	const plan = `{"version": "v1", "target": "company",
 		"where": [{"field": "address", "op": "within_radius",
@@ -510,7 +526,7 @@ func TestQueryPlanARadiusNoteFollowsWhatTheCallerCanRead(t *testing.T) {
 // inside it, NEAREST FIRST, each saying how far.
 //
 // This is the test that proves the SQL rather than the Go. The haversine, the
-// bounding box, the geocode_status filter and the distance projection are all
+// bounding box, the point-status filter and the distance projection are all
 // strings until a database evaluates them.
 func TestQueryPlanARadiusAnswersNearestFirstWithDistances(t *testing.T) {
 	q := setupQuery(t)
@@ -564,7 +580,7 @@ func TestQueryPlanARadiusAnswersNearestFirstWithDistances(t *testing.T) {
 // at its old coordinates.
 //
 // This is the staleness design proving itself end to end. The trigger marks the
-// row stale when the address changes; the radius reads geocode_status and takes
+// row stale when the address changes; the radius reads the point status and takes
 // only 'ok'. Without either half, this company would answer from where it used
 // to be — and the answer would look exactly like a correct one.
 func TestQueryPlanACompanyThatMovedIsNotAnsweredFromItsOldAddress(t *testing.T) {
@@ -590,7 +606,7 @@ func TestQueryPlanACompanyThatMovedIsNotAnsweredFromItsOldAddress(t *testing.T) 
 		"limit": 20}`)
 	if containsID(after.Rows, moved) {
 		t.Error("a company that changed its address still answers from its OLD coordinates — " +
-			"either the staleness trigger did not fire or the radius is not reading geocode_status")
+			"either the staleness trigger did not fire or the radius is not reading the point status")
 	}
 }
 
@@ -848,11 +864,8 @@ func TestQueryPlanAndFilterEngineAnswerTheSameCompaniesForOneRadius(t *testing.T
 	q.seedLocatedCompany(t, "Shared Muenchen GmbH", 48.1351, 11.5820)
 	stale := q.seedLocatedCompany(t, "Shared Umgezogen GmbH", 48.7800, 9.1900)
 	q.moveCompany(t, stale, "Neue Strasse 1")
-	failed := q.seedLocatedCompany(t, "Shared Fehler GmbH", 48.7900, 9.1900)
-	if _, err := q.Owner.Exec(context.Background(),
-		`UPDATE company SET geocode_status = 'failed' WHERE id = $1`, failed); err != nil {
-		t.Fatalf("marking the company failed: %v", err)
-	}
+	failed := q.seedUnlocatedCompany(t, "Shared Fehler GmbH")
+	q.recordGeocode(t, failed, contacts.GeocodeFailed, nil, nil)
 
 	result := q.run(q.admin(), t, `{
 		"version": "v1", "target": "company",

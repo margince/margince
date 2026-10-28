@@ -14,7 +14,7 @@ import {
   typedTask,
 } from "./mockapi/calls";
 import { anna, mockApi } from "./seed";
-import { openedAt, pageOverflow, textsOf } from "./waits";
+import { listClipping, openedAt, pageOverflow, textsOf } from "./waits";
 
 /**
  * Settle the page's motion before measuring the colours it paints.
@@ -1337,7 +1337,7 @@ test.describe("§3.8: 390px mobile", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
   for (const screen of CORE_SCREENS) {
-    test(`nothing scrolls sideways at 390px on #/${screen}`, async ({
+    test(`nothing scrolls sideways or hides at 390px on #/${screen}`, async ({
       page,
     }) => {
       await page.goto(`/#/${screen}`);
@@ -1351,6 +1351,7 @@ test.describe("§3.8: 390px mobile", () => {
       // Named offenders rather than a count: a bare number tells whoever broke
       // this that something is 169px too wide and nothing about what.
       expect(await pageOverflow(page)).toEqual([]);
+      expect(await listClipping(page)).toEqual([]);
     });
   }
 

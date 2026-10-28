@@ -219,7 +219,7 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		extra += " AND " + activities.NotSystemMinted("a", arg)
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT a.id, coalesce(a.subject, ''), `+storekit.TaskDueSQL("a")+`, a.assignee_id, coalesce(u.display_name, ''), a.occurred_at, a.version,
+		SELECT a.id, coalesce(a.subject, ''), a.body, `+storekit.TaskDueSQL("a")+`, a.assignee_id, coalesce(u.display_name, ''), a.occurred_at, a.version,
 		       (SELECT dl.deal_id FROM activity_link dl
 		         WHERE dl.activity_id = a.id AND dl.entity_type = 'deal' AND %[3]s
 		         ORDER BY dl.id LIMIT 1),
@@ -252,7 +252,7 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		// go and find the version first would be two round trips for one click,
 		// and the version it found could already be the wrong one.
 		var version int64
-		if err := row.Scan(&id, &step.Subject, &step.DueAt, &assignee, &assigneeName, &occurredAt, &version,
+		if err := row.Scan(&id, &step.Subject, &step.Body, &step.DueAt, &assignee, &assigneeName, &occurredAt, &version,
 			&dealID, &contactID); err != nil {
 			return step, err
 		}
