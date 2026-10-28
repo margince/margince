@@ -399,6 +399,7 @@ export function sourceUnavailableText(
 export const KNOWN_SOURCES = {
   approval: true,
   dedupe_candidate: true,
+  contact_case: true,
   deal_suggestion: true,
   tag_suggestion: true,
   task: true,

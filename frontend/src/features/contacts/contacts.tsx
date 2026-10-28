@@ -15,6 +15,8 @@ import {
   lastActivityColumn,
   mineEmptyNote,
   ownerColumn,
+  sharedEmptyNote,
+  sharedWithMeView,
   standardViews,
   tagsColumn,
   useOwnerTagChips,
@@ -103,7 +105,10 @@ function ContactsList() {
         title={pageName}
         state={state}
         unit="unit.contacts"
-        emptyNote={mineEmptyNote({ t, state, viewerId, unit: "unit.contacts" })}
+        emptyNote={
+          mineEmptyNote({ t, state, viewerId, unit: "unit.contacts" }) ??
+          sharedEmptyNote({ t, state, unit: "unit.contacts" })
+        }
         action={
           <>
             <ContactCreateActions />
@@ -202,7 +207,12 @@ function ContactsList() {
         selection={selection}
         dataChips={ownerChips}
         dataViews={savedViews}
-        views={[...standardViews(viewerId)]}
+        // Shared with me is the contacts list's alone: a merge that kept a
+        // former owner's access leaves the remaining contact there.
+        views={[
+          ...standardViews(viewerId),
+          ...(viewerId ? [sharedWithMeView()] : []),
+        ]}
       />
     </div>
   );

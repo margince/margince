@@ -1,0 +1,43 @@
+/* The duplicate case review: the members to tick, then the evidence and the
+   preview. Its own sheet because the Worklist and the contact page both open it. */
+.contactcase-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.contactcase-members {
+  gap: var(--space-3);
+}
+
+/* The tick that says "same person", then the choice of record to keep. */
+.contactcase-member {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  overflow-wrap: anywhere;
+}
+
+.contactcase-member-name {
+  display: flex;
+  flex-direction: column;
+}
+
+.contactcase-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.contactcase-edge {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.contactcase-edge > .contactcase-list {
+  padding-inline-start: var(--space-4);
+}
