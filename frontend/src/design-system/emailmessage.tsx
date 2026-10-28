@@ -11,6 +11,8 @@ import { translatePlural, useLocale, useT } from "../i18n";
 import { ENTITY } from "../lib/entity";
 import { routeHash } from "../lib/router";
 import { FileChip } from "./filechip";
+import { withControllerSend } from "./provenanceof";
+import type { Provenance } from "./trust";
 import "./emaildetail.css";
 
 // One message's parts, shared by the drawer, the thread inside it and the
@@ -154,6 +156,37 @@ function PartyLine({
 }
 
 /**
+ * Who the message presents as its sender. A relay send names the relay's own
+ * address, never the member it was sent for.
+ */
+export function senderParties(presentation: EmailPresentation): EmailParty[] {
+  const send = presentation.controller_send;
+  if (!send) {
+    return presentation.from;
+  }
+  return send.from_address ? [{ address: send.from_address }] : [];
+}
+
+/** The relay arm of a relay send, by the History row's rule; null otherwise. */
+export function relaySendOf(
+  presentation: EmailPresentation,
+  viewerUserId: string | undefined,
+): Provenance | null {
+  const send = presentation.controller_send;
+  if (!send) {
+    return null;
+  }
+  const member = presentation.from.find((party) => party.user_id)?.user_id;
+  return withControllerSend(
+    member
+      ? { kind: "human", self: member === viewerUserId, userId: member }
+      : { kind: "unknown" },
+    send,
+    viewerUserId,
+  );
+}
+
+/**
  * The envelope: who the message was with and when it was sent. The email
  * drawer adds its filing line as `children`; the task panel draws it bare.
  */
@@ -169,7 +202,10 @@ export function EmailEnvelope({
   const t = useT();
   return (
     <div className="emaildetail__parties">
-      <PartyLine label={t("email.detail.from")} parties={presentation.from} />
+      <PartyLine
+        label={t("email.detail.from")}
+        parties={senderParties(presentation)}
+      />
       <PartyLine label={t("email.detail.to")} parties={presentation.to} />
       <PartyLine label={t("email.detail.cc")} parties={presentation.cc} />
       <p className="emaildetail__party">

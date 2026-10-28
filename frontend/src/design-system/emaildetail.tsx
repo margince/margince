@@ -34,6 +34,7 @@ export function EmailDetail({
   open = true,
   onClose,
   formatWhen,
+  viewerUserId,
   renderAccess,
   renderRecords,
   renderActions,
@@ -49,6 +50,8 @@ export function EmailDetail({
   onClose: () => void;
   /** The caller owns the reader's timezone, so it owns the formatting. */
   formatWhen: ActivityWhenFormatter;
+  /** Who is reading, so a relay send says "for you" only to its member. */
+  viewerUserId?: string;
   /**
    * Who reads this thread, and the control to change it, under the subject.
    *
@@ -127,6 +130,7 @@ export function EmailDetail({
         <ThreadState
           read={read}
           formatWhen={formatWhen}
+          viewerUserId={viewerUserId}
           renderRecords={renderRecords}
           related={renderRelated}
           notice={notice}
@@ -145,6 +149,7 @@ export function EmailDetail({
 function ThreadState({
   read,
   formatWhen,
+  viewerUserId,
   renderRecords,
   related,
   notice,
@@ -156,6 +161,7 @@ function ThreadState({
     refetch: () => unknown;
   }>;
   formatWhen: ActivityWhenFormatter;
+  viewerUserId?: string;
   renderRecords?: (presentation: EmailPresentation) => ReactNode;
   related?: () => ReactNode;
   notice?: string;
@@ -202,6 +208,7 @@ function ThreadState({
     <EmailThread
       presentation={read.data}
       formatWhen={formatWhen}
+      viewerUserId={viewerUserId}
       renderRecords={renderRecords}
       related={related}
       notice={notice}

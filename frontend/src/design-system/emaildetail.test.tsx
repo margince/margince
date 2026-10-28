@@ -561,3 +561,85 @@ describe("a mail whose text could not be read", () => {
     expect(screen.queryByText(/could not be read/)).toBeNull();
   });
 });
+
+describe("a mail the installation's relay sent for a rep", () => {
+  const REP = "01a05500-0000-7000-8000-0000000000u1";
+  const COLLEAGUE = "01a05500-0000-7000-8000-0000000000u2";
+  // As the read answers it: the rep is the activity's participant, the relay
+  // is what sent it.
+  const relayed = (fromAddress: string | null) =>
+    presentation({
+      from: [
+        { address: "anna@kps.test", display_name: "Anna Weber", user_id: REP },
+      ],
+      to: [{ address: "lena@kps.test", display_name: "Lena Hoffmann" }],
+      controller_send: { from_address: fromAddress },
+    });
+
+  function openAs(viewer: string) {
+    return (
+      <EmailDetail
+        activityId={ACTIVITY}
+        onClose={() => {}}
+        formatWhen={(iso) => iso}
+        viewerUserId={viewer}
+      />
+    );
+  }
+
+  it("says Margince sent it for the reader, from the relay's address", async () => {
+    stubRead(relayed("privacy@kps.test"));
+    draw(openAs(REP));
+
+    expect(await screen.findByText("Sent by Margince for you")).toBeTruthy();
+    expect(screen.getByText("From privacy@kps.test")).toBeTruthy();
+    await openEnvelope();
+    const from = screen.getByText("From", {
+      selector: ".emaildetail__partyLabel",
+    });
+    expect(from.parentElement?.textContent).toBe("Fromprivacy@kps.test");
+    expect(screen.queryByText("Anna Weber")).toBeNull();
+    expect(screen.queryByText("anna@kps.test")).toBeNull();
+  });
+
+  it("tells a colleague it was sent for a colleague", async () => {
+    stubRead(relayed("privacy@kps.test"));
+    draw(openAs(COLLEAGUE));
+
+    expect(
+      await screen.findByText("Sent by Margince for a colleague"),
+    ).toBeTruthy();
+    expect(screen.queryByText("Sent by Margince for you")).toBeNull();
+  });
+
+  it("names no sender address the relay did not record, and still not the rep", async () => {
+    stubRead(relayed(null));
+    draw(openAs(REP));
+
+    expect(await screen.findByText("Sent by Margince for you")).toBeTruthy();
+    expect(screen.queryByText(/^From /)).toBeNull();
+    await openEnvelope();
+    expect(
+      screen.queryByText("From", { selector: ".emaildetail__partyLabel" }),
+    ).toBeNull();
+    expect(screen.queryByText("Anna Weber")).toBeNull();
+  });
+
+  it("leaves a mail the rep sent from their own mailbox as it was", async () => {
+    stubRead(
+      presentation({
+        from: [
+          {
+            address: "anna@kps.test",
+            display_name: "Anna Weber",
+            user_id: REP,
+          },
+        ],
+      }),
+    );
+    draw(openAs(REP));
+
+    expect(await screen.findAllByText("Anna Weber")).not.toHaveLength(0);
+    expect(screen.queryByText(/Sent by Margince/)).toBeNull();
+  });
+});
