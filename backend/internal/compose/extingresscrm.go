@@ -282,6 +282,14 @@ func (l crmLanding) deal(ctx context.Context, key string, f extension.DealFields
 	if err != nil {
 		return extension.Ref{}, nil, fmt.Errorf("%w: the stage id is not a canonical UUID", extension.ErrInvalid)
 	}
+	var company *ids.CompanyID
+	if f.CompanyID != "" {
+		parsed, err := ids.Parse(f.CompanyID)
+		if err != nil {
+			return extension.Ref{}, nil, fmt.Errorf("%w: the company id is not a canonical UUID", extension.ErrInvalid)
+		}
+		company = new(ids.From[ids.CompanyKind](parsed))
+	}
 	one := 1
 	find := func() (ids.UUID, bool, error) {
 		rows, _, err := l.deals.ListDeals(ctx, deals.ListDealsInput{SourceSystem: &l.system, SourceID: &key, Limit: &one})
@@ -292,7 +300,7 @@ func (l crmLanding) deal(ctx context.Context, key string, f extension.DealFields
 	}
 	create := func() (ids.UUID, error) {
 		made, err := l.deals.CreateDeal(ctx, deals.CreateDealInput{
-			Name: f.Name, AmountMinor: f.AmountMinor, Currency: nonEmpty(f.Currency), CustomFields: f.CustomFields,
+			Name: f.Name, AmountMinor: f.AmountMinor, Currency: nonEmpty(f.Currency), CustomFields: f.CustomFields, CompanyID: company,
 			PipelineID: ids.From[ids.PipelineKind](pipeline), StageID: ids.From[ids.StageKind](stage),
 			ReferencesFromRequest: true, Source: l.system, SourceSystem: &l.system, SourceID: &key,
 		})

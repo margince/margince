@@ -74,6 +74,10 @@ type DealFields struct {
 	StageID    string
 	// LostReason is why the deal was lost; only read on a move to a lost stage.
 	LostReason string
+	// CompanyID is the core id of the company the deal belongs to, set when the
+	// deal is born. A later record never moves a deal to another company, and a
+	// company the acting member cannot see is refused.
+	CompanyID string
 	// AmountMinor is the deal value in the smallest unit of Currency.
 	AmountMinor *int64
 	Currency    string
@@ -151,6 +155,9 @@ func (d DealFields) validate() error {
 		return fmt.Errorf("extension: the deal name is over the %d-rune cap", MaxDisplayNameRunes)
 	case !uuidShape.MatchString(d.PipelineID), !uuidShape.MatchString(d.StageID):
 		return errors.New("extension: a deal names its pipeline and stage by their ids")
+	}
+	if d.CompanyID != "" && !uuidShape.MatchString(d.CompanyID) {
+		return errors.New("extension: a deal names its company by its id")
 	}
 	if err := validateCustomFieldKeys(d.CustomFields); err != nil {
 		return err

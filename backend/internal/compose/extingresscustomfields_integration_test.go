@@ -6,8 +6,11 @@
 package compose
 
 import (
+	"context"
 	"slices"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/customfields"
@@ -70,5 +73,26 @@ func TestALandedDealSetsCustomFieldsAndKeepsOneAUserEdited(t *testing.T) {
 	}
 	if got := read(route); got != "typed by a user" {
 		t.Errorf("route = %v, want the user's value kept", got)
+	}
+}
+
+// A deal lands under the company it names, and a later record naming another
+// company leaves the deal where it was.
+func TestALandedDealBelongsToTheCompanyItNames(t *testing.T) {
+	e := setupCRMIngress(t)
+	first := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme"}))
+	other := e.mustIngest(t, companyRecord("acct-2", extension.CompanyFields{DisplayName: "Beta"}))
+	deal := func(company string) extension.Record {
+		return e.dealRecord("opp-1", func(d *extension.DealFields) { d.CompanyID = company })
+	}
+	made := e.mustIngest(t, deal(first.Ref.ID))
+	e.mustIngest(t, deal(other.Ref.ID))
+
+	var got string
+	e.readAsWorkspace(t, func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT company_id::text FROM deal WHERE id = $1`, ids.MustParse(made.Ref.ID)).Scan(&got)
+	})
+	if got != first.Ref.ID {
+		t.Errorf("company_id = %s, want the company named when the deal was born (%s)", got, first.Ref.ID)
 	}
 }

@@ -76,8 +76,9 @@ func TestACompanyOrDealPayloadIsHeldToItsGrammar(t *testing.T) {
 		}
 	}
 	for name, edit := range map[string]func(*extension.Record){
-		"a deal with no name":  func(r *extension.Record) { r.Deal.Name = "" },
-		"a deal with no stage": func(r *extension.Record) { r.Deal.StageID = "" },
+		"a deal with no name":         func(r *extension.Record) { r.Deal.Name = "" },
+		"a deal with no stage":        func(r *extension.Record) { r.Deal.StageID = "" },
+		"a company that is not an id": func(r *extension.Record) { r.Deal.CompanyID = "acme" },
 		"a stage that is not an id": func(r *extension.Record) {
 			r.Deal.StageID = "not-a-uuid"
 			r.Deal.PipelineID = "also-not"

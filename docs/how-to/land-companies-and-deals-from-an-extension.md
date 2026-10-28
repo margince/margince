@@ -10,6 +10,7 @@ A `Record` carries one payload. Set `Company` or `Deal` instead of `Activity`. `
 |---|---|---|
 | Outside id | `System` + `Key` on the record | `System` + `Key` on the record |
 | Required | `DisplayName` | `Name`, `PipelineID`, `StageID` (core ids) |
+| Belongs to | none | `CompanyID`, a core company id the member can see, set when the deal is born and never moved by a later record |
 | Optional values | `LegalName`, `Industry`, `Description`, `Domain` | `AmountMinor`, `Currency`, `CustomFields` (`cf_*` keys of active custom fields, at most `extension.MaxLandedCustomFields`, which is 50) |
 | Natural key to adopt by | `AdoptOn: extension.AdoptKeyDomain`, which needs a non-empty `Domain` | none |
 | Stage move | none | a different `StageID`; `LostReason` for a lost stage |
