@@ -31,12 +31,12 @@ type Story = StoryObj<typeof meta>;
 const SYMBOLS: ReadonlyArray<
   Readonly<{ name: string; Mark: Glyph; line: Glyph; ink: string }>
 > = [
-  { name: "InfoFilled", Mark: InfoFilled, line: Info, ink: "--infoText" },
+  { name: "InfoFilled", Mark: InfoFilled, line: Info, ink: "--info" },
   {
     name: "WarningFilled",
     Mark: WarningFilled,
     line: TriangleAlert,
-    ink: "--warningText",
+    ink: "--warning",
   },
   {
     name: "ErrorFilled",
@@ -54,7 +54,7 @@ const SYMBOLS: ReadonlyArray<
     name: "Lightbulb2Filled",
     Mark: Lightbulb2Filled,
     line: Lightbulb,
-    ink: "--discoveryText",
+    ink: "--discovery",
   },
 ];
 
@@ -64,7 +64,8 @@ const row: CSSProperties = {
   gap: "var(--space-4)",
 };
 
-/** Each mark in its tone's ink, at the sizes a notice and a heading draw it. */
+/** Each mark in the ink a `Callout` paints it, at the sizes a notice and a
+ * heading draw it. */
 export const Marks: Story = {
   render: () => (
     <div className={specimenColumn}>
@@ -81,8 +82,8 @@ export const Marks: Story = {
   ),
 };
 
-/** The filled mark beside the lucide line glyph it can stand in for, both at
- * 16px, so the two read as one size on one line. */
+/** Each filled mark beside the lucide line glyph it can replace, both at 16px,
+ * to show the two read as one size. */
 export const BesideLucide: Story = {
   render: () => (
     <div className={specimenColumn}>

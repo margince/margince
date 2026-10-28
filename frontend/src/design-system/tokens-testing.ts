@@ -451,9 +451,12 @@ export function resolve(
       ? tint
       : composite(tint, resolve(right, pal, seen));
   }
-  const [inkName, part] = shareOf(right, value);
-  const hue = linearToOklab(linearOf(resolve(left, pal, seen)));
-  const ink = linearToOklab(linearOf(resolve(inkName, pal, seen)));
+  // Either colour may carry the share; the other takes the rest of the mix.
+  const [base, [mixedIn, part]] = /%\s*$/.test(left)
+    ? [right, shareOf(left, value)]
+    : [left, shareOf(right, value)];
+  const hue = linearToOklab(linearOf(resolve(base, pal, seen)));
+  const ink = linearToOklab(linearOf(resolve(mixedIn, pal, seen)));
   const mixAt = (i: 0 | 1 | 2) => hue[i] * (1 - part) + ink[i] * part;
   return hexOf(oklabToLinear([mixAt(0), mixAt(1), mixAt(2)]));
 }

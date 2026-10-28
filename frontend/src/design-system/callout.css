@@ -2,8 +2,7 @@
  *
  * A card with a faint wash of the tone's hue, carrying the tone's ICON before
  * its first words. The words stay in body ink; the icon's SHAPE doubles the
- * tone for a reader who does not read colour, which a dot differing only in hue
- * could not.
+ * tone for a reader who does not read colour.
  *
  * ONE anatomy, at one density: icon | heading over an optional body | the verbs
  * at the END | the dismiss after them. There is no second face. The two this
@@ -17,11 +16,9 @@
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--r-md);
-  /* Mixed into the opaque `--bgElevated`: `--pane` is translucent, so the wash
-   * would shift with whatever sits behind the card. */
-  background: color-mix(in oklab, var(--callout-hue) 12%, var(--bgElevated));
-  /* Hairlines inside the card (fact rows, tables) darken with the wash. */
-  --borderSubtle: color-mix(in oklab, var(--callout-hue) 30%, var(--bgElevated));
+  background: var(--callout-wash);
+  /* Borders inside the card follow the wash. */
+  --borderSubtle: var(--callout-edge);
 }
 
 .callout-icon {
@@ -119,31 +116,35 @@
 }
 
 /* Tone reaches the glyph's ink (`--callout-ink`) and the card's wash
- * (`--callout-hue`); the words stay in body ink. */
+ * (`--callout-wash`); the words stay in body ink. */
 .callout-icon {
   color: var(--callout-ink);
 }
 
-/* `info` takes the info family's own ink: body ink would make the one tone
- * NAMED info indistinguishable from untoned prose. */
+/* `info` takes the info hue: body ink would make the tone NAMED info read as
+ * untoned prose. */
 .callout-info {
   --callout-ink: var(--info);
-  --callout-hue: var(--info);
+  --callout-wash: var(--bgNoticeInfo);
+  --callout-edge: var(--borderNoticeInfo);
 }
 
 .callout-warning {
   --callout-ink: var(--warning);
-  --callout-hue: var(--warning);
+  --callout-wash: var(--bgNoticeWarning);
+  --callout-edge: var(--borderNoticeWarning);
 }
 
 .callout-danger {
   --callout-ink: var(--dangerText);
-  --callout-hue: var(--danger);
+  --callout-wash: var(--bgNoticeDanger);
+  --callout-edge: var(--borderNoticeDanger);
 }
 
 .callout-success {
   --callout-ink: var(--successText);
-  --callout-hue: var(--success);
+  --callout-wash: var(--bgNoticeSuccess);
+  --callout-edge: var(--borderNoticeSuccess);
 }
 
 /* `discovery` is the notice about something NEW to this reader — a capability
@@ -151,12 +152,14 @@
  * verdict on the account. */
 .callout-discovery {
   --callout-ink: var(--discovery);
-  --callout-hue: var(--discovery);
+  --callout-wash: var(--bgNoticeDiscovery);
+  --callout-edge: var(--borderNoticeDiscovery);
 }
 
 /* `ai` is the claim that a machine produced what the notice is about: the
  * indigo the product spends on nothing else. */
 .callout-ai {
   --callout-ink: var(--ai);
-  --callout-hue: var(--ai);
+  --callout-wash: var(--bgNoticeAi);
+  --callout-edge: var(--borderNoticeAi);
 }

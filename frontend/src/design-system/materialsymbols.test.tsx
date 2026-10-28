@@ -8,10 +8,8 @@ import { cleanup, render } from "@testing-library/react";
 import { Info } from "lucide-react";
 import { afterEach, describe, expect, it } from "vitest";
 import {
-  extensionFrontendFiles,
-  filesUnder,
-  moduleSpecifiers,
-  parseSource,
+  extensionFilesMatching,
+  filesMatching,
   sourceTextAt,
 } from "../../scripts/lib/source-tree";
 import { type Glyph, InfoFilled, WarningFilled } from "./materialsymbols";
@@ -23,10 +21,14 @@ const srcDir = join(frontendRoot, "src");
 const extensionsRoot = join(frontendRoot, "..", "extensions");
 const OWNER = join(srcDir, "design-system", "materialsymbols.tsx");
 
-function materialImports(path: string, text: string): string[] {
-  if (!text.includes("@material-symbols/")) return [];
-  return moduleSpecifiers(parseSource(path, text), "all").filter((specifier) =>
-    specifier.startsWith("@material-symbols/"),
+// Raw text, not a parsed import: a template specifier, a `require`, an `.mdx`
+// page or a CSS `url()` names the files where no string-literal import shows.
+const MATERIAL_REFERENCE = /material-symbols|@material-["'`$]/g;
+const CORPUS_FILE = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs|mdx|css)$/;
+
+function materialReferenceLines(text: string): number[] {
+  return [...text.matchAll(MATERIAL_REFERENCE)].map(
+    (match) => text.slice(0, match.index).split("\n").length,
   );
 }
 
@@ -70,36 +72,88 @@ describe("a Material symbol", () => {
 });
 
 describe("one module imports Material Symbols", () => {
-  it("finds the import in a planted caller", () => {
-    expect(
-      materialImports(
-        join(srcDir, "features", "probe.tsx"),
-        'import Info from "@material-symbols/svg-500/rounded/info-fill.svg?react";\n' +
-          'const lazy = () => import("@material-symbols/svg-500/rounded/error-fill.svg?react");',
-      ),
-    ).toHaveLength(2);
+  it.each([
+    [
+      "a static import",
+      "probe.tsx",
+      'import Info from "@material-symbols/svg-500/rounded/info-fill.svg?react";',
+    ],
+    [
+      "a template import",
+      "probe.tsx",
+      `const mark = (name: string) => import(\`@material-symbols/svg-500/rounded/\${name}.svg?react\`);`,
+    ],
+    [
+      "a require",
+      "probe.cjs",
+      'const info = require("@material-symbols/svg-500/rounded/info-fill.svg");',
+    ],
+    [
+      "an import-equals",
+      "probe.ts",
+      'import info = require("@material-symbols/svg-500/rounded/info-fill.svg");',
+    ],
+    [
+      "a specifier assembled from parts",
+      "probe.ts",
+      'const specifier = "@material-" + "symbols/svg-500/rounded/info-fill.svg";',
+    ],
+    [
+      "an mdx page",
+      "probe.mdx",
+      'import Info from "@material-symbols/svg-500/rounded/info-fill.svg?react";\n\n<Info />',
+    ],
+    [
+      "a css url",
+      "probe.css",
+      '.mark { mask: url("@material-symbols/svg-500/rounded/info-fill.svg"); }',
+    ],
+    ["a css import", "probe.css", '@import "@material-symbols/font-500";'],
+    [
+      "a relative path into node_modules",
+      "probe.ts",
+      'import "../../node_modules/@material-symbols/svg-500/rounded/info-fill.svg";',
+    ],
+    [
+      "a glob",
+      "probe.ts",
+      'const marks = import.meta.glob("/node_modules/@material-symbols/svg-500/rounded/*.svg");',
+    ],
+    [
+      "an import of the copied files",
+      "probe.tsx",
+      'import Info from "../design-system/material-symbols/info-fill.svg?react";',
+    ],
+  ])("finds %s in a planted caller", (_shape, file, text) => {
+    expect(CORPUS_FILE.test(file), `${file} is outside the corpus`).toBe(true);
+    expect(materialReferenceLines(`// probe\n${text}`)).toEqual([2]);
   });
 
   it("finds none outside materialsymbols.tsx", { timeout: 60_000 }, () => {
-    const files = filesUnder(srcDir).concat(
-      extensionFrontendFiles(extensionsRoot),
+    const files = filesMatching(srcDir, CORPUS_FILE).concat(
+      extensionFilesMatching(extensionsRoot, CORPUS_FILE),
     );
     expect(files.length).toBeGreaterThan(100);
+    expect(files.some((file) => file.endsWith(".css"))).toBe(true);
+    const owner = sourceTextAt(OWNER);
     expect(
-      materialImports(OWNER, sourceTextAt(OWNER)).length,
-      "the owner imports nothing, so the census reads the wrong module",
+      materialReferenceLines(owner).length,
+      "the owner imports no mark, so the census reads the wrong module",
     ).toBeGreaterThan(0);
+    expect(owner, "the owner imports the npm package").not.toMatch(
+      /["'`]@material-symbols\//,
+    );
 
     const strays = files
-      .filter((file) => file !== OWNER)
+      .filter((file) => file !== OWNER && file !== __filename)
       .flatMap((file) =>
-        materialImports(file, sourceTextAt(file)).map(
-          (specifier) => `${relative(frontendRoot, file)}: ${specifier}`,
+        materialReferenceLines(sourceTextAt(file)).map(
+          (line) => `${relative(frontendRoot, file)}:${line}`,
         ),
       );
     expect(
       strays,
-      "Import the glyph from src/design-system/materialsymbols.tsx; add it there if it is missing.",
+      "Import the glyph from src/design-system/materialsymbols.tsx; a missing one is an SVG copied into material-symbols/ and imported there.",
     ).toEqual([]);
   });
 });

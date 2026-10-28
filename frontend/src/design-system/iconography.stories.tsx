@@ -329,8 +329,8 @@ const STATUS_MARKS = {
 
 /**
  * The filled marks a status or a tone stands on, from Material Symbols Rounded
- * at weight 500. `materialsymbols.tsx` is the one module that imports them, so
- * a mark the product needs is added there.
+ * at weight 500, as SVG files copied beside `materialsymbols.tsx`. A new one is
+ * its SVG copied there and one import in that module.
  */
 export const StatusMarks: Story = {
   name: "Status marks",
@@ -338,8 +338,9 @@ export const StatusMarks: Story = {
     <div className={specimenColumn} style={column}>
       <p className={specimenIntro}>
         A status or tone mark that stands alone is a filled Material symbol:
-        Rounded, weight 500. Each takes size the way a lucide glyph does, so one
-        can stand in for the other. Shown at 24px.
+        Rounded, weight 500, an SVG file kept in the design system. Each takes
+        size the way a lucide glyph does, so one can stand in for the other.
+        Shown at 24px.
       </p>
       <div
         style={{
@@ -379,7 +380,8 @@ export const UsageRules: Story = {
       >
         <li>
           A status or tone mark that stands alone is a filled Material symbol,
-          from <code>materialsymbols.tsx</code>. A line icon in a control or a
+          from <code>materialsymbols.tsx</code>, except the lucide{" "}
+          <code>Sparkles</code> that marks AI. A line icon in a control or a
           verb is lucide. No emoji, no pictographic character, no image standing
           in for a glyph.
         </li>

@@ -3,12 +3,14 @@
 
 /// <reference types="vite-plugin-svgr/client" />
 
-import CheckCircleSvg from "@material-symbols/svg-500/rounded/check_circle-fill.svg?react";
-import ErrorSvg from "@material-symbols/svg-500/rounded/error-fill.svg?react";
-import InfoSvg from "@material-symbols/svg-500/rounded/info-fill.svg?react";
-import Lightbulb2Svg from "@material-symbols/svg-500/rounded/lightbulb_2-fill.svg?react";
-import WarningSvg from "@material-symbols/svg-500/rounded/warning-fill.svg?react";
 import type { ComponentProps, ComponentType, FunctionComponent } from "react";
+// Copied unchanged from @material-symbols/svg-500 0.48.1, rounded (Apache-2.0,
+// LICENSE beside them). A new mark is one SVG copied in and one import here.
+import CheckCircleSvg from "./material-symbols/check_circle-fill.svg?react";
+import ErrorSvg from "./material-symbols/error-fill.svg?react";
+import InfoSvg from "./material-symbols/info-fill.svg?react";
+import Lightbulb2Svg from "./material-symbols/lightbulb_2-fill.svg?react";
+import WarningSvg from "./material-symbols/warning-fill.svg?react";
 
 /** A glyph from either icon source, so a slot that takes one takes the other. */
 export type Glyph = ComponentType<Readonly<{ size?: number }>>;

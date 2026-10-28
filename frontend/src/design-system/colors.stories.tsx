@@ -161,6 +161,13 @@ const AI_TOKENS: readonly Entry[] = [
   { token: "--aiText", usage: "The agent's label." },
 ];
 
+const NOTICES: readonly Entry[] = (
+  ["Info", "Success", "Warning", "Danger", "Discovery", "Ai"] as const
+).flatMap((tone) => [
+  { token: `--bgNotice${tone}`, usage: "A notice card's ground." },
+  { token: `--borderNotice${tone}`, usage: "The borders inside that card." },
+]);
+
 const TAGS: readonly Entry[] = [
   "--tagTeal",
   "--tagAmber",
@@ -701,6 +708,16 @@ export const AI: Story = {
     <Rows
       intro="Indigo means a machine did this: wrote the draft, found the thing, or holds the evidence behind a claim. It marks authorship and never status, so nothing good, bad or urgent is indigo and nothing a human wrote is. Choose the step by its shape: the base for a filled verb, Light for a tinted row, Chip for a chip, Med for an edge, Text for a label."
       entries={AI_TOKENS}
+    />
+  ),
+};
+
+/** The tinted ground of a notice, one per callout tone. */
+export const Notices: Story = {
+  render: () => (
+    <Rows
+      intro="A callout washes its card in its tone: the base at 12% over the elevated ground, and the borders inside it at 30%. Mixed into an opaque ground, so the wash reads the same over any pane."
+      entries={NOTICES}
     />
   ),
 };

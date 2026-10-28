@@ -3,10 +3,12 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
+import { join } from "node:path";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MailX } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { declaredValues, rulesOf } from "../../scripts/lib/css-rules";
 import {
   CALLOUT_TONES,
   Callout,
@@ -157,6 +159,13 @@ describe("Callout", () => {
     // per tone is what reaches a reader who does not read colour.
     const { container } = render(<Callout tone={tone} title="Something" />);
     expect(container.querySelector(`.callout-icon ${glyph}`)).toBeTruthy();
+  });
+
+  it("draws the ai tone's Sparkles solid, as every AI mark is", () => {
+    const fills = rulesOf([join(__dirname, "base.css")])
+      .filter((rule) => rule.selector === ".lucide-sparkles")
+      .flatMap((rule) => declaredValues(rule.body, "fill"));
+    expect(fills).toEqual(["currentColor"]);
   });
 
   it("takes the caller's glyph instead where the notice names a thing", () => {

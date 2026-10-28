@@ -32,7 +32,6 @@
     "build-storybook": "storybook build -o storybook-static"
   },
   "dependencies": {
-    "@material-symbols/svg-500": "0.48.1",
     "@tanstack/react-query": "^5.101.2",
     "lucide-react": "^1.23.0",
     "openapi-fetch": "^0.17.0",

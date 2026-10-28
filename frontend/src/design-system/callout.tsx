@@ -14,27 +14,10 @@ import {
 } from "./materialsymbols";
 import "./callout.css";
 
-// Callout: something the surface says ABOUT itself, rather than content.
-//
-// The product had fourteen spellings of this — three app banners duplicating
-// the same inline style object, nine screen-local classes, and a handful of
-// bare paragraphs tinted by hand. One of them, `.co-callout`, declared only a
-// top margin: the name promised a callout and the sheet delivered whitespace.
-//
-// The tones are a closed set because they are claims, not decoration. `warning`
-// says something will go wrong if you do nothing; `danger` says something is
-// wrong or is about to be irreversible; `success` confirms an action landed;
-// `info` is the default and carries no urgency at all; `discovery` says the
-// notice is about something NEW to this reader — a capability they have not
-// met, a step of onboarding — which is the one claim that is not a verdict on
-// the account; `ai` says a MACHINE produced what the notice is about, the same
-// claim `Panel tone="ai"` makes for a card. There is no seventh: a surface
-// reaching for one is reaching for emphasis, which is what the words are for.
-//
-// The vocabulary is a VALUE the type is read from, so the story that draws
-// every tone, the gate that checks every tone has a glyph and a rule, and the
-// compiler all walk one list. Spelled twice, they drift, and the copy that goes
-// stale is always the one nobody renders.
+// Callout: what a surface says about itself, not content. Each tone is a claim,
+// so the set is closed. `info` carries no urgency. `warning`: harm if nothing is
+// done. `danger`: wrong now, or about to be irreversible. `success`: an action
+// landed. `discovery`: new to this reader. `ai`: a machine made what it is about.
 export const CALLOUT_TONES = [
   "info",
   "success",
@@ -61,8 +44,7 @@ export type CalloutKind = "outcome" | "standing" | "event";
 
 /**
  * The tone's glyph, so the claim reaches a reader who does not read colour. A
- * filled Material mark, because a tone mark stands alone rather than in a
- * control.
+ * filled Material mark, since a tone mark stands alone; `ai` alone keeps lucide.
  */
 const TONE_ICONS: Readonly<Record<CalloutTone, Glyph>> = {
   info: InfoFilled,
@@ -78,10 +60,8 @@ const TONE_ICONS: Readonly<Record<CalloutTone, Glyph>> = {
   ai: Sparkles,
 };
 
-/**
- * How a screen reader learns about a notice whose caller did not choose a
- * loudness. The table in `Callout`'s own doc is this function, in prose.
- */
+/** With no `live`, a failed outcome is an alert and other outcomes and events a
+ * status. A standing notice arrives with the page, so it announces nothing. */
 function announcementFor(
   kind: CalloutKind | undefined,
   tone: CalloutTone,
@@ -90,46 +70,8 @@ function announcementFor(
   return kind === "outcome" && tone === "danger" ? "alert" : "status";
 }
 
-/**
- * A card washed in the tone's hue: the tone's icon in the tone's ink, the
- * heading and the words in ordinary ink, then whatever the reader can do about
- * it.
- *
- * One anatomy, and the heading is part of it rather than a choice. Icon,
- * heading over an optional body, `actions` at the end, then the dismiss. In a
- * narrow card the actions drop below the words. A heading alone is a complete
- * callout, and the commonest shape: most notices are one sentence, and that
- * sentence is the heading. The two faces this replaced bought density. They
- * cost a notice whose first words were sometimes a heading and sometimes not.
- * So no two of them scanned alike down a page, and the tone reached the ink of
- * one and not the other.
- *
- * `live` decides how a screen reader learns about it; `kind` is the same
- * question asked in the caller's own terms. Passing neither is silent, exactly
- * as before, and an explicit `live` always wins. Otherwise:
- *
- * | `kind`     | tone     | role     |
- * |------------|----------|----------|
- * | `outcome`  | `danger` | `alert`  |
- * | `outcome`  | other    | `status` |
- * | `event`    | any      | `status` |
- * | `standing` | any      | none     |
- *
- * That is the honest reading of each: an outcome the reader caused and cannot
- * use is a failure they have to be told about, anything else that arrived while
- * they were reading is worth mentioning quietly, and a notice rendered WITH the
- * page has nothing to interrupt for. Passing `alert` to something merely
- * informative is how a reader learns to ignore all of them.
- *
- * There is no `className`, and that is the point of the prop's absence: a
- * notice needing air gets it from the stack it sits in, and one that wanted its
- * own colour, edge or plate was not this primitive at all — it was a second
- * callout wearing this one's name, which is the thing the fourteen spellings
- * above were.
- *
- * Copy never lives here: every word arrives as a prop, translated by the
- * caller.
- */
+/** The tone's icon in its ink on a wash of its hue; words and verbs in plain
+ * ink. No `className`: a notice wanting its own colour or edge is a second one. */
 export function Callout({
   tone = "info",
   kind,

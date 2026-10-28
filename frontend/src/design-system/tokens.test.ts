@@ -91,6 +91,27 @@ const canonical: Record<string, string> = {
   "--discoverySurface": "#eed7fc",
   "--discoveryBg": "color-mix(in srgb, var(--discovery) 12%, transparent)",
   "--discoveryBorder": "#d8a0f7",
+  "--bgNoticeInfo": "color-mix(in oklab, var(--info) 12%, var(--bgElevated))",
+  "--borderNoticeInfo":
+    "color-mix(in oklab, var(--info) 30%, var(--bgElevated))",
+  "--bgNoticeSuccess":
+    "color-mix(in oklab, var(--success) 12%, var(--bgElevated))",
+  "--borderNoticeSuccess":
+    "color-mix(in oklab, var(--success) 30%, var(--bgElevated))",
+  "--bgNoticeWarning":
+    "color-mix(in oklab, var(--warning) 12%, var(--bgElevated))",
+  "--borderNoticeWarning":
+    "color-mix(in oklab, var(--warning) 30%, var(--bgElevated))",
+  "--bgNoticeDanger":
+    "color-mix(in oklab, var(--danger) 12%, var(--bgElevated))",
+  "--borderNoticeDanger":
+    "color-mix(in oklab, var(--danger) 30%, var(--bgElevated))",
+  "--bgNoticeDiscovery":
+    "color-mix(in oklab, var(--discovery) 12%, var(--bgElevated))",
+  "--borderNoticeDiscovery":
+    "color-mix(in oklab, var(--discovery) 30%, var(--bgElevated))",
+  "--bgNoticeAi": "color-mix(in oklab, var(--ai) 12%, var(--bgElevated))",
+  "--borderNoticeAi": "color-mix(in oklab, var(--ai) 30%, var(--bgElevated))",
   "--r-xs": "4px",
   "--r-sm": "8px",
   "--r-control": "12px",
@@ -261,6 +282,11 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
             [`--${state}Text`, ["--textOnStatusControl"]],
             [`--${state}Surface`, [`--${state}Text`]],
           ]),
+        ),
+        ...Object.fromEntries(
+          Object.keys(themes.light)
+            .filter((name) => name.startsWith("--bgNotice"))
+            .map((ground) => [ground, ["--textPrimary"]]),
         ),
         "--accent": ["--textOnAccentControl"],
         "--ai": ["--textOnAccent"],
