@@ -451,7 +451,7 @@ export function resolve(
       ? tint
       : composite(tint, resolve(right, pal, seen));
   }
-  // Either colour may carry the share; the other takes the rest of the mix.
+  // One of the two colours carries the share; the other takes the rest of the mix.
   const [base, [mixedIn, part]] = /%\s*$/.test(left)
     ? [right, shareOf(left, value)]
     : [left, shareOf(right, value)];

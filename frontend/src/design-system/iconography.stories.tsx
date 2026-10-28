@@ -329,8 +329,8 @@ const STATUS_MARKS = {
 
 /**
  * The filled marks a status or a tone stands on, from Material Symbols Rounded
- * at weight 500, as SVG files copied beside `materialsymbols.tsx`. A new one is
- * its SVG copied there and one import in that module.
+ * at weight 500. They are SVG files beside `materialsymbols.tsx`, which says how
+ * to add one.
  */
 export const StatusMarks: Story = {
   name: "Status marks",

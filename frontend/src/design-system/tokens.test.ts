@@ -3,6 +3,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { chipInks } from "../../scripts/lib/chip-inks";
+import { declaredValues, rulesOf } from "../../scripts/lib/css-rules";
+import { CALLOUT_TONES } from "./callout";
 import {
   composite,
   contrastOf,
@@ -240,6 +242,18 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       });
     }
 
+    // The grounds a callout's words sit on, read from the sheet that paints them.
+    const calloutWashes = rulesOf([join(here, "callout.css")])
+      .flatMap((rule) => declaredValues(rule.body, "--callout-wash"))
+      .map((value) => /^var\((--[\w-]+)\)$/.exec(value)?.[1] ?? value);
+
+    it("reads one declared wash per callout tone", () => {
+      expect(new Set(calloutWashes).size).toBe(CALLOUT_TONES.length);
+      for (const ground of calloutWashes) {
+        expect(themes.light[ground], `${ground} is not a token`).toBeDefined();
+      }
+    });
+
     // The lesson that produced this whole block, as a gate. Darkening the
     // grounds by a few percent dropped SEVENTEEN text/ground pairs under
     // 4.5:1 — and the tokens themselves all still looked reasonable in
@@ -284,9 +298,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
           ]),
         ),
         ...Object.fromEntries(
-          Object.keys(themes.light)
-            .filter((name) => name.startsWith("--bgNotice"))
-            .map((ground) => [ground, ["--textPrimary"]]),
+          calloutWashes.map((ground) => [ground, ["--textPrimary"]]),
         ),
         "--accent": ["--textOnAccentControl"],
         "--ai": ["--textOnAccent"],

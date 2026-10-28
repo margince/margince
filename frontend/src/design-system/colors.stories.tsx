@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { CSSProperties } from "react";
+import { CALLOUT_TONES } from "./callout";
 import { Heading } from "./heading";
 import {
   specimenColumn,
@@ -161,12 +162,13 @@ const AI_TOKENS: readonly Entry[] = [
   { token: "--aiText", usage: "The agent's label." },
 ];
 
-const NOTICES: readonly Entry[] = (
-  ["Info", "Success", "Warning", "Danger", "Discovery", "Ai"] as const
-).flatMap((tone) => [
-  { token: `--bgNotice${tone}`, usage: "A notice card's ground." },
-  { token: `--borderNotice${tone}`, usage: "The borders inside that card." },
-]);
+const NOTICES: readonly Entry[] = CALLOUT_TONES.flatMap((tone) => {
+  const name = tone.charAt(0).toUpperCase() + tone.slice(1);
+  return [
+    { token: `--bgNotice${name}`, usage: "A notice card's ground." },
+    { token: `--borderNotice${name}`, usage: "The borders inside that card." },
+  ];
+});
 
 const TAGS: readonly Entry[] = [
   "--tagTeal",

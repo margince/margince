@@ -44,7 +44,7 @@ export type CalloutKind = "outcome" | "standing" | "event";
 
 /**
  * The tone's glyph, so the claim reaches a reader who does not read colour. A
- * filled Material mark, since a tone mark stands alone; `ai` alone keeps lucide.
+ * filled Material mark, since a tone mark stands alone.
  */
 const TONE_ICONS: Readonly<Record<CalloutTone, Glyph>> = {
   info: InfoFilled,
@@ -61,7 +61,7 @@ const TONE_ICONS: Readonly<Record<CalloutTone, Glyph>> = {
 };
 
 /** With no `live`, a failed outcome is an alert and other outcomes and events a
- * status. A standing notice arrives with the page, so it announces nothing. */
+ * status. No `kind`, or a standing notice, arrives with the page and is silent. */
 function announcementFor(
   kind: CalloutKind | undefined,
   tone: CalloutTone,
@@ -94,6 +94,7 @@ export function Callout({
   title: ReactNode;
   /** Buttons or links, laid out after the body. */
   actions?: ReactNode;
+  /** The role to announce with, in place of the one `kind` derives. */
   live?: "status" | "alert";
   /**
    * The control that puts the notice away, at the end of the card. ONE prop

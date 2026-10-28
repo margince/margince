@@ -3,6 +3,8 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
+import { createHash } from "node:crypto";
+import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { cleanup, render } from "@testing-library/react";
 import { Info } from "lucide-react";
@@ -20,11 +22,27 @@ const frontendRoot = resolve(__dirname, "../..");
 const srcDir = join(frontendRoot, "src");
 const extensionsRoot = join(frontendRoot, "..", "extensions");
 const OWNER = join(srcDir, "design-system", "materialsymbols.tsx");
+const COPIES = join(srcDir, "design-system", "material-symbols");
+
+// Each copied file's sha256 as published in @material-symbols/svg-500 0.48.1.
+const PUBLISHED: Readonly<Record<string, string>> = {
+  LICENSE: "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+  "check_circle-fill.svg":
+    "6403fa8db865a30ba8fe4d22cb293d7df2cee74da774e2d119e401e15bb90bc2",
+  "error-fill.svg":
+    "5b16c9672a4ec4d201a37028f6ff3821994552a93fbd806e508c8c5987c81e2c",
+  "info-fill.svg":
+    "2181d79146e81135a1af0d3a98fd3fcc08c87f0f7162656b57e42b08a4ff78d8",
+  "lightbulb_2-fill.svg":
+    "51c84ce4cc99bb4289550b6814098a804eb7dac923b85f10311ba19d07753132",
+  "warning-fill.svg":
+    "f13d716ece4e68f885df9519aa586c223735df24f13b80ee856b303ea79ee3a9",
+};
 
 // Raw text, not a parsed import: a template specifier, a `require`, an `.mdx`
 // page or a CSS `url()` names the files where no string-literal import shows.
 const MATERIAL_REFERENCE = /material-symbols|@material-["'`$]/g;
-const CORPUS_FILE = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs|mdx|css)$/;
+const CORPUS_FILE = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs|mdx|css|html)$/;
 
 function materialReferenceLines(text: string): number[] {
   return [...text.matchAll(MATERIAL_REFERENCE)].map(
@@ -120,6 +138,11 @@ describe("one module imports Material Symbols", () => {
       'const marks = import.meta.glob("/node_modules/@material-symbols/svg-500/rounded/*.svg");',
     ],
     [
+      "an html entry",
+      "probe.html",
+      '<img src="/src/design-system/material-symbols/info-fill.svg" alt="" />',
+    ],
+    [
       "an import of the copied files",
       "probe.tsx",
       'import Info from "../design-system/material-symbols/info-fill.svg?react";',
@@ -132,9 +155,11 @@ describe("one module imports Material Symbols", () => {
   it("finds none outside materialsymbols.tsx", { timeout: 60_000 }, () => {
     const files = filesMatching(srcDir, CORPUS_FILE).concat(
       extensionFilesMatching(extensionsRoot, CORPUS_FILE),
+      join(frontendRoot, "index.html"),
     );
     expect(files.length).toBeGreaterThan(100);
     expect(files.some((file) => file.endsWith(".css"))).toBe(true);
+    expect(files.some((file) => file.endsWith(".html"))).toBe(true);
     const owner = sourceTextAt(OWNER);
     expect(
       materialReferenceLines(owner).length,
@@ -153,7 +178,19 @@ describe("one module imports Material Symbols", () => {
       );
     expect(
       strays,
-      "Import the glyph from src/design-system/materialsymbols.tsx; a missing one is an SVG copied into material-symbols/ and imported there.",
+      "Import the glyph from src/design-system/materialsymbols.tsx, which says how to add a missing one.",
     ).toEqual([]);
+  });
+});
+
+describe("the copied Material files", () => {
+  it("are byte for byte the published ones, and only those", () => {
+    expect(readdirSync(COPIES).sort()).toEqual(Object.keys(PUBLISHED).sort());
+    for (const [file, sha256] of Object.entries(PUBLISHED)) {
+      const digest = createHash("sha256")
+        .update(readFileSync(join(COPIES, file)))
+        .digest("hex");
+      expect(digest, `${file} differs from the published file`).toBe(sha256);
+    }
   });
 });

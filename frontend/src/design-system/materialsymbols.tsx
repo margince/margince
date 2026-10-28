@@ -5,7 +5,8 @@
 
 import type { ComponentProps, ComponentType, FunctionComponent } from "react";
 // Copied unchanged from @material-symbols/svg-500 0.48.1, rounded (Apache-2.0,
-// LICENSE beside them). A new mark is one SVG copied in and one import here.
+// LICENSE beside them). A new mark is one SVG copied in, its sha256 pinned in
+// materialsymbols.test.tsx, and one import here.
 import CheckCircleSvg from "./material-symbols/check_circle-fill.svg?react";
 import ErrorSvg from "./material-symbols/error-fill.svg?react";
 import InfoSvg from "./material-symbols/info-fill.svg?react";
