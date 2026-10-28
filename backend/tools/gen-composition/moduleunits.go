@@ -17,6 +17,8 @@ import (
 	"runtime"
 
 	"golang.org/x/mod/modfile"
+
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 const (
@@ -41,8 +43,8 @@ type unitSource struct {
 	fetched    bool
 }
 
-// listedModule is the part of `go mod download -json` this composer reads.
-type listedModule struct {
+// downloadedModule is the part of `go mod download -json` this composer reads.
+type downloadedModule struct {
 	Path  string
 	Dir   string
 	Error string
@@ -123,12 +125,16 @@ func fetchUnits(root string) error {
 	if len(wanted) == 0 {
 		return nil
 	}
-	downloaded, err := goModules(filepath.Dir(instanceGoMod(root)), append([]string{"mod", "download", "-json"}, wanted...))
+	downloaded, err := downloadModules(filepath.Dir(instanceGoMod(root)), wanted)
 	if err != nil {
 		return err
 	}
 	for _, m := range downloaded {
-		dst := filepath.Join(outDir, unitNameFromModulePath(m.Path))
+		name := unitNameFromModulePath(m.Path)
+		if err := extension.Name(name).Validate(); err != nil {
+			return fmt.Errorf("%s: %w", m.Path, err)
+		}
+		dst := filepath.Join(outDir, name)
 		if err := os.CopyFS(dst, os.DirFS(m.Dir)); err != nil {
 			return fmt.Errorf("%s: %w", m.Path, err)
 		}
@@ -140,7 +146,7 @@ func fetchUnits(root string) error {
 }
 
 // dropReplaces removes a downloaded unit's replace lines from its copy. Go
-// never applies a dependency's replace, and the composed workspace would: a
+// never applies a dependency's replace, but the composed workspace would. A
 // path like ../../backend points nowhere from the copy and conflicts with the
 // workspace's own backend.
 func dropReplaces(goModPath string) error {
@@ -161,26 +167,28 @@ func dropReplaces(goModPath string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(goModPath, out, 0o644) // #nosec G306 -- build output
+	return os.WriteFile(goModPath, out, 0o644) // #nosec G306 G703 -- build output under build/extensions/<name>, the name checked by extension.Name
 }
 
-func goModules(dir string, args []string) ([]listedModule, error) {
+// downloadModules runs `go mod download` inside the instance's module, so its
+// go.sum and the checksum database check every module@version it is given.
+func downloadModules(instanceDir string, versions []string) ([]downloadedModule, error) {
 	goBin, err := goBinary()
 	if err != nil {
 		return nil, err
 	}
-	cmd := exec.Command(goBin, args...) // #nosec G204 -- GOROOT/bin/go; the arguments are module paths parsed from go.mod by modfile
-	cmd.Dir = dir
+	cmd := exec.Command(goBin, append([]string{"mod", "download", "-json"}, versions...)...) // #nosec G204 -- GOROOT/bin/go; the arguments are module paths parsed from go.mod by modfile
+	cmd.Dir = instanceDir
 	cmd.Env = append(os.Environ(), "GOWORK=off")
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	out, runErr := cmd.Output()
-	var modules []listedModule
+	var modules []downloadedModule
 	dec := json.NewDecoder(bytes.NewReader(out))
 	for dec.More() {
-		var m listedModule
+		var m downloadedModule
 		if err := dec.Decode(&m); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("go mod download: %w\n%s", err, stderr.String())
 		}
 		if m.Error != "" {
 			return nil, fmt.Errorf("%s: %s", m.Path, m.Error)
@@ -188,7 +196,7 @@ func goModules(dir string, args []string) ([]listedModule, error) {
 		modules = append(modules, m)
 	}
 	if runErr != nil {
-		return nil, fmt.Errorf("go %s: %w\n%s", args[0], runErr, stderr.String())
+		return nil, fmt.Errorf("go mod download: %w\n%s", runErr, stderr.String())
 	}
 	return modules, nil
 }

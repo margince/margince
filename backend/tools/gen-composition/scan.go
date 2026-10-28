@@ -60,9 +60,17 @@ func scanExtensions(root string) ([]extensionUnit, error) {
 		if err := extension.Name(src.name).Validate(); err != nil {
 			return nil, fmt.Errorf("%s: %w", src.modulePath, err)
 		}
+		if _, err := os.Stat(src.dir); src.fetched && os.IsNotExist(err) {
+			return nil, fmt.Errorf("%s@%s is not fetched yet; run make composition", src.modulePath, src.version)
+		}
 		unit, err := scanUnit(src.name, src.dir)
 		if err != nil {
 			return nil, err
+		}
+		// A downloaded go.mod may name any module. Composed under another path,
+		// it would stand in for that module everywhere, core's imports included.
+		if src.fetched && unit.ModulePath != src.modulePath {
+			return nil, fmt.Errorf("%s@%s declares module %q in its go.mod; refused, since it would replace that module in the whole build", src.modulePath, src.version, unit.ModulePath)
 		}
 		units = append(units, unit)
 	}
@@ -135,7 +143,7 @@ func scanUnit(name, dir string) (extensionUnit, error) {
 		// but a dependency tree, and "no Go module" sends whoever removed the
 		// unit looking for a go.mod they deliberately deleted.
 		if empty, err := holdsOnlyInstalledOutput(dir); err == nil && empty {
-			return extensionUnit{}, fmt.Errorf("extensions/%s holds nothing but installed dependencies — its source is gone but the directory is not; remove its require from the instance's go.mod and the directory (`rm -rf extensions/%s`)", name, name)
+			return extensionUnit{}, fmt.Errorf("extensions/%s holds nothing but installed dependencies — its source is gone but the directory is not; remove its require from the instance's go.mod, or restore its source", name)
 		}
 		return extensionUnit{}, fmt.Errorf("extensions/%s: nothing to compose (no Go module)", name)
 	case err != nil:
@@ -371,6 +379,13 @@ func coreDigest(root string) (string, error) {
 		// go.sum may legitimately be absent (a dependency-free member);
 		// absence digests as empty, so appearing registers as a change.
 		if err := h.addFileOrEmpty(member + "/go.sum"); err != nil {
+			return "", err
+		}
+	}
+	// The instance's go.mod and go.sum decide which unit, at which version, is
+	// composed; a changed require must restale the fast probe too.
+	for _, rel := range []string{instanceDirName + "/go.mod", instanceDirName + "/go.sum"} {
+		if err := h.addFileOrEmpty(rel); err != nil {
 			return "", err
 		}
 	}

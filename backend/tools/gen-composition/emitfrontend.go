@@ -448,7 +448,13 @@ func linkUnitScreens(root string, units []extensionUnit) error {
 		return err
 	}
 	for _, u := range units {
-		if err := os.Symlink(filepath.Join(u.Dir, frontendLayer), filepath.Join(dir, u.Name)); err != nil {
+		// Relative, as linkHost's is, so the tree still resolves when it is
+		// mounted at another path.
+		target, err := filepath.Rel(dir, filepath.Join(u.Dir, frontendLayer))
+		if err != nil {
+			return err
+		}
+		if err := os.Symlink(target, filepath.Join(dir, u.Name)); err != nil {
 			return fmt.Errorf("linking %s's screen: %w", u.Name, err)
 		}
 	}

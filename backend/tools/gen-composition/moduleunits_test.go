@@ -6,6 +6,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -161,5 +162,103 @@ func TestTheUnitNameIsTheModulePathsLastElement(t *testing.T) {
 		if got := unitNameFromModulePath(modPath); got != want {
 			t.Errorf("unitNameFromModulePath(%q) = %q, want %q", modPath, got, want)
 		}
+	}
+}
+
+func TestAChangedInstanceGoModRestalesTheCoreDigest(t *testing.T) {
+	root := digestRoot(t)
+	writeTree(t, root, map[string]string{"instance/go.mod": "module i\n\nrequire example.test/crm v1.0.0\n"})
+	before, err := coreDigest(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeTree(t, root, map[string]string{"instance/go.mod": "module i\n\nrequire example.test/crm v1.1.0\n"})
+	after, err := coreDigest(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if before == after {
+		t.Fatal("a new version in instance/go.mod left the core digest unchanged, so -verify-inputs would pass a stale composition")
+	}
+}
+
+// The tree's other gates read units from the folders under extensions/, so
+// core's instance must turn on those and no others, by the composer's rules.
+func TestCoreInstanceTurnsOnExactlyTheUnitsUnderExtensions(t *testing.T) {
+	units, err := instanceUnits(repoRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tier, err := filepath.Abs(filepath.Join(repoRoot, "extensions"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var required []string
+	for _, u := range units {
+		dir, err := filepath.Abs(u.dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if filepath.Dir(dir) == tier {
+			required = append(required, filepath.Base(dir))
+		}
+	}
+	entries, err := os.ReadDir(tier)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var present []string
+	for _, e := range entries {
+		if _, err := os.Stat(filepath.Join(tier, e.Name(), "go.mod")); err == nil {
+			present = append(present, e.Name())
+		}
+	}
+	if len(present) == 0 {
+		t.Fatal("no unit under extensions/: this test compares nothing")
+	}
+	sort.Strings(required)
+	if strings.Join(required, " ") != strings.Join(present, " ") {
+		t.Errorf("instance/go.mod turns on %v, but extensions/ holds %v; require each unit with a replace to ../extensions/<name>, or remove the folder", required, present)
+	}
+}
+
+func TestUnitScreenLinksAreRelativeAndReplacedEachRun(t *testing.T) {
+	root := t.TempDir()
+	unit := func(name string) extensionUnit {
+		dir := filepath.Join(root, "extensions", name)
+		writeTree(t, dir, map[string]string{"frontend/package.json": "{}\n"})
+		return extensionUnit{Name: name, Dir: dir}
+	}
+	if err := linkUnitScreens(root, []extensionUnit{unit("alpha"), unit("beta")}); err != nil {
+		t.Fatal(err)
+	}
+	if err := linkUnitScreens(root, []extensionUnit{unit("beta")}); err != nil {
+		t.Fatal(err)
+	}
+	links := filepath.Join(root, filepath.FromSlash(unitScreensDir))
+	if _, err := os.Lstat(filepath.Join(links, "alpha")); !os.IsNotExist(err) {
+		t.Errorf("alpha's link survived a run that no longer enables it (lstat err = %v)", err)
+	}
+	target, err := os.Readlink(filepath.Join(links, "beta"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if filepath.IsAbs(target) {
+		t.Errorf("link target %q is absolute; a tree mounted elsewhere would not resolve it", target)
+	}
+	if _, err := os.Stat(filepath.Join(links, "beta", "package.json")); err != nil {
+		t.Errorf("beta's link does not resolve to its frontend: %v", err)
+	}
+}
+
+func TestADownloadedUnitClaimingAnotherModulePathIsRefused(t *testing.T) {
+	root := t.TempDir()
+	writeTree(t, root, map[string]string{
+		"instance/go.mod":               "module i\n\nrequire example.test/acme/crmx v1.2.3\n",
+		"build/extensions/crmx/go.mod":  "module github.com/google/uuid\n",
+		"build/extensions/crmx/crmx.go": "package uuid\n",
+	})
+	if _, err := scanExtensions(root); err == nil || !strings.Contains(err.Error(), `declares module "github.com/google/uuid"`) {
+		t.Fatalf("err = %v, want the impostor module refused", err)
 	}
 }
