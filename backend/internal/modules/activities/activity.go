@@ -15,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -339,15 +338,8 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	// Attested outbound is the one write that turns "does this workspace
-	// correspond with them" from no to yes, and the verdict engine acts on that
-	// answer inside its own transaction. The two serialize on one key; capture's
-	// sink takes it for the same reason on the rows a connector files.
-	if in.CounterpartyOutboundAttested && counterparty != "" {
-		if err := storekit.LockWriteIdentity(ctx, tx, correspondence.LockEntity,
-			correspondence.LockIdentity(counterparty)); err != nil {
-			return crmcontracts.Activity{}, false, err
-		}
+	if err := lockCorrespondenceForAttestedSend(ctx, tx, in, counterparty); err != nil {
+		return crmcontracts.Activity{}, false, err
 	}
 	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
 		return crmcontracts.Activity{}, false, err
