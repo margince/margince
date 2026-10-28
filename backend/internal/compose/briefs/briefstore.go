@@ -325,8 +325,8 @@ func (e *BriefEngine) LatestRun(ctx context.Context, now time.Time) (BriefRun, e
 
 // LatestCutoff answers the as_of of the reader's run for today, under the
 // same gate, reader and local day as LatestRun. It reads no items and writes
-// nothing: a surface that only dates a window from the brief has not opened
-// the brief, so it must not record an open or resurface a snooze.
+// nothing. A surface that only dates a window from the brief has not opened
+// it, so it must not record an open or resurface a snooze.
 func (e *BriefEngine) LatestCutoff(ctx context.Context, now time.Time) (time.Time, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return time.Time{}, err
