@@ -457,7 +457,7 @@ func TestSuggestionDismissalIsPerUser(t *testing.T) {
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
-	seedUnansweredOutbound(t, e, company.UUID)
+	seedUnansweredCall(t, e, company.UUID)
 
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 	rep2 := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AccountRepPerms)
@@ -690,11 +690,15 @@ func TestASuggestionDismissedOnAScopedPageStaysDismissed(t *testing.T) {
 	// threshold, the other engagement's the more recent — so the account's
 	// newest exchange and the ERP page's newest exchange are different messages,
 	// which is what makes the two fingerprints differ at all.
+	// The rep logs each mail to a contact there, so the rep is its sender. The
+	// mail then waits on the other side, as the rep's own History badge reads it.
+	buyer := e.SeedContact(t, "Anna Buyer", &e.Rep1)
+	employ(t, e, buyer, company.UUID, "Buyer")
 	unanswered := func(subject string, within ids.ProjectID, daysAgo int) {
 		at, outbound := company360Clock.AddDate(0, 0, -daysAgo), "outbound"
-		logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		logged, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
 			Kind: "email", Direction: &outbound, Subject: &subject, OccurredAt: &at,
-			Links: []activities.ActivityLinkInput{{EntityType: "company", EntityID: company.UUID}},
+			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: buyer}},
 		})
 		if err != nil {
 			t.Fatalf("logging %q: %v", subject, err)

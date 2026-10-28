@@ -26,6 +26,7 @@ import {
   type WebForm,
   type WebFormCreated,
 } from "./webformkinds";
+import { FormOwnerLine } from "./webformowner";
 import { WebFormSetupModal } from "./webformsetup";
 import "./webforms.css";
 
@@ -167,6 +168,7 @@ function FormRow({
             {form.sender === "browser"
               ? form.allowed_origins.join(", ")
               : t(`webForms.senderLine.${form.sender}`)}
+            {form.owner_id && <FormOwnerLine ownerId={form.owner_id} />}
             <span className="webform-row-actions">
               <Button
                 data-testid="web-form-setup"
