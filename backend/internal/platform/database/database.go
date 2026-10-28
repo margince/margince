@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -90,6 +91,13 @@ func PoolConfig(dsn string) (*pgxpool.Config, error) {
 	// Typed entity ids ride uuid/uuid[] on every connection, and every
 	// timestamptz reads back in UTC.
 	setSessionUTC(cfg)
+	if dir := os.Getenv(SQLCensusDirEnv); dir != "" {
+		tracer, err := processCensus(dir)
+		if err != nil {
+			return nil, err
+		}
+		cfg.ConnConfig.Tracer = tracer
+	}
 	cfg.AfterConnect = func(_ context.Context, conn *pgx.Conn) error {
 		RegisterIDTypes(conn)
 		RegisterUTCTimes(conn)
