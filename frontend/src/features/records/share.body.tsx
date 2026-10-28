@@ -35,6 +35,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
+import { holdsEveryWord, searchWords } from "../../format/collate";
 import {
   formatDate,
   formatNumber,
@@ -98,13 +99,11 @@ export function ShareScreenBody({
   const [reason, setReason] = useState("");
 
   const filteredRoster = useMemo(() => {
-    const q = term.trim().toLowerCase();
-    if (!q) {
+    const words = searchWords(term);
+    if (words.length === 0) {
       return roster;
     }
-    return roster.filter((r) =>
-      `${r.name} ${r.note}`.toLowerCase().includes(q),
-    );
+    return roster.filter((r) => holdsEveryWord(words, [r.name, r.note]));
   }, [roster, term]);
 
   function resetForm() {

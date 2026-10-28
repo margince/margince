@@ -1,5 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
+import {
+  type JustIn,
+  LatestInboundPanel,
+} from "../../components/latestinbound";
 import { CallAction } from "../../design-system/callaction";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
@@ -24,7 +28,7 @@ import {
   ConversationList,
   useChronologyCut,
 } from "../records/recordconversations";
-import { TimelineActions } from "../records/timelineactions";
+import { RowAnswerActions, TimelineActions } from "../records/timelineactions";
 import { MeetingBriefAction } from "./contactmeetings";
 import { callBackNumber } from "./contactmemory.rows";
 import { timelineState } from "./contacttimelinestate";
@@ -40,6 +44,72 @@ import { invalidateRecord } from "../../lib/recordwritekeys";
 type Contact360 = components["schemas"]["Contact360"];
 
 // --- Timeline ---------------------------------------------------------------
+
+type Activity = components["schemas"]["Activity"];
+
+// The verbs one of the contact's activities offers, wherever it is drawn. That
+// is its timeline row, and the "Just in" panel when it is the newest one in.
+// The panel only answers, so `answerOnly` leaves the filing verbs to the row.
+function ContactRowActions({
+  activity,
+  contactId,
+  view,
+  onBriefMeeting,
+  answerOnly = false,
+}: Readonly<{
+  activity: Activity;
+  contactId: string;
+  view?: Contact360;
+  onBriefMeeting?: (activityId: string) => void;
+  answerOnly?: boolean;
+}>) {
+  const t = useT();
+  const Verbs = answerOnly ? RowAnswerActions : TimelineActions;
+  return (
+    <Verbs
+      activity={activity}
+      entityType="contact"
+      entityId={contactId}
+      contactId={contactId}
+      extra={(row) => (
+        <>
+          <MeetingBriefAction activity={row} onBriefMeeting={onBriefMeeting} />
+          <CallAction
+            appearance="button"
+            label={t("record.verb.call")}
+            number={callBackNumber(row.kind, view?.contact)}
+            record={{ entityType: "contact", entityId: contactId }}
+          />
+        </>
+      )}
+    />
+  );
+}
+
+/** The newest unanswered thing the contact sent, leading the Overview. */
+export function ContactLatestInbound({
+  latest,
+  contactId,
+  view,
+}: Readonly<{
+  latest: JustIn | undefined;
+  contactId: string;
+  view: Contact360;
+}>) {
+  return (
+    <LatestInboundPanel
+      latest={latest}
+      actions={(activity) => (
+        <ContactRowActions
+          activity={activity}
+          contactId={contactId}
+          view={view}
+          answerOnly
+        />
+      )}
+    />
+  );
+}
 
 /**
  * ContactTimelineTab is the contact's History, read through the same
@@ -100,25 +170,11 @@ export function ContactTimelineTab({
     // hide that sender behind this contact's own.
     values: { currency: null, locale, zone: recordZone },
     renderActions: (activity) => (
-      <TimelineActions
+      <ContactRowActions
         activity={activity}
-        entityType="contact"
-        entityId={contactId}
         contactId={contactId}
-        extra={(row) => (
-          <>
-            <MeetingBriefAction
-              activity={row}
-              onBriefMeeting={onBriefMeeting}
-            />
-            <CallAction
-              appearance="button"
-              label={t("record.verb.call")}
-              number={callBackNumber(row.kind, view?.contact)}
-              record={{ entityType: "contact", entityId: contactId }}
-            />
-          </>
-        )}
+        view={view}
+        onBriefMeeting={onBriefMeeting}
       />
     ),
   });

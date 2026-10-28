@@ -22,9 +22,9 @@ expect:
   outcome: accepted
   answer:
   - verdict: still_owed
-    remaining_names: invoice
+    remaining_names: Rechnung
   - verdict: settled
   judge: none
   judge_none_reason: The first answer supplies only the quote and explicitly defers the invoice. The
-    remaining work must name the invoice in the configured English record language. The second supplies
+    remaining work must quote the ask for the invoice from the original request. The second supplies
     both requested documents.

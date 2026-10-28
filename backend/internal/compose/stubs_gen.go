@@ -1871,6 +1871,10 @@ func (stubs) EmbedReindexStart(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "EmbedReindexStart")
 }
 
+func (stubs) EmbedReindexIdentities(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "EmbedReindexIdentities")
+}
+
 func (stubs) EmbedReindexPreview(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "EmbedReindexPreview")
 }
@@ -3691,7 +3695,7 @@ func (stubs) GetTeamExceptions(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetTeamExceptions")
 }
 
-func (stubs) GetHandledForYou(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) GetHandledForYou(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetHandledForYouParams) {
 	httperr.NotImplemented(w, r, "GetHandledForYou")
 }
 

@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { useRef } from "react";
+import { Button } from "../design-system/atoms";
+import { useListFocusHandoff } from "../design-system/listfocus";
+import { useT } from "../i18n";
+import { currentParams, replaceParams } from "../lib/urlstate";
+
+// The press edits the address, not the list's query. A list may keep a refused
+// dial out of its query, yet the dial still sits in the address.
+function withoutDials(dials: readonly string[]) {
+  const next = new Map(currentParams());
+  for (const dial of dials) {
+    next.delete(dial);
+  }
+  replaceParams(next);
+}
+
+export function RefusedFiltersNote({
+  message,
+  dials,
+  names,
+}: Readonly<{ message: string; dials: readonly string[]; names: string }>) {
+  const t = useT();
+  const remove = useRef<HTMLButtonElement>(null);
+  useListFocusHandoff(remove);
+  return (
+    <span>
+      {message}{" "}
+      <Button ref={remove} onClick={() => withoutDials(dials)}>
+        {t("list.filterRefusedRemove", { dial: names })}
+      </Button>
+    </span>
+  );
+}

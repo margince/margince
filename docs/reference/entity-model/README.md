@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 333 |
-| Columns | 3948 |
+| Columns | 3956 |
 | Foreign keys | 551 |
 | Owning areas | 37 |
 
@@ -44,7 +44,7 @@ Ranked by how many foreign keys point at them.
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 35 | 49 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 68 | 38 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 44 | 27 |
-| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 42 | 18 |
+| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 43 | 18 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 12 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 9 |
 | [`team`](identity.md#team) | [identity](identity.md) | 6 | 9 |
@@ -150,7 +150,7 @@ erDiagram
 | [`activity_participant_replay`](compose.md#activity_participant_replay) | compose | 3 | 0 |
 | [`activity_reader_state`](activities.md#activity_reader_state) | activities | 8 | 0 |
 | [`activity_reply_verdict_history`](activities.md#activity_reply_verdict_history) | activities | 6 | 0 |
-| [`activity_request_settlement`](activities.md#activity_request_settlement) | activities | 10 | 0 |
+| [`activity_request_settlement`](activities.md#activity_request_settlement) | activities | 11 | 0 |
 | [`activity_retention_evidence`](activities.md#activity_retention_evidence) | activities | 12 | 0 |
 | [`activity_review_response`](activities.md#activity_review_response) | activities | 16 | 0 |
 | [`activity_review_template`](activities.md#activity_review_template) | activities | 16 | 0 |
@@ -232,7 +232,7 @@ erDiagram
 | [`company_dossier`](compose.md#company_dossier) | compose | 6 | 0 |
 | [`company_fact`](contacts.md#company_fact) | contacts | 18 | 0 |
 | [`company_fact_revision`](contacts.md#company_fact_revision) | contacts | 2 | 0 |
-| [`company_geocode_state`](contacts.md#company_geocode_state) | contacts | 5 | 0 |
+| [`company_geocode_state`](contacts.md#company_geocode_state) | contacts | 11 | 0 |
 | [`company_growth_fit`](compose.md#company_growth_fit) | compose | 6 | 0 |
 | [`company_offered_value`](contacts.md#company_offered_value) | contacts | 5 | 0 |
 | [`company_profile_field`](contacts.md#company_profile_field) | contacts | 15 | 0 |
@@ -323,7 +323,7 @@ erDiagram
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 11 | 0 |
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 12 | 1 |
 | [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 16 | 1 |
-| [`lead`](contacts.md#lead) | contacts | 42 | 18 |
+| [`lead`](contacts.md#lead) | contacts | 43 | 18 |
 | [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 11 | 1 |
 | [`lead_manual_signal`](contacts.md#lead_manual_signal) | contacts | 12 | 0 |
 | [`lead_origin`](contacts.md#lead_origin) | contacts | 13 | 2 |

@@ -74,6 +74,9 @@ func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in 
 	if err := s.carryLeadCompany(ctx, tx, id, contactID, deref(lead.Title)); err != nil {
 		return PromoteOutcome{}, err
 	}
+	if err := s.carryLeadIndustry(ctx, tx, company, lead.Industry); err != nil {
+		return PromoteOutcome{}, err
+	}
 	carried, err := carryLeadActivities(ctx, tx, id, contactID)
 	if err != nil {
 		return PromoteOutcome{}, err

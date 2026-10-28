@@ -1,11 +1,11 @@
 {
   "totals": {
     "sites": 49,
-    "sites_best_current": 36,
+    "sites_best_current": 35,
     "sites_best_partial": 1,
-    "sites_best_stale": 11,
+    "sites_best_stale": 12,
     "sites_absent": 1,
-    "scenarios": 270,
+    "scenarios": 271,
     "records": 355,
     "bindings": 18,
     "self_judged_records": 0
@@ -1378,7 +1378,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -1388,7 +1388,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 30,
@@ -2409,7 +2409,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -2419,7 +2419,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current",
+            "state": "stale",
             "measured_on": {
               "provider": "gemini",
               "model": "gemini-3.1-flash-lite",
@@ -8354,7 +8354,7 @@
       "ready": 30,
       "usable_with_care": 13,
       "not_reliable_yet": 1,
-      "recheck_pending": 12,
+      "recheck_pending": 13,
       "models": [
         {
           "binding": {
@@ -8363,9 +8363,9 @@
             "env": "cloud_frontier"
           },
           "sites": 42,
-          "sites_current": 30,
+          "sites_current": 29,
           "sites_partial": 1,
-          "sites_stale": 11,
+          "sites_stale": 12,
           "runs": 654,
           "passed": 642,
           "reliability": 0.981651376146789,
@@ -8776,7 +8776,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 30,
           "passed": 30,
           "records": 1
@@ -10398,9 +10398,9 @@
         "env": "cloud_frontier"
       },
       "sites": 45,
-      "sites_current": 32,
+      "sites_current": 31,
       "sites_partial": 1,
-      "sites_stale": 12,
+      "sites_stale": 13,
       "runs": 813,
       "passed": 784,
       "reliability": 0.964329643296433,
@@ -20981,17 +20981,8 @@
       "key": "request_settlement/request_settle",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "a_reply_that_says_nothing_either_way_is_answered_unsure",
@@ -21030,6 +21021,12 @@
           "file": "backend/internal/compose/aicert/corpus/request_settlement/declined_and_handed_on_01.yaml"
         },
         {
+          "name": "delivering_feedback_then_asking_them_does_not_reverse_the_duty",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/request_settlement/feedback_delivered_then_our_question.yaml"
+        },
+        {
           "name": "partial_delivery_keeps_the_remaining_invoice_de",
           "expects": "accepted",
           "graded_by": "mechanical",
@@ -21061,10 +21058,10 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 10,
-          "scenarios_total": 10,
+          "scenarios_measured": 0,
+          "scenarios_total": 11,
           "runs": 30,
           "passed": 30,
           "reliability": 1,
@@ -21076,7 +21073,37 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "10 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague and 4 more",
+          "stale_cause": {
+            "case_changed": [
+              "an_answer_off_the_thread_can_leave_the_request_owed",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "partial_delivery_keeps_the_remaining_invoice_de",
+              "partial_delivery_keeps_the_remaining_invoice_en",
+              "partial_delivery_keeps_the_remaining_invoice_vi"
+            ],
+            "prompt_changed": [
+              "a_reply_that_says_nothing_either_way_is_answered_unsure",
+              "an_answer_off_the_thread_can_leave_the_request_owed",
+              "an_answer_off_the_thread_settles_a_request",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "answering_one_of_two_asks_leaves_the_other_owed",
+              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+              "partial_delivery_keeps_the_remaining_invoice_de",
+              "partial_delivery_keeps_the_remaining_invoice_en",
+              "partial_delivery_keeps_the_remaining_invoice_vi",
+              "signature_completion_requires_the_matching_document"
+            ],
+            "grader_changed": [
+              "a_reply_that_says_nothing_either_way_is_answered_unsure",
+              "an_answer_off_the_thread_can_leave_the_request_owed",
+              "an_answer_off_the_thread_settles_a_request",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "answering_one_of_two_asks_leaves_the_other_owed",
+              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+              "signature_completion_requires_the_matching_document"
+            ]
+          }
         },
         {
           "binding": {
@@ -21087,7 +21114,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 10,
+          "scenarios_total": 11,
           "runs": 18,
           "passed": 18,
           "reliability": 1,
@@ -21099,8 +21126,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "6 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "6 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "case_changed": [
+              "an_answer_off_the_thread_can_leave_the_request_owed",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not"
+            ],
             "prompt_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_off_the_thread_can_leave_the_request_owed",
@@ -21128,7 +21159,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 10,
+          "scenarios_total": 11,
           "runs": 24,
           "passed": 23,
           "reliability": 0.9583333333333334,
@@ -21140,8 +21171,11 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "case_changed": [
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not"
+            ],
             "prompt_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_settles_a_request_and_an_acknowledgement_does_not",
@@ -21165,7 +21199,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 10,
+          "scenarios_total": 11,
           "runs": 18,
           "passed": 15,
           "reliability": 0.8333333333333334,
@@ -21177,8 +21211,12 @@
             "invalid": 3,
             "abstained": 0
           },
-          "stale_reason": "6 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "6 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "case_changed": [
+              "an_answer_off_the_thread_can_leave_the_request_owed",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not"
+            ],
             "prompt_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_off_the_thread_can_leave_the_request_owed",
@@ -21206,7 +21244,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 10,
+          "scenarios_total": 11,
           "runs": 24,
           "passed": 15,
           "reliability": 0.625,
@@ -21218,8 +21256,12 @@
             "invalid": 9,
             "abstained": 0
           },
-          "stale_reason": "6 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "6 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "case_changed": [
+              "an_answer_off_the_thread_can_leave_the_request_owed",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not"
+            ],
             "prompt_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_off_the_thread_can_leave_the_request_owed",
@@ -21247,7 +21289,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 10,
+          "scenarios_total": 11,
           "runs": 18,
           "passed": 18,
           "reliability": 1,
@@ -21259,8 +21301,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "6 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "6 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "case_changed": [
+              "an_answer_off_the_thread_can_leave_the_request_owed",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not"
+            ],
             "prompt_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_off_the_thread_can_leave_the_request_owed",
@@ -21288,7 +21334,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 10,
+          "scenarios_total": 11,
           "runs": 18,
           "passed": 18,
           "reliability": 1,
@@ -21300,8 +21346,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "6 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "6 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "case_changed": [
+              "an_answer_off_the_thread_can_leave_the_request_owed",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not"
+            ],
             "prompt_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_off_the_thread_can_leave_the_request_owed",
@@ -21329,7 +21379,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 10,
+          "scenarios_total": 11,
           "runs": 18,
           "passed": 18,
           "reliability": 1,
@@ -21341,8 +21391,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "6 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "6 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "case_changed": [
+              "an_answer_off_the_thread_can_leave_the_request_owed",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not"
+            ],
             "prompt_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_off_the_thread_can_leave_the_request_owed",
@@ -21370,7 +21424,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 10,
+          "scenarios_total": 11,
           "runs": 18,
           "passed": 18,
           "reliability": 1,
@@ -21382,8 +21436,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "6 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "6 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "case_changed": [
+              "an_answer_off_the_thread_can_leave_the_request_owed",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not"
+            ],
             "prompt_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_off_the_thread_can_leave_the_request_owed",
@@ -21411,7 +21469,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 10,
+          "scenarios_total": 11,
           "runs": 12,
           "passed": 6,
           "reliability": 0.5,
@@ -21423,8 +21481,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "case_changed": [
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not"
+            ],
             "prompt_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_settles_a_request_and_an_acknowledgement_does_not",

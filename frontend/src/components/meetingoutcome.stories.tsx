@@ -2,26 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
-import { meFixture } from "../../testing/mefixture";
+import { expect, userEvent, within } from "storybook/test";
+import { meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
-} from "../../testing/story-utils";
-import { MeetingOutcome } from "./worklist.meetingoutcome";
-// The line the verbs stand on belongs to the ROW rather than to the screen, so
-// a story mounting them without it draws a bare inline flow with no gap.
-import "./worklist.css";
-import "./worklist.row.css";
+} from "../testing/story-utils";
+import { MeetingOutcome } from "./meetingoutcome";
 
-// What a rep does with a meeting that already happened.
-//
-// The card used to offer three statuses — held, no-show, cancelled — and each
-// wrote one word and closed. The two verbs here are not two of those three:
-// they differ in KIND. Cancelling is a fact with nothing to add, so the card
-// writes it; saying what came of a meeting is the thing a rep opened the queue
-// to record, so it opens the composer bound to that meeting.
+// Canceling writes at once; saying how a meeting went opens the composer bound to it.
 
 const MEETING_ID = "01a05500-0000-7000-8000-0000000000b1";
 
@@ -56,7 +46,7 @@ function stubRoutes(meeting: unknown = CAPTURED_MEETING): void {
 }
 
 const meta: Meta<typeof MeetingOutcome> = {
-  title: "Records/Worklist/Meeting outcome",
+  title: "Records/Meeting outcome",
   component: MeetingOutcome,
   parameters: { layout: "padded" },
 };
@@ -67,7 +57,11 @@ type Story = StoryObj<typeof MeetingOutcome>;
 // function rather than two copies that can drift apart.
 const openComposer: Story["play"] = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
-  await userEvent.click(await canvas.findByRole("button", { name: "Update" }));
+  await userEvent.click(
+    await canvas.findByRole("button", {
+      name: "Update Discovery call with Turbinenbau",
+    }),
+  );
 };
 
 /**
@@ -81,11 +75,13 @@ export const TwoVerbs: Story = {
     stubRoutes();
     return (
       <StoryProviders>
-        <div className="worklist-row-acts">
+        <div>
           <MeetingOutcome
             id={MEETING_ID}
             version={3}
             title="Discovery call with Turbinenbau"
+            invalidateKeys={[]}
+            cancellable
           />
         </div>
       </StoryProviders>
@@ -105,11 +101,13 @@ export const ComposerOpen: Story = {
     stubRoutes();
     return (
       <StoryProviders>
-        <div className="worklist-row-acts">
+        <div>
           <MeetingOutcome
             id={MEETING_ID}
             version={3}
             title="Discovery call with Turbinenbau"
+            invalidateKeys={[]}
+            cancellable
           />
         </div>
       </StoryProviders>
@@ -128,15 +126,55 @@ export const NothingCapturedYet: Story = {
     stubRoutes({ ...CAPTURED_MEETING, body: null });
     return (
       <StoryProviders>
-        <div className="worklist-row-acts">
+        <div>
           <MeetingOutcome
             id={MEETING_ID}
             version={3}
             title="Discovery call with Turbinenbau"
+            invalidateKeys={[]}
+            cancellable
           />
         </div>
       </StoryProviders>
     );
   },
   play: openComposer,
+};
+
+/**
+ * A meeting with a live calendar invitation: the invitation owns its subject,
+ * notes and date, and is canceled through itself. The card offers no cancel,
+ * and the composer asks only how it went.
+ */
+export const CalendarManaged: Story = {
+  render: () => {
+    stubRoutes({
+      ...CAPTURED_MEETING,
+      invitation_status: "confirmed",
+      calendar_managed: true,
+    });
+    return (
+      <StoryProviders>
+        <div>
+          <MeetingOutcome
+            id={MEETING_ID}
+            version={3}
+            title="Discovery call with Turbinenbau"
+            invalidateKeys={[]}
+            cancellable={false}
+          />
+        </div>
+      </StoryProviders>
+    );
+  },
+  play: async (context) => {
+    const canvas = within(context.canvasElement);
+    await canvas.findByRole("button", {
+      name: "Update Discovery call with Turbinenbau",
+    });
+    await expect(
+      canvas.queryByRole("button", { name: /canceled/ }),
+    ).not.toBeInTheDocument();
+    await openComposer?.(context);
+  },
 };

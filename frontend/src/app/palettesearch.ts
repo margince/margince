@@ -11,6 +11,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useSettledValue } from "../design-system/debouncedsearch";
 import { activityDay } from "../format/activitywhen";
+import { foldForSearch } from "../format/collate";
 import { useLocale, useT } from "../i18n";
 import {
   problemFieldErrors,
@@ -46,8 +47,8 @@ export const PALETTE_PER_TYPE = 3;
 // as typing on or backspacing does, rather than the box having changed subject.
 // Case-blind, as the search itself is.
 function sameSubject(asked: string, typed: string): boolean {
-  const a = asked.toLowerCase();
-  const b = typed.toLowerCase();
+  const a = foldForSearch(asked);
+  const b = foldForSearch(typed);
   return b.startsWith(a) || a.startsWith(b);
 }
 

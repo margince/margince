@@ -96,3 +96,48 @@ describe("a name in a className reads the binding in its own scope", () => {
     ).toEqual([["huge"]]);
   });
 });
+
+describe("a call in a className reads what the function returns", () => {
+  const variants = (code: string, element: string) => {
+    const source = parsed(code);
+    return classVariants(source, classAttribute(source, element));
+  };
+
+  it("reads each branch a local function returns, not its inputs", () => {
+    const code = `function look(state) { return state === "x" ? "tone-x" : "tone-y"; }
+    const C = () => <i className={look(state)} />;`;
+    expect(variants(code, "i")).toEqual([["tone-x"], ["tone-y"]]);
+  });
+
+  it("reads the function useMemo is handed", () => {
+    const code = `function C() {
+      const cls = useMemo(() => (open ? "row-open" : "row"), [open]);
+      return <i className={cls} />;
+    }`;
+    expect(variants(code, "i")).toEqual([["row-open"], ["row"]]);
+  });
+
+  it("reads the classes it is handed when its returns name none", () => {
+    const code = `const join = (...parts) => parts.join(" ");
+    const C = () => <i className={join("a", "b")} />;`;
+    expect(variants(code, "i")).toEqual([["a", "b"]]);
+  });
+
+  it("keeps the spaces a returned text carries inside a template", () => {
+    const code = `function look(on) { return on ? " mark-on" : ""; }
+    const C = () => <i className={\`mark\${look(on)}\`} />;`;
+    expect(on(code, "i")).toEqual(["mark", "mark-on"]);
+  });
+
+  it("reads a list filled after its declaration as unread, not as its start", () => {
+    const code = `function C() {
+      const classes = ["bar"];
+      if (dense) classes.push("bar-dense");
+      let tone = "ink";
+      if (warn) tone += " ink-warn";
+      return <><i className={classes.join(" ")} /><b className={tone} /></>;
+    }`;
+    expect(variants(code, "i")).toEqual([[]]);
+    expect(variants(code, "b")).toEqual([[]]);
+  });
+});

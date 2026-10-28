@@ -119,6 +119,9 @@ var contractBodies = map[string]string{
 
 	// Optional: the version names the report the approver read.
 	"approveImportRun": `{"version":2}`,
+
+	"saveReportingReportDraft": `{"selection":{"scope":{"kind":"workspace"},"period":"this_month","target_basis":"month",` +
+		`"close_window":"fiscal_quarter","metrics":["bookings_won"],"blocks":["bookings_trend"]}}`,
 }
 
 // What a registration does not say: that the decoder bound to a route can

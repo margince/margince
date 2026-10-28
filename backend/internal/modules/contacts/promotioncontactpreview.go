@@ -103,6 +103,8 @@ type LeadContactChange struct {
 	Phones         []ContactPhoneInput
 	Deal           *QualifyDealInput
 	ReviewContact  *ids.ContactID
+	// CompanyIndustry is the industry the promotion writes to the linked company, or nil.
+	CompanyIndustry *string
 }
 
 // PreviewLeadContactChange holds the writer's row locks while resolving the
@@ -235,6 +237,13 @@ func (s *Store) previewLeadContactChangeTx(ctx context.Context, tx pgx.Tx, id id
 		return LeadContactChange{}, err
 	}
 	if err := s.previewPromotionCarry(ctx, tx, id, candidate, &out.LeadPromotionCarry); err != nil {
+		return LeadContactChange{}, err
+	}
+	company, err := leadLinkedCompany(ctx, tx, id)
+	if err != nil {
+		return LeadContactChange{}, err
+	}
+	if out.CompanyIndustry, err = leadIndustryCarry(ctx, tx, company, lead.Industry); err != nil {
 		return LeadContactChange{}, err
 	}
 	out.Deal, err = s.previewQualifiedDeal(ctx, tx, lead, in.Deal)

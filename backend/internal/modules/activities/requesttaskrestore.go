@@ -25,7 +25,7 @@ func (s *Store) restoreRequestTask(ctx context.Context, tx pgx.Tx, task crmcontr
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	current, err := readActivityContent(ctx, tx, ids.From[ids.ActivityKind](id), storekit.IncludeArchived)
+	current, err := readActivityContentAt(ctx, tx, ids.From[ids.ActivityKind](id), storekit.IncludeArchived, s.now())
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
@@ -51,7 +51,7 @@ func (s *Store) restoreRequestTask(ctx context.Context, tx pgx.Tx, task crmcontr
 	if err := recordRequestAcceptance(ctx, tx, lock, current, id); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	out, err := readActivityContent(ctx, tx, ids.From[ids.ActivityKind](id), storekit.LiveOnly)
+	out, err := readActivityContentAt(ctx, tx, ids.From[ids.ActivityKind](id), storekit.LiveOnly, s.now())
 	return out, false, err
 }
 

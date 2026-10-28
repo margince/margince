@@ -45,7 +45,7 @@ func TestAwaitingOutcomeCarriesTheUnsettledMeetingsAndNoOthers(t *testing.T) {
 	kind := "meeting"
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	got, _, err := store.ListActivities(e.as(), ListActivitiesInput{
-		Kind: &kind, AwaitingOutcome: true,
+		Kind: &kind, OpenStatusOnly: true,
 	})
 	if err != nil {
 		t.Fatalf("reading the meetings awaiting an outcome: %v", err)
@@ -112,7 +112,7 @@ func TestOnlyACustomerMeetingOwesAFollowUp(t *testing.T) {
 	kind := "meeting"
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	got, _, err := store.ListActivities(e.as(), ListActivitiesInput{
-		Kind: &kind, AwaitingOutcome: true, CustomerMeetingsOnly: true,
+		Kind: &kind, OpenStatusOnly: true, CustomerMeetingsOnly: true,
 	})
 	if err != nil {
 		t.Fatalf("reading the customer meetings awaiting an outcome: %v", err)
@@ -168,7 +168,7 @@ func TestAHiddenCustomerLinkMakesNoFollowUp(t *testing.T) {
 	kind := "meeting"
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	got, _, err := store.ListActivities(e.as(), ListActivitiesInput{
-		Kind: &kind, AwaitingOutcome: true, CustomerMeetingsOnly: true,
+		Kind: &kind, OpenStatusOnly: true, CustomerMeetingsOnly: true,
 	})
 	if err != nil {
 		t.Fatalf("reading the customer meetings awaiting an outcome: %v", err)
@@ -183,7 +183,7 @@ func TestAHiddenCustomerLinkMakesNoFollowUp(t *testing.T) {
 	if carried[meeting] {
 		t.Fatal("a meeting appeared because of a customer link the reader cannot see")
 	}
-	all, _, err := store.ListActivities(e.as(), ListActivitiesInput{Kind: &kind, AwaitingOutcome: true})
+	all, _, err := store.ListActivities(e.as(), ListActivitiesInput{Kind: &kind, OpenStatusOnly: true})
 	if err != nil {
 		t.Fatalf("reading every meeting awaiting an outcome: %v", err)
 	}

@@ -77,6 +77,7 @@ function frame(
   owner = "",
   buckets?: WorklistBuckets,
   shape: (page: Worklist) => Worklist = (page) => page,
+  scope: WorklistScope = "mine",
 ) {
   globalThis.fetch = (async (): Promise<Response> =>
     jsonResponse(roster)) as typeof fetch;
@@ -86,7 +87,7 @@ function frame(
       <WorklistHeader
         day={page}
         loaded={page.queue}
-        scope="mine"
+        scope={scope}
         filter="all"
         owner={owner}
         onScope={() => {}}
@@ -122,6 +123,19 @@ export const BothDials: Story = {
  *  gone and the picker stands alone with the contact it chose on its face. */
 export const AColleaguesDay: Story = {
   render: () => frame(["mine", "unassigned", "team", "all"], LENA),
+};
+
+/** The Unassigned scope, with the line under the dials that says what it
+ *  lists. */
+export const TheUnassignedScope: Story = {
+  render: () =>
+    frame(
+      ["mine", "unassigned", "team", "all"],
+      "",
+      undefined,
+      undefined,
+      "unassigned",
+    ),
 };
 
 /** Both dials in the dark theme, which is where this strip can go wrong on its

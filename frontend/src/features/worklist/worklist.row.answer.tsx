@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ReactNode, useRef, useState } from "react";
+import { MeetingOutcome } from "../../components/meetingoutcome";
 import {
   useAutomationRetry,
   useClaimSettle,
@@ -24,7 +25,6 @@ import {
   BriefSetAsides,
 } from "./worklist.briefverbs";
 import { DomainQuestionAnswer } from "./worklist.domainquestion";
-import { MeetingOutcome } from "./worklist.meetingoutcome";
 import { PlanWorkActions } from "./worklist.plan";
 import {
   useNudgeDismissal,
@@ -121,6 +121,8 @@ const ANSWER_BY_SOURCE: Partial<
           // always has one: the meeting's subject, written by whoever booked
           // it. The dialog falls back to its own heading when a row has none.
           title={item.title}
+          invalidateKeys={[worklistKey]}
+          cancellable={item.actions.includes("cancel")}
         />
       ),
     }),
@@ -140,7 +142,10 @@ const ANSWER_BY_SOURCE: Partial<
   // means something else and posts elsewhere, so this table is keyed by source.
   relationship_decay: {
     verb: "dismiss",
-    draw: (item) => ({ primary: <NudgeDismiss contactId={item.id} /> }),
+    draw: (item) => ({
+      primary: <NudgeDismiss contactId={item.id} permanent={false} />,
+      equals: <NudgeDismiss contactId={item.id} permanent />,
+    }),
   },
 };
 
@@ -191,15 +196,16 @@ export function rowAnswer(
   return { primary };
 }
 
-// Setting a lapsed contact aside for a month.
-//
-// Nobody is waiting on a quiet contact, so its row returns each morning.
-// Without a way to say "not this one, not now", a rep who decided meets it again.
+// Setting a lapsed contact aside for a month, or with `permanent` ("Stop
+// following") for good. A quiet contact's row returns each morning otherwise.
 //
 // Undoable from the confirmation, like every disposition beside it. The row
 // leaves the lane on success. Without undo, a misclick costs the reader the only
 // address they had for a contact they were not done with.
-function NudgeDismiss({ contactId }: Readonly<{ contactId: string }>) {
+function NudgeDismiss({
+  contactId,
+  permanent,
+}: Readonly<{ contactId: string; permanent: boolean }>) {
   const t = useT();
   const toast = useToast();
   const { dismiss, restore } = useNudgeDismissal();
@@ -208,38 +214,45 @@ function NudgeDismiss({ contactId }: Readonly<{ contactId: string }>) {
       pending={dismiss.isPending}
       onClick={() =>
         dismiss.mutate(
-          { contactId },
+          { contactId, permanent },
           {
             onSuccess: () =>
-              toast.show(t("worklist.verb.dismissed"), {
-                action: {
-                  kind: "undo",
-                  label: t("worklist.verb.dismissUndo"),
-                  // The toast dismisses itself when the action is pressed.
-                  // A failed undo leaves the contact set aside, with the only
-                  // way back already off the screen.
-                  //
-                  // mutateAsync and a catch: the dismissal removes the row.
-                  // By the time the reader presses Undo, this component is
-                  // unmounted, and React Query has dropped the observer that
-                  // per-call callbacks hang off. A refused undo would fail
-                  // with the screen silent.
-                  onAct: () => {
-                    restore.mutateAsync({ contactId }).catch(() =>
-                      toast.show(t("worklist.verb.dismissUndoFailed"), {
-                        tone: "danger",
-                      }),
-                    );
+              toast.show(
+                t(
+                  permanent
+                    ? "worklist.verb.stopped"
+                    : "worklist.verb.dismissed",
+                ),
+                {
+                  action: {
+                    kind: "undo",
+                    label: t("worklist.verb.dismissUndo"),
+                    // The toast dismisses itself when the action is pressed.
+                    // A failed undo leaves the contact set aside, with the only
+                    // way back already off the screen.
+                    //
+                    // mutateAsync and a catch: the dismissal removes the row.
+                    // By the time the reader presses Undo, this component is
+                    // unmounted, and React Query has dropped the observer that
+                    // per-call callbacks hang off. A refused undo would fail
+                    // with the screen silent.
+                    onAct: () => {
+                      restore.mutateAsync({ contactId }).catch(() =>
+                        toast.show(t("worklist.verb.dismissUndoFailed"), {
+                          tone: "danger",
+                        }),
+                      );
+                    },
                   },
                 },
-              }),
+              ),
             onError: () =>
               toast.show(t("worklist.verb.dismissFailed"), { tone: "danger" }),
           },
         )
       }
     >
-      {t("worklist.verb.dismiss")}
+      {t(permanent ? "worklist.verb.stopFollowing" : "worklist.verb.dismiss")}
     </Button>
   );
 }
@@ -376,7 +389,7 @@ function refusalMessage(
 }
 
 // How a meeting went is recorded by `MeetingOutcome` in
-// worklist.meetingoutcome.tsx. "Cancelled" writes that one word from the card;
+// components/meetingoutcome.tsx. "Cancelled" writes that one word from the card;
 // "Update" opens the composer bound to this meeting, where the outcome is typed.
 // Its dialog reads and patches the meeting: a form, a query and a mutation. That
 // is a screen's worth of code, not one row verb, so it has its own file.

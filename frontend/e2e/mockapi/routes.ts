@@ -129,6 +129,10 @@ export const routes: readonly MockRoute[] = [
   },
   // The anonymous reads the signed-out surface makes, by design.
   { path: "/embeddings/reindex/status", handle: session.reindexStatus },
+  {
+    path: "/embeddings/reindex/identities",
+    handle: session.reindexIdentitiesRead,
+  },
   { path: "/auth/capabilities", handle: session.authCapabilities },
   { path: "/assistant/profile", handle: reply(session.assistantProfile) },
   { path: () => true, handle: records.projects },
@@ -271,8 +275,18 @@ export const routes: readonly MockRoute[] = [
   },
   {
     method: "GET",
+    path: /^\/deals\/([^/]+)\/commitments$/,
+    handle: reply({ data: [], complete: true, has_more: false }),
+  },
+  {
+    method: "GET",
     path: /^\/deals\/([^/]+)\/win-evidence$/,
     handle: records.getDealWinEvidence,
+  },
+  {
+    method: "GET",
+    path: /^\/deals\/([^/]+)\/commitments$/,
+    handle: reply({ data: [], has_more: false, complete: true }),
   },
   { path: (path) => path.startsWith("/deals/"), handle: records.getDeal },
   { method: "GET", path: "/magic", handle: reply(work.magicReceipt) },

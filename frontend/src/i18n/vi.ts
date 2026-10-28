@@ -763,6 +763,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.promotionContactPhone": "Số điện thoại sẽ thêm",
   "approval.preview.promotionExistingContact": "Liên hệ hiện có sẽ cập nhật",
   "approval.preview.promotionSetOrigin": "Liên kết liên hệ với lead này",
+  "approval.preview.promotionCompanyIndustry": "Ngành của công ty",
   "approval.preview.promotionDuplicateCandidate":
     "Liên hệ có thể trùng cần xem xét",
   "approval.preview.promotionMoveActivity": "Hoạt động sẽ chuyển sang liên hệ",
@@ -784,6 +785,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bổ sung thông tin còn thiếu đã hiển thị vào liên hệ hiện có. Giữ tên, chức danh và số điện thoại chính hiện có.",
   "approval.preview.promotionDeal":
     "Mở cơ hội đã hiển thị và thêm liên hệ làm bên liên quan. Lead được liên kết với cơ hội này.",
+  "approval.preview.promotionFillIndustry":
+    "Ghi ngành đã hiển thị vào công ty được liên kết, vì công ty chưa có ngành.",
   "approval.preview.promotionReview":
     "Tạo một liên hệ riêng và đưa cặp có thể trùng vào danh sách xem xét.",
   "approval.preview.promotionAllMarketing": "Tất cả hoạt động tiếp thị",
@@ -1669,6 +1672,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.bandCount_other": "{count} việc",
   "brief.focus.context": "Xem chi tiết",
   "brief.queue.back": "Quay lại Danh sách công việc",
+  "brief.queue.next": "Việc tiếp theo",
+  "brief.queue.nextNone": "Không còn hồ sơ nào",
   "brief.queue.title": "Danh sách công việc",
   "brief.queue.show": "Xem Danh sách công việc",
   "brief.queue.hide": "Ẩn Danh sách công việc",
@@ -2289,7 +2294,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "Trang chủ {company}, chạy trên Margince",
   "shell.poweredBy": "Chạy trên Margince",
-  "shell.poweredByPrefix": "Chạy trên",
   "shell.beta": "Beta",
   "shell.searchEverything": "Tìm kiếm hoặc hỏi Margince",
   "shell.breadcrumbAria": "Đường dẫn điều hướng",
@@ -3205,6 +3209,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "stageLadder.earlier": "Xem các giai đoạn trước",
   "stageLadder.later": "Xem các giai đoạn sau",
   "standing.timeline.empty": "Chưa có mốc thời gian nào.",
+  "latest.kind.email": "Email mới",
+  "latest.kind.message": "Tin nhắn mới",
+  "latest.kind.webForm": "Biểu mẫu trang web mới",
+  "latest.line.open": "{kind}: xem trong Tổng quan",
+  "latest.noticed": "Đánh dấu đã xem",
   "standing.next.label": "Tiếp theo",
   "standing.next.none": "Chưa có việc nào đến hạn.",
   "standing.next.snooze": "Để sau",
@@ -3525,6 +3534,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.next.title": "Việc cần làm",
   "co.next.empty": "Công ty này không có việc cần làm nào đang mở.",
   "co.next.overdue": "Quá hạn",
+  "deal.commitments.title": "Cam kết của khách hàng",
+  "deal.commitments.empty":
+    "Khách hàng không có cam kết nào đang mở cho deal này.",
+  "deal.commitments.denied":
+    "Bạn không thể đọc các cam kết của khách hàng: chúng trích dẫn liên hệ và tin nhắn mà bạn không có quyền truy cập.",
+  "deal.commitments.incomplete":
+    "Một số cam kết không hiển thị vì bạn không được đọc liên hệ hoặc tin nhắn của chúng.",
+  "deal.commitments.more":
+    "Đang hiển thị 25 cam kết khẩn cấp nhất; còn cam kết khác đang mở.",
+  "deal.commitments.source": "Mở tin nhắn",
+  "deal.commitments.overdue": "Đã quá hạn: đã thực hiện chưa?",
+  "deal.commitments.done": "Hoàn thành",
+  "deal.commitments.noLongerTrue": "Không còn đúng",
+  "deal.commitments.differs": "Khác với giá trị deal ({amount})",
   "co.next.due": "Hạn {when}",
   "co.next.undated": "Chưa có hạn",
   "co.next.col.task": "Công việc",
@@ -4756,6 +4779,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.segregationDismiss": "Ẩn thông báo này",
   "list.emptyMine": "Bạn không chịu trách nhiệm {unit} nào.",
   "list.showAll": "Hiển thị tất cả",
+  "list.filterRefusedRemove": "Bỏ lọc theo {dial}",
   "lead.assignedAway":
     "{names} đã được giao cho {owner}. Không còn trong “Của tôi”.",
   "lead.viewNew": "Mới",
@@ -5134,8 +5158,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.filterCurrencyAll": "Mọi loại tiền",
   "deals.filterCountry": "Quốc gia",
   "deals.filterCountryAll": "Mọi quốc gia",
-  "deals.filterRefused":
-    "Vai trò hiện tại không lọc được deal theo {dial}. Bỏ bộ lọc này để xem danh sách.",
+  "deals.filterRefused": "Vai trò hiện tại không lọc được deal theo {dial}.",
   "deals.rangeFrom": "Từ {value}",
   "deals.rangeTo": "Đến {value}",
   "deals.valueAtLeast": "Tối thiểu ({currency})",
@@ -8060,6 +8083,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "“{value}” không phải trạng thái cuộc họp. Các trạng thái: {allowed}.",
   "import.reason.meeting_status_not_valid_for_kind":
     "Chỉ cuộc họp mới có trạng thái cuộc họp. Bỏ giá trị này khỏi hàng.",
+  "import.reason.meeting_not_taken_place":
+    "Theo ngày hoặc giờ trong hàng này, cuộc họp chưa bắt đầu nên không thể là “held” hoặc “no_show”. Để trống trạng thái hoặc dùng “booked” hay “canceled”. Nếu cuộc họp đã bắt đầu hôm nay, thêm giờ bắt đầu.",
   "import.reason.direction_unknown":
     "“{value}” không phải chiều hoạt động. Các chiều: {allowed}.",
   "import.reason.activity_unlinked":
@@ -9084,9 +9109,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.s1.fieldRequired": "Bắt buộc",
   "ob.s1.requiredMissing": "Điền các trường này để tiếp tục: {fields}",
   "ob.s1.saving": "Đang lưu…",
-  "ob.s1.saveFailed": "Không thể lưu công ty",
-  "ob.s1.savedNote":
-    "Đã lưu vào hồ sơ công ty. Các thay đổi ở đây sẽ được lưu lại khi tiếp tục.",
   "ob.readFromSite": "đọc từ trang web",
 
   "ob.manualChapterLegal": "Pháp nhân",
@@ -10647,7 +10669,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "threads.readOnly": "Bạn chỉ có quyền đọc.",
   "deal360.blocker": "Trở ngại",
   "deal360.buyer": "Điều người mua muốn",
-  "deal360.verdict.live": "Đang tiến triển",
+  "deal360.verdict.live": "Đúng tiến độ",
   "deal360.verdict.drifting": "Đang chững lại",
   "deal360.verdict.blocked": "Bị chặn",
   "deal360.verdict.cold": "Nguội",
@@ -13787,14 +13809,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.field.nameHint":
     "Hiện trên ghi chú của mỗi lead, ví dụ Trang liên hệ.",
   "webForms.field.sender": "Biểu mẫu của bạn nằm ở đâu?",
+  "webForms.senderGroup.noDeveloper": "Không cần lập trình viên",
+  "webForms.senderGroup.developer": "Dành cho lập trình viên",
   "webForms.field.senderFixed":
     "Cố định khi biểu mẫu đã tồn tại. Tạo biểu mẫu mới để đổi.",
   "webForms.senderHint.browser":
-    "Biểu mẫu trên trang của bạn, hoặc trong WordPress, Webflow hay công cụ dựng trang khác cho phép đặt nơi biểu mẫu gửi tới. Không cần lập trình viên.",
+    "Biểu mẫu trên trang của bạn, hoặc trong WordPress, Webflow hay công cụ dựng trang khác cho phép đặt nơi biểu mẫu gửi tới.",
   "webForms.senderHint.server":
-    "Dành cho lập trình viên: máy chủ trang web chuyển tiếp mỗi yêu cầu, có chữ ký.",
+    "Máy chủ trang web chuyển tiếp mỗi yêu cầu, có chữ ký.",
   "webForms.senderHint.webflow":
-    "Dành cho lập trình viên: webhook tạo bằng API của Webflow. Với biểu mẫu Webflow, hãy chọn Trang web của bạn.",
+    "Webhook tạo bằng API của Webflow. Với biểu mẫu Webflow, hãy chọn Trang web của bạn.",
   "webForms.senderHint.typeform":
     "Mỗi câu trả lời Typeform đến qua một webhook. Margince tạo khóa ký cho bạn.",
   "webForms.senderHint.tally":
@@ -13823,6 +13847,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.field.redirectUrlHint":
     "Nơi khách đến sau khi gửi. Để trống sẽ hiện thông báo thành công.",
   "webForms.field.redirectUrlPlaceholder": "https://www.example.com/cam-on",
+  "webForms.field.owner": "Người chịu trách nhiệm cho lead mới",
+  "webForms.field.ownerHint":
+    "Mỗi lead mới từ biểu mẫu này được giao cho thành viên này. Để trống thì bất kỳ ai trong nhóm cũng có thể nhận.",
+  "webForms.field.ownerNone": "Chưa giao",
+  "webForms.field.ownerGone": "{name} (đã nghỉ, lead mới sẽ chưa được giao)",
+  "webForms.field.ownerKept": "Thành viên đã lưu (không có trong danh sách)",
+  "webForms.row.owner": "Lead được giao cho",
+  "webForms.row.ownerLeft": "{name} đã nghỉ, lead mới sẽ chưa được giao",
   "webForms.field.successMessage": "Thông báo thành công",
   "webForms.field.successMessageHint": "Hiện cho khách sau khi gửi.",
   "webForms.setup.title": "Kết nối {name}",
@@ -14948,6 +14980,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.memory.channelTask": "Việc cần làm",
   "contact.memory.replied": "Đã trả lời",
   "contact.memory.unanswered": "Chưa trả lời",
+  "contact.memory.view": "Xem",
+  "contact.memory.viewEntry": "Xem {title}",
 
   "contact.mayBeDone.notYet": "Chưa xong",
   "contact.rail.blocked": "Bị chặn",
@@ -16245,9 +16279,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.scope.mine": "Của tôi",
   "worklist.sourceUnavailable":
     "Nguồn không khả dụng hoặc chưa được chia sẻ với bạn",
-  "worklist.scope.unassigned": "Chưa giao",
+  "worklist.scope.unassigned": "Chưa nhận",
   "worklist.scope.team": "Nhóm",
   "worklist.scope.all": "Tất cả",
+  "worklist.scope.unassignedHint":
+    "Việc đang mở mà bạn xem được, chưa có người phụ trách.",
+  "worklist.take.action": "Nhận việc",
+  "worklist.take.done": "Đã nhận việc",
+  "worklist.take.failed": "Không thể nhận việc này. Thử lại.",
   "worklist.owner.shared": "Cùng phụ trách: {names}",
   "worklist.owner.left":
     "{name} đã nghỉ. Việc này cần người chịu trách nhiệm mới.",
@@ -16311,6 +16350,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.handled.wayBack": "Trạng thái",
   "worklist.handled.putBackDone": "Đã hoàn tác",
   "worklist.handled.truncated": "Danh sách đã bị cắt bớt. Vẫn còn việc khác.",
+  "receipt.detail.summary": "Chi tiết",
+  "receipt.detail.by": "Người làm",
+  "receipt.detail.when": "Thời điểm",
+  "receipt.detail.source": "Nguồn",
+  "worklist.handled.showMore": "Xem thêm",
   "worklist.exceptions.empty": "Nhóm không có ngoại lệ nào.",
   "worklist.exceptions.loading": "Đang tải nhóm…",
   "worklist.exceptions.count": "{count} cần chú ý",
@@ -16588,6 +16632,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingOutcomeFailed": "Không thể ghi nhận kết quả. Thử lại.",
   "worklist.verb.meetingDayMissing":
     "Ngày này không có trong múi giờ của công ty. Chọn ngày khác.",
+  "worklist.verb.meetingUpdateFor": "Cập nhật {subject}",
+  "worklist.verb.meetingCanceledFor": "Đánh dấu đã hủy: {subject}",
+  "worklist.verb.meetingCancelInCalendar":
+    "Lời mời trên lịch quản lý cuộc họp này. Hủy cuộc họp qua lời mời.",
+  "worklist.verb.meetingCalendarManaged":
+    "Lời mời trên lịch giữ tiêu đề, ghi chú và ngày. Tại đây chỉ lưu kết quả cuộc họp.",
   "worklist.verb.retry": "Chạy lại",
   "worklist.verb.retryStarted": "Đang chạy lại quy tắc…",
   "worklist.verb.retryFailed": "Không thể chạy lại quy tắc. Thử lại.",
@@ -16630,6 +16680,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.dismissUndo": "Hoàn tác",
   "worklist.verb.dismissFailed": "Không thể gác lại liên hệ. Thử lại.",
   "worklist.verb.dismissUndoFailed": "Không thể khôi phục liên hệ. Thử lại.",
+  "worklist.verb.stopFollowing": "Ngừng theo dõi",
+  "worklist.verb.stopped": "Đã ngừng theo dõi liên hệ này",
+  "worklist.verb.dismissAll": "Gác lại tất cả đang hiển thị",
+  "worklist.verb.dismissedAll": "Đã gác lại liên hệ một tháng",
+  "worklist.verb.dismissAllFailed": "Không thể gác lại liên hệ. Thử lại.",
+  "contact.follow.stopped": "Bạn đã ngừng theo dõi liên hệ này.",
+  "contact.follow.setAside": "Bạn đã gác lại liên hệ này đến {date}.",
+  "contact.follow.resume": "Theo dõi lại",
   "worklist.verb.completeUndo": "Hoàn tác",
   "worklist.verb.completeUndoFailed": "Không thể mở lại việc cần làm. Thử lại.",
   "worklist.source.failed": "Không thể tải nguồn: {source}",
@@ -17002,6 +17060,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.company.linkOpens": "Tên công ty trên lead này sẽ mở {name}.",
   "lead.company.linkOnQualify":
     "Chưa có liên hệ nào được tạo. Khi bạn xác nhận lead này đủ điều kiện, lead sẽ trở thành liên hệ tại {name}.",
+  "lead.company.matchedByDomain": "Cùng tên miền trang web",
+  "lead.company.matchedByName": "Cùng tên công ty",
+  "lead.company.linkWhyDomain": "{name} dùng tên miền trang web của lead này.",
+  "lead.company.linkWhyName": "{name} có cùng tên công ty với lead này.",
+  "lead.details.fromCompany": "Từ {name}",
+  "lead.details.fromCompanyRecord": "Từ hồ sơ công ty",
+  "lead.details.companyDecides":
+    "Các thông tin này lấy từ hồ sơ công ty. Sửa chúng trên trang công ty.",
+  "lead.details.companyCountry": "Quốc gia",
+  "lead.companySize": "Quy mô công ty",
+  "lead.filterCompanySizeAll": "Mọi quy mô công ty",
+  "lead.filterIndustryAll": "Mọi ngành",
+  "lead.filterRefused": "Vai trò hiện tại không lọc được lead theo {dial}.",
   "lead.timeline.received": "{at} · đã nhận",
   "lead.timeline.weReplied": "Bạn đã trả lời",
   "lead.timeline.repliedIn": "{at} · sau {span}",
@@ -17188,6 +17259,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.by.agent": "Một trợ lý AI",
   "magic.by.system": "Margince",
   "magic.by.data_correction": "Hiệu chỉnh dữ liệu",
+  "magic.by.member": "{name}",
+  "magic.by.colleague": "Một đồng nghiệp",
   "magic.failingSince": "Bị lỗi từ {when}",
   "magic.noRecord": "Không nêu hồ sơ nào",
   "magic.undo.action": "Hoàn tác",
@@ -17917,4 +17990,56 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.coverage.source.deal_advice": "Bước tiếp theo cho cơ hội",
   "tasks.origin.accepted_recommendation":
     "Được chấp nhận từ một bước được đề xuất.",
+  "deal.verdict.yourMove": "Đến lượt bạn",
+  "deal.verdict.yourMoveToday":
+    "Khách hàng đã viết hôm nay và đang chờ phản hồi.",
+  "deal.verdict.yourMoveDays_one":
+    "Khách hàng đã viết {count} ngày trước và đang chờ phản hồi.",
+  "deal.verdict.yourMoveDays_other":
+    "Khách hàng đã viết {count} ngày trước và đang chờ phản hồi.",
+  "deal.verdict.goneQuiet": "Im lặng",
+  "deal.verdict.goneQuietSince":
+    "Không có hoạt động kể từ {date}, nên deal được coi là đình trệ.",
+  "deal.verdict.nothingFiled": "Chưa có gì được ghi nhận cho deal này.",
+  "deal.verdict.onHold": "Tạm dừng",
+  "deal.verdict.onHoldUntil":
+    "Tạm dừng đến {date} theo thỏa thuận với khách hàng.",
+  "deal.verdict.overdueToClose": "Quá hạn chốt",
+  "deal.verdict.closePassed": "Ngày dự kiến chốt ({date}) đã qua.",
+  "deal.verdict.notStarted": "Chưa bắt đầu",
+  "co.verdict.noContact": "Chưa liên hệ",
+  "co.verdict.addedOn": "Được thêm ngày {date}, chưa ghi nhận trao đổi nào.",
+  "co.verdict.active": "Đang hoạt động",
+  "co.verdict.lastExchange": "Trao đổi gần nhất với công ty này vào {date}.",
+  "co.verdict.goingQuiet": "Đang im lặng",
+  "co.verdict.quietSince": "Không có trao đổi với ai ở đây kể từ {date}.",
+  "co.verdict.dormant": "Không hoạt động",
+  "co.verdict.dormantSince":
+    "Không có deal đang mở và không có trao đổi kể từ {date}.",
+  "project.verdict.startsOn": "Bắt đầu vào {date}.",
+  "project.verdict.overrunning": "Quá hạn",
+  "project.verdict.endPassed": "Ngày kết thúc dự kiến ({date}) đã qua.",
+  "project.verdict.behind": "Chậm tiến độ",
+  "project.verdict.overdueFirst_one":
+    "{count} việc cần làm đã quá hạn, đầu tiên: {subject}.",
+  "project.verdict.overdueFirst_other":
+    "{count} việc cần làm đã quá hạn, đầu tiên: {subject}.",
+  "project.verdict.overdue_one": "{count} việc cần làm đã quá hạn.",
+  "project.verdict.overdue_other": "{count} việc cần làm đã quá hạn.",
+  "project.verdict.overdueFloor_one":
+    "Ít nhất {count} việc cần làm đã quá hạn.",
+  "project.verdict.overdueFloor_other":
+    "Ít nhất {count} việc cần làm đã quá hạn.",
+  "project.verdict.wrappingUp": "Sắp hoàn thành",
+  "project.verdict.daysLeft_one":
+    "Còn {count} ngày, không có việc cần làm nào quá hạn.",
+  "project.verdict.daysLeft_other":
+    "Còn {count} ngày, không có việc cần làm nào quá hạn.",
+  "project.verdict.lastDay":
+    "Hôm nay là ngày cuối, không có việc cần làm nào quá hạn.",
+  "project.verdict.onSchedule": "Đúng tiến độ",
+  "project.verdict.dayOf":
+    "Ngày {day}/{total}, không có việc cần làm nào quá hạn.",
+  "contact.verdict.nothingOwed": "Không bên nào còn việc cần làm.",
+  "contact.verdict.noExchange": "Chưa ghi nhận trao đổi nào với liên hệ này.",
 };

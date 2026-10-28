@@ -76,6 +76,7 @@ type probeRequest struct {
 type probeReply struct {
 	Text         string `json:"text"`
 	InputTokens  int    `json:"input_tokens"`
+	CachedTokens int    `json:"cached_tokens,omitempty"`
 	OutputTokens int    `json:"output_tokens"`
 	ServedModel  string `json:"served_model,omitempty"`
 }
@@ -182,7 +183,8 @@ func (c *recordingCompleter) Complete(ctx context.Context, req model.Request) (m
 	// convenience, and no convenience is worth emitting a credential. The
 	// failure is recorded on the call so it is visible rather than silent.
 	call.Reply = probeReply{
-		InputTokens: resp.InputTokens, OutputTokens: resp.OutputTokens, ServedModel: resp.ServedModel,
+		InputTokens: resp.InputTokens, CachedTokens: resp.CachedTokens,
+		OutputTokens: resp.OutputTokens, ServedModel: resp.ServedModel,
 	}
 	wire, stripErr := stripRequest(ctx, req)
 	if stripErr != nil {

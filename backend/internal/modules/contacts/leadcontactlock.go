@@ -57,6 +57,7 @@ func lockContactThenLead(
 // come before any row. Then come the last-activity clocks an employment at the
 // company moves, the candidate contact, its lanes, and the lead. A zero
 // candidate names no contact; a nil company moves no clock.
+// The promotion's industry carry (leadIndustryCarry) also relies on this company lock.
 func (s *Store) lockLeadForContact(ctx context.Context, tx pgx.Tx, id ids.LeadID, candidate ids.ContactID, company *ids.CompanyID) (ContactCandidate, error) {
 	if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
 		return ContactCandidate{}, err

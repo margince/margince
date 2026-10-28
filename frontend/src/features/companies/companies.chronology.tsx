@@ -2,6 +2,10 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { useRoster } from "../../components/entityref";
 import {
+  type JustIn,
+  LatestInboundPanel,
+} from "../../components/latestinbound";
+import {
   hasTimelineFilters,
   useRecordTimeline,
 } from "../../design-system/recordtimeline";
@@ -25,7 +29,7 @@ import {
   ConversationList,
   useChronologyCut,
 } from "../records/recordconversations";
-import { TimelineActions } from "../records/timelineactions";
+import { RowAnswerActions, TimelineActions } from "../records/timelineactions";
 import type { Company, Company360View } from "./companies";
 import { recordNamesIn } from "./company360";
 import type { CitedRecord } from "./companyevidence";
@@ -241,4 +245,26 @@ export function useCitedReceipt() {
     closeEmail: () => setEmail(null),
     step: list.length > 1 ? step : undefined,
   };
+}
+
+/**
+ * The newest unanswered thing anyone at the account sent, leading the
+ * Overview, with the verbs its row has in the timeline.
+ */
+export function CompanyLatestInbound({
+  latest,
+  companyId,
+}: Readonly<{ latest: JustIn | undefined; companyId: string }>) {
+  return (
+    <LatestInboundPanel
+      latest={latest}
+      actions={(activity) => (
+        <RowAnswerActions
+          activity={activity}
+          entityType="company"
+          entityId={companyId}
+        />
+      )}
+    />
+  );
 }

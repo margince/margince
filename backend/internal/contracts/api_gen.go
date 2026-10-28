@@ -2450,6 +2450,7 @@ func (e AttentionConnectionFactsMedium) Valid() bool {
 const (
 	AttentionItemActionsAcknowledge  AttentionItemActions = "acknowledge"
 	AttentionItemActionsAct          AttentionItemActions = "act"
+	AttentionItemActionsCancel       AttentionItemActions = "cancel"
 	AttentionItemActionsComplete     AttentionItemActions = "complete"
 	AttentionItemActionsDecide       AttentionItemActions = "decide"
 	AttentionItemActionsDiscard      AttentionItemActions = "discard"
@@ -2463,6 +2464,7 @@ const (
 	AttentionItemActionsRetry        AttentionItemActions = "retry"
 	AttentionItemActionsSetAside     AttentionItemActions = "set_aside"
 	AttentionItemActionsSnooze       AttentionItemActions = "snooze"
+	AttentionItemActionsTake         AttentionItemActions = "take"
 	AttentionItemActionsUndo         AttentionItemActions = "undo"
 )
 
@@ -2472,6 +2474,8 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsAcknowledge:
 		return true
 	case AttentionItemActionsAct:
+		return true
+	case AttentionItemActionsCancel:
 		return true
 	case AttentionItemActionsComplete:
 		return true
@@ -2498,6 +2502,8 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsSetAside:
 		return true
 	case AttentionItemActionsSnooze:
+		return true
+	case AttentionItemActionsTake:
 		return true
 	case AttentionItemActionsUndo:
 		return true
@@ -11765,6 +11771,7 @@ const (
 	ImportReasonCodeLinkTypeUnknown              ImportReasonCode = "link_type_unknown"
 	ImportReasonCodeLinkedinHeld                 ImportReasonCode = "linkedin_held"
 	ImportReasonCodeLostReasonMissing            ImportReasonCode = "lost_reason_missing"
+	ImportReasonCodeMeetingNotTakenPlace         ImportReasonCode = "meeting_not_taken_place"
 	ImportReasonCodeMeetingStatusNotValidForKind ImportReasonCode = "meeting_status_not_valid_for_kind"
 	ImportReasonCodeMeetingStatusUnknown         ImportReasonCode = "meeting_status_unknown"
 	ImportReasonCodeMessageNotImportable         ImportReasonCode = "message_not_importable"
@@ -11961,6 +11968,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeLinkedinHeld:
 		return true
 	case ImportReasonCodeLostReasonMissing:
+		return true
+	case ImportReasonCodeMeetingNotTakenPlace:
 		return true
 	case ImportReasonCodeMeetingStatusNotValidForKind:
 		return true
@@ -12802,6 +12811,96 @@ func (e KnowledgeEmbedState) Valid() bool {
 	}
 }
 
+// Defines values for LeadIndustry.
+const (
+	LeadIndustryAerospaceDefense          LeadIndustry = "aerospace_defense"
+	LeadIndustryAgriculture               LeadIndustry = "agriculture"
+	LeadIndustryAutomotive                LeadIndustry = "automotive"
+	LeadIndustryChemicalsMaterials        LeadIndustry = "chemicals_materials"
+	LeadIndustryConstruction              LeadIndustry = "construction"
+	LeadIndustryConsumerGoodsRetail       LeadIndustry = "consumer_goods_retail"
+	LeadIndustryEducation                 LeadIndustry = "education"
+	LeadIndustryEnergyUtilities           LeadIndustry = "energy_utilities"
+	LeadIndustryEntertainmentMedia        LeadIndustry = "entertainment_media"
+	LeadIndustryFinancialServices         LeadIndustry = "financial_services"
+	LeadIndustryFoodBeverage              LeadIndustry = "food_beverage"
+	LeadIndustryGovernmentPublicSector    LeadIndustry = "government_public_sector"
+	LeadIndustryHealthcare                LeadIndustry = "healthcare"
+	LeadIndustryHospitalityTourism        LeadIndustry = "hospitality_tourism"
+	LeadIndustryInsurance                 LeadIndustry = "insurance"
+	LeadIndustryItServices                LeadIndustry = "it_services"
+	LeadIndustryLegalProfessionalServices LeadIndustry = "legal_professional_services"
+	LeadIndustryLogisticsTransport        LeadIndustry = "logistics_transport"
+	LeadIndustryManufacturing             LeadIndustry = "manufacturing"
+	LeadIndustryMarketingAdvertising      LeadIndustry = "marketing_advertising"
+	LeadIndustryMiningMetals              LeadIndustry = "mining_metals"
+	LeadIndustryNonprofit                 LeadIndustry = "nonprofit"
+	LeadIndustryPharmaBiotech             LeadIndustry = "pharma_biotech"
+	LeadIndustryRealEstate                LeadIndustry = "real_estate"
+	LeadIndustrySoftware                  LeadIndustry = "software"
+	LeadIndustryTelecommunications        LeadIndustry = "telecommunications"
+)
+
+// Valid indicates whether the value is a known member of the LeadIndustry enum.
+func (e LeadIndustry) Valid() bool {
+	switch e {
+	case LeadIndustryAerospaceDefense:
+		return true
+	case LeadIndustryAgriculture:
+		return true
+	case LeadIndustryAutomotive:
+		return true
+	case LeadIndustryChemicalsMaterials:
+		return true
+	case LeadIndustryConstruction:
+		return true
+	case LeadIndustryConsumerGoodsRetail:
+		return true
+	case LeadIndustryEducation:
+		return true
+	case LeadIndustryEnergyUtilities:
+		return true
+	case LeadIndustryEntertainmentMedia:
+		return true
+	case LeadIndustryFinancialServices:
+		return true
+	case LeadIndustryFoodBeverage:
+		return true
+	case LeadIndustryGovernmentPublicSector:
+		return true
+	case LeadIndustryHealthcare:
+		return true
+	case LeadIndustryHospitalityTourism:
+		return true
+	case LeadIndustryInsurance:
+		return true
+	case LeadIndustryItServices:
+		return true
+	case LeadIndustryLegalProfessionalServices:
+		return true
+	case LeadIndustryLogisticsTransport:
+		return true
+	case LeadIndustryManufacturing:
+		return true
+	case LeadIndustryMarketingAdvertising:
+		return true
+	case LeadIndustryMiningMetals:
+		return true
+	case LeadIndustryNonprofit:
+		return true
+	case LeadIndustryPharmaBiotech:
+		return true
+	case LeadIndustryRealEstate:
+		return true
+	case LeadIndustrySoftware:
+		return true
+	case LeadIndustryTelecommunications:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LeadSlaState.
 const (
 	LeadSlaStateLeadSlaStateAtRisk       LeadSlaState = "at_risk"
@@ -12862,6 +12961,147 @@ func (e LeadStatusSetBy) Valid() bool {
 	case LeadStatusSetByLeadStatusSetByHuman:
 		return true
 	case LeadStatusSetByLeadStatusSetBySystem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LeadCompanyFactsIndustry.
+const (
+	LeadCompanyFactsIndustryAerospaceDefense          LeadCompanyFactsIndustry = "aerospace_defense"
+	LeadCompanyFactsIndustryAgriculture               LeadCompanyFactsIndustry = "agriculture"
+	LeadCompanyFactsIndustryAutomotive                LeadCompanyFactsIndustry = "automotive"
+	LeadCompanyFactsIndustryChemicalsMaterials        LeadCompanyFactsIndustry = "chemicals_materials"
+	LeadCompanyFactsIndustryConstruction              LeadCompanyFactsIndustry = "construction"
+	LeadCompanyFactsIndustryConsumerGoodsRetail       LeadCompanyFactsIndustry = "consumer_goods_retail"
+	LeadCompanyFactsIndustryEducation                 LeadCompanyFactsIndustry = "education"
+	LeadCompanyFactsIndustryEnergyUtilities           LeadCompanyFactsIndustry = "energy_utilities"
+	LeadCompanyFactsIndustryEntertainmentMedia        LeadCompanyFactsIndustry = "entertainment_media"
+	LeadCompanyFactsIndustryFinancialServices         LeadCompanyFactsIndustry = "financial_services"
+	LeadCompanyFactsIndustryFoodBeverage              LeadCompanyFactsIndustry = "food_beverage"
+	LeadCompanyFactsIndustryGovernmentPublicSector    LeadCompanyFactsIndustry = "government_public_sector"
+	LeadCompanyFactsIndustryHealthcare                LeadCompanyFactsIndustry = "healthcare"
+	LeadCompanyFactsIndustryHospitalityTourism        LeadCompanyFactsIndustry = "hospitality_tourism"
+	LeadCompanyFactsIndustryInsurance                 LeadCompanyFactsIndustry = "insurance"
+	LeadCompanyFactsIndustryItServices                LeadCompanyFactsIndustry = "it_services"
+	LeadCompanyFactsIndustryLegalProfessionalServices LeadCompanyFactsIndustry = "legal_professional_services"
+	LeadCompanyFactsIndustryLogisticsTransport        LeadCompanyFactsIndustry = "logistics_transport"
+	LeadCompanyFactsIndustryManufacturing             LeadCompanyFactsIndustry = "manufacturing"
+	LeadCompanyFactsIndustryMarketingAdvertising      LeadCompanyFactsIndustry = "marketing_advertising"
+	LeadCompanyFactsIndustryMiningMetals              LeadCompanyFactsIndustry = "mining_metals"
+	LeadCompanyFactsIndustryNonprofit                 LeadCompanyFactsIndustry = "nonprofit"
+	LeadCompanyFactsIndustryPharmaBiotech             LeadCompanyFactsIndustry = "pharma_biotech"
+	LeadCompanyFactsIndustryRealEstate                LeadCompanyFactsIndustry = "real_estate"
+	LeadCompanyFactsIndustrySoftware                  LeadCompanyFactsIndustry = "software"
+	LeadCompanyFactsIndustryTelecommunications        LeadCompanyFactsIndustry = "telecommunications"
+)
+
+// Valid indicates whether the value is a known member of the LeadCompanyFactsIndustry enum.
+func (e LeadCompanyFactsIndustry) Valid() bool {
+	switch e {
+	case LeadCompanyFactsIndustryAerospaceDefense:
+		return true
+	case LeadCompanyFactsIndustryAgriculture:
+		return true
+	case LeadCompanyFactsIndustryAutomotive:
+		return true
+	case LeadCompanyFactsIndustryChemicalsMaterials:
+		return true
+	case LeadCompanyFactsIndustryConstruction:
+		return true
+	case LeadCompanyFactsIndustryConsumerGoodsRetail:
+		return true
+	case LeadCompanyFactsIndustryEducation:
+		return true
+	case LeadCompanyFactsIndustryEnergyUtilities:
+		return true
+	case LeadCompanyFactsIndustryEntertainmentMedia:
+		return true
+	case LeadCompanyFactsIndustryFinancialServices:
+		return true
+	case LeadCompanyFactsIndustryFoodBeverage:
+		return true
+	case LeadCompanyFactsIndustryGovernmentPublicSector:
+		return true
+	case LeadCompanyFactsIndustryHealthcare:
+		return true
+	case LeadCompanyFactsIndustryHospitalityTourism:
+		return true
+	case LeadCompanyFactsIndustryInsurance:
+		return true
+	case LeadCompanyFactsIndustryItServices:
+		return true
+	case LeadCompanyFactsIndustryLegalProfessionalServices:
+		return true
+	case LeadCompanyFactsIndustryLogisticsTransport:
+		return true
+	case LeadCompanyFactsIndustryManufacturing:
+		return true
+	case LeadCompanyFactsIndustryMarketingAdvertising:
+		return true
+	case LeadCompanyFactsIndustryMiningMetals:
+		return true
+	case LeadCompanyFactsIndustryNonprofit:
+		return true
+	case LeadCompanyFactsIndustryPharmaBiotech:
+		return true
+	case LeadCompanyFactsIndustryRealEstate:
+		return true
+	case LeadCompanyFactsIndustrySoftware:
+		return true
+	case LeadCompanyFactsIndustryTelecommunications:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LeadCompanyFactsSizeBand.
+const (
+	LeadCompanyFactsSizeBandN10015000 LeadCompanyFactsSizeBand = "1001-5000"
+	LeadCompanyFactsSizeBandN110      LeadCompanyFactsSizeBand = "1-10"
+	LeadCompanyFactsSizeBandN1150     LeadCompanyFactsSizeBand = "11-50"
+	LeadCompanyFactsSizeBandN201500   LeadCompanyFactsSizeBand = "201-500"
+	LeadCompanyFactsSizeBandN5000     LeadCompanyFactsSizeBand = "5000+"
+	LeadCompanyFactsSizeBandN5011000  LeadCompanyFactsSizeBand = "501-1000"
+	LeadCompanyFactsSizeBandN51200    LeadCompanyFactsSizeBand = "51-200"
+)
+
+// Valid indicates whether the value is a known member of the LeadCompanyFactsSizeBand enum.
+func (e LeadCompanyFactsSizeBand) Valid() bool {
+	switch e {
+	case LeadCompanyFactsSizeBandN10015000:
+		return true
+	case LeadCompanyFactsSizeBandN110:
+		return true
+	case LeadCompanyFactsSizeBandN1150:
+		return true
+	case LeadCompanyFactsSizeBandN201500:
+		return true
+	case LeadCompanyFactsSizeBandN5000:
+		return true
+	case LeadCompanyFactsSizeBandN5011000:
+		return true
+	case LeadCompanyFactsSizeBandN51200:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LeadCompanyMatchMatchedBy.
+const (
+	LeadCompanyMatchMatchedByDomain LeadCompanyMatchMatchedBy = "domain"
+	LeadCompanyMatchMatchedByName   LeadCompanyMatchMatchedBy = "name"
+)
+
+// Valid indicates whether the value is a known member of the LeadCompanyMatchMatchedBy enum.
+func (e LeadCompanyMatchMatchedBy) Valid() bool {
+	switch e {
+	case LeadCompanyMatchMatchedByDomain:
+		return true
+	case LeadCompanyMatchMatchedByName:
 		return true
 	default:
 		return false
@@ -15634,6 +15874,30 @@ func (e QualifyingEventRecordKind) Valid() bool {
 	case QualifyingEventRecordKindInquiry:
 		return true
 	case QualifyingEventRecordKindMeeting:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReceiptActorType.
+const (
+	ReceiptActorTypeReceiptActorAgent     ReceiptActorType = "agent"
+	ReceiptActorTypeReceiptActorConnector ReceiptActorType = "connector"
+	ReceiptActorTypeReceiptActorHuman     ReceiptActorType = "human"
+	ReceiptActorTypeReceiptActorSystem    ReceiptActorType = "system"
+)
+
+// Valid indicates whether the value is a known member of the ReceiptActorType enum.
+func (e ReceiptActorType) Valid() bool {
+	switch e {
+	case ReceiptActorTypeReceiptActorAgent:
+		return true
+	case ReceiptActorTypeReceiptActorConnector:
+		return true
+	case ReceiptActorTypeReceiptActorHuman:
+		return true
+	case ReceiptActorTypeReceiptActorSystem:
 		return true
 	default:
 		return false
@@ -21548,6 +21812,7 @@ func (e WorklistDealVerdictStanding) Valid() bool {
 const (
 	WorklistItemActionsAcknowledge  WorklistItemActions = "acknowledge"
 	WorklistItemActionsAct          WorklistItemActions = "act"
+	WorklistItemActionsCancel       WorklistItemActions = "cancel"
 	WorklistItemActionsComplete     WorklistItemActions = "complete"
 	WorklistItemActionsDecide       WorklistItemActions = "decide"
 	WorklistItemActionsDiscard      WorklistItemActions = "discard"
@@ -21561,6 +21826,7 @@ const (
 	WorklistItemActionsRetry        WorklistItemActions = "retry"
 	WorklistItemActionsSetAside     WorklistItemActions = "set_aside"
 	WorklistItemActionsSnooze       WorklistItemActions = "snooze"
+	WorklistItemActionsTake         WorklistItemActions = "take"
 	WorklistItemActionsUndo         WorklistItemActions = "undo"
 )
 
@@ -21570,6 +21836,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsAcknowledge:
 		return true
 	case WorklistItemActionsAct:
+		return true
+	case WorklistItemActionsCancel:
 		return true
 	case WorklistItemActionsComplete:
 		return true
@@ -21596,6 +21864,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsSetAside:
 		return true
 	case WorklistItemActionsSnooze:
+		return true
+	case WorklistItemActionsTake:
 		return true
 	case WorklistItemActionsUndo:
 		return true
@@ -24499,6 +24769,129 @@ func (e ListLeadsParamsSlaState) Valid() bool {
 	}
 }
 
+// Defines values for ListLeadsParamsIndustry.
+const (
+	ListLeadsParamsIndustryAerospaceDefense          ListLeadsParamsIndustry = "aerospace_defense"
+	ListLeadsParamsIndustryAgriculture               ListLeadsParamsIndustry = "agriculture"
+	ListLeadsParamsIndustryAutomotive                ListLeadsParamsIndustry = "automotive"
+	ListLeadsParamsIndustryChemicalsMaterials        ListLeadsParamsIndustry = "chemicals_materials"
+	ListLeadsParamsIndustryConstruction              ListLeadsParamsIndustry = "construction"
+	ListLeadsParamsIndustryConsumerGoodsRetail       ListLeadsParamsIndustry = "consumer_goods_retail"
+	ListLeadsParamsIndustryEducation                 ListLeadsParamsIndustry = "education"
+	ListLeadsParamsIndustryEnergyUtilities           ListLeadsParamsIndustry = "energy_utilities"
+	ListLeadsParamsIndustryEntertainmentMedia        ListLeadsParamsIndustry = "entertainment_media"
+	ListLeadsParamsIndustryFinancialServices         ListLeadsParamsIndustry = "financial_services"
+	ListLeadsParamsIndustryFoodBeverage              ListLeadsParamsIndustry = "food_beverage"
+	ListLeadsParamsIndustryGovernmentPublicSector    ListLeadsParamsIndustry = "government_public_sector"
+	ListLeadsParamsIndustryHealthcare                ListLeadsParamsIndustry = "healthcare"
+	ListLeadsParamsIndustryHospitalityTourism        ListLeadsParamsIndustry = "hospitality_tourism"
+	ListLeadsParamsIndustryInsurance                 ListLeadsParamsIndustry = "insurance"
+	ListLeadsParamsIndustryItServices                ListLeadsParamsIndustry = "it_services"
+	ListLeadsParamsIndustryLegalProfessionalServices ListLeadsParamsIndustry = "legal_professional_services"
+	ListLeadsParamsIndustryLogisticsTransport        ListLeadsParamsIndustry = "logistics_transport"
+	ListLeadsParamsIndustryManufacturing             ListLeadsParamsIndustry = "manufacturing"
+	ListLeadsParamsIndustryMarketingAdvertising      ListLeadsParamsIndustry = "marketing_advertising"
+	ListLeadsParamsIndustryMiningMetals              ListLeadsParamsIndustry = "mining_metals"
+	ListLeadsParamsIndustryNonprofit                 ListLeadsParamsIndustry = "nonprofit"
+	ListLeadsParamsIndustryPharmaBiotech             ListLeadsParamsIndustry = "pharma_biotech"
+	ListLeadsParamsIndustryRealEstate                ListLeadsParamsIndustry = "real_estate"
+	ListLeadsParamsIndustrySoftware                  ListLeadsParamsIndustry = "software"
+	ListLeadsParamsIndustryTelecommunications        ListLeadsParamsIndustry = "telecommunications"
+)
+
+// Valid indicates whether the value is a known member of the ListLeadsParamsIndustry enum.
+func (e ListLeadsParamsIndustry) Valid() bool {
+	switch e {
+	case ListLeadsParamsIndustryAerospaceDefense:
+		return true
+	case ListLeadsParamsIndustryAgriculture:
+		return true
+	case ListLeadsParamsIndustryAutomotive:
+		return true
+	case ListLeadsParamsIndustryChemicalsMaterials:
+		return true
+	case ListLeadsParamsIndustryConstruction:
+		return true
+	case ListLeadsParamsIndustryConsumerGoodsRetail:
+		return true
+	case ListLeadsParamsIndustryEducation:
+		return true
+	case ListLeadsParamsIndustryEnergyUtilities:
+		return true
+	case ListLeadsParamsIndustryEntertainmentMedia:
+		return true
+	case ListLeadsParamsIndustryFinancialServices:
+		return true
+	case ListLeadsParamsIndustryFoodBeverage:
+		return true
+	case ListLeadsParamsIndustryGovernmentPublicSector:
+		return true
+	case ListLeadsParamsIndustryHealthcare:
+		return true
+	case ListLeadsParamsIndustryHospitalityTourism:
+		return true
+	case ListLeadsParamsIndustryInsurance:
+		return true
+	case ListLeadsParamsIndustryItServices:
+		return true
+	case ListLeadsParamsIndustryLegalProfessionalServices:
+		return true
+	case ListLeadsParamsIndustryLogisticsTransport:
+		return true
+	case ListLeadsParamsIndustryManufacturing:
+		return true
+	case ListLeadsParamsIndustryMarketingAdvertising:
+		return true
+	case ListLeadsParamsIndustryMiningMetals:
+		return true
+	case ListLeadsParamsIndustryNonprofit:
+		return true
+	case ListLeadsParamsIndustryPharmaBiotech:
+		return true
+	case ListLeadsParamsIndustryRealEstate:
+		return true
+	case ListLeadsParamsIndustrySoftware:
+		return true
+	case ListLeadsParamsIndustryTelecommunications:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListLeadsParamsSizeBand.
+const (
+	ListLeadsParamsSizeBandN10015000 ListLeadsParamsSizeBand = "1001-5000"
+	ListLeadsParamsSizeBandN110      ListLeadsParamsSizeBand = "1-10"
+	ListLeadsParamsSizeBandN1150     ListLeadsParamsSizeBand = "11-50"
+	ListLeadsParamsSizeBandN201500   ListLeadsParamsSizeBand = "201-500"
+	ListLeadsParamsSizeBandN5000     ListLeadsParamsSizeBand = "5000+"
+	ListLeadsParamsSizeBandN5011000  ListLeadsParamsSizeBand = "501-1000"
+	ListLeadsParamsSizeBandN51200    ListLeadsParamsSizeBand = "51-200"
+)
+
+// Valid indicates whether the value is a known member of the ListLeadsParamsSizeBand enum.
+func (e ListLeadsParamsSizeBand) Valid() bool {
+	switch e {
+	case ListLeadsParamsSizeBandN10015000:
+		return true
+	case ListLeadsParamsSizeBandN110:
+		return true
+	case ListLeadsParamsSizeBandN1150:
+		return true
+	case ListLeadsParamsSizeBandN201500:
+		return true
+	case ListLeadsParamsSizeBandN5000:
+		return true
+	case ListLeadsParamsSizeBandN5011000:
+		return true
+	case ListLeadsParamsSizeBandN51200:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListLeadsParamsTagMode.
 const (
 	ListLeadsParamsTagModeAll  ListLeadsParamsTagMode = "all"
@@ -25568,13 +25961,19 @@ type Activity struct {
 
 	// AutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
 	AutomaticKind *ActivityAutomaticKind `json:"automatic_kind,omitempty"`
-	Body          *string                `json:"body,omitempty"`
+
+	// AwaitingOutcome Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false.
+	AwaitingOutcome *bool   `json:"awaiting_outcome,omitempty"`
+	Body            *string `json:"body,omitempty"`
 
 	// BodyCompleteness How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased.
 	BodyCompleteness *BodyCompleteness `json:"body_completeness,omitempty"`
 
 	// BulkMailAttested This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply.
 	BulkMailAttested *bool `json:"bulk_mail_attested,omitempty"`
+
+	// CalendarManaged Whether a live calendar invitation holds this meeting. Then a write through this activity that sets `subject`, `body`, `occurred_at`, `occurred_precision` or a `meeting_status` other than `held` or `no_show` is refused with `calendar_managed`; that change goes through the invitation (`PATCH /scheduling/invitations/{id}`). Archiving or restoring the activity is refused with `calendar_managed` too, and the undo of its creation is refused. Every read that carries `writable` carries this. Absent means false.
+	CalendarManaged *bool `json:"calendar_managed,omitempty"`
 
 	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 	CaptureLabel *ActivityCaptureLabel `json:"capture_label,omitempty"`
@@ -29179,6 +29578,13 @@ type AttentionItem struct {
 	// contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
 	// the read-only fallback for a receipt.
 	//
+	// `take` is offered on a task nobody holds that the caller may change. It sets
+	// `assignee_id` to the caller through `PATCH /activities/{id}`, pinned with `If-Match`.
+	//
+	// `cancel` is offered on a meeting owed an outcome that no live calendar invitation
+	// holds. It sets `meeting_status` to `canceled` through `PATCH /activities/{id}`, pinned
+	// with `If-Match`. A meeting an invitation holds is canceled through the invitation.
+	//
 	// Domain questions offer `keep`, `discard`, and `reopen` where allowed. Keeping creates a
 	// company or matches the supplied `company_id`; forwarded identity requires an
 	// explicit match. A vendor question offers `keep_as_vendor` instead of `reopen`, which
@@ -29829,6 +30235,9 @@ type Authorization struct {
 	// RefusedDealFilters The `listDeals` query parameters this caller is refused whatever their value: `422` `field_masked` where the role masks the column on any deal, `403` where a grant the filter reads is missing, `list_id` included where the caller may not read lists. Computed by the list resolution and clauses the list runs, so a client withholds exactly the dials the list would refuse.
 	// A mask that withholds a reference only on some rows, such as a deal's private company, refuses no filter and is not listed. Absent from a server that does not compute it, and empty when nothing is refused.
 	RefusedDealFilters *[]string `json:"refused_deal_filters,omitempty"`
+
+	// RefusedLeadFilters The `listLeads` query parameters this caller is refused whatever their value: `403` where a grant the filter reads is missing, such as `industry`, `country` and `size_band` for a seat that may not read companies, and `list_id` where the caller may not read lists. Computed by the list resolution and clauses the list runs, so a client withholds exactly the dials the list would refuse. Absent from a server that does not compute it, and empty when nothing is refused.
+	RefusedLeadFilters *[]string `json:"refused_lead_filters,omitempty"`
 
 	// RowScope How far the grants above reach: the caller's own rows, every row belonging to a live team they share, or every row in the workspace. Widened to the maximum any of the caller's roles holds, the same union the server applies.
 	// It is a THIRD axis, independent of the seat ceiling and the object grants, and a client that ignores it will describe a team lead's reach as if it were an admin's.
@@ -32773,7 +33182,12 @@ type Company360NextStep struct {
 	// AssigneeName The assignee's name while they are a live workspace member. Null when the task has no
 	// assignee or the name cannot be given, so a reader says nothing about who holds it
 	// instead of printing an id.
-	AssigneeName    *string             `json:"assignee_name,omitempty"`
+	AssigneeName *string `json:"assignee_name,omitempty"`
+
+	// Body The task's own words, as written. Only a task whose content this reader may read is
+	// listed here, so a task read out of a message the reader may not open never reaches
+	// this field.
+	Body            *string             `json:"body,omitempty"`
 	DueAt           *time.Time          `json:"due_at,omitempty"`
 	LinkedContactId *openapi_types.UUID `json:"linked_contact_id,omitempty"`
 	LinkedDealId    *openapi_types.UUID `json:"linked_deal_id,omitempty"`
@@ -33293,7 +33707,10 @@ type CompanyContact struct {
 
 	// Engagement Where one contact stands with us, over the same 90-day window the relationship
 	// score uses. What decides between the two conversational states is who wrote
-	// LAST, not whether both directions have traffic.
+	// LAST, not whether both directions have traffic. When their latest message is a
+	// mail the reader may read, its History badge decides instead: `waiting` needs a
+	// mail still owed a reply, and a mail owed none (a calendar copy, a mail that
+	// informs us) counts only once we wrote after it.
 	//
 	// `waiting` — their latest message has no reply from us. They are waiting on us,
 	// and answering is the obvious next move.
@@ -33447,7 +33864,10 @@ type CompanyCoverageRoute struct {
 
 	// Engagement Where one contact stands with us, over the same 90-day window the relationship
 	// score uses. What decides between the two conversational states is who wrote
-	// LAST, not whether both directions have traffic.
+	// LAST, not whether both directions have traffic. When their latest message is a
+	// mail the reader may read, its History badge decides instead: `waiting` needs a
+	// mail still owed a reply, and a mail owed none (a calendar copy, a mail that
+	// informs us) counts only once we wrote after it.
 	//
 	// `waiting` — their latest message has no reply from us. They are waiting on us,
 	// and answering is the obvious next move.
@@ -33494,7 +33914,10 @@ type CompanyCoverageSeat struct {
 
 	// Engagement Where one contact stands with us, over the same 90-day window the relationship
 	// score uses. What decides between the two conversational states is who wrote
-	// LAST, not whether both directions have traffic.
+	// LAST, not whether both directions have traffic. When their latest message is a
+	// mail the reader may read, its History badge decides instead: `waiting` needs a
+	// mail still owed a reply, and a mail owed none (a calendar copy, a mail that
+	// informs us) counts only once we wrote after it.
 	//
 	// `waiting` — their latest message has no reply from us. They are waiting on us,
 	// and answering is the obvious next move.
@@ -35848,7 +36271,10 @@ type ContactEmployer struct {
 
 // ContactEngagement Where one contact stands with us, over the same 90-day window the relationship
 // score uses. What decides between the two conversational states is who wrote
-// LAST, not whether both directions have traffic.
+// LAST, not whether both directions have traffic. When their latest message is a
+// mail the reader may read, its History badge decides instead: `waiting` needs a
+// mail still owed a reply, and a mail owed none (a calendar copy, a mail that
+// informs us) counts only once we wrote after it.
 //
 // `waiting` — their latest message has no reply from us. They are waiting on us,
 // and answering is the obvious next move.
@@ -37430,6 +37856,9 @@ type CreateLeadRequest struct {
 	Email     *openapi_types.Email `json:"email,omitempty"`
 	FullName  *string              `json:"full_name,omitempty"`
 
+	// Industry An industry code, or text the server maps to one, as it maps a company's industry. Text that names no code is `422` `not_a_known_value`.
+	Industry *string `json:"industry,omitempty"`
+
 	// LinkedinUrl Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key for LinkedIn-captured leads.
 	LinkedinUrl *string `json:"linkedin_url,omitempty"`
 
@@ -38313,6 +38742,9 @@ type DealCommitment struct {
 	ContactId   openapi_types.UUID `json:"contact_id"`
 	ContactName string             `json:"contact_name"`
 
+	// DiffersFromDeal The one total the quoted words state in the deal's currency, present only when it is not the deal's value. A deposit, an instalment, a price per period or unit, a sum in another currency or more than one sum is never a total. Absent when the deal has no value the reader may see.
+	DiffersFromDeal *StatedAmount `json:"differs_from_deal,omitempty"`
+
 	// DueAt Absent when the conversation named no day.
 	DueAt *time.Time `json:"due_at,omitempty"`
 
@@ -38324,6 +38756,9 @@ type DealCommitment struct {
 
 	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
+	// Overdue True once the whole due day is over in the installation's timezone. A promise due today, or with no due day, is not overdue.
+	Overdue bool `json:"overdue"`
 
 	// SourceActivityId The captured activity it was read from.
 	SourceActivityId openapi_types.UUID `json:"source_activity_id"`
@@ -39823,6 +40258,15 @@ type EmailThreadPage struct {
 	NextCursor *string `json:"next_cursor,omitempty"`
 }
 
+// EmbedReindexIdentities The two identities the status read compares, read without its backlog scan.
+type EmbedReindexIdentities struct {
+	// ConfiguredIdentity The live embed binding's provider/model@dims, as in EmbedReindexStatus.
+	ConfiguredIdentity string `json:"configured_identity"`
+
+	// PopulatedIdentity The identity the last reindex run was released under, as in EmbedReindexStatus.
+	PopulatedIdentity string `json:"populated_identity"`
+}
+
 // EmbedReindexPreview The scope before the spend (ADR-0020 preview-before-spend obligation): what running the reindex now would touch and roughly cost. MUST precede the confirm route — the estimate is what the operator consents to. An estimate, labeled as such — actual spend is metered per embed call.
 type EmbedReindexPreview struct {
 	ComputedAt time.Time `json:"computed_at"`
@@ -40941,6 +41385,9 @@ type HandOverUserWorkRequest struct {
 type HandledForYou struct {
 	// AsOf The instant these were read at.
 	AsOf time.Time `json:"as_of"`
+
+	// NextCursor Where the next page starts, present when `truncated` is true and the window can be read further. Paging stops after the first 5,000 receipts of a window. Absent on older responses, which a client reads as a list it cannot continue.
+	NextCursor *string `json:"next_cursor,omitempty"`
 
 	// Receipts What was done, newest first. Empty is the honest common case.
 	Receipts []Receipt `json:"receipts"`
@@ -43303,10 +43750,13 @@ type Lead struct {
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
+	// CompanyFacts What the company the lead is linked to (`company_id`) records, read from the company record and never written through the lead. Sent only while `company_id` is set and the reader may open that company. Absent otherwise, including for a seat that may not read companies.
+	CompanyFacts *LeadCompanyFacts `json:"company_facts,omitempty"`
+
 	// CompanyId The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. Null until then, and null again when an edit of `company_name` no longer names the linked company. Withheld when the reader cannot open that company. The link adds no contact; converting the lead makes it a contact employed there.
 	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
 
-	// CompanyMatch A company the lead's `company_name` names exactly, offered for a human to confirm. Confirming sets `company_id` and creates no contact. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise.
+	// CompanyMatch A company the lead names, offered for a human to confirm. Confirming sets `company_id` and creates no contact. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only for a live company the reader can open. The company that claims the domain held in `candidate_company_key` is offered first, except this installation's own company. Otherwise the offer is the one company whose name equals `company_name`, compared without case and with runs of spaces folded to one. Absent when neither rule names a company.
 	CompanyMatch *LeadCompanyMatch `json:"company_match,omitempty"`
 
 	// CompanyName Free text, as captured or typed. It names the company until a human links one (`company_id`).
@@ -43333,6 +43783,9 @@ type Lead struct {
 
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
+
+	// Industry The industry typed on the lead, one of the fixed codes, or null. While the lead is linked to a company whose industry is known, the company's speaks for the lead: show `company_facts.industry` when it is set, and this value otherwise. The `industry` filter reads the same rule. Promotion writes this value to the linked company when the company has none.
+	Industry *LeadIndustry `json:"industry,omitempty"`
 
 	// LastActivityAt Most recent activity at or before now linked to this lead — the "last touch" a work queue row shows (ADR-0118). A task never counts, whoever filed it. Derived from activity_link, not stored on the lead.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
@@ -43437,6 +43890,9 @@ type Lead struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
+// LeadIndustry The industry typed on the lead, one of the fixed codes, or null. While the lead is linked to a company whose industry is known, the company's speaks for the lead: show `company_facts.industry` when it is set, and this value otherwise. The `industry` filter reads the same rule. Promotion writes this value to the linked company when the company has none.
+type LeadIndustry string
+
 // LeadSlaState Derived from sla_deadline_at and first_response_at (formulas §18.1); null once responded or on a terminal lead. Orders the work queue above score (ADR-0119).
 type LeadSlaState string
 
@@ -43446,13 +43902,37 @@ type LeadStatus string
 // LeadStatusSetBy Who last placed the lead on its status: a human by hand (an agent acting for one counts as the human), or the system from captured activity. Null for a lead nobody has moved yet — one still on new, or one carried over from before the ladder existed.
 type LeadStatusSetBy string
 
-// LeadCompanyMatch A company the lead's `company_name` names exactly, offered for a human to confirm. Confirming sets `company_id` and creates no contact. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise.
+// LeadCompanyFacts What the company the lead is linked to (`company_id`) records, read from the company record and never written through the lead. Sent only while `company_id` is set and the reader may open that company. Absent otherwise, including for a seat that may not read companies.
+type LeadCompanyFacts struct {
+	// Country The ISO-3166 alpha-2 code of the company's address country.
+	Country *string `json:"country,omitempty"`
+
+	// Industry The company's `industry`.
+	Industry *LeadCompanyFactsIndustry `json:"industry,omitempty"`
+
+	// SizeBand The company's `size_band`.
+	SizeBand *LeadCompanyFactsSizeBand `json:"size_band,omitempty"`
+}
+
+// LeadCompanyFactsIndustry The company's `industry`.
+type LeadCompanyFactsIndustry string
+
+// LeadCompanyFactsSizeBand The company's `size_band`.
+type LeadCompanyFactsSizeBand string
+
+// LeadCompanyMatch A company the lead names, offered for a human to confirm. Confirming sets `company_id` and creates no contact. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only for a live company the reader can open. The company that claims the domain held in `candidate_company_key` is offered first, except this installation's own company. Otherwise the offer is the one company whose name equals `company_name`, compared without case and with runs of spaces folded to one. Absent when neither rule names a company.
 type LeadCompanyMatch struct {
 	Id openapi_types.UUID `json:"id"`
+
+	// MatchedBy Which rule named the company: `domain` when it claims the lead's domain, `name` when its name equals the lead's company name.
+	MatchedBy LeadCompanyMatchMatchedBy `json:"matched_by"`
 
 	// Name The company's display name.
 	Name string `json:"name"`
 }
+
+// LeadCompanyMatchMatchedBy Which rule named the company: `domain` when it claims the lead's domain, `name` when its name equals the lead's company name.
+type LeadCompanyMatchMatchedBy string
 
 // LeadDisqualifyReason defines model for LeadDisqualifyReason.
 type LeadDisqualifyReason struct {
@@ -48353,6 +48833,12 @@ type RbacObjectGrant struct {
 // about one, and an empty subject is a real state rather than a missing field — a
 // client draws the summary alone rather than inventing something to open.
 type Receipt struct {
+	// Actor Who did it: the member or agent that proposed an applied decision, or the job that made a correction. Absent on older responses.
+	Actor *ReceiptActor `json:"actor,omitempty"`
+
+	// Changes Every field the act moved, old value to new, read from the audit rows it wrote and masked to what the reader may see on the record. Values travel whole, never cut short. Absent when no audit row of the act can be read, which is not the same as an act that moved nothing (an empty list).
+	Changes *[]MagicFieldChange `json:"changes,omitempty"`
+
 	// CloseDateChange Recorded close-date correction values, formatted at the presentation edge.
 	CloseDateChange *CloseDateChange `json:"close_date_change,omitempty"`
 
@@ -48368,6 +48854,9 @@ type Receipt struct {
 	// Review The recorded automatic change and its current review state.
 	Review *AppliedDealChangeReview `json:"review,omitempty"`
 
+	// SourceRecord The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message.
+	SourceRecord *AttentionSubject `json:"source_record,omitempty"`
+
 	// Subject The record this item is about, named so a reader knows who it concerns before opening anything.
 	Subject *AttentionSubject `json:"subject,omitempty"`
 
@@ -48378,6 +48867,30 @@ type Receipt struct {
 	// A receipt for an approval the system decided carries none: that decision is revisitable through the record it named. A change made without asking — the close-date sweep's corrections — has this receipt as its only telling, so the way back travels with it.
 	Undo *AppliedUndo `json:"undo,omitempty"`
 }
+
+// ReceiptActor Who did the act, and on whose behalf.
+//
+// `label` is the name a reader reads, from the same owner that names the actor on
+// `/magic`: a background job by what it is, a member by their name. A colleague whose
+// seat the reader cannot name reads `magic.by.colleague`, never an id.
+type ReceiptActor struct {
+	// Id The actor as the audit trail records it. For the record, not for display.
+	Id string `json:"id"`
+
+	// Label What happened, as a key and the values to fill it with.
+	//
+	// Typed rather than composed on the server for the reason every other sentence in
+	// this contract is: the product ships three languages, and a sentence assembled here
+	// reaches a German reader in English.
+	Label MagicSentence `json:"label"`
+
+	// OnBehalfOf The seat whose authority the act was taken under, where it bound one.
+	OnBehalfOf *openapi_types.UUID `json:"on_behalf_of,omitempty"`
+	Type       ReceiptActorType    `json:"type"`
+}
+
+// ReceiptActorType defines model for ReceiptActor.Type.
+type ReceiptActorType string
 
 // RecommendationReceipt The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
 type RecommendationReceipt struct {
@@ -52385,6 +52898,12 @@ type StartCompanySiteReadRequest struct {
 	Url string `json:"url"`
 }
 
+// StatedAmount A sum of money a customer's words state, in minor units of `currency`.
+type StatedAmount struct {
+	AmountMinor int64  `json:"amount_minor"`
+	Currency    string `json:"currency"`
+}
+
 // SubscriptionConfirmationPage The answer for a consent link: one named subscription and the contact's current answer to it.
 //
 // Deliberately carries NOTHING about the record. The mail said "confirm this subscription", and
@@ -54045,6 +54564,9 @@ type UpdateLeadRequest struct {
 	CompanyName         *string              `json:"company_name,omitempty"`
 	Email               *openapi_types.Email `json:"email,omitempty"`
 	FullName            *string              `json:"full_name,omitempty"`
+
+	// Industry An industry code, or text the server maps to one, as it maps a company's industry. Text that names no code is `422` `not_a_known_value`. Null clears it.
+	Industry *string `json:"industry,omitempty"`
 
 	// Origin Where the lead came from: an ACTIVE key from `/lead-origins`, or the key the lead already carries (a retired key is 422 only for a new value). Changing it recomputes the score. Null clears it, and the lead scores neutral.
 	Origin *string `json:"origin,omitempty"`
@@ -61866,8 +62388,25 @@ type ListLeadsParams struct {
 	SlaState *ListLeadsParamsSlaState `form:"sla_state,omitempty" json:"sla_state,omitempty"`
 
 	// MinScore Triage by score.
-	MinScore *int    `form:"min_score,omitempty" json:"min_score,omitempty"`
-	Q        *string `form:"q,omitempty" json:"q,omitempty"`
+	MinScore *int `form:"min_score,omitempty" json:"min_score,omitempty"`
+
+	// Industry Leads in one industry, matched exactly on the code; a value outside the list is `422`.
+	// A lead is in the industry of the company it is linked to, and in its own `industry` when
+	// it is linked to none, or that company has none. A company outside the caller's row
+	// scope counts as no company. A seat that may not read companies is refused with `403`.
+	Industry *ListLeadsParamsIndustry `form:"industry,omitempty" json:"industry,omitempty"`
+
+	// Country Leads whose linked company's address is in this ISO-3166 alpha-2 country, in either
+	// case. A code that is not two letters is refused with `422` `country_malformed`. A lead
+	// linked to no company, or to a company outside the caller's row scope, is not returned.
+	// A seat that may not read companies is refused with `403`.
+	Country *string `form:"country,omitempty" json:"country,omitempty"`
+
+	// SizeBand Leads whose linked company has this size band; a value outside the list is `422`. A
+	// lead linked to no company, or to a company outside the caller's row scope, is not
+	// returned. A seat that may not read companies is refused with `403`.
+	SizeBand *ListLeadsParamsSizeBand `form:"size_band,omitempty" json:"size_band,omitempty"`
+	Q        *string                  `form:"q,omitempty" json:"q,omitempty"`
 
 	// TagId Narrow to the records carrying these tags. Repeat the parameter for several.
 	//
@@ -61895,6 +62434,12 @@ type ListLeadsParamsStatus string
 
 // ListLeadsParamsSlaState defines parameters for ListLeads.
 type ListLeadsParamsSlaState string
+
+// ListLeadsParamsIndustry defines parameters for ListLeads.
+type ListLeadsParamsIndustry string
+
+// ListLeadsParamsSizeBand defines parameters for ListLeads.
+type ListLeadsParamsSizeBand string
 
 // ListLeadsParamsTagMode defines parameters for ListLeads.
 type ListLeadsParamsTagMode string
@@ -64890,6 +65435,12 @@ type GetWorklistParamsScope string
 // GetWorklistParamsFilter defines parameters for GetWorklist.
 type GetWorklistParamsFilter string
 
+// GetHandledForYouParams defines parameters for GetHandledForYou.
+type GetHandledForYouParams struct {
+	// Cursor The `next_cursor` of the page before. It pins that page's window and instant, so a receipt landing between two reads does not shift the list under the reader. A token this server did not mint is refused with 422.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
 // GetHiddenBacklogRowsParamsRule defines parameters for GetHiddenBacklogRows.
 type GetHiddenBacklogRowsParamsRule string
 
@@ -66095,6 +66646,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "automatic_kind")
 	}
 
+	if raw, found := object["awaiting_outcome"]; found {
+		err = json.Unmarshal(raw, &a.AwaitingOutcome)
+		if err != nil {
+			return fmt.Errorf("error reading 'awaiting_outcome': %w", err)
+		}
+		delete(object, "awaiting_outcome")
+	}
+
 	if raw, found := object["body"]; found {
 		err = json.Unmarshal(raw, &a.Body)
 		if err != nil {
@@ -66117,6 +66676,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'bulk_mail_attested': %w", err)
 		}
 		delete(object, "bulk_mail_attested")
+	}
+
+	if raw, found := object["calendar_managed"]; found {
+		err = json.Unmarshal(raw, &a.CalendarManaged)
+		if err != nil {
+			return fmt.Errorf("error reading 'calendar_managed': %w", err)
+		}
+		delete(object, "calendar_managed")
 	}
 
 	if raw, found := object["capture_label"]; found {
@@ -66491,6 +67058,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.AwaitingOutcome != nil {
+		object["awaiting_outcome"], err = json.Marshal(a.AwaitingOutcome)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'awaiting_outcome': %w", err)
+		}
+	}
+
 	if a.Body != nil {
 		object["body"], err = json.Marshal(a.Body)
 		if err != nil {
@@ -66509,6 +67083,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["bulk_mail_attested"], err = json.Marshal(a.BulkMailAttested)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'bulk_mail_attested': %w", err)
+		}
+	}
+
+	if a.CalendarManaged != nil {
+		object["calendar_managed"], err = json.Marshal(a.CalendarManaged)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'calendar_managed': %w", err)
 		}
 	}
 
@@ -70318,6 +70899,14 @@ func (a *CreateLeadRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "full_name")
 	}
 
+	if raw, found := object["industry"]; found {
+		err = json.Unmarshal(raw, &a.Industry)
+		if err != nil {
+			return fmt.Errorf("error reading 'industry': %w", err)
+		}
+		delete(object, "industry")
+	}
+
 	if raw, found := object["linkedin_url"]; found {
 		err = json.Unmarshal(raw, &a.LinkedinUrl)
 		if err != nil {
@@ -70473,6 +71062,13 @@ func (a CreateLeadRequest) MarshalJSON() ([]byte, error) {
 		object["full_name"], err = json.Marshal(a.FullName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'full_name': %w", err)
+		}
+	}
+
+	if a.Industry != nil {
+		object["industry"], err = json.Marshal(a.Industry)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'industry': %w", err)
 		}
 	}
 
@@ -72389,6 +72985,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "captured_by")
 	}
 
+	if raw, found := object["company_facts"]; found {
+		err = json.Unmarshal(raw, &a.CompanyFacts)
+		if err != nil {
+			return fmt.Errorf("error reading 'company_facts': %w", err)
+		}
+		delete(object, "company_facts")
+	}
+
 	if raw, found := object["company_id"]; found {
 		err = json.Unmarshal(raw, &a.CompanyId)
 		if err != nil {
@@ -72491,6 +73095,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'imported_from': %w", err)
 		}
 		delete(object, "imported_from")
+	}
+
+	if raw, found := object["industry"]; found {
+		err = json.Unmarshal(raw, &a.Industry)
+		if err != nil {
+			return fmt.Errorf("error reading 'industry': %w", err)
+		}
+		delete(object, "industry")
 	}
 
 	if raw, found := object["last_activity_at"]; found {
@@ -72834,6 +73446,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		return nil, fmt.Errorf("error marshaling 'captured_by': %w", err)
 	}
 
+	if a.CompanyFacts != nil {
+		object["company_facts"], err = json.Marshal(a.CompanyFacts)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'company_facts': %w", err)
+		}
+	}
+
 	if a.CompanyId != nil {
 		object["company_id"], err = json.Marshal(a.CompanyId)
 		if err != nil {
@@ -72918,6 +73537,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["imported_from"], err = json.Marshal(a.ImportedFrom)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'imported_from': %w", err)
+		}
+	}
+
+	if a.Industry != nil {
+		object["industry"], err = json.Marshal(a.Industry)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'industry': %w", err)
 		}
 	}
 
@@ -76019,6 +76645,14 @@ func (a *UpdateLeadRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "full_name")
 	}
 
+	if raw, found := object["industry"]; found {
+		err = json.Unmarshal(raw, &a.Industry)
+		if err != nil {
+			return fmt.Errorf("error reading 'industry': %w", err)
+		}
+		delete(object, "industry")
+	}
+
 	if raw, found := object["origin"]; found {
 		err = json.Unmarshal(raw, &a.Origin)
 		if err != nil {
@@ -76143,6 +76777,13 @@ func (a UpdateLeadRequest) MarshalJSON() ([]byte, error) {
 		object["full_name"], err = json.Marshal(a.FullName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'full_name': %w", err)
+		}
+	}
+
+	if a.Industry != nil {
+		object["industry"], err = json.Marshal(a.Industry)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'industry': %w", err)
 		}
 	}
 
@@ -78389,6 +79030,9 @@ type ServerInterface interface {
 	// Confirm and start a fleet-wide reindex.
 	// (POST /embeddings/reindex)
 	EmbedReindexStart(w http.ResponseWriter, r *http.Request)
+	// The two embed-store identities, without the backlog scan.
+	// (GET /embeddings/reindex/identities)
+	EmbedReindexIdentities(w http.ResponseWriter, r *http.Request)
 	// Preview a reindex — the scope before the spend.
 	// (GET /embeddings/reindex/preview)
 	EmbedReindexPreview(w http.ResponseWriter, r *http.Request)
@@ -79756,7 +80400,7 @@ type ServerInterface interface {
 	GetTeamExceptions(w http.ResponseWriter, r *http.Request)
 	// What the product did on your behalf, so you can check it.
 	// (GET /worklist/handled)
-	GetHandledForYou(w http.ResponseWriter, r *http.Request)
+	GetHandledForYou(w http.ResponseWriter, r *http.Request, params GetHandledForYouParams)
 	// What the queue is not showing, and which rule is holding it back.
 	// (GET /worklist/hidden)
 	GetHiddenBacklog(w http.ResponseWriter, r *http.Request)
@@ -82556,6 +83200,12 @@ func (_ Unimplemented) EmbedReindexStart(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The two embed-store identities, without the backlog scan.
+// (GET /embeddings/reindex/identities)
+func (_ Unimplemented) EmbedReindexIdentities(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Preview a reindex — the scope before the spend.
 // (GET /embeddings/reindex/preview)
 func (_ Unimplemented) EmbedReindexPreview(w http.ResponseWriter, r *http.Request) {
@@ -85288,7 +85938,7 @@ func (_ Unimplemented) GetTeamExceptions(w http.ResponseWriter, r *http.Request)
 
 // What the product did on your behalf, so you can check it.
 // (GET /worklist/handled)
-func (_ Unimplemented) GetHandledForYou(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetHandledForYou(w http.ResponseWriter, r *http.Request, params GetHandledForYouParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -89927,6 +90577,8 @@ func (siw *ServerInterfaceWrapper) SaveReportingReportDraft(w http.ResponseWrite
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -105663,6 +106315,26 @@ func (siw *ServerInterfaceWrapper) EmbedReindexStart(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// EmbedReindexIdentities operation middleware
+func (siw *ServerInterfaceWrapper) EmbedReindexIdentities(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.EmbedReindexIdentities(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // EmbedReindexPreview operation middleware
 func (siw *ServerInterfaceWrapper) EmbedReindexPreview(w http.ResponseWriter, r *http.Request) {
 
@@ -109033,6 +109705,45 @@ func (siw *ServerInterfaceWrapper) ListLeads(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "min_score"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "min_score", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "industry" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "industry", r.URL.Query(), &params.Industry, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "industry"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "industry", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "country" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "country", r.URL.Query(), &params.Country, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "country"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "country", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "size_band" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "size_band", r.URL.Query(), &params.SizeBand, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "size_band"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "size_band", Err: err})
 		}
 		return
 	}
@@ -124169,14 +124880,33 @@ func (siw *ServerInterfaceWrapper) GetTeamExceptions(w http.ResponseWriter, r *h
 // GetHandledForYou operation middleware
 func (siw *ServerInterfaceWrapper) GetHandledForYou(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetHandledForYouParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetHandledForYou(w, r)
+		siw.Handler.GetHandledForYou(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -125908,6 +126638,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/embeddings/reindex", wrapper.EmbedReindexStart)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/embeddings/reindex/identities", wrapper.EmbedReindexIdentities)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/embeddings/reindex/preview", wrapper.EmbedReindexPreview)
