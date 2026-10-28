@@ -14185,9 +14185,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jeder neue Lead aus diesem Formular geht an dieses Teammitglied. Ohne Zuweisung kann ihn jedes Teammitglied übernehmen.",
   "webForms.field.ownerNone": "Nicht zugewiesen",
   "webForms.field.ownerGone":
-    "Ein Teammitglied, das keine Leads mehr übernehmen kann",
-  "webForms.field.ownerKept": "Das jetzt eingestellte Teammitglied",
+    "{name} (ausgeschieden, neue Leads kommen ohne Zuweisung an)",
+  "webForms.field.ownerKept": "Gespeichertes Teammitglied (nicht in der Liste)",
   "webForms.row.owner": "Leads gehen an",
+  "webForms.row.ownerLeft":
+    "{name} ist ausgeschieden, neue Leads kommen ohne Zuweisung an",
   "webForms.field.successMessage": "Erfolgsmeldung",
   "webForms.field.successMessageHint":
     "Wird dem Besucher nach dem Senden gezeigt.",

@@ -3,6 +3,7 @@
 
 import { useRecordOwnerOptions } from "../../components/assigneepicker";
 import {
+  EntityRef,
   RosterFailedLine,
   RosterPartialNote,
   useRosterPartial,
@@ -10,10 +11,11 @@ import {
 import { Field } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
+import { useDepartedName } from "../../lib/membernames";
 
 // Who each new lead from the form goes to. A saved owner the list does not
-// hold stays chosen until changed. Leads for one who left arrive unassigned,
-// and one a partial roster missed is simply kept.
+// hold, or does not hold yet, stays chosen until changed. Only one the server
+// names as departed is shown as such, since their leads arrive unassigned.
 export function OwnerField({
   ownerId,
   error,
@@ -26,10 +28,9 @@ export function OwnerField({
   const t = useT();
   const { options, roster } = useRecordOwnerOptions();
   const partial = useRosterPartial("user", true);
+  const departed = useDepartedName(ownerId || null);
   const unlisted =
-    ownerId !== "" &&
-    roster.isSuccess &&
-    !options.some((option) => option.value === ownerId);
+    ownerId !== "" && !options.some((option) => option.value === ownerId);
   return (
     <div className="form-stack webform-part">
       <Field
@@ -46,11 +47,9 @@ export function OwnerField({
                 ? [
                     {
                       value: ownerId,
-                      label: t(
-                        partial
-                          ? "webForms.field.ownerKept"
-                          : "webForms.field.ownerGone",
-                      ),
+                      label: departed
+                        ? t("webForms.field.ownerGone", { name: departed })
+                        : t("webForms.field.ownerKept"),
                     },
                   ]
                 : []),
@@ -64,5 +63,20 @@ export function OwnerField({
       <RosterFailedLine kind="user" roster={roster} />
       <RosterPartialNote partial={partial} />
     </div>
+  );
+}
+
+// The row's word on where the form's leads go, which stops naming an owner
+// who left as their destination.
+export function FormOwnerLine({ ownerId }: Readonly<{ ownerId: string }>) {
+  const t = useT();
+  const departed = useDepartedName(ownerId);
+  if (departed) {
+    return <span>{t("webForms.row.ownerLeft", { name: departed })}</span>;
+  }
+  return (
+    <span>
+      {t("webForms.row.owner")} <EntityRef kind="user" id={ownerId} asText />
+    </span>
   );
 }

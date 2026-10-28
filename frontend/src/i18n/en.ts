@@ -14156,9 +14156,10 @@ export const en = {
   "webForms.field.ownerHint":
     "Each new lead from this form goes to this colleague. Leave it unassigned for anyone on the team to pick up.",
   "webForms.field.ownerNone": "Unassigned",
-  "webForms.field.ownerGone": "A colleague who can no longer take leads",
-  "webForms.field.ownerKept": "The owner set now",
+  "webForms.field.ownerGone": "{name} (left, so new leads arrive unassigned)",
+  "webForms.field.ownerKept": "Saved owner (not listed)",
   "webForms.row.owner": "Leads go to",
+  "webForms.row.ownerLeft": "{name} left, so new leads arrive unassigned",
   "webForms.field.successMessage": "Success message",
   "webForms.field.successMessageHint": "Shown to the visitor after sending.",
   "webForms.setup.title": "Connect {name}",

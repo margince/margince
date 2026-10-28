@@ -93,6 +93,15 @@ const roster = {
   page: { has_more: false },
 };
 
+// A colleague who left: named by the names read, absent from the roster.
+const departedSeat = {
+  id: "u-gone",
+  display_name: "Max Former",
+  email: "max@acme.test",
+  is_agent: false,
+  departed: true,
+};
+
 type Sent = { method: string; url: string; body: unknown; ifMatch: string };
 
 // The backend the card talks to: the list, plus whatever a case writes. Every
@@ -119,7 +128,7 @@ function backendFor(
       return jsonResponse(roster);
     }
     if (new URL(req.url).pathname === "/v1/users/names") {
-      return jsonResponse({ data: roster.data });
+      return jsonResponse({ data: [...roster.data, departedSeat] });
     }
     const route = `${req.method} ${new URL(req.url).pathname}`;
     const answer = writes[route];
@@ -247,6 +256,26 @@ describe("WebFormsCard", () => {
     render(<WebFormsCard />);
     expect(await screen.findByText("Jane Doe")).toBeTruthy();
     expect(screen.getByText(/Leads go to/)).toBeTruthy();
+  });
+
+  it("says leads arrive unassigned once the form's owner left", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(OPERATOR, [{ ...contactForm, owner_id: "u-gone" }]).fetch,
+    );
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    expect(
+      await screen.findByText(
+        "Max Former left, so new leads arrive unassigned",
+      ),
+    ).toBeTruthy();
+    await user.click(screen.getByTestId("edit-web-form"));
+    expect(
+      await screen.findByText(
+        "Max Former (left, so new leads arrive unassigned)",
+      ),
+    ).toBeTruthy();
   });
 
   it("flags every empty required field on Create and sends nothing", async () => {
