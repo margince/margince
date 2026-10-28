@@ -1645,6 +1645,8 @@ export const en = {
   "worklist.bandCount_other": "{count} items",
   "brief.focus.context": "View details",
   "brief.queue.back": "Back to Worklist",
+  "brief.queue.next": "Next task",
+  "brief.queue.nextNone": "No more records",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Show Worklist",
   "brief.queue.hide": "Hide Worklist",
@@ -8358,6 +8360,8 @@ export const en = {
     "“{value}” is not a meeting status. The statuses are: {allowed}.",
   "import.reason.meeting_status_not_valid_for_kind":
     "Only a meeting has a meeting status. Remove it from this row.",
+  "import.reason.meeting_not_taken_place":
+    "By the date or time on this row, the meeting has not started yet, so it cannot be held or no_show. Leave the status empty, or use booked or canceled. If it started today, add the time it started.",
   "import.reason.direction_unknown":
     "“{value}” is not a direction. The directions are: {allowed}.",
   "import.reason.activity_unlinked":
@@ -16574,6 +16578,11 @@ export const en = {
   "worklist.scope.unassigned": "Unassigned",
   "worklist.scope.team": "Team",
   "worklist.scope.all": "All",
+  "worklist.scope.unassignedHint":
+    "Open work you can see that nobody is responsible for.",
+  "worklist.take.action": "Take it",
+  "worklist.take.done": "Assigned to you",
+  "worklist.take.failed": "Task was not assigned to you. Retry.",
   "worklist.owner.shared": "Shared responsibility: {names}",
   "worklist.owner.left": "{name} left. This needs a new owner.",
   "worklist.owner.sharedCount_one": "{count} responsible recipient",
@@ -16918,6 +16927,12 @@ export const en = {
   "worklist.verb.meetingOutcomeFailed": "Outcome was not recorded. Retry.",
   "worklist.verb.meetingDayMissing":
     "That date does not exist in the company’s time zone. Pick another date.",
+  "worklist.verb.meetingUpdateFor": "Update {subject}",
+  "worklist.verb.meetingCanceledFor": "Mark as canceled: {subject}",
+  "worklist.verb.meetingCancelInCalendar":
+    "The calendar invitation keeps this meeting. Cancel it through the invitation.",
+  "worklist.verb.meetingCalendarManaged":
+    "The calendar invitation keeps the subject, notes and date. Only the outcome is saved here.",
   "worklist.verb.retry": "Run again",
   "worklist.verb.retryStarted": "Rerunning rule…",
   "worklist.verb.retryFailed": "Rule was not rerun. Retry.",

@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -58,7 +59,7 @@ func ListActivitiesByDealTx(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, 
 	if err != nil {
 		return nil, err
 	}
-	return collectDealActivityLists(ctx, tx, rows, in.Columns, limit)
+	return collectDealActivityLists(ctx, tx, rows, in.Columns, listClock(in), limit)
 }
 
 func readableDealBatchSQL(ctx context.Context, dealIDs []ids.UUID, arg func(any) int) (string, error) {
@@ -70,7 +71,7 @@ func readableDealBatchSQL(ctx context.Context, dealIDs []ids.UUID, arg func(any)
 	return where, err
 }
 
-func collectDealActivityLists(ctx context.Context, tx pgx.Tx, rows pgx.Rows, columns CustomColumns, limit int) (map[ids.UUID]DealActivityList, error) {
+func collectDealActivityLists(ctx context.Context, tx pgx.Tx, rows pgx.Rows, columns CustomColumns, asOf time.Time, limit int) (map[ids.UUID]DealActivityList, error) {
 	defer rows.Close()
 	byDeal := map[ids.UUID][]ids.UUID{}
 	positions := map[ids.UUID]int{}
@@ -92,7 +93,7 @@ func collectDealActivityLists(ctx context.Context, tx pgx.Tx, rows pgx.Rows, col
 		return nil, err
 	}
 	rows.Close()
-	if err := finishActivityList(ctx, tx, columns, unique); err != nil {
+	if err := finishActivityList(ctx, tx, columns, unique, asOf); err != nil {
 		return nil, err
 	}
 	out := make(map[ids.UUID]DealActivityList, len(byDeal))

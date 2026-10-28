@@ -282,7 +282,7 @@ A meeting holds a status: **booked, held, no-show, canceled.**
 **Activities are never fully deleted.** If something is filed on the wrong record, the fix is **Relink**, not delete.
 
 ### How do I edit or delete a note, call or meeting I logged?
-You cannot edit or delete a logged activity in the Margince app. An activity on the timeline has **Relink** and, except for email, **Change visibility**, but no Edit or Delete. To fix one, log a new activity with the right details. You can still move an open task with **Move to** (a new date), **Snooze 1 day** or **Done**. To move an activity to the right record, choose **Relink** and search under "Search contacts, companies, deals, leads or projects". Tick **Replace existing link** to change the link and not add one, then choose **Relink**.
+You cannot edit or delete a logged activity in the Margince app. An activity on the timeline has **Relink** and, except for email, **Change visibility**, but no Edit or Delete. To fix one, log a new activity with the right details; a started meeting with no outcome takes **Update** to [record what came of it](meetings-and-booking.md#how-do-i-record-what-came-of-a-meeting). You can still move an open task with **Move to** (a new date), **Snooze 1 day** or **Done**. To move an activity to the right record, choose **Relink** and search under "Search contacts, companies, deals, leads or projects". Tick **Replace existing link** to change the link and not add one, then choose **Relink**.
 
 Also called: fix a note, remove an activity, change a task's due date, move an email to another deal.
 

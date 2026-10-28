@@ -53,7 +53,7 @@ function aMeetingOwedAnAnswer(over = {}) {
     title: "Discovery call with Turbinenbau",
     band: "keep_momentum",
     destination: "today",
-    actions: ["decide"],
+    actions: ["decide", "cancel"],
     ...over,
   });
 }
@@ -128,6 +128,30 @@ function stubWithMeetingRead(
               },
             );
           }
+          // The server's rule: a live invitation is canceled through itself.
+          if (meeting.calendar_managed && body.includes('"canceled"')) {
+            return new Response(
+              JSON.stringify({
+                title: "Unprocessable",
+                status: 422,
+                code: "validation_error",
+                details: {
+                  errors: [
+                    {
+                      field: "meeting",
+                      code: "calendar_managed",
+                      message:
+                        "Change or cancel this meeting through its calendar invitation",
+                    },
+                  ],
+                },
+              }),
+              {
+                status: 422,
+                headers: { "content-type": "application/problem+json" },
+              },
+            );
+          }
           if (patchStatus !== 200) {
             return new Response(JSON.stringify({ title: "no" }), {
               status: patchStatus,
@@ -159,7 +183,9 @@ describe("a meeting that owes an answer", () => {
       await screen.findByRole("button", { name: /update/i }),
     ).not.toBeNull();
     expect(
-      screen.getByRole("button", { name: /^mark as canceled$/i }),
+      screen.getByRole("button", {
+        name: "Mark as canceled: Discovery call with Turbinenbau",
+      }),
     ).not.toBeNull();
     // The two statuses that need prose are answers INSIDE the composer, not
     // verbs on the card: a row that still offered them would write one word and
@@ -175,7 +201,9 @@ describe("a meeting that owes an answer", () => {
     renderUnderAToastRegion();
 
     await user.click(
-      await screen.findByRole("button", { name: /^mark as canceled$/i }),
+      await screen.findByRole("button", {
+        name: "Mark as canceled: Discovery call with Turbinenbau",
+      }),
     );
     expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
     expect(sent).toEqual([{ meeting_status: "canceled" }]);
@@ -268,11 +296,72 @@ describe("a meeting that owes an answer", () => {
     renderUnderAToastRegion();
 
     await user.click(
-      await screen.findByRole("button", { name: /^mark as canceled$/i }),
+      await screen.findByRole("button", {
+        name: "Mark as canceled: Discovery call with Turbinenbau",
+      }),
     );
     // A refused write leaves the row exactly as it was, which renders the same
     // as a click that did nothing.
     expect(await screen.findByText(/Outcome was not recorded/i)).not.toBeNull();
+  });
+
+  it("reads the queue again when the meeting changed under the row, so a retry carries its new version", async () => {
+    // The server holds version 5; the row still carries 3.
+    stubWithMeetingRead([], 200, { ...CAPTURED_MEETING, version: 5 });
+    const worklistReads = () =>
+      vi
+        .mocked(globalThis.fetch)
+        .mock.calls.filter(([input]) =>
+          String(input instanceof Request ? input.url : input).includes(
+            "/worklist",
+          ),
+        ).length;
+    const user = userEvent.setup();
+    renderUnderAToastRegion();
+    const cancel = await screen.findByRole("button", {
+      name: "Mark as canceled: Discovery call with Turbinenbau",
+    });
+    const before = worklistReads();
+
+    await user.click(cancel);
+
+    expect(await screen.findByText(/Outcome was not recorded/i)).not.toBeNull();
+    await waitFor(() => expect(worklistReads()).toBeGreaterThan(before));
+  });
+
+  it("draws no cancel on a row that does not offer it, and still offers the update", async () => {
+    stub(aDayWithOne({ actions: ["decide"] }));
+    renderUnderAToastRegion();
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Update Discovery call with Turbinenbau",
+      }),
+    ).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /canceled/ })).toBeNull();
+  });
+
+  it("stops offering a cancel the calendar invitation refuses, and offers no retry", async () => {
+    const sent: unknown[] = [];
+    stubWithMeetingRead(sent, 200, {
+      ...CAPTURED_MEETING,
+      invitation_status: "confirmed",
+      calendar_managed: true,
+    });
+    const user = userEvent.setup();
+    renderUnderAToastRegion();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Mark as canceled: Discovery call with Turbinenbau",
+      }),
+    );
+    expect(
+      await screen.findByText(/Cancel it through the invitation/),
+    ).not.toBeNull();
+    expect(screen.queryByText(/Retry/)).toBeNull();
+    expect(screen.queryByRole("button", { name: /canceled/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /update/i })).not.toBeNull();
   });
 });
 
@@ -378,26 +467,41 @@ describe("the start a meeting outcome saves", () => {
     });
   });
 
-  it("files a date-only meeting moved onto today as today, not as now", async () => {
+  // A date-only meeting has taken place once its date is over, so the server
+  // refuses `held` on one dated today.
+  const dateOnly = {
+    ...CAPTURED_MEETING,
+    occurred_at: "2026-01-15T05:00:00Z",
+    occurred_precision: "day",
+  };
+
+  it("refuses to move a date-only meeting onto today, and sends nothing", async () => {
     // 05:00 on the 20th in Bangkok, still the 19th in UTC.
     vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true });
     vi.setSystemTime(new Date("2026-01-19T22:00:00Z"));
     const sent: Record<string, unknown>[] = [];
-    stubWithMeetingRead(sent, 200, {
-      ...CAPTURED_MEETING,
-      occurred_at: "2026-01-15T05:00:00Z",
-      occurred_precision: "day",
-    });
+    stubWithMeetingRead(sent, 200, dateOnly);
     await openAndSave("Asia/Bangkok", typed("2026-01-20"));
+
+    expect(await screen.findByText("Latest date: 19/01/2026")).not.toBeNull();
+    expect(sent).toEqual([]);
+  });
+
+  it("files a date-only meeting moved onto yesterday as that date alone", async () => {
+    vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-01-19T22:00:00Z"));
+    const sent: Record<string, unknown>[] = [];
+    stubWithMeetingRead(sent, 200, dateOnly);
+    await openAndSave("Asia/Bangkok", typed("2026-01-19"));
 
     expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
     expect(sent[0]).toMatchObject({
-      occurred_at: "2026-01-20T12:00:00Z",
+      occurred_at: "2026-01-19T12:00:00Z",
       occurred_precision: "day",
     });
   });
 
-  it("files a meeting moved onto today at now while its hour is still to come", async () => {
+  it("files a meeting moved onto today a minute before now while its hour is still to come", async () => {
     // 17:00 in Bangkok; the meeting's 21:00 has not come yet.
     vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true });
     vi.setSystemTime(new Date("2026-01-20T10:00:00Z"));
@@ -407,8 +511,8 @@ describe("the start a meeting outcome saves", () => {
 
     expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
     const filed = Date.parse(String(sent[0]?.occurred_at));
-    expect(filed).toBeGreaterThanOrEqual(Date.parse("2026-01-20T10:00:00Z"));
-    expect(filed).toBeLessThan(Date.parse("2026-01-20T14:00:00Z"));
+    expect(filed).toBeGreaterThanOrEqual(Date.parse("2026-01-20T09:59:00Z"));
+    expect(filed).toBeLessThan(Date.parse("2026-01-20T10:00:00Z"));
   });
 
   it("files a meeting moved onto today at its own time once that hour passed", async () => {

@@ -173,7 +173,9 @@ describe("handing a task to somebody else", () => {
   it("AC-WORKLIST-MGR-03: writes the new assignee to the task the row names", async () => {
     const fetched = stubRosterAnd(() => jsonResponse({}));
     const user = userEvent.setup();
-    renderUnderAToastRegion(rowOf(row({ id: "task-1" }), LENA));
+    renderUnderAToastRegion(
+      rowOf(row({ id: "task-1", actions: ["complete"] }), LENA),
+    );
 
     await openHandOff(user);
     await user.click(await screen.findByRole("combobox"));
@@ -203,7 +205,9 @@ describe("handing a task to somebody else", () => {
   it("offers everyone except the contact whose queue this is", async () => {
     stubRosterAnd(() => jsonResponse({}));
     const user = userEvent.setup();
-    renderUnderAToastRegion(rowOf(row({ id: "task-1" }), LENA));
+    renderUnderAToastRegion(
+      rowOf(row({ id: "task-1", actions: ["complete"] }), LENA),
+    );
 
     await openHandOff(user);
 
@@ -218,7 +222,7 @@ describe("handing a task to somebody else", () => {
     stubRosterAnd(() => refusal());
     const user = userEvent.setup();
     const { container } = renderUnderAToastRegion(
-      rowOf(row({ id: "task-1" }), LENA),
+      rowOf(row({ id: "task-1", actions: ["complete"] }), LENA),
     );
 
     await openHandOff(user);
@@ -355,7 +359,9 @@ describe("a rep hands on their own task", () => {
   it("offers everyone but the reader, when no rep is selected", async () => {
     stubRosterAnd(() => undefined);
     const user = userEvent.setup();
-    renderUnderAToastRegion(rowOf(row({ id: "a-1" }), ""));
+    renderUnderAToastRegion(
+      rowOf(row({ id: "a-1", actions: ["complete"] }), ""),
+    );
     await openHandOff(user);
     // The listbox is PORTALLED, so its options are not inside the labelled
     // trigger — reading them through `within(picker)` finds none and the
@@ -387,7 +393,9 @@ describe("a rep hands on their own task", () => {
       fetched.mock.calls.some(([input]) =>
         String(input instanceof Request ? input.url : input).includes("/users"),
       );
-    renderUnderAToastRegion(rowOf(row({ id: "a-1" }), ""));
+    renderUnderAToastRegion(
+      rowOf(row({ id: "a-1", actions: ["complete"] }), ""),
+    );
     await openHandOff(user);
     await user.click(
       await screen.findByLabelText(en["worklist.manager.reassignTo"]),
@@ -415,7 +423,7 @@ describe("the row a rep is standing on", () => {
     const user = userEvent.setup();
     renderUnderAToastRegion(
       <WorklistRow
-        item={row({ id: "a-1", source: "task" })}
+        item={row({ id: "a-1", source: "task", actions: ["complete"] })}
         position={1}
         owner=""
         selected={false}
