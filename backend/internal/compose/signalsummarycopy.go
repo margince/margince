@@ -18,7 +18,11 @@ package compose
 // established: a table keyed by the language, with the shipped set as the
 // census, so a language the product gains fails a test rather than a reader.
 
-import "github.com/margince/margince/backend/internal/shared/kernel/textlang"
+import (
+	"fmt"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+)
 
 // signalSummaryCopy is one language's set. Every field is required — a partial
 // set is a silent English fallback in miniature, and the census refuses one.
@@ -61,3 +65,24 @@ func signalSummaryCopyFor(lang textlang.Lang) signalSummaryCopy {
 	}
 	return signalSummaryByLang[textlang.English]
 }
+
+type ghostedThreadParts struct {
+	Days int `json:"days"`
+}
+
+func (parts ghostedThreadParts) worded(lang textlang.Lang) string {
+	return fmt.Sprintf(signalSummaryCopyFor(lang).ghostedThread, parts.Days)
+}
+
+func (parts ghostedThreadParts) complete() bool { return parts.Days > 0 }
+
+type projectQuietParts struct {
+	Project string `json:"project"`
+	Days    int    `json:"days"`
+}
+
+func (parts projectQuietParts) worded(lang textlang.Lang) string {
+	return fmt.Sprintf(signalSummaryCopyFor(lang).projectQuiet, parts.Project, parts.Days)
+}
+
+func (parts projectQuietParts) complete() bool { return parts.Project != "" && parts.Days > 0 }

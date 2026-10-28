@@ -26,6 +26,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -165,16 +166,22 @@ func WriteGhostedSignals(ctx context.Context, tx pgx.Tx, now time.Time) (Ghosted
 	if err != nil {
 		return GhostedPass{}, err
 	}
-	said := signalSummaryCopyFor(identity.BaseLanguageForRecord(ctx, tx))
+	parts := ghostedThreadParts{Days: ghostedThresholdDays}
+	summary := parts.worded(identity.BaseLanguageForRecord(ctx, tx))
+	params, err := json.Marshal(parts)
+	if err != nil {
+		return GhostedPass{}, fmt.Errorf("encoding a ghosted-thread summary's parts: %w", err)
+	}
 	pass := GhostedPass{Considered: len(candidates)}
 	for _, found := range candidates {
 		days := max(occurredday.DaysSince(occurredday.Moment{At: found.At, DateOnly: occurredday.IsDay(found.Precision)}, now, loc), 0)
 		raised, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
-			Kind:        kindGhostedThread,
-			CompanyID:   found.CompanyID,
-			Summary:     fmt.Sprintf(said.ghostedThread, ghostedThresholdDays),
-			Severity:    severityWarn,
-			Fingerprint: signalFingerprint(kindGhostedThread, found.CompanyID, found.ActivityID),
+			Kind:          kindGhostedThread,
+			CompanyID:     found.CompanyID,
+			Summary:       summary,
+			SummaryParams: params,
+			Severity:      severityWarn,
+			Fingerprint:   signalFingerprint(kindGhostedThread, found.CompanyID, found.ActivityID),
 			// The message is CITED, not quoted. This finding is shared with
 			// everyone who can see the account, while the message it points at
 			// may be readable by one contact — capture files mail against

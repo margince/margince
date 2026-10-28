@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -63,7 +64,8 @@ type Service struct {
 	// lists: the page names the Shortlists the account is on (lists.enabled).
 	lists bool
 	// activities answers the timeline's custom-field columns (WithActivityFields).
-	activities *activities.Store
+	activities  *activities.Store
+	signalWords signals.SummaryWords
 }
 
 // NewService binds the composite read to the module stores it composes.

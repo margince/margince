@@ -29315,7 +29315,7 @@ export interface components {
                 kind: string;
                 /** @enum {string} */
                 severity: "info" | "warn" | "urgent";
-                /** @description The signal's one sentence, in the words its producer wrote — the strip does not rephrase what a conversation said. */
+                /** @description The signal's one sentence, in the language `Signal.summary` reads in. The strip does not rephrase what a conversation said. */
                 summary: string;
             } | null;
         };
@@ -38104,6 +38104,12 @@ export interface components {
              * @enum {string}
              */
             severity: "info" | "warn" | "urgent";
+            /**
+             * @description The signal's one sentence. A sentence the server words itself (`technical_change`,
+             *     `ghosted_thread`, `project_gone_quiet`) is in the reader's chosen display language, else
+             *     the installation's base language. Every other summary, and a summary stored without its
+             *     parts, reads as it was written.
+             */
             summary: string;
             /** @description Per-claim evidence; a claim without evidence is omitted. */
             evidence: components["schemas"]["SignalEvidence"][];

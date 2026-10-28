@@ -333,7 +333,7 @@ func (s extensionSignals) Get(ctx context.Context, id string) (crm.Signal, error
 	if err != nil {
 		return crm.Signal{}, fmt.Errorf("%w: %q is not a UUID", extension.ErrInvalid, id)
 	}
-	got, err := signals.ReadSignalTx(ctx, s.core.tx, signalID, storekit.LiveOnly)
+	got, err := signals.ReadSignalTx(ctx, s.core.tx, signalID, storekit.LiveOnly, signalSummaryWords)
 	if err != nil {
 		return crm.Signal{}, portRefusal(err)
 	}
@@ -360,7 +360,7 @@ func (s extensionSignals) List(ctx context.Context, q extension.SignalQuery) (ex
 	if company != nil {
 		in.CompanyID = &company.UUID
 	}
-	rows, page, err := signals.ListSignalsTx(ctx, s.core.tx, in)
+	rows, page, err := signals.ListSignalsTx(ctx, s.core.tx, in, signalSummaryWords)
 	if err != nil {
 		return extension.Page[crm.Signal]{}, portRefusal(err)
 	}
