@@ -83,7 +83,7 @@ func previewTagAssignments(ctx context.Context, tx pgx.Tx, source, target ids.Ta
 		return nil, apperrors.ErrInvalidArgument
 	}
 	for _, assignment := range assignments {
-		if !memberEntityTables[assignment.EntityType] {
+		if !acceptsEntityType(assignment.EntityType) {
 			return nil, apperrors.ErrInvalidArgument
 		}
 		if err := auth.Require(ctx, assignment.EntityType, principal.ActionRead); err != nil {

@@ -689,6 +689,44 @@ Set the types on a company with `Core().Companies().SetExtensionTypes(ctx, compa
 
 A user or an agent can also set a declared value with `PATCH /v1/companies/{id}`, in `extension_relationship_types`. A value that no unit declares is refused with a 422 on that field and the code `invalid_enum`. A company that already holds a value keeps it when its unit is later removed, and a save that does not change it is accepted. `GET /v1/company-types` lists every declared value with its label, for any signed-in user. The company list takes a declared value in `extension_relationship_type`. The `relationship_type` filter stays core's own list.
 
+## Declare a record kind
+
+A unit that keeps records core does not know, such as a ledger account, can declare them as a record kind. Core then
+lets a user tag the record, put it on a Shortlist and see it in the audit log. A role holds no right on a kind unless the declaration or an admin gives it. The rows stay
+in your own table.
+
+```go
+RecordKinds: []extension.RecordKindDeclaration{{
+	Kind:        "ledger_account",
+	DisplayName: "Ledger account",
+	Table:       "ext_finance_demo_ledger_account",
+	Fields:      []extension.RecordKindField{{Name: "account_code", Label: "Account code"}},
+	NaturalKey:  []string{"account_code"},
+	Defaults:    []extension.RbacDefault{{Role: "admin", Actions: []extension.RbacAction{extension.RbacRead}}},
+}},
+```
+
+| Field | Meaning |
+|---|---|
+| `Kind` | The short name: a lower-case letter, then lower-case letters, digits or `_`, up to 32 characters. The stored name is `ext:<unit>:<kind>`. |
+| `DisplayName` | What a screen calls one record. Required, in English. |
+| `Table` | Your own table, `ext_<unit>_<name>`. It needs an `id uuid` primary key and an `archived_at timestamptz` column. Give `margince_app` the same four rights as on any unit table (see the table rules above), because core reads it with that role. |
+| `Fields` | The columns that make up a record, each with a label. Every one must exist in the table. |
+| `NaturalKey` | The fields that name one record. The table must hold a unique index over these columns and no others, and the index must cover every row. |
+| `Defaults` | Starting rights per system role. Leave it out and every role is refused until an admin ticks the kind's object. |
+| `DeletePolicy` | `extension.DeleteArchiveOnly` (the default) or `extension.DeleteErasable`. |
+
+The kind is gated on the RBAC object `ext_<unit>_<kind>`. The unit's hyphens become `_` in that name. Before core links,
+tags or lists a record, it checks the `read` right and a live row. A caller without the right gets `404`. The start
+refuses a declaration that breaks the table above.
+
+The service reports itself unready while your table, a column or the unique index is missing. It does the same while
+`margince_app` holds fewer than the four rights on the table.
+
+`GET /v1/record-kinds` lists the kinds a seat may read. The reference page
+[an extension cannot add its own record kinds](../reference/an-extension-cannot-add-its-own-record-k.md#extension-record-kinds-and-link-registry)
+says what core does with a kind today, and what it leaves out.
+
 ## Draw a panel on a core page
 
 A unit with a frontend package can draw its own part of a page inline on a core page. Declare one

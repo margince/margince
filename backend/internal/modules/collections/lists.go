@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
 type Store struct {
@@ -106,6 +107,18 @@ var memberEntityTables = func() map[string]bool {
 	}
 	return m
 }()
+
+// acceptsEntityType answers whether a tag or a list may point at a type. It
+// takes a core record type or a kind an extension declared. A declared kind
+// has the `ext:<unit>:<kind>` form. The check reads the registry, because a
+// list would close the set again.
+func acceptsEntityType(entityType string) bool {
+	if memberEntityTables[entityType] {
+		return true
+	}
+	_, declared := recordkinds.Lookup(entityType)
+	return declared
+}
 
 // entityTypeField names the input every polymorphic refusal on this surface
 // points at.
@@ -332,8 +345,11 @@ func (s *Store) checkNewList(ctx context.Context, in *CreateListInput) error {
 	if strings.TrimSpace(in.Name) == "" {
 		return &BadInputError{Field: nameField, Reason: "a list needs a name"}
 	}
-	if !memberEntityTables[in.EntityType] {
+	if !acceptsEntityType(in.EntityType) {
 		return &BadInputError{Field: entityTypeField, Reason: "must be " + memberEntityVocabulary}
+	}
+	if in.ListType == listTypeDynamic && recordkinds.IsExtensionName(in.EntityType) {
+		return &BadInputError{Field: listTypeField, Reason: "a Live List follows a filter core can evaluate; an extension kind takes a Shortlist"}
 	}
 	if in.ListType == "" {
 		in.ListType = listTypeStatic

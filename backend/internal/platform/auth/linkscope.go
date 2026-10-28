@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
 // The activity_link columns, one per record kind it can point at. Named
@@ -159,6 +160,9 @@ func linkTargetArm(alias, column, table, probe, predicate string) string {
 // archive of it and blocks nothing else. That is the price of the probe having
 // one meaning.
 func EnsureLinkTarget(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
+	if recordkinds.IsExtensionName(table) {
+		return ensureExtensionRecord(ctx, tx, table, id, true)
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idPos := arg(id)
@@ -181,6 +185,30 @@ func EnsureLinkTarget(ctx context.Context, tx pgx.Tx, table string, id ids.UUID)
 		return err
 	}
 	return nil
+}
+
+// ensureExtensionRecord is the row probe for a kind an extension declared, live
+// or not as the caller asks. Core cannot see inside the unit's rows, so a caller
+// sees one when the kind's read right is theirs and the row exists. A caller
+// without the right gets the
+// answer a missing row gets, so the probe does not disclose that the id exists.
+// The share lock is the one a core target takes: an archive committing between
+// the probe and the write must wait.
+func ensureExtensionRecord(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID, live bool) error {
+	declared, ok := recordkinds.Lookup(kind)
+	if !ok || Require(ctx, kind, principal.ActionRead) != nil {
+		return apperrors.ErrNotFound
+	}
+	query := `SELECT 1 FROM ` + pgx.Identifier{"ext", declared.Table}.Sanitize() + ` WHERE id = $1`
+	if live {
+		query += ` AND archived_at IS NULL`
+	}
+	var held int
+	err := tx.QueryRow(ctx, query+` FOR SHARE`, id).Scan(&held)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return apperrors.ErrNotFound
+	}
+	return err
 }
 
 // EnsureAttachTarget is EnsureLinkTarget for the ATTACH direction, and the
@@ -213,6 +241,11 @@ func EnsureAttachTarget(ctx context.Context, tx pgx.Tx, table string, id ids.UUI
 	// with its own visibility probe, for the same reason.
 	if err := EnsureLinkTarget(ctx, tx, table, id); err != nil {
 		return err
+	}
+	// An extension kind has no read-only share to narrow: the kind's read right
+	// the link probe just checked is all the reach there is.
+	if recordkinds.IsExtensionName(table) {
+		return nil
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }

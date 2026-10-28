@@ -498,6 +498,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/query-vocabulary":                                              {Op: "describeQueryVocabulary", Access: "tool", Tool: "describe_query_vocabulary", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"GET /v1/record-fields":                                                 {Op: "describeRecordFields", Access: "tool", Tool: "describe_record_fields", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"GET /v1/record-grants":                                                 {Op: "listRecordGrants", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/record-kinds":                                                  {Op: "listRecordKinds", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/record-roles":                                                  {Op: "listRecordRoles", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/records/{entity_type}/{entity_id}/lists":                       {Op: "getRecordLists", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/records/{entity_type}/{entity_id}/tags":                        {Op: "getRecordTags", Access: "tool", Tool: "get_record_tags", RecordType: "", Tier: "auto_execute", Scope: "read"},

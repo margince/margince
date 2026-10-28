@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/migrations"
 )
 
@@ -59,7 +60,7 @@ func SchemaAtHead(pool *pgxpool.Pool) func(context.Context) error {
 			return err
 		}
 		if len(short) == 0 {
-			return nil
+			return VerifyRecordKinds(ctx, pool, recordkinds.All())
 		}
 		return fmt.Errorf("the database is behind this binary: %s — apply the migrations (cmd/migrate up); "+
 			"this process serves again without a restart once they land", describeShortfalls(short))

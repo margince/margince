@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 333 |
-| Columns | 3948 |
+| Columns | 3951 |
 | Foreign keys | 551 |
 | Owning areas | 37 |
 
@@ -139,7 +139,7 @@ erDiagram
 | [`activity_commitment_admission`](activities.md#activity_commitment_admission) | activities | 13 | 0 |
 | [`activity_identity`](activities.md#activity_identity) | activities | 5 | 0 |
 | [`activity_kind`](compose.md#activity_kind) | compose | 1 | 1 |
-| [`activity_link`](activities.md#activity_link) | activities | 9 | 0 |
+| [`activity_link`](activities.md#activity_link) | activities | 10 | 0 |
 | [`activity_mail_reference`](activities.md#activity_mail_reference) | activities | 3 | 0 |
 | [`activity_meeting_attendee_repair`](compose.md#activity_meeting_attendee_repair) | compose | 4 | 0 |
 | [`activity_meeting_history`](activities.md#activity_meeting_history) | activities | 12 | 0 |
@@ -289,7 +289,7 @@ erDiagram
 | [`deal_status_card`](compose.md#deal_status_card) | compose | 6 | 0 |
 | [`deal_suggestion`](deals.md#deal_suggestion) | deals | 21 | 1 |
 | [`deal_suggestion_evidence`](deals.md#deal_suggestion_evidence) | deals | 7 | 0 |
-| [`dedupe_candidate`](contacts.md#dedupe_candidate) | contacts | 19 | 0 |
+| [`dedupe_candidate`](contacts.md#dedupe_candidate) | contacts | 21 | 0 |
 | [`dedupe_scan_state`](contacts.md#dedupe_scan_state) | contacts | 3 | 0 |
 | [`email_signature`](contacts.md#email_signature) | contacts | 9 | 0 |
 | [`embed_store_binding`](search.md#embed_store_binding) | search | 6 | 0 |

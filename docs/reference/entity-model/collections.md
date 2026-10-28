@@ -12,7 +12,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `definition` | `jsonb` |  | A Live List's filter tree; null for a Shortlist. |
-| `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `project`. |
+| `entity_type` | `text` | yes |  |
 | `list_type` | `text`, default `'static'::text` | yes | One of `static`, `dynamic`. |
 | `name` | `text` | yes |  |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
@@ -35,7 +35,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 **Rules**
 
-- `list_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])))`
+- `list_entity_type_check`: `CHECK (((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
 - `list_list_type_check`: `CHECK ((list_type = ANY (ARRAY['static', 'dynamic'])))`
 - `list_sharing_check`: `CHECK ((sharing = ANY (ARRAY['private', 'team', 'workspace'])))`
 - `list_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
@@ -88,7 +88,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 |---|---|---|---|
 | `definition_version` | `bigint` | yes |  |
 | `entity_id` | `uuid` | yes |  |
-| `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `project`. |
+| `entity_type` | `text` | yes |  |
 | `list_id` | `uuid` | yes | Points at `list.id`. |
 | `member_since` | `timestamp with time zone` | yes |  |
 
@@ -101,7 +101,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 **Rules**
 
 - `list_live_member_definition_version_js_safe`: `CHECK (((definition_version >= '-9007199254740991'::bigint) AND (definition_version <= '9007199254740991'::bigint)))`
-- `list_live_member_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])))`
+- `list_live_member_entity_type_check`: `CHECK (((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
 
 **Indexes**
 
@@ -117,7 +117,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `added_by` | `text` | yes | The principal that added a Shortlist member; `dynamic` for a Live List member. |
 | `entity_id` | `uuid` | yes |  |
-| `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `project`. |
+| `entity_type` | `text` | yes |  |
 | `list_id` | `uuid` | yes | Points at `list.id`. |
 | `note` | `text` |  |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -130,7 +130,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 **Rules**
 
-- `list_member_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])))`
+- `list_member_entity_type_check`: `CHECK (((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
 - `list_member_unique`: `UNIQUE (list_id, entity_type, entity_id)`
 
 **Indexes**
@@ -150,7 +150,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 | `actor` | `text` | yes |  |
 | `definition_version` | `bigint` |  |  |
 | `entity_id` | `uuid` | yes |  |
-| `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `project`. |
+| `entity_type` | `text` | yes |  |
 | `list_id` | `uuid` | yes | Points at `list.id`. |
 | `member_note` | `text` |  |  |
 | `note` | `text` |  |  |
@@ -167,7 +167,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 - `list_member_event_action_check`: `CHECK ((action = ANY (ARRAY['added', 'removed', 'entered', 'left'])))`
 - `list_member_event_definition_version_js_safe`: `CHECK (((definition_version >= '-9007199254740991'::bigint) AND (definition_version <= '9007199254740991'::bigint)))`
-- `list_member_event_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])))`
+- `list_member_event_entity_type_check`: `CHECK (((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
 - `list_member_event_reason_check`: `CHECK ((reason = ANY (ARRAY['chosen', 'bulk', 'record_archived', 'record_restored', 'evaluated', 'filter_changed', 'automation'])))`
 
 **Indexes**
@@ -243,7 +243,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 | `name` | `text` | yes |  |
 | `owner_id` | `uuid` | yes | Points at `app_user.id`. |
 | `query` | `jsonb` | yes | The saved column choice, sort, and filter state, in the list-view vocabulary; persisted and restored verbatim. |
-| `resource` | `text` | yes | One of `contacts`, `companies`, `deals`, `activities`, `leads`, `partners` and 1 more. |
+| `resource` | `text` | yes |  |
 | `shared_scope` | `text`, default `'private'::text` | yes | V1 enforces private. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -258,7 +258,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 **Rules**
 
-- `saved_view_resource_check`: `CHECK ((resource = ANY (ARRAY['contacts', 'companies', 'deals', 'activities', 'leads', 'partners', 'projects'])))`
+- `saved_view_resource_check`: `CHECK (((resource = ANY (ARRAY['contacts', 'companies', 'deals', 'activities', 'leads', 'partners', 'projects'])) OR (resource ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
 - `saved_view_shared_scope_check`: `CHECK ((shared_scope = ANY (ARRAY['private', 'team', 'workspace'])))`
 - `saved_view_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
@@ -417,7 +417,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 | `assigned_by` | `uuid` |  |  |
 | `assigned_by_kind` | `text` |  | One of `human`, `agent`, `import`. |
 | `entity_id` | `uuid` | yes |  |
-| `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `project`. |
+| `entity_type` | `text` | yes |  |
 | `tag_id` | `uuid` | yes | Points at `tag.id`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
@@ -430,7 +430,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 **Rules**
 
 - `taggable_assigned_by_kind_check`: `CHECK (((assigned_by_kind IS NULL) OR (assigned_by_kind = ANY (ARRAY['human', 'agent', 'import']))))`
-- `taggable_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])))`
+- `taggable_entity_type_check`: `CHECK (((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
 - `taggable_unique`: `UNIQUE (tag_id, entity_type, entity_id)`
 
 **Indexes**

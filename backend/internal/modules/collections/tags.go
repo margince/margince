@@ -210,7 +210,7 @@ func (s *Store) ApplyTag(ctx context.Context, tagID ids.TagID, entityType string
 	if err := auth.Require(ctx, "tag", principal.ActionRead); err != nil {
 		return taggableRow{}, err
 	}
-	if !memberEntityTables[entityType] {
+	if !acceptsEntityType(entityType) {
 		return taggableRow{}, &BadInputError{Field: entityTypeField, Reason: "must be " + memberEntityVocabulary}
 	}
 	// UPDATE on the target, not merely read. A tag is part of the record: it
@@ -249,7 +249,7 @@ func (s *Store) ApplyTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, enti
 	if err := auth.Require(ctx, "tag", principal.ActionRead); err != nil {
 		return taggableRow{}, err
 	}
-	if !memberEntityTables[entityType] {
+	if !acceptsEntityType(entityType) {
 		return taggableRow{}, &BadInputError{Field: entityTypeField, Reason: "must be " + memberEntityVocabulary}
 	}
 	if err := auth.Require(ctx, entityType, principal.ActionUpdate); err != nil {
@@ -340,7 +340,7 @@ func auditTagLink(ctx context.Context, tx pgx.Tx, tagID ids.TagID, change string
 // spends a ResolveTag lookup on, only to have the write itself refuse them
 // afterward.
 func (s *Store) EnsureTaggable(ctx context.Context, entityType string, entityID ids.UUID) error {
-	if !memberEntityTables[entityType] {
+	if !acceptsEntityType(entityType) {
 		return &BadInputError{Field: entityTypeField, Reason: "must be " + memberEntityVocabulary}
 	}
 	if err := auth.Require(ctx, entityType, principal.ActionUpdate); err != nil {

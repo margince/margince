@@ -131,6 +131,13 @@ never holds a value your client does not know.
 A company keeps a value when its extension is later removed. A save that leaves it unchanged is still accepted.
 The steps for the extension's side are in [how-to/add-an-extension.md](../how-to/add-an-extension.md#declare-a-company-type).
 
+## Record kinds from extensions
+
+`GET /v1/record-kinds` lists the kinds of record installed extensions add, each named `ext:<unit>:<kind>`. A signed-in
+seat sees only the kinds it may read. Each entry carries the `display_name`, the `fields`, the `natural_key`, the
+`delete_policy` and the `actions` the seat holds. The list is empty when no extension declares a kind or the seat may read none.
+The steps for the extension's side are in [how-to/add-an-extension.md](../how-to/add-an-extension.md#declare-a-record-kind).
+
 ## Events out
 
 Margince sends events to your system as signed webhooks. To register one, see

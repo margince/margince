@@ -1026,7 +1026,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## dedupe_candidate
 
-19 columns · primary key `(id)` · referenced by 0 foreign keys
+21 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1039,9 +1039,11 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `evidence` | `jsonb` | yes | Per-field agree/collide snapshot captured at detection: what the review queue renders, never re-derived against since-edited rows. |
 | `left_company_id` | `uuid` |  | Points at `company.id`. |
 | `left_contact_id` | `uuid` |  | Points at `contact.id`. |
+| `left_ext_id` | `uuid` |  |  |
 | `left_lead_id` | `uuid` |  | Points at `lead.id`. |
 | `right_company_id` | `uuid` |  | Points at `company.id`. |
 | `right_contact_id` | `uuid` |  | Points at `contact.id`. |
+| `right_ext_id` | `uuid` |  |  |
 | `right_lead_id` | `uuid` |  | Points at `lead.id`. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
@@ -1067,9 +1069,10 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `dedupe_candidate_confidence_check`: `CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))`
 - `dedupe_candidate_disposed_shape`: `CHECK (((disposition = 'open') = (disposed_at IS NULL)))`
 - `dedupe_candidate_disposition_check`: `CHECK ((disposition = ANY (ARRAY['open', 'merged', 'not_a_duplicate'])))`
-- `dedupe_candidate_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'lead'])))`
+- `dedupe_candidate_entity_type_check`: `CHECK (((entity_type = ANY (ARRAY['contact', 'company', 'lead'])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
+- `dedupe_candidate_ext_shape`: `CHECK ( CASE WHEN (entity_type ~ '^ext:') THEN ((left_ext_id IS NOT NULL) AND (right_ext_id IS NOT NULL) AND (left_ext_id < right_ext_id)) ELSE ((left_ext_id IS NULL) AND (right_ext_id IS NULL)) END)`
 - `dedupe_candidate_ordered`: `CHECK ((COALESCE(left_contact_id, left_company_id, left_lead_id) < COALESCE(right_contact_id, right_company_id, right_lead_id)))`
-- `dedupe_candidate_shape`: `CHECK ((((entity_type = 'contact') AND (left_contact_id IS NOT NULL) AND (right_contact_id IS NOT NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'company') AND (left_company_id IS NOT NULL) AND (right_company_id IS NOT NULL) AND (left_contact_id IS NULL) AND (right_contact_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'lead') AND (left_lead_id IS NOT NULL) AND (right_lead_id IS NOT NULL) AND (left_contact_id IS NULL) AND (right_contact_id IS NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL))))`
+- `dedupe_candidate_shape`: `CHECK ((((entity_type ~ '^ext:') AND (left_contact_id IS NULL) AND (right_contact_id IS NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'contact') AND (left_contact_id IS NOT NULL) AND (right_contact_id IS NOT NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'company') AND (left_company_id IS NOT NULL) AND (right_company_id IS NOT NULL) AND (left_contact_id IS NULL) AND (right_contact_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'lead') AND (left_lead_id IS NOT NULL) AND (right_lead_id IS NOT NULL) AND (left_contact_id IS NULL) AND (right_contact_id IS NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL))))`
 - `dedupe_candidate_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
@@ -1083,6 +1086,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_dedupe_candidate_right_contact`: `btree (right_contact_id)`
 - `idx_dedupe_candidate_right_lead`: `btree (right_lead_id)`
 - `uq_dedupe_candidate_pair`: `unique, btree (entity_type, COALESCE(left_contact_id, left_company_id, left_lead_id), COALESCE(right_contact_id, right_company_id, right_lead_id))`
+- `uq_dedupe_candidate_pair_ext`: `unique, btree (entity_type, left_ext_id, right_ext_id) WHERE (left_ext_id IS NOT NULL)`
 
 **Triggers**
 
