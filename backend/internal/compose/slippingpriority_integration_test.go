@@ -32,7 +32,7 @@ func TestOverdueDealIsFoundBehindMoreThanOnePageOfCurrentDeals(t *testing.T) {
 		}
 	}
 	// A long quiet threshold isolates the overdue-close path in this test.
-	candidates, cut, err := quietDealScanWithClock(e.Pool, 100000, func() time.Time { return now })(e.Admin())
+	candidates, cut, err := quietDealScanWithClock(e.Pool, 100000, func() time.Time { return now })(e.Admin(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

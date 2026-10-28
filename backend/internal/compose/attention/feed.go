@@ -235,7 +235,7 @@ type Service struct {
 	// taskOwner is whose queue TasksOwnedBy means. Zero for every other scope,
 	// and never read by them.
 	taskOwner ids.UUID
-	// noticeOwners is a team roster; nil leaves the visible agenda unrestricted.
+	// noticeOwners is the live team audience for requested decisions and disclosures.
 	noticeOwners []ids.UUID
 	// teamRoster is the roster scope=team resolved with, which degradableRoster
 	// answers from rather than asking again; nil under every other scope.
@@ -404,11 +404,7 @@ func (s *Service) decisionsDepth() int {
 // decisionsToDepth is the same read at a depth the caller chooses: the lane feed
 // takes a page, and the ranked queue takes a census so its batch rows can count.
 func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontracts.AttentionItem, laneCount, error) {
-	pairs, err := s.duplicates.OpenCandidates(ctx, depth)
-	if err != nil {
-		return nil, laneCount{}, err
-	}
-	openPairs, err := s.duplicates.CountOpen(ctx)
+	pairs, openPairs, err := s.duplicateCandidates(ctx, depth)
 	if err != nil {
 		return nil, laneCount{}, err
 	}
@@ -433,12 +429,15 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	// Whether the merge would be ACCEPTED, which authority does not answer.
 	// A permission verdict empties the offer the same way it does above: a
 	// reader who may not ask has no verb, which is a complete answer.
-	settleable, err := s.duplicates.SettleablePairs(ctx, pairs)
-	switch {
-	case errors.Is(err, apperrors.ErrPermissionDenied), errors.Is(err, apperrors.ErrNotFound):
-		settleable = nil
-	case err != nil:
-		return nil, laneCount{}, err
+	var settleable map[ids.UUID]bool
+	if len(pairs) > 0 {
+		settleable, err = s.duplicates.SettleablePairs(ctx, pairs)
+		switch {
+		case errors.Is(err, apperrors.ErrPermissionDenied), errors.Is(err, apperrors.ErrNotFound):
+			settleable = nil
+		case err != nil:
+			return nil, laneCount{}, err
+		}
 	}
 	duplicates := make([]crmcontracts.AttentionItem, 0, len(pairs))
 	for _, pair := range pairs {

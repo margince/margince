@@ -175,22 +175,8 @@ func ownedByReader(row ranked, reader principal.Principal) bool {
 	return owner != nil && owner.Id != nil && !reader.UserID.IsZero() && ids.UUID(*owner.Id) == reader.UserID
 }
 
-// keepReadersOwn drops the rows belonging to somebody else.
-//
-// It runs over the CANDIDATES, before the page is cut, so a reader asking for
-// twenty-five of their own rows gets twenty-five where they exist. Narrowing
-// after the cut returned a short page while the reader's own work sat just
-// past it.
-//
-// It fails CLOSED. A call with no human behind it has no "own work" to answer
-// for, and a queue that handed such a caller every row it had read would be
-// widening a scope named `mine` — the opposite of what it says. An agent that
-// needs the day reads it under a scope it can actually hold.
-//
-// The narrowing itself is a display cut, not the security boundary: the lanes
-// are already row-scoped, so this changes what a wide-scoped reader is SHOWN
-// by default rather than what any store was asked. Pushing the filter into
-// each producer is the better shape and needs each to take an owner.
+// Producers scope candidates before their bounds; this final cut also checks
+// personal lanes whose attribution comes from the assembled row.
 func keepReadersOwn(ctx context.Context, rows []ranked) []ranked {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
@@ -376,6 +362,9 @@ func (s *Service) keepTeams(ctx context.Context, rows []ranked) ([]ranked, scope
 
 // formerTeammates is the bound reader's answer, or nobody when none is bound.
 func (s *Service) formerTeammates(ctx context.Context) ([]ids.UUID, error) {
+	if s.teamRoster != nil {
+		return s.teamRoster.former, nil
+	}
 	if s.former == nil {
 		return nil, nil
 	}
@@ -453,7 +442,11 @@ func (s *Service) forNoticeTeam(ctx context.Context) (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	narrowed.teamRoster = &rosterRead{members: roster, cut: cut}
+	former, err := s.formerTeammates(ctx)
+	if err != nil {
+		return nil, err
+	}
+	narrowed.teamRoster = &rosterRead{members: roster, former: former, cut: cut}
 	for _, member := range roster {
 		narrowed.noticeOwners = append(narrowed.noticeOwners, member.UserID)
 	}

@@ -360,7 +360,11 @@ func fill(
 }
 
 func (s *Service) readRisk(ctx context.Context, out *crmcontracts.Attention) ([]crmcontracts.AttentionItem, error) {
-	risky, cut, err := s.atRisk.Quiet(ctx)
+	owners, err := s.recordOwners(ctx)
+	if err != nil {
+		return nil, err
+	}
+	risky, cut, err := s.atRisk.Quiet(ctx, owners)
 	if err != nil {
 		return nil, err
 	}
