@@ -97,6 +97,57 @@ wiring.
 Two more fields are not a capability: `FailureClasses` sorts a job's errors into the ones worth a retry, and
 `Name`, `Version` and `Description` say who the unit is.
 
+## How far an extension reaches into the core, and how far the core reaches into it
+
+An extension is a guest with a short list of doors. Every door runs under the rights of a member, and a write
+through it is audited like any other. Nothing here lets a unit touch a core table with its own SQL.
+
+### What an extension can do to core records
+
+| Door | What it can do | What stops it |
+|---|---|---|
+| `Ingest`, `IngestBatch` | Create or update a company, a deal or an activity under the id it has in its own system. It can move a deal to another stage. | It lands as a named member, and that member's rights apply. A field a user edited is left alone. A value that is already filled is never overwritten. |
+| Read doors (`Deals`, companies, signals, activities, the custom-field list) | Read and list records, filter by a custom field or by the outside id. | It reads as the caller who made the call. A record outside that caller's scope answers "not found". |
+| `Tx.Core()` | Make the core's own write onto a record from inside the unit's transaction. | The same rights check, audit row and event as a core write. |
+| `Tx.Record` | Write the ledger row and the event for what the unit's own SQL did. | It is offered, not forced. A unit may still write its tables and record nothing. |
+| Notices | Tell a member or a role about a contact, company or deal. | The unit names no address. The core picks the members who may open the record and the channel. |
+| Its own tables | Keep any data of its own in `ext_<name>_…` tables. | A unit cannot write a table it does not own, and cannot see another unit's. |
+| No door | Delete a core record, change a role, read a secret of another unit, or change a core table. | Not offered. |
+
+### What the core does with an extension
+
+| The core… | When | What the unit sees |
+|---|---|---|
+| Runs its job | On the cadence set in the unit's contract fragment | A tick with no caller behind it, or the service member |
+| Delivers an event | For each event type the unit declared | The event. Erase and merge events carry ids only. |
+| Calls its inbound endpoint | When an outside system calls `/v1/ext/<name>/…` | The request, after the core resolved the workspace and checked size and rate |
+| Serves its agent tool | When an agent calls the verb | The call, at the risk tier the contract declares |
+| Draws its card or entry | On the record page, in the slot the unit named | The record's type and id in the query |
+| Asks it for data | When an admin connects a finance source, or the sync runs | A fresh call for each read |
+| Reads its policy | When retention or messaging rules apply | Nothing. A pack is data, not an actor. |
+| Reads its declaration | At boot and on the Extensions settings page | Nothing. The core refuses a bad set. |
+
+The core never calls into a unit's SQL, never waits for a unit to answer a save, and never shares memory with
+it. A unit that fails does not change a core record.
+
+### How a unit "declares fields"
+
+A unit does not add a column to a core record. It has three ways to carry its own fields:
+
+```text
+ core record (company, deal, activity)
+   |  fields an admin adds        custom fields, listed by the read door;
+   |                              a unit reads and filters on them, never creates them
+   |  the unit's outside id       source_system + external id, so the unit finds its record again
+   |  the unit's own table        ext_<name>_<table>, joined by the record's id
+   |                              shown on the page by a Panel, or a mark in a slot
+```
+
+Settings an admin can change are declared as `Settings`, one switch or one line of text each. Whole new record kinds, typed links
+between records, signal types and report counts are being added to the declaration one feature at a time. The
+state of each is in
+[an-extension-cannot-add-its-own-record-k.md](../reference/an-extension-cannot-add-its-own-record-k.md).
+
 ## What every extension gets for free
 
 - **Its own address space.** Tables begin with `ext_<name>_`, API paths with `/v1/ext/<name>/`, and no unit can
