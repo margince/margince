@@ -14,14 +14,15 @@ import "./worklist.pair.css";
 type AttentionContactCase = components["schemas"]["AttentionContactCase"];
 
 function ownersKey(contactCase: AttentionContactCase): MessageKey {
-  if (contactCase.owners.length === 0) return "worklist.contactCase.unowned";
-  return contactCase.merge_mode === "delegated"
-    ? "worklist.contactCase.ownersAny"
+  return contactCase.owners.length === 0
+    ? "worklist.contactCase.unowned"
     : "worklist.contactCase.owners";
 }
 
-function refusalKey(contactCase: AttentionContactCase): MessageKey | null {
-  if (contactCase.can_merge) return null;
+// The owners list says who the case belongs to, and some of them may hold
+// only a read seat. So the authority line speaks of the reader alone.
+function authorityKey(contactCase: AttentionContactCase): MessageKey {
+  if (contactCase.can_merge) return "worklist.contactCase.yours";
   return contactCase.too_large
     ? "contactCase.notAllowed.tooLarge"
     : "worklist.contactCase.notYours";
@@ -43,7 +44,6 @@ export function ContactCaseDecision({
     style: "long",
     type: "conjunction",
   }).format(contactCase.owners);
-  const refusal = refusalKey(contactCase);
   return (
     <div className="worklist-pair-review" data-testid="contact-case-row">
       <ul className="worklist-pair-cards">
@@ -57,8 +57,7 @@ export function ContactCaseDecision({
         ))}
       </ul>
       <p className="t-caption worklist-pair-steward">
-        {t(ownersKey(contactCase), { names })}
-        {refusal && <> {t(refusal)}</>}
+        {t(ownersKey(contactCase), { names })} {t(authorityKey(contactCase))}
       </p>
       <div className="worklist-pair-actions">
         <Button

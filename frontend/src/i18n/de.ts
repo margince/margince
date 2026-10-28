@@ -18535,6 +18535,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Markiere die Kontakte, die dieselbe Person sind. Wähle dann, welcher Datensatz bleibt und wer verantwortlich ist.",
   "contactCase.loading": "Mögliche Duplikate werden geladen…",
   "contactCase.none": "Für diesen Kontakt gibt es keine offenen Duplikate.",
+  "contactCase.settledElsewhere":
+    "Jemand anderes hat diese Duplikate bereits geklärt. Dieser Kontakt bleibt bestehen.",
   "contactCase.withheld": "Diese Duplikate sind für dich nicht sichtbar.",
   "contactCase.stale":
     "Die Duplikate haben sich während deiner Prüfung geändert. Prüfe die Auswahl erneut.",
@@ -18603,8 +18605,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contactCase.entry_other": "Mögliche Duplikate ({count})",
   "worklist.contactCase.review": "Prüfen",
   "worklist.contactCase.owners": "Verantwortlich: {names}.",
-  "worklist.contactCase.ownersAny":
-    "Verantwortlich: {names}. Jede dieser Personen kann sie zusammenführen.",
+  "worklist.contactCase.yours": "Du kannst sie zusammenführen.",
   "worklist.contactCase.unowned": "Niemand verantwortlich.",
   "worklist.contactCase.notYours":
     "Du kannst sie nicht zusammenführen. Die Prüfung zeigt, wer es kann.",

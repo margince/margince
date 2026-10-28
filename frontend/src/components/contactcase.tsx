@@ -53,10 +53,16 @@ function CaseReviewBody({
   const query = useContactCase(contactId);
   const [stale, setStale] = useState(false);
   const [merged, setMerged] = useState<ContactCaseOutcome | null>(null);
+  const [seenOpen, setSeenOpen] = useState(false);
+  const [mergedPair, setMergedPair] = useState(false);
+  const contactCase = query.data;
+  if (contactCase && !seenOpen) setSeenOpen(true);
   if (merged) {
     return <MergedBody outcome={merged} onClose={onClose} />;
   }
-  const contactCase = query.data;
+  // The case vanished under an open review, and no pair was merged here.
+  // So a colleague settled it, and this contact is the one that remained.
+  const settledElsewhere = contactCase === null && seenOpen && !mergedPair;
   if (!contactCase || contactCase.status === "resolved") {
     return (
       <>
@@ -64,7 +70,11 @@ function CaseReviewBody({
           <SurfaceState
             state={readState(query, contactCase)}
             loadingLabel={t("contactCase.loading")}
-            emptyLabel={t("contactCase.none")}
+            emptyLabel={t(
+              settledElsewhere
+                ? "contactCase.settledElsewhere"
+                : "contactCase.none",
+            )}
             detail={{
               withheldReason: t("contactCase.withheld"),
               onRetry: () => void query.refetch(),
@@ -91,6 +101,7 @@ function CaseReviewBody({
         void query.refetch();
       }}
       onMerged={setMerged}
+      onPairMerged={() => setMergedPair(true)}
     />
   );
 }

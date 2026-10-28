@@ -26005,6 +26005,8 @@ export interface components {
              *     when the case's `policy_enabled` is on, for a full-seat owner of either end.
              */
             can_dismiss: boolean;
+            /** @description Whether this caller may merge this one pair through the pair's own decision route. */
+            can_merge: boolean;
         };
         ContactCaseOwner: {
             /** Format: uuid */

@@ -44,7 +44,12 @@ function EvidenceLine({ evidence }: Readonly<{ evidence: Evidence }>) {
 export function CaseEvidence({
   contactCase,
   onStale,
-}: Readonly<{ contactCase: ContactCase; onStale: () => void }>) {
+  onPairMerged,
+}: Readonly<{
+  contactCase: ContactCase;
+  onStale: () => void;
+  onPairMerged: () => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   return (
@@ -80,11 +85,12 @@ export function CaseEvidence({
                 ))}
               </ul>
             )}
-            {mayDecidePair(edge) && (
+            {mayDecidePair(contactCase, edge) && (
               <PairActions
                 contactCase={contactCase}
                 edge={edge}
                 onStale={onStale}
+                onMerged={onPairMerged}
               />
             )}
           </li>

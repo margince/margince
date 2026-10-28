@@ -37,6 +37,8 @@ type Props = Readonly<{
   onClose: () => void;
   onStale: () => void;
   onMerged: (outcome: ContactCaseOutcome) => void;
+  /** This reviewer merged one pair of a too-large case here. */
+  onPairMerged: () => void;
 }>;
 
 function selectionProblem(
@@ -89,6 +91,7 @@ export function CaseForm({
   onClose,
   onStale,
   onMerged,
+  onPairMerged,
 }: Props) {
   const t = useT();
   const plural = usePlural();
@@ -203,7 +206,11 @@ export function CaseForm({
           )}
         </Field>
         {!locked && problem && <p className="t-caption">{t(problem)}</p>}
-        <CaseEvidence contactCase={contactCase} onStale={onStale} />
+        <CaseEvidence
+          contactCase={contactCase}
+          onStale={onStale}
+          onPairMerged={onPairMerged}
+        />
         {previewed && preview.data && (
           <CasePreview contactCase={contactCase} outcome={preview.data} />
         )}

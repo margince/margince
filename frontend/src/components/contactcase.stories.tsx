@@ -55,6 +55,7 @@ function DelegatedForm() {
           onClose={() => undefined}
           onStale={() => undefined}
           onMerged={() => undefined}
+          onPairMerged={() => undefined}
         />
       </Modal>
     </StoryProviders>
