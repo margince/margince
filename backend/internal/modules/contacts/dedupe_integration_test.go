@@ -358,6 +358,32 @@ func TestDedupeCompanyExactTierFindsAClaimedDomain(t *testing.T) {
 	}
 }
 
+// Capture's employer inference arrives with whatever the mail header spelled,
+// and a company is filed under whatever its site was read as. The two spellings
+// of one internationalized domain are one domain, so the exact tier must route
+// to the company already holding the other one.
+func TestDedupeCompanyExactTierFindsTheOtherSpellingOfADomain(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "Bücher GmbH", Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: "xn--bcher-kva.example", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m := e.dedupeCompanyInTx(ctx, t, CompanyCandidate{
+		DisplayName: "Some Other Spelling", Domains: []string{"bücher.example"},
+	})
+	if m.Decision != DecisionExactCollision {
+		t.Fatalf("decision = %s, want exact_collision on the unicode spelling", m.Decision)
+	}
+	if ids.UUID(company.Id) != m.CompanyID.UUID {
+		t.Fatalf("matched %s, want the company holding the punycode spelling %s", m.CompanyID, company.Id)
+	}
+}
+
 func TestDedupeCompanyFuzzyTierMeetsAcrossLegalSuffixes(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()

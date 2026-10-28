@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
@@ -26,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // approvalStatusApproved is the decided status a receipt is read from. Spelled
@@ -95,8 +97,12 @@ func (r attentionReceipts) RecentWithMore(ctx context.Context, since time.Time, 
 	// Newest first across BOTH sources: merged by appending, the corrections
 	// would sit under every approval however recent, and the reader's most
 	// recent news would be the furthest down the card.
-	sort.SliceStable(decided, func(i, j int) bool {
-		return decided[i].OccurredAt.After(decided[j].OccurredAt)
+	// The id breaks a tie, so every read of one window pages it alike.
+	sort.Slice(decided, func(i, j int) bool {
+		if !decided[i].OccurredAt.Equal(decided[j].OccurredAt) {
+			return decided[i].OccurredAt.After(decided[j].OccurredAt)
+		}
+		return decided[i].ID.String() > decided[j].ID.String()
 	})
 	if len(decided) > limit {
 		decided, more = decided[:limit], true
@@ -127,6 +133,7 @@ func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
 		OccurredAt:      c.AppliedAt,
 		TargetType:      approvalTargetDeal,
 		TargetID:        c.DealID.UUID,
+		Actor:           attention.ReceiptActor{Type: c.ActorType, ID: c.ActorID, OnBehalfOf: c.OnBehalfOf},
 		Undo: &attention.ReceiptUndo{
 			AuditLogID: c.AuditLogID,
 			Version:    c.Version,
@@ -181,10 +188,12 @@ func receiptsWithin(rows []crmcontracts.Approval, since time.Time) []attention.R
 			summary = *row.Summary
 		}
 		receipt := attention.Receipt{
-			ID:         ids.UUID(row.Id),
-			Kind:       row.Kind,
-			Summary:    summary,
-			OccurredAt: *row.DecidedAt,
+			ID:               ids.UUID(row.Id),
+			Kind:             row.Kind,
+			Summary:          summary,
+			OccurredAt:       *row.DecidedAt,
+			Actor:            proposerOf(row),
+			SourceActivityID: citedActivity(row.Evidence),
 		}
 		// Both or neither: a type with no id names nothing, and an id with no
 		// type says where to look without saying at what.
@@ -230,4 +239,35 @@ func correctionDate(value *string) string {
 		return "not set"
 	}
 	return *value
+}
+
+// proposerOf is who staged a decision the system then applied: the member or
+// agent whose work the receipt reports. An id outside the principal
+// vocabulary names nobody, so the receipt says nothing about who.
+func proposerOf(row crmcontracts.Approval) attention.ReceiptActor {
+	kind, _, _ := strings.Cut(row.ProposedBy, ":")
+	switch principal.PrincipalType(kind) {
+	case principal.PrincipalHuman, principal.PrincipalAgent, principal.PrincipalConnector, principal.PrincipalSystem:
+	default:
+		return attention.ReceiptActor{}
+	}
+	actor := attention.ReceiptActor{Type: kind, ID: row.ProposedBy}
+	if row.OnBehalfOf != nil {
+		on := ids.UUID(*row.OnBehalfOf)
+		actor.OnBehalfOf = &on
+	}
+	return actor
+}
+
+// citedActivity is the first message a decision's evidence was read from.
+func citedActivity(evidence *[]crmcontracts.ApprovalEvidence) ids.UUID {
+	if evidence == nil {
+		return ids.Nil
+	}
+	for _, claim := range *evidence {
+		if claim.SourceType != nil && *claim.SourceType == crmcontracts.ApprovalEvidenceSourceTypeActivity && claim.SourceId != nil {
+			return ids.UUID(*claim.SourceId)
+		}
+	}
+	return ids.Nil
 }

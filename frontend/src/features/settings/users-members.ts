@@ -3,6 +3,7 @@
 
 import { useIsMutating, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
+import { holdsEveryWord, searchWords } from "../../format/collate";
 import { readMemberPage } from "../../lib/memberpages";
 
 export type User = components["schemas"]["User"];
@@ -10,12 +11,9 @@ export function matchingMembers(
   members: readonly User[],
   search: string,
 ): User[] {
-  const term = search.trim().normalize("NFKC").toLowerCase();
+  const words = searchWords(search);
   return members.filter((member) =>
-    `${member.display_name} ${member.email}`
-      .normalize("NFKC")
-      .toLowerCase()
-      .includes(term),
+    holdsEveryWord(words, [member.display_name, member.email]),
   );
 }
 

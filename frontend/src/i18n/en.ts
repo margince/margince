@@ -2279,7 +2279,6 @@ export const en = {
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "{company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",
-  "shell.poweredByPrefix": "Powered by",
   "shell.beta": "Beta",
   "shell.searchEverything": "Search or ask Margince",
   "shell.breadcrumbAria": "Breadcrumb",
@@ -14120,14 +14119,16 @@ export const en = {
   "webForms.field.nameHint":
     "Shown on each lead’s note, for example Contact page.",
   "webForms.field.sender": "Where is your form?",
+  "webForms.senderGroup.noDeveloper": "No developer needed",
+  "webForms.senderGroup.developer": "For developers",
   "webForms.field.senderFixed":
     "Fixed once the form exists. Create a new form to change it.",
   "webForms.senderHint.browser":
-    "A form on your own pages, or in WordPress, Webflow or another site builder that lets you set where a form sends to. No developer needed.",
+    "A form on your own pages, or in WordPress, Webflow or another site builder that lets you set where a form sends to.",
   "webForms.senderHint.server":
-    "For developers: your website’s server forwards each enquiry, signed with a secret.",
+    "Your website’s server forwards each enquiry, signed with a secret.",
   "webForms.senderHint.webflow":
-    "For developers: a webhook made with Webflow’s API. For a Webflow form, choose Your website.",
+    "A webhook made with Webflow’s API. For a Webflow form, choose Your website.",
   "webForms.senderHint.typeform":
     "Each Typeform response comes in through a webhook. Margince makes the secret for you.",
   "webForms.senderHint.tally":
@@ -16630,6 +16631,11 @@ export const en = {
   "worklist.handled.wayBack": "Status",
   "worklist.handled.putBackDone": "Already undone",
   "worklist.handled.truncated": "List truncated. More items exist.",
+  "receipt.detail.summary": "Details",
+  "receipt.detail.by": "Done by",
+  "receipt.detail.when": "When",
+  "receipt.detail.source": "Source",
+  "worklist.handled.showMore": "Show more",
   "worklist.exceptions.empty": "No team exceptions.",
   "worklist.exceptions.loading": "Loading team…",
   "worklist.exceptions.count": "{count} need attention",
@@ -17476,7 +17482,7 @@ export const en = {
   // The machinery's receipt on Home: what ran while the reader was away, in
   // four lanes. The `magic.action.*` and `magic.consequence.*` families are
   // the client half of a mirror the server sends keys against. So the set is
-  // the contract (src/features/sign-in/magic.keys.ts), not one screen's copy.
+  // the contract (src/lib/magickeys.ts), not one screen's copy.
   "magic.heading.brief": "Since your last brief",
   "magic.loading": "Reading what the machinery did",
   "magic.lane.done": "Done for you",
@@ -17544,6 +17550,8 @@ export const en = {
   "magic.by.agent": "An agent",
   "magic.by.system": "Margince",
   "magic.by.data_correction": "Data correction",
+  "magic.by.member": "{name}",
+  "magic.by.colleague": "A colleague",
   "magic.failingSince": "Failing since {when}",
   "magic.noRecord": "No record named",
   "magic.undo.action": "Undo",

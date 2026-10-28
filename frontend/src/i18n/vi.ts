@@ -2291,7 +2291,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "Trang chủ {company}, chạy trên Margince",
   "shell.poweredBy": "Chạy trên Margince",
-  "shell.poweredByPrefix": "Chạy trên",
   "shell.beta": "Beta",
   "shell.searchEverything": "Tìm kiếm hoặc hỏi Margince",
   "shell.breadcrumbAria": "Đường dẫn điều hướng",
@@ -13791,14 +13790,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.field.nameHint":
     "Hiện trên ghi chú của mỗi lead, ví dụ Trang liên hệ.",
   "webForms.field.sender": "Biểu mẫu của bạn nằm ở đâu?",
+  "webForms.senderGroup.noDeveloper": "Không cần lập trình viên",
+  "webForms.senderGroup.developer": "Dành cho lập trình viên",
   "webForms.field.senderFixed":
     "Cố định khi biểu mẫu đã tồn tại. Tạo biểu mẫu mới để đổi.",
   "webForms.senderHint.browser":
-    "Biểu mẫu trên trang của bạn, hoặc trong WordPress, Webflow hay công cụ dựng trang khác cho phép đặt nơi biểu mẫu gửi tới. Không cần lập trình viên.",
+    "Biểu mẫu trên trang của bạn, hoặc trong WordPress, Webflow hay công cụ dựng trang khác cho phép đặt nơi biểu mẫu gửi tới.",
   "webForms.senderHint.server":
-    "Dành cho lập trình viên: máy chủ trang web chuyển tiếp mỗi yêu cầu, có chữ ký.",
+    "Máy chủ trang web chuyển tiếp mỗi yêu cầu, có chữ ký.",
   "webForms.senderHint.webflow":
-    "Dành cho lập trình viên: webhook tạo bằng API của Webflow. Với biểu mẫu Webflow, hãy chọn Trang web của bạn.",
+    "Webhook tạo bằng API của Webflow. Với biểu mẫu Webflow, hãy chọn Trang web của bạn.",
   "webForms.senderHint.typeform":
     "Mỗi câu trả lời Typeform đến qua một webhook. Margince tạo khóa ký cho bạn.",
   "webForms.senderHint.tally":
@@ -16320,6 +16321,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.handled.wayBack": "Trạng thái",
   "worklist.handled.putBackDone": "Đã hoàn tác",
   "worklist.handled.truncated": "Danh sách đã bị cắt bớt. Vẫn còn việc khác.",
+  "receipt.detail.summary": "Chi tiết",
+  "receipt.detail.by": "Người làm",
+  "receipt.detail.when": "Thời điểm",
+  "receipt.detail.source": "Nguồn",
+  "worklist.handled.showMore": "Xem thêm",
   "worklist.exceptions.empty": "Nhóm không có ngoại lệ nào.",
   "worklist.exceptions.loading": "Đang tải nhóm…",
   "worklist.exceptions.count": "{count} cần chú ý",
@@ -17203,6 +17209,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.by.agent": "Một trợ lý AI",
   "magic.by.system": "Margince",
   "magic.by.data_correction": "Hiệu chỉnh dữ liệu",
+  "magic.by.member": "{name}",
+  "magic.by.colleague": "Một đồng nghiệp",
   "magic.failingSince": "Bị lỗi từ {when}",
   "magic.noRecord": "Không nêu hồ sơ nào",
   "magic.undo.action": "Hoàn tác",

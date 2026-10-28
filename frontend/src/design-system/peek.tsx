@@ -218,6 +218,8 @@ function keyboardFocus(target: EventTarget): boolean {
 /** One row of a peek: the thing, what state it is in, and where it leads. */
 export type PeekItem = Readonly<{
   key: string;
+  // A mark before the row (a contact's avatar).
+  lead?: ReactNode;
   title: ReactNode;
   // The thing's one line of state ("Negotiation · €95k", "Due today").
   sub?: ReactNode;
@@ -232,6 +234,9 @@ export type PeekItem = Readonly<{
  *  counts, `foot` is the closing line. */
 export type PeekContent = Readonly<{
   head: string;
+  // The rows already say what the card is about (a contact card names them),
+  // so the head only names the panel for a screen reader.
+  headHidden?: boolean;
   items: readonly PeekItem[];
   foot?: ReactNode;
 }>;
@@ -241,14 +246,15 @@ export type PeekContent = Readonly<{
  * that make the count up. One closing line follows: the door to the whole
  * list, or a note that the rows are the newest few.
  */
-export function PeekCard({ head, items, foot }: PeekContent) {
+export function PeekCard({ head, headHidden, items, foot }: PeekContent) {
   return (
     <>
-      <p className="peek-head t-eyebrow">{head}</p>
+      {!headHidden && <p className="peek-head t-eyebrow">{head}</p>}
       <OverviewList>
         {items.map((item) => (
           <OverviewRow
             key={item.key}
+            lead={item.lead}
             title={<PeekTitle item={item} />}
             sub={item.sub}
             right={item.right}

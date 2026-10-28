@@ -2364,7 +2364,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "Home von {company}, läuft mit Margince",
   "shell.poweredBy": "Läuft mit Margince",
-  "shell.poweredByPrefix": "Läuft mit",
   "shell.beta": "Beta",
   "shell.searchEverything": "Suchen oder Margince fragen",
   "shell.breadcrumbAria": "Navigationspfad",
@@ -14146,14 +14145,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.field.nameHint":
     "Steht in der Notiz jedes Leads, zum Beispiel Kontaktseite.",
   "webForms.field.sender": "Wo ist dein Formular?",
+  "webForms.senderGroup.noDeveloper": "Ohne Entwickler",
+  "webForms.senderGroup.developer": "Für Entwickler",
   "webForms.field.senderFixed":
     "Steht fest, sobald das Formular existiert. Lege für eine Änderung ein neues an.",
   "webForms.senderHint.browser":
-    "Ein Formular auf deinen eigenen Seiten, in WordPress, Webflow oder einem anderen Baukasten, in dem du festlegst, wohin ein Formular sendet. Ohne Entwickler.",
+    "Ein Formular auf deinen eigenen Seiten, in WordPress, Webflow oder einem anderen Baukasten, in dem du festlegst, wohin ein Formular sendet.",
   "webForms.senderHint.server":
-    "Für Entwickler: Der Server deiner Website leitet jede Anfrage signiert weiter.",
+    "Der Server deiner Website leitet jede Anfrage signiert weiter.",
   "webForms.senderHint.webflow":
-    "Für Entwickler: ein Webhook, der über die API von Webflow angelegt wird. Ein Webflow-Formular verbindest du ohne Webhook über die erste Option.",
+    "Ein Webhook, der über die API von Webflow angelegt wird. Ein Webflow-Formular verbindest du ohne Webhook über die erste Option.",
   "webForms.senderHint.typeform":
     "Jede Typeform-Antwort kommt über einen Webhook. Margince erstellt den Signaturschlüssel für dich.",
   "webForms.senderHint.tally":
@@ -16744,6 +16745,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.handled.wayBack": "Status",
   "worklist.handled.putBackDone": "Bereits rückgängig gemacht",
   "worklist.handled.truncated": "Liste gekürzt. Es gibt weitere Einträge.",
+  "receipt.detail.summary": "Details",
+  "receipt.detail.by": "Ausgeführt von",
+  "receipt.detail.when": "Zeitpunkt",
+  "receipt.detail.source": "Quelle",
+  "worklist.handled.showMore": "Mehr anzeigen",
   "worklist.exceptions.empty": "Keine Team-Ausnahmen.",
   "worklist.exceptions.loading": "Team wird geladen…",
   "worklist.exceptions.count": "{count} mit Handlungsbedarf",
@@ -17656,6 +17662,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.by.agent": "Ein Agent",
   "magic.by.system": "Margince",
   "magic.by.data_correction": "Datenkorrektur",
+  "magic.by.member": "{name}",
+  "magic.by.colleague": "Ein Teammitglied",
   "magic.failingSince": "Fehlerhaft seit {when}",
   "magic.noRecord": "Kein Datensatz genannt",
   "magic.undo.action": "Rückgängig",

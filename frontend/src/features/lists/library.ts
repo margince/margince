@@ -6,7 +6,12 @@
 // by what the reader typed and pressed. Pure, so the rules the page draws by
 // are proved here without a page.
 
-import { forReader, stable } from "../../format/collate";
+import {
+  forReader,
+  holdsEveryWord,
+  searchWords,
+  stable,
+} from "../../format/collate";
 import type { Locale } from "../../i18n";
 import type { FilterResource } from "../../lib/filterdata";
 import {
@@ -138,13 +143,12 @@ export function cutLibrary(
   cut: LibraryCut,
   captionOf: (item: LibraryItem) => string,
 ): LibraryItem[] {
-  const q = cut.q.trim().toLowerCase();
+  const words = searchWords(cut.q);
   return items.filter(
     (item) =>
       (cut.archived || !isArchived(item)) &&
       (cut.type === "all" || typeOf(item) === cut.type) &&
-      (q === "" ||
-        `${nameOf(item)} ${captionOf(item)}`.toLowerCase().includes(q)),
+      holdsEveryWord(words, [nameOf(item), captionOf(item)]),
   );
 }
 
