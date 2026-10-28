@@ -219,6 +219,7 @@ type WaitingCustomer struct {
 func (s *Service) waitingCustomers(
 	ctx context.Context, asOf time.Time,
 ) (waitingRead, *crmcontracts.WorklistSourceUnavailable) {
+	defer timeStage("waiting_customers")()
 	if s.waiting == nil {
 		return waitingRead{}, nil
 	}
