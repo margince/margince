@@ -43,38 +43,24 @@ type extensionUnit struct {
 	Frontend *unitFrontend
 }
 
-// scanExtensions reads the enabled set. A capability layer this composer
-// cannot compose yet is a hard error, not a silent drop — an extension
-// shipping one must not build until its composition slice exists. There are
-// none left today (unbuiltCapabilityLayers is empty); the rule outlives the
-// list.
+// scanExtensions reads the enabled set: exactly the extensions the instance's
+// go.mod requires (instanceUnits). A folder under extensions/ that go.mod does
+// not require is not turned on. A capability layer this composer cannot
+// compose yet is a hard error, not a silent drop; there are none left today
+// (unbuiltCapabilityLayers is empty), and the rule outlives the list.
 func scanExtensions(root string) ([]extensionUnit, error) {
-	entries, err := os.ReadDir(filepath.Join(root, "extensions"))
+	sources, err := instanceUnits(root)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
 		return nil, err
 	}
-	var units []extensionUnit
-	for _, entry := range entries {
-		if entry.Type()&fs.ModeSymlink != 0 {
-			// IsDir() is false for a symlink, so without this check a
-			// symlinked unit would silently drop out of the composed
-			// binary while sitting visibly under extensions/.
-			return nil, fmt.Errorf("extensions/%s: a symlinked entry is not composable — an enabled unit is a plain directory tree", entry.Name())
-		}
-		if !entry.IsDir() {
-			continue // approvals.lock, .gitkeep
-		}
-		name := entry.Name()
+	units := make([]extensionUnit, 0, len(sources))
+	for _, src := range sources {
 		// The ONE unit-name rule, published on the seam: scan-time
 		// acceptance must never drift from boot-time validation.
-		if err := extension.Name(name).Validate(); err != nil {
-			return nil, fmt.Errorf("extensions/%s: %w", name, err)
+		if err := extension.Name(src.name).Validate(); err != nil {
+			return nil, fmt.Errorf("%s: %w", src.modulePath, err)
 		}
-		dir := filepath.Join(root, "extensions", name)
-		unit, err := scanUnit(name, dir)
+		unit, err := scanUnit(src.name, src.dir)
 		if err != nil {
 			return nil, err
 		}
@@ -149,7 +135,7 @@ func scanUnit(name, dir string) (extensionUnit, error) {
 		// but a dependency tree, and "no Go module" sends whoever removed the
 		// unit looking for a go.mod they deliberately deleted.
 		if empty, err := holdsOnlyInstalledOutput(dir); err == nil && empty {
-			return extensionUnit{}, fmt.Errorf("extensions/%s holds nothing but installed dependencies — its source is gone but the directory is not, and presence under extensions/ IS enablement; remove the directory (`rm -rf extensions/%s`) and re-run `pnpm install` to prune the workspace member", name, name)
+			return extensionUnit{}, fmt.Errorf("extensions/%s holds nothing but installed dependencies — its source is gone but the directory is not; remove its require from the instance's go.mod and the directory (`rm -rf extensions/%s`)", name, name)
 		}
 		return extensionUnit{}, fmt.Errorf("extensions/%s: nothing to compose (no Go module)", name)
 	case err != nil:

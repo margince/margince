@@ -47,7 +47,7 @@ type extensionsHandlers struct{}
 // though the answer is identical for every caller and changes only on deploy: it
 // enumerates the installation's internal surface (routes, jobs, unit versions).
 //
-// Read is the only verb it will ever carry. Presence under extensions/ IS the
+// Read is the only verb it will ever carry. The instance's go.mod is the
 // enablement, so there is no runtime toggle for a write to gate.
 //
 // Agents never reach it at all: the operation is `x-agent-access: human-only`,
