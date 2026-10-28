@@ -255,6 +255,14 @@ func TestADateOnlyMeetingIsOwedOnceItsLocalDateIsOver(t *testing.T) {
 		if read.AwaitingOutcome == nil || *read.AwaitingOutcome != c.owed {
 			t.Errorf("%q reads awaiting_outcome %v, want %v", c.subject, read.AwaitingOutcome, c.owed)
 		}
+		unchanged, err := store.UpdateActivity(meetingCtx(e), id, UpdateActivityInput{Subject: &c.subject})
+		if err != nil {
+			t.Fatalf("resending the subject of %q: %v", c.subject, err)
+		}
+		if unchanged.AwaitingOutcome == nil || *unchanged.AwaitingOutcome != c.owed {
+			t.Errorf("%q answers a patch that changes nothing with awaiting_outcome %v, want %v",
+				c.subject, unchanged.AwaitingOutcome, c.owed)
+		}
 		_, err = store.UpdateActivity(meetingCtx(e), id, UpdateActivityInput{MeetingStatus: &held})
 		var early *MeetingNotTakenPlaceError
 		switch {

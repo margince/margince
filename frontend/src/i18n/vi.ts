@@ -16232,7 +16232,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.scope.unassigned": "Chưa nhận",
   "worklist.scope.team": "Nhóm",
   "worklist.scope.all": "Tất cả",
-  "worklist.scope.unassignedHint": "Việc đang mở mà bạn xem được, chưa có người phụ trách.",
+  "worklist.scope.unassignedHint":
+    "Việc đang mở mà bạn xem được, chưa có người phụ trách.",
   "worklist.take.action": "Nhận việc",
   "worklist.take.done": "Đã nhận việc",
   "worklist.take.failed": "Không thể nhận việc này. Thử lại.",

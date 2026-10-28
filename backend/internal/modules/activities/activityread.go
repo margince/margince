@@ -255,8 +255,8 @@ func readActivityAt(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived 
 // that would answer the wrong one. gates/restrictedreaders_test.go's
 // call-graph walk credits it through lockActivityForWrite's own
 // restricted_at check one hop away, rather than through a waiver entry.
-func readHeldActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter) (crmcontracts.Activity, error) {
-	return readActivityRow(ctx, tx, id, archived, time.Now())
+func readHeldActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter, asOf time.Time) (crmcontracts.Activity, error) {
+	return readActivityRow(ctx, tx, id, archived, asOf)
 }
 
 // readActivityRow is the SELECT + scan + link attachment readActivity and

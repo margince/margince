@@ -74,7 +74,9 @@ func (w *csvWriters) planActivityUpdate(
 		return plan, why, nil
 	}
 	movesStart := plan.patch.OccurredAt != nil || plan.patch.OccurredPrecision != nil
-	if plan.patch.MeetingStatus == nil && (!movesStart || stored.Kind != activities.KindMeeting) {
+	probes := plan.patch.MeetingStatus != nil || (movesStart && stored.Kind == activities.KindMeeting)
+	// Without the update grant the caller refuses the row for that instead.
+	if !probes || !auth.Allows(ctx, w.object, principal.ActionUpdate) {
 		return plan, migration.Reason{}, nil
 	}
 	err = w.activities.ProbeOutcome(ctx, ids.From[ids.ActivityKind](id), plan.patch)

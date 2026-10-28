@@ -122,6 +122,9 @@ func (s *Store) ProbeLoggedOutcome(ctx context.Context, in LogActivityInput) err
 
 // ProbeOutcome is ProbeLoggedOutcome for a patch of the activity id.
 func (s *Store) ProbeOutcome(ctx context.Context, id ids.ActivityID, in UpdateActivityInput) error {
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return err
+	}
 	at := s.now()
 	in.recordedAt = &at
 	return s.tx(ctx, func(tx pgx.Tx) error {

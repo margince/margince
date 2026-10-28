@@ -33,7 +33,8 @@ const MeetingNoonCutoffMigration = "1792761600"
 // noon of the day the start already had. No later change moved the start. The
 // zone is $1, the cutoff migration $2. A day meeting is stored at noon UTC and
 // has no start to restore, so neither side of that save is one.
-var noonMeetingScope = `
+func noonMeetingScope() string {
+	return `
   FROM activity a
   JOIN LATERAL (
        SELECT au.action, au.actor_type, au.occurred_at AS saved_at, au.after ? 'meeting_status' AS set_status,
@@ -51,6 +52,7 @@ var noonMeetingScope = `
    AND (last.original AT TIME ZONE $1)::time <> TIME '12:00:00' AND last.original_precision IS DISTINCT FROM 'day'
    AND last.saved_at < (SELECT m.applied_at FROM schema_migrations_core m WHERE m.version = $2)
    AND NOT EXISTS (SELECT 1 FROM meeting_invitation i WHERE i.activity_id = a.id AND ` + InvitationHoldsMeetingSQL("i") + `)`
+}
 
 // NoonMeeting is one meeting to restore: the start it holds, the one the
 // outcome save replaced, whether it was archived since, and its status.
@@ -70,7 +72,7 @@ func NoonMeetingsAfterTx(ctx context.Context, tx pgx.Tx, zone string, after ids.
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id, a.version, a.occurred_at, last.original, a.archived_at IS NOT NULL, a.meeting_status `+noonMeetingScope+`
+	rows, err := tx.Query(ctx, `SELECT a.id, a.version, a.occurred_at, last.original, a.archived_at IS NOT NULL, a.meeting_status `+noonMeetingScope()+`
 		   AND a.id > $3 ORDER BY a.id LIMIT $4`, zone, MeetingNoonCutoffMigration, after, limit)
 	if err != nil {
 		return nil, fmt.Errorf("activities: selecting meetings an outcome save moved to noon: %w", err)
@@ -85,7 +87,7 @@ func NoonMeetingsAfterTx(ctx context.Context, tx pgx.Tx, zone string, after ids.
 // CountNoonMeetingsTx counts the meetings still to restore, up to limit.
 func CountNoonMeetingsTx(ctx context.Context, q pgx.Tx, zone string, limit int64) (int64, error) {
 	var count int64
-	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT a.id `+noonMeetingScope+` LIMIT $3) found`,
+	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT a.id `+noonMeetingScope()+` LIMIT $3) found`,
 		zone, MeetingNoonCutoffMigration, limit).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("activities: counting meetings an outcome save moved to noon: %w", err)
@@ -136,10 +138,10 @@ func restoreMeetingHistoryStartTx(ctx context.Context, tx pgx.Tx, m NoonMeeting)
 }
 
 // restoreArchivedMeetingStartTx puts back the start of a meeting archived after
-// the damage. Restoring the record then shows the meeting when it was. The live update refuses an archived row, so
-// this writes the audit row and event that update would write. An archived
-// meeting moves no last-activity clock. It answers false and writes nothing
-// when the row changed.
+// the damage. Restoring the record then shows the meeting when it was. The live
+// update refuses an archived row, so this writes the audit row and event that
+// update would write. An archived meeting moves no last-activity clock. It
+// answers false and writes nothing when the row changed.
 func restoreArchivedMeetingStartTx(ctx context.Context, tx pgx.Tx, m NoonMeeting, status *string) (bool, error) {
 	if _, err := storekit.LockRow(ctx, tx, "activity", m.ID, storekit.IncludeArchived); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {

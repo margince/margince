@@ -272,7 +272,7 @@ func admitActivityPatch(
 	}
 	// A held row must reach the UPDATE afterwards so its own CHECK trigger —
 	// not this read — is what refuses the write.
-	current, err := readActivityForWrite(ctx, tx, id, held)
+	current, err := readActivityForWrite(ctx, tx, id, held, orWallClock(in.recordedAt))
 	if err != nil {
 		return crmcontracts.Activity{}, held, err
 	}

@@ -233,8 +233,8 @@ export function latestHeldMoment(now: Date): Date {
 }
 
 /**
- * The last date a meeting filed as held can name. A `day` meeting has taken
- * place only once its date is over in `zone`, so it ends the day before.
+ * Mirrors Go occurredday.MeetingTookPlace for the date box; the server still
+ * refuses a later date (422 in_future). A `day` meeting ends the day before.
  */
 export function latestHeldDay(
   precision: OccurredPrecision,
