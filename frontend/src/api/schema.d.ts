@@ -36314,8 +36314,9 @@ export interface components {
             basis_id?: string | null;
         };
         SendEmailRequest: {
+            /** @description The subject line. Blank or only white space is refused with 422 `required`. */
             subject: string;
-            /** @description The (possibly edited) final body that is sent. */
+            /** @description The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`. */
             body: string;
             /**
              * @description The same message as markup, or omitted for a plain-text send. It never
@@ -36836,8 +36837,9 @@ export interface components {
          *     otherwise have supplied — the records this new conversation belongs to.
          */
         SendCompanyEmailRequest: {
+            /** @description The subject line. Blank or only white space is refused with 422 `required`. */
             subject: string;
-            /** @description The (possibly edited) final body that is sent. */
+            /** @description The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`. */
             body: string;
             /**
              * @description The same message as markup, or omitted for a plain-text send. It never

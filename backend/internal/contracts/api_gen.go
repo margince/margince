@@ -51468,7 +51468,7 @@ type SendCompanyEmailRequest struct {
 	// preference link.
 	Bcc *[]openapi_types.Email `json:"bcc,omitempty"`
 
-	// Body The (possibly edited) final body that is sent.
+	// Body The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`.
 	Body string                 `json:"body"`
 	Cc   *[]openapi_types.Email `json:"cc,omitempty"`
 
@@ -51559,7 +51559,9 @@ type SendCompanyEmailRequest struct {
 	// Required with `scheduled_at`. A zone NAME, never a numeric offset, which
 	// would freeze the DST rules of the day it was written (AC-DS-TZ4).
 	ScheduledTz *string `json:"scheduled_tz,omitempty"`
-	Subject     string  `json:"subject"`
+
+	// Subject The subject line. Blank or only white space is refused with 422 `required`.
+	Subject string `json:"subject"`
 
 	// To At least one addressee. A send whose To: line is empty is refused 422 before
 	// anything is staged — `cc` alone does not make a message addressed to anyone.
@@ -51650,7 +51652,7 @@ type SendEmailRequest struct {
 	// preference link.
 	Bcc *[]openapi_types.Email `json:"bcc,omitempty"`
 
-	// Body The (possibly edited) final body that is sent.
+	// Body The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`.
 	Body string                 `json:"body"`
 	Cc   *[]openapi_types.Email `json:"cc,omitempty"`
 
@@ -51738,9 +51740,11 @@ type SendEmailRequest struct {
 	// ScheduledTz The IANA zone name (e.g. `Europe/Berlin`) the human chose `scheduled_at` in.
 	// Required with `scheduled_at`. A zone NAME, never a numeric offset, which
 	// would freeze the DST rules of the day it was written (AC-DS-TZ4).
-	ScheduledTz *string               `json:"scheduled_tz,omitempty"`
-	Subject     string                `json:"subject"`
-	To          []openapi_types.Email `json:"to"`
+	ScheduledTz *string `json:"scheduled_tz,omitempty"`
+
+	// Subject The subject line. Blank or only white space is refused with 422 `required`.
+	Subject string                `json:"subject"`
+	To      []openapi_types.Email `json:"to"`
 }
 
 // SendEmailRequestCommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
