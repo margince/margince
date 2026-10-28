@@ -21,9 +21,15 @@ import { useMe } from "../../lib/session";
 import { bandTone } from "../ai/aiusage";
 import "./embedreindex.css";
 import { useNow } from "../../format/now";
-import { available } from "../../lib/settingscapability";
-import { holds } from "../../lib/settingscatalog";
 import { settingsHref } from "../../lib/settingsrouting";
+import {
+  embedReindexIdentitiesQueryKey,
+  embedReindexStatusQueryKey,
+  type ReindexIdentities,
+  type ReindexStatus,
+  useEmbedReindexAvailable,
+  useEmbedReindexStatus,
+} from "./embedreindex.queries";
 
 // The v6 B2 embedding-reindex surface (ADR-0068 design §5.6-swap). The
 // status read is admin/ops-only server-side now (migration 0115:
@@ -37,56 +43,10 @@ import { settingsHref } from "../../lib/settingsrouting";
 // reindex and the always-available force rebuild — are admin/ops-only
 // server-side too (embedding_reindex object's update grant).
 
-type ReindexStatus = components["schemas"]["EmbedReindexStatus"];
-type ReindexIdentities = components["schemas"]["EmbedReindexIdentities"];
 type ReindexPreview = components["schemas"]["EmbedReindexPreview"];
 type UtilizationImpact = NonNullable<ReindexPreview["utilization_impact"]>;
 
-// The settings card's status read. A successful confirm's setQueryData (below)
-// seeds it and the banner's identities from the one write.
-export const embedReindexStatusQueryKey = ["embed-reindex-status"];
-// The app-shell banner's read: the two identities alone, with no backlog scan.
-export const embedReindexIdentitiesQueryKey = ["embed-reindex-identities"];
-
-// Whether this installation has an embed lane bound. The status read answers
-// 501 without one, so both surfaces ask this before issuing it.
-export function useEmbedReindexAvailable(): boolean {
-  return holds(available("embedding_reindex"), useMe().data);
-}
 const embedReindexPreviewQueryKey = ["embed-reindex-preview"];
-
-export function useEmbedReindexStatus(enabled: boolean, staleTime?: number) {
-  return useQuery({
-    queryKey: embedReindexStatusQueryKey,
-    enabled,
-    staleTime,
-    queryFn: async (): Promise<ReindexStatus> => {
-      const data = unwrap(await api.GET("/embeddings/reindex/status"));
-      if (!data) {
-        throw new Error("malformed reindex status response");
-      }
-      return data;
-    },
-  });
-}
-
-export function useEmbedReindexIdentities(
-  enabled: boolean,
-  staleTime?: number,
-) {
-  return useQuery({
-    queryKey: embedReindexIdentitiesQueryKey,
-    enabled,
-    staleTime,
-    queryFn: async (): Promise<ReindexIdentities> => {
-      const data = unwrap(await api.GET("/embeddings/reindex/identities"));
-      if (!data) {
-        throw new Error("malformed reindex identities response");
-      }
-      return data;
-    },
-  });
-}
 
 // impactLabel names the HYPOTHETICAL post-reindex band the estimator
 // disclosed (utilization_impact) — distinct copy from aiusage's bandLabel,

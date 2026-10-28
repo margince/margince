@@ -6,7 +6,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
-import { EmbedReindexCard, embedReindexStatusQueryKey } from "./embedreindex";
+import { EmbedReindexCard } from "./embedreindex";
+import { embedReindexStatusQueryKey } from "./embedreindex.queries";
 
 type Handler = (body: unknown) => Response | Promise<Response>;
 

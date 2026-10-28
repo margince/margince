@@ -5,7 +5,7 @@ import { Callout } from "../design-system/callout";
 import {
   useEmbedReindexAvailable,
   useEmbedReindexIdentities,
-} from "../features/settings/embedreindex";
+} from "../features/settings/embedreindex.queries";
 import { useT } from "../i18n";
 import { useCan } from "../lib/capability";
 
