@@ -86,33 +86,34 @@ func (s *Store) LookupCity(ctx context.Context, city string) (CachedPlace, bool,
 		if !ok {
 			return errors.New("company has no geocode columns")
 		}
-		locatedTerms := geocode.LocatedSQL("company", columns, arg)
+		pointTerms := geocode.ResolvedPointSQL("g", columns, arg)
 		// ROW SCOPE, and it is load-bearing rather than ceremonial. This
 		// answers a point derived from companies, so without the predicate a
 		// caller who may see none of them still learns that SOMEBODY is located
 		// in a city — an existence answer about records they were not granted,
 		// one city name at a time. Scoped, the centroid is composed only from
 		// the companies this caller could have listed themselves.
-		scope, err := scopeOrAllRows(ctx, "company", "", arg)
+		scope, err := scopeOrAllRows(ctx, "company", "o", arg)
 		if err != nil {
 			return err
 		}
-		// The located terms are the predicate the radius query applies
-		// (geocode.LocatedSQL). An address change stamps the row `stale` and
+		// The point terms are the predicate the radius query applies
+		// (geocode.ResolvedPointSQL). An address change stamps the row `stale` and
 		// keeps its old point, so averaging it would use the previous address.
 		//
 		// The spread comes back with the centre from the same scan. A second
 		// query could read a different row set under a concurrent write, and
 		// the check only means something against the rows behind this average.
 		return tx.QueryRow(ctx, `
-			SELECT avg(geocode_lat), avg(geocode_lon),
-			       max(geocode_lat) - min(geocode_lat),
-			       max(geocode_lon) - min(geocode_lon),
+			SELECT avg(g.`+columns.Lat+`), avg(g.`+columns.Lon+`),
+			       max(g.`+columns.Lat+`) - min(g.`+columns.Lat+`),
+			       max(g.`+columns.Lon+`) - min(g.`+columns.Lon+`),
 			       count(*)
-			  FROM company
-			 WHERE archived_at IS NULL
-			   AND `+strings.Join(locatedTerms, " AND ")+`
-			   AND lower(btrim(address_city)) = $1
+			  FROM company o
+			  JOIN `+columns.Table+` g ON g.`+columns.Key+` = o.id
+			 WHERE o.archived_at IS NULL
+			   AND `+strings.Join(pointTerms, " AND ")+`
+			   AND lower(btrim(o.address_city)) = $1
 			   AND `+scope, args...).
 			Scan(&lat, &lon, &latSpread, &lonSpread, &located)
 	})
