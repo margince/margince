@@ -5398,7 +5398,11 @@ export interface paths {
          *     a task needs its `subject`. An activity may link to >1 entity
          *     (contact and deal). A link that names a record the caller cannot read answers 422
          *     naming `links`, the same for a missing record and for one hidden by row scope. `log_activity` is 🟢
-         *     (reversible).
+         *     (reversible). `meeting_status` `held` or `no_show` describes a meeting that took place, so it is refused
+         *     on a meeting whose start has not passed yet (a date-only meeting until its date is over in
+         *     the installation's timezone): `422 code: in_future` on `meeting_status`. A meeting with no
+         *     `occurred_at` starts now, so it has taken place. A re-run with the same `source_system` and
+         *     `source_id` that moves the meeting's status is judged the same way, at its stored start.
          */
         post: operations["logActivity"];
         delete?: never;
@@ -5425,7 +5429,18 @@ export interface paths {
         delete: operations["archiveActivity"];
         options?: never;
         head?: never;
-        /** Update an activity (e.g. complete a task). */
+        /**
+         * Update an activity (e.g. complete a task).
+         * @description `meeting_status` `held` or `no_show` describes a meeting that took place, so it is refused
+         *     on a meeting whose start has not passed yet (a date-only meeting until its date is over in
+         *     the installation's timezone), judged at the start the patch leaves the row with:
+         *     `422 code: in_future` on `meeting_status`. A patch that moves the start of a `held` or
+         *     `no_show` meeting is judged the same way with the status it keeps. `canceled` and `booked`
+         *     are accepted at any time. On a meeting with a live calendar invitation, a patch that sets
+         *     `subject`, `body`, `occurred_at`, `occurred_precision` or a `meeting_status` other than
+         *     `held` or `no_show` answers `422 code: calendar_managed` on `meeting`; that change goes
+         *     through the invitation.
+         */
         patch: operations["updateActivity"];
         trace?: never;
     };
@@ -10046,6 +10061,30 @@ export interface paths {
          *     `embedding_reindex` RBAC object, migration 0114).
          */
         get: operations["EmbedReindexStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/embeddings/reindex/identities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The two embed-store identities, without the backlog scan.
+         * @description `configured_identity` and `populated_identity` exactly as the status read reports them,
+         *     and nothing that needs the backlog scan. It is what the app shell's reindex banner reads:
+         *     the banner is keyed on the two identities alone, so it must not pay for
+         *     `entities_pending` on every page load. Gated like the status read (the
+         *     `embedding_reindex` read grant).
+         */
+        get: operations["EmbedReindexIdentities"];
         put?: never;
         post?: never;
         delete?: never;
@@ -20122,7 +20161,9 @@ export interface paths {
          *     overdue first, then by nearest due date, at most 25. A promise from an activity filed
          *     under another deal of the same company is not this deal's. Each carries the quoted
          *     words and the activity they came from, so a reader can check it, and its claim id, so
-         *     a reader with `contact:update` can dismiss it (`POST /claims/{id}/settle`).
+         *     a reader with `contact:update` can dismiss it (`POST /claims/{id}/settle`). The server
+         *     decides whether each one is overdue and whether its words state a total price other than
+         *     the deal's value, so every client shows the same verdict.
          *
          *     Needs `contact:read` and `activity:read` on top of the deal grant: each row names a
          *     contact and quotes a captured activity. A commitment whose contact or activity the
@@ -25258,6 +25299,13 @@ export interface components {
             /** @description Fleet-wide count of live entities lacking a current-identity embedding row. */
             entities_pending: number;
         };
+        /** @description The two identities the status read compares, read without its backlog scan. */
+        EmbedReindexIdentities: {
+            /** @description The live embed binding's provider/model@dims, as in EmbedReindexStatus. */
+            configured_identity: string;
+            /** @description The identity the last reindex run was released under, as in EmbedReindexStatus. */
+            populated_identity: string;
+        };
         /** @description The scope before the spend (ADR-0020 preview-before-spend obligation): what running the reindex now would touch and roughly cost. MUST precede the confirm route — the estimate is what the operator consents to. An estimate, labeled as such — actual spend is metered per embed call. */
         EmbedReindexPreview: {
             /** @description Fleet-wide pending count (the same figure the status read reports). */
@@ -26474,7 +26522,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -29439,6 +29487,12 @@ export interface components {
             /** Format: uuid */
             activity_id: string;
             subject: string;
+            /**
+             * @description The task's own words, as written. Only a task whose content this reader may read is
+             *     listed here, so a task read out of a message the reader may not open never reaches
+             *     this field.
+             */
+            body?: string | null;
             /** Format: date-time */
             due_at?: string | null;
             overdue: boolean;
@@ -31630,6 +31684,16 @@ export interface components {
             occurred_at: string;
             /** @description How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time. */
             occurred_precision: components["schemas"]["OccurredPrecision"];
+            /** @description True once the whole due day is over in the installation's timezone. A promise due today, or with no due day, is not overdue. */
+            overdue: boolean;
+            /** @description The one total the quoted words state in the deal's currency, present only when it is not the deal's value. A deposit, an instalment, a price per period or unit, a sum in another currency or more than one sum is never a total. Absent when the deal has no value the reader may see. */
+            differs_from_deal?: components["schemas"]["StatedAmount"];
+        };
+        /** @description A sum of money a customer's words state, in minor units of `currency`. */
+        StatedAmount: {
+            /** Format: int64 */
+            amount_minor: number;
+            currency: string;
         };
         /** @description What `search_report_evidence` takes beside the run the path names. */
         ReportEvidenceSearchRequest: {
@@ -32808,7 +32872,10 @@ export interface components {
         /**
          * @description Where one contact stands with us, over the same 90-day window the relationship
          *     score uses. What decides between the two conversational states is who wrote
-         *     LAST, not whether both directions have traffic.
+         *     LAST, not whether both directions have traffic. When their latest message is a
+         *     mail the reader may read, its History badge decides instead: `waiting` needs a
+         *     mail still owed a reply, and a mail owed none (a calendar copy, a mail that
+         *     informs us) counts only once we wrote after it.
          *
          *     `waiting` — their latest message has no reply from us. They are waiting on us,
          *     and answering is the obvious next move.
@@ -35272,6 +35339,10 @@ export interface components {
         Activity: {
             /** @description Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
+            /** @description Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false. */
+            readonly awaiting_outcome?: boolean;
+            /** @description Whether a live calendar invitation holds this meeting. Then a write through this activity that sets `subject`, `body`, `occurred_at`, `occurred_precision` or a `meeting_status` other than `held` or `no_show` is refused with `calendar_managed`; that change goes through the invitation (`PATCH /scheduling/invitations/{id}`). Archiving or restoring the activity is refused with `calendar_managed` too, and the undo of its creation is refused. Every read that carries `writable` carries this. Absent means false. */
+            readonly calendar_managed?: boolean;
             /** @description Decisions about promises read from this source, included on list and detail reads when its content is visible. */
             readonly commitment_admissions?: components["schemas"]["CommitmentAdmission"][];
             /** Format: uuid */
@@ -48410,6 +48481,13 @@ export interface components {
              *     contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
              *     the read-only fallback for a receipt.
              *
+             *     `take` is offered on a task nobody holds that the caller may change. It sets
+             *     `assignee_id` to the caller through `PATCH /activities/{id}`, pinned with `If-Match`.
+             *
+             *     `cancel` is offered on a meeting owed an outcome that no live calendar invitation
+             *     holds. It sets `meeting_status` to `canceled` through `PATCH /activities/{id}`, pinned
+             *     with `If-Match`. A meeting an invitation holds is canceled through the invitation.
+             *
              *     Domain questions offer `keep`, `discard`, and `reopen` where allowed. Keeping creates a
              *     company or matches the supplied `company_id`; forwarded identity requires an
              *     explicit match. A vendor question offers `keep_as_vendor` instead of `reopen`, which
@@ -48424,7 +48502,7 @@ export interface components {
              *     suggestion until later in the day. One word for both would make a client that
              *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen" | "take" | "cancel")[];
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time
@@ -49961,7 +50039,7 @@ export interface components {
              */
             undo?: components["schemas"]["AppliedUndo"];
             /** @description What this item offers, routed to the endpoint that owns the verb. */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen" | "take" | "cancel")[];
             /**
              * @description The heading this row sits under, as an OUTCOME rather than a priority number.
              *
@@ -68224,6 +68302,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EmbedReindexStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description No embeddings model is bound to the installation, so there is no index to rebuild. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    EmbedReindexIdentities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The two identities. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbedReindexIdentities"];
                 };
             };
             401: components["responses"]["Unauthorized"];

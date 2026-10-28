@@ -11,6 +11,12 @@
         "task": "create_task"
       }
     },
+    "change_reports": {
+      "field": "action",
+      "actions": {
+        "draft": "draft_report"
+      }
+    },
     "change_state": {
       "field": "action",
       "actions": {

@@ -90,12 +90,12 @@ Everything below is the detail behind the two tables above: which tools each job
 
 | | |
 |---|---:|
-| Tools the assistant is offered | 37 |
+| Tools the assistant is offered | 38 |
 | … some case requires | 27 |
 | … some case requires as one of a set | 0 |
-| … **no case requires** | 10 |
+| … **no case requires** | 11 |
 | … of those, permitted somewhere but never required | 5 |
-| Prompt tokens spent on tools no case requires | 4025 |
+| Prompt tokens spent on tools no case requires | 4668 |
 | Use cases | 34 |
 | Acceptance criteria the cases declare, each with a statement | 73 |
 
@@ -117,7 +117,7 @@ A tool being "untried" means something different on each, so the numbers above a
 | | Surface A: MCP | Surface B: scheduled agents |
 |---|---|---|
 | Who drives it | a user, watching | a job on a timer, unattended |
-| Menu | 37 tools, the whole catalog | 5 to 7 tools, declared per agent |
+| Menu | 38 tools, the whole catalog | 5 to 7 tools, declared per agent |
 | A wrong reach | the user corrects it | nobody is there |
 | Graded by | the use-case lane on this page | [ai-certification.md](ai-certification.md) |
 
@@ -425,13 +425,14 @@ A tool this lane has not tried may still be graded. The `Graded by` column names
 corpus tests the tool anyway. That lane asks which tool a goal should reach for, and which plausible neighbour it must
 avoid, which this lane cannot express at all: it sees that a name appeared, never whether it was the right first reach.
 
-So of the 10 tools no use case requires, **3 are graded elsewhere** and 7 are untried by any lane.
+So of the 11 tools no use case requires, **3 are graded elsewhere** and 8 are untried by any lane.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
 | `read_view` | 1010 | - | - | - |
+| `change_reports` | 643 | - | - | - |
 | `change_record_parts` | 567 | - | - | - |
 | `decide_approvals` | 429 | - | - | - |
 | `annotate_brief` | 417 | `agent_loop` | - | `morning_brief` |

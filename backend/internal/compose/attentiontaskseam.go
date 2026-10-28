@@ -146,7 +146,7 @@ func (t attentionTasks) RemindersForViewer(ctx context.Context, asOf time.Time) 
 	}
 	var due []attention.Task
 	page := reminderPage
-	in := activities.ListActivitiesInput{RemindersDue: true, TaskAsOf: &asOf, Limit: &page, ReadableOnly: true}
+	in := activities.ListActivitiesInput{RemindersDue: true, AsOf: &asOf, Limit: &page, ReadableOnly: true}
 	for {
 		rows, next, err := t.store.ListActivities(ctx, in)
 		if err != nil {

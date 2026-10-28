@@ -84,6 +84,7 @@ var summaryVerbs = map[string][]string{
 	"decideBundle":        {"%s", "%s"},
 	"runReport":           {"%s"},
 	"composeReport":       {"%d"},
+	"draftReport":         {"%s"},
 	"bulkChange":          {"%d"},
 	"analyticsQuery":      {"%s"},
 	"annotateNothing":     nil,

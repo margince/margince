@@ -1,0 +1,56 @@
+name: delivering_feedback_then_asking_them_does_not_reverse_the_duty
+task: request_settlement
+site: request_settle
+source: hand_authored
+sanitized_by: hand_authored
+fixture:
+  - messages:
+      - direction: inbound
+        subject: Product feedback
+        body: Please share your feedback on the product setup and export screen.
+      - direction: outbound
+        subject: 'Re: Product feedback'
+        body: >
+          The setup was clear and easy to follow. The export screen needs a
+          date filter and a way to choose columns. Which prospects have you
+          spoken to about this product?
+  - messages:
+      - direction: inbound
+        subject: Product feedback and revised quote
+        body: Please share your product feedback and send the revised quote.
+      - direction: outbound
+        subject: 'Re: Product feedback and revised quote'
+        body: >
+          The setup was clear. The export screen needs a date filter.
+          I will send the revised quote tomorrow. Which prospects have you spoken to?
+  - messages:
+      - direction: inbound
+        subject: Report and date
+        body: Please send the report and confirm the launch date.
+      - direction: outbound
+        subject: 'Re: Report and date'
+        body: |
+          Answers inline below.
+          > Please send the report.
+          The report is attached.
+          > Confirm the launch date.
+          Friday is confirmed.
+expect:
+  outcome: accepted
+  answer:
+    - verdict: settled
+    - verdict: still_owed
+      remaining_names: revised quote
+    - verdict: settled
+  rubric: >
+    The requested feedback was delivered. Our new question asks the customer
+    to answer; it does not create an obligation for us. Still_owed or an
+    invented task to answer our own question is wrong. The second conversation
+    still owes only the revised quote, explicitly requested in the original
+    inbound message. Its outbound question must not replace that remaining ask.
+    The third reply answers both asks inline, beneath quoted lines; both the
+    attached report and the confirmed Friday must count as our answer.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

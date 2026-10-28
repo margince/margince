@@ -29,11 +29,11 @@
     }
   ],
   "catalog": {
-    "tools": 37,
+    "tools": 38,
     "system_frame_tokens": 592,
-    "tokens": 23137,
-    "median_tool_tokens": 469,
-    "mean_tool_tokens": 624
+    "tokens": 23781,
+    "median_tool_tokens": 493,
+    "mean_tool_tokens": 625
   },
   "agents": [
     {
@@ -46,7 +46,7 @@
         "read_brief",
         "read_record"
       ],
-      "of_served_tools": 37,
+      "of_served_tools": 38,
       "tokens": 4165,
       "listing_tokens": 2072,
       "step_schema_tokens": 1501,
@@ -67,7 +67,7 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "of_served_tools": 37,
+      "of_served_tools": 38,
       "tokens": 6239,
       "listing_tokens": 3300,
       "step_schema_tokens": 2347,
@@ -130,6 +130,10 @@
     {
       "name": "create_record",
       "tokens": 755
+    },
+    {
+      "name": "change_reports",
+      "tokens": 643
     },
     {
       "name": "change_lists",
