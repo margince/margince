@@ -63901,6 +63901,18 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            /**
+             * @description A live contact holds the new email or LinkedIn profile (`contact_holds_email`), with the
+             *     details `createLead` gives.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -64161,7 +64173,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description Lead was never promoted, has already been demoted, or a live lead now holds its email (`duplicate_email`). */
+            /** @description Lead was never promoted, has already been demoted, a live lead now holds its email (`duplicate_email`), or a live contact now holds its email or profile (`contact_holds_email`). */
             409: {
                 headers: {
                     [name: string]: unknown;
