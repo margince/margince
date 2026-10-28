@@ -84,8 +84,7 @@ func fileLinkedInTwins(ctx context.Context, tx pgx.Tx, contact ids.ContactID, ha
 		  JOIN contact c ON c.id = s.contact_id AND c.archived_at IS NULL
 		 WHERE s.platform = '`+SocialLinkedIn+`' AND `+linkedInProfileKeySQL("s.handle")+` = $1
 		   AND s.contact_id <> $2
-		 ORDER BY s.contact_id
-		 LIMIT $3`, key, contact, dedupeRivalLimit)
+		 ORDER BY s.contact_id`, key, contact)
 	if err != nil {
 		return 0, fmt.Errorf("dedupe contact linkedin: %w", err)
 	}
@@ -100,6 +99,13 @@ func fileLinkedInTwins(ctx context.Context, tx pgx.Tx, contact ids.ContactID, ha
 	})
 	if err != nil {
 		return 0, fmt.Errorf("dedupe contact linkedin: %w", err)
+	}
+	// The cap comes after the pairs the queue already holds, so a profile held
+	// by more than dedupeRivalLimit contacts reaches the later ones on a later pass.
+	holders, err = newRivals(ctx, tx, entityContact, &contact.UUID, holders,
+		func(h holder) ids.UUID { return h.id.UUID })
+	if err != nil {
+		return 0, err
 	}
 	filed := 0
 	for _, h := range holders {

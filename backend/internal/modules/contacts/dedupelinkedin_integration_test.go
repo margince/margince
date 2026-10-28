@@ -11,6 +11,7 @@ package contacts
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -143,5 +144,44 @@ func TestTheDuplicateScanPairsContactsAlreadySharingALinkedInProfile(t *testing.
 	e.scanEverything(t, 10)
 	if n := e.openLinkedInPairs(ctx, t, first, second); n != 1 {
 		t.Errorf("open LinkedIn pairs after the scan = %d, want 1", n)
+	}
+}
+
+// More holders of one profile than one pass files: each later pass reaches the
+// pairs the first left out, until every pair is on the queue.
+func TestTheScanReachesEveryPairOfAProfileHeldPastTheCap(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	holders := make([]ids.ContactID, 7)
+	for i := range holders {
+		holders[i] = e.createWithLinkedIn(ctx, t, fmt.Sprintf("Holder %d", i), fmt.Sprintf("holder%d@example.com", i), "")
+	}
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		for _, h := range holders {
+			if _, err := tx.Exec(ctx, `INSERT INTO contact_social (contact_id, platform, handle)
+				VALUES ($1, 'linkedin', 'https://www.linkedin.com/in/shared-profile')`, h); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("seeding the shared profile: %v", err)
+	}
+	for pass := range 6 {
+		if filed, _ := e.scanEverything(t, 10); filed == 0 {
+			break
+		} else if pass == 5 {
+			t.Fatalf("the scan still filed %d pairs on its sixth pass", filed)
+		}
+	}
+	want := len(holders) * (len(holders) - 1) / 2
+	got := 0
+	for i := range holders {
+		for j := i + 1; j < len(holders); j++ {
+			got += e.openLinkedInPairs(ctx, t, holders[i], holders[j])
+		}
+	}
+	if got != want {
+		t.Errorf("open LinkedIn pairs among the seven holders = %d, want %d", got, want)
 	}
 }
