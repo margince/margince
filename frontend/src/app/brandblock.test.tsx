@@ -1,11 +1,5 @@
 /** @vitest-environment happy-dom */
-import {
-  act,
-  cleanup,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { en } from "../i18n/en";
 import {
@@ -36,9 +30,9 @@ describe("The rail's brand block", () => {
       name: "Demo GmbH home, powered by Margince",
     });
     expect(brand.textContent).toBe("Demo GmbH");
-    expect(
-      document.querySelector(".ws-chip img")?.getAttribute("src"),
-    ).toBe(TWO_MARKS.logo_icon_url);
+    expect(document.querySelector(".ws-chip img")?.getAttribute("src")).toBe(
+      TWO_MARKS.logo_icon_url,
+    );
     // Beside the link rather than inside it: the attribution and the build badge
     // are one line of the head, and neither is somewhere a press should lead.
     const attribution = document.querySelector(".ws-company");
@@ -74,9 +68,9 @@ describe("The rail's brand block", () => {
       );
     });
     await waitFor(() =>
-      expect(
-        container.querySelector(".ws-chip img")?.getAttribute("src"),
-      ).toBe("/v1/companies/44444444-4444-4444-8444-444444444444/logo/icon"),
+      expect(container.querySelector(".ws-chip img")?.getAttribute("src")).toBe(
+        "/v1/companies/44444444-4444-4444-8444-444444444444/logo/icon",
+      ),
     );
   });
 
@@ -154,9 +148,9 @@ describe("The rail's brand block", () => {
       <WorkspaceRail route={{ screen: "home" }} collapsed={collapsed} />,
     );
     expect(container.querySelectorAll(".ws-chip img")).toHaveLength(1);
-    expect(
-      container.querySelector(".ws-chip img")?.getAttribute("src"),
-    ).toBe(TWO_MARKS.logo_icon_url);
+    expect(container.querySelector(".ws-chip img")?.getAttribute("src")).toBe(
+      TWO_MARKS.logo_icon_url,
+    );
   });
 
   // A wide wordmark squeezed into the square is a row of illegible strokes, so
@@ -171,7 +165,9 @@ describe("The rail's brand block", () => {
       client,
       <WorkspaceRail route={{ screen: "home" }} />,
     );
-    expect(container.querySelector(`img[src="${TWO_MARKS.logo_url}"]`)).toBeNull();
+    expect(
+      container.querySelector(`img[src="${TWO_MARKS.logo_url}"]`),
+    ).toBeNull();
     expect(container.querySelector(".ws-chip .avatar")?.textContent).toBe("DG");
   });
 });
