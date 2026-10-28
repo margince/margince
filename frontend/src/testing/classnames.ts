@@ -295,15 +295,21 @@ export function declarationOf(
   | ts.FunctionDeclaration
   | ts.FunctionExpression
   | undefined {
+  const found = bindingOf(name);
+  if (!found) return undefined;
+  if (ts.isVariableDeclaration(found)) {
+    return ts.isIdentifier(found.name) ? found : undefined;
+  }
+  const fn = ts.isFunctionDeclaration(found) || ts.isFunctionExpression(found);
+  return fn ? found : undefined;
+}
+
+/** The nearest binding of an identifier, of any kind. Nothing means the file
+ * declares no such name, so it is an import or a global. */
+export function bindingOf(name: ts.Identifier): Declared | undefined {
   for (let scope = name.parent; scope; scope = scope.parent) {
     const found = bindingsOf(scope).get(name.text);
-    if (!found) continue;
-    if (ts.isVariableDeclaration(found)) {
-      return ts.isIdentifier(found.name) ? found : undefined;
-    }
-    const fn =
-      ts.isFunctionDeclaration(found) || ts.isFunctionExpression(found);
-    return fn ? found : undefined;
+    if (found) return found;
   }
   return undefined;
 }
