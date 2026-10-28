@@ -15590,6 +15590,15 @@ components:
           nullable: true
           description: >-
             Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word.
+        message_move:
+          type: string
+          enum: [needs_reply, waiting_for_them, none]
+          readOnly: true
+          description: |-
+            Present exactly when `kind=message` and the reader may read it. Whose move the chat
+            message is, by the rules `email_summary.move` follows for mail: `needs_reply` on one
+            still owed our answer, `waiting_for_them` on one a seat sent that is still the last
+            word with them, `none` otherwise.
         thread_key:
           type: [string, 'null']
           readOnly: true
