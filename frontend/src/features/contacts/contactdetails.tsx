@@ -45,6 +45,8 @@ import { useRecordOwners } from "../records/recordreferences";
 import { BoughtMark, boughtFields } from "./boughtmarks";
 import { BoughtAttributes } from "./contactboughtattributes";
 import { ContactSource } from "./contactfacts";
+import { type ProfileField, proposedEmployer } from "./employerproposal";
+import { ProposedEmployerRow } from "./employerproposalrow";
 import { currentEmployer } from "./employmentcurrency";
 
 type Contact = components["schemas"]["Contact"];
@@ -75,6 +77,9 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
     .filter(Boolean)
     .join(", ");
   const employer = currentEmployer(view.employments?.data);
+  const proposed = employer
+    ? undefined
+    : proposedEmployer(view, view.employments?.data ?? []);
   const owner = rosterOwnerName(contact.owner_id, ownerName, t, notSet);
   const field = (
     key: string,
@@ -95,9 +100,9 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
         {
           key: "employer",
           term: t("contact.rail.employer"),
-          value: employer ? <EmployerCard employment={employer} /> : notSet,
-          empty: !employer,
-          block: Boolean(employer),
+          value: employerValue(view, employer, proposed, notSet),
+          empty: !employer && !proposed,
+          block: Boolean(employer ?? proposed),
         },
         field(
           "email",
@@ -211,6 +216,17 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
  * us goes under it. The facts are the company's own, so a company this reader may
  * not open shows its name alone.
  */
+function employerValue(
+  view: Contact360,
+  employer: Employment | undefined,
+  proposed: ProfileField | undefined,
+  notSet: string,
+): ReactNode {
+  if (employer) return <EmployerCard employment={employer} />;
+  if (proposed) return <ProposedEmployerRow view={view} fact={proposed} />;
+  return notSet;
+}
+
 function EmployerCard({ employment }: Readonly<{ employment: Employment }>) {
   const t = useT();
   const company = useEmployerSummary(employment.company_id).data;

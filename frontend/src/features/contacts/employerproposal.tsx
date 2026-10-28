@@ -10,8 +10,8 @@ import { useEntityName } from "../../components/entityref.queries";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ErrorLine } from "../../design-system/errorline";
-import { PanelBody } from "../../design-system/panel";
 import type { RecordPickerCandidate } from "../../design-system/recordpicker";
+import { Stack } from "../../design-system/stack";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { useGrantRefused } from "../../lib/capability";
@@ -155,7 +155,7 @@ export function EmployerProposal({
   const duplicate = useEntityName("company", duplicateId);
   const busy = verbs.createAndLink.isPending || verbs.verdict.isPending;
   return (
-    <PanelBody>
+    <Stack gap="2">
       <Callout
         tone="ai"
         kind="standing"
@@ -229,6 +229,6 @@ export function EmployerProposal({
             : t("contact.proposal.duplicateUnnamed")}
         </ErrorLine>
       )}
-    </PanelBody>
+    </Stack>
   );
 }

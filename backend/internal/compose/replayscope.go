@@ -190,8 +190,15 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/companies":            {object: tableCompany, table: tableCompany, idPath: "id"},
 	"PATCH /v1/companies/{id}":      {object: tableCompany, table: tableCompany, idPath: "id"},
 	"POST /v1/companies/{id}/merge": {object: tableCompany, table: tableCompany, idPath: "id"},
-	// The edges are the path company's roster, so its scope governs them.
-	"POST /v1/companies/{id}/link-contacts": {object: tableCompany, table: tableCompany, pathParam: "id"},
+	"POST /v1/companies/{id}/link-contacts": {
+		object: tableCompany, table: tableCompany, pathParam: "id",
+		companions: []companionRef{
+			{table: tableContact, idPath: "data[]." + companionContactField},
+			{table: tableCompany, idPath: "data[]." + companionCompanyField},
+			{table: tableDeal, idPath: "data[]." + dealIDField},
+			{table: tableProject, idPath: "data[].project_id"},
+		},
+	},
 	// The rejection answers the archived company alongside the domain decision
 	// it recorded, so the replayed record is the company and the gate
 	// resolves against its own row — the admission carries no authority of its

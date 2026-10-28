@@ -86,7 +86,6 @@ var rowScopedResponses = map[string]expectedTarget{
 	// company id beside it is a reference, not a second body.
 	"QuickCaptureContactResult": {table: "contact", idPath: "contact.id"},
 	"LinkContactEmployerResult": {table: "contact", idPath: "contact.id"},
-	// The edges name no owner of their own: they are the path company's roster.
 	"LinkCompanyContactsResult": {table: "company", pathParam: "id"},
 	// A scheduled message is readable only by the rep who scheduled it, which
 	// the store enforces with its own scheduled_by predicate rather than an
@@ -275,20 +274,47 @@ var companionRecordFields = map[string]string{
 // inside it, and the fields beside it are the wrapper's own. TOP-LEVEL
 // properties only, for the same reason — the nested record's fields are its
 // own, covered by the probe that already resolves it.
+//
+// A body keyed by its route parameter is no record either: every record an
+// array element names is a companion, at `<field>[].<id field>`.
 func companionsInContract(t *testing.T, schemas []string, got expectedTarget) []string {
 	t.Helper()
-	if !strings.Contains(got.idPath, ".") {
-		return nil
-	}
+	wraps, projects := strings.Contains(got.idPath, "."), got.pathParam != ""
 	var out []string
 	for _, schema := range schemas {
-		for field, table := range schemaRecordFields(t, schema) {
-			out = append(out, table+":"+field)
+		if wraps {
+			for field, table := range schemaRecordFields(t, schema) {
+				out = append(out, table+":"+field)
+			}
+		}
+		if wraps || projects {
+			out = append(out, arrayCompanions(t, schema)...)
 		}
 	}
 	sort.Strings(out)
 	return out
 }
+
+// arrayCompanions are the record ids each element of a top-level array of
+// named schemas carries, as "table:field[].id_field".
+func arrayCompanions(t *testing.T, schema string) []string {
+	t.Helper()
+	var out []string
+	for field, format := range contractSchemaProperties(t)[schema] {
+		item, isArray := strings.CutPrefix(format, arrayOfSchema)
+		if !isArray {
+			continue
+		}
+		for idField, table := range schemaRecordFields(t, item) {
+			out = append(out, table+":"+field+"[]."+idField)
+		}
+	}
+	return out
+}
+
+// arrayOfSchema prefixes the item schema of an array property in
+// contractSchemaProperties, where a scalar property holds its format.
+const arrayOfSchema = "array-of:"
 
 // schemaRecordFields reads one named schema's top-level uuid properties that
 // name a row-scoped record.
@@ -607,6 +633,9 @@ func contractSchemaProperties(t *testing.T) map[string]map[string]string {
 			Schemas map[string]struct {
 				Properties map[string]struct {
 					Format string `yaml:"format"`
+					Items  struct {
+						Ref string `yaml:"$ref"`
+					} `yaml:"items"`
 				} `yaml:"properties"`
 			} `yaml:"schemas"`
 		} `yaml:"components"`
@@ -623,6 +652,9 @@ func contractSchemaProperties(t *testing.T) map[string]map[string]string {
 		fields := map[string]string{}
 		for field, property := range schema.Properties {
 			fields[field] = property.Format
+			if item, ok := strings.CutPrefix(property.Items.Ref, "#/components/schemas/"); ok {
+				fields[field] = arrayOfSchema + item
+			}
 		}
 		contractProperties[name] = fields
 	}

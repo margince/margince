@@ -21,8 +21,6 @@ import (
 // batch the list offers is one the link accepts.
 const linkCandidateCap = 50
 
-const entityRelationship = "relationship"
-
 // LinkCandidate is a contact on one of a company's domains who does not work
 // there yet, with the address that matched.
 type LinkCandidate struct {
@@ -36,7 +34,7 @@ type LinkCandidate struct {
 // ListLinkCandidates answers who on this company's domains could be linked to
 // it, under the caller's contact row scope, and whether more exist than the cap.
 func (s *Store) ListLinkCandidates(ctx context.Context, companyID ids.CompanyID) ([]LinkCandidate, bool, error) {
-	for _, object := range []string{companyEntity, contactEntity, entityRelationship} {
+	for _, object := range []string{companyEntity, contactEntity, tableRelationship} {
 		if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
 			return nil, false, err
 		}
@@ -62,7 +60,7 @@ func (s *Store) ListLinkCandidates(ctx context.Context, companyID ids.CompanyID)
 
 // linkCandidatesTx is the one reading of a link candidate. The list and the
 // link share it, so the link accepts what the list offers and nothing else. A
-// non-nil only narrows it to those contacts.
+// non-nil `only` narrows it to those contacts.
 func (s *Store) linkCandidatesTx(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, only []ids.UUID, limit int,
 ) ([]LinkCandidate, error) {
@@ -87,8 +85,8 @@ func (s *Store) linkCandidatesTx(
 	if only != nil {
 		narrowed = storekit.SQLf("c.id = ANY($%d)", arg(only))
 	}
-	// The live slot as well as currency: the unique index refuses a link while it
-	// holds an edge, and a contact whose end date is still ahead works there now.
+	// The unique index refuses a link while it holds an edge. A contact whose end
+	// date is still ahead works there now.
 	rows, err := tx.Query(ctx, storekit.SQLf(`
 		SELECT c.id, c.full_name, c.title, matched.email
 		  FROM contact c

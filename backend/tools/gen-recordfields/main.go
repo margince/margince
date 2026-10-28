@@ -85,6 +85,8 @@ type node struct {
 	// it such a property has no `type` keyword of its own and renders as the
 	// bare word "value", telling a model nothing about what it may send.
 	AllOf []*node `yaml:"allOf"`
+	// AgentWithheld is `x-agent-withheld`: create_record refuses this field.
+	AgentWithheld bool `yaml:"x-agent-withheld"`
 }
 
 func main() {
@@ -155,7 +157,7 @@ func render(all schemas, shared map[string]*parameter, paths map[string]map[stri
 			}
 			if table.which == "create" {
 				var err error
-				if schema, err = withoutWithheld(schema, all, entry.recordType); err != nil {
+				if schema, err = withoutWithheld(schema, all); err != nil {
 					return nil, err
 				}
 			}
@@ -184,7 +186,9 @@ func render(all schemas, shared map[string]*parameter, paths map[string]map[stri
 		b.WriteString("},\n")
 	}
 	b.WriteString("}\n")
-	renderWithheld(&b)
+	if err := renderWithheld(&b, all); err != nil {
+		return nil, err
+	}
 	if err := renderEnums(&b, all); err != nil {
 		return nil, err
 	}

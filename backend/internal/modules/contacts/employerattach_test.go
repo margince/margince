@@ -66,7 +66,8 @@ func TestALinkBatchIsRefusedBeforeAnyRead(t *testing.T) {
 		"repeated": {[]ids.UUID{repeated, repeated}, "duplicate"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			if field, code := refusalOf(linkBatchShape(tc.batch)); field != fieldContactIDs || code != tc.code {
+			_, err := (&Store{}).LinkCompanyContacts(t.Context(), ids.From[ids.CompanyKind](ids.NewV7()), tc.batch)
+			if field, code := refusalOf(err); field != fieldContactIDs || code != tc.code {
 				t.Errorf("refusal = %s/%s, want %s/%s", field, code, fieldContactIDs, tc.code)
 			}
 		})
@@ -84,23 +85,25 @@ func refusalOf(err error) (field, code string) {
 	return "", ""
 }
 
-func TestAnAgentContactCreateNamesNoEmployer(t *testing.T) {
-	agent := principal.WithActor(t.Context(), principal.Principal{Type: principal.PrincipalAgent, ID: "agent:tools"})
-	human := principal.WithActor(t.Context(), principal.Principal{Type: principal.PrincipalHuman, ID: "human:rep"})
+func TestAnAgentContactCreatePreviewNamesNoEmployer(t *testing.T) {
+	reader := principal.WithActor(t.Context(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:rep",
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{contactEntity: {Create: true, Read: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	agent := principal.Principal{Type: principal.PrincipalAgent, ID: "agent:tools"}
 	picked := ids.From[ids.CompanyKind](ids.NewV7())
 	for field, choice := range map[string]EmployerChoice{
 		endCompanyColumn: {CompanyID: &picked},
 		fieldCompanyName: {CompanyName: new("Side Effect GmbH")},
 	} {
-		refused, ok := errors.AsType[*values.ParseError](refuseAgentEmployer(agent, choice))
+		_, err := (&Store{}).PreviewContactCreationForActor(reader,
+			CreateContactInput{FullName: "Agent Proposed", Source: "agent", Employer: choice}, agent)
+		refused, ok := errors.AsType[*values.ParseError](err)
 		if !ok || refused.Field != field || refused.Code != "employer_needs_a_human" {
-			t.Errorf("agent naming %s: err = %v, want employer_needs_a_human on %s", field, refused, field)
+			t.Errorf("agent naming %s: err = %v, want employer_needs_a_human on %s", field, err, field)
 		}
-		if err := refuseAgentEmployer(human, choice); err != nil {
-			t.Errorf("a human naming %s is refused: %v", field, err)
-		}
-	}
-	if err := refuseAgentEmployer(agent, EmployerChoice{}); err != nil {
-		t.Errorf("an agent naming no employer is refused: %v", err)
 	}
 }

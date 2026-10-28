@@ -18,6 +18,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func TestAContactCreatedWithACompanyHasACurrentEmployment(t *testing.T) {
@@ -158,6 +160,75 @@ func TestCreateAndLinkOnAContactTheCallerCannotSeeIsNotFound(t *testing.T) {
 	}
 	if got := countCompaniesNamed(e.as(), t, e, "Privateco"); got != 0 {
 		t.Errorf("%d company(s) written for an unseen contact, want 0", got)
+	}
+}
+
+// A holder the caller cannot read is never named: the company is created
+// without the domain, and the answer carries no hint of the holder.
+func TestCreateAndLinkOnADomainAHiddenCompanyHoldsCreatesItWithoutTheDomain(t *testing.T) {
+	e := setupDedupe(t)
+	holder := e.createNamedCompany(e.asOther(), t, "Hiddenholder", "hiddenholder.test")
+	if _, err := e.store.UpdateCompany(e.asOther(), holder, UpdateCompanyInput{Visibility: new("owner")}); err != nil {
+		t.Fatalf("making the holder private: %v", err)
+	}
+	ctx := e.as()
+	contactID := e.contactWithEmail(ctx, t, "Hal Hidden", "hal@hiddenholder.test")
+
+	linked, err := e.store.LinkContactEmployer(ctx, contactID, LinkEmployerInput{CompanyName: new("Hiddenholder Two")})
+	if err != nil {
+		t.Fatalf("create and link: %v", err)
+	}
+	if !linked.CompanyCreated || linked.CompanyDomain != nil || linked.CompanyID == holder {
+		t.Fatalf("created = %v, domain = %v, company = %v; want a new company with no domain", linked.CompanyCreated, linked.CompanyDomain, linked.CompanyID)
+	}
+	if got := e.domainsOf(ctx, t, linked.CompanyID); len(got) != 0 {
+		t.Errorf("company domains = %v, want none", got)
+	}
+	assertEmployedAt(ctx, t, e, contactID, linked.CompanyID)
+}
+
+func TestCreateAndLinkOnASuppressedDomainGivesNoDomain(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	if _, err := e.store.SetDomainAdmission(ctx, "blockedvendor.test", DomainSuppressed, "a tool we use"); err != nil {
+		t.Fatalf("suppressing the domain: %v", err)
+	}
+	contactID := e.contactWithEmail(ctx, t, "Bea Blocked", "bea@blockedvendor.test")
+
+	linked, err := e.store.LinkContactEmployer(ctx, contactID, LinkEmployerInput{CompanyName: new("Blocked Vendor Ltd")})
+	if err != nil {
+		t.Fatalf("create and link: %v", err)
+	}
+	if linked.CompanyDomain != nil {
+		t.Errorf("domain = %q, want none on a suppressed domain", *linked.CompanyDomain)
+	}
+	if got := e.domainsOf(ctx, t, linked.CompanyID); len(got) != 0 {
+		t.Errorf("company domains = %v, want none", got)
+	}
+}
+
+func TestAnAgentContactCreateWithACompanyWritesNothing(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:tools", UserID: e.rep, OnBehalfOf: e.rep,
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{
+				"contact": {Create: true, Read: true, Update: true}, "company": {Create: true, Read: true},
+				"relationship": {Create: true, Read: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	_, err := e.store.CreateContact(ctx, CreateContactInput{
+		FullName: "Agent Made", Source: "agent", Employer: EmployerChoice{CompanyName: new("Agent Side Effect GmbH"), Source: "agent"},
+	})
+	if refused, ok := errors.AsType[*values.ParseError](err); !ok || refused.Code != "employer_needs_a_human" {
+		t.Fatalf("err = %v, want employer_needs_a_human", err)
+	}
+	if contacts, companies := countContactsNamed(e.as(), t, e, "Agent Made"), countCompaniesNamed(e.as(), t, e, "Agent Side Effect GmbH"); contacts+companies != 0 {
+		t.Errorf("%d contact(s) and %d company(s) written, want none", contacts, companies)
 	}
 }
 

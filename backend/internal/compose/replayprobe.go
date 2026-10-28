@@ -269,20 +269,51 @@ func replayTableFor(target replayTarget, body string) (string, error) {
 // have answered 404.
 func ensureCompanionsVisible(ctx context.Context, pool *pgxpool.Pool, target replayTarget, body string) error {
 	for _, companion := range target.companions {
-		raw, err := stringAt(body, companion.idPath)
-		if err != nil {
-			// Absent, null, or not a string: the body names no record here.
-			continue
-		}
-		id, err := ids.Parse(raw)
-		if err != nil {
-			return apperrors.ErrNotFound
-		}
-		if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-			return auth.EnsureVisible(ctx, tx, companion.table, id)
-		}); err != nil {
-			return err
+		for _, raw := range companionIDsAt(body, companion.idPath) {
+			id, err := ids.Parse(raw)
+			if err != nil {
+				return apperrors.ErrNotFound
+			}
+			if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+				return auth.EnsureVisible(ctx, tx, companion.table, id)
+			}); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
+}
+
+// companionIDsAt reads every id a companion path names. A `[]` segment fans out
+// over an array, and an absent, null or non-string value names nothing.
+func companionIDsAt(body, path string) []string {
+	var node any
+	if err := json.Unmarshal([]byte(body), &node); err != nil {
+		return nil
+	}
+	return stringsAt(node, strings.Split(path, "."))
+}
+
+//craft:ignore naked-any a decoded JSON value has no type until a segment narrows it
+func stringsAt(node any, segments []string) []string {
+	if len(segments) == 0 {
+		if text, ok := node.(string); ok {
+			return []string{text}
+		}
+		return nil
+	}
+	object, ok := node.(map[string]any)
+	if !ok {
+		return nil
+	}
+	name, fans := strings.CutSuffix(segments[0], "[]")
+	if !fans {
+		return stringsAt(object[name], segments[1:])
+	}
+	items, _ := object[name].([]any)
+	var out []string
+	for _, item := range items {
+		out = append(out, stringsAt(item, segments[1:])...)
+	}
+	return out
 }

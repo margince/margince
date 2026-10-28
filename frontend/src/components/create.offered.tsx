@@ -30,8 +30,8 @@ export type NameOffers = Readonly<{
   prefill?: OfferPrefill;
 }>;
 
-// A pick the form makes from the reader's other answers while this box is
-// untouched: `from` names what to look up, and the first record `find` answers wins.
+// A pick made from the reader's other answers while the box is untouched.
+// `from` names what to look up; the first record `find` returns wins.
 export type OfferPrefill = Readonly<{
   from: (rows: FormRows) => string | undefined;
   find: (key: string) => Promise<readonly NameOffer[]>;

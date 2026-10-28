@@ -164,9 +164,6 @@ func (s *Store) readyContactCreate(ctx context.Context, in *CreateContactInput) 
 func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateContactInput, by string,
 	active []fieldcatalog.Column,
 ) (crmcontracts.Contact, error) {
-	if err := refuseAgentEmployer(ctx, in.Employer); err != nil {
-		return crmcontracts.Contact{}, err
-	}
 	owner, err := storekit.NewRecordOwner(ctx, tx, in.OwnerID)
 	if err != nil {
 		return crmcontracts.Contact{}, err

@@ -84,6 +84,11 @@ func TestTheEmployerLinkRoutesAnswerTheirContract(t *testing.T) {
 	if rows, _ := linked["data"].([]any); len(rows) != 1 || rows[0].(map[string]any)["contact_id"] != contact["id"] {
 		t.Errorf("linked = %v, want one edge for the ticked contact", linked)
 	}
+	var replayed AnyMap
+	if status := e.Call(t, http.MethodPost, companyPath+"/link-contacts", AnyMap{"contact_ids": []any{contact["id"]}},
+		map[string]string{"Idempotency-Key": "link-wanda"}, &replayed); status != http.StatusCreated {
+		t.Fatalf("link replay = %d %v, want the first answer", status, replayed)
+	}
 
 	var refused AnyMap
 	if status := e.Call(t, http.MethodPost, "/v1/contacts/"+colleague["id"].(string)+"/employer",

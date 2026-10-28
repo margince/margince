@@ -11,7 +11,7 @@ import {
 import { ContactCreateActions } from "./contactcreate";
 
 const meta: Meta = {
-  title: "Records/Contacts/Create actions",
+  title: "Records/Contact create/List actions",
   render: () => {
     installFetchStub({ "GET /me": meRoute({ contact: ["read", "create"] }) });
     return (

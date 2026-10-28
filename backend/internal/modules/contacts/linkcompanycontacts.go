@@ -5,7 +5,7 @@ package contacts
 
 import (
 	"context"
-	"net/http"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -27,7 +27,7 @@ func (s *Store) LinkCompanyContacts(ctx context.Context, companyID ids.CompanyID
 	if err := linkBatchShape(contactIDs); err != nil {
 		return nil, err
 	}
-	for _, object := range []string{companyEntity, contactEntity, entityRelationship} {
+	for _, object := range []string{companyEntity, contactEntity, tableRelationship} {
 		if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
 			return nil, err
 		}
@@ -49,14 +49,12 @@ func (s *Store) LinkCompanyContacts(ctx context.Context, companyID ids.CompanyID
 			return err
 		}
 		for _, id := range contactIDs {
-			contactID := ids.From[ids.ContactKind](id)
-			edge, err := s.CreateRelationshipTx(ctx, tx, CreateRelationshipInput{
-				Kind: employmentKind, ContactID: &contactID, CompanyID: &companyID, Source: linkEmployerSource,
-			})
+			attached, err := s.attachEmployerTx(ctx, tx, ids.From[ids.ContactKind](id),
+				EmployerChoice{CompanyID: &companyID, Source: linkEmployerSource})
 			if err != nil {
 				return err
 			}
-			out = append(out, edge)
+			out = append(out, attached.edge)
 		}
 		return nil
 	})
@@ -68,7 +66,7 @@ func linkBatchShape(contactIDs []ids.UUID) error {
 		return &RequiredFieldError{Field: fieldContactIDs}
 	}
 	if len(contactIDs) > linkCandidateCap {
-		return httperr.Validation(fieldContactIDs, "too_many", "link at most 50 contacts at once")
+		return httperr.Validation(fieldContactIDs, "too_many", fmt.Sprintf("link at most %d contacts at once", linkCandidateCap))
 	}
 	seen := make(map[ids.UUID]bool, len(contactIDs))
 	for _, id := range contactIDs {
@@ -97,11 +95,7 @@ func refuseNonCandidates(contactIDs []ids.UUID, candidates []LinkCandidate) erro
 // contactIDRefusal names the offending id in details, since one field carries
 // the whole list.
 func contactIDRefusal(code string, id ids.UUID, message string) error {
-	return &httperr.DetailedError{
-		Status:  http.StatusUnprocessableEntity,
-		Code:    "validation_error",
-		Detail:  message,
-		Details: map[string]any{"contact_id": id.String()},
-		Fields:  []httperr.FieldError{{Field: fieldContactIDs, Code: code, Message: message}},
-	}
+	refusal := httperr.Validation(fieldContactIDs, code, message)
+	refusal.Details = map[string]any{"contact_id": id.String()}
+	return refusal
 }

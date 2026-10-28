@@ -14,9 +14,11 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { RecordDetails } from "../../design-system/recorddetails";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { useContactAboutSections } from "./contactdetails";
 import { Employers } from "./contactemployers";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -133,7 +135,11 @@ function stubApi({
   return sent;
 }
 
-function mount(view: Contact360) {
+function AboutRail({ view }: Readonly<{ view: Contact360 }>) {
+  return <RecordDetails sections={useContactAboutSections(view)} />;
+}
+
+function mount(view: Contact360, place: "card" | "rail" = "card") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -141,7 +147,11 @@ function mount(view: Contact360) {
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <ToastProvider>
-          <Employers view={view} />
+          {place === "card" ? (
+            <Employers view={view} />
+          ) : (
+            <AboutRail view={view} />
+          )}
           <ToastRegion />
         </ToastProvider>
       </LocaleProvider>
@@ -379,5 +389,60 @@ describe("The signature’s company on the Company card", () => {
     expect(
       screen.queryByRole("button", { name: "Create and link" }),
     ).toBeNull();
+  });
+});
+
+describe("The signature’s company in the rail’s About section", () => {
+  it("shows the proposal and its verbs on the employer row", async () => {
+    stubApi();
+    mount(contactView(), "rail");
+
+    expect(
+      await screen.findByRole("button", { name: "Create and link" }),
+    ).toBeEnabled();
+    expect(screen.getByText("Employer")).toBeVisible();
+    expect(screen.getByText(PROPOSAL)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Link" })).toBeEnabled();
+  });
+
+  it("creates and links through the same requests as the Company card", async () => {
+    const sent = stubApi();
+    mount(contactView(), "rail");
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole("button", { name: "Create and link" }),
+    );
+
+    await waitFor(() => expect(sent).toHaveLength(2));
+    expect(sent.map((write) => [write.path, write.body])).toEqual([
+      [
+        `/contacts/${CONTACT_ID}/employer`,
+        { company_name: "Nordlicht Logistik GmbH" },
+      ],
+      ["/ai/feedback", expect.objectContaining({ verdict: "confirmed" })],
+    ]);
+  });
+
+  it("folds the empty employer row when no company was read", async () => {
+    stubApi();
+    mount(contactView({ profile_fields: [] }), "rail");
+
+    expect(await screen.findByText(/^Show \d+ empty fields?$/)).toBeVisible();
+    expect(screen.queryByText("Employer")).toBeNull();
+    expect(screen.queryByText(PROPOSAL)).toBeNull();
+  });
+
+  it("folds it once somebody ruled on the company", async () => {
+    stubApi();
+    mount(
+      contactView({
+        profile_fields: [{ ...signatureCompany, verdict: "suppressed" }],
+      }),
+      "rail",
+    );
+
+    expect(await screen.findByText(/^Show \d+ empty fields?$/)).toBeVisible();
+    expect(screen.queryByText(PROPOSAL)).toBeNull();
   });
 });

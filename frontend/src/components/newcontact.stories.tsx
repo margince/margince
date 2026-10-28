@@ -72,7 +72,7 @@ async function typeWorkEmail(context: Canvas) {
 }
 
 const meta: Meta = {
-  title: "Records/Contacts/New contact",
+  title: "Records/Contact create/New contact",
 };
 export default meta;
 

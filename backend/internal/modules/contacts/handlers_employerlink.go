@@ -39,7 +39,7 @@ func (h Handlers) LinkContactEmployer(w http.ResponseWriter, r *http.Request, id
 		CompanyId:      openapi_types.UUID(linked.CompanyID.UUID),
 		CompanyCreated: linked.CompanyCreated,
 		CompanyDomain:  linked.CompanyDomain,
-		RelationshipId: openapi_types.UUID(linked.RelationshipID),
+		RelationshipId: openapi_types.UUID(linked.edge.ID),
 	})
 }
 

@@ -40022,9 +40022,11 @@ components:
           type: [string, 'null']
           format: uuid
           description: An existing company this contact works at now. Not with `company_name`. Refused from an agent.
+          x-agent-withheld: true
         company_name:
           type: [string, 'null']
           description: A new company to create as this contact's employer. Not with `company_id`; blank means no employer. Refused from an agent.
+          x-agent-withheld: true
       additionalProperties: true
       x-extension: true
 

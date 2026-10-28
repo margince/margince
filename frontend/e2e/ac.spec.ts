@@ -1365,7 +1365,7 @@ test("AC-create-3: a company created with a domain offers the contacts on it, no
   });
   const ticks = dialog.getByRole("checkbox");
   await expect(ticks).toHaveCount(2);
-  for (const tick of await ticks.all()) await expect(tick).not.toBeChecked();
+  await expect(dialog.getByRole("checkbox", { checked: true })).toHaveCount(0);
   await expect(
     dialog.getByRole("button", { name: de["co.domainContacts.linkNone"] }),
   ).toBeDisabled();

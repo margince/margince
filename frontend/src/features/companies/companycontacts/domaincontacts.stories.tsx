@@ -22,9 +22,6 @@ import {
   longDomainCandidates,
 } from "./domaincontacts.fixtures";
 
-// The contacts on a company's domain that are not linked to it: offered once
-// over a company just created, and on its Contacts tab until they are.
-
 type CandidateList = components["schemas"]["CompanyLinkCandidateList"];
 type Story = StoryObj;
 

@@ -13,7 +13,7 @@ import { QuickCaptureAction } from "./quickcapture";
 // Quick capture with the Company box New contact shares.
 
 const meta: Meta = {
-  title: "Records/Contacts/Quick capture",
+  title: "Records/Contact create/Quick capture",
   render: () => {
     installFetchStub({ "GET /me": meRoute({ contact: ["read", "create"] }) });
     return (

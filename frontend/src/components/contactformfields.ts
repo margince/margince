@@ -263,11 +263,8 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
   ];
 }
 
-// Creation and Details share the same address types and primary semantics.
-// The pane edits the name the record is KNOWN by, and only that: the split
-// parts are taken at creation for the greeting a mail merge needs, and a pane
-// that listed all three drew the same name three times in a column a reader
-// scans for what differs. The employer is an edge, edited on the Company card.
+// The split name parts are taken once, for a mail merge's greeting. The
+// employer is an edge, edited on the Company card.
 const CREATE_ONLY = new Set([
   "first_name",
   "last_name",

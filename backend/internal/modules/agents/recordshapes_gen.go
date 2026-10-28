@@ -44,7 +44,7 @@ var createParentFields = map[string][]string{
 }
 
 // createWithheldFields are body fields create_record refuses although the
-// REST route takes them.
+// REST route takes them: the contract marks each `x-agent-withheld`.
 var createWithheldFields = map[string][]string{
 	"contact": {"company_id", "company_name"},
 }

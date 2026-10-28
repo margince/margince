@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
@@ -12,7 +12,7 @@ import { stable } from "../../format/collate";
 import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { AddEmploymentModal } from "./addemploymentmodal";
+import { useAddEmployment } from "./addemploymentmodal";
 import { BoughtMark, boughtFields } from "./boughtmarks";
 import { EmploymentRow } from "./contactemploymentrow";
 import {
@@ -23,7 +23,6 @@ import {
 } from "./contactrail";
 import {
   EmployerProposal,
-  type ProfileField,
   proposedEmployer,
   useEmployerProposal,
 } from "./employerproposal";
@@ -57,7 +56,7 @@ export async function searchCompanyCandidates(
 
 // Refresh the record, paginated roles and brief together after any employment
 // edit so the saved value and employer summary agree.
-function useEmploymentActions(contactId: string) {
+export function useEmploymentActions(contactId: string) {
   const t = useT();
   const queryClient = useQueryClient();
   const invalidate = async () => {
@@ -107,15 +106,11 @@ function useEmploymentActions(contactId: string) {
 
 export type EmploymentActions = ReturnType<typeof useEmploymentActions>;
 
-// What the add dialog opens on. `seq` remounts it per open, so a seed is read
-// afresh; `fact` is the proposal a link from it answers.
-type AddingEmployment = Readonly<{
-  open: boolean;
-  seq: number;
-  term?: string;
-  company?: RecordPickerCandidate;
-  fact?: ProfileField;
-}>;
+// A reader who cannot edit the contact's own fields cannot edit where they work.
+export function useCanEditEmployment(contact: Contact360["contact"]): boolean {
+  const readOnlyReason = useContactReadOnlyReason(contact);
+  return useCanWriteRecord("contact", contact) && !readOnlyReason;
+}
 
 // A contact can hold more than one employment edge at once, so this is a
 // list rather than the single Details row it used to be. The current
@@ -127,10 +122,7 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
   const t = useT();
   const contact = view.contact;
   const readOnlyReason = useContactReadOnlyReason(contact);
-  // The same decision and the same read-only reasons DetailsGrid gates its own
-  // edit affordances on — a reader who cannot edit the contact's own fields
-  // cannot edit which company they work at either.
-  const canEdit = useCanWriteRecord("contact", contact) && !readOnlyReason;
+  const canEdit = useCanEditEmployment(contact);
   const actions = useEmploymentActions(contact.id);
   const bought = boughtFields(contact);
   const more = useEmploymentPages(view);
@@ -142,12 +134,6 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
       ].map((role) => [role.relationship_id, role]),
     ).values(),
   ];
-  const [adding, setAdding] = useState<AddingEmployment>({
-    open: false,
-    seq: 0,
-  });
-  const openAdding = (seed: Omit<AddingEmployment, "open" | "seq"> = {}) =>
-    setAdding((prior) => ({ ...seed, open: true, seq: prior.seq + 1 }));
   const proposal = useEmployerProposal(contact.id, actions.invalidate);
   // The row being edited, kept after the dialog closes so it still has an
   // employment to draw while it animates out. `editingOpen` is what is open,
@@ -179,51 +165,34 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
       stable(a.company_id, b.company_id) ||
       stable(b.started_at ?? "", a.started_at ?? ""),
   );
-  // Every company this contact already has a live edge to — the 360 projection
-  // drops an edge the moment it is removed, so this list IS the live set,
-  // nothing further to filter. AddEmploymentModal excludes these from its
-  // own picker so a rep cannot draw a second edge to a company already on
-  // this list.
-  //
-  // Memoized on a primitive key rather than on `employments` itself: the
-  // array here is rebuilt fresh every render (the sort above always returns
-  // a new one), and AddEmploymentModal's own searchTargets treats a new
-  // identity as a new search space and clears the picker's candidates —
-  // so the set only gets a new identity when the set of ids it names
-  // actually changes.
-  // `stable` rather than the reader's collation, because this string is only
-  // ever compared against a previous rendering of itself: whose locale produced
-  // it must not be part of the answer.
-  const connectedCompanyKey = employments
-    .map((employment) => employment.company_id)
-    .sort(stable)
-    .join(",");
-  const connectedCompanyIds = useMemo(
-    () => (connectedCompanyKey === "" ? [] : connectedCompanyKey.split(",")),
-    [connectedCompanyKey],
-  );
+  const adding = useAddEmployment(contact.id, actions.create, employments);
   const proposed = proposedEmployer(view, employments);
-  const linkedFact = adding.fact;
   return (
     <Panel
       title={t("contact.rail.employmentTitle")}
       titleAction={
         canEdit ? (
-          <Button variant="ghost" onClick={() => openAdding()}>
+          <Button variant="ghost" onClick={() => adding.open()}>
             {t("contact.rail.addEmployment")}
           </Button>
         ) : undefined
       }
     >
       {proposed && (
-        <EmployerProposal
-          fact={proposed}
-          verbs={proposal}
-          canEdit={canEdit}
-          onLink={(company) =>
-            openAdding({ term: proposed.value, company, fact: proposed })
-          }
-        />
+        <PanelBody>
+          <EmployerProposal
+            fact={proposed}
+            verbs={proposal}
+            canEdit={canEdit}
+            onLink={(company) =>
+              adding.open({
+                term: proposed.value,
+                company,
+                onLinked: () => proposal.confirm(proposed),
+              })
+            }
+          />
+        </PanelBody>
       )}
       <PanelBody>
         <ErrorLine error={proposal.verdict.error} />
@@ -314,18 +283,7 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
             onSaved={actions.invalidate}
           />
         )}
-        <AddEmploymentModal
-          key={adding.seq}
-          open={adding.open}
-          onClose={() => setAdding((prior) => ({ ...prior, open: false }))}
-          initialTerm={adding.company ? undefined : adding.term}
-          initialCompany={adding.company}
-          onLinked={linkedFact ? () => proposal.confirm(linkedFact) : undefined}
-          contactId={contact.id}
-          create={actions.create}
-          excludedCompanyIds={connectedCompanyIds}
-          hasCurrentEmployment={employments.some(stillHeld)}
-        />
+        {adding.modal}
         {/* Remove is the irreversible verb — the connection and its history are
           gone, not merely dated — so it is the one that sits behind a
           confirm, unlike "mark as ended" which is an ordinary field edit. */}

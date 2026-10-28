@@ -30,7 +30,7 @@ type EmployerChoice struct {
 type EmployerAttached struct {
 	CompanyID      ids.CompanyID
 	CompanyCreated bool
-	RelationshipID ids.UUID
+	edge           relationshipRow
 }
 
 // named reports whether the choice names an employer at all. A blank name is a
@@ -49,8 +49,8 @@ func employerChoiceFromRequest(companyID *ids.CompanyID, companyName *string, so
 	return EmployerChoice{CompanyID: companyID, CompanyName: companyName, Source: source}, nil
 }
 
-// refuseAgentEmployer keeps a company out of an agent's contact create, where
-// it would land beside a contact a human approved without seeing it.
+// refuseAgentEmployer refuses an agent the fields CreateContactRequest marks `x-agent-withheld`.
+// They would land a company beside a contact a human approved without seeing it.
 func refuseAgentEmployer(ctx context.Context, choice EmployerChoice) error {
 	if !choice.named() {
 		return nil
@@ -68,9 +68,8 @@ func refuseAgentEmployer(ctx context.Context, choice EmployerChoice) error {
 	}
 }
 
-// attachEmployerTx is the one writer of "this contact works there now". It
-// creates the company from the name when no id was given, then writes the edge
-// through CreateRelationshipTx, whose gates it keeps. An id wins over a name.
+// attachEmployerTx writes a contact's employment edge through CreateRelationshipTx,
+// whose gates it keeps. It creates the company when no id was given; an id wins over a name.
 func (s *Store) attachEmployerTx(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, choice EmployerChoice,
 ) (EmployerAttached, error) {
@@ -100,6 +99,6 @@ func (s *Store) attachEmployerTx(
 	if err != nil {
 		return out, err
 	}
-	out.RelationshipID = edge.ID
+	out.edge = edge
 	return out, nil
 }

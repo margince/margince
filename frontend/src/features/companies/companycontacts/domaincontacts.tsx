@@ -22,7 +22,8 @@ import { Callout } from "../../../design-system/callout";
 import { ErrorLine } from "../../../design-system/errorline";
 import { Heading } from "../../../design-system/heading";
 import { useToast } from "../../../design-system/toast";
-import { usePlural, useT } from "../../../i18n";
+import { formatNumber } from "../../../format/format";
+import { useLocale, usePlural, useT } from "../../../i18n";
 import { useCanWrite, useGrantRefused } from "../../../lib/capability";
 import {
   problemFieldErrorsOf,
@@ -106,6 +107,7 @@ export function DomainContactsDialog({
 }: Readonly<{ companyId: string; open: boolean; onClose: () => void }>) {
   const t = useT();
   const plural = usePlural();
+  const { locale } = useLocale();
   const toast = useToast();
   const queryClient = useQueryClient();
   const headingId = useId();
@@ -134,7 +136,7 @@ export function DomainContactsDialog({
       renew();
       toast.show(
         plural("co.domainContacts.linked", contactIds.length, {
-          count: String(contactIds.length),
+          count: formatNumber(contactIds.length, locale),
         }),
       );
       setTicked(new Set());
@@ -210,7 +212,7 @@ export function DomainContactsDialog({
           {chosen.length === 0
             ? t("co.domainContacts.linkNone")
             : plural("co.domainContacts.link", chosen.length, {
-                count: String(chosen.length),
+                count: formatNumber(chosen.length, locale),
               })}
         </Button>
       </div>
@@ -231,6 +233,7 @@ function CandidateRows({
 }>) {
   const t = useT();
   const plural = usePlural();
+  const { locale } = useLocale();
   if (query.isError) {
     return <ErrorLine error={query.error} />;
   }
@@ -277,7 +280,7 @@ function CandidateRows({
         <Callout
           kind="standing"
           title={plural("co.domainContacts.truncated", rows.length, {
-            count: String(rows.length),
+            count: formatNumber(rows.length, locale),
           })}
         />
       )}
@@ -291,6 +294,7 @@ export function DomainContactsCallout({
 }: Readonly<{ companyId: string }>) {
   const t = useT();
   const plural = usePlural();
+  const { locale } = useLocale();
   const refused = useLinkRefused();
   const [open, setOpen] = useState(false);
   const candidates = useLinkCandidates(companyId, true);
@@ -299,7 +303,7 @@ export function DomainContactsCallout({
   if (candidates.isError && problemStatus(candidates.error) !== 403) {
     notice = <ErrorLine error={candidates.error} standing />;
   } else if (list && list.data.length > 0) {
-    const count = String(list.data.length);
+    const count = formatNumber(list.data.length, locale);
     notice = (
       <Callout
         kind="standing"
