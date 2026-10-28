@@ -11,7 +11,8 @@ package activities
 import (
 	"strings"
 	"testing"
-	"time"
+
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 // gateCopies counts the content gates in a rendered filter by the request
@@ -38,7 +39,7 @@ func renderedFilter(t *testing.T, in ListActivitiesInput) []string {
 // Under a content gate the reminders arm is already gated: the outer filter
 // holds every row to it, reminders included.
 func TestTheRemindersArmOfAContentGatedReadAddsNoSecondGate(t *testing.T) {
-	until := time.Now()
+	until := clocktest.Now(t)
 	in := ListActivitiesInput{OpenAndDueBy: &until, IncludeEmailRequests: true, WorklistAsOf: &until, ReadableOnly: true}
 	without := renderedFilter(t, in)
 	in.OrRemindersDue = true
@@ -54,7 +55,7 @@ func TestTheRemindersArmOfAContentGatedReadAddsNoSecondGate(t *testing.T) {
 // Under a discover gate the arm still owes the audience. The content gate is
 // discover and audience, so the arm adds the audience half alone.
 func TestTheRemindersArmOfADiscoverGatedReadAddsTheAudienceAlone(t *testing.T) {
-	until := time.Now()
+	until := clocktest.Now(t)
 	in := ListActivitiesInput{OpenAndDueBy: &until, WorklistAsOf: &until}
 	without := renderedFilter(t, in)
 	in.OrRemindersDue = true
