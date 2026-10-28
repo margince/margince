@@ -103,7 +103,7 @@ export const MAGIC_BY_KEYS = [
   "magic.by.agent",
   "magic.by.system",
   "magic.by.data_correction",
-  "magic.by.person",
+  "magic.by.member",
   "magic.by.colleague",
 ] as const satisfies readonly MessageKey[];
 

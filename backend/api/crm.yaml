@@ -65857,7 +65857,7 @@ components:
         Who did the act, and on whose behalf.
 
         `label` is the name a reader reads, from the same owner that names the actor on
-        `/magic`: a background job by what it is, a person by their name. A colleague whose
+        `/magic`: a background job by what it is, a member by their name. A colleague whose
         seat the reader cannot name reads `magic.by.colleague`, never an id.
       required: [type, id, label]
       properties:
@@ -65930,7 +65930,7 @@ components:
         actor:
           allOf: [{ $ref: '#/components/schemas/ReceiptActor' }]
           description: >-
-            Who did it: the person or agent that proposed an applied decision, or the job
+            Who did it: the member or agent that proposed an applied decision, or the job
             that made a correction. Absent on older responses.
         source_record:
           allOf: [{ $ref: '#/components/schemas/AttentionSubject' }]

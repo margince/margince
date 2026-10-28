@@ -28,7 +28,7 @@ type attentionReceiptDetails struct {
 var _ attention.ReceiptDetails = attentionReceiptDetails{}
 
 func (d attentionReceiptDetails) Describe(ctx context.Context, receipts []attention.Receipt) ([]attention.ReceiptDetail, error) {
-	people, err := d.peopleNamed(ctx, receipts)
+	members, err := d.membersNamed(ctx, receipts)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (d attentionReceiptDetails) Describe(ctx context.Context, receipts []attent
 	}
 	out := make([]attention.ReceiptDetail, len(receipts))
 	for i, receipt := range receipts {
-		out[i].Actor = labelledActor(receipt.Actor, people)
+		out[i].Actor = labelledActor(receipt.Actor, members)
 		if moved, read := changes[receipt.ID]; read {
 			out[i].Changes = &moved
 		}
@@ -54,12 +54,12 @@ func (d attentionReceiptDetails) Describe(ctx context.Context, receipts []attent
 	return out, nil
 }
 
-// peopleNamed reads the name of every person who acted on the page, in one
+// membersNamed reads the name of every member who acted on the page, in one
 // read under the reader's own grants.
-func (d attentionReceiptDetails) peopleNamed(ctx context.Context, receipts []attention.Receipt) (map[ids.UUID]string, error) {
+func (d attentionReceiptDetails) membersNamed(ctx context.Context, receipts []attention.Receipt) (map[ids.UUID]string, error) {
 	var seats []ids.UUID
 	for _, receipt := range receipts {
-		if seat, ok := personOf(receipt.Actor); ok {
+		if seat, ok := memberOf(receipt.Actor); ok {
 			seats = append(seats, seat)
 		}
 	}
@@ -69,15 +69,15 @@ func (d attentionReceiptDetails) peopleNamed(ctx context.Context, receipts []att
 	return d.names.Labels(ctx, entityUser, seats)
 }
 
-func labelledActor(actor attention.ReceiptActor, people map[ids.UUID]string) *crmcontracts.ReceiptActor {
+func labelledActor(actor attention.ReceiptActor, members map[ids.UUID]string) *crmcontracts.ReceiptActor {
 	if actor.Type == "" {
 		return nil
 	}
-	seat, _ := personOf(actor)
+	seat, _ := memberOf(actor)
 	out := &crmcontracts.ReceiptActor{
 		Type:  crmcontracts.ReceiptActorType(actor.Type),
 		Id:    actor.ID,
-		Label: magic.ActorLabel(actor.Type, actor.ID, people[seat]),
+		Label: magic.ActorLabel(actor.Type, actor.ID, members[seat]),
 	}
 	if actor.OnBehalfOf != nil {
 		on := openapi_types.UUID(*actor.OnBehalfOf)
@@ -86,8 +86,8 @@ func labelledActor(actor attention.ReceiptActor, people map[ids.UUID]string) *cr
 	return out
 }
 
-// personOf is the seat behind a human actor id ("human:<uuid>").
-func personOf(actor attention.ReceiptActor) (ids.UUID, bool) {
+// memberOf is the seat behind a human actor id ("human:<uuid>").
+func memberOf(actor attention.ReceiptActor) (ids.UUID, bool) {
 	if actor.Type != string(principal.PrincipalHuman) {
 		return ids.Nil, false
 	}

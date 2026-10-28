@@ -209,7 +209,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "ob.s4.provMicrosoft",
   "magic.by.system",
   // Only the name of whoever acted.
-  "magic.by.person",
+  "magic.by.member",
   // A number and a plus sign, written alike in every locale.
   "lead.signal.employees.201+",
   // The same proper noun as connectors.provGmail and its neighbours, one

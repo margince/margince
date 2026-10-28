@@ -34,7 +34,7 @@ describe("a receipt opened", () => {
             type: "human",
             id: "human:01a05500-0000-7000-8000-00000000b001",
             label: {
-              key: "magic.by.person",
+              key: "magic.by.member",
               values: { name: "Kirsten Vogel" },
             },
           },

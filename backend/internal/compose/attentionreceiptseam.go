@@ -241,7 +241,7 @@ func correctionDate(value *string) string {
 	return *value
 }
 
-// proposerOf is who staged a decision the system then applied: the person or
+// proposerOf is who staged a decision the system then applied: the member or
 // agent whose work the receipt reports. An id outside the principal
 // vocabulary names nobody, so the receipt says nothing about who.
 func proposerOf(row crmcontracts.Approval) attention.ReceiptActor {

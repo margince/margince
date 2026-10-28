@@ -29,21 +29,21 @@ import (
 )
 
 const (
-	byPerson    = "magic.by.person"
+	byMember    = "magic.by.member"
 	byColleague = "magic.by.colleague"
 )
 
 // ActorLabel names who acted. This page reports only the machinery, so only a
-// surface that also reports people's acts names a person. A seat the reader
+// surface that also reports members' acts names a member. A seat the reader
 // cannot name is a colleague, never an id.
-func ActorLabel(actorType, actorID, personName string) crmcontracts.MagicSentence {
+func ActorLabel(actorType, actorID, memberName string) crmcontracts.MagicSentence {
 	if actorType != string(principal.PrincipalHuman) {
 		return actorLabel(entry{ActorType: actorType, ActorID: actorID})
 	}
-	if personName == "" {
+	if memberName == "" {
 		return crmcontracts.MagicSentence{Key: byColleague}
 	}
-	return crmcontracts.MagicSentence{Key: byPerson, Values: &map[string]string{"name": personName}}
+	return crmcontracts.MagicSentence{Key: byMember, Values: &map[string]string{"name": memberName}}
 }
 
 // ReceiptRecord is one receipt and the record its act wrote to.

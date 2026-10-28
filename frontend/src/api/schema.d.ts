@@ -48958,7 +48958,7 @@ export interface components {
          * @description Who did the act, and on whose behalf.
          *
          *     `label` is the name a reader reads, from the same owner that names the actor on
-         *     `/magic`: a background job by what it is, a person by their name. A colleague whose
+         *     `/magic`: a background job by what it is, a member by their name. A colleague whose
          *     seat the reader cannot name reads `magic.by.colleague`, never an id.
          */
         ReceiptActor: {
@@ -49027,7 +49027,7 @@ export interface components {
             occurred_at: string;
             subject?: components["schemas"]["AttentionSubject"];
             review?: components["schemas"]["AppliedDealChangeReview"];
-            /** @description Who did it: the person or agent that proposed an applied decision, or the job that made a correction. Absent on older responses. */
+            /** @description Who did it: the member or agent that proposed an applied decision, or the job that made a correction. Absent on older responses. */
             actor?: components["schemas"]["ReceiptActor"];
             /** @description The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message. */
             source_record?: components["schemas"]["AttentionSubject"];

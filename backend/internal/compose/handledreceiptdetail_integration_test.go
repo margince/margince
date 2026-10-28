@@ -86,7 +86,7 @@ func changeOf(receipt crmcontracts.Receipt, field string) (crmcontracts.MagicFie
 }
 
 // The sweep's correction and two cards that applied on their own, one staged by
-// a person and one by an agent. Each receipt names who did it and what moved.
+// a member and one by an agent. Each receipt names who did it and what moved.
 func TestAReceiptNamesWhoDidItAndWhatItMoved(t *testing.T) {
 	e := setupCloseDate(t)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
@@ -132,9 +132,9 @@ func TestAReceiptNamesWhoDidItAndWhatItMoved(t *testing.T) {
 	decided := receiptByID(t, handled, card.UUID)
 	name := e.WsScalar(t, `SELECT display_name FROM app_user WHERE id = $1`, e.Rep1)
 	if decided.Actor == nil || decided.Actor.Type != crmcontracts.ReceiptActorTypeReceiptActorHuman ||
-		decided.Actor.Label.Key != "magic.by.person" || decided.Actor.Label.Values == nil ||
+		decided.Actor.Label.Key != "magic.by.member" || decided.Actor.Label.Values == nil ||
 		(*decided.Actor.Label.Values)["name"] != name {
-		t.Errorf("the card a person staged names %+v, want %q", decided.Actor, name)
+		t.Errorf("the card a member staged names %+v, want %q", decided.Actor, name)
 	}
 	if change, ok := changeOf(decided, "expected_close_date"); !ok || change.After != moved.Format(time.DateOnly) {
 		t.Errorf("the applied card's close date reads %+v (found=%t), want it moved to %s", change, ok, moved.Format(time.DateOnly))

@@ -48371,7 +48371,7 @@ type RbacObjectGrant struct {
 // about one, and an empty subject is a real state rather than a missing field — a
 // client draws the summary alone rather than inventing something to open.
 type Receipt struct {
-	// Actor Who did it: the person or agent that proposed an applied decision, or the job that made a correction. Absent on older responses.
+	// Actor Who did it: the member or agent that proposed an applied decision, or the job that made a correction. Absent on older responses.
 	Actor *ReceiptActor `json:"actor,omitempty"`
 
 	// Changes Every field the act moved, old value to new, read from the audit rows it wrote and masked to what the reader may see on the record. Values travel whole, never cut short. Absent when no audit row of the act can be read, which is not the same as an act that moved nothing (an empty list).
@@ -48409,7 +48409,7 @@ type Receipt struct {
 // ReceiptActor Who did the act, and on whose behalf.
 //
 // `label` is the name a reader reads, from the same owner that names the actor on
-// `/magic`: a background job by what it is, a person by their name. A colleague whose
+// `/magic`: a background job by what it is, a member by their name. A colleague whose
 // seat the reader cannot name reads `magic.by.colleague`, never an id.
 type ReceiptActor struct {
 	// Id The actor as the audit trail records it. For the record, not for display.
