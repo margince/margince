@@ -17,19 +17,14 @@ import { usePopoverDismiss } from "./popover";
 import type { ShellCounts } from "./shell";
 import { useSquareMark } from "./squaremark";
 
-// The head is one lockup at every width: a square mark, the name beside it, and
-// the line saying what it runs on under the name. A square is the one shape
-// every company's mark fits at one weight; a full-width wordmark out-shouted
-// the destinations below it, and a square icon beside it looked lost.
-//
-// Only the name is the link. The mark is the name drawn again, so it is hidden
-// from assistive tech, and the attribution stays outside the link because a
-// fact about the build is not somewhere a press should lead. shell.css
-// stretches the link over the whole head so the card still reads as one target.
+// One lockup at every width: a square mark, the name, and what it runs on.
+// A square is the one shape every company's mark fits at one weight.
+// Only the name is the link, and the mark repeats it, so the mark is hidden
+// from assistive tech. shell.css stretches the link over the whole card.
 function BrandBlock() {
   const t = useT();
-  /* The stage this product is at, on the head's second line, on every branch
-   * below: it is a fact about the build, not about the company above it.
+  /* The stage this product is at, on every branch below. It is a fact about
+   * the build, not about the company above it.
    * Temporary: betabadge.tsx lists what its deletion takes. */
   const marker = <BetaBadge />;
   // The installation's own name and marks (ADR-0061: one installation, one

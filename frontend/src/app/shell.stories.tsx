@@ -202,9 +202,9 @@ export const SettingsHeadWithActionPhone: Story = {
   render: () => <SettingsHeadWithVerb />,
 };
 
-/** A company with only a wide wordmark wears its monogram in the head: the
- * head holds a square, and a wordmark contained into one renders as a smear
- * rather than as a missing image, which is the failure this state catches. */
+/** A company with only a wide wordmark wears its monogram in the head. A
+ * wordmark contained into the head's square renders as a smear, not as a
+ * missing image, and that smear is the failure this state catches. */
 export const CompanyWordmark: Story = {
   render: () => {
     stubSession();

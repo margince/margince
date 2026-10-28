@@ -21,8 +21,8 @@ afterEach(() => {
 });
 
 describe("The rail's brand block", () => {
-  // Whose product this is, above whose product it runs on: the company is the
-  // heading, and the product is the line beneath it, outside the link.
+  // The company is the heading. The product it runs on is the line beneath
+  // it, outside the link.
   it("heads the rail with the company's square mark and puts the product under it", () => {
     const client = newClient();
     client.setQueryData(["me"], repSeeing(TWO_MARKS));
@@ -34,8 +34,8 @@ describe("The rail's brand block", () => {
     expect(document.querySelector(".ws-chip img")?.getAttribute("src")).toBe(
       TWO_MARKS.logo_icon_url,
     );
-    // Beside the link rather than inside it: the attribution and the build badge
-    // are one line of the head, and neither is somewhere a press should lead.
+    // The attribution and the build badge stand beside the link. Neither is
+    // somewhere a press should lead.
     const attribution = document.querySelector(".ws-company");
     expect(attribution?.textContent).toContain("Powered by Margince");
     expect(within(brand).queryByText("Powered by Margince")).toBeNull();
@@ -93,9 +93,8 @@ describe("The rail's brand block", () => {
     );
   });
 
-  // A company whose site declared no icon has a face rather than a gap: the
-  // monogram is the floor under the mark, so an absent icon is a rendering
-  // decision and never an empty slot.
+  // A company whose site declared no icon has a face rather than a gap. The
+  // monogram is the floor under the mark, so the slot is never empty.
   it("draws the company's monogram when no logo resolved", () => {
     const client = newClient();
     client.setQueryData(
@@ -154,9 +153,8 @@ describe("The rail's brand block", () => {
     );
   });
 
-  // The site read stores a square lockup in the wide slot alone, so the head
-  // measures what the wide slot holds: a square there is the company's mark,
-  // and a wordmark squeezed into the square would be illegible strokes.
+  // The site read stores a square lockup in the wide slot alone. A square
+  // there is the company's mark; a wordmark squeezed into one is illegible.
   it.each([
     ["a square lockup", 200, 200, TWO_MARKS.logo_url],
     ["a wordmark", 700, 200, undefined],

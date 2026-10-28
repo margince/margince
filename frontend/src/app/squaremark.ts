@@ -3,9 +3,8 @@
 
 import { useEffect, useState } from "react";
 
-// A mark this close to square fills a square chip without becoming a smear;
-// anything wider is a wordmark, and a wordmark contained into the chip is a
-// row of lines nobody can read.
+// A mark this close to square fills a square chip without becoming a smear.
+// Anything wider is a wordmark, which no one can read at that size.
 const SQUARE_RATIO = 1.25;
 
 export function isSquareMark(width: number, height: number): boolean {
@@ -14,11 +13,9 @@ export function isSquareMark(width: number, height: number): boolean {
 }
 
 /**
- * The installation's square mark: the icon slot when it holds one, otherwise
- * the wide slot once its image proves square. The site read stores a square
- * lockup in the wide slot alone and leaves the icon slot empty, so reading the
- * icon slot only would show those companies a monogram for a logo they have.
- * Null until then, which leaves the monogram in the chip.
+ * The installation's square mark: the icon slot, else the wide slot once its
+ * image proves square. The site read stores a square lockup in the wide slot
+ * alone. Null until a mark is known, which leaves the monogram in the chip.
  */
 export function useSquareMark(
   icon: string | null | undefined,
