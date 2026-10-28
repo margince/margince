@@ -154,8 +154,8 @@ export function RecordTabs<Option extends string>({
   );
 }
 
-// A scrolled-off end fades, so a tab cut at the edge reads as one of more
-// rather than as the last; the strip's scrollbar is hidden.
+// The strip hides its scrollbar, so an end that hides tabs fades instead. A tab
+// cut at that edge then reads as one of more, not as the last.
 function stripClass(edges: ClippedEdges) {
   return [
     "recordtabs-strip",

@@ -130,9 +130,9 @@ export const WithTrailingControl: Story = {
   ),
 };
 
-// Analytics' own tabs at 390px: more than the phone holds. The strip scrolls
-// rather than wraps, so its far end fades over the cut tab to say more follow,
-// and the start, with nothing scrolled past it yet, does not.
+// Analytics' own tabs at 390px: more than the phone holds. The far end fades
+// over the cut tab to say more follow. The start has nothing scrolled past it
+// yet, so it does not fade.
 export const ScrollsAtPhoneWidth: Story = {
   tags: ["uat-phone"],
   parameters: { layout: "fullscreen" },
