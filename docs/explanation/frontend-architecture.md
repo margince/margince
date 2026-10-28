@@ -385,8 +385,7 @@ even if the test tree breaks.
 
 `craft static`, in `make check` and in CI, reads only the comment lines a
 change adds to a `frontend/` file. The frontend lane is separate from the Go
-merge gate and needs Node and pnpm. Run `make check-fe` (or
-`make frontend-check`) before pushing a frontend change.
+merge gate and needs Node and pnpm.
 
 ## Where to look first
 
