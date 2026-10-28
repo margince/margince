@@ -13,11 +13,11 @@
 // disappearing. A row that vanished on success would leave the reader unsure
 // whether their press landed or the list simply moved.
 
-import { Button } from "../../design-system/atoms";
-import { useT } from "../../i18n";
-import { useCanWrite } from "../../lib/capability";
-import { useReceiptUndo } from "../../lib/receiptundo";
-import type { Receipt } from "./worklist.queries";
+import { Button } from "../design-system/atoms";
+import { useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import type { Receipt } from "../lib/handled";
+import { useReceiptUndo } from "../lib/receiptundo";
 
 export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
   const t = useT();

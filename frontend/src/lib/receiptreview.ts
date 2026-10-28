@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { components } from "../api/schema";
-
-type Receipt = components["schemas"]["Receipt"];
+import type { Receipt } from "./handled";
 
 export function isReviewableReceipt(receipt: Receipt): boolean {
   return receipt.review

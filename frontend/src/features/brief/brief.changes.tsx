@@ -3,6 +3,7 @@
 
 import { useId } from "react";
 import { EntityRef } from "../../components/entityref";
+import { ReceiptReview } from "../../components/receiptreview";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
@@ -14,12 +15,11 @@ import {
 } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
+import { useHandledForYou } from "../../lib/handled";
 import { isReviewableReceipt } from "../../lib/receiptreview";
 import { useRecordZone } from "../../lib/recordzone";
 import { listReadState } from "../../lib/worklist.listread";
-import { useHandledForYou } from "../worklist/worklist.queries";
 import { receiptBasis, receiptSummary } from "../worklist/worklist.receiptcopy";
-import { ReceiptReview } from "../worklist/worklist.receiptreview";
 
 // The changes made for the reader that they can still accept or take back, in
 // Home's rail. Drawn only when there is one: a heading over "none" would be a
