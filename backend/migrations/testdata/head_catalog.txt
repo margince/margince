@@ -5831,6 +5831,15 @@ public.meeting_proposal.token_hash text NOT NULL gen=- def=-
 public.meeting_proposal.used_at timestamp with time zone gen=- def=-
 public.meeting_proposal_pkey CREATE UNIQUE INDEX meeting_proposal_pkey ON public.meeting_proposal USING btree (activity_id)
 public.meeting_proposal_token_hash_key CREATE UNIQUE INDEX meeting_proposal_token_hash_key ON public.meeting_proposal USING btree (token_hash)
+public.member_identity_family(member uuid) secdef=false cfg=- acl=- 
+  WITH RECURSIVE member_identities(id) AS (
+    SELECT member
+    UNION
+    SELECT retired.id FROM app_user retired JOIN member_identities survivor
+      ON retired.merged_into_user_id = survivor.id
+     WHERE retired.removed_at IS NOT NULL)
+  SELECT array_agg(id) FROM member_identities
+
 public.mfa_challenge_spent acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.mfa_challenge_spent.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.mfa_challenge_spent.jti text NOT NULL gen=- def=-
