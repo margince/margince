@@ -346,7 +346,7 @@ func TestAHandledReceiptNamesItsRecord(t *testing.T) {
 		  WHERE id = $1`, id)
 
 	feed := newAttentionService(e.Pool, svc, func() time.Time { return now })
-	handled, err := feed.HandledForYou(e.Admin())
+	handled, err := feed.HandledForYou(e.Admin(), nil)
 	if err != nil {
 		t.Fatalf("reading the handled receipts: %v", err)
 	}

@@ -27,6 +27,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // handledWindow is how far back a receipt is worth reporting when no window
@@ -43,15 +44,49 @@ func (s *Service) WithHandledWindow(w HandledWindow) *Service {
 	return s
 }
 
+// ReceiptActor is who did an act and on whose authority.
+type ReceiptActor struct {
+	Type       string
+	ID         string
+	OnBehalfOf *ids.UUID
+}
+
+// ReceiptDetails describes a page of receipts past their summary: who acted,
+// named for a reader, and what the act moved. Optional: unbound, receipts
+// carry neither, which is the contract an older server had.
+type ReceiptDetails interface {
+	Describe(ctx context.Context, receipts []Receipt) ([]ReceiptDetail, error)
+}
+
+// ReceiptDetail is one receipt's description, in the order it was asked for.
+type ReceiptDetail struct {
+	Actor *crmcontracts.ReceiptActor
+	// Changes is nil when none of the act's audit rows could be read, which
+	// is not an act that moved nothing.
+	Changes *[]crmcontracts.MagicFieldChange
+}
+
 // handledCap bounds one page of receipts.
 //
 // A reader checking what was done needs to be able to finish reading. The list
-// says when it stopped short rather than presenting the bound as the whole.
+// says when it stopped short rather than presenting the bound as the whole, and
+// hands back where the next page starts.
 const handledCap = 50
 
-// HandledForYou is what was done, newest first.
-func (s *Service) HandledForYou(ctx context.Context) (crmcontracts.HandledForYou, error) {
+// WithReceiptDetails binds who acted and what each act moved. Unbound, a
+// receipt carries its summary alone.
+func (s *Service) WithReceiptDetails(d ReceiptDetails) *Service {
+	s.receiptDetails = d
+	return s
+}
+
+// HandledForYou is what was done, newest first, from the page `cursor` names.
+func (s *Service) HandledForYou(ctx context.Context, cursor *string) (crmcontracts.HandledForYou, error) {
 	if err := auth.RequireHuman(ctx); err != nil {
+		return crmcontracts.HandledForYou{}, err
+	}
+	position, err := decodeHandledCursor(cursor)
+	if err != nil {
 		return crmcontracts.HandledForYou{}, err
 	}
 	if s.receipts == nil {
@@ -65,42 +100,97 @@ func (s *Service) HandledForYou(ctx context.Context) (crmcontracts.HandledForYou
 		}, nil
 	}
 	asOf := s.now()
-	since := asOf.Add(-handledWindow)
-	if s.handledWindow != nil {
-		resolved, err := s.handledWindow(ctx, asOf)
-		if err != nil {
+	if position.Since.IsZero() {
+		if position.Since, err = s.handledSince(ctx, asOf); err != nil {
 			return crmcontracts.HandledForYou{}, err
 		}
-		since = resolved
 	}
-	// One MORE than the page carries, so the bound can be reported as reached
-	// rather than inferred from a full page — a page that happened to hold
-	// exactly the cap would otherwise claim there was more when there was not.
-	recent, err := s.receipts.Recent(ctx, since, handledCap+1)
+	since := position.Since
+	recent, err := s.recentPinned(ctx, since, position)
 	if err != nil {
 		return crmcontracts.HandledForYou{}, err
 	}
 	out := crmcontracts.HandledForYou{
 		AsOf:      asOf,
 		Since:     &since,
-		Receipts:  make([]crmcontracts.Receipt, 0, len(recent)),
-		Truncated: len(recent) > handledCap,
+		Receipts:  make([]crmcontracts.Receipt, 0, handledCap),
+		Truncated: len(recent) > position.Offset+handledCap,
 	}
-	if out.Truncated {
-		recent = recent[:handledCap]
+	page := recent[min(position.Offset, len(recent)):min(position.Offset+handledCap, len(recent))]
+	if out.Truncated && position.Offset+len(page) <= maxHandledOffset {
+		next, err := position.after(len(page), recent)
+		if err != nil {
+			return crmcontracts.HandledForYou{}, err
+		}
+		out.NextCursor = &next
 	}
-	subjects := make([]*crmcontracts.AttentionSubject, 0, len(recent))
-	for _, receipt := range recent {
+	if err := s.drawReceipts(ctx, page, &out); err != nil {
+		return crmcontracts.HandledForYou{}, err
+	}
+	return out, nil
+}
+
+// recentPinned reads one more than the page carries, so a reached bound is
+// reported, not inferred from a full page. A receipt newer than the pin takes a
+// read slot and is dropped. So a full read that lost rows is read again wider,
+// until it holds that one more or the window ends.
+func (s *Service) recentPinned(ctx context.Context, since time.Time, position handledCursor) ([]Receipt, error) {
+	want := position.Offset + handledCap + 1
+	for limit := want; ; {
+		read, err := s.receipts.Recent(ctx, since, limit)
+		if err != nil {
+			return nil, err
+		}
+		kept := position.pin(read)
+		dropped := len(read) - len(kept)
+		if len(read) < limit || len(kept) >= want || dropped == 0 {
+			return kept, nil
+		}
+		limit += dropped
+	}
+}
+
+// handledSince is where the window starts: the done lane's own resolver where
+// one is bound, a day otherwise.
+func (s *Service) handledSince(ctx context.Context, asOf time.Time) (time.Time, error) {
+	if s.handledWindow == nil {
+		return asOf.Add(-handledWindow), nil
+	}
+	return s.handledWindow(ctx, asOf)
+}
+
+// drawReceipts renders one page, then names its records and sources under the
+// reader's own grants.
+func (s *Service) drawReceipts(ctx context.Context, page []Receipt, out *crmcontracts.HandledForYou) error {
+	var details []ReceiptDetail
+	if s.receiptDetails != nil && len(page) > 0 {
+		var err error
+		if details, err = s.receiptDetails.Describe(ctx, page); err != nil {
+			return err
+		}
+	}
+	subjects := make([]*crmcontracts.AttentionSubject, 0, 2*len(page))
+	for i, receipt := range page {
 		row := handledReceipt(receipt)
+		if i < len(details) {
+			row.Actor, row.Changes = details[i].Actor, details[i].Changes
+		}
 		out.Receipts = append(out.Receipts, row)
-		subjects = append(subjects, row.Subject)
+		subjects = append(subjects, row.Subject, row.SourceRecord)
 	}
 	// The same label pass the feed runs, so a receipt names its record here
 	// exactly as it does in the feed's done lane.
 	if err := s.labelSubjects(ctx, subjects); err != nil {
-		return crmcontracts.HandledForYou{}, err
+		return err
 	}
-	return out, nil
+	// A source the reader may not open is left out rather than named. The record
+	// the act was about is the receipt's claim; its source is not.
+	for i := range out.Receipts {
+		if source := out.Receipts[i].SourceRecord; source != nil && source.Label == nil {
+			out.Receipts[i].SourceRecord = nil
+		}
+	}
+	return nil
 }
 
 // handledReceipt is one completed act on the wire.
@@ -118,6 +208,9 @@ func handledReceipt(receipt Receipt) crmcontracts.Receipt {
 	// the summary alone rather than inventing something to open.
 	if subject := subjectOf(receipt.TargetType, receipt.TargetID); subject != nil {
 		out.Subject = subject
+	}
+	if !receipt.SourceActivityID.IsZero() {
+		out.SourceRecord = subjectOf("activity", receipt.SourceActivityID)
 	}
 	// The way back, only where the act carries one. An approval the system
 	// decided is revisitable through the record it named; a correction nobody

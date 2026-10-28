@@ -102,11 +102,7 @@ function draw(
     ...routes,
   });
   return render(
-    <>
-      {rows.map((one) => (
-        <Verb key={one.id} activity={one} page={page} />
-      ))}
-    </>,
+    rows.map((one) => <Verb key={one.id} activity={one} page={page} />),
   );
 }
 

@@ -18,6 +18,17 @@ export const WEB_FORM_SENDERS: readonly WebFormSender[] = [
   "webflow",
 ];
 
+// The senders a reader sets up without writing code; the rest need a developer.
+const NO_DEVELOPER_SENDERS: readonly WebFormSender[] = [
+  "browser",
+  "typeform",
+  "tally",
+];
+
+export function needsDeveloper(sender: WebFormSender): boolean {
+  return !NO_DEVELOPER_SENDERS.includes(sender);
+}
+
 // The guide a reader setting a form up is pointed at.
 export const WEB_FORMS_GUIDE =
   "https://github.com/margince/margince/blob/main/docs/handbook/connect-your-website.md";

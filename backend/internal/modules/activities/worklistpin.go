@@ -76,6 +76,11 @@ func (s *Store) PinWorklistRow(ctx context.Context, row WorklistRowRef) error {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
+		if row.Source == string(crmcontracts.WorklistItemSourceTask) {
+			if err := lockTaskAdoption(ctx, tx, row.RowID); err != nil {
+				return err
+			}
+		}
 		by, err := storekit.CapturedBy(ctx)
 		if err != nil {
 			return err
