@@ -69,7 +69,12 @@ func TestCollectUnitFrontendRefusals(t *testing.T) {
 			manifest: `{"name":"@margince-ext/demo","private":true,"main":"screen.tsx","dependencies":{"react-dom":"^19.0.0"}}`,
 			want:     "must be a peerDependency",
 		},
+		"an install-time script": {
+			manifest: `{"name":"@margince-ext/demo","private":true,"main":"screen.tsx","scripts":{"postinstall":"node setup.js"}}`,
+			want:     `declares a "postinstall" script`,
+		},
 		"a manifest that is not JSON": {
+
 			manifest: `{`,
 			want:     "package.json",
 		},

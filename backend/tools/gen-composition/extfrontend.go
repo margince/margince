@@ -60,7 +60,13 @@ type unitPackageJSON struct {
 	Main             string            `json:"main"`
 	Dependencies     map[string]string `json:"dependencies"`
 	PeerDependencies map[string]string `json:"peerDependencies"`
+	Scripts          map[string]string `json:"scripts"`
 }
+
+// installScripts are the lifecycle scripts pnpm runs for a workspace member on
+// install. A unit can arrive from a version string in the instance's go.mod,
+// so none of its code may run before its checks have.
+var installScripts = []string{"preinstall", "install", "postinstall", "preprepare", "prepare", "postprepare"}
 
 // collectUnitFrontend reads a unit's frontend layer. Absent is the common case
 // (de is shaped that way) and composes nothing.
@@ -94,6 +100,12 @@ func collectUnitFrontend(name, dir string) (*unitFrontend, error) {
 	case pkg.Main == "":
 		return nil, fmt.Errorf("extensions/%s: %s/package.json declares no main — the screen the SPA mounts is that module's default export",
 			name, frontendLayer)
+	}
+	for _, script := range installScripts {
+		if _, declared := pkg.Scripts[script]; declared {
+			return nil, fmt.Errorf("extensions/%s: %s/package.json declares a %q script — pnpm would run it on install, before any check of the unit; build the screen without one",
+				name, frontendLayer, script)
+		}
 	}
 	for _, dep := range hostedFrameworkDeps {
 		if _, direct := pkg.Dependencies[dep]; direct {
