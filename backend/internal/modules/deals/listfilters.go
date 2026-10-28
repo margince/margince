@@ -121,3 +121,10 @@ func (p *Provider) ListFilters(t datasource.EntityType) []string {
 		return nil
 	}
 }
+
+func uuidOfFilter[K ids.EntityKind](id *ids.ID[K]) *ids.UUID {
+	if id == nil {
+		return nil
+	}
+	return &id.UUID
+}

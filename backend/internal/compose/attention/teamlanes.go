@@ -59,6 +59,7 @@ type OverdueLoad interface {
 // rosterRead is one roster answer: its members, and whether it stopped at its cap.
 type rosterRead struct {
 	members []TeamMember
+	former  []ids.UUID
 	cut     bool
 }
 

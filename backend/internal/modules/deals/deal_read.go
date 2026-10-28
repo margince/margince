@@ -88,14 +88,15 @@ type ListDealsInput struct {
 	IDs []ids.UUID
 	// TagIDs narrows to the deals carrying these tags, combined by TagMode.
 	// The predicate is storekit's, shared with the contact and account lists.
-	TagIDs     []ids.UUID
-	TagMode    storekit.TagMode
-	Cursor     *string
-	Limit      *int
-	Query      *string
-	PipelineID *ids.PipelineID
-	StageID    *ids.StageID
-	OwnerID    *ids.UserID
+	TagIDs      []ids.UUID
+	TagMode     storekit.TagMode
+	Cursor      *string
+	Limit       *int
+	Query       *string
+	PipelineID  *ids.PipelineID
+	StageID     *ids.StageID
+	OwnerID     *ids.UserID
+	ScopeOwners *storekit.OwnerSet
 	// OwnerTeamID and Unassigned are the other two owner dials; with OwnerID
 	// they are one predicate, storekit.OwnershipClause.
 	OwnerTeamID      *ids.TeamID
@@ -326,6 +327,9 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 	if in.StageID != nil {
 		where = append(where, storekit.SQLf("stage_id = $%d", arg(*in.StageID)))
 	}
+	if scoped := storekit.OwnerSetClause("owner_id", in.ScopeOwners, arg); scoped != "" {
+		where = append(where, scoped)
+	}
 	ownership, err := storekit.OwnershipClause(in.OwnerID, in.OwnerTeamID, in.Unassigned, arg)
 	if err != nil {
 		return nil, err
@@ -399,16 +403,6 @@ func appendIdleFilters(where []string, in ListDealsInput) []string {
 		where = append(where, QuietSQL("", *in.QuietForDays))
 	}
 	return where
-}
-
-// uuidOfFilter widens one optional typed filter id to the untyped UUID the
-// reference table above walks. It is deliberately the only widening here: the
-// phantom kind is what stops a project id being probed against company.
-func uuidOfFilter[K ids.EntityKind](id *ids.ID[K]) *ids.UUID {
-	if id == nil {
-		return nil
-	}
-	return &id.UUID
 }
 
 // referenceFilterClause narrows a filter on a column that NAMES another record
