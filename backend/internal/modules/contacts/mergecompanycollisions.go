@@ -22,11 +22,13 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // moveCompanySingletons re-homes the at-most-one-per-company rows.
@@ -174,17 +176,8 @@ func moveCompanyScans(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.Com
 // whose normalized form the survivor already holds is dropped as the duplicate
 // it now is. Everything else re-normalizes onto the survivor.
 func moveCompanyDedupeCandidates(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) error {
-	// The pair between the two merging companies — including the queue's own
-	// row for THIS merge, which keeps its disposition and simply stops naming
-	// the retired record once the survivor absorbs it.
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM dedupe_candidate
-		 WHERE entity_type = 'company'
-		   AND ((left_company_id = $1 AND right_company_id = $2)
-		     OR (left_company_id = $2 AND right_company_id = $1))
-		   AND disposition = 'open'`,
-		sourceID, targetID); err != nil {
-		return fmt.Errorf("drop the open self-pair: %w", err)
+	if err := settleOpenPairBetween(ctx, tx, sourceID, targetID); err != nil {
+		return err
 	}
 	// A pair the survivor already has, in either orientation, once the source
 	// end is read as the survivor. One of the two has to go — the pair is
@@ -240,11 +233,10 @@ func moveCompanyDedupeCandidates(ctx context.Context, tx pgx.Tx, sourceID, targe
 	// The pair BETWEEN the two merging companies is excluded, at every
 	// disposition. Re-normalizing it would name the survivor at both ends —
 	// a self-pair, which dedupe_candidate_ordered refuses outright because it
-	// requires a strict left < right. The open one was dropped above; a
-	// disposed one stays as it is, still naming the retired company, because
-	// that is precisely what it records: the merge that retired it. A row
-	// saying "these two were judged the same" is not made truer by rewriting
-	// both ends to one id.
+	// requires a strict left < right. It stays as it is, still naming the
+	// retired company, because that is precisely what it records: the merge
+	// that retired it. A row saying "these two were judged the same" is not
+	// made truer by rewriting both ends to one id.
 	//
 	// Both SET expressions read the row as it was BEFORE the update, so the
 	// same CASE in each picks the same "other end" — the column the retired
@@ -263,4 +255,26 @@ func moveCompanyDedupeCandidates(ctx context.Context, tx pgx.Tx, sourceID, targe
 		return fmt.Errorf("re-normalize the remaining pairs: %w", err)
 	}
 	return nil
+}
+
+// settleOpenPairBetween marks the open pair of the two merging companies as
+// merged, by the user behind this call. The dedupe queue marks its own pair
+// before it merges, so only a merge made from a company page finds one open.
+// Without this, that merge left no row for the queue's merged list to show.
+func settleOpenPairBetween(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) error {
+	var pairID ids.UUID
+	err := tx.QueryRow(ctx, `
+		SELECT id FROM dedupe_candidate
+		 WHERE entity_type = 'company' AND disposition = 'open'
+		   AND ((left_company_id = $1 AND right_company_id = $2)
+		     OR (left_company_id = $2 AND right_company_id = $1))`,
+		sourceID, targetID).Scan(&pairID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("read the open pair of the merging companies: %w", err)
+	}
+	actor, _ := principal.Actor(ctx)
+	return setDedupeDispositionTx(ctx, tx, pairID, dispositionMerged, actor.UserID)
 }
