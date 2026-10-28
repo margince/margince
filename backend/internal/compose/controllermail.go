@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -33,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -89,11 +91,13 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 	}
 	in.Rendered = rendered
 	subject := rendered.Subject
+	// Members read the activity; only the delivery keeps the placeholder the dispatcher fills.
+	readable := strings.ReplaceAll(body, comms.LinkPlaceholder, mailcopy.For(rendered.Language).SentLinkMarker)
 	outbound := string(crmcontracts.ActivityDirectionOutbound)
 	activity, _, err := q.activities.LogActivityTx(ctx, tx, activities.SentRecord(activities.LogActivityInput{
 		Kind:      string(crmcontracts.ActivityKindEmail),
 		Subject:   &subject,
-		Body:      &body,
+		Body:      &readable,
 		Direction: &outbound,
 		Source:    systemActor,
 		// The installation writing to somebody about its own obligations is not

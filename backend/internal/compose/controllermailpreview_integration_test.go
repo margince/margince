@@ -298,3 +298,25 @@ func TestTheSingleMailViewMarksARelaySendAsTheTimelineDoes(t *testing.T) {
 			shown.ControllerSend, laneFromAddress)
 	}
 }
+
+func TestTheTimelineCopyOfARelaySendSaysWhereTheLinkWentInTheMailsLanguage(t *testing.T) {
+	l := setupConfirmLane(t)
+	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact), "de"); err != nil {
+		t.Fatalf("IssueConfirmToken: %v", err)
+	}
+	staged, _, delivered := stagedControllerMail(t, l)
+	var logged string
+	if err := l.e.Pool.QueryRow(context.Background(), `SELECT body FROM activity WHERE id = $1`, staged).Scan(&logged); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(logged, mailcopy.For("de").SentLinkMarker) {
+		t.Errorf("the timeline copy carries no German link marker:\n%s", logged)
+	}
+	_, token, _ := lastCut(l.vault.sealed, "#/confirm/")
+	if strings.Contains(logged, "{{confirmation-link}}") || strings.Contains(logged, token) {
+		t.Errorf("the timeline copy shows the template token or the live link:\n%s", logged)
+	}
+	if !strings.Contains(delivered, "{{confirmation-link}}") {
+		t.Error("the delivery lost the placeholder the dispatcher fills")
+	}
+}

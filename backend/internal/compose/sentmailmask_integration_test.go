@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -158,7 +159,8 @@ func TestControllerMailStoresItsTimelineRowMasked(t *testing.T) {
 	if !strings.Contains(deliveredSubject, secret) || !strings.Contains(deliveredBody, secret) {
 		t.Fatalf("the delivery carries %q / %q, want the words as rendered", deliveredSubject, deliveredBody)
 	}
-	if storedSubject != credentialmask.MaskText(deliveredSubject) || storedBody != credentialmask.MaskText(deliveredBody) {
+	readable := strings.ReplaceAll(deliveredBody, "{{confirmation-link}}", mailcopy.For(rendered.Language).SentLinkMarker)
+	if storedSubject != credentialmask.MaskText(deliveredSubject) || storedBody != credentialmask.MaskText(readable) {
 		t.Fatalf("the timeline row stores %q / %q, want the delivered text masked", storedSubject, storedBody)
 	}
 }

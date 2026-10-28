@@ -318,7 +318,9 @@ type Copy struct {
 	NoticeIgnore string
 
 	// PreviewLinkMarker stands where the link goes in a preview, which mints none.
+	// SentLinkMarker stands for it in the timeline copy of a sent mail.
 	PreviewLinkMarker string
+	SentLinkMarker    string
 
 	// The opt-out acknowledgement, which Decree 91/2020/ND-CP Art. 16 owes a
 	// Vietnamese recipient who refuses further advertising: a confirmation
