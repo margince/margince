@@ -7,6 +7,7 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch } from "../../api/version";
 import { ArchiveAction } from "../../components/archive";
+import { EntityRef } from "../../components/entityref";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
@@ -167,6 +168,12 @@ function FormRow({
             {form.sender === "browser"
               ? form.allowed_origins.join(", ")
               : t(`webForms.senderLine.${form.sender}`)}
+            {form.owner_id && (
+              <span>
+                {t("webForms.row.owner")}{" "}
+                <EntityRef kind="user" id={form.owner_id} asText />
+              </span>
+            )}
             <span className="webform-row-actions">
               <Button
                 data-testid="web-form-setup"
