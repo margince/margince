@@ -180,7 +180,7 @@ func walkContactCase(ctx context.Context, tx pgx.Tx, start ids.UUID) (contactCas
 // liveCaseOwnerSQL is whether the joined owner seat u still counts as an owner
 // of a case. It asks what identity asks before carrying a former owner's
 // access, so the owners a case names are the ones a merge can carry.
-var liveCaseOwnerSQL = "coalesce(u.removed_at IS NULL AND " + workforce.LiveMemberSQL("u") + ", false)"
+var liveCaseOwnerSQL = "coalesce(u.removed_at IS NULL AND " + workforce.LiveHumanSQL("u") + ", false)"
 
 // readCaseMembers reads what a reviewer compares, in id order. The employer is
 // the list's own, so a company hidden from the reader stays hidden here.

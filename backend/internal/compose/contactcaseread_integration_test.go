@@ -6,11 +6,13 @@
 package compose
 
 // What a case read tells each reader: where a merged contact went, and which
-// pairs this reader may merge one by one.
+// pairs this reader may merge one by one, and who owns a share of it.
 
 import (
+	"context"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -51,5 +53,31 @@ func TestAPairIsMergeableOnlyWithWriteAccessToBothEnds(t *testing.T) {
 	}
 	if edge := c.read(rep, t, own[0]).Edges[0]; !edge.CanMerge {
 		t.Error("a rep may not merge a pair of their own two contacts")
+	}
+}
+
+func TestAnAgentSeatOwnsNoShareOfACase(t *testing.T) {
+	c := setupCases(t)
+	agent := ids.NewV7()
+	if _, err := integration.OwnerConn(t).Exec(context.Background(),
+		`INSERT INTO app_user (id, email, display_name, is_agent) VALUES ($1, $2, 'Case Agent', true)`,
+		agent, "agent-"+agent.String()+"@case.test"); err != nil {
+		t.Fatal(err)
+	}
+	members := c.seedCase(t, c.e.Rep1, c.e.Rep2, c.e.Rep3)
+	c.e.WsExec(t, `UPDATE contact SET owner_id = $1 WHERE id = $2`, agent, members[2])
+	c.setPolicy(t, true)
+	rep := c.rep(c.e.Rep1)
+	read := c.read(rep, t, members[0])
+	for _, owner := range read.Owners {
+		if ids.UUID(owner.UserId) == agent {
+			t.Errorf("the case names the agent seat as an owner")
+		}
+	}
+	if _, err := c.store.MergeContactCase(rep, members[0], caseDecision(read, members, members[0], c.e.Rep1)); err != nil {
+		t.Fatalf("merging: %v", err)
+	}
+	if got := grantAccess(t, c.e, members[0], agent); got != "" {
+		t.Errorf("the agent seat holds %q on the survivor, want no grant", got)
 	}
 }

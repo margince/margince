@@ -127,10 +127,12 @@ func ownerCarryGrantor(ctx context.Context, owner ids.UUID) ids.UUID {
 	return owner
 }
 
+// memberLive is whether the former owner is a colleague still here; an agent
+// seat is none.
 func memberLive(ctx context.Context, tx pgx.Tx, member ids.UUID) (bool, error) {
 	var live bool
 	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM app_user u WHERE u.id = @member AND u.removed_at IS NULL AND `+
-		workforce.LiveMemberSQL("u")+`)`, pgx.NamedArgs{"member": member}).Scan(&live); err != nil {
+		workforce.LiveHumanSQL("u")+`)`, pgx.NamedArgs{"member": member}).Scan(&live); err != nil {
 		return false, fmt.Errorf("read whether the former owner is still a colleague: %w", err)
 	}
 	return live, nil
