@@ -19,9 +19,10 @@ import (
 )
 
 // GrantCarrier moves the grants on a retiring record onto its survivor, folding
-// two grants of one grantee into one.
+// two grants of one grantee into one, and keeps a former owner's access there.
 type GrantCarrier interface {
 	CarryGrantsTx(ctx context.Context, tx pgx.Tx, recordType string, from, to ids.UUID) error
+	CarryOwnerAccessTx(ctx context.Context, tx pgx.Tx, recordType string, record, owner, mergedFrom ids.UUID) (authz.OwnerAccessCarry, error)
 }
 
 // WithGrantCarrier wires the identity-side grant carry. Compose binds it.
@@ -37,6 +38,26 @@ func (s *Store) carryGrantsTx(ctx context.Context, tx pgx.Tx, recordType string,
 		return s.grantCarrier.CarryGrantsTx(ctx, tx, recordType, from, to)
 	}
 	return refuseUnwiredGrantCarry(ctx, tx, recordType, from)
+}
+
+// carryOwnerAccessTx keeps the access of a contact's former owner on the
+// record that survives it. The survivor's own owner needs no grant. Unwired, it
+// refuses: the merge would otherwise take the record away from its owner.
+func (s *Store) carryOwnerAccessTx(ctx context.Context, tx pgx.Tx, survivor ids.ContactID, survivorOwner, formerOwner *ids.UUID, mergedFrom ids.UUID) (*authz.OwnerAccessCarry, error) {
+	if formerOwner == nil {
+		return nil, nil
+	}
+	if sameOwner(survivorOwner, formerOwner) {
+		return &authz.OwnerAccessCarry{Owner: *formerOwner, Skipped: authz.OwnerCarryAlreadyOwner}, nil
+	}
+	if s.grantCarrier == nil {
+		return nil, &SatelliteCarrierNotWiredError{Holding: "an owner other than the survivor's"}
+	}
+	carry, err := s.grantCarrier.CarryOwnerAccessTx(ctx, tx, contactEntity, survivor.UUID, *formerOwner, mergedFrom)
+	if err != nil {
+		return nil, fmt.Errorf("keep the former owner's access: %w", err)
+	}
+	return &carry, nil
 }
 
 func refuseUnwiredGrantCarry(ctx context.Context, tx pgx.Tx, recordType string, from ids.UUID) error {
