@@ -145,9 +145,10 @@
 .choicelist-group + .choicelist-group {
   margin-top: var(--space-3);
 }
+/* Padding rather than a margin: a legend sits outside its fieldset's flow, so
+   no gap reaches it, and a margin here would read as space the caller owes. */
 .choicelist-group-label {
-  padding: 0;
-  margin-bottom: var(--space-2);
+  padding: 0 0 var(--space-2);
   color: var(--textSecondary);
 }
 .choicelist-cards > .choicelist-group {
