@@ -66,20 +66,25 @@ export function recipientSuggestions(
 ): readonly TokenSuggestion[] {
   const seen = new Set<string>();
   const out: TokenSuggestion[] = [];
-  const offer = (value: string | null | undefined, label: string) => {
+  const offer = (
+    value: string | null | undefined,
+    label: string,
+    detail?: string,
+  ) => {
     const address = value?.trim();
     if (!address || seen.has(address)) {
       return;
     }
     seen.add(address);
-    out.push({ value: address, label, hint: address });
+    out.push({ value: address, label, hint: address, detail });
   };
+  const account = company?.company?.display_name;
   const subject = contact?.contact;
   for (const address of subject?.emails ?? []) {
-    offer(address.email, subject?.full_name ?? address.email);
+    offer(address.email, subject?.full_name ?? address.email, account);
   }
   for (const contact of company?.contacts?.data ?? []) {
-    offer(contact.primary_email, contact.full_name);
+    offer(contact.primary_email, contact.full_name, account);
   }
   for (const member of colleagues) {
     // Members come last: a message goes to the record's contacts first.

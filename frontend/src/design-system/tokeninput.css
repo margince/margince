@@ -84,15 +84,21 @@
   /* One step down from the field's own type: a token is a value inside a
    * control, not a heading over one. */
   white-space: nowrap;
+  /* Never wider than its field: a long one cuts its text short rather than
+     running out over the controls beside the field. */
+  max-inline-size: 100%;
+  min-inline-size: 0;
 }
 
-/* A named value: the name first, the value it stands for dimmed after it. */
+.token-label,
+.token-value {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* A named value: the name alone, its address on the card it opens. */
 .token-label {
   font-weight: var(--fontWeightMedium);
-}
-.token-detail {
-  margin-inline-start: var(--space-1);
-  color: var(--textSecondary);
 }
 
 /* The mark stays 12px — a bigger cross inside a token pill would out-draw the

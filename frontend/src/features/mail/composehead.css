@@ -33,6 +33,12 @@
   font: var(--fontBodySmall);
   color: var(--textSecondary);
 }
+/* The Cc and Bcc link keeps its own room at the end of the To line; the tokens
+   wrap before they reach it. */
+.compose-address-field .field-shell > .btn {
+  flex: none;
+  white-space: nowrap;
+}
 .compose-address-field .input,
 .compose-address-field .field-shell {
   border-color: transparent;

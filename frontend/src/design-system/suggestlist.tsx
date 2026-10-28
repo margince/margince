@@ -44,6 +44,8 @@ export type Suggestion = Readonly<{
   label?: string;
   /** Shown after the label, dimmed: what it is, when the label alone is thin. */
   hint?: string;
+  /** One more fact a committed token's card carries (a contact's company). */
+  detail?: string;
 }>;
 
 /**

@@ -10,6 +10,16 @@ import { AddressBlock } from "./composehead";
 // asked for, and — under the addresses, because it is about the ones standing
 // there — the notice that one of them is bouncing.
 
+// A named address draws as its name, with the address and account on its card.
+const CONTACTS = [
+  {
+    value: "ada@brandt.example",
+    label: "Ada Brandt-Sachsinger",
+    hint: "ada@brandt.example",
+    detail: "Brandt Logistik",
+  },
+];
+
 /**
  * The block owns no state, so the story lends it some: a reader in the catalog
  * can add and remove tokens and watch Bcc open, which is the half of this
@@ -37,7 +47,7 @@ function Head({
         onBccChange={setBcc}
         copiesOpen={copiesOpen}
         onOpenCopies={() => setCopiesOpen(true)}
-        suggestions={[]}
+        suggestions={CONTACTS}
         onToEditing={() => {}}
         invalidTo={invalidTo}
         needTo="Name at least one recipient."

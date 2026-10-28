@@ -4,6 +4,7 @@
 import { X } from "lucide-react";
 import { type KeyboardEvent, useRef, useState } from "react";
 import { isImeCommit } from "../lib/imecommit";
+import { usePeek } from "./peek";
 import { type Suggestion, SuggestPopup, useSuggestList } from "./suggestlist";
 import "./tokeninput.css";
 
@@ -121,11 +122,9 @@ export function TokenInput({
     setTyped("");
   };
 
-  // A committed value reads the way its suggestion did: an address the record
-  // knows shows its contact's name, with the address itself beside it.
-  const labels = new Map(
-    (suggestions ?? EMPTY).map((row) => [row.value, row.label]),
-  );
+  // A committed value an offer named reads as that name; what it stands for
+  // waits on the token's card.
+  const offers = new Map((suggestions ?? EMPTY).map((row) => [row.value, row]));
 
   const list = useSuggestList({
     anchorRef: fieldRef,
@@ -177,18 +176,13 @@ export function TokenInput({
       className={`token-input input ${disabled ? "is-disabled" : ""}`.trim()}
     >
       {values.map((value) => (
-        <span key={value} className="token">
-          <TokenFace value={value} label={labels.get(value)} />
-          <button
-            type="button"
-            className="token-remove"
-            disabled={disabled}
-            aria-label={`Remove ${value}`}
-            onClick={() => onChange(values.filter((v) => v !== value))}
-          >
-            <X size={12} aria-hidden />
-          </button>
-        </span>
+        <TokenChip
+          key={value}
+          value={value}
+          offer={offers.get(value)}
+          disabled={disabled}
+          onRemove={() => onChange(values.filter((v) => v !== value))}
+        />
       ))}
       <input
         {...aria}
@@ -228,18 +222,51 @@ export function TokenInput({
   );
 }
 
-// The value alone, or a name and the value it stands for, dimmed after it.
-function TokenFace({
+// A named value shows the name alone, so a row of recipients stays one line
+// beside the field's own controls. The value it stands for, and the one fact
+// the offer carried, are on the card the name opens on hover or focus.
+function TokenChip({
   value,
-  label,
-}: Readonly<{ value: string; label: string | undefined }>) {
-  if (!label || label === value) {
-    return value;
-  }
+  offer,
+  disabled,
+  onRemove,
+}: Readonly<{
+  value: string;
+  offer: Suggestion | undefined;
+  disabled: boolean | undefined;
+  onRemove: () => void;
+}>) {
+  const label = offer?.label;
+  const named = label !== undefined && label !== "" && label !== value;
+  const {
+    ref,
+    props: anchor,
+    panel,
+  } = usePeek<HTMLSpanElement>({
+    content: named
+      ? {
+          head: label,
+          items: [{ key: value, title: value, sub: offer?.detail }],
+        }
+      : undefined,
+  });
   return (
     <>
-      <span className="token-label">{label}</span>
-      <span className="token-detail">{value}</span>
+      <span ref={ref} className="token" {...anchor}>
+        <span className={named ? "token-label" : "token-value"}>
+          {named ? label : value}
+        </span>
+        <button
+          type="button"
+          className="token-remove"
+          disabled={disabled}
+          aria-label={`Remove ${value}`}
+          onClick={onRemove}
+        >
+          <X size={12} aria-hidden />
+        </button>
+      </span>
+      {panel}
     </>
   );
 }
