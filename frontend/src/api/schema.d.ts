@@ -15790,8 +15790,7 @@ export interface paths {
         /**
          * Mail the subject a single-use link that confirms one marketing purpose.
          * @description Mints the double-opt-in link for `purpose_id` and stages it to the contact's own live
-         *     primary address — `queued` reports whether it reached the lane, and an installation with
-         *     none still mints and answers 201. The purpose must be live and must itself require double
+         *     primary address. The purpose must be live and must itself require double
          *     opt-in; anything else is a 422, because a mailed link asking about a purpose that needs no
          *     confirmation asks a question the answer does not fit. The plaintext is never returned: this endpoint once handed it to the
          *     authenticated operator, who could paste it straight back into `recordConsent` — a round
@@ -15806,10 +15805,8 @@ export interface paths {
          *     authorization decision recording why the installation was allowed to send it, and a
          *     timeline entry — which is what makes it visible to a subject-access export and reachable by
          *     erasure. `queued` reports that the message was staged in the same transaction that minted
-         *     the link; `sendable` says whether this installation has a lane at all. An installation with
-         *     no lane still mints the token and answers 201, because the write happened and reporting it
-         *     as a failure would invite a second request that mints another token and supersedes the
-         *     first.
+         *     the link. An installation with no lane is refused with 409 before anything is minted,
+         *     because the link is mailed and never returned.
          */
         post: operations["issueDoubleOptIn"];
         delete?: never;
@@ -15963,9 +15960,8 @@ export interface paths {
          *     row, an authorization decision recording why the installation was allowed to send it, and a
          *     timeline entry — which is what makes it visible to a subject-access export and reachable by
          *     erasure. `queued` reports that the message was staged, in the same transaction that minted
-         *     the link; `sendable` says whether this installation has a lane at all. An installation with
-         *     no lane still mints the token and answers 201, because the write happened and reporting it
-         *     as a failure would invite a second request that mints another token and supersedes the first.
+         *     the link. An installation with no lane is refused with 409 before anything is minted,
+         *     because the link is mailed and never returned.
          */
         post: operations["requestDetailsConfirmation"];
         delete?: never;
@@ -75616,6 +75612,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["ControllerMailRefused"];
             /**
              * @description The request named no purpose, named one no `consent_purpose` row holds, or the contact
              *     carries no live email address — so there is no mailbox a link could reach.
