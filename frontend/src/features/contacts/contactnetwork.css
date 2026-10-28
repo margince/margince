@@ -96,6 +96,9 @@
   border-left: 1px solid var(--accentMed);
   background: var(--accentLight);
   display: grid;
+  /* Not the implicit `auto` track: it grows to a citation's full subject, and
+     the subject must cut short inside the plate instead. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
   align-content: start;
 }
@@ -164,6 +167,7 @@
 }
 .pn-evidence-receipts {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-1);
 }
 .pn-evidence-receipts .pn-receipts {
