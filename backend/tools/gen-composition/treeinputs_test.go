@@ -13,7 +13,7 @@ import (
 // Go's test cache never rechecks a file outside this module, so without this a
 // replayed pass would outlive a change to the ones these tests read.
 func TestTheTestCacheKeysOnTheTreeOutsideThisModule(t *testing.T) {
-	if err := gatekit.DeclareInputs(os.Getenv, "../../../backend", "../../../composition", "../../../extensions", "../../../fixtures", "../../../frontend", "../../../go.work"); err != nil {
+	if err := gatekit.DeclareInputs(os.Getenv, "../../../backend", "../../../composition", "../../../extensions", "../../../fixtures", "../../../frontend", "../../../go.work", "../../../instance"); err != nil {
 		t.Fatal(err)
 	}
 }
