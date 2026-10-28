@@ -119,7 +119,8 @@ without labels tells the next reader something false. All the labels:
 
 ## Build and test
 
-`make check` is the merge gate (`craft-static` + `check-backend` + `check-fe`). Run it before you push.
+`make check` is the merge gate (`craft-static` + `check-backend` + `check-fe`). Run it before a PR
+leaves draft.
 `make test-integration` is the lane with a real Postgres and needs `make db-up`. Without a database
 it fails with an error instead of skipping, because a skipped security gate looks the same as a
 passing one.
@@ -167,15 +168,19 @@ because the sandbox may not see the host's key store. Every mutation on GitHub n
 Commands that only read (`git status`, `diff`, `log`) can run in the sandbox.
 
 1. Branch off `main`: `git switch -c <type>/<slug> origin/main`.
-2. Run `make check` before you push, `frontend/` and `craft static --strict` included. `check` does
-   not reach the integration lane. For a backend Go change, also run `make test-it DIR=<pkg>` for
-   each integration package it touches. CI runs the whole lane on every non-draft PR that changes
-   `backend/`; `make check-all` runs it locally.
-3. Push and open a PR. The release notes print its title. Use `feat(scope): …`, `fix(scope): …` or
+2. Open a draft PR at your first push, so others can follow the work, and push as you go. A push to
+   a draft runs no CI and needs no local gate.
+3. Before you mark the PR ready, run `make check`, `frontend/` and `craft static --strict` included.
+   With write access, `gh workflow run ci.yml --ref <branch>` runs the same gate on GitHub instead.
+   It tests the branch head, so merge `origin/main` first. `check` does not reach the integration
+   lane: for a backend Go change, run `make test-it DIR=<pkg>` for each integration package it
+   touches, or let CI run the whole lane. It does on a dispatch and on every non-draft PR that
+   changes `backend/`; `make check-all` runs it locally.
+4. Mark the PR ready. The release notes print its title. Use `feat(scope): …`, `fix(scope): …` or
    `perf(scope): …` for what a user or operator notices. Add `!` (`fix(api)!: …`) when it breaks a
    setting, an API client or an upgrade; such a title lists under **Breaking**.
-4. CI, CodeRabbit and SonarCloud must all pass. Deal with review findings; do not dismiss them.
-5. Merge only when all checks are green: `gh pr merge <n> --squash`, then remove the branch.
+5. CI, CodeRabbit and SonarCloud must all pass. Deal with review findings; do not dismiss them.
+6. Merge only when all checks are green: `gh pr merge <n> --squash`, then remove the branch.
 
 **Commit only product.** Before `git add`, check `git status` for files the build leaves behind
 (`node_modules/`, `.pnpm-store/`, built programs), working notes and screen images. Working notes go
