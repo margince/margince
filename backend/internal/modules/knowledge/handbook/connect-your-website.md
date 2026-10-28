@@ -39,7 +39,7 @@ The prospect then sees the form's **Success message**, or goes to the **Thank-yo
 Also called: where do my website leads go, new lead from website, duplicate lead.
 
 ### Who gets the leads from a form?
-Pick a person in **Owner of new leads** when you create or edit the form. Each new lead from it then goes to that person. With **Unassigned**, anyone on the team can pick the lead up. If the owner leaves the workspace, new leads arrive unassigned until you pick someone else.
+Pick a colleague in **Owner of new leads** when you create or edit the form. Each new lead from it then goes to that colleague. With **Unassigned**, anyone on the team can pick the lead up. If the owner leaves the workspace, new leads arrive unassigned until you pick someone else.
 Also called: assign website leads, lead owner, route form leads.
 
 ### How do I connect WordPress?

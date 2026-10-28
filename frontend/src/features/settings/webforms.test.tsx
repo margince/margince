@@ -73,7 +73,7 @@ const budgetField: CustomField = {
   version: 1,
 };
 
-// The colleagues an owner picker offers: a person, plus an agent seat the
+// The colleagues an owner picker offers: a colleague, plus an agent seat the
 // server refuses as an owner.
 const roster = {
   data: [
