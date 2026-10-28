@@ -170,6 +170,10 @@ func TestTheNoticeLinkOpensTheDisclosureForTheLead(t *testing.T) {
 	if ref.LeadID.IsZero() || !ref.ContactID.IsZero() {
 		t.Fatalf("the link resolved to lead %v and contact %v, want the lead alone", ref.LeadID, ref.ContactID)
 	}
+	if mailed := l.e.WsScalar(t, `SELECT locale FROM lead_privacy_notice`); ref.QuestionLocale == "" || ref.QuestionLocale != mailed {
+		t.Errorf("the lead's page names language %q and its mail was written in %q: the page must follow the mail",
+			ref.QuestionLocale, mailed)
+	}
 	info, err := store.PrivacyInformationFor(l.e.Admin(), ref)
 	if err != nil {
 		t.Fatalf("assembling the lead's disclosure: %v", err)

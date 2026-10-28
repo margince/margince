@@ -4,6 +4,8 @@
 package consent
 
 import (
+	"errors"
+	"io"
 	"net/http"
 	"time"
 
@@ -97,4 +99,20 @@ func (h Handlers) SendPrivacyNotice(w http.ResponseWriter, r *http.Request, id c
 		Queued:      issued.Staged,
 		Sendable:    h.store.canSendConfirm(),
 	})
+}
+
+// sendLanguageOf reads the optional body of a controller send. An empty body,
+// however it arrives, picks no language.
+func sendLanguageOf(w http.ResponseWriter, r *http.Request) (string, bool) {
+	var body crmcontracts.ControllerMailSend
+	if err := httperr.DecodeOrRefusal(w, r, &body); errors.Is(err, io.EOF) {
+		return "", true
+	} else if err != nil {
+		httperr.Write(w, r, err)
+		return "", false
+	}
+	if body.Language == nil {
+		return "", true
+	}
+	return string(*body.Language), true
 }

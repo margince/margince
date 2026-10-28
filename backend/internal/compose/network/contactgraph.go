@@ -293,8 +293,9 @@ func edgeReceipts(ctx context.Context, tx pgx.Tx, userID, contactID ids.UUID) ([
 	limitPos := arg(receiptsPerEdge)
 
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT a.id, a.subject, a.occurred_at, a.occurred_precision, a.kind
+		SELECT a.id, a.subject, a.occurred_at, a.occurred_precision, a.kind, %s
 		  FROM activity a
+		  LEFT JOIN comms_outbound delivery ON delivery.activity_id = a.id
 		 WHERE a.archived_at IS NULL
 		   AND EXISTS (SELECT 1 FROM activity_participant up
 		                WHERE up.activity_id = a.id AND up.user_id = $%d)
@@ -302,7 +303,7 @@ func edgeReceipts(ctx context.Context, tx pgx.Tx, userID, contactID ids.UUID) ([
 		                WHERE pp.activity_id = a.id AND pp.contact_id = $%d)
 		   AND (%s)
 		 ORDER BY a.occurred_at DESC, a.id DESC
-		 LIMIT $%d`, userPos, contactPos, scope, limitPos), args...)
+		 LIMIT $%d`, activities.ControllerSendSQL, userPos, contactPos, scope, limitPos), args...)
 	if err != nil {
 		return nil, fmt.Errorf("network: reading the messages behind a relationship: %w", err)
 	}
@@ -313,34 +314,20 @@ func edgeReceipts(ctx context.Context, tx pgx.Tx, userID, contactID ids.UUID) ([
 		var r crmcontracts.ContactGraphReceipt
 		var activityID ids.UUID
 		var kind string
-		if err := rows.Scan(&activityID, &r.Subject, &r.OccurredAt, &r.OccurredPrecision, &kind); err != nil {
+		var controller bool
+		var from *string
+		if err := rows.Scan(&activityID, &r.Subject, &r.OccurredAt, &r.OccurredPrecision, &kind, &controller, &from); err != nil {
 			return nil, fmt.Errorf("network: reading a message behind a relationship: %w", err)
 		}
 		r.ActivityId = openapi_types.UUID(activityID)
 		r.Kind = crmcontracts.ContactGraphReceiptKind(kind)
+		r.ControllerSend = activities.ControllerSendOf(controller, from)
 		out = append(out, r)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("network: reading the messages behind a relationship: %w", err)
 	}
-	return markControllerSends(ctx, tx, out)
-}
-
-// markControllerSends marks the receipts the installation's relay sent, as the
-// timeline marks the same activities.
-func markControllerSends(ctx context.Context, tx pgx.Tx, receipts []crmcontracts.ContactGraphReceipt) ([]crmcontracts.ContactGraphReceipt, error) {
-	activityIDs := make([]ids.UUID, 0, len(receipts))
-	for _, r := range receipts {
-		activityIDs = append(activityIDs, ids.UUID(r.ActivityId))
-	}
-	marks, err := activities.ControllerSendsFor(ctx, tx, activityIDs)
-	if err != nil {
-		return nil, err
-	}
-	for i := range receipts {
-		receipts[i].ControllerSend = marks[ids.UUID(receipts[i].ActivityId)]
-	}
-	return receipts, nil
+	return out, nil
 }
 
 // chooseRoute picks the warmest way in.

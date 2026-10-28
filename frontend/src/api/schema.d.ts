@@ -24836,7 +24836,7 @@ export interface components {
              *     that they exist rather than showing an empty list that reads as none.
              */
             bcc_withheld: boolean;
-            /** @description Present only on a mail the installation's relay sent for a member, as on `Activity`; `from` then names that member. */
+            /** @description Present only on a mail sent through the installation's own relay, as on `Activity`. Its `from_address` is the address the mail left from, whatever `from` names. */
             readonly controller_send?: components["schemas"]["ControllerSend"] | null;
             attachments: components["schemas"]["EmailAttachmentSummary"][];
             /** @description What the message is filed against, named for a reader. */
@@ -30925,7 +30925,7 @@ export interface components {
              * @enum {string}
              */
             kind: "email" | "call" | "meeting" | "note" | "task" | "message";
-            /** @description Present only on a mail the installation's relay sent for a member, as on `Activity`. */
+            /** @description Present only on a mail sent through the installation's own relay, as on `Activity`. */
             controller_send?: components["schemas"]["ControllerSend"] | null;
         };
         /**
@@ -35444,7 +35444,7 @@ export interface components {
             direction?: null | "inbound" | "outbound";
             /** @description Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word. */
             readonly email_summary?: components["schemas"]["EmailSummary"] | null;
-            /** @description Present only on a mail the installation's relay sent for a member. Absent on every other row. */
+            /** @description Present only on a mail sent through the installation's own relay. Absent on every other row. */
             readonly controller_send?: components["schemas"]["ControllerSend"] | null;
             /** @description The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none. */
             readonly thread_key?: string | null;
@@ -43485,11 +43485,11 @@ export interface components {
             text: string;
         };
         /**
-         * @description Present on a mail the installation sent through its own relay on a member's behalf,
-         *     rather than through that member's mailbox. Its presence is the lane.
+         * @description Present on a mail sent through the installation's own relay rather than through a
+         *     member's mailbox. Its presence is the lane.
          */
         ControllerSend: {
-            /** @description The From address the mail was staged with. Null on a mail staged before it was recorded. */
+            /** @description The From address the mail left from, or was staged with while it waits. Null when the relay names none. */
             from_address: string | null;
         };
         /**
@@ -45240,7 +45240,7 @@ export interface components {
              *     language. Art. 14(2)(c)-(e) requires naming them.
              */
             rights: ("access" | "rectification" | "erasure" | "restriction" | "objection" | "complain_to_authority")[];
-            /** @description The language the link's mail was written in, which the page asks in too. Absent on a link minted before it was recorded. */
+            /** @description The language the link's mail was written in, which the page asks in too. Absent when the link records no language. */
             language?: components["schemas"]["MailLanguage"];
         };
         /**
@@ -45266,7 +45266,7 @@ export interface components {
              * @enum {string}
              */
             state: "unknown" | "granted" | "withdrawn";
-            /** @description The language the link's mail was written in, which the page asks in too. Absent on a link minted before it was recorded. */
+            /** @description The language the link's mail was written in, which the page asks in too. Absent when the link records no language. */
             language?: components["schemas"]["MailLanguage"];
         };
         /**
@@ -45293,7 +45293,7 @@ export interface components {
             marketing_state: "unknown" | "granted" | "withdrawn";
             /** @description Where each held value came from and when (Art. 14). Empty for a field nothing has stamped. */
             provenance: components["schemas"]["ConfirmFieldOrigin"][];
-            /** @description The language the link's mail was written in, which the page asks in too. Absent on a link minted before it was recorded. */
+            /** @description The language the link's mail was written in, which the page asks in too. Absent when the link records no language. */
             language?: components["schemas"]["MailLanguage"];
         };
         /** @description One line of where a held value came from, for the Art. 14 disclosure on the confirm page. */
@@ -51162,6 +51162,18 @@ export interface components {
         };
         /** @description State conflict (duplicate key, concurrent edit, already-decided, default-pipeline collision). */
         Conflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /**
+         * @description The installation cannot send its own mail (`conflict`), or the consent engine refuses this
+         *     mail to this contact (`consent_not_granted`).
+         */
+        ControllerMailRefused: {
             headers: {
                 [name: string]: unknown;
             };
@@ -75656,15 +75668,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description The installation cannot send its own mail, so the send would be refused too. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            409: components["responses"]["ControllerMailRefused"];
             /**
              * @description The contact carries no live email address, the installation's controller particulars
              *     are incomplete, or the language is not one this build sends in.
@@ -75707,6 +75711,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["ControllerMailRefused"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -75738,6 +75743,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["ControllerMailRefused"];
             /**
              * @description The contact carries no live email address, so there is no mailbox a link could reach,
              *     or the language is not one this build sends in.

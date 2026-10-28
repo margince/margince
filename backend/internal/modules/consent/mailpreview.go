@@ -4,8 +4,8 @@
 package consent
 
 import (
-	"cmp"
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -50,7 +50,7 @@ func (h Handlers) PreviewControllerMail(w http.ResponseWriter, r *http.Request, 
 }
 
 // PreviewControllerMail renders the record confirmation or privacy notice the
-// matching send would stage now. It runs the send's guards and mints no link.
+// matching send would stage now. It runs the send's guards and keeps nothing.
 func (s *Store) PreviewControllerMail(ctx context.Context, contactID ids.ContactID, kind, language string) (ControllerMailPreview, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
 		return ControllerMailPreview{}, err
@@ -63,44 +63,60 @@ func (s *Store) PreviewControllerMail(ctx context.Context, contactID ids.Contact
 	}
 	var out ControllerMailPreview
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		to, err := admitLinkTx(ctx, tx, linkRequest{contactID: contactID})
-		if err != nil {
+		var err error
+		if out, err = s.previewControllerMailTx(ctx, tx, contactID, kind, language); err != nil {
 			return err
 		}
-		if !s.canSendConfirm() {
-			return ErrNoMailLane
-		}
-		installation := s.mailLanguage(ctx, tx)
-		rendered, _, err := s.renderConfirmMail(ctx, tx, confirmMailInput{
-			kind:      kind,
-			language:  cmp.Or(language, installation),
-			expiresAt: s.now().UTC().Add(confirmTokenTTL),
-		})
-		if err != nil {
-			return err
-		}
-		presented, err := s.confirmSender.PresentConfirmationTx(ctx, tx, rendered)
-		if err != nil {
-			return err
-		}
-		presented.Text = strings.ReplaceAll(presented.Text, linkPlaceholder, mailcopy.For(rendered.Language).PreviewLinkMarker)
-		out = ControllerMailPreview{
-			Kind:            kind,
-			Language:        rendered.Language,
-			DefaultLanguage: knownMailLanguage(installation),
-			PresentedMail:   presented,
-			To:              to,
-		}
-		return nil
+		return errMailPreviewDone
 	})
-	return out, err
+	if errors.Is(err, errMailPreviewDone) {
+		return out, nil
+	}
+	return ControllerMailPreview{}, err
 }
 
-func knownMailLanguage(language string) string {
-	if mailcopy.Known(language) {
-		return language
+// errMailPreviewDone rolls the preview's transaction back once it has its answer.
+var errMailPreviewDone = errors.New("consent: mail preview complete")
+
+func (s *Store) previewControllerMailTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, kind, language string) (ControllerMailPreview, error) {
+	to, err := admitLinkTx(ctx, tx, linkRequest{contactID: contactID, preview: true})
+	if err != nil {
+		return ControllerMailPreview{}, err
 	}
-	return string(mailcopy.Fallback)
+	if !s.canSendConfirm() {
+		return ControllerMailPreview{}, ErrNoMailLane
+	}
+	issued := s.now().UTC()
+	in := confirmMailInput{
+		contactID: contactID, recipient: to, kind: kind,
+		language: s.sendLanguage(ctx, tx, language), expiresAt: issued.Add(confirmTokenTTL),
+	}
+	// The engine allows a confirmation only on a live link of its kind, so the
+	// preview writes one, digest only, which the rollback above undoes.
+	if _, err := insertContactLinkTx(ctx, tx, contactLink{
+		contactID: contactID, tokenHash: hashPublicToken(ids.NewV7().String()), deliveredTo: to,
+		issued: issued, expires: in.expiresAt, kind: kind, language: in.language,
+	}); err != nil {
+		return ControllerMailPreview{}, err
+	}
+	rendered, category, err := s.renderConfirmMail(ctx, tx, in)
+	if err != nil {
+		return ControllerMailPreview{}, err
+	}
+	presented, err := s.confirmSender.PresentConfirmationTx(ctx, tx, ConfirmationSend{
+		ContactID: contactID, Recipient: to, Category: category, ExpiresAt: in.expiresAt, Rendered: rendered,
+	})
+	if err != nil {
+		return ControllerMailPreview{}, err
+	}
+	presented.Text = strings.ReplaceAll(presented.Text, linkPlaceholder, mailcopy.For(rendered.Language).PreviewLinkMarker)
+	return ControllerMailPreview{
+		Kind:            kind,
+		Language:        rendered.Language,
+		DefaultLanguage: string(mailcopy.Carried(s.mailLanguage(ctx, tx))),
+		PresentedMail:   presented,
+		To:              to,
+	}, nil
 }
 
 func wireControllerMailPreview(p ControllerMailPreview) crmcontracts.ControllerMailPreview {
@@ -121,20 +137,4 @@ func wireControllerMailPreview(p ControllerMailPreview) crmcontracts.ControllerM
 		out.FromAddress = &p.From
 	}
 	return out
-}
-
-// sendLanguageOf reads the optional body of a controller send; no body picks
-// no language.
-func sendLanguageOf(w http.ResponseWriter, r *http.Request) (string, bool) {
-	if r.ContentLength == 0 {
-		return "", true
-	}
-	var body crmcontracts.ControllerMailSend
-	if !httperr.Decode(w, r, &body) {
-		return "", false
-	}
-	if body.Language == nil {
-		return "", true
-	}
-	return string(*body.Language), true
 }

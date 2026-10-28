@@ -23614,11 +23614,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409':
-          description: The installation cannot send its own mail, so the send would be refused too.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/ControllerMailRefused' }
         '422':
           description: |
             The contact carries no live email address, the installation's controller particulars
@@ -23670,6 +23666,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ControllerMailRefused' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /contacts/{id}/consent/confirm-request:
     parameters:
@@ -23718,6 +23715,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ControllerMailRefused' }
         '422':
           description: |
             The contact carries no live email address, so there is no mailbox a link could reach,
@@ -32895,6 +32893,13 @@ components:
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
+    ControllerMailRefused:
+      description: |
+        The installation cannot send its own mail (`conflict`), or the consent engine refuses this
+        mail to this contact (`consent_not_granted`).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
     VersionConflict:
       description: 'Optimistic-lock failure — the entity changed since the version in If-Match (`code: version_skew`).'
       content:
@@ -36429,7 +36434,7 @@ components:
           allOf: [{ $ref: '#/components/schemas/ControllerSend' }]
           readOnly: true
           nullable: true
-          description: Present only on a mail the installation's relay sent for a member, as on `Activity`; `from` then names that member.
+          description: Present only on a mail sent through the installation's own relay, as on `Activity`. Its `from_address` is the address the mail left from, whatever `from` names.
         attachments:
           type: array
           items: { $ref: '#/components/schemas/EmailAttachmentSummary' }
@@ -43841,7 +43846,7 @@ components:
         controller_send:
           allOf: [{ $ref: '#/components/schemas/ControllerSend' }]
           nullable: true
-          description: Present only on a mail the installation's relay sent for a member, as on `Activity`.
+          description: Present only on a mail sent through the installation's own relay, as on `Activity`.
 
     ContactGraphRoute:
       type: object
@@ -49068,7 +49073,7 @@ components:
           allOf: [{ $ref: '#/components/schemas/ControllerSend' }]
           readOnly: true
           nullable: true
-          description: Present only on a mail the installation's relay sent for a member. Absent on every other row.
+          description: Present only on a mail sent through the installation's own relay. Absent on every other row.
         thread_key:
           type: [string, 'null']
           readOnly: true
@@ -59929,13 +59934,13 @@ components:
     ControllerSend:
       type: object
       description: |
-        Present on a mail the installation sent through its own relay on a member's behalf,
-        rather than through that member's mailbox. Its presence is the lane.
+        Present on a mail sent through the installation's own relay rather than through a
+        member's mailbox. Its presence is the lane.
       required: [from_address]
       properties:
         from_address:
           type: [string, 'null']
-          description: The From address the mail was staged with. Null on a mail staged before it was recorded.
+          description: The From address the mail left from, or was staged with while it waits. Null when the relay names none.
 
     CompanyVatCheck:
       type: object
@@ -61980,7 +61985,7 @@ components:
             enum: [access, rectification, erasure, restriction, objection, complain_to_authority]
         language:
           allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
-          description: The language the link's mail was written in, which the page asks in too. Absent on a link minted before it was recorded.
+          description: The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 
     SubscriptionConfirmationPage:
       type: object
@@ -62004,7 +62009,7 @@ components:
           description: 'Their answer today, so somebody who already said yes is not asked as though they had not.'
         language:
           allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
-          description: The language the link's mail was written in, which the page asks in too. Absent on a link minted before it was recorded.
+          description: The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 
     RecordConfirmationPage:
       type: object
@@ -62032,7 +62037,7 @@ components:
           items: { $ref: '#/components/schemas/ConfirmFieldOrigin' }
         language:
           allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
-          description: The language the link's mail was written in, which the page asks in too. Absent on a link minted before it was recorded.
+          description: The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 
     ConfirmFieldOrigin:
       type: object

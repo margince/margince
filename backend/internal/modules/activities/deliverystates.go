@@ -38,8 +38,8 @@ type DeliveryState struct {
 	// the send wrote — never the live attachment list, which archiving a
 	// document later rewrites.
 	Files []OutboundFile
-	// Controller marks a mail the installation's relay sent for a member, and
-	// FromAddress is the address it was staged with.
+	// Controller marks a mail sent through the installation's own relay, and
+	// FromAddress is the address it records.
 	Controller  bool
 	FromAddress *string
 }

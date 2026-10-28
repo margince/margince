@@ -90,7 +90,7 @@ func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, toke
 }
 
 // pageLanguage is the language the link's mail was written in, which its page
-// asks in too; nil for a link minted before that was recorded.
+// asks in too; nil when the link records none.
 func pageLanguage(ref ConfirmRef) *crmcontracts.MailLanguage {
 	if !mailcopy.Known(ref.QuestionLocale) {
 		return nil

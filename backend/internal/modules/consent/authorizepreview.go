@@ -38,39 +38,14 @@ import (
 // and a future arm that writes something else would be undone by the same
 // rollback rather than discovered by a reader.
 func (g *Gate) Preview(ctx context.Context, req commsauthz.Request) (commsauthz.DecisionSet, error) {
-	for _, r := range req.Recipients {
-		if err := r.Validate(); err != nil {
-			return commsauthz.DecisionSet{}, fmt.Errorf(
-				"consent: this recipient cannot be put to the engine: %w", err)
-		}
+	if err := previewable(req); err != nil {
+		return commsauthz.DecisionSet{}, err
 	}
-	if len(req.Recipients) == 0 {
-		return commsauthz.DecisionSet{}, fmt.Errorf(
-			"consent: a preview needs at least one recipient: %w", apperrors.ErrInvalidArgument)
-	}
-
 	var set commsauthz.DecisionSet
 	err := g.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		modes, err := authorizationModesTx(ctx, tx)
-		if err != nil {
+		var err error
+		if set, err = g.decidePreviewTx(ctx, tx, req); err != nil {
 			return err
-		}
-		for _, r := range req.Recipients {
-			d, err := g.decideOne(ctx, tx, r, req, commsauthz.PhaseStaging)
-			if err != nil {
-				return err
-			}
-			// PhaseStaging is passed to decideOne and then cleared, and the two
-			// are not in tension. The phase steers what the DECISION does —
-			// staging is the phase that records a basis — so asking as staging
-			// is what makes the preview answer the same question the staging
-			// decision will. Leaving it on the returned decision would be the
-			// lie: nothing here is a staging decision, because nothing here is
-			// recorded.
-			d.Phase = ""
-			d.Mode = ModeFor(modes, d.Resolved)
-			d.Requested = req.Context
-			set.Decisions = append(set.Decisions, d)
 		}
 		// The rollback IS the contract. Returning an error is how pgx.Tx is
 		// told to roll back, and errPreviewComplete is not a failure — the
@@ -79,6 +54,56 @@ func (g *Gate) Preview(ctx context.Context, req commsauthz.Request) (commsauthz.
 	})
 	if err != nil && !errors.Is(err, errPreviewComplete) {
 		return commsauthz.DecisionSet{}, err
+	}
+	return set, nil
+}
+
+// PreviewTx is Preview on the caller's transaction, inside a savepoint it
+// rolls back, so it sees what the caller's transaction has written.
+func (g *Gate) PreviewTx(ctx context.Context, tx pgx.Tx, req commsauthz.Request) (commsauthz.DecisionSet, error) {
+	if err := previewable(req); err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
+	savepoint, err := tx.Begin(ctx)
+	if err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
+	set, err := g.decidePreviewTx(ctx, savepoint, req)
+	if rollback := savepoint.Rollback(ctx); err == nil && rollback != nil {
+		return commsauthz.DecisionSet{}, rollback
+	}
+	return set, err
+}
+
+func previewable(req commsauthz.Request) error {
+	for _, r := range req.Recipients {
+		if err := r.Validate(); err != nil {
+			return fmt.Errorf("consent: this recipient cannot be put to the engine: %w", err)
+		}
+	}
+	if len(req.Recipients) == 0 {
+		return fmt.Errorf("consent: a preview needs at least one recipient: %w", apperrors.ErrInvalidArgument)
+	}
+	return nil
+}
+
+func (g *Gate) decidePreviewTx(ctx context.Context, tx pgx.Tx, req commsauthz.Request) (commsauthz.DecisionSet, error) {
+	var set commsauthz.DecisionSet
+	modes, err := authorizationModesTx(ctx, tx)
+	if err != nil {
+		return set, err
+	}
+	for _, r := range req.Recipients {
+		d, err := g.decideOne(ctx, tx, r, req, commsauthz.PhaseStaging)
+		if err != nil {
+			return set, err
+		}
+		// Asked as staging so it answers what staging will; cleared because
+		// nothing here is recorded as a staging decision.
+		d.Phase = ""
+		d.Mode = ModeFor(modes, d.Resolved)
+		d.Requested = req.Context
+		set.Decisions = append(set.Decisions, d)
 	}
 	return set, nil
 }

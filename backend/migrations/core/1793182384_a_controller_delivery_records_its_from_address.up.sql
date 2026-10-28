@@ -3,6 +3,6 @@
 
 SET LOCAL lock_timeout = '2s';
 
--- The address a controller delivery was staged to be sent from. NULL on one
--- staged before it was recorded.
+-- The address a controller delivery left from, or was staged with while it
+-- waits. NULL when the relay names none.
 ALTER TABLE comms_outbound ADD COLUMN IF NOT EXISTS from_address text;

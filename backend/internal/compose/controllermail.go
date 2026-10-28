@@ -133,15 +133,9 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 	// while satisfying a census gate that sees the call and cannot see it
 	// skipped.
 	if q.authority == nil {
-		return ids.UUID{}, errors.New("compose: no authorization authority is wired on the controller mail lane")
+		return ids.UUID{}, errNoControllerAuthority
 	}
-	set, err := q.authority.AuthorizeStagingTx(ctx, tx, deliveryID, commsauthz.Request{
-		Recipients: []connector.Recipient{{Email: in.Recipient}},
-		Context:    in.Category,
-		Subject:    subject,
-		Body:       body,
-		HTMLBody:   in.Rendered.HTMLBody,
-	})
+	set, err := q.authority.AuthorizeStagingTx(ctx, tx, deliveryID, stagingRequest(in, body))
 	if err != nil {
 		return ids.UUID{}, err
 	}
@@ -157,14 +151,40 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 }
 
 // PresentConfirmationTx is the mail QueueConfirmationTx would stage, so a
-// preview shows the same From, subject and text.
-func (q controllerMailQueue) PresentConfirmationTx(ctx context.Context, tx pgx.Tx, rendered consent.Rendered) (consent.PresentedMail, error) {
-	presented, body, err := presentControllerMailTx(ctx, tx, rendered)
+// preview shows the same From, subject and text, and refuses what staging
+// would refuse.
+func (q controllerMailQueue) PresentConfirmationTx(ctx context.Context, tx pgx.Tx, in consent.ConfirmationSend) (consent.PresentedMail, error) {
+	rendered, body, err := presentControllerMailTx(ctx, tx, in.Rendered)
 	if err != nil {
 		return consent.PresentedMail{}, err
 	}
-	return consent.PresentedMail{From: q.from, Subject: presented.Subject, Text: body}, nil
+	in.Rendered = rendered
+	if q.authority == nil {
+		return consent.PresentedMail{}, errNoControllerAuthority
+	}
+	set, err := q.authority.PreviewTx(ctx, tx, stagingRequest(in, body))
+	if err != nil {
+		return consent.PresentedMail{}, err
+	}
+	if err := refuseAtStaging(set); err != nil {
+		return consent.PresentedMail{}, err
+	}
+	return consent.PresentedMail{From: q.from, Subject: rendered.Subject, Text: body}, nil
 }
+
+// stagingRequest is what the engine is asked about one controller mail, at
+// staging and in its preview alike.
+func stagingRequest(in consent.ConfirmationSend, body string) commsauthz.Request {
+	return commsauthz.Request{
+		Recipients: []connector.Recipient{{Email: in.Recipient}},
+		Context:    in.Category,
+		Subject:    in.Rendered.Subject,
+		Body:       body,
+		HTMLBody:   in.Rendered.HTMLBody,
+	}
+}
+
+var errNoControllerAuthority = errors.New("compose: no authorization authority is wired on the controller mail lane")
 
 // presentControllerMailTx adds the brand the installation's mail is sent
 // under: an HTML alternative, and the brand line atop the plain text.

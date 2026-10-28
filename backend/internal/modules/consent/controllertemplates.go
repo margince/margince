@@ -91,9 +91,9 @@ type ConfirmationSend struct {
 // comms', and neither may import the other.
 type ConfirmationSender interface {
 	QueueConfirmationTx(ctx context.Context, tx pgx.Tx, in ConfirmationSend) (ids.UUID, error)
-	// PresentConfirmationTx is the mail QueueConfirmationTx would stage for
-	// rendered, staging nothing.
-	PresentConfirmationTx(ctx context.Context, tx pgx.Tx, rendered Rendered) (PresentedMail, error)
+	// PresentConfirmationTx is the mail QueueConfirmationTx would stage for in,
+	// refused as staging would refuse it, staging nothing.
+	PresentConfirmationTx(ctx context.Context, tx pgx.Tx, in ConfirmationSend) (PresentedMail, error)
 }
 
 // controllerTemplate is one registered wording.
@@ -209,9 +209,7 @@ func renderTemplateContext(key string, expiresAt time.Time, language, purpose st
 	if !ok {
 		return Rendered{}, "", fmt.Errorf("consent: %q is not a registered controller template", key)
 	}
-	if !mailcopy.Known(language) {
-		language = string(mailcopy.Fallback)
-	}
+	language = string(mailcopy.Carried(language))
 	words := mailcopy.For(language)
 	var body strings.Builder
 	if t.linkless {

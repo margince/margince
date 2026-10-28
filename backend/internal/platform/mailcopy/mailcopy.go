@@ -62,10 +62,16 @@ func Languages() []Language {
 
 // For is the copy one installation's mail is written in.
 func For(language string) Copy {
-	if words, known := catalog[Language(language)]; known {
-		return words
+	return catalog[Carried(language)]
+}
+
+// Carried is the language a mail in language is written in: language itself
+// when this build has copy for it, else Fallback.
+func Carried(language string) Language {
+	if Known(language) {
+		return Language(language)
 	}
-	return catalog[Fallback]
+	return Fallback
 }
 
 // Known reports whether this build carries copy for a language.

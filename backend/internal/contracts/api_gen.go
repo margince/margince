@@ -26052,7 +26052,7 @@ type Activity struct {
 	// ContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
 	ContentState *ActivityContentState `json:"content_state,omitempty"`
 
-	// ControllerSend Present only on a mail the installation's relay sent for a member. Absent on every other row.
+	// ControllerSend Present only on a mail sent through the installation's own relay. Absent on every other row.
 	ControllerSend *ControllerSend `json:"controller_send,omitempty"`
 	CreatedAt      time.Time       `json:"created_at"`
 
@@ -36445,7 +36445,7 @@ type ContactGraphNodeType string
 type ContactGraphReceipt struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
 
-	// ControllerSend Present only on a mail the installation's relay sent for a member, as on `Activity`.
+	// ControllerSend Present only on a mail sent through the installation's own relay, as on `Activity`.
 	ControllerSend *ControllerSend `json:"controller_send,omitempty"`
 
 	// Kind What the receipt is evidence OF. The graph counts attendees and organizers as well
@@ -37246,10 +37246,10 @@ type ControllerParticulars struct {
 	PrivacyContact *string `json:"privacy_contact,omitempty"`
 }
 
-// ControllerSend Present on a mail the installation sent through its own relay on a member's behalf,
-// rather than through that member's mailbox. Its presence is the lane.
+// ControllerSend Present on a mail sent through the installation's own relay rather than through a
+// member's mailbox. Its presence is the lane.
 type ControllerSend struct {
-	// FromAddress The From address the mail was staged with. Null on a mail staged before it was recorded.
+	// FromAddress The From address the mail left from, or was staged with while it waits. Null when the relay names none.
 	FromAddress *string `json:"from_address"`
 }
 
@@ -40138,7 +40138,7 @@ type EmailPresentation struct {
 	CanReply         bool              `json:"can_reply"`
 	Cc               []EmailParty      `json:"cc"`
 
-	// ControllerSend Present only on a mail the installation's relay sent for a member, as on `Activity`; `from` then names that member.
+	// ControllerSend Present only on a mail sent through the installation's own relay, as on `Activity`. Its `from_address` is the address the mail left from, whatever `from` names.
 	ControllerSend *ControllerSend    `json:"controller_send,omitempty"`
 	From           []EmailParty       `json:"from"`
 	Id             openapi_types.UUID `json:"id"`
@@ -47795,7 +47795,7 @@ type PrivacyInformationPage struct {
 	AcquiredAt *time.Time                 `json:"acquired_at,omitempty"`
 	Kind       PrivacyInformationPageKind `json:"kind"`
 
-	// Language The language the link's mail was written in, which the page asks in too. Absent on a link minted before it was recorded.
+	// Language The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 	Language *MailLanguage `json:"language,omitempty"`
 
 	// PurposeKeys The key of each entry in `purposes`, at the same index. A page names a purpose the
@@ -49210,7 +49210,7 @@ type RecordConfirmationPage struct {
 	FullName string                     `json:"full_name"`
 	Kind     RecordConfirmationPageKind `json:"kind"`
 
-	// Language The language the link's mail was written in, which the page asks in too. Absent on a link minted before it was recorded.
+	// Language The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 	Language *MailLanguage `json:"language,omitempty"`
 
 	// MarketingState Their answer today, so somebody who already said yes is not asked as though they had not.
@@ -53029,7 +53029,7 @@ type StatedAmount struct {
 type SubscriptionConfirmationPage struct {
 	Kind SubscriptionConfirmationPageKind `json:"kind"`
 
-	// Language The language the link's mail was written in, which the page asks in too. Absent on a link minted before it was recorded.
+	// Language The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 	Language *MailLanguage `json:"language,omitempty"`
 
 	// PurposeKey The subscription this link is about.
@@ -58375,6 +58375,9 @@ type CalendarUnavailable = Problem
 
 // Conflict RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type Conflict = Problem
+
+// ControllerMailRefused RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type ControllerMailRefused = Problem
 
 // Forbidden RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type Forbidden = Problem

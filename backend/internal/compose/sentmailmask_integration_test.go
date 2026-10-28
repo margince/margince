@@ -159,8 +159,10 @@ func TestControllerMailStoresItsTimelineRowMasked(t *testing.T) {
 	if !strings.Contains(deliveredSubject, secret) || !strings.Contains(deliveredBody, secret) {
 		t.Fatalf("the delivery carries %q / %q, want the words as rendered", deliveredSubject, deliveredBody)
 	}
-	readable := strings.ReplaceAll(deliveredBody, "{{confirmation-link}}", mailcopy.For(rendered.Language).SentLinkMarker)
-	if storedSubject != credentialmask.MaskText(deliveredSubject) || storedBody != credentialmask.MaskText(readable) {
+	if storedSubject != credentialmask.MaskText(deliveredSubject) || strings.Contains(storedBody, secret) {
 		t.Fatalf("the timeline row stores %q / %q, want the delivered text masked", storedSubject, storedBody)
+	}
+	if !strings.Contains(storedBody, mailcopy.For(rendered.Language).SentLinkMarker) || strings.Contains(storedBody, "{{confirmation-link}}") {
+		t.Fatalf("the timeline row stores %q, want the link marker where the delivery keeps its placeholder", storedBody)
 	}
 }

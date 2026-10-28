@@ -36,7 +36,7 @@ func TestOnlyARelaySendIsMarkedAsOne(t *testing.T) {
 	}
 }
 
-func TestARelaySendStagedBeforeTheFromWasRecordedKeepsItsLane(t *testing.T) {
+func TestARelaySendWhoseRelayNamesNoFromKeepsItsLane(t *testing.T) {
 	mark := ControllerSendOf(true, nil)
 	if mark == nil || mark.FromAddress != nil {
 		t.Errorf("a relay send with no recorded From reads %+v, want the lane with a null from_address", mark)

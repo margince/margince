@@ -212,7 +212,12 @@ func requireMailLanguage(picked string) error {
 	if picked == "" || mailcopy.Known(picked) {
 		return nil
 	}
-	return &ValidationError{Field: "language", Reason: "this language is not one the installation's mail is written in"}
+	carried := make([]string, 0, len(mailcopy.Languages()))
+	for _, language := range mailcopy.Languages() {
+		carried = append(carried, string(language))
+	}
+	return &ValidationError{Field: "language", Reason: "pick one of the languages the installation's mail is written in: " +
+		strings.Join(carried, ", ")}
 }
 
 // mailLanguage is the language this installation's controller mail is written

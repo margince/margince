@@ -116,29 +116,14 @@ func (s *Store) issueLinkTx(
 			contactID, issued, kind, nullablePurpose(purposeID)); err != nil {
 			return err
 		}
-		// A confirm_token row is a security artifact, not a kernel entity, so
-		// the row id stays untyped — as consent_doi_token's does.
-		// THE QUESTION THIS LINK WILL ASK, pinned now rather than read back when
-		// the subject answers. The page renders in the installation's mail
-		// language, and both that and the question's version can change between
-		// the mail going out and the click coming back — so a grant resolving
-		// either at proof time would name wording the subject never saw.
-		//
 		// The mail below is rendered in this same language, so the row and the
 		// page cannot disagree about which one.
 		questionLocale := s.sendLanguage(ctx, tx, req.language)
-		// WHICH question, decided from the link kind so the pin and the page
-		// cannot disagree about what the subject will be asked.
-		questionKey := QuestionKeyForLink(kind)
-		var tokenRowID ids.UUID
-		if err := tx.QueryRow(ctx, `
-			INSERT INTO confirm_token (contact_id, token_hash, delivered_to, issued_at, expires_at, kind, purpose_id,
-			                           question_key, question_locale, question_version)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-			RETURNING id`,
-			contactID, req.tokenHash, deliveredTo, issued, expires,
-			kind, nullablePurpose(purposeID),
-			questionKey, questionLocale, marketingQuestionVersion).Scan(&tokenRowID); err != nil {
+		tokenRowID, err := insertContactLinkTx(ctx, tx, contactLink{
+			contactID: contactID, tokenHash: req.tokenHash, deliveredTo: deliveredTo,
+			issued: issued, expires: expires, kind: kind, purposeID: purposeID, language: questionLocale,
+		})
+		if err != nil {
 			return err
 		}
 		// The address is audited because it is the evidence: a later reader
@@ -197,4 +182,31 @@ func (s *Store) issueLinkTx(
 		return mintedLink{}, err
 	}
 	return out, nil
+}
+
+// contactLink is one confirm_token row a contact's link is minted as.
+type contactLink struct {
+	contactID       ids.ContactID
+	tokenHash       string
+	deliveredTo     string
+	issued, expires time.Time
+	kind            string
+	purposeID       ids.PurposeID
+	language        string
+}
+
+// insertContactLinkTx writes one link's row and pins the question it asks.
+// A grant read back at proof time could name wording the subject never saw.
+func insertContactLinkTx(ctx context.Context, tx pgx.Tx, link contactLink) (ids.UUID, error) {
+	args := []any{
+		link.contactID, link.tokenHash, link.deliveredTo, link.issued, link.expires, link.kind,
+		nullablePurpose(link.purposeID), QuestionKeyForLink(link.kind), link.language, marketingQuestionVersion,
+	}
+	var id ids.UUID
+	err := tx.QueryRow(ctx, `
+		INSERT INTO confirm_token (contact_id, token_hash, delivered_to, issued_at, expires_at, kind, purpose_id,
+		                           question_key, question_locale, question_version)
+		VALUES (`+storekit.Placeholders(args)+`)
+		RETURNING id`, args...).Scan(&id)
+	return id, err
 }

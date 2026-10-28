@@ -1499,7 +1499,7 @@ type Activity struct {
 	// ContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
 	ContentState *ActivityContentState `json:"content_state,omitempty"`
 
-	// ControllerSend Present only on a mail the installation's relay sent for a member. Absent on every other row.
+	// ControllerSend Present only on a mail sent through the installation's own relay. Absent on every other row.
 	ControllerSend *ControllerSend `json:"controller_send,omitempty"`
 	CreatedAt      time.Time       `json:"created_at"`
 
@@ -1945,10 +1945,10 @@ type ComputedField struct {
 // ComputedFieldKind defines model for ComputedField.Kind.
 type ComputedFieldKind string
 
-// ControllerSend Present on a mail the installation sent through its own relay on a member's behalf,
-// rather than through that member's mailbox. Its presence is the lane.
+// ControllerSend Present on a mail sent through the installation's own relay rather than through a
+// member's mailbox. Its presence is the lane.
 type ControllerSend struct {
-	// FromAddress The From address the mail was staged with. Null on a mail staged before it was recorded.
+	// FromAddress The From address the mail left from, or was staged with while it waits. Null when the relay names none.
 	FromAddress *string `json:"from_address"`
 }
 

@@ -123,8 +123,6 @@ type ConfirmRef struct {
 // supersession is expiry, exactly as the double-opt-in path does it, so the
 // resolve path needs no extra state. Delivery of the plaintext is the caller's,
 // which is what keeps this store free of a mail dependency.
-// language is the one the mail and its page are written in; "" is the
-// installation's mail language.
 func (s *Store) IssueConfirmToken(ctx context.Context, contactID ids.ContactID, language string) (IssuedConfirm, error) {
 	return s.issueLink(ctx, contactID, LinkRecordConfirmation, ids.PurposeID{}, "", refuseWithoutMailLane, language)
 }

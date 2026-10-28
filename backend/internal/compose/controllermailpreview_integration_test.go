@@ -23,8 +23,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/platform/mailer"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/testsmtp"
 )
@@ -116,13 +118,18 @@ func TestAPreviewShowsTheMailTheSendStagesAndSendsNothing(t *testing.T) {
 	l := setupConfirmLane(t)
 	contact := ids.From[ids.ContactKind](l.contact)
 
+	tables := []string{"confirm_token", "comms_outbound", "activity", "communication_decision", "audit_log", "event_outbox"}
+	before := make(map[string]int, len(tables))
+	for _, table := range tables {
+		before[table] = l.e.WsCount(t, `SELECT count(*) FROM `+table)
+	}
 	preview, err := l.store.PreviewControllerMail(l.ctx, contact, consent.LinkRecordConfirmation, "vi")
 	if err != nil {
 		t.Fatalf("PreviewControllerMail: %v", err)
 	}
-	for _, table := range []string{"confirm_token", "comms_outbound", "activity"} {
-		if n := l.e.WsCount(t, `SELECT count(*) FROM `+table); n != 0 {
-			t.Fatalf("a preview wrote %d %s row(s); opening it must send nothing and mint nothing", n, table)
+	for _, table := range tables {
+		if n := l.e.WsCount(t, `SELECT count(*) FROM `+table); n != before[table] {
+			t.Fatalf("a preview took %s from %d to %d rows; opening it must send, mint and record nothing", table, before[table], n)
 		}
 	}
 	if preview.From != laneFromAddress || preview.To != "subject@example.test" {
@@ -319,4 +326,45 @@ func TestTheTimelineCopyOfARelaySendSaysWhereTheLinkWentInTheMailsLanguage(t *te
 	if !strings.Contains(delivered, "{{confirmation-link}}") {
 		t.Error("the delivery lost the placeholder the dispatcher fills")
 	}
+}
+
+func TestAPreviewRefusesWhatTheConsentEngineRefusesTheSend(t *testing.T) {
+	l := setupConfirmLane(t)
+	contact := ids.From[ids.ContactKind](l.contact)
+	if err := l.store.Suppress(l.ctx, consent.SuppressInput{ContactID: contact, Kind: "subject_request"}); err != nil {
+		t.Fatalf("Suppress: %v", err)
+	}
+
+	_, previewErr := l.store.PreviewControllerMail(l.ctx, contact, consent.LinkRecordConfirmation, "")
+	_, sendErr := l.store.IssueConfirmToken(l.ctx, contact, "")
+	if !errors.Is(sendErr, apperrors.ErrConsentNotGranted) {
+		t.Fatalf("the send to a stopped contact answered %v, want the engine's refusal", sendErr)
+	}
+	if !errors.Is(previewErr, apperrors.ErrConsentNotGranted) || answeredStatus(previewErr) != answeredStatus(sendErr) {
+		t.Errorf("the preview answered %v, the send %v: a preview must refuse what the send refuses, with its status",
+			previewErr, sendErr)
+	}
+}
+
+func TestAPreviewHidesAContactOutsideTheCallersScopeBeforeSayingItCannotSend(t *testing.T) {
+	l := setupConfirmLane(t)
+	theirs := l.e.SeedContact(t, "Their Contact", &l.e.Rep3)
+	l.e.MakeCapturePrivate(t, "contact", theirs, l.e.Rep3)
+	unwired := consent.NewStore(InstallationDB(l.e.Pool))
+
+	_, hidden := unwired.PreviewControllerMail(l.ctx, ids.From[ids.ContactKind](theirs), consent.LinkRecordConfirmation, "")
+	if !errors.Is(hidden, apperrors.ErrNotFound) {
+		t.Errorf("a contact outside the caller's scope answered %v, want not found before anything else", hidden)
+	}
+	_, noLane := unwired.PreviewControllerMail(l.ctx, ids.From[ids.ContactKind](l.contact), consent.LinkRecordConfirmation, "")
+	if !errors.Is(noLane, consent.ErrNoMailLane) {
+		t.Errorf("an installation that cannot send answered %v, want ErrNoMailLane", noLane)
+	}
+}
+
+// answeredStatus is the HTTP status the API answers err with.
+func answeredStatus(err error) int {
+	rec := httptest.NewRecorder()
+	httperr.Write(rec, httptest.NewRequest(http.MethodGet, "/", nil), err)
+	return rec.Code
 }

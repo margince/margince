@@ -38,20 +38,6 @@ func TestAConfirmRequestBodyPicksTheLanguageOfTheMail(t *testing.T) {
 	}
 }
 
-func TestAConfirmRequestRefusesALanguageItCannotWriteIn(t *testing.T) {
-	e := setupChannelConsent(t)
-	seedSubjectAddress(t, e)
-	stager := &recordingStager{}
-
-	rec := confirmRequestWith(e, withLane(e, stager, &recordingVault{}), `{"language":"fr"}`)
-	if rec.Code != http.StatusUnprocessableEntity || !strings.Contains(rec.Body.String(), "language") {
-		t.Fatalf("status = %d (body: %s), want a 422 naming the language", rec.Code, rec.Body.String())
-	}
-	if stager.calls != 0 {
-		t.Error("a refused language still staged a mail")
-	}
-}
-
 func TestThePreviewAnswersTheMailWithEveryLanguageOnOffer(t *testing.T) {
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)

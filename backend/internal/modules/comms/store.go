@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -325,13 +326,14 @@ func (s *Store) commitReceipt(ctx context.Context, id ids.UUID, receipt connecto
 		// nobody could account for. It is already NULL on every mail row, so this
 		// is the one write that closes the marker rather than a shape-specific
 		// branch.
+		var args []any
+		arg := func(v any) string { args = append(args, v); return "$" + strconv.Itoa(len(args)) }
 		return tx.QueryRow(ctx, `
 			UPDATE comms_outbound
-			   SET status = 'sent', provider_message_id = $2, sent_at = $3, reason = NULL,
-			       inflight_at = NULL, from_address = coalesce(nullif($4, ''), from_address)
-			 WHERE id = $1 AND status = 'pending'
-			RETURNING activity_id, coalesce(message_id, '')`,
-			id, receipt.ProviderMessageID, s.now().UTC(), receipt.FromAddress).Scan(&activityID, &staged)
+			   SET status = 'sent', provider_message_id = `+arg(receipt.ProviderMessageID)+`, sent_at = `+arg(s.now().UTC())+`,
+			       reason = NULL, inflight_at = NULL, from_address = coalesce(nullif(`+arg(receipt.FromAddress)+`, ''), from_address)
+			 WHERE id = `+arg(id)+` AND status = 'pending'
+			RETURNING activity_id, coalesce(message_id, '')`, args...).Scan(&activityID, &staged)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.ActivityID{}, "", ErrTerminal
