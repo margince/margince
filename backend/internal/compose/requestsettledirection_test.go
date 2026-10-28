@@ -40,3 +40,32 @@ func TestTheModelReadsOurInlineAnswersButNotTheHistoryUnderTheirAsk(t *testing.T
 		t.Fatal("history quoted under their message reached the model as their ask")
 	}
 }
+
+// In a batch, one ungrounded quote no longer fails every other verdict. The
+// settler asks that conversation again alone, where the refusal above applies.
+func TestAnUngroundedQuoteInABatchKeepsTheOtherVerdicts(t *testing.T) {
+	t.Parallel()
+	owed, settled := ids.NewV7(), ids.NewV7()
+	batch := []settleCandidate{
+		{Request: activities.RepliedRequest{RequestID: owed}, Messages: []threadMessage{
+			{ID: owed, Direction: "inbound", Body: "Please send the signed contract."},
+		}},
+		{Request: activities.RepliedRequest{RequestID: settled}, Messages: []threadMessage{
+			{ID: settled, Direction: "inbound", Body: "Can you confirm Friday?"},
+		}},
+	}
+	ungrounded := settleResult{ID: owed.String(), Verdict: activities.RequestStillOwed, Remaining: "Send them the contract", Confidence: 1}
+	payload := settlePayload{Results: []settleResult{
+		ungrounded,
+		{ID: settled.String(), Verdict: activities.RequestSettled, Confidence: 1},
+	}}
+	if msg := validateSettlePayload(payload, batch); msg != "" {
+		t.Fatalf("one ungrounded quote refused the whole batch: %s", msg)
+	}
+	if settleRemainderStands(ungrounded, batch) {
+		t.Fatal("an ungrounded still_owed would be committed instead of asked again alone")
+	}
+	if !settleRemainderStands(payload.Results[1], batch) {
+		t.Fatal("a settled verdict was held back for a quote it does not need")
+	}
+}

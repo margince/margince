@@ -212,7 +212,10 @@ func validateSettlePayload(payload settlePayload, batch []settleCandidate) strin
 		if r.Verdict == activities.RequestStillOwed && strings.TrimSpace(r.Remaining) == "" {
 			return "a still_owed verdict carries no remaining phrase; quote the ask from their request that we still owe"
 		}
-		if r.Verdict == activities.RequestStillOwed && !settleRemainderGrounded(r, batch) {
+		// Asked alone, an ungrounded quote is refused and retried with the
+		// reason. In a batch it would fail every other verdict, so judgeBatch
+		// asks that conversation again alone instead.
+		if len(batch) == 1 && r.Verdict == activities.RequestStillOwed && !settleRemainderGrounded(r, batch) {
 			return "remaining must quote at least two words of their original request verbatim, never our reply, quoted history or a signature"
 		}
 	}
@@ -233,6 +236,12 @@ func settleRemainderGrounded(result settleResult, batch []settleCandidate) bool 
 		}
 	}
 	return false
+}
+
+// settleRemainderStands reports whether a result may be committed as given:
+// any verdict but still_owed, or a still_owed that quotes their request.
+func settleRemainderStands(result settleResult, batch []settleCandidate) bool {
+	return result.Verdict != activities.RequestStillOwed || settleRemainderGrounded(result, batch)
 }
 
 // settleIDs is the ids one batch asks about: what the schema lets the model
