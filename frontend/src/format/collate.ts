@@ -98,6 +98,9 @@ export function holdsEveryWord(
   words: readonly string[],
   fields: readonly string[],
 ): boolean {
+  if (words.length === 0) {
+    return true;
+  }
   const folded = fields.map(foldForSearch);
   return words.every((word) => folded.some((field) => field.includes(word)));
 }
