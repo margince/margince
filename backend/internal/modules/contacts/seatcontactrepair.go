@@ -78,10 +78,10 @@ func ArchiveSeatContactsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit
 	return page, nil
 }
 
-// untouchedByPeopleSQL is the rule both reads below ask of one contact. No
+// untouchedByAnyoneSQL is the rule both reads below ask of one contact. No
 // audit row on the contact or its employment edges is by any actor but the
 // system or a connector.
-func untouchedByPeopleSQL(contact string) string {
+func untouchedByAnyoneSQL(contact string) string {
 	return `NOT EXISTS (SELECT 1 FROM audit_log a
 		                WHERE a.entity_type = '` + contactEntity + `' AND a.entity_id = ` + contact + `
 		                  AND a.actor_type NOT IN ('system', 'connector'))
@@ -91,11 +91,11 @@ func untouchedByPeopleSQL(contact string) string {
 }
 
 // workedOnUnderLock asks again, under the contact's employment lock, whether
-// anyone acted on it since the page was read. That is a person or an agent on
+// anyone acted on it since the page was read. That is a human or an agent on
 // the contact or its edges, or a colleague's tag, list or link.
 func workedOnUnderLock(ctx context.Context, tx pgx.Tx, contact ids.ContactID) (bool, error) {
 	var untouched bool
-	if err := tx.QueryRow(ctx, `SELECT `+untouchedByPeopleSQL("$1"), contact).Scan(&untouched); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT `+untouchedByAnyoneSQL("$1"), contact).Scan(&untouched); err != nil {
 		return false, fmt.Errorf("contacts: re-reading whether anyone acted on a seat's contact: %w", err)
 	}
 	if !untouched {
@@ -110,7 +110,7 @@ func mintedContactPage(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int
 	rows, err := tx.Query(ctx, `
 		SELECT p.id, p.version,
 		       p.captured_by LIKE 'connector:%'
-		       AND `+untouchedByPeopleSQL("p.id")+`
+		       AND `+untouchedByAnyoneSQL("p.id")+`
 		  FROM contact p
 		 WHERE p.archived_at IS NULL AND p.merged_into_id IS NULL AND p.id > $1
 		 ORDER BY p.id
