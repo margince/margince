@@ -71,35 +71,55 @@ feed stops when they leave. A service member is the account made for this. No hu
 The member is not counted against the seat limit and is never deleted, only archived. The steps and the
 call are in [declare-a-service-member.md](../how-to/declare-a-service-member.md).
 
-## The tool bag
+## The tool bag: what a unit can do to each core record
 
-An extension is one Go value, `Extension`, returned by its `New()`. Each field is one kind of thing the core lets a
-unit plug in. A tick in a unit's column means that unit uses the field today, so the four units that ship are
-worked examples to copy from.
+Read a row as "can a unit do this to that record?" A ✅ is a door the core offers. A · is no door.
 
-| What a unit can add | What it is for | [`de`](../../extensions/de) | [`finance-demo`](../../extensions/finance-demo) | [`openchannel`](../../extensions/openchannel) | [`vn`](../../extensions/vn) |
-|---|---|:-:|:-:|:-:|:-:|
-| `Ingress` | Bring records in from another system, under a member's rights | · | · | ✅ | · |
-| `Inbound` | Accept a signed call from a party with no session | · | · | ✅ | · |
-| `Jobs` | Run something on a timer | · | · | ✅ | · |
-| `Subscriptions` | React to events in Margince | · | · | ✅ | · |
-| `Channels` | Send and receive through a messaging provider | · | · | ✅ | · |
-| `OAuthApps` | Sign an admin in to a vendor | · | ✅ | · | · |
-| `Secrets` | Name the secrets the unit keeps | · | · | ✅ | · |
-| `Tools` | Give people and agents a governed operation | · | · | ✅ | · |
-| `Entries` | A button on a core page | · | · | ✅ | · |
-| `Panels` | A card on a record page | · | · | · | · |
-| `Settings` | A switch or a line of text an admin can change | · | · | · | · |
-| `FinanceSources` | Read an accounting system | · | ✅ | · | · |
-| `SystemReads` | Name the reads that jobs and subscriptions make | · | · | · | · |
-| `Migrations` | Keep its own tables, `ext_<name>_…` | · | · | ✅ | · |
-| `FailureClasses` | Sort job errors into those worth a retry | · | · | ✅ | · |
-| `Jurisdictions` | Legal retention floors for a country | ✅ | · | · | ✅ |
-| `Messaging` | Outbound messaging rules for a country | ✅ | · | · | ✅ |
-| `SubjectRights` | Data-subject request deadlines | ✅ | · | · | · |
-| `Documents` | Compliance documents for staff | ✅ | · | · | · |
+| A unit can… | Company | Deal | Contact | Activity | Signal |
+|---|:-:|:-:|:-:|:-:|:-:|
+| **Land** it from its own system (create or update, by the id its system gave it) | ✅ | ✅ | · | ✅ | · |
+| **Move** it to another stage | · | ✅ | · | · | · |
+| **Create** it inside the unit's own transaction (`Tx.Core()`) | · | · | · | ✅ | · |
+| **Read** and list it, as the person who asked | ✅ | ✅ | · | ✅ | ✅ |
+| **Find** it by the id from its own system | ✅ | ✅ | · | · | · |
+| **Filter** it by an admin's custom field | ✅ | ✅ | · | ✅ | · |
+| **Tell** a member or a role about it (a notice) | ✅ | ✅ | ✅ | · | · |
+| **Hear** when it is erased or merged | ✅ | ✅ | · | · | · |
+| **Add a button** to its page | ✅ | ✅ | ✅ | ✅ | · |
+| **Add a small note** to its page | ✅ | ✅ | ✅ | · | · |
+| **Add a card** to its page | · | ✅ | · | · | · |
+| **Keep its own data** beside it, in the unit's own table | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Delete** it | · | · | · | · | · |
+| **Add a column** to it, or **create a custom field** on it | · | · | · | · | · |
 
-`Name`, `Version` and `Description` say who the unit is, and every unit sets them.
+What stops a unit, in each case:
+
+- **Landing and creating** run as a named member, and that member's rights apply. A field a user edited is left
+  alone, and a value that is already filled is never overwritten.
+- **Reading** is done as the person who asked. A record outside that person's scope answers "not found".
+- **A contact** is never landed by a unit. The core makes one when it resolves the other party of an activity.
+- **`Tx.Core()`** carries the same rights check, audit row and event as a core write. It is refused on a job
+  tick, because nobody is behind a tick to check the write against.
+- **Delete, a new column and a custom field** have no door. An admin adds custom fields, and a unit reads and
+  filters on them.
+
+### What else a unit can add
+
+These are not tied to one record.
+
+| A unit can add… | It is for |
+|---|---|
+| A timer (`Jobs`) | Run something on a cadence set in the unit's contract fragment |
+| An event listener (`Subscriptions`) | React to events in Margince |
+| A source of records (`Ingress`, `Inbound`) | Bring records in from another system, or accept a signed call |
+| A messaging provider (`Channels`) | Send and receive messages |
+| A vendor sign-in (`OAuthApps`) | Sign an admin in to a vendor |
+| Secrets (`Secrets`) | Name the secrets the unit keeps. The core seals them. |
+| An agent tool (`Tools`) | A governed operation for people and agents |
+| Settings (`Settings`) | A switch or a line of text an admin can change |
+| An accounting source (`FinanceSources`) | Read an accounting system |
+| A country pack (`Jurisdictions`, `Messaging`, `SubjectRights`, `Documents`) | Retention floors, messaging rules, request deadlines, staff documents |
+| Tables (`Migrations`) | The unit's own `ext_<name>_…` tables |
 
 ### Where a unit's screen can appear
 
@@ -120,29 +140,7 @@ worked examples to copy from.
 | `record_mark.contact`, `.company`, `.deal` | small note | On the record page, for readers who may read the unit's data |
 | `record_panel.deal` | card | The side column of a deal page |
 
-## How far an extension reaches into the core, and how far the core reaches into it
-
-A unit is a guest with a short list of doors. Every door runs under the rights of a member, and a write through
-it is audited like any other. A unit never touches a core table with its own SQL.
-
-### What an extension can do to core records
-
-| Action | Allowed | How, and what stops it |
-|---|:-:|---|
-| Create or update a company, deal or activity under its own outside id | ✅ | `Ingest`, `IngestBatch`. It lands as a named member, and that member's rights apply. |
-| Move a deal to another stage | ✅ | `Ingest`, with the stage's id. A lost stage needs a reason. |
-| Overwrite a field a user edited | 🚫 | The core leaves it alone and names it in the result. |
-| Overwrite a value that is already filled | 🚫 | Adopting and updating fill empty fields only. |
-| Read deals, companies, signals, activities, the custom-field list | ✅ | The read doors. It reads as the caller, and a record outside that caller's scope answers "not found". |
-| Make the core's own write inside the unit's transaction | ✅ | `Tx.Core()`. Same rights check, audit row and event as a core write. |
-| Record what its own SQL did | ✅ | `Tx.Record`. It is offered, not forced. |
-| Tell a member or a role about a record | ✅ | Notices. The unit names no address, and the core picks who may open the record. |
-| Keep its own data | ✅ | Its own `ext_<name>_…` tables, joined by the record's id. |
-| Add a column to a core record | 🚫 | A unit carries its fields in its own table and its outside id. |
-| Create a custom field | 🚫 | An admin adds them. A unit reads and filters on them. |
-| Delete a core record, change a role, touch another unit's data | 🚫 | No door exists. |
-
-### What the core does with an extension
+## How far the core reaches into an extension
 
 | The core… | Happens | When it happens |
 |---|:-:|---|
