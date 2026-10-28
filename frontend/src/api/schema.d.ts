@@ -27032,6 +27032,8 @@ export interface components {
             name: string;
             /** @description A custom field's label. Absent for a core column. */
             label?: string;
+            /** @description What the mapping step calls the field the column is mapped onto, in the caller's language. Present for a core column. */
+            field_label?: string;
             /** @description What goes in the column. */
             description: string;
             /** @description An example value, or several separated by " · ". */
@@ -29599,7 +29601,7 @@ export interface components {
                 kind: string;
                 /** @enum {string} */
                 severity: "info" | "warn" | "urgent";
-                /** @description The signal's one sentence, in the words its producer wrote — the strip does not rephrase what a conversation said. */
+                /** @description The signal's one sentence, in the language `Signal.summary` reads in. The strip does not rephrase what a conversation said. */
                 summary: string;
             } | null;
         };
@@ -36606,8 +36608,9 @@ export interface components {
             basis_id?: string | null;
         };
         SendEmailRequest: {
+            /** @description The subject line. Blank or only white space is refused with 422 `required`. */
             subject: string;
-            /** @description The (possibly edited) final body that is sent. */
+            /** @description The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`. */
             body: string;
             /**
              * @description The same message as markup, or omitted for a plain-text send. It never
@@ -37128,8 +37131,9 @@ export interface components {
          *     otherwise have supplied — the records this new conversation belongs to.
          */
         SendCompanyEmailRequest: {
+            /** @description The subject line. Blank or only white space is refused with 422 `required`. */
             subject: string;
-            /** @description The (possibly edited) final body that is sent. */
+            /** @description The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`. */
             body: string;
             /**
              * @description The same message as markup, or omitted for a plain-text send. It never
@@ -38386,6 +38390,12 @@ export interface components {
              * @enum {string}
              */
             severity: "info" | "warn" | "urgent";
+            /**
+             * @description The signal's one sentence. A sentence the server words itself (`technical_change`,
+             *     `ghosted_thread`, `project_gone_quiet`) is in the reader's chosen display language, else
+             *     the installation's base language. Every other summary, and a summary stored without its
+             *     parts, reads as it was written.
+             */
             summary: string;
             /** @description Per-claim evidence; a claim without evidence is omitted. */
             evidence: components["schemas"]["SignalEvidence"][];

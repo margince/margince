@@ -5,11 +5,13 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // moveDedupeCandidates re-homes the pairs naming a merged-away contact or
@@ -34,12 +36,10 @@ func moveDedupeCandidates(ctx context.Context, tx pgx.Tx, entityType string, sou
 	namesSource := func(row string) string {
 		return fmt.Sprintf("(%[1]s.%[2]s = @source OR %[1]s.%[3]s = @source)", row, side.left, side.right)
 	}
+	if err := settleOpenPairBetween(ctx, tx, side, sourceID, targetID); err != nil {
+		return err
+	}
 	steps := []struct{ what, stmt string }{
-		{"drop the open self-pair", fmt.Sprintf(`
-		DELETE FROM dedupe_candidate p
-		 WHERE p.entity_type = @entity AND p.disposition = 'open'
-		   AND ((p.%[1]s = @source AND p.%[2]s = @target) OR (p.%[1]s = @target AND p.%[2]s = @source))`,
-			side.left, side.right)},
 		// A disposition is a human answer and outlives an open row; between two
 		// rows that both carry one, the survivor's own stands.
 		{"drop the duplicated pairs", `
@@ -72,4 +72,26 @@ func moveDedupeCandidates(ctx context.Context, tx pgx.Tx, entityType string, sou
 		}
 	}
 	return nil
+}
+
+// settleOpenPairBetween marks the open pair of the two merging records as
+// merged, by the user behind this call. The dedupe queue and a case merge mark
+// their pairs first, so only a merge made from a record page finds one open;
+// without this it left no row for the merged list to show.
+func settleOpenPairBetween(ctx context.Context, tx pgx.Tx, side dedupePairSide, sourceID, targetID ids.UUID) error {
+	var pairID ids.UUID
+	err := tx.QueryRow(ctx, fmt.Sprintf(`
+		SELECT id FROM dedupe_candidate
+		 WHERE entity_type = @entity AND disposition = 'open'
+		   AND ((%[1]s = @source AND %[2]s = @target) OR (%[1]s = @target AND %[2]s = @source))`,
+		side.left, side.right),
+		pgx.NamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID, "entity": side.entity}).Scan(&pairID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("contacts: reading the open pair of the merging records: %w", err)
+	}
+	actor, _ := principal.Actor(ctx)
+	return setDedupeDispositionTx(ctx, tx, pairID, dispositionMerged, actor.UserID)
 }

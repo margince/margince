@@ -52,7 +52,10 @@ type DerivedSignal struct {
 	// which still belongs to the company's page because the project does.
 	ProjectID ids.UUID
 	Summary   string
-	Severity  string
+	// SummaryParams are the parts Summary was worded from, so a reader in
+	// another language reads it in theirs. Nil when it was not worded from parts.
+	SummaryParams json.RawMessage
+	Severity      string
 	// Fingerprint identifies the finding by what it fired ON, so a producer
 	// that runs hourly raises nothing new on an unchanged account and a
 	// dismissal survives every later pass.
@@ -158,10 +161,10 @@ func RecordDerived(ctx context.Context, tx pgx.Tx, in DerivedSignal, detectedAt 
 	var signalID ids.UUID
 	query := `
 		INSERT INTO signal
-		  (kind, entity_type, entity_id, resolved_company_id, summary,
+		  (kind, entity_type, entity_id, resolved_company_id, summary, summary_params,
 		   evidence, fingerprint, source_channel, resolution_state, severity,
 		   status, detected_at, source, captured_by, visibility, owner_id)
-		VALUES (` + arg(in.Kind) + `, ` + arg(subjectType) + `, ` + arg(subjectID) + `, ` + arg(in.CompanyID) + `, ` + arg(in.Summary) + `,
+		VALUES (` + arg(in.Kind) + `, ` + arg(subjectType) + `, ` + arg(subjectID) + `, ` + arg(in.CompanyID) + `, ` + arg(in.Summary) + `, ` + arg(in.SummaryParams) + `,
 		        ` + arg(evidence) + `, ` + arg(in.Fingerprint) + `, ` + arg(channel) + `, 'resolved', ` + arg(in.Severity) + `,
 		        'open', ` + arg(detectedAt) + `, ` + arg(source) + `, ` + arg(by) + `, ` + arg(visibility) + `, ` + arg(nullableOwner(in.PrivateTo)) + `)
 		ON CONFLICT DO NOTHING

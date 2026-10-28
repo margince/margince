@@ -3621,6 +3621,9 @@
                           "example": {
                             "type": "string"
                           },
+                          "field_label": {
+                            "type": "string"
+                          },
                           "label": {
                             "type": "string"
                           },

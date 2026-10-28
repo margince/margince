@@ -33,7 +33,7 @@ func (e *Env) bindStores(db *database.DB) {
 	e.Contacts = contacts.NewStore(db).
 		WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx).
 		WithProviderRunReader(integrations.ReadRunForContactTx).
-		WithMergeSignalReader(signals.PreviewSignalCarryTx).
+		WithMergeSignalReader(signals.PreviewSignalCarry(nil)).
 		WithMergeCommitmentReader(weeklyplan.NewStore(db, nil, identityTeammates{svc: identity.NewServiceFor(db)}).PreviewCommitmentCarryTx).
 		WithMergeNoticeReader(notices.PreviewNoticeCarryTx).
 		WithMergeContentReader(e.Activities).

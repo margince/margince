@@ -16181,9 +16181,8 @@ paths:
       tags: [Companies]
       operationId: putAnchorCompany
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
-      # This save IS the 🟡 confirmation of a read-back: an agent may PROPOSE the company
-      # (POST /coldstart/preview) but never make it true, exactly as it may stage an approval
-      # and never approve it.
+      # This save IS the 🟡 confirmation of a read-back. A human reads the company back
+      # (POST /coldstart/preview) and confirms it here: this save takes a human session.
       x-agent-access: human-only
       summary: Save the installation's own company — the human's confirm-first write.
       description: |
@@ -38678,6 +38677,7 @@ components:
       properties:
         name:        { type: string, description: 'The mapping target: a core field, or a custom field''s `cf_` key.' }
         label:       { type: string, description: 'A custom field''s label. Absent for a core column.' }
+        field_label: { type: string, description: 'What the mapping step calls the field the column is mapped onto, in the caller''s language. Present for a core column.' }
         description: { type: string, description: 'What goes in the column.' }
         example:     { type: string, description: 'An example value, or several separated by " · ".' }
         required_on_new_row: { type: boolean, description: 'Whether a row that creates a record needs this column filled.' }
@@ -41992,8 +41992,8 @@ components:
             summary:
               type: string
               description: >-
-                The signal's one sentence, in the words its producer wrote — the strip does not
-                rephrase what a conversation said.
+                The signal's one sentence, in the language `Signal.summary` reads in. The strip
+                does not rephrase what a conversation said.
 
     Company360Contact:
       type: object
@@ -50597,8 +50597,8 @@ components:
       type: object
       required: [subject, body, to]
       properties:
-        subject: { type: string }
-        body: { type: string, description: The (possibly edited) final body that is sent. }
+        subject: { type: string, description: The subject line. Blank or only white space is refused with 422 `required`. }
+        body: { type: string, description: The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`. }
         html_body:
           type: [string, 'null']
           description: |
@@ -51178,8 +51178,8 @@ components:
         One account-started send. It is SendEmailRequest plus the `links` an anchor would
         otherwise have supplied — the records this new conversation belongs to.
       properties:
-        subject: { type: string }
-        body: { type: string, description: The (possibly edited) final body that is sent. }
+        subject: { type: string, description: The subject line. Blank or only white space is refused with 422 `required`. }
+        body: { type: string, description: The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`. }
         html_body:
           type: [string, 'null']
           description: |
@@ -52520,7 +52520,13 @@ components:
         resolved_company_id: { type: [string, 'null'], format: uuid, description: The company the raw signal resolved to (the only required attribution level). }
         resolved_contact_id: { type: [string, 'null'], format: uuid, description: 'Optional contact resolution, set only under a recorded consent grant and never inferred.' }
         severity: { type: string, enum: [info, warn, urgent], default: info }
-        summary: { type: string }
+        summary:
+          type: string
+          description: |
+            The signal's one sentence. A sentence the server words itself (`technical_change`,
+            `ghosted_thread`, `project_gone_quiet`) is in the reader's chosen display language, else
+            the installation's base language. Every other summary, and a summary stored without its
+            parts, reads as it was written.
         evidence:
           type: array
           items: { $ref: '#/components/schemas/SignalEvidence' }
