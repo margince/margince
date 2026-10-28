@@ -17,6 +17,7 @@ import {
   usePaletteHotkey,
 } from "./app/palette";
 import { Shell, useRoute } from "./app/shell";
+import { SourceHost } from "./app/sourcehost";
 import { CallLogHost } from "./components/calllog.host";
 import { useJourneyProgress } from "./features/onboarding/onboarding-journey";
 import {
@@ -304,9 +305,15 @@ function AuthedApp({
           the product's, not the reader's mail client's. */}
         <WriteToHost>
           <CallLogHost>
-            <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
-              <ScreenView screen={route.screen} id={route.id} id2={route.id2} />
-            </AuthedShell>
+            <SourceHost>
+              <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
+                <ScreenView
+                  screen={route.screen}
+                  id={route.id}
+                  id2={route.id2}
+                />
+              </AuthedShell>
+            </SourceHost>
           </CallLogHost>
         </WriteToHost>
         <CommandPalette

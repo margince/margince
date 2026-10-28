@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { MessageKey } from "../../i18n/en";
-import { undoRefusalKey } from "../../lib/historyundo";
+import type { MessageKey } from "../i18n/en";
+import { undoRefusalKey } from "./historyundo";
 
 // The client half of a mirror: this registry, `en.ts` and the keys the receipt
 // service emits name exactly the same sentences, and a gate in the backend

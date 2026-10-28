@@ -16601,6 +16601,11 @@ export const en = {
   "worklist.handled.wayBack": "Status",
   "worklist.handled.putBackDone": "Already undone",
   "worklist.handled.truncated": "List truncated. More items exist.",
+  "receipt.detail.summary": "Details",
+  "receipt.detail.by": "Done by",
+  "receipt.detail.when": "When",
+  "receipt.detail.source": "Source",
+  "worklist.handled.showMore": "Show more",
   "worklist.exceptions.empty": "No team exceptions.",
   "worklist.exceptions.loading": "Loading team…",
   "worklist.exceptions.count": "{count} need attention",
@@ -17441,7 +17446,7 @@ export const en = {
   // The machinery's receipt on Home: what ran while the reader was away, in
   // four lanes. The `magic.action.*` and `magic.consequence.*` families are
   // the client half of a mirror the server sends keys against. So the set is
-  // the contract (src/features/sign-in/magic.keys.ts), not one screen's copy.
+  // the contract (src/lib/magickeys.ts), not one screen's copy.
   "magic.heading.brief": "Since your last brief",
   "magic.loading": "Reading what the machinery did",
   "magic.lane.done": "Done for you",
