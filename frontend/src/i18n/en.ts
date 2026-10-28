@@ -16795,7 +16795,7 @@ export const en = {
   "worklist.verdict.drifting": "Drifting",
   "worklist.verdict.blocked": "Blocked",
   "worklist.verdict.cold": "Cold",
-  "worklist.verdict.believes": "Assessment",
+  "worklist.verdict.believes": "Earlier assessment",
   "worklist.verdict.asOf": "As of {when}",
   "worklist.untitled.approval": "Approval waiting",
   "worklist.untitled.dedupe_candidate": "Possible duplicate records",
@@ -18234,6 +18234,8 @@ export const en = {
     "This reader cannot check mail coverage. Missing recorded mail does not prove that nobody replied.",
   "mailCoverage.connections": "Check connections",
   "connectors.syncTimeUnknown": "Successful sync time unavailable",
+  "brief.coverage.source.deal_advice": "Suggested deal steps",
+  "tasks.origin.accepted_recommendation": "Accepted from a suggested step.",
 } as const;
 
 export type MessageKey = keyof typeof en;

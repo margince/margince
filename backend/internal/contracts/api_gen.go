@@ -36910,6 +36910,9 @@ type CreateActivityRequest struct {
 	// Raw Provenance an importer keeps with the record — the source system's own representation of this activity. Stored verbatim and returned by `getActivity`. It is content: a reader who may not read this activity's subject and body does not receive it either, and the retention and noise-redaction paths destroy it with the rest of the text.
 	Raw *map[string]interface{} `json:"raw,omitempty"`
 
+	// Recommendation The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
+	Recommendation *RecommendationReceipt `json:"recommendation,omitempty"`
+
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 
@@ -37861,6 +37864,9 @@ type CreateTaskRequest struct {
 		EntityId   openapi_types.UUID               `json:"entity_id"`
 		EntityType CreateTaskRequestLinksEntityType `json:"entity_type"`
 	} `json:"links,omitempty"`
+
+	// Recommendation The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
+	Recommendation *RecommendationReceipt `json:"recommendation,omitempty"`
 
 	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
 	RequestActivityId *openapi_types.UUID `json:"request_activity_id,omitempty"`
@@ -39014,6 +39020,9 @@ type DealStatusCardMove struct {
 
 	// Reason One sentence saying why this move and not another.
 	Reason string `json:"reason"`
+
+	// Recommendation The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
+	Recommendation *RecommendationReceipt `json:"recommendation,omitempty"`
 }
 
 // DealStatusCardSection defines model for DealStatusCardSection.
@@ -48361,6 +48370,17 @@ type Receipt struct {
 	Undo *AppliedUndo `json:"undo,omitempty"`
 }
 
+// RecommendationReceipt The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
+type RecommendationReceipt struct {
+	BasisFingerprint string `json:"basis_fingerprint"`
+
+	// CheckedAt Evaluation instant identifying this observation.
+	CheckedAt     time.Time          `json:"checked_at"`
+	DealId        openapi_types.UUID `json:"deal_id"`
+	PolicyVersion string             `json:"policy_version"`
+	Rule          string             `json:"rule"`
+}
+
 // RecordAccess Who can open one contact or company and who can change it. `data` is one page of the
 // members who can open it; `group_counts` and `page.total` count all of them.
 type RecordAccess struct {
@@ -56434,23 +56454,13 @@ type WorklistDealFacts struct {
 	WinProbability *int                `json:"win_probability,omitempty"`
 }
 
-// WorklistDealVerdict How the deal behind a row is STANDING, beside the move that acts on it.
-//
-// The move says what to do; this says what the reader is walking into. A row
-// that names a step without saying whether the deal is alive asks the reader to
-// open the deal page to find out, which is the hand-off the queue exists to
-// remove.
-//
-// NOTHING IS DECIDED HERE. compose/dealstatus already wrote a standing per deal
-// and cached it per reader; this carries that answer onto the row. A deal with
-// no cached card carries no verdict, and its row says what it said before.
-//
-// `source` is what the reader is being shown, and a client's copy turns on it:
-// a deterministic rule stated as a belief is a lie about where the sentence came
-// from.
+// WorklistDealVerdict An earlier assessment of the deal, with the date it was written.
+// Current facts and actions are checked separately. These saved words never
+// establish that a task or reply is still owed and never change ranking.
+// Missing or inaccessible saved assessments are omitted.
 type WorklistDealVerdict struct {
-	// AsOf When the reading behind this line was taken, so a stale one can be told from
-	// a fresh one.
+	// AsOf When the earlier assessment was written. Clients must display this date
+	// and must not present the saved sentence as a current eligibility check.
 	AsOf *time.Time `json:"as_of,omitempty"`
 
 	// Line One sentence saying what the standing rests on, already written and already
@@ -56477,7 +56487,7 @@ type WorklistDealVerdict struct {
 	// Standing `live` — moving, with a next step both sides expect.
 	// `drifting` — nothing wrong, nothing happening; it dies of neglect.
 	// `blocked` — something specific is in the way.
-	// `cold` — long silence after real engagement.
+	// `cold` — recorded evidence that engagement ended, as assessed on `as_of`.
 	//
 	// The same four the deal page's own verdict carries, because they ARE that
 	// verdict. Held by backend/gates/worklistverdictstandings_test.go, which
@@ -56506,7 +56516,7 @@ type WorklistDealVerdictSource string
 // WorklistDealVerdictStanding `live` — moving, with a next step both sides expect.
 // `drifting` — nothing wrong, nothing happening; it dies of neglect.
 // `blocked` — something specific is in the way.
-// `cold` — long silence after real engagement.
+// `cold` — recorded evidence that engagement ended, as assessed on `as_of`.
 //
 // The same four the deal page's own verdict carries, because they ARE that
 // verdict. Held by backend/gates/worklistverdictstandings_test.go, which
@@ -56894,20 +56904,10 @@ type WorklistItem struct {
 	// Urgent Whether this work contributes to the urgent summary, independent of a personal pin.
 	Urgent *bool `json:"urgent,omitempty"`
 
-	// Verdict How the deal behind a row is STANDING, beside the move that acts on it.
-	//
-	// The move says what to do; this says what the reader is walking into. A row
-	// that names a step without saying whether the deal is alive asks the reader to
-	// open the deal page to find out, which is the hand-off the queue exists to
-	// remove.
-	//
-	// NOTHING IS DECIDED HERE. compose/dealstatus already wrote a standing per deal
-	// and cached it per reader; this carries that answer onto the row. A deal with
-	// no cached card carries no verdict, and its row says what it said before.
-	//
-	// `source` is what the reader is being shown, and a client's copy turns on it:
-	// a deterministic rule stated as a belief is a lie about where the sentence came
-	// from.
+	// Verdict An earlier assessment of the deal, with the date it was written.
+	// Current facts and actions are checked separately. These saved words never
+	// establish that a task or reply is still owed and never change ranking.
+	// Missing or inaccessible saved assessments are omitted.
 	Verdict *WorklistDealVerdict `json:"verdict,omitempty"`
 
 	// Version The version of the row this item's own verbs write to, present where it names one — a
@@ -57113,6 +57113,9 @@ type WorklistMove struct {
 	// not record such an attestation; a cursor or completed import cannot supply it.
 	// No mailbox identity, credential, cursor or colleague account travels.
 	MailCoverage *MailCaptureCoverage `json:"mail_coverage,omitempty"`
+
+	// Recommendation The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
+	Recommendation *RecommendationReceipt `json:"recommendation,omitempty"`
 }
 
 // WorklistMoveAction `draft_reply` answers the message in `activity_id` — offered only where the
@@ -57406,8 +57409,8 @@ type WorklistSourceUnavailable struct {
 	// Category Worklist category affected by this missing source.
 	Category *string `json:"category,omitempty"`
 
-	// ContributesRows False for a side read that puts no row on the queue — `calendar` and
-	// `next_meeting` — so its failure cannot hide a row, and a figure counted over
+	// ContributesRows False for a side read that puts no row on the queue — `calendar`,
+	// `next_meeting` and `deal_advice` — so its failure cannot hide a row, and a figure counted over
 	// the queue stays exact. True for a lane whose rows may be missing. Absent from
 	// an older server and from a surface that names only lanes, and a client reads
 	// absent as true.
@@ -61246,7 +61249,13 @@ type RevertStageProgressionParams struct {
 
 // GetDealStatusParams defines parameters for GetDealStatus.
 type GetDealStatusParams struct {
-	// FactsOnly Refresh the card and shared action cache from current facts without model calls. Takes precedence over refresh.
+	// IfRecommendation Check this recommendation basis before opening its action. Requires if_rule and facts_only; a changed step returns version_skew.
+	IfRecommendation *string `form:"if_recommendation,omitempty" json:"if_recommendation,omitempty"`
+
+	// IfRule The recommendation rule being checked with if_recommendation.
+	IfRule *string `form:"if_rule,omitempty" json:"if_rule,omitempty"`
+
+	// FactsOnly Refresh the card and its current suggested step without model calls. Takes precedence over refresh.
 	FactsOnly *bool `form:"facts_only,omitempty" json:"facts_only,omitempty"`
 
 	// Refresh Rewrite even when the fingerprint still matches. The reader asking for a second opinion.
@@ -68710,6 +68719,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "raw")
 	}
 
+	if raw, found := object["recommendation"]; found {
+		err = json.Unmarshal(raw, &a.Recommendation)
+		if err != nil {
+			return fmt.Errorf("error reading 'recommendation': %w", err)
+		}
+		delete(object, "recommendation")
+	}
+
 	if raw, found := object["remind_at"]; found {
 		err = json.Unmarshal(raw, &a.RemindAt)
 		if err != nil {
@@ -68938,6 +68955,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["raw"], err = json.Marshal(a.Raw)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'raw': %w", err)
+		}
+	}
+
+	if a.Recommendation != nil {
+		object["recommendation"], err = json.Marshal(a.Recommendation)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'recommendation': %w", err)
 		}
 	}
 
@@ -105130,6 +105154,32 @@ func (siw *ServerInterfaceWrapper) GetDealStatus(w http.ResponseWriter, r *http.
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetDealStatusParams
+
+	// ------------- Optional query parameter "if_recommendation" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "if_recommendation", r.URL.Query(), &params.IfRecommendation, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "if_recommendation"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "if_recommendation", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "if_rule" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "if_rule", r.URL.Query(), &params.IfRule, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "if_rule"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "if_rule", Err: err})
+		}
+		return
+	}
 
 	// ------------- Optional query parameter "facts_only" -------------
 

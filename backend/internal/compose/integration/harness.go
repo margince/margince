@@ -195,6 +195,9 @@ func ContractsStore(db *database.DB, dealStore *deals.Store) *contracts.Store {
 // same owner DSN the migration step uses.
 func SchemaPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
+	if err := testdb.EnsureSchema(context.Background(), OwnerConn(t)); err != nil {
+		t.Fatal(err)
+	}
 	dsn := os.Getenv("MARGINCE_TEST_DSN")
 	if dsn == "" {
 		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")

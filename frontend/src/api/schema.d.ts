@@ -20000,7 +20000,7 @@ export interface paths {
          *     it had nothing to add.
          *
          *     Written by the model from the deal's own facts — its stage and value, its
-         *     timeline, its open tasks, its health factors and what the buyer said in the
+         *     timeline, its open tasks and what the buyer said in the
          *     Deal Room — and assembled under the CALLER's row scope, so a record they
          *     cannot see never reaches a sentence.
          *
@@ -31493,6 +31493,7 @@ export interface components {
          *     to send; absent for `none`.
          */
         DealStatusCardMove: {
+            recommendation?: components["schemas"]["RecommendationReceipt"];
             mail_coverage?: components["schemas"]["MailCaptureCoverage"];
             action: string;
             /** @description One sentence saying why this move and not another. */
@@ -31511,6 +31512,19 @@ export interface components {
              *     nothing to do (`none`).
              */
             readonly fingerprint?: string;
+        };
+        /** @description The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task. */
+        RecommendationReceipt: {
+            /** Format: uuid */
+            deal_id: string;
+            rule: string;
+            policy_version: string;
+            basis_fingerprint: string;
+            /**
+             * Format: date-time
+             * @description Evaluation instant identifying this observation.
+             */
+            checked_at: string;
         };
         /**
          * @description The calling reader's mail capture for the requested interval. This does
@@ -35527,6 +35541,7 @@ export interface components {
         };
         /** @description What a task needs. Stored as an activity of kind `task`. */
         CreateTaskRequest: {
+            recommendation?: components["schemas"]["RecommendationReceipt"];
             /**
              * Format: uuid
              * @description The non-task activity this task follows from, including email and messages. The caller and assignee need access to the source content. The task preserves its audience and inherits its visible links when no links are supplied. This reference does not accept or settle a request.
@@ -35562,6 +35577,7 @@ export interface components {
         };
         /** @description The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. */
         CreateActivityRequest: {
+            recommendation?: components["schemas"]["RecommendationReceipt"];
             /**
              * Format: uuid
              * @description The non-task activity this task follows from, including email and messages. The caller and assignee need access to the source content. The task preserves its audience and inherits its visible links when no links are supplied. This reference does not accept or settle a request.
@@ -50248,27 +50264,17 @@ export interface components {
             version?: number;
         };
         /**
-         * @description How the deal behind a row is STANDING, beside the move that acts on it.
-         *
-         *     The move says what to do; this says what the reader is walking into. A row
-         *     that names a step without saying whether the deal is alive asks the reader to
-         *     open the deal page to find out, which is the hand-off the queue exists to
-         *     remove.
-         *
-         *     NOTHING IS DECIDED HERE. compose/dealstatus already wrote a standing per deal
-         *     and cached it per reader; this carries that answer onto the row. A deal with
-         *     no cached card carries no verdict, and its row says what it said before.
-         *
-         *     `source` is what the reader is being shown, and a client's copy turns on it:
-         *     a deterministic rule stated as a belief is a lie about where the sentence came
-         *     from.
+         * @description An earlier assessment of the deal, with the date it was written.
+         *     Current facts and actions are checked separately. These saved words never
+         *     establish that a task or reply is still owed and never change ranking.
+         *     Missing or inaccessible saved assessments are omitted.
          */
         WorklistDealVerdict: {
             /**
              * @description `live` — moving, with a next step both sides expect.
              *     `drifting` — nothing wrong, nothing happening; it dies of neglect.
              *     `blocked` — something specific is in the way.
-             *     `cold` — long silence after real engagement.
+             *     `cold` — recorded evidence that engagement ended, as assessed on `as_of`.
              *
              *     The same four the deal page's own verdict carries, because they ARE that
              *     verdict. Held by backend/gates/worklistverdictstandings_test.go, which
@@ -50307,8 +50313,8 @@ export interface components {
             source: "deal_status" | "brief_finding";
             /**
              * Format: date-time
-             * @description When the reading behind this line was taken, so a stale one can be told from
-             *     a fresh one.
+             * @description When the earlier assessment was written. Clients must display this date
+             *     and must not present the saved sentence as a current eligibility check.
              */
             as_of?: string;
         };
@@ -50406,6 +50412,7 @@ export interface components {
          *     for it.
          */
         WorklistMove: {
+            recommendation?: components["schemas"]["RecommendationReceipt"];
             mail_coverage?: components["schemas"]["MailCaptureCoverage"];
             /** @description The deal recommendation's evidence basis, preserved across surfaces. */
             basis?: components["schemas"]["WorkEvidenceBasis"];
@@ -50660,8 +50667,8 @@ export interface components {
             /** @enum {string} */
             reason: "withheld" | "failed";
             /**
-             * @description False for a side read that puts no row on the queue — `calendar` and
-             *     `next_meeting` — so its failure cannot hide a row, and a figure counted over
+             * @description False for a side read that puts no row on the queue — `calendar`,
+             *     `next_meeting` and `deal_advice` — so its failure cannot hide a row, and a figure counted over
              *     the queue stays exact. True for a lane whose rows may be missing. Absent from
              *     an older server and from a surface that names only lanes, and a client reads
              *     absent as true.
@@ -81848,7 +81855,11 @@ export interface operations {
     getDealStatus: {
         parameters: {
             query?: {
-                /** @description Refresh the card and shared action cache from current facts without model calls. Takes precedence over refresh. */
+                /** @description Check this recommendation basis before opening its action. Requires if_rule and facts_only; a changed step returns version_skew. */
+                if_recommendation?: string;
+                /** @description The recommendation rule being checked with if_recommendation. */
+                if_rule?: string;
+                /** @description Refresh the card and its current suggested step without model calls. Takes precedence over refresh. */
                 facts_only?: boolean;
                 /** @description Rewrite even when the fingerprint still matches. The reader asking for a second opinion. */
                 refresh?: boolean;
@@ -81871,9 +81882,19 @@ export interface operations {
                     "application/json": components["schemas"]["DealStatusCard"];
                 };
             };
+            /** @description The conditional recommendation parameters are invalid or facts_only is missing. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

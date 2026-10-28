@@ -16486,7 +16486,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verdict.drifting": "Đang chững lại",
   "worklist.verdict.blocked": "Bị chặn",
   "worklist.verdict.cold": "Đã nguội",
-  "worklist.verdict.believes": "Đánh giá",
+  "worklist.verdict.believes": "Đánh giá trước đó",
   "worklist.verdict.asOf": "Tính đến {when}",
   "worklist.untitled.approval": "Phê duyệt đang chờ",
   "worklist.untitled.dedupe_candidate": "Hồ sơ có thể trùng",
@@ -17894,4 +17894,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không có quyền kiểm tra phạm vi thu thập email. Thiếu thư trong hồ sơ không chứng minh rằng chưa có ai phản hồi.",
   "mailCoverage.connections": "Kiểm tra kết nối",
   "connectors.syncTimeUnknown": "Chưa có thông tin về lần đồng bộ thành công",
+  "brief.coverage.source.deal_advice": "Bước tiếp theo cho cơ hội",
+  "tasks.origin.accepted_recommendation":
+    "Được chấp nhận từ một bước được đề xuất.",
 };

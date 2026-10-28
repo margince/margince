@@ -54,7 +54,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contractfrontendlane_test.go` | H3 | A contract change owes three regenerations, and the one that strands the frontend types is enforced in two different places for two different readers. |
 | `contractvocabulary_test.go` | H3 | A membership set built from a generated enum's own constants must hold every member of that enum. |
 | `corepicklistcontract_test.go` | H3 | The core picklist value sets against the contract that owns them. |
-| `dealmoveargument_test.go` | H2 | One rule, read on both sides of a compose seam. |
+| `dealmoveargument_test.go` | H2 | Both readers share the kernel parser; this checks key precedence and typed operands across the access gate and the final wire projection. |
 | `dealmovemirror_test.go` | H2 | One rule, spelled on both sides of a module boundary, held equal in both directions. |
 | `dealroominvitelink_test.go` | H3 | The address a buyer invitation mails is an address this app serves. |
 | `decisionpreset_test.go` | H3 | The routing form's one-click OpenRouter decision binding and the commented `decisions:` blocks the presets carry are two spellings of one binding: an operator who presses the button and one who uncomments the block must end up with the same endpoint and model. |

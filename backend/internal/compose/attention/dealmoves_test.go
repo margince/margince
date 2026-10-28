@@ -29,7 +29,7 @@ type stubDealMoves struct {
 	err   error
 }
 
-func (s *stubDealMoves) CachedMoves(
+func (s *stubDealMoves) CurrentMoves(
 	_ context.Context, dealIDs []ids.UUID,
 ) (map[ids.UUID]crmcontracts.DealStatusCardMove, error) {
 	s.calls++
@@ -93,11 +93,8 @@ func TestADriftingDealCarriesTheCardsMove(t *testing.T) {
 	}
 }
 
-// A deal nobody has opened has no cached card, and assembling one costs a
-// timeline, seats and possibly a model call. Thirty rows would be thirty of
-// those, which is the N+1 this feed exists to avoid — so the row keeps what it
-// had and says no step.
-func TestADealWithNoCachedCardKeepsItsRowUnchanged(t *testing.T) {
+// An owner that cannot verify a step leaves the underlying row available.
+func TestADealWithoutAVerifiedStepKeepsItsRowUnchanged(t *testing.T) {
 	dealID := ids.NewV7()
 	moves := &stubDealMoves{moves: map[ids.UUID]crmcontracts.DealStatusCardMove{}}
 	svc := (&Service{}).WithDealMoves(moves)
@@ -108,7 +105,7 @@ func TestADealWithNoCachedCardKeepsItsRowUnchanged(t *testing.T) {
 	}
 
 	if queue[0].Move != nil {
-		t.Fatalf("a deal with no cached card invented the step %+v", queue[0].Move)
+		t.Fatalf("a deal without verified advice invented the step %+v", queue[0].Move)
 	}
 	if moves.calls != 1 {
 		t.Fatalf("the pass made %d reads for one page, wanted exactly one", moves.calls)

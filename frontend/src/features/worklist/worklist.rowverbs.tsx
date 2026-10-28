@@ -10,9 +10,12 @@
 import { Sparkles } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Button, OverflowMenu } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { useToast } from "../../design-system/toast";
 import { useTooltip } from "../../design-system/tooltip";
 import { useT } from "../../i18n";
+import { useCurrentMove } from "../../lib/currentmove";
+import { opensElsewhere } from "../../lib/linkclick";
 import { useFoldedViewport } from "../../lib/viewport";
 import {
   moveHref,
@@ -239,6 +242,15 @@ function PreparedMove({
   onOpenEmail,
 }: Readonly<{ item: WorklistItem; onOpenEmail?: (id: string) => void }>) {
   const t = useT();
+  const check = useCurrentMove<{ activityId: string } | { href: string }>(
+    (target) => {
+      if ("activityId" in target) {
+        onOpenEmail?.(target.activityId);
+      } else {
+        globalThis.location.assign(target.href);
+      }
+    },
+  );
   if (replyIsTheMove(item)) {
     return null;
   }
@@ -246,9 +258,21 @@ function PreparedMove({
     item.move?.action === "draft_reply" ? item.move.activity_id : undefined;
   if (replyActivity && onOpenEmail && item.subject?.type !== "contact") {
     return (
-      <Button variant="ghost" onClick={() => onOpenEmail(replyActivity)}>
-        {t("worklist.verb.draft_reply")}
-      </Button>
+      <>
+        <Button
+          variant="ghost"
+          pending={check.isPending}
+          onClick={() =>
+            check.mutate({
+              receipt: item.move?.recommendation,
+              operand: { activityId: replyActivity },
+            })
+          }
+        >
+          {t("worklist.verb.draft_reply")}
+        </Button>
+        <ErrorLine error={check.error} />
+      </>
     );
   }
   const move = moveHref(item);
@@ -258,13 +282,25 @@ function PreparedMove({
   const modelWrites =
     moveOpensComposer(item) || item.move?.action === "open_meeting_brief";
   return (
-    <a className={modelWrites ? PREPARED_VERB : NAVIGATING_VERB} href={move}>
-      {modelWrites && <Sparkles aria-hidden="true" />}
-      {/* The label follows the route and the verb. Where the address opens
-          the composer it names the act; where it only reaches the record it
-          says so. It names the verb the server chose. */}
-      {moveLabel(item, t)}
-    </a>
+    <>
+      <a
+        className={modelWrites ? PREPARED_VERB : NAVIGATING_VERB}
+        href={move}
+        aria-busy={check.isPending}
+        aria-disabled={check.isPending}
+        onClick={(event) => {
+          const receipt = item.move?.recommendation;
+          if (!receipt || opensElsewhere(event)) return;
+          event.preventDefault();
+          if (check.isPending) return;
+          check.mutate({ receipt, operand: { href: move } });
+        }}
+      >
+        {modelWrites && <Sparkles aria-hidden="true" />}
+        {moveLabel(item, t)}
+      </a>
+      <ErrorLine error={check.error} />
+    </>
   );
 }
 

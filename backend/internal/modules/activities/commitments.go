@@ -187,8 +187,7 @@ func listOpenTasks(ctx context.Context, tx pgx.Tx, in ListOpenTasksInput) ([]Ope
 	if err != nil {
 		return nil, false, err
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id, coalesce(a.subject, ''), `+storekit.TaskDueSQL("a")+`,
-			a.assignee_id, coalesce(u.display_name, ''), a.created_at
+	rows, err := tx.Query(ctx, `SELECT `+openTaskColumns()+`
 		FROM activity a
 		LEFT JOIN app_user u ON u.id = a.assignee_id
 		WHERE `+joinAnd(where)+
@@ -384,4 +383,9 @@ func joinAnd(terms []string) string {
 	}
 	out += outSb364.String()
 	return out
+}
+
+func openTaskColumns() string {
+	return "a.id, coalesce(a.subject, ''), " + storekit.TaskDueSQL("a") +
+		", a.assignee_id, coalesce(u.display_name, ''), a.created_at"
 }
