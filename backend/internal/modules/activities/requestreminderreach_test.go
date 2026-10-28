@@ -55,7 +55,7 @@ func TestAReminderNamesItsAssigneeOnlyWhereThatIsTheReach(t *testing.T) {
 // The consumer runs on every audience event, so most calls concern a mail
 // whose reminder already agrees. Moving it anyway would write an audit row
 // for a change that did not happen. A narrowed reach names the assignee as
-// its one reader, so with no assignee it would reach nobody.
+// its reader, so with no assignee it would reach nobody.
 func TestAReminderAgreeingWithItsMailIsLeftAlone(t *testing.T) {
 	selected := string(crmcontracts.ActivityAudienceSelected)
 	workspace := string(crmcontracts.ActivityAudienceWorkspace)

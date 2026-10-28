@@ -135,7 +135,7 @@ func writeReminderReachTx(
 //
 // A reminder already agreeing with its mail is left alone, so a recompute that
 // changes nothing writes no audit row. An unassigned reminder is not narrowed:
-// a narrowed reach names its assignee as the one reader, and with none it
+// a narrowed reach names its assignee as its reader, and with none it
 // would reach nobody. The source's own gate still decides its content.
 func reminderMove(mailShared bool, stored string, assignee *ids.UUID) (string, bool) {
 	want := reminderReach(mailShared)
