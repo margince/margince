@@ -11257,6 +11257,13 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Lead' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: |
+            A live contact holds the new email or LinkedIn profile (`contact_holds_email`), with the
+            details `createLead` gives.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Leads]
@@ -11500,7 +11507,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
-          description: Lead was never promoted, has already been demoted, or a live lead now holds its email (`duplicate_email`).
+          description: Lead was never promoted, has already been demoted, a live lead now holds its email (`duplicate_email`), or a live contact now holds its email or profile (`contact_holds_email`).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
