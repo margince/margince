@@ -360,7 +360,7 @@ it("reads the grants again when the second agent's write fails", async () => {
   const toggle = await screen.findByTestId("overnight-grant-toggle");
   await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("true"));
   await userEvent.click(toggle);
-  // The first write landed and the second did not, so the card must ask the
-  // server how the grants stand instead of showing what it cached.
+  // The first write landed and the second did not. The card must ask the server
+  // how the grants stand instead of showing what it cached.
   await waitFor(() => expect(reads).toBeGreaterThanOrEqual(2));
 });

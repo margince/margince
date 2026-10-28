@@ -16,7 +16,7 @@ package gates
 //
 // The check is one method, InboundRequest.SignatureHolds. An endpoint whose
 // handler never reaches it is the defect. The gate follows each declared
-// endpoint's own Handle, through the functions and methods of its package, so a
+// endpoint's own Handle through the functions and methods of its package. So a
 // unit that verifies one of two endpoints still fails for the other.
 
 import (
