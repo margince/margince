@@ -83,7 +83,7 @@ stale page.
 
 | A unit can… | Company | Deal | Contact | Activity | Signal |
 |---|:-:|:-:|:-:|:-:|:-:|
-| **Land** it from its own system (create or update, by the id that system gave it) | ✅ | ✅ | · | ✅ | · |
+| **Land** it from its own system (create or update, by the id that system gave it) | ✅ | ✅ | · | ✅ | ✅ |
 | **Move** it to another stage | · | ✅ | · | · | · |
 | **Create** it inside the unit's own transaction (`Tx.Core()`) | · | · | · | ✅ | ✅ |
 | **Read** and list it, as the user who asked | ✅ | ✅ | · | ✅ | ✅ |
