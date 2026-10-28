@@ -299,7 +299,7 @@ func (s *RequestSettler) judgeBatch(ctx context.Context, batch []settleCandidate
 		if !ok {
 			continue // the validator guarantees this; belt and braces
 		}
-		if v.Confidence < settleConfidenceFloor {
+		if v.Confidence < settleConfidenceFloor || !settleRemainderStands(v, batch) {
 			retry = append(retry, candidate)
 			continue
 		}
