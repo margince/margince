@@ -162,6 +162,11 @@
   block-size: var(--controlIcon);
   flex: none;
 }
+/* The AI mark is solid wherever it is drawn. A property here beats lucide's
+   `fill="none"` attribute, so no call site has to ask. */
+.lucide-sparkles {
+  fill: currentColor;
+}
 /* The filled tones are FLAT: a fill and its ink, no shadow under it and no
    lift on hover. A button that casts a shadow sits above the pane it belongs
    to, and the panes of this language are translucent ground that nothing

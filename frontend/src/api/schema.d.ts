@@ -7458,8 +7458,8 @@ export interface paths {
          *     The caller needs `lead:update` and `company:read`; a missing grant answers `403` before
          *     anything is read. A company the caller cannot open answers `404`, as a missing one does.
          *     A company that is not the lead's current `company_match` answers `422` naming
-         *     `company_id` with code `not_the_lead_match`: the lead's company name changed, a second
-         *     company of that name appeared, or the id was never offered. Repeating a link that already
+         *     `company_id` with code `not_the_lead_match`: the lead's domain or company name changed, a
+         *     second company of that name appeared, or the id was never offered. Repeating a link that already
          *     holds changes nothing and answers the lead as it is. A lead with neither name nor email
          *     answers `422` with code `identity_required`; one that is promoted or disqualified answers
          *     `404`.
@@ -37135,6 +37135,12 @@ export interface components {
              */
             readonly company_id?: string | null;
             company_match?: components["schemas"]["LeadCompanyMatch"];
+            company_facts?: components["schemas"]["LeadCompanyFacts"];
+            /**
+             * @description The industry typed on the lead, one of the fixed codes, or null. While the lead is linked to a company whose industry is known, the company's speaks for the lead: show `company_facts.industry` when it is set, and this value otherwise. The `industry` filter reads the same rule. Promotion writes this value to the linked company when the company has none.
+             * @enum {string|null}
+             */
+            industry?: null | "agriculture" | "automotive" | "aerospace_defense" | "chemicals_materials" | "construction" | "consumer_goods_retail" | "education" | "energy_utilities" | "entertainment_media" | "financial_services" | "food_beverage" | "government_public_sector" | "healthcare" | "hospitality_tourism" | "insurance" | "it_services" | "software" | "legal_professional_services" | "logistics_transport" | "manufacturing" | "marketing_advertising" | "mining_metals" | "nonprofit" | "pharma_biotech" | "real_estate" | "telecommunications";
             /** @description Loose key for ABM routing without creating a company. */
             candidate_company_key?: string | null;
             /**
@@ -37279,6 +37285,8 @@ export interface components {
             linkedin_url?: string | null;
             title?: string | null;
             company_name?: string | null;
+            /** @description An industry code, or text the server maps to one, as it maps a company's industry. Text that names no code is `422` `not_a_known_value`. */
+            industry?: string | null;
             candidate_company_key?: string | null;
             /** Format: uuid */
             project_id?: string | null;
@@ -37328,6 +37336,8 @@ export interface components {
             phone?: string | null;
             title?: string | null;
             company_name?: string | null;
+            /** @description An industry code, or text the server maps to one, as it maps a company's industry. Text that names no code is `422` `not_a_known_value`. Null clears it. */
+            industry?: string | null;
             /** @description Loose ABM routing key. Format: lowercased registrable domain when known (`acme.com`), else a slug of company_name. Never a company FK. */
             candidate_company_key?: string | null;
             /**
@@ -37370,12 +37380,32 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
-        /** @description A company the lead's `company_name` names exactly, offered for a human to confirm. Confirming sets `company_id` and creates no contact. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise. */
+        /** @description A company the lead names, offered for a human to confirm. Confirming sets `company_id` and creates no contact. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only for a live company the reader can open. The company that claims the domain held in `candidate_company_key` is offered first, except this installation's own company. Otherwise the offer is the one company whose name equals `company_name`, compared without case and with runs of spaces folded to one. Absent when neither rule names a company. */
         LeadCompanyMatch: {
             /** Format: uuid */
             id: string;
             /** @description The company's display name. */
             name: string;
+            /**
+             * @description Which rule named the company: `domain` when it claims the lead's domain, `name` when its name equals the lead's company name.
+             * @enum {string}
+             */
+            matched_by: "domain" | "name";
+        };
+        /** @description What the company the lead is linked to (`company_id`) records, read from the company record and never written through the lead. Sent only while `company_id` is set and the reader may open that company. Absent otherwise, including for a seat that may not read companies. */
+        LeadCompanyFacts: {
+            /**
+             * @description The company's `industry`.
+             * @enum {string|null}
+             */
+            industry?: null | "agriculture" | "automotive" | "aerospace_defense" | "chemicals_materials" | "construction" | "consumer_goods_retail" | "education" | "energy_utilities" | "entertainment_media" | "financial_services" | "food_beverage" | "government_public_sector" | "healthcare" | "hospitality_tourism" | "insurance" | "it_services" | "software" | "legal_professional_services" | "logistics_transport" | "manufacturing" | "marketing_advertising" | "mining_metals" | "nonprofit" | "pharma_biotech" | "real_estate" | "telecommunications";
+            /** @description The ISO-3166 alpha-2 code of the company's address country. */
+            country?: string | null;
+            /**
+             * @description The company's `size_band`.
+             * @enum {string|null}
+             */
+            size_band?: null | "1-10" | "11-50" | "51-200" | "201-500" | "501-1000" | "1001-5000" | "5000+";
         };
         LinkLeadCompanyRequest: {
             /**
@@ -41023,6 +41053,8 @@ export interface components {
              *     A mask that withholds a reference only on some rows, such as a deal's private company, refuses no filter and is not listed. Absent from a server that does not compute it, and empty when nothing is refused.
              */
             refused_deal_filters?: string[];
+            /** @description The `listLeads` query parameters this caller is refused whatever their value: `403` where a grant the filter reads is missing, such as `industry`, `country` and `size_band` for a seat that may not read companies, and `list_id` where the caller may not read lists. Computed by the list resolution and clauses the list runs, so a client withholds exactly the dials the list would refuse. Absent from a server that does not compute it, and empty when nothing is refused. */
+            refused_lead_filters?: string[];
         };
         /** @description The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it. */
         InstallationBrand: {
@@ -63192,6 +63224,26 @@ export interface operations {
                 sla_state?: "within_target" | "at_risk" | "breached";
                 /** @description Triage by score. */
                 min_score?: number;
+                /**
+                 * @description Leads in one industry, matched exactly on the code; a value outside the list is `422`.
+                 *     A lead is in the industry of the company it is linked to, and in its own `industry` when
+                 *     it is linked to none, or that company has none. A company outside the caller's row
+                 *     scope counts as no company. A seat that may not read companies is refused with `403`.
+                 */
+                industry?: "agriculture" | "automotive" | "aerospace_defense" | "chemicals_materials" | "construction" | "consumer_goods_retail" | "education" | "energy_utilities" | "entertainment_media" | "financial_services" | "food_beverage" | "government_public_sector" | "healthcare" | "hospitality_tourism" | "insurance" | "it_services" | "software" | "legal_professional_services" | "logistics_transport" | "manufacturing" | "marketing_advertising" | "mining_metals" | "nonprofit" | "pharma_biotech" | "real_estate" | "telecommunications";
+                /**
+                 * @description Leads whose linked company's address is in this ISO-3166 alpha-2 country, in either
+                 *     case. A code that is not two letters is refused with `422` `country_malformed`. A lead
+                 *     linked to no company, or to a company outside the caller's row scope, is not returned.
+                 *     A seat that may not read companies is refused with `403`.
+                 */
+                country?: string;
+                /**
+                 * @description Leads whose linked company has this size band; a value outside the list is `422`. A
+                 *     lead linked to no company, or to a company outside the caller's row scope, is not
+                 *     returned. A seat that may not read companies is refused with `403`.
+                 */
+                size_band?: "1-10" | "11-50" | "51-200" | "201-500" | "501-1000" | "1001-5000" | "5000+";
                 q?: string;
                 /**
                  * @description Narrow to the records carrying these tags. Repeat the parameter for several.

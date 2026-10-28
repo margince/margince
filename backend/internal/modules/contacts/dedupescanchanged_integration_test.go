@@ -64,9 +64,50 @@ func ageRows(t *testing.T, tables ...string) {
 	}
 }
 
+// ageAllScannedRows ages every table the nightly pass reads, taken from its
+// own stream list so a new stream is aged too.
 func ageAllScannedRows(t *testing.T) {
 	t.Helper()
-	ageRows(t, "company", "company_domain", "contact", "contact_email", "contact_phone")
+	tables := make([]string, 0, len(dedupeScanStreams))
+	for _, stream := range dedupeScanStreams {
+		tables = append(tables, stream.table)
+	}
+	ageRows(t, tables...)
+}
+
+// A similar name files only with a second fact. A fact that arrives after both
+// companies last changed is found by the next nightly pass. That pass reads the
+// facts and the employment edges as well as the companies.
+func TestTheNightlyScanFilesASimilarNameOnceASecondFactArrives(t *testing.T) {
+	for name, share := range map[string]func(e *dedupeEnv, ctx context.Context, t *testing.T, brand, line ids.CompanyID){
+		"a stated phone number": func(e *dedupeEnv, ctx context.Context, t *testing.T, brand, line ids.CompanyID) {
+			e.statePhone(ctx, t, brand, "+49 89 1234567")
+			e.statePhone(ctx, t, line, "0049 89 123 45 67")
+		},
+		"a contact employed at both": func(e *dedupeEnv, _ context.Context, t *testing.T, brand, line ids.CompanyID) {
+			colleague := mustContact(t, e, "Greta Hoffmann")
+			employ(t, e, colleague, brand)
+			employ(t, e, colleague, line)
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := setupDedupe(t)
+			ctx := e.as()
+			brand := e.createNamedCompany(ctx, t, brandName)
+			line := e.createNamedCompany(ctx, t, lineName)
+			e.forgetFiledPairs(ctx, t)
+			ageAllScannedRows(t)
+			if got := e.scanChanged(t); got.Filed != 0 {
+				t.Fatalf("the pass before any shared fact = %+v, want nothing filed", got)
+			}
+			ageAllScannedRows(t)
+
+			share(e, ctx, t, brand, line)
+			if got := e.scanChanged(t); got.Filed != 1 {
+				t.Errorf("the pass after the shared fact = %+v, want the pair filed", got)
+			}
+		})
+	}
 }
 
 func TestTheFirstNightlyScanReadsEverythingAndTheNextOnlyWhatChanged(t *testing.T) {

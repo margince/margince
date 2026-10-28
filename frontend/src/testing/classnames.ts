@@ -104,7 +104,7 @@ function readerFor(
 ) {
   const handed = (n: ts.Node) => {
     if (ts.isIdentifier(n)) return boundTo(n) ? undefined : given?.(n);
-    return ts.isPropertyAccessExpression(n) ? given?.(n) : undefined;
+    return isMember(n) ? given?.(n) : undefined;
   };
   // Which way a test can go: both, unless it names a handed value.
   const ways = (test: ts.Expression) => {
@@ -113,8 +113,13 @@ function readerFor(
     return { yes: values.some(Boolean), no: values.some((v) => !v) };
   };
   const following = new Set<ts.Node>();
+  // Two branches that draw the same list are one branch.
   const capped = <T>(all: T[]): T[] => {
     if (all.length <= cap) return all;
+    const unique = [
+      ...new Map(all.map((a) => [JSON.stringify(a), a])).values(),
+    ];
+    if (unique.length <= cap) return unique;
     const at = root ?? source;
     const { line } = source.getLineAndCharacterOfPosition(at.getStart(source));
     throw new Error(
@@ -127,7 +132,7 @@ function readerFor(
       [unit],
     );
   const followed = <T>(
-    n: ts.Identifier | ts.PropertyAccessExpression,
+    n: ts.Identifier | Member,
     read: (e: ts.Node) => T[],
     none: T[],
     value: (v: string) => T,
@@ -136,6 +141,7 @@ function readerFor(
     if (values) return values.map((v) => value(v ?? ""));
     const initializer = ts.isIdentifier(n) ? boundTo(n) : undefined;
     if (!initializer || following.has(initializer)) return none;
+    if (ts.isIdentifier(n) && changedAfter(n)) return none;
     following.add(initializer);
     const out = read(initializer);
     following.delete(initializer);
@@ -152,7 +158,7 @@ function readerFor(
       ]);
       return product([[n.head.text], ...spans], (a, b) => a + b, "");
     }
-    if (ts.isIdentifier(n) || ts.isPropertyAccessExpression(n)) {
+    if (ts.isIdentifier(n) || isMember(n)) {
       return followed(n, texts, [CUT], (v) => v);
     }
     if (ts.isConditionalExpression(n)) return chosen(n).flatMap(texts);
@@ -161,10 +167,12 @@ function readerFor(
   };
   // An empty list may be a call that computes a string (`look(state)`): unread.
   // Not a raw array: it renders comma-joined, which is no class list.
-  const listTexts = (n: ts.Node): string[] =>
-    ts.isCallExpression(n)
-      ? lists(n).map((l) => l.join(" ").replaceAll("*", CUT) || CUT)
-      : [CUT];
+  const listTexts = (n: ts.Node): string[] => {
+    if (!ts.isCallExpression(n)) return [CUT];
+    const returned = returnedTexts(n);
+    if (returned.some((t) => t.replaceAll(CUT, "").trim())) return returned;
+    return lists(n).map((l) => l.join(" ").replaceAll("*", CUT) || CUT);
+  };
   const binaryTexts = (n: ts.BinaryExpression): string[] => {
     const kind = n.operatorToken.kind;
     if (kind === ts.SyntaxKind.AmpersandAmpersandToken) {
@@ -201,7 +209,7 @@ function readerFor(
     if (ts.isTemplateExpression(n)) {
       return texts(n).map((t) => tokensOf(t, true));
     }
-    if (ts.isIdentifier(n) || ts.isPropertyAccessExpression(n)) {
+    if (ts.isIdentifier(n) || isMember(n)) {
       return followed(n, lists, [[]], words);
     }
     return ts.isBinaryExpression(n) ? binary(n) : compound(n);
@@ -209,12 +217,68 @@ function readerFor(
   const compound = (n: ts.Node): string[][] => {
     if (ts.isConditionalExpression(n)) return capped(chosen(n).flatMap(lists));
     if (ts.isCallExpression(n) || ts.isArrayLiteralExpression(n)) {
+      const returned = returnedBy(n);
+      if (returned.some((l) => l.length > 0)) return returned;
       return product(partsOf(n).map(lists), join, []);
     }
     const branches = capped(partsOf(n).flatMap(lists));
     return branches.length > 0 ? branches : [[]];
   };
+  // A call of a function the file defines reads as what it returns, so
+  // `cls()` and `useMemo(() => tone)` keep their classes. Its arguments are its
+  // inputs, read as classes only when its returns name none (`join(...parts)`).
+  const throughBody = <T>(n: ts.Node, read: (e: ts.Node) => T[]): T[] => {
+    const fn = ts.isCallExpression(n) ? calledBody(n) : undefined;
+    if (!fn || following.has(fn)) return [];
+    following.add(fn);
+    const out = capped(returnsOf(fn).flatMap(read));
+    following.delete(fn);
+    return out;
+  };
+  const returnedBy = (n: ts.Node) => throughBody(n, lists);
+  // In a template the returned text keeps its spaces: `a${look()}` is two
+  // classes when `look` returns " b".
+  const returnedTexts = (n: ts.Node) => throughBody(n, texts);
   return { texts, lists };
+}
+
+type Member = ts.PropertyAccessExpression | ts.ElementAccessExpression;
+// `props.tone`, or `props["tone"]` spelled with a literal key.
+const isMember = (n: ts.Node): n is Member =>
+  ts.isPropertyAccessExpression(n) ||
+  (ts.isElementAccessExpression(n) &&
+    ts.isStringLiteralLike(n.argumentExpression));
+
+type Body = ts.ArrowFunction | ts.FunctionExpression | ts.FunctionDeclaration;
+// The function a call runs: one the file binds by name, or the one `useMemo`
+// is handed. An import or a parameter has no body here to read.
+function calledBody(call: ts.CallExpression): Body | undefined {
+  const callee = call.expression;
+  const hook = ts.isPropertyAccessExpression(callee) ? callee.name : callee;
+  if (ts.isIdentifier(hook) && hook.text === "useMemo") {
+    const [fn] = call.arguments;
+    return fn && isBody(fn) ? fn : undefined;
+  }
+  const declared = ts.isIdentifier(callee) ? declarationOf(callee) : undefined;
+  if (!declared || ts.isFunctionDeclaration(declared)) return declared;
+  if (ts.isFunctionExpression(declared)) return declared;
+  const init = declared.initializer;
+  return init && isBody(init) ? init : undefined;
+}
+const isBody = (n: ts.Node): n is ts.ArrowFunction | ts.FunctionExpression =>
+  ts.isArrowFunction(n) || ts.isFunctionExpression(n);
+
+// The expressions a function returns, not those of a function nested in it.
+function returnsOf(fn: Body): ts.Expression[] {
+  if (!fn.body) return [];
+  if (!ts.isBlock(fn.body)) return [fn.body];
+  const out: ts.Expression[] = [];
+  const visit = (n: ts.Node) => {
+    if (ts.isReturnStatement(n) && n.expression) out.push(n.expression);
+    if (!ts.isFunctionLike(n)) ts.forEachChild(n, visit);
+  };
+  ts.forEachChild(fn.body, visit);
+  return out;
 }
 
 /**
@@ -269,6 +333,37 @@ function tagOf(attribute: ts.JsxAttribute): string | undefined {
   return ts.isJsxOpeningElement(tag) || ts.isJsxSelfClosingElement(tag)
     ? tag.tagName.getText()
     : undefined;
+}
+
+const MUTATORS = new Set(["push", "unshift", "splice", "fill"]);
+// Whether the variable a name reads is written again after its declaration,
+// so its initializer is not all it holds: `classes.push(…)` or `cls += …`.
+function changedAfter(name: ts.Identifier): boolean {
+  const declared = declarationOf(name);
+  if (!declared || !ts.isVariableDeclaration(declared)) return false;
+  const same = (e: ts.Expression) =>
+    ts.isIdentifier(e) && e.text === name.text && declarationOf(e) === declared;
+  const writes = (n: ts.Node): boolean => {
+    const target = writtenBy(n);
+    if (target && same(target)) return true;
+    return ts.forEachChild(n, writes) ?? false;
+  };
+  return writes(declared.parent.parent.parent);
+}
+
+// The variable a write lands on: the list a mutator is called on, or the left
+// side of an assignment.
+function writtenBy(n: ts.Node): ts.Expression | undefined {
+  if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression)) {
+    const { expression, name } = n.expression;
+    return MUTATORS.has(name.text) ? expression : undefined;
+  }
+  const assigns =
+    ts.isBinaryExpression(n) &&
+    n.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+    n.operatorToken.kind <= ts.SyntaxKind.LastAssignment;
+  if (!assigns) return undefined;
+  return ts.isElementAccessExpression(n.left) ? n.left.expression : n.left;
 }
 
 function boundTo(name: ts.Identifier): ts.Expression | undefined {

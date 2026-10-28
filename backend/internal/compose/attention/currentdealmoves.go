@@ -20,6 +20,7 @@ type preparedDealMoves struct {
 }
 
 func (s *Service) readingDealMoves(ctx context.Context, day crmcontracts.Attention) (*Service, *crmcontracts.WorklistSourceUnavailable) {
+	defer timeStage("deal_moves")()
 	scoped := *s
 	scoped.currentDealMoves = &preparedDealMoves{}
 	if s.dealMoves == nil {

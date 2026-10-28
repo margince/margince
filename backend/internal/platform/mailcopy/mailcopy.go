@@ -421,8 +421,11 @@ type Copy struct {
 // mailer.Send refuses line breaks in the recipient and the subject, which are
 // the header fields. The body is the sender's to keep honest.
 func OneLine(text string) string {
-	return strings.Join(strings.FieldsFunc(text, func(r rune) bool {
-		return r == '\n' || r == '\r' || r == '\v' || r == '\f' ||
-			r == '\u0085' || r == '\u2028' || r == '\u2029'
-	}), " ")
+	return strings.Join(strings.FieldsFunc(text, LineBreak), " ")
+}
+
+// LineBreak reports a rune some reader of plain text draws as a new line.
+func LineBreak(r rune) bool {
+	return r == '\n' || r == '\r' || r == '\v' || r == '\f' ||
+		r == '\u0085' || r == '\u2028' || r == '\u2029'
 }

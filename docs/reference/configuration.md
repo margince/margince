@@ -76,7 +76,7 @@ so a file cannot set them: a value for one in the `.env` file or a YAML file sto
 **What stops the boot.** Margince lists every fault at once, so one restart fixes them all. A boot
 stops on any of these:
 
-- a flag it does not know;
+- a flag it does not know, which stops the load before any other source is read, so it is the only fault listed;
 - a key in either YAML file that no program reads, a seed key included;
 - a value that fails the check of its setting or seed;
 - a required value that no source sets;

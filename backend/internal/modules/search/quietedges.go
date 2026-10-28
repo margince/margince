@@ -47,10 +47,8 @@ type QuietRead struct {
 	// not happened yet: a booked meeting is not a touch. The window above is
 	// measured from the same instant, so the read has one clock. Zero reads
 	// the database's own now().
-	AsOf  time.Time
-	Limit int
-	// Offset skips candidates an earlier page of the same read already gave.
-	Offset  int
+	AsOf    time.Time
+	Limit   int
 	Exclude ExcludeEdges
 }
 
@@ -92,6 +90,10 @@ func liveExchangeClock(asOf string) string {
 //
 // The contact row scope applies at source, before the LIMIT, so an unreadable
 // contact neither leaks through an edge row nor evicts a readable lapse.
+//
+// Each contact's strongest edge is chosen first, and the exchange clock runs
+// once per contact after it. The clock reads only the contact, so running it
+// per edge repeated the same aggregate for every colleague who wrote to them.
 func QuietContacts(ctx context.Context, tx pgx.Tx, read QuietRead) ([]QuietContact, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, err
@@ -127,29 +129,29 @@ func QuietContacts(ctx context.Context, tx pgx.Tx, read QuietRead) ([]QuietConta
 	owned := quietOwnerClause(read, arg)
 	exchangedPos := arg(2)
 	limitPos := arg(read.Limit)
-	offsetPos := arg(read.Offset)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT q.user_id, q.contact_id, q.touched_at, q.last_inbound_at, q.last_outbound_at,
-		       q.count_90d, q.in_count_90d, q.out_count_90d, q.count_total, q.live_owner
-		  FROM (
-		    SELECT DISTINCT ON (e.contact_id) e.user_id, e.contact_id, x.touched AS touched_at,
+		WITH strongest AS MATERIALIZED (
+		    SELECT DISTINCT ON (e.contact_id) e.user_id, e.contact_id,
 		           e.last_inbound_at, e.last_outbound_at, e.count_90d, e.in_count_90d,
 		           e.out_count_90d, e.count_total, o.id AS live_owner
 		      FROM graph_interaction_edge e
 		      %s
-		      JOIN LATERAL (%s) x ON x.touched <= $%d AND x.touched > $%d
 		      JOIN contact p ON p.id = e.contact_id AND p.archived_at IS NULL
 		      LEFT JOIN app_user o ON o.id = p.owner_id AND %s
 		     WHERE e.count_total >= $%d
 		       AND (%s)
 		       AND (%s)
 		       AND (%s)
-		     ORDER BY e.contact_id, e.count_total DESC, x.touched DESC, e.user_id
-		  ) q
-		 ORDER BY q.count_total DESC, q.touched_at ASC, q.contact_id
-		 LIMIT $%d OFFSET $%d`, liveMemberJoin, liveExchangeClock(asOf), beforePos, afterPos, workforce.LiveMemberSQL("o"),
-		exchangedPos,
-		owned, scope, excluded, limitPos, offsetPos), args...)
+		     ORDER BY e.contact_id, e.count_total DESC, e.user_id
+		)
+		SELECT e.user_id, e.contact_id, x.touched, e.last_inbound_at, e.last_outbound_at,
+		       e.count_90d, e.in_count_90d, e.out_count_90d, e.count_total, e.live_owner
+		  FROM strongest e
+		  JOIN LATERAL (%s) x ON x.touched <= $%d AND x.touched > $%d
+		 ORDER BY e.count_total DESC, x.touched ASC, e.contact_id
+		 LIMIT $%d`, liveMemberJoin, workforce.LiveMemberSQL("o"),
+		exchangedPos, owned, scope, excluded,
+		liveExchangeClock(asOf), beforePos, afterPos, limitPos), args...)
 	if err != nil {
 		return nil, fmt.Errorf("search: reading quiet relationships: %w", err)
 	}

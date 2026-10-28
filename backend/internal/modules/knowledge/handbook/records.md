@@ -47,7 +47,7 @@ Many users get two of these wrong.
 
 **A deal does not need a company.** Name, pipeline, stage and source are required. Value, company and expected close date are not. Value and currency go together: you cannot give one without the other. A deal with no value has no currency either. Qualifying a lead creates a deal with no company, also for a lead linked to a company.
 
-A lead's company is plain text until you link it, so imported leads do not create half-filled companies in your CRM. When only one company you can open has the name the lead names, the lead page offers **Link to** that company. Linking makes the company name on the lead open the company. If you later change the lead's company to a name that is not the linked company, the link is removed. Linking creates no contact, and the lead keeps its status: someone is a lead or a contact, never both. When you qualify the lead, the contact it becomes gets a job link to the linked company.
+A lead's company is plain text until you link it, so imported leads do not create half-filled companies in your CRM. The lead page offers **Link to** a company you can open: the one holding the lead's domain, else the only one with that name. Linking makes the company name on the lead open the company. If you later change the lead's company to another name, the link is removed unless the linked company holds the lead's domain. Linking creates no contact, and the lead keeps its status: someone is a lead or a contact, never both. When you qualify the lead, the contact it becomes gets a job link to the linked company.
 
 ## Contacts
 
@@ -252,8 +252,8 @@ Margince has no notes of their own: a note is an activity. The kinds of activity
 To see everything that happened with a contact or company in Margince, open the record's **History** tab. **All** is one timeline of emails, meetings, calls, notes, tasks and messages. Field changes are listed under **Changes** alone.
 1. Under **Timeline filter**, pick **All**, **Threads** (email conversations) or **Changes**.
 2. Cut it down with **All kinds** (Email, Calls, Meetings, Notes…), **Search this timeline**, and **From** and **To** dates.
-A company's History also holds what reached it through its deals and the contacts who work there.
-Also called: timeline, activity log, customer history, interaction history.
+A company's History also holds what reached it through its deals and the contacts who work there. A record's **Overview** tab opens with the newest thing someone sent in the last 7 days that nobody has answered. It shows as **New email**, **New message** or **New website form**, with **Reply** or **Write email**. **Noticed** hides it until you sign out, and on the other tabs it is one line under the record's name.
+Also called: timeline, activity log, customer history, interaction history, newest email.
 
 ### How do I log a note, call or meeting on a record?
 To log an activity in Margince, open the contact, company, lead or deal and choose **Log activity** in its header.

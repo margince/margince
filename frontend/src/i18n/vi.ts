@@ -763,6 +763,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.promotionContactPhone": "Số điện thoại sẽ thêm",
   "approval.preview.promotionExistingContact": "Liên hệ hiện có sẽ cập nhật",
   "approval.preview.promotionSetOrigin": "Liên kết liên hệ với lead này",
+  "approval.preview.promotionCompanyIndustry": "Ngành của công ty",
   "approval.preview.promotionDuplicateCandidate":
     "Liên hệ có thể trùng cần xem xét",
   "approval.preview.promotionMoveActivity": "Hoạt động sẽ chuyển sang liên hệ",
@@ -784,6 +785,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bổ sung thông tin còn thiếu đã hiển thị vào liên hệ hiện có. Giữ tên, chức danh và số điện thoại chính hiện có.",
   "approval.preview.promotionDeal":
     "Mở cơ hội đã hiển thị và thêm liên hệ làm bên liên quan. Lead được liên kết với cơ hội này.",
+  "approval.preview.promotionFillIndustry":
+    "Ghi ngành đã hiển thị vào công ty được liên kết, vì công ty chưa có ngành.",
   "approval.preview.promotionReview":
     "Tạo một liên hệ riêng và đưa cặp có thể trùng vào danh sách xem xét.",
   "approval.preview.promotionAllMarketing": "Tất cả hoạt động tiếp thị",
@@ -3210,6 +3213,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "stageLadder.earlier": "Xem các giai đoạn trước",
   "stageLadder.later": "Xem các giai đoạn sau",
   "standing.timeline.empty": "Chưa có mốc thời gian nào.",
+  "latest.kind.email": "Email mới",
+  "latest.kind.message": "Tin nhắn mới",
+  "latest.kind.webForm": "Biểu mẫu trang web mới",
+  "latest.line.open": "{kind}: xem trong Tổng quan",
+  "latest.noticed": "Đánh dấu đã xem",
   "standing.next.label": "Tiếp theo",
   "standing.next.none": "Chưa có việc nào đến hạn.",
   "standing.next.snooze": "Để sau",
@@ -4775,6 +4783,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.segregationDismiss": "Ẩn thông báo này",
   "list.emptyMine": "Bạn không chịu trách nhiệm {unit} nào.",
   "list.showAll": "Hiển thị tất cả",
+  "list.filterRefusedRemove": "Bỏ lọc theo {dial}",
   "lead.assignedAway":
     "{names} đã được giao cho {owner}. Không còn trong “Của tôi”.",
   "lead.viewNew": "Mới",
@@ -5153,8 +5162,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.filterCurrencyAll": "Mọi loại tiền",
   "deals.filterCountry": "Quốc gia",
   "deals.filterCountryAll": "Mọi quốc gia",
-  "deals.filterRefused":
-    "Vai trò hiện tại không lọc được deal theo {dial}. Bỏ bộ lọc này để xem danh sách.",
+  "deals.filterRefused": "Vai trò hiện tại không lọc được deal theo {dial}.",
   "deals.rangeFrom": "Từ {value}",
   "deals.rangeTo": "Đến {value}",
   "deals.valueAtLeast": "Tối thiểu ({currency})",
@@ -13851,6 +13859,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.field.redirectUrlHint":
     "Nơi khách đến sau khi gửi. Để trống sẽ hiện thông báo thành công.",
   "webForms.field.redirectUrlPlaceholder": "https://www.example.com/cam-on",
+  "webForms.field.owner": "Người chịu trách nhiệm cho lead mới",
+  "webForms.field.ownerHint":
+    "Mỗi lead mới từ biểu mẫu này được giao cho thành viên này. Để trống thì bất kỳ ai trong nhóm cũng có thể nhận.",
+  "webForms.field.ownerNone": "Chưa giao",
+  "webForms.field.ownerGone": "{name} (đã nghỉ, lead mới sẽ chưa được giao)",
+  "webForms.field.ownerKept": "Thành viên đã lưu (không có trong danh sách)",
+  "webForms.row.owner": "Lead được giao cho",
+  "webForms.row.ownerLeft": "{name} đã nghỉ, lead mới sẽ chưa được giao",
   "webForms.field.successMessage": "Thông báo thành công",
   "webForms.field.successMessageHint": "Hiện cho khách sau khi gửi.",
   "webForms.setup.title": "Kết nối {name}",
@@ -17056,6 +17072,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.company.linkOpens": "Tên công ty trên lead này sẽ mở {name}.",
   "lead.company.linkOnQualify":
     "Chưa có liên hệ nào được tạo. Khi bạn xác nhận lead này đủ điều kiện, lead sẽ trở thành liên hệ tại {name}.",
+  "lead.company.matchedByDomain": "Cùng tên miền trang web",
+  "lead.company.matchedByName": "Cùng tên công ty",
+  "lead.company.linkWhyDomain": "{name} dùng tên miền trang web của lead này.",
+  "lead.company.linkWhyName": "{name} có cùng tên công ty với lead này.",
+  "lead.details.fromCompany": "Từ {name}",
+  "lead.details.fromCompanyRecord": "Từ hồ sơ công ty",
+  "lead.details.companyDecides":
+    "Các thông tin này lấy từ hồ sơ công ty. Sửa chúng trên trang công ty.",
+  "lead.details.companyCountry": "Quốc gia",
+  "lead.companySize": "Quy mô công ty",
+  "lead.filterCompanySizeAll": "Mọi quy mô công ty",
+  "lead.filterIndustryAll": "Mọi ngành",
+  "lead.filterRefused": "Vai trò hiện tại không lọc được lead theo {dial}.",
   "lead.timeline.received": "{at} · đã nhận",
   "lead.timeline.weReplied": "Bạn đã trả lời",
   "lead.timeline.repliedIn": "{at} · sau {span}",

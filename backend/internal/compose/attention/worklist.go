@@ -181,6 +181,7 @@ func (s *Service) worklistIn(
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
 	teamWeek := teamWeekFor(ctx)
 	out.TeamWeek = &teamWeek
+	defer timeStage("row_names")()
 	if err := withPins.nameWorklistRows(ctx, out.Queue, beside.night.findings); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
@@ -225,6 +226,7 @@ func (s *Service) worklistFrom(
 	// case where a tally would otherwise print a confident zero.
 	besideTheDay []*crmcontracts.WorklistSourceUnavailable,
 ) crmcontracts.Worklist {
+	defer timeStage("rank")()
 	if limit <= 0 {
 		limit = worklistPage
 	}

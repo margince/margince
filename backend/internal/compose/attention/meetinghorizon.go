@@ -58,6 +58,7 @@ type horizonRead struct {
 // only when the lane answered and holds nothing left today: a withheld lane's
 // emptiness is not a free day, and a day with a meeting left needs no pointer past it.
 func (s *Service) meetingHorizon(ctx context.Context, day crmcontracts.Attention, until time.Time) horizonRead {
+	defer timeStage("meeting_horizon")()
 	var out horizonRead
 	if s.horizon == nil || s.taskScope != TasksMine {
 		return out

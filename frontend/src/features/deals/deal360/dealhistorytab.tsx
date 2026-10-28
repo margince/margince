@@ -10,6 +10,10 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import type { components } from "../../../api/schema";
+import {
+  type JustIn,
+  LatestInboundPanel,
+} from "../../../components/latestinbound";
 import { Panel, PanelBody } from "../../../design-system/panel";
 import {
   useRecordTimeline,
@@ -30,7 +34,10 @@ import {
   useChronologyFilter,
   useRecordChronology,
 } from "../../records/recordchronology";
-import { TimelineActions } from "../../records/timelineactions";
+import {
+  RowAnswerActions,
+  TimelineActions,
+} from "../../records/timelineactions";
 import { StartDeliveryPrompt } from "../dealproject";
 import { OutcomeReviewPanel } from "./outcomereview";
 
@@ -142,5 +149,27 @@ export function DealHistoryTab({
         </PanelBody>
       </Panel>
     </>
+  );
+}
+
+/**
+ * The newest unanswered thing anyone on the deal sent, leading the Overview
+ * with the verbs its History row has.
+ */
+export function DealLatestInbound({
+  latest,
+  dealId,
+}: Readonly<{ latest: JustIn | undefined; dealId: string }>) {
+  return (
+    <LatestInboundPanel
+      latest={latest}
+      actions={(activity) => (
+        <RowAnswerActions
+          activity={activity}
+          entityType="deal"
+          entityId={dealId}
+        />
+      )}
+    />
   );
 }
