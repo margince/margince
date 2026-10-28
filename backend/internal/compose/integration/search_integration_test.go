@@ -732,3 +732,41 @@ func searchAs(e *SearchEnv) context.Context {
 		},
 	})
 }
+
+// A linked lead's excerpt names the company as it is called now.
+//
+// The lead keeps the spelling somebody typed, and a rename of the linked
+// company moves that out of date. A hit showing the old name sends the reader
+// looking for an account nobody calls that any more.
+func TestALinkedLeadsExcerptFollowsTheCompanysName(t *testing.T) {
+	e := SetupSearch(t)
+	ctx := e.Admin()
+	company := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by)
+		VALUES ($1, 'Nordwind Logistik', 'manual', 'human:x')`)
+	e.SeedID(t, `INSERT INTO lead (id, owner_id, full_name, company_name, company_id, source, captured_by)
+		VALUES ($1, $2, 'Clara Vogt', 'Nordwind GmbH', $3, 'manual', 'human:x')`, e.Rep1, company)
+
+	excerpt := func() string {
+		t.Helper()
+		page, err := e.Store.Search(ctx, search.Input{Query: "Clara Vogt", Types: []string{"lead"}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(page.Hits) != 1 {
+			t.Fatalf("searching the lead → %+v, want the one lead", page.Hits)
+		}
+		return page.Hits[0].Snippet
+	}
+	if got := excerpt(); got != "Nordwind Logistik" {
+		t.Fatalf("the excerpt reads %q, want the linked company's own name", got)
+	}
+
+	// Renamed on the company, which is where the name lives.
+	if _, err := e.Pool.Exec(context.Background(),
+		`UPDATE company SET display_name = 'Nordwind Fracht' WHERE id = $1`, company); err != nil {
+		t.Fatal(err)
+	}
+	if got := excerpt(); got != "Nordwind Fracht" {
+		t.Errorf("after the rename the excerpt reads %q, want the new name", got)
+	}
+}
