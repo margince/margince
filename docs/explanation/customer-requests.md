@@ -40,8 +40,14 @@ completes its reminder.
 
 A `settled` verdict completes the reminder linked to the evidence, through the ordinary activity writer.
 So it carries the audit row and the event that a human who completes it by hand would carry. `still_owed` may
-change the title of a reminder with no date that the machine filed. The new title names what is still
-open ("Send the offer" in place of the mail's subject line). It never touches a reminder a human accepted, dated or opened again.
+change the title of a reminder with no date that the machine filed. The new title quotes the part of
+the customer's request that is still open ("send the revised offer" in place of the mail's subject
+line). The quote must be at least two words of their request, outside the quoted history and the
+signature. A text that is not such a quote is dropped, so a question we asked them never becomes our
+work. It never touches a reminder a human accepted, dated or opened again.
+
+Each verdict records the rule it was reached under. A `still_owed` verdict from an older rule is judged
+again, and a reminder it retitled may be retitled once more.
 
 An open reminder always wins over the machine's verdict. Someone who takes the work back up is the
 answer, and the request counts as open again while their task stands. `unsure` records that the pass

@@ -557,6 +557,7 @@ public.activity_request_settlement.judged_through_activity_id uuid NOT NULL gen=
 public.activity_request_settlement.remaining text gen=- def=-
 public.activity_request_settlement.request_activity_id uuid NOT NULL gen=- def=-
 public.activity_request_settlement.revalidation_requested_at timestamp with time zone gen=- def=-
+public.activity_request_settlement.rule_version text NOT NULL gen=- def=''::text
 public.activity_request_settlement.verdict text NOT NULL gen=- def=-
 public.activity_request_settlement_pkey CREATE UNIQUE INDEX activity_request_settlement_pkey ON public.activity_request_settlement USING btree (request_activity_id)
 public.activity_retention_evidence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
