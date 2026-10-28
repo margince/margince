@@ -303,7 +303,7 @@ func ensureWriteAuthority(ctx context.Context, tx pgx.Tx, table string, id ids.U
 	if err != nil {
 		return err
 	}
-	if Unbounded(p) || !shareableTables[table] {
+	if Unbounded(p) || !shareableTables[table] || admittedCaseMember(ctx, table, id) {
 		return nil
 	}
 	var args []any

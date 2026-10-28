@@ -52,11 +52,15 @@ func (e *AssigneeNotAllowedError) FieldFault() (field, code, message string) {
 // other rows. Reading it here would let a single write share on one lead widen
 // the assigner's whole destination pool.
 func AssigneeEligibleSQL(p principal.Principal, alias string, arg func(any) int) string {
-	return fmt.Sprintf(
-		`%[1]s
-		   AND NOT %[2]s.is_agent AND %[2]s.seat_type <> 'read'
-		   AND %[3]s`,
-		workforce.LiveMemberSQL(alias), alias, ownerPredicate(p, arg, unownedIsNobodys)(alias))
+	return assigneeSeatSQL(alias) + " AND " + ownerPredicate(p, arg, unownedIsNobodys)(alias)
+}
+
+// assigneeSeatSQL is the seat half of AssigneeEligibleSQL alone: a live human
+// seat that can write. A delegated case merge asks only this of an owner its
+// admission names, because that owner already holds one of the merged contacts.
+func assigneeSeatSQL(alias string) string {
+	return fmt.Sprintf(`%[1]s
+		   AND NOT %[2]s.is_agent AND %[2]s.seat_type <> 'read'`, workforce.LiveMemberSQL(alias), alias)
 }
 
 // newRecordOwnerSQL is AssigneeEligibleSQL for a NEW record's named owner,
@@ -139,6 +143,9 @@ func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	destPos := arg(dest)
 
+	if admittedCaseGrantee(ctx, dest) {
+		eligible = func(_ principal.Principal, alias string, _ func(any) int) string { return assigneeSeatSQL(alias) }
+	}
 	status := "status"
 	if consolidatingInto(ctx, dest) {
 		if err := Require(ctx, "user_admin", principal.ActionDelete); err != nil {
