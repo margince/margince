@@ -289,3 +289,23 @@ func (readsContacts) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.R
 func (r readsContacts) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
 }
+
+// Duplicate contacts count as the one review the Worklist shows for them,
+// however many pairs join the group.
+func TestTheDigestCountsAGroupOfDuplicateContactsOnce(t *testing.T) {
+	b := setupBackfillWire(t)
+	for range 3 {
+		if _, err := b.env.Contacts.CreateContact(b.env.Admin(), contacts.CreateContactInput{
+			FullName: "Cleo Marsh", Source: "manual",
+			Phones: []contacts.ContactPhoneInput{{Phone: "+493055530001", PhoneType: "work", IsPrimary: true, Position: 1}},
+		}); err != nil {
+			t.Fatalf("seeding a duplicate: %v", err)
+		}
+	}
+	if pairs := b.env.WsCount(t, `SELECT count(*) FROM dedupe_candidate WHERE entity_type = 'contact' AND disposition = 'open'`); pairs < 2 {
+		t.Fatalf("the three contacts are joined by %d pairs, want a group of at least two", pairs)
+	}
+	if _, open := b.buildCounts(t, readsContacts{}, time.Now().UTC()); open != 1 {
+		t.Errorf("the digest reported %d duplicates to review, want the one group", open)
+	}
+}

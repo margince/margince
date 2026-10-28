@@ -37108,7 +37108,7 @@ components:
         review:
           type: object
           properties:
-            dedupe_open: { type: integer, description: 'Every open duplicate candidate pair the reader can see, not only the pairs filed overnight.' }
+            dedupe_open: { type: integer, description: 'Every open duplicate review item the reader can see, as the Worklist shows them, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own.' }
             approvals_pending: { type: integer, description: 'Pending 🟡 items (enrich, quarantine, merge).' }
             classify:
               type: object
