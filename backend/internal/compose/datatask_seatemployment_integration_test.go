@@ -180,9 +180,9 @@ func replayChangesNothing(ctx context.Context, t *testing.T, e *integration.Env,
 	}
 }
 
-// A seat login's contact stays when anybody but capture worked on it: a note a
-// colleague wrote about it, a lead made from it, or a tag an agent gave it.
-// The plain seat contact beside them is archived, so the step ran.
+// A seat login's contact stays when anybody but capture worked on it. That is a
+// note a colleague wrote about it, a lead made from it, or an agent's tag. The
+// plain seat contact beside them is archived, so the step ran.
 func TestTheSeatContactStepKeepsAContactSomebodyWorkedOn(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
