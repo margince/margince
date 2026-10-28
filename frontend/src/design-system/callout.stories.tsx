@@ -56,16 +56,12 @@ function Derives({
 
 /** Every tone together, which is the only way to judge that they differ.
  * No `icon` at any of them: the glyph comes from the tone, so shape carries the
- * claim as well as colour does — and `accent` shares `info`'s glyph, because it
- * is the same claim asking for more of the reader's attention. */
+ * claim as well as colour does. */
 export const Tones: Story = {
   render: () => (
     <Stack>
       <Callout title="Capture is running">
         Every message to and from this mailbox is read every five minutes.
-      </Callout>
-      <Callout tone="accent" title="Two accounts are waiting on you">
-        Neither has been answered since the buyer asked for a price.
       </Callout>
       <Callout tone="warning" title="Reindex needed">
         Search is answering from an index that is behind the records.
@@ -78,6 +74,9 @@ export const Tones: Story = {
       </Callout>
       <Callout tone="discovery" title="Deal Rooms are new here">
         A buyer can now read the price, the terms and the plan in one place.
+      </Callout>
+      <Callout tone="ai" title="Drafted from the last three calls">
+        Read it before it goes out: the model has not met this buyer.
       </Callout>
     </Stack>
   ),
@@ -97,11 +96,7 @@ export const AlertAnatomy: Story = {
         Every message to and from this mailbox is read every five minutes.
       </Callout>
 
-      <Callout
-        tone="accent"
-        title="The index is behind"
-        actions={<Button>Refresh</Button>}
-      >
+      <Callout title="The index is behind" actions={<Button>Refresh</Button>}>
         Search is answering from the records as they stood an hour ago.
       </Callout>
 
@@ -197,11 +192,7 @@ export const Narrow: Story = {
     // catalog's 2rem frame off it: 390px less two frames is not a width any
     // reader has.
     <div style={{ padding: "var(--padCard)" }}>
-      <Callout
-        tone="accent"
-        title="The index is behind"
-        actions={<Button>Refresh</Button>}
-      >
+      <Callout title="The index is behind" actions={<Button>Refresh</Button>}>
         Search is answering from the records as they stood an hour ago.
       </Callout>
     </div>
@@ -239,7 +230,6 @@ function Column({
 function ActionsAndDismiss() {
   return (
     <Callout
-      tone="accent"
       title="Also tag contacts at this company with Product X?"
       actions={<Button>Choose contacts</Button>}
       dismiss={{ label: "Dismiss", onDismiss: () => {} }}

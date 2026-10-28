@@ -18,3 +18,8 @@ indent_size = 2
 
 [*.md]
 trim_trailing_whitespace = false
+
+# Copied third-party files stay byte for byte as published.
+[frontend/src/design-system/material-symbols/**]
+insert_final_newline = false
+trim_trailing_whitespace = false
