@@ -6,7 +6,7 @@ import { type MockApiOptions, mockApi } from "./seed";
 /**
  * The shell's standing advisory, rendered — which nothing had ever done.
  *
- * `EmbedReindexBanner` keys on `/embeddings/reindex/status`, and no mock
+ * `EmbedReindexBanner` keys on `/embeddings/reindex/identities`, and no mock
  * answered that read: the query errored, the component returned null, and every
  * sweep in this suite — the AC screens, the axe pass, the overflow pass — ran
  * against a shell with no banner in it. A whole mounted surface, on every route
@@ -88,7 +88,7 @@ test.describe("the reindex advisory", () => {
       page,
       "#/settings/knowledge",
       { embedReindex: "current" },
-      /\/embeddings\/reindex\/status/,
+      /\/embeddings\/reindex\/identities/,
     );
     await expect(page.locator(BANNER)).toHaveCount(0);
   });

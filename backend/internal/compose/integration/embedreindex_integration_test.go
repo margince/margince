@@ -6,7 +6,7 @@
 package integration
 
 // The embed-reindex transport end to end (Task 15, ADR-0068 design
-// §5.6-swap): the three /embeddings/reindex* HTTP ops over a real
+// §5.6-swap): the four /embeddings/reindex* HTTP ops over a real
 // migrated Postgres, the claim+enqueue-in-one-tx confirm, and the REAL
 // River workers (compose.NewJobRunner, exactly as cmd/worker wires it —
 // no hand-called store pass standing in for the worker role).

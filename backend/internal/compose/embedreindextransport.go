@@ -4,7 +4,7 @@
 package compose
 
 // The embed-reindex transport (ADR-0068 design §5.6-swap, Task 15): the
-// three /embeddings/reindex* ops discharge the rbacgate_test.go waiver
+// four /embeddings/reindex* ops discharge the rbacgate_test.go waiver
 // on search.Store's binding-marker READS and its claim — every one of
 // them is reached ONLY through a handler below that gates first
 // (auth.Require(ctx, "embedding_reindex", <action>)), which is the whole
@@ -147,7 +147,7 @@ type embedReindexEstimator interface {
 	EstimateEmbedReindex(ctx context.Context, currentIdentity string) ([]costestimate.Row, costestimate.Row, error)
 }
 
-// embedReindexEngine backs the three handlers over the search module's
+// embedReindexEngine backs the four handlers over the search module's
 // binding-marker store, the resolved embed lane, the priced preview, and
 // the insert-only job enqueuer.
 type embedReindexEngine struct {
