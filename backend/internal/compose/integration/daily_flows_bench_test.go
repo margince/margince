@@ -330,6 +330,8 @@ func fetchRound(s Seat, base string, calls []dailyCall, parallel bool) ([]dailyR
 // the note its no-data row carries. The harness configures no mail connector,
 // binds no embedding model and serves no license. Any other 501 is a server
 // fault and fails the run.
+//
+// gatekit:fixture the unwired routes and the note each prints on its no-data row
 var dailyUnwiredRoutes = map[string]string{
 	"/v1/digest":                    "answers 501 until a mail connector is configured",
 	"/v1/connectors":                "answers 501 until a mail connector is configured",
