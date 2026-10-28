@@ -40,7 +40,7 @@ function EvidenceLine({ evidence }: Readonly<{ evidence: Evidence }>) {
   );
 }
 
-/** Each pair in the case, with what made it look like one person. */
+/** Each pair in the case, with what made the two look like duplicates. */
 export function CaseEvidence({
   contactCase,
   onStale,

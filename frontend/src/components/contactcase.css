@@ -13,7 +13,7 @@
   gap: var(--space-3);
 }
 
-/* The tick that says "same person", then the choice of record to keep. */
+/* The tick that says "a duplicate", then the choice of record to keep. */
 .contactcase-member {
   display: flex;
   flex-direction: column;

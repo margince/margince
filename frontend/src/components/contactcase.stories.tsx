@@ -23,7 +23,7 @@ import { CasePreview } from "./contactcase.evidence";
 import { CaseForm } from "./contactcase.form";
 import type { ContactCase } from "./contactcase.queries";
 
-// The review of a group of contacts that may be one person, in each state a
+// The review of a group of contacts that may be duplicates, in each state a
 // reader can meet it in.
 const meta: Meta = { title: "Patterns/Contact duplicate review" };
 export default meta;

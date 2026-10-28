@@ -81,7 +81,7 @@ function MemberDetail({ member }: Readonly<{ member: ContactCaseMember }>) {
   );
 }
 
-/** The decision itself: who is the same person, what stays, who owns it. */
+/** The decision itself: which contacts are duplicates, what stays, who owns it. */
 export function CaseForm({
   contactCase,
   startId,

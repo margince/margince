@@ -85,7 +85,7 @@ describe("which members the review ticks", () => {
   it("walks open pairs only, and keeps the walk connected", () => {
     const one = contactCase();
     expect(defaultSelection(one, ANA)).toEqual([ANA, BEN, CLEO]);
-    // From Dana, Cleo and Ben come in; Ana was marked as a different person.
+    // From Dana, Cleo and Ben come in; Ana was marked as different from Dana.
     expect(defaultSelection(one, DANA)).toEqual([DANA, CLEO, BEN]);
     expect(isConnected(one, [ANA, CLEO])).toBe(false);
     expect(isConnected(one, [ANA, BEN, CLEO])).toBe(true);
