@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -167,17 +168,19 @@ func exactCompanyByDomain(ctx context.Context, tx pgx.Tx, domains []string, excl
 	if len(domains) == 0 {
 		return nil, nil
 	}
-	lowered := make([]string, 0, len(domains))
+	// Both spellings of each candidate. A contact's mail domain arrives folded
+	// by nothing, so a Unicode address would otherwise miss the company holding
+	// the punycode its own site was read under, and land on no company at all.
+	spellings := make([]string, 0, len(domains))
 	for _, d := range domains {
-		lowered = append(lowered, normalizeDomain(d))
+		spellings = append(spellings, owndomain.Spellings(d)...)
 	}
 	return exactOwners[ids.CompanyID](ctx, tx, entityCompany, `
 		SELECT DISTINCT company_id FROM company_domain
 		WHERE domain = ANY($1) AND archived_at IS NULL
-		  
 		  AND ($2::uuid IS NULL OR company_id <> $2)
 		ORDER BY company_id
-		LIMIT 2`, lowered, exclude)
+		LIMIT 2`, spellings, exclude)
 }
 
 // nameDomainClaimant answers the company that claims the domain the
