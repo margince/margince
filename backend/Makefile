@@ -182,7 +182,7 @@ check-composition: composition ## Reproducibility gate: a clean regeneration mus
 test-extensions: composition ## Every enabled extension's own test lane (each unit is its own module — ./... never reaches them), on the composed workspace [EXT_COVER_OUT=<file> merges a coverage profile]
 	@set -e; found=0; out="$(if $(EXT_COVER_OUT),$(abspath $(EXT_COVER_OUT)))"; \
 	[ -z "$$out" ] || { rm -f "$$out"; tmp=$$(mktemp); trap 'rm -f "$$tmp"' EXIT; }; \
-	for mod in $$(awk '/^\t\.\.\/\.\.\/./ && !/^\t\.\.\/\.\.\/backend/ {print "../build/composition/" $$1 "/go.mod"}' ../build/composition/go.work); do \
+	for mod in $$(awk '/^\t/ && $$1 !~ /^(\.\/backend|\.\.\/\.\.|\.\.\/\.\.\/backend(\/tools)?)$$/ {print "../build/composition/" $$1 "/go.mod"}' ../build/composition/go.work); do \
 		[ -e "$$mod" ] || continue; found=1; \
 		dir=$$(dirname "$$mod"); \
 		echo "== $$dir"; \

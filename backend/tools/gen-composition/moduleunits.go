@@ -15,8 +15,10 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 
 	"golang.org/x/mod/modfile"
+	"golang.org/x/mod/module"
 
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -40,7 +42,10 @@ type unitSource struct {
 	modulePath string
 	version    string
 	dir        string
-	fetched    bool
+	// download is the module@version fetched for it: the requirement itself,
+	// or what the instance's replace points it at.
+	download string
+	fetched  bool
 }
 
 // downloadedModule is the part of `go mod download -json` this composer reads.
@@ -73,16 +78,9 @@ func instanceUnits(root string) ([]unitSource, error) {
 	if err != nil {
 		return nil, err
 	}
-	local := map[string]string{}
+	replaces := map[string]*modfile.Replace{}
 	for _, r := range mod.Replace {
-		if r.New.Version != "" {
-			continue
-		}
-		dir := r.New.Path
-		if !filepath.IsAbs(dir) {
-			dir = filepath.Join(filepath.Dir(goModPath), dir)
-		}
-		local[r.Old.Path] = filepath.Clean(dir)
+		replaces[r.Old.Path+"@"+r.Old.Version] = r
 	}
 	seen := map[string]string{}
 	var units []unitSource
@@ -95,13 +93,33 @@ func instanceUnits(root string) ([]unitSource, error) {
 			return nil, fmt.Errorf("%s: %s and %s are both the unit %q; one name, one unit", goModPath, other, r.Mod.Path, name)
 		}
 		seen[name] = r.Mod.Path
-		u := unitSource{name: name, modulePath: r.Mod.Path, version: r.Mod.Version, dir: local[r.Mod.Path]}
-		if u.dir == "" {
-			u.dir, u.fetched = filepath.Join(root, filepath.FromSlash(fetchedUnitsDir), name), true
-		}
-		units = append(units, u)
+		units = append(units, resolveUnit(root, goModPath, name, r.Mod, replaces))
 	}
 	return units, nil
+}
+
+// resolveUnit applies the instance's replace the way Go does: one for this
+// exact version wins over one for every version. A replace onto a folder is
+// composed in place; onto another module version, that version is fetched.
+func resolveUnit(root, goModPath, name string, req module.Version, replaces map[string]*modfile.Replace) unitSource {
+	u := unitSource{name: name, modulePath: req.Path, version: req.Version, download: req.Path + "@" + req.Version}
+	r := replaces[req.Path+"@"+req.Version]
+	if r == nil {
+		r = replaces[req.Path+"@"]
+	}
+	if r != nil && r.New.Version == "" {
+		u.dir = r.New.Path
+		if !filepath.IsAbs(u.dir) {
+			u.dir = filepath.Join(filepath.Dir(goModPath), u.dir)
+		}
+		u.dir = filepath.Clean(u.dir)
+		return u
+	}
+	if r != nil {
+		u.download = r.New.Path + "@" + r.New.Version
+	}
+	u.dir, u.fetched = filepath.Join(root, filepath.FromSlash(fetchedUnitsDir), name), true
+	return u
 }
 
 // fetchUnits copies every versioned extension out of the module cache. The
@@ -117,9 +135,12 @@ func fetchUnits(root string) error {
 		return err
 	}
 	var wanted []string
+	unitOf := map[string]string{}
 	for _, u := range units {
 		if u.fetched {
-			wanted = append(wanted, u.modulePath+"@"+u.version)
+			wanted = append(wanted, u.download)
+			modPath, _, _ := strings.Cut(u.download, "@")
+			unitOf[modPath] = u.name
 		}
 	}
 	if len(wanted) == 0 {
@@ -130,7 +151,7 @@ func fetchUnits(root string) error {
 		return err
 	}
 	for _, m := range downloaded {
-		name := unitNameFromModulePath(m.Path)
+		name := unitOf[m.Path]
 		if err := extension.Name(name).Validate(); err != nil {
 			return fmt.Errorf("%s: %w", m.Path, err)
 		}
