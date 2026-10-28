@@ -18,6 +18,7 @@ import {
   liveInterval,
   liveOnMount,
   liveOnReturn,
+  notePrefetched,
   retryQuery,
 } from "./queryclient";
 
@@ -135,18 +136,24 @@ describe("the query client defaults", () => {
     expect(liveOnReturn({ queryKey: ["me", "ai-activity"] })).toBe(false);
   });
 
-  it("re-reads a live work read on mount unless its answer is under a second old", () => {
-    const day = ["worklist", "mine", "all", ""];
-    const answeredAt = (dataUpdatedAt: number) => ({
-      queryKey: day,
+  it("re-reads a live work read on mount unless it is the prefetched answer, under a second old", () => {
+    const day = { queryKey: ["worklist", "mine", "all", ""], queryHash: "day" };
+    const at = (dataUpdatedAt: number) => ({
+      ...day,
       state: { dataUpdatedAt },
     });
-    expect(liveOnMount(answeredAt(10_000), 10_999)).toBe(true);
-    expect(liveOnMount(answeredAt(10_000), 11_000)).toBe("always");
-    expect(liveOnMount(answeredAt(0), 5_000)).toBe("always");
+    expect(liveOnMount(at(10_000), 10_100)).toBe("always");
+    notePrefetched("day", 10_000);
+    expect(liveOnMount(at(10_000), 10_999)).toBe(true);
+    expect(liveOnMount(at(10_000), 11_000)).toBe("always");
+    expect(liveOnMount(at(10_500), 10_600)).toBe("always");
     expect(
       liveOnMount(
-        { queryKey: ["contact", "p-1"], state: { dataUpdatedAt: 0 } },
+        {
+          queryKey: ["contact", "p-1"],
+          queryHash: "c",
+          state: { dataUpdatedAt: 0 },
+        },
         5_000,
       ),
     ).toBe(true);

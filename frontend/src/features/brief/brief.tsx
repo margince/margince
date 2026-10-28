@@ -13,6 +13,7 @@ import { greetingNameOf } from "../../format/greetingname";
 import { useNow } from "../../format/now";
 import { useT } from "../../i18n";
 import { markJourney } from "../../lib/journeymarks";
+import { useMagic } from "../../lib/magic.queries";
 import { isReviewableReceipt } from "../../lib/receiptreview";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
@@ -21,7 +22,6 @@ import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { pillCount } from "../../lib/worklistcounts";
 import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
 import { MagicPanel } from "../sign-in/magic";
-import { useMagic } from "../sign-in/magic.queries";
 import {
   MeetingDetailModal,
   TaskDetailModal,

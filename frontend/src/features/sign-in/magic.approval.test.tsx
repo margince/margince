@@ -1,9 +1,9 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import { MAGIC_PAGE_LINES } from "../../lib/magic.queries";
 import { wonProposal } from "../../testing/magic.approval.fixtures";
 import { receipt, renderMagic, stub } from "../../testing/magic.testkit";
-import { MAGIC_PAGE_LINES } from "./magic.queries";
 
 afterEach(() => {
   cleanup();

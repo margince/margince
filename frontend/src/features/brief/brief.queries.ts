@@ -31,12 +31,10 @@ export function useMorningBrief(): UseQueryResult<MorningBrief | null> {
 /** The read useMorningBrief makes, which Home's prefetch also starts. */
 export const morningBriefOptions = queryOptions({
   queryKey: briefKey,
-  // On the same schedule as the attention feed, because the Worklist's
-  // briefing lane is BOTH of them: the feed says which entries are still
-  // waiting and this says what each one is. Refreshing one without the other
-  // leaves the lane intersecting a fresh list of ids against a stale set of
-  // items, and an intersection that finds nothing draws the quiet-morning
-  // plate over a morning that has work in it.
+  // On the same schedule as the attention feed. The Worklist's briefing lane
+  // is both: the feed says which entries still wait, and this says what each
+  // one is. Refreshed apart, a fresh list of ids meets a stale set of items.
+  // An empty intersection then draws the quiet-morning plate over real work.
   queryFn: async (): Promise<MorningBrief | null> => {
     const { data, error, response } = await api.GET("/brief");
     // No run yet is not a failure: it is a page that offers to make one.

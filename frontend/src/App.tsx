@@ -10,6 +10,7 @@ import { isPublicBookingId } from "./app/bookingroute";
 import { AuthSplash } from "./app/bootsplash";
 import { ConfinedAccountScreen, useProbeAnswer } from "./app/confinement";
 import { DateFormatsProvider } from "./app/dateformats";
+import { prefetchHome } from "./app/homeprefetch";
 import { passesOnboardingGate } from "./app/onboarding-gate";
 import {
   CommandPalette,
@@ -19,7 +20,6 @@ import {
 import { Shell, useRoute } from "./app/shell";
 import { SourceHost } from "./app/sourcehost";
 import { CallLogHost } from "./components/calllog.host";
-import { prefetchHome } from "./features/brief/brief.prefetch";
 import { useJourneyProgress } from "./features/onboarding/onboarding-journey";
 import {
   ReleaseSkewScreen,

@@ -46,17 +46,30 @@ export function liveOnReturn(query: { queryKey: QueryKey }): "always" | false {
 }
 
 // A live work read is read again on every mount, so a screen never opens on an
-// answer another screen fetched minutes ago. An answer under a second old is
-// the current one: the read the shell prefetched for the opening screen is not
-// fetched a second time when that screen mounts.
+// answer fetched before it. The one exception is the answer the shell prefetched
+// for the screen being opened (app/homeprefetch.ts). While it is under a second
+// old, that screen's mount uses it instead of fetching it a second time.
 export const LIVE_ANSWER_CURRENT_MS = 1_000;
 
+const prefetchedAnswers = new Map<string, number>();
+
+/** Records the answer a prefetch fetched, by query hash and its stamp. */
+export function notePrefetched(queryHash: string, answeredAt: number): void {
+  prefetchedAnswers.set(queryHash, answeredAt);
+}
+
 export function liveOnMount(
-  query: { queryKey: QueryKey; state: { dataUpdatedAt: number } },
+  query: {
+    queryKey: QueryKey;
+    queryHash: string;
+    state: { dataUpdatedAt: number };
+  },
   now = Date.now(),
 ): "always" | true {
   if (!isLiveWorkRead(query.queryKey)) return true;
-  return now - query.state.dataUpdatedAt < LIVE_ANSWER_CURRENT_MS
+  const answeredAt = query.state.dataUpdatedAt;
+  const prefetched = prefetchedAnswers.get(query.queryHash) === answeredAt;
+  return prefetched && now - answeredAt < LIVE_ANSWER_CURRENT_MS
     ? true
     : "always";
 }
