@@ -299,7 +299,7 @@ func signalColumns(alias string) string {
 		"id", "kind", "source_channel", "raw_ref", "entity_type", "entity_id",
 		"resolution_state", "resolution_confidence::float8", "resolved_company_id", "resolved_contact_id",
 		"severity", "summary", "evidence", "status", "detected_at", "source", "captured_by",
-		"version", "created_at", "updated_at", "archived_at",
+		"version", "created_at", "updated_at", "archived_at", "summary_params",
 	}
 	for i, c := range cols {
 		cols[i] = alias + "." + c
@@ -312,14 +312,21 @@ func readSignal(ctx context.Context, tx pgx.Tx, id ids.SignalID, archived storek
 	if archived == storekit.LiveOnly {
 		q += ` AND s.archived_at IS NULL`
 	}
-	sig, err := scanSignal(tx.QueryRow(ctx, q, id))
+	sig, params, err := scanSignal(tx.QueryRow(ctx, q, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.Signal{}, apperrors.ErrNotFound
 	}
-	return sig, err
+	if err != nil {
+		return crmcontracts.Signal{}, err
+	}
+	read := []crmcontracts.Signal{sig}
+	wordForReader(ctx, tx, read, []json.RawMessage{params})
+	return read[0], nil
 }
 
-func scanSignal(row pgx.Row) (crmcontracts.Signal, error) {
+// scanSignal answers the row and the parts its summary was worded from, nil
+// when it was not worded from parts.
+func scanSignal(row pgx.Row) (crmcontracts.Signal, json.RawMessage, error) {
 	var sig crmcontracts.Signal
 	var id ids.UUID
 	var kind, sourceChannel, resolutionState, severity, status string
@@ -335,18 +342,19 @@ func scanSignal(row pgx.Row) (crmcontracts.Signal, error) {
 	var resolutionNote *string
 	var resolvedBy *ids.UUID
 	var resolvedAt *time.Time
+	var params json.RawMessage
 
 	err := row.Scan(&id, &kind, &sourceChannel, &sig.RawRef, &entityType, &entityID,
 		&resolutionState, &confidence, &resolvedCompanyID, &resolvedContactID,
 		&severity, &sig.Summary, &evidenceJSON, &status, &sig.DetectedAt, &sig.Source, &capturedBy,
-		&version, &sig.CreatedAt, &sig.UpdatedAt, &sig.ArchivedAt,
+		&version, &sig.CreatedAt, &sig.UpdatedAt, &sig.ArchivedAt, &params,
 		&resolutionOutcome, &resolutionNote, &resolvedBy, &resolvedAt)
 	if err != nil {
-		return sig, err
+		return sig, nil, err
 	}
 	sig.Resolution = resolutionFrom(resolutionOutcome, resolutionNote, resolvedBy, resolvedAt)
 	if err := json.Unmarshal(evidenceJSON, &sig.Evidence); err != nil {
-		return sig, fmt.Errorf("signal evidence is not the contract shape: %w", err)
+		return sig, nil, fmt.Errorf("signal evidence is not the contract shape: %w", err)
 	}
 	sig.Id = openapi_types.UUID(id)
 	sig.Kind = crmcontracts.SignalKind(kind)
@@ -367,7 +375,7 @@ func scanSignal(row pgx.Row) (crmcontracts.Signal, error) {
 	}
 	sig.CapturedBy = &capturedBy
 	sig.Version = &version
-	return sig, nil
+	return sig, params, nil
 }
 
 func uuidPtr(id *ids.UUID) *openapi_types.UUID {

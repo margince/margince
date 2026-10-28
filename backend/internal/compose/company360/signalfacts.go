@@ -10,6 +10,7 @@ package company360
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -42,9 +43,10 @@ type signalFacts struct {
 
 // signalHeadline is one signal as the strip states it.
 type signalHeadline struct {
-	Kind     string
-	Severity string
-	Summary  string
+	Kind          string
+	Severity      string
+	Summary       string
+	SummaryParams json.RawMessage
 }
 
 // readSignalFacts reads what the account's open signals say: the worst one
@@ -72,17 +74,18 @@ func readSignalFacts(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, no
 	}
 	facts := signalFacts{Readable: true}
 	var kind, severity, summary, endedSaid *string
+	var params json.RawMessage
 	var endedID *ids.UUID
 	// One read serves two readers: the strip states the worst, and the
 	// contradiction rule asks whether the contract ended — and what the mail
 	// that says so said. Two queries would let them describe two instants.
 	if err := tx.QueryRow(ctx, fmt.Sprintf(`
 		WITH open_signals AS (
-			SELECT s.id, s.kind, s.severity, s.summary, s.detected_at FROM signal s
+			SELECT s.id, s.kind, s.severity, s.summary, s.summary_params, s.detected_at FROM signal s
 			 WHERE %[1]s AND s.status = 'open' AND s.archived_at IS NULL AND %[2]s
 		)
 		SELECT ended.summary, ended.id,
-		       worst.kind, worst.severity, worst.summary
+		       worst.kind, worst.severity, worst.summary, worst.summary_params
 		  FROM (SELECT 1) one
 		  LEFT JOIN LATERAL (
 			SELECT id, summary, detected_at FROM open_signals
@@ -90,13 +93,13 @@ func readSignalFacts(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, no
 			 ORDER BY detected_at DESC, id DESC
 			 LIMIT 1) ended ON true
 		  LEFT JOIN LATERAL (
-			SELECT kind, severity, summary FROM open_signals
+			SELECT kind, severity, summary, summary_params FROM open_signals
 			 ORDER BY CASE severity WHEN 'urgent' THEN 0 WHEN 'warn' THEN 1 ELSE 2 END,
 			          detected_at DESC, id DESC
 			 LIMIT 1) worst ON true`,
 		signals.OfCompanyWhere(companyPos), scope), args...).
 		Scan(&endedSaid, &endedID,
-			&kind, &severity, &summary); err != nil {
+			&kind, &severity, &summary, &params); err != nil {
 		return signalFacts{}, fmt.Errorf("read the account's open signals: %w", err)
 	}
 	if endedID != nil {
@@ -115,7 +118,7 @@ func readSignalFacts(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, no
 		}
 	}
 	if kind != nil && severity != nil && summary != nil {
-		facts.Worst = signalHeadline{Kind: *kind, Severity: *severity, Summary: *summary}
+		facts.Worst = signalHeadline{Kind: *kind, Severity: *severity, Summary: *summary, SummaryParams: params}
 		facts.HasWorst = true
 	}
 	return facts, nil

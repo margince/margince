@@ -17,6 +17,7 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -46,16 +47,22 @@ const (
 // together or not at all.
 func technicalChangeRecorder() contacts.TechnicalChangeRecorder {
 	return func(ctx context.Context, tx pgx.Tx, change contacts.TechnicalChange, at time.Time) error {
-		summary, ok := technicalChangeSummary(identity.BaseLanguageForRecord(ctx, tx), change)
+		parts := technicalPartsOf(change)
+		summary, ok := parts.worded(identity.BaseLanguageForRecord(ctx, tx))
 		if !ok {
 			// A change in a field nobody would act on. The record still holds
 			// it; it just does not earn a line on the account's signal list.
 			return nil
 		}
-		_, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
-			Kind:      kindTechnicalChange,
-			CompanyID: change.CompanyID.UUID,
-			Summary:   summary,
+		params, err := json.Marshal(parts)
+		if err != nil {
+			return fmt.Errorf("encoding a technical change summary's parts: %w", err)
+		}
+		_, err = signals.RecordDerived(ctx, tx, signals.DerivedSignal{
+			Kind:          kindTechnicalChange,
+			CompanyID:     change.CompanyID.UUID,
+			Summary:       summary,
+			SummaryParams: params,
 			// Never `warn` or `urgent`: a company changing its own systems is
 			// news about the account, not a problem with it.
 			Severity: severityInfo,
@@ -226,13 +233,29 @@ var technicalSummaryByLang = map[textlang.Lang]technicalSummaryCopy{
 	},
 }
 
-// technicalChangeSummary is the sentence a rep reads on the account.
+type technicalChangeParts struct {
+	Field       string                       `json:"field"`
+	Kind        contacts.TechnicalChangeKind `json:"kind"`
+	Value       string                       `json:"value"`
+	ValueKey    string                       `json:"value_key,omitempty"`
+	Previous    string                       `json:"previous,omitempty"`
+	PreviousKey string                       `json:"previous_key,omitempty"`
+}
+
+func technicalPartsOf(change contacts.TechnicalChange) technicalChangeParts {
+	return technicalChangeParts{
+		Field: change.Field, Kind: change.Kind, Value: change.Value, ValueKey: change.ValueKey,
+		Previous: change.Previous, PreviousKey: change.PreviousKey,
+	}
+}
+
+// worded is the sentence a rep reads on the account.
 //
 // Written per field rather than from a template, because the four fields are
 // four different pieces of news: a mail system moving is an IT decision worth a
 // call, a careers page appearing is a hiring signal, and a shared phrasing
 // would flatten both into "a technical signal changed".
-func technicalChangeSummary(lang textlang.Lang, change contacts.TechnicalChange) (string, bool) {
+func (change technicalChangeParts) worded(lang textlang.Lang) (string, bool) {
 	said := technicalCopyFor(lang)
 
 	switch change.Field {
@@ -267,6 +290,17 @@ func technicalChangeSummary(lang textlang.Lang, change contacts.TechnicalChange)
 		// a reason to pick up the phone, and every account publishing one would
 		// put a line on every signal list for nobody to act on.
 		return "", false
+	}
+}
+
+func (change technicalChangeParts) complete() bool {
+	switch change.Kind {
+	case contacts.TechnicalMoved:
+		return change.Value != "" && change.Previous != ""
+	case contacts.TechnicalAppeared, contacts.TechnicalGone:
+		return change.Value != ""
+	default:
+		return false
 	}
 }
 

@@ -5,6 +5,7 @@ package signals
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -64,6 +65,7 @@ func ListSignalsTx(ctx context.Context, tx pgx.Tx, in ListSignalsInput) ([]crmco
 	}
 
 	var signals []crmcontracts.Signal
+	var params []json.RawMessage
 	var page storekit.Page
 	rows, err := tx.Query(ctx,
 		`SELECT `+signalColumns("s")+` FROM signal s`+signalResolutionJoin+` WHERE `+strings.Join(where, " AND ")+
@@ -74,17 +76,18 @@ func ListSignalsTx(ctx context.Context, tx pgx.Tx, in ListSignalsInput) ([]crmco
 	}
 	defer rows.Close()
 	for rows.Next() {
-		sig, err := scanSignal(rows)
+		sig, parts, err := scanSignal(rows)
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}
 		signals = append(signals, sig)
+		params = append(params, parts)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	if len(signals) > limit {
-		signals = signals[:limit]
+		signals, params = signals[:limit], params[:limit]
 		last := signals[len(signals)-1]
 		next, err := storekit.EncodeCursor(last.CreatedAt, ids.UUID(last.Id))
 		if err != nil {
@@ -95,6 +98,7 @@ func ListSignalsTx(ctx context.Context, tx pgx.Tx, in ListSignalsInput) ([]crmco
 	if signals == nil {
 		signals = []crmcontracts.Signal{}
 	}
+	wordForReader(ctx, tx, signals, params)
 	return signals, page, nil
 }
 

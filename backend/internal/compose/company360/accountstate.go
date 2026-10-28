@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -139,7 +140,7 @@ func (a *assembly) readStateStrip() error {
 		})
 		strip.Signal.Kind = facts.Worst.Kind
 		strip.Signal.Severity = crmcontracts.Company360StateStripSignalSeverity(facts.Worst.Severity)
-		strip.Signal.Summary = facts.Worst.Summary
+		strip.Signal.Summary = signals.SummaryIn(a.recordLanguage(), facts.Worst.Kind, facts.Worst.SummaryParams, facts.Worst.Summary)
 	}
 	a.out.StateStrip = &strip
 	return nil
