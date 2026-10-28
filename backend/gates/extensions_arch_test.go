@@ -25,9 +25,7 @@ import (
 const compositionModulePath = "github.com/margince/margince/composition"
 
 // extensionTrees lists every extension source directory: the enabled set
-// under ../extensions and the CI fixtures under ../fixtures/extensions. It
-// adds the units an installation turned on, which gen-composition
-// lists in ../build/extensions.list as "<name>\t<dir>".
+// under ../extensions plus the CI fixtures under ../fixtures/extensions.
 func extensionTrees(t *testing.T) map[string]string {
 	t.Helper()
 	trees := map[string]string{}
@@ -43,15 +41,6 @@ func extensionTrees(t *testing.T) map[string]string {
 			if e.IsDir() {
 				trees[filepath.ToSlash(filepath.Join(root, e.Name()))] = e.Name()
 			}
-		}
-	}
-	listed, err := os.ReadFile("../build/extensions.list")
-	if err != nil && !os.IsNotExist(err) {
-		t.Fatal(err)
-	}
-	for line := range strings.SplitSeq(strings.TrimSpace(string(listed)), "\n") {
-		if name, dir, ok := strings.Cut(line, "\t"); ok {
-			trees[filepath.ToSlash(dir)] = name
 		}
 	}
 	return trees
