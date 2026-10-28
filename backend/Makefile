@@ -183,7 +183,7 @@ check-static: composition ## The static half of check (STATIC_LEGS), which CI ru
 # build/composition/ before it writes it again, so a run in one `make check`
 # lane would take the tree away from the other lanes that read it.
 # `make check` composes once, before the lanes start.
-composition: ## Materialize build/composition/ from the enabled set under extensions/, plus every extension an installation's Go module blank-imports [MARGINCE_INSTANCE=<dir>] (every build lane depends on this)
+composition: ## Materialize build/composition/ from the enabled set under extensions/, plus every extension an installation's go.mod requires [MARGINCE_INSTANCE=<dir>] (every build lane depends on this)
 ifdef CHECK_WRITERS_RAN
 	@echo "composition: written by make check's writers phase, so this lane only reads it"
 else
@@ -200,7 +200,7 @@ check-composition: composition ## Reproducibility gate: a clean regeneration mus
 test-extensions: composition ## Every enabled extension's own test lane (each unit is its own module — ./... never reaches them), on the composed workspace [EXT_COVER_OUT=<file> merges a coverage profile]
 	@set -e; found=0; out="$(if $(EXT_COVER_OUT),$(abspath $(EXT_COVER_OUT)))"; \
 	[ -z "$$out" ] || { rm -f "$$out"; tmp=$$(mktemp); trap 'rm -f "$$tmp"' EXIT; }; \
-	for mod in ../extensions/*/go.mod $$(cut -f2 ../build/extensions.list 2>/dev/null | sed 's|$$|/go.mod|'); do \
+	for mod in ../extensions/*/go.mod; do \
 		[ -e "$$mod" ] || continue; found=1; \
 		dir=$$(dirname "$$mod"); \
 		echo "== $$dir"; \

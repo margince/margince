@@ -8,8 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -17,152 +15,154 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"sort"
-	"strconv"
 	"strings"
+
+	"golang.org/x/mod/modfile"
+
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 const (
-	// moduleUnitsDir holds the units copied out of the module cache. The cache
-	// is read-only, and the frontend install writes beside a unit's frontend/.
-	moduleUnitsDir = "build/extensions"
-	// moduleUnitsList names every unit an installation turns on, one
-	// "<name>\t<absolute dir>" per line, so -verify reads the set generate used.
-	moduleUnitsList = "build/extensions.list"
+	// copiedUnitsList names each unit the last run copied into extensions/. The
+	// next run removes those, and never a unit that belongs to the tree.
+	copiedUnitsList = "build/extensions.list"
 	backendModule   = "github.com/margince/margince/backend"
 )
 
 var majorVersionSuffix = regexp.MustCompile(`^v[0-9]+$`)
 
-// moduleUnit is one unit an installation turns on.
-type moduleUnit struct {
-	name string
-	dir  string
-}
+// skippedUnitDirs are folders a unit's module zip never holds, or that an
+// installation fills locally: copying them would bring in a stale install.
+var skippedUnitDirs = map[string]bool{".git": true, ".hg": true, ".svn": true, ".bzr": true, "node_modules": true}
 
-// listedPackage is the part of `go list -find -json` this composer reads.
-// Module.Dir is where the go command resolved the module, any replace applied.
-type listedPackage struct {
-	ImportPath string
-	Module     *struct {
-		Path    string
-		Version string
-		Dir     string
-		Replace *struct {
-			Version string
-		}
-	}
-	Error *struct {
+// listedModule is the part of `go list -m -json` and `go mod download -json`
+// this composer reads. Dir is where the go command resolved the module, any
+// replace applied.
+type listedModule struct {
+	Path    string
+	Version string
+	Dir     string
+	Error   *struct {
 		Err string
 	}
 }
 
-// resolveModuleUnits turns on every extension an installation's own Go module
-// imports. The go command resolves each one, so go.sum and the checksum
-// database verify a download. A replace onto a folder is composed where it
-// sits. With no installation named, only extensions/ is composed.
+// resolveModuleUnits copies every extension the installation's go.mod requires
+// into extensions/<name>/, where presence turns a unit on as for any other.
+// The go command resolves each one, so go.sum and the checksum database verify
+// a download, and a replace onto a folder copies that folder.
 func resolveModuleUnits(root, instanceDir string) error {
-	outDir := filepath.Join(root, filepath.FromSlash(moduleUnitsDir))
-	listPath := filepath.Join(root, filepath.FromSlash(moduleUnitsList))
-	if err := os.RemoveAll(outDir); err != nil {
-		return err
-	}
-	if err := os.Remove(listPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
+	if err := removeCopiedUnits(root); err != nil {
 		return err
 	}
 	if instanceDir == "" {
 		return nil
 	}
-	imports, err := blankImports(instanceDir)
-	if err != nil || len(imports) == 0 {
+	required, err := requiredExtensions(filepath.Join(instanceDir, "go.mod"))
+	if err != nil || len(required) == 0 {
 		return err
 	}
-	pkgs, err := listPackages(instanceDir, imports)
+	modules, err := locateModules(instanceDir, required)
 	if err != nil {
 		return err
 	}
-	units := make([]moduleUnit, 0, len(pkgs))
-	for _, p := range pkgs {
-		m := p.Module
-		if m == nil || m.Path != p.ImportPath {
-			return fmt.Errorf("%s: import the extension's module root, the package that declares New()", p.ImportPath)
+	names := make([]string, 0, len(modules))
+	for _, m := range modules {
+		name := unitNameFromModulePath(m.Path)
+		dst := filepath.Join(root, "extensions", name)
+		if _, err := os.Stat(dst); err == nil {
+			return fmt.Errorf("%s: extensions/%s already exists, so two units would share one name; remove one", m.Path, name)
 		}
-		unit := moduleUnit{name: unitNameFromModulePath(m.Path), dir: m.Dir}
-		if m.Replace == nil || m.Replace.Version != "" {
-			unit.dir = filepath.Join(outDir, unit.name)
-			if err := copyModule(m.Dir, unit.dir); err != nil {
-				return fmt.Errorf("%s@%s: %w", m.Path, m.Version, err)
-			}
+		if err := copyModule(m.Dir, dst); err != nil {
+			return fmt.Errorf("%s@%s: %w", m.Path, m.Version, err)
 		}
-		units = append(units, unit)
+		names = append(names, name)
 	}
-	return writeModuleUnits(listPath, units)
+	return writeCopiedUnits(root, names)
 }
 
-// blankImports lists the blank imports of the installation's root package:
-// `import _ "<module>"` turns an extension on, the way a program turns on a
-// database/sql driver. Core's own packages are left out, because the
-// installation imports those to build core's binaries.
-func blankImports(instanceDir string) ([]string, error) {
-	pkgs, err := parseDirByPackage(token.NewFileSet(), instanceDir, parser.ImportsOnly)
+// requiredExtensions lists what the installation's go.mod requires itself:
+// each such module is an extension, except core's backend and the composition
+// this run writes. A `// indirect` line is a dependency, never an extension.
+func requiredExtensions(goModPath string) ([]string, error) {
+	raw, err := os.ReadFile(goModPath) // #nosec G304 -- the installation's own go.mod, named by the operator
 	if err != nil {
 		return nil, err
 	}
-	seen := map[string]bool{}
-	var paths []string
-	for _, files := range pkgs {
-		for _, f := range files {
-			for _, imp := range f.Imports {
-				p, err := strconv.Unquote(imp.Path.Value)
-				if err != nil {
-					return nil, err
-				}
-				if imp.Name == nil || imp.Name.Name != "_" || isCorePackage(p) || seen[p] {
-					continue
-				}
-				seen[p] = true
-				paths = append(paths, p)
-			}
-		}
+	mod, err := modfile.ParseLax(goModPath, raw, nil)
+	if err != nil {
+		return nil, err
 	}
-	sort.Strings(paths)
+	var paths []string
+	for _, r := range mod.Require {
+		if r.Indirect || r.Mod.Path == backendModule || r.Mod.Path == compositionModule {
+			continue
+		}
+		paths = append(paths, r.Mod.Path)
+	}
 	return paths, nil
 }
 
-func isCorePackage(importPath string) bool {
-	return importPath == compositionModule || importPath == backendModule || strings.HasPrefix(importPath, backendModule+"/")
+// locateModules asks the go command, inside the installation's module, where
+// each module is, and downloads the ones the cache lacks. Like `go get`, the
+// download records the checked sums in the installation's go.sum.
+func locateModules(instanceDir string, paths []string) ([]listedModule, error) {
+	listed, err := goModules(instanceDir, append([]string{"list", "-mod=mod", "-m", "-json"}, paths...))
+	if err != nil {
+		return nil, err
+	}
+	var missing []string
+	for _, m := range listed {
+		if m.Dir == "" {
+			missing = append(missing, m.Path)
+		}
+	}
+	if len(missing) == 0 {
+		return listed, nil
+	}
+	downloaded, err := goModules(instanceDir, append([]string{"mod", "download", "-json"}, missing...))
+	if err != nil {
+		return nil, err
+	}
+	dirs := make(map[string]string, len(downloaded))
+	for _, d := range downloaded {
+		dirs[d.Path] = d.Dir
+	}
+	for i := range listed {
+		if listed[i].Dir == "" {
+			listed[i].Dir = dirs[listed[i].Path]
+		}
+	}
+	return listed, nil
 }
 
-// listPackages asks the go command, inside the installation's module, where
-// each imported package is. It downloads what the cache lacks and, like
-// `go get`, records the checked sums in the installation's go.sum.
-func listPackages(instanceDir string, imports []string) ([]listedPackage, error) {
+func goModules(instanceDir string, args []string) ([]listedModule, error) {
 	goBin, err := goBinary()
 	if err != nil {
 		return nil, err
 	}
-	cmd := exec.Command(goBin, append([]string{"list", "-mod=mod", "-find", "-json"}, imports...)...) // #nosec G204 -- GOROOT/bin/go; the arguments are import paths parsed from Go source
+	cmd := exec.Command(goBin, args...) // #nosec G204 -- GOROOT/bin/go; the arguments are module paths parsed from go.mod by modfile
 	cmd.Dir = instanceDir
 	cmd.Env = append(os.Environ(), "GOWORK=off")
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	out, runErr := cmd.Output()
-	var pkgs []listedPackage
+	var modules []listedModule
 	dec := json.NewDecoder(bytes.NewReader(out))
 	for dec.More() {
-		var p listedPackage
-		if err := dec.Decode(&p); err != nil {
+		var m listedModule
+		if err := dec.Decode(&m); err != nil {
 			return nil, err
 		}
-		if p.Error != nil {
-			return nil, fmt.Errorf("%s: %s", p.ImportPath, p.Error.Err)
+		if m.Error != nil {
+			return nil, fmt.Errorf("%s: %s", m.Path, m.Error.Err)
 		}
-		pkgs = append(pkgs, p)
+		modules = append(modules, m)
 	}
 	if runErr != nil {
-		return nil, fmt.Errorf("go list: %w\n%s", runErr, stderr.String())
+		return nil, fmt.Errorf("go %s: %w\n%s", args[0], runErr, stderr.String())
 	}
-	return pkgs, nil
+	return modules, nil
 }
 
 // unitNameFromModulePath takes the unit name from the module path's last
@@ -175,10 +175,45 @@ func unitNameFromModulePath(modulePath string) string {
 	return base
 }
 
-// copyModule copies a module out of the read-only cache. os.CopyFS refuses
-// anything but regular files and folders, and a module zip holds nothing else.
-func copyModule(src, dst string) error {
-	return os.CopyFS(dst, os.DirFS(src))
+// copyModule copies the files Go puts in a module's zip, leaving out
+// skippedUnitDirs, nested modules and links. Both ends are opened as roots,
+// so no path in the source can lead the copy outside either folder.
+func copyModule(src, dst string) (err error) {
+	if err := os.MkdirAll(dst, 0o755); err != nil { // #nosec G301 -- build output stays readable to another UID
+		return err
+	}
+	from, err := os.OpenRoot(src)
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, from.Close()) }()
+	to, err := os.OpenRoot(dst)
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, to.Close()) }()
+	return fs.WalkDir(from.FS(), ".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if p == "." {
+				return nil
+			}
+			if _, statErr := from.Stat(path.Join(p, "go.mod")); skippedUnitDirs[d.Name()] || statErr == nil {
+				return fs.SkipDir
+			}
+			return to.Mkdir(p, 0o755)
+		}
+		if !d.Type().IsRegular() {
+			return nil
+		}
+		content, err := from.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		return to.WriteFile(p, content, 0o644)
+	})
 }
 
 // goBinary is the running toolchain's go: a writable PATH entry must not choose
@@ -192,35 +227,35 @@ func goBinary() (string, error) {
 	return filepath.Join(goRoot, "bin", "go"), nil
 }
 
-func writeModuleUnits(listPath string, units []moduleUnit) error {
-	if len(units) == 0 {
+func writeCopiedUnits(root string, names []string) error {
+	if len(names) == 0 {
 		return nil
 	}
+	listPath := filepath.Join(root, filepath.FromSlash(copiedUnitsList))
 	if err := os.MkdirAll(filepath.Dir(listPath), 0o755); err != nil { // #nosec G301 -- build output stays readable to another UID
 		return err
 	}
-	var b strings.Builder
-	for _, u := range units {
-		fmt.Fprintf(&b, "%s\t%s\n", u.name, u.dir)
-	}
-	return os.WriteFile(listPath, []byte(b.String()), 0o644) // #nosec G306 -- build output
+	return os.WriteFile(listPath, []byte(strings.Join(names, "\n")+"\n"), 0o644) // #nosec G306 -- build output
 }
 
-func readModuleUnits(root string) ([]moduleUnit, error) {
-	raw, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(moduleUnitsList))) // #nosec G304 -- build output at a fixed path
+// removeCopiedUnits removes what the last run copied, so an import the
+// installation dropped no longer turns its unit on.
+func removeCopiedUnits(root string) error {
+	listPath := filepath.Join(root, filepath.FromSlash(copiedUnitsList))
+	raw, err := os.ReadFile(listPath) // #nosec G304 -- build output at a fixed path
 	if errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
+		return nil
 	}
 	if err != nil {
-		return nil, err
+		return err
 	}
-	var units []moduleUnit
-	for line := range strings.SplitSeq(strings.TrimSpace(string(raw)), "\n") {
-		name, dir, ok := strings.Cut(line, "\t")
-		if !ok {
-			return nil, fmt.Errorf("%s: malformed line %q, run make composition again", moduleUnitsList, line)
+	for name := range strings.FieldsSeq(string(raw)) {
+		if err := extension.Name(name).Validate(); err != nil {
+			return fmt.Errorf("%s: %w, run make composition again", copiedUnitsList, err)
 		}
-		units = append(units, moduleUnit{name: name, dir: dir})
+		if err := os.RemoveAll(filepath.Join(root, "extensions", name)); err != nil {
+			return err
+		}
 	}
-	return units, nil
+	return os.Remove(listPath)
 }

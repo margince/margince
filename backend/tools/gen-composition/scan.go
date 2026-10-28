@@ -41,9 +41,6 @@ type extensionUnit struct {
 	// common case, and not an error. The composed screen registry imports it
 	// by package name.
 	Frontend *unitFrontend
-	// Fetched marks a unit copied out of the module cache: its shipped
-	// manifest is what was released, so it is checked and never rewritten.
-	Fetched bool
 }
 
 // scanExtensions reads the enabled set. A capability layer this composer
@@ -53,7 +50,10 @@ type extensionUnit struct {
 // list.
 func scanExtensions(root string) ([]extensionUnit, error) {
 	entries, err := os.ReadDir(filepath.Join(root, "extensions"))
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	var units []extensionUnit
@@ -80,10 +80,6 @@ func scanExtensions(root string) ([]extensionUnit, error) {
 		}
 		units = append(units, unit)
 	}
-	units, err = appendModuleUnits(root, units)
-	if err != nil {
-		return nil, err
-	}
 	sort.Slice(units, func(i, j int) bool { return units[i].Name < units[j].Name })
 	// The cross-unit check runs HERE, over the sorted whole set, because
 	// this is the only place in the build that sees every unit at once: a
@@ -95,34 +91,6 @@ func scanExtensions(root string) ([]extensionUnit, error) {
 	}
 	if err := checkDerivedIdentifiers(tables); err != nil {
 		return nil, err
-	}
-	return units, nil
-}
-
-// appendModuleUnits adds the units an installation's go.mod turned on. One
-// name under extensions/ and in go.mod is refused: it would be two units
-// claiming one namespace, table prefix and route tree.
-func appendModuleUnits(root string, units []extensionUnit) ([]extensionUnit, error) {
-	listed, err := readModuleUnits(root)
-	if err != nil {
-		return nil, err
-	}
-	fetchedRoot := filepath.Join(root, filepath.FromSlash(moduleUnitsDir))
-	for _, m := range listed {
-		if err := extension.Name(m.name).Validate(); err != nil {
-			return nil, fmt.Errorf("%s: %w", m.dir, err)
-		}
-		for _, u := range units {
-			if u.Name == m.name {
-				return nil, fmt.Errorf("unit %q is both %s and %s, rename or remove one", m.name, u.Dir, m.dir)
-			}
-		}
-		unit, err := scanUnit(m.name, m.dir)
-		if err != nil {
-			return nil, err
-		}
-		unit.Fetched = filepath.Dir(m.dir) == fetchedRoot
-		units = append(units, unit)
 	}
 	return units, nil
 }
