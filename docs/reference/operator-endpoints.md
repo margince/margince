@@ -24,7 +24,8 @@ Served next to `/v1`:
   `/healthz` or `/readyz`.
 - `/metrics`: Prometheus text format. It carries the **HTTP section** below,
   `margince_outbox_unpublished`, `margince_relay_published_total`, the **connection pool section**
-  below, the counters of the AI router, and the **job runtime section** below. Closed by default.
+  below, and the counters of the AI router. It also carries the **day stage section** and the **job
+  runtime section** below. Closed by default.
   Set `--metrics-token` to need a Bearer credential. Or set `--metrics-access=open` for a scraper
   that finds targets by annotation, where the port itself is already closed off.
 
@@ -67,6 +68,26 @@ Served next to `/v1`:
 
   Think of the scrape interval when you pick that window. A rate needs many points, so a cluster
   that scrapes every `5m` needs `[30m]` or more.
+
+  The day stage section splits the time it takes to build one reader's day of work into its steps.
+  Home and `/v1/worklist` both read that day:
+
+  | Metric | Type | Labels |
+  |---|---|---|
+  | `margince_worklist_stage_duration_seconds` | histogram | `stage` |
+
+  **`stage` is a fixed name from the code**, never a request value. Each `timeStage` call in
+  `backend/internal/compose/attention` names one step, and every optional lane is timed under its
+  own lane name. The buckets run from `1ms` to `8s`, past the `4s` budget an optional lane may
+  spend. The series start empty and count from process start, so read them through `rate`. The
+  stages that cost the most time, over 5 minutes:
+
+  ```promql
+  topk(5, sum by (stage) (rate(margince_worklist_stage_duration_seconds_sum[5m]))
+    / sum by (stage) (rate(margince_worklist_stage_duration_seconds_count[5m])))
+  ```
+
+  A slow `/v1/worklist` in the HTTP section shows here as the stage that grew.
 
   The connection pool section reports the own pool of this process. It publishes every value pgx
   works out, as gauges and counters:
