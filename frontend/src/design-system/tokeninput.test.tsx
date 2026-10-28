@@ -327,7 +327,7 @@ describe("offering a vocabulary", () => {
   });
 });
 
-// A recipient row stays one line beside the field's own controls, so a named
+// A recipient row stays one line beside the field's own controls. A named
 // token shows the name alone and keeps the rest on the card it opens.
 describe("a named token", () => {
   it("shows the name and not the address", () => {
