@@ -18,13 +18,19 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// partOfThePrice marks a sum as a deposit, an instalment or a price per period
-// or unit. Such a sum is a different quantity from the deal's total, so
-// comparing the two would flag every subscription.
+// partOfThePrice marks a sum as a deposit, an instalment, a price per period
+// or unit, a change against another price, or a fee or tax beside it. Such a
+// sum is a different quantity from the deal's total, so comparing the two
+// would flag every subscription and every discount. Go's \b is ASCII-only, so
+// a Vietnamese word is bounded by spaces instead.
 var partOfThePrice = regexp.MustCompile(`(?i)deposit|down payment|upfront|instal+ments?|` +
 	`per[\s-](?:month|year|seat|user|licen[cs]e)|monthly|yearly|annual|\beach\b|/\s?(?:mo|month|yr|year)\b|` +
+	`\b(?:more|less|cheaper|higher|lower|extra|off|fees?|tax|vat)\b|additional|discount|rebate|surcharge|` +
+	`shipping|travel|` +
 	`anzahlung|teilzahlung|\braten?\b|monatlich|jährlich|pro (?:monat|jahr|nutzer|lizenz)|` +
-	`đặt cọc|trả góp|mỗi tháng|hàng tháng|mỗi năm|hàng năm`)
+	`\bmehr\b|weniger|günstiger|zusätzlich|rabatt|nachlass|aufpreis|gebühr|mwst|steuer|versand|reisekosten|` +
+	`đặt cọc|trả góp|mỗi tháng|hàng tháng|mỗi năm|hàng năm|` +
+	`thêm|giảm|chiết khấu|phụ phí|(?:^|\s)phí\s|thuế`)
 
 // Differing returns the total the words state in the deal's currency, in minor
 // units, and true when it is not dealMinor. Only one stated sum in that

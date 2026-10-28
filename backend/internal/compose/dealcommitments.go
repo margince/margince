@@ -11,7 +11,6 @@ package compose
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -22,7 +21,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -68,12 +66,9 @@ func (h dealCommitmentHandlers) read(ctx context.Context, dealID ids.DealID) (cr
 		return out, err
 	}
 	var rows []contacts.CompanyCommitment
-	var today time.Time
+	now := h.now()
 	err = database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
 		var err error
-		if today, err = startOfToday(ctx, tx, h.now()); err != nil {
-			return err
-		}
 		// One past the card's length, to know whether more exist.
 		rows, out.Complete, err = h.contacts.OpenTheirCommitmentsForDeal(ctx, tx, dealID.UUID, dealCommitmentsLimit+1)
 		return err
@@ -96,26 +91,11 @@ func (h dealCommitmentHandlers) read(ctx context.Context, dealID ids.DealID) (cr
 			DueAt:             row.DueAt,
 			OccurredAt:        row.OccurredAt,
 			OccurredPrecision: crmcontracts.OccurredPrecision(row.Precision),
-			Overdue:           deadline.Passed(row.DueAt, today),
+			Overdue:           deadline.Passed(row.DueAt, now),
 			DiffersFromDeal:   differingPrice(row.SourceQuote, deal),
 		})
 	}
 	return out, nil
-}
-
-// startOfToday is where the installation's current day began. A promise is
-// late once its whole due day is over: one due today is not, whatever hour of
-// that day it was filed with.
-func startOfToday(ctx context.Context, tx pgx.Tx, now time.Time) (time.Time, error) {
-	zone, err := identity.TimezoneAppliedTx(ctx, tx)
-	if err != nil {
-		return time.Time{}, err
-	}
-	loc, err := time.LoadLocation(zone)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("compose: installation timezone %q: %w", zone, err)
-	}
-	return storekit.StartOfDay(now, loc), nil
 }
 
 // differingPrice is the total the customer's own words state when it is not

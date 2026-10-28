@@ -18,7 +18,6 @@ func TestATotalInTheDealsCurrencyThatIsNotTheDealValueIsFlagged(t *testing.T) {
 		{"Let's go ahead at EUR 45k for the whole rollout.", 4_500_000},
 		{"Budget approved: 1.5 Mio. EUR.", 150_000_000},
 		{"Final offer 39 999 euros.", 3_999_900},
-		{"We will pay €42 more than planned.", 4_200},
 	}
 	for _, c := range cases {
 		t.Run(c.words, func(t *testing.T) {
@@ -44,6 +43,12 @@ func TestASumThatIsNotADifferentTotalIsNeverFlagged(t *testing.T) {
 		"German deposit":         "Die Anzahlung von 10.000 EUR kommt Freitag.",
 		"Vietnamese instalment":  "Chúng tôi trả góp 12.000 EUR.",
 		"two sums":               "Either €42,000 or €45,000, we will decide.",
+		"a change to the price":  "We will pay €42 more than planned.",
+		"a discount":             "We expect a discount of €2,000.",
+		"a fee beside it":        "Travel costs of €1,500 are on us.",
+		"a tax":                  "Plus €9,120 VAT, of course.",
+		"German discount":        "Wir rechnen mit 2.000 EUR Rabatt.",
+		"Vietnamese fee":         "Phí triển khai 3.000 EUR do chúng tôi trả.",
 		"a word holding a mark":  "We expand to Europe 2027 with 3 teams.",
 		"no money at all":        "We will sign the NDA by Friday.",
 	}

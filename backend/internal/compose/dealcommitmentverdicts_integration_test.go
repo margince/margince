@@ -70,20 +70,22 @@ func (w dealWatch) verdicts(t *testing.T, deal ids.UUID) map[ids.UUID]crmcontrac
 	return rows
 }
 
-// A promise is overdue once its whole due day is over where the installation
-// is. One due today is not, even when it was filed at the day's first instant,
-// which in UTC is already the day before.
-func TestADealCommitmentIsOverdueOnceItsDueDayIsOver(t *testing.T) {
+// A promise is overdue once its deadline has passed, the rule the company
+// card and the deal's own ordering use. A day deadline is stored as the end of
+// that local day, so a promise due today is not late until the day is over.
+func TestADealCommitmentIsOverdueOnceItsDeadlineHasPassed(t *testing.T) {
 	w := seedDealWatch(t)
 	zone := setInstallationZone(t, w.Env, "Asia/Ho_Chi_Minh")
 	yesterday := time.Date(2026, time.March, 9, 23, 59, 59, 0, zone)
-	today := time.Date(2026, time.March, 10, 0, 0, 0, 0, zone)
+	endOfToday := time.Date(2026, time.March, 10, 23, 59, 59, 0, zone)
+	thisMorning := time.Date(2026, time.March, 10, 9, 0, 0, 0, zone)
 	late := w.promiseDue(t, w.deal, "We will send the signed NDA by Monday.", &yesterday)
-	dueToday := w.promiseDue(t, w.deal, "We will confirm the kick-off date today.", &today)
+	dueToday := w.promiseDue(t, w.deal, "We will confirm the kick-off date today.", &endOfToday)
+	dueThisMorning := w.promiseDue(t, w.deal, "We will call you at nine.", &thisMorning)
 	undated := w.promiseDue(t, w.deal, "We will introduce you to our CFO.", nil)
 
 	rows := w.verdicts(t, w.deal)
-	for claim, want := range map[ids.UUID]bool{late: true, dueToday: false, undated: false} {
+	for claim, want := range map[ids.UUID]bool{late: true, dueToday: false, dueThisMorning: true, undated: false} {
 		row, ok := rows[claim]
 		if !ok {
 			t.Fatalf("commitment %s is missing from the deal", claim)
