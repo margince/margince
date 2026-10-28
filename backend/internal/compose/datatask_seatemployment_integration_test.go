@@ -6,6 +6,7 @@
 package compose
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -50,9 +51,10 @@ func TestTheSeatEmploymentTaskRetiresOnlyMachineInferredEdgesOfSeatLoginsAndRepl
 		t.Fatalf("creating the second company: %v", err)
 	}
 	seat, inferred := capturedEmployee(t, e, "newhire@outside.test")
-	_, mailbox := capturedEmployee(t, e, "colleague@outside.test")
-	_, edited := capturedEmployee(t, e, "edited@outside.test")
-	_, client := capturedEmployee(t, e, "client@outside.test")
+	mailboxContact, mailbox := capturedEmployee(t, e, "colleague@outside.test")
+	editedContact, edited := capturedEmployee(t, e, "edited@outside.test")
+	clientContact, client := capturedEmployee(t, e, "client@outside.test")
+	quiet, _ := capturedEmployee(t, e, "quiet@outside.test")
 	asserted, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
 		Kind: "employment", ContactID: &seat, CompanyID: new(ids.From[ids.CompanyKind](ids.UUID(other.Id))), Source: "manual",
 	})
@@ -66,6 +68,7 @@ func TestTheSeatEmploymentTaskRetiresOnlyMachineInferredEdgesOfSeatLoginsAndRepl
 	// mailbox there, which proves the address but can change with the grant.
 	e.WsExec(t, `UPDATE app_user SET email = 'newhire@outside.test' WHERE id = $1`, e.Rep3)
 	e.WsExec(t, `UPDATE app_user SET email = 'edited@outside.test' WHERE id = $1`, e.Rep1)
+	e.WsExec(t, `UPDATE app_user SET email = 'quiet@outside.test' WHERE id = $1`, e.Rep2)
 	connectSeatMailbox(t, e, e.Rep2, "colleague@outside.test", "shared")
 
 	task := seatEmploymentDataTask()
@@ -97,9 +100,24 @@ func TestTheSeatEmploymentTaskRetiresOnlyMachineInferredEdgesOfSeatLoginsAndRepl
 			t.Errorf("%s was retired", name)
 		}
 	}
-	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'relationship' AND action = 'archive' AND evidence ? 'data_task_run'`); got != 1 {
-		t.Errorf("archive audit rows naming the run = %d, want 1", got)
+	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'relationship' AND action = 'archive' AND evidence ? 'data_task_run'`); got != 2 {
+		t.Errorf("archive audit rows naming the run = %d, want the two inferred edges of seat logins nobody worked on", got)
 	}
+	// The contact capture minted for a seat login, with nothing a colleague
+	// did on it, is archived. A seat contact whose edge a human made or edited,
+	// a client and an address only a mailbox proves all stay.
+	if contactLive(t, e, quiet) {
+		t.Error("the contact capture minted for a colleague's login is still live")
+	}
+	for name, contact := range map[string]ids.ContactID{
+		"the seat with a hand-made edge": seat, "the seat with a hand-edited edge": editedContact,
+		"a client": clientContact, "an address only a mailbox proves": mailboxContact,
+	} {
+		if !contactLive(t, e, contact) {
+			t.Errorf("%s was archived", name)
+		}
+	}
+	replayChangesNothing(ctx, t, e, task.Steps[1])
 
 	in := datatask.BatchIn{Limit: 2, RunID: ids.NewV7()}
 	for {
@@ -116,6 +134,34 @@ func TestTheSeatEmploymentTaskRetiresOnlyMachineInferredEdgesOfSeatLoginsAndRepl
 		}
 		if out.Done {
 			break
+		}
+		in.Cursor = out.Cursor
+	}
+}
+
+func contactLive(t *testing.T, e *integration.Env, contact ids.ContactID) bool {
+	t.Helper()
+	return e.WsCount(t, `SELECT count(*) FROM contact WHERE id = $1 AND archived_at IS NULL`, contact) == 1
+}
+
+// replayChangesNothing runs a step over the whole table again, a page at a time.
+func replayChangesNothing(ctx context.Context, t *testing.T, e *integration.Env, step datatask.Step) {
+	t.Helper()
+	in := datatask.BatchIn{Limit: 2, RunID: ids.NewV7()}
+	for {
+		var out datatask.BatchOut
+		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			var err error
+			out, err = step.Batch(ctx, tx, in)
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if out.Changed != 0 {
+			t.Fatalf("a replay of %s changed %d rows again", step.Name, out.Changed)
+		}
+		if out.Done {
+			return
 		}
 		in.Cursor = out.Cursor
 	}
