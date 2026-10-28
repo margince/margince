@@ -110,8 +110,8 @@ func composedFragment(call *ast.CallExpr) string {
 // test does not see.
 //
 // A name called like a function after `FROM` is a set-returning function, not a
-// relation. member_identity_family is the one function either spelling calls
-// that reads a table, so a call to it counts as reading app_user.
+// relation. member_identity_family reads app_user for the merged accounts, so
+// a call to it counts as reading app_user.
 func relationsIn(sql string) map[string]bool {
 	out := map[string]bool{}
 	for _, m := range regexp.MustCompile(`(?i)\b(?:FROM|JOIN)\s+([a-z_][a-z0-9_]*)(\s*\()?`).FindAllStringSubmatch(sql, -1) {
