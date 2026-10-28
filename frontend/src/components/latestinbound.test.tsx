@@ -5,7 +5,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import type { EntityKind } from "../lib/entity";
@@ -137,7 +137,7 @@ describe("the Just in line in the record's head", () => {
     );
     await user.click(
       screen.getByRole("button", {
-        name: "New email: show it on the Overview",
+        name: "New email: open in Overview",
       }),
     );
     expect(onOpen).toHaveBeenCalledOnce();
@@ -178,6 +178,17 @@ function serveActivities(waitingRows: Activity[], recentRows: Activity[]) {
 }
 
 describe("reading the latest inbound item", () => {
+  // Only Date is faked: the reads and clicks still run on real timers.
+  beforeEach(() => {
+    vi.useFakeTimers({
+      toFake: ["Date"],
+      now: new Date("2026-10-28T09:00:00Z"),
+    });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("asks for the record's waiting reply and its last week, and picks the newer", async () => {
     const laterForm = activity("form", {
       kind: "note",
@@ -206,5 +217,17 @@ describe("reading the latest inbound item", () => {
     withProviders(<Probe kind="contact" id="contact-noticed" />);
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(4));
     expect(screen.getByText("none")).toBeTruthy();
+  });
+
+  it("passes over an item once it is older than the window", async () => {
+    vi.setSystemTime(new Date("2026-11-04T10:00:00Z"));
+    const fresh = activity("fresh", {
+      kind: "message",
+      direction: "inbound",
+      occurred_at: "2026-11-03T10:00:00Z",
+    });
+    serveActivities([MAIL, fresh], [fresh, MAIL]);
+    withProviders(<Probe kind="contact" id="contact-aged" />);
+    expect(await screen.findByText("message:fresh")).toBeTruthy();
   });
 });

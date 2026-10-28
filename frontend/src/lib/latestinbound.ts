@@ -40,18 +40,19 @@ function answers(row: Activity): boolean {
 /**
  * The newest thing they sent that nobody has answered yet, or undefined.
  *
- * `waiting` is the server's own answer for mail and chat (the activities
- * list's `waiting_reply`), so this never re-derives who is waiting on a
- * thread. A website form lands as a note the waiting read does not know.
- * So it is found in `recent`, and is answered once a row in `answers` comes
- * after it. Both reads are already cut to the last `JUST_IN_DAYS`.
+ * `waiting` is the server's `waiting_reply` read, newest first, so this never
+ * re-derives who is waiting on a thread. A website form is a note that read
+ * does not know: it is found in `recent`, answered once a row in `answers`
+ * follows it. `skip` drops a row before ranking (set aside, or aged out).
  */
 export function latestInbound(
-  waiting: Activity | undefined,
+  waiting: readonly Activity[],
   recent: readonly Activity[],
+  skip: (row: Activity) => boolean = () => false,
 ): LatestInbound | undefined {
   const form = recent.find(
-    (row) => row.kind === "note" && row.source === WEB_FORM_SOURCE,
+    (row) =>
+      row.kind === "note" && row.source === WEB_FORM_SOURCE && !skip(row),
   );
   const formOpen =
     form &&
@@ -60,9 +61,12 @@ export function latestInbound(
         answers(row) &&
         Date.parse(row.occurred_at) > Date.parse(form.occurred_at),
     );
+  const waitingRow = waiting.find(
+    (row) => (row.kind === "email" || row.kind === "message") && !skip(row),
+  );
   const message =
-    waiting && (waiting.kind === "email" || waiting.kind === "message")
-      ? { activity: waiting, kind: waiting.kind }
+    waitingRow && (waitingRow.kind === "email" || waitingRow.kind === "message")
+      ? { activity: waitingRow, kind: waitingRow.kind }
       : undefined;
   if (!formOpen) {
     return message;

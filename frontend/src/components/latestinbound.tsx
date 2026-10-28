@@ -30,6 +30,8 @@ type Activity = components["schemas"]["Activity"];
 // The newest form among the recent rows is what is looked for. A record
 // rarely has more than a page of activity in a week.
 const RECENT_LIMIT = 50;
+// Enough waiting threads to pass over the ones a reader set aside.
+const WAITING_LIMIT = 10;
 const DAY_MS = 86_400_000;
 
 /** The item as a page holds it: `notice` sets it aside on this browser. */
@@ -52,7 +54,8 @@ export function useLatestInbound(
   // The ids set aside since mount; storage alone would not draw the page again.
   const [noticed, setNoticed] = useState<ReadonlySet<string>>(new Set());
   // Fixed for the mount: a window that moved every render would be a new
-  // query key every render.
+  // query key every render. `now` ages rows out of it while the page stays open.
+  const now = useNow(60_000);
   const [since] = useState(() =>
     new Date(Date.now() - JUST_IN_DAYS * DAY_MS).toISOString(),
   );
@@ -68,7 +71,7 @@ export function useLatestInbound(
               ...scope,
               waiting_reply: true,
               occurred_after: since,
-              limit: 1,
+              limit: WAITING_LIMIT,
             },
           },
         }),
@@ -90,14 +93,19 @@ export function useLatestInbound(
   if (!waiting.isSuccess || !recent.isSuccess) {
     return undefined;
   }
-  const latest = latestInbound(waiting.data.data?.[0], recent.data.data ?? []);
+  const cutoff = now - JUST_IN_DAYS * DAY_MS;
+  const latest = latestInbound(
+    waiting.data.data ?? [],
+    recent.data.data ?? [],
+    (row) =>
+      Date.parse(row.occurred_at) < cutoff ||
+      noticed.has(row.id) ||
+      readStored(noticedKey(row.id)) !== null,
+  );
   if (!latest) {
     return undefined;
   }
   const id = latest.activity.id;
-  if (noticed.has(id) || readStored(noticedKey(id)) !== null) {
-    return undefined;
-  }
   const notice = () => {
     writeStored(noticedKey(id), "1");
     setNoticed((ids) => new Set(ids).add(id));

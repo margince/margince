@@ -31,11 +31,11 @@ const mailIn = row("mail-in", "2026-10-27T09:00:00Z", {
 
 describe("the latest thing they sent", () => {
   it("is nothing on a record nobody wrote to", () => {
-    expect(latestInbound(undefined, [])).toBeUndefined();
+    expect(latestInbound([], [])).toBeUndefined();
   });
 
   it("is the message the server says is waiting for a reply", () => {
-    expect(latestInbound(mailIn, [mailIn])).toEqual({
+    expect(latestInbound([mailIn], [mailIn])).toEqual({
       activity: mailIn,
       kind: "email",
     });
@@ -43,7 +43,7 @@ describe("the latest thing they sent", () => {
 
   it("is a website form while nothing from our side came after it", () => {
     const note = row("ours", "2026-10-27T10:00:00Z", {});
-    expect(latestInbound(undefined, [note, form])?.kind).toBe("web_form");
+    expect(latestInbound([], [note, form])?.kind).toBe("web_form");
   });
 
   it.each([
@@ -52,7 +52,7 @@ describe("the latest thing they sent", () => {
     ["a sent email", { kind: "email", direction: "outbound" }],
   ] as const)("drops the form once %s answered it", (_, fields) => {
     const answer = row("answer", "2026-10-27T10:00:00Z", fields);
-    expect(latestInbound(undefined, [answer, form])).toBeUndefined();
+    expect(latestInbound([], [answer, form])).toBeUndefined();
   });
 
   it("keeps the form when the meeting after it was canceled", () => {
@@ -60,21 +60,39 @@ describe("the latest thing they sent", () => {
       kind: "meeting",
       meeting_status: "canceled",
     });
-    expect(latestInbound(undefined, [canceled, form])?.kind).toBe("web_form");
+    expect(latestInbound([], [canceled, form])?.kind).toBe("web_form");
   });
 
   it("keeps the form when the call came before it", () => {
     const call = row("call", "2026-10-26T10:00:00Z", { kind: "call" });
-    expect(latestInbound(undefined, [form, call])?.kind).toBe("web_form");
+    expect(latestInbound([], [form, call])?.kind).toBe("web_form");
   });
 
   it("is the newer of an open form and a waiting message", () => {
     const laterForm = row("form2", "2026-10-27T11:00:00Z", {
       source: "web_form",
     });
-    expect(latestInbound(mailIn, [laterForm, mailIn])?.activity.id).toBe(
+    expect(latestInbound([mailIn], [laterForm, mailIn])?.activity.id).toBe(
       "form2",
     );
-    expect(latestInbound(mailIn, [mailIn, form])?.activity.id).toBe("mail-in");
+    expect(latestInbound([mailIn], [mailIn, form])?.activity.id).toBe(
+      "mail-in",
+    );
+  });
+
+  it("passes over a skipped item to the next one still open", () => {
+    const laterForm = row("form2", "2026-10-27T11:00:00Z", {
+      source: "web_form",
+    });
+    const olderMail = row("mail-old", "2026-10-26T09:00:00Z", {
+      kind: "email",
+      direction: "inbound",
+    });
+    const skipped = new Set(["form2", "mail-in"]);
+    expect(
+      latestInbound([mailIn, olderMail], [laterForm, mailIn, olderMail], (r) =>
+        skipped.has(r.id),
+      )?.activity.id,
+    ).toBe("mail-old");
   });
 });

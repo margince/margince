@@ -275,7 +275,6 @@ export function ContactPageV2({
               />
             }
           >
-            {tab === "overview" && <ContactFollowState contactId={id} />}
             {tab === "overview" && (
               <>
                 <ContactLatestInbound
@@ -283,6 +282,7 @@ export function ContactPageV2({
                   contactId={id}
                   view={view.data}
                 />
+                <ContactFollowState contactId={id} />
                 <ContactOverview
                   view={view.data}
                   onAction={runAction}
