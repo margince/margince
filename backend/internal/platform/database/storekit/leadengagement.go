@@ -33,6 +33,7 @@ func TaskDueSQL(alias string) string {
 func humanSetDueSQL(alias string) string {
 	return `EXISTS (SELECT 1 FROM audit_log dated WHERE dated.entity_type='activity'
  AND dated.entity_id=` + alias + `.id AND dated.actor_type='human' AND dated.after ? 'due_at'
+ AND NOT ` + AutomaticTaskRepairAuditClause("dated") + `
  AND ` + AuditNotFromAnImport("dated") + `)`
 }
 

@@ -64,7 +64,7 @@ func TestUnavailableAdviceKeepsTheRiskLaneCompletenessSeparate(t *testing.T) {
 			if (missing.Reason == "withheld") != refusal.withheld {
 				t.Fatalf("advice failure lost its cause: %+v", missing)
 			}
-			unavailable := stampSources([]crmcontracts.WorklistSourceUnavailable{{Source: sourceAtRisk, Reason: "failed"}, *missing})
+			unavailable := svc.stampSources([]crmcontracts.WorklistSourceUnavailable{{Source: sourceAtRisk, Reason: "failed"}, *missing})
 			if unavailable[0].Source == unavailable[1].Source || !*unavailable[0].ContributesRows || *unavailable[1].ContributesRows {
 				t.Fatalf("side-read status changed the lane's coverage: %+v", unavailable)
 			}

@@ -298,3 +298,8 @@ to Home with the queue open, its `queue_scope` dial set and its filters kept. Th
 nothing (`worklist.nexttask.tsx`). `nextTaskHref` in `worklist.next.ts` takes each record once, where its
 first row stands, and leaves out rows that open no record page. It follows the list the record was opened
 from, else the reader's own list, and goes back to the top after the last record.
+
+Quiet relationships use the same scoped read and row renderer in a separate optional
+list. They join the work queue and Focus only when the reader pins them. A pin
+keeps the routine meaning and names the reader's choice; it adds no deadline or
+deal dependency. Existing tasks and waiting replies remove duplicate suggestions.

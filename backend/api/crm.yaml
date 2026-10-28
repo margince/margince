@@ -816,6 +816,11 @@ paths:
               properties:
                 version: {type: integer, format: int64, minimum: 1}
                 review: {$ref: '#/components/schemas/HomeRepairReview'}
+                reviewed_actions:
+                  type: array
+                  maxItems: 1000
+                  description: Supported action names in the displayed review's row order, required when requires_action_review is true.
+                  items: {type: string}
       responses:
         '204': {description: The bounded reviewed run was activated.}
         '401': {$ref: '#/components/responses/Unauthorized'}
@@ -57159,6 +57164,7 @@ components:
       additionalProperties: false
       required: [tasks, digest, rule_version, limit, as_of, counts]
       properties:
+        requires_action_review: {type: boolean, description: The client must acknowledge the actions it displayed when activating this page.}
         tasks:
           type: array
           maxItems: 1000
@@ -57182,7 +57188,7 @@ components:
         version: {type: integer, format: int64}
         action:
           type: string
-          enum: [archive_automatic_reminder, withdraw_proposal, supersede_suggestion, reclassify_message, human_review, leave_current, revalidate_settlement]
+          enum: [archive_automatic_reminder, normalize_automatic_task, withdraw_proposal, supersede_suggestion, reclassify_message, human_review, leave_current, revalidate_settlement]
         reason: {type: string}
 
     HomeRepairCounts:
@@ -57197,6 +57203,7 @@ components:
         review: {type: integer, minimum: 0}
         keep: {type: integer, minimum: 0}
         revalidate: {type: integer, minimum: 0, description: Older settled request verdicts the email-request settlement pass judges again.}
+        normalize: {type: integer, minimum: 0, description: Pristine automatic tasks with a proved source reference or generated notification date to correct.}
 
     DataTaskControl:
       type: object
@@ -65519,7 +65526,8 @@ components:
       description: |
         Up to six actionable priorities from the scoped day, selected before filtering
         or pagination and ordered by the queue's server ranking. Routine maintenance
-        and future tasks do not fill spare places. Pins remain explicit choices.
+        and future tasks do not fill spare places. Ordinary pins only order the queue;
+        pinning an optional reconnection explicitly chooses it for Focus.
         Source coverage and failures are reported on the enclosing worklist; these
         counts describe the candidates actually read, not an exhaustive installation.
       required: [items, total, urgent_remaining]
@@ -65613,6 +65621,16 @@ components:
           type: array
           items: { $ref: '#/components/schemas/WorklistItem' }
           description: 'Everything actionable, best-first. The order is the product of this endpoint.'
+        optional_relationships:
+          type: array
+          items: { $ref: '#/components/schemas/WorklistItem' }
+          description: |
+            Optional reconnections, outside the work queue, counts and Focus. An open
+            deal or relationship score does not establish an obligation. A reader may
+            pin a suggestion into their personal queue or create an explicit task.
+        optional_relationships_more_available:
+          type: boolean
+          description: 'More optional contacts exist beyond the existing relationship read bound.'
         focus:
           $ref: '#/components/schemas/WorklistFocus'
         sources_unavailable:

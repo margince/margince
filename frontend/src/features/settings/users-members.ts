@@ -6,6 +6,19 @@ import type { components } from "../../api/schema";
 import { readMemberPage } from "../../lib/memberpages";
 
 export type User = components["schemas"]["User"];
+export function matchingMembers(
+  members: readonly User[],
+  search: string,
+): User[] {
+  const term = search.trim().normalize("NFKC").toLowerCase();
+  return members.filter((member) =>
+    `${member.display_name} ${member.email}`
+      .normalize("NFKC")
+      .toLowerCase()
+      .includes(term),
+  );
+}
+
 type MemberAction = NonNullable<User["allowed_actions"]>[number];
 
 const MEMBERS_KEY = ["users-admin", "all"] as const;

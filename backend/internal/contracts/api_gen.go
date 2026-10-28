@@ -11439,6 +11439,7 @@ const (
 	HomeRepairTaskActionArchiveAutomaticReminder HomeRepairTaskAction = "archive_automatic_reminder"
 	HomeRepairTaskActionHumanReview              HomeRepairTaskAction = "human_review"
 	HomeRepairTaskActionLeaveCurrent             HomeRepairTaskAction = "leave_current"
+	HomeRepairTaskActionNormalizeAutomaticTask   HomeRepairTaskAction = "normalize_automatic_task"
 	HomeRepairTaskActionReclassifyMessage        HomeRepairTaskAction = "reclassify_message"
 	HomeRepairTaskActionRevalidateSettlement     HomeRepairTaskAction = "revalidate_settlement"
 	HomeRepairTaskActionSupersedeSuggestion      HomeRepairTaskAction = "supersede_suggestion"
@@ -11453,6 +11454,8 @@ func (e HomeRepairTaskAction) Valid() bool {
 	case HomeRepairTaskActionHumanReview:
 		return true
 	case HomeRepairTaskActionLeaveCurrent:
+		return true
+	case HomeRepairTaskActionNormalizeAutomaticTask:
 		return true
 	case HomeRepairTaskActionReclassifyMessage:
 		return true
@@ -41315,9 +41318,12 @@ type HistoryEdgeOtherEntityType string
 
 // HomeRepairCounts defines model for HomeRepairCounts.
 type HomeRepairCounts struct {
-	Archive    int `json:"archive"`
-	Keep       int `json:"keep"`
-	Reclassify int `json:"reclassify"`
+	Archive int `json:"archive"`
+	Keep    int `json:"keep"`
+
+	// Normalize Pristine automatic tasks with a proved source reference or generated notification date to correct.
+	Normalize  *int `json:"normalize,omitempty"`
+	Reclassify int  `json:"reclassify"`
 
 	// Revalidate Older settled request verdicts the email-request settlement pass judges again.
 	Revalidate *int `json:"revalidate,omitempty"`
@@ -41334,9 +41340,12 @@ type HomeRepairReview struct {
 	Limit  int              `json:"limit"`
 
 	// PreviewToken Reader-bound classification review token; expires after fifteen minutes and is consumed on activation.
-	PreviewToken *string          `json:"preview_token,omitempty"`
-	RuleVersion  string           `json:"rule_version"`
-	Tasks        []HomeRepairTask `json:"tasks"`
+	PreviewToken *string `json:"preview_token,omitempty"`
+
+	// RequiresActionReview The client must acknowledge the actions it displayed when activating this page.
+	RequiresActionReview *bool            `json:"requires_action_review,omitempty"`
+	RuleVersion          string           `json:"rule_version"`
+	Tasks                []HomeRepairTask `json:"tasks"`
 }
 
 // HomeRepairTask defines model for HomeRepairTask.
@@ -55995,7 +56004,8 @@ type Worklist struct {
 
 	// Focus Up to six actionable priorities from the scoped day, selected before filtering
 	// or pagination and ordered by the queue's server ranking. Routine maintenance
-	// and future tasks do not fill spare places. Pins remain explicit choices.
+	// and future tasks do not fill spare places. Ordinary pins only order the queue;
+	// pinning an optional reconnection explicitly chooses it for Focus.
 	// Source coverage and failures are reported on the enclosing worklist; these
 	// counts describe the candidates actually read, not an exhaustive installation.
 	Focus *WorklistFocus `json:"focus,omitempty"`
@@ -56030,6 +56040,14 @@ type Worklist struct {
 	// A read that failed is named in `sources_unavailable` as source `next_meeting`,
 	// category `meetings`; a read the reader is refused is absent and named nowhere.
 	NextMeeting *Contact360NextMeeting `json:"next_meeting,omitempty"`
+
+	// OptionalRelationships Optional reconnections, outside the work queue, counts and Focus. An open
+	// deal or relationship score does not establish an obligation. A reader may
+	// pin a suggestion into their personal queue or create an explicit task.
+	OptionalRelationships *[]WorklistItem `json:"optional_relationships,omitempty"`
+
+	// OptionalRelationshipsMoreAvailable More optional contacts exist beyond the existing relationship read bound.
+	OptionalRelationshipsMoreAvailable *bool `json:"optional_relationships_more_available,omitempty"`
 
 	// PlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` and the
 	// due commitments were read across the team roster. Absent under every other scope.
@@ -56564,7 +56582,8 @@ type WorklistDoneRequest struct {
 
 // WorklistFocus Up to six actionable priorities from the scoped day, selected before filtering
 // or pagination and ordered by the queue's server ranking. Routine maintenance
-// and future tasks do not fill spare places. Pins remain explicit choices.
+// and future tasks do not fill spare places. Ordinary pins only order the queue;
+// pinning an optional reconnection explicitly chooses it for Focus.
 // Source coverage and failures are reported on the enclosing worklist; these
 // counts describe the candidates actually read, not an exhaustive installation.
 type WorklistFocus struct {
@@ -58175,8 +58194,11 @@ type GetAutomaticWorkHealthParams struct {
 
 // ActivateHomeRepairJSONBody defines parameters for ActivateHomeRepair.
 type ActivateHomeRepairJSONBody struct {
-	Review  HomeRepairReview `json:"review"`
-	Version int64            `json:"version"`
+	Review HomeRepairReview `json:"review"`
+
+	// ReviewedActions Supported action names in the displayed review's row order, required when requires_action_review is true.
+	ReviewedActions *[]string `json:"reviewed_actions,omitempty"`
+	Version         int64     `json:"version"`
 }
 
 // PreviewHomeRepairJSONBody defines parameters for PreviewHomeRepair.
