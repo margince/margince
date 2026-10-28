@@ -169,7 +169,6 @@ reach features/contacts/contactarchived.tsx features/records/history.tsx
 reach features/contacts/contactarchived.tsx features/records/recordaccess.tsx
 reach features/contacts/contactarchived.tsx features/worklist/worklist.return.tsx
 reach features/contacts/contactbillingroles.stories.tsx features/companies/company360.css
-reach features/contacts/contactcards.tsx features/records/claimdismiss.tsx
 reach features/contacts/contactconfirm.tsx features/worklist/worklist.return.tsx
 reach features/contacts/contactconsentpanel.tsx features/privacy/consent.tsx
 reach features/contacts/contactdealrooms.tsx features/deals/dealroomaccess.tsx

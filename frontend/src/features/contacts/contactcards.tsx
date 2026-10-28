@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { DismissClaimButton } from "../../components/claimdismiss";
 import { Badge, Button, Checkbox } from "../../design-system/atoms";
 import {
   OverviewCard,
@@ -12,7 +13,6 @@ import { useNow } from "../../format/now";
 import { useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
-import { DismissClaimButton } from "../records/claimdismiss";
 import { TakenOverLine, TakeOverPromiseButton } from "./claimtakeover";
 import { omitted } from "./contact360";
 import { ContactClaimsReview, claimsForReview } from "./contactclaimsreview";

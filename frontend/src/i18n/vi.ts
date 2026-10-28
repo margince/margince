@@ -3524,6 +3524,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.next.title": "Việc cần làm",
   "co.next.empty": "Công ty này không có việc cần làm nào đang mở.",
   "co.next.overdue": "Quá hạn",
+  "deal.commitments.title": "Cam kết của khách hàng",
+  "deal.commitments.empty":
+    "Khách hàng không có cam kết nào đang mở cho deal này.",
+  "deal.commitments.denied":
+    "Bạn không thể đọc các cam kết của khách hàng: chúng trích dẫn liên hệ và tin nhắn mà bạn không có quyền truy cập.",
+  "deal.commitments.incomplete":
+    "Một số cam kết không hiển thị vì bạn không được đọc liên hệ hoặc tin nhắn của chúng.",
+  "deal.commitments.more":
+    "Đang hiển thị 25 cam kết khẩn cấp nhất; còn cam kết khác đang mở.",
+  "deal.commitments.source": "Mở tin nhắn",
+  "deal.commitments.overdue": "Đã quá hạn: đã thực hiện chưa?",
+  "deal.commitments.done": "Hoàn thành",
+  "deal.commitments.noLongerTrue": "Không còn đúng",
+  "deal.commitments.differs": "Khác với giá trị deal ({amount})",
   "co.next.due": "Hạn {when}",
   "co.next.undated": "Chưa có hạn",
   "co.next.col.task": "Công việc",

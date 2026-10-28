@@ -3610,6 +3610,20 @@ export const en = {
   "co.next.title": "Tasks",
   "co.next.empty": "No open tasks for this company.",
   "co.next.overdue": "Overdue",
+  "deal.commitments.title": "Customer commitments",
+  "deal.commitments.empty":
+    "The customer has no open commitments on this deal.",
+  "deal.commitments.denied":
+    "You cannot read the customer’s commitments: they quote contacts and messages you have no access to.",
+  "deal.commitments.incomplete":
+    "Some commitments are left out because you cannot read their contact or message.",
+  "deal.commitments.more":
+    "Showing the 25 most urgent commitments; more are open.",
+  "deal.commitments.source": "Open message",
+  "deal.commitments.overdue": "Overdue: did it happen?",
+  "deal.commitments.done": "Done",
+  "deal.commitments.noLongerTrue": "No longer true",
+  "deal.commitments.differs": "Differs from the deal value ({amount})",
   "co.next.due": "Due {when}",
   "co.next.undated": "No due date",
   "co.next.col.task": "Task",

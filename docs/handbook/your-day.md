@@ -201,9 +201,10 @@ Neither an undone change nor a replaced one can be accepted. To make Margince as
 ### What happens to a promise from a call or an email?
 A promise Margince reads in a meeting transcript or an email becomes something to watch or a task,
 by who made it.
-- A promise the customer made goes on their contact to watch, and never becomes a task. The deal
-  lists open ones under **Customer commitments**, with **Open message**. **Dismiss** removes a wrong
-  reading, if you may change the contact.
+- A promise the customer made goes on their contact to watch, and never becomes a task. The deal's
+  **Overview** lists open ones under **Customer commitments**, with **Open message**. **Dismiss**
+  removes a wrong reading, if you may change the contact. Past its due day a promise asks **Overdue:
+  did it happen?** (**Done**, **No longer true**). Another total price shows **Differs from the deal value**.
 - A promise a named colleague made becomes their task. When Margince reads it clearly, it writes the
   task at once. If not, the colleague gets an **Add commitment task** proposal.
 - A promise nobody can be given stays on the contact with nobody asked. Press **I’ll take this** to
