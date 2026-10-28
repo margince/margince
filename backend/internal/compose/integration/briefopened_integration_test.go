@@ -191,6 +191,33 @@ func TestEveryReadOfTheBriefIsItsOwnOpen(t *testing.T) {
 	}
 }
 
+// Home's suggestions and handled-work reads date their window from the brief
+// without showing it, so they are not opens.
+func TestHomesWindowReadsAreNotBriefOpens(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	stages := apptest.DiscoverSeededPipeline(t, e)
+	createDealClosingThisWeek(t, e, stages, "Closing this week")
+
+	if status := e.Call(t, "POST", "/v1/brief", nil, nil, nil); status != http.StatusCreated {
+		t.Fatalf("POST /v1/brief = %d, want 201", status)
+	}
+	for _, path := range []string{"/v1/magic?limit=100", "/v1/worklist/handled"} {
+		if status := e.Call(t, "GET", path, nil, nil, nil); status != http.StatusOK {
+			t.Fatalf("GET %s = %d, want 200", path, status)
+		}
+	}
+	if staged := openEvents(t, e); len(staged) != 0 {
+		t.Fatalf("the window reads staged %d brief.opened event(s), want none", len(staged))
+	}
+	if status := e.Call(t, "GET", "/v1/brief", nil, nil, nil); status != http.StatusOK {
+		t.Fatalf("GET /v1/brief = %d, want 200", status)
+	}
+	if staged := openEvents(t, e); len(staged) != 1 {
+		t.Fatalf("the brief read staged %d open(s), want 1", len(staged))
+	}
+}
+
 // assertSystemLogRow proves the trace points at a real system_log row.
 //
 // system_log rather than audit_log, and that is the ruling rather than an

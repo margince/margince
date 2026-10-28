@@ -256,7 +256,7 @@ func (a *assembly) contactStrengths() ([]contacts.ContactStrength, error) {
 	// active-contact count, its reply balance and its single-threaded flag off
 	// these strengths, so an unscoped read put a number computed across every
 	// project under a timeline showing one.
-	contacts, err := contacts.StrengthForCompanyContacts(a.ctx, a.tx, a.companyID, a.now, a.opts.ProjectID)
+	contacts, err := companyContactStrengths(a.ctx, a.tx, a.companyID, a.now, a.opts.ProjectID)
 	if err != nil {
 		return nil, err
 	}
