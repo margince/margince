@@ -5,6 +5,11 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
+  "worklist.relationships.optional": "Optionale Kontaktpflege",
+  "worklist.relationships.optionalDetail":
+    "Stille allein ist keine Aufgabe. Hefte einen Kontakt für deinen Tag an oder erstelle eine Aufgabe im Datensatz.",
+  "worklist.relationships.more":
+    "Weitere optionale Kontakte liegen außerhalb dieser Ansicht.",
   "webhooks.event.signal.updated.label": "Hinweis neu zugeordnet",
   "webhooks.event.signal.updated.when":
     "Wenn ein Hinweis beim Zusammenführen eines Duplikats zum verbleibenden Mitglied wechselt.",

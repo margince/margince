@@ -55967,7 +55967,8 @@ type Worklist struct {
 
 	// Focus Up to six actionable priorities from the scoped day, selected before filtering
 	// or pagination and ordered by the queue's server ranking. Routine maintenance
-	// and future tasks do not fill spare places. Pins remain explicit choices.
+	// and future tasks do not fill spare places. Ordinary pins only order the queue;
+	// pinning an optional reconnection explicitly chooses it for Focus.
 	// Source coverage and failures are reported on the enclosing worklist; these
 	// counts describe the candidates actually read, not an exhaustive installation.
 	Focus *WorklistFocus `json:"focus,omitempty"`
@@ -56002,6 +56003,14 @@ type Worklist struct {
 	// A read that failed is named in `sources_unavailable` as source `next_meeting`,
 	// category `meetings`; a read the reader is refused is absent and named nowhere.
 	NextMeeting *Contact360NextMeeting `json:"next_meeting,omitempty"`
+
+	// OptionalRelationships Optional reconnections, outside the work queue, counts and Focus. An open
+	// deal or relationship score does not establish an obligation. A reader may
+	// pin a suggestion into their personal queue or create an explicit task.
+	OptionalRelationships *[]WorklistItem `json:"optional_relationships,omitempty"`
+
+	// OptionalRelationshipsMoreAvailable More optional contacts exist beyond the existing relationship read bound.
+	OptionalRelationshipsMoreAvailable *bool `json:"optional_relationships_more_available,omitempty"`
 
 	// PlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` and the
 	// due commitments were read across the team roster. Absent under every other scope.
@@ -56536,7 +56545,8 @@ type WorklistDoneRequest struct {
 
 // WorklistFocus Up to six actionable priorities from the scoped day, selected before filtering
 // or pagination and ordered by the queue's server ranking. Routine maintenance
-// and future tasks do not fill spare places. Pins remain explicit choices.
+// and future tasks do not fill spare places. Ordinary pins only order the queue;
+// pinning an optional reconnection explicitly chooses it for Focus.
 // Source coverage and failures are reported on the enclosing worklist; these
 // counts describe the candidates actually read, not an exhaustive installation.
 type WorklistFocus struct {

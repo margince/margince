@@ -48616,7 +48616,8 @@ export interface components {
         /**
          * @description Up to six actionable priorities from the scoped day, selected before filtering
          *     or pagination and ordered by the queue's server ranking. Routine maintenance
-         *     and future tasks do not fill spare places. Pins remain explicit choices.
+         *     and future tasks do not fill spare places. Ordinary pins only order the queue;
+         *     pinning an optional reconnection explicitly chooses it for Focus.
          *     Source coverage and failures are reported on the enclosing worklist; these
          *     counts describe the candidates actually read, not an exhaustive installation.
          */
@@ -48707,6 +48708,14 @@ export interface components {
             summary: components["schemas"]["WorklistSummary"];
             /** @description Everything actionable, best-first. The order is the product of this endpoint. */
             queue: components["schemas"]["WorklistItem"][];
+            /**
+             * @description Optional reconnections, outside the work queue, counts and Focus. An open
+             *     deal or relationship score does not establish an obligation. A reader may
+             *     pin a suggestion into their personal queue or create an explicit task.
+             */
+            optional_relationships?: components["schemas"]["WorklistItem"][];
+            /** @description More optional contacts exist beyond the existing relationship read bound. */
+            optional_relationships_more_available?: boolean;
             focus?: components["schemas"]["WorklistFocus"];
             /** @description Sources that could not be included, and why. Empty is the honest common case. */
             sources_unavailable: components["schemas"]["WorklistSourceUnavailable"][];
