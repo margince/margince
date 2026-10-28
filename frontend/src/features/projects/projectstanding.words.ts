@@ -67,12 +67,81 @@ export function projectVerdict(view: Project360, ctx: Ctx): StandingVerdict {
     case "withheld":
       return { word: ctx.t("state.withheld"), tone: "neutral" };
     default:
-      return {
-        word: ctx.t("standing.notAssessed"),
-        sentence: ctx.t("project.standing.unassessed"),
-        tone: "neutral",
-      };
+      return (
+        deliveryVerdict(view, ctx) ?? {
+          word: ctx.t("standing.notAssessed"),
+          sentence: ctx.t("project.standing.unassessed"),
+          tone: "neutral",
+        }
+      );
   }
+}
+
+/**
+ * The call nobody wrote, read off the dates and the open tasks. A project
+ * with no dates, or whose tasks this reader may not see, gets none: being on
+ * schedule is a claim about both.
+ */
+function deliveryVerdict(
+  view: Project360,
+  ctx: Ctx,
+): StandingVerdict | undefined {
+  const used = timeUsed(view, ctx.zone);
+  if (used.kind === "notStarted") {
+    return {
+      word: ctx.t("project.standing.notStarted"),
+      sentence: ctx.t("project.verdict.startsOn", {
+        date: day(used.startsOn, ctx),
+      }),
+      tone: "neutral",
+    };
+  }
+  const tasks = commitmentsReading(view);
+  if (used.kind !== "running" || !tasks || view.project.phase === "closed") {
+    return undefined;
+  }
+  if (used.day > used.total) {
+    return {
+      word: ctx.t("project.verdict.overrunning"),
+      sentence: ctx.t("project.verdict.endPassed", {
+        date: day(used.endsOn, ctx),
+      }),
+      tone: "danger",
+    };
+  }
+  if (tasks.overdue > 0) {
+    const count = String(tasks.overdue);
+    return {
+      word: ctx.t("project.verdict.behind"),
+      sentence: tasks.firstOverdue
+        ? ctx.plural("project.verdict.overdueFirst", tasks.overdue, {
+            count,
+            subject: tasks.firstOverdue,
+          })
+        : ctx.plural("project.verdict.overdue", tasks.overdue, { count }),
+      tone: "warning",
+    };
+  }
+  const left = used.total - used.day;
+  return used.tone === "warning"
+    ? {
+        word: ctx.t("project.verdict.wrappingUp"),
+        sentence:
+          left === 0
+            ? ctx.t("project.verdict.lastDay")
+            : ctx.plural("project.verdict.daysLeft", left, {
+                count: String(left),
+              }),
+        tone: "success",
+      }
+    : {
+        word: ctx.t("project.verdict.onSchedule"),
+        sentence: ctx.t("project.verdict.dayOf", {
+          day: String(used.day),
+          total: String(used.total),
+        }),
+        tone: "success",
+      };
 }
 
 function commitmentsDim(view: Project360, ctx: Ctx): StandingDim {

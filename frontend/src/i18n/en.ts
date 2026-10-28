@@ -10988,8 +10988,8 @@ export const en = {
   "threads.readOnly": "Your access is read-only.",
   "deal360.blocker": "Blockers",
   "deal360.buyer": "What the buyer wants",
-  "deal360.verdict.live": "Live",
-  "deal360.verdict.drifting": "Drifting",
+  "deal360.verdict.live": "On track",
+  "deal360.verdict.drifting": "Slipping",
   "deal360.verdict.blocked": "Blocked",
   "deal360.verdict.cold": "Cold",
   "recordmail.title": "Email",
@@ -18264,6 +18264,49 @@ export const en = {
   "connectors.syncTimeUnknown": "Successful sync time unavailable",
   "brief.coverage.source.deal_advice": "Suggested deal steps",
   "tasks.origin.accepted_recommendation": "Accepted from a suggested step.",
+  "deal.verdict.yourMove": "Your move",
+  "deal.verdict.yourMoveToday":
+    "The buyer wrote today and is waiting for a reply.",
+  "deal.verdict.yourMoveDays_one":
+    "The buyer wrote {count} day ago and is waiting for a reply.",
+  "deal.verdict.yourMoveDays_other":
+    "The buyer wrote {count} days ago and is waiting for a reply.",
+  "deal.verdict.goneQuiet": "Gone quiet",
+  "deal.verdict.goneQuietSince":
+    "No activity since {date}, so the deal counts as stalled.",
+  "deal.verdict.nothingFiled": "Nothing has been filed on this deal yet.",
+  "deal.verdict.onHold": "On hold",
+  "deal.verdict.onHoldUntil": "Paused until {date}, as agreed with the buyer.",
+  "deal.verdict.overdueToClose": "Overdue to close",
+  "deal.verdict.closePassed": "The expected close date, {date}, has passed.",
+  "deal.verdict.notStarted": "Not started",
+  "co.verdict.noContact": "No contact yet",
+  "co.verdict.addedOn": "Added {date}, and no exchange is recorded yet.",
+  "co.verdict.active": "Active",
+  "co.verdict.lastExchange": "Last exchange with this account {date}.",
+  "co.verdict.goingQuiet": "Going quiet",
+  "co.verdict.quietSince": "No exchange with anyone here since {date}.",
+  "co.verdict.dormant": "Dormant",
+  "co.verdict.dormantSince": "No open deal and no exchange since {date}.",
+  "project.verdict.startsOn": "Starts {date}.",
+  "project.verdict.overrunning": "Overrunning",
+  "project.verdict.endPassed": "The target end, {date}, has passed.",
+  "project.verdict.behind": "Behind",
+  "project.verdict.overdueFirst_one": "{count} task is overdue: {subject}.",
+  "project.verdict.overdueFirst_other":
+    "{count} tasks are overdue, the first: {subject}.",
+  "project.verdict.overdue_one": "{count} task is overdue.",
+  "project.verdict.overdue_other": "{count} tasks are overdue.",
+  "project.verdict.wrappingUp": "Wrapping up",
+  "project.verdict.daysLeft_one": "{count} day left, and no task is overdue.",
+  "project.verdict.daysLeft_other":
+    "{count} days left, and no task is overdue.",
+  "project.verdict.lastDay": "Today is the last day, and no task is overdue.",
+  "project.verdict.onSchedule": "On schedule",
+  "project.verdict.dayOf": "Day {day} of {total}, and no task is overdue.",
+  "contact.verdict.nothingOwed": "Nothing is owed on either side.",
+  "contact.verdict.noExchange":
+    "No exchange with this contact is recorded yet.",
 } as const;
 
 export type MessageKey = keyof typeof en;

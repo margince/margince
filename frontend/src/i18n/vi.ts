@@ -10646,8 +10646,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "threads.readOnly": "Bạn chỉ có quyền đọc.",
   "deal360.blocker": "Trở ngại",
   "deal360.buyer": "Điều người mua muốn",
-  "deal360.verdict.live": "Đang tiến triển",
-  "deal360.verdict.drifting": "Đang chững lại",
+  "deal360.verdict.live": "Đúng tiến độ",
+  "deal360.verdict.drifting": "Đang chậm lại",
   "deal360.verdict.blocked": "Bị chặn",
   "deal360.verdict.cold": "Nguội",
   "recordmail.title": "Email",
@@ -17925,4 +17925,50 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.coverage.source.deal_advice": "Bước tiếp theo cho cơ hội",
   "tasks.origin.accepted_recommendation":
     "Được chấp nhận từ một bước được đề xuất.",
+  "deal.verdict.yourMove": "Đến lượt bạn",
+  "deal.verdict.yourMoveToday":
+    "Khách hàng đã viết hôm nay và đang chờ phản hồi.",
+  "deal.verdict.yourMoveDays_one":
+    "Khách hàng đã viết {count} ngày trước và đang chờ phản hồi.",
+  "deal.verdict.yourMoveDays_other":
+    "Khách hàng đã viết {count} ngày trước và đang chờ phản hồi.",
+  "deal.verdict.goneQuiet": "Im lặng",
+  "deal.verdict.goneQuietSince":
+    "Không có hoạt động kể từ {date}, nên giao dịch được coi là đình trệ.",
+  "deal.verdict.nothingFiled": "Chưa có gì được ghi nhận cho giao dịch này.",
+  "deal.verdict.onHold": "Tạm dừng",
+  "deal.verdict.onHoldUntil":
+    "Tạm dừng đến {date} theo thỏa thuận với khách hàng.",
+  "deal.verdict.overdueToClose": "Quá hạn chốt",
+  "deal.verdict.closePassed": "Ngày dự kiến chốt ({date}) đã qua.",
+  "deal.verdict.notStarted": "Chưa bắt đầu",
+  "co.verdict.noContact": "Chưa liên hệ",
+  "co.verdict.addedOn": "Được thêm ngày {date}, chưa ghi nhận trao đổi nào.",
+  "co.verdict.active": "Đang hoạt động",
+  "co.verdict.lastExchange": "Trao đổi gần nhất với công ty này vào {date}.",
+  "co.verdict.goingQuiet": "Đang im lặng",
+  "co.verdict.quietSince": "Không có trao đổi với ai ở đây kể từ {date}.",
+  "co.verdict.dormant": "Không hoạt động",
+  "co.verdict.dormantSince":
+    "Không có giao dịch đang mở và không có trao đổi kể từ {date}.",
+  "project.verdict.startsOn": "Bắt đầu vào {date}.",
+  "project.verdict.overrunning": "Quá hạn",
+  "project.verdict.endPassed": "Ngày kết thúc dự kiến ({date}) đã qua.",
+  "project.verdict.behind": "Chậm tiến độ",
+  "project.verdict.overdueFirst_one":
+    "{count} nhiệm vụ đã quá hạn, đầu tiên: {subject}.",
+  "project.verdict.overdueFirst_other":
+    "{count} nhiệm vụ đã quá hạn, đầu tiên: {subject}.",
+  "project.verdict.overdue_one": "{count} nhiệm vụ đã quá hạn.",
+  "project.verdict.overdue_other": "{count} nhiệm vụ đã quá hạn.",
+  "project.verdict.wrappingUp": "Sắp hoàn thành",
+  "project.verdict.daysLeft_one":
+    "Còn {count} ngày, không có nhiệm vụ quá hạn.",
+  "project.verdict.daysLeft_other":
+    "Còn {count} ngày, không có nhiệm vụ quá hạn.",
+  "project.verdict.lastDay": "Hôm nay là ngày cuối, không có nhiệm vụ quá hạn.",
+  "project.verdict.onSchedule": "Đúng tiến độ",
+  "project.verdict.dayOf": "Ngày {day}/{total}, không có nhiệm vụ quá hạn.",
+  "contact.verdict.nothingOwed": "Không bên nào còn việc cần làm.",
+  "contact.verdict.noExchange": "Chưa ghi nhận trao đổi nào với liên hệ này.",
 };

@@ -216,6 +216,7 @@ function cardHead(
         </>
       ) : undefined,
     },
+    standing: card.verdict.standing,
     // The indigo pill claims a model wrote the call; the structured fallback
     // wrote this one when it did not.
     sources:

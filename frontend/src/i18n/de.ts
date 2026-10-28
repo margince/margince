@@ -10933,8 +10933,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "threads.readOnly": "Du hast nur Lesezugriff.",
   "deal360.blocker": "Blocker",
   "deal360.buyer": "Was die Käuferseite will",
-  "deal360.verdict.live": "Aktiv",
-  "deal360.verdict.drifting": "Stagnierend",
+  "deal360.verdict.live": "Im Plan",
+  "deal360.verdict.drifting": "Verliert Tempo",
   "deal360.verdict.blocked": "Blockiert",
   "deal360.verdict.cold": "Kalt",
   "recordmail.title": "E-Mail",
@@ -18402,4 +18402,53 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.coverage.source.deal_advice": "Vorgeschlagene nächste Schritte",
   "tasks.origin.accepted_recommendation":
     "Aus einem vorgeschlagenen Schritt übernommen.",
+  "deal.verdict.yourMove": "Du bist dran",
+  "deal.verdict.yourMoveToday":
+    "Die Käuferseite hat heute geschrieben und wartet auf eine Antwort.",
+  "deal.verdict.yourMoveDays_one":
+    "Die Käuferseite hat vor {count} Tag geschrieben und wartet auf eine Antwort.",
+  "deal.verdict.yourMoveDays_other":
+    "Die Käuferseite hat vor {count} Tagen geschrieben und wartet auf eine Antwort.",
+  "deal.verdict.goneQuiet": "Verstummt",
+  "deal.verdict.goneQuietSince":
+    "Keine Aktivität seit {date}, daher gilt der Deal als festgefahren.",
+  "deal.verdict.nothingFiled": "Zu diesem Deal ist noch nichts erfasst.",
+  "deal.verdict.onHold": "Pausiert",
+  "deal.verdict.onHoldUntil":
+    "Bis {date} pausiert, wie mit der Käuferseite vereinbart.",
+  "deal.verdict.overdueToClose": "Abschluss überfällig",
+  "deal.verdict.closePassed":
+    "Das erwartete Abschlussdatum ({date}) ist verstrichen.",
+  "deal.verdict.notStarted": "Nicht begonnen",
+  "co.verdict.noContact": "Noch kein Kontakt",
+  "co.verdict.addedOn": "Am {date} angelegt, noch kein Austausch erfasst.",
+  "co.verdict.active": "Aktiv",
+  "co.verdict.lastExchange":
+    "Letzter Austausch mit diesem Unternehmen am {date}.",
+  "co.verdict.goingQuiet": "Wird ruhig",
+  "co.verdict.quietSince": "Seit {date} kein Austausch mit jemandem hier.",
+  "co.verdict.dormant": "Ruhend",
+  "co.verdict.dormantSince":
+    "Kein offener Deal und kein Austausch seit {date}.",
+  "project.verdict.startsOn": "Beginnt am {date}.",
+  "project.verdict.overrunning": "Überzogen",
+  "project.verdict.endPassed": "Das geplante Ende ({date}) ist verstrichen.",
+  "project.verdict.behind": "Im Rückstand",
+  "project.verdict.overdueFirst_one":
+    "{count} Aufgabe ist überfällig: {subject}.",
+  "project.verdict.overdueFirst_other":
+    "{count} Aufgaben sind überfällig, zuerst: {subject}.",
+  "project.verdict.overdue_one": "{count} Aufgabe ist überfällig.",
+  "project.verdict.overdue_other": "{count} Aufgaben sind überfällig.",
+  "project.verdict.wrappingUp": "Auf der Zielgeraden",
+  "project.verdict.daysLeft_one": "Noch {count} Tag, keine Aufgabe überfällig.",
+  "project.verdict.daysLeft_other":
+    "Noch {count} Tage, keine Aufgabe überfällig.",
+  "project.verdict.lastDay":
+    "Heute ist der letzte Tag, keine Aufgabe überfällig.",
+  "project.verdict.onSchedule": "Im Zeitplan",
+  "project.verdict.dayOf": "Tag {day} von {total}, keine Aufgabe überfällig.",
+  "contact.verdict.nothingOwed": "Auf keiner Seite steht etwas aus.",
+  "contact.verdict.noExchange":
+    "Mit diesem Kontakt ist noch kein Austausch erfasst.",
 };
