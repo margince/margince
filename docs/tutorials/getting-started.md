@@ -51,8 +51,8 @@ against the empty database, it sets up the company and the admin
 user from the settings file `config/margince.yaml`. On the first run, `make dev` makes
 that file (and the admin password file) from
 [`config/margince.example.yaml`](../../config/margince.example.yaml), and
-then leaves it alone. Edit it as you like, or delete it to start over. No
-screen or endpoint runs this first setup, and no request creates a workspace.
+then leaves it alone. Edit it as you like, or delete it to start over. With no `bootstrap_admin`, the api prints a one-time setup token
+and serves the setup screen instead, where the first admin claims the installation.
 
 ## 4. Sign in
 

@@ -211,8 +211,8 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// Which public routes carry a credential in the path — and so must not
 	// have it written to any log — is stated once in
 	// shared/kernel/capabilitypath, not named at each mount. The booking
-	// page's slug is deliberately absent from that list; it is a public
-	// identifier the host hands out, not a credential.
+	// page's slug is on that list because it is the only admission check on a
+	// route that writes.
 	// boundByResponseDeadline sits OUTSIDE the handler chain because a
 	// write deadline has to be set before anything starts writing — including
 	// the access log's own wrapper, which is what holds the ResponseWriter the

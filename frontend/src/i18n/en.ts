@@ -12468,7 +12468,7 @@ export const en = {
   "users.handover.action": "Hand over work",
   "users.handover.title": "Hand over the work of {name}",
   "users.handover.body":
-    "Every lead, contact, company, deal and project {name} owns moves to the colleague you choose. Their tasks, automations and Deal Rooms stay where they are.",
+    "Every lead, contact, company, deal and project {name} owns moves to the colleague you choose. Their open tasks move too. Automations and Deal Rooms stay where they are.",
   "users.handover.receiver": "Give it to",
   "users.handover.choose": "Choose a colleague",
   "users.handover.confirm": "Hand over",
