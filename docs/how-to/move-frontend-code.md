@@ -79,7 +79,10 @@ or leave the import where it is.
    every sentence of a line you touch by the
    [comment rules](../reference/docs-prose-style.md#comments-in-code).
 
-7. Run the checks:
+7. Push and open a draft PR. The PR body lists the files that moved and the paths you changed by
+   hand.
+
+8. Before you mark the PR ready, run the checks:
 
    ```sh
    make craft-static
@@ -88,8 +91,6 @@ or leave the import where it is.
 
    `make craft-static` takes a short time, so run it first. Do not change the tree while `make check`
    runs. If you changed a file under `backend/`, also run `make test-it DIR=<pkg>` for that package.
-
-8. Push and open the PR. The PR body lists the files that moved and the paths you changed by hand.
 
 ## Guards that scan the screens
 
