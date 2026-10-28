@@ -252,7 +252,11 @@ function EvidencePlate({
               count: formatNumber(receipts.length, locale),
             })}
           </Eyebrow>
-          <ReceiptList receipts={receipts} onOpenEmail={onOpenEmail} />
+          <ReceiptList
+            receipts={receipts}
+            relayMember={mine ? "self" : "colleague"}
+            onOpenEmail={onOpenEmail}
+          />
         </div>
       ) : (
         <p className="pn-counts t-sub">{t("contact.graph.countsOnly")}</p>

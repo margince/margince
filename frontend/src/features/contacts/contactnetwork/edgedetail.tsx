@@ -14,6 +14,7 @@ import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { Badge, Button, Card } from "../../../design-system/atoms";
 import { ErrorLine } from "../../../design-system/errorline";
+import type { RelaySend } from "../../../design-system/trust";
 import { formatNumber } from "../../../format/format";
 import { type Translator, useLocale, useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
@@ -76,6 +77,7 @@ export function EdgeDetail({
                 })
               : undefined;
         const receipts = edge.receipts ?? [];
+        const memberId = [node, otherNode].find((end) => end?.user_id)?.user_id;
         return (
           <div key={`${edge.from}->${edge.to}`}>
             <p className="pn-band">
@@ -90,7 +92,11 @@ export function EdgeDetail({
               })}
             </p>
             {receipts.length > 0 ? (
-              <ReceiptList receipts={receipts} onOpenEmail={onOpenEmail} />
+              <ReceiptList
+                receipts={receipts}
+                relayMember={relayMemberOf(memberId, viewerId)}
+                onOpenEmail={onOpenEmail}
+              />
             ) : (
               <p className="pn-counts t-sub">{t("contact.graph.countsOnly")}</p>
             )}
@@ -160,6 +166,16 @@ function RecordWorksWith({
       )}
     </p>
   );
+}
+
+function relayMemberOf(
+  memberId: string | null | undefined,
+  viewerId: string | undefined,
+): RelaySend["member"] {
+  if (!memberId || viewerId === undefined) {
+    return "unknown";
+  }
+  return memberId === viewerId ? "self" : "colleague";
 }
 
 function nameFor(

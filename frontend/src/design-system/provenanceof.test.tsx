@@ -3,7 +3,7 @@ import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { ProvenanceTag } from "./provenance";
-import { provenanceOf, withCreator } from "./provenanceof";
+import { provenanceOf, withControllerSend, withCreator } from "./provenanceof";
 
 afterEach(() => {
   cleanup();
@@ -382,5 +382,30 @@ describe("withCreator", () => {
     expect(
       withCreator(human, { ...agent, actor_type: "human", actor_id: "x" }),
     ).toBe(human);
+  });
+});
+
+describe("withControllerSend", () => {
+  const REP = "4f1c7a2e-8b3d-4e5f-9a6b-7c8d9e0f1a2b";
+  const SEND = { from_address: "privacy@kps.test" };
+
+  it("names the member only against a known reader", () => {
+    const member = (viewer?: string) => {
+      const tag = withControllerSend(
+        provenanceOf(`human:${REP}`, viewer),
+        SEND,
+        viewer,
+      );
+      return tag.kind === "system" ? tag.relay?.member : tag.kind;
+    };
+    expect(member(REP)).toBe("self");
+    expect(member("0b9d2a71-3c5e-4f18-8a6d-7e2c1b4f9a03")).toBe("colleague");
+    expect(member(undefined)).toBe("unknown");
+  });
+
+  it("leaves a row the relay did not send as captured_by says", () => {
+    const human = provenanceOf(`human:${REP}`, REP);
+    expect(withControllerSend(human, null, REP)).toBe(human);
+    expect(withControllerSend(human, undefined, REP)).toBe(human);
   });
 });
