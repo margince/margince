@@ -761,7 +761,7 @@ A declared kind needs no extra code to show up in search or to be listed and fil
 | Where | What core does with the kind |
 |---|---|
 | `GET /v1/search` | Takes `ext:<unit>:<kind>` in `types`, and returns hits of that `type`. The title is the `LabelField` of the `Timeline`, or else the first `NaturalKey` field. A hit has no snippet. A seat with no `read` right on the kind gets no hit of it. An archived row is never a hit. |
-| `GET /v1/filters/vocabulary` and `POST /v1/filters/preview` | Take the kind as `resource`. Every declared field is a text field. A preview shows `id` and the declared fields as columns. |
+| `GET /v1/filters/vocabulary` and `POST /v1/filters/preview` | Take the kind as `resource`. A declared field is a text field, or a choice when it lists `Options`. A preview shows `id` and the declared fields as columns. |
 | Lists | A Shortlist or a Live List takes the kind as its `entity_type`. A member of another type is refused with `entity_type_mismatch`. |
 | Saved views | Take the kind as `resource`. A kind no unit declares is refused. |
 | Filters screen | Offers each kind the seat may read after the four core record types. |
