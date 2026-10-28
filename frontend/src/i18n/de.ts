@@ -15353,6 +15353,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.memory.channelTask": "Aufgabe",
   "contact.memory.replied": "Beantwortet",
   "contact.memory.unanswered": "Unbeantwortet",
+  "contact.memory.view": "Ansehen",
+  "contact.memory.viewEntry": "{title} ansehen",
 
   "contact.mayBeDone.notYet": "Noch nicht",
   "contact.rail.blocked": "Blockiert",
