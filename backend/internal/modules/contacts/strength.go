@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -83,6 +84,10 @@ type RelationshipStrength struct {
 	// in order to use one of them, which is the payload growing with history
 	// that this fold exists to avoid.
 	LastInboundActivity *ids.ActivityID
+	// LastInboundMove is the History badge's move on LastInboundActivity when
+	// that is a mail, filled by compose from activities. Nil leaves the
+	// direction dates to decide, as they do for a call or a meeting.
+	LastInboundMove *crmcontracts.EmailSummaryMove
 }
 
 // strengthInteractionUnit is what one interaction is, from relstrength's shared
