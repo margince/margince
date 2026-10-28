@@ -173,7 +173,8 @@ type Service struct {
 	employers ContactEmployers
 	// dealMoves is OPTIONAL in the same way: nil means a deal row names its
 	// problem and no step, which is what every deal row did before this seam.
-	dealMoves DealMoves
+	dealMoves        DealMoves
+	currentDealMoves *preparedDealMoves
 	// dealStandings is OPTIONAL in the same way: nil means a deal row says what
 	// to do and not how the deal is standing, which is what every deal row did
 	// before this seam. dealstanding.go states the three-source order.

@@ -16,6 +16,7 @@ type Situation = "task" | "request" | "covered";
 function panel(
   writer: WrittenBy,
   situation: Situation = "task",
+  coverage?: components["schemas"]["MailCaptureCoverage"]["state"],
   withNextTask = false,
 ) {
   const request = situation !== "task";
@@ -65,6 +66,16 @@ function panel(
       "GET /deals/demo-deal/status": () =>
         jsonResponse({
           deal_id: "demo-deal",
+          ...(coverage
+            ? {
+                mail_coverage: {
+                  channel: "email",
+                  state: coverage,
+                  interval_to: "2026-09-05T09:00:00Z",
+                  evaluated_at: "2026-09-05T09:00:00Z",
+                },
+              }
+            : {}),
           story: {
             sentences: [
               {
@@ -111,7 +122,9 @@ type Story = StoryObj;
 
 export const ExistingTask: Story = { render: panel("model") };
 export const ComposedBrief: Story = { render: panel("deterministic") };
-export const WithNextTask: Story = { render: panel("model", "task", true) };
+export const WithNextTask: Story = {
+  render: panel("model", "task", undefined, true),
+};
 export const ExistingTaskDark: Story = {
   globals: { theme: "dark" },
   render: panel("model"),
@@ -129,4 +142,11 @@ export const RequestAlreadyCovered: Story = {
 export const RequestAlreadyCoveredDark: Story = {
   ...RequestAlreadyCovered,
   globals: { theme: "dark" },
+};
+
+export const CurrentRequestWithUnavailableCapture: Story = {
+  render: panel("deterministic", "covered", "unavailable"),
+};
+export const HistoricalReviewWithPartialCapture: Story = {
+  render: panel("deterministic", "request", "partial"),
 };

@@ -239,6 +239,9 @@ func timelineKeyset(in ListActivitiesInput, sorted *storekit.ListSort, arg func(
 // shrink that set further.
 func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 	var where []string
+	if in.InteractionsAsOf != nil {
+		where = append(where, relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d", arg(*in.InteractionsAsOf))))
+	}
 	if in.ThreadKey != nil && *in.ThreadKey != "" {
 		where = append(where, sprintf("a.thread_key = $%d", arg(*in.ThreadKey)))
 	}

@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -104,7 +105,7 @@ func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyIn
 			WHERE contact_id = $1 AND `+employment.CurrentPrimarySlotSQL("")+`)
 		ON CONFLICT DO NOTHING
 		RETURNING id`,
-		contactID, companyID, in.Source, in.CapturedBy, domain, in.ActivityID, mailClockSkewAllowance).Scan(&edgeID)
+		contactID, companyID, in.Source, in.CapturedBy, owndomain.Fold(domain), in.ActivityID, mailClockSkewAllowance).Scan(&edgeID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Either guard skipped it: the contact already has a current primary
 		// employer, or this exact edge already exists. Only the second has

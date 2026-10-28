@@ -82,6 +82,8 @@ var taskSourceWriters = map[string][]string{
 	"modules/activities/handlers_activity.go:LogActivity":                 {writesHumanTask},
 	"modules/activities/handlers_task.go:CreateTask":                      {writesHumanTask},
 	"modules/activities/handlers_task.go:TaskInputFrom":                   {writesHumanTask},
+	"modules/activities/recommendation.go:checkTaskRecommendation":        {provenance.AcceptedRecommendationSource},
+	"compose/taskrecommendationseam.go:taskRecommendationFrom":            {writesHumanTask},
 	"modules/activities/requesttask.go:emailRequestTask":                  {provenance.EmailRequestSource},
 	"compose/csvactivitywriter.go:createActivity":                         {writesCallerSource},
 	"compose/extcore.go:Create":                                           {writesCallerSource},

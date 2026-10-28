@@ -1,0 +1,23 @@
+{
+  "scenario": "case64_catch_me_up_and_the_brief",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gpt:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "usage": {
+    "input_tokens": 80012,
+    "output_tokens": 4699,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 766848,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  }
+}

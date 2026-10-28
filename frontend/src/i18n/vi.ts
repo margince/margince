@@ -15,58 +15,101 @@ import type { MessageKey } from "./en";
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.signal.updated.label": "Đổi thành viên phụ trách cảnh báo",
-  "webhooks.event.signal.updated.when": "Khi cảnh báo được chuyển sang thành viên giữ lại lúc gộp tài khoản trùng.",
+  "webhooks.event.signal.updated.when":
+    "Khi cảnh báo được chuyển sang thành viên giữ lại lúc gộp tài khoản trùng.",
   "webhooks.event.user.updated.label": "Đổi thiết lập thành viên",
-  "webhooks.event.user.updated.when": "Khi quản trị viên lưu hồ sơ thành viên hoặc gộp tài khoản trùng.",
+  "webhooks.event.user.updated.when":
+    "Khi quản trị viên lưu hồ sơ thành viên hoặc gộp tài khoản trùng.",
 
   "approval.kind.merge_members": "Gộp tài khoản thành viên",
-  "users.retirement.approval_decisions": "Xử lý các yêu cầu phê duyệt đang chờ thành viên này.",
-  "users.retirement.automations": "Tạm dừng hoặc giao lại các quy trình tự động của thành viên này.",
-  "users.retirement.booking_pages": "Xóa các trang đặt lịch của thành viên này.",
-  "users.retirement.data_requests": "Giao lại các yêu cầu dữ liệu đang mở của thành viên này.",
-  "users.retirement.deal_rooms": "Giao lại các Deal Room đang mở của thành viên này.",
-  "users.retirement.introductions": "Đóng các lượt giới thiệu đang chờ của thành viên này.",
-  "users.retirement.lists": "Giao lại hoặc chuyển các danh sách của thành viên này vào kho lưu trữ.",
-  "users.retirement.stewarded_lists": "Giao lại hoặc chuyển các danh sách do thành viên này phụ trách vào kho lưu trữ.",
-  "users.retirement.mail_drafts": "Gửi hoặc bỏ các email nháp đã lưu của thành viên này.",
-  "users.retirement.meeting_invitations": "Hủy các lời mời họp đang mở của thành viên này.",
-  "users.retirement.meeting_proposals": "Xử lý các đề xuất họp của thành viên này.",
-  "users.retirement.privacy_notices": "Giao lại các thông báo quyền riêng tư đang mở của thành viên này.",
-  "users.retirement.record_responsibilities": "Giao lại các trách nhiệm trên hồ sơ của thành viên này.",
-  "users.retirement.reports": "Giao lại hoặc chuyển các báo cáo của thành viên này vào kho lưu trữ.",
-  "users.retirement.report_schedules": "Tắt các lịch báo cáo của thành viên này.",
-  "users.retirement.saved_views": "Xóa các chế độ xem đã lưu của thành viên này.",
-  "users.retirement.scheduled_mail": "Hủy các email đã lên lịch của thành viên này.",
-  "users.retirement.handoffs": "Giao lại các lượt bàn giao đang mở của thành viên này.",
-  "users.retirement.voice_profiles": "Chuyển các hồ sơ giọng văn của thành viên này vào kho lưu trữ.",
-  "users.retirement.web_forms": "Tạm dừng hoặc chuyển giao biểu mẫu trang web của thành viên này.",
-  "users.retirement.webhooks": "Giao lại hoặc tắt các webhook của thành viên này.",
-  "users.retirement.weekly_plans": "Đóng các kế hoạch tuần đang mở của thành viên này.",
-  "users.retirement.analytics_shares": "Thu hồi các liên kết chia sẻ phân tích đang hoạt động theo thành viên này.",
-  "users.retirement.source_used": "Chỉ có thể gộp tài khoản nhập hoặc được mời chưa thiết lập đăng nhập. Với tài khoản đã thiết lập, hãy bàn giao công việc rồi tắt thành viên.",
-  "users.retirement.self_survivor": "Chọn một thành viên khác bạn làm tài khoản giữ lại.",
+  "users.retirement.approval_decisions":
+    "Xử lý các yêu cầu phê duyệt đang chờ thành viên này.",
+  "users.retirement.automations":
+    "Tạm dừng hoặc giao lại các quy trình tự động của thành viên này.",
+  "users.retirement.booking_pages":
+    "Xóa các trang đặt lịch của thành viên này.",
+  "users.retirement.data_requests":
+    "Giao lại các yêu cầu dữ liệu đang mở của thành viên này.",
+  "users.retirement.deal_rooms":
+    "Giao lại các Deal Room đang mở của thành viên này.",
+  "users.retirement.introductions":
+    "Đóng các lượt giới thiệu đang chờ của thành viên này.",
+  "users.retirement.lists":
+    "Giao lại hoặc chuyển các danh sách của thành viên này vào kho lưu trữ.",
+  "users.retirement.stewarded_lists":
+    "Giao lại hoặc chuyển các danh sách do thành viên này phụ trách vào kho lưu trữ.",
+  "users.retirement.mail_drafts":
+    "Gửi hoặc bỏ các email nháp đã lưu của thành viên này.",
+  "users.retirement.meeting_invitations":
+    "Hủy các lời mời họp đang mở của thành viên này.",
+  "users.retirement.meeting_proposals":
+    "Xử lý các đề xuất họp của thành viên này.",
+  "users.retirement.privacy_notices":
+    "Giao lại các thông báo quyền riêng tư đang mở của thành viên này.",
+  "users.retirement.record_responsibilities":
+    "Giao lại các trách nhiệm trên hồ sơ của thành viên này.",
+  "users.retirement.reports":
+    "Giao lại hoặc chuyển các báo cáo của thành viên này vào kho lưu trữ.",
+  "users.retirement.report_schedules":
+    "Tắt các lịch báo cáo của thành viên này.",
+  "users.retirement.saved_views":
+    "Xóa các chế độ xem đã lưu của thành viên này.",
+  "users.retirement.scheduled_mail":
+    "Hủy các email đã lên lịch của thành viên này.",
+  "users.retirement.handoffs":
+    "Giao lại các lượt bàn giao đang mở của thành viên này.",
+  "users.retirement.voice_profiles":
+    "Chuyển các hồ sơ giọng văn của thành viên này vào kho lưu trữ.",
+  "users.retirement.web_forms":
+    "Tạm dừng hoặc chuyển giao biểu mẫu trang web của thành viên này.",
+  "users.retirement.webhooks":
+    "Giao lại hoặc tắt các webhook của thành viên này.",
+  "users.retirement.weekly_plans":
+    "Đóng các kế hoạch tuần đang mở của thành viên này.",
+  "users.retirement.analytics_shares":
+    "Thu hồi các liên kết chia sẻ phân tích đang hoạt động theo thành viên này.",
+  "users.retirement.source_used":
+    "Chỉ có thể gộp tài khoản nhập hoặc được mời chưa thiết lập đăng nhập. Với tài khoản đã thiết lập, hãy bàn giao công việc rồi tắt thành viên.",
+  "users.retirement.self_survivor":
+    "Chọn một thành viên khác bạn làm tài khoản giữ lại.",
   "users.retirement.deactivate_first": "Tắt thành viên này trước khi xóa.",
   "users.retirement.choose_survivor": "Chọn thành viên giữ lại.",
-  "users.retirement.choose_receiver": "Chọn đồng nghiệp nhận công việc còn lại.",
-  "users.retirement.private_tasks": "Một số nhiệm vụ đang mở nằm ngoài quyền truy cập của bạn. Nhờ thành viên phụ trách chia sẻ hoặc giao lại trước khi xóa.",
-  "users.retirement.work_not_transferable": "Bạn không có quyền sửa một số công việc hoặc hồ sơ đang được giao. Giao lại trước khi tiếp tục.",
-  "users.retirement.state_changed": "Thành viên này đã thay đổi. Yêu cầu bản xem trước mới.",
-  "users.retirement.source_signed_out": "Tài khoản bị xóa sẽ đăng xuất ở mọi nơi.",
-  "users.retirement.connectors_reconnect": "Cần kết nối lại các dịch vụ dưới thành viên giữ lại.",
-  "users.retirement.survivor_access": "Thành viên giữ lại giữ nguyên vai trò, nhóm và thiết lập đăng nhập, đồng thời kế thừa quyền truy cập cá nhân và thư từ của tài khoản được gộp.",
-  "users.retirement.original_attribution": "Lịch sử giữ nguyên tên thành viên thực hiện ban đầu.",
-  "users.retirement.private_alerts_archived": "Các cảnh báo cá nhân được chuyển vào kho lưu trữ.",
-  "users.retirement.crm_private_records_move": "Đồng nghiệp nhận có thể xem các hồ sơ CRM được bàn giao, kể cả liên hệ và công ty riêng tư.",
-  "users.retirement.private_audiences_retained": "Email và hoạt động giữ nguyên phạm vi chia sẻ. Thành viên nhận có thể tìm thấy hoạt động đã chia sẻ với các thành viên có quyền xem hồ sơ được bàn giao.",
-  "users.retirement.email_reserved": "Không thể hoàn tác việc xóa tại đây. Email ban đầu vẫn được giữ riêng. Dùng Tắt nếu đồng nghiệp này có thể quay lại.",
-  "users.retirement.survivor_inactive": "Thành viên giữ lại đang bị tắt. Bật lại để đăng nhập và thêm vào nhóm.",
+  "users.retirement.choose_receiver":
+    "Chọn đồng nghiệp nhận công việc còn lại.",
+  "users.retirement.private_tasks":
+    "Một số nhiệm vụ đang mở nằm ngoài quyền truy cập của bạn. Nhờ thành viên phụ trách chia sẻ hoặc giao lại trước khi xóa.",
+  "users.retirement.work_not_transferable":
+    "Bạn không có quyền sửa một số công việc hoặc hồ sơ đang được giao. Giao lại trước khi tiếp tục.",
+  "users.retirement.state_changed":
+    "Thành viên này đã thay đổi. Yêu cầu bản xem trước mới.",
+  "users.retirement.source_signed_out":
+    "Tài khoản bị xóa sẽ đăng xuất ở mọi nơi.",
+  "users.retirement.connectors_reconnect":
+    "Cần kết nối lại các dịch vụ dưới thành viên giữ lại.",
+  "users.retirement.survivor_access":
+    "Thành viên giữ lại giữ nguyên vai trò, nhóm và thiết lập đăng nhập, đồng thời kế thừa quyền truy cập cá nhân và thư từ của tài khoản được gộp.",
+  "users.retirement.original_attribution":
+    "Lịch sử giữ nguyên tên thành viên thực hiện ban đầu.",
+  "users.retirement.private_alerts_archived":
+    "Các cảnh báo cá nhân được chuyển vào kho lưu trữ.",
+  "users.retirement.crm_private_records_move":
+    "Đồng nghiệp nhận có thể xem các hồ sơ CRM được bàn giao, kể cả liên hệ và công ty riêng tư.",
+  "users.retirement.private_audiences_retained":
+    "Email và hoạt động giữ nguyên phạm vi chia sẻ. Thành viên nhận có thể tìm thấy hoạt động đã chia sẻ với các thành viên có quyền xem hồ sơ được bàn giao.",
+  "users.retirement.email_reserved":
+    "Không thể hoàn tác việc xóa tại đây. Email ban đầu vẫn được giữ riêng. Dùng Tắt nếu đồng nghiệp này có thể quay lại.",
+  "users.retirement.survivor_inactive":
+    "Thành viên giữ lại đang bị tắt. Bật lại để đăng nhập và thêm vào nhóm.",
   "users.retirement.unknown": "Xử lý công việc còn lại trước khi tiếp tục.",
-  "users.retirement.protected_email": "Địa chỉ đăng nhập này đã được sử dụng và không thể sửa tại đây.",
+  "users.retirement.protected_email":
+    "Địa chỉ đăng nhập này đã được sử dụng và không thể sửa tại đây.",
   "users.mergeSource": "Tài khoản trùng lặp",
   "users.mergedAccounts": "Các tài khoản đã gộp vào thành viên này",
   "users.reloadMember": "Tải lại thành viên",
-  "users.teamAdminOnly": "Chỉ quản trị viên mới có thể thay đổi nhóm của thành viên.",
-  "users.visibleWorkNote": "Số liệu thể hiện công việc bạn được phép xem. Khi gộp, quyền truy cập hồ sơ cá nhân và thư từ riêng tư vẫn được giữ cho cùng một thành viên.",
+  "users.teamAdminOnly":
+    "Chỉ quản trị viên mới có thể thay đổi nhóm của thành viên.",
+  "users.visibleWorkNote":
+    "Số liệu thể hiện công việc bạn được phép xem. Khi gộp, quyền truy cập hồ sơ cá nhân và thư từ riêng tư vẫn được giữ cho cùng một thành viên.",
   "users.search": "Tìm thành viên",
   "users.searchPlaceholder": "Tên hoặc email",
   "users.clearSearch": "Xóa tìm kiếm",
@@ -75,9 +118,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.edit": "Sửa thành viên",
   "users.editTitle": "Sửa {name}",
   "users.saved": "Đã lưu thành viên.",
-  "users.invitedSetup": "Tài khoản đã được bật và đang chờ thiết lập đăng nhập. Bạn có thể sửa tên, vai trò và nhóm ngay bây giờ.",
+  "users.invitedSetup":
+    "Tài khoản đã được bật và đang chờ thiết lập đăng nhập. Bạn có thể sửa tên, vai trò và nhóm ngay bây giờ.",
   "users.editInactive": "Kích hoạt lại thành viên trước khi thêm vào nhóm.",
-  "users.emailChangeEndsSessions": "Đổi email tài khoản sẽ đăng xuất thành viên và hủy các liên kết đăng nhập hiện có.",
+  "users.emailChangeEndsSessions":
+    "Đổi email tài khoản sẽ đăng xuất thành viên và hủy các liên kết đăng nhập hiện có.",
   "users.keepRoles": "Giữ các vai trò hiện tại",
   "users.editCancel": "Hủy",
   "users.editSave": "Lưu thành viên",
@@ -85,8 +130,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.remove": "Xóa thành viên",
   "users.mergeTitle": "Gộp {name} vào tài khoản khác?",
   "users.removeTitle": "Xóa {name}?",
-  "users.mergeBody": "Chọn tài khoản giữ lại. Công việc được chuyển sang tài khoản đó và tài khoản trùng được xóa khỏi danh sách thành viên.",
-  "users.removeBody": "Tài khoản này sẽ bị xóa khỏi danh sách thành viên. Lịch sử vẫn ghi nhận thành viên thực hiện ban đầu. Chọn thành viên nhận nếu còn công việc cần chuyển.",
+  "users.mergeBody":
+    "Chọn tài khoản giữ lại. Công việc được chuyển sang tài khoản đó và tài khoản trùng được xóa khỏi danh sách thành viên.",
+  "users.removeBody":
+    "Tài khoản này sẽ bị xóa khỏi danh sách thành viên. Lịch sử vẫn ghi nhận thành viên thực hiện ban đầu. Chọn thành viên nhận nếu còn công việc cần chuyển.",
   "users.survivingMember": "Tài khoản giữ lại",
   "users.noHandover": "Không cần bàn giao",
   "users.chooseMember": "Chọn thành viên",
@@ -1553,7 +1600,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.rates": "Đầu vào {input} · Đầu ra {output} mỗi 1 triệu token",
 
   "brief.weekly.tasksCompleted": "Việc cần làm đã hoàn tất",
-  "brief.weekly.noMeetings": "Không có cuộc họp nào",
+  "brief.weekly.noMeetings": "Chưa ghi nhận cuộc họp nào",
   "brief.weekly.noLeads": "Chưa nhận lead nào",
   "brief.weekly.noCommitments": "Không có cam kết đến hạn",
   "brief.weekly.basis":
@@ -2559,6 +2606,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "partner.marginTier": "Mức hoa hồng đối tác",
   "partner.marginTierHint":
     "Tỷ lệ đối tác nhận trên mỗi deal thắng do đối tác mang về. Giới thiệu: đối tác chỉ giới thiệu khách hàng. Hợp tác tích cực: hai bên cùng làm deal. Đối tác tự chốt: đối tác tự bán. Để trống khi thỏa thuận với đối tác trả theo cách khác.",
+  "partner.writeRefused":
+    "Vai trò của bạn không thể thay đổi chương trình đối tác của công ty này. Liên hệ quản trị viên.",
+  "partner.marginTierRefused":
+    "Vai trò của bạn không thể chọn mức hoa hồng đối tác. Liên hệ quản trị viên.",
   "partner.stage": "Giai đoạn quan hệ",
   "partner.nextStep": "Bước tiếp theo",
   "partner.nextStepDue": "Hạn bước tiếp theo",
@@ -2648,6 +2699,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.loading": "Đang tải…",
   "ref.nameLoadFailed": "Không thể tải tên",
   "ref.memberLeft": "{name} (đã nghỉ)",
+  "roster.failedUsers": "Không thể tải danh sách thành viên.",
+  "roster.failedTeams": "Không thể tải danh sách nhóm.",
   "owner.rosterFailed":
     "Không thể tải danh sách thành viên. Hãy tải lại trang để chọn một người.",
   "ref.notInRoster":
@@ -3064,15 +3117,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.health.payment.paidOnTime_other":
     "{count} trên {total} hóa đơn được thanh toán đúng hạn",
   "co.health.reason.neverWritten":
-    "Chưa có tin nhắn nào từ họ và chưa có cuộc họp nào.",
+    "Chưa ghi nhận tin nhắn nào từ họ hoặc cuộc họp nào.",
   "co.health.reason.quiet_one":
-    "Chưa có phản hồi và chưa có cuộc họp nào trong {days} ngày qua.",
+    "Chưa ghi nhận phản hồi hoặc cuộc họp trong {days} ngày.",
   "co.health.reason.quiet_other":
-    "Chưa có phản hồi và chưa có cuộc họp nào trong {days} ngày qua.",
+    "Chưa ghi nhận phản hồi hoặc cuộc họp trong {days} ngày.",
   "co.health.reason.quietSince_one":
-    "Chưa có phản hồi hay cuộc họp nào từ {at} ({days} ngày).",
+    "Chưa ghi nhận phản hồi hoặc cuộc họp từ {at} ({days} ngày).",
   "co.health.reason.quietSince_other":
-    "Chưa có phản hồi hay cuộc họp nào từ {at} ({days} ngày).",
+    "Chưa ghi nhận phản hồi hoặc cuộc họp từ {at} ({days} ngày).",
   "co.health.reason.meetingBooked": "Đã đặt một cuộc họp vào {at}.",
   "co.health.reason.lastMetToday": "Đã họp hôm nay.",
   "co.health.reason.lastMet_one": "Lần họp gần nhất cách đây {days} ngày.",
@@ -3096,6 +3149,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.health.reason.dealsNoneStalled_other":
     "{count} deal đang mở, không deal nào bị đình trệ.",
   "company.partnerSetUp": "Thiết lập chương trình đối tác",
+  "company.partnerSetUpUnreadable":
+    "Vai trò của bạn không thể xem chương trình đối tác. Liên hệ quản trị viên.",
   "signal.kind.stalled_deal": "Deal bị đình trệ",
   "signal.kind.champion_left": "Người ủng hộ đã rời đi",
   "signal.kind.reengagement": "Nối lại liên hệ",
@@ -3105,7 +3160,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "signal.kind.contract_ended": "Hợp đồng sắp kết thúc",
   "signal.kind.new_opportunity": "Cơ hội mới",
   "signal.kind.commitment_made": "Đã đưa ra cam kết",
-  "signal.kind.ghosted_thread": "Chưa phản hồi",
+  "signal.kind.ghosted_thread": "Chưa ghi nhận phản hồi",
   "signal.kind.project_gone_quiet": "Dự án đã im lặng",
   "signal.kind.funding": "Gọi vốn",
   "signal.kind.leadership_change": "Thay đổi lãnh đạo",
@@ -3704,7 +3759,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.ask.q.whats_changed": "Gần đây có gì thay đổi?",
   "co.ask.nothing": "Không tìm thấy câu trả lời trong các hồ sơ bạn được xem.",
   "co.ask.failed": "Không thể trả lời câu hỏi. Thử lại.",
-  "co.suggest.kind.no_reply": "Chưa phản hồi",
+  "co.suggest.kind.no_reply": "Chưa ghi nhận phản hồi",
   "co.suggest.kind.stalled_deal": "Deal đình trệ",
   "co.suggest.kind.no_next_step": "Chưa có bước tiếp theo",
   "co.suggest.kind.lifecycle_conflict": "Mâu thuẫn vòng đời",
@@ -4134,7 +4189,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.contacts.board.change": "Đổi vai trò",
   "co.reach.waiting": "Cần trả lời",
   "co.reach.answered": "Đã trả lời",
-  "co.reach.silent": "Chưa phản hồi",
+  "co.reach.silent": "Chưa ghi nhận phản hồi",
   "co.reach.lapsed": "Đã im lặng",
   "co.reach.untried": "Chưa liên hệ",
   "co.role.champion": "người ủng hộ",
@@ -4794,7 +4849,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.standing.dims": "Các chỉ số của deal",
   "deal.standing.momentum": "Đà tiến triển",
   "deal.standing.momentum.active": "Đang hoạt động",
-  "deal.standing.momentum.activeSub": "hoạt động gần nhất được lưu trong deal này {date}",
+  "deal.standing.momentum.activeSub":
+    "hoạt động gần nhất được lưu trong deal này {date}",
   "deal.standing.momentum.stalledSub": "không có hoạt động từ {date}",
   "deal.standing.momentum.onHold": "Tạm dừng",
   "deal.standing.momentum.onHoldSub": "đến {date}",
@@ -4828,7 +4884,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.standing.timeline.booked": "đã đặt lịch",
   "deal.standing.timeline.theyWrote": "Họ đã viết",
   "deal.standing.timeline.currentRequest": "yêu cầu hiện tại từ tin nhắn này",
-  "deal.standing.timeline.lastContact": "trao đổi gần nhất được lưu trong deal này",
+  "deal.standing.timeline.lastContact":
+    "trao đổi gần nhất được lưu trong deal này",
   "deal.standing.next.openMessage": "Mở tin nhắn",
   "deal.standing.coverage": "Độ phủ",
   "deal.standing.risk": "Rủi ro",
@@ -4965,6 +5022,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "assignments.kindTeam": "Nhóm",
   "assignments.who": "Ai",
   "assignments.findColleague": "Tìm đồng nghiệp",
+  "assignments.invited": "Đã mời, chưa đăng nhập",
+  "assignments.noColleagueFound":
+    "Không tìm thấy đồng nghiệp. Chỉ đồng nghiệp có tài khoản Margince mới được giao. Liên hệ quản trị viên để mời họ.",
   "assignments.findTeam": "Tìm nhóm",
   "assignments.role": "Vai trò",
   "assignments.rolePlaceholder": "Chọn vai trò",
@@ -6272,6 +6332,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "calendar.patternMonth": "mm",
   "calendar.patternYear": "yyyy",
   "calendar.invalidDate": "Nhập ngày theo dạng {pattern}.",
+  "calendar.patternHour": "gg",
+  "calendar.patternMinute": "pp",
+  "calendar.invalidTime": "Nhập giờ theo dạng {pattern}.",
+  "calendar.anyMonth": "Mọi tháng",
+  "calendar.year": "Năm",
   "calendar.earliest": "Ngày sớm nhất: {date}",
   "calendar.latest": "Ngày muộn nhất: {date}",
   "compose.schedulePick": "Chọn ngày và giờ",
@@ -9411,7 +9476,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.reconnectToSend":
     "Kết nối lại hộp thư này để gửi thư từ đó. Hộp thư kết nối từ trước khi có tính năng gửi không thể nâng cấp tại chỗ; nhà cung cấp chỉ cấp quyền gửi trên kết nối mới.",
   "connectors.lastSynced": "Đồng bộ lần cuối {at}",
-  "connectors.neverSynced": "Chờ lần đồng bộ đầu tiên",
+  "connectors.neverSynced": "Chưa ghi nhận lần đồng bộ thành công",
   "connectors.notConfigured": "Bản cài đặt này chưa cấu hình thu thập thư.",
   "connectors.reconnect": "Kết nối lại",
   "connectors.disconnect": "Ngắt kết nối",
@@ -10954,6 +11019,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Các hệ thống trao đổi hồ sơ với bản cài đặt này.",
   "settings.page.knowledge.sub":
     "Tài liệu mà bản nháp và câu trả lời có thể dùng.",
+  "settings.page.web-forms.sub":
+    "Biểu mẫu trên trang web gửi mỗi yêu cầu vào thành một lead, hoặc thành ghi chú trên lead hay liên hệ đã gửi nó.",
   "settings.page.import.sub": "Nhập hồ sơ từ tệp, mỗi lần một đợt.",
   "settings.page.models.sub":
     "Nhà cung cấp nào xử lý từng loại việc, và nhà cung cấp đó có khả dụng không.",
@@ -11161,6 +11228,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.laneRestricted": "Bị giữ",
   "privacy.requestsEmpty": "Chưa có yêu cầu nào về quyền riêng tư.",
   "settings.tab.integrations": "Tích hợp",
+  "settings.tab.web-forms": "Biểu mẫu trang web",
   "settings.tab.capture": "Quy tắc thu thập",
   "settings.tab.knowledge": "Tài liệu",
   "corpusAsk.title": "Hỏi tài liệu",
@@ -13663,14 +13731,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "financeSource.cancel": "Hủy",
 
   "webForms.title": "Biểu mẫu trang web",
-  "webForms.sub": "Biểu mẫu trên trang web. Mỗi yêu cầu thành một lead, hoặc một ghi chú trên lead hay liên hệ có email đó.",
-  "webForms.readOnly": "Chỉ đọc: chỉ vai trò có quyền tích hợp mới đổi được biểu mẫu trang web.",
+  "webForms.sub":
+    "Biểu mẫu trên trang web. Mỗi yêu cầu thành một lead, hoặc một ghi chú trên lead hay liên hệ có email đó.",
+  "webForms.readOnly":
+    "Chỉ đọc: chỉ vai trò có quyền tích hợp mới đổi được biểu mẫu trang web.",
   "webForms.new": "Biểu mẫu trang web mới",
   "webForms.state.active": "Đang hoạt động",
   "webForms.state.paused": "Tạm dừng",
-  "webForms.sender.browser": "Trang web",
+  "webForms.sender.browser": "Trang web của bạn",
   "webForms.sender.server": "Máy chủ trang web",
-  "webForms.sender.webflow": "Webflow",
+  "webForms.sender.webflow": "Webhook Webflow",
   "webForms.sender.typeform": "Typeform",
   "webForms.sender.tally": "Tally",
   "webForms.senderLine.browser": "Gửi từ các trang web đã liệt kê",
@@ -13683,60 +13753,108 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.edit": "Sửa",
   "webForms.pause": "Tạm dừng biểu mẫu",
   "webForms.resume": "Tiếp tục biểu mẫu",
-  "webForms.rotate": "Đổi khóa ký",
-  "webForms.rotateConfirm.title": "Đổi khóa ký của biểu mẫu?",
-  "webForms.rotateConfirm.body": "Khóa hiện tại ngừng hoạt động ngay và khóa mới chỉ hiện một lần. Cập nhật máy chủ trang web của bạn ngay.",
+  "webForms.rotate": "Tạo khóa ký mới",
+  "webForms.rotateConfirm.title": "Tạo khóa ký mới cho biểu mẫu?",
+  "webForms.rotateConfirm.body":
+    "Khóa hiện tại ngừng hoạt động ngay và khóa mới chỉ hiện một lần. Hãy dán nó vào chỗ của khóa cũ ngay.",
   "webForms.archive": "Lưu trữ",
-  "webForms.archiveConfirm": "Sau khi lưu trữ, biểu mẫu này không nhận bài gửi nữa. Không thể hoàn tác.",
+  "webForms.archiveConfirm":
+    "Sau khi lưu trữ, biểu mẫu này không nhận bài gửi nữa. Không thể hoàn tác.",
   "webForms.archiveDone": "Đã lưu trữ biểu mẫu trang web",
   "webForms.drawer.editTitle": "Sửa biểu mẫu trang web",
-  "webForms.drawer.sub": "Mỗi bài gửi thành một lead kèm yêu cầu dưới dạng ghi chú. Lead hay liên hệ đã có email đó sẽ nhận ghi chú thay vào đó.",
+  "webForms.drawer.sub":
+    "Mỗi bài gửi thành một lead kèm yêu cầu dưới dạng ghi chú. Lead hay liên hệ đã có email đó sẽ nhận ghi chú thay vào đó.",
   "webForms.drawer.cancel": "Hủy",
   "webForms.drawer.save": "Lưu biểu mẫu",
   "webForms.drawer.create": "Tạo biểu mẫu",
   "webForms.field.name": "Tên",
-  "webForms.field.nameHint": "Hiện trên ghi chú của mỗi lead, ví dụ Trang liên hệ.",
-  "webForms.field.sender": "Gửi bởi",
-  "webForms.field.senderFixed": "Cố định khi biểu mẫu đã tồn tại. Tạo biểu mẫu mới để đổi.",
-  "webForms.senderHint.browser": "Biểu mẫu trên trang web gửi thẳng từ trình duyệt của khách.",
-  "webForms.senderHint.server": "Máy chủ trang web chuyển tiếp mỗi bài gửi, ký bằng một khóa ký.",
-  "webForms.senderHint.webflow": "Webflow gửi mỗi bài gửi biểu mẫu dưới dạng webhook có chữ ký.",
-  "webForms.senderHint.typeform": "Typeform gửi mỗi câu trả lời dưới dạng webhook có chữ ký.",
-  "webForms.senderHint.tally": "Tally gửi mỗi câu trả lời dưới dạng webhook có chữ ký.",
+  "webForms.field.nameHint":
+    "Hiện trên ghi chú của mỗi lead, ví dụ Trang liên hệ.",
+  "webForms.field.sender": "Biểu mẫu của bạn nằm ở đâu?",
+  "webForms.field.senderFixed":
+    "Cố định khi biểu mẫu đã tồn tại. Tạo biểu mẫu mới để đổi.",
+  "webForms.senderHint.browser":
+    "Biểu mẫu trên trang của bạn, hoặc trong WordPress, Webflow hay công cụ dựng trang khác cho phép đặt nơi biểu mẫu gửi tới. Không cần lập trình viên.",
+  "webForms.senderHint.server":
+    "Dành cho lập trình viên: máy chủ trang web chuyển tiếp mỗi yêu cầu, có chữ ký.",
+  "webForms.senderHint.webflow":
+    "Dành cho lập trình viên: webhook tạo bằng API của Webflow. Với biểu mẫu Webflow, hãy chọn Trang web của bạn.",
+  "webForms.senderHint.typeform":
+    "Mỗi câu trả lời Typeform đến qua một webhook. Margince tạo khóa ký cho bạn.",
+  "webForms.senderHint.tally":
+    "Mỗi câu trả lời Tally đến qua một webhook. Margince tạo khóa ký cho bạn.",
   "webForms.field.origins": "Trang web",
-  "webForms.field.originsHint": "Mỗi dòng một địa chỉ. Bài gửi từ trang web khác bị từ chối.",
+  "webForms.field.originsHint":
+    "Mỗi dòng một địa chỉ. Bài gửi từ trang web khác bị từ chối.",
+  "webForms.required.name": "Nhập tên cho biểu mẫu này.",
+  "webForms.required.origins": "Nhập trang web gửi biểu mẫu này.",
+  "webForms.required.consentWording": "Nhập nội dung mà khách truy cập đồng ý.",
+  "webForms.field.originKept":
+    "{entry} được lưu thành {origin}: mọi trang của trang web đó đều có thể gửi.",
   "webForms.field.originsPlaceholder": "https://www.example.com",
   "webForms.field.senderSecret": "Khóa ký",
-  "webForms.field.senderSecretHint": "Khóa ký trong phần cài đặt webhook của công cụ, ít nhất 16 ký tự.",
+  "webForms.field.senderSecretHint":
+    "Khóa ký API Webflow trả về một lần khi tạo webhook. Webhook do một ứng dụng OAuth tạo thì được ký bằng client secret của ứng dụng đó. Để trống cho đến khi có: trước đó biểu mẫu không nhận bài gửi nào.",
   "webForms.field.senderSecretKeep": "Để trống để giữ khóa đã lưu.",
   "webForms.field.consentRequired": "Yêu cầu đồng ý trước khi nhận bài gửi",
   "webForms.field.consentWording": "Nội dung đồng ý",
-  "webForms.field.consentWordingHint": "Văn bản bạn đặt cạnh ô đánh dấu. Mỗi bài gửi có đánh dấu giữ văn bản này trong ghi chú làm bằng chứng.",
+  "webForms.field.consentWordingHint":
+    "Văn bản bạn đặt cạnh ô đánh dấu. Mỗi bài gửi có đánh dấu giữ văn bản này trong ghi chú làm bằng chứng.",
   "webForms.field.consentPolicyVersion": "Phiên bản chính sách quyền riêng tư",
-  "webForms.field.consentPolicyVersionHint": "Phiên bản chính sách mà nội dung dẫn tới.",
+  "webForms.field.consentPolicyVersionHint":
+    "Phiên bản chính sách mà nội dung dẫn tới.",
   "webForms.field.redirectUrl": "Trang cảm ơn",
-  "webForms.field.redirectUrlHint": "Nơi khách đến sau khi gửi. Để trống sẽ hiện thông báo thành công.",
+  "webForms.field.redirectUrlHint":
+    "Nơi khách đến sau khi gửi. Để trống sẽ hiện thông báo thành công.",
   "webForms.field.redirectUrlPlaceholder": "https://www.example.com/cam-on",
   "webForms.field.successMessage": "Thông báo thành công",
   "webForms.field.successMessageHint": "Hiện cho khách sau khi gửi.",
   "webForms.setup.title": "Kết nối {name}",
-  "webForms.setup.how.browser": "Dán biểu mẫu này vào trang web, hoặc trỏ biểu mẫu của bạn tới địa chỉ này và giữ nguyên tên trường.",
-  "webForms.setup.how.server": "Máy chủ của bạn gửi mỗi bài gửi tới địa chỉ này, ký như đoạn mã bên dưới.",
-  "webForms.setup.how.webflow": "Trong Webflow, thêm webhook bài gửi biểu mẫu gửi tới địa chỉ này.",
-  "webForms.setup.how.typeform": "Trong Typeform, thêm webhook ở mục Connect gửi tới địa chỉ này.",
-  "webForms.setup.how.tally": "Trong Tally, thêm webhook ở mục Integrations gửi tới địa chỉ này.",
   "webForms.setup.address": "Địa chỉ biểu mẫu",
   "webForms.setup.secret": "Khóa ký biểu mẫu",
-  "webForms.setup.secretWarning": "Khóa này chỉ hiện một lần. Lưu nó trên máy chủ của bạn dưới tên {name}.",
   "webForms.setup.snippet": "Mã để dán",
-  "webForms.setup.builderSecret": "Dùng cùng khóa ký mà bạn đã lưu trên biểu mẫu này.",
-  "webForms.setup.customFields": "Trường mang tên một trường tùy chỉnh của lead sẽ điền vào trường đó: {fields}. Giá trị mà trường đó không nhận sẽ được ghi vào ghi chú.",
+  "webForms.setup.customFields":
+    "Trường mang tên một trường tùy chỉnh của lead sẽ điền vào trường đó: {fields}. Giá trị mà trường đó không nhận sẽ được ghi vào ghi chú.",
   "webForms.setup.copy": "Sao chép mã",
   "webForms.setup.copySecret": "Sao chép khóa",
   "webForms.setup.copied": "Đã sao chép",
   "webForms.setup.copyFailed": "Chọn văn bản ở trên và sao chép thủ công.",
-  "webForms.setup.leaveWarning": "Đóng lại sẽ mất bản duy nhất của khóa này. Hãy sao chép trước.",
+  "webForms.setup.leaveWarning":
+    "Đóng lại sẽ mất bản duy nhất của khóa này. Hãy sao chép trước.",
   "webForms.setup.done": "Xong",
+  "webForms.guide": "Hướng dẫn từng bước",
+  "webForms.row.secretMissing": "Đang chờ khóa ký",
+  "webForms.setup.copyAddress": "Sao chép địa chỉ",
+  "webForms.steps.browser.address": "Sao chép địa chỉ biểu mẫu.",
+  "webForms.steps.browser.builder":
+    "Trong Webflow, WordPress hay công cụ dựng trang khác, mở phần cài đặt biểu mẫu. Đặt nơi gửi tới (Webflow gọi là Action) là địa chỉ này, và phương thức là POST.",
+  "webForms.steps.browser.fields":
+    "Đặt tên trường email là email. Margince cũng đọc full_name, phone, company và message, và giữ mọi trường khác trong ghi chú của lead.",
+  "webForms.steps.browser.code":
+    "Tự viết trang? Thay vào đó, dán đoạn mã này vào chỗ đặt biểu mẫu.",
+  "webForms.steps.endpoint": "Dán địa chỉ biểu mẫu làm địa chỉ của webhook.",
+  "webForms.steps.typeform.open":
+    "Trong Typeform, mở biểu mẫu, vào Connect, rồi Webhooks, và chọn Add a webhook.",
+  "webForms.steps.typeform.secret":
+    "Bật Secret trong cài đặt webhook, dán khóa ký biểu mẫu rồi lưu. Sau đó bật webhook: Typeform tạo nó ở trạng thái tắt.",
+  "webForms.steps.tally.open":
+    "Trong Tally, mở biểu mẫu, vào Integrations và kết nối Webhooks.",
+  "webForms.steps.tally.secret":
+    "Dán khóa ký biểu mẫu vào Signing secret, rồi lưu.",
+  "webForms.steps.server.secret":
+    "Lưu khóa ký biểu mẫu trên máy chủ trang web dưới tên {name}.",
+  "webForms.steps.server.address":
+    "Máy chủ của bạn gửi mỗi yêu cầu tới địa chỉ biểu mẫu.",
+  "webForms.steps.server.code":
+    "Đoạn mã này ký mỗi bài gửi. Lập trình viên của bạn có thể dùng nguyên như vậy.",
+  "webForms.steps.webflow.create":
+    "Tạo webhook bằng API của Webflow, với địa chỉ biểu mẫu làm URL.",
+  "webForms.steps.webflow.secret":
+    "API Webflow trả về khóa ký của webhook một lần. Webhook do một ứng dụng OAuth tạo thì được ký bằng client secret của ứng dụng đó. Dán khóa phù hợp vào Khóa ký trong mục Sửa của biểu mẫu này.",
+  "webForms.steps.test":
+    "Gửi một yêu cầu thử. Nó hiện thành một lead mới trong mục Lead, hoặc thành ghi chú trên lead hay liên hệ đã có email đó.",
+  "webForms.steps.secretShownOnce":
+    "Khóa ký chỉ hiện một lần, khi tạo biểu mẫu. Bị mất? Chọn Tạo khóa ký mới trong menu ⋯ của biểu mẫu.",
 
   "webhooks.title": "Webhook",
   "webhooks.readOnly":
@@ -14479,12 +14597,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.factReceipts_other": "{count} bằng chứng có thể xem",
   "contact.intro.verdictDirect": "Hỏi {name}: hai bên đã trao đổi với nhau.",
   "contact.intro.verdictOneSided":
-    "Hỏi {name}: đã viết cho liên hệ này nhưng chưa có hồi âm.",
+    "Hỏi {name}: đã viết cho liên hệ này nhưng chưa ghi nhận hồi âm.",
   "contact.intro.verdictVia":
     "Hỏi {name}: tiếp cận được liên hệ này qua {through}.",
   "contact.intro.verdictDirectYou": "Bạn đã trao đổi với liên hệ này.",
   "contact.intro.verdictOneSidedYou":
-    "Bạn đã viết cho liên hệ này nhưng chưa có hồi âm.",
+    "Bạn đã viết cho liên hệ này nhưng chưa ghi nhận hồi âm.",
   "contact.intro.verdictViaYou": "Bạn tiếp cận được họ qua {through}.",
   "contact.intro.ownRouteNoAsk":
     "Không cần nhờ ai. Viết trực tiếp cho liên hệ này.",
@@ -14817,13 +14935,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "contact.mayBeDone.notYet": "Chưa xong",
   "contact.rail.blocked": "Bị chặn",
-  "contact.standing.lastRecordedExchange": "từ lần trao đổi gần nhất được ghi nhận với liên hệ này",
+  "contact.standing.lastRecordedExchange":
+    "từ lần trao đổi gần nhất được ghi nhận với liên hệ này",
   "contact.standing.lastInbound": "Tin nhắn đến gần nhất",
   "contact.standing.direction.twoWay": "Cả hai bên đều đã viết.",
   "contact.standing.direction.inboundOnly":
     "Đến nay chỉ có họ viết. Nhóm của bạn chưa gửi gì.",
   "contact.standing.direction.outboundOnly":
-    "Đến nay chỉ có nhóm của bạn viết. Chưa có trả lời.",
+    "Chỉ ghi nhận tin nhắn gửi đi từ nhóm của bạn. Chưa ghi nhận trả lời.",
   "contact.standing.direction.none": "Chưa có tin nhắn theo chiều nào.",
   "contact.subtitle.at": "tại",
   "contact.standing.dims": "Mối quan hệ đang thế nào",
@@ -15645,7 +15764,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tin nh\u1eafn n\u00e0y kh\u00f4ng c\u00f3 ng\u01b0\u1eddi nh\u1eadn",
   "sched.recipientsMore": "{first} và {count} người khác",
   "sched.move": "Đổi giờ gửi",
-  "sched.moveTo": "Giờ gửi mới cho “{subject}”",
+  "sched.moveToDay": "Ngày gửi mới cho “{subject}”",
+  "sched.moveToTime": "Giờ gửi mới cho “{subject}”",
   "sched.moveSave": "Chuyển tin nhắn",
   "sched.withdraw": "Thu h\u1ed3i",
   "sched.withdrawTitle": "Thu h\u1ed3i tin nh\u1eafn n\u00e0y?",
@@ -16347,20 +16467,22 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.because.meeting_unprepared": "chưa chuẩn bị gì",
   "worklist.because.outcome_unrecorded": "chưa ghi nhận kết quả",
   "worklist.because.you_wrote_last": "bạn gửi tin sau cùng",
-  "worklist.because.no_reply_days": "chưa phản hồi",
-  "worklist.because.no_reply_days.value_one": "{value} ngày chưa phản hồi",
-  "worklist.because.no_reply_days.value_other": "{value} ngày chưa phản hồi",
+  "worklist.because.no_reply_days": "chưa ghi nhận phản hồi",
+  "worklist.because.no_reply_days.value_one":
+    "{value} ngày chưa ghi nhận phản hồi",
+  "worklist.because.no_reply_days.value_other":
+    "{value} ngày chưa ghi nhận phản hồi",
   "worklist.because.met_days_ago": "đã gặp",
   "worklist.because.met_days_ago.value_one": "đã gặp {value} ngày trước",
   "worklist.because.met_days_ago.value_other": "đã gặp {value} ngày trước",
-  "worklist.because.nothing_sent_since": "chưa gửi gì từ đó",
+  "worklist.because.nothing_sent_since": "chưa ghi nhận thư gửi đi từ đó",
   "worklist.because.no_attendee_on_file": "cuộc họp chưa có liên hệ nào",
   "worklist.because.response_overdue": "quá hạn trả lời",
   "worklist.because.response_due_soon": "sắp đến hạn trả lời",
   "worklist.because.response_due_soon.value": "cần trả lời trước {value}",
   "worklist.because.unassigned": "chưa có ai phụ trách",
   "worklist.because.stale": "đã chờ lâu",
-  "worklist.because.no_reply_history": "chưa có lịch sử trả lời",
+  "worklist.because.no_reply_history": "chưa ghi nhận lịch sử trả lời",
   "worklist.because.asks_nothing": "không yêu cầu gì",
   "worklist.because.addressed_elsewhere": "gửi cho đồng nghiệp",
   "worklist.because.bcc_from_stranger":
@@ -16372,7 +16494,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verdict.drifting": "Đang chững lại",
   "worklist.verdict.blocked": "Bị chặn",
   "worklist.verdict.cold": "Đã nguội",
-  "worklist.verdict.believes": "Đánh giá",
+  "worklist.verdict.believes": "Đánh giá trước đó",
   "worklist.verdict.asOf": "Tính đến {when}",
   "worklist.untitled.approval": "Phê duyệt đang chờ",
   "worklist.untitled.dedupe_candidate": "Hồ sơ có thể trùng",
@@ -16840,7 +16962,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.standing.closedUnreasoned": "Đã đóng. Hồ sơ được giữ lại làm lịch sử.",
   "lead.standing.noResponse": "Chưa ghi nhận phản hồi đầu tiên.",
   "lead.standing.theirMove": "Chờ lead phản hồi",
-  "lead.standing.answeredOn": "Đã trả lời vào {at}. Chưa có phản hồi.",
+  "lead.standing.answeredOn":
+    "Đã ghi nhận trả lời vào {at}. Chưa ghi nhận phản hồi sau đó.",
   "lead.standing.inMotion": "Đang tiến triển",
   "lead.standing.engagedBecause":
     "Lead đã trả lời, hoặc đã lên lịch một cuộc họp.",
@@ -17774,4 +17897,18 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.standing.peek.started": "Bắt đầu làm việc",
   "project.standing.peek.today": "Hôm nay",
   "project.standing.peek.documents": "Tệp của dự án này, mới nhất trước",
+  "mailCoverage.title": "Lịch sử email có thể chưa đầy đủ",
+  "mailCoverage.unknown":
+    "Việc thu thập email chưa xác minh đầy đủ giai đoạn này. Các ngày này dựa trên trao đổi đã ghi nhận; phản hồi có thể nằm ngoài hồ sơ.",
+  "mailCoverage.partial":
+    "Thu thập đã thành công, nhưng chưa xác minh đầy đủ lịch sử Hộp thư đến và thư Đã gửi. Thiếu thư trong hồ sơ không chứng minh rằng chưa có ai phản hồi.",
+  "mailCoverage.unavailable":
+    "Không thể thu thập email cho một phần lịch sử này. Phản hồi có thể nằm ngoài hồ sơ.",
+  "mailCoverage.withheld":
+    "Bạn không có quyền kiểm tra phạm vi thu thập email. Thiếu thư trong hồ sơ không chứng minh rằng chưa có ai phản hồi.",
+  "mailCoverage.connections": "Kiểm tra kết nối",
+  "connectors.syncTimeUnknown": "Chưa có thông tin về lần đồng bộ thành công",
+  "brief.coverage.source.deal_advice": "Bước tiếp theo cho cơ hội",
+  "tasks.origin.accepted_recommendation":
+    "Được chấp nhận từ một bước được đề xuất.",
 };

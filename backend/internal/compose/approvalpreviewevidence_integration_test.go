@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/signals"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -26,6 +27,8 @@ import (
 )
 
 func TestLifecyclePreviewResolvesItsActualSourceForTheReader(t *testing.T) {
+	now := clocktest.Now(t)
+	sourceAt := now.Add(-time.Minute)
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, nil, integration.AdminWithSignals)
 	company, err := e.Contacts.CreateCompany(ctx, contacts.CreateCompanyInput{DisplayName: "Harbor account", Source: "manual"})
@@ -38,7 +41,7 @@ func TestLifecyclePreviewResolvesItsActualSourceForTheReader(t *testing.T) {
 	}
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	activity, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
-		Kind: "meeting", Subject: new("Contract review"), Body: new("The buyer ended the agreement."),
+		Kind: "meeting", Subject: new("Contract review"), Body: new("The buyer ended the agreement."), OccurredAt: &sourceAt,
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
@@ -49,13 +52,14 @@ func TestLifecyclePreviewResolvesItsActualSourceForTheReader(t *testing.T) {
 		t.Fatal("source quote did not match")
 	}
 	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
-		_, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{Kind: signalKindContractEnded, CompanyID: id.UUID, Summary: "The buyer ended the agreement.", Severity: "warn", Fingerprint: "harbor-ended", Evidence: []signals.DerivedEvidence{{ActivityID: ids.UUID(activity.Id), Snippet: "The buyer ended the agreement.", SourceQuote: &proof, LifecycleScope: "company"}}}, time.Date(2026, 9, 15, 8, 0, 0, 0, time.UTC))
+		_, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{Kind: signalKindContractEnded, CompanyID: id.UUID, Summary: "The buyer ended the agreement.", Severity: "warn", Fingerprint: "harbor-ended", Evidence: []signals.DerivedEvidence{{ActivityID: ids.UUID(activity.Id), Snippet: "The buyer ended the agreement.", SourceQuote: &proof, LifecycleScope: "company"}}}, sourceAt)
 		return err
 	}); err != nil {
 		t.Fatal(err)
 	}
 	svc := NewApprovalsService(e.DB())
 	proposer := NewSignalProposer(e.Pool, svc, slog.New(slog.DiscardHandler))
+	proposer.now = func() time.Time { return now }
 	if count, err := proposer.RunWorkspace(ctx); err != nil || count != 1 {
 		t.Fatalf("proposals=%d, %v", count, err)
 	}

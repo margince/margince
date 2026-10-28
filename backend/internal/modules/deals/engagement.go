@@ -118,53 +118,13 @@ func Stakeholders(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now time.Ti
 	for _, id := range engaged {
 		isEngaged[id] = true
 	}
-	// The contact row scope, not just the deal's. Being able to read a deal
-	// does not license learning WHO is on it: a stakeholder can be an
-	// owner-private captured contact, and a coverage payload that listed them
-	// would disclose through a side door exactly what the contact read closes.
-	// Seats the caller cannot see are absent, and the caller cannot tell an
-	// invisible seat from an empty one — which is the same answer every other
-	// row-scoped list gives.
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	dealPos := arg(dealID)
-	// The edge's own admission FIRST, and the contact row scope after it. Both,
-	// because they answer different questions: the edge grant asks whether this
-	// caller may read seats at all, the contact scope asks which of them. A
-	// caller holding the deal and contact grants and neither of these is served a
-	// pair that neither grant covers.
-	bound, err := edgeBound(ctx, "r", arg)
+	seats, err := StakeholderSeats(ctx, tx, []ids.UUID{dealID.UUID})
 	if err != nil {
 		return nil, err
 	}
-	scope, err := auth.ScopeClauseFor(ctx, "contact", "p", arg)
-	if err != nil {
-		return nil, err
+	out := seats[dealID.UUID]
+	for i := range out {
+		out[i].Engaged = isEngaged[out[i].ContactID]
 	}
-	visible := predicateAlways
-	if scope != "" {
-		visible = scope
-	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT r.contact_id, coalesce(r.role, '')
-		  FROM relationship r
-		  JOIN contact p ON p.id = r.contact_id AND p.archived_at IS NULL
-		 WHERE r.kind = 'deal_stakeholder' AND r.deal_id = $%d AND r.archived_at IS NULL
-		   AND (%s)
-		   AND (%s)
-		 ORDER BY r.contact_id`, dealPos, bound, visible), args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out []DealStakeholder
-	for rows.Next() {
-		var s DealStakeholder
-		if err := rows.Scan(&s.ContactID, &s.Role); err != nil {
-			return nil, err
-		}
-		s.Engaged = isEngaged[s.ContactID]
-		out = append(out, s)
-	}
-	return out, rows.Err()
+	return out, nil
 }

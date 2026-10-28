@@ -38,10 +38,12 @@ export {
   fetchEntityName,
   useEntityName,
 } from "./entityref.queries";
-export type { RosterKind } from "./roster";
+export type { RosterKind, RosterRead } from "./roster";
 export {
+  RosterFailedLine,
   RosterPartialNote,
   useRoster,
+  useRosterHint,
   useRosterPartial,
   useRosterPartialHint,
 } from "./roster";

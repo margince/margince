@@ -40,7 +40,7 @@ The 1 table owned by `webforms`, as the migrations build them. [Back to the enti
 
 **Rules**
 
-- `web_form_admission`: `CHECK ((((sender = 'browser') AND (secret_ref IS NULL) AND (cardinality(allowed_origins) > 0)) OR ((sender <> 'browser') AND (secret_ref IS NOT NULL) AND (cardinality(allowed_origins) = 0))))`
+- `web_form_admission`: `CHECK ((((sender = 'browser') AND (secret_ref IS NULL) AND (cardinality(allowed_origins) > 0)) OR ((sender <> 'browser') AND ((secret_ref IS NOT NULL) OR (sender = 'webflow')) AND (cardinality(allowed_origins) = 0))))`
 - `web_form_consent_wording_bounded`: `CHECK (((consent_wording IS NULL) OR (length(consent_wording) <= 2000)))`
 - `web_form_field_map_object`: `CHECK ((jsonb_typeof(field_map) = 'object'))`
 - `web_form_form_key_key`: `UNIQUE (form_key)`

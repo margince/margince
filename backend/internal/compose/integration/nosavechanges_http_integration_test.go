@@ -187,10 +187,17 @@ func TestAWebhookSubscriptionSavedAsItAlreadyIsChangesNothing(t *testing.T) {
 // The settings drawer sends every field it shows, cleared ones as null. Saved
 // unchanged, that body must not move the version or write history.
 func TestAWebsiteFormSavedAsItAlreadyIsChangesNothing(t *testing.T) {
-	e := setupFormsApp(t)
-	form := createForm(t, e, AnyMap{"name": "Contact page", "sender": "browser", "allowed_origins": []string{siteOrigin}})
+	const site = "https://www.example.com"
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	var form versionedWire
+	if status := e.Call(t, "POST", "/v1/web-forms", AnyMap{
+		"name": "Contact page", "sender": "browser", "allowed_origins": []string{site},
+	}, nil, &form); status != http.StatusCreated {
+		t.Fatalf("creating the form -> %d", status)
+	}
 	assertSaveChangesNothing(t, e, "PATCH", "/v1/web-forms/"+form.ID, AnyMap{
-		"name": "Contact page", "allowed_origins": []string{siteOrigin}, "consent_required": false,
+		"name": "Contact page", "allowed_origins": []string{site}, "consent_required": false,
 		"consent_wording": nil, "consent_policy_version": nil, "redirect_url": nil, "success_message": nil,
 	}, form.ID, form.Version)
 }

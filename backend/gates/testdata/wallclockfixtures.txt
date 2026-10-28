@@ -73,6 +73,7 @@ internal/compose/erasurestageevidence_integration_test.go 1
 internal/compose/extinbound_test.go 20
 internal/compose/extledger_integration_test.go 2
 internal/compose/extsubscribe_test.go 1
+internal/compose/futureinteraction_integration_test.go 3
 internal/compose/fxrefresh_integration_test.go 3
 internal/compose/graphconsumer_integration_test.go 1
 internal/compose/graphedge_integration_test.go 8
@@ -216,7 +217,7 @@ internal/compose/integration/toolschema_conformance_integration_test.go 5
 internal/compose/integration/voice_lifecycle_http_integration_test.go 1
 internal/compose/integration/voice_sendoutcome_integration_test.go 2
 internal/compose/integration/voicestore_integration_test.go 3
-internal/compose/integration/webforms_integration_test.go 1
+internal/compose/integration/webforms/webforms_integration_test.go 1
 internal/compose/integration/webhooks/listmember_integration_test.go 1
 internal/compose/integration/webhooks/schemaconformance_integration_test.go 1
 internal/compose/integration/webhooks/webhookretry_pass_integration_test.go 3

@@ -20,6 +20,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -141,15 +142,16 @@ func (s *Sink) upsertLead(ctx context.Context, tx pgx.Tx, rec connector.Normaliz
 	}
 	err := tx.QueryRow(ctx, `
 		INSERT INTO lead (full_name, email, company_name, title, source_system, source_id, source, captured_by, owner_id,
-		                  origin, origin_detail, score)
+		                  origin, origin_detail, score, email_domain_folded)
 		VALUES (NULLIF($1, ''), NULLIF(lower($2), ''), NULLIF($3, ''), NULLIF($4, ''), $5, $6, $7, $8, $9,
-		        (SELECT key FROM lead_origin WHERE key = $10 AND active), NULLIF($11, ''), $12)
+		        (SELECT key FROM lead_origin WHERE key = $10 AND active), NULLIF($11, ''), $12, $13)
 		ON CONFLICT (source_system, source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL
 		DO NOTHING
 		RETURNING id`,
 		fields.FullName, fields.Email, fields.CompanyName, fields.Title,
 		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, captureSource(rec), rec.CapturedBy,
-		owner, fields.Origin, textcut.Runes(fields.OriginDetail, values.MaxLeadOriginDetailRunes), score).Scan(&id)
+		owner, fields.Origin, textcut.Runes(fields.OriginDetail, values.MaxLeadOriginDetailRunes), score,
+		owndomain.StoredOfAddress(fields.Email)).Scan(&id)
 	if err == nil {
 		if err := recordScore(ctx, tx, id); err != nil {
 			return ids.LeadID{}, false, fmt.Errorf("capture: score history for new lead: %w", err)

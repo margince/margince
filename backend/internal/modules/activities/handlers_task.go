@@ -72,6 +72,7 @@ func taskSubject(raw string) (string, error) {
 func activityOfTask(req crmcontracts.CreateTaskRequest) (crmcontracts.CreateActivityRequest, error) {
 	subject := req.Subject
 	out := crmcontracts.CreateActivityRequest{
+		Recommendation:    req.Recommendation,
 		Kind:              crmcontracts.CreateActivityRequestKindCreateActivityRequestKindTask,
 		Subject:           &subject,
 		Body:              req.Body,

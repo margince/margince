@@ -158,7 +158,7 @@ Run again only the scenarios that a fix should change, on both targets, plus con
 
 ```bash
 for c in claude gpt; do
-  for s in case20_put_it_in_the_board_pack case7_ask_for_a_number; do
+  for s in case20_put_it_in_the_board_pack case49_who_can_introduce_us; do
     MARGINCE_E2E_LLM=1 E2E_LLM_CANDIDATE=$c E2E_LLM_VIA=cli \
       E2E_LLM_STACK_PRESET=config/presets/openrouter_cloud_eu.yaml \
       SCENARIO=$s make e2e-llm

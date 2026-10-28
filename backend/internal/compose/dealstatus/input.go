@@ -18,7 +18,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -28,7 +27,7 @@ import (
 )
 
 // ProjectionVersion invalidates all card readers when the evidence interpretation changes.
-const ProjectionVersion = "deal-status-projection-8"
+const ProjectionVersion = "deal-status-projection-10"
 
 // promptVersion is DERIVED from the prompt as it is SENT — boundary rule
 // included — so rewording it rewrites the cards whether or not anybody
@@ -60,7 +59,7 @@ var promptVersion = ai.PromptDigest(func(fence promptfence.Fence) string {
 // appended in a form it can ignore.
 func moveKey(move crmcontracts.DealStatusCardMove) string {
 	key := move.Action + ": " + move.Reason
-	if id, ok := operandActivity(move); ok {
+	if id, ok := NamedActivity(move); ok {
 		key += " [activity:" + id.String() + "]"
 	}
 	var keySb65 strings.Builder
@@ -91,36 +90,14 @@ func evidenceKey(evidence []crmcontracts.DealNextBestActionEvidence) string {
 	return key.String()
 }
 
-// operandActivity is NamedActivity over a move that has NOT been through JSON.
-//
-// NamedActivity reads the stored shape, where every id is a string, and the
-// queue keeps a copy of it that a gate holds to the same answer. This runs on
-// the move decideMove just built, whose ids are still typed, so it cannot use
-// that reader without changing a wire contract two packages agree on.
-func operandActivity(move crmcontracts.DealStatusCardMove) (ids.UUID, bool) {
-	if id, ok := NamedActivity(move); ok {
-		return id, true
-	}
-	args := move.Arguments
-	if args == nil {
-		return ids.UUID{}, false
-	}
-	raw, present := (*args)["request_activity_id"]
-	if !present {
-		raw, present = (*args)["activity_id"]
-	}
-	if !present {
-		return ids.UUID{}, false
-	}
-	return linkID(raw)
-}
-
 // project renders the gathered facts into the prompt's shape. Only what the
 // caller may read reaches it: the facts were gathered under their row scope,
 // and a withheld row gives up its words here.
 func project(f facts, move crmcontracts.DealStatusCardMove) StatusInput {
 	in := StatusInput{Deal: dealIn(f.deal), RecommendedMove: moveKey(move), RequestStates: requestStates(f)}
-	in.Health = healthIn(f.health)
+	if move.Recommendation != nil {
+		in.decisionBasis = move.Recommendation.BasisFingerprint
+	}
 	for _, a := range f.timeline {
 		if len(in.Timeline) == maxTimelineRows {
 			break
@@ -160,22 +137,6 @@ func project(f facts, move crmcontracts.DealStatusCardMove) StatusInput {
 		}
 	}
 	return in
-}
-
-// healthIn carries the four factors as measurements: a score and, where the
-// factor counts things, the count. No sentence — see FactorIn for why.
-func healthIn(h *deals.DealHealth) []FactorIn {
-	if h == nil {
-		return nil
-	}
-	engaged := len(h.Evidence.EngagedStakeholderIDs)
-	overdue := len(h.Evidence.OverdueTaskIDs)
-	return []FactorIn{
-		{Key: "activity_recency", Value: h.Factors.ActivityRecency},
-		{Key: "stage_velocity", Value: h.Factors.StageVelocity},
-		{Key: "engagement", Value: h.Factors.Engagement, Count: &engaged},
-		{Key: "commitments", Value: h.Factors.Commitments, Count: &overdue},
-	}
 }
 
 // actIn dates an activity: a day entry by its own date, an instant by the date
@@ -338,6 +299,7 @@ func threadIn(th crmcontracts.DealRoomThread) ThreadIn {
 func Fingerprint(in StatusInput, userID ids.UUID, routingVersion string, now time.Time, loc *time.Location, lang string) (string, error) {
 	encoded, err := json.Marshal(struct {
 		In       StatusInput `json:"in"`
+		Decision string      `json:"decision"`
 		Prompt   string      `json:"prompt"`
 		Routing  string      `json:"routing"`
 		Reader   string      `json:"reader"`
@@ -345,7 +307,7 @@ func Fingerprint(in StatusInput, userID ids.UUID, routingVersion string, now tim
 		Zone     string      `json:"zone"`
 		Language string      `json:"language"`
 	}{
-		In: in, Prompt: ProjectionVersion + "\x00" + promptVersion, Routing: routingVersion,
+		In: in, Decision: in.decisionBasis, Prompt: ProjectionVersion + "\x00" + promptVersion, Routing: routingVersion,
 		Reader: userID.String(), Day: elapsed.CalendarDay(now, loc).Format("2006-01-02"),
 		Zone:     loc.String(),
 		Language: lang,

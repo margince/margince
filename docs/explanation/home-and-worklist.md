@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx frontend/src/features/worklist/worklist.next.ts frontend/src/features/worklist/worklist.nexttask.tsx -->
+<!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx frontend/src/features/worklist/worklist.next.ts frontend/src/features/worklist/worklist.nexttask.tsx -->
 # Home and the Worklist: how the day is ranked
 
 Home has one ranking engine behind three views: the Worklist, the **First** section on Morning, and the
@@ -55,7 +55,23 @@ It uses current deal facts and the risk facts already read for this caller.
 A stored signal or finding cannot create current work alone. Suggestions without current facts stay in the stored brief.
 
 Home and Worklist use the same typed reasons. Deal values and dates keep their own fields.
-Cached deal facts add context after the page is cut; they do not admit work.
+
+Current deal actions use the deal page's rules over one batch of owning reads, before the page is cut.
+They share the Worklist's database snapshot. A failed advice read keeps the work and names the gap.
+
+Saved model words are an earlier view, with their written date. They never admit work or change its rank.
+A reader must still have access to the source records used to write those words.
+
+The action has no separate stored copy for an event handler to refresh.
+Owner writes keep their normal audit and outbox path. Late or repeated jobs cannot make an old card supply a current action.
+The client keeps its existing live reads and refreshes after writes.
+
+A task from this action carries its rule and source basis into the normal task writer.
+That writer checks the same rules again inside a `Serializable` transaction.
+A changed basis returns a version conflict. Only one task can commit from the same basis.
+
+The other prepared actions check that basis before opening. Tasks you create keep their existing write path.
+
 Stored findings follow the current audience of their cited activities on both run reads and item read-backs.
 
 ## Personal work needs its own owner

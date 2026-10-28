@@ -31,9 +31,6 @@ const objectUserAdmin = "user_admin"
 // and a typo in any of them would silently ask for a grant nobody holds.
 const objectActivity = "activity"
 
-// objectPartner is the RBAC object a partner program write is governed by.
-const objectPartner = "partner"
-
 // objectDeal is the RBAC object a stage move is governed by. Spelled here
 // rather than imported, for targetImportRun's reason: approvals may not import
 // a module it governs.
@@ -169,9 +166,9 @@ var decisionGrants = map[string][]grantRequirement{
 	// MergeTags), so deciding takes that grant, for disqualify_lead's reason.
 	"merge_tags": {{targetTag, principal.ActionUpdate}},
 	// A set-up writes the partner row and adds `partner` to the company's
-	// relationship types (contacts/partner.go UpsertPartner), which takes both
-	// update grants. Deciding takes the grants the write takes.
-	"set_up_partner": {{tableCompany, principal.ActionUpdate}, {objectPartner, principal.ActionUpdate}},
+	// relationship types (contacts/partner.go UpsertPartner). It carries no
+	// margin tier, so it takes the company grant alone, and so does deciding it.
+	"set_up_partner": {{tableCompany, principal.ActionUpdate}},
 	// Retiring a word is gated on `tag.delete` (collections/tags.go ArchiveTag),
 	// so a floored archive is decided on that grant.
 	"archive_tag": {{targetTag, principal.ActionDelete}},
