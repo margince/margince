@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -77,16 +78,15 @@ func restoreMailRecipientsBatch(ctx context.Context, tx pgx.Tx, in datatask.Batc
 	return datatask.AdvanceUUID(in, scanned, changed)
 }
 
-// A missing original link uses the same guarded natural-key fallback as participant replay.
-const mailRecipientOriginalScope = `FROM activity a JOIN raw_capture rc ON ` + storedMailOriginal + `
+var mailRecipientOriginalScope = `FROM activity a JOIN raw_capture rc ON ` + storedMailOriginal + `
  WHERE a.kind = 'email' AND a.archived_at IS NULL AND ` + storedMailProvider
 
 // storedMailOriginal matches raw_capture rc to the activity a it is the
 // original of. storedMailProvider limits a to the mail connectors whose
 // original is the message's own RFC 822 bytes.
+var storedMailOriginal = storekit.StoredOriginalSQL("a", "rc")
+
 const (
-	storedMailOriginal = `(rc.id = a.raw_capture_id
- OR (a.raw_capture_id IS NULL AND rc.source_system = a.source_system AND rc.source_id = a.source_id))`
 	storedMailProvider = `split_part(a.captured_by, ':', 1) = 'connector'
  AND split_part(a.captured_by, ':', 2) IN ('gmail', 'imap', 'graph')`
 )

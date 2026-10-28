@@ -6,7 +6,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-32 columns · primary key `(id)` · referenced by 143 foreign keys
+34 columns · primary key `(id)` · referenced by 145 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -23,10 +23,12 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `last_active_at` | `timestamp with time zone` |  |  |
 | `locale` | `text` |  | One of `en`, `de`, `vi`. |
 | `locked_until` | `timestamp with time zone` |  |  |
+| `merged_into_user_id` | `uuid` |  | Points at `app_user.id`. |
 | `morning_brief_delivery` | `text` |  |  |
 | `must_change_password` | `boolean`, default `false` | yes |  |
 | `password_hash` | `text` |  |  |
 | `quiet_day_notice` | `boolean` |  |  |
+| `removed_at` | `timestamp with time zone` |  |  |
 | `routine_delivery_time` | `text` |  |  |
 | `routine_mail_scope` | `text` |  | One of `personal`, `team`, `combined`. |
 | `routine_mail_team_id` | `uuid` |  | Points at `team.id`. |
@@ -47,6 +49,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `merged_into_user_id` | `app_user` | the parent cannot be deleted while this row points at it |
 | `routine_mail_team_id` | `team` | deleting the parent keeps this row and clears the link |
 
 **Rules**
@@ -54,11 +57,14 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `app_user_agent_is_full`: `CHECK (((NOT is_agent) OR (seat_type = 'full')))`
 - `app_user_agent_never_forced`: `CHECK ((NOT (is_agent AND must_change_password)))`
 - `app_user_delivery_hour_check`: `CHECK (((delivery_hour_local IS NULL) OR ((delivery_hour_local >= 0) AND (delivery_hour_local <= 23))))`
+- `app_user_does_not_merge_into_itself`: `CHECK (((merged_into_user_id IS NULL) OR (merged_into_user_id <> id)))`
 - `app_user_failed_login_count_check`: `CHECK ((failed_login_count >= 0))`
 - `app_user_forced_rotation_needs_a_password`: `CHECK ((NOT (must_change_password AND (password_hash IS NULL))))`
 - `app_user_greeting_name_length`: `CHECK (((greeting_name IS NULL) OR ((char_length(greeting_name) >= 1) AND (char_length(greeting_name) <= 100))))`
 - `app_user_locale_shipped`: `CHECK ((locale = ANY (ARRAY['en', 'de', 'vi'])))`
+- `app_user_merge_is_retired`: `CHECK (((merged_into_user_id IS NULL) OR (removed_at IS NOT NULL)))`
 - `app_user_morning_brief_delivery_check`: `CHECK (((morning_brief_delivery IS NULL) OR (morning_brief_delivery = ANY (ARRAY['none', 'email']))))`
+- `app_user_removed_is_deactivated`: `CHECK (((removed_at IS NULL) OR (status = 'deactivated')))`
 - `app_user_routine_delivery_time_check`: `CHECK ((routine_delivery_time ~ '^(working|([01][0-9]|2[0-3]):00)$'))`
 - `app_user_routine_mail_scope_check`: `CHECK ((routine_mail_scope = ANY (ARRAY['personal', 'team', 'combined'])))`
 - `app_user_seat_type_check`: `CHECK ((seat_type = ANY (ARRAY['read', 'full'])))`
@@ -75,6 +81,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `app_user_pkey`: `unique, btree (id)`
 - `idx_app_user_live`: `btree (created_at, id) WHERE (archived_at IS NULL)`
+- `idx_app_user_merge_target`: `btree (merged_into_user_id) WHERE (merged_into_user_id IS NOT NULL)`
 - `uq_app_user_email`: `unique, btree (lower(email))`
 
 **Triggers**

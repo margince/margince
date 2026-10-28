@@ -77,7 +77,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 	// never recorded as "the" response for a key (the approved retry is
 	// the same request under the same key).
 	return contractRouter(srv,
-		agentGate(registry, staging, provider, provider, fieldOwnership{pool: pool}, importsFor(&srv), tagSeam(pool), gate),
+		agentGate(registry, staging, provider, provider, importsFor(&srv), tagSeam(pool), gate),
 		idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), dealrooms.NewStore(InstallationDB(pool)), deals.NewStore(InstallationDB(pool), DealsInstallation()), InstallationDB(pool)), schedulingReplayRestore(sendStore(pool, srv.send))),
 		// Outermost, so the measurement covers the admission gate and the
 		// idempotency replay: a refusal that cost a database read is a slow
@@ -197,11 +197,13 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// workspace-scoped call like any other /v1 route, and mounting it on the
 	// operational mux instead would win the longest-pattern match against
 	// "/v1/" and serve without a session. See extensionEdge.
-	publicEdge := publicConfirm(newPublicConfirmLimiters())(
-		publicPreferences(consent.NewStore(InstallationDB(pool)), newPublicPreferenceLimiters())(
-			publicBooking(activities.NewStore(InstallationDB(pool)), identity.NewService(pool), newPublicBookingLimiters())(
-				publicDealRoom(dealrooms.NewStore(InstallationDB(pool)), newPublicDealRoomLimiters())(
-					extensionEdge(srv, log)(api),
+	publicEdge := publicForms(srv.webFormsHandlers, newPublicFormLimiters())(
+		publicConfirm(newPublicConfirmLimiters())(
+			publicPreferences(consent.NewStore(InstallationDB(pool)), newPublicPreferenceLimiters())(
+				publicBooking(activities.NewStore(InstallationDB(pool)), identity.NewService(pool), newPublicBookingLimiters())(
+					publicDealRoom(dealrooms.NewStore(InstallationDB(pool)), newPublicDealRoomLimiters())(
+						extensionEdge(srv, log)(api),
+					),
 				),
 			),
 		),

@@ -158,6 +158,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`role.changed`](#rolechanged) | user | 1 |
 | [`signal.detected`](#signaldetected) | signal | 1 |
 | [`signal.resolved`](#signalresolved) | signal | 1 |
+| [`signal.updated`](#signalupdated) | signal | 1 |
 | [`stage.archived`](#stagearchived) | stage | 1 |
 | [`stage.created`](#stagecreated) | stage | 1 |
 | [`stage.updated`](#stageupdated) | stage | 1 |
@@ -168,6 +169,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`user.mfa_removed`](#usermfa_removed) | user | 1 |
 | [`user.password_link_issued`](#userpassword_link_issued) | user | 1 |
 | [`user.reactivated`](#userreactivated) | user | 1 |
+| [`user.updated`](#userupdated) | user | 1 |
 | [`user_delivery.changed`](#user_deliverychanged) | user | 1 |
 | [`user_display_name.changed`](#user_display_namechanged) | user | 1 |
 | [`user_greeting_name.changed`](#user_greeting_namechanged) | user | 1 |
@@ -1570,6 +1572,15 @@ Payload for signal.resolved. The resolver ran over a signal (signals/resolver.go
 | `data.resolved_contact_id` | string (uuid) | no | The consent-gated contact the signal resolved to (absent unless an existing contact under a recorded consent grant matched). |
 | `data.signal_id` | string (uuid) | yes | The signal the resolver ran over. |
 
+### `signal.updated`
+
+Record: `signal` · version 1
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.owner_id` | string (uuid) | yes |  |
+| `data.signal_id` | string (uuid) | yes |  |
+
 ### `stage.archived`
 
 Record: `stage` · version 1
@@ -1690,6 +1701,15 @@ Payload for user.reactivated. A deactivated member was lifted out of deactivatio
 | `data.by` | string (uuid) | yes | The admin who reactivated the member. |
 | `data.status` | UserReactivatedStatus | yes |  |
 | `data.user_id` | string (uuid) | yes | The reactivated member. |
+
+### `user.updated`
+
+Record: `user` · version 1
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.by` | string (uuid) | yes |  |
+| `data.user_id` | string (uuid) | yes |  |
 
 ### `user_delivery.changed`
 

@@ -3,6 +3,128 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "webhooks.event.signal.updated.label": "Alert owner changed",
+  "webhooks.event.signal.updated.when":
+    "When an alert moves to the surviving member during a duplicate merge.",
+  "webhooks.event.user.updated.label": "Member settings changed",
+  "webhooks.event.user.updated.when":
+    "When an administrator saves a member’s profile or consolidates a duplicate identity.",
+
+  "approval.kind.merge_members": "Merge member accounts",
+  "users.retirement.approval_decisions":
+    "Resolve approvals awaiting this member’s decision.",
+  "users.retirement.automations":
+    "Pause or reassign this member’s automations.",
+  "users.retirement.booking_pages": "Remove this member’s booking pages.",
+  "users.retirement.data_requests":
+    "Reassign this member’s open data requests.",
+  "users.retirement.deal_rooms": "Reassign this member’s open Deal Rooms.",
+  "users.retirement.introductions":
+    "Close this member’s outstanding introductions.",
+  "users.retirement.lists": "Reassign or archive this member’s lists.",
+  "users.retirement.stewarded_lists":
+    "Reassign or archive this member’s stewarded lists.",
+  "users.retirement.mail_drafts":
+    "Send or discard this member’s saved mail drafts.",
+  "users.retirement.meeting_invitations":
+    "Cancel this member’s outstanding meeting invitations.",
+  "users.retirement.meeting_proposals":
+    "Resolve this member’s meeting proposals.",
+  "users.retirement.privacy_notices":
+    "Reassign this member’s open privacy notices.",
+  "users.retirement.record_responsibilities":
+    "Reassign this member’s record responsibilities.",
+  "users.retirement.reports": "Reassign or archive this member’s reports.",
+  "users.retirement.report_schedules":
+    "Disable this member’s report schedules.",
+  "users.retirement.saved_views": "Remove this member’s saved views.",
+  "users.retirement.scheduled_mail": "Cancel this member’s scheduled mail.",
+  "users.retirement.handoffs": "Reassign this member’s open handoffs.",
+  "users.retirement.voice_profiles": "Archive this member’s voice profiles.",
+  "users.retirement.web_forms":
+    "Pause or reassign this member’s website forms.",
+  "users.retirement.webhooks": "Reassign or disable this member’s webhooks.",
+  "users.retirement.weekly_plans": "Close this member’s open weekly plans.",
+  "users.retirement.analytics_shares":
+    "Revoke live analytics shares scoped to this member.",
+  "users.retirement.source_used":
+    "Only unused imported or invited identities can be merged. Hand over work and deactivate a member who has already completed sign-in setup.",
+  "users.retirement.self_survivor":
+    "Choose a surviving member other than yourself.",
+  "users.retirement.deactivate_first":
+    "Deactivate this member before removing it.",
+  "users.retirement.choose_survivor": "Choose the member to keep.",
+  "users.retirement.choose_receiver":
+    "Choose a colleague to receive the remaining work.",
+  "users.retirement.private_tasks":
+    "Some open tasks are outside your access. Ask their owner to share or reassign them before removal.",
+  "users.retirement.work_not_transferable":
+    "Some owned work is outside your write access. Reassign it before continuing.",
+  "users.retirement.state_changed":
+    "This member changed. Request a fresh preview.",
+  "users.retirement.source_signed_out":
+    "The removed identity is signed out everywhere.",
+  "users.retirement.connectors_reconnect":
+    "Connected accounts must be reconnected under the surviving member.",
+  "users.retirement.survivor_access":
+    "The survivor keeps its roles, teams and sign-in settings, and retains the merged identity’s personal access and correspondence.",
+  "users.retirement.original_attribution": "Original names remain in history.",
+  "users.retirement.private_alerts_archived": "Personal alerts are archived.",
+  "users.retirement.crm_private_records_move":
+    "Owned CRM records, including private contacts and companies, become visible to the receiving colleague.",
+  "users.retirement.private_audiences_retained":
+    "Mail and activities keep their own audience. Activity already shared with a transferred record’s readers may become discoverable to the recipient.",
+  "users.retirement.email_reserved":
+    "Removal cannot be undone here. The original email stays reserved; use Deactivate if this colleague may return.",
+  "users.retirement.survivor_inactive":
+    "The surviving member is deactivated. Reactivate it to restore sign-in and team assignment.",
+  "users.retirement.unknown": "Resolve the remaining work before continuing.",
+  "users.retirement.protected_email":
+    "This sign-in address has already been used and cannot be changed here.",
+  "users.mergeSource": "Duplicate account",
+  "users.mergedAccounts": "Accounts merged into this member",
+  "users.reloadMember": "Reload member",
+  "users.teamAdminOnly": "Only an administrator can change team membership.",
+  "users.visibleWorkNote":
+    "Counts show the work you may see. Merging also preserves personal record access and private correspondence for the same colleague.",
+  "users.search": "Search members",
+  "users.searchPlaceholder": "Name or email",
+  "users.clearSearch": "Clear search",
+  "users.resultCount": "{matching} of {total} members",
+  "users.noSearchResults": "No members match this search.",
+  "users.edit": "Edit member",
+  "users.editTitle": "Edit {name}",
+  "users.saved": "Member saved.",
+  "users.invitedSetup":
+    "This account is enabled and waiting for sign-in setup. You can edit the name, role and teams now.",
+  "users.editInactive": "Reactivate this member before adding them to teams.",
+  "users.emailChangeEndsSessions":
+    "Changing the account email signs this member out and cancels existing sign-in links.",
+  "users.keepRoles": "Keep current roles",
+  "users.editCancel": "Cancel",
+  "users.editSave": "Save member",
+  "users.merge": "Merge duplicate",
+  "users.remove": "Remove member",
+  "users.mergeTitle": "Merge {name} into another account?",
+  "users.removeTitle": "Remove {name}?",
+  "users.mergeBody":
+    "Choose the account to keep. Work moves to it, and this duplicate leaves the member list.",
+  "users.removeBody":
+    "This account leaves the member list. Its original authorship stays in history. Choose a colleague if it still owns work.",
+  "users.survivingMember": "Account to keep",
+  "users.noHandover": "No handover needed",
+  "users.chooseMember": "Choose a member",
+  "users.workToTransfer": "Work to transfer",
+  "users.merged": "Duplicate account merged.",
+  "users.removed": "Member removed.",
+  "users.work.contacts": "Contacts",
+  "users.work.companies": "Companies",
+  "users.work.leads": "Leads",
+  "users.work.deals": "Deals",
+  "users.work.projects": "Projects",
+  "users.work.alerts": "Open alerts",
+  "users.work.tasks": "Tasks",
+
   "homeRepair.taskPermission":
     "Activity archive permission is required to archive reviewed tasks.",
   "homeRepair.classificationPermission":
@@ -1454,7 +1576,7 @@ export const en = {
   "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",
 
   "brief.weekly.tasksCompleted": "Tasks completed",
-  "brief.weekly.noMeetings": "No meetings held",
+  "brief.weekly.noMeetings": "No meetings recorded",
   "brief.weekly.noLeads": "None received",
   "brief.weekly.noCommitments": "None due",
   "brief.weekly.basis":
@@ -1681,6 +1803,9 @@ export const en = {
   // a name, so the tag says the kind and stops rather than printing an
   // identifier at a reader who can do nothing with it.
   "trust.agentUnnamed": "Automated by an agent",
+  // The colleague the agent worked for, from the record's create audit row.
+  "trust.agentFor": "Made by {agent} for {name}",
+  "trust.agentUnnamedFor": "Made by an agent for {name}",
   // A job the installation ran itself — a scheduled sweep, a backfill, a public
   // endpoint. Named apart from an agent because "a model decided this" and "the
   // system did its housekeeping" are different answers to "who do I ask".
@@ -1771,6 +1896,7 @@ export const en = {
   "systemJob.public_booking": "Public booking page",
   "systemJob.public_confirm": "Public details confirmation",
   "systemJob.public_preferences": "Public preference page",
+  "systemJob.public_web_form": "Website form",
   "systemJob.rbac_defaults": "Extension starting permissions",
   "systemJob.release_version": "Release check",
   "systemJob.report_schedule": "Scheduled reports",
@@ -2485,6 +2611,10 @@ export const en = {
   "partner.marginTier": "Margin tier",
   "partner.marginTierHint":
     "The share the partner earns on each won deal they sourced. Intro: they only introduced the client. Active collaboration: the deal was worked together. Partner closed: they sold it themselves. Leave it unset when their agreement pays differently.",
+  "partner.writeRefused":
+    "Your role cannot change this company’s partner program. Ask an admin.",
+  "partner.marginTierRefused":
+    "Your role cannot set the margin tier. Ask an admin.",
   "partner.stage": "Relationship stage",
   "partner.nextStep": "Next step",
   "partner.nextStepDue": "Next step due",
@@ -2595,6 +2725,8 @@ export const en = {
   // a destination.
   "ref.nameLoadFailed": "Name did not load",
   "ref.memberLeft": "{name} (left)",
+  "roster.failedUsers": "Colleagues did not load.",
+  "roster.failedTeams": "Teams did not load.",
   "owner.rosterFailed": "Colleagues did not load. Reload the page to pick one.",
   "ref.notInRoster": "Currently assigned (no longer in the user list)",
 
@@ -3062,9 +3194,15 @@ export const en = {
   "co.health.payment.paidOnTime_other":
     "{count} of {total} invoices paid on time",
   // The server's reason codes for the relationship and commercial ratings.
-  "co.health.reason.neverWritten": "No message from them and no meeting yet.",
-  "co.health.reason.quiet_one": "No reply and no meeting for {days} day.",
-  "co.health.reason.quiet_other": "No reply and no meeting for {days} days.",
+  "co.health.reason.neverWritten":
+    "No message from them or meeting is recorded.",
+  "co.health.reason.quiet_one": "No reply or meeting recorded for {days} day.",
+  "co.health.reason.quiet_other":
+    "No reply or meeting recorded for {days} days.",
+  "co.health.reason.quietSince_one":
+    "No reply or meeting recorded since {at} ({days} day).",
+  "co.health.reason.quietSince_other":
+    "No reply or meeting recorded since {at} ({days} days).",
   "co.health.reason.meetingBooked": "A meeting is booked for {at}.",
   "co.health.reason.lastMetToday": "Last met them today.",
   "co.health.reason.lastMet_one": "Last met them {days} day ago.",
@@ -3085,6 +3223,8 @@ export const en = {
   "co.health.reason.dealsNoneStalled_other":
     "{count} open deals, none stalled.",
   "company.partnerSetUp": "Set up partner program",
+  "company.partnerSetUpUnreadable":
+    "Your role cannot see partner programs. Ask an admin.",
   "signal.kind.stalled_deal": "Deal stalled",
   "signal.kind.champion_left": "Champion left",
   "signal.kind.reengagement": "Re-engagement",
@@ -3094,7 +3234,7 @@ export const en = {
   "signal.kind.contract_ended": "Contract ending",
   "signal.kind.new_opportunity": "New opportunity",
   "signal.kind.commitment_made": "Commitment made",
-  "signal.kind.ghosted_thread": "No reply",
+  "signal.kind.ghosted_thread": "No reply recorded",
   "signal.kind.project_gone_quiet": "Project gone quiet",
   "signal.kind.funding": "Funding",
   "signal.kind.leadership_change": "Leadership change",
@@ -3706,7 +3846,7 @@ export const en = {
   "co.ask.q.whats_changed": "What changed recently?",
   "co.ask.nothing": "No records you can access answer that question.",
   "co.ask.failed": "The question could not be answered. Retry.",
-  "co.suggest.kind.no_reply": "No reply",
+  "co.suggest.kind.no_reply": "No reply recorded",
   "co.suggest.kind.stalled_deal": "Stalled deal",
   "co.suggest.kind.no_next_step": "No next step",
   "co.suggest.kind.lifecycle_conflict": "Lifecycle conflict",
@@ -4145,7 +4285,7 @@ export const en = {
   "co.contacts.board.change": "Change role",
   "co.reach.waiting": "Needs reply",
   "co.reach.answered": "Answered",
-  "co.reach.silent": "No reply",
+  "co.reach.silent": "No reply recorded",
   "co.reach.lapsed": "Went quiet",
   "co.reach.untried": "Not contacted",
   "co.role.champion": "champion",
@@ -4839,11 +4979,10 @@ export const en = {
   "deal.forecast.bestCase": "best case",
   "deal.forecast.pipeline": "pipeline",
   "deal.forecast.omitted": "omitted from forecast",
-  "standing.yourMove": "Your move",
   "deal.standing.dims": "Deal readings",
   "deal.standing.momentum": "Momentum",
   "deal.standing.momentum.active": "Active",
-  "deal.standing.momentum.activeSub": "last activity {date}",
+  "deal.standing.momentum.activeSub": "last activity filed on this deal {date}",
   "deal.standing.momentum.stalledSub": "no activity since {date}",
   "deal.standing.momentum.onHold": "On hold",
   "deal.standing.momentum.onHoldSub": "until {date}",
@@ -4874,17 +5013,18 @@ export const en = {
   "deal.standing.figure.final": "outcome",
   "deal.standing.closedOn": "Closed {date}",
   "standing.timeline.label": "{name} over time",
-  "standing.noReply": "no reply",
   "deal.standing.timeline.booked": "booked",
   "deal.standing.timeline.theyWrote": "They wrote",
-  "deal.standing.timeline.lastContact": "last contact",
+  "deal.standing.timeline.currentRequest": "current request since this message",
+  "deal.standing.timeline.lastContact": "last exchange filed on this deal",
   "deal.standing.next.openMessage": "Open the message",
   "deal.standing.coverage": "Coverage",
   "deal.standing.risk": "Risk",
   "deal.standing.risk.none": "None found",
   "deal.standing.risk.found_one": "{count} signal",
   "deal.standing.risk.found_other": "{count} signals",
-  "deal.standing.risk.replyOwed": "Reply owed",
+  "deal.standing.teamReply": "Team reply owed",
+  "deal.standing.risk.replyOwed": "Team reply owed",
   "deal.standing.risk.closePassed": "Close date passed",
   "deal.details.closingFootnote":
     "Closing stages ask first: Won and Lost open a short dialog.",
@@ -5014,6 +5154,9 @@ export const en = {
   "assignments.kindTeam": "Team",
   "assignments.who": "Who",
   "assignments.findColleague": "Find a colleague",
+  "assignments.invited": "Invited, not signed in yet",
+  "assignments.noColleagueFound":
+    "No colleague found. Only colleagues with a Margince account can be assigned. Ask an admin to invite them.",
   "assignments.findTeam": "Find a team",
   "assignments.role": "Role",
   "assignments.rolePlaceholder": "Pick a role",
@@ -6384,6 +6527,11 @@ export const en = {
   "calendar.patternMonth": "MM",
   "calendar.patternYear": "YYYY",
   "calendar.invalidDate": "Enter a date as {pattern}.",
+  "calendar.patternHour": "hh",
+  "calendar.patternMinute": "mm",
+  "calendar.invalidTime": "Enter a time as {pattern}.",
+  "calendar.anyMonth": "Any month",
+  "calendar.year": "Year",
   "calendar.earliest": "Earliest date: {date}",
   "calendar.latest": "Latest date: {date}",
   "compose.schedulePick": "Select date and time",
@@ -9614,7 +9762,7 @@ export const en = {
   "connectors.reconnectToSend":
     "Reconnect this mailbox to send from it. A mailbox connected before sending existed cannot be upgraded in place; the provider grants sending only on a new connection.",
   "connectors.lastSynced": "Last synced {at}",
-  "connectors.neverSynced": "Awaiting first sync",
+  "connectors.neverSynced": "No successful sync recorded",
   "connectors.notConfigured":
     "Mail capture is not configured on this installation.",
   "connectors.reconnect": "Reconnect",
@@ -11217,6 +11365,8 @@ export const en = {
   "settings.page.integrations.sub":
     "Systems this installation exchanges records with.",
   "settings.page.knowledge.sub": "Documents that drafts and answers may use.",
+  "settings.page.web-forms.sub":
+    "Forms on your website that send each enquiry in as a lead, or as a note on the lead or contact it comes from.",
   "settings.page.import.sub": "Import records from a file, one run at a time.",
   "settings.page.models.sub":
     "Which provider handles each kind of work, and whether it is available.",
@@ -11423,6 +11573,7 @@ export const en = {
   "privacy.laneRestricted": "Held",
   "privacy.requestsEmpty": "No privacy requests yet.",
   "settings.tab.integrations": "Integrations",
+  "settings.tab.web-forms": "Website forms",
   "settings.tab.capture": "Capture rules",
   "settings.tab.knowledge": "Knowledge",
   "corpusAsk.title": "Ask your documents",
@@ -13904,6 +14055,134 @@ export const en = {
   "financeSource.findCompany": "Find a company",
   "financeSource.cancel": "Cancel",
 
+  "webForms.title": "Website forms",
+  "webForms.sub":
+    "Forms on your website. Each enquiry becomes a lead, or a note on the lead or contact with that email.",
+  "webForms.readOnly":
+    "Read-only: only a role with the integrations permission can change website forms.",
+  "webForms.new": "New website form",
+  "webForms.state.active": "Active",
+  "webForms.state.paused": "Paused",
+  "webForms.sender.browser": "Your website",
+  "webForms.sender.server": "Website server",
+  "webForms.sender.webflow": "Webflow webhook",
+  "webForms.sender.typeform": "Typeform",
+  "webForms.sender.tally": "Tally",
+  "webForms.senderLine.browser": "Posts from the listed websites",
+  "webForms.senderLine.server": "Signed posts from your website’s server",
+  "webForms.senderLine.webflow": "Signed webhook from Webflow",
+  "webForms.senderLine.typeform": "Signed webhook from Typeform",
+  "webForms.senderLine.tally": "Signed webhook from Tally",
+  "webForms.row.consent": "Consent required",
+  "webForms.setup": "Show setup",
+  "webForms.edit": "Edit",
+  "webForms.pause": "Pause form",
+  "webForms.resume": "Resume form",
+  "webForms.rotate": "Make a new secret",
+  "webForms.rotateConfirm.title": "Make a new form secret?",
+  "webForms.rotateConfirm.body":
+    "The current secret stops working at once, and the new one is shown once. Paste it where the old one was right away.",
+  "webForms.archive": "Archive",
+  "webForms.archiveConfirm":
+    "Archiving stops this form from taking submissions. This cannot be undone.",
+  "webForms.archiveDone": "Website form archived",
+  "webForms.drawer.editTitle": "Edit website form",
+  "webForms.drawer.sub":
+    "Each submission becomes a lead with the enquiry as a note. A lead or contact that already has the email gets the note instead.",
+  "webForms.drawer.cancel": "Cancel",
+  "webForms.drawer.save": "Save form",
+  "webForms.drawer.create": "Create form",
+  "webForms.field.name": "Name",
+  "webForms.field.nameHint":
+    "Shown on each lead’s note, for example Contact page.",
+  "webForms.field.sender": "Where is your form?",
+  "webForms.field.senderFixed":
+    "Fixed once the form exists. Create a new form to change it.",
+  "webForms.senderHint.browser":
+    "A form on your own pages, or in WordPress, Webflow or another site builder that lets you set where a form sends to. No developer needed.",
+  "webForms.senderHint.server":
+    "For developers: your website’s server forwards each enquiry, signed with a secret.",
+  "webForms.senderHint.webflow":
+    "For developers: a webhook made with Webflow’s API. For a Webflow form, choose Your website.",
+  "webForms.senderHint.typeform":
+    "Each Typeform response comes in through a webhook. Margince makes the secret for you.",
+  "webForms.senderHint.tally":
+    "Each Tally response comes in through a webhook. Margince makes the secret for you.",
+  "webForms.field.origins": "Websites",
+  "webForms.field.originsHint":
+    "One address per line. Posts from any other website are refused.",
+  "webForms.required.name": "Enter a name for this form.",
+  "webForms.required.origins": "Enter the website the form is posted from.",
+  "webForms.required.consentWording":
+    "Enter the wording the visitor agrees to.",
+  "webForms.field.originKept":
+    "{entry} is kept as {origin}: every page of that website can post.",
+  "webForms.field.originsPlaceholder": "https://www.example.com",
+  "webForms.field.senderSecret": "Signing secret",
+  "webForms.field.senderSecretHint":
+    "The secret the Webflow API answers once when it makes the webhook. A webhook an OAuth app makes is signed with that app’s client secret instead. Leave it empty until you have it: the form takes no posts until then.",
+  "webForms.field.senderSecretKeep": "Leave empty to keep the stored secret.",
+  "webForms.field.consentRequired":
+    "Require consent before a submission is taken",
+  "webForms.field.consentWording": "Consent wording",
+  "webForms.field.consentWordingHint":
+    "The text you show beside the checkbox. Each ticked submission keeps it in its note as evidence.",
+  "webForms.field.consentPolicyVersion": "Privacy policy version",
+  "webForms.field.consentPolicyVersionHint":
+    "The version of the policy the wording links to.",
+  "webForms.field.redirectUrl": "Thank-you page",
+  "webForms.field.redirectUrlHint":
+    "Where a visitor goes after sending. Empty shows the success message.",
+  "webForms.field.redirectUrlPlaceholder": "https://www.example.com/thanks",
+  "webForms.field.successMessage": "Success message",
+  "webForms.field.successMessageHint": "Shown to the visitor after sending.",
+  "webForms.setup.title": "Connect {name}",
+  "webForms.setup.address": "Form address",
+  "webForms.setup.secret": "Form secret",
+  "webForms.setup.snippet": "Code to paste",
+  "webForms.setup.customFields":
+    "A field named after a lead custom field fills it: {fields}. A value it cannot take goes on the note.",
+  "webForms.setup.copy": "Copy code",
+  "webForms.setup.copySecret": "Copy secret",
+  "webForms.setup.copied": "Copied",
+  "webForms.setup.copyFailed": "Select the text above and copy it manually.",
+  "webForms.setup.leaveWarning":
+    "Closing destroys the only copy of this secret. Copy it first.",
+  "webForms.setup.done": "Done",
+  "webForms.guide": "Step-by-step guide",
+  "webForms.row.secretMissing": "Waiting for its secret",
+  "webForms.setup.copyAddress": "Copy address",
+  "webForms.steps.browser.address": "Copy the form address.",
+  "webForms.steps.browser.builder":
+    "In Webflow, WordPress or another site builder, open your form’s settings. Set where it sends to (Webflow calls it Action) to this address, and the method to POST.",
+  "webForms.steps.browser.fields":
+    "Name the email field email. Margince also reads full_name, phone, company and message, and keeps every other field on the lead’s note.",
+  "webForms.steps.browser.code":
+    "Writing the page yourself? Paste this code where the form goes instead.",
+  "webForms.steps.endpoint": "Paste the form address as the webhook’s address.",
+  "webForms.steps.typeform.open":
+    "In Typeform, open the form, go to Connect, then Webhooks, and choose Add a webhook.",
+  "webForms.steps.typeform.secret":
+    "Turn on Secret in the webhook’s settings, paste the form secret and save. Then switch the webhook on: Typeform makes it off.",
+  "webForms.steps.tally.open":
+    "In Tally, open the form, go to Integrations, and connect Webhooks.",
+  "webForms.steps.tally.secret":
+    "Paste the form secret in Signing secret, then save.",
+  "webForms.steps.server.secret":
+    "Store the form secret on your website’s server as {name}.",
+  "webForms.steps.server.address":
+    "Your server posts each enquiry to the form address.",
+  "webForms.steps.server.code":
+    "This code signs each post. Your developer can use it as it is.",
+  "webForms.steps.webflow.create":
+    "Create the webhook with Webflow’s API, with the form address as its URL.",
+  "webForms.steps.webflow.secret":
+    "The Webflow API answers the webhook’s secret once. A webhook an OAuth app made is signed with that app’s client secret instead. Paste the one that applies in Signing secret under Edit on this form.",
+  "webForms.steps.test":
+    "Send a test enquiry. It shows up as a new lead under Leads, or as a note on the lead or contact that already has its email.",
+  "webForms.steps.secretShownOnce":
+    "The secret was shown once, when the form was made. Lost it? Choose Make a new secret in the form’s ⋯ menu.",
+
   "webhooks.title": "Webhooks",
   "webhooks.readOnly":
     "Read-only: only an administrator or operations user can change subscriptions.",
@@ -14625,12 +14904,12 @@ export const en = {
   "contact.intro.verdictDirect":
     "Ask {name}. They already correspond with this contact.",
   "contact.intro.verdictOneSided":
-    "Ask {name}. They wrote to this contact with no reply yet.",
+    "Ask {name}. They wrote to this contact; no reply is recorded.",
   "contact.intro.verdictVia":
     "Ask {name}. They reach this contact through {through}.",
   "contact.intro.verdictDirectYou": "You already correspond with this contact.",
   "contact.intro.verdictOneSidedYou":
-    "You wrote to this contact with no reply yet.",
+    "You wrote to this contact; no reply is recorded.",
   "contact.intro.verdictViaYou": "You reach them through {through}.",
   // What stands where the ask would be on the reader's own route. The panel
   // is the page's one recommendation, so it says what to do rather than
@@ -14985,12 +15264,14 @@ export const en = {
 
   "contact.mayBeDone.notYet": "Not yet",
   "contact.rail.blocked": "Blocked",
-  "contact.rail.lastReply": "Last reply",
+  "contact.standing.lastRecordedExchange":
+    "since last recorded contact exchange",
+  "contact.standing.lastInbound": "Last inbound message",
   "contact.standing.direction.twoWay": "Both sides have written.",
   "contact.standing.direction.inboundOnly":
     "Only they have written so far. Nothing has gone out from your team.",
   "contact.standing.direction.outboundOnly":
-    "Only your team has written so far. No reply yet.",
+    "Only outgoing messages from your team are recorded. No reply is recorded.",
   "contact.standing.direction.none": "No messages either way yet.",
   "contact.subtitle.at": "at",
   "contact.standing.dims": "How the relationship stands",
@@ -15826,7 +16107,8 @@ export const en = {
   "sched.recipientsUnknown": "No recipient on this message",
   "sched.recipientsMore": "{first} and {count} more",
   "sched.move": "Reschedule",
-  "sched.moveTo": "New time for “{subject}”",
+  "sched.moveToDay": "New day for “{subject}”",
+  "sched.moveToTime": "New time for “{subject}”",
   "sched.moveSave": "Move message",
   "sched.withdraw": "Withdraw",
   "sched.withdrawTitle": "Withdraw this message?",
@@ -16486,20 +16768,22 @@ export const en = {
   "worklist.because.meeting_unprepared": "nothing prepared",
   "worklist.because.outcome_unrecorded": "no outcome recorded",
   "worklist.because.you_wrote_last": "you wrote last",
-  "worklist.because.no_reply_days": "no reply",
-  "worklist.because.no_reply_days.value_one": "no reply for {value} day",
-  "worklist.because.no_reply_days.value_other": "no reply for {value} days",
+  "worklist.because.no_reply_days": "no reply recorded",
+  "worklist.because.no_reply_days.value_one":
+    "no reply recorded for {value} day",
+  "worklist.because.no_reply_days.value_other":
+    "no reply recorded for {value} days",
   "worklist.because.met_days_ago": "met",
   "worklist.because.met_days_ago.value_one": "met {value} day ago",
   "worklist.because.met_days_ago.value_other": "met {value} days ago",
-  "worklist.because.nothing_sent_since": "nothing sent since",
+  "worklist.because.nothing_sent_since": "no outgoing message recorded since",
   "worklist.because.no_attendee_on_file": "no attendee on file",
   "worklist.because.response_overdue": "reply overdue",
   "worklist.because.response_due_soon": "reply due soon",
   "worklist.because.response_due_soon.value": "reply due by {value}",
   "worklist.because.unassigned": "no owner",
   "worklist.because.stale": "waiting a long time",
-  "worklist.because.no_reply_history": "no reply history",
+  "worklist.because.no_reply_history": "no reply history recorded",
   "worklist.because.asks_nothing": "asks for nothing",
   "worklist.because.addressed_elsewhere": "addressed to a colleague",
   "worklist.because.bcc_from_stranger":
@@ -16511,7 +16795,7 @@ export const en = {
   "worklist.verdict.drifting": "Drifting",
   "worklist.verdict.blocked": "Blocked",
   "worklist.verdict.cold": "Cold",
-  "worklist.verdict.believes": "Assessment",
+  "worklist.verdict.believes": "Earlier assessment",
   "worklist.verdict.asOf": "As of {when}",
   "worklist.untitled.approval": "Approval waiting",
   "worklist.untitled.dedupe_candidate": "Possible duplicate records",
@@ -17005,7 +17289,8 @@ export const en = {
   "lead.standing.closedUnreasoned": "Closed. The record is kept as history.",
   "lead.standing.noResponse": "No first response recorded.",
   "lead.standing.theirMove": "Awaiting lead",
-  "lead.standing.answeredOn": "Answered on {at}. No reply yet.",
+  "lead.standing.answeredOn":
+    "Answer recorded on {at}. No later reply is recorded.",
   "lead.standing.inMotion": "In motion",
   "lead.standing.engagedBecause":
     "The lead replied, or a meeting is scheduled.",
@@ -17938,6 +18223,19 @@ export const en = {
   "project.standing.peek.started": "Work started",
   "project.standing.peek.today": "Today",
   "project.standing.peek.documents": "Files on this project, newest first",
+  "mailCoverage.title": "Mail history may be incomplete",
+  "mailCoverage.unknown":
+    "Mail capture does not verify this period. These dates describe recorded exchanges; a reply may exist outside this record.",
+  "mailCoverage.partial":
+    "Capture has succeeded, but a complete Inbox and Sent history is unverified. Missing recorded mail does not prove that nobody replied.",
+  "mailCoverage.unavailable":
+    "Mail capture is unavailable for part of this history. A reply may exist outside this record.",
+  "mailCoverage.withheld":
+    "This reader cannot check mail coverage. Missing recorded mail does not prove that nobody replied.",
+  "mailCoverage.connections": "Check connections",
+  "connectors.syncTimeUnknown": "Successful sync time unavailable",
+  "brief.coverage.source.deal_advice": "Suggested deal steps",
+  "tasks.origin.accepted_recommendation": "Accepted from a suggested step.",
 } as const;
 
 export type MessageKey = keyof typeof en;

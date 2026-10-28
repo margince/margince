@@ -111,14 +111,14 @@ func EnsureActivityWritableIn(ctx context.Context, tx pgx.Tx, id ids.UUID, live 
 // row aliased `a`: authored, assigned, hosted, link-less, or linked to a
 // record the caller may change.
 func activityWriteArms(p principal.Principal, arg func(any) int) string {
-	me, author := arg(p.UserID), arg("%:"+p.UserID.String())
+	me := arg(p.UserID)
 	return fmt.Sprintf(`(
-		   a.captured_by LIKE $%[2]d
-		   OR a.assignee_id = $%[1]d
-		   OR a.host_user_id = $%[1]d
+		   %[3]s
+		   OR a.assignee_id IN (%[1]s)
+		   OR a.host_user_id IN (%[1]s)
 		   OR NOT EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id)
-		   OR EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND %[3]s))`,
-		me, author, linkTargetWritable(p, "l", arg))
+		   OR EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND %[2]s))`,
+		memberIdentitySQL(me), linkTargetWritable(p, "l", arg), memberAuthorshipSQL("a", me, arg))
 }
 
 // ActivityWritableSubset answers which of the named live, unheld activities

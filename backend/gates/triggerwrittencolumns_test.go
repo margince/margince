@@ -279,6 +279,9 @@ func assignmentTarget(assignment string) string {
 // dead assignment that arrives in the same function later. What the register
 // adds is the product claim the shape cannot carry: WHY this row has to move.
 var touchStatements = gatekit.Waive(map[string]string{
+	"internal/modules/identity/memberretirement.go:recordMemberSurvivor":          "the survivor's merged aliases change its account editor and retirement preview, so its locked revision must move",
+	"internal/modules/identity/teams.go:recordTeamChange":                         "team membership is part of the member editor snapshot; the authorization lock serializes access changes and its revision must move",
+	"internal/modules/identity/userrole.go:changeUserRoleTx":                      "role assignments are part of the member editor snapshot; the authorization lock serializes role changes and its revision must move",
 	"internal/modules/activities/automaticdealfiling.go:retractMachineLinkTx":     "taking an automatic deal link back changes who the activity reaches, so it moves the version a staged approval pinned, as finalizeRelinkedActivity does for a filing",
 	"internal/modules/activities/relinkbatch.go:finalizeRelinkedActivity":         "a staged approval pins activity.version, and that pin is the only thing between an approved \"send this body on this conversation\" and the conversation being repointed before the approval redeems; a relink that changes who the activity reaches must move the version the pin re-checks",
 	"internal/modules/capture/sinkprojectwrite.go:linkActivityToProject":          "the automatic half of the same relink: filing under a project changes who the activity reaches, so it must move the version a staged approval pinned, for the reason the human path gives",

@@ -31,6 +31,9 @@ export const E2E_ADMIN_GRANTS: GrantSpec = {
   pipeline: ["create", "read", "update", "delete"],
   custom_field: ["create", "read", "update", "delete"],
   webhook_subscription: ["create", "read", "update", "delete"],
+  // Website forms, whose page opens on the integrations write. The provider
+  // and finance cards on Integrations ask the same object.
+  integrations: ["create", "read", "update", "delete"],
   capture_settings: ["read", "update"],
   embedding_reindex: ["read", "update"],
   fx_rate: ["create", "read", "update"],

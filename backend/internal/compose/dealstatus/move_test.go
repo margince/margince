@@ -116,7 +116,7 @@ func TestTheMoveAndReplyToNameTheSameMail(t *testing.T) {
 			request := inboundMail(testNow.AddDate(0, 0, -200))
 			deal := openDeal()
 			deal.Status = status
-			f := facts{deal: deal, now: testNow, loc: time.UTC, timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindNote, testNow)}, requests: []crmcontracts.Activity{request, inboundMail(testNow.AddDate(0, 0, -201))}}
+			f := facts{deal: deal, now: testNow, loc: time.UTC, timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindNote, testNow)}, currentRequests: []crmcontracts.Activity{request, inboundMail(testNow.AddDate(0, 0, -201))}}
 			mv := decideMove(f)
 			card := composeDeterministic(f, mv)
 			if mv.Action != ActionCreateTask || mv.Arguments == nil || (*mv.Arguments)["request_activity_id"] != request.Id || card.ReplyTo == nil || *card.ReplyTo != request.Id {
@@ -332,7 +332,7 @@ func TestAQuietContactedDealNamesTheChampionToMeet(t *testing.T) {
 	if !strings.Contains(mv.Reason, "23 days ago") {
 		t.Errorf("the advice does not say how long it has been quiet: %q", mv.Reason)
 	}
-	if !strings.Contains(mv.Reason, "nothing is booked") {
+	if !strings.Contains(mv.Reason, "no meeting is recorded") {
 		t.Errorf("the advice does not say why now: %q", mv.Reason)
 	}
 	if !strings.Contains(mv.Reason, "champion") {
@@ -378,7 +378,7 @@ func TestTheMeetingRequestNeverNamesTheBlocker(t *testing.T) {
 	if strings.Contains(mv.Reason, "Nadine Pichelot") {
 		t.Errorf("the blocker was offered as the meeting to book: %q", mv.Reason)
 	}
-	if !strings.Contains(mv.Reason, "agree the next step") {
+	if !strings.Contains(strings.ToLower(mv.Reason), "agree the next step") {
 		t.Errorf("the card did not fall back to the sentence that names nobody: %q", mv.Reason)
 	}
 }
@@ -575,7 +575,7 @@ func TestACoveredRequestDoesNotOfferAnotherReadersPrivateTask(t *testing.T) {
 	request := inboundMail(testNow.Add(-time.Hour))
 	covered := true
 	request.EmailSummary = &crmcontracts.EmailSummary{RequestHasReminder: &covered}
-	f := facts{deal: openDeal(), now: testNow, loc: time.UTC, requests: []crmcontracts.Activity{request}}
+	f := facts{deal: openDeal(), now: testNow, loc: time.UTC, currentRequests: []crmcontracts.Activity{request}}
 	mv := decideMove(f)
 	if mv.Action != ActionDraftEmail {
 		t.Fatalf("covered request offered %s", mv.Action)

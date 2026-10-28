@@ -35,6 +35,7 @@ const gmailConnected: CaptureConnection = {
     "https://www.googleapis.com/auth/gmail.send",
   ],
   last_synced_at: "2026-07-23T09:30:00Z",
+  last_success_at: "2026-07-23T09:30:00Z",
   // A finished backfill. Mounting BackfillPanel below the row must not fire an
   // extra request, because the panel seeds from this embedded snapshot. "none"
   // would auto-fire the setup screen's scope preview against an unstubbed
@@ -365,9 +366,20 @@ describe("the connected-inboxes card", () => {
   });
 
   it("shows an honest waiting line for a connection that has never synced", async () => {
-    stubApi([{ ...gmailConnected, last_synced_at: null }]);
+    stubApi([
+      { ...gmailConnected, last_synced_at: null, last_success_at: null },
+    ]);
     render(<ConnectorsCard />);
-    expect(await screen.findByText(/Awaiting first sync/)).toBeTruthy();
+    expect(await screen.findByText(/No successful sync recorded/)).toBeTruthy();
+  });
+
+  it("keeps the successful sync time unknown for an older server", async () => {
+    stubApi([{ ...gmailConnected, last_success_at: undefined }]);
+    render(<ConnectorsCard />);
+    expect(
+      await screen.findByText(/Successful sync time unavailable/),
+    ).toBeTruthy();
+    expect(screen.queryByText("No successful sync recorded")).toBeNull();
   });
 
   it("surfaces a load failure without crashing the card", async () => {

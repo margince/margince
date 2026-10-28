@@ -166,6 +166,7 @@ export const SETTINGS_SECTIONS = {
     "webhooks.title",
     "connectors.telegramTitle",
   ],
+  "web-forms": ["webForms.title"],
   knowledge: ["knowledge.title"],
   import: [
     "import.hub.title",

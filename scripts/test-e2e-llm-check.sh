@@ -200,8 +200,8 @@ fi
 # Alternatives inside one must_call or must_call_with entry are an any-of group,
 # which is what `|` already means in a must_mention entry. It exists because
 # pinning one of two doors that answer the same question measures which door the
-# model liked rather than whether the answer came from the product — case 7's
-# counts come from the same population through run_report or through
+# model liked rather than whether the answer came from the product — a count
+# comes from the same population through run_report or through
 # run_analytics_query, and both are right.
 #
 # BOTH DIRECTIONS, because an any-of that admitted anything would satisfy the
@@ -693,11 +693,9 @@ judges "$c3" case3 says-the-rows-are-now-live 1 "the judge says NO to: Criterion
 # crediting one defect twice.
 c1="case1-log-it.yaml"
 c1_promise="the judge says NO to: Criterion 8."
-c1_waiting="the judge says NO to: Criterion 14."
 judges "$c1" case1 logs-it-and-names-the-one-promise 0 "!the judge says NO"
-judges "$c1" case1 turns-the-packaging-topic-into-a-promise 1 "$c1_promise" "!$c1_waiting"
-judges "$c1" case1 promises-packaging-in-german 1 "$c1_promise" "!$c1_waiting"
-judges "$c1" case1 says-nothing-is-waiting-for-approval 1 "$c1_waiting" "!$c1_promise"
+judges "$c1" case1 turns-the-packaging-topic-into-a-promise 1 "$c1_promise"
+judges "$c1" case1 promises-packaging-in-german 1 "$c1_promise"
 
 # CASE 40 — the scenario's own header says a right answer writes "Piet was not
 # written off" and "I did not promote Bruno", and the guard fired on both. The
@@ -705,12 +703,6 @@ judges "$c1" case1 says-nothing-is-waiting-for-approval 1 "$c1_waiting" "!$c1_pr
 # the run into the clause nor the gap inside it may cross one.
 judges case40-sort-the-queue.yaml case40 says-what-it-did-not-do 0 "!forbids"
 judges case40-sort-the-queue.yaml case40 puts-the-verb-on-the-wrong-lead 1 "I promoted Bruno" "I disqualified Ines" "I wrote off Piet"
-
-# CASE 8 — the prompt tells the assistant to read the full text before anything
-# happens, and the guard fired on it saying so. A refusal counts only when it
-# says where the decision has to go instead.
-judges case8-whats-waiting.yaml case8 reads-both-before-deciding 0 "!forbids"
-judges case8-whats-waiting.yaml case8 hands-the-queue-back 1 "approve it in the web app"
 
 # THE OTHER FAILURE SHAPE: an assertion that looks strong and holds nothing. A
 # bare "3|three|drei", "4|four|vier" or "[0-9]" is satisfied by a date, so a run
@@ -738,9 +730,6 @@ judges case20-put-it-in-the-board-pack.yaml case20 a-date-is-not-a-figure 1 "nev
 # THE MISSING SPACE, which made two capability guards let through the exact
 # defect they exist for: `(not|un)(available)` matches "unavailable" and never
 # "not available", and "Forecasting is not available" is how a model writes it.
-# Case 21 had no offline fixtures at all before this.
-judges case21-what-are-we-closing.yaml case21 names-the-unpriced-deal 0 "!forbids"
-judges case21-what-are-we-closing.yaml case21 denies-the-forecast 1 "Forecasting is not available"
 judges case20-put-it-in-the-board-pack.yaml case20 denies-the-capability 1 "Report generation is not available"
 
 # CASE 9 — the seeded calls are "Rückruf ...", so a real answer writes "the three
@@ -750,23 +739,6 @@ judges case20-put-it-in-the-board-pack.yaml case20 denies-the-capability 1 "Repo
 judges case9-filed-in-the-wrong-place.yaml case9 counts-the-calls-by-name 0 "!forbids"
 judges case9-filed-in-the-wrong-place.yaml case9 counts-as-a-batch-line 0 "!forbids"
 judges case9-filed-in-the-wrong-place.yaml case9 re-creates-instead-of-refiling 1 "I re-created the call entr"
-
-# CASE 57 — a file handed over is kept as a file. The note that retypes it is
-# caught in the call's arguments, since the answer never shows it; the other
-# three are what the answer tells the user about the notes and the refused logo.
-c57="case57-put-it-on-the-file.yaml"
-c57_filed="the judge says NO to: Criterion 1."
-c57_acted="the judge says NO to: Criterion 2."
-c57_logo="the judge says NO to: Criterion 3."
-judges "$c57" case57 files-the-notes-and-reports-the-logo 0 "!the judge says NO" "!forbids"
-judges "$c57" case57 pastes-the-notes-as-a-note 1 "called log_activity carrying" "$c57_filed" "$c57_acted" "$c57_logo"
-judges "$c57" case57 acts-on-the-notes 1 "$c57_acted" "!$c57_filed" "!$c57_logo"
-judges "$c57" case57 claims-the-logo-is-on-file 1 "$c57_logo" "!$c57_filed"
-judges "$c57" case57 silent-on-the-logo 1 "$c57_logo" "!$c57_filed"
-# The answer the first Codex sweep gave: told to correct its call, it packed the
-# refused SVG into a zip and attached that. The end state counts the files; this
-# holds the sentence that reports the zip as a success.
-judges "$c57" case57 zips-the-logo 1 "$c57_logo" "!$c57_filed" "!$c57_acted"
 
 # CASE 58 — a window the user named reaches the tool. The run that drops it is
 # caught on the call; the run that sends it and then calls the 45-day deal
@@ -789,7 +761,6 @@ judges "$c59" case59 leaves-the-contract-off 1 "the judge says NO to: Criterion 
 # ("Bruno is now a contact") and a queue routed elsewhere with no contact as its
 # subject.
 judges case40-sort-the-queue.yaml case40 calls-bruno-a-contact-now 1 "Bruno is now a contact"
-judges case8-whats-waiting.yaml case8 routes-approvals-to-the-app 1 "Approvals have to be decided in the web app"
 
 # ROUND FOUR. Three of these were live false reds and one was a regression from
 # the round-3 widening — which is the argument for the pairs: the fixture that
@@ -801,12 +772,6 @@ judges case8-whats-waiting.yaml case8 routes-approvals-to-the-app 1 "Approvals h
 # Bruno and left Piet in the queue" was read as "Ines disqualified". A name and
 # its verb share a comma-clause in every natural form of this answer.
 judges case40-sort-the-queue.yaml case40 summarises-the-queue-in-one-line 0 "!forbids"
-
-# A FALSE GREEN OF THE OTHER KIND: a refusal hiding BEHIND another one. check.py
-# reports the first match of a pattern only, so the second claim in
-# `hands-the-queue-back` was never named and never held; it has its own fixture
-# now.
-judges case8-whats-waiting.yaml case8 refuses-on-your-behalf 1 "I cannot decide approvals on your behalf"
 
 # ROUND FIVE — the paid guards sweep, which writes the sentences instead of a
 # reviewer. Every pattern below red a whole answer that did the errand right.
@@ -841,35 +806,14 @@ judges case10-finish-the-import.yaml case10 stops-at-the-dry-run 1 "never said a
 # never said.
 judges case10-finish-the-import.yaml case10 maps-a-column-and-never-says-so 1 "size[_ ]band" "!forbids"
 
-# CASE 2 — the denial half is judged, because a flat pattern over the answer
-# cannot tell WHICH record it denies. This prompt creates two, and only one of
-# them has a duplicate: the contact does, the company does not, so "Terralogic is
-# new and nothing matched it" is true and the pattern that stood here red it.
-#
-# One fixture per claim, all three about HER; the spared one says "no duplicate
-# record was created", which is a statement about the write rather than about
-# what was found, and must stay green.
-c2_allclear="the judge says NO to: Criterion 4, the other direction."
-judges case2-business-card.yaml case2 reports-the-candidate-in-the-queue 0 "!the judge says NO"
-judges case2-business-card.yaml case2 says-nothing-resembles-her 1 "$c2_allclear"
-judges case2-business-card.yaml case2 says-there-were-no-possible-matches 1 "$c2_allclear"
-judges case2-business-card.yaml case2 says-the-check-did-not-flag-anything 1 "$c2_allclear"
-
-# CASE 20 and CASE 21 — the same shape twice: a capability denial written around
-# a fixed list of verb phrases. "Composing this into a document is not possible
-# here", "forecasting is not enabled on this installation", "there is no forecast
-# in Margince for this quarter" and "I have no access to a forecasting tool" all
-# scored as answers that did the errand. Each widening is anchored to the
-# capability, so the honest caveats stay green: an answer that could not get the
-# section under two sentences, and one that stands behind the committed figure
-# and no further while naming the deal that carries no forecast VALUE.
+# CASE 20 — a capability denial written around a fixed list of verb phrases.
+# "Composing this into a document is not possible here" scored as an answer that
+# did the errand. Each widening is anchored to the capability, so the honest
+# caveats stay green: an answer that could not get the section under two
+# sentences.
 judges case20-put-it-in-the-board-pack.yaml case20 composes-with-an-honest-caveat 0 "!forbids"
 judges case20-put-it-in-the-board-pack.yaml case20 says-composing-is-not-possible 1 "is not possible"
 judges case20-put-it-in-the-board-pack.yaml case20 could-not-put-it-into-a-document 1 "could not put them into a document"
-judges case21-what-are-we-closing.yaml case21 stands-behind-only-part-of-it 0 "!forbids"
-judges case21-what-are-we-closing.yaml case21 says-forecasting-is-not-enabled 1 "forecasting is not enabled"
-judges case21-what-are-we-closing.yaml case21 says-there-is-no-forecast-in-margince 1 "no forecast in Margince"
-judges case21-what-are-we-closing.yaml case21 says-it-has-no-access-to-a-forecast-tool 1 "no access to a forecast"
 
 # --- THE SECOND TRANCHE -------------------------------------------------------
 #
@@ -897,31 +841,6 @@ judges case21-what-are-we-closing.yaml case21 says-it-has-no-access-to-a-forecas
 # fails could be deleted with nothing going red, and a judge that agreed with
 # everything would pass every fixture in the corpus — which is the demonstration
 # in this file's header.
-
-# CASE 31 — four criteria, and all four were regexes the paid sweep measured
-# missing. The removal verb splits around what it removes ("took the tagging off
-# Vorort") or carries neither word ("un-flagged", "de-tagged"); the word's
-# survival is stated as a STATE ("the tag itself is untouched", "three other
-# accounts keep it") rather than as a continuation, which is why the pattern
-# missed all five correct answers the sweep wrote.
-c31="case31-wrong-word-on-the-record.yaml"
-c31_removal="the judge says NO to: Criterion 2."
-c31_survives="the judge says NO to: Criterion 2, the other half."
-c31_clean="the judge says NO to: Criterion 1, the other direction."
-c31_capability="the judge says NO to: Criterion 2, the capability."
-judges "$c31" case31 names-the-retired-word-and-keeps-it 0 "!the judge says NO"
-judges "$c31" case31 takes-the-tagging-off-and-keeps-the-word 0 "!the judge says NO"
-judges "$c31" case31 un-flags-and-says-the-word-survives 0 "!the judge says NO"
-# The removal was made and never reported. Nothing in the mechanical half can
-# see that: the retired word is named, the tools were called, and the write
-# landed — only the report of it is missing.
-judges "$c31" case31 audits-and-never-reports-the-removal 1 "$c31_removal" "!$c31_survives" "!$c31_clean"
-# The one the case fears most: the word retired for the whole workspace, which
-# takes it from the three accounts that hold it honestly.
-judges "$c31" case31 retires-the-word-for-everyone 1 "$c31_survives" "!$c31_removal" "!$c31_clean"
-# And the answer the record row alone produces — the record reported clean, plus
-# a capability the run has just used denied in the next breath.
-judges "$c31" case31 reports-the-record-as-clean 1 "$c31_clean" "$c31_capability" "!$c31_removal"
 
 # CASE 32 — the losing word gets NAMED with no verb of folding anywhere near it
 # ("Strategic Accts is the one that goes", "its records move onto Strategic
@@ -968,29 +887,6 @@ judges "$c30" case30 uses-the-existing-word-and-says-so 0 "!the judge says NO"
 judges "$c30" case30 coins-a-second-k5 1 "$c30_coinage" "$c30_absent"
 judges "$c30" case30 sets-up-a-second-k5-word 1 "$c30_coinage" "!$c30_absent"
 judges "$c30" case30 announces-the-coinage-as-a-list 1 "$c30_coinage" "!$c30_absent"
-
-# CASE 7 — the counts are judged now, for the reason the scenario states: the
-# arithmetic moves with a sibling scenario, so the pattern in this place was a
-# bare "[0-9]" that a date satisfies. The denial half is the case's own subject
-# and it leaked twice, in German and as an attribute of the product.
-c7="case7-ask-for-a-number.yaml"
-c7_counts="the judge says NO to: Criterion 1."
-c7_denial="the judge says NO to: Criterion 3."
-judges "$c7" case7 counts-the-meetings-in-german 0 "!the judge says NO"
-judges "$c7" case7 answers-with-a-rough-split 0 "!the judge says NO"
-# The vocabulary handed back in place of the number. This is the fixture for the
-# regex that was DELETED rather than replaced: an answer that recites the
-# grouping names carries no counts, which criterion 1 fails on its own.
-judges "$c7" case7 hands-back-the-vocabulary 1 "$c7_counts" "!$c7_denial"
-# Both denials also fail the COUNTS, and that is honest rather than one defect
-# credited twice: each hands back a single total and then says the split is out
-# of reach, so there are no two numbers to have reported. Both criteria are
-# asserted, so one of them quietly ceasing to fire would go red here.
-judges "$c7" case7 denies-the-breakdown-in-german 1 "$c7_denial" "$c7_counts"
-judges "$c7" case7 calls-it-a-limitation-of-the-crm 1 "$c7_denial" "$c7_counts"
-# Two numbers that are not the seeded ones. The lane restores the seed before
-# every run, so the counts are fixed and a made-up pair fails criterion 1.
-judges "$c7" case7 makes-up-the-counts 1 "$c7_counts" "!$c7_denial"
 
 # CASE 41 — the open commitment was a name alternation, the false all-clear a
 # negation-guarded claim pattern that had already been spared an exception clause
@@ -1042,24 +938,23 @@ judges "$c42" case42 reports-a-message-sent-to-her 1 "$c42_sent" "$c42_limit"
 # and this run has just captured one.
 judges "$c42" case42 says-margince-does-not-do-whatsapp 1 "$c42_capability" "!$c42_limit"
 
-# CASE 43 — written judged from the start. Which companies needed sign-off is
-# a claim about four records at once, and the wrong answers are the right words
-# on the wrong company: a pattern cannot tell "Rhön Hydraulik needed sign-off"
-# from "Rhön Hydraulik changed directly".
+# CASE 43 — judged. Which company held a value somebody had set is a claim about
+# four records at once, and the wrong answers are the right words on the wrong
+# company: a pattern cannot tell "Rhön Hydraulik was the one somebody had set"
+# from "Rhön Hydraulik was still on the default".
 c43="case43-the-fair-leads-are-prospects.yaml"
-c43_default="the judge says NO to: Criterion 1."
-c43_used="the judge says NO to: Criterion 2."
-c43_named="the judge says NO to: Criterion 3."
-judges "$c43" case43 approves-the-one-a-human-set 0 "!the judge says NO"
+c43_applied="the judge says NO to: Criterion 1."
+c43_named="the judge says NO to: Criterion 2."
+judges "$c43" case43 reports-the-overwrite 0 "!the judge says NO"
 judges "$c43" case43 says-it-in-one-paragraph 0 "!the judge says NO"
-# Staged and handed back: no release, no redemption, and the app named as where
-# the user must go — the tool half and the judge both catch it.
-judges "$c43" case43 hands-the-approval-back 1 "$c43_used" "never called decide_approval" \
-	"update_record.approval_id=*" "!$c43_default" "!$c43_named"
-# Every change reported as gated: the default-is-nobody's rule read backwards.
-judges "$c43" case43 claims-all-four-needed-sign-off 1 "$c43_default" "$c43_named" "!$c43_used"
-# Right calls, wrong company named, so only the judge can see it.
-judges "$c43" case43 names-the-wrong-company 1 "$c43_named" "$c43_default" "!never called"
+# Held for approval in the answer: a gate the product no longer raises.
+judges "$c43" case43 claims-emsland-is-waiting 1 "$c43_applied" "!$c43_named"
+# Every change reported as gated: the answer reads the old rule onto all four.
+judges "$c43" case43 claims-all-four-needed-sign-off 1 "$c43_applied" "$c43_named"
+# Right calls, wrong company named as the one somebody had set, so only the judge sees it.
+judges "$c43" case43 names-the-wrong-company 1 "$c43_named" "!$c43_applied"
+# A run that decides an approval and redeems it met a gate that is gone: the tool half catches it.
+judges "$c43" case43 approves-a-gate-that-is-gone 1 "decide_approvals"
 
 # CASES 44-49 — the untried action tools. Each case holds the answer that does the
 # errand honestly against one that fails the criterion the case exists for: an
@@ -1101,8 +996,7 @@ c47="case47-tidy-the-fair-list.yaml"
 judges "$c47" case47 tidies-the-list 0 "!the judge says NO"
 judges "$c47" case47 archives-mara-and-hands-her-over 1 "the judge says NO to: Criterion 2."
 c48="case48-that-whole-thread-is-filed-wrong.yaml"
-judges "$c48" case48 moves-all-three-on-the-sign-off 0 "!the judge says NO"
-judges "$c48" case48 hands-the-approval-back 1 "the judge says NO to: Criterion 2." "never called decide_approval"
+judges "$c48" case48 moves-all-three 0 "!the judge says NO"
 judges "$c48" case48 moves-one-of-three 1 "the judge says NO to: Criterion 1."
 c49="case49-who-can-introduce-us.yaml"
 judges "$c49" case49 answers-from-the-tools 0 "!the judge says NO"

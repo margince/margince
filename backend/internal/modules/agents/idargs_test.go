@@ -278,7 +278,7 @@ func (seamProbeDocuments) MaxBytes(context.Context) int64 { return 0 }
 func idProbeDispatcher(t *testing.T) *Dispatcher {
 	t.Helper()
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
-	RegisterCoreTools(r, seamProbeProvider{}, seamProbeProvider{}, nil, noConflicts{}, nil, nil, nil)
+	RegisterCoreTools(r, seamProbeProvider{}, seamProbeProvider{}, nil, nil, nil, nil)
 	RegisterReportingTool(r, func(context.Context, ReportingRead) (ReportingAnswer, error) {
 		return ReportingAnswer{}, errSeamReached
 	})
@@ -359,6 +359,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterDuplicateTools(r, stubDuplicateQueue{})
 	RegisterListTools(r, &stubLists{})
 	RegisterImportTools(r, stubImports{})
+	RegisterMemberTools(r, seamProbeMembers{})
 	RegisterListTool(r, seamProbeProvider{}, probeVocabulary{})
 	RegisterRecordPartsTool(r, seamProbeRecordParts{})
 	RegisterReadViewTool(r, probeViews, func(context.Context, ReadView, map[string]string, url.Values) (json.RawMessage, error) {

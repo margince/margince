@@ -13,20 +13,10 @@ package compose
 // execute: the loser sees the claim and answers 409 while the first is
 // in flight.
 //
-// A 2xx outcome is recorded for replay. A refusal is judged by whether it
-// CHANGED anything, which is not one answer:
-//
-//   - A refusal that wrote nothing releases the claim, so the client may retry
-//     the same key. Replaying stored failures would pin transient faults for
-//     24h and would break the stage-then-redeem approval flow, whose retry is
-//     the same request.
-//   - A refusal that had already written is recorded instead. Releasing it
-//     hands back a key whose retry re-runs the committed half — the one thing
-//     the key exists to prevent — so the next attempt meets the claimFailed
-//     answer: this request failed after it had already started, check whether
-//     it took effect before retrying under a new key. Handlers report a write
-//     through markWriteCommitted (partialwrite.go); the per-field split's
-//     staging half is the only door that does today.
+// A 2xx outcome is recorded for replay. A refusal releases the claim, so the
+// client may retry the same key. Replaying stored failures would pin transient
+// faults for 24h and would break the stage-then-redeem approval flow, whose
+// retry is the same request.
 
 import (
 	"bytes"
@@ -136,14 +126,10 @@ func idempotency(pool *pgxpool.Pool, probes map[string]replayProbe, restore repl
 			}
 
 			rec := &replayRecorder{ResponseWriter: w, status: http.StatusOK}
-			// The handler is given somewhere to say that it wrote before it
-			// refused. Read after it returns, because a refusal that changed
-			// something must not give the key back — see settleClaim.
-			ctx, effect := withWriteEffect(r.Context())
-			next.ServeHTTP(rec, r.WithContext(ctx))
+			next.ServeHTTP(rec, r)
 			// Zero records: this door records no served count, so its claims carry
 			// none (0198).
-			if err := settleHTTPClaim(r.Context(), pool, hold, route, rec, effect.committed); err != nil {
+			if err := settleHTTPClaim(r.Context(), pool, hold, route, rec); err != nil {
 				slog.ErrorContext(r.Context(), "idempotency claim settlement failed", "err", err)
 			}
 		})
@@ -346,22 +332,10 @@ func resolveClaimRow(ctx context.Context, tx pgx.Tx, principalID, key, endpoint,
 	}
 }
 
-// settleClaim records a 2xx outcome for replay, and decides what a refusal
-// means from whether the request WROTE before it answered one.
-//
-// A refusal that changed nothing gives the key back: the caller fixes the call
-// and retries, which is the whole point of releasing it. A refusal that changed
-// something must not — the retry would run the applied half a second time under
-// the same key, which is precisely what the key exists to prevent. Such a claim
-// is RECORDED instead, and the next attempt under it meets the claimFailed
-// answer: this request failed after it had already started, check whether it
-// took effect before retrying under a new key. That is the honest sentence,
-// because whether the effect landed is exactly what nobody here can determine.
-//
-// Only one door reports a write today (the per-field split's staging half), so
-// the released path is still what every other refusal takes.
+// settleClaim records a 2xx outcome for replay. It gives the key back for a
+// refusal, so the caller can fix the call and retry under the same key.
 func settleClaim(ctx context.Context, pool *pgxpool.Pool, hold claimHold,
-	status int, body, contentType string, records int, wrote bool,
+	status int, body, contentType string,
 ) error {
 	// A caller that took no claim settles nothing. It reached here after
 	// reading somebody else's row — a replay, a mismatch, or an infrastructure
@@ -370,20 +344,20 @@ func settleClaim(ctx context.Context, pool *pgxpool.Pool, hold claimHold,
 	if !hold.holdsClaim() {
 		return nil
 	}
-	if claimIsReleased(status, wrote) {
+	if claimIsReleased(status) {
 		return releaseClaim(ctx, pool, hold)
 	}
-	return recordClaimOutcome(ctx, pool, hold, status, body, contentType, records)
+	return recordClaimOutcome(ctx, pool, hold, status, body, contentType, 0)
 }
 
-// claimIsReleased is the rule a refusal is judged by: a key goes back only for
-// one that changed nothing.
+// claimIsReleased is the rule a refusal is judged by: a key goes back for any
+// outcome that is not a success.
 //
 // A function rather than an inline condition because it is the whole of what
 // settleClaim decides, and a case can then state it without a database — the
 // two arms it chooses between are each already held.
-func claimIsReleased(status int, wrote bool) bool {
-	return (status < 200 || status >= 300) && !wrote
+func claimIsReleased(status int) bool {
+	return status < 200 || status >= 300
 }
 
 // recordClaimOutcome writes a settled response onto a held claim, whatever that

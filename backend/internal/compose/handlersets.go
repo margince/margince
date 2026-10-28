@@ -49,6 +49,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/modules/signals"
+	"github.com/margince/margince/backend/internal/modules/webforms"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
 	"github.com/margince/margince/backend/internal/shared/ports/contactdata"
@@ -78,6 +79,7 @@ type (
 	voiceHandlers           = ai.Handlers
 	customfieldsHandlers    = customfields.Handlers
 	webhooksHandlers        = webhooks.Handlers
+	webFormsHandlers        = webforms.Handlers
 	company360Handlers      = company360.Handlers
 	contact360Handlers      = contact360.Handlers
 	project360Handlers      = project360.Handlers
@@ -106,7 +108,7 @@ type (
 // Its own function so the composition root reads as a list of what is wired
 // rather than how each piece is built.
 func (s *Server) wireContact360(pool *pgxpool.Pool) {
-	s.contact360Svc = contact360.NewService(pool, s.contactsStore, s.dealsStore, ProjectsStore(pool), consent.NewStore(InstallationDB(pool)), comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool))), ai.NewFeedbackStore(InstallationDB(pool)), time.Now)
+	s.contact360Svc = contact360.NewService(pool, s.contactsStore, s.dealsStore, ProjectsStore(pool), consent.NewStore(InstallationDB(pool)), comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool))), ai.NewFeedbackStore(InstallationDB(pool)), time.Now).WithMailCoverage(mailCaptureCoverageReader(InstallationDB(pool)))
 	s.contact360Handlers = contact360.NewHandlers(s.contact360Svc)
 	// The relationship brief is assembled from the SAME composite read the page
 	// serves, so the two cannot disagree about what this caller may see. The
@@ -134,7 +136,7 @@ func (s *Server) wireContact360(pool *pgxpool.Pool) {
 	// Deal Room through their own gates. Built through the shared constructor
 	// because the worklist reads the move this same service decides — see
 	// newDealStatusService for why there is only one.
-	s.dealStatusSvc = newDealStatusService(pool)
+	s.dealStatusSvc = newDealStatusService(pool, time.Now)
 	s.dealStatusHandlers = dealstatus.NewHandlers(s.dealStatusSvc)
 	s.roomBriefSvc = newRoomBriefService(pool)
 	s.roomBriefHandlers = roombrief.NewHandlers(s.roomBriefSvc)

@@ -6310,20 +6310,18 @@ paths:
         - name: q
           in: query
           schema: {type: string}
-          description: Case-insensitive match over display_name/email.
+          description: Case-insensitive match over display_name/email that ignores diacritics on both sides.
         - name: include_inactive
           in: query
           schema: {type: boolean, default: false}
           description: Admin management view — include deactivated/suspended members. Honored only for an admin caller.
         - name: include_invited
           in: query
-          deprecated: true
           schema: {type: boolean, default: false}
           description: |-
-            Also list invited seats — members who have not signed in yet. Naming the colleagues a record
-            already points at is `GET /users/names`, which answers id and display name alone; a roster row
-            carries the member's email and seat status with it.
-            Pickers leave it off, so nobody is offered work they cannot open.
+            Also list invited seats — members who have not signed in yet. Each row's `status` says so.
+            A picker that may hand an invited colleague work, such as a record responsibility, asks for them.
+            Naming the colleagues a record already points at is `GET /users/names`.
       responses:
         '200':
           description: A page of workspace members.
@@ -6331,6 +6329,66 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/UserListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /users/{id}/retirement-preview:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Identity]
+      operationId: previewMemberRetirement
+      summary: Preview removing a member or merging them into another account.
+      parameters:
+        - name: mode
+          in: query
+          schema: {type: string, enum: [merge, remove], default: remove}
+        - name: to_user_id
+          in: query
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: The work, unresolved dependencies and confirmation token.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MemberRetirementPreview'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '409': {$ref: '#/components/responses/VersionConflict'}
+      description: Preview removing a member or merging them into another account.
+  /users/{id}/merge:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Identity]
+      operationId: mergeMembers
+      summary: Merge a duplicate into the selected surviving member.
+      description: |-
+        The source must be an unused imported or invited identity. The acting administrator cannot be the survivor.
+
+        Needs the passport permission Change records.
+
+        Waits for a human to approve.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/MergeMembersRequest'}
+      responses:
+        '200':
+          description: Work transferred and duplicate removed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [merged]
+                properties:
+                  merged: {type: boolean}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/VersionConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /users/names:
     get:
@@ -6375,7 +6433,7 @@ paths:
         - name: q
           in: query
           schema: {type: string}
-          description: Case-insensitive match over team name.
+          description: Case-insensitive match over team name that ignores diacritics on both sides.
       responses:
         '200':
           description: A page of teams.
@@ -7735,11 +7793,21 @@ paths:
 
         May hold the request open while an AI model answers, when no stored answer exists yet.
       parameters:
+        - name: if_recommendation
+          in: query
+          required: false
+          schema: {type: string, pattern: '^[0-9a-f]{64}$'}
+          description: Check this recommendation basis before opening its action. Requires if_rule and facts_only; a changed step returns version_skew.
+        - name: if_rule
+          in: query
+          required: false
+          schema: {type: string}
+          description: The recommendation rule being checked with if_recommendation.
         - name: facts_only
           in: query
           required: false
           schema: {type: boolean}
-          description: Refresh the card and shared action cache from current facts without model calls. Takes precedence over refresh.
+          description: Refresh the card and its current suggested step without model calls. Takes precedence over refresh.
         - name: refresh
           in: query
           required: false
@@ -7751,9 +7819,15 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/DealStatusCard'}
+        '400':
+          description: The conditional recommendation parameters are invalid or facts_only is missing.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /deals/{id}/coverage:
     get:
@@ -11441,15 +11515,24 @@ components:
     Contact360:
       type: object
       description: |-
-        The contact record page in one payload. Every section except `contact` is
-        optional: absent means the caller lacks its grant, and `sections_omitted` names it.
+        The contact record page in one payload. Record sections may be absent when their
+        grants are withheld; `sections_omitted` names those sections. Mail coverage
+        reports its own state and observation clock. Absent coverage is unknown.
       required: [as_of, contact, sections_omitted]
       properties:
+        mail_coverage: {$ref: '#/components/schemas/MailCaptureCoverage'}
         as_of:
           type: string
           format: date-time
-          description: The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
+          description: The assembly clock. Mail coverage carries its own evaluation time; Read Committed does not promise one snapshot across sections.
         contact: {$ref: '#/components/schemas/Contact'}
+        created_by:
+          allOf: [{$ref: '#/components/schemas/PrincipalAttribution'}]
+          description: |-
+            Who created the contact, from its earliest create audit row: for an agent, the
+            colleague it worked for and the tool it was typed through, each when the row
+            records it, which `captured_by` cannot say. Absent when no create row is known; a reader says "unknown" for an
+            absent value and never "System".
         scope:
           $ref: '#/components/schemas/ProjectScope'
           description: The project this was narrowed to, when the request named one.
@@ -12482,6 +12565,7 @@ components:
         minute before a call.
       required: [deal_id, story, generated_at, generated_by]
       properties:
+        mail_coverage: {$ref: '#/components/schemas/MailCaptureCoverage'}
         deal_id: {type: string, format: uuid}
         story:
           allOf: [{$ref: '#/components/schemas/DealStatusCardSection'}]
@@ -12509,15 +12593,17 @@ components:
         next:
           allOf: [{$ref: '#/components/schemas/DealStatusCardMove'}]
           description: The one move to make, with the verb to perform it.
+        request_basis:
+          allOf: [{$ref: '#/components/schemas/WorkEvidenceBasis'}]
+          description: Current request evidence supporting reply_to; absent for historical review.
         reply_to:
           type: [string, 'null']
           format: uuid
           description: |-
-            The inbound message an email from here would answer: the most recent
-            one this deal has received that nobody has replied to. Null when the
-            buyer has never written, or when the last thing they wrote has been
-            answered — then a mail from here starts a thread rather than
-            continuing one.
+            A confirmed current inbound request on this deal, admitted by the
+            request owner's responsibility, settlement and currency rules.
+            Absent for historical or unconfirmed review. Its absence makes no
+            claim about whether an unrecorded reply exists.
         generated_at: {type: string, format: date-time}
         generated_by: {$ref: '#/components/schemas/WrittenBy'}
       additionalProperties: false
@@ -12562,6 +12648,8 @@ components:
         to send; absent for `none`.
       required: [action, reason, evidence]
       properties:
+        recommendation: {$ref: '#/components/schemas/RecommendationReceipt'}
+        mail_coverage: {$ref: '#/components/schemas/MailCaptureCoverage'}
         action: {type: string}
         reason: {type: string, description: "One sentence saying why this move and not another."}
         arguments:
@@ -12571,6 +12659,9 @@ components:
         evidence:
           type: array
           items: {$ref: '#/components/schemas/DealNextBestActionEvidence'}
+        basis:
+          allOf: [{$ref: '#/components/schemas/WorkEvidenceBasis'}]
+          description: Evidence classification for this recommendation; absence supplies no urgency.
         fingerprint:
           type: string
           readOnly: true
@@ -12579,6 +12670,62 @@ components:
             rules chose it. Send it to `POST /deals/{id}/move/dismiss` to set this move aside;
             the set-aside lifts when the card names a different move. Absent on a move with
             nothing to do (`none`).
+      additionalProperties: false
+    RecommendationReceipt:
+      type: object
+      additionalProperties: false
+      description: >-
+        The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
+      required: [deal_id, rule, policy_version, basis_fingerprint, checked_at]
+      properties:
+        deal_id: {type: string, format: uuid}
+        rule: {type: string}
+        policy_version: {type: string}
+        basis_fingerprint: {type: string, pattern: '^[0-9a-f]{64}$'}
+        checked_at: {type: string, format: date-time, description: Evaluation instant identifying this observation.}
+    MailCaptureCoverage:
+      type: object
+      additionalProperties: false
+      description: |-
+        The calling reader's mail capture for the requested interval. This does
+        not assert that no reply exists. Partial means capture has succeeded but
+        does not attest a complete Inbox and Sent interval. Current providers do
+        not record such an attestation; a cursor or completed import cannot supply it.
+        No mailbox identity, credential, cursor or colleague account travels.
+      required: [channel, state, interval_to, evaluated_at]
+      properties:
+        channel: {type: string, enum: [email]}
+        state: {type: string, enum: [unknown, partial, unavailable, withheld]}
+        interval_from:
+          type: string
+          format: date-time
+          description: Start of the requested interval, not a verified coverage boundary.
+        interval_to:
+          type: string
+          format: date-time
+          description: End of the requested interval, not a verified coverage boundary.
+        last_success_at:
+          type: string
+          format: date-time
+          description: Oldest successful sync across every relevant mailbox; absent if any has never succeeded.
+        evaluated_at: {type: string, format: date-time}
+    WorkEvidenceBasis:
+      type: object
+      description: |-
+        A recommendation's scoped source and classification. Known request kinds
+        are current_request and request_review; unknown kinds remain neutral.
+        Source age is not a deadline. Evaluation time is not source time.
+      required: [kind, scope, source_activity_id, source_at, source_precision, evaluated_at, policy_version]
+      properties:
+        mail_coverage: {$ref: '#/components/schemas/MailCaptureCoverage'}
+        kind: {type: string}
+        scope: {type: string, description: The record scope in which the evidence was evaluated.}
+        source_activity_id: {type: string, format: uuid}
+        source_at: {type: string, format: date-time}
+        source_precision: {$ref: '#/components/schemas/OccurredPrecision'}
+        source_version: {$ref: '#/components/schemas/RowVersion'}
+        evaluated_at: {type: string, format: date-time}
+        policy_version: {type: string}
       additionalProperties: false
     DealNextBestActionEvidence:
       type: object
@@ -14500,6 +14647,17 @@ components:
       properties:
         to_phase: {type: string, enum: [initiative, pursuing, delivering, closed]}
         reason: {type: [string, 'null'], description: 'Required when to_phase=closed (422 closed_reason_required); recorded on the phase-history row either way.'}
+    HandoverCounts:
+      type: object
+      description: Live records per kind.
+      required: [lead, contact, company, deal, project, task]
+      properties:
+        lead: {type: integer, minimum: 0}
+        contact: {type: integer, minimum: 0}
+        company: {type: integer, minimum: 0}
+        deal: {type: integer, minimum: 0}
+        project: {type: integer, minimum: 0}
+        task: {type: integer, minimum: 0, description: Open tasks assigned to the member.}
     BulkRecordType:
       type: string
       description: |-
@@ -15520,6 +15678,7 @@ components:
       description: What a task needs. Stored as an activity of kind `task`.
       required: [subject, source]
       properties:
+        recommendation: {$ref: '#/components/schemas/RecommendationReceipt'}
         source_activity_id:
           type: string
           format: uuid
@@ -15549,6 +15708,7 @@ components:
       type: object
       required: [kind, source]
       properties:
+        recommendation: {$ref: '#/components/schemas/RecommendationReceipt'}
         source_activity_id:
           type: string
           format: uuid
@@ -18619,6 +18779,36 @@ components:
             $ref: '#/components/schemas/ReportingExecution'
         next_cursor:
           type: string
+    MemberRetirementBlocker:
+      type: string
+      enum: [approval_decisions, automations, booking_pages, data_requests, deal_rooms, introductions, lists, stewarded_lists, mail_drafts, meeting_invitations, meeting_proposals, privacy_notices, record_responsibilities, reports, report_schedules, saved_views, scheduled_mail, handoffs, voice_profiles, web_forms, webhooks, weekly_plans, analytics_shares, source_used, self_survivor, deactivate_first, choose_survivor, choose_receiver, private_tasks, work_not_transferable, state_changed]
+    MemberRetirementConsequence:
+      type: string
+      enum: [source_signed_out, connectors_reconnect, survivor_access, original_attribution, private_alerts_archived, crm_private_records_move, private_audiences_retained, email_reserved, survivor_inactive]
+    MemberRetirementPreview:
+      type: object
+      required: [owned, signal_count, blockers, token, source_name, source_email, consequences]
+      properties:
+        owned: {$ref: '#/components/schemas/HandoverCounts'}
+        signal_count: {type: integer, minimum: 0}
+        blockers:
+          type: array
+          items: {$ref: '#/components/schemas/MemberRetirementBlocker'}
+        consequences:
+          type: array
+          items: {$ref: '#/components/schemas/MemberRetirementConsequence'}
+        token: {type: string}
+        source_name: {type: string}
+        source_email: {type: string, format: email}
+        survivor_name: {type: string}
+        survivor_email: {type: string, format: email}
+    MergeMembersRequest:
+      type: object
+      additionalProperties: false
+      required: [to_user_id, preview_token]
+      properties:
+        to_user_id: {type: string, format: uuid}
+        preview_token: {type: string, minLength: 1}
     User:
       type: object
       description: A seat — human or first-party agent.
@@ -18663,11 +18853,18 @@ components:
           items: {type: string, format: uuid}
           description: >-
             The live teams this user belongs to, ordered by team name. Present ONLY for an admin caller, on the same terms as `roles`: the roster answers every authenticated user because the share and assignee pickers read it, and who is in which team is not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no scope and no share, so listing one would describe access the user does not have.
+        email_editable:
+          type: boolean
+          description: Whether this unused member's sign-in email can still be corrected. Present only on the administration view.
+        merged_from:
+          type: array
+          items: {$ref: '#/components/schemas/SeatName'}
+          description: Original account identities consolidated into this member, present only on the administration view.
         allowed_actions:
           type: array
           items:
             type: string
-            enum: [change_role, issue_password_link, remove_mfa, deactivate, reactivate, hand_over]
+            enum: [change_role, issue_password_link, remove_mfa, deactivate, reactivate, hand_over, edit, merge, remove]
           description: >-
             The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
         last_active_at:

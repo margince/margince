@@ -4,8 +4,8 @@
 An agent in Margince acts for the human who gave it a **passport**, the credential an agent carries
 ([how to make one](../how-to/mint-a-passport.md)). It can only do what that human could do alone.
 
-Most tools run at once. Four actions always wait for a human to approve them: `merge` on `change_tags`, `invite` on
-`schedule_meeting`, `set_up_partner` on `change_state`, and `enrich`. A few more wait only in some cases, such as moving a deal to `won` or `lost`. These
+Most tools run at once. These actions always wait for a human to approve them: `merge` on `change_tags`, `invite` on
+`schedule_meeting`, `set_up_partner` on `change_state`, `enrich`, and `merge_member_accounts` on `change_state`. A few more wait only in some cases, such as moving a deal to `won` or `lost`. These
 are `update_record`, `move_deal` on `change_state`, and the two relink actions on `change_activities`. A waiting call
 changes nothing until a human approves it in the CRM. The agent then repeats the call with the approval's ID.
 
@@ -60,7 +60,7 @@ Open the row to see each action, the verb it runs and its tier, for example `mer
 | `read_reports` | 🟢 | `read` | no | 🔀 Read the sales reports <details><summary>actions</summary>`evidence` (`search_report_evidence`, 🟢) `run` (`run_report`, 🟢) `standard` (`read_reporting`, 🟢)</details> |
 | `read_tags` | 🟢 | `read` | no | 🔀 Read tags <details><summary>actions</summary>`get` (`get_tag`, 🟢) `list` (`list_tags`, 🟢) `record` (`get_record_tags`, 🟢)</details> |
 | `read_view` | 🟢 | `read` | no | Read a view: a record's derived views, reference lists and reporting objects, each as its REST route answers |
-| `read_workspace` | 🟢 | `read` | no | 🔀 Read how this workspace is set up and which names each tool takes <details><summary>actions</summary>`analytics` (`describe_analytics_vocabulary`, 🟢) `channel_providers` (`list_channel_providers`, 🟢) `colleagues` (`list_colleagues`, 🟢) `list_filters` (`describe_list_filters`, 🟢) `pipelines` (`list_pipelines`, 🟢) `query` (`describe_query_vocabulary`, 🟢) `record_fields` (`describe_record_fields`, 🟢) `report_blocks` (`describe_report_blocks`, 🟢) `report_vocabulary` (`describe_report_vocabulary`, 🟢)</details> |
+| `read_workspace` | 🟢 | `read` | no | 🔀 Read how this workspace is set up and which names each tool takes <details><summary>actions</summary>`analytics` (`describe_analytics_vocabulary`, 🟢) `channel_providers` (`list_channel_providers`, 🟢) `colleagues` (`list_colleagues`, 🟢) `member_retirement` (`preview_member_retirement`, 🟢) `list_filters` (`describe_list_filters`, 🟢) `pipelines` (`list_pipelines`, 🟢) `query` (`describe_query_vocabulary`, 🟢) `record_fields` (`describe_record_fields`, 🟢) `report_blocks` (`describe_report_blocks`, 🟢) `report_vocabulary` (`describe_report_vocabulary`, 🟢)</details> |
 | `whoami` | 🟢 | `read` | no | Who this passport acts for |
 | `draft_outbound` | 🟢 | `draft` | no | 🔀 Draft an email or follow-ups <details><summary>actions</summary>`one_message` (`draft_email`, 🟢) `slipping_deals` (`draft_follow_ups_for`, 🟢)</details> |
 | `annotate_brief` | 🟢 | `write` | no | Write findings onto the morning brief |
@@ -69,7 +69,7 @@ Open the row to see each action, the verb it runs and its tier, for example `mer
 | `change_activities` | dynamic | `write` | no | 🔀 Log, plan and file activities <details><summary>actions</summary>`attach` (`attach_document`, 🟢) `log` (`log_activity`, 🟢) `relink` (`relink_activity`, dynamic) `relink_many` (`relink_activities`, dynamic) `task` (`create_task`, 🟢)</details> |
 | `change_lists` | 🟢 | `write` | no | Make and change lists |
 | `change_record_parts` | 🟢 | `write` | no | Change the parts of a record |
-| `change_state` | dynamic | `write` | no | 🔀 Move a lead, deal, project or partner <details><summary>actions</summary>`demote` (`demote_lead`, 🟢) `disqualify` (`disqualify_lead`, 🟢) `move_deal` (`progress_deal`, dynamic) `move_project` (`advance_project_phase`, 🟢) `promote` (`promote_lead`, 🟢) `qualify` (`qualify_lead`, 🟢) `set_up_partner` (`set_up_partner`, 🟡)</details> |
+| `change_state` | dynamic | `write` | no | 🔀 Move a lead, deal, project or partner <details><summary>actions</summary>`merge_member_accounts` (`merge_members`, 🟡) `demote` (`demote_lead`, 🟢) `disqualify` (`disqualify_lead`, 🟢) `move_deal` (`progress_deal`, dynamic) `move_project` (`advance_project_phase`, 🟢) `promote` (`promote_lead`, 🟢) `qualify` (`qualify_lead`, 🟢) `set_up_partner` (`set_up_partner`, 🟡)</details> |
 | `change_tags` | dynamic | `write` | no | 🔀 Change tags <details><summary>actions</summary>`apply` (`apply_tag`, 🟢) `archive` (`archive_tag`, 🟢) `create` (`create_tag`, 🟢) `merge` (`merge_tags`, 🟡) `remove` (`remove_tag`, 🟢) `update` (`update_tag`, 🟢)</details> |
 | `commit_import` | 🟢 | `write` | no | Commit an import |
 | `create_record` | 🟢 | `write` | no | Create a record |
@@ -83,16 +83,10 @@ Open the row to see each action, the verb it runs and its tier, for example `mer
 
 ## Rules for single tools
 
-- **`update_record` is 🟢, with a 🟡 part.** The patch works per field. The fields no human wrote last apply at once.
-  The fields a human *did* write last wait for approval. The result names them in `staged_approval`, with the replay
-  call that uses the approval. A machine never undoes the edit of a human unless asked, and the edit of a human never
-  blocks the own fields of the machine.
-
-  When every field waits, nothing applies and the call is refused. The refusal still carries the same result,
-  `staged_approval` included, so a view can offer the choice.
-- **A write says what it changed.** `create_record` and `update_record` list each field they set in `changes`, and
-  `staged_approval` lists each field that waits. Each entry has the field's label and its value before and after,
-  with a name in place of an ID. The approval inbox shows a change in the same words. `read_approval` carries the
+- **`update_record` is 🟢.** The whole patch applies in the one call, whoever last wrote the fields. The audit row and
+  Undo put a wrong edit back. A call the contract marks confirm-first stages the whole call instead.
+- **A write says what it changed.** `create_record` and `update_record` list each field they set in `changes`. Each
+  entry has the field's label and its value before and after, with a name in place of an ID. The approval inbox shows a change in the same words. `read_approval` carries the
   same `changes` for a change that waits in the inbox.
 - **A deal move follows its stage.** It waits or runs by what the stage means. A column renamed `"Won"` still waits.
   `advanceDealTier` trusts the meaning set up for the stage. A stage it cannot prove is `open` waits too.

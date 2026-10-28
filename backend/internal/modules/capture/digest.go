@@ -69,6 +69,7 @@ type DigestConnRow struct {
 	Provider       string     `json:"provider"`
 	Status         string     `json:"status"`
 	LastSyncedAt   *time.Time `json:"last_synced_at,omitempty"`
+	LastSuccessAt  *time.Time `json:"last_success_at,omitempty"`
 	LastErrorClass *string    `json:"last_sync_error_class,omitempty"`
 }
 
@@ -133,7 +134,7 @@ func (r *Registry) buildDigestPayload(ctx context.Context, tx pgx.Tx, userID ids
 
 	// The connector health strip is the USER's own connections (RC-8).
 	rows, err := tx.Query(ctx, `
-		SELECT c.provider, c.status, s.last_synced_at, s.last_error_class
+		SELECT c.provider, c.status, s.last_synced_at, s.last_success_at, s.last_error_class
 		FROM capture_connection c
 		LEFT JOIN capture_sync_state s ON s.connection_id = c.id
 		WHERE c.user_id = $1 AND c.archived_at IS NULL
@@ -144,7 +145,7 @@ func (r *Registry) buildDigestPayload(ctx context.Context, tx pgx.Tx, userID ids
 	defer rows.Close()
 	for rows.Next() {
 		var c DigestConnRow
-		if err := rows.Scan(&c.Provider, &c.Status, &c.LastSyncedAt, &c.LastErrorClass); err != nil {
+		if err := rows.Scan(&c.Provider, &c.Status, &c.LastSyncedAt, &c.LastSuccessAt, &c.LastErrorClass); err != nil {
 			return DigestPayload{}, err
 		}
 		p.Connectors = append(p.Connectors, c)

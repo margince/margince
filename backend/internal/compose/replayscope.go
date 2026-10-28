@@ -161,7 +161,10 @@ const (
 // recorded confirmation. The anonymous surface needs its own dedupe scope
 // (workspace + request digest) before the header's promise can be honored;
 // until then the slot's natural key refuses a duplicate booking.
+const replayMemberAdminObject = "user_admin"
+
 var replayableOperations = map[string]replayTarget{
+	"POST /v1/users/{id}/merge":       {object: replayMemberAdminObject, rowNote: "the response is only a boolean acknowledgment; it contains no member record or private content"},
 	"POST /v1/scheduling/invitations": {object: tableActivity, table: tableActivity, idPath: "id"},
 	"POST /v1/scheduling/proposals":   {object: tableActivity, table: tableActivity, idPath: "id"},
 	// Row-scoped records: both gates apply, and the object and the table are
@@ -233,7 +236,7 @@ var replayableOperations = map[string]replayTarget{
 		objectNote:  "one route over three record types: the undo was gated per record on the caller's grant and write authority when it ran",
 		moduleProbe: probeBulkBatch, idPath: "batch_id",
 	},
-	"POST /v1/users/{id}/handover":         {object: "user_admin", rowNote: "the response is counts, not a record: each moved row was gated on the caller's write authority when it ran, and a replay hands back the numbers alone"},
+	"POST /v1/users/{id}/handover":         {object: replayMemberAdminObject, rowNote: "the response is counts, not a record: each moved row was gated on the caller's write authority when it ran, and a replay hands back the numbers alone"},
 	"POST /v1/projects/transfer-ownership": {object: tableProject, rowNote: "the response is a count, not a record: the handover's rows were each gated on the caller's write authority when it ran, and a replay hands back the number alone"},
 	"POST /v1/leads":                       {object: tableLead, table: tableLead, idPath: "id"},
 	"PATCH /v1/leads/{id}":                 {object: tableLead, table: tableLead, idPath: "id"},

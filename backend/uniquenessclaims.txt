@@ -60,7 +60,6 @@ internal/compose/agentcommand.go#const block at const opApproveApproval
 internal/compose/agentcommand_integration_test.go#func archivableRecordTypes
 internal/compose/agentgatecanon.go#const keyBindsTheRetry
 internal/compose/agentgatestaging.go#func resolveStagedTarget
-internal/compose/agentsplit.go#const block at const opApplyTag
 internal/compose/agenttasks.go#const taskColumns
 internal/compose/aicert/record.go#type Record.Scenarios
 internal/compose/aicert/reportcmd/report.go#var reportColumns

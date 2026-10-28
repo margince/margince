@@ -23,6 +23,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "settings.tab.mcp",
   "webhooks.eventGroup.voice_dna",
   "webhooks.field.targetUrlPlaceholder",
+  "webForms.sender.typeform",
+  "webForms.sender.tally",
+  "webForms.field.originsPlaceholder",
   "webhooks.headers.namePlaceholder",
   // Markup with placeholders, which is the same in every language.
   // Only placeholders and punctuation, with no word to translate.

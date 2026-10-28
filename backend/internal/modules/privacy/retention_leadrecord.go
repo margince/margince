@@ -38,7 +38,7 @@ func (*RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.UU
 		return fmt.Errorf("read the lead's address before scrubbing it: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
-		UPDATE lead SET full_name = 'Anonymized Lead', email = NULL, phone = NULL, title = NULL,
+		UPDATE lead SET full_name = 'Anonymized Lead', email = NULL, email_domain_folded = NULL, phone = NULL, title = NULL,
 		  company_name = NULL, candidate_company_key = NULL, linkedin_url = NULL,
 		  disqualify_note = NULL, score_override_reason = NULL, source_author_name = NULL,
 		  origin_detail = NULL, archived_at = coalesce(archived_at, now())

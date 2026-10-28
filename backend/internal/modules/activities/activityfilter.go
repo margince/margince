@@ -221,7 +221,7 @@ func timelineKeyset(in ListActivitiesInput, sorted *storekit.ListSort, arg func(
 	if in.Cursor == nil || *in.Cursor == "" {
 		return "", nil
 	}
-	if in.RequestReviewAsOf != nil {
+	if in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil {
 		return "", errRequestReviewWithCursor
 	}
 	return sorted.KeysetClause(*in.Cursor, arg)
@@ -236,6 +236,9 @@ func timelineKeyset(in ListActivitiesInput, sorted *storekit.ListSort, arg func(
 // shrink that set further.
 func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 	var where []string
+	if in.InteractionsAsOf != nil {
+		where = append(where, relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d", arg(*in.InteractionsAsOf))))
+	}
 	if in.ThreadKey != nil && *in.ThreadKey != "" {
 		where = append(where, sprintf("a.thread_key = $%d", arg(*in.ThreadKey)))
 	}
@@ -295,6 +298,6 @@ func occurredWindowClauses(in ListActivitiesInput, arg func(any) int) []string {
 // with the answer blanked.
 func filtersOnContent(in ListActivitiesInput) bool {
 	return (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "") ||
-		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.ReadableOnly || in.ConversationAsOf != nil || in.SourceActivityID != nil ||
+		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil || in.ReadableOnly || in.ConversationAsOf != nil || in.SourceActivityID != nil ||
 		in.SentBy != nil || in.ConversationOf != nil || in.RemindersDue || len(in.CustomFilters) > 0
 }

@@ -143,6 +143,10 @@ export function previewFieldLabel(field: string, t: Translator): string {
   const promotion = PREVIEW_DETAIL_LABELS[field] ?? MERGE_FIELD_LABELS[field];
   if (promotion) return t(promotion);
   switch (field) {
+    case "member_source":
+      return t("users.mergeSource");
+    case "member_target":
+      return t("users.survivingMember");
     case "existing_task_id":
       return t("approval.preview.existingTask");
     case "recipients":

@@ -16,6 +16,7 @@
       "actions": {
         "demote": "demote_lead",
         "disqualify": "disqualify_lead",
+        "merge_member_accounts": "merge_members",
         "move_deal": "progress_deal",
         "move_project": "advance_project_phase",
         "promote": "promote_lead",
@@ -134,6 +135,7 @@
         "channel_providers": "list_channel_providers",
         "colleagues": "list_colleagues",
         "list_filters": "describe_list_filters",
+        "member_retirement": "preview_member_retirement",
         "pipelines": "list_pipelines",
         "query": "describe_query_vocabulary",
         "record_fields": "describe_record_fields",

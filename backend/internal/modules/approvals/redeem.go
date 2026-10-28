@@ -366,10 +366,19 @@ func copyRationales(declared map[string]string) map[string]string {
 // entity type can carry a target_version pin that Redeem is able to
 // re-verify (ADR-0036 §2).
 func TargetVersionCheckable(entityType string) bool {
-	return versionTables[entityType]
+	return entityType == objectUserAdmin || versionTables[entityType]
 }
 
 func targetVersion(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (int64, error) {
+	// The account editor uses the roster’s exact microsecond revision.
+	if table == objectUserAdmin {
+		var revision int64
+		err := tx.QueryRow(ctx, `SELECT (extract(epoch FROM updated_at) * 1000000)::bigint FROM app_user WHERE id = @id AND archived_at IS NULL AND removed_at IS NULL`, pgx.StrictNamedArgs{"id": id}).Scan(&revision)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, apperrors.ErrNotFound
+		}
+		return revision, err
+	}
 	if !versionTables[table] {
 		return 0, fmt.Errorf("crmapprovals: %q is not a versioned target", table)
 	}

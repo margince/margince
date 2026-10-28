@@ -20,9 +20,10 @@ import (
 // ListActivitiesInput narrows a timeline read: the page, the kind, the
 // transport, and the record the activities hang off.
 type ListActivitiesInput struct {
-	mailIdentities map[string][]string
-	Cursor         *string
-	Limit          *int
+	InteractionsAsOf *time.Time
+	mailIdentities   map[string][]string
+	Cursor           *string
+	Limit            *int
 	// Sort is the caller's order, validated against activitySortFields. Nil
 	// means the order the rest of this narrowing implies: newest-first for a
 	// timeline, nearest-deadline-first for the task queue.
@@ -164,7 +165,9 @@ type ListActivitiesInput struct {
 	// WaitingReply asks for the same narrowing judged now. The store reads its
 	// own clock, so the wait and its page judge one snapshot.
 	WaitingReply bool
-	// RequestReviewAsOf reads confirmed obligations independently of queue priority.
+	// RequestCurrentAsOf admits confirmed current requests before the page limit.
+	RequestCurrentAsOf *time.Time
+	// RequestReviewAsOf reads request evidence independently of current-work admission.
 	RequestReviewAsOf *time.Time
 	// ownDomains is the colleague-domain snapshot the waiting walk tests senders
 	// against. Unexported and set by the store beside the transaction it reads

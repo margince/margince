@@ -44,6 +44,10 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 - `automation_pkey`: `unique, btree (id)`
 - `idx_automation_key_live`: `btree (key) WHERE (enabled AND (archived_at IS NULL))`
 
+**Triggers**
+
+- `automation_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.enabled AND (new.archived_at IS NULL)))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+
 ## automation_effect_claim
 
 6 columns · primary key `(id)` · referenced by 0 foreign keys

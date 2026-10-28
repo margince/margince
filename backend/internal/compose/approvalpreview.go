@@ -64,6 +64,9 @@ func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.A
 	if approval.Status != crmcontracts.ApprovalStatusPending {
 		return nil, nil //nolint:nilnil // Terminal decisions retain their recorded context.
 	}
+	if approval.Kind == "merge_members" {
+		return r.memberMergePreview(ctx, approval)
+	}
 	if approval.Kind == CommitmentTaskKind {
 		return r.commitmentPreview(ctx, approval)
 	}

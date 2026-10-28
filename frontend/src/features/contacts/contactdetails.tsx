@@ -252,7 +252,12 @@ function EmployerCard({ employment }: Readonly<{ employment: Employment }>) {
 export function ContactDetails({
   contact,
   profiles,
-}: Readonly<{ contact: Contact; profiles?: readonly Profile[] }>) {
+  createdBy,
+}: Readonly<{
+  contact: Contact;
+  profiles?: readonly Profile[];
+  createdBy?: Contact360["created_by"];
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
@@ -349,7 +354,7 @@ export function ContactDetails({
               {formatDateAbbrev(contact.created_at, locale, zone)}
             </FieldRow>
             <FieldRow label={t("history.field.source")} align="middle">
-              <ContactSource contact={contact} />
+              <ContactSource contact={contact} createdBy={createdBy} />
             </FieldRow>
           </>
         }

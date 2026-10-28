@@ -40,7 +40,8 @@ export function useContactEdit(contact: Contact): RailEdit {
         required: contact.visibility === "owner",
         label: "list.owner",
         type: "select",
-        options: owners,
+        options: owners.options,
+        hint: owners.hint,
       },
     ],
     record: {

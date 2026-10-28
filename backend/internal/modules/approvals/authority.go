@@ -24,13 +24,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+const objectUserAdmin = "user_admin"
+
 // objectActivity is the RBAC object every timeline write is governed by, spelled
 // once: three staged kinds and the target-visibility switch below all name it,
 // and a typo in any of them would silently ask for a grant nobody holds.
 const objectActivity = "activity"
-
-// objectPartner is the RBAC object a partner program write is governed by.
-const objectPartner = "partner"
 
 // objectDeal is the RBAC object a stage move is governed by. Spelled here
 // rather than imported, for targetImportRun's reason: approvals may not import
@@ -115,6 +114,7 @@ const objectCommunicationException = "communication_exception"
 // both today, and decisionGrantsFor combines them so one that grows a second half
 // gains authority rather than silently losing the first.
 var decisionGrants = map[string][]grantRequirement{
+	"merge_members": {{objectUserAdmin, principal.ActionDelete}},
 	// A held message asks its rep to try again or give up. Both answers move the
 	// message's own state — reschedule and cancel — which the store gates on
 	// activity.UPDATE, so that is what deciding requires. It is the effects'
@@ -166,9 +166,9 @@ var decisionGrants = map[string][]grantRequirement{
 	// MergeTags), so deciding takes that grant, for disqualify_lead's reason.
 	"merge_tags": {{targetTag, principal.ActionUpdate}},
 	// A set-up writes the partner row and adds `partner` to the company's
-	// relationship types (contacts/partner.go UpsertPartner), which takes both
-	// update grants. Deciding takes the grants the write takes.
-	"set_up_partner": {{tableCompany, principal.ActionUpdate}, {objectPartner, principal.ActionUpdate}},
+	// relationship types (contacts/partner.go UpsertPartner). It carries no
+	// margin tier, so it takes the company grant alone, and so does deciding it.
+	"set_up_partner": {{tableCompany, principal.ActionUpdate}},
 	// Retiring a word is gated on `tag.delete` (collections/tags.go ArchiveTag),
 	// so a floored archive is decided on that grant.
 	"archive_tag": {{targetTag, principal.ActionDelete}},

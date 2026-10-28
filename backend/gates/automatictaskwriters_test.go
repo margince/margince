@@ -71,6 +71,7 @@ var taskSourceWriters = map[string][]string{
 	"modules/contacts/handlers_company.go:ListCompanies":                  {writesNoTask},
 	"modules/deals/handlers_deal.go:ListDeals":                            {writesNoTask},
 	"compose/dealroomtimeline.go:write":                                   {writesNoTask},
+	"compose/webformleads.go:Land":                                        {writesNoTask},
 	"compose/assurancebundletask.go:writeBundleTask":                      {provenance.AssuranceTaskSource},
 	"compose/leadworktasks.go:repliedTaskInput":                           {provenance.LeadRepliedSource},
 	"compose/leadworktasks.go:arrivalTaskInput":                           {provenance.LeadForContactSource},
@@ -81,6 +82,8 @@ var taskSourceWriters = map[string][]string{
 	"modules/activities/handlers_activity.go:LogActivity":                 {writesHumanTask},
 	"modules/activities/handlers_task.go:CreateTask":                      {writesHumanTask},
 	"modules/activities/handlers_task.go:TaskInputFrom":                   {writesHumanTask},
+	"modules/activities/recommendation.go:checkTaskRecommendation":        {provenance.AcceptedRecommendationSource},
+	"compose/taskrecommendationseam.go:taskRecommendationFrom":            {writesHumanTask},
 	"modules/activities/requesttask.go:emailRequestTask":                  {provenance.EmailRequestSource},
 	"compose/csvactivitywriter.go:createActivity":                         {writesCallerSource},
 	"compose/extcore.go:Create":                                           {writesCallerSource},
@@ -103,6 +106,7 @@ var taskSourceWriters = map[string][]string{
 // storekit.CurrentTaskClause itself, with why.
 // gatekit:fixture the declared readers of another population, checked both ways below
 var openTaskReadersElsewhere = map[string]string{
+	"modules/activities/memberhandover.go:ConsolidateMemberTasksTx":       "moves every open task during an admitted identity merge, including tasks no longer current, so none can be left on a hidden account",
 	"compose/automaticworksql.go:automaticItemsSQL":                       "lists what Margince did, done or not, for Done for you; it reports work, it assigns none",
 	"modules/activities/bulkcomplete.go:LockTaskForBulkTx":                "locks one task a human chose to complete",
 	"compose/reportprojects.go:projectCommitmentsSpec":                    "a report over the project's recorded promises, not a personal queue",
@@ -114,7 +118,6 @@ var openTaskReadersElsewhere = map[string]string{
 	"modules/activities/lasttouch.go:openChildReminderHoldsAccount":       "an open reminder of the engine's own family holds its re-raise; it creates no work",
 	"modules/activities/lasttouch.go:openReminderHoldsEntity":             "an open reminder of the engine's own family holds its re-raise; it creates no work",
 	"modules/activities/requestrecovery.go:requestAvailableForAcceptance": "checks a request has no accepted task before a human accepts it",
-	"modules/activities/systemtaskopen.go:OpenSystemTaskOnTx":             "keeps one open task of the system's own family on a record; it creates no work",
 	"modules/activities/whichdealanswer.go:answerWhichDealTx":             "closes the deal questions a colleague's filing has just answered; it creates no work",
 	"modules/activities/taskwindow.go:openTaskWindowClauses":              "narrows a list the caller already gates with the worklist clauses",
 	"modules/activities/taskreminder.go:dueReminderClause":                "narrows a list the caller already gates with the worklist clauses",

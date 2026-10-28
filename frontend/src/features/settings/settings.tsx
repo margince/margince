@@ -73,6 +73,7 @@ import { SystemHealthPage } from "./settings.systemhealth";
 import { AuditLogCard } from "./settings-audit";
 import { TeamsCard } from "./users-access";
 import { UsersAdminCard } from "./users-admin";
+import { WebFormsCard } from "./webforms";
 import { WebhooksCard } from "./webhooks";
 import "./settings.css";
 
@@ -226,6 +227,8 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
       );
     case "integrations":
       return <IntegrationsTab />;
+    case "web-forms":
+      return <WebFormsCard />;
     case "knowledge":
       return <KnowledgeCard />;
     case "import":

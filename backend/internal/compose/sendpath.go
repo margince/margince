@@ -277,6 +277,7 @@ var lateApprovalEffects = map[string]lateApprovalEffect{
 func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 	send = send.withPoolDefaults(pool)
 	return activities.NewStore(InstallationDB(pool)).
+		WithTaskRecommendation(taskRecommendationReader(pool)).
 		WithUnsubscribe(preferenceLinkAdapter{store: consent.NewStore(InstallationDB(pool))}).
 		// The disclosures a jurisdiction demands, put into the body that owes
 		// them. See compose/disclosurefooter.go.

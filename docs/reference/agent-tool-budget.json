@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 37,
     "system_frame_tokens": 592,
-    "tokens": 22955,
+    "tokens": 23137,
     "median_tool_tokens": 469,
-    "mean_tool_tokens": 619
+    "mean_tool_tokens": 624
   },
   "agents": [
     {
@@ -97,7 +97,7 @@
     },
     {
       "name": "change_state",
-      "tokens": 1117
+      "tokens": 1228
     },
     {
       "name": "read_analytics",
@@ -108,12 +108,12 @@
       "tokens": 1014
     },
     {
-      "name": "preview_import",
-      "tokens": 1001
+      "name": "read_view",
+      "tokens": 1010
     },
     {
-      "name": "read_view",
-      "tokens": 993
+      "name": "preview_import",
+      "tokens": 1001
     },
     {
       "name": "read_forecast",
@@ -132,12 +132,16 @@
       "tokens": 755
     },
     {
-      "name": "update_record",
-      "tokens": 641
-    },
-    {
       "name": "change_lists",
       "tokens": 620
+    },
+    {
+      "name": "update_record",
+      "tokens": 593
+    },
+    {
+      "name": "read_workspace",
+      "tokens": 590
     },
     {
       "name": "change_record_parts",
@@ -150,10 +154,6 @@
     {
       "name": "draft_outbound",
       "tokens": 517
-    },
-    {
-      "name": "read_workspace",
-      "tokens": 488
     },
     {
       "name": "schedule_meeting",

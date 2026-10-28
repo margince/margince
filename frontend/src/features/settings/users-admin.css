@@ -65,3 +65,7 @@
   flex: 1 1 20rem;
   min-width: 0;
 }
+
+.users-retirement-address {
+  overflow-wrap: anywhere;
+}

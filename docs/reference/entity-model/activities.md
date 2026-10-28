@@ -136,7 +136,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_calendar_method_unread_outbound`: `btree (created_at, id) WHERE ((calendar_method IS NULL) AND (kind = 'email') AND (direction = 'outbound'))`
 - `activity_meeting_no_overlap`: `gist (host_user_id, tsrange(timezone('UTC', occurred_at), (timezone('UTC', occurred_at) + (( CASE WHEN booking_interval_exact THEN duration_seconds ELSE 3600 END)::double precision * '00:00:01'::interval)), '[)')) WHERE ((kind = 'meeting') AND (host_user_id IS NOT NULL) AND (archived_at IS NULL) AND claims_host_slot AND (meeting_status IS DISTINCT FROM 'canceled'))`
 - `activity_pkey`: `unique, btree (id)`
-- `idx_activity_answer_mail`: `btree (counterparty_email, kind, occurred_at) WHERE ((direction = 'outbound') AND counterparty_outbound_attested AND (restricted_at IS NULL) AND (audience = 'workspace') AND (archived_at IS NULL))`
+- `idx_activity_answer_mail_subject`: `btree (counterparty_email, kind, lower(btrim(regexp_replace(regexp_replace(COALESCE(subject, ''), '^(\s*(re|aw|antw)\s*:)+\s*', '', 'i'), '\s+', ' ', 'g'))), occurred_at) WHERE ((direction = 'outbound') AND counterparty_outbound_attested AND (restricted_at IS NULL) AND (audience = 'workspace') AND (archived_at IS NULL))`
 - `idx_activity_answer_touch`: `btree (id, occurred_at) WHERE (((kind = 'call') OR ((kind = 'meeting') AND (meeting_status = 'held'))) AND (restricted_at IS NULL) AND (audience = 'workspace') AND (archived_at IS NULL))`
 - `idx_activity_channel_thread`: `btree (channel_provider, thread_key) WHERE (channel_provider IS NOT NULL)`
 - `idx_activity_counterparty_email`: `btree (counterparty_email) WHERE (counterparty_email IS NOT NULL)`
@@ -162,6 +162,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
+- `activity_assignee_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.assignee_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.kind = 'task') AND (NOT new.is_done)))) EXECUTE FUNCTION refuse_retired_member_work('assignee_id')`
 - `activity_last_activity`: `AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision))) EXECUTE FUNCTION trg_activity_last_activity()`
 - `activity_no_company_meeting_on_rekind`: `BEFORE UPDATE OF kind FOR EACH ROW EXECUTE FUNCTION activity_refuses_becoming_a_company_meeting()`
 - `activity_project_last_activity`: `AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision))) EXECUTE FUNCTION trg_activity_project_last_activity()`
@@ -454,6 +455,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_participant_pkey`: `unique, btree (id)`
 - `idx_aparticipant_address`: `btree (lower(address)) WHERE (address IS NOT NULL)`
 - `idx_aparticipant_contact`: `btree (contact_id, activity_id) WHERE (contact_id IS NOT NULL)`
+- `idx_aparticipant_sender_domain_reversed`: `btree (reverse(address_domain_folded) COLLATE "C") WHERE ((role = 'from') AND (address_domain_folded IS NOT NULL))`
 - `idx_aparticipant_user`: `btree (user_id, activity_id) WHERE (user_id IS NOT NULL)`
 - `uq_activity_participant`: `unique, btree (activity_id, role, user_id, contact_id, address, channel_user_id) NULLS NOT DISTINCT`
 
@@ -870,6 +872,10 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 - `booking_page_slug_key`: `unique, btree (slug)`
 - `idx_booking_page_host_user`: `btree (host_user_id)`
 
+**Triggers**
+
+- `booking_page_host_user_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND true)) EXECUTE FUNCTION refuse_retired_member_work('host_user_id')`
+
 ## deal_document_hide
 
 4 columns · primary key `(deal_id, attachment_id)` · referenced by 0 foreign keys
@@ -907,7 +913,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 | `bcc_addresses` | `text[]`, default `'{}'::text[]` | yes |  |
 | `body` | `text`, default `''::text` | yes |  |
 | `cc_addresses` | `text[]`, default `'{}'::text[]` | yes |  |
-| `grounding` | `jsonb`, default `'[]'::jsonb` | yes |  |
+| `grounding` | `jsonb`, default `'[]'::jsonb` | yes | The records this draft was written from, which an agent draft records and a human draft leaves empty. |
 | `html_body` | `text` |  | The editor's markup beside the plain body, so reopening restores the formatting. |
 | `subject` | `text`, default `''::text` | yes |  |
 | `to_addresses` | `text[]`, default `'{}'::text[]` | yes |  |
@@ -931,6 +937,10 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 - `mail_draft_one_per_anchor`: `unique, btree (author_id, anchor_type, anchor_id)`
 - `mail_draft_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `mail_draft_author_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.author_id IS NOT NULL) AND true)) EXECUTE FUNCTION refuse_retired_member_work('author_id')`
 
 ## meeting_invitation
 
@@ -981,6 +991,10 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 - `meeting_invitation_pkey`: `unique, btree (activity_id)`
 - `meeting_invitation_public_intent`: `unique, btree (((public_intent ->> 'key_hash'))) WHERE (public_intent IS NOT NULL)`
 
+**Triggers**
+
+- `meeting_invitation_host_user_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND ((new.status <> ALL (ARRAY['canceled', 'erased'])) OR (NOT new.cleanup_complete)))) EXECUTE FUNCTION refuse_retired_member_work('host_user_id')`
+
 ## meeting_proposal
 
 9 columns · primary key `(activity_id)` · referenced by 0 foreign keys
@@ -1013,6 +1027,10 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 - `meeting_proposal_pkey`: `unique, btree (activity_id)`
 - `meeting_proposal_token_hash_key`: `unique, btree (token_hash)`
+
+**Triggers**
+
+- `meeting_proposal_host_user_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND true)) EXECUTE FUNCTION refuse_retired_member_work('host_user_id')`
 
 ## scheduled_send
 
@@ -1072,6 +1090,10 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 - `idx_scheduled_send_owner`: `btree (scheduled_by, status, scheduled_at DESC)`
 - `scheduled_send_one_held_message_per_seat`: `unique, btree (held_reason, scheduled_by, principal_kind, payload_version, origin_kind, agent_actor_id, agent_passport_id, anchor_activity_id, md5((COALESCE(origin_links, '[]'))), md5((COALESCE(also_links, '[]'))), md5((payload))) NULLS NOT DISTINCT WHERE ((status = 'held') AND (held_reason = 'send_refused'))`
 - `scheduled_send_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `scheduled_send_scheduled_by_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.scheduled_by IS NOT NULL) AND (new.status = ANY (ARRAY['scheduled', 'held', 'sending'])))) EXECUTE FUNCTION refuse_retired_member_work('scheduled_by')`
 
 ## transcript_read
 

@@ -89,7 +89,12 @@ export function useDealEdit(
     }).map(
       (field): CreateField =>
         field.key === "owner_id"
-          ? { ...field, label: "list.owner", options: owners }
+          ? {
+              ...field,
+              label: "list.owner",
+              options: owners.options,
+              hint: owners.hint,
+            }
           : field,
     ),
     ...editProjectFields(t, {

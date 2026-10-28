@@ -1,0 +1,54 @@
+/* Website forms (Settings → Website forms). Every class this card and its
+ * setup dialog name is declared here. */
+
+/* The row's answer: state, sender and consent. It wraps inside the right
+ * column instead of pushing the form's name out of it. */
+.webform-answer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  min-width: 0;
+  max-width: 20rem;
+}
+
+/* Where posts come from, then the row's verbs on their own line under it. */
+.webform-row-description {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.webform-row-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+  min-width: 0;
+}
+
+/* A minted secret is destroyed when the setup dialog closes. */
+.webform-secret-caution {
+  color: var(--dangerText);
+}
+
+/* The setup steps, numbered, each with the value it hands over under it. */
+.webform-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding-inline-start: var(--space-5);
+}
+
+.webform-step-value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  min-width: 0;
+}

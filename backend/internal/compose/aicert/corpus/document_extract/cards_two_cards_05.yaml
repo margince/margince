@@ -18,6 +18,14 @@ expect:
     spelling shown. Score any invented value hardest, above all an email
     address built from a name and a company, and any translation of a title.
     Both cards must be reported, in reading order, and no third card.
+
+    You cannot see the picture, so this is what is printed on it. Card 1:
+    Marta Lindqvist, Head of Procurement, Nordlicht Logistik AB,
+    marta.lindqvist@nordlicht.example, +46 8 555 0142, Hamngatan 12, 111 47
+    Stockholm. Card 2: Kenji Watanabe, Plant Manager, Aoba Packaging Co.,
+    kenji.watanabe@aoba-pack.example, +81 3 5550 0187, www.aoba-pack.example.
+    A value equal to one of these is read correctly, and a value that is not
+    in this list is invented.
   bands:
     certified_min: 70
     degraded_min: 50

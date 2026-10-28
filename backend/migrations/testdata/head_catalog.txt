@@ -1,6 +1,7 @@
 defacl public objtype=r acl=margince_app=arwd/margince_owner
 public.activity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity.activity_assignee_id_fkey FOREIGN KEY (assignee_id) REFERENCES app_user(id) ON DELETE SET NULL (assignee_id)
+public.activity.activity_assignee_id_retirement_guard CREATE TRIGGER activity_assignee_id_retirement_guard BEFORE INSERT OR UPDATE ON public.activity FOR EACH ROW WHEN (((new.assignee_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.kind = 'task'::text) AND (NOT new.is_done)))) EXECUTE FUNCTION refuse_retired_member_work('assignee_id')
 public.activity.activity_audience_check CHECK ((audience = ANY (ARRAY['workspace'::text, 'participants'::text, 'selected'::text])))
 public.activity.activity_body_completeness_check CHECK ((body_completeness = ANY (ARRAY['complete'::text, 'partial'::text, 'unreadable'::text, 'forwarded'::text, 'unassessed'::text])))
 public.activity.activity_calendar_method_check CHECK ((calendar_method = ANY (ARRAY['PUBLISH'::text, 'REQUEST'::text, 'REPLY'::text, 'ADD'::text, 'CANCEL'::text, 'REFRESH'::text, 'COUNTER'::text, 'DECLINECOUNTER'::text])))
@@ -1035,6 +1036,7 @@ public.analytics_share.analytics_share_scope_kind_check CHECK ((scope_kind = ANY
 public.analytics_share.analytics_share_scope_shape CHECK (((scope_id IS NULL) OR (num_nonnulls(scope_team_id, scope_user_id) = 1)))
 public.analytics_share.analytics_share_scope_team_id_fkey FOREIGN KEY (scope_team_id) REFERENCES team(id) ON DELETE CASCADE NOT VALID
 public.analytics_share.analytics_share_scope_user_id_fkey FOREIGN KEY (scope_user_id) REFERENCES app_user(id) ON DELETE CASCADE NOT VALID
+public.analytics_share.analytics_share_scope_user_id_retirement_guard CREATE TRIGGER analytics_share_scope_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.analytics_share FOR EACH ROW WHEN (((new.scope_id IS NOT NULL) AND ((new.scope_kind = 'owner'::text) AND (new.revoked_at IS NULL) AND (new.expires_at > now())))) EXECUTE FUNCTION refuse_retired_member_work('scope_id')
 public.analytics_share.analytics_share_snapshot_fkey FOREIGN KEY (snapshot_id) REFERENCES forecast_snapshot(id) ON DELETE CASCADE
 public.analytics_share.analytics_share_snapshot_matches_kind CHECK (((kind = 'snapshot'::text) = (snapshot_id IS NOT NULL)))
 public.analytics_share.analytics_share_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -1068,13 +1070,17 @@ public.app_user acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/marg
 public.app_user.app_user_agent_is_full CHECK (((NOT is_agent) OR (seat_type = 'full'::text)))
 public.app_user.app_user_agent_never_forced CHECK ((NOT (is_agent AND must_change_password)))
 public.app_user.app_user_delivery_hour_check CHECK (((delivery_hour_local IS NULL) OR ((delivery_hour_local >= 0) AND (delivery_hour_local <= 23))))
+public.app_user.app_user_does_not_merge_into_itself CHECK (((merged_into_user_id IS NULL) OR (merged_into_user_id <> id)))
 public.app_user.app_user_failed_login_count_check CHECK ((failed_login_count >= 0))
 public.app_user.app_user_forced_rotation_needs_a_password CHECK ((NOT (must_change_password AND (password_hash IS NULL))))
 public.app_user.app_user_forget_weekly_plan_responses CREATE TRIGGER app_user_forget_weekly_plan_responses BEFORE DELETE ON public.app_user FOR EACH ROW EXECUTE FUNCTION weekly_plan_commitment_forget_manager()
 public.app_user.app_user_greeting_name_length CHECK (((greeting_name IS NULL) OR ((char_length(greeting_name) >= 1) AND (char_length(greeting_name) <= 100))))
 public.app_user.app_user_locale_shipped CHECK ((locale = ANY (ARRAY['en'::text, 'de'::text, 'vi'::text])))
+public.app_user.app_user_merge_is_retired CHECK (((merged_into_user_id IS NULL) OR (removed_at IS NOT NULL)))
+public.app_user.app_user_merged_into_user_id_fkey FOREIGN KEY (merged_into_user_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.app_user.app_user_morning_brief_delivery_check CHECK (((morning_brief_delivery IS NULL) OR (morning_brief_delivery = ANY (ARRAY['none'::text, 'email'::text]))))
 public.app_user.app_user_pkey PRIMARY KEY (id)
+public.app_user.app_user_removed_is_deactivated CHECK (((removed_at IS NULL) OR (status = 'deactivated'::text)))
 public.app_user.app_user_routine_delivery_time_check CHECK ((routine_delivery_time ~ '^(working|([01][0-9]|2[0-3]):00)$'::text))
 public.app_user.app_user_routine_mail_scope_check CHECK ((routine_mail_scope = ANY (ARRAY['personal'::text, 'team'::text, 'combined'::text])))
 public.app_user.app_user_routine_mail_team_id_fkey FOREIGN KEY (routine_mail_team_id) REFERENCES team(id) ON DELETE SET NULL
@@ -1103,10 +1109,12 @@ public.app_user.is_agent boolean NOT NULL gen=- def=false
 public.app_user.last_active_at timestamp with time zone gen=- def=-
 public.app_user.locale text gen=- def=-
 public.app_user.locked_until timestamp with time zone gen=- def=-
+public.app_user.merged_into_user_id uuid gen=- def=-
 public.app_user.morning_brief_delivery text gen=- def=-
 public.app_user.must_change_password boolean NOT NULL gen=- def=false
 public.app_user.password_hash text gen=- def=-
 public.app_user.quiet_day_notice boolean gen=- def=-
+public.app_user.removed_at timestamp with time zone gen=- def=-
 public.app_user.report_authority_user_change CREATE TRIGGER report_authority_user_change BEFORE UPDATE OF status, archived_at, seat_type, is_agent ON public.app_user FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()
 public.app_user.report_authority_user_delete CREATE TRIGGER report_authority_user_delete BEFORE DELETE ON public.app_user FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()
 public.app_user.routine_delivery_time text gen=- def=-
@@ -1135,6 +1143,7 @@ public.approval.approval_passport_id_fkey FOREIGN KEY (passport_id) REFERENCES p
 public.approval.approval_pending_names_decider CHECK (((status <> 'pending'::text) OR ((requested_decider_id IS NOT NULL) AND (requested_decider_source IS NOT NULL))))
 public.approval.approval_pkey PRIMARY KEY (id)
 public.approval.approval_requested_decider_fkey FOREIGN KEY (requested_decider_id) REFERENCES app_user(id) ON DELETE SET NULL
+public.approval.approval_requested_decider_id_retirement_guard CREATE TRIGGER approval_requested_decider_id_retirement_guard BEFORE INSERT OR UPDATE ON public.approval FOR EACH ROW WHEN (((new.requested_decider_id IS NOT NULL) AND (new.status = 'pending'::text))) EXECUTE FUNCTION refuse_retired_member_work('requested_decider_id')
 public.approval.approval_requested_decider_source_check CHECK ((requested_decider_source = ANY (ARRAY['payload_owner'::text, 'on_behalf_of'::text, 'stager'::text, 'record_owner'::text])))
 public.approval.approval_staged_by_connection_fkey FOREIGN KEY (staged_by_connection) REFERENCES oauth_grant(id) ON DELETE SET NULL
 public.approval.approval_staged_in_conversation_of_fkey FOREIGN KEY (staged_in_conversation_of) REFERENCES app_user(id) ON DELETE SET NULL
@@ -1503,6 +1512,7 @@ public.automation.action jsonb NOT NULL gen=- def=-
 public.automation.archived_at timestamp with time zone gen=- def=-
 public.automation.automation_origin_check CHECK ((origin = ANY (ARRAY['catalog'::text, 'agent_authored'::text])))
 public.automation.automation_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
+public.automation.automation_owner_id_retirement_guard CREATE TRIGGER automation_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.automation FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.enabled AND (new.archived_at IS NULL)))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.automation.automation_paused_reason_check CHECK ((paused_reason = ANY (ARRAY['list_archived'::text, 'list_invalid'::text, 'list_unavailable'::text, 'burst'::text])))
 public.automation.automation_pkey PRIMARY KEY (id)
 public.automation.automation_tier_check CHECK ((tier = ANY (ARRAY['auto_execute'::text, 'confirmation_required'::text])))
@@ -1535,6 +1545,7 @@ public.automation_effect_claim_unique CREATE UNIQUE INDEX automation_effect_clai
 public.automation_pkey CREATE UNIQUE INDEX automation_pkey ON public.automation USING btree (id)
 public.booking_page acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.booking_page.booking_page_host_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.booking_page.booking_page_host_user_id_retirement_guard CREATE TRIGGER booking_page_host_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.booking_page FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND true)) EXECUTE FUNCTION refuse_retired_member_work('host_user_id')
 public.booking_page.booking_page_pkey PRIMARY KEY (id)
 public.booking_page.booking_page_slug_key UNIQUE (slug)
 public.booking_page.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -1751,6 +1762,7 @@ public.capture_connection.signature_enrich_enabled boolean gen=- def=-
 public.capture_connection.status text NOT NULL gen=- def='disconnected'::text
 public.capture_connection.sync_anchor timestamp with time zone gen=- def=-
 public.capture_connection.sync_cursor jsonb gen=- def=-
+public.capture_connection.sync_revision bigint NOT NULL gen=- def=0
 public.capture_connection.unread_from timestamp with time zone gen=- def=-
 public.capture_connection.unread_to timestamp with time zone gen=- def=-
 public.capture_connection.user_id uuid NOT NULL gen=- def=-
@@ -2441,6 +2453,7 @@ public.company.company_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENC
 public.company.company_name_source_check CHECK ((name_source = ANY (ARRAY['human'::text, 'dossier'::text, 'signature'::text, 'domain'::text])))
 public.company.company_not_own_parent CHECK (((parent_company_id IS NULL) OR (parent_company_id <> id)))
 public.company.company_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
+public.company.company_owner_id_retirement_guard CREATE TRIGGER company_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.company FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.company.company_owner_private_names_its_owner CHECK (((visibility <> 'owner'::text) OR (owner_id IS NOT NULL)))
 public.company.company_parent_company_id_fkey FOREIGN KEY (parent_company_id) REFERENCES company(id) ON DELETE SET NULL (parent_company_id)
 public.company.company_pkey PRIMARY KEY (id)
@@ -3106,6 +3119,7 @@ public.contact.contact_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENC
 public.contact.contact_narrowing_reason_check CHECK ((narrowing_reason = ANY (ARRAY['awaiting_verdict'::text, 'outbound_no_answer'::text, 'confidentiality_hold'::text, 'advisor'::text, 'human_decided'::text])))
 public.contact.contact_narrowing_reason_only_when_owner CHECK (((narrowing_reason IS NULL) OR (visibility = 'owner'::text)))
 public.contact.contact_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
+public.contact.contact_owner_id_retirement_guard CREATE TRIGGER contact_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.contact FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.contact.contact_owner_private_names_its_owner CHECK (((visibility <> 'owner'::text) OR (owner_id IS NOT NULL)))
 public.contact.contact_pkey PRIMARY KEY (id)
 public.contact.contact_relationship_mark_check CHECK ((relationship_mark = ANY (ARRAY['vendor_marketing'::text])))
@@ -3263,6 +3277,7 @@ public.contact_email.contact_email_version_js_safe CHECK (((version >= '-9007199
 public.contact_email.contact_id uuid NOT NULL gen=- def=-
 public.contact_email.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact_email.email text NOT NULL gen=- def=-
+public.contact_email.email_domain_folded text gen=- def=-
 public.contact_email.email_type text NOT NULL gen=- def='work'::text
 public.contact_email.from_correspondence boolean NOT NULL gen=- def=true
 public.contact_email.id uuid NOT NULL gen=- def=uuidv7()
@@ -3512,6 +3527,7 @@ public.data_subject_request.assignee_id uuid gen=- def=-
 public.data_subject_request.channel text gen=- def=-
 public.data_subject_request.contact_id uuid gen=- def=-
 public.data_subject_request.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.data_subject_request.data_subject_request_assignee_id_retirement_guard CREATE TRIGGER data_subject_request_assignee_id_retirement_guard BEFORE INSERT OR UPDATE ON public.data_subject_request FOR EACH ROW WHEN (((new.assignee_id IS NOT NULL) AND (new.status = ANY (ARRAY['open'::text, 'in_progress'::text])))) EXECUTE FUNCTION refuse_retired_member_work('assignee_id')
 public.data_subject_request.data_subject_request_channel CHECK (((channel IS NULL) OR (channel = ANY (ARRAY['confirm_link'::text, 'email'::text, 'phone'::text, 'letter'::text, 'in_person'::text, 'operator_ui'::text]))))
 public.data_subject_request.data_subject_request_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE SET NULL
 public.data_subject_request.data_subject_request_kind_check CHECK ((kind = ANY (ARRAY['access'::text, 'rectify'::text, 'erasure'::text])))
@@ -3621,6 +3637,7 @@ public.deal.deal_lost_reason CHECK (((status <> 'lost'::text) OR (lost_reason IS
 public.deal.deal_lost_reason_only_when_lost CHECK (((lost_reason IS NULL) OR (status = 'lost'::text)))
 public.deal.deal_money_currency_pair CHECK ((((amount_minor IS NULL) AND (expected_arr_minor IS NULL)) = (currency IS NULL)))
 public.deal.deal_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
+public.deal.deal_owner_id_retirement_guard CREATE TRIGGER deal_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.deal FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.deal.deal_partner_attribution_check CHECK (((partner_attribution IS NULL) OR (partner_attribution = ANY (ARRAY['sourced'::text, 'influenced'::text]))))
 public.deal.deal_partner_attribution_pairing CHECK (((partner_company_id IS NULL) = (partner_attribution IS NULL)))
 public.deal.deal_partner_company_id_fkey FOREIGN KEY (partner_company_id) REFERENCES company(id) ON DELETE SET NULL (partner_company_id)
@@ -3800,6 +3817,7 @@ public.deal_room.deal_room_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id
 public.deal_room.deal_room_pkey PRIMARY KEY (id)
 public.deal_room.deal_room_state_check CHECK ((state = ANY (ARRAY['draft'::text, 'building'::text, 'ready'::text, 'publishing'::text, 'live'::text, 'paused'::text, 'closed'::text, 'expired'::text, 'archived'::text])))
 public.deal_room.deal_room_steward_fkey FOREIGN KEY (steward_user_id) REFERENCES app_user(id) ON DELETE SET NULL
+public.deal_room.deal_room_steward_user_id_retirement_guard CREATE TRIGGER deal_room_steward_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.deal_room FOR EACH ROW WHEN (((new.steward_user_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.state <> ALL (ARRAY['closed'::text, 'expired'::text]))))) EXECUTE FUNCTION refuse_retired_member_work('steward_user_id')
 public.deal_room.deal_room_touch CREATE TRIGGER deal_room_touch BEFORE UPDATE ON public.deal_room FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.deal_room.deal_room_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.deal_room.expires_at timestamp with time zone gen=- def=-
@@ -4608,7 +4626,7 @@ public.idempotency_key.response_records integer NOT NULL gen=- def=0
 public.idempotency_key.response_status integer gen=- def=-
 public.idempotency_key_pkey CREATE UNIQUE INDEX idempotency_key_pkey ON public.idempotency_key USING btree (principal_id, key, endpoint)
 public.idx_aam_subject CREATE INDEX idx_aam_subject ON public.activity_audience_member USING btree (subject_type, subject_id)
-public.idx_activity_answer_mail CREATE INDEX idx_activity_answer_mail ON public.activity USING btree (counterparty_email, kind, occurred_at) WHERE ((direction = 'outbound'::text) AND counterparty_outbound_attested AND (restricted_at IS NULL) AND (audience = 'workspace'::text) AND (archived_at IS NULL))
+public.idx_activity_answer_mail_subject CREATE INDEX idx_activity_answer_mail_subject ON public.activity USING btree (counterparty_email, kind, lower(btrim(regexp_replace(regexp_replace(COALESCE(subject, ''::text), '^(\s*(re|aw|antw)\s*:)+\s*'::text, ''::text, 'i'::text), '\s+'::text, ' '::text, 'g'::text))), occurred_at) WHERE ((direction = 'outbound'::text) AND counterparty_outbound_attested AND (restricted_at IS NULL) AND (audience = 'workspace'::text) AND (archived_at IS NULL))
 public.idx_activity_answer_touch CREATE INDEX idx_activity_answer_touch ON public.activity USING btree (id, occurred_at) WHERE (((kind = 'call'::text) OR ((kind = 'meeting'::text) AND (meeting_status = 'held'::text))) AND (restricted_at IS NULL) AND (audience = 'workspace'::text) AND (archived_at IS NULL))
 public.idx_activity_channel_thread CREATE INDEX idx_activity_channel_thread ON public.activity USING btree (channel_provider, thread_key) WHERE (channel_provider IS NOT NULL)
 public.idx_activity_counterparty_email CREATE INDEX idx_activity_counterparty_email ON public.activity USING btree (counterparty_email) WHERE (counterparty_email IS NOT NULL)
@@ -4651,8 +4669,10 @@ public.idx_analytics_share_scope_user CREATE INDEX idx_analytics_share_scope_use
 public.idx_analytics_share_snapshot CREATE INDEX idx_analytics_share_snapshot ON public.analytics_share USING btree (snapshot_id)
 public.idx_aparticipant_address CREATE INDEX idx_aparticipant_address ON public.activity_participant USING btree (lower(address)) WHERE (address IS NOT NULL)
 public.idx_aparticipant_contact CREATE INDEX idx_aparticipant_contact ON public.activity_participant USING btree (contact_id, activity_id) WHERE (contact_id IS NOT NULL)
+public.idx_aparticipant_sender_domain_reversed CREATE INDEX idx_aparticipant_sender_domain_reversed ON public.activity_participant USING btree (reverse(address_domain_folded) COLLATE "C") WHERE ((role = 'from'::text) AND (address_domain_folded IS NOT NULL))
 public.idx_aparticipant_user CREATE INDEX idx_aparticipant_user ON public.activity_participant USING btree (user_id, activity_id) WHERE (user_id IS NOT NULL)
 public.idx_app_user_live CREATE INDEX idx_app_user_live ON public.app_user USING btree (created_at, id) WHERE (archived_at IS NULL)
+public.idx_app_user_merge_target CREATE INDEX idx_app_user_merge_target ON public.app_user USING btree (merged_into_user_id) WHERE (merged_into_user_id IS NOT NULL)
 public.idx_approval_bundle CREATE INDEX idx_approval_bundle ON public.approval USING btree (bundle_id, created_at) WHERE (bundle_id IS NOT NULL)
 public.idx_approval_expiry_due CREATE INDEX idx_approval_expiry_due ON public.approval USING btree (expires_at) WHERE (status = 'pending'::text)
 public.idx_approval_inbox CREATE INDEX idx_approval_inbox ON public.approval USING btree (created_at) WHERE (status = 'pending'::text)
@@ -4967,6 +4987,8 @@ public.idx_transcript_read_latest CREATE INDEX idx_transcript_read_latest ON pub
 public.idx_user_record_view_entity_company CREATE INDEX idx_user_record_view_entity_company ON public.user_record_view USING btree (entity_company_id) WHERE (entity_company_id IS NOT NULL)
 public.idx_user_record_view_entity_contact CREATE INDEX idx_user_record_view_entity_contact ON public.user_record_view USING btree (entity_contact_id) WHERE (entity_contact_id IS NOT NULL)
 public.idx_voice_corpus_profile CREATE INDEX idx_voice_corpus_profile ON public.voice_corpus_source USING btree (voice_profile_id, created_at DESC)
+public.idx_web_form_lead_origin CREATE INDEX idx_web_form_lead_origin ON public.web_form USING btree (lead_origin) WHERE (lead_origin IS NOT NULL)
+public.idx_web_form_owner CREATE INDEX idx_web_form_owner ON public.web_form USING btree (owner_id) WHERE (owner_id IS NOT NULL)
 public.idx_webhook_delivery_by_subscription CREATE INDEX idx_webhook_delivery_by_subscription ON public.webhook_delivery USING btree (subscription_id, created_at DESC)
 public.idx_webhook_delivery_due CREATE INDEX idx_webhook_delivery_due ON public.webhook_delivery USING btree (next_retry_at) WHERE (status = 'retrying'::text)
 public.idx_webhook_subscription_live CREATE INDEX idx_webhook_subscription_live ON public.webhook_subscription USING btree (state) WHERE (archived_at IS NULL)
@@ -5060,6 +5082,7 @@ public.intro_request.intro_request_contact_id_fkey FOREIGN KEY (contact_id) REFE
 public.intro_request.intro_request_distinct_seats CHECK ((requester_user_id <> introducer_user_id))
 public.intro_request.intro_request_fallback CHECK ((fallback_policy = ANY (ARRAY['name_drop'::text, 'next_route'::text, 'none'::text])))
 public.intro_request.intro_request_introducer_user_id_fkey FOREIGN KEY (introducer_user_id) REFERENCES app_user(id)
+public.intro_request.intro_request_introducer_user_id_retirement_guard CREATE TRIGGER intro_request_introducer_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.intro_request FOR EACH ROW WHEN (((new.introducer_user_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.closed_at IS NULL)))) EXECUTE FUNCTION refuse_retired_member_work('introducer_user_id')
 public.intro_request.intro_request_note_origin CHECK ((note_generated_by = ANY (ARRAY['human'::text, 'model'::text, 'deterministic'::text])))
 public.intro_request.intro_request_origin_known CHECK ((origin = ANY (ARRAY['asked'::text, 'recorded'::text])))
 public.intro_request.intro_request_pkey PRIMARY KEY (id)
@@ -5279,6 +5302,7 @@ public.lead.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead.disqualify_note text gen=- def=-
 public.lead.disqualify_reason_id uuid gen=- def=-
 public.lead.email text gen=- def=-
+public.lead.email_domain_folded text gen=- def=-
 public.lead.entered_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead.first_response_at timestamp with time zone gen=- def=-
 public.lead.from_contact_id uuid gen=- def=-
@@ -5294,6 +5318,7 @@ public.lead.lead_origin_detail_bounded CHECK (((origin_detail IS NULL) OR (lengt
 public.lead.lead_origin_fkey FOREIGN KEY (origin) REFERENCES lead_origin(key) ON UPDATE RESTRICT ON DELETE RESTRICT
 public.lead.lead_override_retains_the_computed_score CHECK (((score_override_reason IS NULL) OR (score_computed IS NOT NULL)))
 public.lead.lead_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
+public.lead.lead_owner_id_retirement_guard CREATE TRIGGER lead_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.lead FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.lead.lead_pkey PRIMARY KEY (id)
 public.lead.lead_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE SET NULL (project_id)
 public.lead.lead_promoted_contact_id_fkey FOREIGN KEY (promoted_contact_id) REFERENCES contact(id) ON DELETE SET NULL (promoted_contact_id)
@@ -5608,9 +5633,11 @@ public.list.id uuid NOT NULL gen=- def=uuidv7()
 public.list.list_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
 public.list.list_list_type_check CHECK ((list_type = ANY (ARRAY['static'::text, 'dynamic'::text])))
 public.list.list_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
+public.list.list_owner_id_retirement_guard CREATE TRIGGER list_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.list FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.list.list_pkey PRIMARY KEY (id)
 public.list.list_sharing_check CHECK ((sharing = ANY (ARRAY['private'::text, 'team'::text, 'workspace'::text])))
 public.list.list_steward_id_fkey FOREIGN KEY (steward_id) REFERENCES app_user(id) ON DELETE SET NULL
+public.list.list_steward_id_retirement_guard CREATE TRIGGER list_steward_id_retirement_guard BEFORE INSERT OR UPDATE ON public.list FOR EACH ROW WHEN (((new.steward_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('steward_id')
 public.list.list_team_id_fkey FOREIGN KEY (team_id) REFERENCES team(id) ON DELETE SET NULL (team_id)
 public.list.list_type text NOT NULL gen=- def='static'::text
 public.list.list_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -5739,6 +5766,7 @@ public.mail_draft.html_body text gen=- def=-
 public.mail_draft.id uuid NOT NULL gen=- def=-
 public.mail_draft.mail_draft_anchor_type CHECK ((anchor_type = ANY (ARRAY['activity'::text, 'contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
 public.mail_draft.mail_draft_author_id_fkey FOREIGN KEY (author_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.mail_draft.mail_draft_author_id_retirement_guard CREATE TRIGGER mail_draft_author_id_retirement_guard BEFORE INSERT OR UPDATE ON public.mail_draft FOR EACH ROW WHEN (((new.author_id IS NOT NULL) AND true)) EXECUTE FUNCTION refuse_retired_member_work('author_id')
 public.mail_draft.mail_draft_one_per_anchor UNIQUE (author_id, anchor_type, anchor_id)
 public.mail_draft.mail_draft_pkey PRIMARY KEY (id)
 public.mail_draft.mail_draft_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -5768,6 +5796,7 @@ public.meeting_invitation.management_ref text NOT NULL gen=- def=-
 public.meeting_invitation.meeting_invitation_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.meeting_invitation.meeting_invitation_command_check CHECK ((command = ANY (ARRAY['create'::text, 'update'::text, 'cancel'::text])))
 public.meeting_invitation.meeting_invitation_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id)
+public.meeting_invitation.meeting_invitation_host_user_id_retirement_guard CREATE TRIGGER meeting_invitation_host_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.meeting_invitation FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND ((new.status <> ALL (ARRAY['canceled'::text, 'erased'::text])) OR (NOT new.cleanup_complete)))) EXECUTE FUNCTION refuse_retired_member_work('host_user_id')
 public.meeting_invitation.meeting_invitation_management_hash_key UNIQUE (management_hash)
 public.meeting_invitation.meeting_invitation_pkey PRIMARY KEY (activity_id)
 public.meeting_invitation.meeting_invitation_provider_check CHECK ((provider = ANY (ARRAY['gcal'::text, 'graphcal'::text])))
@@ -5795,6 +5824,7 @@ public.meeting_proposal.invitation_id uuid gen=- def=-
 public.meeting_proposal.link_ref text NOT NULL gen=- def=-
 public.meeting_proposal.meeting_proposal_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.meeting_proposal.meeting_proposal_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id)
+public.meeting_proposal.meeting_proposal_host_user_id_retirement_guard CREATE TRIGGER meeting_proposal_host_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.meeting_proposal FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND true)) EXECUTE FUNCTION refuse_retired_member_work('host_user_id')
 public.meeting_proposal.meeting_proposal_invitation_id_fkey FOREIGN KEY (invitation_id) REFERENCES meeting_invitation(activity_id) ON DELETE SET NULL
 public.meeting_proposal.meeting_proposal_pkey PRIMARY KEY (activity_id)
 public.meeting_proposal.meeting_proposal_token_hash_key UNIQUE (token_hash)
@@ -5803,6 +5833,15 @@ public.meeting_proposal.token_hash text NOT NULL gen=- def=-
 public.meeting_proposal.used_at timestamp with time zone gen=- def=-
 public.meeting_proposal_pkey CREATE UNIQUE INDEX meeting_proposal_pkey ON public.meeting_proposal USING btree (activity_id)
 public.meeting_proposal_token_hash_key CREATE UNIQUE INDEX meeting_proposal_token_hash_key ON public.meeting_proposal USING btree (token_hash)
+public.member_identity_family(member uuid) secdef=false cfg=- acl=- 
+  WITH RECURSIVE member_identities(id) AS (
+    SELECT member
+    UNION
+    SELECT retired.id FROM app_user retired JOIN member_identities survivor
+      ON retired.merged_into_user_id = survivor.id
+     WHERE retired.removed_at IS NOT NULL)
+  SELECT array_agg(id) FROM member_identities
+
 public.mfa_challenge_spent acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.mfa_challenge_spent.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.mfa_challenge_spent.jti text NOT NULL gen=- def=-
@@ -6217,6 +6256,7 @@ public.privacy_notice_case.privacy_notice_case_completion_shape CHECK (((state =
 public.privacy_notice_case.privacy_notice_case_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.privacy_notice_case.privacy_notice_case_delivery_id_fkey FOREIGN KEY (delivery_id) REFERENCES comms_outbound(id) ON DELETE SET NULL
 public.privacy_notice_case.privacy_notice_case_owner_fkey FOREIGN KEY (owner_user_id) REFERENCES app_user(id) ON DELETE SET NULL
+public.privacy_notice_case.privacy_notice_case_owner_user_id_retirement_guard CREATE TRIGGER privacy_notice_case_owner_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.privacy_notice_case FOR EACH ROW WHEN (((new.owner_user_id IS NOT NULL) AND (new.state = ANY (ARRAY['open'::text, 'assigned'::text, 'queued'::text, 'delivery_failed'::text, 'blocked'::text])))) EXECUTE FUNCTION refuse_retired_member_work('owner_user_id')
 public.privacy_notice_case.privacy_notice_case_pkey PRIMARY KEY (id)
 public.privacy_notice_case.privacy_notice_case_queued_names_its_delivery CHECK (((state <> 'queued'::text) OR (delivery_id IS NOT NULL)))
 public.privacy_notice_case.privacy_notice_case_resolution_note_length CHECK (((resolution_note IS NULL) OR (char_length(resolution_note) <= 500)))
@@ -6310,6 +6350,7 @@ public.project.project_company_id_fkey FOREIGN KEY (company_id) REFERENCES compa
 public.project.project_dates CHECK (((ended_at IS NULL) OR (started_at IS NULL) OR (ended_at >= started_at)))
 public.project.project_key_shape CHECK (((key IS NULL) OR (key ~ '^[A-Za-z][A-Za-z0-9_-]{1,23}$'::text)))
 public.project.project_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
+public.project.project_owner_id_retirement_guard CREATE TRIGGER project_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.project FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.project.project_phase_check CHECK ((phase = ANY (ARRAY['initiative'::text, 'pursuing'::text, 'delivering'::text, 'closed'::text])))
 public.project.project_pkey PRIMARY KEY (id)
 public.project.project_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
@@ -6579,6 +6620,7 @@ public.record_assignment.record_assignment_project_id_fkey FOREIGN KEY (project_
 public.record_assignment.record_assignment_role_id_fkey FOREIGN KEY (role_id) REFERENCES record_role(id) ON DELETE RESTRICT
 public.record_assignment.record_assignment_team_id_fkey FOREIGN KEY (team_id) REFERENCES team(id) ON DELETE RESTRICT
 public.record_assignment.record_assignment_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
+public.record_assignment.record_assignment_user_id_retirement_guard CREATE TRIGGER record_assignment_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.record_assignment FOR EACH ROW WHEN (((new.user_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('user_id')
 public.record_assignment.record_assignment_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.record_assignment.role_id uuid NOT NULL gen=- def=-
 public.record_assignment.source text gen=- def=-
@@ -6678,6 +6720,19 @@ BEGIN
   END LOOP;
 END;
 
+public.refuse_retired_member_work() secdef=false cfg=- acl=- DECLARE
+    member_id uuid;
+    retired boolean;
+BEGIN
+    member_id := (to_jsonb(NEW)->>TG_ARGV[0])::uuid;
+    SELECT removed_at IS NOT NULL INTO retired FROM app_user WHERE id = member_id FOR KEY SHARE;
+    IF retired THEN
+        RAISE EXCEPTION 'A retired member cannot receive active work'
+            USING ERRCODE = '23514', CONSTRAINT = 'member_work_reference_retired';
+    END IF;
+    RETURN NEW;
+END;
+
 public.refuse_service_member_delete() secdef=false cfg=- acl=- BEGIN
     IF OLD.service_extension IS NOT NULL THEN
         RAISE EXCEPTION 'a service member is archived, never deleted'
@@ -6768,6 +6823,7 @@ public.report_definition.report_definition_check CHECK (((audience = 'team'::tex
 public.report_definition.report_definition_draft_after_published CHECK (((draft_revision IS NULL) OR ((draft_revision >= (revision + 1)) AND (draft_revision <= '9007199254740991'::bigint))))
 public.report_definition.report_definition_draft_revision_js_safe CHECK (((draft_revision >= '-9007199254740991'::bigint) AND (draft_revision <= '9007199254740991'::bigint)))
 public.report_definition.report_definition_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id)
+public.report_definition.report_definition_owner_id_retirement_guard CREATE TRIGGER report_definition_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.report_definition FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.report_definition.report_definition_pkey PRIMARY KEY (id)
 public.report_definition.report_definition_revision_js_safe CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))
 public.report_definition.report_definition_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -6910,6 +6966,7 @@ public.report_schedule.owner_id uuid NOT NULL gen=- def=-
 public.report_schedule.report_id uuid NOT NULL gen=- def=-
 public.report_schedule.report_revision bigint NOT NULL gen=- def=-
 public.report_schedule.report_schedule_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id)
+public.report_schedule.report_schedule_owner_id_retirement_guard CREATE TRIGGER report_schedule_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.report_schedule FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND new.enabled)) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.report_schedule.report_schedule_pkey PRIMARY KEY (id)
 public.report_schedule.report_schedule_report_id_report_revision_fkey FOREIGN KEY (report_id, report_revision) REFERENCES report_definition_revision(report_id, revision)
 public.report_schedule.report_schedule_report_revision_js_safe CHECK (((report_revision >= '-9007199254740991'::bigint) AND (report_revision <= '9007199254740991'::bigint)))
@@ -7062,6 +7119,7 @@ public.saved_view.owner_id uuid NOT NULL gen=- def=-
 public.saved_view.query jsonb NOT NULL gen=- def=-
 public.saved_view.resource text NOT NULL gen=- def=-
 public.saved_view.saved_view_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.saved_view.saved_view_owner_id_retirement_guard CREATE TRIGGER saved_view_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.saved_view FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.saved_view.saved_view_pkey PRIMARY KEY (id)
 public.saved_view.saved_view_resource_check CHECK ((resource = ANY (ARRAY['contacts'::text, 'companies'::text, 'deals'::text, 'activities'::text, 'leads'::text, 'partners'::text, 'projects'::text])))
 public.saved_view.saved_view_shared_scope_check CHECK ((shared_scope = ANY (ARRAY['private'::text, 'team'::text, 'workspace'::text])))
@@ -7103,6 +7161,7 @@ public.scheduled_send.scheduled_send_pkey PRIMARY KEY (id)
 public.scheduled_send.scheduled_send_principal_kind CHECK ((principal_kind = ANY (ARRAY['human'::text, 'agent'::text])))
 public.scheduled_send.scheduled_send_released_shape CHECK ((((status = 'released'::text) AND (activity_id IS NOT NULL) AND (delivery_id IS NOT NULL)) OR ((status <> 'released'::text) AND (activity_id IS NULL) AND (delivery_id IS NULL))))
 public.scheduled_send.scheduled_send_scheduled_by_fkey FOREIGN KEY (scheduled_by) REFERENCES app_user(id) ON DELETE RESTRICT
+public.scheduled_send.scheduled_send_scheduled_by_retirement_guard CREATE TRIGGER scheduled_send_scheduled_by_retirement_guard BEFORE INSERT OR UPDATE ON public.scheduled_send FOR EACH ROW WHEN (((new.scheduled_by IS NOT NULL) AND (new.status = ANY (ARRAY['scheduled'::text, 'held'::text, 'sending'::text])))) EXECUTE FUNCTION refuse_retired_member_work('scheduled_by')
 public.scheduled_send.scheduled_send_status CHECK ((status = ANY (ARRAY['scheduled'::text, 'released'::text, 'cancelled'::text, 'held'::text])))
 public.scheduled_send.scheduled_send_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.scheduled_send.scheduled_tz text NOT NULL gen=- def=-
@@ -7125,6 +7184,7 @@ public.sdr_handoff.note text gen=- def=-
 public.sdr_handoff.reason_applies_to text gen=- def=-
 public.sdr_handoff.reason_id uuid gen=- def=-
 public.sdr_handoff.sdr_handoff_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES app_user(id)
+public.sdr_handoff.sdr_handoff_assigned_to_retirement_guard CREATE TRIGGER sdr_handoff_assigned_to_retirement_guard BEFORE INSERT OR UPDATE ON public.sdr_handoff FOR EACH ROW WHEN (((new.assigned_to IS NOT NULL) AND (new.status = ANY (ARRAY['submitted'::text, 'accepted'::text])))) EXECUTE FUNCTION refuse_retired_member_work('assigned_to')
 public.sdr_handoff.sdr_handoff_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL
 public.sdr_handoff.sdr_handoff_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.sdr_handoff.sdr_handoff_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE RESTRICT
@@ -7355,6 +7415,7 @@ public.signal.signal_entity_shape CHECK ((entity_unkeyed OR (entity_id IS NULL) 
 public.signal.signal_entity_type_check CHECK (((entity_type IS NULL) OR (entity_type = ANY (ARRAY['deal'::text, 'company'::text, 'contact'::text, 'project'::text]))))
 public.signal.signal_kind_check CHECK ((kind = ANY (ARRAY['stalled_deal'::text, 'champion_left'::text, 'reengagement'::text, 'buying_intent'::text, 'risk'::text, 'other'::text, 'contract_ended'::text, 'new_opportunity'::text, 'commitment_made'::text, 'ghosted_thread'::text, 'project_gone_quiet'::text, 'funding'::text, 'leadership_change'::text, 'expansion'::text, 'product_launch'::text, 'technical_change'::text])))
 public.signal.signal_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
+public.signal.signal_owner_id_retirement_guard CREATE TRIGGER signal_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.signal FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.status = 'open'::text)))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.signal.signal_owner_private_names_its_owner CHECK (((visibility <> 'owner'::text) OR (owner_id IS NOT NULL)))
 public.signal.signal_pkey PRIMARY KEY (id)
 public.signal.signal_resolution_confidence_check CHECK (((resolution_confidence IS NULL) OR ((resolution_confidence >= (0)::numeric) AND (resolution_confidence <= (1)::numeric))))
@@ -8357,6 +8418,7 @@ public.voice_profile.version bigint NOT NULL gen=- def=1
 public.voice_profile.voice_profile_derived_versioned CHECK (((voice_profile_md = ''::text) OR (profile_version >= 1)))
 public.voice_profile.voice_profile_md text NOT NULL gen=- def=''::text
 public.voice_profile.voice_profile_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT
+public.voice_profile.voice_profile_owner_id_retirement_guard CREATE TRIGGER voice_profile_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.voice_profile FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.voice_profile.voice_profile_pkey PRIMARY KEY (id)
 public.voice_profile.voice_profile_scope_check CHECK ((scope = ANY (ARRAY['user'::text, 'team'::text, 'workspace'::text])))
 public.voice_profile.voice_profile_scope_owner_check CHECK ((((scope = 'user'::text) AND (owner_id IS NOT NULL) AND (team_id IS NULL)) OR ((scope = 'team'::text) AND (owner_id IS NULL) AND (team_id IS NOT NULL)) OR ((scope = 'workspace'::text) AND (owner_id IS NULL) AND (team_id IS NULL))))
@@ -8429,6 +8491,45 @@ public.voice_profile_version_history CREATE INDEX voice_profile_version_history 
 public.voice_profile_version_one_active CREATE UNIQUE INDEX voice_profile_version_one_active ON public.voice_profile_version USING btree (voice_profile_id) WHERE (status = 'active'::text)
 public.voice_profile_version_pkey CREATE UNIQUE INDEX voice_profile_version_pkey ON public.voice_profile_version USING btree (id)
 public.voice_profile_version_predecessor_ix CREATE INDEX voice_profile_version_predecessor_ix ON public.voice_profile_version USING btree (voice_profile_id, predecessor_version)
+public.web_form acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.web_form.allowed_origins text[] NOT NULL gen=- def='{}'::text[]
+public.web_form.archived_at timestamp with time zone gen=- def=-
+public.web_form.captured_by text NOT NULL gen=- def=-
+public.web_form.consent_policy_version text gen=- def=-
+public.web_form.consent_required boolean NOT NULL gen=- def=false
+public.web_form.consent_wording text gen=- def=-
+public.web_form.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.web_form.field_map jsonb NOT NULL gen=- def='{}'::jsonb
+public.web_form.form_key text NOT NULL gen=- def=-
+public.web_form.id uuid NOT NULL gen=- def=uuidv7()
+public.web_form.lead_origin text gen=- def=-
+public.web_form.name text NOT NULL gen=- def=-
+public.web_form.owner_id uuid gen=- def=-
+public.web_form.redirect_url text gen=- def=-
+public.web_form.secret_ref text gen=- def=-
+public.web_form.sender text NOT NULL gen=- def=-
+public.web_form.state text NOT NULL gen=- def='active'::text
+public.web_form.success_message text gen=- def=-
+public.web_form.trg_web_form_updated CREATE TRIGGER trg_web_form_updated BEFORE UPDATE ON public.web_form FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.web_form.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.web_form.version bigint NOT NULL gen=- def=1
+public.web_form.web_form_admission CHECK ((((sender = 'browser'::text) AND (secret_ref IS NULL) AND (cardinality(allowed_origins) > 0)) OR ((sender <> 'browser'::text) AND ((secret_ref IS NOT NULL) OR (sender = 'webflow'::text)) AND (cardinality(allowed_origins) = 0))))
+public.web_form.web_form_consent_wording_bounded CHECK (((consent_wording IS NULL) OR (length(consent_wording) <= 2000)))
+public.web_form.web_form_field_map_object CHECK ((jsonb_typeof(field_map) = 'object'::text))
+public.web_form.web_form_form_key_key UNIQUE (form_key)
+public.web_form.web_form_key_shape CHECK ((form_key ~ '^[A-Za-z0-9_-]{16,64}$'::text))
+public.web_form.web_form_lead_origin_fkey FOREIGN KEY (lead_origin) REFERENCES lead_origin(key) ON UPDATE RESTRICT ON DELETE SET NULL
+public.web_form.web_form_name_present CHECK (((length(btrim(name)) > 0) AND (length(name) <= 200)))
+public.web_form.web_form_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL
+public.web_form.web_form_owner_id_retirement_guard CREATE TRIGGER web_form_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.web_form FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.state = 'active'::text)))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
+public.web_form.web_form_pkey PRIMARY KEY (id)
+public.web_form.web_form_redirect_https CHECK (((redirect_url IS NULL) OR (redirect_url ~ '^https://'::text)))
+public.web_form.web_form_sender_check CHECK ((sender = ANY (ARRAY['browser'::text, 'server'::text, 'webflow'::text, 'typeform'::text, 'tally'::text])))
+public.web_form.web_form_state_check CHECK ((state = ANY (ARRAY['active'::text, 'paused'::text])))
+public.web_form.web_form_success_message_bounded CHECK (((success_message IS NULL) OR (length(success_message) <= 500)))
+public.web_form.web_form_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.web_form_form_key_key CREATE UNIQUE INDEX web_form_form_key_key ON public.web_form USING btree (form_key)
+public.web_form_pkey CREATE UNIQUE INDEX web_form_pkey ON public.web_form USING btree (id)
 public.webhook_delivery acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.webhook_delivery.attempts integer NOT NULL gen=- def=0
 public.webhook_delivery.claimed_until timestamp with time zone gen=- def=-
@@ -8472,6 +8573,7 @@ public.webhook_subscription.updated_at timestamp with time zone NOT NULL gen=- d
 public.webhook_subscription.version bigint NOT NULL gen=- def=1
 public.webhook_subscription.webhook_subscription_event_types_check CHECK ((cardinality(event_types) > 0))
 public.webhook_subscription.webhook_subscription_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.webhook_subscription.webhook_subscription_owner_id_retirement_guard CREATE TRIGGER webhook_subscription_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.webhook_subscription FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.state = 'active'::text)))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.webhook_subscription.webhook_subscription_pkey PRIMARY KEY (id)
 public.webhook_subscription.webhook_subscription_state_check CHECK ((state = ANY (ARRAY['active'::text, 'paused'::text])))
 public.webhook_subscription.webhook_subscription_target_url_check CHECK ((target_url ~ '^https://'::text))
@@ -8495,6 +8597,7 @@ public.weekly_plan.weekly_plan_capacity_note_bounded CHECK (((capacity_note IS N
 public.weekly_plan.weekly_plan_outcome_is_a_tally CHECK (((commitments_due IS NULL) OR ((commitments_due >= 0) AND (commitments_kept >= 0) AND (commitments_kept <= commitments_due))))
 public.weekly_plan.weekly_plan_outcome_matches_status CHECK ((((status = 'closed'::text) = (commitments_due IS NOT NULL)) AND ((commitments_due IS NULL) = (commitments_kept IS NULL))))
 public.weekly_plan.weekly_plan_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.weekly_plan.weekly_plan_owner_id_retirement_guard CREATE TRIGGER weekly_plan_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.weekly_plan FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.status = 'open'::text))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.weekly_plan.weekly_plan_pkey PRIMARY KEY (id)
 public.weekly_plan.weekly_plan_risks_bounded CHECK (((risks IS NULL) OR (length(risks) <= 2000)))
 public.weekly_plan.weekly_plan_status_check CHECK ((status = ANY (ARRAY['open'::text, 'closed'::text])))

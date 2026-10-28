@@ -92,18 +92,23 @@ export function onResponse(
   capabilityHandler = capabilities;
 }
 
-// The tools this view declared in actions.json. The transport itself refuses a
-// tool call naming anything else, so no code path of the view, whatever calls
-// sendToHost, can ask the host to run a tool the view did not declare.
-let permittedTools: ReadonlySet<string> = new Set();
+// What a view may send without declaring anything: its handshake, its size and
+// a chat message. The transport refuses any other method. So no code path of
+// the view can ask the host for more than the view declared. A view with no
+// actions registers nothing, and its document carries no tool call at all.
+const OPEN_METHODS: ReadonlySet<string> = new Set([
+  "ui/initialize",
+  "ui/notifications/initialized",
+  "ui/notifications/size-changed",
+  "ui/message",
+]);
+let mayAlsoSend: (message: Record<string, unknown>) => boolean = () => false;
 
-/** permitTools replaces the set of tools this view may ask its host to run. */
-export function permitTools(names: readonly string[]): void {
-  permittedTools = new Set(names);
-}
-
-function callIsPermitted(params: unknown): boolean {
-  return permittedTools.has(asText(asRecord(params).name));
+/** allowOutbound replaces the check for the other messages a view may send. */
+export function allowOutbound(
+  check: (message: Record<string, unknown>) => boolean,
+): void {
+  mayAlsoSend = check;
 }
 
 /**
@@ -133,7 +138,8 @@ function fromHost(event: MessageEvent): boolean {
  * ever leaves here, because a view holds none.
  */
 export function sendToHost(message: Record<string, unknown>): void {
-  if (message.method === "tools/call" && !callIsPermitted(message.params))
+  const method = asText(message.method);
+  if (method !== "" && !OPEN_METHODS.has(method) && !mayAlsoSend(message))
     return;
   const target =
     hostOrigin === null || hostOrigin === "null" ? "*" : hostOrigin;

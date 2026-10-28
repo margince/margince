@@ -77,3 +77,7 @@ The 1 table owned by `introductions`, as the migrations build them. [Back to the
 - `intro_request_open_route`: `unique, btree (contact_id, introducer_user_id, through_contact_id) NULLS NOT DISTINCT WHERE ((status = ANY (ARRAY['requested', 'accepted', 'name_drop_approved'])) AND (archived_at IS NULL))`
 - `intro_request_pkey`: `unique, btree (id)`
 - `intro_request_recorded_pair`: `unique, btree (contact_id, introducer_user_id, requester_user_id) WHERE ((origin = 'recorded') AND (archived_at IS NULL))`
+
+**Triggers**
+
+- `intro_request_introducer_user_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.introducer_user_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.closed_at IS NULL)))) EXECUTE FUNCTION refuse_retired_member_work('introducer_user_id')`

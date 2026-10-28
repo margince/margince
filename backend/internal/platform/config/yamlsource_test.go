@@ -38,7 +38,7 @@ ai:
   routing: {chat: {model: m}}
 `)
 	roots := map[string]bool{"version": true, "workspace": true}
-	layer, unknown, err := readYAML(p, namesOf(t, roots, "log.level", "ai.routing"))
+	layer, unknown, err := readYAML(os.ReadFile, p, namesOf(t, roots, "log.level", "ai.routing"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ ai:
 }
 
 func TestMissingYAMLIsAnEmptyLayer(t *testing.T) {
-	layer, unknown, err := readYAML(filepath.Join(t.TempDir(), "absent.yaml"), namesOf(t, nil))
+	layer, unknown, err := readYAML(os.ReadFile, filepath.Join(t.TempDir(), "absent.yaml"), namesOf(t, nil))
 	if err != nil || len(layer.values) != 0 || len(unknown) != 0 {
 		t.Fatalf("%v %v %v", layer, unknown, err)
 	}
@@ -73,7 +73,7 @@ func TestOverlayFilesBesideTheBaseAreFound(t *testing.T) {
 
 func TestANullValueIsAKeyLeftUnwritten(t *testing.T) {
 	p := writeFile(t, t.TempDir(), "margince.yaml", "log: {level: null}\nweb:\nuploads: ~\n")
-	layer, unknown, err := readYAML(p, namesOf(t, nil, "log.level"))
+	layer, unknown, err := readYAML(os.ReadFile, p, namesOf(t, nil, "log.level"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestANullValueIsAKeyLeftUnwritten(t *testing.T) {
 // one typo of a parent would bury the other faults under its children.
 func TestAnUnknownSectionIsReportedOnceAtItsLine(t *testing.T) {
 	p := writeFile(t, t.TempDir(), "margince.yaml", "lgo:\n  level: debug\n  format: json\nlog:\n  level: info\n")
-	_, unknown, err := readYAML(p, namesOf(t, nil, "log.level", "log.format"))
+	_, unknown, err := readYAML(os.ReadFile, p, namesOf(t, nil, "log.level", "log.format"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/activities/answered.go backend/internal/modules/activities/requeststate.go backend/internal/modules/activities/requestsettlement.go backend/internal/modules/activities/owedverdict.go backend/internal/modules/activities/emailrequesttasks.go backend/internal/modules/activities/requesttask.go -->
+<!-- describes: backend/internal/platform/database/storekit/answered.go backend/internal/modules/activities/answered.go backend/internal/modules/activities/requeststate.go backend/internal/compose/dealstatus/requestbasis.go backend/internal/compose/dealstatus/service.go backend/internal/modules/activities/requestsettlement.go backend/internal/modules/activities/owedverdict.go backend/internal/modules/activities/emailrequesttasks.go backend/internal/modules/activities/requesttask.go -->
 # Customer requests last longer than pipeline stages
 
 A captured request and a sales deal have different lives. When a deal closes, Margince stops telling
@@ -53,10 +53,10 @@ snooze, `not_mine` or `handled`, that changes their own queue, not what is owed 
 
 ## Whether a reply is still owed
 
-One check answers this for every surface. The surfaces are the needs-reply badge on the timeline, the
-contact page and the agent tools, the waiting lane, request review and the response time. It lives in
-`activities/answered.go`, and `backend/gates/answerwalk_test.go` fails a second walk of a thread for our
-reply.
+The timeline badge, contact page, agent tools, waiting lane, request review and response time
+use the same reply evidence. It lives in `platform/database/storekit/answered.go`.
+`backend/gates/answerwalk_test.go` fails a second walk of a thread for our reply.
+Request state still decides whether the original ask stays owed.
 
 A message that is not a request is answered by any of:
 
@@ -119,6 +119,17 @@ is counted under the past the horizon number in `/worklist/hidden`.
 
 That number counts conversations rather than single requests, and older ones are not counted. The record
 of such a request still offers **Create task** to take it back.
+
+The deal reads current requests apart from review, before either read reaches its page limit.
+Current requests share the existing intent, completion, recipient and source date checks. A request a human
+holds can stay current beyond the date limit. Review keeps old evidence and evidence not yet confirmed on the record,
+but does not set `reply_to` or start a waiting clock. The date of a message is no deadline.
+
+The card and its Worklist move carry the same source basis. The basis names its scope, source time,
+decision and the time of the check. Time since contact exchange, activity filed on a deal and current
+request arrival are separate figures. No one links mail to another record to make those dates match.
+Cache readers share a version check; a card from an older projection is a miss. The move's dismissal
+identity still names its action and source, so a new decision does not undo a reader's choice.
 
 The deal offers **Create task** for a request that waits to be accepted. Both task and activity create
 calls accept `request_activity_id`. The server checks that the caller may read the source evidence, and

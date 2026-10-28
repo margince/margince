@@ -13,6 +13,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailrole"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/contactaddress"
@@ -40,8 +41,7 @@ var offeredEmailCandidatesSQL = `
 	          JOIN contact p ON p.id = l.contact_id AND p.archived_at IS NULL
 	         WHERE a.id = ANY($1) AND a.kind = ANY($2) AND a.archived_at IS NULL
 	           AND (a.kind <> '` + string(crmcontracts.ActivityKindTask) + `' OR ` + relstrength.OriginIsEngagementSQL("a") + `) %s) c
-	 WHERE c.linked = 1 AND c.address <> ''
-	   AND NOT EXISTS (SELECT 1 FROM app_user seat WHERE lower(seat.email) = lower(c.address))`
+	 WHERE c.linked = 1 AND c.address <> ''`
 
 // offeredEmails is the address Write email opens with, per written-about row. The
 // reply-recipient read and every activity read take their answer from it.
@@ -89,13 +89,20 @@ func offeredEmails(ctx context.Context, tx pgx.Tx, rows []ids.UUID) (map[ids.UUI
 	return withoutColleagues(ctx, tx, out)
 }
 
-// withoutColleagues drops the addresses at one of our own domains.
+// withoutColleagues drops the addresses at one of our own domains, and any
+// seat's login, in either spelling of its domain.
 func withoutColleagues(ctx context.Context, tx pgx.Tx, offered map[ids.UUID]string) (map[ids.UUID]string, error) {
 	own, err := owndomain.Read(ctx, tx, auth.TrustedOwnDomainsSQL)
 	if err != nil {
 		return nil, err
 	}
-	maps.DeleteFunc(offered, func(_ ids.UUID, address string) bool { return own.Covers(address) })
+	seats, err := storekit.WorkspaceSeatAddresses(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	maps.DeleteFunc(offered, func(_ ids.UUID, address string) bool {
+		return own.Covers(address) || seats.IsLogin(address)
+	})
 	return offered, nil
 }
 

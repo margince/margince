@@ -32,14 +32,10 @@ openapi: 3.1.0
 #     keyed by operationId→ToolSpec, and returns the approval-required response (403 code:
 #     approval_required, or 202 where a staging ref is returned). REST is NOT read-only for agents;
 #     the SAME resolver/approval flow gates both surfaces. A human's direct call is itself approval.
-#   - Human-edit precedence is PER FIELD (interfaces.md §2.1): `update_record` is 🟢, but when an
-#     agent's patch touches a field whose current value a HUMAN last wrote (audit-trail lookup),
-#     exactly those fields are split off into a 🟡 staged approval while the rest of the patch
-#     applies at the auto_execute tier in the same request. A mixed patch answers 200 with the updated record plus a
-#     `staged_approval` member naming the withheld fields and the approval id; a patch made up
-#     entirely of human-owned fields answers 403 approval_required with the staging reference.
-#     Redemption replays ONLY the staged fields with the approval reference (X-Approval-Token on
-#     REST, `approval_id` on MCP) — the staged sub-patch, not the original call, is the bound diff.
+#   - `update_record` is 🟢: an agent's patch applies in the one request, whoever last wrote the fields,
+#     and the audit row and Undo are the safety net. A call the contract tightens to confirm-first
+#     stages the whole call, and redemption replays it with the approval reference (X-Approval-Token
+#     on REST, `approval_id` on MCP).
 #   - DEFAULT-DENY (fail-closed): the gate resolves an agent-principal mutation's tier from
 #     `operationId → ToolSpec`. A mutating operation that maps to NO ToolSpec tier is REFUSED for an
 #     agent principal (403 code: permission_denied) — never silently admitted. So a new endpoint that
@@ -114,6 +110,8 @@ security:
 tags:
   - name: Webhooks
     description: Outbound webhook subscriptions (E10/S-E10.6) — signed, retried delivery of published domain events to a tenant-owned HTTPS endpoint.
+  - name: WebForms
+    description: Website forms — a public intake address per form that turns a website's form submission into a lead.
   - name: Integrations
     description: Licensed data-provider connections and the runs they execute (ADR-0101) — an installation-owned connection per provider, a metered run ledger, and the contact-scoped enrichment runs domain surfaces queue against it.
   - name: Contacts
@@ -10004,6 +10002,76 @@ paths:
         '502': { $ref: '#/components/responses/CalendarUnavailable' }
 
 
+  /public/forms/{form_key}:
+    parameters:
+      - { name: form_key, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [WebForms]
+      operationId: submitWebForm
+      security: []   # anonymous: a website's visitor or a form builder's webhook
+      x-agent-access: human-only
+      summary: Land one website form submission as a lead (anonymous).
+      description: |
+        The intake address of one website form. What admits a request depends on the form's
+        `sender`: a `browser` form takes posts only from its allowed websites (the `Origin`
+        header) and runs the spam checks; a `server` form takes posts signed with
+        `X-Margince-Timestamp`, `X-Margince-Nonce` and `X-Margince-Signature`; a builder form
+        checks the builder's own signature header.
+
+        A new email becomes a lead with the form's origin; an email an open lead or a contact
+        already holds adds the message to that record's timeline instead. The answer is the same in
+        every case and for
+        a submission the spam checks dropped, so the address tells nobody who is in the CRM.
+
+        A request whose `Accept` asks for HTML (a plain `<form>` post) is answered with a redirect
+        to the form's `redirect_url`, or a short thank-you page.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: '#/components/schemas/WebFormFields' }
+          multipart/form-data:
+            schema: { $ref: '#/components/schemas/WebFormFields' }
+          application/json:
+            schema: { $ref: '#/components/schemas/WebFormFields' }
+      responses:
+        '202':
+          description: Received.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebFormReceipt' }
+        '200':
+          description: The thank-you page, for a plain HTML post on a form with no redirect.
+          content:
+            text/html:
+              schema: { type: string }
+        '303':
+          description: Redirect to the form's `redirect_url`, for a plain HTML post.
+          headers:
+            Location: { schema: { type: string } }
+        '401':
+          description: A server or builder form's signature did not verify.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '403':
+          description: A browser form was posted from a website not on its list.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '410':
+          description: The form is paused.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: Rate-limited; a webhook sender retries.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   # ---- Deal Room buyer edge ----
   # The buyer's side of a Deal Room. No room id ever appears in a path: the
   # credential (exchange, peek) or the session Bearer (everything else) is the
@@ -14411,6 +14479,139 @@ paths:
   # approval (BYO-WIRE-6, UC-E10-04 E4); a human does it directly. Rotating a
   # secret and replaying a delivery are human-only (secret exposure /
   # operational). The signing secret is returned exactly once, at create/rotate.
+  /web-forms:
+    get:
+      tags: [WebForms]
+      operationId: listWebForms
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: List the website forms that land leads in this installation.
+      parameters:
+        - $ref: '#/components/parameters/IncludeArchived'
+      responses:
+        '200':
+          description: Website forms, newest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebFormListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [WebForms]
+      operationId: createWebForm
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Create a website form (returns a minted signing secret once).
+      description: |
+        Mints the form's public key, the last segment of its intake address
+        `POST /v1/public/forms/{form_key}`. A `server` form answers its own signing secret in
+        `signing_secret`, once; no read returns it again. So does a `typeform` or `tally` form
+        sent without `sender_secret`: the secret is then typed into the builder's webhook. A
+        `webflow` form stores the secret Webflow issued, sent in `sender_secret` now or on a
+        later update; until then it refuses every post. Every signed
+        sender needs a secret store on this installation; without one it answers 422 on `sender`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateWebFormRequest' }
+      responses:
+        '201':
+          description: The created form, plus the signing secret once whenever this installation minted it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebFormCreated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /web-forms/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [WebForms]
+      operationId: getWebForm
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Get one website form.
+      responses:
+        '200':
+          description: The form.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebForm' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    patch:
+      tags: [WebForms]
+      operationId: updateWebForm
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Change a website form, pause it or resume it.
+      description: |
+        A partial update. The sender kind and the form key never change: a form a website already
+        points at keeps its address. `sender_secret` replaces a builder form's stored secret.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateWebFormRequest' }
+      responses:
+        '200':
+          description: The updated form.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebForm' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [WebForms]
+      operationId: archiveWebForm
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Archive a website form; its address stops taking submissions.
+      responses:
+        '200':
+          description: The archived form.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebForm' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /web-forms/{id}/rotate-secret:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [WebForms]
+      operationId: rotateWebFormSecret
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Rotate a form's minted signing secret (returns the new secret once).
+      description: |
+        A `server`, `typeform` or `tally` form gets a new secret this installation mints; a
+        `browser` or `webflow` form answers 422 on `sender`. The old secret stops verifying at once.
+      responses:
+        '200':
+          description: The form plus its new one-time signing secret.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebFormCreated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /webhook-subscriptions:
     get:
       tags: [Webhooks]
@@ -23611,20 +23812,18 @@ paths:
         - name: q
           in: query
           schema: { type: string }
-          description: Case-insensitive match over display_name/email.
+          description: Case-insensitive match over display_name/email that ignores diacritics on both sides.
         - name: include_inactive
           in: query
           schema: { type: boolean, default: false }
           description: Admin management view — include deactivated/suspended members. Honored only for an admin caller.
         - name: include_invited
           in: query
-          deprecated: true
           schema: { type: boolean, default: false }
           description: |
-            Also list invited seats — members who have not signed in yet. Naming the colleagues a record
-            already points at is `GET /users/names`, which answers id and display name alone; a roster row
-            carries the member's email and seat status with it.
-            Pickers leave it off, so nobody is offered work they cannot open.
+            Also list invited seats — members who have not signed in yet. Each row's `status` says so.
+            A picker that may hand an invited colleague work, such as a record responsibility, asks for them.
+            Naming the colleagues a record already points at is `GET /users/names`.
       responses:
         '200':
           description: A page of workspace members.
@@ -23693,6 +23892,122 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /users/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Identity]
+      operationId: getMember
+      summary: Read a member for administration.
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The current member profile and access assignments.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    patch:
+      tags: [Identity]
+      operationId: updateMember
+      summary: Edit a member's identity, role and teams.
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateMemberRequest' }
+      responses:
+        '204': { description: Saved atomically. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /users/{id}/retirement-preview:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Identity]
+      operationId: previewMemberRetirement
+      summary: Preview removing a member or merging them into another account.
+      x-mcp-tool: { verb: preview_member_retirement, tier: auto_execute, scope: read, served_by: registry }
+      parameters:
+        - name: mode
+          in: query
+          schema: { type: string, enum: [merge, remove], default: remove }
+        - name: to_user_id
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The work, unresolved dependencies and confirmation token.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberRetirementPreview' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+
+  /users/{id}/merge:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Identity]
+      operationId: mergeMembers
+      summary: Merge a duplicate into the selected surviving member.
+      description: The source must be an unused imported or invited identity. The acting administrator cannot be the survivor.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
+      x-mcp-tool: { verb: merge_members, tier: confirmation_required, record_type: user_admin, scope: write, served_by: registry }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MergeMembersRequest' }
+      responses:
+        '200':
+          description: Work transferred and duplicate removed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [merged]
+                properties:
+                  merged: { type: boolean }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /users/{id}/remove:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Identity]
+      operationId: removeMember
+      summary: Retire an account while preserving historical attribution.
+      description: Removal is permanent. The original email remains reserved for historical attribution. Deactivate an account that may return instead.
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RemoveMemberRequest' }
+      responses:
+        '204': { description: Member removed from the roster. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /users/assignable-roles:
@@ -23802,8 +24117,8 @@ paths:
         reads that put a name on a timeline row, and a former member exists precisely so
         their name still appears on the work they did.
 
-        Admin-only (`role: admin`); an agent may never provision a human. A duplicate email
-        answers 409 `email_taken` — if that member is merely deactivated they are already
+        Admin-only (`role: admin`); an agent may never provision a human. An email merged into another member returns the live surviving account with status 200. Removed identities without a live survivor answer 409 `removed_member_email`. Other duplicate emails
+        answer 409 `email_taken` — if that member is merely deactivated they are already
         what this route would create, and if they are active this is the wrong route.
 
         Emits no event: the closed V1 catalog carries `user.invited`, which announces an
@@ -23815,6 +24130,12 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/FormerMemberRequest' }
       responses:
+        "200":
+          description: The live surviving member for an already merged import identity.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
         '201':
           description: The former member's seat.
           content:
@@ -24742,7 +25063,7 @@ paths:
         - name: q
           in: query
           schema: { type: string }
-          description: Case-insensitive match over team name.
+          description: Case-insensitive match over team name that ignores diacritics on both sides.
       responses:
         '200':
           description: A page of teams.
@@ -29200,7 +29521,7 @@ paths:
         it had nothing to add.
 
         Written by the model from the deal's own facts — its stage and value, its
-        timeline, its open tasks, its health factors and what the buyer said in the
+        timeline, its open tasks and what the buyer said in the
         Deal Room — and assembled under the CALLER's row scope, so a record they
         cannot see never reaches a sentence.
 
@@ -29222,11 +29543,21 @@ paths:
         deterministically and `generated_by` says which wrote it. There is no blank
         AI card and no spinner that never resolves.
       parameters:
+        - name: if_recommendation
+          in: query
+          required: false
+          schema: { type: string, pattern: '^[0-9a-f]{64}$' }
+          description: Check this recommendation basis before opening its action. Requires if_rule and facts_only; a changed step returns version_skew.
+        - name: if_rule
+          in: query
+          required: false
+          schema: { type: string }
+          description: The recommendation rule being checked with if_recommendation.
         - name: facts_only
           in: query
           required: false
           schema: { type: boolean }
-          description: Refresh the card and shared action cache from current facts without model calls. Takes precedence over refresh.
+          description: Refresh the card and its current suggested step without model calls. Takes precedence over refresh.
         - name: refresh
           in: query
           required: false
@@ -29238,9 +29569,15 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DealStatusCard' }
+        '400':
+          description: The conditional recommendation parameters are invalid or facts_only is missing.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /deals/{id}/move/dismiss:
     parameters:
@@ -32546,7 +32883,7 @@ components:
         effective_date:
           type: string
           format: date
-          description: Defaults to today. A past date is accepted only when the currency has no rate yet or the date is earlier than every rate stored for it.
+          description: A calendar day in the installation's time zone. Defaults to today there. A past date is accepted only when the currency has no rate yet or the date is earlier than every rate stored for it.
     AiModelRate:
       type: object
       description: One effective-dated model price. The four buckets are USD per 1M tokens as decimal strings (the server stores µUSD integers). Transparency-only — never gates routing.
@@ -32664,9 +33001,134 @@ components:
         effective_date:
           type: string
           format: date
-          description: Defaults to today; must not be in the past (append-forward).
+          description: A UTC calendar day. Defaults to today's UTC date and must not be before it (append-forward).
 
     # ---- outbound webhooks (E10/S-E10.6, A51; BYO-DDL-3/4) ----
+    WebFormSender:
+      type: string
+      enum: [browser, server, webflow, typeform, tally]
+      description: |
+        Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
+        allowed website, with spam checks. `server`: a server signing with this form's secret.
+        `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
+        builder computes with the form's stored secret: the `sender_secret` pasted, or for `typeform`
+        and `tally` one this installation minted when none was.
+
+    WebForm:
+      type: object
+      description: >-
+        A website form (`web_form`): a public intake address that turns a submission into a lead.
+        No secret is ever returned here; `secret_configured` says one is stored.
+      required: [id, name, form_key, sender, allowed_origins, field_map, consent_required, state, secret_configured, version, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        form_key: { type: string, description: 'The last segment of the intake address. Public; it is an address, not a credential.' }
+        sender: { $ref: '#/components/schemas/WebFormSender' }
+        allowed_origins:
+          type: array
+          items: { type: string }
+          description: The websites a `browser` form takes posts from, as origins (`https://example.com`).
+        lead_origin: { type: [string, 'null'], description: 'The `/lead-origins` key every lead from this form carries.' }
+        owner_id: { type: [string, 'null'], format: uuid, description: 'Who owns the leads this form creates; null leaves them in the unassigned queue.' }
+        field_map:
+          type: object
+          additionalProperties: { type: string }
+          description: The sender's field names mapped to lead fields, for names the defaults do not already read.
+        consent_required: { type: boolean, description: 'A submission without `consent` ticked is refused with 422.' }
+        consent_policy_version: { type: [string, 'null'] }
+        consent_wording: { type: [string, 'null'], description: 'The consent wording the form shows, written on each lead''s timeline as evidence.' }
+        redirect_url: { type: [string, 'null'], description: 'Where a plain HTML post is sent after a submission.' }
+        success_message: { type: [string, 'null'] }
+        state: { type: string, enum: [active, paused] }
+        secret_configured: { type: boolean }
+        version: { type: integer, format: int64, description: 'Optimistic-concurrency version; echo it in If-Match on update.' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        archived_at: { type: [string, 'null'], format: date-time }
+
+    WebFormCreated:
+      allOf:
+        - $ref: '#/components/schemas/WebForm'
+        - type: object
+          properties:
+            signing_secret:
+              type: string
+              description: The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once.
+
+    WebFormListResponse:
+      type: object
+      required: [data, secrets_available]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/WebForm' }
+        secrets_available: { type: boolean, description: 'Whether this installation can store a secret, which every sender but `browser` needs.' }
+
+    CreateWebFormRequest:
+      type: object
+      required: [name, sender]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        sender: { $ref: '#/components/schemas/WebFormSender' }
+        sender_secret: { type: string, minLength: 16, maxLength: 512, description: 'The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow''s secret is pasted. Refused for any other sender.' }
+        allowed_origins:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 300 }
+          description: Required, and only allowed, for a `browser` form.
+        lead_origin: { type: [string, 'null'] }
+        owner_id: { type: [string, 'null'], format: uuid }
+        field_map:
+          type: object
+          maxProperties: 40
+          additionalProperties: { type: string }
+        consent_required: { type: boolean, default: false }
+        consent_policy_version: { type: [string, 'null'], maxLength: 200 }
+        consent_wording: { type: [string, 'null'], maxLength: 2000 }
+        redirect_url: { type: [string, 'null'], maxLength: 2000 }
+        success_message: { type: [string, 'null'], maxLength: 500 }
+
+    UpdateWebFormRequest:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        sender_secret: { type: string, minLength: 16, maxLength: 512 }
+        allowed_origins:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 300 }
+        lead_origin: { type: [string, 'null'] }
+        owner_id: { type: [string, 'null'], format: uuid }
+        field_map:
+          type: object
+          maxProperties: 40
+          additionalProperties: { type: string }
+        consent_required: { type: boolean }
+        consent_policy_version: { type: [string, 'null'], maxLength: 200 }
+        consent_wording: { type: [string, 'null'], maxLength: 2000 }
+        redirect_url: { type: [string, 'null'], maxLength: 2000 }
+        success_message: { type: [string, 'null'], maxLength: 500 }
+        state: { type: string, enum: [active, paused] }
+
+    WebFormFields:
+      type: object
+      description: |
+        The submitted fields. Read by name: `email` (required), `full_name` or `first_name` and
+        `last_name`, `phone`, `company`, `title`, `message`, `consent`, plus `page_url`,
+        `referrer` and `utm_*`. Common spellings (`name`, `e-mail`, `your-email`) read too, and
+        the form's `field_map` names the rest. Every other field is kept on the lead's timeline.
+        Fields starting `_mrg_` steer the spam checks and are never stored.
+      additionalProperties: true
+
+    WebFormReceipt:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [received] }
+        message: { type: [string, 'null'], description: 'The form''s success message.' }
+        redirect_url: { type: [string, 'null'] }
+
     WebhookSubscription:
       type: object
       description: >-
@@ -35024,6 +35486,7 @@ components:
         watch_expires_at: { type: [string, 'null'], format: date-time, description: 'Push/delta subscription renewal deadline (Gmail Pub/Sub / Graph change-notification), or null.' }
         scopes: { type: array, items: { type: string }, description: The granted provider scopes. }
         last_synced_at: { type: [string, 'null'], format: date-time, description: 'Last sync attempt (CAP-DDL-5); null before the first.' }
+        last_success_at: { type: [string, 'null'], format: date-time, description: 'Last successful sync for this mailbox; null before one succeeds.' }
         last_sync_error_class: { type: [string, 'null'], description: 'rate_limited | unreachable | auth | history_gone | internal — class only, detail in system_log.' }
         sync_failing_since: { type: [string, 'null'], format: date-time, description: 'When the CURRENT failure streak began, null while healthy. Set on the first failure after a success and left alone until one clears it, so the duration read off it is the outage''s — last_synced_at moves on every postponed tick and dates the newest attempt instead.' }
         next_sync_due_at: { type: [string, 'null'], format: date-time, description: 'When the sweep will next pick this connection up (backoff-aware).' }
@@ -40865,7 +41328,8 @@ components:
         dimension the client rates itself.
 
         - `never_written`: no message from them and no meeting with them, ever.
-        - `quiet`: no message from them and no meeting with them for `days` days.
+        - `quiet`: no message from them and no meeting with them for `days` days, counted from
+          `at`, the last of the two.
         - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
         - `last_met`: in touch through a meeting `days` days ago.
         - `single_threaded`: in touch, but one contact carries the whole account.
@@ -42043,15 +42507,24 @@ components:
     Contact360:
       type: object
       description: |
-        The contact record page in one payload (PO-EXT-3). Every section except `contact` is
-        optional: absent means the caller lacks its grant, and `sections_omitted` names it.
+        The contact record page in one payload. Record sections may be absent when their
+        grants are withheld; `sections_omitted` names those sections. Mail coverage
+        reports its own state and observation clock. Absent coverage is unknown.
       required: [as_of, contact, sections_omitted]
       properties:
+        mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         as_of:
           type: string
           format: date-time
-          description: The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
+          description: The assembly clock. Mail coverage carries its own evaluation time; Read Committed does not promise one snapshot across sections.
         contact: { $ref: '#/components/schemas/Contact' }
+        created_by:
+          allOf: [{ $ref: '#/components/schemas/PrincipalAttribution' }]
+          description: |
+            Who created the contact, from its earliest create audit row: for an agent, the
+            colleague it worked for and the tool it was typed through, each when the row
+            records it, which `captured_by` cannot say. Absent when no create row is known; a reader says "unknown" for an
+            absent value and never "System".
         scope:
           $ref: '#/components/schemas/ProjectScope'
           description: The project this was narrowed to, when the request named one.
@@ -44007,6 +44480,7 @@ components:
         shape exists to prevent.
       required: [deal_id, story, generated_at, generated_by]
       properties:
+        mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         deal_id: { type: string, format: uuid }
         story:
           allOf: [{ $ref: '#/components/schemas/DealStatusCardSection' }]
@@ -44034,19 +44508,17 @@ components:
         next:
           allOf: [{ $ref: '#/components/schemas/DealStatusCardMove' }]
           description: The one move to make, with the verb to perform it.
+        request_basis:
+          allOf: [{ $ref: '#/components/schemas/WorkEvidenceBasis' }]
+          description: Current request evidence supporting reply_to; absent for historical review.
         reply_to:
           type: [string, 'null']
           format: uuid
           description: |
-            The inbound message an email from here would answer: the most recent
-            one this deal has received that nobody has replied to. Null when the
-            buyer has never written, or when the last thing they wrote has been
-            answered — then a mail from here starts a thread rather than
-            continuing one.
-
-            Independent of `next` on purpose. Whether there is something to reply
-            to is a fact about the deal; which move ranks first is a judgement,
-            and the two must not have to agree for the reply to be reachable.
+            A confirmed current inbound request on this deal, admitted by the
+            request owner's responsibility, settlement and currency rules.
+            Absent for historical or unconfirmed review. Its absence makes no
+            claim about whether an unrecorded reply exists.
         generated_at: { type: string, format: date-time }
         generated_by: { $ref: '#/components/schemas/WrittenBy' }
       additionalProperties: false
@@ -44098,6 +44570,8 @@ components:
         to send; absent for `none`.
       required: [action, reason, evidence]
       properties:
+        recommendation: { $ref: '#/components/schemas/RecommendationReceipt' }
+        mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         action: { type: string }
         reason: { type: string, description: "One sentence saying why this move and not another." }
         arguments:
@@ -44107,6 +44581,9 @@ components:
         evidence:
           type: array
           items: { $ref: '#/components/schemas/DealNextBestActionEvidence' }
+        basis:
+          allOf: [{ $ref: '#/components/schemas/WorkEvidenceBasis' }]
+          description: Evidence classification for this recommendation; absence supplies no urgency.
         fingerprint:
           type: string
           readOnly: true
@@ -44115,6 +44592,67 @@ components:
             rules chose it. Send it to `POST /deals/{id}/move/dismiss` to set this move aside;
             the set-aside lifts when the card names a different move. Absent on a move with
             nothing to do (`none`).
+      additionalProperties: false
+
+    RecommendationReceipt:
+      type: object
+      additionalProperties: false
+      description: >-
+        The rule and current facts behind a suggested action. The server checks
+        these facts again when accepting the suggestion; the receipt grants no authority.
+        Replaying the same accepted observation returns its original task.
+      required: [deal_id, rule, policy_version, basis_fingerprint, checked_at]
+      properties:
+        deal_id: { type: string, format: uuid }
+        rule: { type: string }
+        policy_version: { type: string }
+        basis_fingerprint: { type: string, pattern: '^[0-9a-f]{64}$' }
+        checked_at: { type: string, format: date-time, description: Evaluation instant identifying this observation. }
+
+    MailCaptureCoverage:
+      type: object
+      additionalProperties: false
+      description: |
+        The calling reader's mail capture for the requested interval. This does
+        not assert that no reply exists. Partial means capture has succeeded but
+        does not attest a complete Inbox and Sent interval. Current providers do
+        not record such an attestation; a cursor or completed import cannot supply it.
+        No mailbox identity, credential, cursor or colleague account travels.
+      required: [channel, state, interval_to, evaluated_at]
+      properties:
+        channel: { type: string, enum: [email] }
+        state: { type: string, enum: [unknown, partial, unavailable, withheld] }
+        interval_from:
+          type: string
+          format: date-time
+          description: Start of the requested interval, not a verified coverage boundary.
+        interval_to:
+          type: string
+          format: date-time
+          description: End of the requested interval, not a verified coverage boundary.
+        last_success_at:
+          type: string
+          format: date-time
+          description: Oldest successful sync across every relevant mailbox; absent if any has never succeeded.
+        evaluated_at: { type: string, format: date-time }
+
+    WorkEvidenceBasis:
+      type: object
+      description: |
+        A recommendation's scoped source and classification. Known request kinds
+        are current_request and request_review; unknown kinds remain neutral.
+        Source age is not a deadline. Evaluation time is not source time.
+      required: [kind, scope, source_activity_id, source_at, source_precision, evaluated_at, policy_version]
+      properties:
+        mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
+        kind: { type: string }
+        scope: { type: string, description: The record scope in which the evidence was evaluated. }
+        source_activity_id: { type: string, format: uuid }
+        source_at: { type: string, format: date-time }
+        source_precision: { $ref: '#/components/schemas/OccurredPrecision' }
+        source_version: { $ref: '#/components/schemas/RowVersion' }
+        evaluated_at: { type: string, format: date-time }
+        policy_version: { type: string }
       additionalProperties: false
 
     DealNextBestActionEvidence:
@@ -48624,6 +49162,7 @@ components:
       description: What a task needs. Stored as an activity of kind `task`.
       required: [subject, source]
       properties:
+        recommendation: { $ref: '#/components/schemas/RecommendationReceipt' }
         source_activity_id:
           type: string
           format: uuid
@@ -48662,6 +49201,7 @@ components:
       type: object
       required: [kind, source]
       properties:
+        recommendation: { $ref: '#/components/schemas/RecommendationReceipt' }
         source_activity_id:
           type: string
           format: uuid
@@ -49907,6 +50447,16 @@ components:
       description: |
         What the composer opened against: `activity` for a reply to that message, or the
         record a new conversation starts from.
+    MailDraftGround:
+      description: >-
+        One record the draft was written from. A saved agent draft keeps these
+        so the composer files the sent mail where the draft was grounded,
+        rather than rebuilding links from whichever page it was opened on.
+      type: object
+      required: [anchor_type, anchor_id]
+      properties:
+        anchor_type: { $ref: '#/components/schemas/MailDraftAnchorType' }
+        anchor_id: { type: string, format: uuid }
 
     MailDraftInput:
       type: object
@@ -49935,6 +50485,15 @@ components:
         id: { type: string, format: uuid }
         anchor_type: { $ref: '#/components/schemas/MailDraftAnchorType' }
         anchor_id: { type: string, format: uuid }
+        grounding:
+          type: array
+          readOnly: true
+          description: >-
+            The records this draft was written from, which an agent draft
+            records and a human draft leaves empty. The composer files a sent
+            draft under these, so a draft grounded in a deal reaches that
+            deal's timeline even when it is opened from the contact page.
+          items: { $ref: '#/components/schemas/MailDraftGround' }
         to: { type: array, items: { type: string } }
         cc: { type: array, items: { type: string } }
         bcc: { type: array, items: { type: string } }
@@ -53652,6 +54211,57 @@ components:
           enum: [csv, json]
 
     # ---- Identity (User / Team / Role) ----
+    UpdateMemberRequest:
+      type: object
+      additionalProperties: false
+      required: [display_name, email, expected_updated_at]
+      properties:
+        display_name: { type: string, minLength: 1, maxLength: 255 }
+        email: { type: string, format: email, description: May change only before the account has been used to sign in. }
+        role: { type: string, description: Omit to keep the current roles. }
+        team_ids:
+          type: array
+          maxItems: 2000
+          items: { type: string, format: uuid }
+        expected_updated_at: { type: string, format: date-time }
+    MemberRetirementBlocker:
+      type: string
+      enum: [approval_decisions, automations, booking_pages, data_requests, deal_rooms, introductions, lists, stewarded_lists, mail_drafts, meeting_invitations, meeting_proposals, privacy_notices, record_responsibilities, reports, report_schedules, saved_views, scheduled_mail, handoffs, voice_profiles, web_forms, webhooks, weekly_plans, analytics_shares, source_used, self_survivor, deactivate_first, choose_survivor, choose_receiver, private_tasks, work_not_transferable, state_changed]
+    MemberRetirementConsequence:
+      type: string
+      enum: [source_signed_out, connectors_reconnect, survivor_access, original_attribution, private_alerts_archived, crm_private_records_move, private_audiences_retained, email_reserved, survivor_inactive]
+    MemberRetirementPreview:
+      type: object
+      required: [owned, signal_count, blockers, token, source_name, source_email, consequences]
+      properties:
+        owned: { $ref: '#/components/schemas/HandoverCounts' }
+        signal_count: { type: integer, minimum: 0 }
+        blockers:
+          type: array
+          items: { $ref: '#/components/schemas/MemberRetirementBlocker' }
+        consequences:
+          type: array
+          items: { $ref: '#/components/schemas/MemberRetirementConsequence' }
+        token: { type: string }
+        source_name: { type: string }
+        source_email: { type: string, format: email }
+        survivor_name: { type: string }
+        survivor_email: { type: string, format: email }
+    MergeMembersRequest:
+      type: object
+      additionalProperties: false
+      required: [to_user_id, preview_token]
+      properties:
+        to_user_id: { type: string, format: uuid }
+        preview_token: { type: string, minLength: 1 }
+    RemoveMemberRequest:
+      type: object
+      additionalProperties: false
+      required: [preview_token]
+      properties:
+        to_user_id: { type: string, format: uuid }
+        preview_token: { type: string, minLength: 1 }
+
     User:
       type: object
       description: A seat — human or first-party agent. Mirrors `app_user`.
@@ -53728,11 +54338,18 @@ components:
             user because the share and assignee pickers read it, and who is in which team is
             not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no
             scope and no share, so listing one would describe access the user does not have.
+        email_editable:
+          type: boolean
+          description: Whether this unused member's sign-in email can still be corrected. Present only on the administration view.
+        merged_from:
+          type: array
+          items: { $ref: '#/components/schemas/SeatName' }
+          description: Original account identities consolidated into this member, present only on the administration view.
         allowed_actions:
           type: array
           items:
             type: string
-            enum: [change_role, issue_password_link, remove_mfa, deactivate, reactivate, hand_over]
+            enum: [change_role, issue_password_link, remove_mfa, deactivate, reactivate, hand_over, edit, merge, remove]
           description: >
             The member verbs the CALLER would be admitted to on this user right now, computed by
             the same checks those endpoints run: the `user_admin` verb each takes, a seat that may
@@ -57878,6 +58495,7 @@ components:
           enum:
             - activity
             - app_user
+            - user_admin
             - commission
             - custom_field
             - data_subject_request
@@ -66744,20 +67362,10 @@ components:
     WorklistDealVerdict:
       type: object
       description: |
-        How the deal behind a row is STANDING, beside the move that acts on it.
-
-        The move says what to do; this says what the reader is walking into. A row
-        that names a step without saying whether the deal is alive asks the reader to
-        open the deal page to find out, which is the hand-off the queue exists to
-        remove.
-
-        NOTHING IS DECIDED HERE. compose/dealstatus already wrote a standing per deal
-        and cached it per reader; this carries that answer onto the row. A deal with
-        no cached card carries no verdict, and its row says what it said before.
-
-        `source` is what the reader is being shown, and a client's copy turns on it:
-        a deterministic rule stated as a belief is a lie about where the sentence came
-        from.
+        An earlier assessment of the deal, with the date it was written.
+        Current facts and actions are checked separately. These saved words never
+        establish that a task or reply is still owed and never change ranking.
+        Missing or inaccessible saved assessments are omitted.
       required: [line, source]
       properties:
         standing:
@@ -66772,7 +67380,7 @@ components:
             `live` — moving, with a next step both sides expect.
             `drifting` — nothing wrong, nothing happening; it dies of neglect.
             `blocked` — something specific is in the way.
-            `cold` — long silence after real engagement.
+            `cold` — recorded evidence that engagement ended, as assessed on `as_of`.
 
             The same four the deal page's own verdict carries, because they ARE that
             verdict. Held by backend/gates/worklistverdictstandings_test.go, which
@@ -66813,8 +67421,8 @@ components:
           type: string
           format: date-time
           description: |
-            When the reading behind this line was taken, so a stale one can be told from
-            a fresh one.
+            When the earlier assessment was written. Clients must display this date
+            and must not present the saved sentence as a current eligibility check.
 
     WorklistReason:
       type: object
@@ -66912,6 +67520,11 @@ components:
         for it.
       required: [action]
       properties:
+        recommendation: { $ref: '#/components/schemas/RecommendationReceipt' }
+        mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
+        basis:
+          allOf: [{ $ref: '#/components/schemas/WorkEvidenceBasis' }]
+          description: The deal recommendation's evidence basis, preserved across surfaces.
         action:
           type: string
           enum: [draft_reply, draft_email, create_task, open_task, open_meeting_brief, reconnect, none]
@@ -67161,8 +67774,8 @@ components:
         contributes_rows:
           type: boolean
           description: |
-            False for a side read that puts no row on the queue — `calendar` and
-            `next_meeting` — so its failure cannot hide a row, and a figure counted over
+            False for a side read that puts no row on the queue — `calendar`,
+            `next_meeting` and `deal_advice` — so its failure cannot hide a row, and a figure counted over
             the queue stays exact. True for a lane whose rows may be missing. Absent from
             an older server and from a surface that names only lanes, and a client reads
             absent as true.

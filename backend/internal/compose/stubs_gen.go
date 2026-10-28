@@ -2907,6 +2907,10 @@ func (stubs) SubmitConfirmDetails(w nethttp.ResponseWriter, r *nethttp.Request, 
 	httperr.NotImplemented(w, r, "SubmitConfirmDetails")
 }
 
+func (stubs) SubmitWebForm(w nethttp.ResponseWriter, r *nethttp.Request, formKey string) {
+	httperr.NotImplemented(w, r, "SubmitWebForm")
+}
+
 func (stubs) GetPublicMeetingInvitation(w nethttp.ResponseWriter, r *nethttp.Request, token string) {
 	httperr.NotImplemented(w, r, "GetPublicMeetingInvitation")
 }
@@ -3399,6 +3403,14 @@ func (stubs) ArchiveServiceMember(w nethttp.ResponseWriter, r *nethttp.Request, 
 	httperr.NotImplemented(w, r, "ArchiveServiceMember")
 }
 
+func (stubs) GetMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetMember")
+}
+
+func (stubs) UpdateMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "UpdateMember")
+}
+
 func (stubs) GetUserAccess(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetUserAccess")
 }
@@ -3415,6 +3427,10 @@ func (stubs) HandOverUserWork(w nethttp.ResponseWriter, r *nethttp.Request, id c
 	httperr.NotImplemented(w, r, "HandOverUserWork")
 }
 
+func (stubs) MergeMembers(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.MergeMembersParams) {
+	httperr.NotImplemented(w, r, "MergeMembers")
+}
+
 func (stubs) RemoveUserMfa(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RemoveUserMfa")
 }
@@ -3425,6 +3441,14 @@ func (stubs) IssueUserPasswordLink(w nethttp.ResponseWriter, r *nethttp.Request,
 
 func (stubs) ReactivateUser(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ReactivateUser")
+}
+
+func (stubs) RemoveMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RemoveMember")
+}
+
+func (stubs) PreviewMemberRetirement(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.PreviewMemberRetirementParams) {
+	httperr.NotImplemented(w, r, "PreviewMemberRetirement")
 }
 
 func (stubs) ChangeUserRole(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
@@ -3537,6 +3561,30 @@ func (stubs) RejectVoiceProfileVersion(w nethttp.ResponseWriter, r *nethttp.Requ
 
 func (stubs) RollbackVoiceProfileVersion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, profileVersion crmcontracts.VoiceProfileVersionNumber, params crmcontracts.RollbackVoiceProfileVersionParams) {
 	httperr.NotImplemented(w, r, "RollbackVoiceProfileVersion")
+}
+
+func (stubs) ListWebForms(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListWebFormsParams) {
+	httperr.NotImplemented(w, r, "ListWebForms")
+}
+
+func (stubs) CreateWebForm(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateWebForm")
+}
+
+func (stubs) ArchiveWebForm(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ArchiveWebForm")
+}
+
+func (stubs) GetWebForm(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetWebForm")
+}
+
+func (stubs) UpdateWebForm(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateWebFormParams) {
+	httperr.NotImplemented(w, r, "UpdateWebForm")
+}
+
+func (stubs) RotateWebFormSecret(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RotateWebFormSecret")
 }
 
 func (stubs) ListWebhookSubscriptions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListWebhookSubscriptionsParams) {

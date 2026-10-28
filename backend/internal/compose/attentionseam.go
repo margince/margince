@@ -173,7 +173,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 	// ONE deal-status service for both seams below: the move and the standing
 	// are two reads of the same cached card, and a second service value would
 	// be a second set of stores over the same pool for no reason.
-	cards := newDealStatusService(pool)
+	cards := newDealStatusService(pool, now)
 	return attention.NewService(
 		attentionApprovals{svc: svc},
 		attentionDuplicates{store: contacts.NewStore(db)},

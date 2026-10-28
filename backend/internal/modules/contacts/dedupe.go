@@ -6,11 +6,13 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -221,7 +223,25 @@ type contactCandidateRow struct {
 //
 //nolint:cyclop // the rename added no branch: this body is what it was under the old noun.
 func fuzzyContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactResolution, error) {
+	// candidate gathers the ids each arm of the `WHERE` below can name, one
+	// indexed read per arm. The arms are joined with `OR` across contact and
+	// relationship, which no index answers. Without candidate, every read
+	// scores every live contact. The `WHERE` still decides; candidate only
+	// bounds what it reads.
 	rows, err := tx.Query(ctx, `
+		WITH candidate AS (
+		  SELECT p.id FROM contact p
+		   WHERE p.archived_at IS NULL AND f_fold_apostrophes(lower(p.full_name)) % f_fold_apostrophes(lower($1))
+		  UNION
+		  SELECT p.id FROM contact p
+		   WHERE p.archived_at IS NULL AND `+exactNameKeySQL("p.full_name")+` = `+exactNameKeySQL("$1")+`
+		  UNION
+		  SELECT p.id FROM contact p
+		   WHERE p.archived_at IS NULL AND `+exactDigraphNameKeySQL("p.full_name")+` = `+exactDigraphNameKeySQL("$1")+`
+		  UNION
+		  SELECT r.contact_id FROM relationship r
+		   WHERE $2::uuid IS NOT NULL AND r.company_id = $2 AND r.kind = 'employment'
+		     AND `+employment.CurrentPrimarySQL("r")+` AND r.archived_at IS NULL)
 		SELECT p.id, p.full_name, r.company_id, od.domain,
 		       -- EVERY live address, not an unordered LIMIT 1: a contact with a
 		       -- work and a personal address has two primaries as far as this
@@ -229,7 +249,7 @@ func fuzzyContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactRe
 		       -- the employer term depend on the plan Postgres chose. Archived
 		       -- addresses are excluded — an address somebody stopped using is
 		       -- not evidence of where they work now.
-		       (SELECT array_agg(DISTINCT split_part(pe.email, '@', 2))
+		       (SELECT array_agg(pe.email)
 		          FROM contact_email pe
 		         WHERE pe.contact_id = p.id AND pe.archived_at IS NULL)
 		  FROM contact p
@@ -239,6 +259,7 @@ func fuzzyContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactRe
 		  LEFT JOIN company_domain od
 		    ON od.company_id = r.company_id AND od.archived_at IS NULL
 		 WHERE p.archived_at IS NULL
+		   AND p.id IN (SELECT id FROM candidate)
 		   AND ($3::uuid IS NULL OR p.id <> $3)
 		   AND (f_fold_apostrophes(lower(p.full_name)) % f_fold_apostrophes(lower($1))
 		        OR ($2::uuid IS NOT NULL AND r.company_id = $2)
@@ -257,9 +278,11 @@ func fuzzyContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactRe
 	scored := map[ids.ContactID]ReviewMatch{}
 	for rows.Next() {
 		var row contactCandidateRow
-		if err := rows.Scan(&row.id, &row.fullName, &row.companyID, &row.companyDomain, &row.mailDomains); err != nil {
+		var addresses []string
+		if err := rows.Scan(&row.id, &row.fullName, &row.companyID, &row.companyDomain, &addresses); err != nil {
 			return ContactResolution{}, fmt.Errorf("scan contact candidate: %w", err)
 		}
+		row.mailDomains = mailDomainsOf(addresses)
 		match := ReviewMatch{ContactID: row.id, Confidence: contactConfidence(c, row)}
 		switch {
 		case match.Confidence >= dedupeReviewThreshold:
@@ -373,10 +396,16 @@ func normalizeDomain(d string) string { return strings.ToLower(strings.TrimSpace
 
 // emailDomain returns the lowercased host of an address, or "" when the
 // input carries no host to compare.
-func emailDomain(e string) string {
-	at := strings.LastIndex(normalizeEmail(e), "@")
-	if at < 0 {
-		return ""
+func emailDomain(e string) string { return owndomain.OfAddress(normalizeEmail(e)) }
+
+// mailDomainsOf is the distinct folded domains of a contact's addresses, in
+// the order they were read.
+func mailDomainsOf(addresses []string) []string {
+	var domains []string
+	for _, address := range addresses {
+		if domain := emailDomain(address); domain != "" && !slices.Contains(domains, domain) {
+			domains = append(domains, domain)
+		}
 	}
-	return normalizeEmail(e)[at+1:]
+	return domains
 }

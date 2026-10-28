@@ -245,7 +245,7 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 // which captures through the Sink directly without needing a registry.
 func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 	ensurer := contactsEnsurer{
-		store:  newCounterpartyStore(pool),
+		store:  newCounterpartyStoreAt(pool, cfg.clock()),
 		pool:   pool,
 		triage: newDomainTriageTrigger(pool, cfg.logger(), cfg.SkipReservedDomainProposals),
 		log:    cfg.logger(),

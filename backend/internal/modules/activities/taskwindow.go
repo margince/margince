@@ -10,6 +10,8 @@
 
 package activities
 
+import "github.com/margince/margince/backend/internal/platform/database/storekit"
+
 // openTaskWindowClauses narrows a task read to the window the caller asked for:
 // an upper bound, a lower one, or both.
 //
@@ -18,19 +20,19 @@ package activities
 // their bounds MEET rather than overlap.
 // reminders widens the upper bound: a due reminder is today's work.
 func openTaskWindowClauses(in ListActivitiesInput, reminders string, arg func(any) int) []string {
-	const openTask = "a.kind = 'task' AND NOT a.is_done AND a.due_at IS NOT NULL"
+	openTask := "a.kind = 'task' AND NOT a.is_done AND " + storekit.TaskDueSQL("a") + " IS NOT NULL"
 	var clauses []string
 	if in.OpenAndDueBy != nil {
 		// Strictly before the instant, which is what deadline.Passed means and
 		// what this clause replaced. The bound the caller passes is the END of
 		// the day, so `<=` would put a task due at exactly tomorrow 00:00 on
 		// today's list — a promise reported late a day early.
-		deadline := sprintf("a.due_at < $%d", arg(*in.OpenAndDueBy))
+		deadline := sprintf(storekit.TaskDueSQL("a")+" < $%d", arg(*in.OpenAndDueBy))
 		if in.IncludeEmailRequests && in.OpenAndDueAfter == nil {
 			// An undated reminder of a request and an undated promise are both
 			// owed now: nobody named a later day for either.
-			deadline = "(" + deadline + sprintf(" OR (a.due_at IS NULL AND a.source_system = ANY($%d)))",
-				arg([]string{EmailRequestTaskSource, CommitmentTaskSource}))
+			deadline = "(" + deadline + sprintf(" OR ("+storekit.TaskDueSQL("a")+" IS NULL AND a.source_system = ANY($%d)))",
+				arg(storekit.UndatedTaskSources()))
 		}
 		if in.OrRemindersDue && reminders != "" {
 			deadline = "(" + deadline + " OR " + reminders + ")"
@@ -43,7 +45,7 @@ func openTaskWindowClauses(in ListActivitiesInput, reminders string, arg func(an
 		// 00:00 is outside today's read and inside the upcoming one, and none
 		// can fall between the two or be counted by both.
 		clauses = append(clauses,
-			sprintf(openTask+" AND a.due_at >= $%d", arg(*in.OpenAndDueAfter)))
+			sprintf(openTask+" AND "+storekit.TaskDueSQL("a")+" >= $%d", arg(*in.OpenAndDueAfter)))
 	}
 	return clauses
 }

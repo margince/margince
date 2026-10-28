@@ -60,7 +60,7 @@ func TestIdentityTablesAreReadByEverySeat(t *testing.T) {
 	}
 	for _, table := range []string{"contact", "company"} {
 		sql := rendered(rep, table)
-		if strings.Contains(sql, "t.owner_id IS NULL OR t.owner_id = $") {
+		if strings.Contains(sql, "t.owner_id IS NULL OR t.owner_id IN (SELECT unnest(member_identity_family(") {
 			t.Errorf("%s predicate for a rep still carries the own-scope arm: %s", table, sql)
 		}
 		if !strings.Contains(sql, "t.visibility <> 'owner'") {
@@ -92,7 +92,7 @@ func TestAProjectStaysTheOwnersToWrite(t *testing.T) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	sql := writeAuthorityPredicate(rep, "project", arg)
-	if !strings.Contains(sql, "owner_id = $") || !strings.Contains(sql, "rg.access = 'write'") {
+	if !strings.Contains(sql, "owner_id IN (SELECT unnest(member_identity_family(") || !strings.Contains(sql, "rg.access = 'write'") {
 		t.Errorf("project write arm for a rep widened with the read class: %s", sql)
 	}
 }
@@ -104,7 +104,7 @@ func TestTheWriteArmIsUntouchedByTheReadClasses(t *testing.T) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	sql := writeAuthorityPredicate(rep, "deal", arg)
-	if !strings.Contains(sql, "owner_id = $") || !strings.Contains(sql, "rg.access = 'write'") {
+	if !strings.Contains(sql, "owner_id IN (SELECT unnest(member_identity_family(") || !strings.Contains(sql, "rg.access = 'write'") {
 		t.Errorf("deal write arm for a rep widened: %s", sql)
 	}
 }

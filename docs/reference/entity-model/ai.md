@@ -436,6 +436,10 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `voice_profile_pkey`: `unique, btree (id)`
 - `voice_profile_team_fk`: `btree (team_id) WHERE (team_id IS NOT NULL)`
 
+**Triggers**
+
+- `voice_profile_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+
 ## voice_profile_delta
 
 10 columns · primary key `(id)` · referenced by 0 foreign keys

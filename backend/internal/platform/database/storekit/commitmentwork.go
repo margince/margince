@@ -31,14 +31,16 @@ func CurrentTaskClause(alias string, asOf time.Time, identities string, arg func
  AND ` + HeldTaskClause("successor") + `)
  AND ` + occurredday.BegunSQL("request_source", instant) + `
  AND ` + occurredday.FromSQL("request_source", instant+` - make_interval(days => `+horizon+`)`) + ` AND ` + DirectMailRecipientSQL("request_source", MailSeatAddressesSQL(identities, pinner)) + `)`
+	engagement := CurrentLeadEngagementClause(provenance.TaskSourceActivitySQL(alias), asOf, arg) + " AND " + latestLeadAdviceSQL(alias)
 	question := CurrentSourceMailClause(alias+".source_activity_id", asOf, arg)
 	return fmt.Sprintf(`(`+humanOrImportedTaskSQL(alias)+` OR `+HumanWroteActivityClause(alias)+`
  OR (`+pinner+`, %[1]s.id::text) IN (SELECT reader_id, row_id FROM `+auth.EffectiveWorklistPinsSQL(arg)+` adopted WHERE adopted.source='task')
  OR %[1]s.source_system = ANY($%[4]d)
  OR (%[1]s.source_system = $%[2]d AND `+source+`)
  OR (%[1]s.source_system = $%[3]d AND `+request+`)
- OR (%[1]s.source_system = ANY($%[5]d) AND `+question+`))`, alias, arg(provenance.CommitmentTaskSource), arg(provenance.EmailRequestSource),
-		arg(taskSourcesOf(currentByItsWriter)), arg(taskSourcesOf(currentBySourceMail)))
+ OR (%[1]s.source_system = ANY($%[5]d) AND `+question+`)
+ OR (%[1]s.source_system = ANY($%[6]d) AND `+engagement+`))`, alias, arg(provenance.CommitmentTaskSource), arg(provenance.EmailRequestSource),
+		arg(taskSourcesOf(currentByItsWriter)), arg(taskSourcesOf(currentBySourceMail)), arg(taskSourcesOf(currentByLeadEngagement)))
 }
 
 // humanOrImportedTaskSQL names the tasks that stay current by their own
@@ -64,27 +66,35 @@ const (
 	currentByItsWriter
 	// currentBySourceMail: the mail it asks about is current (CurrentSourceMailClause).
 	currentBySourceMail
+	currentByLeadEngagement
 )
 
-// taskSourceFamilies is every source_system a native writer stamps on a task
-// it creates with no human behind it, with how that task stays current.
+// Native task provenance shares its current-work and date policy here.
 //
 // Held by: TestEveryAutomaticTaskWriterAndOpenTaskReaderIsDeclared (backend/gates/automatictaskwriters_test.go)
-var taskSourceFamilies = map[string]taskCurrency{
-	provenance.CommitmentTaskSource:     currentByCommitment,
-	provenance.EmailRequestSource:       currentByRequest,
-	provenance.NoActivityReminderSource: currentByItsWriter,
-	provenance.CheckInCadenceSource:     currentByItsWriter,
-	provenance.LeadSLATaskSource:        currentByItsWriter,
-	provenance.LeadQualifyTaskSource:    currentByItsWriter,
-	provenance.AssuranceTaskSource:      currentByItsWriter,
-	provenance.OvernightReconcileSource: currentByItsWriter,
-	provenance.LeadRepliedSource:        currentByItsWriter,
-	provenance.LeadForContactSource:     currentByItsWriter,
-	provenance.WhichDealSource:          currentBySourceMail,
+type taskSourcePolicy struct {
+	currency      taskCurrency
+	undated       bool
+	generatedDate bool
 }
 
-// TaskSourceFamilies lists the automatic task sources, for the census gate.
+var taskSourceFamilies = map[string]taskSourcePolicy{
+	provenance.AcceptedRecommendationSource: {currency: currentByItsWriter},
+	provenance.CommitmentTaskSource:         {currency: currentByCommitment, undated: true},
+	provenance.EmailRequestSource:           {currency: currentByRequest, undated: true},
+	provenance.NoActivityReminderSource:     {currency: currentByItsWriter},
+	provenance.CheckInCadenceSource:         {currency: currentByItsWriter},
+	provenance.LeadSLATaskSource:            {currency: currentByItsWriter},
+	provenance.LeadQualifyTaskSource:        {currency: currentByItsWriter},
+	provenance.AssuranceTaskSource:          {currency: currentByItsWriter},
+	provenance.OvernightReconcileSource:     {currency: currentByItsWriter},
+	provenance.LeadRepliedSource:            {currency: currentByLeadEngagement, undated: true, generatedDate: true},
+	// A refused submission has no activity source; the owner decides its lifecycle.
+	provenance.LeadForContactSource: {currency: currentByItsWriter, undated: true, generatedDate: true},
+	provenance.WhichDealSource:      {currency: currentBySourceMail},
+}
+
+// TaskSourceFamilies lists native task sources for the census gate.
 func TaskSourceFamilies() []string { return automaticTaskSources() }
 
 func automaticTaskSources() []string {
@@ -99,7 +109,7 @@ func automaticTaskSources() []string {
 func taskSourcesOf(currency taskCurrency) []string {
 	var out []string
 	for source, how := range taskSourceFamilies {
-		if how == currency {
+		if how.currency == currency {
 			out = append(out, source)
 		}
 	}
@@ -119,6 +129,27 @@ func taskSourcesOf(currency taskCurrency) []string {
 func CurrentSourceMailClause(source string, asOf time.Time, arg func(any) int) string {
 	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
 	return `EXISTS (SELECT 1 FROM activity current_source WHERE current_source.id = ` + source + `
- AND current_source.archived_at IS NULL AND ` + occurredday.BegunSQL("current_source", instant) + `
- AND ` + occurredday.FromSQL("current_source", instant+` - make_interval(days => `+WaitingHorizonSQL(asOf, arg)+`)`) + `)`
+ AND ` + sourceWithinHorizonSQL("current_source", asOf, arg) + `
+ AND ` + occurredday.BegunSQL("current_source", instant) + `)`
+}
+
+func sourceWithinHorizonSQL(alias string, asOf time.Time, arg func(any) int) string {
+	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
+	return alias + `.archived_at IS NULL AND ` + occurredday.FromSQL(alias, instant+` - make_interval(days => `+WaitingHorizonSQL(asOf, arg)+`)`)
+}
+
+// UndatedTaskSources names current work that needs no invented deadline.
+func UndatedTaskSources() []string {
+	return taskSourcesWith(func(p taskSourcePolicy) bool { return p.undated })
+}
+
+func taskSourcesWith(keep func(taskSourcePolicy) bool) []string {
+	var out []string
+	for source, policy := range taskSourceFamilies {
+		if keep(policy) {
+			out = append(out, source)
+		}
+	}
+	slices.Sort(out)
+	return out
 }

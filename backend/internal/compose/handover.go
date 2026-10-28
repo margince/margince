@@ -278,6 +278,7 @@ type handoverHandlers struct {
 }
 
 func (s *Server) wireHandoverSurface() {
+	s.authHandlers = s.WithMemberWork(memberWork{newHandoverSeam(s.bulkHandlers.engine)})
 	s.handoverHandlers = handoverHandlers{
 		seam: newHandoverSeam(s.bulkHandlers.engine),
 	}

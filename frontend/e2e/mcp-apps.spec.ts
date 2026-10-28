@@ -27,25 +27,24 @@ const APPROVAL = {
   proposed_change: { stage: "Negotiation" },
 };
 
-const HELD = {
+const UPDATED = {
   record_type: "contact",
   id: "0195c3a0-0000-7000-8000-000000000003",
-  fields: { job_title: "Head of Sales" },
-  staged_approval: {
-    approval_id: "0195c3a0-0000-7000-8000-0000000000c1",
-    fields: ["job_title"],
-    replay: {
-      record_type: "contact",
-      id: "0195c3a0-0000-7000-8000-000000000003",
-      fields: { job_title: "VP Sales" },
+  fields: { job_title: "VP Sales" },
+  changes: [
+    {
+      field: "job_title",
+      label: "Job title",
+      before: { kind: "text", text: "Head of Sales" },
+      after: { kind: "text", text: "VP Sales" },
     },
-  },
+  ],
 };
 
 const VIEWS = [
   { file: "create-followups", populated: () => FILED },
   { file: "approval", populated: () => APPROVAL },
-  { file: "field-conflict", populated: () => HELD },
+  { file: "update", populated: () => UPDATED },
 ] as const;
 
 const FILED = {
@@ -327,7 +326,7 @@ const PLAIN_CALLS = [
   },
   {
     name: "a plain owner change",
-    file: "field-conflict",
+    file: "update",
     input: { record_type: "lead", id: LEAD, fields: { owner_id: REP } },
     result: {
       structuredContent: {
@@ -348,41 +347,6 @@ const PLAIN_CALLS = [
       },
     },
     heading: 'Updated lead "Jane Doe"',
-  },
-  {
-    name: "an update whose every field was held",
-    file: "field-conflict",
-    input: { record_type: "lead", id: LEAD, fields: { owner_id: REP } },
-    result: {
-      isError: true,
-      content: [{ type: "text", text: `staged as approval ${LEAD}` }],
-      structuredContent: {
-        data: {
-          record_type: "lead",
-          id: LEAD,
-          fields: { full_name: "Jane Doe", owner_id: LEAD },
-          staged_approval: {
-            approval_id: LEAD,
-            fields: ["owner_id"],
-            replay: {
-              record_type: "lead",
-              id: LEAD,
-              fields: { owner_id: REP },
-            },
-            changes: [
-              {
-                field: "owner_id",
-                label: "Owner",
-                before: { kind: "owner", text: "Ana Rep" },
-                after: { kind: "owner", text: "Sam Rep" },
-              },
-            ],
-          },
-        },
-        warnings: [],
-      },
-    },
-    heading: "Edited by hand",
   },
   {
     name: "a refused create",

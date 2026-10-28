@@ -196,7 +196,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_connection
 
-27 columns · primary key `(id)` · referenced by 2 foreign keys
+28 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -220,6 +220,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `status` | `text`, default `'disconnected'::text` | yes | Connection state; `reauth_required` when the stored token expired/was revoked upstream. |
 | `sync_anchor` | `timestamp with time zone` |  |  |
 | `sync_cursor` | `jsonb` |  | Opaque provider watermark (Gmail historyId / IMAP UID / Graph delta) for incremental capture; read-only. |
+| `sync_revision` | `bigint`, default `0` | yes |  |
 | `unread_from` | `timestamp with time zone` |  |  |
 | `unread_to` | `timestamp with time zone` |  |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |

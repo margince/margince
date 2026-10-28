@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/partslim"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -217,8 +218,7 @@ func (o *owedEnv) slimmedOriginalOf(t *testing.T, blob blobstore.Store, message 
 	var payload []byte
 	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT rc.payload FROM raw_capture rc
-			JOIN activity a ON rc.id = a.raw_capture_id
-			  OR (a.raw_capture_id IS NULL AND rc.source_system = a.source_system AND rc.source_id = a.source_id)
+			JOIN activity a ON `+storekit.StoredOriginalSQL("a", "rc")+`
 			WHERE a.id = $1`, message).Scan(&payload)
 	}); err != nil {
 		t.Fatalf("reading the original: %v", err)

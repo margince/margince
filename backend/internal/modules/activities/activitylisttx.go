@@ -32,7 +32,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 		return nil, storekit.Page{}, err
 	}
 	order := sorted.OrderBy()
-	if in.RequestReviewAsOf != nil {
+	if in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil {
 		order = requestPriorityOrder
 	}
 
@@ -64,7 +64,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	var page storekit.Page
 	if len(activities) > limit {
 		activities = activities[:limit]
-		if in.RequestReviewAsOf == nil {
+		if in.RequestReviewAsOf == nil && in.RequestCurrentAsOf == nil {
 			last := activities[limit-1]
 			next, err := sorted.EncodePageCursor(paged[limit-1].key, last.CreatedAt, ids.UUID(last.Id))
 			if err != nil {
@@ -74,25 +74,29 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 		}
 		// Request priority has no resumable cursor; its count still includes later rows.
 	}
-	if err := WithEmailRowFacts(ctx, tx, activities); err != nil {
-		return nil, storekit.Page{}, err
-	}
-	if err := AttachLinks(ctx, tx, activities); err != nil {
-		return nil, storekit.Page{}, err
-	}
-	if err := WithOffersEmail(ctx, tx, activities); err != nil {
-		return nil, storekit.Page{}, err
-	}
-	if err := WithCommitmentAdmissions(ctx, tx, activities); err != nil {
-		return nil, storekit.Page{}, err
-	}
-	if err := StampActivitiesWritable(ctx, tx, activities); err != nil {
-		return nil, storekit.Page{}, err
-	}
-	if err := withCustomValues(ctx, tx, in.Columns.cols, pageOf(activities)); err != nil {
+	if err := finishActivityList(ctx, tx, in.Columns, activities); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	return activities, page, nil
+}
+
+func finishActivityList(ctx context.Context, tx pgx.Tx, columns CustomColumns, activities []crmcontracts.Activity) error {
+	if err := WithEmailRowFacts(ctx, tx, activities); err != nil {
+		return err
+	}
+	if err := AttachLinks(ctx, tx, activities); err != nil {
+		return err
+	}
+	if err := WithOffersEmail(ctx, tx, activities); err != nil {
+		return err
+	}
+	if err := WithCommitmentAdmissions(ctx, tx, activities); err != nil {
+		return err
+	}
+	if err := StampActivitiesWritable(ctx, tx, activities); err != nil {
+		return err
+	}
+	return withCustomValues(ctx, tx, columns.cols, pageOf(activities))
 }
 
 func requireActivityListScope(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) error {
