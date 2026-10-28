@@ -381,3 +381,44 @@ func TestAStoredAppInstallationPassesTheSendPreflight(t *testing.T) {
 		t.Errorf("SendableMailProvider = %q, want %q", got, providerGmail)
 	}
 }
+
+// The pre-flight and connector registration answer one question, whether this
+// installation has a vendor's app. A source one of them counts and the other
+// does not is a mailbox that connects and then cannot send, or the reverse.
+func TestThePreflightAndRegistrationAgreeOnEveryAppSource(t *testing.T) {
+	stored := appResolver(func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{ClientID: "stored-id", ClientSecretRef: "stored-secret"}, true, nil
+	})
+	vendors := map[string]func(env bool, resolve appResolver) Server{
+		providerGmail: func(env bool, resolve appResolver) Server {
+			return Server{gmailAppConfigured: env, googleAppResolver: resolve}
+		},
+		providerGraph: func(env bool, resolve appResolver) Server {
+			return Server{graphAppConfigured: env, microsoftAppResolver: resolve}
+		},
+	}
+	sources := map[string]struct {
+		env     bool
+		resolve appResolver
+		want    bool
+	}{
+		"the environment": {true, nil, true},
+		"Settings":        {false, stored, true},
+		"neither":         {false, nil, false},
+	}
+	for provider, build := range vendors {
+		for name, src := range sources {
+			t.Run(provider+" from "+name, func(t *testing.T) {
+				s := build(src.env, src.resolve)
+				sends, err := s.mailAppConfigured(context.Background(), provider)
+				if err != nil {
+					t.Fatalf("mailAppConfigured: %v", err)
+				}
+				registers := appReachable(src.resolve, src.env)
+				if sends != src.want || registers != src.want {
+					t.Errorf("pre-flight says %v and registration says %v, want both %v", sends, registers, src.want)
+				}
+			})
+		}
+	}
+}

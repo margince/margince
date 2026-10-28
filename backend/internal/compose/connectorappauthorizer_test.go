@@ -148,8 +148,8 @@ func TestAStoredAppRegistersTheGoogleConnectors(t *testing.T) {
 		{"neither", nil, GmailConfig{}, false},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			if got := googleAppReachable(c.resolve, c.cfg); got != c.want {
-				t.Errorf("googleAppReachable = %v, want %v", got, c.want)
+			if got := appReachable(c.resolve, c.cfg.canSync()); got != c.want {
+				t.Errorf("appReachable = %v, want %v", got, c.want)
 			}
 		})
 	}

@@ -105,17 +105,11 @@ func (s *Server) mailAppConfigured(ctx context.Context, provider string) (bool, 
 	}
 }
 
-// envOrStoredApp asks both sources the connect flow and the worker resolve the
-// app from. An app set in Settings then sends as an environment one does.
+// envOrStoredApp answers by resolveApp's rule, the one the connect flow and the
+// worker resolve the app by. An app set in Settings then sends as an
+// environment one does.
 func envOrStoredApp(ctx context.Context, env bool, stored appResolver) (bool, error) {
-	if env {
-		return true, nil
-	}
-	if stored == nil {
-		return false, nil
-	}
-	_, ok, err := stored(ctx)
-	return ok, err
+	return resolveApp(ctx, stored, env, func(capture.ConnectorApp) bool { return true }, nil)
 }
 
 // installSendPreflight installs the pre-flight over whichever capture registry
