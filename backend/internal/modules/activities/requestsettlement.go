@@ -351,8 +351,10 @@ func recordSettlement(ctx context.Context, tx pgx.Tx, in RequestSettlementInput)
 		settlementEvidenceCol:  in.Request.Evidence,
 		settlementRuleCol:      RequestSettlementRule,
 	}
-	args := []any{in.Request.RequestID, in.Request.NewestAnswerID, in.Verdict,
-		remaining, dueAt, in.Confidence, in.DecidedBy, in.Request.Evidence, RequestSettlementRule}
+	args := []any{
+		in.Request.RequestID, in.Request.NewestAnswerID, in.Verdict,
+		remaining, dueAt, in.Confidence, in.DecidedBy, in.Request.Evidence, RequestSettlementRule,
+	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_request_settlement (request_activity_id, judged_through_activity_id,
 		       verdict, remaining, due_at, confidence, decided_by, judged_evidence, rule_version)

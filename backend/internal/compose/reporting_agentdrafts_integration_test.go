@@ -76,7 +76,7 @@ func agentDraftsFixture(t *testing.T) agentDrafts {
 }
 
 // agentFor is an agent principal holding a write passport lent by human.
-func (f agentDrafts) agentFor(t *testing.T, human context.Context) context.Context {
+func (f agentDrafts) agentFor(human context.Context, t *testing.T) context.Context {
 	t.Helper()
 	lender, ok := principal.Actor(human)
 	if !ok {
@@ -115,7 +115,7 @@ func (f agentDrafts) draft(ctx context.Context, t *testing.T, args map[string]an
 // name and audience, and a reader still sees the published charts alone.
 func TestAnAgentSavesADraftOnAReportItsHumanEdits(t *testing.T) {
 	f := agentDraftsFixture(t)
-	drafted, err := f.draft(f.agentFor(t, f.human), t, map[string]any{"report_id": f.report.Id, "selection": f.shorter()})
+	drafted, err := f.draft(f.agentFor(f.human, t), t, map[string]any{"report_id": f.report.Id, "selection": f.shorter()})
 	if err != nil {
 		t.Fatalf("the agent could not draft on its human's report: %v", err)
 	}
@@ -142,7 +142,7 @@ func TestAnAgentSavesADraftOnAReportItsHumanEdits(t *testing.T) {
 // human owns it, and the audit row and its event name the agent and passport.
 func TestAnAgentsNewReportIsPrivateToItsHuman(t *testing.T) {
 	f := agentDraftsFixture(t)
-	agent := f.agentFor(t, f.human)
+	agent := f.agentFor(f.human, t)
 	created, err := f.draft(agent, t, map[string]any{
 		"name": "Prepared by the agent", "description": "Where the quarter stands", "selection": f.shorter(),
 	})
@@ -189,7 +189,7 @@ func TestAnAgentActingForAReaderCannotDraft(t *testing.T) {
 	if _, err := f.service.GetReport(f.reader, ids.UUID(f.report.Id)); err != nil {
 		t.Fatalf("the reader cannot open the report, so the refusal below proves nothing: %v", err)
 	}
-	if _, err := f.draft(f.agentFor(t, f.reader), t, map[string]any{"report_id": f.report.Id, "selection": f.shorter()}); err == nil {
+	if _, err := f.draft(f.agentFor(f.reader, t), t, map[string]any{"report_id": f.report.Id, "selection": f.shorter()}); err == nil {
 		t.Fatal("an agent acting for a rep who may not edit the report saved a draft on it")
 	}
 	after, err := f.service.GetReport(f.human, ids.UUID(f.report.Id))
@@ -211,7 +211,7 @@ func TestTheDraftToolCannotChangeWhoSeesAReport(t *testing.T) {
 			t.Errorf("%s's input declares an audience: %s", name, spec.InputSchema)
 		}
 	}
-	if _, err := f.draft(f.agentFor(t, f.human), t, map[string]any{
+	if _, err := f.draft(f.agentFor(f.human, t), t, map[string]any{
 		"report_id": f.report.Id, "selection": f.shorter(), "audience": "private",
 	}); err == nil {
 		t.Fatal("a draft call naming an audience was accepted")
@@ -227,7 +227,7 @@ func TestTheDraftToolCannotChangeWhoSeesAReport(t *testing.T) {
 // a write passport is refused each, even on its own human's draft.
 func TestAnAgentCannotPublishOrShareAReport(t *testing.T) {
 	f := agentDraftsFixture(t)
-	agent := f.agentFor(t, f.human)
+	agent := f.agentFor(f.human, t)
 	drafted, err := f.draft(agent, t, map[string]any{"report_id": f.report.Id, "selection": f.shorter()})
 	if err != nil {
 		t.Fatal(err)
@@ -271,7 +271,7 @@ func TestAnAgentDoesNotReplaceAnOpenDraft(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.draft(f.agentFor(t, f.human), t, map[string]any{"report_id": f.report.Id, "selection": f.selection()}); err == nil {
+	if _, err := f.draft(f.agentFor(f.human, t), t, map[string]any{"report_id": f.report.Id, "selection": f.selection()}); err == nil {
 		t.Fatal("an agent replaced a draft an editor had open")
 	}
 	revisions, err := f.service.ListReportRevisions(f.human, id)
@@ -313,7 +313,7 @@ func TestAnAgentDraftsForAnEditorWhoDoesNotOwnTheReport(t *testing.T) {
 	}
 	shorter := teamScope
 	shorter.Blocks = shorter.Blocks[:len(shorter.Blocks)-1]
-	drafted, err := f.draft(f.agentFor(t, manager), t, map[string]any{"report_id": report.Id, "selection": shorter})
+	drafted, err := f.draft(f.agentFor(manager, t), t, map[string]any{"report_id": report.Id, "selection": shorter})
 	if err != nil {
 		t.Fatalf("the manager's agent could not draft on a report the manager edits: %v", err)
 	}
