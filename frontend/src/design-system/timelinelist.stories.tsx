@@ -475,8 +475,7 @@ export const DateOnlyEntry: Story = {
   },
 };
 
-// A notice the installation's relay sent for the reader, beside a mail the
-// reader sent from their own mailbox: only the first names Margince and its From.
+// A relay send beside the reader's own mail. Only the first names Margince.
 function sentMail(
   id: string,
   subject: string,

@@ -104,8 +104,7 @@ export const Unassessed: Story = {
   args: { completeness: "unassessed", body: HEADER_ONLY },
 };
 
-// A notice the installation's relay sent for the reader: Margince and the
-// relay's address stand where the rep would, and the rep is not the sender.
+// A relay send seen by its member. The relay's address stands where the rep's would.
 const RELAYED: EmailPresentation = {
   ...BASE,
   summary: {

@@ -23,7 +23,7 @@ function sentenceFor(
 
 /**
  * ConfirmDetailsAction mails the contact a link to see what is held about them,
- * correct it, and answer on marketing, once the rep has seen the mail.
+ * correct it, and answer on marketing.
  *
  * The address is never chosen here. The server derives it from the contact's
  * own live primary email. That is what lets a grant made through the link

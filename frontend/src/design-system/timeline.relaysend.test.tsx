@@ -7,6 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
+import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { activityTimeline } from "./activitytimeline";
@@ -61,7 +62,7 @@ function renderRow(row: Activity, viewer = REP) {
   render(
     <LocaleProvider initial="en">
       <ul>
-        <TimelineRow entry={entry} zone="UTC" />
+        <TimelineRow entry={entry} zone={viewerZone()} />
       </ul>
     </LocaleProvider>,
   );

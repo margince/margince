@@ -6,8 +6,7 @@ import type { components } from "../../api/schema";
 type MailPreview = components["schemas"]["ControllerMailPreview"];
 type MailLanguage = components["schemas"]["MailLanguage"];
 
-// The server's own copy for both mails, with the link marker it puts where the
-// link goes, so a test reads the words a contact would.
+// The server's own copy of both mails, link marker included.
 const COPY: Record<
   MailPreview["kind"],
   Record<MailLanguage, { subject: string; text: string }>
