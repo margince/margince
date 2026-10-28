@@ -94,6 +94,11 @@ class RewriteTest(unittest.TestCase):
         self.assertEqual(content, [text, skill])
 
 
+class MainTest(unittest.TestCase):
+    def test_a_transcript_outside_the_repo_and_the_temp_directory_is_refused(self):
+        self.assertEqual(restmap.main(["restmap.py", "/etc/hosts", "--mcp-url", "http://127.0.0.1:1/mcp", "--token-env", "X"]), 3)
+
+
 class ScoredAsOverMcpTest(unittest.TestCase):
     """What the rewrite is for: the checker reads a REST run as it reads an MCP one."""
 

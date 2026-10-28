@@ -14,6 +14,7 @@ import re
 import sys
 from urllib.parse import parse_qsl, urlsplit
 
+import check
 import mcpclient
 import transcript
 
@@ -123,7 +124,11 @@ def main(argv):
     parser.add_argument("--mcp-url", required=True)
     parser.add_argument("--token-env", required=True)
     args = parser.parse_args(argv[1:])
-    path = args.transcript
+    try:
+        path = check.checked_path(args.transcript)
+    except ValueError as refused:
+        print(refused, file=sys.stderr)
+        return 3
     try:
         _instructions, tools = mcpclient.Session(args.mcp_url, os.environ.get(args.token_env, "")).open()
     except mcpclient.McpFault as fault:
