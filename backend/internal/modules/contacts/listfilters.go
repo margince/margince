@@ -149,6 +149,9 @@ var leadListFilters = storekit.FilterSet[ListLeadsInput]{
 		in.TagMode = tagModeOrDefault(v)
 	}),
 	filterFromContact: storekit.FilterID(func(in *ListLeadsInput, id *ids.ContactID) { in.FromContactID = id }),
+	filterIndustry:    storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CompanyFacts.Industry = v }),
+	filterCountry:     storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CompanyFacts.Country = v }),
+	filterSizeBand:    storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CompanyFacts.SizeBand = v }),
 }
 
 // ListFilters names what SearchEntity can narrow one entity type by. An entity

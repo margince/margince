@@ -3,6 +3,13 @@ import { Phone, Plus } from "lucide-react";
 import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import {
+  expectAppliedFiltersFit,
+  expectAppliedFiltersOneLine,
+  LONG_FILTER_CHIPS,
+  LONG_FILTER_VALUES,
+  WIDE,
+} from "../testing/appliedfilterchecks";
 import { Button } from "./atoms";
 import { IconAction } from "./iconaction";
 import { Menu, useCloseOnEscape } from "./listmenu";
@@ -167,3 +174,36 @@ export const MenuUnderATip: Story = {
     await expect(menu).not.toHaveClass("open");
   },
 };
+
+// An applied filter longer than a phone's line: its value wraps at its spaces,
+// whole, and the "⋮" that removes the filter stays inside the toolbar.
+export const LongAppliedFilterPhone: Story = {
+  name: "Long applied filter, phone",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => <LongFilters />,
+  play: async ({ canvasElement }) => expectAppliedFiltersFit(canvasElement),
+};
+
+// The same filters on a desktop line: each stays one line at the control height.
+export const LongAppliedFilterWide: Story = {
+  name: "Long applied filter, wide",
+  parameters: WIDE,
+  globals: { viewport: { value: "wide" } },
+  tags: ["uat-wide"],
+  render: () => <LongFilters />,
+  play: async ({ canvasElement }) => expectAppliedFiltersOneLine(canvasElement),
+};
+
+function LongFilters() {
+  return (
+    <ListSurface
+      title="Leads"
+      chips={LONG_FILTER_CHIPS}
+      chosen={LONG_FILTER_VALUES}
+      onChipChange={() => undefined}
+    >
+      <p>Zeilen</p>
+    </ListSurface>
+  );
+}

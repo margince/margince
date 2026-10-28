@@ -136,14 +136,24 @@ export function dialOfParameter(parameter: string): string {
 }
 
 /**
- * The deal dials this reader cannot narrow by. The value is typed in the base
- * currency, a company is picked by searching companies, and the rest the server
- * names.
+ * The deal dials this reader's role refuses: the ones the server names, and the
+ * company dial, which is picked by searching companies.
+ */
+export function roleRefusedDealDials(
+  reach: Omit<DialReach, "baseCurrency">,
+): ReadonlySet<string> {
+  const refused = new Set(reach.refused.map(dialOfParameter));
+  if (!reach.readsCompanies) refused.add("company_id");
+  return refused;
+}
+
+/**
+ * The deal dials this reader cannot narrow by: the role's, and the value while
+ * no base currency is known to type it in.
  */
 export function withheldDealDials(reach: DialReach): ReadonlySet<string> {
-  const withheld = new Set(reach.refused.map(dialOfParameter));
+  const withheld = new Set(roleRefusedDealDials(reach));
   if (!reach.baseCurrency) withheld.add(VALUE_DIAL);
-  if (!reach.readsCompanies) withheld.add("company_id");
   return withheld;
 }
 
