@@ -157,10 +157,12 @@ jobs:
               - 'frontend/src/mcp-apps/forbidden.json'
               # The dev compose stack the DB-backed lanes boot.
               - 'docker-compose.dev.yml'
+              - 'go.mod'
               - 'go.work'
               - 'go.work.sum'
               - 'Makefile'
               - 'scripts/**'
+              - 'instance/**'
               - 'extensions/**'
               - 'fixtures/**'
               - 'composition/**'
@@ -476,6 +478,7 @@ jobs:
         working-directory: .
         run: |
           cp -R fixtures/extensions/crm-hello extensions/
+          printf 'require example.margince.dev/ext/crm-hello v0.0.0\nreplace example.margince.dev/ext/crm-hello => ../extensions/crm-hello\n' >> instance/go.mod
           make -C backend build check-composition
           (cd backend && GOWORK="$PWD/../build/composition/go.work" go test ./cmd/...)
           make -C backend test-extensions EXT_COVER_OUT="$PWD/backend/coverage-extensions.out"
