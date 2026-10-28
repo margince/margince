@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { unwrap } from "../../lib/problem";
@@ -48,13 +48,16 @@ export function fillsPage(
  * caller with no human behind it — which is the only refusal this read has.
  */
 export function useMagic() {
-  return useQuery({
-    queryKey: magicKey,
-    queryFn: async (): Promise<MagicReceipt> =>
-      unwrap(
-        await api.GET("/magic", {
-          params: { query: { limit: MAGIC_PAGE_LINES } },
-        }),
-      ),
-  });
+  return useQuery(magicOptions);
 }
+
+/** The read useMagic makes, which Home's prefetch also starts. */
+export const magicOptions = queryOptions({
+  queryKey: magicKey,
+  queryFn: async (): Promise<MagicReceipt> =>
+    unwrap(
+      await api.GET("/magic", {
+        params: { query: { limit: MAGIC_PAGE_LINES } },
+      }),
+    ),
+});

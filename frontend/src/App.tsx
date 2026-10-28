@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 // Route → screen. The table below is total over `Screen` (lib/router.tsx), so
 // every address the product answers has a view. An address it does not answer
@@ -19,6 +19,7 @@ import {
 import { Shell, useRoute } from "./app/shell";
 import { SourceHost } from "./app/sourcehost";
 import { CallLogHost } from "./components/calllog.host";
+import { prefetchHome } from "./features/brief/brief.prefetch";
 import { useJourneyProgress } from "./features/onboarding/onboarding-journey";
 import {
   ReleaseSkewScreen,
@@ -44,6 +45,7 @@ import { SPA_RELEASE } from "./lib/release";
 import { navigateReplacing, type Screen } from "./lib/router";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
 import { useTaskReminderNotifications } from "./lib/taskreminders";
+import { currentParams } from "./lib/urlstate";
 
 // The anonymous public surfaces render without a session — their slug in the
 // path is the whole address (security: [] in the contract).
@@ -230,11 +232,25 @@ function AuthedApp({
   const [paletteOpen, setPaletteOpen] = useState(false);
   const gatesPending = companyPending || recordZone.pending || progress.pending;
   const shellReady = authed && !gatesPending;
+  // Home's reads start here rather than when its lazy screen commits, and only
+  // once nothing will send the reader to onboarding instead.
+  const opensHome =
+    shellReady &&
+    described === true &&
+    !progress.unfinished &&
+    route.screen === "home";
+  const queryClient = useQueryClient();
   useEffect(() => {
     if (shellReady) {
       markJourney("gates");
     }
   }, [shellReady]);
+  useEffect(() => {
+    if (!opensHome) {
+      return;
+    }
+    prefetchHome(queryClient, currentParams());
+  }, [opensHome, queryClient]);
   const commands = useBuiltinCommands();
   usePaletteHotkey(paletteOpen, setPaletteOpen);
   useTaskReminderNotifications(authed);

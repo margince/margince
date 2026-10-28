@@ -16,6 +16,7 @@ import { ProblemError, throwProblem } from "../lib/problem";
 import {
   createQueryClient,
   liveInterval,
+  liveOnMount,
   liveOnReturn,
   retryQuery,
 } from "./queryclient";
@@ -132,6 +133,23 @@ describe("the query client defaults", () => {
     // inside the staleness window above the return would be served the cache.
     expect(liveOnReturn({ queryKey: ["contact360", "p-1"] })).toBe("always");
     expect(liveOnReturn({ queryKey: ["me", "ai-activity"] })).toBe(false);
+  });
+
+  it("re-reads a live work read on mount unless its answer is under a second old", () => {
+    const day = ["worklist", "mine", "all", ""];
+    const answeredAt = (dataUpdatedAt: number) => ({
+      queryKey: day,
+      state: { dataUpdatedAt },
+    });
+    expect(liveOnMount(answeredAt(10_000), 10_999)).toBe(true);
+    expect(liveOnMount(answeredAt(10_000), 11_000)).toBe("always");
+    expect(liveOnMount(answeredAt(0), 5_000)).toBe("always");
+    expect(
+      liveOnMount(
+        { queryKey: ["contact", "p-1"], state: { dataUpdatedAt: 0 } },
+        5_000,
+      ),
+    ).toBe(true);
   });
 
   it("reports a failed query once, through the global sink", async () => {

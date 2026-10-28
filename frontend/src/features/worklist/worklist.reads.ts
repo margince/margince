@@ -1,4 +1,8 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  infiniteQueryOptions,
+  useInfiniteQuery,
+  useQuery,
+} from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { unwrap } from "../../lib/problem";
 import { isLiveWorkRead, worklistKey } from "../../lib/workkeys";
@@ -31,9 +35,20 @@ export function useWorklist(
   owner?: string,
   enabled = true,
 ) {
-  const queryKey = [...worklistKey, scope, filter, owner ?? ""];
   return useInfiniteQuery({
+    ...worklistDayOptions(scope, filter, owner),
     enabled,
+  });
+}
+
+/** The read useWorklist makes, which Home's prefetch also starts. */
+export function worklistDayOptions(
+  scope: WorklistScope,
+  filter: WorklistFilter,
+  owner?: string,
+) {
+  const queryKey = [...worklistKey, scope, filter, owner ?? ""];
+  return infiniteQueryOptions({
     queryKey,
     ...(!isLiveWorkRead(queryKey) ? { refetchOnWindowFocus: true } : {}),
     initialPageParam: undefined as string | undefined,
