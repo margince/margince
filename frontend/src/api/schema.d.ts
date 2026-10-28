@@ -2102,6 +2102,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/companies/for-address": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The company a contact at this email address would work at.
+         * @description Answers the live, unmerged company the caller can read whose live domain is the
+         *     address's domain or a parent of it, the narrowest such domain first. It matches as
+         *     the daily link reconcile and `listCompanyLinkCandidates` do: an address on
+         *     `eu.acme.example` answers the company on `acme.example`. Consumer mail for this
+         *     workspace and a domain refused a company never answer, even when a company carries
+         *     the domain. A company the caller cannot read is never named.
+         *
+         *     `company` is absent when no company answers, and for a value that is no address with
+         *     a hostname, so a form may ask while the address is still being typed. Needs read on
+         *     companies.
+         */
+        get: operations["getCompanyForAddress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/companies/{id}": {
         parameters: {
             query?: never;
@@ -2625,15 +2654,19 @@ export interface paths {
         };
         /**
          * Live contacts on this company's domains who do not work here yet.
-         * @description A contact is a candidate when it is live and not merged, the caller can read it (the
-         *     row scope `GET /contacts` applies), one of its live email addresses is at exactly one
-         *     of this company's domains, and it holds no current employment at this company. A
-         *     domain that is consumer mail for this workspace never matches, even when the company
-         *     carries it. `linkCompanyContacts` accepts exactly these contacts.
+         * @description A contact is a candidate when it is live and not merged, the caller can read and
+         *     change it, one of its live email addresses is at one of this company's domains or a
+         *     subdomain of one, it is no workspace seat, and it holds no current employment at this
+         *     company. A domain that is consumer mail for this workspace never matches, even when
+         *     the company carries it. `linkCompanyContacts` accepts exactly these contacts.
+         *
+         *     A candidate with no current employer is also attached by the daily link reconcile,
+         *     so the list's lasting use is contacts who work elsewhere today.
          *
          *     Ordered by name, then id. At most 50 candidates; `truncated` is true when more exist.
-         *     Needs read on companies, contacts and relationships. Reading the company is mandatory:
-         *     one the caller cannot see answers 404.
+         *     Needs read on companies, contacts and relationships. A caller without
+         *     `relationship:create` and `contact:update` gets no candidates. Reading the company is
+         *     mandatory: one the caller cannot see answers 404.
          */
         get: operations["listCompanyLinkCandidates"];
         put?: never;
@@ -2662,12 +2695,13 @@ export interface paths {
          *     one transaction. Every id must be a candidate `listCompanyLinkCandidates` would return
          *     to this caller now; one that is not answers 422 naming `contact_ids` with code
          *     `not_a_link_candidate` and `details.contact_id`, and nothing is written. A contact the
-         *     caller cannot read answers the same as any other non-candidate. Each edge becomes the
-         *     contact's primary employment when they have no other current one.
+         *     caller cannot read, or may read but not change, answers the same as any other
+         *     non-candidate. Each edge becomes the contact's primary employment when they have no
+         *     other current one.
          *
          *     Needs `relationship:create`, `contact:update`, and read on companies, contacts and
-         *     relationships; a contact the caller may read but not change answers 403 and nothing is
-         *     written. A company the caller cannot see answers 404.
+         *     relationships; without the first two it answers 403. A company the caller cannot see
+         *     answers 404.
          */
         post: operations["linkCompanyContacts"];
         delete?: never;
@@ -28173,6 +28207,11 @@ export interface components {
              * @description The employment edge written.
              */
             relationship_id: string;
+        };
+        /** @description The company a contact at the asked address would work at. */
+        CompanyForAddress: {
+            /** @description Absent when no company the caller can read is on the address's domain. */
+            company?: components["schemas"]["ContactEmployer"];
         };
         /** @description A contact on one of the company's domains who does not work there yet. */
         CompanyLinkCandidate: {
@@ -54694,6 +54733,32 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getCompanyForAddress: {
+        parameters: {
+            query: {
+                /** @description The address as typed. */
+                email: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The company, or none. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyForAddress"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

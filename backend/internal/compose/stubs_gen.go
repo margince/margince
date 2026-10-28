@@ -979,6 +979,10 @@ func (stubs) CreateCompany(w nethttp.ResponseWriter, r *nethttp.Request, params 
 	httperr.NotImplemented(w, r, "CreateCompany")
 }
 
+func (stubs) GetCompanyForAddress(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetCompanyForAddressParams) {
+	httperr.NotImplemented(w, r, "GetCompanyForAddress")
+}
+
 func (stubs) ArchiveCompany(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ArchiveCompanyParams) {
 	httperr.NotImplemented(w, r, "ArchiveCompany")
 }

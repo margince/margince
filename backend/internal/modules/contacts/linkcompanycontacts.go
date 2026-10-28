@@ -86,7 +86,7 @@ func refuseNonCandidates(contactIDs []ids.UUID, candidates []LinkCandidate) erro
 	for _, id := range contactIDs {
 		if !offered[id] {
 			return contactIDRefusal(codeNotLinkCandidate, id,
-				"this contact is not one you can link here: no live address on the company's domains, or already employed there")
+				"this contact is not one you can link here: not on the company's domains, a workspace seat, not yours to change, or already employed there")
 		}
 	}
 	return nil

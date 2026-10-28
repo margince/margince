@@ -7,6 +7,7 @@ package integration
 
 import (
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
@@ -44,8 +45,8 @@ func TestAContactCreatedWithACompanyReplaysItsFirstAnswer(t *testing.T) {
 	}
 }
 
-// The wire the company page and the signature card call: candidates, the
-// link, and create-and-link on a domain a company already holds.
+// The wire the company page, the New contact form and the signature card call.
+// Candidates, the address's company, the link, and create-and-link on a held domain.
 func TestTheEmployerLinkRoutesAnswerTheirContract(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
@@ -74,6 +75,17 @@ func TestTheEmployerLinkRoutesAnswerTheirContract(t *testing.T) {
 	}
 	if rows, _ := candidates["data"].([]any); len(rows) != 2 || candidates["truncated"] != false {
 		t.Fatalf("candidates = %v, want both contacts and truncated=false", candidates)
+	}
+
+	for address, want := range map[string]any{"nora@eu.wireco.test": company["id"], "nora@gmail.com": nil} {
+		var answer AnyMap
+		if status := e.Call(t, http.MethodGet, "/v1/companies/for-address?email="+url.QueryEscape(address), nil, nil, &answer); status != http.StatusOK {
+			t.Fatalf("company for %s = %d %v", address, status, answer)
+		}
+		found, _ := answer["company"].(map[string]any)
+		if found["company_id"] != want {
+			t.Errorf("company for %s = %v, want %v", address, answer, want)
+		}
 	}
 
 	var linked AnyMap

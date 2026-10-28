@@ -2,8 +2,10 @@
 -- SPDX-FileCopyrightText: 2026 Gradion
 -- pgmigrate:no-transaction
 -- The index a company's link candidates are found by: live addresses on the
--- company's folded domains. Built concurrently, so writes are never blocked, and
+-- company's folded domains, reversed, so a domain and every subdomain of it are
+-- one range of the index. Built concurrently, so writes are never blocked, and
 -- the first drop clears an invalid index a failed build left behind.
-DROP INDEX CONCURRENTLY IF EXISTS idx_contact_email_domain_folded;
-CREATE INDEX CONCURRENTLY idx_contact_email_domain_folded ON contact_email (email_domain_folded)
+DROP INDEX CONCURRENTLY IF EXISTS idx_contact_email_domain_reversed;
+CREATE INDEX CONCURRENTLY idx_contact_email_domain_reversed ON contact_email
+    ((reverse(email_domain_folded) COLLATE "C"))
     WHERE archived_at IS NULL;

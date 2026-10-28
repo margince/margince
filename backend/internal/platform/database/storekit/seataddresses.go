@@ -102,6 +102,14 @@ func (s SeatAddresses) For(asking ids.UUID) []string {
 	return out
 }
 
+// HoldsNoSeatAddressSQL is true when the contact holds no live address among
+// the seat addresses For listed, bound at seatsArg.
+func HoldsNoSeatAddressSQL(contactID string, seatsArg int) string {
+	return fmt.Sprintf(`NOT EXISTS (SELECT 1 FROM contact_email seat_address
+		WHERE seat_address.contact_id = %s AND seat_address.archived_at IS NULL
+		  AND lower(seat_address.email) = ANY($%d))`, contactID, seatsArg)
+}
+
 func (s SeatAddresses) declaredBy(address string, asking ids.UUID) bool {
 	_, ok := s.declared[address][asking]
 	return ok && !asking.IsZero()

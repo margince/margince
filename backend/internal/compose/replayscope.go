@@ -121,6 +121,7 @@ const (
 	companionContactField = "contact_id"
 	companionCompanyField = "company_id"
 	companionLeadField    = "lead_id"
+	wrappedContactID      = "contact.id"
 
 	objectOffer         = "offer"
 	objectPipeline      = "pipeline"
@@ -171,17 +172,17 @@ var replayableOperations = map[string]replayTarget{
 	// the same word by construction (policy.coreObjects mirrors the table).
 	"POST /v1/contacts": {object: tableContact, table: tableContact, idPath: "id"},
 	"POST /v1/contacts/{id}/employer": {
-		object: tableContact, table: tableContact, idPath: "contact.id",
+		object: tableContact, table: tableContact, idPath: wrappedContactID,
 		companions: []companionRef{{table: tableCompany, idPath: companionCompanyField}},
 	},
 	"POST /v1/contacts/quick-capture": {
-		object: tableContact, table: tableContact, idPath: "contact.id",
+		object: tableContact, table: tableContact, idPath: wrappedContactID,
 		companions: []companionRef{{table: tableCompany, idPath: companionCompanyField}},
 	},
 	"PATCH /v1/contacts/{id}":      {object: tableContact, table: tableContact, idPath: "id"},
 	"POST /v1/contacts/{id}/merge": {object: tableContact, table: tableContact, idPath: "id"},
 	"POST /v1/leads/{id}/promote": {
-		object: tableContact, table: tableContact, idPath: "contact.id",
+		object: tableContact, table: tableContact, idPath: wrappedContactID,
 		companions: []companionRef{
 			{table: tableLead, idPath: companionLeadField},
 			{table: tableDeal, idPath: dealIDField},

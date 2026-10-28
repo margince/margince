@@ -274,9 +274,6 @@ var companionRecordFields = map[string]string{
 // inside it, and the fields beside it are the wrapper's own. TOP-LEVEL
 // properties only, for the same reason — the nested record's fields are its
 // own, covered by the probe that already resolves it.
-//
-// A body keyed by its route parameter is no record either: every record an
-// array element names is a companion, at `<field>[].<id field>`.
 func companionsInContract(t *testing.T, schemas []string, got expectedTarget) []string {
 	t.Helper()
 	wraps, projects := strings.Contains(got.idPath, "."), got.pathParam != ""

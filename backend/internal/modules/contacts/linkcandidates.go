@@ -5,6 +5,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -12,6 +13,8 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -31,17 +34,22 @@ type LinkCandidate struct {
 	Employer  *crmcontracts.ContactEmployer
 }
 
-// ListLinkCandidates answers who on this company's domains could be linked to
-// it, under the caller's contact row scope, and whether more exist than the cap.
+// ListLinkCandidates answers who on this company's domains the caller could
+// link to it, and whether more exist than the cap. A caller who may not link
+// anyone is offered no one.
 func (s *Store) ListLinkCandidates(ctx context.Context, companyID ids.CompanyID) ([]LinkCandidate, bool, error) {
 	for _, object := range []string{companyEntity, contactEntity, tableRelationship} {
 		if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
 			return nil, false, err
 		}
 	}
+	mayLink, err := mayLinkEmployees(ctx)
+	if err != nil {
+		return nil, false, err
+	}
 	var out []LinkCandidate
-	err := s.txSnapshot(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisibleLive(ctx, tx, companyEntity, companyID.UUID); err != nil {
+	err = s.txSnapshot(ctx, func(tx pgx.Tx) error {
+		if err := auth.EnsureVisibleLive(ctx, tx, companyEntity, companyID.UUID); err != nil || !mayLink {
 			return err
 		}
 		var err error
@@ -58,9 +66,25 @@ func (s *Store) ListLinkCandidates(ctx context.Context, companyID ids.CompanyID)
 	return out, truncated, nil
 }
 
+// mayLinkEmployees reports whether LinkCompanyContacts would admit the caller
+// at all: the verbs it requires, held by a seat that may write.
+func mayLinkEmployees(ctx context.Context) (bool, error) {
+	if actor, ok := principal.Actor(ctx); ok && actor.SeatType == principal.SeatRead {
+		return false, nil
+	}
+	err := requireRelationshipCreate(ctx, contactEntity)
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
 // linkCandidatesTx is the one reading of a link candidate. The list and the
 // link share it, so the link accepts what the list offers and nothing else. A
 // non-nil `only` narrows it to those contacts.
+//
+// It matches a domain and skips workspace seats as the daily plant does. It asks
+// the write authority the edge create asks.
 func (s *Store) linkCandidatesTx(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, only []ids.UUID, limit int,
 ) ([]LinkCandidate, error) {
@@ -71,41 +95,48 @@ func (s *Store) linkCandidatesTx(
 	if err != nil || len(domains) == 0 {
 		return nil, err
 	}
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	matching := arg(domains)
-	scope, err := auth.ScopeClauseFor(ctx, contactEntity, "c", arg)
+	seats, err := storekit.WorkspaceSeatAddresses(ctx, tx)
 	if err != nil {
 		return nil, err
 	}
-	if scope == "" {
-		scope = scopeAllRows
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	matching := arg(domains)
+	scope, err := linkableContactClause(ctx, arg)
+	if err != nil {
+		return nil, err
 	}
 	narrowed := scopeAllRows
 	if only != nil {
 		narrowed = storekit.SQLf("c.id = ANY($%d)", arg(only))
 	}
-	// The unique index refuses a link while it holds an edge. A contact whose end
+	// The IN arm repeats the lateral's match for the planner: it drives the read
+	// from idx_contact_email_domain_reversed instead of every live contact. The
+	// unique index refuses a link while it holds an edge, and a contact whose end
 	// date is still ahead works there now.
 	rows, err := tx.Query(ctx, storekit.SQLf(`
 		SELECT c.id, c.full_name, c.title, matched.email
 		  FROM contact c
 		  JOIN LATERAL (
 		       SELECT ce.email FROM contact_email ce
-		        WHERE ce.contact_id = c.id AND ce.archived_at IS NULL AND ce.email_domain_folded = ANY($%[1]d)`+
+		        WHERE ce.contact_id = c.id AND ce.archived_at IS NULL
+		          AND EXISTS (SELECT 1 FROM unnest($%[1]d::text[]) own(domain)
+		                       WHERE `+owndomain.CoversSQL("ce.email_domain_folded", "own.domain")+`)`+
 		ReachableEmailOrder+` LIMIT 1) matched ON true
 		 WHERE c.archived_at IS NULL AND c.merged_into_id IS NULL
 		   AND c.id IN (SELECT held.contact_id FROM contact_email held
-		                 WHERE held.archived_at IS NULL AND held.email_domain_folded = ANY($%[1]d))
+		                  JOIN unnest($%[1]d::text[]) own(domain)
+		                    ON `+owndomain.CoversIndexedSQL("held.email_domain_folded", "own.domain")+`
+		                 WHERE held.archived_at IS NULL)
 		   AND NOT EXISTS (
 		       SELECT 1 FROM relationship rel
 		        WHERE rel.contact_id = c.id AND rel.company_id = $%[2]d
 		          AND (%[3]s OR (rel.kind = 'employment' AND rel.archived_at IS NULL AND %[4]s)))
-		   AND %[5]s AND %[6]s
+		   AND %[5]s AND %[6]s AND %[7]s
 		 ORDER BY lower(c.full_name), c.id
-		 LIMIT %[7]d`,
+		 LIMIT %[8]d`,
 		matching, arg(companyID), employment.LiveSlotSQL("rel"), employment.IsCurrentSQL("rel.ended_at"),
-		scope, narrowed, limit), args...)
+		storekit.HoldsNoSeatAddressSQL("c.id", arg(seats.For(ids.Nil))), scope, narrowed, limit), args...)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading link candidates: %w", err)
 	}
@@ -117,6 +148,26 @@ func (s *Store) linkCandidatesTx(
 		return nil, fmt.Errorf("contacts: reading link candidates: %w", err)
 	}
 	return out, attachCandidateEmployers(ctx, tx, out)
+}
+
+// linkableContactClause is the contacts the caller may read and change, the
+// pair of probes auth.EnsureWritableLive runs on the edge's anchor.
+func linkableContactClause(ctx context.Context, arg func(any) int) (string, error) {
+	readable, err := auth.ScopeClauseFor(ctx, contactEntity, "c", arg)
+	if err != nil {
+		return "", err
+	}
+	writable, err := auth.WriteAuthorityClauseFor(ctx, contactEntity, "c", arg)
+	if err != nil {
+		return "", err
+	}
+	clause := scopeAllRows
+	for _, arm := range []string{readable, writable} {
+		if arm != "" {
+			clause += " AND " + arm
+		}
+	}
+	return "(" + clause + ")", nil
 }
 
 // companyMatchDomainsTx is the company's live folded domains a contact address

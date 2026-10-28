@@ -63,6 +63,20 @@ func (h Handlers) ListCompanyLinkCandidates(w http.ResponseWriter, r *http.Reque
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.CompanyLinkCandidateList{Data: data, Truncated: truncated})
 }
 
+// GetCompanyForAddress serves GET /companies/for-address.
+func (h Handlers) GetCompanyForAddress(w http.ResponseWriter, r *http.Request, params crmcontracts.GetCompanyForAddressParams) {
+	company, found, err := h.store.CompanyForAddress(r.Context(), params.Email)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	var out crmcontracts.CompanyForAddress
+	if found {
+		out.Company = &company
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
 // LinkCompanyContacts serves POST /companies/{id}/link-contacts.
 func (h Handlers) LinkCompanyContacts(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.LinkCompanyContactsParams) {
 	var req crmcontracts.LinkCompanyContactsRequest
