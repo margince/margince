@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -94,7 +96,7 @@ func TestADealWatchesOnlyThePromisesFiledOnIt(t *testing.T) {
 	kickoff := w.promiseOn(t, other, "Kick-off", "We will attend the CRM kick-off.")
 	reader := w.As(w.Rep1, []ids.UUID{w.Team1}, dealWatchPerms)
 	for deal, want := range map[ids.UUID]ids.UUID{w.deal: w.claim, other: kickoff} {
-		got, err := newDealCommitmentHandlers(w.Pool, time.Now).read(reader, ids.From[ids.DealKind](deal))
+		got, err := newDealCommitmentHandlers(w.Pool, func() time.Time { return clocktest.Now(t) }).read(reader, ids.From[ids.DealKind](deal))
 		if err != nil {
 			t.Fatalf("reading the deal's commitments: %v", err)
 		}
@@ -109,7 +111,7 @@ func TestADealWatchesOnlyThePromisesFiledOnIt(t *testing.T) {
 func TestADealWatchesWhatItsCustomerCommittedTo(t *testing.T) {
 	w := seedDealWatch(t)
 	reader := w.As(w.Rep1, []ids.UUID{w.Team1}, dealWatchPerms)
-	got, err := newDealCommitmentHandlers(w.Pool, time.Now).read(reader, ids.From[ids.DealKind](w.deal))
+	got, err := newDealCommitmentHandlers(w.Pool, func() time.Time { return clocktest.Now(t) }).read(reader, ids.From[ids.DealKind](w.deal))
 	if err != nil {
 		t.Fatalf("reading the deal's commitments: %v", err)
 	}
@@ -129,7 +131,7 @@ func TestADismissedCommitmentLeavesTheDeal(t *testing.T) {
 		t.Fatalf("dismissing: %v", err)
 	}
 	reader := w.As(w.Rep1, []ids.UUID{w.Team1}, dealWatchPerms)
-	got, err := newDealCommitmentHandlers(w.Pool, time.Now).read(reader, ids.From[ids.DealKind](w.deal))
+	got, err := newDealCommitmentHandlers(w.Pool, func() time.Time { return clocktest.Now(t) }).read(reader, ids.From[ids.DealKind](w.deal))
 	if err != nil || len(got.Data) != 0 || !got.Complete {
 		t.Errorf("a dismissed commitment reads as %d row(s), complete=%v, err=%v", len(got.Data), got.Complete, err)
 	}
@@ -141,7 +143,7 @@ func TestAHiddenCommitmentMakesTheListIncomplete(t *testing.T) {
 	w := seedDealWatch(t)
 	w.MakeCapturePrivate(t, "contact", w.contact, w.Rep3)
 	reader := w.As(w.Rep1, []ids.UUID{w.Team1}, dealWatchPerms)
-	got, err := newDealCommitmentHandlers(w.Pool, time.Now).read(reader, ids.From[ids.DealKind](w.deal))
+	got, err := newDealCommitmentHandlers(w.Pool, func() time.Time { return clocktest.Now(t) }).read(reader, ids.From[ids.DealKind](w.deal))
 	if err != nil || len(got.Data) != 0 || got.Complete {
 		t.Errorf("a hidden commitment reads as %d row(s), complete=%v, err=%v; want none and incomplete",
 			len(got.Data), got.Complete, err)
@@ -160,11 +162,11 @@ func TestADealWatchNeedsTheContactGrant(t *testing.T) {
 		},
 	}
 	reader := w.As(w.Rep1, []ids.UUID{w.Team1}, perms)
-	if _, err := newDealCommitmentHandlers(w.Pool, time.Now).read(reader, ids.From[ids.DealKind](w.deal)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := newDealCommitmentHandlers(w.Pool, func() time.Time { return clocktest.Now(t) }).read(reader, ids.From[ids.DealKind](w.deal)); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a reader with no contact grant: err = %v, want permission denied", err)
 	}
 	w.WsExec(t, `UPDATE deal SET company_id = NULL WHERE id = $1`, w.deal)
-	if _, err := newDealCommitmentHandlers(w.Pool, time.Now).read(reader, ids.From[ids.DealKind](w.deal)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := newDealCommitmentHandlers(w.Pool, func() time.Time { return clocktest.Now(t) }).read(reader, ids.From[ids.DealKind](w.deal)); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a reader with no contact grant, on a deal with no company: err = %v, want permission denied", err)
 	}
 }
@@ -177,7 +179,7 @@ func TestADealWatchNeedsTheActivityGrant(t *testing.T) {
 		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeTeam,
 		Objects: map[string]principal.ObjectGrant{"deal": {Read: true}, "contact": {Read: true}},
 	})
-	if _, err := newDealCommitmentHandlers(w.Pool, time.Now).read(reader, ids.From[ids.DealKind](w.deal)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := newDealCommitmentHandlers(w.Pool, func() time.Time { return clocktest.Now(t) }).read(reader, ids.From[ids.DealKind](w.deal)); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a reader with no activity grant: err = %v, want permission denied", err)
 	}
 }
@@ -198,7 +200,7 @@ func TestADealWatchSaysWhenMoreAreOwed(t *testing.T) {
 		})
 	}
 	reader := w.As(w.Rep1, []ids.UUID{w.Team1}, dealWatchPerms)
-	got, err := newDealCommitmentHandlers(w.Pool, time.Now).read(reader, ids.From[ids.DealKind](w.deal))
+	got, err := newDealCommitmentHandlers(w.Pool, func() time.Time { return clocktest.Now(t) }).read(reader, ids.From[ids.DealKind](w.deal))
 	if err != nil || len(got.Data) != dealCommitmentsLimit || !got.HasMore {
 		t.Errorf("an account owing %d commitments reads as %d row(s), has_more=%v, err=%v",
 			dealCommitmentsLimit+1, len(got.Data), got.HasMore, err)
@@ -233,7 +235,7 @@ func TestADealWatchNeedsNoCompanyGrant(t *testing.T) {
 	if deal.MaskedFields == nil || !slices.Contains(*deal.MaskedFields, "company_id") {
 		t.Fatalf("the deal shows its company to a reader with no company grant: masked=%v", deal.MaskedFields)
 	}
-	got, err := newDealCommitmentHandlers(w.Pool, time.Now).read(reader, ids.From[ids.DealKind](w.deal))
+	got, err := newDealCommitmentHandlers(w.Pool, func() time.Time { return clocktest.Now(t) }).read(reader, ids.From[ids.DealKind](w.deal))
 	if err != nil {
 		t.Fatalf("reading the deal's commitments: %v", err)
 	}
@@ -254,7 +256,7 @@ func TestADealWatchWithholdsAPromiseWhoseMessageIsHidden(t *testing.T) {
 		t.Fatalf("narrowing the message's audience: %v", err)
 	}
 	reader := w.As(w.Rep1, []ids.UUID{w.Team1}, noCompanyWatchPerms)
-	got, err := newDealCommitmentHandlers(w.Pool, time.Now).read(reader, ids.From[ids.DealKind](w.deal))
+	got, err := newDealCommitmentHandlers(w.Pool, func() time.Time { return clocktest.Now(t) }).read(reader, ids.From[ids.DealKind](w.deal))
 	if err != nil {
 		t.Fatalf("reading the deal's commitments: %v", err)
 	}

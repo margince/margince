@@ -14,6 +14,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -92,9 +93,7 @@ func (f agentDrafts) agentFor(t *testing.T, human context.Context) context.Conte
 func (f agentDrafts) draft(ctx context.Context, t *testing.T, args map[string]any) (crmcontracts.ReportingReport, error) {
 	t.Helper()
 	routed := map[string]any{"action": "draft"}
-	for name, value := range args {
-		routed[name] = value
-	}
+	maps.Copy(routed, args)
 	raw, err := json.Marshal(routed)
 	if err != nil {
 		t.Fatal(err)
