@@ -114,6 +114,11 @@ func (c contactCase) liveOwners(memberIDs []ids.UUID) []ids.UUID {
 
 func compareUUID(a, b ids.UUID) int { return slices.Compare(a[:], b[:]) }
 
+func sortedUUIDs(in ...ids.UUID) []ids.UUID {
+	slices.SortFunc(in, compareUUID)
+	return in
+}
+
 // openContactPairs is the edge rule a case is walked over. A pair counts when
 // it is open and both ends pass the queue's own live visibility clause.
 func openContactPairs(ctx context.Context, arg func(any) int) (string, error) {

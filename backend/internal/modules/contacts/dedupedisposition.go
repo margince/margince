@@ -149,6 +149,13 @@ func (s *Store) disposeMerge(ctx context.Context, id ids.UUID, row DedupeCandida
 				return err
 			}
 		}
+		// A contact merge takes the stops and then both rows before the pair
+		// row, the order a case merge and a direct merge keep.
+		if row.EntityType == entityContact {
+			if err := s.lockMergingContacts(ctx, tx, sortedUUIDs(row.LeftID, row.RightID)); err != nil {
+				return err
+			}
+		}
 		if err := setDedupeDispositionTx(ctx, tx, id, dispositionMerged, by); err != nil {
 			return err
 		}

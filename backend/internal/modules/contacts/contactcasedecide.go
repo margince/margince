@@ -147,7 +147,7 @@ func (s *Store) decideContactCaseTx(ctx context.Context, tx pgx.Tx, contactID id
 	if err != nil {
 		return crmcontracts.ContactCaseOutcome{}, err
 	}
-	if err := s.lockCaseMembers(ctx, tx, selected); err != nil {
+	if err := s.lockMergingContacts(ctx, tx, selected); err != nil {
 		return crmcontracts.ContactCaseOutcome{}, err
 	}
 	c, err := walkContactCase(ctx, tx, contactID)
@@ -177,10 +177,11 @@ func (s *Store) decideContactCaseTx(ctx context.Context, tx pgx.Tx, contactID id
 	}, active)
 }
 
-// lockCaseMembers takes every selected member's stop lock in one call, then
-// holds each live member in id order: the order every contact merge keeps. A
-// member already gone is left to the walk, which no longer finds it.
-func (s *Store) lockCaseMembers(ctx context.Context, tx pgx.Tx, selected []ids.UUID) error {
+// lockMergingContacts takes the stop locks of contacts about to merge in one
+// call, then holds each live one in id order: the order every contact merge
+// keeps, before any pair row. A contact already gone is left to the caller's
+// own check. selected is sorted.
+func (s *Store) lockMergingContacts(ctx context.Context, tx pgx.Tx, selected []ids.UUID) error {
 	subjects := make([]commsauthz.StopSubject, 0, len(selected))
 	for _, id := range selected {
 		subjects = append(subjects, commsauthz.ContactStopSubject(ids.From[ids.ContactKind](id)))
