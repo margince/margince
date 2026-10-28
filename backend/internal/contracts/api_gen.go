@@ -33356,7 +33356,10 @@ type CompanyContact struct {
 
 	// Engagement Where one contact stands with us, over the same 90-day window the relationship
 	// score uses. What decides between the two conversational states is who wrote
-	// LAST, not whether both directions have traffic.
+	// LAST, not whether both directions have traffic. When their latest message is a
+	// mail the reader may read, its History badge decides instead: `waiting` needs a
+	// mail still owed a reply, and a mail owed none (a calendar copy, a mail that
+	// informs us) counts only once we wrote after it.
 	//
 	// `waiting` — their latest message has no reply from us. They are waiting on us,
 	// and answering is the obvious next move.
@@ -33510,7 +33513,10 @@ type CompanyCoverageRoute struct {
 
 	// Engagement Where one contact stands with us, over the same 90-day window the relationship
 	// score uses. What decides between the two conversational states is who wrote
-	// LAST, not whether both directions have traffic.
+	// LAST, not whether both directions have traffic. When their latest message is a
+	// mail the reader may read, its History badge decides instead: `waiting` needs a
+	// mail still owed a reply, and a mail owed none (a calendar copy, a mail that
+	// informs us) counts only once we wrote after it.
 	//
 	// `waiting` — their latest message has no reply from us. They are waiting on us,
 	// and answering is the obvious next move.
@@ -33557,7 +33563,10 @@ type CompanyCoverageSeat struct {
 
 	// Engagement Where one contact stands with us, over the same 90-day window the relationship
 	// score uses. What decides between the two conversational states is who wrote
-	// LAST, not whether both directions have traffic.
+	// LAST, not whether both directions have traffic. When their latest message is a
+	// mail the reader may read, its History badge decides instead: `waiting` needs a
+	// mail still owed a reply, and a mail owed none (a calendar copy, a mail that
+	// informs us) counts only once we wrote after it.
 	//
 	// `waiting` — their latest message has no reply from us. They are waiting on us,
 	// and answering is the obvious next move.
@@ -35911,7 +35920,10 @@ type ContactEmployer struct {
 
 // ContactEngagement Where one contact stands with us, over the same 90-day window the relationship
 // score uses. What decides between the two conversational states is who wrote
-// LAST, not whether both directions have traffic.
+// LAST, not whether both directions have traffic. When their latest message is a
+// mail the reader may read, its History badge decides instead: `waiting` needs a
+// mail still owed a reply, and a mail owed none (a calendar copy, a mail that
+// informs us) counts only once we wrote after it.
 //
 // `waiting` — their latest message has no reply from us. They are waiting on us,
 // and answering is the obvious next move.
@@ -39896,6 +39908,15 @@ type EmailThreadPage struct {
 
 	// NextCursor Pass back as `thread_cursor` for the next page. Null when this is the last.
 	NextCursor *string `json:"next_cursor,omitempty"`
+}
+
+// EmbedReindexIdentities The two identities the status read compares, read without its backlog scan.
+type EmbedReindexIdentities struct {
+	// ConfiguredIdentity The live embed binding's provider/model@dims, as in EmbedReindexStatus.
+	ConfiguredIdentity string `json:"configured_identity"`
+
+	// PopulatedIdentity The identity the last reindex run was released under, as in EmbedReindexStatus.
+	PopulatedIdentity string `json:"populated_identity"`
 }
 
 // EmbedReindexPreview The scope before the spend (ADR-0020 preview-before-spend obligation): what running the reindex now would touch and roughly cost. MUST precede the confirm route — the estimate is what the operator consents to. An estimate, labeled as such — actual spend is metered per embed call.
@@ -78638,6 +78659,9 @@ type ServerInterface interface {
 	// Confirm and start a fleet-wide reindex.
 	// (POST /embeddings/reindex)
 	EmbedReindexStart(w http.ResponseWriter, r *http.Request)
+	// The two embed-store identities, without the backlog scan.
+	// (GET /embeddings/reindex/identities)
+	EmbedReindexIdentities(w http.ResponseWriter, r *http.Request)
 	// Preview a reindex — the scope before the spend.
 	// (GET /embeddings/reindex/preview)
 	EmbedReindexPreview(w http.ResponseWriter, r *http.Request)
@@ -82802,6 +82826,12 @@ func (_ Unimplemented) PreviewEmailSignOff(w http.ResponseWriter, r *http.Reques
 // Confirm and start a fleet-wide reindex.
 // (POST /embeddings/reindex)
 func (_ Unimplemented) EmbedReindexStart(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The two embed-store identities, without the backlog scan.
+// (GET /embeddings/reindex/identities)
+func (_ Unimplemented) EmbedReindexIdentities(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -105914,6 +105944,26 @@ func (siw *ServerInterfaceWrapper) EmbedReindexStart(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// EmbedReindexIdentities operation middleware
+func (siw *ServerInterfaceWrapper) EmbedReindexIdentities(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.EmbedReindexIdentities(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // EmbedReindexPreview operation middleware
 func (siw *ServerInterfaceWrapper) EmbedReindexPreview(w http.ResponseWriter, r *http.Request) {
 
@@ -126178,6 +126228,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/embeddings/reindex", wrapper.EmbedReindexStart)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/embeddings/reindex/identities", wrapper.EmbedReindexIdentities)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/embeddings/reindex/preview", wrapper.EmbedReindexPreview)

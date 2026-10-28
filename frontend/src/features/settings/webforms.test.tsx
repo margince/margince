@@ -73,6 +73,35 @@ const budgetField: CustomField = {
   version: 1,
 };
 
+// The colleagues an owner picker offers: a colleague, plus an agent seat the
+// server refuses as an owner.
+const roster = {
+  data: [
+    {
+      id: "u-42",
+      display_name: "Jane Doe",
+      email: "jane@acme.test",
+      is_agent: false,
+    },
+    {
+      id: "agent-1",
+      display_name: "Runner Bot",
+      email: "bot@acme.test",
+      is_agent: true,
+    },
+  ],
+  page: { has_more: false },
+};
+
+// A colleague who left: named by the names read, absent from the roster.
+const departedSeat = {
+  id: "u-gone",
+  display_name: "Max Former",
+  email: "max@acme.test",
+  is_agent: false,
+  departed: true,
+};
+
 type Sent = { method: string; url: string; body: unknown; ifMatch: string };
 
 // The backend the card talks to: the list, plus whatever a case writes. Every
@@ -94,6 +123,12 @@ function backendFor(
     }
     if (req.method === "GET" && req.url.includes("/v1/custom-fields")) {
       return jsonResponse({ data: [budgetField] });
+    }
+    if (req.method === "GET" && new URL(req.url).pathname === "/v1/users") {
+      return jsonResponse(roster);
+    }
+    if (new URL(req.url).pathname === "/v1/users/names") {
+      return jsonResponse({ data: [...roster.data, departedSeat] });
     }
     const route = `${req.method} ${new URL(req.url).pathname}`;
     const answer = writes[route];
@@ -190,6 +225,57 @@ describe("WebFormsCard", () => {
     expect(
       (await screen.findByTestId("web-form-custom-fields")).textContent,
     ).toContain("cf_budget (Budget)");
+  });
+
+  it("sends each new lead to the owner picked for the form", async () => {
+    const backend = backendFor(OPERATOR, [], {
+      "POST /v1/web-forms": () =>
+        jsonResponse({ ...contactForm, owner_id: "u-42" }, 201),
+    });
+    vi.stubGlobal("fetch", backend.fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(await screen.findByTestId("new-web-form"));
+    await user.type(screen.getByLabelText(/^Name/), "Demo request");
+    await user.type(screen.getByLabelText(/^Websites/), "https://acme.test");
+    await user.click(screen.getByLabelText(/^Owner of new leads/));
+    await screen.findByRole("option", { name: "Jane Doe" });
+    expect(screen.queryByRole("option", { name: "Runner Bot" })).toBeNull();
+    await user.click(screen.getByRole("option", { name: "Jane Doe" }));
+    await user.click(screen.getByTestId("save-web-form"));
+
+    await waitFor(() => expect(backend.sent).toHaveLength(1));
+    expect(backend.sent[0]?.body).toMatchObject({ owner_id: "u-42" });
+  });
+
+  it("names the owner each form's leads go to", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(OPERATOR, [{ ...contactForm, owner_id: "u-42" }]).fetch,
+    );
+    render(<WebFormsCard />);
+    expect(await screen.findByText("Jane Doe")).toBeTruthy();
+    expect(screen.getByText(/Leads go to/)).toBeTruthy();
+  });
+
+  it("says leads arrive unassigned once the form's owner left", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(OPERATOR, [{ ...contactForm, owner_id: "u-gone" }]).fetch,
+    );
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    expect(
+      await screen.findByText(
+        "Max Former left, so new leads arrive unassigned",
+      ),
+    ).toBeTruthy();
+    await user.click(screen.getByTestId("edit-web-form"));
+    expect(
+      await screen.findByText(
+        "Max Former (left, so new leads arrive unassigned)",
+      ),
+    ).toBeTruthy();
   });
 
   it("flags every empty required field on Create and sends nothing", async () => {
@@ -447,6 +533,17 @@ describe("web form settings", () => {
     expect(
       webFormBodyOf({ ...draftFor(builder), senderSecret: " s3cret " }),
     ).toMatchObject({ sender_secret: "s3cret" });
+  });
+
+  it("sends the owner only when it changed, and null to unassign", () => {
+    const owned = { ...contactForm, owner_id: "u-42" };
+    expect(webFormBodyOf(draftFor(owned), owned)).not.toHaveProperty(
+      "owner_id",
+    );
+    expect(
+      webFormBodyOf({ ...draftFor(owned), ownerId: "" }, owned).owner_id,
+    ).toBeNull();
+    expect(webFormBodyOf(draftFor())).not.toHaveProperty("owner_id");
   });
 
   it("clears an emptied optional setting instead of storing blank text", () => {
