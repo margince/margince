@@ -83,3 +83,23 @@ func TestTheWorkerWaitsForItsSchemaBeforeItStartsLanesOrJobs(t *testing.T) {
 		t.Fatal("observeUntilAtHead no longer calls awaitSchema, so run() starts its lanes without waiting")
 	}
 }
+
+// A release refusal cancels the boot's context, which also ends the wait. The
+// early return must still answer the refusal, or the worker would exit zero
+// past the crash loop the release guard relies on.
+func TestAReleaseRefusalWhileWaitingStillExitsNonZero(t *testing.T) {
+	t.Parallel()
+	body := runBody(t, "main.go", "run")
+	waitAt := indexOfStatement(body, func(s string) bool { return strings.Contains(s, "observeUntilAtHead(") })
+	lanesAt := indexOfStatement(body, func(s string) bool { return strings.Contains(s, "startEventLanes(") })
+	if waitAt < 0 || lanesAt < waitAt {
+		t.Fatal("run() no longer waits for its schema before its lanes, so this gate is about a shape that is gone")
+	}
+	for _, stmt := range body[waitAt+1 : lanesAt] {
+		if strings.Contains(stmt, "releaseSkewRefusal(") {
+			return
+		}
+	}
+	t.Error("run() returns from an ended schema wait without answering releaseSkewRefusal, " +
+		"so a release refusal during the wait exits zero")
+}

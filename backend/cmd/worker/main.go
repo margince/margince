@@ -10,6 +10,7 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -143,7 +144,8 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	stopObserve, atHead, err := observeUntilAtHead(ctx, cfg, pool, rdb, started, logger)
 	defer stopObserve()
 	if err != nil || !atHead {
-		return err
+		// A release refusal also ends the wait. It must still exit non-zero.
+		return cmp.Or(err, releaseSkewRefusal(releaseSkewErr))
 	}
 
 	//nolint:contextcheck // boot-time wiring: the model path outlives any request context (cmd/api resolves the same path under the same waiver)
