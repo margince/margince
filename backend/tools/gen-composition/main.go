@@ -37,7 +37,7 @@ var (
 	rootPath     = flag.String("root", "..", "repository root (the directory holding extensions/ and build/)")
 	verify       = flag.Bool("verify", false, "regenerate in memory and compare against composition.json and the files on disk; write nothing")
 	verifyInputs = flag.Bool("verify-inputs", false, "recompute input digests only and compare against composition.json; write nothing")
-	instanceDir  = flag.String("instance", "", "an installation's Go module folder: every extension its root package imports with `import _` is composed beside extensions/")
+	instanceDir  = flag.String("instance", "", "an installation's Go module folder: every extension its go.mod requires is copied into extensions/ and composed")
 )
 
 // genMode is the tool's three mutually exclusive operations; when both
@@ -179,23 +179,14 @@ func generate(root string) error {
 	// directory that does not exist is a claim pnpm currently tolerates by
 	// ignoring it, which is not a property to depend on — and `de` ships no
 	// frontend/ at all.
-	var screens []extensionUnit
-	var screenDirs []string
+	unitNames := make([]string, 0, len(composed.Manifests))
 	for _, m := range composed.Manifests {
 		if m.Unit.Frontend == nil {
 			continue
 		}
-		rel, err := filepath.Rel(root, m.Unit.Dir)
-		if err != nil {
-			return err
-		}
-		screens = append(screens, m.Unit)
-		screenDirs = append(screenDirs, filepath.ToSlash(rel))
+		unitNames = append(unitNames, m.Unit.Name)
 	}
-	if err := emitComposedFrontendWorkspace(filepath.Join(root, filepath.FromSlash(composedFrontendWorkspaceDir)), screenDirs); err != nil {
-		return err
-	}
-	if err := linkUnitScreens(root, screens); err != nil {
+	if err := emitComposedFrontendWorkspace(filepath.Join(root, filepath.FromSlash(composedFrontendWorkspaceDir)), unitNames); err != nil {
 		return err
 	}
 	m, err := currentManifest(root, composed.Files)
