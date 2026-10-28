@@ -218,7 +218,7 @@ function keyboardFocus(target: EventTarget): boolean {
 /** One row of a peek: the thing, what state it is in, and where it leads. */
 export type PeekItem = Readonly<{
   key: string;
-  // A mark before the row (a person's avatar).
+  // A mark before the row (a contact's avatar).
   lead?: ReactNode;
   title: ReactNode;
   // The thing's one line of state ("Negotiation · €95k", "Due today").
@@ -234,7 +234,7 @@ export type PeekItem = Readonly<{
  *  counts, `foot` is the closing line. */
 export type PeekContent = Readonly<{
   head: string;
-  // The rows already say what the card is about (a person's card names them),
+  // The rows already say what the card is about (a contact card names them),
   // so the head only names the panel for a screen reader.
   headHidden?: boolean;
   items: readonly PeekItem[];

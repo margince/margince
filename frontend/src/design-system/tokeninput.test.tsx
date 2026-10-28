@@ -232,7 +232,7 @@ const CONTACTS = [
     value: "dana@nordwand.example",
     label: "Dana Ellwanger",
     hint: "Nordwand",
-    person: {
+    card: {
       identity: "c-dana",
       href: "#/contacts/c-dana",
       about: "Buyer · Nordwand GmbH",

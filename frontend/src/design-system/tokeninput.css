@@ -90,13 +90,13 @@
   min-inline-size: 0;
 }
 
-/* A person's token opens on their avatar, brought down to sit inside the pill
-   with a hairline of the pill around it. */
-.token-person {
+/* A known recipient's token opens on their avatar, brought down to sit inside
+   the pill with a hairline of the pill around it. */
+.token-has-face {
   padding-inline-start: 2px;
   gap: var(--space-1);
 }
-.token-person .avatar {
+.token-has-face .avatar {
   flex: none;
   width: 20px;
   height: 20px;

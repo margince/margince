@@ -17,7 +17,7 @@ const CONTACTS = [
     value: "ada@brandt.example",
     label: "Ada Brandt-Sachsinger",
     hint: "ada@brandt.example",
-    person: {
+    card: {
       identity: "c-ada",
       href: "#/contacts/c-ada",
       about: "Head of Logistics · Brandt Logistik",
@@ -27,13 +27,13 @@ const CONTACTS = [
     value: "lars@brandt.example",
     label: "Lars Strojny",
     hint: "lars@brandt.example",
-    person: { identity: "c-lars", about: "Brandt Logistik" },
+    card: { identity: "c-lars", about: "Brandt Logistik" },
   },
   {
     value: "luitpold@brandt.example",
     label: "Luitpold Alexander Zollorsch",
     hint: "luitpold@brandt.example",
-    person: { identity: "c-luitpold", about: "CFO · Brandt Logistik" },
+    card: { identity: "c-luitpold", about: "CFO · Brandt Logistik" },
   },
 ];
 

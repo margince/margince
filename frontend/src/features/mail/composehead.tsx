@@ -15,8 +15,8 @@ import { Callout } from "../../design-system/callout";
 import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
 import {
+  type TokenCard,
   TokenInput,
-  type TokenPerson,
   type TokenSuggestion,
 } from "../../design-system/tokeninput";
 import { useT } from "../../i18n";
@@ -72,14 +72,14 @@ export function recipientSuggestions(
   const offer = (
     value: string | null | undefined,
     label: string,
-    person?: TokenPerson,
+    card?: TokenCard,
   ) => {
     const address = value?.trim();
     if (!address || seen.has(address)) {
       return;
     }
     seen.add(address);
-    out.push({ value: address, label, hint: address, person });
+    out.push({ value: address, label, hint: address, card });
   };
   const account = company?.company?.display_name;
   const contactCard = (id: string, title: string | null | undefined) => ({

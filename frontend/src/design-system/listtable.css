@@ -855,7 +855,7 @@
  * This is the ONE avatar size a prop cannot carry — the row height is the
  * table's decision and the chip arrives already built from a caller's cell
  * renderer, which knows nothing about it. The scale starts at `sm`; the only
- * other 20px chip is a person's token in `TokenInput`, inside its pill. */
+ * other 20px chip is a recipient's token in `TokenInput`, inside its pill. */
 .lt-table.dense .avatar,
 .lt-table td:not(.lt-identity) .avatar {
   width: 20px;

@@ -10,17 +10,17 @@ import { type Suggestion, SuggestPopup, useSuggestList } from "./suggestlist";
 import "./tokeninput.css";
 
 /**
- * An offer that names a person. Its token draws their avatar, and its card is
+ * An offer that names someone with a record. Its token draws their avatar, and its card is
  * a contact card. The card holds the avatar, the name linked to `href`, the
  * address, and `about` (title and company) under them.
  */
-export type TokenPerson = Readonly<{
+export type TokenCard = Readonly<{
   identity: string;
   href?: string;
   about?: string;
 }>;
 
-export type TokenSuggestion = Suggestion & Readonly<{ person?: TokenPerson }>;
+export type TokenSuggestion = Suggestion & Readonly<{ card?: TokenCard }>;
 
 /**
  * A set of short values a reader builds one at a time — the control the `in`
@@ -252,22 +252,22 @@ function TokenChip({
 }>) {
   const label = offer?.label;
   const named = label !== undefined && label !== "" && label !== value;
-  const person = named ? offer?.person : undefined;
+  const card = named ? offer?.card : undefined;
   const {
     ref,
     props: anchor,
     panel,
   } = usePeek<HTMLSpanElement>({
-    content: named ? tokenCard(value, label, person) : undefined,
+    content: named ? tokenCard(value, label, card) : undefined,
   });
   return (
     <>
       <span
         ref={ref}
-        className={person ? "token token-person" : "token"}
+        className={card ? "token token-has-face" : "token"}
         {...anchor}
       >
-        {person && <Avatar name={label ?? value} identity={person.identity} />}
+        {card && <Avatar name={label ?? value} identity={card.identity} />}
         <span className={named ? "token-label" : "token-value"}>
           {named ? label : value}
         </span>
@@ -289,7 +289,7 @@ function TokenChip({
 function tokenCard(
   value: string,
   label: string,
-  person: TokenPerson | undefined,
+  card: TokenCard | undefined,
 ): PeekContent {
   return {
     head: label,
@@ -297,15 +297,15 @@ function tokenCard(
     items: [
       {
         key: value,
-        lead: person && (
-          <Avatar name={label} identity={person.identity} size="md" />
+        lead: card && (
+          <Avatar name={label} identity={card.identity} size="md" />
         ),
         title: label,
         sub: value,
-        href: person?.href,
+        href: card?.href,
       },
     ],
-    foot: person?.about || undefined,
+    foot: card?.about || undefined,
   };
 }
 
