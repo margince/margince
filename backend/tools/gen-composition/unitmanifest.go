@@ -346,6 +346,9 @@ func generateUnitManifests(derived []derivedManifest) error {
 		if existing, err := os.ReadFile(path); err == nil && bytes.Equal(existing, d.Encoded) { // #nosec G304 -- a path this generator derives from the tree it is reading
 			continue
 		}
+		if d.Unit.Fetched {
+			return fmt.Errorf("%s: the shipped %s does not match what the unit's code declares; ask its publisher for a fixed release", d.Unit.Name, unitManifestFile)
+		}
 		if err := writeFileAtomic(d.Unit.Dir, path, d.Encoded); err != nil {
 			return err
 		}

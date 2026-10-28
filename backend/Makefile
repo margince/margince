@@ -169,8 +169,8 @@ check-static: composition ## The static half of check (STATIC_LEGS), which CI ru
 # gen-composition runs pinned to the ROOT workspace: the tool lives in
 # the separate backend/tools module, so a caller-exported GOWORK (off, or
 # an unrelated workspace) would break resolution before anything builds.
-composition: ## Materialize build/composition/ from the enabled set under extensions/ (every build lane depends on this)
-	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition
+composition: ## Materialize build/composition/ from the enabled set under extensions/, plus every extension an installation's Go module blank-imports [MARGINCE_INSTANCE=<dir>] (every build lane depends on this)
+	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition $(if $(MARGINCE_INSTANCE),-instance $(abspath $(MARGINCE_INSTANCE)))
 
 check-composition: composition ## Reproducibility gate: a clean regeneration must reproduce composition.json byte-for-byte
 	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition -verify
@@ -182,7 +182,7 @@ check-composition: composition ## Reproducibility gate: a clean regeneration mus
 test-extensions: composition ## Every enabled extension's own test lane (each unit is its own module — ./... never reaches them), on the composed workspace [EXT_COVER_OUT=<file> merges a coverage profile]
 	@set -e; found=0; out="$(if $(EXT_COVER_OUT),$(abspath $(EXT_COVER_OUT)))"; \
 	[ -z "$$out" ] || { rm -f "$$out"; tmp=$$(mktemp); trap 'rm -f "$$tmp"' EXIT; }; \
-	for mod in ../extensions/*/go.mod; do \
+	for mod in ../extensions/*/go.mod $$(cut -f2 ../build/extensions.list 2>/dev/null | sed 's|$$|/go.mod|'); do \
 		[ -e "$$mod" ] || continue; found=1; \
 		dir=$$(dirname "$$mod"); \
 		echo "== $$dir"; \
