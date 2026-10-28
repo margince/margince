@@ -22,6 +22,13 @@ import { OvernightGrantCard } from "./overnight-grant";
 // what stops working. Onboarding never writes. Settings writes on flip and,
 // once off, says so with an Off badge instead of a warning.
 
+/** The rep's one answer is held for both overnight agents. */
+const bothAgents = (grants: Record<string, unknown>[]) =>
+  grants.flatMap((grant) => [
+    grant,
+    { ...grant, spec: "overnight_at_risk_sweep" },
+  ]);
+
 function render(ui: ReactNode) {
   return rtlRender(
     <QueryClientProvider
@@ -97,14 +104,22 @@ it("the settings card shows the stored answer and writes when flipped", async ()
   installFetchStub({
     "GET /me/agent-grants": () =>
       jsonResponse({
-        data: [
+        data: bothAgents([
           { spec: "morning_brief", state: "granted", credential_usable: true },
-        ],
+        ]),
       }),
     "PUT /me/agent-grants/morning_brief": (body: unknown) => {
-      written.push(body);
+      written.push(["morning_brief", body]);
       return jsonResponse({
         spec: "morning_brief",
+        state: "declined",
+        credential_usable: false,
+      });
+    },
+    "PUT /me/agent-grants/overnight_at_risk_sweep": (body: unknown) => {
+      written.push(["overnight_at_risk_sweep", body]);
+      return jsonResponse({
+        spec: "overnight_at_risk_sweep",
         state: "declined",
         credential_usable: false,
       });
@@ -115,17 +130,23 @@ it("the settings card shows the stored answer and writes when flipped", async ()
   const toggle = await screen.findByTestId("overnight-grant-toggle");
   await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("true"));
   await userEvent.click(toggle);
-  // Unlike onboarding's, this switch is the action: flipping it writes.
-  await waitFor(() => expect(written).toEqual([{ granted: false }]));
+  // Unlike onboarding's, this switch is the action: flipping it writes, and it
+  // writes the one answer for both overnight agents.
+  await waitFor(() =>
+    expect(written).toEqual([
+      ["morning_brief", { granted: false }],
+      ["overnight_at_risk_sweep", { granted: false }],
+    ]),
+  );
 });
 
 it("says a refused flip once for the card, and the switch returns to the stored answer", async () => {
   installFetchStub({
     "GET /me/agent-grants": () =>
       jsonResponse({
-        data: [
+        data: bothAgents([
           { spec: "morning_brief", state: "granted", credential_usable: true },
-        ],
+        ]),
       }),
     "PUT /me/agent-grants/morning_brief": () =>
       jsonResponse(
@@ -148,7 +169,7 @@ it("tells the rep the agent outgrew their authority, not that it lapsed", async 
   installFetchStub({
     "GET /me/agent-grants": () =>
       jsonResponse({
-        data: [
+        data: bothAgents([
           // Live authority, neither revoked nor expired, for a job this agent
           // no longer does. The run degrades and prepares nothing at 2am.
           {
@@ -157,7 +178,7 @@ it("tells the rep the agent outgrew their authority, not that it lapsed", async 
             credential_usable: true,
             credential_funds_agent: false,
           },
-        ],
+        ]),
       }),
   });
   render(<OvernightGrantCard />);
@@ -173,14 +194,14 @@ it("says nothing when the authority still covers the agent", async () => {
   installFetchStub({
     "GET /me/agent-grants": () =>
       jsonResponse({
-        data: [
+        data: bothAgents([
           {
             spec: "morning_brief",
             state: "granted",
             credential_usable: true,
             credential_funds_agent: true,
           },
-        ],
+        ]),
       }),
   });
   render(<OvernightGrantCard />);
@@ -194,10 +215,10 @@ it("tells the rep their authority died rather than that they declined", async ()
   installFetchStub({
     "GET /me/agent-grants": () =>
       jsonResponse({
-        data: [
+        data: bothAgents([
           // They said yes; the passport behind it has expired or been revoked.
           { spec: "morning_brief", state: "granted", credential_usable: false },
-        ],
+        ]),
       }),
   });
   render(<OvernightGrantCard />);
@@ -215,13 +236,13 @@ it("reads a decline back quietly on Settings: an Off badge, no warning", async (
   installFetchStub({
     "GET /me/agent-grants": () =>
       jsonResponse({
-        data: [
+        data: bothAgents([
           {
             spec: "morning_brief",
             state: "declined",
             credential_usable: false,
           },
-        ],
+        ]),
       }),
   });
   render(<OvernightGrantCard />);
@@ -237,14 +258,14 @@ it("drops the Off badge once the rep turns it on", async () => {
   installFetchStub({
     "GET /me/agent-grants": () =>
       jsonResponse({
-        data: [
+        data: bothAgents([
           {
             spec: "morning_brief",
             state: "granted",
             credential_usable: true,
             credential_funds_agent: true,
           },
-        ],
+        ]),
       }),
   });
   render(<OvernightGrantCard />);
@@ -260,7 +281,9 @@ it("says the same thing about the same authority in both places", async () => {
   installFetchStub({
     "GET /me/agent-grants": () =>
       jsonResponse({
-        data: [{ spec: "morning_brief", state, credential_usable: true }],
+        data: bothAgents([
+          { spec: "morning_brief", state, credential_usable: true },
+        ]),
       }),
     "PUT /me/agent-grants/morning_brief": () => {
       state = "declined";
@@ -280,4 +303,31 @@ it("says the same thing about the same authority in both places", async () => {
   // wording: a second spelling of the warning would let the two drift into
   // describing different costs for one decision.
   expect(inOnboarding.textContent).toBe(settingsWords);
+});
+
+it("shows the question open to a rep who granted only the morning brief", async () => {
+  installFetchStub({
+    "GET /me/agent-grants": () =>
+      jsonResponse({
+        data: [
+          {
+            spec: "morning_brief",
+            state: "granted",
+            credential_usable: true,
+            credential_funds_agent: true,
+          },
+          {
+            spec: "overnight_at_risk_sweep",
+            state: "declined",
+            credential_usable: false,
+          },
+        ],
+      }),
+  });
+  render(<OvernightGrantCard />);
+
+  const toggle = await screen.findByTestId("overnight-grant-toggle");
+  // The sweep runs only for a rep who granted it, so a brief-only answer is not
+  // "on": turning it on once grants both.
+  expect(toggle.getAttribute("aria-checked")).toBe("false");
 });

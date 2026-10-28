@@ -90,6 +90,8 @@ function jsonResponse(body: unknown): Response {
 }
 
 type Answers = Readonly<{
+  /** The seat's grants; the administrator's when absent. */
+  allow?: GrantSpec;
   running?: readonly Occurrence[];
   /** Absent means the body carries no `live_total` at all. */
   liveTotal?: number;
@@ -107,7 +109,7 @@ function stubApi(answers: Answers) {
     vi.fn(async (request: Request) => {
       const pathname = new URL(request.url).pathname;
       if (pathname.endsWith("/me")) {
-        return jsonResponse(meFixture({ allow: ADMIN }));
+        return jsonResponse(meFixture({ allow: answers.allow ?? ADMIN }));
       }
       if (pathname.endsWith("/assistant/profile")) {
         return jsonResponse({
@@ -235,6 +237,18 @@ describe("the agent panel's hierarchy", () => {
       en["agent.panel.recent"],
     );
     expect(head?.querySelector("a.link-button")?.textContent).toBe(
+      en["agent.panel.fullLog"],
+    );
+  });
+
+  // The log opens the AI usage page, which a seat without the diagnostics read
+  // grant cannot open. Offering it would send a rep to a refusal.
+  it("offers the full log only to a seat that can open it", async () => {
+    const rep = await openPanel({ allow: { license: ["read"] } });
+    expect(rep.querySelector("a.link-button")).toBeNull();
+    cleanup();
+    const admin = await openPanel();
+    expect(admin.querySelector("a.link-button")?.textContent).toBe(
       en["agent.panel.fullLog"],
     );
   });

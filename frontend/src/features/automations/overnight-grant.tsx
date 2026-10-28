@@ -12,8 +12,7 @@ import { StatusBadge } from "../../design-system/statusbadge";
 import { Switch } from "../../design-system/switch";
 import { useT } from "../../i18n";
 import {
-  type MyAgentGrant,
-  morningBriefGrant,
+  overnightStanding,
   useAgentGrants,
   useSetAgentGrant,
 } from "../../lib/overnight-grant";
@@ -26,21 +25,6 @@ import {
 //
 // Settings writes on flip. Onboarding's switch holds the answer until the step
 // continues, and its description says so in words.
-
-// Lapsed and outgrown differ from a decline (the rep already agreed); each
-// names its cause, since either degrades the 2am run silently.
-function grantStanding(grants: readonly MyAgentGrant[]) {
-  const grant = morningBriefGrant(grants);
-  const granted = grant?.state === "granted";
-  return {
-    granted,
-    lapsed: granted && !grant?.credential_usable,
-    outgrown:
-      granted &&
-      grant?.credential_usable === true &&
-      !grant?.credential_funds_agent,
-  };
-}
 
 /**
  * The settings card: the same question, answered again later.
@@ -62,7 +46,7 @@ export function OvernightGrantCard() {
   const stored =
     query.data === undefined
       ? undefined
-      : morningBriefGrant(query.data)?.state === "granted";
+      : overnightStanding(query.data).granted;
   const shownOff = (optimistic ?? stored) === false;
 
   return (
@@ -76,7 +60,7 @@ export function OvernightGrantCard() {
     >
       <QueryGate query={query} pendingLabel={t("overnightGrant.title")}>
         {(grants) => {
-          const { granted, lapsed, outgrown } = grantStanding(grants);
+          const { granted, lapsed, outgrown } = overnightStanding(grants);
           const shown = optimistic ?? granted;
           return (
             <>

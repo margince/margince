@@ -195,7 +195,7 @@ func TestEveryRefusalHasAKeyToVerifyAgainst(t *testing.T) {
 	if len(key) == 0 {
 		t.Fatal("an unresolved address yielded an empty key, so its refusal skips the comparison every other refusal makes")
 	}
-	if verified(key, signedRequest(senderSecret, "n-1", "{}")) {
+	if signedRequest(senderSecret, "n-1", "{}").SignatureHolds(key) {
 		t.Fatal("a request signed with a real secret verified against the stand-in")
 	}
 
@@ -327,7 +327,7 @@ func TestTheVerifiedMaterialIsThePublishedSignedPayload(t *testing.T) {
 	mac.Write(req.SignedPayload())
 	req.Signature = "sha256=" + hex.EncodeToString(mac.Sum(nil))
 
-	if !verified([]byte(senderSecret), req) {
+	if !req.SignatureHolds([]byte(senderSecret)) {
 		t.Fatal("a signature over SignedPayload did not verify")
 	}
 	// Each of the three parts is covered: change one and the signature is no
@@ -348,7 +348,7 @@ func TestTheVerifiedMaterialIsThePublishedSignedPayload(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			if verified([]byte(senderSecret), edit(req)) {
+			if edit(req).SignatureHolds([]byte(senderSecret)) {
 				t.Fatalf("%s is not covered by the signature", name)
 			}
 		})

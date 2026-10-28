@@ -29,6 +29,12 @@ import (
 
 const publicBookingPrefix = "/v1/public/booking/"
 
+// The booking edge also serves the pages a booked meeting and a sent proposal link to.
+const (
+	publicMeetingPrefix  = "/v1/public/meeting/"
+	publicProposalPrefix = "/v1/public/proposal/"
+)
+
 // publicBookingLimits: the page is anonymous and rate limiting is its
 // only brake (api-rate-limits-and-abuse.md §1.3). Per-IP covers scripted
 // scraping of one client; per-slug covers a distributed flood aimed at
@@ -50,8 +56,8 @@ func newPublicBookingLimiters() publicBookingLimiters {
 func publicBooking(store *activities.Store, svc *identity.Service, limits publicBookingLimiters) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			proposal := strings.HasPrefix(r.URL.Path, "/v1/public/proposal/")
-			management := strings.HasPrefix(r.URL.Path, "/v1/public/meeting/")
+			proposal := strings.HasPrefix(r.URL.Path, publicProposalPrefix)
+			management := strings.HasPrefix(r.URL.Path, publicMeetingPrefix)
 			if !proposal && !management && !strings.HasPrefix(r.URL.Path, publicBookingPrefix) {
 				next.ServeHTTP(w, r)
 				return

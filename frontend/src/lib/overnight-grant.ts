@@ -14,9 +14,14 @@ import { readStored, removeStored, STORAGE_KEYS, writeStored } from "./storage";
 
 export type MyAgentGrant = components["schemas"]["MyAgentGrant"];
 
-/** The agent this question is about. The morning brief is the one a rep
- * recognises by name, and the sweep that feeds it runs under the same answer. */
+/** The morning brief is the agent a rep recognises by name. */
 export const MORNING_BRIEF = "morning_brief" as const;
+
+/** The sweep that feeds the brief. The runner starts each agent only for a rep
+ * who granted that agent, so the one answer is written for both. */
+export const OVERNIGHT_AT_RISK_SWEEP = "overnight_at_risk_sweep" as const;
+
+const OVERNIGHT_AGENTS = [MORNING_BRIEF, OVERNIGHT_AT_RISK_SWEEP] as const;
 
 const GRANTS_KEY = ["agent-grants"] as const;
 
@@ -66,12 +71,14 @@ export function useSetAgentGrant() {
   const t = useT();
   return useMutation({
     mutationFn: async (granted: boolean) => {
-      return unwrap(
-        await api.PUT("/me/agent-grants/{spec}", {
-          params: { path: { spec: MORNING_BRIEF } },
-          body: { granted },
-        }),
-      );
+      for (const spec of OVERNIGHT_AGENTS) {
+        unwrap(
+          await api.PUT("/me/agent-grants/{spec}", {
+            params: { path: { spec } },
+            body: { granted },
+          }),
+        );
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: GRANTS_KEY });
@@ -80,9 +87,20 @@ export function useSetAgentGrant() {
   });
 }
 
-/** Picks the morning brief's answer out of the list. */
-export function morningBriefGrant(
-  grants: readonly MyAgentGrant[],
-): MyAgentGrant | undefined {
-  return grants.find((grant) => grant.spec === MORNING_BRIEF);
+/** The rep's one answer as the overnight agents stand on it. It reads as granted
+ * only when every agent has the grant, so a rep who answered before the sweep
+ * was offered sees the question open and can answer it for both. */
+export function overnightStanding(grants: readonly MyAgentGrant[]) {
+  const own = OVERNIGHT_AGENTS.map((spec) =>
+    grants.find((grant) => grant.spec === spec),
+  );
+  const granted = own.every((grant) => grant?.state === "granted");
+  return {
+    granted,
+    lapsed: granted && own.some((grant) => !grant?.credential_usable),
+    outgrown:
+      granted &&
+      own.every((grant) => grant?.credential_usable === true) &&
+      own.some((grant) => !grant?.credential_funds_agent),
+  };
 }
