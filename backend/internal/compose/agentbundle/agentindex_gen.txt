@@ -21,6 +21,10 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /dedupe/candidates/{id}` | getDedupeCandidate | One candidate with its full detection-time evidence. | Read records | at once |
 | `POST /dedupe/candidates/{id}/disposition` | disposeDedupeCandidate | Decide one pair — merge through the owner's verb, or dismiss forever. | Change records | at once |
 | `POST /dedupe/candidates/{id}/undo` | undoDedupeDisposition | Re-open a disposed pair. | Change records | at once |
+| `GET /dedupe/contact-cases` | listContactCases | The open contact duplicate cases, strongest first. | Read records | at once |
+| `GET /dedupe/contact-cases/{contact_id}` | getContactCase | The duplicate case this contact belongs to. | Read records | at once |
+| `POST /dedupe/contact-cases/{contact_id}/preview` | previewContactCaseMerge | What merging these members would do, without writing anything. | Read records | at once |
+| `POST /dedupe/contact-cases/{contact_id}/merge` | mergeContactCase | Merge the selected members of a case into one contact. Not reversible. | Change records | at once |
 | `GET /contacts/{id}/network` | getContactNetwork | Who on our team knows this contact, and how well. | Read records | at once |
 
 ## Companies

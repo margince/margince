@@ -68,6 +68,7 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "owner_id", Type: "string"},
 		{Name: "owner_team_id", Type: "string"},
 		{Name: "relationship_mark", Type: "string", Enum: []string{"vendor_marketing", "any"}},
+		{Name: "shared_with_me", Type: "boolean"},
 		{Name: "sort", Type: "string"},
 		{Name: "tag_id", Type: "array"},
 		{Name: "tag_mode", Type: "string", Enum: []string{"any", "all", "none"}},

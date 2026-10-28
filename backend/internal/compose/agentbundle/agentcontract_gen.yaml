@@ -148,6 +148,14 @@ paths:
           description: |-
             `true` returns only rows with no owner. Unassigned rows are visible at every row scope, so this names the unowned queue rather than widening what the caller sees.
             Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
+        - name: shared_with_me
+          in: query
+          schema: {type: boolean}
+          description: |-
+            `true` returns only contacts someone else owns that the caller holds a live record grant
+            on, directly or through one of their teams. A merge that kept a former owner's access
+            puts the remaining contact here. Mutually exclusive with `owner_id`, `owner_team_id` and
+            `unassigned`; combining them is `422`.
         - name: q
           in: query
           schema: {type: string}
@@ -6092,6 +6100,114 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /dedupe/contact-cases:
+    get:
+      tags: [Contacts]
+      operationId: listContactCases
+      security: [{bearerAuth: []}]
+      summary: The open contact duplicate cases, strongest first.
+      parameters:
+        - name: scope
+          in: query
+          schema: {type: string, enum: [mine, unassigned, all], default: mine}
+          description: '`mine`: cases with a member the caller owns. `unassigned`: cases where no member has a live owner. `all`: every case the caller can see.'
+        - {name: cursor, in: query, schema: {type: string}, description: Opaque keyset cursor.}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 50, default: 25}}
+      responses:
+        '200':
+          description: One page of cases.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ContactCaseListResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+      description: The open contact duplicate cases, strongest first.
+  /dedupe/contact-cases/{contact_id}:
+    parameters:
+      - {name: contact_id, in: path, required: true, schema: {type: string, format: uuid}, description: Any member of the case.}
+    get:
+      tags: [Contacts]
+      operationId: getContactCase
+      security: [{bearerAuth: []}]
+      summary: The duplicate case this contact belongs to.
+      description: |-
+        `404` when the contact is in no open case and was not merged away. A contact that was merged
+        away answers `status: resolved` with the contact it went into, so a reviewer holding an old
+        tab sees who settled it.
+      responses:
+        '200':
+          description: The case.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ContactCase'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /dedupe/contact-cases/{contact_id}/preview:
+    parameters:
+      - {name: contact_id, in: path, required: true, schema: {type: string, format: uuid}}
+    post:
+      tags: [Contacts]
+      operationId: previewContactCaseMerge
+      security: [{bearerAuth: []}]
+      summary: What merging these members would do, without writing anything.
+      description: |-
+        Runs the merge itself in a transaction that is rolled back, so the answer is the one the
+        merge would give. Refuses exactly as the merge refuses.
+
+        Needs the passport permission Read records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ContactCaseDecisionRequest'}
+      responses:
+        '200':
+          description: The outcome the merge would have, with `committed` false.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ContactCaseOutcome'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /dedupe/contact-cases/{contact_id}/merge:
+    parameters:
+      - {name: contact_id, in: path, required: true, schema: {type: string, format: uuid}}
+    post:
+      tags: [Contacts]
+      operationId: mergeContactCase
+      summary: Merge the selected members of a case into one contact. Not reversible.
+      description: |-
+        In one transaction: every selected member merges into `survivor_id`, the pairs between them
+        are marked merged, `owner_id` becomes the owner, and every other live owner of a selected
+        member keeps access through a record grant (write for a full seat, read for a read seat).
+        Pairs a merged-away member had with an unselected contact move onto the survivor and stay
+        open. Either all of it commits or none of it does.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ContactCaseDecisionRequest'}
+      responses:
+        '200':
+          description: The committed outcome.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ContactCaseOutcome'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /approvals:
     get:
       tags: [Approvals]
@@ -8975,15 +9091,7 @@ components:
         evidence:
           type: array
           description: 'Per-field agree/collide snapshot captured at detection: what the review queue renders, never re-derived against since-edited rows.'
-          items:
-            type: object
-            required: [field, left_value, right_value, signal]
-            properties:
-              field: {type: string, description: 'full_name, company, domain, …'}
-              left_value: {type: [string, 'null']}
-              right_value: {type: [string, 'null']}
-              signal: {type: string, description: 'agree | collide | one_sided'}
-              score: {type: [number, 'null'], description: 'The field''s contribution where scored (e.g. name_sim).'}
+          items: {$ref: '#/components/schemas/DedupeEvidence'}
         status: {type: string, enum: [open, merged, not_a_duplicate]}
         can_decide:
           type: boolean
@@ -9007,6 +9115,142 @@ components:
       properties:
         disposition: {type: string, enum: [merge, not_a_duplicate]}
         winner_id: {type: [string, 'null'], format: uuid, description: 'Required for merge: the surviving record — must be one of the pair.'}
+    DedupeEvidence:
+      type: object
+      description: One field of a pair's detection-time evidence.
+      required: [field, left_value, right_value, signal]
+      properties:
+        field: {type: string, description: 'full_name, company, domain, …'}
+        left_value: {type: [string, 'null']}
+        right_value: {type: [string, 'null']}
+        signal: {type: string, description: 'agree | collide | one_sided'}
+        score: {type: [number, 'null'], description: 'The field''s contribution where scored (e.g. name_sim).'}
+    ContactCase:
+      type: object
+      description: |-
+        One group of contacts that may be the same person: every live contact reachable from the
+        addressed contact over open duplicate pairs the caller can see. A case is read off the
+        pairs and is never stored, so dismissing, re-opening or merging a pair re-shapes it at once.
+        `anchor_id` is the lowest member id; every member id addresses the same case.
+      required: [anchor_id, revision, status, members, edges, owners, confidence, too_large, policy_enabled, can_merge, merge_mode]
+      properties:
+        anchor_id: {type: string, format: uuid}
+        revision: {type: string, description: 'Changes whenever a member, an owner, a version or a pair changes. Preview and merge refuse a stale one with 409 case_changed.'}
+        status: {type: string, enum: [open, resolved], description: '`resolved` when the addressed contact was merged away; `resolution` says into which contact.'}
+        members: {type: array, items: {$ref: '#/components/schemas/ContactCaseMember'}}
+        edges: {type: array, items: {$ref: '#/components/schemas/ContactCaseEdge'}}
+        owners:
+          type: array
+          description: The live owners of the members. Each of them sees the case in their own Worklist.
+          items: {$ref: '#/components/schemas/ContactCaseOwner'}
+        confidence: {type: number, minimum: 0, maximum: 1, description: 'The strongest open pair in the case.'}
+        too_large: {type: boolean, description: 'The case has more members than one review may merge (25). The pairs still decide one by one.'}
+        policy_enabled: {type: boolean, description: 'Whether the workspace lets any owner of a member merge the case (`contacts.shared_merge_reviews`).'}
+        can_merge: {type: boolean, description: 'Whether this caller may merge at least two members of this case.'}
+        merge_mode:
+          type: string
+          enum: [ordinary, delegated, none]
+          description: '`ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `none`: neither.'
+        reason:
+          type: [string, 'null']
+          enum: [no_write_authority, too_large, resolved, null]
+          description: Why `can_merge` is false.
+        resolution:
+          allOf: [{$ref: '#/components/schemas/ContactCaseResolution'}]
+          description: Present when `status` is `resolved`.
+    ContactCaseMember:
+      type: object
+      required: [id, name, version, owner_id, owner_name, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        email: {type: [string, 'null'], description: The primary email address.}
+        title: {type: [string, 'null']}
+        company_name: {type: [string, 'null'], description: The current employer.}
+        owner_id: {type: [string, 'null'], format: uuid}
+        owner_name: {type: [string, 'null']}
+        version: {type: integer, format: int64}
+        created_at: {type: string, format: date-time}
+    ContactCaseEdge:
+      type: object
+      description: One duplicate pair between two members, with the evidence it was filed on.
+      required: [pair_id, left_id, right_id, confidence, status, evidence]
+      properties:
+        pair_id: {type: string, format: uuid}
+        left_id: {type: string, format: uuid}
+        right_id: {type: string, format: uuid}
+        confidence: {type: number, minimum: 0, maximum: 1}
+        status: {type: string, enum: [open, not_a_duplicate], description: '`not_a_duplicate` pairs are shown so a reviewer sees that someone said these two are different people; selecting both refuses the merge.'}
+        evidence: {type: array, items: {$ref: '#/components/schemas/DedupeEvidence'}}
+    ContactCaseOwner:
+      type: object
+      required: [user_id, name, seat, member_ids]
+      properties:
+        user_id: {type: string, format: uuid}
+        name: {type: string}
+        seat: {type: string, enum: [full, read]}
+        member_ids: {type: array, items: {type: string, format: uuid}}
+    ContactCaseResolution:
+      type: object
+      required: [survivor_id, resolved_at]
+      properties:
+        survivor_id: {type: string, format: uuid}
+        resolved_by: {type: [string, 'null'], format: uuid}
+        resolved_by_name: {type: [string, 'null']}
+        resolved_at: {type: string, format: date-time}
+    ContactCaseListResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/ContactCase'}}
+        page: {$ref: '#/components/schemas/PageInfo'}
+    ContactCaseDecisionRequest:
+      type: object
+      required: [revision, member_ids, survivor_id, owner_id]
+      properties:
+        revision: {type: string, description: The case revision the reviewer looked at.}
+        member_ids:
+          type: array
+          minItems: 2
+          maxItems: 25
+          uniqueItems: true
+          description: The members the reviewer says are one person. They must be connected by open pairs, and no two of them may carry a `not_a_duplicate` pair.
+          items: {type: string, format: uuid}
+        survivor_id: {type: string, format: uuid, description: 'The record that remains. Its values win where two members disagree.'}
+        owner_id: {type: string, format: uuid, description: 'Who owns the remaining contact: the live owner of one of the selected members.'}
+    ContactCaseOutcome:
+      type: object
+      description: What the merge did, or for a preview what it would do. Every selected member's owner other than the chosen one keeps access through a record grant.
+      required: [committed, survivor_id, merged_ids, owner_id, mode, shares, skipped]
+      properties:
+        committed: {type: boolean, description: '`false` for a preview: nothing was written.'}
+        survivor_id: {type: string, format: uuid}
+        merged_ids: {type: array, items: {type: string, format: uuid}}
+        owner_id: {type: string, format: uuid}
+        mode: {type: string, enum: [ordinary, delegated]}
+        shares:
+          type: array
+          description: The people who keep access to the remaining contact, and at which level. A read seat keeps read access.
+          items: {$ref: '#/components/schemas/ContactCaseShare'}
+        skipped:
+          type: array
+          description: Owners who get no new grant, and why.
+          items: {$ref: '#/components/schemas/ContactCaseSkippedOwner'}
+        survivor: {$ref: '#/components/schemas/Contact'}
+    ContactCaseShare:
+      type: object
+      required: [user_id, name, access]
+      properties:
+        user_id: {type: string, format: uuid}
+        name: {type: string}
+        access: {type: string, enum: [read, write]}
+    ContactCaseSkippedOwner:
+      type: object
+      required: [user_id, name, reason]
+      properties:
+        user_id: {type: string, format: uuid}
+        name: {type: string}
+        reason: {type: string, enum: [inactive, already_owner, already_granted]}
     ImportObject:
       type: string
       enum: [company, lead, contact, deal, activity]
