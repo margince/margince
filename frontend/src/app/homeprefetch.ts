@@ -19,19 +19,25 @@ export function prefetchHome(client: QueryClient, params: UrlParams): void {
   if (addressFrom(params).view !== "morning") {
     return;
   }
-  const noted = (queryKey: QueryKey) => () => {
-    const query = client.getQueryCache().find({ queryKey, exact: true });
-    if (query?.state.dataUpdatedAt) {
-      notePrefetched(query.queryHash, query.state.dataUpdatedAt);
-    }
+  // Noted only when the call fetched. A prefetch also resolves on a fresh cache
+  // hit, and that answer is not one this load fetched.
+  const prefetched = (queryKey: QueryKey, fetch: () => Promise<void>) => {
+    const find = () => client.getQueryCache().find({ queryKey, exact: true });
+    const before = find()?.state.dataUpdateCount ?? 0;
+    void fetch().then(() => {
+      const query = find();
+      if (query && query.state.dataUpdateCount > before) {
+        notePrefetched(query.queryHash, query.state.dataUpdatedAt);
+      }
+    });
   };
   const day = worklistDayOptions("mine", "all");
-  void client.prefetchInfiniteQuery(day).then(noted(day.queryKey));
-  void client
-    .prefetchQuery(morningBriefOptions)
-    .then(noted(morningBriefOptions.queryKey));
-  void client.prefetchQuery(magicOptions).then(noted(magicOptions.queryKey));
-  void client
-    .prefetchInfiniteQuery(handledForYouOptions)
-    .then(noted(handledForYouOptions.queryKey));
+  prefetched(day.queryKey, () => client.prefetchInfiniteQuery(day));
+  prefetched(morningBriefOptions.queryKey, () =>
+    client.prefetchQuery(morningBriefOptions),
+  );
+  prefetched(magicOptions.queryKey, () => client.prefetchQuery(magicOptions));
+  prefetched(handledForYouOptions.queryKey, () =>
+    client.prefetchInfiniteQuery(handledForYouOptions),
+  );
 }
