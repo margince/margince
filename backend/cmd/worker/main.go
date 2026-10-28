@@ -140,11 +140,11 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// answers "still starting" until started.complete below, so coming up
 	// early never makes this replica look ready before it can work.
 	started := &bootGate{}
-	observe, err := startObserveListener(ctx, cfg, pool, rdb, started, logger)
-	if err != nil {
+	stopObserve, atHead, err := observeUntilAtHead(ctx, cfg, pool, rdb, started, logger)
+	defer stopObserve()
+	if err != nil || !atHead {
 		return err
 	}
-	defer observe.Stop()
 
 	//nolint:contextcheck // boot-time wiring: the model path outlives any request context (cmd/api resolves the same path under the same waiver)
 	modelPath, err := selectModelPath(ctx, workerModelPathSpec(cfg, bootstrap), pool, logger)
