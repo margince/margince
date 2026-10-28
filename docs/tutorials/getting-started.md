@@ -62,7 +62,7 @@ API behind it, so it is the only URL you need.
 Sign in as `admin@demo.test` with `operator-supplied-first-password` (from
 `config/margince-admin-password`). Those credentials exist only while `bootstrap_admin` is set
 in the settings file. If you claimed the installation on the setup screen instead, sign in with
-the email and password you entered there. The app asks you to set a new password
+the email and password you typed there. The app asks you to set a new password
 before any other step works. The rest of this page follows that cold path.
 
 `make seed-dev`, run against the running stack, is the short way past it. It
