@@ -13,9 +13,9 @@
 // see extmigrations_fixture_test.go.
 //
 // It is a fixture rather than a temp-dir string so a human can point the
-// generator at it: `cp -R fixtures/extensions/bad-unprefixed-table extensions/
-// && make composition` reproduces the refusal by hand. Nothing copies it in CI
-// (the extension lane copies crm-hello only), so the vanilla composed set never
+// generator at it: requiring it in instance/go.mod from its folder and running
+// `make composition` reproduces the refusal by hand. Nothing requires it in CI
+// (the extension lane requires crm-hello only), so the vanilla composed set never
 // sees it.
 package badunprefixedtable
 

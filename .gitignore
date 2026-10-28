@@ -30,9 +30,8 @@ coverage-extensions.out
 # `make fe-typecheck-composed`, never committed.
 /build/composition-frontend/
 # The versioned extensions an instance requires, copied out of the module cache
-# by gen-composition, and the list of every composed unit's folder.
+# by gen-composition.
 /build/extensions/
-/build/extensions.list
 
 /extensions/*
 !/extensions/.gitkeep
