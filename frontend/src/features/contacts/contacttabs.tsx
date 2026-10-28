@@ -1,6 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
-import { LatestInboundPanel } from "../../components/latestinbound";
+import {
+  type JustIn,
+  LatestInboundPanel,
+} from "../../components/latestinbound";
 import { CallAction } from "../../design-system/callaction";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
@@ -12,7 +15,6 @@ import { GroupedTimelineList } from "../../design-system/timeline";
 import { TimelineFilterBar } from "../../design-system/timelinefilterbar";
 import { groupChronology } from "../../design-system/timelinegroups";
 import { useLocale, useT } from "../../i18n";
-import type { LatestInbound } from "../../lib/latestinbound";
 import { useRecordZone } from "../../lib/recordzone";
 import { RecordHistoryTab } from "../records/history";
 import {
@@ -90,7 +92,7 @@ export function ContactLatestInbound({
   contactId,
   view,
 }: Readonly<{
-  latest: LatestInbound | undefined;
+  latest: JustIn | undefined;
   contactId: string;
   view: Contact360;
 }>) {

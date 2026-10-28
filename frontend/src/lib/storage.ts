@@ -56,6 +56,12 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "seat",
   },
+  // A "Just in" item a reader set aside with "Noticed", keyed by activity id.
+  latestInboundNoticed: {
+    prefix: "margince.latestInbound.noticed:",
+    area: "local",
+    lifetime: "seat",
+  },
   platformDeclined: {
     prefix: "margince.first-run.platform-declined:",
     area: "local",

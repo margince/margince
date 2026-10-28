@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useRoster } from "../../components/entityref";
-import { LatestInboundPanel } from "../../components/latestinbound";
+import {
+  type JustIn,
+  LatestInboundPanel,
+} from "../../components/latestinbound";
 import {
   hasTimelineFilters,
   useRecordTimeline,
@@ -13,7 +16,6 @@ import type {
 import { TimelineFilterBar } from "../../design-system/timelinefilterbar";
 import { groupChronology } from "../../design-system/timelinegroups";
 import { useLocale, useT } from "../../i18n";
-import type { LatestInbound } from "../../lib/latestinbound";
 import { useOpenEmail } from "../../lib/openemail";
 import { useRecordZone } from "../../lib/recordzone";
 import type { OpenReceipt } from "../records/record360";
@@ -252,7 +254,7 @@ export function useCitedReceipt() {
 export function CompanyLatestInbound({
   latest,
   companyId,
-}: Readonly<{ latest: LatestInbound | undefined; companyId: string }>) {
+}: Readonly<{ latest: JustIn | undefined; companyId: string }>) {
   return (
     <LatestInboundPanel
       latest={latest}

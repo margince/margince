@@ -6,7 +6,7 @@ The Overview tab puts recorded context and real work first. A new contact must n
 
 ## Reading order
 
-The newest thing the contact sent in the last 7 days that nobody has answered comes first, as the "Just in" panel (`frontend/src/components/latestinbound.tsx`). On the other tabs it is one line under the badges.
+The newest thing the contact sent in the last 7 days that nobody has answered comes first, as the "Just in" row (`frontend/src/components/latestinbound.tsx`). It is shaped like the Next bar. "Noticed" hides it in this browser. On the other tabs it is one line under the badges.
 
 After it, a moment that needs action, an open task or a promise still owed comes first. Otherwise the relationship brief comes first. When no brief exists, a plain line that states the recorded identity takes its place. Source and the date the record was created show beside the owner in the header. A failed brief has its own retry; a failure does not turn into an empty profile.
 

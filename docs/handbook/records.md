@@ -255,7 +255,7 @@ Margince has no notes of their own: a note is an activity. The kinds of activity
 To see everything that happened with a contact or company in Margince, open the record's **History** tab. **All** is one timeline of emails, meetings, calls, notes, tasks and messages. Field changes are listed under **Changes** alone.
 1. Under **Timeline filter**, pick **All**, **Threads** (email conversations) or **Changes**.
 2. Cut it down with **All kinds** (Email, Calls, Meetings, Notes…), **Search this timeline**, and **From** and **To** dates.
-A company's History also holds what reached it through its deals and the contacts who work there. A record's **Overview** tab opens with the newest thing someone sent in the last 7 days that nobody has answered. It shows as **New email**, **New message** or **New website form**, with **Reply**. On the other tabs it is one line under the record's name.
+A company's History also holds what reached it through its deals and the contacts who work there. A record's **Overview** tab opens with the newest thing someone sent in the last 7 days that nobody has answered. It shows as **New email**, **New message** or **New website form**, with **Reply**. **Noticed** hides it until you sign out, and on the other tabs it is one line under the record's name.
 Also called: timeline, activity log, customer history, interaction history, newest email.
 
 ### How do I log a note, call or meeting on a record?

@@ -6,7 +6,7 @@ import { FileText, Mail, MessageCircle } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Avatar } from "../design-system/atoms";
+import { Button } from "../design-system/atoms";
 import { Panel } from "../design-system/panel";
 import { activityAgo } from "../format/activitywhen";
 import { emailSummaryText } from "../format/emailtext";
@@ -22,6 +22,7 @@ import {
 } from "../lib/latestinbound";
 import { unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
+import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
 import "./latestinbound.css";
 
 type Activity = components["schemas"]["Activity"];
@@ -31,16 +32,25 @@ type Activity = components["schemas"]["Activity"];
 const RECENT_LIMIT = 50;
 const DAY_MS = 86_400_000;
 
+/** The item as a page holds it: `notice` sets it aside on this browser. */
+export type JustIn = LatestInbound & Readonly<{ notice?: () => void }>;
+
+function noticedKey(activityId: string) {
+  return { family: STORAGE_KEYS.latestInboundNoticed, member: activityId };
+}
+
 /**
  * The newest thing they sent on this record that nobody has answered, from
- * the last `JUST_IN_DAYS`. Keyed under the record's timeline key, so every
- * write that refreshes the timeline (a reply sent, a call logged) refreshes
- * this too.
+ * the last `JUST_IN_DAYS`, unless the reader pressed "Noticed" on it. Keyed
+ * under the record's timeline key, so every write that refreshes the timeline
+ * (a reply sent, a call logged) refreshes this too.
  */
 export function useLatestInbound(
   entityType: EntityKind,
   entityId: string,
-): LatestInbound | undefined {
+): JustIn | undefined {
+  // The ids set aside since mount; storage alone would not draw the page again.
+  const [noticed, setNoticed] = useState<ReadonlySet<string>>(new Set());
   // Fixed for the mount: a window that moved every render would be a new
   // query key every render.
   const [since] = useState(() =>
@@ -80,7 +90,19 @@ export function useLatestInbound(
   if (!waiting.isSuccess || !recent.isSuccess) {
     return undefined;
   }
-  return latestInbound(waiting.data.data?.[0], recent.data.data ?? []);
+  const latest = latestInbound(waiting.data.data?.[0], recent.data.data ?? []);
+  if (!latest) {
+    return undefined;
+  }
+  const id = latest.activity.id;
+  if (noticed.has(id) || readStored(noticedKey(id)) !== null) {
+    return undefined;
+  }
+  const notice = () => {
+    writeStored(noticedKey(id), "1");
+    setNoticed((ids) => new Set(ids).add(id));
+  };
+  return { ...latest, notice };
 }
 
 const KIND_ICON: Record<LatestInboundKind, ReactNode> = {
@@ -114,8 +136,17 @@ function itemWords(activity: Activity): {
   const raw = activity.body ?? "";
   const excerpt =
     summary?.preview ??
-    (activity.kind === "email" ? emailSummaryText(raw) : raw.trim());
+    (activity.kind === "email" ? emailSummaryText(raw) : oneLine(raw));
   return { subject, excerpt: excerpt || undefined };
+}
+
+// A form's note is one answer per line; the row reads them as one line.
+function oneLine(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join(" · ");
 }
 
 function When({ activity }: Readonly<{ activity: Activity }>) {
@@ -136,57 +167,54 @@ function When({ activity }: Readonly<{ activity: Activity }>) {
 }
 
 /**
- * "Just in": the newest unanswered thing they sent, as the lead panel at the
- * top of a record's Overview. `actions` draws the verbs for it, the same ones
- * the record's timeline offers on that row. So the panel and the row cannot
- * disagree about what may be done with it.
+ * "Just in": the newest unanswered thing they sent, as one row at the top of
+ * a record's Overview. It is laid out like the Next bar under it. `actions` draws
+ * the verbs the record's timeline offers on that row, so the two agree.
  */
 export function LatestInboundPanel({
   latest,
   actions,
 }: Readonly<{
-  latest: LatestInbound | undefined;
+  latest: JustIn | undefined;
   actions?: (activity: Activity) => ReactNode;
 }>) {
   const t = useT();
   if (!latest) {
     return null;
   }
-  const { activity, kind } = latest;
+  const { activity, kind, notice } = latest;
   const { subject, excerpt } = itemWords(activity);
   const sender = activity.email_summary?.counterparty?.trim();
-  const senderId = activity.email_summary?.counterparty_contact_id;
+  const words = excerpt !== subject ? excerpt : undefined;
   return (
-    <Panel
-      tone="accent"
-      title={
-        <span className="latest-title">
-          {KIND_ICON[kind]}
-          {kindLabel(kind, t)}
+    <Panel tone="accent">
+      <div className="latest-row">
+        <span className="latest-label">
+          <span className="latest-kind">
+            {KIND_ICON[kind]}
+            {kindLabel(kind, t)}
+          </span>
           <When activity={activity} />
         </span>
-      }
-      actions={actions?.(activity)}
-    >
-      <div className="latest-body">
-        {sender && (
-          <span className="latest-sender">
-            <Avatar name={sender} identity={senderId ?? sender} />
-            {sender}
-          </span>
-        )}
-        {subject && <p className="latest-subject">{subject}</p>}
-        {excerpt && excerpt !== subject && (
-          <p
-            className={
-              kind === "web_form"
-                ? "latest-excerpt latest-form"
-                : "latest-excerpt"
-            }
-          >
-            {excerpt}
-          </p>
-        )}
+        <span className="latest-rule" aria-hidden="true" />
+        <div className="latest-body">
+          {subject && <span className="latest-subject">{subject}</span>}
+          {(sender || words) && (
+            <span className="latest-excerpt">
+              {sender && <span className="latest-sender">{sender}</span>}
+              {sender && words ? " · " : null}
+              {words}
+            </span>
+          )}
+        </div>
+        <div className="latest-verbs">
+          {actions?.(activity)}
+          {notice && (
+            <Button variant="ghost" onClick={notice}>
+              {t("latest.noticed")}
+            </Button>
+          )}
+        </div>
       </div>
     </Panel>
   );
@@ -200,7 +228,7 @@ export function LatestInboundLine({
   latest,
   onOpen,
 }: Readonly<{
-  latest: LatestInbound | undefined;
+  latest: JustIn | undefined;
   onOpen: () => void;
 }>) {
   const t = useT();

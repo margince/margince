@@ -1,59 +1,71 @@
-/* "Just in": the newest unanswered thing they sent. The panel leads a record's
-   Overview in the accent tone; the line is the same item in the record's head,
-   for the tabs that do not draw the panel. */
+/* "Just in": the newest unanswered thing they sent. On a record's Overview it
+   is one row shaped like the Next bar under it, in the accent tint; the line
+   is the same item in the record's head, for the other tabs. */
 
-.latest-title {
+.latest-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-5);
+  background: var(--accentLight);
+}
+.latest-label {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  gap: var(--space-1);
+}
+.latest-kind {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  font: var(--fontHeadingXSmall);
+  color: var(--accentText);
+  white-space: nowrap;
 }
-.latest-title svg {
-  inline-size: 16px;
-  block-size: 16px;
+.latest-kind svg {
+  inline-size: 14px;
+  block-size: 14px;
 }
 .latest-when {
   font: var(--fontBodySmall);
   color: var(--textSecondary);
 }
-
+.latest-rule {
+  align-self: stretch;
+  inline-size: 1px;
+  background: var(--accentMed);
+}
 .latest-body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-4) var(--space-5);
+  gap: var(--space-1);
+  flex: 1 1 280px;
   min-inline-size: 0;
 }
-.latest-sender {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font: var(--fontBodySmall);
-  color: var(--textSecondary);
-}
 .latest-subject {
-  margin: 0;
   font: var(--fontHeadingSmall);
   color: var(--textPrimary);
   overflow-wrap: anywhere;
 }
 .latest-excerpt {
-  margin: 0;
   font: var(--fontBody);
   color: var(--textSecondary);
-  max-inline-size: 72ch;
-  overflow-wrap: anywhere;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-/* A form's note is the visitor's message over one answer per line, so the
-   lines are kept and a few more of them shown. */
-.latest-form {
-  white-space: pre-line;
-  -webkit-line-clamp: 4;
-  line-clamp: 4;
+.latest-sender {
+  color: var(--textPrimary);
+}
+.latest-verbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+  max-width: 100%;
 }
 
 .latest-line {

@@ -11,7 +11,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import type { components } from "../../api/schema";
-import { LatestInboundPanel } from "../../components/latestinbound";
+import {
+  type JustIn,
+  LatestInboundPanel,
+} from "../../components/latestinbound";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
   useRecordTimeline,
@@ -20,7 +23,6 @@ import {
 import { GroupedTimelineList } from "../../design-system/timeline";
 import { groupChronology } from "../../design-system/timelinegroups";
 import { useLocale, useT } from "../../i18n";
-import type { LatestInbound } from "../../lib/latestinbound";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { useRecordZone } from "../../lib/recordzone";
 import { RecordHistoryTab, useFieldHistory } from "../records/history";
@@ -166,7 +168,7 @@ export function LeadHistoryTab({
 export function LeadLatestInbound({
   latest,
   leadId,
-}: Readonly<{ latest: LatestInbound | undefined; leadId: string }>) {
+}: Readonly<{ latest: JustIn | undefined; leadId: string }>) {
   return (
     <LatestInboundPanel
       latest={latest}

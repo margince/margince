@@ -10,7 +10,10 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import type { components } from "../../../api/schema";
-import { LatestInboundPanel } from "../../../components/latestinbound";
+import {
+  type JustIn,
+  LatestInboundPanel,
+} from "../../../components/latestinbound";
 import { Panel, PanelBody } from "../../../design-system/panel";
 import {
   useRecordTimeline,
@@ -20,7 +23,6 @@ import { GroupedTimelineList } from "../../../design-system/timeline";
 import { TimelineFilterBar } from "../../../design-system/timelinefilterbar";
 import { groupChronology } from "../../../design-system/timelinegroups";
 import { useLocale, useT } from "../../../i18n";
-import type { LatestInbound } from "../../../lib/latestinbound";
 import { invalidateRecord } from "../../../lib/recordwritekeys";
 import { useRecordZone } from "../../../lib/recordzone";
 import { RecordHistoryTab } from "../../records/history";
@@ -157,7 +159,7 @@ export function DealHistoryTab({
 export function DealLatestInbound({
   latest,
   dealId,
-}: Readonly<{ latest: LatestInbound | undefined; dealId: string }>) {
+}: Readonly<{ latest: JustIn | undefined; dealId: string }>) {
   return (
     <LatestInboundPanel
       latest={latest}

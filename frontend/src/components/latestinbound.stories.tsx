@@ -82,7 +82,7 @@ export const Email: Story = {
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
         <LatestInboundPanel
-          latest={{ activity: mail, kind: "email" }}
+          latest={{ activity: mail, kind: "email", notice: () => undefined }}
           actions={verbs}
         />
       </div>
@@ -96,7 +96,7 @@ export const WebForm: Story = {
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
         <LatestInboundPanel
-          latest={{ activity: form, kind: "web_form" }}
+          latest={{ activity: form, kind: "web_form", notice: () => undefined }}
           actions={verbs}
         />
       </div>
@@ -109,7 +109,7 @@ export const Message: Story = {
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
         <LatestInboundPanel
-          latest={{ activity: chat, kind: "message" }}
+          latest={{ activity: chat, kind: "message", notice: () => undefined }}
           actions={verbs}
         />
       </div>
@@ -138,7 +138,7 @@ export const HeadLine: Story = {
     <StoryProviders>
       <div style={{ maxWidth: 300 }}>
         <LatestInboundLine
-          latest={{ activity: mail, kind: "email" }}
+          latest={{ activity: mail, kind: "email", notice: () => undefined }}
           onOpen={() => {}}
         />
       </div>

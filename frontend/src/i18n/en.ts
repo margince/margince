@@ -3284,6 +3284,7 @@ export const en = {
   "latest.kind.message": "New message",
   "latest.kind.webForm": "New website form",
   "latest.line.open": "{kind}: show it on the Overview",
+  "latest.noticed": "Noticed",
   "standing.next.label": "Next",
   "standing.next.none": "Nothing is due next.",
   "standing.next.snooze": "Snooze",

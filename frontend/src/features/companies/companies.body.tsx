@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import type { JustIn } from "../../components/latestinbound";
 import { RecordTeam } from "../../components/recordteam";
 import type { useTaskUpdate } from "../../components/taskactions";
 import { EmptyState } from "../../design-system/atoms";
@@ -6,7 +7,6 @@ import { liveProjects } from "../../design-system/projectpicker";
 import type { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import type { CompanyTab } from "../../lib/companytab";
-import type { LatestInbound } from "../../lib/latestinbound";
 import { useRecordZone } from "../../lib/recordzone";
 import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { ComposeModal } from "../mail/compose";
@@ -126,7 +126,7 @@ export function CompanyRecordBody({
   // The page's one sentence about why this account takes no changes, by id,
   // for the profile tab's relationship edges.
   refusedReasonId?: string;
-  latest?: LatestInbound;
+  latest?: JustIn;
 }>) {
   // The anchor the composer is drawn from, kept after `composing` clears. The
   // drawer stays mounted to animate out, and dropping the anchor on close would

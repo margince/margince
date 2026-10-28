@@ -3301,6 +3301,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "latest.kind.message": "Neue Nachricht",
   "latest.kind.webForm": "Neues Website-Formular",
   "latest.line.open": "{kind}: in der Übersicht zeigen",
+  "latest.noticed": "Gesehen",
   "standing.next.label": "Nächstes",
   "standing.next.none": "Als Nächstes ist nichts fällig.",
   "standing.next.snooze": "Später",
