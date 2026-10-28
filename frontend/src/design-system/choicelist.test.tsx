@@ -261,6 +261,37 @@ describe("ChoiceList groups", () => {
   });
 });
 
+describe("ChoiceList tiles", () => {
+  it("keeps a real radio under each tile, so a press on the tile answers", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <ChoiceList
+        legend="Where is your form?"
+        layout="tiles"
+        value="site"
+        choices={[
+          {
+            value: "site" as const,
+            label: "Your website",
+            description: "Posts",
+          },
+          { value: "hook" as const, label: "Webhook", description: "Signed" },
+        ]}
+        onChange={onChange}
+      />,
+    );
+
+    await user.click(screen.getByText("Webhook"));
+    expect(onChange).toHaveBeenLastCalledWith("hook");
+    // The tick is drawn, never read: the radio's own checked state says it.
+    expect(
+      screen.getByRole("radio", { name: /Your website/ }).matches(":checked"),
+    ).toBe(true);
+    expect(screen.queryByRole("img")).toBeNull();
+  });
+});
+
 describe("ChoiceList multiple", () => {
   it("draws checkboxes in one group named by the legend", () => {
     render(<Services initial={["mail"]} onChange={() => {}} />);

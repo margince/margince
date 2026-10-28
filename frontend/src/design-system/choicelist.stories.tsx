@@ -283,6 +283,30 @@ export const GroupedCardsDark: Story = {
   globals: { theme: "dark" },
 };
 
+function TilesLive() {
+  const [value, setValue] = useState<"" | "site" | "server" | "webhook">(
+    "site",
+  );
+  return (
+    <ChoiceList
+      legend="Where is your form?"
+      layout="tiles"
+      value={value}
+      choices={SOURCES}
+      onChange={setValue}
+    />
+  );
+}
+
+// Compact tiles picked by sight: a mark in a square, the name, one short line,
+// and a tick on the chosen tile. Groups share one row.
+export const Tiles: Story = { render: () => <TilesLive /> };
+export const TilesDark: Story = { ...Tiles, globals: { theme: "dark" } };
+export const TilesPhone: Story = {
+  ...Tiles,
+  globals: { viewport: { value: "phone" } },
+};
+
 function LinkLive() {
   const [value, setValue] = useState<"classified" | "held" | "shared">(
     "classified",

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { Check } from "lucide-react";
 import { Fragment, type ReactNode, useId } from "react";
 import { Checkbox, Radio } from "./atoms";
 import "./choicelist.css";
@@ -108,8 +109,13 @@ type Question<Value extends string> = Readonly<{
    * rather than settings: a platform, a vendor, a plan. It is where `mark`
    * earns its place, because a plate is big enough to be recognised before it
    * is read.
+   *
+   * `tiles` is `cards` made compact, for five or so options picked by sight.
+   * A tile is a mark in a square, the name and one short line. A tick marks
+   * the chosen tile in place of a radio. Anything longer than the line
+   * belongs under the question, said once for the chosen answer.
    */
-  layout?: "stack" | "row" | "cards";
+  layout?: "stack" | "row" | "cards" | "tiles";
   /** Layout the surrounding form owns — the margin its own rhythm expects. It
    * lands on the fieldset, which is the only element a caller can position. */
   className?: string;
@@ -137,7 +143,7 @@ export function ChoiceList<Value extends string>(
       name,
       value: choice.value,
       disabled: disabled || choice.disabled,
-      label: <ChoiceText choice={choice} />,
+      label: <ChoiceText choice={choice} tick={layout === "tiles"} />,
     };
     if (props.multiple === true) {
       const { value, onChange } = props;
@@ -191,7 +197,11 @@ export function ChoiceList<Value extends string>(
             {run.choices.map(answer)}
           </Fragment>
         ) : (
-          <ChoiceGroup key={run.choices[0]?.value} label={run.group}>
+          <ChoiceGroup
+            key={run.choices[0]?.value}
+            label={run.group}
+            size={run.choices.length}
+          >
             {run.choices.map(answer)}
           </ChoiceGroup>
         ),
@@ -202,9 +212,15 @@ export function ChoiceList<Value extends string>(
 
 function ChoiceText<Value extends string>({
   choice,
-}: Readonly<{ choice: Choice<Value> }>) {
+  tick,
+}: Readonly<{ choice: Choice<Value>; tick: boolean }>) {
   return (
     <span className="choicelist-text">
+      {tick && (
+        <span className="choicelist-tick" aria-hidden="true">
+          <Check />
+        </span>
+      )}
       {choice.mark === undefined ? null : (
         <span className="choicelist-mark" aria-hidden="true">
           {choice.mark}
@@ -242,10 +258,13 @@ function runsOf<Value extends string>(
 // the outer question's name.
 function ChoiceGroup({
   label,
+  size,
   children,
-}: Readonly<{ label: string; children: ReactNode }>) {
+}: Readonly<{ label: string; size: number; children: ReactNode }>) {
+  // Grown by its count, so in `tiles` groups of three and two share one row
+  // with tiles of one width. Other layouts give each group the full row.
   return (
-    <fieldset className="choicelist-group">
+    <fieldset className="choicelist-group" style={{ flexGrow: size }}>
       <legend className="choicelist-group-label t-eyebrow">{label}</legend>
       <div className="choicelist-group-choices">{children}</div>
     </fieldset>
