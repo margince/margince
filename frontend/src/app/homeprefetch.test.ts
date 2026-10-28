@@ -3,12 +3,13 @@
 
 import { afterEach, expect, it, vi } from "vitest";
 import { morningBriefOptions } from "../features/brief/brief.queries";
+import { quietRun } from "../testing/brief.fixtures";
 import { prefetchHome } from "./homeprefetch";
 import { createQueryClient, liveOnMount } from "./queryclient";
 
 afterEach(() => vi.restoreAllMocks());
 
-const brief = { generated_at: "2026-10-28T06:00:00Z", items: [] };
+const brief = quietRun;
 
 function briefQuery(client: ReturnType<typeof createQueryClient>) {
   const query = client
