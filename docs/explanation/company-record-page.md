@@ -439,8 +439,8 @@ slot.
 ### The installation's second mark
 
 The record above shows one picture. The installation's own company stores two. The sidebar head draws
-only a **square icon**, open or closed, because a wordmark scaled into its `40px` square is a row of lines
-nobody can read. The wide lockup is kept for the places that draw a company at full width.
+only a **square icon**, open or closed. A wordmark scaled into its `40px` square is a row of lines nobody
+can read. The wide lockup is kept for the places that draw a company as a full lockup.
 
 The icon is a second pair of columns on the same row (`logo_icon_object_key`, `logo_icon_origin`). It is
 read back as `CompanyProfile.logo_icon_url`, and served from `GET /companies/{id}/logo/icon` under the
@@ -468,9 +468,9 @@ The badge chain runs first. The lane runs under one deadline, and a slow lockup 
 company its square mark.
 
 When no lockup resolves, the badge fills the wide slot, and the icon slot stays empty. When the lockup is
-itself square, or the best mark of the chain is not, no badge is stored either. The sidebar head measures
-the wide mark when the icon slot is empty and draws it if it is square, so a second copy would be bytes
-stored for nothing.
+itself square, or the best mark of the chain is not, no badge is stored either. When the icon slot is empty,
+the sidebar head measures the wide mark and draws it if it is square. A second copy would be bytes stored
+for nothing.
 
 Both marks wait on the dossier (`site_read.logo_object_key`, `site_read.logo_icon_object_key`). The
 confirm binds each to its slot on the record, slot by slot, under the rule that a human's choice wins.
