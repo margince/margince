@@ -50282,8 +50282,8 @@ components:
       type: object
       required: [subject, body, to]
       properties:
-        subject: { type: string }
-        body: { type: string, description: The (possibly edited) final body that is sent. }
+        subject: { type: string, description: The subject line. Blank or only white space is refused with 422 `required`. }
+        body: { type: string, description: The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`. }
         html_body:
           type: [string, 'null']
           description: |
@@ -50863,8 +50863,8 @@ components:
         One account-started send. It is SendEmailRequest plus the `links` an anchor would
         otherwise have supplied — the records this new conversation belongs to.
       properties:
-        subject: { type: string }
-        body: { type: string, description: The (possibly edited) final body that is sent. }
+        subject: { type: string, description: The subject line. Blank or only white space is refused with 422 `required`. }
+        body: { type: string, description: The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`. }
         html_body:
           type: [string, 'null']
           description: |
