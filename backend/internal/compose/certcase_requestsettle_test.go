@@ -11,18 +11,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 )
 
-// The thing owed may be named in more than one way, and each names it.
-//
-// The check was one lowered substring. An Angebot asked for in a German thread
-// came back as "Angebot für die zweite Charge schicken" from one model, as
-// "Send offer for the second batch" from another and as "Send the quote" from a
-// third — three honest names for one document — and whichever single token the
-// scenario pinned marked the other two wrong.
-//
-// This is not the "accept either finding" relaxation that account_scan did NOT
-// want: there the two answers were different FINDINGS and picking between them
-// was the thing under test. Here they are the same finding under different
-// words.
+// The thing owed may be named in more than one way, and each names it. These
+// are one finding under different words, not two findings to pick between.
 func TestRemainingMayBeNamedInSeveralRenderings(t *testing.T) {
 	t.Parallel()
 	const accepted = "angebot|offer|quote"
