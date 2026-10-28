@@ -135,7 +135,7 @@ func writeUnit(t *testing.T, root, name string, files map[string]string) {
 // requireUnit adds extensions/<name> to the root's instance go.mod.
 func requireUnit(t *testing.T, root, name string) {
 	t.Helper()
-	goMod := filepath.Join(root, defaultInstanceDir, "go.mod")
+	goMod := filepath.Join(root, instanceDirName, "go.mod")
 	raw, err := os.ReadFile(goMod)
 	if os.IsNotExist(err) {
 		raw, err = []byte("module example.test/instance\n"), os.MkdirAll(filepath.Dir(goMod), 0o755)

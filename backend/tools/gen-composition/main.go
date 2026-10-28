@@ -37,7 +37,6 @@ var (
 	rootPath     = flag.String("root", "..", "repository root (the directory holding extensions/ and build/)")
 	verify       = flag.Bool("verify", false, "regenerate in memory and compare against composition.json and the files on disk; write nothing")
 	verifyInputs = flag.Bool("verify-inputs", false, "recompute input digests only and compare against composition.json; write nothing")
-	instanceDir  = flag.String("instance", "", "the instance whose go.mod lists the extensions to compose (default: this repository's instance/)")
 )
 
 // genMode is the tool's three mutually exclusive operations; when both
