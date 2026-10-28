@@ -185,15 +185,9 @@ func readCaseMembers(ctx context.Context, tx pgx.Tx, memberIDs []ids.UUID) ([]ca
 	if err != nil {
 		return nil, err
 	}
-	asked := len(args)
 	employer, err := orderByCurrentEmployer(ctx, arg)
 	if err != nil {
 		return nil, err
-	}
-	if employer == noEmployer {
-		// A reader refused the employer reads none, and an argument bound for a
-		// clause that was dropped has no type Postgres can infer.
-		args = args[:asked]
 	}
 	members := arg(memberIDs)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
