@@ -3612,6 +3612,20 @@ export const en = {
   "co.next.title": "Tasks",
   "co.next.empty": "No open tasks for this company.",
   "co.next.overdue": "Overdue",
+  "deal.commitments.title": "Customer commitments",
+  "deal.commitments.empty":
+    "The customer has no open commitments on this deal.",
+  "deal.commitments.denied":
+    "You cannot read the customer’s commitments: they quote contacts and messages you have no access to.",
+  "deal.commitments.incomplete":
+    "Some commitments are left out because you cannot read their contact or message.",
+  "deal.commitments.more":
+    "Showing the 25 most urgent commitments; more are open.",
+  "deal.commitments.source": "Open message",
+  "deal.commitments.overdue": "Overdue: did it happen?",
+  "deal.commitments.done": "Done",
+  "deal.commitments.noLongerTrue": "No longer true",
+  "deal.commitments.differs": "Differs from the deal value ({amount})",
   "co.next.due": "Due {when}",
   "co.next.undated": "No due date",
   "co.next.col.task": "Task",
@@ -15283,6 +15297,8 @@ export const en = {
   "contact.memory.channelTask": "Task",
   "contact.memory.replied": "Replied",
   "contact.memory.unanswered": "Unanswered",
+  "contact.memory.view": "View",
+  "contact.memory.viewEntry": "View {title}",
 
   "contact.mayBeDone.notYet": "Not yet",
   "contact.rail.blocked": "Blocked",
@@ -16983,6 +16999,15 @@ export const en = {
   "worklist.verb.dismissUndo": "Undo",
   "worklist.verb.dismissFailed": "Contact was not set aside. Retry.",
   "worklist.verb.dismissUndoFailed": "Contact was not restored. Retry.",
+  "worklist.verb.stopFollowing": "Stop following",
+  "worklist.verb.stopped": "Stopped following this contact",
+  "worklist.verb.dismissAll": "Dismiss all shown",
+  "worklist.verb.dismissedAll": "Contacts set aside for a month",
+  "worklist.verb.dismissAllFailed": "Contacts were not set aside. Retry.",
+  // The reader's own choice, so "you": a colleague's choice never shows here.
+  "contact.follow.stopped": "You stopped following this contact.",
+  "contact.follow.setAside": "You set this contact aside until {date}.",
+  "contact.follow.resume": "Resume following",
   "worklist.verb.completeUndo": "Undo",
   "worklist.verb.completeUndoFailed": "Task was not reopened. Retry.",
   // The frame states the fact and the source follows it, rather than the

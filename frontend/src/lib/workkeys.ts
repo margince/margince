@@ -4,6 +4,9 @@ export const worklistKey = ["worklist"] as const;
 export const magicKey = ["magic"] as const;
 export const briefKey = ["brief"] as const;
 export const digestKey = ["digest"] as const;
+// The reader's own set-aside or stop on a quiet contact. The Worklist writes
+// it and the contact page reads it, so both features key on this one prefix.
+export const nudgeDismissalKey = ["nudge-dismissal"] as const;
 
 export async function invalidateHandledChange(
   client: QueryClient,

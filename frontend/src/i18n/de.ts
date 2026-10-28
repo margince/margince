@@ -3623,6 +3623,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.next.title": "Aufgaben",
   "co.next.empty": "Keine offenen Aufgaben zu diesem Unternehmen.",
   "co.next.overdue": "\u00dcberfällig",
+  "deal.commitments.title": "Zusagen des Kunden",
+  "deal.commitments.empty":
+    "Der Kunde hat zu diesem Deal keine offenen Zusagen.",
+  "deal.commitments.denied":
+    "Du kannst die Zusagen des Kunden nicht lesen, weil du keinen Zugriff auf die zitierten Kontakte und Nachrichten hast.",
+  "deal.commitments.incomplete":
+    "Einige Zusagen fehlen, weil du ihren Kontakt oder ihre Nachricht nicht lesen darfst.",
+  "deal.commitments.more":
+    "Die 25 dringendsten Zusagen werden gezeigt; weitere sind offen.",
+  "deal.commitments.source": "Nachricht öffnen",
+  "deal.commitments.overdue": "Überfällig: Ist es passiert?",
+  "deal.commitments.done": "Erledigt",
+  "deal.commitments.noLongerTrue": "Gilt nicht mehr",
+  "deal.commitments.differs": "Weicht vom Deal-Wert ab ({amount})",
   "co.next.due": "Fällig {when}",
   "co.next.undated": "Kein Fälligkeitsdatum",
   "co.next.col.task": "Aufgabe",
@@ -15357,6 +15371,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.memory.channelTask": "Aufgabe",
   "contact.memory.replied": "Beantwortet",
   "contact.memory.unanswered": "Unbeantwortet",
+  "contact.memory.view": "Ansehen",
+  "contact.memory.viewEntry": "{title} ansehen",
 
   "contact.mayBeDone.notYet": "Noch nicht",
   "contact.rail.blocked": "Blockiert",
@@ -17084,6 +17100,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Kontakt konnte nicht zurückgestellt werden. Bitte versuche es erneut.",
   "worklist.verb.dismissUndoFailed":
     "Der Kontakt konnte nicht wiederhergestellt werden. Bitte versuche es erneut.",
+  "worklist.verb.stopFollowing": "Nicht mehr verfolgen",
+  "worklist.verb.stopped": "Kontakt wird nicht mehr verfolgt",
+  "worklist.verb.dismissAll": "Alle angezeigten zurückstellen",
+  "worklist.verb.dismissedAll": "Kontakte für einen Monat zurückgestellt",
+  "worklist.verb.dismissAllFailed":
+    "Die Kontakte konnten nicht zurückgestellt werden. Bitte versuche es erneut.",
+  "contact.follow.stopped": "Du verfolgst diesen Kontakt nicht mehr.",
+  "contact.follow.setAside":
+    "Du hast diesen Kontakt bis {date} zurückgestellt.",
+  "contact.follow.resume": "Wieder verfolgen",
   "worklist.verb.completeUndo": "Rückgängig",
   "worklist.verb.completeUndoFailed":
     "Die Aufgabe konnte nicht wieder geöffnet werden. Bitte versuche es erneut.",
