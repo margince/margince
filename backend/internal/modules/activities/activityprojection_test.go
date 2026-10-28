@@ -24,6 +24,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -333,15 +334,13 @@ func stringOf[T ~string](v *T) *string {
 // arity error somewhere else, at a call site that has nothing to do with the
 // omission.
 func TestTheSelectListAndTheScanAgreeOnLength(t *testing.T) {
-	// A contentArm with no comma in it, so the count below is the projection's
-	// commas and not the predicate's.
-	columns := activityColumns("true")
+	columns := activityColumns("coalesce(a.audience = 'workspace', false)")
 	dests := activityScanTargets(&activityScan{})
 	if len(dests) != len(activityProjection) {
 		t.Fatalf("the scan asks for %d destinations and the projection declares %d columns",
 			len(dests), len(activityProjection))
 	}
-	rendered := strings.Split(columns, ", ")
+	rendered := gatekit.SplitSQLList(columns)
 	if len(rendered) != len(activityProjection) {
 		t.Errorf("the select list renders %d columns and the projection declares %d — pgx scans "+
 			"the row the LIST asked for, so a column declared and not rendered is a scan that "+
