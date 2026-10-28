@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 9 |
 | Tool catalog | 134.0 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 35202 |
+| Approx. wire tokens | 35201 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -92,7 +92,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1017 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 590 |
-| [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 614 |
+| [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 613 |
 | [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 469 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1014 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 593 |
@@ -7304,7 +7304,7 @@ requires passport scope "write".)
       "type": "string"
     },
     "member_ids": {
-      "description": "The contacts of one case that are one person; leave out with candidate_id",
+      "description": "The contacts of one case to merge into one; leave out with candidate_id",
       "items": {
         "format": "uuid",
         "type": "string"

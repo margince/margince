@@ -10,16 +10,16 @@
   "totals": {
     "tools": 38,
     "resources": 9,
-    "tool_catalog_bytes": 137267,
+    "tool_catalog_bytes": 137265,
     "resource_catalog_bytes": 3541,
-    "approx_wire_tokens_total": 35202,
+    "approx_wire_tokens_total": 35201,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
       "description_bytes": 34271,
-      "input_schema_bytes": 65628,
+      "input_schema_bytes": 65626,
       "output_schema_bytes": 28225,
-      "description_plus_input_schema_bytes": 99899
+      "description_plus_input_schema_bytes": 99897
     }
   },
   "tools": {
@@ -6706,7 +6706,7 @@
               "type": "string"
             },
             "member_ids": {
-              "description": "The contacts of one case that are one person; leave out with candidate_id",
+              "description": "The contacts of one case to merge into one; leave out with candidate_id",
               "items": {
                 "format": "uuid",
                 "type": "string"

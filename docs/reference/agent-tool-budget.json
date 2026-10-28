@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 38,
     "system_frame_tokens": 592,
-    "tokens": 24018,
+    "tokens": 24017,
     "median_tool_tokens": 535,
     "mean_tool_tokens": 631
   },
@@ -141,7 +141,7 @@
     },
     {
       "name": "resolve_duplicates",
-      "tokens": 614
+      "tokens": 613
     },
     {
       "name": "update_record",

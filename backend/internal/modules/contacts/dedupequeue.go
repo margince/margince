@@ -101,9 +101,12 @@ type DedupeCandidateRow struct {
 // DedupeQueueInput filters one list page.
 type DedupeQueueInput struct {
 	Status     string // open (default) | merged | not_a_duplicate
-	EntityType string // "" = both
-	Cursor     string
-	Limit      int
+	EntityType string // "" = every type, or EntityTypes when set
+	// EntityTypes narrows an unfiltered read to these types, in the query, so
+	// a page and the count beside it answer the same set.
+	EntityTypes []string
+	Cursor      string
+	Limit       int
 }
 
 const (
@@ -161,6 +164,23 @@ func decodeDedupeCursor(token string) (dedupeCursor, error) {
 	return c, nil
 }
 
+// requireDedupeReadOf gates a read narrowed to some record types on those
+// types alone.
+func requireDedupeReadOf(ctx context.Context, entityTypes []string) error {
+	if len(entityTypes) == 0 {
+		return requireDedupeRead(ctx, "")
+	}
+	for _, entityType := range entityTypes {
+		if entityType == "" {
+			return &DedupeInputError{Field: "entity_type", Msg: "must name a record type"}
+		}
+		if err := requireDedupeRead(ctx, entityType); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // requireDedupeRead gates the queue read on the entities it exposes: the
 // unfiltered queue shows both record types, so it needs both reads.
 func requireDedupeRead(ctx context.Context, entityType string) error {
@@ -191,7 +211,10 @@ func requireDedupeWrite(ctx context.Context, entityType string) error {
 
 // ListDedupeCandidates pages the queue, confidence-sorted (AC-dedupe-1).
 func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) ([]DedupeCandidateRow, string, error) {
-	if err := requireDedupeRead(ctx, in.EntityType); err != nil {
+	if in.EntityType != "" {
+		in.EntityTypes = []string{in.EntityType}
+	}
+	if err := requireDedupeReadOf(ctx, in.EntityTypes); err != nil {
 		return nil, "", err
 	}
 	if in.Status == "" {
@@ -236,9 +259,8 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 	if visClause != "" {
 		query += " AND " + visClause
 	}
-	if in.EntityType != "" {
-		args = append(args, in.EntityType)
-		query += fmt.Sprintf(" AND entity_type = $%d", len(args))
+	if len(in.EntityTypes) > 0 {
+		query += fmt.Sprintf(" AND entity_type = ANY($%d)", arg(in.EntityTypes))
 	}
 	if in.Cursor != "" {
 		cur, err := decodeDedupeCursor(in.Cursor)
@@ -291,19 +313,24 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 // badge and the list answering the same question: a count that disagreed with
 // the page under it would send a reader looking for rows that were never
 // theirs.
-func (s *Store) CountOpenDedupeCandidates(ctx context.Context) (int, error) {
-	if err := requireDedupeRead(ctx, ""); err != nil {
+//
+// Entity types narrow it as they narrow the list; none counts every type.
+func (s *Store) CountOpenDedupeCandidates(ctx context.Context, entityTypes ...string) (int, error) {
+	if err := requireDedupeReadOf(ctx, entityTypes); err != nil {
 		return 0, err
 	}
 	query := `SELECT count(*) FROM dedupe_candidate WHERE disposition = $1 AND archived_at IS NULL`
 	args := []any{dispositionOpen}
-	visClause, err := dedupeVisibilityClause(ctx,
-		func(v any) int { args = append(args, v); return len(args) }, true)
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	visClause, err := dedupeVisibilityClause(ctx, arg, true)
 	if err != nil {
 		return 0, err
 	}
 	if visClause != "" {
 		query += " AND " + visClause
+	}
+	if len(entityTypes) > 0 {
+		query += fmt.Sprintf(" AND entity_type = ANY($%d)", arg(entityTypes))
 	}
 	var open int
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {

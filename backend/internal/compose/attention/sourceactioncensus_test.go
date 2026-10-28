@@ -72,6 +72,9 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// guard: the Keep buttons ask for `merge`, and the "Not the same" line asks
 	// for `dismiss`. A pair no merge would accept still carries the second.
 	"dedupe_candidate": {"merge", "dismiss", "open"},
+	// Reviewed in the case modal the row's own button opens (worklist.contactcase.tsx),
+	// which reads the case and not the row's verbs.
+	"contact_case": {},
 	// Answered by SuggestionDecision in worklist.suggestion.tsx: `decide` opens
 	// the deal it proposes, `dismiss` records that it is not one, and `open`
 	// reaches the company through the routing table.
@@ -331,7 +334,8 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 		// just as easy to leave out of a fixture.
 		WithNoticeCases(&stubNoticeCases{rows: []NoticeCase{{
 			ID: ids.NewV7(), ContactID: ids.NewV7(), Rule: "art14", DueAt: readInstant,
-		}}})).
+		}}}),
+		WithContactCases(&stubContactCases{cases: []ContactCase{aContactCase(ids.NewV7())}})).
 		WithUndelivered(&stubUndelivered{rows: []ParkedSend{{
 			ID: ids.NewV7(), Subject: "a send that never left",
 			Reason: "the address bounced twice", ParkedAt: readInstant,

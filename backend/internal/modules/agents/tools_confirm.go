@@ -371,7 +371,7 @@ func (t mergeRecords) Spec() mcp.ToolSpec {
 			"source_id":{"type":"string","format":"uuid","description":"The record merged away (archived, redirected to the survivor)"},
 			"target_id":{"type":"string","format":"uuid","description":"The surviving record everything relinks to"},
 			"contact_id":{"type":"string","format":"uuid","description":"Any member of a contact case, to merge the case instead of a pair"},
-			"member_ids":{"type":"array","items":{"type":"string","format":"uuid"},"description":"The case members that are one person, survivor included"},
+			"member_ids":{"type":"array","items":{"type":"string","format":"uuid"},"description":"The case members to merge into one contact, survivor included"},
 			"survivor_id":{"type":"string","format":"uuid","description":"The case member that remains"},
 			"owner_id":{"type":"string","format":"uuid","description":"Who owns the remaining contact: the owner of one selected member"},
 			"revision":{"type":"string","description":"The case revision you read"},

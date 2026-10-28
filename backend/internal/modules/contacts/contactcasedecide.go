@@ -17,6 +17,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -106,6 +107,12 @@ func (s *Store) decideContactCase(ctx context.Context, contactID ids.UUID, d Con
 
 // caseSelection checks the request's shape before any lock is taken.
 func caseSelection(d ContactCaseDecision) ([]ids.UUID, error) {
+	if err := httperr.RequireBodyID("survivor_id", d.SurvivorID); err != nil {
+		return nil, err
+	}
+	if err := httperr.RequireBodyID("owner_id", d.OwnerID); err != nil {
+		return nil, err
+	}
 	selected := slices.Clone(d.MemberIDs)
 	slices.SortFunc(selected, compareUUID)
 	selected = slices.Compact(selected)
@@ -116,8 +123,6 @@ func caseSelection(d ContactCaseDecision) ([]ids.UUID, error) {
 		return nil, errCaseTooLarge
 	case !slices.Contains(selected, d.SurvivorID):
 		return nil, &DedupeInputError{Field: "survivor_id", Msg: "must be one of member_ids"}
-	case d.OwnerID.IsZero():
-		return nil, &DedupeInputError{Field: "owner_id", Msg: "is required"}
 	}
 	return selected, nil
 }

@@ -203,9 +203,12 @@ type contactCaseCursor struct {
 
 // ContactCaseListInput filters one page of cases.
 type ContactCaseListInput struct {
-	Scope  string // mine (default) | unassigned | all
-	Cursor string
-	Limit  int
+	Scope string // mine (default) | unassigned | all
+	// Recipient is whose cases mine means; zero is the caller. Visibility
+	// stays the caller's either way.
+	Recipient ids.UUID
+	Cursor    string
+	Limit     int
 }
 
 const (
@@ -244,7 +247,7 @@ func (s *Store) ListContactCases(ctx context.Context, in ContactCaseListInput) (
 	var page []crmcontracts.ContactCase
 	var next string
 	err := s.txSnapshot(ctx, func(tx pgx.Tx) error {
-		ranked, err := rankedContactCases(ctx, tx, in.Scope)
+		ranked, err := rankedContactCases(ctx, tx, in.Scope, in.Recipient)
 		if err != nil {
 			return err
 		}
@@ -272,6 +275,21 @@ func (s *Store) ListContactCases(ctx context.Context, in ContactCaseListInput) (
 		return nil
 	})
 	return page, next, err
+}
+
+// CountContactCases is how many cases ListContactCases would page through in
+// the same scope, so a badge and the list under it agree.
+func (s *Store) CountContactCases(ctx context.Context, in ContactCaseListInput) (int, error) {
+	if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
+		return 0, err
+	}
+	var count int
+	err := s.txSnapshot(ctx, func(tx pgx.Tx) error {
+		ranked, err := rankedContactCases(ctx, tx, in.Scope, in.Recipient)
+		count = len(ranked)
+		return err
+	})
+	return count, err
 }
 
 func rankedAfter(c caseSummary, cur contactCaseCursor) bool {

@@ -24,8 +24,8 @@ const (
 // rankedContactCases answers every case the reader can see in one scope,
 // strongest first. The components are joined over the same edge rule the walk
 // uses, so a listed case reads back whole by its anchor.
-func rankedContactCases(ctx context.Context, tx pgx.Tx, scope string) ([]caseSummary, error) {
-	keep, err := caseScopeFilter(ctx, scope)
+func rankedContactCases(ctx context.Context, tx pgx.Tx, scope string, recipient ids.UUID) ([]caseSummary, error) {
+	keep, err := caseScopeFilter(ctx, scope, recipient)
 	if err != nil {
 		return nil, err
 	}
@@ -128,16 +128,20 @@ type caseOwnership struct {
 }
 
 // caseScopeFilter answers whether a case belongs to the requested scope:
-// mine holds a member the caller owns, unassigned holds no live owner.
-func caseScopeFilter(ctx context.Context, scope string) (func([]caseOwnership) bool, error) {
+// mine holds a member the recipient owns, the caller when none is named, and
+// unassigned holds no live owner.
+func caseScopeFilter(ctx context.Context, scope string, recipient ids.UUID) (func([]caseOwnership) bool, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		return nil, fmt.Errorf("contacts: no actor bound to read cases for")
 	}
+	if recipient.IsZero() {
+		recipient = actor.UserID
+	}
 	switch scope {
 	case "", contactCaseScopeMine:
 		return func(held []caseOwnership) bool {
-			return slices.ContainsFunc(held, func(o caseOwnership) bool { return o.owner != nil && *o.owner == actor.UserID })
+			return slices.ContainsFunc(held, func(o caseOwnership) bool { return o.owner != nil && *o.owner == recipient })
 		}, nil
 	case contactCaseScopeUnassigned:
 		return func(held []caseOwnership) bool {

@@ -64,7 +64,7 @@ func (resolveDuplicates) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","properties":{
 			"candidate_id":{"description":"A flagged pair's candidate_id, to dismiss or reopen it; leave out when merging"},
 			"source_id":{"description":"The record merged away (archived, redirected to the survivor); leave out with candidate_id"},
-			"member_ids":{"description":"The contacts of one case that are one person; leave out with candidate_id"}}}`),
+			"member_ids":{"description":"The contacts of one case to merge into one; leave out with candidate_id"}}}`),
 	}
 }
 
