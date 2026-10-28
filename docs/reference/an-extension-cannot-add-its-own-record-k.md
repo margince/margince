@@ -61,6 +61,7 @@ An erasure of a contact writes an erase row against each signal about that conta
 every image written before that row, so the old kind and evidence are no longer served.
 The data-access export for a contact does not list signals, so these old values are not in it yet.
 
-Any other `kind` is refused with a 422 on the field `kind`, code `invalid_kind`, and nothing changes. A request that
-sends the signal's current `kind` unchanged is accepted. The maintainers decide which of the other signal kinds may be
+The request contract accepts only those six kinds. The store also accepts the signal's current `kind` unchanged, even
+when it is outside the six, so a client can send back what it read. Any other change of `kind` is refused with a 422 on
+the field `kind`, code `invalid_kind`, and nothing changes. The maintainers decide which of the other signal kinds may be
 corrected. Until then they are refused.
