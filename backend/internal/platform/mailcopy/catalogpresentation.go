@@ -153,6 +153,7 @@ func controllerPresentationLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.ConfirmRecordAction }, "Review contact details", "Kontaktdaten ansehen", "Xem thông tin liên hệ")
 	line(func(c *Copy) *string { return &c.ConfirmConsentAction }, "Confirm subscription", "Abonnement bestätigen", "Xác nhận đăng ký")
 	line(func(c *Copy) *string { return &c.NoticeAction }, "View privacy information", "Datenschutzinformationen ansehen", "Xem thông tin bảo vệ dữ liệu")
+	line(func(c *Copy) *string { return &c.PreviewLinkMarker }, "[Personal link, created when you send]", "[Persönlicher Link, wird beim Senden erstellt]", "[Liên kết cá nhân, được tạo khi bạn gửi]")
 	line(func(c *Copy) *string { return &c.ConsentPurposeLabel }, "Subscription", "Thema", "Đăng ký nhận")
 	line(func(c *Copy) *string { return &c.ControllerFrom }, "This message is from %s.", "Diese Nachricht erhalten Sie von %s.", "Email này được gửi từ %s.")
 }

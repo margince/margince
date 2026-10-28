@@ -123,7 +123,7 @@ func TestControllerMailStoresItsTimelineRowMasked(t *testing.T) {
 		t.Fatalf("jobs.NewInserter: %v", err)
 	}
 	// The live link is the engine's evidence for a record confirmation.
-	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact)); err != nil {
+	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact), ""); err != nil {
 		t.Fatalf("IssueConfirmToken: %v", err)
 	}
 	var link ids.UUID
@@ -140,7 +140,7 @@ func TestControllerMailStoresItsTimelineRowMasked(t *testing.T) {
 	rendered.Body += "\nPasswort: " + secret
 	var deliveredSubject, deliveredBody, storedSubject, storedBody string
 	if err := database.WithWorkspaceTx(l.ctx, l.e.Pool, func(tx pgx.Tx) error {
-		delivery, err := NewControllerMailQueue(l.e.Pool, inserter).QueueConfirmationTx(l.ctx, tx, consent.ConfirmationSend{
+		delivery, err := NewControllerMailQueue(l.e.Pool, inserter, "").QueueConfirmationTx(l.ctx, tx, consent.ConfirmationSend{
 			ContactID: ids.From[ids.ContactKind](l.contact), Recipient: "subject@example.test", Category: category,
 			LinkID: link, LinkRef: "sealed-ref", ExpiresAt: expires,
 			MessageID: "controller-mask@margince.test", Rendered: rendered,

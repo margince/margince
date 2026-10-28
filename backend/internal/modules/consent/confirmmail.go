@@ -27,7 +27,11 @@ import (
 // only ever mailed, and returning it would hand a caller the capability that the
 // delivered-to-their-own-mailbox claim rests on.
 func (h Handlers) RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	issued, err := h.store.IssueConfirmToken(r.Context(), pathID[ids.ContactKind](id))
+	language, ok := sendLanguageOf(w, r)
+	if !ok {
+		return
+	}
+	issued, err := h.store.IssueConfirmToken(r.Context(), pathID[ids.ContactKind](id), language)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
@@ -73,7 +77,11 @@ func (h Handlers) RequestDetailsConfirmation(w http.ResponseWriter, r *http.Requ
 // this installation has one, and neither claims delivery. The plaintext token
 // is absent because this link is only ever mailed.
 func (h Handlers) SendPrivacyNotice(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	issued, err := h.store.IssuePrivacyNotice(r.Context(), pathID[ids.ContactKind](id))
+	language, ok := sendLanguageOf(w, r)
+	if !ok {
+		return
+	}
+	issued, err := h.store.IssuePrivacyNotice(r.Context(), pathID[ids.ContactKind](id), language)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return

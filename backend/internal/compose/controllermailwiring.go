@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/mailer"
@@ -164,7 +165,7 @@ func (s *Server) rewireConfirmationLane(pool *pgxpool.Pool) {
 	if s.controllerRelay == nil || s.vault == nil || s.confirmLinkBase == "" || s.confirmRunner == nil {
 		return
 	}
-	queue := NewControllerMailQueue(pool, s.confirmRunner)
+	queue := NewControllerMailQueue(pool, s.confirmRunner, config.Val(loadedConfig(), EmailFromAddress))
 	s.consentHandlers = s.WithConfirmationLane(queue, confirmLinkVault{s.vault}, s.confirmLinkBase)
 	// The session probe answers whether a caller may ask for a confirmation,
 	// and it is this branch that decides whether the lane exists at all. The

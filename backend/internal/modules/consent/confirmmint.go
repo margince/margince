@@ -47,6 +47,8 @@ type mintRequest struct {
 	lane      mailLanePolicy
 	tokenHash string
 	link      string
+	// language is what the mail and its page are written in; "" means the installation's.
+	language string
 	// askedByTheSubject lifts the re-solicitation guard; see linkRequest.
 	askedByTheSubject bool
 }
@@ -122,9 +124,9 @@ func (s *Store) issueLinkTx(
 		// the mail going out and the click coming back — so a grant resolving
 		// either at proof time would name wording the subject never saw.
 		//
-		// The language is resolved through the same call that renders the mail
-		// below, so the row and the page cannot disagree about which one.
-		questionLocale := s.mailLanguage(ctx, tx)
+		// The mail below is rendered in this same language, so the row and the
+		// page cannot disagree about which one.
+		questionLocale := s.sendLanguage(ctx, tx, req.language)
 		// WHICH question, decided from the link kind so the pin and the page
 		// cannot disagree about what the subject will be asked.
 		questionKey := QuestionKeyForLink(kind)
@@ -160,6 +162,7 @@ func (s *Store) issueLinkTx(
 			contactID:  contactID,
 			recipient:  deliveredTo,
 			kind:       kind,
+			language:   questionLocale,
 			tokenRowID: tokenRowID,
 			link:       req.link,
 			expiresAt:  expires,

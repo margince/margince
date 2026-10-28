@@ -123,8 +123,10 @@ type ConfirmRef struct {
 // supersession is expiry, exactly as the double-opt-in path does it, so the
 // resolve path needs no extra state. Delivery of the plaintext is the caller's,
 // which is what keeps this store free of a mail dependency.
-func (s *Store) IssueConfirmToken(ctx context.Context, contactID ids.ContactID) (IssuedConfirm, error) {
-	return s.issueLink(ctx, contactID, LinkRecordConfirmation, ids.PurposeID{}, "", refuseWithoutMailLane)
+// language is the one the mail and its page are written in; "" is the
+// installation's mail language.
+func (s *Store) IssueConfirmToken(ctx context.Context, contactID ids.ContactID, language string) (IssuedConfirm, error) {
+	return s.issueLink(ctx, contactID, LinkRecordConfirmation, ids.PurposeID{}, "", refuseWithoutMailLane, language)
 }
 
 // IssuePrivacyNotice mints the link that tells a contact what is held about
@@ -142,8 +144,8 @@ func (s *Store) IssueConfirmToken(ctx context.Context, contactID ids.ContactID) 
 // reach a contact who has asked us to stop: the disclosure duty survives that
 // stop, and only CategoryPrivacyNotice survives it in the engine. Before this
 // the duty was owed to exactly those contacts and undeliverable to them.
-func (s *Store) IssuePrivacyNotice(ctx context.Context, contactID ids.ContactID) (IssuedConfirm, error) {
-	return s.issueLink(ctx, contactID, LinkPrivacyNotice, ids.PurposeID{}, "", refuseWithoutMailLane)
+func (s *Store) IssuePrivacyNotice(ctx context.Context, contactID ids.ContactID, language string) (IssuedConfirm, error) {
+	return s.issueLink(ctx, contactID, LinkPrivacyNotice, ids.PurposeID{}, "", refuseWithoutMailLane, language)
 }
 
 // PreviewConsentLink uses the mint's recipient and purpose guards without creating a token.
@@ -188,7 +190,7 @@ func (s *Store) IssueConsentLink(ctx context.Context, contactID ids.ContactID, p
 	if err := httperr.RequireBodyID(purposeIDField, purposeID.UUID); err != nil {
 		return IssuedConfirm{}, err
 	}
-	return s.issueLink(ctx, contactID, LinkConsentConfirmation, purposeID, expectedAddress, refuseWithoutMailLane)
+	return s.issueLink(ctx, contactID, LinkConsentConfirmation, purposeID, expectedAddress, refuseWithoutMailLane, "")
 }
 
 // IssueBookedConsentLink mints the same double opt-in for the public booking
@@ -203,7 +205,7 @@ func (s *Store) IssueBookedConsentLink(ctx context.Context, contactID ids.Contac
 	if err := httperr.RequireBodyID(purposeIDField, purposeID.UUID); err != nil {
 		return IssuedConfirm{}, err
 	}
-	return s.issueLink(ctx, contactID, LinkConsentConfirmation, purposeID, expectedAddress, mintWithoutMailLane)
+	return s.issueLink(ctx, contactID, LinkConsentConfirmation, purposeID, expectedAddress, mintWithoutMailLane, "")
 }
 
 // deliveryAddressTx reads the subject's own live primary address, the same way
@@ -304,8 +306,11 @@ const (
 	mintWithoutMailLane   mailLanePolicy = false
 )
 
-func (s *Store) issueLink(ctx context.Context, contactID ids.ContactID, kind string, purposeID ids.PurposeID, expectedAddress string, lane mailLanePolicy) (IssuedConfirm, error) {
+func (s *Store) issueLink(ctx context.Context, contactID ids.ContactID, kind string, purposeID ids.PurposeID, expectedAddress string, lane mailLanePolicy, language string) (IssuedConfirm, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+		return IssuedConfirm{}, err
+	}
+	if err := requireMailLanguage(language); err != nil {
 		return IssuedConfirm{}, err
 	}
 	token, err := newConfirmToken()
@@ -323,6 +328,7 @@ func (s *Store) issueLink(ctx context.Context, contactID ids.ContactID, kind str
 			purposeID:       purposeID,
 			expectedAddress: expectedAddress,
 			lane:            lane,
+			language:        language,
 			tokenHash:       hashPublicToken(token),
 			link:            s.confirmLink(token),
 		})

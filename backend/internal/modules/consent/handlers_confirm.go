@@ -13,6 +13,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -46,7 +47,9 @@ func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, toke
 			writeConsentErr(w, r, err)
 			return
 		}
-		httperr.WriteJSON(w, http.StatusOK, wireSubscriptionCard(card))
+		page := wireSubscriptionCard(card)
+		page.Language = pageLanguage(ref)
+		httperr.WriteJSON(w, http.StatusOK, page)
 		return
 	}
 	// A privacy notice is answered with the disclosure and nothing else: how
@@ -60,7 +63,9 @@ func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, toke
 			writeConsentErr(w, r, err)
 			return
 		}
-		httperr.WriteJSON(w, http.StatusOK, wirePrivacyInformation(info))
+		page := wirePrivacyInformation(info)
+		page.Language = pageLanguage(ref)
+		httperr.WriteJSON(w, http.StatusOK, page)
 		return
 	}
 	// EVERY OTHER KIND IS REFUSED, rather than falling through to the record.
@@ -79,7 +84,19 @@ func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, toke
 		writeConsentErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireConfirmCard(card))
+	page := wireConfirmCard(card)
+	page.Language = pageLanguage(ref)
+	httperr.WriteJSON(w, http.StatusOK, page)
+}
+
+// pageLanguage is the language the link's mail was written in, which its page
+// asks in too; nil for a link minted before that was recorded.
+func pageLanguage(ref ConfirmRef) *crmcontracts.MailLanguage {
+	if !mailcopy.Known(ref.QuestionLocale) {
+		return nil
+	}
+	language := crmcontracts.MailLanguage(ref.QuestionLocale)
+	return &language
 }
 
 // SubmitConfirmDetails implements (POST /public/confirm/{token}): the answer

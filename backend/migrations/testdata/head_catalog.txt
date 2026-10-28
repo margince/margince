@@ -2173,6 +2173,7 @@ public.comms_outbound.consent_purpose text gen=- def=-
 public.comms_outbound.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.comms_outbound.delivery_due_at timestamp with time zone gen=- def=-
 public.comms_outbound.execution_authority text NOT NULL gen=- def='supported'::text
+public.comms_outbound.from_address text gen=- def=-
 public.comms_outbound.from_name text gen=- def=-
 public.comms_outbound.html_body text gen=- def=-
 public.comms_outbound.id uuid NOT NULL gen=- def=-

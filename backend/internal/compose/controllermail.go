@@ -51,6 +51,8 @@ type controllerMailQueue struct {
 	// The lane is NOT a side door: a confirmation mail is asked the same
 	// question, and answers it on its own evidence rather than skipping it.
 	authority *consent.Gate
+	// from is the relay's sender address, recorded on each delivery it stages.
+	from string
 }
 
 var _ consent.ConfirmationSender = controllerMailQueue{}
@@ -58,7 +60,7 @@ var _ consent.ConfirmationSender = controllerMailQueue{}
 // NewControllerMailQueue builds the lane the installation's own notices ride.
 //
 //nolint:ireturn // returns the consent-side seam by design: the concrete type is unexported and every caller holds the interface
-func NewControllerMailQueue(pool *pgxpool.Pool, runner *jobs.Runner) consent.ConfirmationSender {
+func NewControllerMailQueue(pool *pgxpool.Pool, runner *jobs.Runner, from string) consent.ConfirmationSender {
 	store := activities.NewStore(InstallationDB(pool))
 	return controllerMailQueue{
 		activities: store,
@@ -66,6 +68,7 @@ func NewControllerMailQueue(pool *pgxpool.Pool, runner *jobs.Runner) consent.Con
 		runner:     runner,
 		templates:  consent.ControllerTemplateRegistry(),
 		authority:  consentGateFor(pool),
+		from:       from,
 	}
 }
 
@@ -80,17 +83,12 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 	if !ok {
 		return ids.UUID{}, errors.New("compose: staging a controller delivery outside workspace context")
 	}
-	subject, body := in.Rendered.Subject, in.Rendered.Body
-	if in.Rendered.Language != "" || in.Rendered.HTMLBody != "" {
-		brand, err := config.StoredApplyTx(ctx, tx, loadedConfig(), identity.Name)
-		if err != nil {
-			return ids.UUID{}, err
-		}
-		in.Rendered.HTMLBody = consent.RenderControllerPresentation(in.Rendered, brand)
-		if brand != "" {
-			body = brand + "\n\n" + body
-		}
+	rendered, body, err := presentControllerMailTx(ctx, tx, in.Rendered)
+	if err != nil {
+		return ids.UUID{}, err
 	}
+	in.Rendered = rendered
+	subject := rendered.Subject
 	outbound := string(crmcontracts.ActivityDirectionOutbound)
 	activity, _, err := q.activities.LogActivityTx(ctx, tx, activities.SentRecord(activities.LogActivityInput{
 		Kind:      string(crmcontracts.ActivityKindEmail),
@@ -119,6 +117,7 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		PayloadExpiresAt: controllerExpiry(in.ExpiresAt),
 		DueAt:            in.DueAt,
 		LinkID:           in.LinkID,
+		FromAddress:      q.from,
 	}, q.templates)
 	if err != nil {
 		return ids.UUID{}, err
@@ -151,6 +150,34 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		return ids.UUID{}, err
 	}
 	return deliveryID, nil
+}
+
+// PresentConfirmationTx is the mail QueueConfirmationTx would stage, so a
+// preview shows the same From, subject and text.
+func (q controllerMailQueue) PresentConfirmationTx(ctx context.Context, tx pgx.Tx, rendered consent.Rendered) (consent.PresentedMail, error) {
+	presented, body, err := presentControllerMailTx(ctx, tx, rendered)
+	if err != nil {
+		return consent.PresentedMail{}, err
+	}
+	return consent.PresentedMail{From: q.from, Subject: presented.Subject, Text: body}, nil
+}
+
+// presentControllerMailTx adds the brand the installation's mail is sent
+// under: an HTML alternative, and the brand line atop the plain text.
+func presentControllerMailTx(ctx context.Context, tx pgx.Tx, rendered consent.Rendered) (consent.Rendered, string, error) {
+	body := rendered.Body
+	if rendered.Language == "" && rendered.HTMLBody == "" {
+		return rendered, body, nil
+	}
+	brand, err := config.StoredApplyTx(ctx, tx, loadedConfig(), identity.Name)
+	if err != nil {
+		return consent.Rendered{}, "", err
+	}
+	rendered.HTMLBody = consent.RenderControllerPresentation(rendered, brand)
+	if brand != "" {
+		body = brand + "\n\n" + body
+	}
+	return rendered, body, nil
 }
 
 // controllerMailSubject files the notice under the record it was sent to: the

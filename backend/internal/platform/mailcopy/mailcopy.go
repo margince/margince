@@ -317,6 +317,9 @@ type Copy struct {
 	// notice rather than a request.
 	NoticeIgnore string
 
+	// PreviewLinkMarker stands where the link goes in a preview, which mints none.
+	PreviewLinkMarker string
+
 	// The opt-out acknowledgement, which Decree 91/2020/ND-CP Art. 16 owes a
 	// Vietnamese recipient who refuses further advertising: a confirmation
 	// that their refusal was received, within twenty-four hours.

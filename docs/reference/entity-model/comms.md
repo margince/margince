@@ -6,7 +6,7 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 
 ## comms_outbound
 
-42 columns · primary key `(id)` · referenced by 4 foreign keys
+43 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -25,6 +25,7 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 | `consent_purpose` | `text` |  |  |
 | `delivery_due_at` | `timestamp with time zone` |  |  |
 | `execution_authority` | `text`, default `'supported'::text` | yes | One of `supported`, `instruction`. |
+| `from_address` | `text` |  |  |
 | `from_name` | `text` |  |  |
 | `html_body` | `text` |  |  |
 | `in_reply_to` | `text` |  |  |

@@ -45206,6 +45206,8 @@ export interface components {
              *     language. Art. 14(2)(c)-(e) requires naming them.
              */
             rights: ("access" | "rectification" | "erasure" | "restriction" | "objection" | "complain_to_authority")[];
+            /** @description The language the link's mail was written in, which the page asks in too. Absent on a link minted before it was recorded. */
+            language?: components["schemas"]["MailLanguage"];
         };
         /**
          * @description The answer for a consent link: one named subscription and the contact's current answer to it.
@@ -45230,6 +45232,8 @@ export interface components {
              * @enum {string}
              */
             state: "unknown" | "granted" | "withdrawn";
+            /** @description The language the link's mail was written in, which the page asks in too. Absent on a link minted before it was recorded. */
+            language?: components["schemas"]["MailLanguage"];
         };
         /**
          * @description One contact's own view of what the workspace holds about them, for the no-login confirm page.
@@ -45255,6 +45259,8 @@ export interface components {
             marketing_state: "unknown" | "granted" | "withdrawn";
             /** @description Where each held value came from and when (Art. 14). Empty for a field nothing has stamped. */
             provenance: components["schemas"]["ConfirmFieldOrigin"][];
+            /** @description The language the link's mail was written in, which the page asks in too. Absent on a link minted before it was recorded. */
+            language?: components["schemas"]["MailLanguage"];
         };
         /** @description One line of where a held value came from, for the Art. 14 disclosure on the confirm page. */
         ConfirmFieldOrigin: {
@@ -75596,6 +75602,15 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            /** @description The installation cannot send its own mail, so the send would be refused too. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             /**
              * @description The contact carries no live email address, the installation's controller particulars
              *     are incomplete, or the language is not one this build sends in.

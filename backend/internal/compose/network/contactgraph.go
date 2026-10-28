@@ -32,6 +32,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -322,7 +323,24 @@ func edgeReceipts(ctx context.Context, tx pgx.Tx, userID, contactID ids.UUID) ([
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("network: reading the messages behind a relationship: %w", err)
 	}
-	return out, nil
+	return markControllerSends(ctx, tx, out)
+}
+
+// markControllerSends marks the receipts the installation's relay sent, as the
+// timeline marks the same activities.
+func markControllerSends(ctx context.Context, tx pgx.Tx, receipts []crmcontracts.ContactGraphReceipt) ([]crmcontracts.ContactGraphReceipt, error) {
+	activityIDs := make([]ids.UUID, 0, len(receipts))
+	for _, r := range receipts {
+		activityIDs = append(activityIDs, ids.UUID(r.ActivityId))
+	}
+	marks, err := activities.ControllerSendsFor(ctx, tx, activityIDs)
+	if err != nil {
+		return nil, err
+	}
+	for i := range receipts {
+		receipts[i].ControllerSend = marks[ids.UUID(receipts[i].ActivityId)]
+	}
+	return receipts, nil
 }
 
 // chooseRoute picks the warmest way in.

@@ -38,6 +38,10 @@ type DeliveryState struct {
 	// the send wrote — never the live attachment list, which archiving a
 	// document later rewrites.
 	Files []OutboundFile
+	// Controller marks a mail the installation's relay sent for a member, and
+	// FromAddress is the address it was staged with.
+	Controller  bool
+	FromAddress *string
 }
 
 // applyEmailStates stamps onto the email rows of a page what happened to
@@ -60,6 +64,7 @@ func applyEmailStates(page []crmcontracts.Activity, states map[ids.UUID]EmailRow
 		}
 		state, known := states[ids.UUID(page[i].Id)]
 		summary.Delivery = contractDelivery(state.Delivery, known && state.Delivery.Status != "")
+		page[i].ControllerSend = ControllerSendOf(state.Delivery.Controller, state.Delivery.FromAddress)
 		if known {
 			summary.Move = state.Move
 			summary.RequestHasReminder = &state.RequestHasReminder

@@ -47399,6 +47399,9 @@ type PrivacyInformationPage struct {
 	AcquiredAt *time.Time                 `json:"acquired_at,omitempty"`
 	Kind       PrivacyInformationPageKind `json:"kind"`
 
+	// Language The language the link's mail was written in, which the page asks in too. Absent on a link minted before it was recorded.
+	Language *MailLanguage `json:"language,omitempty"`
+
 	// PurposeKeys The key of each entry in `purposes`, at the same index. A page names a purpose the
 	// product seeds in its reader's language by its key, and shows the published name of any
 	// other.
@@ -48810,6 +48813,9 @@ type RecordConfirmationPage struct {
 	Email    string                     `json:"email"`
 	FullName string                     `json:"full_name"`
 	Kind     RecordConfirmationPageKind `json:"kind"`
+
+	// Language The language the link's mail was written in, which the page asks in too. Absent on a link minted before it was recorded.
+	Language *MailLanguage `json:"language,omitempty"`
 
 	// MarketingState Their answer today, so somebody who already said yes is not asked as though they had not.
 	MarketingState RecordConfirmationPageMarketingState `json:"marketing_state"`
@@ -52626,6 +52632,9 @@ type StatedAmount struct {
 // link's own write side allows.
 type SubscriptionConfirmationPage struct {
 	Kind SubscriptionConfirmationPageKind `json:"kind"`
+
+	// Language The language the link's mail was written in, which the page asks in too. Absent on a link minted before it was recorded.
+	Language *MailLanguage `json:"language,omitempty"`
 
 	// PurposeKey The subscription this link is about.
 	PurposeKey string `json:"purpose_key"`

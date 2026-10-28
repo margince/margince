@@ -28,6 +28,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -184,6 +185,34 @@ func TestTheMailCatalogSpeaksEveryLanguageTheContractAdmits(t *testing.T) {
 					language, written.Type().Field(i).Name)
 			}
 		}
+	}
+}
+
+// TestTheContractsMailLanguagesAreTheCatalogs holds the languages a rep may pick
+// for a mail equal to those the catalog has copy for, in both directions.
+func TestTheContractsMailLanguagesAreTheCatalogs(t *testing.T) {
+	t.Parallel()
+	document, err := os.ReadFile(mailLanguageContract)
+	if err != nil {
+		t.Fatal(err)
+	}
+	declared := regexp.MustCompile(`\n    MailLanguage:\s*\n\s*type: string\s*\n\s*enum: \[([^\]]*)\]`).
+		FindStringSubmatch(string(document))
+	if declared == nil {
+		t.Fatal("the contract's MailLanguage enum could not be read, so this gate compares nothing")
+	}
+	var offered []string
+	for raw := range strings.SplitSeq(declared[1], ",") {
+		offered = append(offered, strings.TrimSpace(raw))
+	}
+	var carried []string
+	for _, language := range mailcopy.Languages() {
+		carried = append(carried, string(language))
+	}
+	if !slices.Equal(offered, carried) {
+		t.Errorf("the contract's MailLanguage is %v and the mail catalog carries %v: a rep picks from the "+
+			"first and the mail is written from the second, so keep them equal, in mailcopy.Languages() order",
+			offered, carried)
 	}
 }
 

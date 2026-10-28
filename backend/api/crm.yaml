@@ -23587,6 +23587,11 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The installation cannot send its own mail, so the send would be refused too.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422':
           description: |
             The contact carries no live email address, the installation's controller particulars
@@ -61893,6 +61898,9 @@ components:
           items:
             type: string
             enum: [access, rectification, erasure, restriction, objection, complain_to_authority]
+        language:
+          allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
+          description: The language the link's mail was written in, which the page asks in too. Absent on a link minted before it was recorded.
 
     SubscriptionConfirmationPage:
       type: object
@@ -61914,6 +61922,9 @@ components:
           type: string
           enum: [unknown, granted, withdrawn]
           description: 'Their answer today, so somebody who already said yes is not asked as though they had not.'
+        language:
+          allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
+          description: The language the link's mail was written in, which the page asks in too. Absent on a link minted before it was recorded.
 
     RecordConfirmationPage:
       type: object
@@ -61939,6 +61950,9 @@ components:
           type: array
           description: 'Where each held value came from and when (Art. 14). Empty for a field nothing has stamped.'
           items: { $ref: '#/components/schemas/ConfirmFieldOrigin' }
+        language:
+          allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
+          description: The language the link's mail was written in, which the page asks in too. Absent on a link minted before it was recorded.
 
     ConfirmFieldOrigin:
       type: object

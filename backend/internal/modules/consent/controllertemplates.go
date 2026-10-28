@@ -91,6 +91,9 @@ type ConfirmationSend struct {
 // comms', and neither may import the other.
 type ConfirmationSender interface {
 	QueueConfirmationTx(ctx context.Context, tx pgx.Tx, in ConfirmationSend) (ids.UUID, error)
+	// PresentConfirmationTx is the mail QueueConfirmationTx would stage for
+	// rendered, staging nothing.
+	PresentConfirmationTx(ctx context.Context, tx pgx.Tx, rendered Rendered) (PresentedMail, error)
 }
 
 // controllerTemplate is one registered wording.

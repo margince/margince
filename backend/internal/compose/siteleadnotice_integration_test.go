@@ -63,7 +63,7 @@ func setupNoticeLane(t *testing.T) *noticeLaneEnv {
 	vault := &sealingVault{}
 	notices := &siteLeadNoticeLane{reviewed: current}
 	notices.store.Store(consent.NewStore(InstallationDB(e.Pool)).
-		WithConfirmationLane(NewControllerMailQueue(e.Pool, inserter), vault, "https://crm.example.test"))
+		WithConfirmationLane(NewControllerMailQueue(e.Pool, inserter, ""), vault, "https://crm.example.test"))
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	read, _ := runTeamDeepRead(t, e, company)
 	svc := approvals.NewService(e.DB())
