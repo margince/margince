@@ -13,6 +13,8 @@ package gates
 // must be the fold itself or say here why it is not one.
 
 import (
+	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -46,5 +48,60 @@ func TestOnlyTheSharedFoldReadsIDNA(t *testing.T) {
 			}
 			t.Errorf("%s imports %s: fold domains through owndomain.Fold (or mailidentity.NormalizeDomain / FoldAddress) instead of a fold of its own", rel, idnaImportPath)
 		}
+	}
+}
+
+// lockKeyOwner is the one file that may spell the correspondence lock key.
+const lockKeyOwner = "internal/platform/mailidentity/mailidentity.go"
+
+// TestOnlyMailIdentitySpellsTheCorrespondenceLockKey censuses the callers of
+// correspondence.LockIdentity, which is the raw half of that key.
+//
+// The lock serializes a verdict that archives a sender's mail against the
+// insert proving the workspace writes to them. correspondence is tier 0 and
+// cannot fold IDNA, so its key alone gave two spellings of one domain two
+// keys, and the pair serialized on nothing while looking like code that did.
+func TestOnlyMailIdentitySpellsTheCorrespondenceLockKey(t *testing.T) {
+	t.Parallel()
+	const call = "correspondence.LockIdentity("
+	owned, judged := 0, 0
+	var findings []string
+	for _, root := range []string{"internal", "../extensions"} {
+		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+			if walkErr != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") {
+				return walkErr
+			}
+			source, readErr := os.ReadFile(path) // #nosec G304 -- a *.go path from the trusted source tree
+			if readErr != nil {
+				return readErr
+			}
+			judged++
+			rel := filepath.ToSlash(path)
+			if !strings.Contains(string(source), call) {
+				return nil
+			}
+			if rel == lockKeyOwner {
+				owned++
+				return nil
+			}
+			findings = append(findings, rel)
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("walking %s: %v", root, err)
+		}
+	}
+	// A walk that read nothing passes exactly like a clean tree.
+	if judged < 500 {
+		t.Fatalf("the census read only %d Go files, so it covered almost nothing", judged)
+	}
+	if owned == 0 {
+		t.Errorf("%s no longer spells the key, so this census guards nothing", lockKeyOwner)
+	}
+	if len(findings) > 0 {
+		t.Errorf("%d file(s) spell the correspondence lock key themselves: %s\n\n"+
+			"Take it from mailidentity.CorrespondenceLockKey, which folds the address first. "+
+			"A key that differs by a spelling takes a second lock and serializes nothing.",
+			len(findings), strings.Join(findings, ", "))
 	}
 }

@@ -215,6 +215,17 @@ func FoldAddress(address string) string {
 	return folded[:at+1] + domain
 }
 
+// CorrespondenceLockKey is the key every writer of the correspondence fact
+// takes, folded through IDNA so two spellings of one domain take one lock.
+//
+// The key lives here rather than in correspondence, which is tier 0 and stdlib
+// only, and so cannot fold IDNA. It is one function rather than a composition
+// each caller repeats: two writers that compose it differently take two locks
+// and serialize nothing, while looking like code that does.
+func CorrespondenceLockKey(address string) string {
+	return correspondence.LockIdentity(FoldAddress(address))
+}
+
 // AddressSpellings returns the folded address with each of
 // owndomain.Spellings for its domain. An address with no domain is itself.
 func AddressSpellings(address string) []string {

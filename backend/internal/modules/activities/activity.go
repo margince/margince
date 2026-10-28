@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -345,7 +346,7 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	// sink takes it for the same reason on the rows a connector files.
 	if in.CounterpartyOutboundAttested && counterparty != "" {
 		if err := storekit.LockWriteIdentity(ctx, tx, correspondence.LockEntity,
-			correspondence.LockIdentity(counterparty)); err != nil {
+			mailidentity.CorrespondenceLockKey(counterparty)); err != nil {
 			return crmcontracts.Activity{}, false, err
 		}
 	}

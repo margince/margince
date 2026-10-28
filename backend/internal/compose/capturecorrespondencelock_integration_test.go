@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -66,7 +67,7 @@ func TestTheCorrespondenceGuardAndAnAttestedSendSerializeOnOneKey(t *testing.T) 
 		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(ctx,
 				`SELECT pg_try_advisory_xact_lock(hashtextextended($1 || ':' || $2, 0))`,
-				correspondence.LockEntity+"_write", correspondence.LockIdentity(victim)).Scan(&free)
+				correspondence.LockEntity+"_write", mailidentity.CorrespondenceLockKey(victim)).Scan(&free)
 		}); err != nil {
 			t.Fatalf("probing the correspondence key: %v", err)
 		}
@@ -86,5 +87,53 @@ func TestTheCorrespondenceGuardAndAnAttestedSendSerializeOnOneKey(t *testing.T) 
 	if !probe() {
 		t.Error("the key stayed held after the transaction committed — an xact lock that " +
 			"outlived its transaction would stall every later send to this address")
+	}
+}
+
+// The guard and the send meet on one key whichever spelling each carries.
+//
+// counterparty_email keeps the address as its header spelled it, so a verdict
+// can read the unicode form while the send that would flip the answer carries
+// the punycode. Unfolded, the two took different keys and serialized on
+// nothing, which is the same stale archive this pair exists to prevent.
+func TestTheCorrespondenceKeyIsOneKeyForBothSpellingsOfADomain(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	const unicodeSpelling = "cfo@b\u00fccher.example"
+	const punycodeSpelling = "cfo@xn--bcher-kva.example"
+
+	held := make(chan struct{})
+	release := make(chan struct{})
+	done := make(chan error, 1)
+	go func() {
+		done <- database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			if _, err := capture.NewPendingStore(InstallationDB(e.Pool)).
+				CorrespondsWith(ctx, tx, unicodeSpelling); err != nil {
+				return err
+			}
+			close(held)
+			<-release
+			return nil
+		})
+	}()
+	<-held
+
+	var free bool
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT pg_try_advisory_xact_lock(hashtextextended($1 || ':' || $2, 0))`,
+			correspondence.LockEntity+"_write",
+			mailidentity.CorrespondenceLockKey(punycodeSpelling)).Scan(&free)
+	}); err != nil {
+		t.Fatalf("probing the punycode key: %v", err)
+	}
+	if free {
+		t.Error("a send to the punycode spelling could take the key while the guard held " +
+			"the unicode one, so the two serialize on nothing")
+	}
+
+	close(release)
+	if err := <-done; err != nil {
+		t.Fatalf("the holding transaction: %v", err)
 	}
 }

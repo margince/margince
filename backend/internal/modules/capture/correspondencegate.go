@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -58,11 +59,13 @@ import (
 // the order: a rule that demoted every reply would have refused a prospect who
 // wrote first and got answered, which is the most ordinary shape there is.
 func correspondencePositiveTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
-	normalized := normalizeEmail(email)
-	if normalized == "" {
+	if normalizeEmail(email) == "" {
 		return false, nil
 	}
-	return correspondedBeforeTx(ctx, tx, []string{normalized}, time.Time{})
+	// Every spelling a stored counterparty_email may hold. The column keeps the
+	// address as its header spelled it, lowercased, so one logical address is
+	// stored under its unicode or its punycode domain depending on the message.
+	return correspondedBeforeTx(ctx, tx, storedSpellings(email), time.Time{})
 }
 
 // correspondedBeforeTx is correspondencePositiveTx over several spellings of
@@ -199,7 +202,7 @@ func (s *PendingStore) CorrespondsWith(ctx context.Context, tx pgx.Tx, email str
 	// never see it — so the two serialize on one key rather than on luck. The
 	// writers take it in capture's sink and in the activities store.
 	if err := storekit.LockWriteIdentity(ctx, tx,
-		correspondence.LockEntity, correspondence.LockIdentity(email)); err != nil {
+		correspondence.LockEntity, mailidentity.CorrespondenceLockKey(email)); err != nil {
 		return false, err
 	}
 	return correspondencePositiveTx(ctx, tx, email)
@@ -309,8 +312,7 @@ func answeredExchange(alias, address string) string {
 // else does), so a blank key is a record from somewhere else, and guessing it
 // apart from its neighbours would invent a second conversation.
 func wroteOnTwoThreadsTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
-	normalized := normalizeEmail(email)
-	if normalized == "" {
+	if normalizeEmail(email) == "" {
 		return false, nil
 	}
 	var threads int
@@ -318,11 +320,11 @@ func wroteOnTwoThreadsTx(ctx context.Context, tx pgx.Tx, email string) (bool, er
 		SELECT count(*) FROM (
 		  SELECT DISTINCT thread_key
 		    FROM activity
-		   WHERE counterparty_email = $1
+		   WHERE counterparty_email = ANY($1::text[])
 		     AND counterparty_outbound_attested
 		     AND thread_key <> ''
 		     AND `+auth.ActivityAvailableClause("activity")+`
-		   LIMIT 2) AS distinct_threads`, normalized).Scan(&threads); err != nil {
+		   LIMIT 2) AS distinct_threads`, storedSpellings(email)).Scan(&threads); err != nil {
 		return false, fmt.Errorf("capture: counting the threads this workspace wrote on: %w", err)
 	}
 	return threads >= 2, nil
