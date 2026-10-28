@@ -5,14 +5,14 @@
 
 package compose
 
-// The forecast half of the canonical corpus: what a quarter is expected to
-// close, why it moved between two snapshots, and whether the inputs can be
-// trusted. Each proof calls `read_forecast` by name, as an MCP client does,
-// through the composed registry.
+// The forecast half of the canonical corpus. It covers what a quarter is
+// expected to close, why it moved between two snapshots, and whether the inputs
+// can be trusted. Each proof calls `read_forecast` by name, as an MCP client
+// does, through the composed registry.
 //
 // The snapshots are written through the forecasting store's own writer, the way
-// the nightly job writes them, and the input checks come from a real assurance
-// pass. Nothing here shapes a row the product would not have made.
+// the nightly job writes them. The input checks come from a real assurance pass.
+// Nothing here shapes a row the product would not have made.
 
 import (
 	"context"
@@ -146,7 +146,7 @@ func proveF02ForecastMovement(t *testing.T) {
 }
 
 // assuredForecast runs a real assurance pass over a workspace with one healthy
-// open deal and one deal the rules fault, and returns the registry and a seat
+// open deal and one deal the rules fault. It returns the workspace and a seat
 // that may read the forecast.
 func assuredForecast(t *testing.T) (*assuranceJobEnv, context.Context) {
 	t.Helper()
