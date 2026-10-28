@@ -76,7 +76,7 @@ type unitManifest struct {
 // extensionTools reads every shipped unit's manifest and returns the agent
 // tools the tier contributes to the registry, sorted.
 //
-// instance/go.mod requires exactly the units under extensions/ (a gate holds
+// instance/go.mod requires the units under extensions/ and no others (a gate holds
 // the two equal), so the directory listing is the shipped set. A tree with no
 // units returns nothing, which is the honest answer for a core-only build and
 // not a scan that failed.

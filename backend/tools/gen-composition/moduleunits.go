@@ -15,7 +15,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"strings"
 
 	"golang.org/x/mod/modfile"
 )
@@ -28,10 +27,7 @@ const (
 	// cache. The cache is read-only, and the frontend install writes beside a
 	// unit's frontend/.
 	fetchedUnitsDir = "build/extensions"
-	// unitDirsList names the folder of every composed unit, one per line, for
-	// the lanes outside this tool that walk the units.
-	unitDirsList  = "build/extensions.list"
-	backendModule = "github.com/margince/margince/backend"
+	backendModule   = "github.com/margince/margince/backend"
 )
 
 var majorVersionSuffix = regexp.MustCompile(`^v[0-9]+$`)
@@ -166,18 +162,6 @@ func goModules(dir string, args []string) ([]listedModule, error) {
 		return nil, fmt.Errorf("go %s: %w\n%s", args[0], runErr, stderr.String())
 	}
 	return modules, nil
-}
-
-func writeUnitDirs(root string, units []extensionUnit) error {
-	var b strings.Builder
-	for _, u := range units {
-		b.WriteString(u.Dir + "\n")
-	}
-	listPath := filepath.Join(root, filepath.FromSlash(unitDirsList))
-	if err := os.MkdirAll(filepath.Dir(listPath), 0o755); err != nil { // #nosec G301 -- build output stays readable to another UID
-		return err
-	}
-	return os.WriteFile(listPath, []byte(b.String()), 0o644) // #nosec G306 -- build output
 }
 
 // unitNameFromModulePath takes the unit name from the module path's last

@@ -178,10 +178,9 @@ func generate(root string) error {
 	// directory that does not exist is a claim pnpm currently tolerates by
 	// ignoring it, which is not a property to depend on — and `de` ships no
 	// frontend/ at all.
-	var screens, units []extensionUnit
+	var screens []extensionUnit
 	var screenDirs []string
 	for _, m := range composed.Manifests {
-		units = append(units, m.Unit)
 		if m.Unit.Frontend == nil {
 			continue
 		}
@@ -196,9 +195,6 @@ func generate(root string) error {
 		return err
 	}
 	if err := linkUnitScreens(root, screens); err != nil {
-		return err
-	}
-	if err := writeUnitDirs(root, units); err != nil {
 		return err
 	}
 	m, err := currentManifest(root, composed.Files)

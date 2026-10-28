@@ -470,15 +470,14 @@ jobs:
           make check-backend CHECK_LEGS="${{ matrix.legs }}" 2>&1 | tee "$RUNNER_TEMP/check-backend.log"
       # crm-hello declares capabilities no shipped unit does, so this is the one
       # walk of them; TestEveryPublishedCapabilityHasALiveDeclaringUnit reads the
-      # cp below. It runs after the merge gate, which must see only the committed
+      # require below. It runs after the merge gate, which must see only the committed
       # units. Only cmd/ imports the composition (TestCompositionWiredOnlyFromCmd),
       # so ./cmd/... is every package the fixture can change.
       - name: Stage the reference fixture and walk the composed path
         if: ${{ matrix.part == 'unit' }}
         working-directory: .
         run: |
-          cp -R fixtures/extensions/crm-hello extensions/
-          printf 'require example.margince.dev/ext/crm-hello v0.0.0\nreplace example.margince.dev/ext/crm-hello => ../extensions/crm-hello\n' >> instance/go.mod
+          printf 'require example.margince.dev/ext/crm-hello v0.0.0\nreplace example.margince.dev/ext/crm-hello => ../fixtures/extensions/crm-hello\n' >> instance/go.mod
           make -C backend build check-composition
           (cd backend && GOWORK="$PWD/../build/composition/go.work" go test ./cmd/...)
           make -C backend test-extensions EXT_COVER_OUT="$PWD/backend/coverage-extensions.out"
