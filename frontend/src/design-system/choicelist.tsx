@@ -54,9 +54,8 @@ export type Choice<Value extends string> = Readonly<{
    */
   disabled?: boolean;
   /**
-   * The kind of answer this is, said once over the run of choices that share
-   * it: "No developer needed" over three plates, "For developers" over two.
-   * Consecutive choices with the same group sit under one label; every radio
+   * The kind of answer this is, said once over the choices that share it.
+   * Consecutive choices with the same group sit under one label. Every radio
    * stays in the one question, so the arrow keys still move across groups.
    */
   group?: string;
@@ -239,8 +238,8 @@ function runsOf<Value extends string>(
   return runs;
 }
 
-// A nested fieldset, for the reason the question is one: the group is named by
-// its legend natively, and its radios stay in the outer question's name.
+// A nested fieldset, so the group is named by its own legend. Its radios keep
+// the outer question's name.
 function ChoiceGroup({
   label,
   children,

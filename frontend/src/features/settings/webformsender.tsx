@@ -15,8 +15,8 @@ import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import { needsDeveloper, type WebFormSender } from "./webformkinds";
 
-// A glyph per kind of form, not the vendors' logos: the label names the vendor,
-// and the mark only lets the eye find a plate again.
+// A glyph per kind of form, not the vendors' logos. The label names the
+// vendor; the mark only lets the eye find a plate again.
 const SENDER_MARKS: Readonly<Record<WebFormSender, LucideIcon>> = {
   browser: Globe,
   typeform: MessageSquareText,
