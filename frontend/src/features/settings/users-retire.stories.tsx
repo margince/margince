@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import { UTC_ZONE } from "../../format/timezone";
 import { meFixture } from "../../testing/mefixture";
 import {
@@ -26,7 +27,11 @@ const SURVIVOR: User = {
   email: "robin.new@example.test",
   status: "invited",
 };
-function renderRetirement(merge: boolean, blocked: boolean) {
+function renderRetirement(
+  merge: boolean,
+  blocked: boolean,
+  members = [MEMBER, SURVIVOR],
+) {
   installFetchStub({
     "GET /me": () =>
       jsonResponse(
@@ -63,7 +68,7 @@ function renderRetirement(merge: boolean, blocked: boolean) {
     <StoryProviders>
       <RetireMember
         member={MEMBER}
-        members={[MEMBER, SURVIVOR]}
+        members={members}
         merge={merge}
         onClose={() => undefined}
       />
@@ -82,6 +87,27 @@ const meta = {
 } satisfies Meta<typeof RetireMember>;
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const Merge: Story = { render: () => renderRetirement(true, false) };
+export const Merge: Story = {
+  render: () =>
+    renderRetirement(true, false, [
+      MEMBER,
+      ...Array.from({ length: 250 }, (_, index) => ({
+        ...SURVIVOR,
+        id: `20000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+        display_name: `Colleague ${index + 1}`,
+        email: `colleague${index + 1}@example.test`,
+      })),
+      SURVIVOR,
+    ]),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement.ownerDocument.body);
+    await userEvent.type(canvas.getByRole("searchbox"), SURVIVOR.email);
+    await expect(
+      await canvas.findByRole("button", {
+        name: `${SURVIVOR.display_name} ${SURVIVOR.email}`,
+      }),
+    ).toBeVisible();
+  },
+};
 export const Remove: Story = { render: () => renderRetirement(false, false) };
 export const Blocked: Story = { render: () => renderRetirement(true, true) };
