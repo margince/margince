@@ -207,8 +207,8 @@ func (s *Store) writePairDecision(ctx context.Context, row DedupeCandidateRow,
 
 func setDedupeDispositionTx(ctx context.Context, tx pgx.Tx, id ids.UUID, disposition string, by ids.UUID) error {
 	tag, err := tx.Exec(ctx, `
-		UPDATE dedupe_candidate SET disposition = $2, disposed_by = $3, disposed_at = now()
-		WHERE id = $1 AND disposition = 'open'`, id, disposition, by)
+		UPDATE dedupe_candidate SET disposition = $2, disposed_by = NULLIF($3::uuid, $4::uuid), disposed_at = now()
+		WHERE id = $1 AND disposition = 'open'`, id, disposition, by, ids.Nil)
 	if err != nil {
 		return fmt.Errorf("contacts: disposing dedupe candidate: %w", err)
 	}
