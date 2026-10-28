@@ -191,7 +191,7 @@ The work counts come from the current Worklist read. The greeting's email count 
 **Since your last brief** says when some activity could not be counted. Its count then says how much it could count, and an empty list does not mean nothing happened. A change that covers several records lists each record with its time and its full values, before and after. Each record keeps the review its change allows: **Keep date**, **Accept** or **Undo**.
 
 ### Check applied changes
-**Check applied changes**, on **Today**, lists deal changes you can still keep or undo. Each names the deal, what changed and when. Date estimates show their sales history when available. An undone or accepted change leaves this list. Press **Details** on a change to see who made it, when, the email or meeting it came from, and each value before and after. Press the email or meeting to open it. A source you cannot open is not named.
+**Check applied changes**, on **Today**, lists deal changes you can still keep or undo. Each names the deal, what changed and when. Date estimates show their sales history when available. An undone or accepted change leaves this list. **Details** shows who made a change, when, each value before and after, and the email or meeting it came from, which opens on a press. A source you cannot open is not named.
 
 **Keep date** keeps a date estimate; **Accept** keeps a stage change. Neither runs the change again or makes an estimate a customer promise. **Undo** puts the deal back. Past changes remain under **Change history** on the Worklist.
 
