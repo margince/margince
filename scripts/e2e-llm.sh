@@ -263,8 +263,8 @@ open(sys.argv[3], "w").write(json.dumps(cfg))' \
 }
 
 # fetch_skill downloads the skill an assistant on the REST door reads, the way a
-# person installing it does: the download is a human act, so it is made with the
-# administrator's session and not with the passport.
+# user installing it does. The download is a human act, so it is made with the
+# admin's session and not with the passport.
 SKILL_DIR="$WORK/skill/margince"
 fetch_skill() {
   mkdir -p "$WORK/skill"
