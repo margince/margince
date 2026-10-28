@@ -967,6 +967,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `contact_social_contact_id_platform_key`: `unique, btree (contact_id, platform)`
 - `contact_social_pkey`: `unique, btree (id)`
+- `idx_contact_social_linkedin_profile`: `btree ("substring"(lower(handle), '^(?:https?://)?(?:[a-z0-9-]+\.)*linkedin\.com/in/([^/?#]+)')) WHERE (platform = 'linkedin')`
 
 ## conversation_claim
 
