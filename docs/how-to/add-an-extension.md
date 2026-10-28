@@ -1207,7 +1207,7 @@ the gates:
    composed frontend registry. A unit's routes, its agent tools *and* `#/ext/<name>` are all live on the one port
    that `make dev` prints.
 
-Push only once `make check` is **green** (finished, not still running). The plain stub check keeps passing,
+Mark the PR ready only once `make check` is **green** (finished, not still running). The plain stub check keeps passing,
 because it is keyed on the *empty* `extensions/` tree. Your unit changes only the composed output, never the
 committed `composition/` stub.
 

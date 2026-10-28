@@ -111,7 +111,7 @@ A move touches many import lines, so it often conflicts with work that lands fir
 4. Search the files that landed on `main` since your branch started. They may import a moved file
    by its old path.
 5. Search `vi.mock` paths by hand. `tsc` does not check them.
-6. Run `make check` again before the PR leaves draft.
+6. Run `make check` again before you mark the PR ready, or before you push if it is ready already.
 
 ## When a gate reads moved code as new
 
