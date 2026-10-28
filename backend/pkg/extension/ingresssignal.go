@@ -19,7 +19,7 @@ import (
 const KindSignal RecordKind = "signal"
 
 // DispositionAlreadyRaised is a signal the installation already holds under the
-// same kind, subject and key, raised by this unit or by a person. It is a
+// same kind, subject and key, raised by this unit or by a user. It is a
 // SUCCESS carrying the held signal's Ref, so the cursor advances as it does for
 // Accepted. A dismissed signal answers it too, so a replay never undoes a
 // dismissal.

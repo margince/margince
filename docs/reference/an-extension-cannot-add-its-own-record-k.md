@@ -398,18 +398,3 @@ extension declares its own as `ext:<unit>:<type>`, in the registry the record ki
 | Screens | A Links card on the deal Overview, a Linked as list filter and a Linked as report split. |
 
 Not done yet: a merge does not carry links to the record that stays, and the filter reads deal links only.
-
-## Let an unattended extension run land a signal through Ingest
-
-A scheduled job of an extension can raise a signal of a type the extension declared, with `Ingest`, as the member whose
-credential it holds. The steps are in [Land a signal](../how-to/land-companies-and-deals-from-an-extension.md#land-a-signal).
-
-| Part | What it does |
-|---|---|
-| `extension.KindSignal` | A source lists it in `Lands`. A record carries a `Signal` payload instead of an activity, and `Key` is the unit's key for the event. |
-| Authority | The write runs as the member named in `on`, with their live rights. It needs their grant to create signals and their sight of the subject. A demoted member is refused from the next call. |
-| Subject | The subject type must also be listed in `Lands`. A record the member cannot see is not found. |
-| Writer | The same writer as `Signals().Create`, so the layout check, provenance, audit row and `signal.detected` event are the same. |
-| Repeat | The fingerprint is the kind, the subject and the key. A repeat answers `DispositionAlreadyRaised`, which is a success. A dismissed signal stays dismissed. |
-| Refused as before | Any other governed core write from an unattended run stays refused. No new identity or seat is added. |
-| Personal data | The `Personal` members of the layout are the declaration erasure reads, as for `Signals().Create`. |

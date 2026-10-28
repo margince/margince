@@ -126,7 +126,7 @@ An unattended run can also raise a signal about a record, with the evidence layo
 |---|---|
 | Authority | The signal is written as the member in `on`, with their live rights. It needs their grant to create signals. A member demoted since the last call is refused with `ErrForbidden`. |
 | Subject | A record the member cannot see answers `ErrNotFound`. A subject type the source did not list answers `ErrIngressNotDeclared`. |
-| Repeat | The same kind, subject and key answers `DispositionAlreadyRaised` with the held signal's `Ref`. That is a success, so move your cursor on. A signal a person dismissed stays dismissed, and a replay does not raise it again. |
+| Repeat | The same kind, subject and key answers `DispositionAlreadyRaised` with the held signal's `Ref`. That is a success, so move your cursor on. A signal a user dismissed stays dismissed, and a replay does not raise it again. |
 | New signal | `DispositionAccepted`. Core writes the signal, its audit row and its `signal.detected` event in one transaction. |
 | Edits | A unit cannot change a signal's kind or evidence afterwards. |
 | Personal data | A layout member marked `Personal` is removed when the contact it is about is erased. |
