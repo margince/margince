@@ -41,7 +41,8 @@ export function ImportMappingTable({
   columns: readonly ImportColumn[];
   rowsProfiled: number;
   // An option's value is the key the mapping sends (`cf_tier`); its text is
-  // the label the screen shows (`Tier`).
+  // the label the screen shows (`Tier`), or the core field's own name in the
+  // user's language (`Employees` for `size_band`).
   targets: readonly ImportFormatColumn[];
   /** The file the targets belong to, named in a chosen field's guide. */
   file: string;
@@ -58,7 +59,7 @@ export function ImportMappingTable({
     { value: DONT_IMPORT, label: t("import.dontImport") },
     ...targets.map((target) => ({
       value: target.name,
-      label: target.label ?? target.name,
+      label: target.label ?? target.field_label ?? target.name,
     })),
   ];
 

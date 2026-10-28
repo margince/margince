@@ -26748,6 +26748,8 @@ export interface components {
             name: string;
             /** @description A custom field's label. Absent for a core column. */
             label?: string;
+            /** @description What the mapping step calls the field the column is mapped onto, in the caller's language. Present for a core column. */
+            field_label?: string;
             /** @description What goes in the column. */
             description: string;
             /** @description An example value, or several separated by " · ". */
