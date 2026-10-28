@@ -91,6 +91,27 @@ func (readReports) routeTargets() map[string]string {
 	return map[string]string{"standard": "read_reporting", "run": "run_report", "evidence": "search_report_evidence"}
 }
 
+// changeReports fronts the reporting writes an agent may make. Each stays its
+// own tool, so a later report write joins as one more action, not one more
+// listed tool.
+type changeReports struct{ routed }
+
+func (changeReports) Spec() mcp.ToolSpec {
+	return mcp.ToolSpec{
+		Name: "change_reports", Title: "Prepare saved reports", Version: toolVersionV1,
+		Description: changeReportsCopy.render(), Instead: changeReportsCopy.Instead,
+		InputSchema: schema(`{"type":"object","properties":{
+			"action":{"description":"draft: save a report's next charts as a draft for a human to publish, or create a new report only they see"},
+			"selection":{"description":"The report's metrics, charts and sections; a pipeline_id comes from ` + pipelinesSource + `"}}}`),
+	}
+}
+
+func (changeReports) routeField() string { return actionArg }
+
+func (changeReports) routeTargets() map[string]string {
+	return map[string]string{"draft": draftReportTool}
+}
+
 type readAnalytics struct{ routed }
 
 func (readAnalytics) Spec() mcp.ToolSpec {

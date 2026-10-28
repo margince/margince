@@ -975,7 +975,7 @@ var agentPolicies = map[string]agentPolicy{
 	"PUT /v1/ai/routing":                                                    {Op: "replaceAiRouting", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/ai/task-overrides":                                             {Op: "replaceAiTaskOverrides", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/analytics/framework":                                           {Op: "publishReportingFramework", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"PUT /v1/analytics/reports/{id}/draft":                                  {Op: "saveReportingReportDraft", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PUT /v1/analytics/reports/{id}/draft":                                  {Op: "saveReportingReportDraft", Access: "tool", Tool: "draft_report", RecordType: "", Tier: "auto_execute", Scope: "write"},
 	"PUT /v1/brief/annotations":                                             {Op: "annotateMorningBrief", Access: "tool", Tool: "annotate_brief", RecordType: "", Tier: "auto_execute", Scope: "write"},
 	"PUT /v1/capture/blocked-domains":                                       {Op: "setBlockedDomain", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/capture/senders/{address}/decision":                            {Op: "setCaptureSenderDecision", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

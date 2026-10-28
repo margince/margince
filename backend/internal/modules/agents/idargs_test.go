@@ -290,6 +290,9 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterAnalyticsReportTool(r, func(context.Context, json.RawMessage) (json.RawMessage, error) {
 		return nil, errSeamReached
 	})
+	RegisterReportDraftTool(r, func(context.Context, ReportDraftRequest) (crmcontracts.ReportingReport, error) {
+		return crmcontracts.ReportingReport{}, errSeamReached
+	})
 	RegisterAnalyticsQueryTool(r, func(context.Context, json.RawMessage) (json.RawMessage, error) {
 		return nil, errSeamReached
 	})

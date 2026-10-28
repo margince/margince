@@ -13453,9 +13453,10 @@ paths:
         in: header
         required: true
         schema: { type: string }
-      x-agent-access: human-only
+      x-mcp-tool: { verb: draft_report, tier: auto_execute, scope: write }
       security:
       - cookieAuth: []
+      - bearerAuth: []
       requestBody:
         required: true
         content:
