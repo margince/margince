@@ -142,6 +142,16 @@ var Columns = withActivityColumns(map[string]Column{
 		De: "Telefonnummer mit Ländervorwahl.",
 		Vi: "Số điện thoại kèm mã quốc gia.",
 	}, Example: same("+49 30 1234567")},
+	"company.email": {Description: langcopy.Phrase{
+		En: "The company's general address, such as info@. It is stored on the company and never finds or creates a contact.",
+		De: "Die allgemeine Adresse des Unternehmens, etwa info@. Sie wird beim Unternehmen gespeichert und findet oder erzeugt nie einen Kontakt.",
+		Vi: "Địa chỉ chung của công ty, ví dụ info@. Địa chỉ được lưu trên công ty và không bao giờ tìm hay tạo liên hệ.",
+	}, Example: same("info@acme.com")},
+	"company.phone": {Description: langcopy.Phrase{
+		En: "The company's main number, with its country code.",
+		De: "Die Hauptnummer des Unternehmens, mit Ländervorwahl.",
+		Vi: "Số điện thoại chính của công ty, kèm mã quốc gia.",
+	}, Example: same("+49 30 1234567")},
 	"title": {Description: langcopy.Phrase{
 		En: "Job title.",
 		De: "Berufsbezeichnung.",

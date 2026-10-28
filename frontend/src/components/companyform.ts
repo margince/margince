@@ -116,6 +116,8 @@ export function mapCompanyBody(
     legal_name: values.legal_name?.trim() || undefined,
     industry: values.industry?.trim() || undefined,
     size_band: asSizeBand(values.size_band),
+    phone: values.phone?.trim() || undefined,
+    email: values.email?.trim() || undefined,
     domains: mapDomainRows(rows),
     source: "manual",
   };
@@ -150,6 +152,8 @@ export function mapCompanyUpdate(
         : asSizeBand(stringField(values.size_band)),
     owner_id: nullable("owner_id"),
     description: nullable("description"),
+    phone: nullable("phone"),
+    email: nullable("email"),
     parent_company_id: nullable("parent_company_id"),
   };
   if (Object.hasOwn(rows, "domains") && !sameDomainSet(desired, current)) {
@@ -261,6 +265,8 @@ export function companyCreateFields(
         label: formatSizeBand(t, band),
       })),
     },
+    { key: "phone", label: "create.phone" },
+    { key: "email", label: "create.email", type: "email" },
     {
       key: "domains",
       label: "company.domains",
@@ -320,6 +326,8 @@ export function companyEditFields(
         label: formatSizeBand(t, band),
       })),
     },
+    { key: "phone", label: "create.phone" },
+    { key: "email", label: "create.email", type: "email" },
     // Who is accountable for this account. It defaults to whoever created the
     // record and stays there until someone changes it — which, until now,
     // nothing on this page let them do.

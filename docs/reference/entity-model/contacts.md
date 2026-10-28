@@ -6,7 +6,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company
 
-45 columns · primary key `(id)` · referenced by 49 foreign keys
+47 columns · primary key `(id)` · referenced by 49 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -20,6 +20,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `assess_against_entity_id` | `uuid` |  | The legal entity whose offering the growth fit judges this company against. |
 | `description` | `text` |  | One human-written line saying what the company does, shown under the title on the company page. |
 | `display_name` | `text` | yes |  |
+| `email` | `text` |  | The general address, such as info@. |
 | `geocode_input_hash` | `text` |  |  |
 | `geocode_lat` | `double precision` |  |  |
 | `geocode_lon` | `double precision` |  |  |
@@ -40,6 +41,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `name_source` | `text`, default `'human'::text` | yes | One of `human`, `dossier`, `signature`, `domain`. |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `parent_company_id` | `uuid` |  | Single-level hierarchy FK; no cycles. |
+| `phone` | `text` |  | The company's main number, E.164 as a contact's number is. |
 | `quarantined_at` | `timestamp with time zone` |  |  |
 | `size_band` | `text` |  | One of `1-10`, `11-50`, `51-200`, `201-500`, `501-1000`, `1001-5000` and 1 more. |
 | `source_author_id` | `uuid` |  | Points at `app_user.id`. |

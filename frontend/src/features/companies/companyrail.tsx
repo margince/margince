@@ -149,8 +149,9 @@ export function useRowBuilders(company: Company, edit: Edit) {
   const write = (key: string) => (next: string) =>
     save(mapCompanyUpdate({ [key]: next }, {}));
   const text = (
-    key: "industry" | "legal_name" | "linkedin_url",
+    key: "industry" | "legal_name" | "linkedin_url" | "phone" | "email",
     label: MessageKey,
+    type?: "email",
   ): DetailRow => ({
     key,
     term: t(label),
@@ -159,6 +160,7 @@ export function useRowBuilders(company: Company, edit: Edit) {
       <InlineText
         label={t(label)}
         value={company[key] ?? ""}
+        type={type}
         placeholder={t("field.unset")}
         canEdit={edit.canEdit}
         readOnlyReason={edit.reason}

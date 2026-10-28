@@ -58,6 +58,10 @@ type UpdateCompanyInput struct {
 	// Lifecycle, when non-nil, moves where the account stands with us
 	// (ADR-0079/A124). nil leaves it untouched.
 	Lifecycle *string
+	// Phone and Email, when non-nil, set or (when empty) clear the main number
+	// and the general address. nil leaves them untouched.
+	Phone *string
+	Email *string
 	// Visibility, when non-nil, moves who may see this company between
 	// 'workspace' and 'owner'. nil leaves it untouched. companyvisibility.go
 	// carries the two rules it owes that no other column here does.

@@ -29,11 +29,17 @@ const writableSeat = () =>
   });
 
 describe("CompanyProfileDetails", () => {
-  it("draws the six fields the details column leaves out, set or not", async () => {
+  it("draws the eight fields the details column leaves out, set or not", async () => {
     stub();
     render(
       <CompanyProfileDetails
-        company={{ ...company, linkedin_url: null, legal_name: null }}
+        company={{
+          ...company,
+          linkedin_url: null,
+          legal_name: null,
+          phone: null,
+          email: null,
+        }}
         edit={EDITABLE}
         {...NO_FIELDS}
       />,
@@ -48,6 +54,8 @@ describe("CompanyProfileDetails", () => {
       en["company.relationshipTypes"],
       en["history.field.parent_company_id"],
       en["create.linkedinUrl"],
+      en["create.phone"],
+      en["create.email"],
       en["co.profileField.registered_address"],
       en["tags.panelTitle"],
     ]) {
@@ -88,6 +96,40 @@ describe("CompanyProfileDetails", () => {
       expect(patchBody).toMatchObject({
         linkedin_url: "https://linkedin.com/company/brandt-gmbh",
       }),
+    );
+  });
+
+  it("saves the company's general address inline as its email", async () => {
+    let patchBody: unknown;
+    stub({
+      "/me": writableSeat,
+      "/companies/o-1": async (request) => {
+        if (request.method === "PATCH") {
+          patchBody = await request.json();
+          return jsonResponse({ ...company, version: 2 });
+        }
+        return jsonResponse(company);
+      },
+    });
+    render(
+      <CompanyProfileDetails
+        company={{ ...company, email: null }}
+        edit={EDITABLE}
+        {...NO_FIELDS}
+      />,
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: `Change ${en["create.email"]}`,
+      }),
+    );
+    await userEvent.type(
+      screen.getByLabelText(en["create.email"]),
+      "info@brandt.example{Enter}",
+    );
+    await waitFor(() =>
+      expect(patchBody).toMatchObject({ email: "info@brandt.example" }),
     );
   });
 

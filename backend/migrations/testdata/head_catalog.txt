@@ -2469,6 +2469,7 @@ public.company.company_visibility_check CHECK ((visibility = ANY (ARRAY['workspa
 public.company.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.company.description text gen=- def=-
 public.company.display_name text NOT NULL gen=- def=-
+public.company.email text gen=- def=-
 public.company.geocode_input_hash text gen=- def=-
 public.company.geocode_lat double precision gen=- def=-
 public.company.geocode_lon double precision gen=- def=-
@@ -2491,6 +2492,7 @@ public.company.merged_into_id uuid gen=- def=-
 public.company.name_source text NOT NULL gen=- def='human'::text
 public.company.owner_id uuid gen=- def=-
 public.company.parent_company_id uuid gen=- def=-
+public.company.phone text gen=- def=-
 public.company.quarantined_at timestamp with time zone gen=- def=-
 public.company.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(display_name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(display_name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(((COALESCE(legal_name, ''::text) || ' '::text) || COALESCE(industry, ''::text)))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(((COALESCE(legal_name, ''::text) || ' '::text) || COALESCE(industry, ''::text)))), 'B'::"char"))
 public.company.size_band text gen=- def=-
