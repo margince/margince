@@ -6046,6 +6046,8 @@ export const en = {
   "create.companyPicked": "Adds the contact to this existing company.",
   "create.companyNew":
     "Creates a new company unless one is picked from the list.",
+  "create.companyPrefilled":
+    "Matched to an existing company by the work email domain.",
   "create.dealName": "Deal name",
   "create.amount": "Value",
   "create.amountNegative": "Enter an amount of zero or more.",
@@ -15196,6 +15198,23 @@ export const en = {
   "contact.rail.removeEmploymentTitle": "Remove company link?",
   "contact.rail.removeEmploymentBody":
     "The link to {company} and its history are deleted permanently. {company} itself stays. If they left, mark the role ended instead.",
+  "contact.proposal.title": "From {source}: {company}",
+  "contact.proposal.ask": "Link or create this company?",
+  "contact.proposal.link": "Link",
+  "contact.proposal.create": "Create and link",
+  "contact.proposal.dismiss": "Dismiss",
+  "contact.proposal.linkDenied":
+    "Your role cannot link companies to contacts. Ask an admin.",
+  "contact.proposal.createDenied":
+    "Your role cannot create companies. Ask an admin.",
+  "contact.proposal.duplicate":
+    "{company} already has this contact’s work email domain, so no company was created.",
+  "contact.proposal.duplicateUnnamed":
+    "Another company already has this contact’s work email domain, so no company was created.",
+  "contact.proposal.linkExisting": "Link that company",
+  "contact.proposal.created": "{company} created and linked",
+  "contact.proposal.createdWithDomain":
+    "{company} created with {domain} and linked",
   "contact.timeline.empty": "No activity logged with this contact yet.",
   "contact.deals.empty": "This contact is not on any deal.",
   "contact.deals.untitled": "Untitled deal",

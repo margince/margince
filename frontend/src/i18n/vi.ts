@@ -5850,6 +5850,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.companyPicked": "Thêm liên hệ vào công ty có sẵn này.",
   "create.companyNew":
     "Tạo công ty mới nếu không chọn công ty có sẵn trong danh sách.",
+  "create.companyPrefilled":
+    "Đã khớp với công ty có sẵn theo tên miền email công việc.",
   "create.dealName": "Tên deal",
   "create.amount": "Giá trị",
   "create.amountNegative": "Nhập số tiền từ 0 trở lên.",
@@ -14571,7 +14573,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.enriched.field.address": "Địa chỉ",
   "contact.enriched.field.website": "Trang web",
   "contact.enriched.readFrom": "Đọc từ {source} vào {when}",
-  "contact.enriched.source.capture_enrich": "email của họ",
+  "contact.enriched.source.capture_enrich": "chữ ký email của họ",
   "contact.enriched.source.site_read": "trang web công ty",
   "contact.enriched.source.vcard_import": "vCard đã nhập",
   "contact.enriched.source.contact_research": "kết quả nghiên cứu đã chấp nhận",
@@ -14870,6 +14872,23 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.rail.removeEmploymentTitle": "Gỡ liên kết công ty?",
   "contact.rail.removeEmploymentBody":
     "Liên kết với {company} và lịch sử liên quan sẽ bị xóa vĩnh viễn. Hồ sơ {company} vẫn được giữ nguyên. Nếu họ đã nghỉ việc, hãy đánh dấu vai trò đã kết thúc thay vì xóa.",
+  "contact.proposal.title": "Từ {source}: {company}",
+  "contact.proposal.ask": "Gắn hoặc tạo công ty này?",
+  "contact.proposal.link": "Gắn",
+  "contact.proposal.create": "Tạo và gắn",
+  "contact.proposal.dismiss": "Bỏ qua",
+  "contact.proposal.linkDenied":
+    "Vai trò của bạn không thể gắn công ty với liên hệ. Liên hệ quản trị viên.",
+  "contact.proposal.createDenied":
+    "Vai trò của bạn không thể tạo công ty. Liên hệ quản trị viên.",
+  "contact.proposal.duplicate":
+    "{company} đã có tên miền email công việc của liên hệ này, nên chưa tạo công ty mới.",
+  "contact.proposal.duplicateUnnamed":
+    "Một công ty khác đã có tên miền email công việc của liên hệ này, nên chưa tạo công ty mới.",
+  "contact.proposal.linkExisting": "Gắn công ty đó",
+  "contact.proposal.created": "Đã tạo và gắn {company}",
+  "contact.proposal.createdWithDomain":
+    "Đã tạo {company} với tên miền {domain} và gắn",
   "contact.timeline.empty": "Chưa ghi nhận hoạt động nào với liên hệ này.",
   "contact.deals.empty": "Liên hệ này chưa có trong deal nào.",
   "contact.deals.untitled": "Deal chưa có tên",

@@ -4,8 +4,12 @@ import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { unwrap } from "../lib/problem";
+import {
+  companyChoice,
+  contactCompanyField,
+  type HomeCompany,
+} from "./contactformfields";
 import { CreateAction, type CreateField } from "./create";
-import { searchCompanies } from "./filterreference";
 import { leadHeldNoticeFor } from "./leadheldnotice";
 import { normalizeProfileUrl } from "./profileurl";
 
@@ -15,26 +19,12 @@ type Contact = components["schemas"]["Contact"];
 // state, and nothing else. It is not contactCreateFields trimmed: those
 // repeatable email and phone rows cost two clicks before a value can be typed.
 //
-// The company box also offers companies whose name is like the one typed.
-// Picking one attaches it by id, and an unpicked name creates a company, so a
-// reader never has to merge one away later.
-//
 // On a company's page the company is already chosen, so the box is left out.
 function quickCaptureFields(askCompany: boolean): CreateField[] {
-  const company: CreateField = {
-    key: "company_name",
-    label: "create.companyName",
-    offers: {
-      search: searchCompanies,
-      pickedKey: "company_id",
-      pickedHint: "create.companyPicked",
-      newHint: "create.companyNew",
-    },
-  };
   return [
     { key: "full_name", label: "create.fullName", required: true },
     { key: "title", label: "create.contactTitle" },
-    ...(askCompany ? [company] : []),
+    ...(askCompany ? [contactCompanyField] : []),
     { key: "profile_url", label: "create.linkedin" },
     { key: "email", label: "create.email", type: "email" },
     { key: "phone", label: "create.phone" },
@@ -58,8 +48,6 @@ async function quickCaptureContact(
       body: {
         full_name: values.full_name?.trim() ?? "",
         title: statedValue(values, "title"),
-        // The contract lets an id win over a name; sending only one of them
-        // keeps the request saying what the reader chose.
         ...companyChoice(values),
         // Normalized here, as the contact rail does on save. A bare
         // `linkedin.com/in/jdoe` stored as typed is unlinkable on every surface.
@@ -72,13 +60,6 @@ async function quickCaptureContact(
     t,
   );
   return data.contact;
-}
-
-function companyChoice(values: Record<string, string>) {
-  const companyId = statedValue(values, "company_id");
-  return companyId
-    ? { company_id: companyId }
-    : { company_name: statedValue(values, "company_name") };
 }
 
 function profileUrlOrUndefined(raw: string | undefined) {
@@ -94,17 +75,9 @@ function leadIdsOf(extra: Record<string, unknown> | undefined) {
     : undefined;
 }
 
-export type QuickCaptureCompany = Readonly<{
-  id: string;
-  // The list on the company page that shows the new contact.
-  listKey: string;
-}>;
-
-// A company's Contacts tab offers quick capture alone: it is the one create
-// that writes the contact and its employment in one transaction.
 export function QuickCaptureAction({
   company,
-}: Readonly<{ company?: QuickCaptureCompany }>) {
+}: Readonly<{ company?: HomeCompany }>) {
   const t = useT();
   // The form stays open and gives no other feedback, so without this six
   // saved contacts look the same as six that failed silently.

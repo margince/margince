@@ -21,6 +21,12 @@ import {
   useContactReadOnlyReason,
   withheldSections,
 } from "./contactrail";
+import {
+  EmployerProposal,
+  type ProfileField,
+  proposedEmployer,
+  useEmployerProposal,
+} from "./employerproposal";
 import { stillHeld, today } from "./employmentcurrency";
 import { EmploymentEdit } from "./employmentedit";
 import { ImportedEmploymentHistory } from "./employmentimport";
@@ -101,6 +107,16 @@ function useEmploymentActions(contactId: string) {
 
 export type EmploymentActions = ReturnType<typeof useEmploymentActions>;
 
+// What the add dialog opens on. `seq` remounts it per open, so a seed is read
+// afresh; `fact` is the proposal a link from it answers.
+type AddingEmployment = Readonly<{
+  open: boolean;
+  seq: number;
+  term?: string;
+  company?: RecordPickerCandidate;
+  fact?: ProfileField;
+}>;
+
 // A contact can hold more than one employment edge at once, so this is a
 // list rather than the single Details row it used to be. The current
 // employer leads and carries an explicit marker: `is_current_primary` is
@@ -126,7 +142,13 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
       ].map((role) => [role.relationship_id, role]),
     ).values(),
   ];
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState<AddingEmployment>({
+    open: false,
+    seq: 0,
+  });
+  const openAdding = (seed: Omit<AddingEmployment, "open" | "seq"> = {}) =>
+    setAdding((prior) => ({ ...seed, open: true, seq: prior.seq + 1 }));
+  const proposal = useEmployerProposal(contact.id, actions.invalidate);
   // The row being edited, kept after the dialog closes so it still has an
   // employment to draw while it animates out. `editingOpen` is what is open,
   // and `seq` rides in the key below so every press opens a dialog seeded
@@ -180,18 +202,31 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
     () => (connectedCompanyKey === "" ? [] : connectedCompanyKey.split(",")),
     [connectedCompanyKey],
   );
+  const proposed = proposedEmployer(view, employments);
+  const linkedFact = adding.fact;
   return (
     <Panel
       title={t("contact.rail.employmentTitle")}
       titleAction={
         canEdit ? (
-          <Button variant="ghost" onClick={() => setAdding(true)}>
+          <Button variant="ghost" onClick={() => openAdding()}>
             {t("contact.rail.addEmployment")}
           </Button>
         ) : undefined
       }
     >
+      {proposed && (
+        <EmployerProposal
+          fact={proposed}
+          verbs={proposal}
+          canEdit={canEdit}
+          onLink={(company) =>
+            openAdding({ term: proposed.value, company, fact: proposed })
+          }
+        />
+      )}
       <PanelBody>
+        <ErrorLine error={proposal.verdict.error} />
         <SurfaceState
           loadingLabel={t("contact.rail.employmentTitle")}
           state={bodyState(
@@ -280,8 +315,12 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
           />
         )}
         <AddEmploymentModal
-          open={adding}
-          onClose={() => setAdding(false)}
+          key={adding.seq}
+          open={adding.open}
+          onClose={() => setAdding((prior) => ({ ...prior, open: false }))}
+          initialTerm={adding.company ? undefined : adding.term}
+          initialCompany={adding.company}
+          onLinked={linkedFact ? () => proposal.confirm(linkedFact) : undefined}
           contactId={contact.id}
           create={actions.create}
           excludedCompanyIds={connectedCompanyIds}

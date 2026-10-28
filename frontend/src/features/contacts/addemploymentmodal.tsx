@@ -32,6 +32,9 @@ export function AddEmploymentModal({
   create,
   excludedCompanyIds,
   hasCurrentEmployment,
+  initialTerm,
+  initialCompany = null,
+  onLinked,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
@@ -46,10 +49,17 @@ export function AddEmploymentModal({
   // START in the state the save will produce instead of showing the reader one
   // answer and writing the other.
   hasCurrentEmployment: boolean;
+  // A name to start the search on, or a company already chosen. Read at mount.
+  initialTerm?: string;
+  initialCompany?: RecordPickerCandidate | null;
+  // Runs once the employment is written, before the modal closes.
+  onLinked?: () => void;
 }>) {
   const t = useT();
   const headingId = useId();
-  const [company, setCompany] = useState<RecordPickerCandidate | null>(null);
+  const [company, setCompany] = useState<RecordPickerCandidate | null>(
+    initialCompany,
+  );
   const [role, setRole] = useState("");
   // A FIRST-CLASS field rather than something to correct afterwards. An
   // employment with no start date has no window, and the account walk that
@@ -72,8 +82,8 @@ export function AddEmploymentModal({
   // and `hasCurrentEmployment` is read off the same rows that rule reads, so the
   // two agree by construction rather than by being maintained in step.
   const [isCurrent, setIsCurrent] = useState(!hasCurrentEmployment);
-  // useState only reads its initial value ONCE, and this modal is mounted for
-  // the life of the section rather than remounted per open. So the default has
+  // useState only reads its initial value ONCE, and a caller may keep this
+  // modal mounted across opens rather than remount it per open. So the default has
   // to be re-taken every time it opens, or it answers a question about the rows
   // as they were the first time the section rendered: end the only employment,
   // reopen, and the box would still be unticked because the initializer had
@@ -108,7 +118,7 @@ export function AddEmploymentModal({
   function close() {
     setCompany(null);
     setRole("");
-    // The modal is never unmounted — the list only flips `open` — so every
+    // A caller may keep the modal mounted and only flip `open`, so every
     // field it holds has to be put back by hand. A start date left standing
     // from a cancelled flow is the worst of them to forget: it would be sent
     // for the NEXT employer, dated from the last one.
@@ -133,6 +143,7 @@ export function AddEmploymentModal({
                 searchTargets={searchTargets}
                 selected={company}
                 onPick={setCompany}
+                initialTerm={initialTerm}
                 disabled={create.isPending}
               />
               {!company && allConnected && (
@@ -197,7 +208,12 @@ export function AddEmploymentModal({
                 // and would have re-created the spelling the backfill removed.
                 source: "manual",
               },
-              { onSuccess: close },
+              {
+                onSuccess: () => {
+                  onLinked?.();
+                  close();
+                },
+              },
             );
           }}
         >

@@ -8,6 +8,7 @@ import {
   useDebouncedSearch,
 } from "../design-system/debouncedsearch";
 import type { MessageKey } from "../i18n/en";
+import type { CreateField, FormRows } from "./create.fields";
 
 /**
  * One record a box offers. `fills` are other fields of the form the record
@@ -26,7 +27,37 @@ export type NameOffers = Readonly<{
   pickedKey: string;
   pickedHint: MessageKey;
   newHint?: MessageKey;
+  prefill?: OfferPrefill;
 }>;
+
+// A pick the form makes from the reader's other answers while this box is
+// untouched: `from` names what to look up, and the first record `find` answers wins.
+export type OfferPrefill = Readonly<{
+  from: (rows: FormRows) => string | undefined;
+  find: (key: string) => Promise<readonly NameOffer[]>;
+  hint: MessageKey;
+}>;
+
+/**
+ * The prefilled pick of the form's one prefilling box, as values to lay over
+ * the reader's own. Empty once the reader has written to the box at all.
+ */
+export function usePrefilledPick(
+  fields: readonly CreateField[],
+  values: Record<string, string>,
+  rows: FormRows,
+): Record<string, string> {
+  const field = fields.find((candidate) => candidate.offers?.prefill);
+  const offers = field?.offers;
+  const untouched = field !== undefined && !Object.hasOwn(values, field.key);
+  const lookup = untouched ? (offers?.prefill?.from(rows) ?? "") : "";
+  const { results } = useDebouncedSearch(offers?.prefill?.find, lookup);
+  const [offer] = results;
+  if (!field || !offers || !offer || lookup === "") {
+    return {};
+  }
+  return { [field.key]: offer.label, [offers.pickedKey]: offer.value };
+}
 
 /** What the box beneath the field says the save will do with its name. */
 export function offeredHint(
@@ -34,7 +65,11 @@ export function offeredHint(
   fieldKey: string,
   values: Record<string, string>,
   t: (key: MessageKey) => string,
+  prefilled = false,
 ): string | undefined {
+  if (prefilled && offers.prefill) {
+    return t(offers.prefill.hint);
+  }
   if (values[offers.pickedKey]) {
     return t(offers.pickedHint);
   }

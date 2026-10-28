@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
 import { api } from "../../../api/client";
 import type { components, paths } from "../../../api/schema";
 import {
@@ -9,6 +9,7 @@ import {
   listFetchLimit,
   useListQuery,
 } from "../../../components/listquery";
+import { NewContactAction } from "../../../components/newcontact";
 import { QuickCaptureAction } from "../../../components/quickcapture";
 import { Badge } from "../../../design-system/atoms";
 import { type ActivityMoment, activityDay } from "../../../format/activitywhen";
@@ -155,6 +156,8 @@ export function CompanyContactsList({
     fetchPage,
   });
 
+  const home = { id: companyId, listKey: companyContactsListKey(companyId) };
+
   const narrow = (status: string) => {
     state.setQuery((prev) => ({ ...prev, q: "", filters: { status } }));
   };
@@ -171,13 +174,10 @@ export function CompanyContactsList({
           mayCreate ? (
             // Keyed by the company: the page is reused across companies, and
             // an open form must not file its contact under the last one.
-            <QuickCaptureAction
-              key={companyId}
-              company={{
-                id: companyId,
-                listKey: companyContactsListKey(companyId),
-              }}
-            />
+            <Fragment key={companyId}>
+              <QuickCaptureAction company={home} />
+              <NewContactAction company={home} />
+            </Fragment>
           ) : undefined
         }
         // The colleague-by-contact comparison, kept as the diagnostic it is

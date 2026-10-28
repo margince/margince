@@ -2,10 +2,14 @@ import { EMAIL_TYPE_LABEL, PHONE_TYPE_LABEL } from "../format/contactchannels";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { useT } from "../i18n";
+import { unwrap } from "../lib/problem";
 import { addressPatch } from "./companyform";
 import type { CreateField, FormRows } from "./create";
+import type { NameOffer } from "./create.offered";
+import { searchCompanies } from "./filterreference";
 import { normalizeProfileUrl } from "./profileurl";
 
 // Creation and Details share the field definitions and collection mappers.
@@ -55,6 +59,64 @@ function contactPhoneInputs(rows: FormRows) {
     }));
 }
 
+// The domain of the first work address typed, the primary one first. Which
+// domains name a company is the server's answer, so free mail is not judged here.
+export function workEmailDomain(rows: FormRows): string | undefined {
+  const work = (rows.emails ?? []).filter(
+    (row) => asEmailType(row.email_type) === "work",
+  );
+  const [first] = [...work].sort(
+    (a, b) => Number(b.is_primary === "true") - Number(a.is_primary === "true"),
+  );
+  const domain = /^[^@\s]+@([^@\s]+\.[^@\s]+)$/.exec(
+    (first?.email ?? "").trim(),
+  )?.[1];
+  return domain?.toLowerCase();
+}
+
+async function companyOnDomain(domain: string): Promise<readonly NameOffer[]> {
+  const data = unwrap(
+    await api.GET("/companies", { params: { query: { domain, limit: 1 } } }),
+  );
+  return data.data.map((company) => ({
+    value: company.id,
+    label: company.display_name,
+  }));
+}
+
+// The employer box of every contact create: a pick sends `company_id`, a typed
+// name creates a company, and an untouched box takes a work email's company.
+export const contactCompanyField: CreateField = {
+  key: "company_name",
+  label: "create.companyName",
+  offers: {
+    search: searchCompanies,
+    pickedKey: "company_id",
+    pickedHint: "create.companyPicked",
+    newHint: "create.companyNew",
+    prefill: {
+      from: workEmailDomain,
+      find: companyOnDomain,
+      hint: "create.companyPrefilled",
+    },
+  },
+};
+
+// The company whose page a create runs on, which files the contact under it.
+export type HomeCompany = Readonly<{
+  id: string;
+  // The list on the company page that shows the new contact.
+  listKey: string;
+}>;
+
+// The contract refuses both together, so the request says what the reader chose.
+export function companyChoice(values: Record<string, string>) {
+  const companyId = values.company_id?.trim();
+  return companyId
+    ? { company_id: companyId }
+    : { company_name: values.company_name?.trim() || undefined };
+}
+
 // Builds the create-contact request body: scalar fields trim to undefined
 // when blank (never sent rather than sent empty), `social.linkedin` folds
 // into the `social` object, and each repeatable row becomes an
@@ -74,6 +136,7 @@ export function mapContactBody(
     social: linkedin ? { linkedin } : undefined,
     emails: emails.length > 0 ? emails : undefined,
     phones: phones.length > 0 ? phones : undefined,
+    ...companyChoice(values),
     source: "manual",
   };
 }
@@ -146,6 +209,7 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
     { key: "first_name", label: "create.firstName" },
     { key: "last_name", label: "create.lastName" },
     { key: "title", label: "create.contactTitle" },
+    contactCompanyField,
     { key: "social.linkedin", label: "create.linkedin" },
     {
       key: "emails",
@@ -203,11 +267,15 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
 // The pane edits the name the record is KNOWN by, and only that: the split
 // parts are taken at creation for the greeting a mail merge needs, and a pane
 // that listed all three drew the same name three times in a column a reader
-// scans for what differs.
+// scans for what differs. The employer is an edge, edited on the Company card.
+const CREATE_ONLY = new Set([
+  "first_name",
+  "last_name",
+  contactCompanyField.key,
+]);
+
 export function contactEditFields(t: ReturnType<typeof useT>): CreateField[] {
-  return contactCreateFields(t).filter(
-    (field) => field.key !== "first_name" && field.key !== "last_name",
-  );
+  return contactCreateFields(t).filter((field) => !CREATE_ONLY.has(field.key));
 }
 
 // Compare replace-sets in their request shape; row ids and server metadata
