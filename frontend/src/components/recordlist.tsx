@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
+import { useListFocusHandoff } from "../design-system/listfocus";
 import type { ListChip } from "../design-system/listsurface.dials";
 import type { ListColumn } from "../design-system/listtable";
 import { RowTags } from "../design-system/rowtags";
@@ -201,16 +202,28 @@ export function mineEmptyNote<Row>({
   return (
     <span>
       {t("list.emptyMine", { unit: t(unit) })}{" "}
-      <Button
-        onClick={() =>
-          state.setQuery((query) => {
-            const { owner_id: _mine, ...rest } = query.filters;
-            return { ...query, filters: rest };
-          })
-        }
-      >
-        {t("list.showAll")}
-      </Button>
+      <ShowAll setQuery={state.setQuery} label={t("list.showAll")} />
     </span>
+  );
+}
+
+function ShowAll({
+  setQuery,
+  label,
+}: Readonly<{ setQuery: ListState<unknown>["setQuery"]; label: string }>) {
+  const button = useRef<HTMLButtonElement>(null);
+  useListFocusHandoff(button);
+  return (
+    <Button
+      ref={button}
+      onClick={() =>
+        setQuery((query) => {
+          const { owner_id: _mine, ...rest } = query.filters;
+          return { ...query, filters: rest };
+        })
+      }
+    >
+      {label}
+    </Button>
   );
 }

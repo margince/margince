@@ -16,6 +16,7 @@ export function mapLeadBody(values: Record<string, string>): CreateLeadRequest {
     linkedin_url: values.linkedin_url?.trim() || undefined,
     title: values.title?.trim() || undefined,
     company_name: values.company_name?.trim() || undefined,
+    industry: values.industry?.trim() || undefined,
     contact_id: values.contact_id || undefined,
     owner_id:
       values.owner_id === UNASSIGNED_OWNER

@@ -45,7 +45,7 @@ var clearableFields = map[string][]string{
 		"linkedin_url", "owner_id", "parent_company_id", "assess_against_entity_id",
 	},
 	"lead": {
-		"email", "phone", "title", "company_name", "candidate_company_key", "project_id", "owner_id",
+		"email", "phone", "title", "company_name", "industry", "candidate_company_key", "project_id", "owner_id",
 		"origin", "origin_detail",
 	},
 	"deal": {

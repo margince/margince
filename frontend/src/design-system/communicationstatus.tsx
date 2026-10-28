@@ -149,7 +149,7 @@ export function CommunicationStatus({
     <Popover
       className={[
         "commstatus",
-        `commstatus-${drawn}`,
+        ...inkOf(drawn),
         // The dense size has a rule; the prose one is the sheet's default and
         // carried a class that drew nothing, which read as a pair of variants
         // where there is one variant and a base.
@@ -158,7 +158,7 @@ export function CommunicationStatus({
       onHover
       label={
         <span className="commstatus-face">
-          {state === "checking" ? (
+          {drawn === "checking" ? (
             <BusyMark />
           ) : (
             <Glyph size={size} aria-hidden="true" />
@@ -167,14 +167,14 @@ export function CommunicationStatus({
               the first rather than as a distinct envelope, so `context_only`
               and `external` stay recognisably the same neutral mark with a
               note about where the message goes. */}
-          {state === "context_only" && (
+          {drawn === "context_only" && (
             <Info
               size={size === 18 ? 11 : 10}
               aria-hidden="true"
               className="commstatus-cue"
             />
           )}
-          {state === "external" && (
+          {drawn === "external" && (
             <ArrowUpRight
               size={size === 18 ? 11 : 10}
               aria-hidden="true"
@@ -243,6 +243,23 @@ export function CommunicationStatusLine({
  * standing objection is true however you reach somebody — and it can say
  * attention, because a dead address is too.
  */
+// The ink a state is drawn in. The two neutral marks keep the trigger's own
+// colour, so they carry no class of their own.
+function inkOf(drawn: CommunicationState): string[] {
+  switch (drawn) {
+    case "ready":
+      return ["commstatus-ready"];
+    case "attention":
+      return ["commstatus-attention"];
+    case "restricted":
+      return ["commstatus-restricted"];
+    case "checking":
+      return ["commstatus-checking"];
+    default:
+      return [];
+  }
+}
+
 function drawnState(
   state: CommunicationState,
   scope: CommunicationScope,

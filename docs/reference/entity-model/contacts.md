@@ -314,6 +314,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `company_fact_pkey`: `unique, btree (id)`
+- `idx_company_fact_dedupe_scan`: `btree (updated_at, id)`
 - `idx_company_fact_lookup`: `btree (category, field, value_key)`
 - `uq_company_fact`: `unique, btree (company_id, category, field, value_key)`
 
@@ -1106,11 +1107,11 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 |---|---|---|---|
 | `scanned_through_at` | `timestamp with time zone` | yes |  |
 | `scanned_through_id` | `uuid` | yes |  |
-| `stream` | `text` | yes | One of `company`, `company_domain`, `contact`, `contact_email`, `contact_phone`. |
+| `stream` | `text` | yes | One of `company`, `company_domain`, `contact`, `contact_email`, `contact_phone`, `company_fact` and 1 more. |
 
 **Rules**
 
-- `dedupe_scan_state_stream_check`: `CHECK ((stream = ANY (ARRAY['company', 'company_domain', 'contact', 'contact_email', 'contact_phone'])))`
+- `dedupe_scan_state_stream_check`: `CHECK ((stream = ANY (ARRAY['company', 'company_domain', 'contact', 'contact_email', 'contact_phone', 'company_fact', 'relationship'])))`
 
 **Indexes**
 
@@ -1189,7 +1190,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead
 
-42 columns · primary key `(id)` · referenced by 18 foreign keys
+43 columns · primary key `(id)` · referenced by 18 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1205,6 +1206,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `first_response_at` | `timestamp with time zone` |  | First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. |
 | `from_contact_id` | `uuid` |  | The contact an older lead was created from, and null for every newly created lead. |
 | `full_name` | `text` |  |  |
+| `industry` | `text` |  | The industry typed on the lead, one of the fixed codes, or null. |
 | `linkedin_url` | `text` |  | Normalized LinkedIn profile URL; the exact-match dedupe key. |
 | `merged_into_id` | `uuid` |  | Set when this lead was merged away into another, and null otherwise. |
 | `origin` | `text` |  | Where the lead came from, a key from `/lead-origins`. |
@@ -1836,6 +1838,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_rel_history_deal`: `btree (deal_id)`
 - `idx_rel_history_project`: `btree (project_id)`
 - `idx_relationship_counterparty_contact`: `btree (counterparty_contact_id)`
+- `idx_relationship_dedupe_scan`: `btree (updated_at, id) WHERE ((kind = 'employment') AND (company_id IS NOT NULL))`
 - `relationship_pkey`: `unique, btree (id)`
 - `uq_rel_billing_contact`: `unique, btree (company_id, contact_id, role) WHERE ((kind = 'billing_contact') AND (archived_at IS NULL))`
 - `uq_rel_current_primary_employer`: `unique, btree (contact_id) WHERE ((kind = 'employment') AND is_current_primary AND (archived_at IS NULL))`
