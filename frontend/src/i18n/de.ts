@@ -3622,7 +3622,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.next.empty": "Keine offenen Aufgaben zu diesem Unternehmen.",
   "co.next.overdue": "\u00dcberfällig",
   "deal.commitments.title": "Zusagen des Kunden",
-  "deal.commitments.empty": "Der Kunde hat zu diesem Deal keine offenen Zusagen.",
+  "deal.commitments.empty":
+    "Der Kunde hat zu diesem Deal keine offenen Zusagen.",
   "deal.commitments.denied":
     "Du kannst die Zusagen des Kunden nicht lesen, weil du keinen Zugriff auf die zitierten Kontakte und Nachrichten hast.",
   "deal.commitments.incomplete":

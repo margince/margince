@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
+import { DismissClaimButton } from "../../../components/claimdismiss";
 import { useClaimSettle } from "../../../components/taskactions";
 import { Badge, Button } from "../../../design-system/atoms";
 import { ErrorLine } from "../../../design-system/errorline";
@@ -19,7 +20,6 @@ import { DEAL_COMMITMENTS_KEY } from "../../../lib/activitykeys";
 import { useCanWrite } from "../../../lib/capability";
 import { problemStatus, unwrap } from "../../../lib/problem";
 import { useRecordZone } from "../../../lib/recordzone";
-import { DismissClaimButton } from "../../records/claimdismiss";
 
 type DealCommitments = components["schemas"]["DealCommitments"];
 type DealCommitment = DealCommitments["data"][number];

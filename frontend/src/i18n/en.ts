@@ -3611,7 +3611,8 @@ export const en = {
   "co.next.empty": "No open tasks for this company.",
   "co.next.overdue": "Overdue",
   "deal.commitments.title": "Customer commitments",
-  "deal.commitments.empty": "The customer has no open commitments on this deal.",
+  "deal.commitments.empty":
+    "The customer has no open commitments on this deal.",
   "deal.commitments.denied":
     "You cannot read the customer’s commitments: they quote contacts and messages you have no access to.",
   "deal.commitments.incomplete":

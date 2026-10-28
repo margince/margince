@@ -202,7 +202,9 @@ describe("a card with nothing to list", () => {
         jsonResponse({ title: "Internal error", status: 500 }, 500),
     });
     show();
-    expect(await screen.findByText(/.+/, { selector: ".t-danger" })).toBeTruthy();
+    expect(
+      await screen.findByText(/.+/, { selector: ".t-danger" }),
+    ).toBeTruthy();
     expect(
       screen.queryByText("The customer has no open commitments on this deal."),
     ).toBeNull();
