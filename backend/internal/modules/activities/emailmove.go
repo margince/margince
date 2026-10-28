@@ -39,7 +39,7 @@ func EmailStatesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) (map
 	}
 	rows, err := tx.Query(ctx, `SELECT a.id, coalesce(delivery.status, ''), delivery.reason,
  delivery.sent_at, delivery.bounced_at, delivery.bounce_reason, coalesce(delivery.attachments, '[]'::jsonb),
- `+moveSQL(sentByReader, laterContent)+`, `+openRequestReminderSQL+`
+ `+moveSQL(sentByReader, laterContent, mailKinds)+`, `+openRequestReminderSQL+`
  FROM activity a LEFT JOIN comms_outbound delivery ON delivery.activity_id = a.id
  WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`) AND a.restricted_at IS NULL`, args...)
 	if err != nil {
@@ -61,10 +61,10 @@ func EmailStatesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) (map
 }
 
 // moveSQL is whose move the mail on alias a is, as its History badge reads.
-func moveSQL(sentByReader, laterContent string) string {
+func moveSQL(sentByReader, laterContent, kinds string) string {
 	return `CASE WHEN coalesce(` + owedSQL("now()", neverRelaxed, neverRelaxed, neverRelaxed) + `, false)
    THEN '` + string(crmcontracts.EmailSummaryMoveNeedsReply) + `'
-   WHEN coalesce(` + awaitingTheirAnswerSQL("now()", sentByReader, laterContent) + `, false)
+   WHEN coalesce(` + awaitingTheirAnswerSQL("now()", sentByReader, laterContent, kinds) + `, false)
    THEN '` + string(crmcontracts.EmailSummaryMoveWaitingForThem) + `'
    ELSE '` + string(crmcontracts.EmailSummaryMoveNone) + `' END`
 }
@@ -93,7 +93,7 @@ func MailMoveColumnSQL(ctx context.Context, arg func(any) int) (string, error) {
 		return "", err
 	}
 	return `CASE WHEN a.kind = 'email' AND a.restricted_at IS NULL AND ` + content + ` THEN ` +
-		moveSQL(sentByReader, laterContent) + ` END`, nil
+		moveSQL(sentByReader, laterContent, mailKinds) + ` END`, nil
 }
 
 // MailMovesFor reads the History badge's move for each mail among activityIDs.

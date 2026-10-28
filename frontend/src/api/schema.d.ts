@@ -35412,6 +35412,14 @@ export interface components {
             direction?: null | "inbound" | "outbound";
             /** @description Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word. */
             readonly email_summary?: components["schemas"]["EmailSummary"] | null;
+            /**
+             * @description Present exactly when `kind=message` and the reader may read it. Whose move the chat
+             *     message is, by the rules `email_summary.move` follows for mail: `needs_reply` on one
+             *     still owed our answer, `waiting_for_them` on one a seat sent that is still the last
+             *     word with them, `none` otherwise.
+             * @enum {string}
+             */
+            readonly message_move?: "needs_reply" | "waiting_for_them" | "none";
             /** @description The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none. */
             readonly thread_key?: string | null;
             /**

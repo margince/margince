@@ -113,6 +113,11 @@ export type TimelineEntry = {
    */
   emailSummary?: EmailSummary;
   /**
+   * Whose move a chat message is, the server's own reading by the rules the
+   * mail badge follows. Present only on a readable `message` row.
+   */
+  messageMove?: EmailSummary["move"];
+  /**
    * Opens the canonical detail for this message. The caller owns it, because
    * the screen mounts the drawer, not the list. Absent leaves the row readable
    * and not openable, which is what a surface with nowhere to open it should
@@ -269,7 +274,15 @@ export function isConversationKind(kind: string): boolean {
  * conversation, never on the members of an expanded thread.
  */
 export function entryMove(entry: TimelineEntry): MessageKey | undefined {
-  return moveLabel(entry.emailSummary, entry.withheld === true);
+  const move = entryMoveValue(entry);
+  return moveLabel(move ? { move } : undefined, entry.withheld === true);
+}
+
+// entryMoveValue is the server's move for a mail or a chat message alike.
+function entryMoveValue(
+  entry: TimelineEntry,
+): EmailSummary["move"] | undefined {
+  return entry.emailSummary?.move ?? entry.messageMove;
 }
 
 export function MoveFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
@@ -280,7 +293,7 @@ export function MoveFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
   }
   return (
     <Badge
-      tone={entry.emailSummary?.move === "needs_reply" ? "warning" : undefined}
+      tone={entryMoveValue(entry) === "needs_reply" ? "warning" : undefined}
     >
       {t(move)}
     </Badge>
