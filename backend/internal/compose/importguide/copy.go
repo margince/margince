@@ -12,8 +12,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// Column is one column's guide: what the mapping step calls it, what goes in
-// it, an example, and whether a row that creates a record needs it.
+// Column is one column's guide. It holds the mapping step's name for the
+// column, what goes in it and an example. It also says whether a row that
+// creates a record needs the column.
 type Column struct {
 	Description, Example, Label langcopy.Phrase
 	RequiredOnNew               bool

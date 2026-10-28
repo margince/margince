@@ -10,6 +10,8 @@ import (
 // labels is what the mapping step calls each core target, in the words the
 // record pages use for the same field. A target with no entry here would show
 // its internal name, so withLabels refuses one at start-up.
+var companyName = langcopy.Phrase{En: "Company name", De: "Firmenname", Vi: "Tên công ty"}
+
 var labels = map[string]langcopy.Phrase{
 	"activity.owner_email": {En: "Owner (email)", De: "Verantwortlich (E-Mail)", Vi: "Người chịu trách nhiệm (email)"},
 	"address.city":         {En: "City", De: "Stadt", Vi: "Thành phố"},
@@ -19,15 +21,15 @@ var labels = map[string]langcopy.Phrase{
 	"address.postal_code":  {En: "Postal code", De: "Postleitzahl", Vi: "Mã bưu chính"},
 	"address.region":       {En: "Region", De: "Region", Vi: "Khu vực"},
 	"amount":               {En: "Value", De: "Wert", Vi: "Giá trị"},
-	"author":               {En: "Author", De: "Autor", Vi: "Tác giả"},
+	"author":               {En: "Author", De: "Verfasser", Vi: "Tác giả"},
 	"body":                 {En: "Notes", De: "Notizen", Vi: "Ghi chú"},
 	"close_date":           {En: "Expected close date", De: "Erwartetes Abschlussdatum", Vi: "Ngày dự kiến chốt"},
-	"company_name":         {En: "Company name", De: "Firmenname", Vi: "Tên công ty"},
+	"company_name":         companyName,
 	"company_ref":          {En: "Company ref", De: "Firmen-Ref", Vi: "Ref công ty"},
-	"company.display_name": {En: "Company name", De: "Firmenname", Vi: "Tên công ty"},
+	"company.display_name": companyName,
 	"company.linkedin_url": {En: "LinkedIn page", De: "LinkedIn-Seite", Vi: "Trang LinkedIn"},
 	"contact_ref":          {En: "Contact ref", De: "Kontakt-Ref", Vi: "Ref liên hệ"},
-	"contact.company_name": {En: "Company name", De: "Firmenname", Vi: "Tên công ty"},
+	"contact.company_name": companyName,
 	"currency":             {En: "Currency", De: "Währung", Vi: "Tiền tệ"},
 	"deal.company_ref":     {En: "Company ref", De: "Firmen-Ref", Vi: "Ref công ty"},
 	"deal.description":     {En: "Description", De: "Beschreibung", Vi: "Mô tả"},
@@ -54,7 +56,7 @@ var labels = map[string]langcopy.Phrase{
 	"occurred_at":          {En: "Date and time", De: "Datum und Uhrzeit", Vi: "Ngày giờ"},
 	"owner_email":          {En: "Owner (email)", De: "Verantwortlich (E-Mail)", Vi: "Người chịu trách nhiệm (email)"},
 	"phone":                {En: "Phone", De: "Telefon", Vi: "Điện thoại"},
-	"pipeline":             {En: "Pipeline", De: "Pipeline", Vi: "Pipeline"},
+	"pipeline":             same("Pipeline"),
 	"ref":                  {En: "Your own key (ref)", De: "Dein eigener Schlüssel (Ref)", Vi: "Khóa riêng của bạn (ref)"},
 	"size_band":            {En: "Employees", De: "Mitarbeitende", Vi: "Số nhân viên"},
 	"stage":                {En: "Stage", De: "Phase", Vi: "Giai đoạn"},
@@ -65,8 +67,7 @@ var labels = map[string]langcopy.Phrase{
 }
 
 // withLabels gives every column its label. It panics at start-up on a column
-// with none, because the mapping step would then show that column's internal
-// name to somebody choosing where their data goes.
+// with none. The mapping step would otherwise show that column's internal name.
 func withLabels(columns map[string]Column) map[string]Column {
 	for key, col := range columns {
 		label, ok := labels[key]
