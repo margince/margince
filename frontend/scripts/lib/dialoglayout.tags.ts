@@ -146,6 +146,54 @@ function handedThrough(x: ts.Expression): ts.Identifier | undefined {
   return first && ts.isIdentifier(first) ? first : undefined;
 }
 
+// The module and export a `lazy` loader imports: `default`, or the member its
+// `.then((m) => ({ default: m.X }))` hands on. A helper wrapping the loader
+// (`lazy(routed(() => import(…)))`) is read through.
+function loadedBy(
+  x: ts.Expression,
+): { spec: string; name: string } | undefined {
+  if (!ts.isCallExpression(x) || called(x.expression) !== "lazy") {
+    return undefined;
+  }
+  const inside = x.arguments.flatMap((a) => [a, ...descendants(a)]);
+  const load = inside.find(
+    (n): n is ts.CallExpression =>
+      ts.isCallExpression(n) &&
+      n.expression.kind === ts.SyntaxKind.ImportKeyword,
+  );
+  const [spec] = load?.arguments ?? [];
+  if (!spec || !ts.isStringLiteralLike(spec)) return undefined;
+  const picked = inside.find(
+    (n): n is ts.PropertyAssignment =>
+      ts.isPropertyAssignment(n) &&
+      n.name.getText() === "default" &&
+      ts.isPropertyAccessExpression(n.initializer),
+  );
+  const member = picked?.initializer;
+  const name =
+    member && ts.isPropertyAccessExpression(member)
+      ? member.name.text
+      : "default";
+  return { spec: spec.text, name };
+}
+
+// The component a wrapper call stands for. `memo(X)` and `forwardRef(X)` hand
+// X's own element tree through, and reading the binding as an element of its
+// own judged none of X's rows. `lazy` stands for what its loader imports.
+function wrappedBy(
+  source: ts.SourceFile,
+  x: ts.Expression,
+  hops: number,
+): { def: ts.Node | undefined } | undefined {
+  const handed = handedThrough(x);
+  if (handed) return { def: alias(handed, hops) };
+  const lazy = loadedBy(x);
+  const file = lazy && moduleFor(source.fileName, lazy.spec);
+  return lazy && file
+    ? { def: follow(sourceFileAt(file), lazy.name, hops) }
+    : undefined;
+}
+
 // What an alias names, read from the scope it sits in. A name alone reads the
 // file's top level: for `const Glyph = Icon` in a component taking an `Icon`
 // prop, that is a top-level `Icon`, not the prop.
@@ -163,8 +211,10 @@ function alias(name: ts.Identifier, hops: number): ts.Node | undefined {
   const next = ts.isVariableDeclaration(scoped)
     ? scoped.initializer
     : undefined;
-  const through = next && handedThrough(next);
-  if (through && hops > 0) return alias(through, hops - 1);
+  const source = name.getSourceFile();
+  const wrapped =
+    next && hops > 0 ? wrappedBy(source, next, hops - 1) : undefined;
+  if (wrapped) return wrapped.def;
   return next && ts.isIdentifier(next) && hops > 0
     ? alias(next, hops - 1)
     : scoped;
@@ -179,12 +229,8 @@ function follow(
   const link = bindings(source).get(name);
   const to = local && ts.isVariableDeclaration(local) && local.initializer;
   if (to && ts.isIdentifier(to) && hops > 0) return alias(to, hops - 1);
-  // `memo(X)` and `forwardRef(X)` hand X's own element tree through, and
-  // reading the binding as an element of its own judged none of X's rows. Only
-  // a named argument is followed, which leaves `lazy` unknown: its loader is
-  // an arrow carrying no component.
-  const handed = to && handedThrough(to);
-  if (handed && hops > 0) return alias(handed, hops - 1);
+  const wrapped = to && hops > 0 ? wrappedBy(source, to, hops - 1) : undefined;
+  if (wrapped) return wrapped.def;
 
   if (local || hops === 0 || !link) return local;
   const renamed = link.spec === "" && link.name !== name;
@@ -254,6 +300,20 @@ const spelled = (e: ts.Identifier) => {
   );
 };
 
+// The prop a name unpacked from the props object in the body stands for:
+// `className` in `const { className } = props`.
+function unpacked(e: ts.Identifier, props: string): string | undefined {
+  const declared = bindingOf(e);
+  if (!declared || !ts.isVariableDeclaration(declared)) return undefined;
+  const from = declared.initializer;
+  if (!from || !ts.isIdentifier(from) || from.text !== props) return undefined;
+  const source = bindingOf(from);
+  if (!source || !ts.isParameter(source)) return undefined;
+  if (!ts.isObjectBindingPattern(declared.name)) return undefined;
+  const b = declared.name.elements.find((x) => x.name.getText() === e.text);
+  return b && !b.dotDotDotToken ? propKey(b) : undefined;
+}
+
 const readers = new WeakMap<ts.Node, (e: ts.Node) => string | undefined>();
 
 /** The prop of `def` an expression reads: a destructured binding by its local
@@ -268,9 +328,18 @@ export function propReadBy(def: ts.Node) {
   }
   const props = first && ts.isIdentifier(first) ? first.text : undefined;
   const read = (e: ts.Node) => {
-    if (ts.isIdentifier(e)) return spelled(e) ? undefined : locals.get(e.text);
-    if (!ts.isPropertyAccessExpression(e)) return undefined;
-    return e.expression.getText() === props ? e.name.text : undefined;
+    if (ts.isIdentifier(e)) {
+      if (spelled(e)) return undefined;
+      return locals.get(e.text) ?? (props && unpacked(e, props));
+    }
+    if (ts.isPropertyAccessExpression(e)) {
+      return e.expression.getText() === props ? e.name.text : undefined;
+    }
+    const keyed =
+      ts.isElementAccessExpression(e) &&
+      ts.isStringLiteralLike(e.argumentExpression) &&
+      e.expression.getText() === props;
+    return keyed ? e.argumentExpression.text : undefined;
   };
   readers.set(def, read);
   return read;
