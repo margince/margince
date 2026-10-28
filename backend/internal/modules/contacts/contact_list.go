@@ -37,8 +37,11 @@ type ListContactsInput struct {
 	// OwnerTeamID narrows to a team's rows; Unassigned to the unowned queue.
 	// Both narrow the caller's row scope and never widen it — see
 	// storekit.OwnershipClause, which also refuses two of them at once.
-	OwnerTeamID     *ids.TeamID
-	Unassigned      *bool
+	OwnerTeamID *ids.TeamID
+	Unassigned  *bool
+	// SharedWithMe narrows to contacts someone else owns that the caller holds
+	// a live grant on; it names its own set, so it excludes the owner filters.
+	SharedWithMe    *bool
 	IncludeArchived bool
 	// CapturedByKind filters on the captured_by prefix (ADR-0075/A121 §3a).
 	CapturedByKind *string
@@ -213,6 +216,13 @@ func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmco
 			if err != nil {
 				return nil, err
 			}
+			shared, err := sharedWithMeClause(ctx, in, arg)
+			if err != nil {
+				return nil, err
+			}
+			if shared != "" {
+				where = append(where, shared)
+			}
 			if clause := relationshipMarkClause(in, arg); clause != "" {
 				where = append(where, clause)
 			}
@@ -234,6 +244,21 @@ func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmco
 			return last.CreatedAt, ids.UUID(last.Id)
 		},
 	})
+}
+
+// sharedWithMeClause renders shared_with_me, refused beside an owner filter
+// the way storekit.OwnershipClause refuses two of those at once.
+func sharedWithMeClause(ctx context.Context, in ListContactsInput, arg func(any) int) (string, error) {
+	if in.SharedWithMe == nil || !*in.SharedWithMe {
+		return "", nil
+	}
+	if in.OwnerID != nil || in.OwnerTeamID != nil || (in.Unassigned != nil && *in.Unassigned) {
+		return "", &storekit.PredicateError{
+			Field: "shared_with_me", Code: storekit.CodeConflictingFilters,
+			Message: "shared_with_me names contacts someone else owns; send it without owner_id, owner_team_id or unassigned",
+		}
+	}
+	return auth.SharedWithCallerClause(ctx, contactEntity, contactEntity, arg)
 }
 
 // scanContactPage drains one list query's rows: each contact plus, under a
