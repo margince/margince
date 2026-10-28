@@ -68,7 +68,7 @@ export function BriefScreen() {
     owner === "" ? undefined : owner,
   );
   const queuedDay = briefDay(queued.data?.pages);
-  const review = useWeeklyReview(address.week);
+  const review = useWeeklyReview(address.week, address.view === "weekly");
   const firstName = greetingNameOf(me.data?.user);
   const brief = useMorningBrief();
   const morning = address.view === "morning";

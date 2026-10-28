@@ -334,11 +334,10 @@ export function StartDeliveryPrompt({ deal }: Readonly<{ deal: Deal }>) {
   }
   return (
     <>
-      {/* `accent`, because this is the one notice on the page asking for a MOVE
-          rather than reporting state. The project is a nameable thing, so it
-          keeps its own glyph over the tone's. */}
+      {/* The project is a nameable thing, so it keeps its own glyph over the
+          tone's. */}
       <Callout
-        tone="accent"
+        tone="info"
         kind="standing"
         icon={Briefcase}
         title={t("deal.startDeliveryTitle")}

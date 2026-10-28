@@ -1883,6 +1883,10 @@ func (stubs) EmbedReindexStart(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "EmbedReindexStart")
 }
 
+func (stubs) EmbedReindexIdentities(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "EmbedReindexIdentities")
+}
+
 func (stubs) EmbedReindexPreview(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "EmbedReindexPreview")
 }

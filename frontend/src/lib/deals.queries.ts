@@ -127,9 +127,10 @@ function useCloseDay(value: string | undefined): DayRange | undefined {
  * every matching deal, so it names the true count. A column saying "40 deals"
  * above six cards is what a pipeline view must not do.
  */
-export function useDeals(f: DealFilters) {
+export function useDeals(f: DealFilters, enabled = true) {
   const closeDay = useCloseDay(f.filters[CLOSE_DAY_DIAL]);
   return useInfiniteQuery({
+    enabled,
     // The days, not the dial's word: a list opened after the quarter turns
     // never reuses the old quarter's cached page. Today is read at mount.
     queryKey: ["deals", f, closeDay],
@@ -216,7 +217,7 @@ export function totalsRefusedBecause(
 // useDeals fetches. The server converts each deal before grouping by stage.
 // Reports exclude archived deals, so that broader board population withholds
 // its totals through the same rule as every other unsupported filter.
-export function useStageTotals(f: DealFilters) {
+export function useStageTotals(f: DealFilters, enabled = true) {
   return useQuery({
     // Under ["deals"], so the one invalidation every deal mutation fires
     // refreshes the column headers along with the cards. Keyed apart, a moved
@@ -225,7 +226,7 @@ export function useStageTotals(f: DealFilters) {
     // Asked only when the report would count the deals the board is drawing.
     // totalsWithheldBecause owns that decision and the words for it both, so
     // the column cannot explain a missing total by the wrong rule.
-    enabled: totalsWithheldBecause(f) === undefined,
+    enabled: enabled && totalsWithheldBecause(f) === undefined,
     queryFn: async (): Promise<Map<string, StageTotals> | null> => {
       const { data, error, response } = await api.POST("/reports/{report}", {
         params: { path: { report: "deals-by-stage" } },

@@ -775,6 +775,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.promotionContactPhone": "Zu ergänzende Telefonnummer",
   "approval.preview.promotionExistingContact": "Zu ergänzender Kontakt",
   "approval.preview.promotionSetOrigin": "Kontakt mit diesem Lead verknüpfen",
+  "approval.preview.promotionCompanyIndustry": "Branche des Unternehmens",
   "approval.preview.promotionDuplicateCandidate":
     "Mögliche Dublette zur Prüfung",
   "approval.preview.promotionMoveActivity":
@@ -801,6 +802,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ergänzt die angezeigten fehlenden Angaben am bestehenden Kontakt. Vorhandener Name, Position und Hauptnummer bleiben erhalten.",
   "approval.preview.promotionDeal":
     "Eröffnet den angezeigten Deal und fügt den Kontakt als Beteiligten hinzu. Der Lead wird mit diesem Deal verknüpft.",
+  "approval.preview.promotionFillIndustry":
+    "Trägt die angezeigte Branche beim verknüpften Unternehmen ein, das noch keine hat.",
   "approval.preview.promotionReview":
     "Erstellt einen separaten Kontakt und stellt die mögliche Dublette zur Prüfung bereit.",
   "approval.preview.promotionAllMarketing": "Gesamtes Marketing",
@@ -4927,6 +4930,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.segregationDismiss": "Hinweis ausblenden",
   "list.emptyMine": "Keine {unit}, für die du verantwortlich bist.",
   "list.showAll": "Alle anzeigen",
+  "list.filterRefusedRemove": "{dial} entfernen",
   "lead.assignedAway":
     "{names} an {owner} zugewiesen. Nicht mehr unter „Meine“.",
   "lead.viewNew": "Neu",
@@ -5312,8 +5316,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.filterCurrencyAll": "Jede Währung",
   "deals.filterCountry": "Land",
   "deals.filterCountryAll": "Jedes Land",
-  "deals.filterRefused":
-    "Deine Rolle kann Deals nicht nach {dial} eingrenzen. Entferne diesen Filter, um die Liste zu sehen.",
+  "deals.filterRefused": "Deine Rolle kann Deals nicht nach {dial} eingrenzen.",
   "deals.rangeFrom": "Ab {value}",
   "deals.rangeTo": "Bis {value}",
   "deals.valueAtLeast": "Mindestens ({currency})",
@@ -14230,6 +14233,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.field.redirectUrlHint":
     "Wohin ein Besucher nach dem Senden geht. Leer zeigt die Erfolgsmeldung.",
   "webForms.field.redirectUrlPlaceholder": "https://www.example.com/danke",
+  "webForms.field.owner": "Verantwortlich für neue Leads",
+  "webForms.field.ownerHint":
+    "Jeder neue Lead aus diesem Formular geht an dieses Teammitglied. Ohne Zuweisung kann ihn jedes Teammitglied übernehmen.",
+  "webForms.field.ownerNone": "Nicht zugewiesen",
+  "webForms.field.ownerGone":
+    "{name} (ausgeschieden, neue Leads kommen ohne Zuweisung an)",
+  "webForms.field.ownerKept": "Gespeichertes Teammitglied (nicht in der Liste)",
+  "webForms.row.owner": "Leads gehen an",
+  "webForms.row.ownerLeft":
+    "{name} ist ausgeschieden, neue Leads kommen ohne Zuweisung an",
   "webForms.field.successMessage": "Erfolgsmeldung",
   "webForms.field.successMessageHint":
     "Wird dem Besucher nach dem Senden gezeigt.",
@@ -17543,6 +17556,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Unternehmensname dieses Leads öffnet dann {name}.",
   "lead.company.linkOnQualify":
     "Es wird noch kein Kontakt angelegt. Wenn du diesen Lead qualifizierst, wird er ein Kontakt bei {name}.",
+  "lead.company.matchedByDomain": "Gleiche Website-Domain",
+  "lead.company.matchedByName": "Gleicher Unternehmensname",
+  "lead.company.linkWhyDomain": "{name} nutzt die Website-Domain dieses Leads.",
+  "lead.company.linkWhyName":
+    "{name} trägt den Unternehmensnamen dieses Leads.",
+  "lead.details.fromCompany": "Von {name}",
+  "lead.details.fromCompanyRecord": "Aus dem Unternehmenseintrag",
+  "lead.details.companyDecides":
+    "Diese Angaben stammen aus dem Unternehmenseintrag. Ändere sie beim Unternehmen.",
+  "lead.details.companyCountry": "Land",
+  "lead.companySize": "Unternehmensgröße",
+  "lead.filterCompanySizeAll": "Jede Unternehmensgröße",
+  "lead.filterIndustryAll": "Jede Branche",
+  "lead.filterRefused": "Deine Rolle kann Leads nicht nach {dial} eingrenzen.",
   "lead.timeline.received": "{at} · eingegangen",
   "lead.timeline.weReplied": "Du hast geantwortet",
   "lead.timeline.repliedIn": "{at} · in {span}",

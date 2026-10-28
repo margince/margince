@@ -385,6 +385,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/dedupe/candidates/{id}":                                        {Op: "getDedupeCandidate", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/digest":                                                        {Op: "getMorningDigest", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/email-signature-template":                                      {Op: "getEmailSignatureTemplate", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
+	"GET /v1/embeddings/reindex/identities":                                 {Op: "EmbedReindexIdentities", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/embeddings/reindex/preview":                                    {Op: "EmbedReindexPreview", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/embeddings/reindex/status":                                     {Op: "EmbedReindexStatus", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/exports/bundle":                                                {Op: "downloadExportBundle", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

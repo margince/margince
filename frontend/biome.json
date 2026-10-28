@@ -7,7 +7,12 @@
   },
   "files": {
     "maxSize": 2097152,
-    "includes": ["**", "!src/api/schema.d.ts", "!src/api/public-events.ts"]
+    "includes": [
+      "**",
+      "!src/api/schema.d.ts",
+      "!src/api/public-events.ts",
+      "!src/design-system/material-symbols"
+    ]
   },
   "formatter": {
     "enabled": true,
