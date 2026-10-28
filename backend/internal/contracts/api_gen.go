@@ -39773,12 +39773,15 @@ type EmailPresentation struct {
 	Body *string `json:"body,omitempty"`
 
 	// BodyCompleteness How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased.
-	BodyCompleteness *BodyCompleteness  `json:"body_completeness,omitempty"`
-	CanRelink        bool               `json:"can_relink"`
-	CanReply         bool               `json:"can_reply"`
-	Cc               []EmailParty       `json:"cc"`
-	From             []EmailParty       `json:"from"`
-	Id               openapi_types.UUID `json:"id"`
+	BodyCompleteness *BodyCompleteness `json:"body_completeness,omitempty"`
+	CanRelink        bool              `json:"can_relink"`
+	CanReply         bool              `json:"can_reply"`
+	Cc               []EmailParty      `json:"cc"`
+
+	// ControllerSend Present only on a mail the installation's relay sent for a member, as on `Activity`; `from` then names that member.
+	ControllerSend *ControllerSend    `json:"controller_send,omitempty"`
+	From           []EmailParty       `json:"from"`
+	Id             openapi_types.UUID `json:"id"`
 
 	// Lifecycle What kind of message this is. One value today: this read serves delivered
 	// correspondence. A scheduled send and a draft awaiting approval will borrow the

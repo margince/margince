@@ -328,10 +328,10 @@ func (s *Store) commitReceipt(ctx context.Context, id ids.UUID, receipt connecto
 		return tx.QueryRow(ctx, `
 			UPDATE comms_outbound
 			   SET status = 'sent', provider_message_id = $2, sent_at = $3, reason = NULL,
-			       inflight_at = NULL
+			       inflight_at = NULL, from_address = coalesce(nullif($4, ''), from_address)
 			 WHERE id = $1 AND status = 'pending'
 			RETURNING activity_id, coalesce(message_id, '')`,
-			id, receipt.ProviderMessageID, s.now().UTC()).Scan(&activityID, &staged)
+			id, receipt.ProviderMessageID, s.now().UTC(), receipt.FromAddress).Scan(&activityID, &staged)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.ActivityID{}, "", ErrTerminal

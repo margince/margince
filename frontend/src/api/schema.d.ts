@@ -24836,6 +24836,8 @@ export interface components {
              *     that they exist rather than showing an empty list that reads as none.
              */
             bcc_withheld: boolean;
+            /** @description Present only on a mail the installation's relay sent for a member, as on `Activity`; `from` then names that member. */
+            readonly controller_send?: components["schemas"]["ControllerSend"] | null;
             attachments: components["schemas"]["EmailAttachmentSummary"][];
             /** @description What the message is filed against, named for a reader. */
             links: components["schemas"]["ActivityLink"][];

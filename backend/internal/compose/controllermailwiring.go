@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/mailer"
@@ -43,7 +42,7 @@ func ControllerRelayFor(m mailer.Mailer) comms.ControllerRelay {
 	if m == nil {
 		return nil
 	}
-	return mailerRelay{m}
+	return newMailerRelay(m)
 }
 
 // WithConfirmLinkVault wires ONLY the vault the confirm link is sealed in.
@@ -85,7 +84,23 @@ func WithControllerMail(runner *jobs.Runner) Option {
 // delivery claims an RFC822 identity the row is keyed on. The identity is
 // carried through here so a relay that honours it keys the sent copy the same
 // way the delivery row does.
-type mailerRelay struct{ m mailer.Mailer }
+type mailerRelay struct {
+	m    mailer.Mailer
+	from string
+}
+
+// newMailerRelay reads the From off an SMTP relay, the one transport that names
+// its own.
+func newMailerRelay(m mailer.Mailer) mailerRelay {
+	relay := mailerRelay{m: m}
+	if smtp, ok := m.(mailer.SMTP); ok {
+		relay.from = smtp.FromAddress
+	}
+	return relay
+}
+
+// SenderAddress is the From this relay sends with.
+func (r mailerRelay) SenderAddress() string { return r.from }
 
 // SendControllerMail hands one rendered message to the operator relay, under
 // the delivery row's own Message-ID so a bounce of it can find that row.
@@ -165,7 +180,7 @@ func (s *Server) rewireConfirmationLane(pool *pgxpool.Pool) {
 	if s.controllerRelay == nil || s.vault == nil || s.confirmLinkBase == "" || s.confirmRunner == nil {
 		return
 	}
-	queue := NewControllerMailQueue(pool, s.confirmRunner, config.Val(loadedConfig(), EmailFromAddress))
+	queue := NewControllerMailQueue(pool, s.confirmRunner, s.controllerRelay.SenderAddress())
 	s.consentHandlers = s.WithConfirmationLane(queue, confirmLinkVault{s.vault}, s.confirmLinkBase)
 	// The session probe answers whether a caller may ask for a confirmation,
 	// and it is this branch that decides whether the lane exists at all. The

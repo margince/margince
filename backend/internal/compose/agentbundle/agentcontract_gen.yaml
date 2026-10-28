@@ -8920,6 +8920,11 @@ components:
           description: |-
             True when the message has blind recipients this caller may not see. The viewer says
             that they exist rather than showing an empty list that reads as none.
+        controller_send:
+          allOf: [{$ref: '#/components/schemas/ControllerSend'}]
+          readOnly: true
+          nullable: true
+          description: Present only on a mail the installation's relay sent for a member, as on `Activity`; `from` then names that member.
         attachments:
           type: array
           items: {$ref: '#/components/schemas/EmailAttachmentSummary'}

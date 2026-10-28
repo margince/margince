@@ -19,11 +19,14 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/testsmtp"
 )
 
 // stagedControllerMail is the one controller delivery the lane staged.
@@ -237,4 +240,61 @@ func TestTheNetworkReceiptOfARelaySendCarriesTheSameMark(t *testing.T) {
 		}
 	}
 	t.Fatalf("the relay send is no receipt on the contact's graph: %s", rec.Body.String())
+}
+
+func TestTheTimelineNamesTheFromTheRelayActuallySentWith(t *testing.T) {
+	l := setupConfirmLane(t)
+	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact), ""); err != nil {
+		t.Fatalf("IssueConfirmToken: %v", err)
+	}
+	staged, _, _ := stagedControllerMail(t, l)
+	var deliveryID ids.UUID
+	if err := l.e.Pool.QueryRow(context.Background(), `SELECT id FROM comms_outbound WHERE activity_id = $1`, staged).Scan(&deliveryID); err != nil {
+		t.Fatal(err)
+	}
+
+	const workerFrom = "privacy@worker.example.test"
+	relay := testsmtp.Start(t, false)
+	host, port := relay.Address(t)
+	dispatcher := newSendDispatcher(l.e.Pool, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, nil, nil, nil).
+		WithControllerRelay(ControllerRelayFor(mailer.SMTP{Host: host, Port: port, FromAddress: workerFrom}), l.vault)
+	if outcome, _, err := dispatcher.DispatchWithWait(sendWorkerScope(l.ctx), deliveryID); err != nil || outcome != comms.OutcomeSent {
+		t.Fatalf("controller dispatch: %s %v", outcome, err)
+	}
+
+	contactType := "contact"
+	page, _, err := activities.NewStore(InstallationDB(l.e.Pool)).ListActivities(l.ctx, activities.ListActivitiesInput{
+		EntityType: &contactType, EntityID: &l.contact,
+	})
+	if err != nil {
+		t.Fatalf("ListActivities: %v", err)
+	}
+	for _, row := range page {
+		if ids.UUID(row.Id) != staged {
+			continue
+		}
+		if row.ControllerSend == nil || row.ControllerSend.FromAddress == nil || *row.ControllerSend.FromAddress != workerFrom {
+			t.Errorf("the sent mail reads %+v, want the From it left with, %q, not the staged %q",
+				row.ControllerSend, workerFrom, laneFromAddress)
+		}
+		return
+	}
+	t.Fatalf("the sent mail %s is not on the contact's timeline", staged)
+}
+
+func TestTheSingleMailViewMarksARelaySendAsTheTimelineDoes(t *testing.T) {
+	l := setupConfirmLane(t)
+	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact), ""); err != nil {
+		t.Fatalf("IssueConfirmToken: %v", err)
+	}
+	staged, _, _ := stagedControllerMail(t, l)
+
+	shown, err := activities.NewStore(InstallationDB(l.e.Pool)).GetEmailPresentation(l.ctx, ids.From[ids.ActivityKind](staged), nil)
+	if err != nil {
+		t.Fatalf("GetEmailPresentation: %v", err)
+	}
+	if shown.ControllerSend == nil || shown.ControllerSend.FromAddress == nil || *shown.ControllerSend.FromAddress != laneFromAddress {
+		t.Errorf("the opened relay send reads %+v, want controller_send from %q: its From names the rep",
+			shown.ControllerSend, laneFromAddress)
+	}
 }

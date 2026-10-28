@@ -78,16 +78,18 @@ func applyEmailStates(page []crmcontracts.Activity, states map[ids.UUID]EmailRow
 // timeline decides it. Not WithEmailRowFacts: the single-message read already
 // has the attachments in hand, and counting them again would be a statement
 // for a number that caller can see.
+//
+// It answers the message's controller-send mark, read with its delivery.
 func withEmailStateOn(
 	ctx context.Context, tx pgx.Tx, id openapi_types.UUID, summary *crmcontracts.EmailSummary,
-) error {
+) (*crmcontracts.ControllerSend, error) {
 	row := []crmcontracts.Activity{{Id: id, EmailSummary: summary}}
 	states, err := EmailStatesFor(ctx, tx, emailIDsOf(row))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	applyEmailStates(row, states)
-	return nil
+	return row[0].ControllerSend, nil
 }
 
 // contractDelivery renders one delivery for the wire, or nil when the message
