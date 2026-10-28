@@ -91,10 +91,7 @@ you can do about it there.
 
 To is on the form. **Cc and Bcc** is a link until you press it. Then Bcc says
 what it means: other recipients cannot see these addresses, or that anyone else
-has a copy.
-
-A recipient Margince knows shows as the contact's name. Point at the name, or
-reach it with Tab, to see the address and the company.
+has a copy. A recipient Margince knows shows as the contact's name. Point at the name, or reach it with Tab, to see the address and the company.
 
 A channel reply, such as Telegram, drops the subject and Cc, because the channel
 has neither.
