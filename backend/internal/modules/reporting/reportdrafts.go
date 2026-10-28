@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -48,10 +49,43 @@ func refuseOpenDraft(report crmcontracts.ReportingReport) error {
 	return nil
 }
 
+// requireDraftWrite admits a human whose seat may write, or an agent acting
+// for one. A draft and a new private report change nothing another reader
+// sees, so an agent may prepare them. Publishing and sharing stay a human's.
+func requireDraftWrite(ctx context.Context, action principal.Action) error {
+	if err := auth.RequireActingForAHuman(ctx, "a report draft is prepared"); err != nil {
+		return err
+	}
+	if actor, _ := principal.Actor(ctx); !actor.SeatType.CanMutate() {
+		return apperrors.ErrPermissionDenied
+	}
+	return requireGrants(ctx, "report_definition", action)
+}
+
+// refuseAgentOverDraft keeps an agent from replacing an open draft. Editors
+// preview a draft, so it may be a human's unpublished work.
+func refuseAgentOverDraft(ctx context.Context, report crmcontracts.ReportingReport) error {
+	actor, ok := principal.Actor(ctx)
+	if ok && actor.Type == principal.PrincipalAgent && report.DraftRevision != nil {
+		return invalid("this report already has a draft; an editor publishes or discards it before another is prepared")
+	}
+	return nil
+}
+
+// DraftNewReport creates a report only its author sees, whatever audience the
+// input names, so a new report starts as private as a draft does.
+func (s *Service) DraftNewReport(ctx context.Context, in crmcontracts.ReportingReportInput) (crmcontracts.ReportingReport, error) {
+	if err := requireDraftWrite(ctx, principal.ActionCreate); err != nil {
+		return crmcontracts.ReportingReport{}, err
+	}
+	in.Audience, in.AudienceTeamId = reportingPrivate, nil
+	return s.insertReport(ctx, in)
+}
+
 // SaveReportDraft stores the next revision as a draft only editors see. A
 // second save replaces the draft, which no reader, edition or schedule holds.
 func (s *Service) SaveReportDraft(ctx context.Context, id ids.UUID, version int64, in crmcontracts.ReportingReportDraftInput) (crmcontracts.ReportingReport, error) {
-	if err := requireReadWrite(ctx, "report_definition", principal.ActionUpdate); err != nil {
+	if err := requireDraftWrite(ctx, principal.ActionUpdate); err != nil {
 		return crmcontracts.ReportingReport{}, err
 	}
 	var out crmcontracts.ReportingReport
@@ -61,6 +95,9 @@ func (s *Service) SaveReportDraft(ctx context.Context, id ids.UUID, version int6
 			return err
 		}
 		if err := s.validateRevision(ctx, tx, &in.Selection); err != nil {
+			return err
+		}
+		if err := refuseAgentOverDraft(ctx, before); err != nil {
 			return err
 		}
 		replaced, err := s.draftSelection(ctx, tx, before)

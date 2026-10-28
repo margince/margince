@@ -189,7 +189,7 @@ it("opens a meeting on what it asks, with the row's verbs", async () => {
     source: "meeting_outcome",
     category: "meetings",
     because: [{ kind: "outcome_unrecorded" }],
-    actions: ["decide"],
+    actions: ["decide", "cancel"],
   };
   stubApi({
     "GET /worklist": () => jsonResponse(readingsDay({}, [meeting])),
@@ -228,12 +228,18 @@ it("opens a meeting on what it asks, with the row's verbs", async () => {
   ).toBeTruthy();
   expect(
     within(details).getByRole("button", {
-      name: en["worklist.verb.meetingUpdate"],
+      name: en["worklist.verb.meetingUpdateFor"].replace(
+        "{subject}",
+        "Discovery call with Turbinenbau",
+      ),
     }),
   ).toBeTruthy();
   expect(
     within(details).getByRole("button", {
-      name: en["worklist.verb.meetingCanceled"],
+      name: en["worklist.verb.meetingCanceledFor"].replace(
+        "{subject}",
+        "Discovery call with Turbinenbau",
+      ),
     }),
   ).toBeTruthy();
   // The row's own verbs answer a meeting; the read offers no "Done".

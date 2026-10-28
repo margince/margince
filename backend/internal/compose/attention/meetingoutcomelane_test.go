@@ -100,6 +100,23 @@ func TestAMeetingOwedAnAnswerOffersAWayToGiveIt(t *testing.T) {
 	}
 }
 
+// A meeting a live calendar invitation holds is canceled through the
+// invitation, and the server refuses the write here, so the row offers none.
+func TestOnlyAMeetingNoInvitationHoldsOffersCancel(t *testing.T) {
+	t.Parallel()
+	for _, managed := range []bool{false, true} {
+		item := meetingAwaitingOutcomeItem(MeetingAwaitingOutcome{
+			ID: ids.NewV7(), Subject: "Discovery call", CalendarManaged: managed,
+		})
+		if got := slices.Contains(item.Actions, crmcontracts.AttentionItemActionsCancel); got == managed {
+			t.Errorf("calendar managed %v: offers cancel = %v, want %v", managed, got, !managed)
+		}
+		if !slices.Contains(item.Actions, crmcontracts.AttentionItemActionsDecide) {
+			t.Errorf("calendar managed %v: offers %v, want decide either way", managed, item.Actions)
+		}
+	}
+}
+
 // The verb writes the activity, so the row has to name the version it is
 // answered against — the client cannot make the write conditional otherwise,
 // and two readers answering one meeting both succeed with the later one

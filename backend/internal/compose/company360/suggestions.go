@@ -269,9 +269,10 @@ func NewSuggestionAction(kind crmcontracts.Company360SuggestionActionKind) *stru
 func (said suggestionCopy) staleThread(
 	companyID ids.CompanyID, now time.Time, loc *time.Location, newest lastMessage,
 ) *crmcontracts.Company360Suggestion {
-	// An unrecorded direction cannot support advice about who owes a reply: a
-	// capture that never said who spoke is not evidence that we did.
-	if newest.Direction != string(crmcontracts.ActivityDirectionOutbound) {
+	// A mail waits on them only as its History badge says. Another kind needs
+	// a recorded outbound direction: a capture that never said who spoke is
+	// not evidence that we did.
+	if !newest.awaitsThem() {
 		return nil
 	}
 	waited := now.Sub(newest.At)

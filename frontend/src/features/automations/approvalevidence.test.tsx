@@ -9,6 +9,7 @@ import { formatDateTime } from "../../format/format";
 import { LocaleProvider, translate } from "../../i18n";
 import { RecordZoneProvider } from "../../lib/recordzone";
 import { messageApproval } from "../../testing/message-approval";
+import { SourceHost } from "../../testing/sourcehost";
 import { ApprovalEvidence } from "./approvalevidence";
 
 const SOURCE = "22222222-2222-4222-8222-222222222222";
@@ -66,7 +67,9 @@ function show(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <RecordZoneProvider zone={RECORD_ZONE}>
-          <ApprovalEvidence approval={approval} />
+          <SourceHost>
+            <ApprovalEvidence approval={approval} />
+          </SourceHost>
         </RecordZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,

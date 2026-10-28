@@ -41,6 +41,10 @@ A line outside the quote was written by Margince, so a prospect cannot type one.
 The prospect then sees the form's **Success message**, or goes to the **Thank-you page** if you set one.
 Also called: where do my website leads go, new lead from website, duplicate lead.
 
+### Who gets the leads from a form?
+Pick a colleague in **Owner of new leads** when you create or edit the form. Each new lead from it then goes to that colleague. With **Unassigned**, anyone on the team can pick the lead up. If the owner leaves the workspace, new leads arrive unassigned until you pick someone else.
+Also called: assign website leads, lead owner, route form leads.
+
 ### How do I connect WordPress?
 To connect a WordPress site, add a **Custom HTML** block to the page and paste the **Code to paste** into it. Choose **Your website** and list the site's address under **Websites**.
 

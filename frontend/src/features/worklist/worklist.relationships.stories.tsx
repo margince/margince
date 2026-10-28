@@ -35,6 +35,16 @@ const meta: Meta<typeof OptionalRelationships> = {
           actions: ["open", "dismiss"],
           move: { action: "draft_email" },
         }),
+        row({
+          id: "01930000-0000-7000-8000-000000000032",
+          source: "relationship_decay",
+          category: "relationships",
+          level: 6,
+          title: "Second demo contact",
+          consequence: "data_drifts",
+          because: [{ kind: "quiet_days", value: { kind: "days", days: 120 } }],
+          actions: ["open", "dismiss"],
+        }),
       ],
       optional_relationships_more_available: true,
     },
@@ -50,6 +60,12 @@ export const Optional: Story = {
     await expect(
       canvas.getByText("More optional contacts are outside this view."),
     ).toBeVisible();
+    await expect(
+      canvas.getByRole("button", { name: "Dismiss all shown" }),
+    ).toBeVisible();
+    await expect(
+      canvas.getAllByRole("button", { name: "Stop following" }),
+    ).toHaveLength(2);
   },
 };
 export const Dark: Story = { ...Optional, globals: { theme: "dark" } };
