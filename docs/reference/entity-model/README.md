@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 333 |
-| Columns | 3956 |
+| Columns | 3957 |
 | Foreign keys | 551 |
 | Owning areas | 37 |
 
