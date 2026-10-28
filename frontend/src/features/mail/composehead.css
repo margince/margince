@@ -41,6 +41,7 @@
 /* Each row of tokens is centred on the label's line: the pill is 24px, so the
    field's padding makes up the rest of the line's height. */
 .compose-address-field .token-input {
+  /* ds:ignore a bare address row centres each token row on the label's line */
   padding-block: calc((var(--inputHeight) - var(--space-6)) / 2);
 }
 /* Baseline, so the Cc and Bcc link reads on the first row of tokens. */
