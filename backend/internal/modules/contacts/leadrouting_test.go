@@ -222,8 +222,8 @@ func TestFieldResolvesExactlyRoutableLeadFields(t *testing.T) {
 }
 
 // A stored rule on a field routing no longer reads, such as the old `source`,
-// never applies. Its empty value must not match every lead, and it is named so
-// the settings page and the log can say why a lead went to round-robin.
+// never applies. Its empty value must not match every lead. It is named so the
+// log can say why a lead went to round-robin.
 func TestARuleOnAFieldRoutingNoLongerReadsNeverApplies(t *testing.T) {
 	owners, active := routingPool(2)
 	cfg := RoutingConfig{Owners: owners[:1], Rules: []RoutingRule{{Field: "source", Equals: "", OwnerID: owners[1]}}}
