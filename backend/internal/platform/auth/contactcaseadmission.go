@@ -17,8 +17,8 @@ type (
 	contactCaseAdmission struct{ members, grantees []ids.UUID }
 )
 
-// WithContactCaseAdmission lets a delegated case merge change exactly the
-// selected contacts and hand the survivor to one of their owners. It widens
+// WithContactCaseAdmission lets a delegated case merge change the selected
+// contacts and hand the survivor to one of their owners. It widens
 // no other table, no other contact, no read, and no other assignee. The
 // caller has already decided the workspace policy and the actor's ownership.
 func WithContactCaseAdmission(ctx context.Context, members, grantees []ids.UUID) (context.Context, error) {

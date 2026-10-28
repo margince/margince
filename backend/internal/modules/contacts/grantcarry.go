@@ -18,8 +18,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
-// GrantCarrier moves the grants on a retiring record onto its survivor, folding
-// two grants of one grantee into one, and keeps a former owner's access there.
+// GrantCarrier moves the grants on a retiring record onto its survivor and
+// folds two grants of one grantee into one. It also keeps a former owner's access.
 type GrantCarrier interface {
 	CarryGrantsTx(ctx context.Context, tx pgx.Tx, recordType string, from, to ids.UUID) error
 	CarryOwnerAccessTx(ctx context.Context, tx pgx.Tx, recordType string, record, owner, mergedFrom ids.UUID) (authz.OwnerAccessCarry, error)

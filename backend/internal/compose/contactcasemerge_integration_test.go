@@ -5,9 +5,9 @@
 
 package compose
 
-// What a contact case merge writes, and what it must not: nothing for a
-// preview or a refusal, everything or nothing for a merge, one winner of two
-// racing merges, and the former owner's access on every merge path.
+// What a contact case merge writes. A preview or a refusal writes nothing. A
+// merge writes all or nothing, and of two racing merges one wins. Every merge
+// path keeps the former owner's access.
 
 import (
 	"context"
@@ -156,8 +156,8 @@ func TestAMergeThatFailsHalfwayLeavesNothing(t *testing.T) {
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep2, c.e.Rep3)
 	slices.SortFunc(members, compareUUIDs)
 	consentStore := consent.NewStore(c.e.DB())
-	// The last member merged holds a stop, and this store has no seam to carry
-	// it, so the merge refuses after the first member already merged.
+	// The last member merged holds a stop this store cannot carry. So the merge
+	// refuses after the first member has already merged.
 	if err := consentStore.Suppress(c.e.Admin(), consent.SuppressInput{
 		ContactID: ids.From[ids.ContactKind](members[2]), Kind: commsauthz.ReasonObjection, Reason: "asked to stop",
 	}); err != nil {

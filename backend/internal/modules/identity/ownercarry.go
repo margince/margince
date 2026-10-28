@@ -29,9 +29,8 @@ func (s *Service) CarryOwnerAccessTx(ctx context.Context, tx pgx.Tx, recordType 
 	if !shareableRecordTypes[recordType] || record.IsZero() || owner.IsZero() {
 		return out, fmt.Errorf("identity: an owner carry needs a shareable record and an owner")
 	}
-	// The two questions a share asks of its grantor. Any principal may pass
-	// them: keeping an owner's own access is part of the merge the principal
-	// may already make, not a new share, so the human-only rule does not bind.
+	// The two questions a share asks of its grantor. Any principal may pass:
+	// keeping an owner's own access is part of a merge it may already make.
 	if err := auth.EnsureLinkTarget(ctx, tx, recordType, record); err != nil {
 		return out, err
 	}
@@ -103,8 +102,8 @@ func grantLiveNow(ctx context.Context, tx pgx.Tx, g grantRow) (bool, error) {
 	return grantLive(g, now), nil
 }
 
-// ownerCarryGrantor is the human accountable for a carried grant: the one the
-// merge acts for, or the grantee when no human acts, such as a system merge.
+// ownerCarryGrantor is the human accountable for a carried grant. That is the
+// human the merge acts for, or the grantee for a system merge.
 func ownerCarryGrantor(ctx context.Context, owner ids.UUID) ids.UUID {
 	if actor, ok := principal.Actor(ctx); ok && !actor.UserID.IsZero() {
 		return actor.UserID

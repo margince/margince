@@ -123,8 +123,8 @@ func caseSelection(d ContactCaseDecision) ([]ids.UUID, error) {
 }
 
 // decideContactCaseTx locks every selected member, then reads and checks the
-// case under those locks, so a concurrent merge of the same case is seen as a
-// changed revision rather than raced.
+// case under those locks. A concurrent merge of the same case then shows as a
+// changed revision.
 func (s *Store) decideContactCaseTx(ctx context.Context, tx pgx.Tx, contactID ids.UUID, d ContactCaseDecision,
 	selected []ids.UUID, active []fieldcatalog.Column,
 ) (crmcontracts.ContactCaseOutcome, error) {
@@ -181,8 +181,8 @@ func (s *Store) lockCaseMembers(ctx context.Context, tx pgx.Tx, selected []ids.U
 	return rows.Err()
 }
 
-// caseGone answers for an addressed contact the reviewer saw in a case and
-// that is in none now: a merge or a dismissal changed it under them.
+// caseGone answers for a contact the reviewer saw in a case that is in none
+// now. A merge or a dismissal changed the case under them.
 func caseGone(ctx context.Context, tx pgx.Tx, contactID ids.UUID) error {
 	if err := auth.EnsureVisible(ctx, tx, contactEntity, contactID); err != nil {
 		return err
@@ -226,8 +226,8 @@ func checkCaseSelection(c contactCase, selected []ids.UUID) error {
 // admitCaseDecision answers under which authority the merge runs. Ordinary:
 // the caller may change every selected member and hand the survivor to the
 // owner. Delegated: the policy is on and the caller is a live full-seat owner
-// of a selected member; the context then admits exactly the selected contacts
-// and their owners, and nothing else.
+// of a selected member. The context then admits the selected contacts and
+// their owners, and nothing else.
 func admitCaseDecision(ctx context.Context, tx pgx.Tx, c contactCase, selected []ids.UUID,
 	survivor caseMember, owner ids.UUID, policy bool,
 ) (context.Context, crmcontracts.ContactCaseOutcomeMode, error) {

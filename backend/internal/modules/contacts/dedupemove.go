@@ -12,32 +12,19 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// moveDedupeCandidates re-homes the duplicate pairs that name a merged-away
-// contact or company onto its survivor.
-//
-// Three constraints shape it:
-//
-//   - dedupe_candidate_ordered requires left < right, so the rows are
-//     re-normalized rather than repointed in place.
-//   - uq_dedupe_candidate_pair spans EVERY disposition, so a merged or
-//     dismissed pair collides exactly like an open one.
-//   - the pair a merge is settling is marked 'merged' in this same transaction
-//     before the merge runs, and that row must survive as the record of it.
-//
-// A pair naming both endpoints would become a self-pair and is dropped while
-// open; a pair the survivor already holds is dropped as the duplicate it now
-// is, the one carrying no human judgement going first. Everything else
-// re-normalizes onto the survivor, so a third record's open pair with the
-// retired one stays open against the survivor.
-//
-// The columns come from dedupePairSides, compile-time literals.
+// moveDedupeCandidates re-homes the pairs naming a merged-away contact or
+// company onto its survivor, so a third record's open pair stays open. Rows are
+// re-sorted because `dedupe_candidate_ordered` wants left < right. The unique
+// pair key spans every disposition, so a pair the survivor holds already is
+// dropped, the one without a human verdict first. The pair the merge settles
+// stays as its record. Columns come from dedupePairSides.
 func moveDedupeCandidates(ctx context.Context, tx pgx.Tx, entityType string, sourceID, targetID ids.UUID) error {
 	side, ok := dedupePairSideFor(entityType)
 	if !ok {
 		return fmt.Errorf("contacts: %q has no duplicate pairs to move", entityType)
 	}
-	// otherEnd is the column the retired record does NOT occupy, read off the
-	// row as it was before the statement, so both SET expressions agree.
+	// otherEnd is the end the retired record does not occupy, read off the row
+	// as it was before the statement, so both SET expressions agree.
 	otherEnd := func(row string) string {
 		return fmt.Sprintf("CASE WHEN %[1]s.%[2]s = @source THEN %[1]s.%[3]s ELSE %[1]s.%[2]s END",
 			row, side.left, side.right)

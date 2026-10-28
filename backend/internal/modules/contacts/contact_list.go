@@ -39,8 +39,8 @@ type ListContactsInput struct {
 	// storekit.OwnershipClause, which also refuses two of them at once.
 	OwnerTeamID *ids.TeamID
 	Unassigned  *bool
-	// SharedWithMe narrows to contacts someone else owns that the caller holds
-	// a live grant on; it names its own set, so it excludes the owner filters.
+	// SharedWithMe narrows to contacts someone else owns and the caller holds a
+	// live grant on. It names its own set, so it excludes the owner filters.
 	SharedWithMe    *bool
 	IncludeArchived bool
 	// CapturedByKind filters on the captured_by prefix (ADR-0075/A121 §3a).

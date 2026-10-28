@@ -18,9 +18,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// executeCaseMerge writes a checked decision. The owner changes first, so each
-// member's merge then keeps its own former owner's access against the chosen
-// one and needs no second grant for the new owner.
+// executeCaseMerge writes a checked decision. The owner changes first. Each
+// member's merge then compares its former owner with the chosen one, so the
+// new owner gets no grant.
 func (s *Store) executeCaseMerge(ctx context.Context, tx pgx.Tx, plan caseMergePlan, active []fieldcatalog.Column) (crmcontracts.ContactCaseOutcome, error) {
 	actor, _ := principal.Actor(ctx)
 	for _, e := range plan.c.Edges {

@@ -203,8 +203,8 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 	if err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
-	// A third contact's open pair with the merged-away one now asks about the
-	// survivor, so it stays in front of a human instead of going quiet.
+	// A third contact's open pair with the merged-away one now names the
+	// survivor, so a human still sees it.
 	if err := moveDedupeCandidates(ctx, tx, entityContact, sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}

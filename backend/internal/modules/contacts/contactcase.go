@@ -111,9 +111,8 @@ func (c contactCase) liveOwners(memberIDs []ids.UUID) []ids.UUID {
 
 func compareUUID(a, b ids.UUID) int { return slices.Compare(a[:], b[:]) }
 
-// openContactPairs is the edge rule a case is walked over: an open contact
-// pair whose both ends are live and visible to the reader, the queue's own
-// visibility clause.
+// openContactPairs is the edge rule a case is walked over. A pair counts when
+// it is open and both ends pass the queue's own live visibility clause.
 func openContactPairs(ctx context.Context, arg func(any) int) (string, error) {
 	visible, err := dedupeVisibilityClause(ctx, arg, true)
 	if err != nil {
@@ -134,8 +133,8 @@ func walkContactCase(ctx context.Context, tx pgx.Tx, start ids.UUID) (contactCas
 		return contactCase{}, err
 	}
 	bound := arg(contactCaseMaxMembers + 1)
-	// UNION, not UNION ALL, so a cycle of pairs ends; the outer LIMIT stops the
-	// walk one past the bound, which is how a case says it is too large.
+	// UNION drops a contact already walked, so a cycle of pairs ends. The LIMIT
+	// stops one past the bound, which marks the case as too large.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH RECURSIVE walked(id) AS (
 		  SELECT $%d::uuid

@@ -97,9 +97,9 @@ func (s *Store) contactCaseView(ctx context.Context, tx pgx.Tx, c contactCase) (
 	return out, nil
 }
 
-// caseMergeMode answers how this reader could merge the whole case: under
-// their own write authority over every member, under the workspace policy as
-// the owner of one, or not at all. The decision asks again under its locks.
+// caseMergeMode answers how this reader could merge the whole case. That is
+// by write authority over every member, by the policy as the owner of one, or
+// not at all. The decision asks again under its locks.
 func caseMergeMode(ctx context.Context, tx pgx.Tx, c contactCase, policy bool) (crmcontracts.ContactCaseMergeMode, error) {
 	if auth.Require(ctx, contactEntity, principal.ActionUpdate) != nil {
 		return crmcontracts.ContactCaseMergeModeNone, nil
@@ -150,8 +150,8 @@ func caseOwners(c contactCase) []crmcontracts.ContactCaseOwner {
 	return out
 }
 
-// resolvedContactCase answers for a contact in no open case: resolved when a
-// merge took it into another contact the reader can see it went to, else 404.
+// resolvedContactCase answers for a contact in no open case. It is resolved
+// when a merge took it into another contact, and not found otherwise.
 func resolvedContactCase(ctx context.Context, tx pgx.Tx, contactID ids.UUID) (crmcontracts.ContactCase, error) {
 	if err := auth.EnsureVisible(ctx, tx, contactEntity, contactID); err != nil {
 		return crmcontracts.ContactCase{}, err

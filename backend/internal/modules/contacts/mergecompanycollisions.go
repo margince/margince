@@ -13,11 +13,10 @@ package contacts
 // together has to answer which one survives, and the answer differs by what the
 // row IS.
 //
-// Two answers appear below: a DERIVED row (a geocode position, an enrichment
-// backoff) is dropped when the survivor has its own, because recomputing costs
-// a job; an EVIDENCE row (the VIES receipt) is never destroyed, because no
-// later work can reproduce it. A JUDGED row, a dedupe disposition, is moved by
-// moveDedupeCandidates, which the contact merge shares.
+// A DERIVED row (a geocode position, an enrichment backoff) is dropped when the
+// survivor has its own, because recomputing costs a job. An EVIDENCE row (the
+// VIES receipt) is never destroyed, because no later work can reproduce it.
+// Duplicate pairs move through moveDedupeCandidates.
 
 import (
 	"context"
