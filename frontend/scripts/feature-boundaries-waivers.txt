@@ -172,7 +172,6 @@ reach features/contacts/contactconfirm.tsx features/worklist/worklist.return.tsx
 reach features/contacts/contactconsentpanel.tsx features/privacy/consent.tsx
 reach features/contacts/contactdealrooms.tsx features/deals/dealroomaccess.tsx
 reach features/contacts/contactdeals.tsx features/records/relationships.tsx
-reach features/contacts/contactdetails.tsx features/records/recordreferences.ts
 reach features/contacts/contactfacts.tsx features/companies/companycontacts/summary.tsx
 reach features/contacts/contactfiles.tsx features/voice-knowledge/adddocument.tsx
 reach features/contacts/contactimportaction.tsx features/import/importaddress.ts
@@ -222,12 +221,10 @@ reach features/deals/dealroomdocuments.tsx features/voice-knowledge/adddocument.
 reach features/deals/deals.detail.tsx features/mail/openemaildrawer.tsx
 reach features/deals/deals.detail.tsx features/worklist/worklist.return.tsx
 reach features/deals/deals.details.tsx features/records/recordlists.tsx
-reach features/deals/deals.details.tsx features/records/recordreferences.ts
 reach features/deals/deals.fields.tsx features/projects/projects.form.ts
 reach features/deals/deals.list.tsx app/pagemeta.ts
 reach features/deals/deals.list.tsx features/lists/savedviews.tsx
 reach features/deals/deals.list.tsx features/privacy/legalreviews.tsx
-reach features/deals/deals.list.tsx features/records/recordreferences.ts
 reach features/deals/deals.overview.tsx features/records/record360/index.ts
 reach features/deals/dealsignals.stories.tsx features/records/record360/index.ts
 reach features/deals/dealsignals.tsx features/records/record360/index.ts
@@ -320,11 +317,9 @@ reach features/projects/project360.chronology.tsx features/mail/openemaildrawer.
 reach features/projects/project360.chronology.tsx features/records/recordchronology.tsx
 reach features/projects/project360.chronology.tsx features/records/timelineactions.tsx
 reach features/projects/project360.tsx features/companies/companyactions.tsx
-reach features/projects/project360.tsx features/records/recordreferences.ts
 reach features/projects/project360.tsx features/records/share.tsx
 reach features/projects/project360.tsx features/worklist/taskdetailmodal.tsx
 reach features/projects/projectcompanies.tsx features/companies/companyprojects.tsx
-reach features/projects/projects.create.ts features/records/recordreferences.ts
 reach features/projects/projects.tsx app/pagemeta.ts
 reach features/projects/projects.tsx features/lists/savedviews.tsx
 reach features/projects/projectsections.tsx features/records/record360/index.ts
