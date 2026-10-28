@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/platform/auth backend/internal/shared/kernel/principal backend/internal/compose/agentgate.go backend/internal/modules/identity/passport.go backend/internal/platform/database/database.go backend/internal/compose/dbrole.go scripts/check-rls-store-path.sh backend/api/crm.yaml -->
+<!-- describes: backend/internal/platform/auth backend/internal/shared/kernel/principal backend/internal/compose/agentgate.go backend/internal/modules/identity/passport.go backend/internal/platform/database/database.go backend/internal/compose/dbrole.go scripts/check-rls-store-path.sh backend/api/crm.yaml backend/internal/modules/contacts/contactcasedecide.go backend/internal/modules/contacts/contactcasesettings.go -->
 # Authorization & access control
 
 How Margince decides who may do what, and where that decision is made. You may look for the auth check in
@@ -110,6 +110,39 @@ The rule is spelled once, in `platform/auth` (`actsForTheInstallation`). It
 covers capture-privacy row scope and nothing else. A connector still answers to
 the object RBAC and the grants in its passport. That is why a provider run
 declares the grant set it needs, rather than reading past every gate.
+
+### A contact case merge, and the one write check it lets pass
+
+A contact case is a group of contacts that may be duplicates of each other. Its members often have different
+owners. A rep with `own` scope cannot change a colleague's contact, so without help no single owner
+could merge the case.
+
+`auth.WithContactCaseAdmission` (`platform/auth/contactcaseadmission.go`) puts a case admission on
+the context. It names the selected contacts and the live owners of those contacts. It changes three
+checks and no other:
+
+- `ensureWriteAuthority`, under `EnsureWritable`, lets a selected `contact` row pass the owner or
+  grant check.
+- `AdmitChangers`, the batch check for several principals, lets it pass for the acting principal
+  only. A colleague in the same batch still needs their own write authority.
+- `EnsureAssignee` accepts one of the named owners as the new owner, if that owner is a live
+  human with a full seat. Anyone else is still refused.
+
+It opens up no other table, no other contact and no read. Object RBAC, the visibility check and the
+seat limit still run, so a `read` seat still cannot write.
+
+Only the decision code in the contacts module (`admitCaseDecision` in `contactcasedecide.go`) puts
+the admission on the context. It first tries the ordinary path: the caller may change every selected
+contact, and the new owner passes `EnsureAssignee`. If that fails, it grants the admission
+only when all of these hold:
+
+- the stored setting `contacts.shared_merge_reviews` is on (it is off by default);
+- the caller holds `contact:update` and acts for a human;
+- the caller is the live owner, with a full seat, of one of the selected contacts.
+
+Otherwise the merge is refused. The decision reads the setting in its own transaction, under a
+shared lock, so a change to the setting waits for a merge in flight. The audit row of the merge
+records the mode (`ordinary` or `delegated`) and the setting.
 
 ## Autonomy tiers — how agent actions are governed (🟢 / 🟡)
 

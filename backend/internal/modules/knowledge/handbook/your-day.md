@@ -264,7 +264,7 @@ Worklist items are in bands, shown in this order:
 | **Prospecting** | "No prospecting work waiting." |
 
 Work to check is one more kind. It does not show a band in the list; it has its own panel under it,
-headed **To review**. Contacts that may be one person share one card there, and each of their owners finds it in their own Worklist. Contacts with no owner show under **Unassigned**. **Review** on the card opens the merge; see [merging duplicate contacts](records.md#how-do-i-merge-duplicate-contacts).
+headed **To review**. Possible duplicate contacts share one card there, and each of their owners finds it in their own Worklist. Contacts with no owner show under **Unassigned**. **Review** on the card opens the merge; see [merging duplicate contacts](records.md#how-do-i-merge-duplicate-contacts).
 
 A band you have cleared still shows its heading and says so, but only when the whole day is loaded.
 

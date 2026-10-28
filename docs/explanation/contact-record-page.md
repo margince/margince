@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/contact360 frontend/src/features/contacts/contactpage.tsx frontend/src/features/contacts/contactoverview.tsx frontend/src/features/contacts/contacttoday.tsx frontend/src/features/contacts/contactconsentpanel.tsx frontend/src/features/contacts/contactstanding.ts frontend/src/components/latestinbound.tsx -->
+<!-- describes: backend/internal/compose/contact360 frontend/src/features/contacts/contactpage.tsx frontend/src/features/contacts/contactoverview.tsx frontend/src/features/contacts/contacttoday.tsx frontend/src/features/contacts/contactconsentpanel.tsx frontend/src/features/contacts/contactstanding.ts frontend/src/components/latestinbound.tsx frontend/src/features/contacts/contactcaseentry.tsx -->
 # The contact record page
 
 The Overview tab puts recorded context and real work first. A new contact must not look like an old relationship that is now silent.
@@ -19,6 +19,8 @@ An empty block, whether for reading, for promises or for a conversation, does no
 A relationship is marked inbound only, outbound only, or both ways. A pulse, colleague list or signal list that loaded but is empty does not show; a limit set by role is still stated. Missing times do not prove that a relationship runs only one way.
 
 Editing identity, choosing the default address and resolving where the contact works stay with the parts that already do them.
+
+While the contact is in an open duplicate case, the record header shows a **Possible duplicates** button with a count (`contactcaseentry.tsx`). The count is the number of other contacts of the case that the reader can see. The button opens the same review the Worklist case row opens, so both places merge through one decision. It does not show when the contact is in no case, or when the case is merged or gone.
 
 ## Permission to write
 
