@@ -1076,7 +1076,7 @@ var readViewQueries = map[string][]viewQuery{
 	"GET /v1/deals/{id}/outcome-reviews":                    {},
 	"GET /v1/deals/{id}/stage-evidence":                     {},
 	"GET /v1/deals/{id}/stakeholders":                       {},
-	"GET /v1/deals/{id}/status":                             {{Name: "facts_only", Type: "boolean"}, {Name: "refresh", Type: "boolean"}},
+	"GET /v1/deals/{id}/status":                             {{Name: "facts_only", Type: "boolean"}, {Name: "if_recommendation", Type: "string"}, {Name: "if_rule", Type: "string"}, {Name: "refresh", Type: "boolean"}},
 	"GET /v1/dedupe/candidates":                             {{Name: "cursor", Type: "string"}, {Name: "entity_type", Type: "string"}, {Name: "limit", Type: "integer"}, {Name: "status", Type: "string"}},
 	"GET /v1/dedupe/candidates/{id}":                        {},
 	"GET /v1/email-signature-template":                      {},

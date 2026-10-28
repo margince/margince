@@ -734,13 +734,14 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact_email
 
-13 columns · primary key `(id)` · referenced by 1 foreign key
+14 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
 | `email` | `text` | yes | Stored lowercased. |
+| `email_domain_folded` | `text` |  |  |
 | `email_type` | `text`, default `'work'::text` | yes | One of `work`, `personal`, `other`. |
 | `from_correspondence` | `boolean`, default `true` | yes |  |
 | `is_primary` | `boolean`, default `false` | yes | At most one primary per type (DB-enforced). |
@@ -1178,7 +1179,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead
 
-42 columns · primary key `(id)` · referenced by 18 foreign keys
+43 columns · primary key `(id)` · referenced by 18 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1189,6 +1190,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `disqualify_note` | `text` |  |  |
 | `disqualify_reason_id` | `uuid` |  | Set by DELETE /leads/{id} with a reason; null on an open lead. |
 | `email` | `text` |  | Lowercased; lead-internal dedupe key. |
+| `email_domain_folded` | `text` |  |  |
 | `entered_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `first_response_at` | `timestamp with time zone` |  | First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. |
 | `from_contact_id` | `uuid` |  | The contact an older lead was created from, and null for every newly created lead. |

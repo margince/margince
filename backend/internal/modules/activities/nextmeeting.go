@@ -106,25 +106,12 @@ func nextBookedMeeting(
 	}
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	// The timeline's own scope rule, asked of the meeting itself: an activity
-	// carries no owner, so who may read one is decided by the records it links
-	// to. Spelled through auth so this read and the timeline cannot disagree.
-	scope, err := auth.ActivityContentClause(ctx, "a", arg)
+	where, err := bookedMeetingWhere(ctx, in.After, arg)
 	if err != nil {
 		return BookedMeeting{}, false, err
 	}
-	where := []string{
-		fmt.Sprintf("a.kind = $%d", arg(string(crmcontracts.ActivityKindMeeting))),
-		activityLive,
-		"(a.meeting_status IS NULL OR a.meeting_status = 'booked')",
-		occurredday.AheadSQL("a", fmt.Sprintf("$%d", arg(in.After))),
-		fmt.Sprintf(`EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id
-			AND l.entity_type = $%d AND l.%s = $%d)`,
-			arg(in.EntityType), column, arg(in.EntityID)),
-	}
-	if scope != "" {
-		where = append(where, scope)
-	}
+	where = append(where, fmt.Sprintf(`EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id
+		AND l.entity_type = $%d AND l.%s = $%d)`, arg(in.EntityType), column, arg(in.EntityID)))
 	var meeting BookedMeeting
 	var subject *string
 	err = tx.QueryRow(ctx, `SELECT a.id, a.subject, a.occurred_at, a.occurred_precision
@@ -142,4 +129,21 @@ func nextBookedMeeting(
 		meeting.Subject = *subject
 	}
 	return meeting, true, nil
+}
+
+func bookedMeetingWhere(ctx context.Context, after time.Time, arg func(any) int) ([]string, error) {
+	scope, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return nil, err
+	}
+	where := []string{
+		fmt.Sprintf("a.kind = $%d", arg(string(crmcontracts.ActivityKindMeeting))),
+		activityLive,
+		"(a.meeting_status IS NULL OR a.meeting_status = 'booked')",
+		occurredday.AheadSQL("a", fmt.Sprintf("$%d", arg(after))),
+	}
+	if scope != "" {
+		where = append(where, scope)
+	}
+	return where, nil
 }

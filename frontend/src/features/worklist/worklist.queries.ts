@@ -67,11 +67,9 @@ export type TeamBoard = components["schemas"]["TeamBoard"];
 
 export type TeamExceptions = components["schemas"]["TeamExceptions"];
 
-export type HandledForYou = components["schemas"]["HandledForYou"];
-
 export type WorklistWalk = components["schemas"]["WorklistWalk"];
 
-export type Receipt = components["schemas"]["Receipt"];
+export type { HandledForYou, Receipt } from "../../lib/handled";
 
 export type TeamException = components["schemas"]["TeamException"];
 

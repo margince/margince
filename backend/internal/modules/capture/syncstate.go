@@ -80,44 +80,37 @@ func backoffDelay(consecutiveFailures int) time.Duration {
 	return backoff.Jittered(consecutiveFailures, backoffBase, backoffCap)
 }
 
-// recordSyncSuccess resets the ladder, paces the next sync one interval out,
-// and — the auto-recovery path — flips a degraded connection back to connected
-// and revives an import this connection's own trouble truncated. One success
-// heals everything.
-func (r *Registry) recordSyncSuccess(ctx context.Context, connectionID ids.UUID) error {
-	return r.db.Tx(ctx, func(tx pgx.Tx) error {
-		now := r.now()
-		interval, err := config.StoredApplyTx(ctx, tx, config.Bound(), MailSyncIntervalSeconds)
-		if err != nil {
-			return err
-		}
-		// The interval is a DELAY the database applies to its own clock; the
-		// two last_*_at columns record when this process observed the sync and
-		// stay on its clock, which is the one that observed it.
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO capture_sync_state (connection_id, next_sync_at,
-			                                consecutive_failures, last_synced_at, last_success_at,
-			                                last_error_class, failing_since)
-			VALUES ($1, now() + make_interval(secs => $2), 0, $3, $3, NULL, NULL)
-			ON CONFLICT (connection_id) DO UPDATE SET
-			  next_sync_at = now() + make_interval(secs => $2),
-			  consecutive_failures = 0,
-			  last_synced_at = EXCLUDED.last_synced_at,
-			  last_success_at = EXCLUDED.last_success_at,
-			  last_error_class = NULL,
-			  -- One success ends the streak, so the next failure starts a new
-			  -- one from its own instant rather than continuing this one.
-			  failing_since = NULL`,
-			connectionID, interval, now); err != nil {
-			return err
-		}
-		if _, err := tx.Exec(ctx, `
-			UPDATE capture_connection SET status = 'connected'
-			WHERE id = $1 AND status = 'error' AND archived_at IS NULL`, connectionID); err != nil {
-			return err
-		}
-		return reviveTruncatedBackfillTx(ctx, tx, connectionID)
-	})
+// A successful pull and its health share the snapshot-fenced transaction.
+func (r *Registry) recordSyncSuccessTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) error {
+	now := r.now()
+	interval, err := config.StoredApplyTx(ctx, tx, config.Bound(), MailSyncIntervalSeconds)
+	if err != nil {
+		return err
+	}
+	// Scheduling follows database time; the success stamp follows the observer's clock.
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO capture_sync_state (connection_id, next_sync_at,
+		                                consecutive_failures, last_synced_at, last_success_at,
+		                                last_error_class, failing_since)
+		VALUES ($1, now() + make_interval(secs => $2), 0, $3, $3, NULL, NULL)
+		ON CONFLICT (connection_id) DO UPDATE SET
+		  next_sync_at = now() + make_interval(secs => $2),
+		  consecutive_failures = 0,
+		  last_synced_at = EXCLUDED.last_synced_at,
+		  last_success_at = EXCLUDED.last_success_at,
+		  last_error_class = NULL,
+		  -- One success ends the streak, so the next failure starts a new
+		  -- one from its own instant rather than continuing this one.
+		  failing_since = NULL`,
+		connectionID, interval, now); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE capture_connection SET status = 'connected'
+		WHERE id = $1 AND status = 'error' AND archived_at IS NULL`, connectionID); err != nil {
+		return err
+	}
+	return reviveTruncatedBackfillTx(ctx, tx, connectionID)
 }
 
 // reviveTruncatedBackfillTx puts a truncated import back in the queue when the
@@ -210,20 +203,22 @@ func lockConnectionTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) err
 	return nil
 }
 
-// recordSyncFailure classifies, schedules the retry, and degrades — never
-// tombstones. Auth parks the connection as reauth_required until its human
-// reconnects (the OAuth callback resets both rows).
-//
-// It carries no generation predicate, and does not need one: every
-// capture_connection write here is guarded by the status it moves FROM
-// ('connected'/'error'), and that guard is the fence — a disconnected or
-// reauth-parked row matches nothing, so a cycle that started before its human
-// acted can never drag the row back to a healthier status. What it records is
-// the connection's own health, which outlives any one grant: the daily probe of
-// a degraded connection has to be able to write its verdict.
-func (r *Registry) recordSyncFailure(ctx context.Context, connectionID ids.UUID, syncErr error) error {
+// An older pull may not replace a newer snapshot's health.
+func (r *Registry) recordSyncFailure(ctx context.Context, snapshot syncSnapshot, credentialRef *string, syncErr error) error {
 	class := classifySyncError(syncErr)
+	connectionID := snapshot.id
 	return r.db.Tx(ctx, func(tx pgx.Tx) error {
+		args := snapshot.args()
+		args["credential"] = credentialRef
+		var live int
+		// An old credential's failure cannot park a replacement, including same-account reauth.
+		if err := tx.QueryRow(ctx, `SELECT 1 FROM capture_connection WHERE `+syncSnapshotMatch+`
+			AND credential_ref IS NOT DISTINCT FROM @credential FOR UPDATE`, args).Scan(&live); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil
+			}
+			return err
+		}
 		now := r.now()
 
 		var failures int

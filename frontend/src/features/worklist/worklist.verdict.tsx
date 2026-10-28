@@ -1,56 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// How the deal behind a row is STANDING, drawn beside the step that acts on it.
-//
-// The row already said what to do. This says what the reader is walking into —
-// the judgement the deal page prints, carried onto the row so the reader does
-// not have to open that page to find it.
-//
-// THE LABEL SAYS THIS IS A READING, AND THAT IS THE WHOLE POINT OF DRAWING IT.
-// The server sends two kinds of line and both are readings:
-//
-//   deal_status   — the deal's own card, written from its timeline and cited.
-//   brief_finding — the night's grounded finding about this deal.
-//
-// A row that arrives with NO verdict is not a gap and gets nothing from here.
-// Its typed reasons are drawn underneath by RowCaptions, and those are the
-// deterministic explanation — computed from records with no model in the path.
-// Presenting them under "Margince believes" would be the lie this component
-// exists to prevent, which is why the caption block and this one are separate
-// and why the contract has no third `source` member for that case.
-//
-// `standing` is absent on a brief finding, which is prose about the deal rather
-// than one of the four calls. The badge is drawn only where the server sent a
-// word, never invented from the sentence.
+// Saved assessments keep their date beside independently checked current actions.
 
 import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
 import { formatDateTime } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 
-/**
- * The four standings, and the tone each is drawn in.
- *
- * `cold` takes NO tone deliberately: the palette's tones each carry an
- * instruction — success is fine, warning is act soon, danger is act now — and a
- * deal treated as lost is none of those. Drawn plain, it reads as the statement
- * of fact it is rather than as a fourth thing competing for the same attention.
- */
-const STANDING_TONE = {
-  live: "success",
-  drifting: "warning",
-  blocked: "danger",
-  cold: undefined,
-} as const;
-
-/**
- * Draws one row's verdict, or nothing when the server sent none.
- *
- * Nothing is the ordinary case on most rows: no card is cached for the deal and
- * the night did not surface it. The row is still fully explained by the reasons
- * below it, so this draws no placeholder and no empty state.
- */
 type WorklistDealVerdict = components["schemas"]["WorklistDealVerdict"];
 
 export function VerdictLine({
@@ -68,9 +25,7 @@ export function VerdictLine({
   return (
     <p className="t-caption worklist-row-verdict">
       {verdict.standing && (
-        <Badge tone={STANDING_TONE[verdict.standing]}>
-          {t(`worklist.verdict.${verdict.standing}` as const)}
-        </Badge>
+        <Badge>{t(`worklist.verdict.${verdict.standing}` as const)}</Badge>
       )}
       <span>{t("worklist.verdict.believes")}</span>{" "}
       <span className="worklist-row-verdict-line">{verdict.line}</span>{" "}

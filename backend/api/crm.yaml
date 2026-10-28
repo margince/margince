@@ -14529,13 +14529,15 @@ paths:
       operationId: createWebForm
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
-      summary: Create a website form (returns a server signing secret once).
+      summary: Create a website form (returns a minted signing secret once).
       description: |
         Mints the form's public key, the last segment of its intake address
         `POST /v1/public/forms/{form_key}`. A `server` form answers its own signing secret in
-        `signing_secret`, once; no read returns it again. A builder form (`webflow`, `typeform`,
-        `tally`) stores the secret the builder signs with, sent in `sender_secret`. Both need a
-        secret store on this installation; without one they answer 422 on `sender`.
+        `signing_secret`, once; no read returns it again. So does a `typeform` or `tally` form
+        sent without `sender_secret`: the secret is then typed into the builder's webhook. A
+        `webflow` form stores the secret Webflow issued, sent in `sender_secret` now or on a
+        later update; until then it refuses every post. Every signed
+        sender needs a secret store on this installation; without one it answers 422 on `sender`.
       requestBody:
         required: true
         content:
@@ -14543,7 +14545,7 @@ paths:
             schema: { $ref: '#/components/schemas/CreateWebFormRequest' }
       responses:
         '201':
-          description: The created form, plus its one-time signing secret for a `server` form.
+          description: The created form, plus the signing secret once whenever this installation minted it.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/WebFormCreated' }
@@ -14622,10 +14624,10 @@ paths:
       operationId: rotateWebFormSecret
       security: [ { cookieAuth: [] } ]
       x-agent-access: human-only
-      summary: Rotate a server form's signing secret (returns the new secret once).
+      summary: Rotate a form's minted signing secret (returns the new secret once).
       description: |
-        Only a `server` form has a secret this installation minted; any other sender answers 422 on
-        `sender`. The old secret stops verifying at once.
+        A `server`, `typeform` or `tally` form gets a new secret this installation mints; a
+        `browser` or `webflow` form answers 422 on `sender`. The old secret stops verifying at once.
       responses:
         '200':
           description: The form plus its new one-time signing secret.
@@ -23837,20 +23839,18 @@ paths:
         - name: q
           in: query
           schema: { type: string }
-          description: Case-insensitive match over display_name/email.
+          description: Case-insensitive match over display_name/email that ignores diacritics on both sides.
         - name: include_inactive
           in: query
           schema: { type: boolean, default: false }
           description: Admin management view — include deactivated/suspended members. Honored only for an admin caller.
         - name: include_invited
           in: query
-          deprecated: true
           schema: { type: boolean, default: false }
           description: |
-            Also list invited seats — members who have not signed in yet. Naming the colleagues a record
-            already points at is `GET /users/names`, which answers id and display name alone; a roster row
-            carries the member's email and seat status with it.
-            Pickers leave it off, so nobody is offered work they cannot open.
+            Also list invited seats — members who have not signed in yet. Each row's `status` says so.
+            A picker that may hand an invited colleague work, such as a record responsibility, asks for them.
+            Naming the colleagues a record already points at is `GET /users/names`.
       responses:
         '200':
           description: A page of workspace members.
@@ -25090,7 +25090,7 @@ paths:
         - name: q
           in: query
           schema: { type: string }
-          description: Case-insensitive match over team name.
+          description: Case-insensitive match over team name that ignores diacritics on both sides.
       responses:
         '200':
           description: A page of teams.
@@ -29548,7 +29548,7 @@ paths:
         it had nothing to add.
 
         Written by the model from the deal's own facts — its stage and value, its
-        timeline, its open tasks, its health factors and what the buyer said in the
+        timeline, its open tasks and what the buyer said in the
         Deal Room — and assembled under the CALLER's row scope, so a record they
         cannot see never reaches a sentence.
 
@@ -29570,11 +29570,21 @@ paths:
         deterministically and `generated_by` says which wrote it. There is no blank
         AI card and no spinner that never resolves.
       parameters:
+        - name: if_recommendation
+          in: query
+          required: false
+          schema: { type: string, pattern: '^[0-9a-f]{64}$' }
+          description: Check this recommendation basis before opening its action. Requires if_rule and facts_only; a changed step returns version_skew.
+        - name: if_rule
+          in: query
+          required: false
+          schema: { type: string }
+          description: The recommendation rule being checked with if_recommendation.
         - name: facts_only
           in: query
           required: false
           schema: { type: boolean }
-          description: Refresh the card and shared action cache from current facts without model calls. Takes precedence over refresh.
+          description: Refresh the card and its current suggested step without model calls. Takes precedence over refresh.
         - name: refresh
           in: query
           required: false
@@ -29586,9 +29596,15 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DealStatusCard' }
+        '400':
+          description: The conditional recommendation parameters are invalid or facts_only is missing.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /deals/{id}/move/dismiss:
     parameters:
@@ -32894,7 +32910,7 @@ components:
         effective_date:
           type: string
           format: date
-          description: Defaults to today. A past date is accepted only when the currency has no rate yet or the date is earlier than every rate stored for it.
+          description: A calendar day in the installation's time zone. Defaults to today there. A past date is accepted only when the currency has no rate yet or the date is earlier than every rate stored for it.
     AiModelRate:
       type: object
       description: One effective-dated model price. The four buckets are USD per 1M tokens as decimal strings (the server stores µUSD integers). Transparency-only — never gates routing.
@@ -33012,7 +33028,7 @@ components:
         effective_date:
           type: string
           format: date
-          description: Defaults to today; must not be in the past (append-forward).
+          description: A UTC calendar day. Defaults to today's UTC date and must not be before it (append-forward).
 
     # ---- outbound webhooks (E10/S-E10.6, A51; BYO-DDL-3/4) ----
     WebFormSender:
@@ -33022,7 +33038,8 @@ components:
         Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
         allowed website, with spam checks. `server`: a server signing with this form's secret.
         `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
-        builder computes with the secret stored as `sender_secret`.
+        builder computes with the form's stored secret: the `sender_secret` pasted, or for `typeform`
+        and `tally` one this installation minted when none was.
 
     WebForm:
       type: object
@@ -33064,7 +33081,7 @@ components:
           properties:
             signing_secret:
               type: string
-              description: A `server` form's signing secret, shown this once.
+              description: The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once.
 
     WebFormListResponse:
       type: object
@@ -33081,7 +33098,7 @@ components:
       properties:
         name: { type: string, minLength: 1, maxLength: 200 }
         sender: { $ref: '#/components/schemas/WebFormSender' }
-        sender_secret: { type: string, minLength: 16, maxLength: 512, description: 'The secret a builder signs with. Required for `webflow`, `typeform` and `tally`; refused for any other sender.' }
+        sender_secret: { type: string, minLength: 16, maxLength: 512, description: 'The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow''s secret is pasted. Refused for any other sender.' }
         allowed_origins:
           type: array
           maxItems: 20
@@ -35496,6 +35513,7 @@ components:
         watch_expires_at: { type: [string, 'null'], format: date-time, description: 'Push/delta subscription renewal deadline (Gmail Pub/Sub / Graph change-notification), or null.' }
         scopes: { type: array, items: { type: string }, description: The granted provider scopes. }
         last_synced_at: { type: [string, 'null'], format: date-time, description: 'Last sync attempt (CAP-DDL-5); null before the first.' }
+        last_success_at: { type: [string, 'null'], format: date-time, description: 'Last successful sync for this mailbox; null before one succeeds.' }
         last_sync_error_class: { type: [string, 'null'], description: 'rate_limited | unreachable | auth | history_gone | internal — class only, detail in system_log.' }
         sync_failing_since: { type: [string, 'null'], format: date-time, description: 'When the CURRENT failure streak began, null while healthy. Set on the first failure after a success and left alone until one clears it, so the duration read off it is the outage''s — last_synced_at moves on every postponed tick and dates the newest attempt instead.' }
         next_sync_due_at: { type: [string, 'null'], format: date-time, description: 'When the sweep will next pick this connection up (backoff-aware).' }
@@ -42516,14 +42534,16 @@ components:
     Contact360:
       type: object
       description: |
-        The contact record page in one payload (PO-EXT-3). Every section except `contact` is
-        optional: absent means the caller lacks its grant, and `sections_omitted` names it.
+        The contact record page in one payload. Record sections may be absent when their
+        grants are withheld; `sections_omitted` names those sections. Mail coverage
+        reports its own state and observation clock. Absent coverage is unknown.
       required: [as_of, contact, sections_omitted]
       properties:
+        mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         as_of:
           type: string
           format: date-time
-          description: The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
+          description: The assembly clock. Mail coverage carries its own evaluation time; Read Committed does not promise one snapshot across sections.
         contact: { $ref: '#/components/schemas/Contact' }
         created_by:
           allOf: [{ $ref: '#/components/schemas/PrincipalAttribution' }]
@@ -44487,6 +44507,7 @@ components:
         shape exists to prevent.
       required: [deal_id, story, generated_at, generated_by]
       properties:
+        mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         deal_id: { type: string, format: uuid }
         story:
           allOf: [{ $ref: '#/components/schemas/DealStatusCardSection' }]
@@ -44576,6 +44597,8 @@ components:
         to send; absent for `none`.
       required: [action, reason, evidence]
       properties:
+        recommendation: { $ref: '#/components/schemas/RecommendationReceipt' }
+        mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         action: { type: string }
         reason: { type: string, description: "One sentence saying why this move and not another." }
         arguments:
@@ -44598,6 +44621,48 @@ components:
             nothing to do (`none`).
       additionalProperties: false
 
+    RecommendationReceipt:
+      type: object
+      additionalProperties: false
+      description: >-
+        The rule and current facts behind a suggested action. The server checks
+        these facts again when accepting the suggestion; the receipt grants no authority.
+        Replaying the same accepted observation returns its original task.
+      required: [deal_id, rule, policy_version, basis_fingerprint, checked_at]
+      properties:
+        deal_id: { type: string, format: uuid }
+        rule: { type: string }
+        policy_version: { type: string }
+        basis_fingerprint: { type: string, pattern: '^[0-9a-f]{64}$' }
+        checked_at: { type: string, format: date-time, description: Evaluation instant identifying this observation. }
+
+    MailCaptureCoverage:
+      type: object
+      additionalProperties: false
+      description: |
+        The calling reader's mail capture for the requested interval. This does
+        not assert that no reply exists. Partial means capture has succeeded but
+        does not attest a complete Inbox and Sent interval. Current providers do
+        not record such an attestation; a cursor or completed import cannot supply it.
+        No mailbox identity, credential, cursor or colleague account travels.
+      required: [channel, state, interval_to, evaluated_at]
+      properties:
+        channel: { type: string, enum: [email] }
+        state: { type: string, enum: [unknown, partial, unavailable, withheld] }
+        interval_from:
+          type: string
+          format: date-time
+          description: Start of the requested interval, not a verified coverage boundary.
+        interval_to:
+          type: string
+          format: date-time
+          description: End of the requested interval, not a verified coverage boundary.
+        last_success_at:
+          type: string
+          format: date-time
+          description: Oldest successful sync across every relevant mailbox; absent if any has never succeeded.
+        evaluated_at: { type: string, format: date-time }
+
     WorkEvidenceBasis:
       type: object
       description: |
@@ -44606,6 +44671,7 @@ components:
         Source age is not a deadline. Evaluation time is not source time.
       required: [kind, scope, source_activity_id, source_at, source_precision, evaluated_at, policy_version]
       properties:
+        mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         kind: { type: string }
         scope: { type: string, description: The record scope in which the evidence was evaluated. }
         source_activity_id: { type: string, format: uuid }
@@ -49123,6 +49189,7 @@ components:
       description: What a task needs. Stored as an activity of kind `task`.
       required: [subject, source]
       properties:
+        recommendation: { $ref: '#/components/schemas/RecommendationReceipt' }
         source_activity_id:
           type: string
           format: uuid
@@ -49161,6 +49228,7 @@ components:
       type: object
       required: [kind, source]
       properties:
+        recommendation: { $ref: '#/components/schemas/RecommendationReceipt' }
         source_activity_id:
           type: string
           format: uuid
@@ -50406,6 +50474,16 @@ components:
       description: |
         What the composer opened against: `activity` for a reply to that message, or the
         record a new conversation starts from.
+    MailDraftGround:
+      description: >-
+        One record the draft was written from. A saved agent draft keeps these
+        so the composer files the sent mail where the draft was grounded,
+        rather than rebuilding links from whichever page it was opened on.
+      type: object
+      required: [anchor_type, anchor_id]
+      properties:
+        anchor_type: { $ref: '#/components/schemas/MailDraftAnchorType' }
+        anchor_id: { type: string, format: uuid }
 
     MailDraftInput:
       type: object
@@ -50434,6 +50512,15 @@ components:
         id: { type: string, format: uuid }
         anchor_type: { $ref: '#/components/schemas/MailDraftAnchorType' }
         anchor_id: { type: string, format: uuid }
+        grounding:
+          type: array
+          readOnly: true
+          description: >-
+            The records this draft was written from, which an agent draft
+            records and a human draft leaves empty. The composer files a sent
+            draft under these, so a draft grounded in a deal reaches that
+            deal's timeline even when it is opened from the contact page.
+          items: { $ref: '#/components/schemas/MailDraftGround' }
         to: { type: array, items: { type: string } }
         cc: { type: array, items: { type: string } }
         bcc: { type: array, items: { type: string } }
@@ -67350,20 +67437,10 @@ components:
     WorklistDealVerdict:
       type: object
       description: |
-        How the deal behind a row is STANDING, beside the move that acts on it.
-
-        The move says what to do; this says what the reader is walking into. A row
-        that names a step without saying whether the deal is alive asks the reader to
-        open the deal page to find out, which is the hand-off the queue exists to
-        remove.
-
-        NOTHING IS DECIDED HERE. compose/dealstatus already wrote a standing per deal
-        and cached it per reader; this carries that answer onto the row. A deal with
-        no cached card carries no verdict, and its row says what it said before.
-
-        `source` is what the reader is being shown, and a client's copy turns on it:
-        a deterministic rule stated as a belief is a lie about where the sentence came
-        from.
+        An earlier assessment of the deal, with the date it was written.
+        Current facts and actions are checked separately. These saved words never
+        establish that a task or reply is still owed and never change ranking.
+        Missing or inaccessible saved assessments are omitted.
       required: [line, source]
       properties:
         standing:
@@ -67378,7 +67455,7 @@ components:
             `live` — moving, with a next step both sides expect.
             `drifting` — nothing wrong, nothing happening; it dies of neglect.
             `blocked` — something specific is in the way.
-            `cold` — long silence after real engagement.
+            `cold` — recorded evidence that engagement ended, as assessed on `as_of`.
 
             The same four the deal page's own verdict carries, because they ARE that
             verdict. Held by backend/gates/worklistverdictstandings_test.go, which
@@ -67419,8 +67496,8 @@ components:
           type: string
           format: date-time
           description: |
-            When the reading behind this line was taken, so a stale one can be told from
-            a fresh one.
+            When the earlier assessment was written. Clients must display this date
+            and must not present the saved sentence as a current eligibility check.
 
     WorklistReason:
       type: object
@@ -67518,6 +67595,8 @@ components:
         for it.
       required: [action]
       properties:
+        recommendation: { $ref: '#/components/schemas/RecommendationReceipt' }
+        mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         basis:
           allOf: [{ $ref: '#/components/schemas/WorkEvidenceBasis' }]
           description: The deal recommendation's evidence basis, preserved across surfaces.
@@ -67770,8 +67849,8 @@ components:
         contributes_rows:
           type: boolean
           description: |
-            False for a side read that puts no row on the queue — `calendar` and
-            `next_meeting` — so its failure cannot hide a row, and a figure counted over
+            False for a side read that puts no row on the queue — `calendar`,
+            `next_meeting` and `deal_advice` — so its failure cannot hide a row, and a figure counted over
             the queue stays exact. True for a lane whose rows may be missing. Absent from
             an older server and from a surface that names only lanes, and a client reads
             absent as true.

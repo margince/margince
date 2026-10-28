@@ -3,7 +3,6 @@ import { api } from "../../api/client";
 import { unwrap } from "../../lib/problem";
 import { isLiveWorkRead, worklistKey } from "../../lib/workkeys";
 import type {
-  HandledForYou,
   TeamBoard,
   TeamExceptions,
   Worklist,
@@ -13,6 +12,7 @@ import type {
 } from "./worklist.queries";
 import { represented } from "./worklistunits";
 
+export { useHandledForYou } from "../../lib/handled";
 export { worklistKey } from "../../lib/workkeys";
 
 // The whole day in one read, at one scope or one named owner, and one filter.
@@ -78,23 +78,6 @@ export function loadedQueue(pages: readonly Worklist[]): WorklistItem[] {
     }
   }
   return rows;
-}
-
-/**
- * What the product did on this reader's behalf.
- *
- * No `enabled` gate, unlike the manager reads beside it. A receipt is the
- * reader's own and every act it reports was taken for them, so there is no tier
- * to hold. The server refuses a caller with no human behind it, which is the
- * only refusal this read has.
- */
-export function useHandledForYou() {
-  return useQuery({
-    queryKey: [...worklistKey, "handled"],
-    queryFn: async (): Promise<HandledForYou> => {
-      return unwrap(await api.GET("/worklist/handled", {}));
-    },
-  });
 }
 
 /**

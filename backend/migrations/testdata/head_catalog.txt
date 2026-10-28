@@ -1762,6 +1762,7 @@ public.capture_connection.signature_enrich_enabled boolean gen=- def=-
 public.capture_connection.status text NOT NULL gen=- def='disconnected'::text
 public.capture_connection.sync_anchor timestamp with time zone gen=- def=-
 public.capture_connection.sync_cursor jsonb gen=- def=-
+public.capture_connection.sync_revision bigint NOT NULL gen=- def=0
 public.capture_connection.unread_from timestamp with time zone gen=- def=-
 public.capture_connection.unread_to timestamp with time zone gen=- def=-
 public.capture_connection.user_id uuid NOT NULL gen=- def=-
@@ -3276,6 +3277,7 @@ public.contact_email.contact_email_version_js_safe CHECK (((version >= '-9007199
 public.contact_email.contact_id uuid NOT NULL gen=- def=-
 public.contact_email.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact_email.email text NOT NULL gen=- def=-
+public.contact_email.email_domain_folded text gen=- def=-
 public.contact_email.email_type text NOT NULL gen=- def='work'::text
 public.contact_email.from_correspondence boolean NOT NULL gen=- def=true
 public.contact_email.id uuid NOT NULL gen=- def=uuidv7()
@@ -4624,7 +4626,7 @@ public.idempotency_key.response_records integer NOT NULL gen=- def=0
 public.idempotency_key.response_status integer gen=- def=-
 public.idempotency_key_pkey CREATE UNIQUE INDEX idempotency_key_pkey ON public.idempotency_key USING btree (principal_id, key, endpoint)
 public.idx_aam_subject CREATE INDEX idx_aam_subject ON public.activity_audience_member USING btree (subject_type, subject_id)
-public.idx_activity_answer_mail CREATE INDEX idx_activity_answer_mail ON public.activity USING btree (counterparty_email, kind, occurred_at) WHERE ((direction = 'outbound'::text) AND counterparty_outbound_attested AND (restricted_at IS NULL) AND (audience = 'workspace'::text) AND (archived_at IS NULL))
+public.idx_activity_answer_mail_subject CREATE INDEX idx_activity_answer_mail_subject ON public.activity USING btree (counterparty_email, kind, lower(btrim(regexp_replace(regexp_replace(COALESCE(subject, ''::text), '^(\s*(re|aw|antw)\s*:)+\s*'::text, ''::text, 'i'::text), '\s+'::text, ' '::text, 'g'::text))), occurred_at) WHERE ((direction = 'outbound'::text) AND counterparty_outbound_attested AND (restricted_at IS NULL) AND (audience = 'workspace'::text) AND (archived_at IS NULL))
 public.idx_activity_answer_touch CREATE INDEX idx_activity_answer_touch ON public.activity USING btree (id, occurred_at) WHERE (((kind = 'call'::text) OR ((kind = 'meeting'::text) AND (meeting_status = 'held'::text))) AND (restricted_at IS NULL) AND (audience = 'workspace'::text) AND (archived_at IS NULL))
 public.idx_activity_channel_thread CREATE INDEX idx_activity_channel_thread ON public.activity USING btree (channel_provider, thread_key) WHERE (channel_provider IS NOT NULL)
 public.idx_activity_counterparty_email CREATE INDEX idx_activity_counterparty_email ON public.activity USING btree (counterparty_email) WHERE (counterparty_email IS NOT NULL)
@@ -4667,7 +4669,7 @@ public.idx_analytics_share_scope_user CREATE INDEX idx_analytics_share_scope_use
 public.idx_analytics_share_snapshot CREATE INDEX idx_analytics_share_snapshot ON public.analytics_share USING btree (snapshot_id)
 public.idx_aparticipant_address CREATE INDEX idx_aparticipant_address ON public.activity_participant USING btree (lower(address)) WHERE (address IS NOT NULL)
 public.idx_aparticipant_contact CREATE INDEX idx_aparticipant_contact ON public.activity_participant USING btree (contact_id, activity_id) WHERE (contact_id IS NOT NULL)
-public.idx_aparticipant_sender_host_reversed CREATE INDEX idx_aparticipant_sender_host_reversed ON public.activity_participant USING btree (reverse(split_part(lower(address), '@'::text, 2)) COLLATE "C") WHERE ((role = 'from'::text) AND (address IS NOT NULL))
+public.idx_aparticipant_sender_domain_reversed CREATE INDEX idx_aparticipant_sender_domain_reversed ON public.activity_participant USING btree (reverse(address_domain_folded) COLLATE "C") WHERE ((role = 'from'::text) AND (address_domain_folded IS NOT NULL))
 public.idx_aparticipant_user CREATE INDEX idx_aparticipant_user ON public.activity_participant USING btree (user_id, activity_id) WHERE (user_id IS NOT NULL)
 public.idx_app_user_live CREATE INDEX idx_app_user_live ON public.app_user USING btree (created_at, id) WHERE (archived_at IS NULL)
 public.idx_app_user_merge_target CREATE INDEX idx_app_user_merge_target ON public.app_user USING btree (merged_into_user_id) WHERE (merged_into_user_id IS NOT NULL)
@@ -5300,6 +5302,7 @@ public.lead.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead.disqualify_note text gen=- def=-
 public.lead.disqualify_reason_id uuid gen=- def=-
 public.lead.email text gen=- def=-
+public.lead.email_domain_folded text gen=- def=-
 public.lead.entered_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead.first_response_at timestamp with time zone gen=- def=-
 public.lead.from_contact_id uuid gen=- def=-
@@ -5831,6 +5834,15 @@ public.meeting_proposal.token_hash text NOT NULL gen=- def=-
 public.meeting_proposal.used_at timestamp with time zone gen=- def=-
 public.meeting_proposal_pkey CREATE UNIQUE INDEX meeting_proposal_pkey ON public.meeting_proposal USING btree (activity_id)
 public.meeting_proposal_token_hash_key CREATE UNIQUE INDEX meeting_proposal_token_hash_key ON public.meeting_proposal USING btree (token_hash)
+public.member_identity_family(member uuid) secdef=false cfg=- acl=- 
+  WITH RECURSIVE member_identities(id) AS (
+    SELECT member
+    UNION
+    SELECT retired.id FROM app_user retired JOIN member_identities survivor
+      ON retired.merged_into_user_id = survivor.id
+     WHERE retired.removed_at IS NOT NULL)
+  SELECT array_agg(id) FROM member_identities
+
 public.mfa_challenge_spent acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.mfa_challenge_spent.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.mfa_challenge_spent.jti text NOT NULL gen=- def=-
@@ -8502,7 +8514,7 @@ public.web_form.success_message text gen=- def=-
 public.web_form.trg_web_form_updated CREATE TRIGGER trg_web_form_updated BEFORE UPDATE ON public.web_form FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.web_form.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.web_form.version bigint NOT NULL gen=- def=1
-public.web_form.web_form_admission CHECK ((((sender = 'browser'::text) AND (secret_ref IS NULL) AND (cardinality(allowed_origins) > 0)) OR ((sender <> 'browser'::text) AND (secret_ref IS NOT NULL) AND (cardinality(allowed_origins) = 0))))
+public.web_form.web_form_admission CHECK ((((sender = 'browser'::text) AND (secret_ref IS NULL) AND (cardinality(allowed_origins) > 0)) OR ((sender <> 'browser'::text) AND ((secret_ref IS NOT NULL) OR (sender = 'webflow'::text)) AND (cardinality(allowed_origins) = 0))))
 public.web_form.web_form_consent_wording_bounded CHECK (((consent_wording IS NULL) OR (length(consent_wording) <= 2000)))
 public.web_form.web_form_field_map_object CHECK ((jsonb_typeof(field_map) = 'object'::text))
 public.web_form.web_form_form_key_key UNIQUE (form_key)

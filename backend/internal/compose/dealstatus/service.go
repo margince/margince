@@ -13,12 +13,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/briefevidence"
+	"github.com/margince/margince/backend/internal/compose/mailcoverage"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -51,6 +53,8 @@ type Service struct {
 	activities     *activities.Store
 	rooms          *dealrooms.Store
 	seatsOf        SeatReader
+	seatBatch      SeatBatchReader
+	mailCoverage   mailcoverage.Reader
 	lane           Completer
 	routingVersion string
 	now            func() time.Time
@@ -58,6 +62,9 @@ type Service struct {
 
 // NewService binds the reads. Each store carries its own gates.
 func NewService(pool *pgxpool.Pool, d *deals.Store, a *activities.Store, r *dealrooms.Store, now func() time.Time) *Service {
+	if now == nil {
+		now = time.Now
+	}
 	return &Service{pool: pool, deals: d, activities: a, rooms: r, now: now}
 }
 
@@ -83,12 +90,15 @@ type facts struct {
 	deal            crmcontracts.Deal
 	health          *deals.DealHealth
 	timeline        []crmcontracts.Activity
+	lastExchange    *crmcontracts.Activity
+	contactChecked  bool
 	openTasks       []activities.OpenTask
 	requests        []crmcontracts.Activity
 	currentRequests []crmcontracts.Activity
 	// moreTasks says the open-task read was cut at its window, so the count
 	// is a floor rather than the number.
-	moreTasks bool
+	moreTasks    bool
+	mailCoverage *crmcontracts.MailCaptureCoverage
 	// nextMeeting is the soonest thing booked with the deal, asked of the
 	// database rather than taken off the timeline page: nil means nothing is
 	// booked at all, which the timeline could only ever suggest.
@@ -118,7 +128,7 @@ func (s *Service) Get(ctx context.Context, dealID ids.DealID, refresh bool) (crm
 	return s.readCard(ctx, dealID, cardReadPolicy{refresh: refresh})
 }
 
-// ReadFacts refreshes the card and its shared move cache without asking a model.
+// ReadFacts refreshes the card without asking a model.
 func (s *Service) ReadFacts(ctx context.Context, dealID ids.DealID) (crmcontracts.DealStatusCard, error) {
 	return s.readCard(ctx, dealID, cardReadPolicy{factsOnly: true})
 }
@@ -178,9 +188,7 @@ func cardEvidence(card *crmcontracts.DealStatusCard) []briefevidence.Target {
 	return targets
 }
 
-// cardAndTimeline is the card itself, and the rows it was gathered from. The
-// two travel together because the caller enriches from the second — reading the
-// deal's messages again would ask the same gate the same question.
+// Card and timeline share the same scoped source read.
 func (s *Service) cardAndTimeline(
 	ctx context.Context, dealID ids.DealID, policy cardReadPolicy,
 ) (crmcontracts.DealStatusCard, []crmcontracts.Activity, error) {
@@ -194,7 +202,10 @@ func (s *Service) cardAndTimeline(
 	if err != nil {
 		return crmcontracts.DealStatusCard{}, nil, err
 	}
-	mv := decideMove(f)
+	mv, err := assessMove(f, decideMove(f))
+	if err != nil {
+		return crmcontracts.DealStatusCard{}, nil, err
+	}
 	in := project(f, mv)
 	fingerprint, err := Fingerprint(in, userID.UUID, s.routingVersion, f.now, f.loc, f.lang)
 	if err != nil {
@@ -203,17 +214,23 @@ func (s *Service) cardAndTimeline(
 	verdict := s.decideFromCache(ctx, userID, dealID, fingerprint, policy.refresh, f.now)
 	if verdict.serve {
 		card := verdict.card
+		card.MailCoverage = f.mailCoverage
 		if current, ok := unansweredInbound(f); ok {
 			card.RequestBasis = requestBasis(f, current, basisCurrentRequest)
 		}
 		if card.Next != nil {
 			next := *card.Next
 			next.Basis = mv.Basis
+			next.MailCoverage = f.mailCoverage
+			next.Recommendation, next.Arguments = mv.Recommendation, mv.Arguments
 			card.Next = &next
 		}
 		return card, factActivities(f), nil
 	}
-	card, laneFailed := s.write(ctx, f, mv, in, verdict.askModel && !policy.factsOnly)
+	card, laneFailed := s.write(ctx, f, mv, in, verdict.askModel && !policy.factsOnly && humanCacheOwner(ctx))
+	if !humanCacheOwner(ctx) {
+		return card, factActivities(f), nil
+	}
 	if laneFailed {
 		// The lane was wired and did not answer: a timeout, a budget, an
 		// unparseable reply. The reader gets the floor, which is a working
@@ -224,6 +241,7 @@ func (s *Service) cardAndTimeline(
 		return card, factActivities(f), nil
 	}
 	if err := s.save(ctx, userID, dealID, stored{
+		Access:      accessForCard(f, in, mv),
 		Fingerprint: fingerprint,
 		GeneratedAt: card.GeneratedAt,
 		GeneratedBy: card.GeneratedBy,
@@ -325,6 +343,16 @@ func (s *Service) ask(ctx context.Context, in StatusInput, lang string) (Written
 }
 
 func (s *Service) gather(ctx context.Context, dealID ids.DealID) (facts, error) {
+	var out facts
+	err := database.WithWorkspaceSnapshot(ctx, s.pool, func(ctx context.Context) error {
+		var err error
+		out, err = s.gatherSnapshot(ctx, dealID)
+		return err
+	})
+	return out, err
+}
+
+func (s *Service) gatherSnapshot(ctx context.Context, dealID ids.DealID) (facts, error) {
 	f := facts{now: s.now()}
 	deal, err := s.deals.GetDeal(ctx, dealID, storekit.LiveOnly)
 	if err != nil {
@@ -345,17 +373,20 @@ func (s *Service) gather(ctx context.Context, dealID ids.DealID) (facts, error) 
 		return facts{}, fmt.Errorf("deal status: reading the deal's timeline: %w", err)
 	}
 	f.timeline = timeline
+	if err := s.gatherLastExchange(ctx, dealID, &f); err != nil {
+		return facts{}, err
+	}
 	requestKind := string(crmcontracts.ActivityKindEmail)
 	f.currentRequests, _, err = s.activities.ListActivities(ctx, activities.ListActivitiesInput{
 		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &limit,
-		RequestCurrentAsOf: &f.now, Kind: &requestKind,
+		RequestCurrentAsOf: &f.now, Kind: &requestKind, ReadableOnly: true,
 	})
 	if err != nil {
 		return facts{}, fmt.Errorf("deal status: reading current requests: %w", err)
 	}
 	f.requests, _, err = s.activities.ListActivities(ctx, activities.ListActivitiesInput{
 		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &limit,
-		RequestReviewAsOf: &f.now, Kind: &requestKind,
+		RequestReviewAsOf: &f.now, Kind: &requestKind, ReadableOnly: true,
 	})
 	if err != nil {
 		return facts{}, fmt.Errorf("deal status: reading outstanding requests: %w", err)
@@ -389,9 +420,10 @@ func (s *Service) gather(ctx context.Context, dealID ids.DealID) (facts, error) 
 	if booked {
 		f.nextMeeting = &meeting
 	}
-	if f.followUps, err = s.activities.MeetingsAwaitingFollowUpOnDeal(ctx, f.now, dealID.UUID); err != nil {
+	if f.followUps, err = s.activities.NextMeetingFollowUpOnDeal(ctx, f.now, dealID.UUID); err != nil {
 		return facts{}, fmt.Errorf("deal status: reading the meetings owed a follow-up: %w", err)
 	}
+	s.gatherMailCoverage(ctx, &f)
 	if err := s.gatherRoom(ctx, dealID, &f); err != nil {
 		return facts{}, err
 	}
@@ -443,4 +475,26 @@ func actingUser(ctx context.Context) (ids.UserID, error) {
 			apperrors.ErrPermissionDenied)
 	}
 	return ids.From[ids.UserKind](p.UserID), nil
+}
+
+// An agent with different evidence must not replace the human's cached briefing.
+func humanCacheOwner(ctx context.Context) bool {
+	actor, ok := principal.Actor(ctx)
+	return ok && actor.Type == principal.PrincipalHuman
+}
+
+func (s *Service) gatherLastExchange(ctx context.Context, dealID ids.DealID, f *facts) error {
+	entityType := "deal"
+	one := 1
+	contactRows, _, err := s.activities.ListActivities(ctx, activities.ListActivitiesInput{
+		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &one, InteractionsAsOf: &f.now,
+	})
+	if err != nil {
+		return fmt.Errorf("deal status: reading the last recorded exchange: %w", err)
+	}
+	f.contactChecked = true
+	if len(contactRows) > 0 {
+		f.lastExchange = &contactRows[0]
+	}
+	return nil
 }

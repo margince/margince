@@ -13735,6 +13735,45 @@ func (e MagicNotShownReason) Valid() bool {
 	}
 }
 
+// Defines values for MailCaptureCoverageChannel.
+const (
+	MailCaptureCoverageChannelEmail MailCaptureCoverageChannel = "email"
+)
+
+// Valid indicates whether the value is a known member of the MailCaptureCoverageChannel enum.
+func (e MailCaptureCoverageChannel) Valid() bool {
+	switch e {
+	case MailCaptureCoverageChannelEmail:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MailCaptureCoverageState.
+const (
+	MailCaptureCoverageStatePartial     MailCaptureCoverageState = "partial"
+	MailCaptureCoverageStateUnavailable MailCaptureCoverageState = "unavailable"
+	MailCaptureCoverageStateUnknown     MailCaptureCoverageState = "unknown"
+	MailCaptureCoverageStateWithheld    MailCaptureCoverageState = "withheld"
+)
+
+// Valid indicates whether the value is a known member of the MailCaptureCoverageState enum.
+func (e MailCaptureCoverageState) Valid() bool {
+	switch e {
+	case MailCaptureCoverageStatePartial:
+		return true
+	case MailCaptureCoverageStateUnavailable:
+		return true
+	case MailCaptureCoverageStateUnknown:
+		return true
+	case MailCaptureCoverageStateWithheld:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MailDealRepairOutcomeCountOutcome.
 const (
 	MailDealRepairOutcomeCountOutcomeAlreadyFiled                  MailDealRepairOutcomeCountOutcome = "already_filed"
@@ -31359,6 +31398,9 @@ type CaptureConnection struct {
 	HistoryBaseline *MailHistoryBaseline `json:"history_baseline,omitempty"`
 	Id              openapi_types.UUID   `json:"id"`
 
+	// LastSuccessAt Last successful sync for this mailbox; null before one succeeds.
+	LastSuccessAt *time.Time `json:"last_success_at,omitempty"`
+
 	// LastSyncErrorClass rate_limited | unreachable | auth | history_gone | internal — class only, detail in system_log.
 	LastSyncErrorClass *string `json:"last_sync_error_class,omitempty"`
 
@@ -35744,15 +35786,16 @@ type ContactRelationshipMark string
 // ContactVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a verdict or through the owner's own `POST /contacts/{id}/publish`, and never travels back.
 type ContactVisibility string
 
-// Contact360 The contact record page in one payload (PO-EXT-3). Every section except `contact` is
-// optional: absent means the caller lacks its grant, and `sections_omitted` names it.
+// Contact360 The contact record page in one payload. Record sections may be absent when their
+// grants are withheld; `sections_omitted` names those sections. Mail coverage
+// reports its own state and observation clock. Absent coverage is unknown.
 type Contact360 struct {
 	Activities *struct {
 		Data []Activity `json:"data"`
 		Page PageInfo   `json:"page"`
 	} `json:"activities,omitempty"`
 
-	// AsOf The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
+	// AsOf The assembly clock. Mail coverage carries its own evaluation time; Read Committed does not promise one snapshot across sections.
 	AsOf time.Time `json:"as_of"`
 
 	// BillingRoles The companies this contact handles invoices for, and in what capacity. Absent when the caller lacks the company or relationship grant, named in `sections_omitted` as `billing_roles`; a company outside the caller's row scope is not listed.
@@ -35815,6 +35858,13 @@ type Contact360 struct {
 
 	// LastOutboundPrecision How to read `last_outbound_at`, from the row it names. Absent when that is null or absent.
 	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
+
+	// MailCoverage The calling reader's mail capture for the requested interval. This does
+	// not assert that no reply exists. Partial means capture has succeeded but
+	// does not attest a complete Inbox and Sent interval. Current providers do
+	// not record such an attestation; a cursor or completed import cannot supply it.
+	// No mailbox identity, credential, cursor or colleague account travels.
+	MailCoverage *MailCaptureCoverage `json:"mail_coverage,omitempty"`
 
 	// Moment The ONE thing this contact needs today, selected server-side by the fixed ladder in `ContactMoment.rule` (ADR-0096 D2). Exactly one primary moment wins: a page that offers five reasons has told the reader to choose, which is the work the ladder exists to do. Deterministic and computed at read from captured data. Absent when the caller lacks a grant the ladder needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence.
 	Moment *ContactMoment `json:"moment,omitempty"`
@@ -37217,6 +37267,9 @@ type CreateActivityRequest struct {
 	// Raw Provenance an importer keeps with the record — the source system's own representation of this activity. Stored verbatim and returned by `getActivity`. It is content: a reader who may not read this activity's subject and body does not receive it either, and the retention and noise-redaction paths destroy it with the rest of the text.
 	Raw *map[string]interface{} `json:"raw,omitempty"`
 
+	// Recommendation The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
+	Recommendation *RecommendationReceipt `json:"recommendation,omitempty"`
+
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 
@@ -38172,6 +38225,9 @@ type CreateTaskRequest struct {
 		EntityType CreateTaskRequestLinksEntityType `json:"entity_type"`
 	} `json:"links,omitempty"`
 
+	// Recommendation The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
+	Recommendation *RecommendationReceipt `json:"recommendation,omitempty"`
+
 	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
 	RequestActivityId *openapi_types.UUID `json:"request_activity_id,omitempty"`
 	Source            string              `json:"source"`
@@ -38220,10 +38276,11 @@ type CreateWebFormRequest struct {
 	// Sender Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
 	// allowed website, with spam checks. `server`: a server signing with this form's secret.
 	// `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
-	// builder computes with the secret stored as `sender_secret`.
+	// builder computes with the form's stored secret: the `sender_secret` pasted, or for `typeform`
+	// and `tally` one this installation minted when none was.
 	Sender WebFormSender `json:"sender"`
 
-	// SenderSecret The secret a builder signs with. Required for `webflow`, `typeform` and `tally`; refused for any other sender.
+	// SenderSecret The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow's secret is pasted. Refused for any other sender.
 	SenderSecret   *string `json:"sender_secret,omitempty"`
 	SuccessMessage *string `json:"success_message,omitempty"`
 }
@@ -39266,6 +39323,13 @@ type DealStatusCard struct {
 	// reader deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
+	// MailCoverage The calling reader's mail capture for the requested interval. This does
+	// not assert that no reply exists. Partial means capture has succeeded but
+	// does not attest a complete Inbox and Sent interval. Current providers do
+	// not record such an attestation; a cursor or completed import cannot supply it.
+	// No mailbox identity, credential, cursor or colleague account travels.
+	MailCoverage *MailCaptureCoverage `json:"mail_coverage,omitempty"`
+
 	// Next The one move to make, with the verb to perform it.
 	Next *DealStatusCardMove `json:"next,omitempty"`
 
@@ -39307,8 +39371,18 @@ type DealStatusCardMove struct {
 	// nothing to do (`none`).
 	Fingerprint *string `json:"fingerprint,omitempty"`
 
+	// MailCoverage The calling reader's mail capture for the requested interval. This does
+	// not assert that no reply exists. Partial means capture has succeeded but
+	// does not attest a complete Inbox and Sent interval. Current providers do
+	// not record such an attestation; a cursor or completed import cannot supply it.
+	// No mailbox identity, credential, cursor or colleague account travels.
+	MailCoverage *MailCaptureCoverage `json:"mail_coverage,omitempty"`
+
 	// Reason One sentence saying why this move and not another.
 	Reason string `json:"reason"`
+
+	// Recommendation The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
+	Recommendation *RecommendationReceipt `json:"recommendation,omitempty"`
 }
 
 // DealStatusCardSection defines model for DealStatusCardSection.
@@ -45178,6 +45252,32 @@ type MagicUndo struct {
 	Version *int64 `json:"version,omitempty"`
 }
 
+// MailCaptureCoverage The calling reader's mail capture for the requested interval. This does
+// not assert that no reply exists. Partial means capture has succeeded but
+// does not attest a complete Inbox and Sent interval. Current providers do
+// not record such an attestation; a cursor or completed import cannot supply it.
+// No mailbox identity, credential, cursor or colleague account travels.
+type MailCaptureCoverage struct {
+	Channel     MailCaptureCoverageChannel `json:"channel"`
+	EvaluatedAt time.Time                  `json:"evaluated_at"`
+
+	// IntervalFrom Start of the requested interval, not a verified coverage boundary.
+	IntervalFrom *time.Time `json:"interval_from,omitempty"`
+
+	// IntervalTo End of the requested interval, not a verified coverage boundary.
+	IntervalTo time.Time `json:"interval_to"`
+
+	// LastSuccessAt Oldest successful sync across every relevant mailbox; absent if any has never succeeded.
+	LastSuccessAt *time.Time               `json:"last_success_at,omitempty"`
+	State         MailCaptureCoverageState `json:"state"`
+}
+
+// MailCaptureCoverageChannel defines model for MailCaptureCoverage.Channel.
+type MailCaptureCoverageChannel string
+
+// MailCaptureCoverageState defines model for MailCaptureCoverage.State.
+type MailCaptureCoverageState string
+
 // MailDealRepairOutcomeCount defines model for MailDealRepairOutcomeCount.
 type MailDealRepairOutcomeCount struct {
 	Count   int                               `json:"count"`
@@ -45211,17 +45311,29 @@ type MailDraft struct {
 	Body       string              `json:"body"`
 	Cc         []string            `json:"cc"`
 	CreatedAt  time.Time           `json:"created_at"`
-	HtmlBody   *string             `json:"html_body,omitempty"`
-	Id         openapi_types.UUID  `json:"id"`
-	Subject    string              `json:"subject"`
-	To         []string            `json:"to"`
-	UpdatedAt  time.Time           `json:"updated_at"`
-	Version    int64               `json:"version"`
+
+	// Grounding The records this draft was written from, which an agent draft records and a human draft leaves empty. The composer files a sent draft under these, so a draft grounded in a deal reaches that deal's timeline even when it is opened from the contact page.
+	Grounding *[]MailDraftGround `json:"grounding,omitempty"`
+	HtmlBody  *string            `json:"html_body,omitempty"`
+	Id        openapi_types.UUID `json:"id"`
+	Subject   string             `json:"subject"`
+	To        []string           `json:"to"`
+	UpdatedAt time.Time          `json:"updated_at"`
+	Version   int64              `json:"version"`
 }
 
 // MailDraftAnchorType What the composer opened against: `activity` for a reply to that message, or the
 // record a new conversation starts from.
 type MailDraftAnchorType string
+
+// MailDraftGround One record the draft was written from. A saved agent draft keeps these so the composer files the sent mail where the draft was grounded, rather than rebuilding links from whichever page it was opened on.
+type MailDraftGround struct {
+	AnchorId openapi_types.UUID `json:"anchor_id"`
+
+	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
+	// record a new conversation starts from.
+	AnchorType MailDraftAnchorType `json:"anchor_type"`
+}
 
 // MailDraftInput The composer's fields as they stand. Every content field is optional and an omitted
 // one saves as empty, because a draft is whatever the rep had typed so far.
@@ -48651,6 +48763,17 @@ type Receipt struct {
 	Undo *AppliedUndo `json:"undo,omitempty"`
 }
 
+// RecommendationReceipt The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
+type RecommendationReceipt struct {
+	BasisFingerprint string `json:"basis_fingerprint"`
+
+	// CheckedAt Evaluation instant identifying this observation.
+	CheckedAt     time.Time          `json:"checked_at"`
+	DealId        openapi_types.UUID `json:"deal_id"`
+	PolicyVersion string             `json:"policy_version"`
+	Rule          string             `json:"rule"`
+}
+
 // RecordAccess Who can open one contact or company and who can change it. `data` is one page of the
 // members who can open it; `group_counts` and `page.total` count all of them.
 type RecordAccess struct {
@@ -51675,7 +51798,7 @@ type SetAiModelRateRequest struct {
 	// CacheWritePerMtok USD per 1M cache-write tokens.
 	CacheWritePerMtok string `json:"cache_write_per_mtok"`
 
-	// EffectiveDate Defaults to today; must not be in the past (append-forward).
+	// EffectiveDate A UTC calendar day. Defaults to today's UTC date and must not be before it (append-forward).
 	EffectiveDate *openapi_types.Date `json:"effective_date,omitempty"`
 
 	// InputPerMtok USD per 1M input tokens. Plain non-negative decimal, up to 12 integer and 6 fractional digits (keeps the stored µUSD within int64).
@@ -51734,7 +51857,7 @@ type SetDealRoomExpiryRequest struct {
 
 // SetFxRateRequest defines model for SetFxRateRequest.
 type SetFxRateRequest struct {
-	// EffectiveDate Defaults to today. A past date is accepted only when the currency has no rate yet or the date is earlier than every rate stored for it.
+	// EffectiveDate A calendar day in the installation's time zone. Defaults to today there. A past date is accepted only when the currency has no rate yet or the date is earlier than every rate stored for it.
 	EffectiveDate *openapi_types.Date `json:"effective_date,omitempty"`
 
 	// FromCurrency 3-letter ISO; must not equal the base currency.
@@ -55276,7 +55399,8 @@ type WebForm struct {
 	// Sender Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
 	// allowed website, with spam checks. `server`: a server signing with this form's secret.
 	// `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
-	// builder computes with the secret stored as `sender_secret`.
+	// builder computes with the form's stored secret: the `sender_secret` pasted, or for `typeform`
+	// and `tally` one this installation minted when none was.
 	Sender         WebFormSender `json:"sender"`
 	State          WebFormState  `json:"state"`
 	SuccessMessage *string       `json:"success_message,omitempty"`
@@ -55324,10 +55448,11 @@ type WebFormCreated struct {
 	// Sender Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
 	// allowed website, with spam checks. `server`: a server signing with this form's secret.
 	// `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
-	// builder computes with the secret stored as `sender_secret`.
+	// builder computes with the form's stored secret: the `sender_secret` pasted, or for `typeform`
+	// and `tally` one this installation minted when none was.
 	Sender WebFormSender `json:"sender"`
 
-	// SigningSecret A `server` form's signing secret, shown this once.
+	// SigningSecret The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once.
 	SigningSecret  *string             `json:"signing_secret,omitempty"`
 	State          WebFormCreatedState `json:"state"`
 	SuccessMessage *string             `json:"success_message,omitempty"`
@@ -55369,7 +55494,8 @@ type WebFormReceiptStatus string
 // WebFormSender Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
 // allowed website, with spam checks. `server`: a server signing with this form's secret.
 // `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
-// builder computes with the secret stored as `sender_secret`.
+// builder computes with the form's stored secret: the `sender_secret` pasted, or for `typeform`
+// and `tally` one this installation minted when none was.
 type WebFormSender string
 
 // WebhookBodyContentType The Content-Type of a templated body; null means application/json.
@@ -56107,9 +56233,16 @@ type WeeklyScorecardLeadBlock struct {
 // are current_request and request_review; unknown kinds remain neutral.
 // Source age is not a deadline. Evaluation time is not source time.
 type WorkEvidenceBasis struct {
-	EvaluatedAt   time.Time `json:"evaluated_at"`
-	Kind          string    `json:"kind"`
-	PolicyVersion string    `json:"policy_version"`
+	EvaluatedAt time.Time `json:"evaluated_at"`
+	Kind        string    `json:"kind"`
+
+	// MailCoverage The calling reader's mail capture for the requested interval. This does
+	// not assert that no reply exists. Partial means capture has succeeded but
+	// does not attest a complete Inbox and Sent interval. Current providers do
+	// not record such an attestation; a cursor or completed import cannot supply it.
+	// No mailbox identity, credential, cursor or colleague account travels.
+	MailCoverage  *MailCaptureCoverage `json:"mail_coverage,omitempty"`
+	PolicyVersion string               `json:"policy_version"`
 
 	// Scope The record scope in which the evidence was evaluated.
 	Scope            string             `json:"scope"`
@@ -56717,23 +56850,13 @@ type WorklistDealFacts struct {
 	WinProbability *int                `json:"win_probability,omitempty"`
 }
 
-// WorklistDealVerdict How the deal behind a row is STANDING, beside the move that acts on it.
-//
-// The move says what to do; this says what the reader is walking into. A row
-// that names a step without saying whether the deal is alive asks the reader to
-// open the deal page to find out, which is the hand-off the queue exists to
-// remove.
-//
-// NOTHING IS DECIDED HERE. compose/dealstatus already wrote a standing per deal
-// and cached it per reader; this carries that answer onto the row. A deal with
-// no cached card carries no verdict, and its row says what it said before.
-//
-// `source` is what the reader is being shown, and a client's copy turns on it:
-// a deterministic rule stated as a belief is a lie about where the sentence came
-// from.
+// WorklistDealVerdict An earlier assessment of the deal, with the date it was written.
+// Current facts and actions are checked separately. These saved words never
+// establish that a task or reply is still owed and never change ranking.
+// Missing or inaccessible saved assessments are omitted.
 type WorklistDealVerdict struct {
-	// AsOf When the reading behind this line was taken, so a stale one can be told from
-	// a fresh one.
+	// AsOf When the earlier assessment was written. Clients must display this date
+	// and must not present the saved sentence as a current eligibility check.
 	AsOf *time.Time `json:"as_of,omitempty"`
 
 	// Line One sentence saying what the standing rests on, already written and already
@@ -56760,7 +56883,7 @@ type WorklistDealVerdict struct {
 	// Standing `live` — moving, with a next step both sides expect.
 	// `drifting` — nothing wrong, nothing happening; it dies of neglect.
 	// `blocked` — something specific is in the way.
-	// `cold` — long silence after real engagement.
+	// `cold` — recorded evidence that engagement ended, as assessed on `as_of`.
 	//
 	// The same four the deal page's own verdict carries, because they ARE that
 	// verdict. Held by backend/gates/worklistverdictstandings_test.go, which
@@ -56789,7 +56912,7 @@ type WorklistDealVerdictSource string
 // WorklistDealVerdictStanding `live` — moving, with a next step both sides expect.
 // `drifting` — nothing wrong, nothing happening; it dies of neglect.
 // `blocked` — something specific is in the way.
-// `cold` — long silence after real engagement.
+// `cold` — recorded evidence that engagement ended, as assessed on `as_of`.
 //
 // The same four the deal page's own verdict carries, because they ARE that
 // verdict. Held by backend/gates/worklistverdictstandings_test.go, which
@@ -57177,20 +57300,10 @@ type WorklistItem struct {
 	// Urgent Whether this work contributes to the urgent summary, independent of a personal pin.
 	Urgent *bool `json:"urgent,omitempty"`
 
-	// Verdict How the deal behind a row is STANDING, beside the move that acts on it.
-	//
-	// The move says what to do; this says what the reader is walking into. A row
-	// that names a step without saying whether the deal is alive asks the reader to
-	// open the deal page to find out, which is the hand-off the queue exists to
-	// remove.
-	//
-	// NOTHING IS DECIDED HERE. compose/dealstatus already wrote a standing per deal
-	// and cached it per reader; this carries that answer onto the row. A deal with
-	// no cached card carries no verdict, and its row says what it said before.
-	//
-	// `source` is what the reader is being shown, and a client's copy turns on it:
-	// a deterministic rule stated as a belief is a lie about where the sentence came
-	// from.
+	// Verdict An earlier assessment of the deal, with the date it was written.
+	// Current facts and actions are checked separately. These saved words never
+	// establish that a task or reply is still owed and never change ranking.
+	// Missing or inaccessible saved assessments are omitted.
 	Verdict *WorklistDealVerdict `json:"verdict,omitempty"`
 
 	// Version The version of the row this item's own verbs write to, present where it names one — a
@@ -57389,6 +57502,16 @@ type WorklistMove struct {
 
 	// Basis The deal recommendation's evidence basis, preserved across surfaces.
 	Basis *WorkEvidenceBasis `json:"basis,omitempty"`
+
+	// MailCoverage The calling reader's mail capture for the requested interval. This does
+	// not assert that no reply exists. Partial means capture has succeeded but
+	// does not attest a complete Inbox and Sent interval. Current providers do
+	// not record such an attestation; a cursor or completed import cannot supply it.
+	// No mailbox identity, credential, cursor or colleague account travels.
+	MailCoverage *MailCaptureCoverage `json:"mail_coverage,omitempty"`
+
+	// Recommendation The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
+	Recommendation *RecommendationReceipt `json:"recommendation,omitempty"`
 }
 
 // WorklistMoveAction `draft_reply` answers the message in `activity_id` — offered only where the
@@ -57682,8 +57805,8 @@ type WorklistSourceUnavailable struct {
 	// Category Worklist category affected by this missing source.
 	Category *string `json:"category,omitempty"`
 
-	// ContributesRows False for a side read that puts no row on the queue — `calendar` and
-	// `next_meeting` — so its failure cannot hide a row, and a figure counted over
+	// ContributesRows False for a side read that puts no row on the queue — `calendar`,
+	// `next_meeting` and `deal_advice` — so its failure cannot hide a row, and a figure counted over
 	// the queue stays exact. True for a lane whose rows may be missing. Absent from
 	// an older server and from a surface that names only lanes, and a client reads
 	// absent as true.
@@ -61522,7 +61645,13 @@ type RevertStageProgressionParams struct {
 
 // GetDealStatusParams defines parameters for GetDealStatus.
 type GetDealStatusParams struct {
-	// FactsOnly Refresh the card and shared action cache from current facts without model calls. Takes precedence over refresh.
+	// IfRecommendation Check this recommendation basis before opening its action. Requires if_rule and facts_only; a changed step returns version_skew.
+	IfRecommendation *string `form:"if_recommendation,omitempty" json:"if_recommendation,omitempty"`
+
+	// IfRule The recommendation rule being checked with if_recommendation.
+	IfRule *string `form:"if_rule,omitempty" json:"if_rule,omitempty"`
+
+	// FactsOnly Refresh the card and its current suggested step without model calls. Takes precedence over refresh.
 	FactsOnly *bool `form:"facts_only,omitempty" json:"facts_only,omitempty"`
 
 	// Refresh Rewrite even when the fingerprint still matches. The reader asking for a second opinion.
@@ -64495,7 +64624,7 @@ type ListTeamsParams struct {
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
-	// Q Case-insensitive match over team name.
+	// Q Case-insensitive match over team name that ignores diacritics on both sides.
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
 }
 
@@ -64514,16 +64643,15 @@ type ListUsersParams struct {
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
-	// Q Case-insensitive match over display_name/email.
+	// Q Case-insensitive match over display_name/email that ignores diacritics on both sides.
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
 
 	// IncludeInactive Admin management view — include deactivated/suspended members. Honored only for an admin caller.
 	IncludeInactive *bool `form:"include_inactive,omitempty" json:"include_inactive,omitempty"`
 
-	// IncludeInvited Also list invited seats — members who have not signed in yet. Naming the colleagues a record
-	// already points at is `GET /users/names`, which answers id and display name alone; a roster row
-	// carries the member's email and seat status with it.
-	// Pickers leave it off, so nobody is offered work they cannot open.
+	// IncludeInvited Also list invited seats — members who have not signed in yet. Each row's `status` says so.
+	// A picker that may hand an invited colleague work, such as a record responsibility, asks for them.
+	// Naming the colleagues a record already points at is `GET /users/names`.
 	IncludeInvited *bool `form:"include_invited,omitempty" json:"include_invited,omitempty"`
 }
 
@@ -69010,6 +69138,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "raw")
 	}
 
+	if raw, found := object["recommendation"]; found {
+		err = json.Unmarshal(raw, &a.Recommendation)
+		if err != nil {
+			return fmt.Errorf("error reading 'recommendation': %w", err)
+		}
+		delete(object, "recommendation")
+	}
+
 	if raw, found := object["remind_at"]; found {
 		err = json.Unmarshal(raw, &a.RemindAt)
 		if err != nil {
@@ -69238,6 +69374,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["raw"], err = json.Marshal(a.Raw)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'raw': %w", err)
+		}
+	}
+
+	if a.Recommendation != nil {
+		object["recommendation"], err = json.Marshal(a.Recommendation)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'recommendation': %w", err)
 		}
 	}
 
@@ -79975,7 +80118,7 @@ type ServerInterface interface {
 	// List the website forms that land leads in this installation.
 	// (GET /web-forms)
 	ListWebForms(w http.ResponseWriter, r *http.Request, params ListWebFormsParams)
-	// Create a website form (returns a server signing secret once).
+	// Create a website form (returns a minted signing secret once).
 	// (POST /web-forms)
 	CreateWebForm(w http.ResponseWriter, r *http.Request)
 	// Archive a website form; its address stops taking submissions.
@@ -79987,7 +80130,7 @@ type ServerInterface interface {
 	// Change a website form, pause it or resume it.
 	// (PATCH /web-forms/{id})
 	UpdateWebForm(w http.ResponseWriter, r *http.Request, id Id, params UpdateWebFormParams)
-	// Rotate a server form's signing secret (returns the new secret once).
+	// Rotate a form's minted signing secret (returns the new secret once).
 	// (POST /web-forms/{id}/rotate-secret)
 	RotateWebFormSecret(w http.ResponseWriter, r *http.Request, id Id)
 	// List the workspace's outbound webhook subscriptions.
@@ -85414,7 +85557,7 @@ func (_ Unimplemented) ListWebForms(w http.ResponseWriter, r *http.Request, para
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Create a website form (returns a server signing secret once).
+// Create a website form (returns a minted signing secret once).
 // (POST /web-forms)
 func (_ Unimplemented) CreateWebForm(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -85438,7 +85581,7 @@ func (_ Unimplemented) UpdateWebForm(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Rotate a server form's signing secret (returns the new secret once).
+// Rotate a form's minted signing secret (returns the new secret once).
 // (POST /web-forms/{id}/rotate-secret)
 func (_ Unimplemented) RotateWebFormSecret(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -105490,6 +105633,32 @@ func (siw *ServerInterfaceWrapper) GetDealStatus(w http.ResponseWriter, r *http.
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetDealStatusParams
+
+	// ------------- Optional query parameter "if_recommendation" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "if_recommendation", r.URL.Query(), &params.IfRecommendation, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "if_recommendation"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "if_recommendation", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "if_rule" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "if_rule", r.URL.Query(), &params.IfRule, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "if_rule"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "if_rule", Err: err})
+		}
+		return
+	}
 
 	// ------------- Optional query parameter "facts_only" -------------
 

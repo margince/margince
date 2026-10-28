@@ -27,7 +27,8 @@ func TestANewFormIsRefusedOnTheFieldItGotWrong(t *testing.T) {
 		"unknown sender":              {CreateInput{Name: "F", Sender: "fax"}, "sender"},
 		"browser without a website":   {CreateInput{Name: "F", Sender: SenderBrowser}, "allowed_origins"},
 		"server with a website":       {CreateInput{Name: "F", Sender: SenderServer, AllowedOrigins: site}, "allowed_origins"},
-		"builder without its secret":  {CreateInput{Name: "F", Sender: SenderTally}, "sender_secret"},
+		"webflow before its secret":   {CreateInput{Name: "F", Sender: SenderWebflow}, ""},
+		"tally without a secret":      {CreateInput{Name: "F", Sender: SenderTally}, ""},
 		"server with a pasted secret": {CreateInput{Name: "F", Sender: SenderServer, SenderSecret: secret}, "sender_secret"},
 		"consent without wording":     {CreateInput{Name: "F", Sender: SenderBrowser, AllowedOrigins: site, ConsentRequired: true}, colConsentWording},
 		"plain http redirect":         {CreateInput{Name: "F", Sender: SenderBrowser, AllowedOrigins: site, RedirectURL: new("http://example.com/thanks")}, colRedirectURL},
@@ -93,5 +94,25 @@ func TestAClearedSettingIsGoneFromTheMergedForm(t *testing.T) {
 	if got.Name != "Renamed" || got.LeadOrigin != nil || got.RedirectURL != nil ||
 		got.ConsentPolicyVersion != nil || got.SuccessMessage != nil {
 		t.Fatalf("merged = %+v, want every cleared setting empty", got)
+	}
+}
+
+func TestTheInstallationMintsEverySecretABuilderLetsSomeoneTypeIn(t *testing.T) {
+	pasted := new("a-builder-secret-of-length")
+	for name, tc := range map[string]struct {
+		sender string
+		pasted *string
+		mints  bool
+	}{
+		"a server form":           {SenderServer, nil, true},
+		"typeform without one":    {SenderTypeform, nil, true},
+		"tally with an empty one": {SenderTally, new(""), true},
+		"tally with a pasted one": {SenderTally, pasted, false},
+		"webflow, which issues":   {SenderWebflow, nil, false},
+		"a browser form":          {SenderBrowser, nil, false},
+	} {
+		if got := MintsSecret(tc.sender, tc.pasted); got != tc.mints {
+			t.Errorf("%s: mints = %v, want %v", name, got, tc.mints)
+		}
 	}
 }

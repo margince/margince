@@ -9,6 +9,7 @@ import { usePageName } from "../../app/pagemeta";
 import { useRecordOwnerOptions } from "../../components/assigneepicker";
 import { CreateAction } from "../../components/create";
 import { useObjectCustomFields } from "../../components/customfields.form";
+import { useRosterHint, useRosterPartial } from "../../components/entityref";
 import {
   type ListPage,
   type ListQuery,
@@ -160,6 +161,10 @@ function LeadsWorkbench({
   const pageName = usePageName("leads");
   const savedViews = useSavedViewTabs("leads");
   const assignable = useRecordOwnerOptions();
+  const ownerHint = useRosterHint(
+    assignable.roster,
+    useRosterPartial("user", true),
+  );
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -214,7 +219,7 @@ function LeadsWorkbench({
   const ownerOptions = [
     { value: viewerId, label: t("lead.assignToMe") },
     { value: UNASSIGNED_OWNER, label: t("lead.unassigned") },
-    ...assignable.filter((option) => option.value !== viewerId),
+    ...assignable.options.filter((option) => option.value !== viewerId),
   ];
 
   return (
@@ -294,6 +299,7 @@ function LeadsWorkbench({
                 type: "select",
                 required: true,
                 options: ownerOptions,
+                hint: ownerHint,
               },
               {
                 key: "origin",

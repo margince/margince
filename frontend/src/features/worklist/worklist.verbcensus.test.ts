@@ -82,7 +82,7 @@ const ANSWERED_BY = {
   // deal's history to find the entry themselves.
   undo: {
     how: "inline",
-    file: "worklist.receiptundo.tsx",
+    file: "../../components/receiptundo.tsx",
     // The receipt is not a queue row and carries no `actions` array, so the
     // control asks the field that decides it: a receipt with no `undo` is an
     // approval somebody agreed to, and there is nothing to take back.

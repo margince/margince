@@ -16,6 +16,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -236,10 +237,10 @@ func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, c
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO contact_email (contact_id, email, email_type, is_primary, position, source, captured_by, from_correspondence)
-			 VALUES ($1, lower($2), $3, $4, $5, $6, $7, $8)`,
+			`INSERT INTO contact_email (contact_id, email, email_type, is_primary, position, source, captured_by, from_correspondence, email_domain_folded)
+			 VALUES ($1, lower($2), $3, $4, $5, $6, $7, $8, $9)`,
 			contactID, e.Email, e.EmailType, e.IsPrimary, e.Position, source, by,
-			!e.VouchedNotCorresponded); err != nil {
+			!e.VouchedNotCorresponded, owndomain.StoredOfAddress(e.Email)); err != nil {
 			if name, ok := storekit.UniqueViolation(err); ok {
 				if name == "uq_contact_email_dedupe" {
 					return &DuplicateEmailError{Email: e.Email}

@@ -3,29 +3,7 @@
 
 package attention
 
-// The next-step pass: a row about a deal says what to do about it.
-//
-// The complaint the move field was built for is written into its own contract
-// description — the product knew the buyer had written, knew nobody had
-// answered, knew the answer was to draft a reply, and the page said only "no
-// contact for 83 days". One lane fixed that: an unanswered message names the
-// reply it is waiting for. Every other deal row still arrived naming a problem
-// and no step.
-//
-// Nothing here decides a step. compose/dealstatus already decides one per deal,
-// from records, deterministically, and caches it per reader; this reads what it
-// wrote. Deciding again in a second place is how a queue row and the deal page
-// standing on the same records end up naming different next moves.
-//
-// A CACHE MISS RENDERS NO MOVE. Assembling a card costs a timeline, seats, a
-// deal room and possibly a model call, and a page holds thirty rows. So a deal
-// nobody has opened contributes nothing and its row says what it said before —
-// the rule dealfacts.go and labels.go state, for the same reason.
-//
-// Read AFTER the page is cut, unlike the figures pass. Figures feed the
-// ordering and so must be in hand before anything ranks; a move is drawn and
-// never ranked, so reading one for a row the caller will not receive would
-// spend a query on nothing.
+// Worklist actions come from the same current rule evaluation as the deal page.
 
 import (
 	"context"
@@ -36,16 +14,13 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
 )
 
-// DealMoves answers the already-decided next step for each of these deals.
-//
-// Its implementation reads a cache and never assembles, which is what makes it
-// safe to call with a whole page of ids. A deal absent from the answer has no
-// step to suggest: no cached card, or a card whose own answer was that there is
-// nothing to do.
+// DealMoves checks the same deterministic rules as the record, over batched current facts.
+// An absent deal has no verified action to offer; it cannot supply work on its own.
 type DealMoves interface {
-	CachedMoves(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]crmcontracts.DealStatusCardMove, error)
+	CurrentMoves(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]crmcontracts.DealStatusCardMove, error)
 }
 
 // nameTheStep puts each deal row's already-decided next step onto it.
@@ -71,7 +46,13 @@ func (s *Service) nameTheStep(ctx context.Context, queue []crmcontracts.Worklist
 	if len(wanted) == 0 {
 		return nil
 	}
-	moves, err := s.dealMoves.CachedMoves(ctx, wanted)
+	var moves map[ids.UUID]crmcontracts.DealStatusCardMove
+	var err error
+	if s.currentDealMoves != nil {
+		moves = s.currentDealMoves.moves
+	} else {
+		moves, err = s.dealMoves.CurrentMoves(ctx, wanted)
+	}
 	// A suggested move is an ENRICHMENT of a queue row: a reader who may not
 	// read deals loses the suggestion and keeps the row, which is the answer
 	// this function's own doc already gives for a move naming a record they
@@ -128,7 +109,7 @@ func needsDealMove(item crmcontracts.WorklistItem) (ids.UUID, bool) {
 // Held by: TestAnUnansweredMailReachesTheRowAsAReply and
 // TestAMeetingFollowUpReachesTheRowAsAFreshMessage (dealmoves_test.go)
 func worklistMoveOf(decided crmcontracts.DealStatusCardMove) *crmcontracts.WorklistMove {
-	out := &crmcontracts.WorklistMove{Action: crmcontracts.WorklistMoveAction(decided.Action), Basis: decided.Basis}
+	out := &crmcontracts.WorklistMove{Action: crmcontracts.WorklistMoveAction(decided.Action), Basis: decided.Basis, MailCoverage: decided.MailCoverage, Recommendation: decided.Recommendation}
 	if decided.Arguments == nil {
 		return out
 	}
@@ -147,43 +128,7 @@ func worklistMoveOf(decided crmcontracts.DealStatusCardMove) *crmcontracts.Workl
 	return out
 }
 
-// NamedActivityArgument reads the record a verb acts on out of the card's arguments.
-//
-// Nothing rather than a zero id for a value this cannot parse. A move naming no
-// record is still drawable for the verbs that need none, where one naming a
-// record that does not exist is a control that fails when it is pressed.
-//
-// This is the SECOND reader of that key — the moves reader parses it too, to
-// decide which records to re-gate against the caller's audience. The two are
-// deliberately not shared: they sit in different compose packages, and a
-// package here importing that one would be the sibling edge the seam interface
-// exists to avoid. What holds them together instead is that a DISAGREEMENT is
-// safe in one direction only, and it is this one: an id this parses but the
-// gate did not would be an id served ungated. So this parse must be no more
-// permissive than the gate's, which is why both are the same three refusals
-// (absent key, non-string value, unparseable uuid) written the same way.
-//
-// EXPORTED for that gate alone. It is a pure function of a contract type, so
-// exporting costs nothing, and the alternative — a test-only export, or a gate
-// that reads the source text instead of running the code — would either hide
-// the coupling or assert on spelling rather than behaviour.
-//
-// Held by: TestBothSidesReadTheRecordArgumentAlike (backend/gates)
+// NamedActivityArgument shares the current-source gate's parser, including typed operands.
 func NamedActivityArgument(args map[string]any) (ids.UUID, bool) {
-	raw, present := args["request_activity_id"]
-	if !present {
-		raw, present = args["activity_id"]
-	}
-	if !present {
-		return ids.UUID{}, false
-	}
-	text, ok := raw.(string)
-	if !ok {
-		return ids.UUID{}, false
-	}
-	id, err := ids.Parse(text)
-	if err != nil {
-		return ids.UUID{}, false
-	}
-	return id, true
+	return owedwork.ActivityArgument(args)
 }

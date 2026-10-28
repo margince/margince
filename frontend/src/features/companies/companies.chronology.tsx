@@ -73,6 +73,7 @@ export function useChronologySlots({
   // The workspace roster, for the ids a change row stores. Still walks rather
   // than reading useMemberNames by id: `colleagueName` becomes useRecordChronology's
   // `values.nameOf`, called per row as it renders, so the ids are unknown here.
+  // roster-failure: names change rows only; nothing here is picked.
   const roster = useRoster("user", true);
   const colleagues = new Map(
     (roster.data ?? []).flatMap((entry) =>

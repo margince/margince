@@ -17,18 +17,15 @@ func requestForMove(f facts) (crmcontracts.Activity, bool, bool) {
 	if current, ok := unansweredInbound(f); ok {
 		return current, true, true
 	}
-	for _, candidate := range f.requests {
-		if candidate.Kind == crmcontracts.ActivityKindEmail && !withheld(candidate) {
-			return candidate, false, true
-		}
-	}
-	return crmcontracts.Activity{}, false, false
+	row, found := readableRequest(f.requests)
+	return row, false, found
 }
 
 func requestBasis(f facts, source crmcontracts.Activity, kind string) *crmcontracts.WorkEvidenceBasis {
 	return &crmcontracts.WorkEvidenceBasis{
 		Kind: kind, Scope: linkDeal, SourceActivityId: source.Id,
-		SourceAt: source.OccurredAt, SourcePrecision: source.OccurredPrecision,
+		MailCoverage: f.mailCoverage,
+		SourceAt:     source.OccurredAt, SourcePrecision: source.OccurredPrecision,
 		SourceVersion: source.Version, EvaluatedAt: f.now, PolicyVersion: ProjectionVersion,
 	}
 }
@@ -38,7 +35,7 @@ func requestMoveBasis(f facts, mv crmcontracts.DealStatusCardMove) *crmcontracts
 	if !ok {
 		return nil
 	}
-	operand, ok := operandActivity(mv)
+	operand, ok := NamedActivity(mv)
 	if !ok || operand != ids.UUID(source.Id) {
 		return nil
 	}

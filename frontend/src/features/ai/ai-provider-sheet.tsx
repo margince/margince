@@ -13,7 +13,7 @@ import { DataTable } from "../../design-system/datatable";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import { StatusBadge, type StatusKind } from "../../design-system/statusbadge";
-import { today } from "../../format/calendarday";
+import { AI_RATE_DAY_ZONE, todayIn } from "../../format/calendarday";
 import { stable } from "../../format/collate";
 import { formatDate } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
@@ -320,7 +320,7 @@ function PriceTable({
             render: (r) => (
               <span className="ai-sheet-model">
                 {r.model_id}
-                {r.effective_date > today() ? (
+                {r.effective_date > todayIn(AI_RATE_DAY_ZONE) ? (
                   <Badge>
                     {t("aiRates.manual.from", {
                       date: formatDate(r.effective_date, locale, viewerZone()),

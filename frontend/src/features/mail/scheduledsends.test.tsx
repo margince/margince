@@ -288,14 +288,20 @@ it("pins a move to the version the row was drawn from", async () => {
   const user = userEvent.setup();
   const { calls } = mount([WAITING]);
   await user.click(await screen.findByRole("button", { name: /Reschedule: / }));
-  const picker = screen.getByLabelText(/New time for/);
+  const day = screen.getByRole("textbox", { name: /^New day for/ });
+  const time = screen.getByRole("textbox", { name: /^New time for/ });
   // Seeded from the send's own moment, so a rep who opens the control and saves
   // without touching it does not move the message.
-  expect((picker as HTMLInputElement).value).toMatch(
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/,
+  expect(day).toHaveProperty(
+    "value",
+    expect.stringMatching(/^\d{2}\/\d{2}\/\d{4}$/),
   );
-  await user.clear(picker);
-  await user.type(picker, "2026-09-02T08:30");
+  expect(time).toHaveProperty("value", expect.stringMatching(/^\d{2}:\d{2}$/));
+  await user.clear(day);
+  await user.type(day, "02/09/2026");
+  await user.clear(time);
+  await user.type(time, "08:30");
+  await user.tab();
   await user.click(screen.getByRole("button", { name: "Move message" }));
   const patch = calls.find((call) => call.method === "PATCH");
   expect(patch?.ifMatch).toBe("3");
@@ -327,6 +333,7 @@ it("refuses to move a message to nowhere", async () => {
   const { calls } = mount([WAITING]);
   await user.click(await screen.findByRole("button", { name: /Reschedule: / }));
   await user.clear(screen.getByLabelText(/New time for/));
+  await user.tab();
   expect(
     screen
       .getByRole("button", { name: "Move message" })
