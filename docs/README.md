@@ -96,6 +96,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
   it when you stop.
 - [mint-a-passport.md](how-to/mint-a-passport.md): make a passport token for an agent.
 - [connect-an-mcp-client.md](how-to/connect-an-mcp-client.md): connect a client to the MCP tools.
+- [test-the-rest-surface-end-to-end.md](how-to/test-the-rest-surface-end-to-end.md): test the REST API
 - [test-the-mcp-surface-end-to-end.md](how-to/test-the-mcp-surface-end-to-end.md): test the MCP tools
   with a real model (`make e2e-llm`).
 - [improve-mcp-quality.md](how-to/improve-mcp-quality.md): find why a model fails an MCP test, and fix
