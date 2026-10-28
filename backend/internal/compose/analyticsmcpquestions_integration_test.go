@@ -55,6 +55,7 @@ func loadCanonicalQuestions(t *testing.T) []canonicalQuestion {
 // report path. They are different reaches, not two names for one.
 var questionSurfaces = map[string]bool{
 	"run_analytics_query": true, "run_report": true, "read_reporting": true, "read_attention": true,
+	"read_forecast": true,
 }
 
 // caseSurfaces names which surface each proof ACTUALLY drives, so the corpus
@@ -89,6 +90,11 @@ var caseSurfaces = map[string]string{
 	"G09": "read_reporting",
 	"G06": "read_attention",
 	"G07": "read_attention",
+	"F01": "read_forecast",
+	"F02": "read_forecast",
+	"F03": "read_forecast",
+	"F04": "read_forecast",
+	"F05": "read_forecast",
 }
 
 // canonicalCases maps each corpus id to its executable proof.
@@ -117,6 +123,11 @@ func canonicalCases() map[string]func(t *testing.T) {
 		"G09": proveG09LeadFirstResponse,
 		"G06": proveG06SlippingDealsWithEvidence,
 		"G07": proveG07OpenPromisesToCustomers,
+		"F01": proveF01QuarterForecast,
+		"F02": proveF02ForecastMovement,
+		"F03": proveF03ForecastInputsCanBeTrusted,
+		"F04": proveF04DealsWithInputProblems,
+		"F05": proveF05ForecastSources,
 	}
 }
 
