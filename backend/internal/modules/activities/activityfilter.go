@@ -130,6 +130,9 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	if where, err = appendCustomerMeetingClause(ctx, in, arg, where); err != nil {
 		return nil, "", nil, nil, err
 	}
+	if where, err = appendAwaitingOutcomeClause(ctx, in, arg, where); err != nil {
+		return nil, "", nil, nil, err
+	}
 	where = append(where, activityRowClauses(in, arg)...)
 	custom, err := storekit.CustomFilterClauses(in.Columns.cols, in.CustomFilters, arg)
 	if err != nil {
@@ -186,7 +189,7 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 	if in.UnhostedMeetings {
 		where = append(where, "a.kind = 'meeting' AND "+storekit.UnclaimedMeetingSQL("a"))
 	}
-	if clause := openTaskAssigneeClause(in.AssigneeID, in.TaskAsOf, in.mailIdentities, arg); clause != "" {
+	if clause := openTaskAssigneeClause(in.AssigneeID, in.AsOf, in.mailIdentities, arg); clause != "" {
 		where = append(where, clause)
 	}
 	return append(where, openTaskWindowClauses(in, reminders, arg)...)
@@ -259,10 +262,8 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 		where = append(where, sprintf("(a.subject ILIKE $%d ESCAPE '\\' OR a.body ILIKE $%d ESCAPE '\\')", pos, pos))
 	}
 	where = append(where, occurredWindowClauses(in, arg)...)
-	if in.AwaitingOutcome {
-		// NULL counts as awaiting: a captured calendar event carries no status,
-		// and excluding it would empty this question on a connected calendar.
-		where = append(where, "(a.meeting_status IS NULL OR a.meeting_status = 'booked')")
+	if in.OpenStatusOnly {
+		where = append(where, openMeetingStatusSQL)
 	}
 	return where
 }

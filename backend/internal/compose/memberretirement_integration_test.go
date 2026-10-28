@@ -236,6 +236,38 @@ func TestARetiredMembersCompletedTaskCannotBeReopenedOntoTheHiddenAccount(t *tes
 	}
 }
 
+// A retired seat cannot be given work. The refusal is not found, not a
+// permission error: seatHoldingWork answers an inactive seat as it answers a
+// guessed id. A caller therefore learns nothing about the account.
+//
+// The test above covers the other door, reopening a task the retired member
+// already held, which the member_work_reference_retired check refuses.
+func TestATaskCannotBeAssignedToARetiredMember(t *testing.T) {
+	e := integration.Setup(t)
+	manager := memberManagerFor(t, e)
+	ctx := e.As(e.AdminUser, nil, integration.AdminWithSignals)
+	task := assignedTask(t, e, "Open before retirement", e.Rep2, false)
+	preview, err := manager.Preview(ctx, e.Rep1, &e.Rep2, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Merge(ctx, e.Rep1, e.Rep2, preview.Token); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = e.Activities.UpdateActivity(ctx, ids.From[ids.ActivityKind](task),
+		activities.UpdateActivityInput{AssigneeID: new(ids.From[ids.UserKind](e.Rep1))})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("assigning to a retired member: %v, want not found", err)
+	}
+	// The survivor is still an assignee, so the refusal above is about the
+	// retired seat rather than the task having stopped being writable.
+	if _, err := e.Activities.UpdateActivity(ctx, ids.From[ids.ActivityKind](task),
+		activities.UpdateActivityInput{AssigneeID: new(ids.From[ids.UserKind](e.Rep2))}); err != nil {
+		t.Fatalf("assigning to the survivor: %v", err)
+	}
+}
+
 func TestAMergedMemberKeepsItsPersonalWriteShare(t *testing.T) {
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)

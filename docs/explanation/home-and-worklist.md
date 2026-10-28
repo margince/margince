@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx -->
+<!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx frontend/src/features/worklist/worklist.next.ts frontend/src/features/worklist/worklist.nexttask.tsx -->
 # Home and the Worklist: how the day is ranked
 
 Home has one ranking engine behind three views: the Worklist, the **First** section on Morning, and the
@@ -272,9 +272,34 @@ Older notices got their facts back in migration
 to the stage change that caused it. It never matched by deal name or nearby times, since neither names one
 move. Recorded stage names come first; without them, only a stage setup nobody has edited gives a name.
 
+## What a row offers
+
+The verbs on a row that change a record come from its `actions`, which the server sets. So the screen never
+offers a write the server would refuse. A task row (`taskActions` in `taskactions.go`) offers `complete` and `snooze`, and `take`
+when nobody holds the task. `take` shows on every scope, because nobody holding a task is a fact about the
+task and not about the view.
+
+A meeting owed an outcome (`meetingOutcomeActions` in `meeting.go`) offers `decide`, and `cancel` only when
+no live calendar invite holds it. `PATCH /activities/{id}` refuses that cancel with `calendar_managed`,
+because the invite owns the meeting's time and words. Record pages ask the same question through
+`Activity.awaiting_outcome`, which uses the lane's rule without its look-back window.
+
+A reader who may see a task or meeting and not change it gets no verbs. The reason `read_only` says why,
+so an empty row does not look broken.
+
 ## Addresses
 
 Home's address is `#/home` in every language. `parseHash` in `router.tsx` sends `#/brief` to Home with its
 query kept. `WorklistRedirect` in `brief.queue.tsx` sends `#/worklist` and its owner or `unassigned` form
 to Home with the queue open, its `queue_scope` dial set and its filters kept. The queue drawer has its own
 `queue_scope`, so changing it never changes the Morning or Weekly view behind it.
+
+**Next task** on a record page's next-step bar reads the Worklist again on each press, so an open page polls
+nothing (`worklist.nexttask.tsx`). `nextTaskHref` in `worklist.next.ts` takes each record once, where its
+first row stands, and leaves out rows that open no record page. It follows the list the record was opened
+from, else the reader's own list, and goes back to the top after the last record.
+
+Quiet relationships use the same scoped read and row renderer in a separate optional
+list. They join the work queue and Focus only when the reader pins them. A pin
+keeps the routine meaning and names the reader's choice; it adds no deadline or
+deal dependency. Existing tasks and waiting replies remove duplicate suggestions.

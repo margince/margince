@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import { NextTaskProvider } from "../../components/nexttaskslot";
+import { Button } from "../../design-system/atoms";
 import {
   installFetchStub,
   jsonResponse,
@@ -15,6 +17,7 @@ function panel(
   writer: WrittenBy,
   situation: Situation = "task",
   coverage?: components["schemas"]["MailCaptureCoverage"]["state"],
+  withNextTask = false,
 ) {
   const request = situation !== "task";
   const next = request
@@ -96,12 +99,18 @@ function panel(
     });
     return (
       <StoryProviders>
-        <DealStatusCardPanel
-          deal={{
-            id: "demo-deal",
-            name: request ? "Won account" : "Demo proposal",
-          }}
-        />
+        <NextTaskProvider
+          value={
+            withNextTask ? <Button variant="ghost">Next task</Button> : null
+          }
+        >
+          <DealStatusCardPanel
+            deal={{
+              id: "demo-deal",
+              name: request ? "Won account" : "Demo proposal",
+            }}
+          />
+        </NextTaskProvider>
       </StoryProviders>
     );
   };
@@ -113,6 +122,9 @@ type Story = StoryObj;
 
 export const ExistingTask: Story = { render: panel("model") };
 export const ComposedBrief: Story = { render: panel("deterministic") };
+export const WithNextTask: Story = {
+  render: panel("model", "task", undefined, true),
+};
 export const ExistingTaskDark: Story = {
   globals: { theme: "dark" },
   render: panel("model"),

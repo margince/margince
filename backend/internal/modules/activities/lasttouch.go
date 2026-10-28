@@ -48,35 +48,19 @@ type LastTouchCandidate struct {
 // the engine's own output. The scan reads it to find a silence and the
 // resolver (CompleteQuietRemindersReachedBy) to find its end, so a touch that
 // would not have moved the anchor does not close the reminder either.
-// Mail from a sending system is not contact. It ends no silence.
+// Mail from a sending system, an invitation and a meeting that did not happen
+// are not contact, by the rules every recency clock reads (relstrength).
 //
 // The three positions bind systemSource, systemCapturedBy and
 // systemCapturedByPattern; source alone is a client's to spell, so it is
 // excluded only together with captured_by.
 func genuineEngagement(alias string, sourcePos, capturedByPos, patternPos int) string {
-	return storekit.SQLf(`%[1]s.archived_at IS NULL`+
-		auth.OriginIsEngagement(alias)+auth.AudienceWorkspaceOnly(alias)+`
-				  AND NOT %[1]s.sender_is_machine`+
-		meetingNotCalledOffSQL(alias)+`
+	return storekit.SQLf(`%[1]s.archived_at IS NULL`+auth.AudienceWorkspaceOnly(alias)+`
+				  AND `+relstrength.WrittenByHumanSQL(alias)+`
+				  AND `+relstrength.NotCalledOffSQL(alias)+`
 				  AND NOT (%[1]s.source = $%[2]d
 				           AND (%[1]s.captured_by = $%[3]d OR %[1]s.captured_by LIKE $%[4]d))`,
 		alias, sourcePos, capturedByPos, patternPos)
-}
-
-// meetingNotCalledOffSQL excludes a meeting that did not happen. A booking
-// nobody attended is not contact, so it neither ends a silence nor answers the
-// reminder that reported one.
-//
-// `held` is admitted: a meeting that took place is the strongest touch there
-// is. So is a NULL status, which is what most captured meetings carry: a
-// calendar entry nobody has marked either way.
-//
-// Spelled as IS NULL OR NOT IN rather than NOT IN, because NOT IN is
-// NULL-false and would call every unmarked meeting called off.
-func meetingNotCalledOffSQL(alias string) string {
-	return storekit.SQLf(`
-				  AND (%[1]s.meeting_status IS NULL
-				       OR %[1]s.meeting_status NOT IN ('canceled', 'no_show'))`, alias)
 }
 
 // lastTouchCandidateQuery is LastTouchBefore's read: every linked entity's most

@@ -14,6 +14,26 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
+  "homeRepair.reason.taskChanged":
+    "Công việc đã thay đổi trong khi tạo bản xem trước. Hãy xem trước lần nữa.",
+  "homeRepair.normalize": "Sửa nguồn hoặc ngày được tạo tự động",
+  "homeRepair.normalizeSummary_one":
+    "{count} nhiệm vụ tự động có nguồn hoặc ngày cần sửa.",
+  "homeRepair.normalizeSummary_other":
+    "{count} nhiệm vụ tự động có nguồn hoặc ngày cần sửa.",
+  "homeRepair.taskCorrectionPermission":
+    "Bạn có thể xem xét các nhiệm vụ này, nhưng vai trò của bạn không thể áp dụng mọi chỉnh sửa được liệt kê.",
+  "homeRepair.reason.noLongerCurrent":
+    "Nguồn không còn xác lập công việc hiện tại.",
+  "homeRepair.reason.restoreSource": "Khôi phục liên kết nguồn đã ghi nhận.",
+  "homeRepair.reason.generatedDate": "Xóa ngày thông báo được tạo tự động.",
+  "homeRepair.reason.restoreSourceAndDate":
+    "Khôi phục liên kết nguồn và xóa ngày thông báo được tạo tự động.",
+  "worklist.relationships.optional": "Kết nối lại tùy chọn",
+  "worklist.relationships.optionalDetail":
+    "Im lặng không tự tạo công việc. Ghim một liên hệ vào ngày làm việc hoặc tạo nhiệm vụ trong hồ sơ của họ.",
+  "worklist.relationships.more":
+    "Còn các liên hệ tùy chọn khác ngoài chế độ xem này.",
   "webhooks.event.signal.updated.label": "Đổi thành viên phụ trách cảnh báo",
   "webhooks.event.signal.updated.when":
     "Khi cảnh báo được chuyển sang thành viên giữ lại lúc gộp tài khoản trùng.",
@@ -201,7 +221,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "homeRepair.inspect": "Xem chi tiết",
   "dataTasks.blocked.review_required":
     "Xem xét các thay đổi được đề xuất trước khi bắt đầu.",
-  "homeRepair.archive": "Lưu trữ lời nhắc tự động",
+  "homeRepair.archive": "Lưu trữ công việc tự động",
   "homeRepair.keepReview": "Giữ lại để xem xét",
   "homeRepair.keepCurrent": "Giữ công việc hiện tại",
   "homeRepair.reason.adopted":
@@ -209,7 +229,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "homeRepair.reason.unverified":
     "Bằng chứng hiện có chưa đủ để thay đổi tự động.",
   "homeRepair.reason.unavailable":
-    "Quyền truy cập hiện tại không cho phép kiểm tra nguồn.",
+    "Nguồn bị thiếu hoặc quyền truy cập hiện tại không cho phép kiểm tra nguồn.",
   "homeRepair.reason.historical": "Nguồn cũ không có thời hạn hiện tại.",
   "homeRepair.reason.lateProposed":
     "Do đồng nghiệp ghi sau 30 ngày; đề xuất vẫn gửi cho chính đồng nghiệp đã hứa.",
@@ -230,11 +250,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Công việc này vẫn đáp ứng các quy tắc hiện tại.",
   "homeRepair.unnamed": "Không có chi tiết",
   "homeRepair.explain":
-    "Chỉ bao gồm công việc hiện có quyền xem. Xem xét tối đa 25 mục mỗi lần. Có thể lưu trữ lời nhắc tự động đã cũ và rút các đề xuất trùng lặp hoặc đã cũ. Công việc do người dùng xử lý được giữ lại; không mục nào được đánh dấu hoàn thành.",
+    "Chỉ bao gồm công việc hiện có quyền xem. Xem xét tối đa 25 mục mỗi lần. Có thể lưu trữ công việc tự động đã cũ và rút các đề xuất trùng lặp hoặc đã cũ. Công việc do người dùng xử lý được giữ lại; không mục nào được đánh dấu hoàn thành.",
   "homeRepair.preview": "Xem trước các mục",
   "homeRepair.next": "Xem trang tiếp theo",
   "homeRepair.summary":
-    "Kết quả cần đổi: {reclassify}. Lời nhắc cần lưu trữ: {archive}. Đề xuất cần rút: {withdraw}. Đề xuất deal cần ngừng: {supersede}. Giữ để xem xét: {review}; giữ làm công việc hiện tại: {keep}.",
+    "Kết quả cần đổi: {reclassify}. Công việc tự động cần lưu trữ: {archive}. Đề xuất cần rút: {withdraw}. Đề xuất deal cần ngừng: {supersede}. Giữ để xem xét: {review}; giữ làm công việc hiện tại: {keep}.",
   "homeRepair.apply_one": "Áp dụng {count} thay đổi đã xem xét",
   "homeRepair.apply_other": "Áp dụng {count} thay đổi đã xem xét",
   "homeRepair.settlements": "Yêu cầu đã trả lời",
@@ -1649,6 +1669,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.bandCount_other": "{count} việc",
   "brief.focus.context": "Xem chi tiết",
   "brief.queue.back": "Quay lại Danh sách công việc",
+  "brief.queue.next": "Việc tiếp theo",
+  "brief.queue.nextNone": "Không còn hồ sơ nào",
   "brief.queue.title": "Danh sách công việc",
   "brief.queue.show": "Xem Danh sách công việc",
   "brief.queue.hide": "Ẩn Danh sách công việc",
@@ -2269,7 +2291,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "Trang chủ {company}, chạy trên Margince",
   "shell.poweredBy": "Chạy trên Margince",
-  "shell.poweredByPrefix": "Chạy trên",
   "shell.beta": "Beta",
   "shell.searchEverything": "Tìm kiếm hoặc hỏi Margince",
   "shell.breadcrumbAria": "Đường dẫn điều hướng",
@@ -8040,6 +8061,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "“{value}” không phải trạng thái cuộc họp. Các trạng thái: {allowed}.",
   "import.reason.meeting_status_not_valid_for_kind":
     "Chỉ cuộc họp mới có trạng thái cuộc họp. Bỏ giá trị này khỏi hàng.",
+  "import.reason.meeting_not_taken_place":
+    "Theo ngày hoặc giờ trong hàng này, cuộc họp chưa bắt đầu nên không thể là “held” hoặc “no_show”. Để trống trạng thái hoặc dùng “booked” hay “canceled”. Nếu cuộc họp đã bắt đầu hôm nay, thêm giờ bắt đầu.",
   "import.reason.direction_unknown":
     "“{value}” không phải chiều hoạt động. Các chiều: {allowed}.",
   "import.reason.activity_unlinked":
@@ -9064,9 +9087,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.s1.fieldRequired": "Bắt buộc",
   "ob.s1.requiredMissing": "Điền các trường này để tiếp tục: {fields}",
   "ob.s1.saving": "Đang lưu…",
-  "ob.s1.saveFailed": "Không thể lưu công ty",
-  "ob.s1.savedNote":
-    "Đã lưu vào hồ sơ công ty. Các thay đổi ở đây sẽ được lưu lại khi tiếp tục.",
   "ob.readFromSite": "đọc từ trang web",
 
   "ob.manualChapterLegal": "Pháp nhân",
@@ -13767,14 +13787,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.field.nameHint":
     "Hiện trên ghi chú của mỗi lead, ví dụ Trang liên hệ.",
   "webForms.field.sender": "Biểu mẫu của bạn nằm ở đâu?",
+  "webForms.senderGroup.noDeveloper": "Không cần lập trình viên",
+  "webForms.senderGroup.developer": "Dành cho lập trình viên",
   "webForms.field.senderFixed":
     "Cố định khi biểu mẫu đã tồn tại. Tạo biểu mẫu mới để đổi.",
   "webForms.senderHint.browser":
-    "Biểu mẫu trên trang của bạn, hoặc trong WordPress, Webflow hay công cụ dựng trang khác cho phép đặt nơi biểu mẫu gửi tới. Không cần lập trình viên.",
+    "Biểu mẫu trên trang của bạn, hoặc trong WordPress, Webflow hay công cụ dựng trang khác cho phép đặt nơi biểu mẫu gửi tới.",
   "webForms.senderHint.server":
-    "Dành cho lập trình viên: máy chủ trang web chuyển tiếp mỗi yêu cầu, có chữ ký.",
+    "Máy chủ trang web chuyển tiếp mỗi yêu cầu, có chữ ký.",
   "webForms.senderHint.webflow":
-    "Dành cho lập trình viên: webhook tạo bằng API của Webflow. Với biểu mẫu Webflow, hãy chọn Trang web của bạn.",
+    "Webhook tạo bằng API của Webflow. Với biểu mẫu Webflow, hãy chọn Trang web của bạn.",
   "webForms.senderHint.typeform":
     "Mỗi câu trả lời Typeform đến qua một webhook. Margince tạo khóa ký cho bạn.",
   "webForms.senderHint.tally":
@@ -16225,9 +16247,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.scope.mine": "Của tôi",
   "worklist.sourceUnavailable":
     "Nguồn không khả dụng hoặc chưa được chia sẻ với bạn",
-  "worklist.scope.unassigned": "Chưa giao",
+  "worklist.scope.unassigned": "Chưa nhận",
   "worklist.scope.team": "Nhóm",
   "worklist.scope.all": "Tất cả",
+  "worklist.scope.unassignedHint":
+    "Việc đang mở mà bạn xem được, chưa có người phụ trách.",
+  "worklist.take.action": "Nhận việc",
+  "worklist.take.done": "Đã nhận việc",
+  "worklist.take.failed": "Không thể nhận việc này. Thử lại.",
   "worklist.owner.shared": "Cùng phụ trách: {names}",
   "worklist.owner.left":
     "{name} đã nghỉ. Việc này cần người chịu trách nhiệm mới.",
@@ -16291,6 +16318,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.handled.wayBack": "Trạng thái",
   "worklist.handled.putBackDone": "Đã hoàn tác",
   "worklist.handled.truncated": "Danh sách đã bị cắt bớt. Vẫn còn việc khác.",
+  "receipt.detail.summary": "Chi tiết",
+  "receipt.detail.by": "Người làm",
+  "receipt.detail.when": "Thời điểm",
+  "receipt.detail.source": "Nguồn",
+  "worklist.handled.showMore": "Xem thêm",
   "worklist.exceptions.empty": "Nhóm không có ngoại lệ nào.",
   "worklist.exceptions.loading": "Đang tải nhóm…",
   "worklist.exceptions.count": "{count} cần chú ý",
@@ -16568,6 +16600,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingOutcomeFailed": "Không thể ghi nhận kết quả. Thử lại.",
   "worklist.verb.meetingDayMissing":
     "Ngày này không có trong múi giờ của công ty. Chọn ngày khác.",
+  "worklist.verb.meetingUpdateFor": "Cập nhật {subject}",
+  "worklist.verb.meetingCanceledFor": "Đánh dấu đã hủy: {subject}",
+  "worklist.verb.meetingCancelInCalendar":
+    "Lời mời trên lịch quản lý cuộc họp này. Hủy cuộc họp qua lời mời.",
+  "worklist.verb.meetingCalendarManaged":
+    "Lời mời trên lịch giữ tiêu đề, ghi chú và ngày. Tại đây chỉ lưu kết quả cuộc họp.",
   "worklist.verb.retry": "Chạy lại",
   "worklist.verb.retryStarted": "Đang chạy lại quy tắc…",
   "worklist.verb.retryFailed": "Không thể chạy lại quy tắc. Thử lại.",
@@ -17168,6 +17206,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.by.agent": "Một trợ lý AI",
   "magic.by.system": "Margince",
   "magic.by.data_correction": "Hiệu chỉnh dữ liệu",
+  "magic.by.member": "{name}",
+  "magic.by.colleague": "Một đồng nghiệp",
   "magic.failingSince": "Bị lỗi từ {when}",
   "magic.noRecord": "Không nêu hồ sơ nào",
   "magic.undo.action": "Hoàn tác",

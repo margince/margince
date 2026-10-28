@@ -6,6 +6,8 @@ package activities
 import (
 	"context"
 	"errors"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -177,7 +179,7 @@ func (s *Store) finishInvitation(ctx context.Context, claimed invitationRow, rec
 			if row.Command == invitationCancel {
 				row.Status = invitationCanceled
 			}
-			if err := s.settleInvitation(ctx, tx, row); err != nil {
+			if err := s.settleInvitation(ctx, tx, row, row.Command == invitationUpdate); err != nil {
 				return err
 			}
 		}
@@ -191,23 +193,31 @@ func (s *Store) finishInvitation(ctx context.Context, claimed invitationRow, rec
 	})
 }
 
-func (s *Store) settleInvitation(ctx context.Context, tx pgx.Tx, row invitationRow) error {
+// rescheduled is true only when this settlement delivers a Margince reschedule.
+func (s *Store) settleInvitation(ctx context.Context, tx pgx.Tx, row invitationRow, rescheduled bool) error {
 	current, err := readActivity(ctx, tx, ids.From[ids.ActivityKind](row.ID), storekit.LiveOnly)
 	if err != nil {
 		return err
 	}
-	status := "booked"
-	if current.MeetingStatus != nil && (*current.MeetingStatus == ScheduledStatusHeld || *current.MeetingStatus == "no_show") {
-		status = string(*current.MeetingStatus)
+	at := s.now()
+	status := new(string(crmcontracts.ActivityMeetingStatusBooked))
+	stored := meetingStatusString(current.MeetingStatus)
+	// A reschedule that moves the start leaves its outcome with the old slot.
+	if isMeetingOutcome(&stored) && (!rescheduled || SameStoredStart(row.Appointment.Start, current.OccurredAt)) {
+		status = &stored
+	}
+	status, err = statusAfterMove(ctx, tx, status, row.Appointment.Start, PrecisionInstant, &at)
+	if err != nil {
+		return err
 	}
 	if row.Status == invitationCanceled {
-		status = invitationCanceled
+		status = new(invitationCanceled)
 	}
 	id := ids.From[ids.ActivityKind](row.ID)
 	// Provider receipts identify the organizer's intent without taking the natural
 	// key of a colleague's independently captured attendee copy.
 	seconds := int(row.Appointment.End.Sub(row.Appointment.Start) / time.Second)
-	if _, err := updateActivityInTx(ctx, tx, id, UpdateActivityInput{calendarSettlement: true, OccurredAt: &row.Appointment.Start, MeetingStatus: &status, DurationSeconds: &seconds}); err != nil {
+	if _, err := updateActivityInTx(ctx, tx, id, UpdateActivityInput{calendarSettlement: true, recordedAt: &at, OccurredAt: &row.Appointment.Start, MeetingStatus: status, DurationSeconds: &seconds}); err != nil {
 		return err
 	}
 
@@ -222,15 +232,38 @@ func (s *Store) settleInvitation(ctx context.Context, tx pgx.Tx, row invitationR
 
 func refuseActiveInvitationPatch(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	args := schedulingArgs{}
-	var active bool
-	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM meeting_invitation WHERE activity_id=`+args.add(id)+` AND status<>'canceled')`, args...).Scan(&active)
+	var status string
+	err := tx.QueryRow(ctx, `SELECT status FROM meeting_invitation WHERE activity_id=`+args.add(id), args...).Scan(&status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
-	if active {
+	if invitationHoldsMeeting(status) {
 		return &SchedulingArgumentError{Field: KindMeeting, Code: "calendar_managed", Message: "Change or cancel this meeting through its calendar invitation"}
 	}
 	return nil
+}
+
+// calendarManaged reports whether a live invitation holds the meeting, so its
+// slot and wording change only through the calendar.
+func calendarManaged(meeting crmcontracts.Activity) bool {
+	return meeting.InvitationStatus != nil && invitationHoldsMeeting(string(*meeting.InvitationStatus))
+}
+
+// releasedInvitationStatuses no longer hold their meeting. An erased invitation
+// was withdrawn with its guest.
+var releasedInvitationStatuses = []string{invitationCanceled, invitationErased}
+
+// InvitationHoldsMeetingSQL is invitationHoldsMeeting over the status column of
+// the meeting_invitation row aliased alias, a compile-time identifier.
+func InvitationHoldsMeetingSQL(alias string) string {
+	return pgx.Identifier{alias}.Sanitize() + ".status NOT IN ('" + strings.Join(releasedInvitationStatuses, "', '") + "')"
+}
+
+func invitationHoldsMeeting(status string) bool {
+	return !slices.Contains(releasedInvitationStatuses, status)
 }
 
 func transitionInvitation(ctx context.Context, tx pgx.Tx, row *invitationRow, in crmcontracts.MeetingInvitationChange, buffer int) error {
@@ -243,7 +276,7 @@ func transitionInvitation(ctx context.Context, tx pgx.Tx, row *invitationRow, in
 			return err
 		}
 		row.Appointment.Start, row.Appointment.End = *in.Start, *in.End
-		row.Status, row.Command = "rescheduling", "update"
+		row.Status, row.Command = "rescheduling", invitationUpdate
 	case invitationCancel:
 		if row.Status == invitationCanceled || row.Status == invitationCanceling || row.Status == invitationErased {
 			return apperrors.ErrConflict
@@ -254,7 +287,7 @@ func transitionInvitation(ctx context.Context, tx pgx.Tx, row *invitationRow, in
 			return apperrors.ErrConflict
 		}
 		row.Status = invitationPending
-		if row.Command == "update" {
+		if row.Command == invitationUpdate {
 			row.Status = "rescheduling"
 		}
 		if row.Command == invitationCancel {
@@ -299,5 +332,5 @@ func (s *Store) executeInvitation(ctx context.Context, row invitationRow) (*conn
 
 func changesInvitation(in UpdateActivityInput) bool {
 	return in.OccurredAt != nil || in.OccurredPrecision != nil || in.DurationSeconds != nil || in.Subject != nil || in.Body != nil ||
-		(in.MeetingStatus != nil && *in.MeetingStatus != ScheduledStatusHeld && *in.MeetingStatus != "no_show")
+		(in.MeetingStatus != nil && !isMeetingOutcome(in.MeetingStatus))
 }

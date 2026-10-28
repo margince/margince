@@ -5,6 +5,28 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
+  "homeRepair.reason.taskChanged":
+    "Die Aufgabe wurde während der Vorschau geändert. Erstelle die Vorschau erneut.",
+  "homeRepair.normalize": "Quelle oder erzeugtes Datum berichtigen",
+  "homeRepair.normalizeSummary_one":
+    "Bei {count} automatischen Aufgabe wird die Quelle oder das Datum berichtigt.",
+  "homeRepair.normalizeSummary_other":
+    "Bei {count} automatischen Aufgaben werden Quelle oder Datum berichtigt.",
+  "homeRepair.taskCorrectionPermission":
+    "Du kannst diese Aufgaben prüfen, aber deine Rolle kann nicht alle aufgeführten Korrekturen anwenden.",
+  "homeRepair.reason.noLongerCurrent":
+    "Die Quelle begründet keine aktuelle Aufgabe mehr.",
+  "homeRepair.reason.restoreSource":
+    "Den gespeicherten Quellenverweis wiederherstellen.",
+  "homeRepair.reason.generatedDate":
+    "Das erzeugte Benachrichtigungsdatum entfernen.",
+  "homeRepair.reason.restoreSourceAndDate":
+    "Den Quellenverweis wiederherstellen und das erzeugte Benachrichtigungsdatum entfernen.",
+  "worklist.relationships.optional": "Optionale Kontaktpflege",
+  "worklist.relationships.optionalDetail":
+    "Stille allein ist keine Aufgabe. Hefte einen Kontakt für deinen Tag an oder erstelle eine Aufgabe im Datensatz.",
+  "worklist.relationships.more":
+    "Weitere optionale Kontakte liegen außerhalb dieser Ansicht.",
   "webhooks.event.signal.updated.label": "Hinweis neu zugeordnet",
   "webhooks.event.signal.updated.when":
     "Wenn ein Hinweis beim Zusammenführen eines Duplikats zum verbleibenden Mitglied wechselt.",
@@ -197,7 +219,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "homeRepair.inspect": "Prüfen",
   "dataTasks.blocked.review_required":
     "Prüfe die vorgeschlagenen Änderungen vor dem Start.",
-  "homeRepair.archive": "Automatische Erinnerung archivieren",
+  "homeRepair.archive": "Automatische Aufgabe archivieren",
   "homeRepair.keepReview": "Zur persönlichen Prüfung behalten",
   "homeRepair.keepCurrent": "Aktuelle Aufgabe behalten",
   "homeRepair.reason.adopted":
@@ -205,7 +227,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "homeRepair.reason.unverified":
     "Die verfügbaren Belege rechtfertigen keine automatische Änderung.",
   "homeRepair.reason.unavailable":
-    "Die Quelle kann mit deinem aktuellen Zugriff nicht geprüft werden.",
+    "Die Quelle fehlt oder kann mit deinem aktuellen Zugriff nicht geprüft werden.",
   "homeRepair.reason.historical": "Historische Quelle ohne aktuelle Frist.",
   "homeRepair.reason.lateProposed":
     "Von einem Teammitglied nach Ablauf der 30 Tage erfasst; der Vorschlag bleibt beim Zusagenden.",
@@ -231,11 +253,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die aktuellen Regeln lassen diese Aufgabe weiterhin zu.",
   "homeRepair.unnamed": "Details nicht verfügbar",
   "homeRepair.explain":
-    "Es wird nur Arbeit angezeigt, die du derzeit einsehen kannst. Prüfe bis zu 25 Einträge gleichzeitig. Veraltete automatische Erinnerungen können archiviert und doppelte oder veraltete Vorschläge zurückgezogen werden. Menschlich bearbeitete Aufgaben bleiben erhalten; nichts wird als erledigt markiert.",
+    "Es wird nur Arbeit angezeigt, die du derzeit einsehen kannst. Prüfe bis zu 25 Einträge gleichzeitig. Veraltete automatische Aufgaben können archiviert und doppelte oder veraltete Vorschläge zurückgezogen werden. Menschlich bearbeitete Aufgaben bleiben erhalten; nichts wird als erledigt markiert.",
   "homeRepair.preview": "Einträge prüfen",
   "homeRepair.next": "Nächste Seite prüfen",
   "homeRepair.summary":
-    "Zu ändernde Ergebnisse: {reclassify}. Erinnerungen zum Archivieren: {archive}. Zurückzuziehende Vorschläge: {withdraw}. Zurückzuziehende Deal-Vorschläge: {supersede}. Zur Prüfung behalten: {review}; als aktuelle Arbeit behalten: {keep}.",
+    "Zu ändernde Ergebnisse: {reclassify}. Aufgaben zum Archivieren: {archive}. Zurückzuziehende Vorschläge: {withdraw}. Zurückzuziehende Deal-Vorschläge: {supersede}. Zur Prüfung behalten: {review}; als aktuelle Arbeit behalten: {keep}.",
   "homeRepair.apply_one": "{count} geprüfte Änderung anwenden",
   "homeRepair.apply_other": "{count} geprüfte Änderungen anwenden",
   "homeRepair.settlements": "Beantwortete Anfragen",
@@ -1690,6 +1712,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.bandCount_other": "{count} Einträge",
   "brief.focus.context": "Details anzeigen",
   "brief.queue.back": "Zurück zur Worklist",
+  "brief.queue.next": "Nächste Aufgabe",
+  "brief.queue.nextNone": "Keine weiteren Datensätze",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Worklist einblenden",
   "brief.queue.hide": "Worklist ausblenden",
@@ -2340,7 +2364,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "Home von {company}, läuft mit Margince",
   "shell.poweredBy": "Läuft mit Margince",
-  "shell.poweredByPrefix": "Läuft mit",
   "shell.beta": "Beta",
   "shell.searchEverything": "Suchen oder Margince fragen",
   "shell.breadcrumbAria": "Navigationspfad",
@@ -8262,6 +8285,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "„{value}“ ist kein Terminstatus. Es gibt: {allowed}.",
   "import.reason.meeting_status_not_valid_for_kind":
     "Nur ein Termin hat einen Terminstatus. Entferne ihn aus dieser Zeile.",
+  "import.reason.meeting_not_taken_place":
+    "Nach dem Datum oder der Uhrzeit in dieser Zeile hat der Termin noch nicht begonnen und kann daher weder held noch no_show sein. Lass den Status leer oder nimm booked oder canceled. Hat er heute begonnen, ergänze die Uhrzeit des Beginns.",
   "import.reason.direction_unknown":
     "„{value}“ ist keine Richtung. Es gibt: {allowed}.",
   "import.reason.activity_unlinked":
@@ -9303,9 +9328,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ob.s1.fieldRequired": "Pflichtfeld",
   "ob.s1.requiredMissing": "Fülle diese Felder aus, um fortzufahren: {fields}",
   "ob.s1.saving": "Wird gespeichert…",
-  "ob.s1.saveFailed": "Unternehmen nicht gespeichert",
-  "ob.s1.savedNote":
-    "Im Unternehmen gespeichert. Änderungen hier werden beim Fortfahren erneut gespeichert.",
   "ob.readFromSite": "aus der Website-Analyse",
 
   "ob.manualChapterLegal": "Rechtsträger",
@@ -14120,14 +14142,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.field.nameHint":
     "Steht in der Notiz jedes Leads, zum Beispiel Kontaktseite.",
   "webForms.field.sender": "Wo ist dein Formular?",
+  "webForms.senderGroup.noDeveloper": "Ohne Entwickler",
+  "webForms.senderGroup.developer": "Für Entwickler",
   "webForms.field.senderFixed":
     "Steht fest, sobald das Formular existiert. Lege für eine Änderung ein neues an.",
   "webForms.senderHint.browser":
-    "Ein Formular auf deinen eigenen Seiten, in WordPress, Webflow oder einem anderen Baukasten, in dem du festlegst, wohin ein Formular sendet. Ohne Entwickler.",
+    "Ein Formular auf deinen eigenen Seiten, in WordPress, Webflow oder einem anderen Baukasten, in dem du festlegst, wohin ein Formular sendet.",
   "webForms.senderHint.server":
-    "Für Entwickler: Der Server deiner Website leitet jede Anfrage signiert weiter.",
+    "Der Server deiner Website leitet jede Anfrage signiert weiter.",
   "webForms.senderHint.webflow":
-    "Für Entwickler: ein Webhook, der über die API von Webflow angelegt wird. Ein Webflow-Formular verbindest du ohne Webhook über die erste Option.",
+    "Ein Webhook, der über die API von Webflow angelegt wird. Ein Webflow-Formular verbindest du ohne Webhook über die erste Option.",
   "webForms.senderHint.typeform":
     "Jede Typeform-Antwort kommt über einen Webhook. Margince erstellt den Signaturschlüssel für dich.",
   "webForms.senderHint.tally":
@@ -16646,6 +16670,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.scope.unassigned": "Nicht zugewiesen",
   "worklist.scope.team": "Team",
   "worklist.scope.all": "Alle",
+  "worklist.scope.unassignedHint":
+    "Offene Arbeit, die du sehen kannst und für die niemand zuständig ist.",
+  "worklist.take.action": "Übernehmen",
+  "worklist.take.done": "Dir zugewiesen",
+  "worklist.take.failed":
+    "Die Aufgabe konnte dir nicht zugewiesen werden. Bitte versuche es erneut.",
   "worklist.owner.shared": "Gemeinsam zuständig: {names}",
   "worklist.owner.left":
     "{name} ist ausgeschieden. Dieser Eintrag braucht ein neues verantwortliches Teammitglied.",
@@ -16712,6 +16742,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.handled.wayBack": "Status",
   "worklist.handled.putBackDone": "Bereits rückgängig gemacht",
   "worklist.handled.truncated": "Liste gekürzt. Es gibt weitere Einträge.",
+  "receipt.detail.summary": "Details",
+  "receipt.detail.by": "Ausgeführt von",
+  "receipt.detail.when": "Zeitpunkt",
+  "receipt.detail.source": "Quelle",
+  "worklist.handled.showMore": "Mehr anzeigen",
   "worklist.exceptions.empty": "Keine Team-Ausnahmen.",
   "worklist.exceptions.loading": "Team wird geladen…",
   "worklist.exceptions.count": "{count} mit Handlungsbedarf",
@@ -16992,6 +17027,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Ergebnis konnte nicht erfasst werden. Bitte versuche es erneut.",
   "worklist.verb.meetingDayMissing":
     "Dieses Datum gibt es in der Zeitzone des Unternehmens nicht. Wähle ein anderes Datum.",
+  "worklist.verb.meetingUpdateFor": "Aktualisieren: {subject}",
+  "worklist.verb.meetingCanceledFor": "Als abgesagt markieren: {subject}",
+  "worklist.verb.meetingCancelInCalendar":
+    "Die Kalendereinladung führt diesen Termin. Sag ihn über die Einladung ab.",
+  "worklist.verb.meetingCalendarManaged":
+    "Betreff, Notizen und Datum folgen der Kalendereinladung. Hier wird nur das Ergebnis gespeichert.",
   "worklist.verb.retry": "Erneut ausf\u00fchren",
   "worklist.verb.retryStarted": "Regel wird erneut ausgeführt…",
   "worklist.verb.retryFailed":
@@ -17618,6 +17659,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.by.agent": "Ein Agent",
   "magic.by.system": "Margince",
   "magic.by.data_correction": "Datenkorrektur",
+  "magic.by.member": "{name}",
+  "magic.by.colleague": "Ein Teammitglied",
   "magic.failingSince": "Fehlerhaft seit {when}",
   "magic.noRecord": "Kein Datensatz genannt",
   "magic.undo.action": "Rückgängig",

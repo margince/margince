@@ -2450,6 +2450,7 @@ func (e AttentionConnectionFactsMedium) Valid() bool {
 const (
 	AttentionItemActionsAcknowledge  AttentionItemActions = "acknowledge"
 	AttentionItemActionsAct          AttentionItemActions = "act"
+	AttentionItemActionsCancel       AttentionItemActions = "cancel"
 	AttentionItemActionsComplete     AttentionItemActions = "complete"
 	AttentionItemActionsDecide       AttentionItemActions = "decide"
 	AttentionItemActionsDiscard      AttentionItemActions = "discard"
@@ -2463,6 +2464,7 @@ const (
 	AttentionItemActionsRetry        AttentionItemActions = "retry"
 	AttentionItemActionsSetAside     AttentionItemActions = "set_aside"
 	AttentionItemActionsSnooze       AttentionItemActions = "snooze"
+	AttentionItemActionsTake         AttentionItemActions = "take"
 	AttentionItemActionsUndo         AttentionItemActions = "undo"
 )
 
@@ -2472,6 +2474,8 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsAcknowledge:
 		return true
 	case AttentionItemActionsAct:
+		return true
+	case AttentionItemActionsCancel:
 		return true
 	case AttentionItemActionsComplete:
 		return true
@@ -2498,6 +2502,8 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsSetAside:
 		return true
 	case AttentionItemActionsSnooze:
+		return true
+	case AttentionItemActionsTake:
 		return true
 	case AttentionItemActionsUndo:
 		return true
@@ -11433,6 +11439,7 @@ const (
 	HomeRepairTaskActionArchiveAutomaticReminder HomeRepairTaskAction = "archive_automatic_reminder"
 	HomeRepairTaskActionHumanReview              HomeRepairTaskAction = "human_review"
 	HomeRepairTaskActionLeaveCurrent             HomeRepairTaskAction = "leave_current"
+	HomeRepairTaskActionNormalizeAutomaticTask   HomeRepairTaskAction = "normalize_automatic_task"
 	HomeRepairTaskActionReclassifyMessage        HomeRepairTaskAction = "reclassify_message"
 	HomeRepairTaskActionRevalidateSettlement     HomeRepairTaskAction = "revalidate_settlement"
 	HomeRepairTaskActionSupersedeSuggestion      HomeRepairTaskAction = "supersede_suggestion"
@@ -11447,6 +11454,8 @@ func (e HomeRepairTaskAction) Valid() bool {
 	case HomeRepairTaskActionHumanReview:
 		return true
 	case HomeRepairTaskActionLeaveCurrent:
+		return true
+	case HomeRepairTaskActionNormalizeAutomaticTask:
 		return true
 	case HomeRepairTaskActionReclassifyMessage:
 		return true
@@ -11762,6 +11771,7 @@ const (
 	ImportReasonCodeLinkTypeUnknown              ImportReasonCode = "link_type_unknown"
 	ImportReasonCodeLinkedinHeld                 ImportReasonCode = "linkedin_held"
 	ImportReasonCodeLostReasonMissing            ImportReasonCode = "lost_reason_missing"
+	ImportReasonCodeMeetingNotTakenPlace         ImportReasonCode = "meeting_not_taken_place"
 	ImportReasonCodeMeetingStatusNotValidForKind ImportReasonCode = "meeting_status_not_valid_for_kind"
 	ImportReasonCodeMeetingStatusUnknown         ImportReasonCode = "meeting_status_unknown"
 	ImportReasonCodeMessageNotImportable         ImportReasonCode = "message_not_importable"
@@ -11958,6 +11968,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeLinkedinHeld:
 		return true
 	case ImportReasonCodeLostReasonMissing:
+		return true
+	case ImportReasonCodeMeetingNotTakenPlace:
 		return true
 	case ImportReasonCodeMeetingStatusNotValidForKind:
 		return true
@@ -15631,6 +15643,30 @@ func (e QualifyingEventRecordKind) Valid() bool {
 	case QualifyingEventRecordKindInquiry:
 		return true
 	case QualifyingEventRecordKindMeeting:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReceiptActorType.
+const (
+	ReceiptActorTypeReceiptActorAgent     ReceiptActorType = "agent"
+	ReceiptActorTypeReceiptActorConnector ReceiptActorType = "connector"
+	ReceiptActorTypeReceiptActorHuman     ReceiptActorType = "human"
+	ReceiptActorTypeReceiptActorSystem    ReceiptActorType = "system"
+)
+
+// Valid indicates whether the value is a known member of the ReceiptActorType enum.
+func (e ReceiptActorType) Valid() bool {
+	switch e {
+	case ReceiptActorTypeReceiptActorAgent:
+		return true
+	case ReceiptActorTypeReceiptActorConnector:
+		return true
+	case ReceiptActorTypeReceiptActorHuman:
+		return true
+	case ReceiptActorTypeReceiptActorSystem:
 		return true
 	default:
 		return false
@@ -21545,6 +21581,7 @@ func (e WorklistDealVerdictStanding) Valid() bool {
 const (
 	WorklistItemActionsAcknowledge  WorklistItemActions = "acknowledge"
 	WorklistItemActionsAct          WorklistItemActions = "act"
+	WorklistItemActionsCancel       WorklistItemActions = "cancel"
 	WorklistItemActionsComplete     WorklistItemActions = "complete"
 	WorklistItemActionsDecide       WorklistItemActions = "decide"
 	WorklistItemActionsDiscard      WorklistItemActions = "discard"
@@ -21558,6 +21595,7 @@ const (
 	WorklistItemActionsRetry        WorklistItemActions = "retry"
 	WorklistItemActionsSetAside     WorklistItemActions = "set_aside"
 	WorklistItemActionsSnooze       WorklistItemActions = "snooze"
+	WorklistItemActionsTake         WorklistItemActions = "take"
 	WorklistItemActionsUndo         WorklistItemActions = "undo"
 )
 
@@ -21567,6 +21605,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsAcknowledge:
 		return true
 	case WorklistItemActionsAct:
+		return true
+	case WorklistItemActionsCancel:
 		return true
 	case WorklistItemActionsComplete:
 		return true
@@ -21593,6 +21633,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsSetAside:
 		return true
 	case WorklistItemActionsSnooze:
+		return true
+	case WorklistItemActionsTake:
 		return true
 	case WorklistItemActionsUndo:
 		return true
@@ -25565,13 +25607,19 @@ type Activity struct {
 
 	// AutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
 	AutomaticKind *ActivityAutomaticKind `json:"automatic_kind,omitempty"`
-	Body          *string                `json:"body,omitempty"`
+
+	// AwaitingOutcome Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false.
+	AwaitingOutcome *bool   `json:"awaiting_outcome,omitempty"`
+	Body            *string `json:"body,omitempty"`
 
 	// BodyCompleteness How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased.
 	BodyCompleteness *BodyCompleteness `json:"body_completeness,omitempty"`
 
 	// BulkMailAttested This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply.
 	BulkMailAttested *bool `json:"bulk_mail_attested,omitempty"`
+
+	// CalendarManaged Whether a live calendar invitation holds this meeting. Then a write through this activity that sets `subject`, `body`, `occurred_at`, `occurred_precision` or a `meeting_status` other than `held` or `no_show` is refused with `calendar_managed`; that change goes through the invitation (`PATCH /scheduling/invitations/{id}`). Archiving or restoring the activity is refused with `calendar_managed` too, and the undo of its creation is refused. Every read that carries `writable` carries this. Absent means false.
+	CalendarManaged *bool `json:"calendar_managed,omitempty"`
 
 	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 	CaptureLabel *ActivityCaptureLabel `json:"capture_label,omitempty"`
@@ -29175,6 +29223,13 @@ type AttentionItem struct {
 	// Actions What this item offers. `decide` and `merge` mean the verb is irreversible and a
 	// contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
 	// the read-only fallback for a receipt.
+	//
+	// `take` is offered on a task nobody holds that the caller may change. It sets
+	// `assignee_id` to the caller through `PATCH /activities/{id}`, pinned with `If-Match`.
+	//
+	// `cancel` is offered on a meeting owed an outcome that no live calendar invitation
+	// holds. It sets `meeting_status` to `canceled` through `PATCH /activities/{id}`, pinned
+	// with `If-Match`. A meeting an invitation holds is canceled through the invitation.
 	//
 	// Domain questions offer `keep`, `discard`, and `reopen` where allowed. Keeping creates a
 	// company or matches the supplied `company_id`; forwarded identity requires an
@@ -40939,6 +40994,9 @@ type HandledForYou struct {
 	// AsOf The instant these were read at.
 	AsOf time.Time `json:"as_of"`
 
+	// NextCursor Where the next page starts, present when `truncated` is true and the window can be read further. Paging stops after the first 5,000 receipts of a window. Absent on older responses, which a client reads as a list it cannot continue.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
 	// Receipts What was done, newest first. Empty is the honest common case.
 	Receipts []Receipt `json:"receipts"`
 
@@ -41287,9 +41345,12 @@ type HistoryEdgeOtherEntityType string
 
 // HomeRepairCounts defines model for HomeRepairCounts.
 type HomeRepairCounts struct {
-	Archive    int `json:"archive"`
-	Keep       int `json:"keep"`
-	Reclassify int `json:"reclassify"`
+	Archive int `json:"archive"`
+	Keep    int `json:"keep"`
+
+	// Normalize Pristine automatic tasks with a proved source reference or generated notification date to correct.
+	Normalize  *int `json:"normalize,omitempty"`
+	Reclassify int  `json:"reclassify"`
 
 	// Revalidate Older settled request verdicts the email-request settlement pass judges again.
 	Revalidate *int `json:"revalidate,omitempty"`
@@ -41306,9 +41367,12 @@ type HomeRepairReview struct {
 	Limit  int              `json:"limit"`
 
 	// PreviewToken Reader-bound classification review token; expires after fifteen minutes and is consumed on activation.
-	PreviewToken *string          `json:"preview_token,omitempty"`
-	RuleVersion  string           `json:"rule_version"`
-	Tasks        []HomeRepairTask `json:"tasks"`
+	PreviewToken *string `json:"preview_token,omitempty"`
+
+	// RequiresActionReview The client must acknowledge the actions it displayed when activating this page.
+	RequiresActionReview *bool            `json:"requires_action_review,omitempty"`
+	RuleVersion          string           `json:"rule_version"`
+	Tasks                []HomeRepairTask `json:"tasks"`
 }
 
 // HomeRepairTask defines model for HomeRepairTask.
@@ -48344,6 +48408,12 @@ type RbacObjectGrant struct {
 // about one, and an empty subject is a real state rather than a missing field — a
 // client draws the summary alone rather than inventing something to open.
 type Receipt struct {
+	// Actor Who did it: the member or agent that proposed an applied decision, or the job that made a correction. Absent on older responses.
+	Actor *ReceiptActor `json:"actor,omitempty"`
+
+	// Changes Every field the act moved, old value to new, read from the audit rows it wrote and masked to what the reader may see on the record. Values travel whole, never cut short. Absent when no audit row of the act can be read, which is not the same as an act that moved nothing (an empty list).
+	Changes *[]MagicFieldChange `json:"changes,omitempty"`
+
 	// CloseDateChange Recorded close-date correction values, formatted at the presentation edge.
 	CloseDateChange *CloseDateChange `json:"close_date_change,omitempty"`
 
@@ -48359,6 +48429,9 @@ type Receipt struct {
 	// Review The recorded automatic change and its current review state.
 	Review *AppliedDealChangeReview `json:"review,omitempty"`
 
+	// SourceRecord The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message.
+	SourceRecord *AttentionSubject `json:"source_record,omitempty"`
+
 	// Subject The record this item is about, named so a reader knows who it concerns before opening anything.
 	Subject *AttentionSubject `json:"subject,omitempty"`
 
@@ -48369,6 +48442,30 @@ type Receipt struct {
 	// A receipt for an approval the system decided carries none: that decision is revisitable through the record it named. A change made without asking — the close-date sweep's corrections — has this receipt as its only telling, so the way back travels with it.
 	Undo *AppliedUndo `json:"undo,omitempty"`
 }
+
+// ReceiptActor Who did the act, and on whose behalf.
+//
+// `label` is the name a reader reads, from the same owner that names the actor on
+// `/magic`: a background job by what it is, a member by their name. A colleague whose
+// seat the reader cannot name reads `magic.by.colleague`, never an id.
+type ReceiptActor struct {
+	// Id The actor as the audit trail records it. For the record, not for display.
+	Id string `json:"id"`
+
+	// Label What happened, as a key and the values to fill it with.
+	//
+	// Typed rather than composed on the server for the reason every other sentence in
+	// this contract is: the product ships three languages, and a sentence assembled here
+	// reaches a German reader in English.
+	Label MagicSentence `json:"label"`
+
+	// OnBehalfOf The seat whose authority the act was taken under, where it bound one.
+	OnBehalfOf *openapi_types.UUID `json:"on_behalf_of,omitempty"`
+	Type       ReceiptActorType    `json:"type"`
+}
+
+// ReceiptActorType defines model for ReceiptActor.Type.
+type ReceiptActorType string
 
 // RecommendationReceipt The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
 type RecommendationReceipt struct {
@@ -55967,7 +56064,8 @@ type Worklist struct {
 
 	// Focus Up to six actionable priorities from the scoped day, selected before filtering
 	// or pagination and ordered by the queue's server ranking. Routine maintenance
-	// and future tasks do not fill spare places. Pins remain explicit choices.
+	// and future tasks do not fill spare places. Ordinary pins only order the queue;
+	// pinning an optional reconnection explicitly chooses it for Focus.
 	// Source coverage and failures are reported on the enclosing worklist; these
 	// counts describe the candidates actually read, not an exhaustive installation.
 	Focus *WorklistFocus `json:"focus,omitempty"`
@@ -56002,6 +56100,14 @@ type Worklist struct {
 	// A read that failed is named in `sources_unavailable` as source `next_meeting`,
 	// category `meetings`; a read the reader is refused is absent and named nowhere.
 	NextMeeting *Contact360NextMeeting `json:"next_meeting,omitempty"`
+
+	// OptionalRelationships Optional reconnections, outside the work queue, counts and Focus. An open
+	// deal or relationship score does not establish an obligation. A reader may
+	// pin a suggestion into their personal queue or create an explicit task.
+	OptionalRelationships *[]WorklistItem `json:"optional_relationships,omitempty"`
+
+	// OptionalRelationshipsMoreAvailable More optional contacts exist beyond the existing relationship read bound.
+	OptionalRelationshipsMoreAvailable *bool `json:"optional_relationships_more_available,omitempty"`
 
 	// PlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` and the
 	// due commitments were read across the team roster. Absent under every other scope.
@@ -56536,7 +56642,8 @@ type WorklistDoneRequest struct {
 
 // WorklistFocus Up to six actionable priorities from the scoped day, selected before filtering
 // or pagination and ordered by the queue's server ranking. Routine maintenance
-// and future tasks do not fill spare places. Pins remain explicit choices.
+// and future tasks do not fill spare places. Ordinary pins only order the queue;
+// pinning an optional reconnection explicitly chooses it for Focus.
 // Source coverage and failures are reported on the enclosing worklist; these
 // counts describe the candidates actually read, not an exhaustive installation.
 type WorklistFocus struct {
@@ -58147,8 +58254,11 @@ type GetAutomaticWorkHealthParams struct {
 
 // ActivateHomeRepairJSONBody defines parameters for ActivateHomeRepair.
 type ActivateHomeRepairJSONBody struct {
-	Review  HomeRepairReview `json:"review"`
-	Version int64            `json:"version"`
+	Review HomeRepairReview `json:"review"`
+
+	// ReviewedActions Supported action names in the displayed review's row order, required when requires_action_review is true.
+	ReviewedActions *[]string `json:"reviewed_actions,omitempty"`
+	Version         int64     `json:"version"`
 }
 
 // PreviewHomeRepairJSONBody defines parameters for PreviewHomeRepair.
@@ -64868,6 +64978,12 @@ type GetWorklistParamsScope string
 // GetWorklistParamsFilter defines parameters for GetWorklist.
 type GetWorklistParamsFilter string
 
+// GetHandledForYouParams defines parameters for GetHandledForYou.
+type GetHandledForYouParams struct {
+	// Cursor The `next_cursor` of the page before. It pins that page's window and instant, so a receipt landing between two reads does not shift the list under the reader. A token this server did not mint is refused with 422.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
 // GetHiddenBacklogRowsParamsRule defines parameters for GetHiddenBacklogRows.
 type GetHiddenBacklogRowsParamsRule string
 
@@ -66073,6 +66189,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "automatic_kind")
 	}
 
+	if raw, found := object["awaiting_outcome"]; found {
+		err = json.Unmarshal(raw, &a.AwaitingOutcome)
+		if err != nil {
+			return fmt.Errorf("error reading 'awaiting_outcome': %w", err)
+		}
+		delete(object, "awaiting_outcome")
+	}
+
 	if raw, found := object["body"]; found {
 		err = json.Unmarshal(raw, &a.Body)
 		if err != nil {
@@ -66095,6 +66219,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'bulk_mail_attested': %w", err)
 		}
 		delete(object, "bulk_mail_attested")
+	}
+
+	if raw, found := object["calendar_managed"]; found {
+		err = json.Unmarshal(raw, &a.CalendarManaged)
+		if err != nil {
+			return fmt.Errorf("error reading 'calendar_managed': %w", err)
+		}
+		delete(object, "calendar_managed")
 	}
 
 	if raw, found := object["capture_label"]; found {
@@ -66469,6 +66601,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.AwaitingOutcome != nil {
+		object["awaiting_outcome"], err = json.Marshal(a.AwaitingOutcome)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'awaiting_outcome': %w", err)
+		}
+	}
+
 	if a.Body != nil {
 		object["body"], err = json.Marshal(a.Body)
 		if err != nil {
@@ -66487,6 +66626,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["bulk_mail_attested"], err = json.Marshal(a.BulkMailAttested)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'bulk_mail_attested': %w", err)
+		}
+	}
+
+	if a.CalendarManaged != nil {
+		object["calendar_managed"], err = json.Marshal(a.CalendarManaged)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'calendar_managed': %w", err)
 		}
 	}
 
@@ -79734,7 +79880,7 @@ type ServerInterface interface {
 	GetTeamExceptions(w http.ResponseWriter, r *http.Request)
 	// What the product did on your behalf, so you can check it.
 	// (GET /worklist/handled)
-	GetHandledForYou(w http.ResponseWriter, r *http.Request)
+	GetHandledForYou(w http.ResponseWriter, r *http.Request, params GetHandledForYouParams)
 	// What the queue is not showing, and which rule is holding it back.
 	// (GET /worklist/hidden)
 	GetHiddenBacklog(w http.ResponseWriter, r *http.Request)
@@ -85266,7 +85412,7 @@ func (_ Unimplemented) GetTeamExceptions(w http.ResponseWriter, r *http.Request)
 
 // What the product did on your behalf, so you can check it.
 // (GET /worklist/handled)
-func (_ Unimplemented) GetHandledForYou(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetHandledForYou(w http.ResponseWriter, r *http.Request, params GetHandledForYouParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -124147,14 +124293,33 @@ func (siw *ServerInterfaceWrapper) GetTeamExceptions(w http.ResponseWriter, r *h
 // GetHandledForYou operation middleware
 func (siw *ServerInterfaceWrapper) GetHandledForYou(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetHandledForYouParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetHandledForYou(w, r)
+		siw.Handler.GetHandledForYou(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

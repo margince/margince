@@ -4,6 +4,7 @@ import { Button, Checkbox, SearchField } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Popover } from "../../design-system/popover";
 import { TokenList } from "../../design-system/tokeninput";
+import { holdsEveryWord, searchWords } from "../../format/collate";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import {
@@ -78,13 +79,7 @@ function EventInfo({ type }: Readonly<{ type: string }>) {
 }
 
 function matches(type: string, label: string, group: string, query: string) {
-  const q = query.trim().toLowerCase();
-  return (
-    q === "" ||
-    type.toLowerCase().includes(q) ||
-    label.toLowerCase().includes(q) ||
-    group.toLowerCase().includes(q)
-  );
+  return holdsEveryWord(searchWords(query), [type, label, group]);
 }
 
 function PickerPanel({

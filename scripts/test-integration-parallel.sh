@@ -53,7 +53,7 @@
 #                           covdata pods for the CI fan-in to reconcile + merge;
 #                           coverage instrumentation is on iff this is set
 #   INTEGRATION_TIMEOUT     per-package go-test timeout, as <seconds>s (default
-#                           600s; the budget column parses this). Resolved in
+#                           900s; the budget column parses this). Resolved in
 #                           scripts/lib-testdb.sh, shared with the one-package lane
 #   MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN   owner + app DSNs (Makefile defaults)
 #
@@ -119,19 +119,19 @@ IT_BUDGET="$IT_TIMEOUT"
 # A sharded run executes a SLICE — CI's matrix gives each shard a sixth of the
 # tree — so the budget is generous headroom for it. An unsharded run executes
 # whole packages, and compose/integration alone is 2284 tests: measured at 886s
-# on an unmodified main, against a 600s bound. go test kills it at the ceiling,
+# on an unmodified main, past the bound a slice needs. go test kills it at the ceiling,
 # so NONE of its tests report, and a real regression in the same push would be
 # invisible behind a timeout.
 #
 # So an unsharded run gets a multiple, and the budget column still prices every
-# package against the 600s policy — "split it before it crosses" keeps being
+# package against the budget policy — "split it before it crosses" keeps being
 # said about a package that is genuinely too big. What stops is a hang detector
 # calibrated for a sixth of the work killing a run doing all of it.
 #
 # An explicit INTEGRATION_TIMEOUT overrides both halves, because a caller naming
 # a bound means it.
 if [[ -z "${INTEGRATION_TIMEOUT:-}" ]] && (( SHARD_TOTAL <= 1 )); then
-  # Three times the budget. The slowest package measures 1.5x it today, so this
+  # Twice the budget. The slowest package measures about 1x it today, so this
   # is headroom for a slower machine rather than a number chosen to fit — and it
   # is still far under the CI job limit this bound exists to pre-empt with a
   # legible message.
