@@ -10069,6 +10069,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/embeddings/reindex/identities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The two embed-store identities, without the backlog scan.
+         * @description `configured_identity` and `populated_identity` exactly as the status read reports them,
+         *     and nothing that needs the backlog scan. It is what the app shell's reindex banner reads:
+         *     the banner is keyed on the two identities alone, so it must not pay for
+         *     `entities_pending` on every page load. Gated like the status read (the
+         *     `embedding_reindex` read grant).
+         */
+        get: operations["EmbedReindexIdentities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/embeddings/reindex/preview": {
         parameters: {
             query?: never;
@@ -25275,6 +25299,13 @@ export interface components {
             /** @description Fleet-wide count of live entities lacking a current-identity embedding row. */
             entities_pending: number;
         };
+        /** @description The two identities the status read compares, read without its backlog scan. */
+        EmbedReindexIdentities: {
+            /** @description The live embed binding's provider/model@dims, as in EmbedReindexStatus. */
+            configured_identity: string;
+            /** @description The identity the last reindex run was released under, as in EmbedReindexStatus. */
+            populated_identity: string;
+        };
         /** @description The scope before the spend (ADR-0020 preview-before-spend obligation): what running the reindex now would touch and roughly cost. MUST precede the confirm route — the estimate is what the operator consents to. An estimate, labeled as such — actual spend is metered per embed call. */
         EmbedReindexPreview: {
             /** @description Fleet-wide pending count (the same figure the status read reports). */
@@ -32841,7 +32872,10 @@ export interface components {
         /**
          * @description Where one contact stands with us, over the same 90-day window the relationship
          *     score uses. What decides between the two conversational states is who wrote
-         *     LAST, not whether both directions have traffic.
+         *     LAST, not whether both directions have traffic. When their latest message is a
+         *     mail the reader may read, its History badge decides instead: `waiting` needs a
+         *     mail still owed a reply, and a mail owed none (a calendar copy, a mail that
+         *     informs us) counts only once we wrote after it.
          *
          *     `waiting` — their latest message has no reply from us. They are waiting on us,
          *     and answering is the obvious next move.
@@ -68320,6 +68354,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EmbedReindexStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description No embeddings model is bound to the installation, so there is no index to rebuild. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    EmbedReindexIdentities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The two identities. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbedReindexIdentities"];
                 };
             };
             401: components["responses"]["Unauthorized"];

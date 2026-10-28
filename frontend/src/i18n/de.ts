@@ -14201,6 +14201,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.field.redirectUrlHint":
     "Wohin ein Besucher nach dem Senden geht. Leer zeigt die Erfolgsmeldung.",
   "webForms.field.redirectUrlPlaceholder": "https://www.example.com/danke",
+  "webForms.field.owner": "Verantwortlich für neue Leads",
+  "webForms.field.ownerHint":
+    "Jeder neue Lead aus diesem Formular geht an dieses Teammitglied. Ohne Zuweisung kann ihn jedes Teammitglied übernehmen.",
+  "webForms.field.ownerNone": "Nicht zugewiesen",
+  "webForms.field.ownerGone":
+    "{name} (ausgeschieden, neue Leads kommen ohne Zuweisung an)",
+  "webForms.field.ownerKept": "Gespeichertes Teammitglied (nicht in der Liste)",
+  "webForms.row.owner": "Leads gehen an",
+  "webForms.row.ownerLeft":
+    "{name} ist ausgeschieden, neue Leads kommen ohne Zuweisung an",
   "webForms.field.successMessage": "Erfolgsmeldung",
   "webForms.field.successMessageHint":
     "Wird dem Besucher nach dem Senden gezeigt.",

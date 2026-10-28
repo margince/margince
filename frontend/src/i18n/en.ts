@@ -14173,6 +14173,14 @@ export const en = {
   "webForms.field.redirectUrlHint":
     "Where a visitor goes after sending. Empty shows the success message.",
   "webForms.field.redirectUrlPlaceholder": "https://www.example.com/thanks",
+  "webForms.field.owner": "Owner of new leads",
+  "webForms.field.ownerHint":
+    "Each new lead from this form goes to this colleague. Leave it unassigned for anyone on the team to pick up.",
+  "webForms.field.ownerNone": "Unassigned",
+  "webForms.field.ownerGone": "{name} (left, so new leads arrive unassigned)",
+  "webForms.field.ownerKept": "Saved owner (not listed)",
+  "webForms.row.owner": "Leads go to",
+  "webForms.row.ownerLeft": "{name} left, so new leads arrive unassigned",
   "webForms.field.successMessage": "Success message",
   "webForms.field.successMessageHint": "Shown to the visitor after sending.",
   "webForms.setup.title": "Connect {name}",

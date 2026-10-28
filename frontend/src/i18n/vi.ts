@@ -13842,6 +13842,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.field.redirectUrlHint":
     "Nơi khách đến sau khi gửi. Để trống sẽ hiện thông báo thành công.",
   "webForms.field.redirectUrlPlaceholder": "https://www.example.com/cam-on",
+  "webForms.field.owner": "Người chịu trách nhiệm cho lead mới",
+  "webForms.field.ownerHint":
+    "Mỗi lead mới từ biểu mẫu này được giao cho thành viên này. Để trống thì bất kỳ ai trong nhóm cũng có thể nhận.",
+  "webForms.field.ownerNone": "Chưa giao",
+  "webForms.field.ownerGone": "{name} (đã nghỉ, lead mới sẽ chưa được giao)",
+  "webForms.field.ownerKept": "Thành viên đã lưu (không có trong danh sách)",
+  "webForms.row.owner": "Lead được giao cho",
+  "webForms.row.ownerLeft": "{name} đã nghỉ, lead mới sẽ chưa được giao",
   "webForms.field.successMessage": "Thông báo thành công",
   "webForms.field.successMessageHint": "Hiện cho khách sau khi gửi.",
   "webForms.setup.title": "Kết nối {name}",

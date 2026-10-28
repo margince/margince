@@ -41,6 +41,22 @@ func seedUnansweredOutbound(t *testing.T, e *integration.Env, company ids.UUID) 
 		        '2026-05-10T09:00:00Z', '2026-05-10T09:00:00Z', 'manual', 'human:x')`)
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, company_id)
 		VALUES ($1, 'company', $2)`, sent, company)
+	// The reader sent it, as a logged or captured mail records its sender.
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, user_id, role)
+		VALUES ($1, $2, 'from')`, sent, e.Rep1)
+}
+
+// seedUnansweredCall logs an outbound call as old, with a contact who works at
+// the account. A call has no History badge, so its direction alone says the
+// account waits on them, for every reader of the account alike.
+func seedUnansweredCall(t *testing.T, e *integration.Env, company ids.UUID) {
+	t.Helper()
+	owner := integration.OwnerConn(t)
+	buyer := e.SeedContact(t, "Anna Buyer", &e.Rep1)
+	employ(t, e, buyer, company, "Buyer")
+	called := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, direction, subject, occurred_at, created_at, source, captured_by)
+		VALUES ($1, 'call', 'outbound', 'Proposal call', '2026-05-10T09:00:00Z', '2026-05-10T09:00:00Z', 'manual', 'human:x')`)
+	integration.LinkActivity(t, owner, called, "contact", buyer)
 }
 
 // The rules must look PAST the section page cap.
