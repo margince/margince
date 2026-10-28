@@ -4949,6 +4949,50 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
       description: Get reporting report
+  /analytics/reports/{id}/draft:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags:
+        - Reports
+      operationId: saveReportingReportDraft
+      summary: Save a reporting report draft
+      description: |-
+        Saves the next revision as a draft that only the report's editors see. Readers keep the published revision. A second save replaces the draft.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingReport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+        - name: If-Match
+          in: header
+          required: true
+          schema: {type: string}
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportingReportDraftInput'
   /analytics/reports/{id}/evaluation:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -7900,7 +7944,9 @@ paths:
         overdue first, then by nearest due date, at most 25. A promise from an activity filed
         under another deal of the same company is not this deal's. Each carries the quoted
         words and the activity they came from, so a reader can check it, and its claim id, so
-        a reader with `contact:update` can dismiss it (`POST /claims/{id}/settle`).
+        a reader with `contact:update` can dismiss it (`POST /claims/{id}/settle`). The server
+        decides whether each one is overdue and whether its words state a total price other than
+        the deal's value, so every client shows the same verdict.
       parameters:
         - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
       responses:
@@ -11032,6 +11078,12 @@ components:
       properties:
         activity_id: {type: string, format: uuid}
         subject: {type: string}
+        body:
+          type: [string, 'null']
+          description: |-
+            The task's own words, as written. Only a task whose content this reader may read is
+            listed here, so a task read out of a message the reader may not open never reaches
+            this field.
         due_at: {type: [string, 'null'], format: date-time}
         overdue: {type: boolean}
         assignee_id: {type: [string, 'null'], format: uuid}
@@ -12797,7 +12849,7 @@ components:
           description: False when a commitment was left out because its contact or its message is outside what the caller may read.
     DealCommitment:
       type: object
-      required: [id, contact_id, contact_name, body, source_quote, source_activity_id, source_kind, occurred_at, occurred_precision]
+      required: [id, contact_id, contact_name, body, source_quote, source_activity_id, source_kind, occurred_at, occurred_precision, overdue]
       properties:
         id: {type: string, format: uuid, description: 'The id of the claim, which `POST /claims/{id}/settle` takes.'}
         contact_id: {type: string, format: uuid}
@@ -12811,6 +12863,20 @@ components:
         occurred_precision:
           allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
           description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+        overdue:
+          type: boolean
+          description: True once the whole due day is over in the installation's timezone. A promise due today, or with no due day, is not overdue.
+        differs_from_deal:
+          allOf: [{$ref: '#/components/schemas/StatedAmount'}]
+          description: >-
+            The one total the quoted words state in the deal's currency, present only when it is not the deal's value. A deposit, an instalment, a price per period or unit, a sum in another currency or more than one sum is never a total. Absent when the deal has no value the reader may see.
+    StatedAmount:
+      type: object
+      description: A sum of money a customer's words state, in minor units of `currency`.
+      required: [amount_minor, currency]
+      properties:
+        amount_minor: {type: integer, format: int64}
+        currency: {type: string, pattern: '^[A-Z]{3}$'}
     ReportEvidenceSearchRequest:
       type: object
       description: What `search_report_evidence` takes beside the run the path names.
@@ -18389,6 +18455,13 @@ components:
           description: |-
             The unpublished draft revision, shown only to an editor of the report. Absent when there
             is no draft. Evaluate it with `revision` to preview it.
+    ReportingReportDraftInput:
+      type: object
+      additionalProperties: false
+      required: [selection]
+      properties:
+        selection:
+          $ref: '#/components/schemas/ReportingSelection'
     ReportingTargetInput:
       type: object
       additionalProperties: false

@@ -197,6 +197,18 @@ func composeReportCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, 
 	return agents.NewComposeReportCall(deps.language, agents.ComposeReportCommand{Blocks: len(in.Blocks)}), nil
 }
 
+// draftReportCommand decodes PUT /v1/analytics/reports/{id}/draft. The routed
+// report is the whole of it; the charts wait as a draft for a human to read.
+//
+//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
+func draftReportCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
+	id, err := routedID(r)
+	if err != nil {
+		return nil, err
+	}
+	return agents.NewDraftReportCall(deps.language, agents.DraftReportCommand{ReportID: id}), nil
+}
+
 // uploadAttachmentCommand refuses to stage an upload, as the tool door refuses
 // attach_document: the approval would keep the file's bytes.
 //

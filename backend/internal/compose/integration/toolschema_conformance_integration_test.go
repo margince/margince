@@ -380,6 +380,9 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 	"preview_member_retirement": "requires a live literal-admin role; this fixture stamps object grants only. TestAMemberMergeStagesReviewsApprovesAndRedeemsThroughTheToolDoor validates the real preview result against its schema",
 	"merge_members":             "requires the same live administrator and a reviewed retirement token. TestAMemberMergeStagesReviewsApprovesAndRedeemsThroughTheToolDoor validates the approved result against its schema",
 
+	"draft_report": "a reporting write needs a seat that may write, and this lane's human carries no seat type; " +
+		"TestDraftReportSavesTheSameDraftOnEitherDoor (reportdraftdoors_integration_test.go) calls it on the served MCP surface " +
+		"under a real passport, and TestEveryResultTypeSatisfiesTheSchemaDerivedFromIt (modules/agents) holds its declared schema",
 	"read_view": "runs a route through the API server's router, and this lane's registry is built with no server; " +
 		"TestReadViewAnswersAsItsRoutes (readviewdoors_integration_test.go) calls it on the served MCP surface and compares it to the route",
 	"relink_thread": "refused for an assistant at every destination and however it is called, so it has no answer to hold to a schema; " +

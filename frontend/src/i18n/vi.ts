@@ -3529,6 +3529,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.next.title": "Việc cần làm",
   "co.next.empty": "Công ty này không có việc cần làm nào đang mở.",
   "co.next.overdue": "Quá hạn",
+  "deal.commitments.title": "Cam kết của khách hàng",
+  "deal.commitments.empty":
+    "Khách hàng không có cam kết nào đang mở cho deal này.",
+  "deal.commitments.denied":
+    "Bạn không thể đọc các cam kết của khách hàng: chúng trích dẫn liên hệ và tin nhắn mà bạn không có quyền truy cập.",
+  "deal.commitments.incomplete":
+    "Một số cam kết không hiển thị vì bạn không được đọc liên hệ hoặc tin nhắn của chúng.",
+  "deal.commitments.more":
+    "Đang hiển thị 25 cam kết khẩn cấp nhất; còn cam kết khác đang mở.",
+  "deal.commitments.source": "Mở tin nhắn",
+  "deal.commitments.overdue": "Đã quá hạn: đã thực hiện chưa?",
+  "deal.commitments.done": "Hoàn thành",
+  "deal.commitments.noLongerTrue": "Không còn đúng",
+  "deal.commitments.differs": "Khác với giá trị deal ({amount})",
   "co.next.due": "Hạn {when}",
   "co.next.undated": "Chưa có hạn",
   "co.next.col.task": "Công việc",
@@ -10650,7 +10664,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "threads.readOnly": "Bạn chỉ có quyền đọc.",
   "deal360.blocker": "Trở ngại",
   "deal360.buyer": "Điều người mua muốn",
-  "deal360.verdict.live": "Đang tiến triển",
+  "deal360.verdict.live": "Đúng tiến độ",
   "deal360.verdict.drifting": "Đang chững lại",
   "deal360.verdict.blocked": "Bị chặn",
   "deal360.verdict.cold": "Nguội",
@@ -14953,6 +14967,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.memory.channelTask": "Việc cần làm",
   "contact.memory.replied": "Đã trả lời",
   "contact.memory.unanswered": "Chưa trả lời",
+  "contact.memory.view": "Xem",
+  "contact.memory.viewEntry": "Xem {title}",
 
   "contact.mayBeDone.notYet": "Chưa xong",
   "contact.rail.blocked": "Bị chặn",
@@ -16651,6 +16667,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.dismissUndo": "Hoàn tác",
   "worklist.verb.dismissFailed": "Không thể gác lại liên hệ. Thử lại.",
   "worklist.verb.dismissUndoFailed": "Không thể khôi phục liên hệ. Thử lại.",
+  "worklist.verb.stopFollowing": "Ngừng theo dõi",
+  "worklist.verb.stopped": "Đã ngừng theo dõi liên hệ này",
+  "worklist.verb.dismissAll": "Gác lại tất cả đang hiển thị",
+  "worklist.verb.dismissedAll": "Đã gác lại liên hệ một tháng",
+  "worklist.verb.dismissAllFailed": "Không thể gác lại liên hệ. Thử lại.",
+  "contact.follow.stopped": "Bạn đã ngừng theo dõi liên hệ này.",
+  "contact.follow.setAside": "Bạn đã gác lại liên hệ này đến {date}.",
+  "contact.follow.resume": "Theo dõi lại",
   "worklist.verb.completeUndo": "Hoàn tác",
   "worklist.verb.completeUndoFailed": "Không thể mở lại việc cần làm. Thử lại.",
   "worklist.source.failed": "Không thể tải nguồn: {source}",
@@ -17953,4 +17977,56 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.coverage.source.deal_advice": "Bước tiếp theo cho cơ hội",
   "tasks.origin.accepted_recommendation":
     "Được chấp nhận từ một bước được đề xuất.",
+  "deal.verdict.yourMove": "Đến lượt bạn",
+  "deal.verdict.yourMoveToday":
+    "Khách hàng đã viết hôm nay và đang chờ phản hồi.",
+  "deal.verdict.yourMoveDays_one":
+    "Khách hàng đã viết {count} ngày trước và đang chờ phản hồi.",
+  "deal.verdict.yourMoveDays_other":
+    "Khách hàng đã viết {count} ngày trước và đang chờ phản hồi.",
+  "deal.verdict.goneQuiet": "Im lặng",
+  "deal.verdict.goneQuietSince":
+    "Không có hoạt động kể từ {date}, nên deal được coi là đình trệ.",
+  "deal.verdict.nothingFiled": "Chưa có gì được ghi nhận cho deal này.",
+  "deal.verdict.onHold": "Tạm dừng",
+  "deal.verdict.onHoldUntil":
+    "Tạm dừng đến {date} theo thỏa thuận với khách hàng.",
+  "deal.verdict.overdueToClose": "Quá hạn chốt",
+  "deal.verdict.closePassed": "Ngày dự kiến chốt ({date}) đã qua.",
+  "deal.verdict.notStarted": "Chưa bắt đầu",
+  "co.verdict.noContact": "Chưa liên hệ",
+  "co.verdict.addedOn": "Được thêm ngày {date}, chưa ghi nhận trao đổi nào.",
+  "co.verdict.active": "Đang hoạt động",
+  "co.verdict.lastExchange": "Trao đổi gần nhất với công ty này vào {date}.",
+  "co.verdict.goingQuiet": "Đang im lặng",
+  "co.verdict.quietSince": "Không có trao đổi với ai ở đây kể từ {date}.",
+  "co.verdict.dormant": "Không hoạt động",
+  "co.verdict.dormantSince":
+    "Không có deal đang mở và không có trao đổi kể từ {date}.",
+  "project.verdict.startsOn": "Bắt đầu vào {date}.",
+  "project.verdict.overrunning": "Quá hạn",
+  "project.verdict.endPassed": "Ngày kết thúc dự kiến ({date}) đã qua.",
+  "project.verdict.behind": "Chậm tiến độ",
+  "project.verdict.overdueFirst_one":
+    "{count} việc cần làm đã quá hạn, đầu tiên: {subject}.",
+  "project.verdict.overdueFirst_other":
+    "{count} việc cần làm đã quá hạn, đầu tiên: {subject}.",
+  "project.verdict.overdue_one": "{count} việc cần làm đã quá hạn.",
+  "project.verdict.overdue_other": "{count} việc cần làm đã quá hạn.",
+  "project.verdict.overdueFloor_one":
+    "Ít nhất {count} việc cần làm đã quá hạn.",
+  "project.verdict.overdueFloor_other":
+    "Ít nhất {count} việc cần làm đã quá hạn.",
+  "project.verdict.wrappingUp": "Sắp hoàn thành",
+  "project.verdict.daysLeft_one":
+    "Còn {count} ngày, không có việc cần làm nào quá hạn.",
+  "project.verdict.daysLeft_other":
+    "Còn {count} ngày, không có việc cần làm nào quá hạn.",
+  "project.verdict.lastDay":
+    "Hôm nay là ngày cuối, không có việc cần làm nào quá hạn.",
+  "project.verdict.onSchedule": "Đúng tiến độ",
+  "project.verdict.dayOf":
+    "Ngày {day}/{total}, không có việc cần làm nào quá hạn.",
+  "contact.verdict.nothingOwed": "Không bên nào còn việc cần làm.",
+  "contact.verdict.noExchange": "Chưa ghi nhận trao đổi nào với liên hệ này.",
 };

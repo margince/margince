@@ -20137,7 +20137,9 @@ export interface paths {
          *     overdue first, then by nearest due date, at most 25. A promise from an activity filed
          *     under another deal of the same company is not this deal's. Each carries the quoted
          *     words and the activity they came from, so a reader can check it, and its claim id, so
-         *     a reader with `contact:update` can dismiss it (`POST /claims/{id}/settle`).
+         *     a reader with `contact:update` can dismiss it (`POST /claims/{id}/settle`). The server
+         *     decides whether each one is overdue and whether its words state a total price other than
+         *     the deal's value, so every client shows the same verdict.
          *
          *     Needs `contact:read` and `activity:read` on top of the deal grant: each row names a
          *     contact and quotes a captured activity. A commitment whose contact or activity the
@@ -29454,6 +29456,12 @@ export interface components {
             /** Format: uuid */
             activity_id: string;
             subject: string;
+            /**
+             * @description The task's own words, as written. Only a task whose content this reader may read is
+             *     listed here, so a task read out of a message the reader may not open never reaches
+             *     this field.
+             */
+            body?: string | null;
             /** Format: date-time */
             due_at?: string | null;
             overdue: boolean;
@@ -31645,6 +31653,16 @@ export interface components {
             occurred_at: string;
             /** @description How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time. */
             occurred_precision: components["schemas"]["OccurredPrecision"];
+            /** @description True once the whole due day is over in the installation's timezone. A promise due today, or with no due day, is not overdue. */
+            overdue: boolean;
+            /** @description The one total the quoted words state in the deal's currency, present only when it is not the deal's value. A deposit, an instalment, a price per period or unit, a sum in another currency or more than one sum is never a total. Absent when the deal has no value the reader may see. */
+            differs_from_deal?: components["schemas"]["StatedAmount"];
+        };
+        /** @description A sum of money a customer's words state, in minor units of `currency`. */
+        StatedAmount: {
+            /** Format: int64 */
+            amount_minor: number;
+            currency: string;
         };
         /** @description What `search_report_evidence` takes beside the run the path names. */
         ReportEvidenceSearchRequest: {
