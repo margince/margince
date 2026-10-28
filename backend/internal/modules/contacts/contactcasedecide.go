@@ -181,10 +181,10 @@ func (s *Store) lockCaseMembers(ctx context.Context, tx pgx.Tx, selected []ids.U
 	return rows.Err()
 }
 
-// caseGone answers for an addressed contact in no case: a merge already took
-// it, so the reviewer's view is stale, or it was never in one.
+// caseGone answers for an addressed contact the reviewer saw in a case and
+// that is in none now: a merge or a dismissal changed it under them.
 func caseGone(ctx context.Context, tx pgx.Tx, contactID ids.UUID) error {
-	if _, err := resolvedContactCase(ctx, tx, contactID); err != nil {
+	if err := auth.EnsureVisible(ctx, tx, contactEntity, contactID); err != nil {
 		return err
 	}
 	return errCaseChanged
