@@ -11030,14 +11030,14 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '409':
           description: |
-            A live lead already owns this email (`duplicate_email`).
+            A live lead already owns this email (`duplicate_email`), or a live contact holds the
+            email or the LinkedIn profile (`contact_holds_email`). `existing_id` names the contact and
+            `field` the key that matched, only when the caller can read the contact.
 
-            `contact_holds_email` answers when a live contact holds the email or the LinkedIn profile:
-            somebody is a lead or a contact, never both, so no lead is written. A new opportunity
-            with a contact is a deal on that contact. `existing_id` names the contact and `field`
-            the key that matched, only when the caller can read the contact; otherwise the 409
-            names neither. `owner_notified` is true when the contact's owner was given a Worklist
-            task about the arrival, which is not filed when the caller owns the contact.
+            `contact_holds_email` means somebody is a lead or a contact, never both, so no lead is
+            written. A new opportunity with a contact is a deal on that contact. `owner_notified` is
+            true when the contact's owner was given a Worklist task about the arrival, which is not
+            filed when the caller owns the contact.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -11257,6 +11257,14 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Lead' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: |
+            A live contact holds the new email or LinkedIn profile (`contact_holds_email`).
+            `existing_id` names the contact and `field` the key that matched, only when the caller
+            can read the contact.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Leads]
@@ -11500,7 +11508,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
-          description: Lead was never promoted, has already been demoted, or a live lead now holds its email (`duplicate_email`).
+          description: Lead was never promoted, has already been demoted, a live lead now holds its email (`duplicate_email`), or a live contact now holds its email or profile (`contact_holds_email`, with `existing_id` and `field` when the caller can read that contact).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }

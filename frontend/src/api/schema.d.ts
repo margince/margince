@@ -63595,14 +63595,14 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             /**
-             * @description A live lead already owns this email (`duplicate_email`).
+             * @description A live lead already owns this email (`duplicate_email`), or a live contact holds the
+             *     email or the LinkedIn profile (`contact_holds_email`). `existing_id` names the contact and
+             *     `field` the key that matched, only when the caller can read the contact.
              *
-             *     `contact_holds_email` answers when a live contact holds the email or the LinkedIn profile:
-             *     somebody is a lead or a contact, never both, so no lead is written. A new opportunity
-             *     with a contact is a deal on that contact. `existing_id` names the contact and `field`
-             *     the key that matched, only when the caller can read the contact; otherwise the 409
-             *     names neither. `owner_notified` is true when the contact's owner was given a Worklist
-             *     task about the arrival, which is not filed when the caller owns the contact.
+             *     `contact_holds_email` means somebody is a lead or a contact, never both, so no lead is
+             *     written. A new opportunity with a contact is a deal on that contact. `owner_notified` is
+             *     true when the contact's owner was given a Worklist task about the arrival, which is not
+             *     filed when the caller owns the contact.
              */
             409: {
                 headers: {
@@ -63901,6 +63901,19 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            /**
+             * @description A live contact holds the new email or LinkedIn profile (`contact_holds_email`).
+             *     `existing_id` names the contact and `field` the key that matched, only when the caller
+             *     can read the contact.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -64161,7 +64174,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description Lead was never promoted, has already been demoted, or a live lead now holds its email (`duplicate_email`). */
+            /** @description Lead was never promoted, has already been demoted, a live lead now holds its email (`duplicate_email`), or a live contact now holds its email or profile (`contact_holds_email`, with `existing_id` and `field` when the caller can read that contact). */
             409: {
                 headers: {
                     [name: string]: unknown;

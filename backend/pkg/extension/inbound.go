@@ -10,6 +10,9 @@ package extension
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"regexp"
@@ -82,9 +85,9 @@ type InboundEndpoint struct {
 	Rate InboundRate
 
 	// Skew is how far a request's timestamp may sit from the core's clock, in
-	// either direction. Zero is invalid rather than meaning "no limit": an edge
-	// with no freshness bound makes one captured request replayable forever,
-	// and the nonce alone cannot fix that — the unit would have to keep every
+	// either direction. Zero is invalid rather than meaning "no limit". An edge
+	// with no freshness bound makes one captured request replayable forever.
+	// The nonce alone cannot fix that, because the unit would have to keep every
 	// nonce it has ever seen.
 	Skew time.Duration
 
@@ -204,6 +207,20 @@ func SigningPayload(scope SigningScope, slug, ref string, at time.Time, nonce st
 // distinction the URL makes and the signature would otherwise not.
 func (r InboundRequest) SignedPayload() []byte {
 	return SigningPayload(ScopeInbound, r.Slug, r.Ref, r.Timestamp, r.Nonce, r.Body)
+}
+
+// SignatureHolds reports whether the presented signature is the one secret
+// produces over SignedPayload. A unit calls it before it trusts a byte of the
+// request. The core admits a request but cannot read the unit's secret, so a
+// handler that skips this accepts what anybody posts. A gate holds every unit
+// that declares an endpoint to call it.
+//
+// The comparison is hmac.Equal over the fixed-length hex of a 32-byte digest, so
+// it leaks neither content nor length.
+func (r InboundRequest) SignatureHolds(secret []byte) bool {
+	mac := hmac.New(sha256.New, secret)
+	mac.Write(r.SignedPayload())
+	return hmac.Equal([]byte("sha256="+hex.EncodeToString(mac.Sum(nil))), []byte(r.Signature))
 }
 
 // InboundOutcome is why a handler stopped. It mirrors the response discipline
