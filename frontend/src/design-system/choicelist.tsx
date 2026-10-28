@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useId } from "react";
+import { Check } from "lucide-react";
+import { Fragment, type ReactNode, useId } from "react";
 import { Checkbox, Radio } from "./atoms";
 import "./choicelist.css";
 
@@ -53,6 +54,12 @@ export type Choice<Value extends string> = Readonly<{
    * why: a greyed answer with no reason is a question the reader cannot act on.
    */
   disabled?: boolean;
+  /**
+   * The kind of answer this is, said once over the choices that share it.
+   * Consecutive choices with the same group sit under one label. Every radio
+   * stays in the one question, so the arrow keys still move across groups.
+   */
+  group?: string;
 }>;
 
 /**
@@ -102,8 +109,13 @@ type Question<Value extends string> = Readonly<{
    * rather than settings: a platform, a vendor, a plan. It is where `mark`
    * earns its place, because a plate is big enough to be recognised before it
    * is read.
+   *
+   * `tiles` is `cards` made compact, for five or so options picked by sight.
+   * A tile is a mark in a square, the name and one short line. A tick marks
+   * the chosen tile in place of a radio. Anything longer than the line
+   * belongs under the question, said once for the chosen answer.
    */
-  layout?: "stack" | "row" | "cards";
+  layout?: "stack" | "row" | "cards" | "tiles";
   /** Layout the surrounding form owns — the margin its own rhythm expects. It
    * lands on the fieldset, which is the only element a caller can position. */
   className?: string;
@@ -125,6 +137,44 @@ export function ChoiceList<Value extends string>(
   // caller should have to think about, and two ChoiceLists on one page with the
   // same hand-written name would silently become one question.
   const name = useId();
+  const answer = (choice: Choice<Value>) => {
+    const shared = {
+      className: "choicelist-choice",
+      name,
+      value: choice.value,
+      disabled: disabled || choice.disabled,
+      label: <ChoiceText choice={choice} tick={layout === "tiles"} />,
+    };
+    if (props.multiple === true) {
+      const { value, onChange } = props;
+      return (
+        <Checkbox
+          key={choice.value}
+          {...shared}
+          checked={value.includes(choice.value)}
+          onChange={(event) => {
+            const ticked = event.target.checked;
+            onChange(
+              choices
+                .filter((c) =>
+                  c.value === choice.value ? ticked : value.includes(c.value),
+                )
+                .map((c) => c.value),
+            );
+          }}
+        />
+      );
+    }
+    const { value, onChange } = props;
+    return (
+      <Radio
+        key={choice.value}
+        {...shared}
+        checked={choice.value === value}
+        onChange={() => onChange(choice.value)}
+      />
+    );
+  };
   return (
     // A `fieldset` and a `legend`, with NO `role` on top. `role="radiogroup"`
     // reads like the sharper claim and is the wrong one here: it is the role for
@@ -141,55 +191,36 @@ export function ChoiceList<Value extends string>(
       <legend className={hideLegend ? "sr-only" : "choicelist-legend"}>
         {legend}
       </legend>
-      {choices.map((choice) => {
-        const shared = {
-          className: "choicelist-choice",
-          name,
-          value: choice.value,
-          disabled: disabled || choice.disabled,
-          label: <ChoiceText choice={choice} />,
-        };
-        if (props.multiple === true) {
-          const { value, onChange } = props;
-          return (
-            <Checkbox
-              key={choice.value}
-              {...shared}
-              checked={value.includes(choice.value)}
-              onChange={(event) => {
-                const ticked = event.target.checked;
-                onChange(
-                  choices
-                    .filter((c) =>
-                      c.value === choice.value
-                        ? ticked
-                        : value.includes(c.value),
-                    )
-                    .map((c) => c.value),
-                );
-              }}
-            />
-          );
-        }
-        const { value, onChange } = props;
-        return (
-          <Radio
-            key={choice.value}
-            {...shared}
-            checked={choice.value === value}
-            onChange={() => onChange(choice.value)}
-          />
-        );
-      })}
+      {runsOf(choices).map((run) =>
+        run.group === undefined ? (
+          <Fragment key={run.choices[0]?.value}>
+            {run.choices.map(answer)}
+          </Fragment>
+        ) : (
+          <ChoiceGroup
+            key={run.choices[0]?.value}
+            label={run.group}
+            size={run.choices.length}
+          >
+            {run.choices.map(answer)}
+          </ChoiceGroup>
+        ),
+      )}
     </fieldset>
   );
 }
 
 function ChoiceText<Value extends string>({
   choice,
-}: Readonly<{ choice: Choice<Value> }>) {
+  tick,
+}: Readonly<{ choice: Choice<Value>; tick: boolean }>) {
   return (
     <span className="choicelist-text">
+      {tick && (
+        <span className="choicelist-tick" aria-hidden="true">
+          <Check />
+        </span>
+      )}
       {choice.mark === undefined ? null : (
         <span className="choicelist-mark" aria-hidden="true">
           {choice.mark}
@@ -198,5 +229,44 @@ function ChoiceText<Value extends string>({
       <span className="choicelist-label">{choice.label}</span>
       {choice.description != null && <span>{choice.description}</span>}
     </span>
+  );
+}
+
+type Run<Value extends string> = Readonly<{
+  group?: string;
+  choices: Choice<Value>[];
+}>;
+
+// Choices cut into runs of one group each, in the order given, so a caller
+// decides the order and the labels follow it.
+function runsOf<Value extends string>(
+  choices: readonly Choice<Value>[],
+): Run<Value>[] {
+  const runs: { group?: string; choices: Choice<Value>[] }[] = [];
+  for (const choice of choices) {
+    const last = runs.at(-1);
+    if (last !== undefined && last.group === choice.group) {
+      last.choices.push(choice);
+    } else {
+      runs.push({ group: choice.group, choices: [choice] });
+    }
+  }
+  return runs;
+}
+
+// A nested fieldset, so the group is named by its own legend. Its radios keep
+// the outer question's name.
+function ChoiceGroup({
+  label,
+  size,
+  children,
+}: Readonly<{ label: string; size: number; children: ReactNode }>) {
+  // Grown by its count, so in `tiles` groups of three and two share one row
+  // with tiles of one width. Other layouts give each group the full row.
+  return (
+    <fieldset className="choicelist-group" style={{ flexGrow: size }}>
+      <legend className="choicelist-group-label t-eyebrow">{label}</legend>
+      <div className="choicelist-group-choices">{children}</div>
+    </fieldset>
   );
 }

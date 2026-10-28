@@ -30,6 +30,7 @@ import (
 func TestEveryProducerStatesAnOwner(t *testing.T) {
 	t.Parallel()
 	rows := classifyDay(dayOfEveryLane(), rankInstant, dayMoney{})
+	rows = append(rows, relationshipCandidates(dayOfEveryLane())...)
 	planService := meetingPrepService(nil).WithWeeklyPlans(planWorkStub{entries: []PlanWork{{ID: ids.NewV7(), OwnerID: readerOf(meetingPrepReader()), Label: "Prepare proposal", DueAt: rankInstant}}})
 	planService.taskScope = TasksMine
 	planRows, missing := planService.readingPlan(meetingPrepReader(), scopeMine, rankInstant)
@@ -254,6 +255,7 @@ func TestOnlyAReaderBoundLaneNamesTheReader(t *testing.T) {
 		"domain_question":      "OpenDomainQuestionsForOwner asks only the acting human's decider rule: the sole direct recipient of current mail",
 	}
 	rows := classifyDay(dayOfEveryLane(), rankInstant, dayMoney{})
+	rows = append(rows, relationshipCandidates(dayOfEveryLane())...)
 	planService := meetingPrepService(nil).WithWeeklyPlans(planWorkStub{entries: []PlanWork{{ID: ids.NewV7(), OwnerID: readerOf(meetingPrepReader()), Label: "Prepare proposal", DueAt: rankInstant}}})
 	planService.taskScope = TasksMine
 	planRows, missing := planService.readingPlan(meetingPrepReader(), scopeMine, rankInstant)

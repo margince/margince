@@ -17,7 +17,14 @@ const focusLimit = 6
 // Focus selects from the assembled day before a queue page can hide a candidate.
 // It is a projection of the same ranking, not a second scoring system.
 func focusOf(rows, considered []ranked, asOf time.Time, reader ids.UUID) crmcontracts.WorklistFocus {
-	ordered := markCrowding(slices.Clone(rows))
+	ordered := slices.Clone(rows)
+	for i := range ordered {
+		if ordered[i].item.Source == sourceDecay && ordered[i].pinned {
+			ordered[i].item.Level = semanticLevelOf(ordered[i])
+			ordered[i].pinned = false
+		}
+	}
+	ordered = markCrowding(ordered)
 	sortByRank(ordered)
 	eligible := make([]ranked, 0, len(ordered))
 	for _, row := range ordered {
@@ -52,6 +59,8 @@ func focusEligible(row ranked, asOf time.Time) bool {
 	// An agreed future date is not a request to act today. Legal preparation and
 	// deal close windows already have their own semantic classifier horizons.
 	switch row.item.Source {
+	case sourceDecay:
+		return hasReason(row.item, "pinned")
 	case "notice":
 		return urgentWork(row)
 	case "task":

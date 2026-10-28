@@ -10,7 +10,7 @@
 # than the clock. Whoever hit it first debugged the wrong thing.
 #
 # The lane's own path cannot be exercised here: reproducing it for real means
-# waiting out a 600s budget. So the two behaviours are pinned against the
+# waiting out the budget. So the two behaviours are pinned against the
 # script's SOURCE, which is where a future edit would undo them.
 set -euo pipefail
 
@@ -27,7 +27,7 @@ check() { # description; reads $? style via caller
     fi
 }
 # The two behaviours are exercised for REAL, against fabricated logs: the lane
-# itself provisions databases and waits out a 600s budget, so it cannot be run
+# itself provisions databases and waits out the budget, so it cannot be run
 # here, but the decisions it makes are functions in lib-testdb.sh and those can.
 # shellcheck source=scripts/lib-testdb.sh
 source "$root/scripts/lib-testdb.sh"

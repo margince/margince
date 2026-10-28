@@ -120,6 +120,13 @@ func TestAConcurrentTaskAssignmentCannotLeaveWorkOnARetiredMember(t *testing.T) 
 }
 
 func memberWriteRaceRefusal(err error) bool {
+	// Not found is the merge having won: a retired seat cannot hold work.
+	// seatHoldingWork answers that as not found, so a caller cannot tell it
+	// from a guessed id. TestATaskCannotBeAssignedToARetiredMember pins the
+	// same refusal without a race.
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return true
+	}
 	if _, ok := errors.AsType[*auth.AssigneeNotAllowedError](err); ok {
 		return true
 	}

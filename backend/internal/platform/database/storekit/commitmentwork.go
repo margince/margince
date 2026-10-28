@@ -153,3 +153,10 @@ func taskSourcesWith(keep func(taskSourcePolicy) bool) []string {
 	slices.Sort(out)
 	return out
 }
+
+// TaskRepairPolicy derives repair scope from the same current-work policy as reads.
+func TaskRepairPolicy(source string) (supported, requiresSource bool) {
+	policy, known := taskSourceFamilies[source]
+	return known && (policy.currency == currentBySourceMail || policy.currency == currentByLeadEngagement || policy.generatedDate),
+		known && (policy.currency == currentBySourceMail || policy.currency == currentByLeadEngagement)
+}

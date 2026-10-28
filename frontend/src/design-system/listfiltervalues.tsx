@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useId, useState } from "react";
-import { foldForMatch } from "../format/collate";
+import { holdsEveryWord, searchWords } from "../format/collate";
 import { useT } from "../i18n";
 import { Radio } from "./atoms";
 import { useDebouncedSearch } from "./debouncedsearch";
@@ -32,15 +32,16 @@ function FilterValueList({
   // the enclosing `Menu` fieldset is what names the question they answer.
   const group = useId();
   const [query, setQuery] = useState("");
-  const typed = foldForMatch(query.trim());
+  const words = searchWords(query);
   // The chosen option stays drawn whatever is typed, so the radio that says
   // what the list is narrowed by never disappears from under the reader.
-  const shown = typed
-    ? chip.options.filter(
-        (option) =>
-          option.value === value || foldForMatch(option.label).includes(typed),
-      )
-    : chip.options;
+  const shown =
+    words.length > 0
+      ? chip.options.filter(
+          (option) =>
+            option.value === value || holdsEveryWord(words, [option.label]),
+        )
+      : chip.options;
   return (
     <>
       <Radio

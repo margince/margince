@@ -355,6 +355,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "aiAdmin.overrideHint",
     // The human who made a change, not a CRM contact record.
     "home.change.by",
+    "receipt.detail.by",
     // "Người khác" — SOMEBODY ELSE, a third party who passed on this reader's
     // details. The privacy notice is addressed to a human being and says so:
     // the sentence is about who handed the data over, not about a record type,

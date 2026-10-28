@@ -93,14 +93,7 @@ type QuietRelationship struct {
 	QuietDays int
 	// When they last spoke, so the card can date the silence, not only measure it.
 	LastAt time.Time
-	// What the relationship was WORTH before it went quiet, scored through the
-	// same relstrength.Compute the contact's page reads. The band comes back off
-	// that call rather than being derived here, so there is no second way to turn
-	// a score into the word a rep reads. Without it every lapsed contact reads
-	// alike, and a strong relationship going quiet is the row that most deserves
-	// telling apart from a cc who has drifted.
-	Strength relstrength.Score
-	// Whether money this reader can see still rests on this contact: a silence
-	// with a deal behind it is not the same work as one without.
+	// Recorded context stays available to optional-information consumers, not ranking.
+	Strength    relstrength.Score
 	HasOpenDeal bool
 }
