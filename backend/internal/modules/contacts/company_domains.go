@@ -358,8 +358,8 @@ func reconcileCompanyDomains(ctx context.Context, tx pgx.Tx, companyID ids.Compa
 	if primary != "" && primary != currentPrimary {
 		if _, err := tx.Exec(ctx,
 			`UPDATE company_domain SET is_primary = true
-			 WHERE company_id = $1 AND domain = lower($2) AND archived_at IS NULL`,
-			companyID, primary); err != nil {
+			 WHERE company_id = $1 AND domain = ANY($2) AND archived_at IS NULL`,
+			companyID, owndomain.Spellings(primary)); err != nil {
 			return nil, fmt.Errorf("set primary domain: %w", err)
 		}
 	}
@@ -375,7 +375,7 @@ func archiveRemovedDomains(ctx context.Context, tx pgx.Tx, companyID ids.Company
 		}
 		if _, err := tx.Exec(ctx,
 			`UPDATE company_domain SET archived_at = now()
-			 WHERE company_id = $1 AND domain = lower($2) AND archived_at IS NULL`,
+			 WHERE company_id = $1 AND domain = $2 AND archived_at IS NULL`,
 			companyID, domain); err != nil {
 			return fmt.Errorf("archive removed domain: %w", err)
 		}
