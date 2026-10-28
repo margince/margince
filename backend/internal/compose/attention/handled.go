@@ -106,14 +106,10 @@ func (s *Service) HandledForYou(ctx context.Context, cursor *string) (crmcontrac
 		}
 	}
 	since := position.Since
-	// One MORE than the page carries, so the bound can be reported as reached
-	// rather than inferred from a full page — a page that happened to hold
-	// exactly the cap would otherwise claim there was more when there was not.
-	recent, err := s.receipts.Recent(ctx, since, position.Offset+handledCap+1)
+	recent, err := s.recentPinned(ctx, since, position)
 	if err != nil {
 		return crmcontracts.HandledForYou{}, err
 	}
-	recent = position.pin(recent)
 	out := crmcontracts.HandledForYou{
 		AsOf:      asOf,
 		Since:     &since,
@@ -132,6 +128,26 @@ func (s *Service) HandledForYou(ctx context.Context, cursor *string) (crmcontrac
 		return crmcontracts.HandledForYou{}, err
 	}
 	return out, nil
+}
+
+// recentPinned reads one more than the page carries, so a reached bound is
+// reported, not inferred from a full page. A receipt newer than the pin takes a
+// read slot and is dropped. So a full read that lost rows is read again wider,
+// until it holds that one more or the window ends.
+func (s *Service) recentPinned(ctx context.Context, since time.Time, position handledCursor) ([]Receipt, error) {
+	want := position.Offset + handledCap + 1
+	for limit := want; ; {
+		read, err := s.receipts.Recent(ctx, since, limit)
+		if err != nil {
+			return nil, err
+		}
+		kept := position.pin(read)
+		dropped := len(read) - len(kept)
+		if len(read) < limit || len(kept) >= want || dropped == 0 {
+			return kept, nil
+		}
+		limit += dropped
+	}
 }
 
 // handledSince is where the window starts: the done lane's own resolver where

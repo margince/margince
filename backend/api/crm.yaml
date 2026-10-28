@@ -18544,6 +18544,7 @@ paths:
               schema: { $ref: '#/components/schemas/HandledForYou' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /worklist/exceptions:
     get:
       tags: [Brief]

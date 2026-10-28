@@ -71,6 +71,27 @@ func TestAReceiptLandingBetweenPagesDoesNotShiftTheNext(t *testing.T) {
 	}
 }
 
+func TestAReceiptLandingBetweenPagesKeepsTheRestReachable(t *testing.T) {
+	t.Parallel()
+	acts := spacedReceipts(3 * handledCap)
+	svc := &Service{now: func() time.Time { return rankInstant }, receipts: acts}
+	first, err := svc.HandledForYou(leadReader(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	landed := Receipt{ID: ids.NewV7(), OccurredAt: rankInstant.Add(time.Minute)}
+	svc.receipts = append(listedReceipts{landed}, acts...)
+	second, err := svc.HandledForYou(leadReader(), first.NextCursor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(second.Receipts) != handledCap || !second.Truncated || second.NextCursor == nil {
+		t.Fatalf("second page holds %d receipts, truncated %v, next cursor %v; want %d, true and a cursor",
+			len(second.Receipts), second.Truncated, second.NextCursor, handledCap)
+	}
+}
+
 func TestACursorThisServerDidNotMintIsRefused(t *testing.T) {
 	t.Parallel()
 	svc := &Service{now: func() time.Time { return rankInstant }, receipts: spacedReceipts(3)}

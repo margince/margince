@@ -16292,7 +16292,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.handled.putBackDone": "Đã hoàn tác",
   "worklist.handled.truncated": "Danh sách đã bị cắt bớt. Vẫn còn việc khác.",
   "receipt.detail.summary": "Chi tiết",
-  "receipt.detail.by": "Thực hiện bởi",
+  "receipt.detail.by": "Người làm",
   "receipt.detail.when": "Thời điểm",
   "receipt.detail.source": "Nguồn",
   "worklist.handled.showMore": "Xem thêm",
