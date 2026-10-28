@@ -7,19 +7,15 @@ import "fmt"
 
 // A merged account remains an immutable author. Its surviving member inherits
 // that identity's correspondence access, while grants still use the live seat.
+//
+// The family is one SQL function: a recursive CTE spelled into each clause was
+// planned once per copy, and a connection keeps the planner's memory.
 func memberIdentitySQL(position int) string {
-	return memberIdentityFamilySQL(fmt.Sprintf("SELECT $%d::uuid AS id", position))
+	return fmt.Sprintf("SELECT unnest(member_identity_family($%d::uuid)) AS id", position)
 }
 
 func memberIdentitySetSQL(position int) string {
-	return memberIdentityFamilySQL(fmt.Sprintf("SELECT unnest($%d::uuid[]) AS id", position))
-}
-
-func memberIdentityFamilySQL(roots string) string {
-	return `WITH RECURSIVE member_identities(id) AS (` + roots + `
- UNION SELECT retired.id FROM app_user retired JOIN member_identities survivor
- ON retired.merged_into_user_id = survivor.id WHERE retired.removed_at IS NOT NULL)
- SELECT id FROM member_identities`
+	return fmt.Sprintf("SELECT unnest(member_identity_family(root)) AS id FROM unnest($%d::uuid[]) root", position)
 }
 
 func memberAuthorshipSQL(alias string, memberPosition int, arg func(any) int) string {

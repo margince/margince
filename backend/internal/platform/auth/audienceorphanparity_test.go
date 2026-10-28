@@ -108,10 +108,20 @@ func composedFragment(call *ast.CallExpr) string {
 // relationsIn collects the relations a SQL text reads, from its own FROM and
 // JOIN clauses. Derived from the text so neither spelling can grow a source this
 // test does not see.
+//
+// A name called like a function after `FROM` is a set-returning function, not a
+// relation. member_identity_family reads app_user for the merged accounts, so
+// a call to it counts as reading app_user.
 func relationsIn(sql string) map[string]bool {
 	out := map[string]bool{}
-	for _, m := range regexp.MustCompile(`(?i)\b(?:FROM|JOIN)\s+([a-z_][a-z0-9_]*)`).FindAllStringSubmatch(sql, -1) {
+	for _, m := range regexp.MustCompile(`(?i)\b(?:FROM|JOIN)\s+([a-z_][a-z0-9_]*)(\s*\()?`).FindAllStringSubmatch(sql, -1) {
+		if m[2] != "" {
+			continue
+		}
 		out[strings.ToLower(m[1])] = true
+	}
+	if strings.Contains(sql, "member_identity_family(") {
+		out["app_user"] = true
 	}
 	return out
 }
