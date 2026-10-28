@@ -1669,6 +1669,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.bandCount_other": "{count} việc",
   "brief.focus.context": "Xem chi tiết",
   "brief.queue.back": "Quay lại Danh sách công việc",
+  "brief.queue.next": "Việc tiếp theo",
+  "brief.queue.nextNone": "Không còn hồ sơ nào",
   "brief.queue.title": "Danh sách công việc",
   "brief.queue.show": "Xem Danh sách công việc",
   "brief.queue.hide": "Ẩn Danh sách công việc",
@@ -3524,6 +3526,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.next.title": "Việc cần làm",
   "co.next.empty": "Công ty này không có việc cần làm nào đang mở.",
   "co.next.overdue": "Quá hạn",
+  "deal.commitments.title": "Cam kết của khách hàng",
+  "deal.commitments.empty":
+    "Khách hàng không có cam kết nào đang mở cho deal này.",
+  "deal.commitments.denied":
+    "Bạn không thể đọc các cam kết của khách hàng: chúng trích dẫn liên hệ và tin nhắn mà bạn không có quyền truy cập.",
+  "deal.commitments.incomplete":
+    "Một số cam kết không hiển thị vì bạn không được đọc liên hệ hoặc tin nhắn của chúng.",
+  "deal.commitments.more":
+    "Đang hiển thị 25 cam kết khẩn cấp nhất; còn cam kết khác đang mở.",
+  "deal.commitments.source": "Mở tin nhắn",
+  "deal.commitments.overdue": "Đã quá hạn: đã thực hiện chưa?",
+  "deal.commitments.done": "Hoàn thành",
+  "deal.commitments.noLongerTrue": "Không còn đúng",
+  "deal.commitments.differs": "Khác với giá trị deal ({amount})",
   "co.next.due": "Hạn {when}",
   "co.next.undated": "Chưa có hạn",
   "co.next.col.task": "Công việc",
@@ -8059,6 +8075,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "“{value}” không phải trạng thái cuộc họp. Các trạng thái: {allowed}.",
   "import.reason.meeting_status_not_valid_for_kind":
     "Chỉ cuộc họp mới có trạng thái cuộc họp. Bỏ giá trị này khỏi hàng.",
+  "import.reason.meeting_not_taken_place":
+    "Theo ngày hoặc giờ trong hàng này, cuộc họp chưa bắt đầu nên không thể là “held” hoặc “no_show”. Để trống trạng thái hoặc dùng “booked” hay “canceled”. Nếu cuộc họp đã bắt đầu hôm nay, thêm giờ bắt đầu.",
   "import.reason.direction_unknown":
     "“{value}” không phải chiều hoạt động. Các chiều: {allowed}.",
   "import.reason.activity_unlinked":
@@ -14954,6 +14972,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.memory.channelTask": "Việc cần làm",
   "contact.memory.replied": "Đã trả lời",
   "contact.memory.unanswered": "Chưa trả lời",
+  "contact.memory.view": "Xem",
+  "contact.memory.viewEntry": "Xem {title}",
 
   "contact.mayBeDone.notYet": "Chưa xong",
   "contact.rail.blocked": "Bị chặn",
@@ -16251,9 +16271,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.scope.mine": "Của tôi",
   "worklist.sourceUnavailable":
     "Nguồn không khả dụng hoặc chưa được chia sẻ với bạn",
-  "worklist.scope.unassigned": "Chưa giao",
+  "worklist.scope.unassigned": "Chưa nhận",
   "worklist.scope.team": "Nhóm",
   "worklist.scope.all": "Tất cả",
+  "worklist.scope.unassignedHint":
+    "Việc đang mở mà bạn xem được, chưa có người phụ trách.",
+  "worklist.take.action": "Nhận việc",
+  "worklist.take.done": "Đã nhận việc",
+  "worklist.take.failed": "Không thể nhận việc này. Thử lại.",
   "worklist.owner.shared": "Cùng phụ trách: {names}",
   "worklist.owner.left":
     "{name} đã nghỉ. Việc này cần người chịu trách nhiệm mới.",
@@ -16599,6 +16624,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingOutcomeFailed": "Không thể ghi nhận kết quả. Thử lại.",
   "worklist.verb.meetingDayMissing":
     "Ngày này không có trong múi giờ của công ty. Chọn ngày khác.",
+  "worklist.verb.meetingUpdateFor": "Cập nhật {subject}",
+  "worklist.verb.meetingCanceledFor": "Đánh dấu đã hủy: {subject}",
+  "worklist.verb.meetingCancelInCalendar":
+    "Lời mời trên lịch quản lý cuộc họp này. Hủy cuộc họp qua lời mời.",
+  "worklist.verb.meetingCalendarManaged":
+    "Lời mời trên lịch giữ tiêu đề, ghi chú và ngày. Tại đây chỉ lưu kết quả cuộc họp.",
   "worklist.verb.retry": "Chạy lại",
   "worklist.verb.retryStarted": "Đang chạy lại quy tắc…",
   "worklist.verb.retryFailed": "Không thể chạy lại quy tắc. Thử lại.",
@@ -16641,6 +16672,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.dismissUndo": "Hoàn tác",
   "worklist.verb.dismissFailed": "Không thể gác lại liên hệ. Thử lại.",
   "worklist.verb.dismissUndoFailed": "Không thể khôi phục liên hệ. Thử lại.",
+  "worklist.verb.stopFollowing": "Ngừng theo dõi",
+  "worklist.verb.stopped": "Đã ngừng theo dõi liên hệ này",
+  "worklist.verb.dismissAll": "Gác lại tất cả đang hiển thị",
+  "worklist.verb.dismissedAll": "Đã gác lại liên hệ một tháng",
+  "worklist.verb.dismissAllFailed": "Không thể gác lại liên hệ. Thử lại.",
+  "contact.follow.stopped": "Bạn đã ngừng theo dõi liên hệ này.",
+  "contact.follow.setAside": "Bạn đã gác lại liên hệ này đến {date}.",
+  "contact.follow.resume": "Theo dõi lại",
   "worklist.verb.completeUndo": "Hoàn tác",
   "worklist.verb.completeUndoFailed": "Không thể mở lại việc cần làm. Thử lại.",
   "worklist.source.failed": "Không thể tải nguồn: {source}",

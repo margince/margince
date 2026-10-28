@@ -1,4 +1,5 @@
 import type { components } from "../../api/schema";
+import { NextTaskSlot } from "../../components/nexttaskslot";
 import { Button } from "../../design-system/atoms";
 import { NextBar } from "../../design-system/nextbar";
 import { viewerZone } from "../../format/timezone";
@@ -63,6 +64,7 @@ export function LeadNextBar({
           () => navigate({ screen: "worklist" }),
         ),
       }}
+      onward={<NextTaskSlot />}
     />
   );
 }

@@ -105,7 +105,7 @@ func (s *Store) reconcileInvitation(ctx context.Context, observed invitationRow,
 		if _, err := tx.Exec(ctx, `UPDATE activity SET claims_host_slot=false WHERE id=`+args.add(row.ID), args...); err != nil {
 			return err
 		}
-		if err := s.settleInvitation(ctx, tx, row); err != nil {
+		if err := s.settleInvitation(ctx, tx, row, false); err != nil {
 			return err
 		}
 		row.Version++

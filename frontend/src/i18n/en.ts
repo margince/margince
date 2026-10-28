@@ -1645,6 +1645,8 @@ export const en = {
   "worklist.bandCount_other": "{count} items",
   "brief.focus.context": "View details",
   "brief.queue.back": "Back to Worklist",
+  "brief.queue.next": "Next task",
+  "brief.queue.nextNone": "No more records",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Show Worklist",
   "brief.queue.hide": "Hide Worklist",
@@ -3610,6 +3612,20 @@ export const en = {
   "co.next.title": "Tasks",
   "co.next.empty": "No open tasks for this company.",
   "co.next.overdue": "Overdue",
+  "deal.commitments.title": "Customer commitments",
+  "deal.commitments.empty":
+    "The customer has no open commitments on this deal.",
+  "deal.commitments.denied":
+    "You cannot read the customer’s commitments: they quote contacts and messages you have no access to.",
+  "deal.commitments.incomplete":
+    "Some commitments are left out because you cannot read their contact or message.",
+  "deal.commitments.more":
+    "Showing the 25 most urgent commitments; more are open.",
+  "deal.commitments.source": "Open message",
+  "deal.commitments.overdue": "Overdue: did it happen?",
+  "deal.commitments.done": "Done",
+  "deal.commitments.noLongerTrue": "No longer true",
+  "deal.commitments.differs": "Differs from the deal value ({amount})",
   "co.next.due": "Due {when}",
   "co.next.undated": "No due date",
   "co.next.col.task": "Task",
@@ -8344,6 +8360,8 @@ export const en = {
     "“{value}” is not a meeting status. The statuses are: {allowed}.",
   "import.reason.meeting_status_not_valid_for_kind":
     "Only a meeting has a meeting status. Remove it from this row.",
+  "import.reason.meeting_not_taken_place":
+    "By the date or time on this row, the meeting has not started yet, so it cannot be held or no_show. Leave the status empty, or use booked or canceled. If it started today, add the time it started.",
   "import.reason.direction_unknown":
     "“{value}” is not a direction. The directions are: {allowed}.",
   "import.reason.activity_unlinked":
@@ -15287,6 +15305,8 @@ export const en = {
   "contact.memory.channelTask": "Task",
   "contact.memory.replied": "Replied",
   "contact.memory.unanswered": "Unanswered",
+  "contact.memory.view": "View",
+  "contact.memory.viewEntry": "View {title}",
 
   "contact.mayBeDone.notYet": "Not yet",
   "contact.rail.blocked": "Blocked",
@@ -16566,6 +16586,11 @@ export const en = {
   "worklist.scope.unassigned": "Unassigned",
   "worklist.scope.team": "Team",
   "worklist.scope.all": "All",
+  "worklist.scope.unassignedHint":
+    "Open work you can see that nobody is responsible for.",
+  "worklist.take.action": "Take it",
+  "worklist.take.done": "Assigned to you",
+  "worklist.take.failed": "Task was not assigned to you. Retry.",
   "worklist.owner.shared": "Shared responsibility: {names}",
   "worklist.owner.left": "{name} left. This needs a new owner.",
   "worklist.owner.sharedCount_one": "{count} responsible recipient",
@@ -16910,6 +16935,12 @@ export const en = {
   "worklist.verb.meetingOutcomeFailed": "Outcome was not recorded. Retry.",
   "worklist.verb.meetingDayMissing":
     "That date does not exist in the company’s time zone. Pick another date.",
+  "worklist.verb.meetingUpdateFor": "Update {subject}",
+  "worklist.verb.meetingCanceledFor": "Mark as canceled: {subject}",
+  "worklist.verb.meetingCancelInCalendar":
+    "The calendar invitation keeps this meeting. Cancel it through the invitation.",
+  "worklist.verb.meetingCalendarManaged":
+    "The calendar invitation keeps the subject, notes and date. Only the outcome is saved here.",
   "worklist.verb.retry": "Run again",
   "worklist.verb.retryStarted": "Rerunning rule…",
   "worklist.verb.retryFailed": "Rule was not rerun. Retry.",
@@ -16976,6 +17007,15 @@ export const en = {
   "worklist.verb.dismissUndo": "Undo",
   "worklist.verb.dismissFailed": "Contact was not set aside. Retry.",
   "worklist.verb.dismissUndoFailed": "Contact was not restored. Retry.",
+  "worklist.verb.stopFollowing": "Stop following",
+  "worklist.verb.stopped": "Stopped following this contact",
+  "worklist.verb.dismissAll": "Dismiss all shown",
+  "worklist.verb.dismissedAll": "Contacts set aside for a month",
+  "worklist.verb.dismissAllFailed": "Contacts were not set aside. Retry.",
+  // The reader's own choice, so "you": a colleague's choice never shows here.
+  "contact.follow.stopped": "You stopped following this contact.",
+  "contact.follow.setAside": "You set this contact aside until {date}.",
+  "contact.follow.resume": "Resume following",
   "worklist.verb.completeUndo": "Undo",
   "worklist.verb.completeUndoFailed": "Task was not reopened. Retry.",
   // The frame states the fact and the source follows it, rather than the

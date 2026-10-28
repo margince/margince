@@ -1,36 +1,28 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ComponentProps, useState } from "react";
+import type { ComponentProps } from "react";
 import { TaskDetailDialog } from "../../components/taskactions";
+import { useSourceOpener } from "../../lib/opensource";
 import { useRecordZone } from "../../lib/recordzone";
 import { OpenActivityDrawer } from "../voice-knowledge/activitydrawer";
 import type { WorklistItem } from "./worklist.queries";
 import { WorklistWhy } from "./worklist.why";
 
+/** A task opened where it was listed, with its source one click away. */
 export function TaskDetailModal({
   item,
   ...props
-}: Omit<ComponentProps<typeof TaskDetailDialog>, "onOpenSource" | "why"> &
+}: Omit<ComponentProps<typeof TaskDetailDialog>, "openerFor" | "why"> &
   // The row the task was opened from, when it was opened from one.
   Readonly<{ item?: WorklistItem }>) {
-  const [source, setSource] = useState<string | null>(null);
-  const zone = useRecordZone();
+  const openerFor = useSourceOpener();
   return (
-    <>
-      <TaskDetailDialog
-        {...props}
-        onOpenSource={setSource}
-        why={item && <WorklistWhy item={item} />}
-      />
-      {source && (
-        <OpenActivityDrawer
-          activityId={source}
-          zone={zone}
-          onClose={() => setSource(null)}
-        />
-      )}
-    </>
+    <TaskDetailDialog
+      {...props}
+      openerFor={openerFor}
+      why={item && <WorklistWhy item={item} />}
+    />
   );
 }
 

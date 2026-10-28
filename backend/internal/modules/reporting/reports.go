@@ -226,6 +226,10 @@ func (s *Service) CreateReport(ctx context.Context, in crmcontracts.ReportingRep
 	if err := requireReadWrite(ctx, "report_definition", principal.ActionCreate); err != nil {
 		return crmcontracts.ReportingReport{}, err
 	}
+	return s.insertReport(ctx, in)
+}
+
+func (s *Service) insertReport(ctx context.Context, in crmcontracts.ReportingReportInput) (crmcontracts.ReportingReport, error) {
 	owner, err := actorID(ctx)
 	if err != nil {
 		return crmcontracts.ReportingReport{}, err
@@ -291,7 +295,7 @@ func (s *Service) canEditReport(ctx context.Context, tx pgx.Tx, report crmcontra
 	if report.Audience == reportingTeam {
 		scope = crmcontracts.ReportingScope{Kind: reportingTeam, Id: report.AudienceTeamId}
 	}
-	if report.Audience == "private" {
+	if report.Audience == reportingPrivate {
 		return apperrors.ErrNotFound
 	}
 	_, err = s.authority.Scope(ctx, tx, scope, true)
@@ -377,7 +381,7 @@ func (s *Service) ArchiveReport(ctx context.Context, id ids.UUID) (crmcontracts.
 
 func (s *Service) validateReportAudience(ctx context.Context, tx pgx.Tx, in *crmcontracts.ReportingReportInput) error {
 	switch in.Audience {
-	case "private":
+	case reportingPrivate:
 		if in.AudienceTeamId != nil {
 			return refuse("audience_team_id", "not_allowed", "a private report has no audience team")
 		}

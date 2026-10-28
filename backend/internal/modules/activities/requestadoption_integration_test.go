@@ -38,7 +38,7 @@ func TestAcceptingHistoricalOwnRequestRecordsDurableAdoption(t *testing.T) {
 			if created || task.ArchivedAt != nil {
 				t.Fatal("acceptance did not restore the existing reminder")
 			}
-			rows, total, err := store.ListActivities(e.asSeat(e.rep), ListActivitiesInput{Kind: new("task"), AssigneeID: new(ids.From[ids.UserKind](e.rep)), TaskAsOf: &pastTheHorizon})
+			rows, total, err := store.ListActivities(e.asSeat(e.rep), ListActivitiesInput{Kind: new("task"), AssigneeID: new(ids.From[ids.UserKind](e.rep)), AsOf: &pastTheHorizon})
 			if err != nil {
 				t.Fatal(err)
 			}
