@@ -235,22 +235,8 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// now carry the version the approval was granted against and are no longer
 	// waived here. The entries that remain are types no approval ever pins.
 
-	// Both geocode writes are LAST-WRITER-WINS on purpose, and a version guard
-	// would make them worse rather than safer.
-	//
-	// RecordGeocode writes the answer for one address, identified by
-	// geocode_input_hash. Two workers racing on the same address write the same
-	// point; two racing on DIFFERENT addresses means the address changed
-	// mid-flight, and the later write is the one that matches the row — which
-	// is what last-writer-wins gives. A version guard would fail one of them and
-	// leave the company holding coordinates for an address it no longer has.
-	//
-	// invalidateGeocodeInTx only ever moves a status TOWARD stale, never away,
-	// and it runs inside the address writer's own transaction — the row is
-	// already locked by the patch that changed the address.
-	"internal/modules/contacts:recordGeocodeAfter": "guarded by a re-read rather than a version: the transaction rebuilds the address hash from the live columns and writes nothing unless it still matches what was resolved (addressHashInTx). That is a stronger check than a version pin here — a version would refuse a write whose address is unchanged but whose row was touched for some unrelated reason, and accept one whose address moved without bumping it",
-	"internal/modules/automation:Archive":          "absolute idempotent archive transition; concurrent archives converge, the visibility pre-read only feeds the audit before-image",
-	"internal/modules/approvals:recordEffectRan":   "absolute transition after the work ran: the single-use redemption already admitted exactly one run, and the mark must land whatever the row looks like now",
+	"internal/modules/automation:Archive":        "absolute idempotent archive transition; concurrent archives converge, the visibility pre-read only feeds the audit before-image",
+	"internal/modules/approvals:recordEffectRan": "absolute transition after the work ran: the single-use redemption already admitted exactly one run, and the mark must land whatever the row looks like now",
 
 	// Writes that run UNDER a lock taken by their caller (or a lock the
 	// function's own helper mints) — the guard exists, one frame up.

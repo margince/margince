@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 333 |
-| Columns | 3948 |
+| Columns | 3955 |
 | Foreign keys | 551 |
 | Owning areas | 37 |
 
@@ -150,7 +150,7 @@ erDiagram
 | [`activity_participant_replay`](compose.md#activity_participant_replay) | compose | 3 | 0 |
 | [`activity_reader_state`](activities.md#activity_reader_state) | activities | 8 | 0 |
 | [`activity_reply_verdict_history`](activities.md#activity_reply_verdict_history) | activities | 6 | 0 |
-| [`activity_request_settlement`](activities.md#activity_request_settlement) | activities | 10 | 0 |
+| [`activity_request_settlement`](activities.md#activity_request_settlement) | activities | 11 | 0 |
 | [`activity_retention_evidence`](activities.md#activity_retention_evidence) | activities | 12 | 0 |
 | [`activity_review_response`](activities.md#activity_review_response) | activities | 16 | 0 |
 | [`activity_review_template`](activities.md#activity_review_template) | activities | 16 | 0 |
@@ -232,7 +232,7 @@ erDiagram
 | [`company_dossier`](compose.md#company_dossier) | compose | 6 | 0 |
 | [`company_fact`](contacts.md#company_fact) | contacts | 18 | 0 |
 | [`company_fact_revision`](contacts.md#company_fact_revision) | contacts | 2 | 0 |
-| [`company_geocode_state`](contacts.md#company_geocode_state) | contacts | 5 | 0 |
+| [`company_geocode_state`](contacts.md#company_geocode_state) | contacts | 11 | 0 |
 | [`company_growth_fit`](compose.md#company_growth_fit) | compose | 6 | 0 |
 | [`company_offered_value`](contacts.md#company_offered_value) | contacts | 5 | 0 |
 | [`company_profile_field`](contacts.md#company_profile_field) | contacts | 15 | 0 |

@@ -290,8 +290,8 @@ export const AWaitingBuyerWithEveryVerb: Story = {
 // The hand-off, opened.
 //
 // It is a line of the row's menu, and pressing it opens the picker and its
-// confirm on the row. Only a task can be handed on: a group row names no single
-// activity to move.
+// confirm on the row. Only a task the reader may change can be handed on: a
+// group row names no single activity to move.
 export const ATaskBeingHandedOn: Story = {
   args: {
     ...baseArgs,
@@ -305,7 +305,7 @@ export const ATaskBeingHandedOn: Story = {
       title: "Send the retrofit quote",
       due_at: "2026-09-02T15:00:00Z",
       because: [{ kind: "due_today" }],
-      actions: [],
+      actions: ["complete", "snooze"],
     },
   },
   render: (args) => {

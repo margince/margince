@@ -1716,6 +1716,15 @@
   flex: 1;
   min-height: 0;
 }
+/* At the width where the list's rows become cards (listtable.css), the page
+ * scrolls instead of the list's body, so the surface is as tall as its cards. */
+@media (max-width: 720px) {
+  .wrap:has(> .lt),
+  .wrap:has(> .lt) > .lt {
+    flex: none;
+    min-height: auto;
+  }
+}
 
 /* The shell banners' slot: outside the scroller, so a state that blocks work
  * stays in view on a long page, and measured like the scroller beside it. */

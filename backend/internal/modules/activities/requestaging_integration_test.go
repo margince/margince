@@ -152,7 +152,7 @@ func TestAnAgedSystemReminderRetiresAndAWorkedOneStays(t *testing.T) {
 func assertCurrentHeldRequest(t *testing.T, e *loadEnv, task ids.UUID) {
 	t.Helper()
 	rows, _, err := storeKnowing(e).ListActivities(e.asSeat(e.rep), ListActivitiesInput{
-		Kind: new("task"), AssigneeID: new(ids.From[ids.UserKind](e.rep)), TaskAsOf: &pastTheHorizon,
+		Kind: new("task"), AssigneeID: new(ids.From[ids.UserKind](e.rep)), AsOf: &pastTheHorizon,
 	})
 	if err != nil {
 		t.Fatal(err)

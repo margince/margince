@@ -27,7 +27,7 @@
  * is, which is the honest reading of a document form we do not claim to know.
  */
 
-import { markLine, markQuote } from "./markdown-highlight";
+import { firstRunText, markLine, markQuote } from "./markdown-highlight";
 
 /** A leaf or a wrapper inside one line of prose. */
 export type Inline =
@@ -88,6 +88,11 @@ const QUOTE = /^ {0,3}>[ \t]?/;
 const BULLET = /^ {0,3}[-*+][ \t]+(.*)$/;
 const COMMENT_LINE = /^ {0,3}<!--.*-->[ \t]*$/;
 const ORDERED = /^ {0,3}\d{1,9}[.)][ \t]+(.*)$/;
+
+/** A body's first paragraph as one line of plain text, for a row's detail. */
+export function markdownFirstLine(source: string): string {
+  return firstRunText(readMarkdown(source).blocks);
+}
 
 /** Read a document, and mark the passage `highlight` asks for if it is there. */
 export function readMarkdown(

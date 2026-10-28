@@ -63,7 +63,7 @@ func boundToKnownMessage(ctx context.Context, tx pgx.Tx, in LogActivityInput) (c
 	// noise, or folded into another row, and handing it back would serve a
 	// tombstone as though it were the message — and, for an erasure, disclose
 	// that the message was erased. The arrival files its own copy instead.
-	out, err := readActivity(ctx, tx, incumbent, storekit.LiveOnly)
+	out, err := readActivityAt(ctx, tx, incumbent, storekit.LiveOnly, orWallClock(in.recordedAt))
 	if errors.Is(err, apperrors.ErrNotFound) {
 		// Out of scope, or no longer live. The message stays hidden and this
 		// caller files their own copy, which is the answer capture reaches for
@@ -74,6 +74,17 @@ func boundToKnownMessage(ctx context.Context, tx pgx.Tx, in LogActivityInput) (c
 		return crmcontracts.Activity{}, false, err
 	}
 	return out, true, nil
+}
+
+// replayLanding is the row a log lands on when its source key is already
+// here, with the meeting status the replay moved.
+func replayLanding(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmcontracts.Activity, bool, error) {
+	replay, err := replayedActivity(ctx, tx, in)
+	if err != nil || replay == nil {
+		return crmcontracts.Activity{}, false, err
+	}
+	moved, err := replayMovedTheMeeting(ctx, tx, *replay, in)
+	return moved, true, err
 }
 
 // recognizedMessage answers the activity this message already is, when the

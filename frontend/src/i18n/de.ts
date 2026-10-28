@@ -1712,6 +1712,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.bandCount_other": "{count} Einträge",
   "brief.focus.context": "Details anzeigen",
   "brief.queue.back": "Zurück zur Worklist",
+  "brief.queue.next": "Nächste Aufgabe",
+  "brief.queue.nextNone": "Keine weiteren Datensätze",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Worklist einblenden",
   "brief.queue.hide": "Worklist ausblenden",
@@ -3621,6 +3623,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.next.title": "Aufgaben",
   "co.next.empty": "Keine offenen Aufgaben zu diesem Unternehmen.",
   "co.next.overdue": "\u00dcberfällig",
+  "deal.commitments.title": "Zusagen des Kunden",
+  "deal.commitments.empty":
+    "Der Kunde hat zu diesem Deal keine offenen Zusagen.",
+  "deal.commitments.denied":
+    "Du kannst die Zusagen des Kunden nicht lesen, weil du keinen Zugriff auf die zitierten Kontakte und Nachrichten hast.",
+  "deal.commitments.incomplete":
+    "Einige Zusagen fehlen, weil du ihren Kontakt oder ihre Nachricht nicht lesen darfst.",
+  "deal.commitments.more":
+    "Die 25 dringendsten Zusagen werden gezeigt; weitere sind offen.",
+  "deal.commitments.source": "Nachricht öffnen",
+  "deal.commitments.overdue": "Überfällig: Ist es passiert?",
+  "deal.commitments.done": "Erledigt",
+  "deal.commitments.noLongerTrue": "Gilt nicht mehr",
+  "deal.commitments.differs": "Weicht vom Deal-Wert ab ({amount})",
   "co.next.due": "Fällig {when}",
   "co.next.undated": "Kein Fälligkeitsdatum",
   "co.next.col.task": "Aufgabe",
@@ -8283,6 +8299,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "„{value}“ ist kein Terminstatus. Es gibt: {allowed}.",
   "import.reason.meeting_status_not_valid_for_kind":
     "Nur ein Termin hat einen Terminstatus. Entferne ihn aus dieser Zeile.",
+  "import.reason.meeting_not_taken_place":
+    "Nach dem Datum oder der Uhrzeit in dieser Zeile hat der Termin noch nicht begonnen und kann daher weder held noch no_show sein. Lass den Status leer oder nimm booked oder canceled. Hat er heute begonnen, ergänze die Uhrzeit des Beginns.",
   "import.reason.direction_unknown":
     "„{value}“ ist keine Richtung. Es gibt: {allowed}.",
   "import.reason.activity_unlinked":
@@ -10930,8 +10948,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "threads.readOnly": "Du hast nur Lesezugriff.",
   "deal360.blocker": "Blocker",
   "deal360.buyer": "Was die Käuferseite will",
-  "deal360.verdict.live": "Aktiv",
-  "deal360.verdict.drifting": "Stagnierend",
+  "deal360.verdict.live": "Im Plan",
+  "deal360.verdict.drifting": "Verliert Tempo",
   "deal360.verdict.blocked": "Blockiert",
   "deal360.verdict.cold": "Kalt",
   "recordmail.title": "E-Mail",
@@ -15353,6 +15371,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.memory.channelTask": "Aufgabe",
   "contact.memory.replied": "Beantwortet",
   "contact.memory.unanswered": "Unbeantwortet",
+  "contact.memory.view": "Ansehen",
+  "contact.memory.viewEntry": "{title} ansehen",
 
   "contact.mayBeDone.notYet": "Noch nicht",
   "contact.rail.blocked": "Blockiert",
@@ -16666,6 +16686,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.scope.unassigned": "Nicht zugewiesen",
   "worklist.scope.team": "Team",
   "worklist.scope.all": "Alle",
+  "worklist.scope.unassignedHint":
+    "Offene Arbeit, die du sehen kannst und für die niemand zuständig ist.",
+  "worklist.take.action": "Übernehmen",
+  "worklist.take.done": "Dir zugewiesen",
+  "worklist.take.failed":
+    "Die Aufgabe konnte dir nicht zugewiesen werden. Bitte versuche es erneut.",
   "worklist.owner.shared": "Gemeinsam zuständig: {names}",
   "worklist.owner.left":
     "{name} ist ausgeschieden. Dieser Eintrag braucht ein neues verantwortliches Teammitglied.",
@@ -17017,6 +17043,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Ergebnis konnte nicht erfasst werden. Bitte versuche es erneut.",
   "worklist.verb.meetingDayMissing":
     "Dieses Datum gibt es in der Zeitzone des Unternehmens nicht. Wähle ein anderes Datum.",
+  "worklist.verb.meetingUpdateFor": "Aktualisieren: {subject}",
+  "worklist.verb.meetingCanceledFor": "Als abgesagt markieren: {subject}",
+  "worklist.verb.meetingCancelInCalendar":
+    "Die Kalendereinladung führt diesen Termin. Sag ihn über die Einladung ab.",
+  "worklist.verb.meetingCalendarManaged":
+    "Betreff, Notizen und Datum folgen der Kalendereinladung. Hier wird nur das Ergebnis gespeichert.",
   "worklist.verb.retry": "Erneut ausf\u00fchren",
   "worklist.verb.retryStarted": "Regel wird erneut ausgeführt…",
   "worklist.verb.retryFailed":
@@ -17068,6 +17100,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Kontakt konnte nicht zurückgestellt werden. Bitte versuche es erneut.",
   "worklist.verb.dismissUndoFailed":
     "Der Kontakt konnte nicht wiederhergestellt werden. Bitte versuche es erneut.",
+  "worklist.verb.stopFollowing": "Nicht mehr verfolgen",
+  "worklist.verb.stopped": "Kontakt wird nicht mehr verfolgt",
+  "worklist.verb.dismissAll": "Alle angezeigten zurückstellen",
+  "worklist.verb.dismissedAll": "Kontakte für einen Monat zurückgestellt",
+  "worklist.verb.dismissAllFailed":
+    "Die Kontakte konnten nicht zurückgestellt werden. Bitte versuche es erneut.",
+  "contact.follow.stopped": "Du verfolgst diesen Kontakt nicht mehr.",
+  "contact.follow.setAside":
+    "Du hast diesen Kontakt bis {date} zurückgestellt.",
+  "contact.follow.resume": "Wieder verfolgen",
   "worklist.verb.completeUndo": "Rückgängig",
   "worklist.verb.completeUndoFailed":
     "Die Aufgabe konnte nicht wieder geöffnet werden. Bitte versuche es erneut.",
@@ -18399,4 +18441,61 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.coverage.source.deal_advice": "Vorgeschlagene nächste Schritte",
   "tasks.origin.accepted_recommendation":
     "Aus einem vorgeschlagenen Schritt übernommen.",
+  "deal.verdict.yourMove": "Du bist dran",
+  "deal.verdict.yourMoveToday":
+    "Die Käuferseite hat heute geschrieben und wartet auf eine Antwort.",
+  "deal.verdict.yourMoveDays_one":
+    "Die Käuferseite hat vor {count} Tag geschrieben und wartet auf eine Antwort.",
+  "deal.verdict.yourMoveDays_other":
+    "Die Käuferseite hat vor {count} Tagen geschrieben und wartet auf eine Antwort.",
+  "deal.verdict.goneQuiet": "Verstummt",
+  "deal.verdict.goneQuietSince":
+    "Seit {date} gab es keine Aktivität, daher gilt der Deal als festgefahren.",
+  "deal.verdict.nothingFiled": "Zu diesem Deal ist noch nichts erfasst.",
+  "deal.verdict.onHold": "Pausiert",
+  "deal.verdict.onHoldUntil":
+    "Der Deal ist bis {date} pausiert, wie mit der Käuferseite vereinbart.",
+  "deal.verdict.overdueToClose": "Abschluss überfällig",
+  "deal.verdict.closePassed":
+    "Das erwartete Abschlussdatum ({date}) ist verstrichen.",
+  "deal.verdict.notStarted": "Nicht begonnen",
+  "co.verdict.noContact": "Noch kein Kontakt",
+  "co.verdict.addedOn":
+    "Das Unternehmen wurde am {date} erstellt. Bisher ist kein Austausch erfasst.",
+  "co.verdict.active": "Aktiv",
+  "co.verdict.lastExchange":
+    "Der letzte Austausch mit diesem Unternehmen war am {date}.",
+  "co.verdict.goingQuiet": "Wird ruhig",
+  "co.verdict.quietSince":
+    "Seit {date} gab es mit niemandem hier einen Austausch.",
+  "co.verdict.dormant": "Ruhend",
+  "co.verdict.dormantSince":
+    "Es gibt keinen offenen Deal und seit {date} keinen Austausch.",
+  "project.verdict.startsOn": "Das Projekt beginnt am {date}.",
+  "project.verdict.overrunning": "Überzogen",
+  "project.verdict.endPassed": "Das geplante Ende ({date}) ist verstrichen.",
+  "project.verdict.behind": "Im Rückstand",
+  "project.verdict.overdueFirst_one":
+    "{count} Aufgabe ist überfällig: {subject}.",
+  "project.verdict.overdueFirst_other":
+    "{count} Aufgaben sind überfällig. Die erste ist {subject}.",
+  "project.verdict.overdue_one": "{count} Aufgabe ist überfällig.",
+  "project.verdict.overdue_other": "{count} Aufgaben sind überfällig.",
+  "project.verdict.overdueFloor_one":
+    "Mindestens {count} Aufgabe ist überfällig.",
+  "project.verdict.overdueFloor_other":
+    "Mindestens {count} Aufgaben sind überfällig.",
+  "project.verdict.wrappingUp": "Auf der Zielgeraden",
+  "project.verdict.daysLeft_one":
+    "Es bleibt noch {count} Tag, und keine Aufgabe ist überfällig.",
+  "project.verdict.daysLeft_other":
+    "Es bleiben noch {count} Tage, und keine Aufgabe ist überfällig.",
+  "project.verdict.lastDay":
+    "Heute ist der letzte Tag, und keine Aufgabe ist überfällig.",
+  "project.verdict.onSchedule": "Im Zeitplan",
+  "project.verdict.dayOf":
+    "Das Projekt ist an Tag {day} von {total}, und keine Aufgabe ist überfällig.",
+  "contact.verdict.nothingOwed": "Auf keiner Seite steht etwas aus.",
+  "contact.verdict.noExchange":
+    "Mit diesem Kontakt ist noch kein Austausch erfasst.",
 };
