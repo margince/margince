@@ -12189,6 +12189,7 @@ export interface paths {
          *
          *     Read under the caller's own visibility and bounded, with `truncated` saying when
          *     the read stopped short. Nothing here is a claim about work the caller may not see.
+         *     A truncated page carries `next_cursor`, and the next page continues the same window.
          */
         get: operations["getHandledForYou"];
         put?: never;
@@ -48963,6 +48964,27 @@ export interface components {
             receipts: components["schemas"]["Receipt"][];
             /** @description True when more was done than was read. The list is a floor, not a total. */
             truncated: boolean;
+            /** @description Where the next page starts, present when `truncated` is true and the window can be read further. Paging stops after the first 5,000 receipts of a window. Absent on older responses, which a client reads as a list it cannot continue. */
+            next_cursor?: string;
+        };
+        /**
+         * @description Who did the act, and on whose behalf.
+         *
+         *     `label` is the name a reader reads, from the same owner that names the actor on
+         *     `/magic`: a background job by what it is, a member by their name. A colleague whose
+         *     seat the reader cannot name reads `magic.by.colleague`, never an id.
+         */
+        ReceiptActor: {
+            /** @enum {string} */
+            type: "human" | "agent" | "system" | "connector";
+            /** @description The actor as the audit trail records it. For the record, not for display. */
+            id: string;
+            /**
+             * Format: uuid
+             * @description The seat whose authority the act was taken under, where it bound one.
+             */
+            on_behalf_of?: string;
+            label: components["schemas"]["MagicSentence"];
         };
         /** @description The recorded automatic change and its current review state. */
         AppliedDealChangeReview: {
@@ -49018,6 +49040,12 @@ export interface components {
             occurred_at: string;
             subject?: components["schemas"]["AttentionSubject"];
             review?: components["schemas"]["AppliedDealChangeReview"];
+            /** @description Who did it: the member or agent that proposed an applied decision, or the job that made a correction. Absent on older responses. */
+            actor?: components["schemas"]["ReceiptActor"];
+            /** @description The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message. */
+            source_record?: components["schemas"]["AttentionSubject"];
+            /** @description Every field the act moved, old value to new, read from the audit rows it wrote and masked to what the reader may see on the record. Values travel whole, never cut short. Absent when no audit row of the act can be read, which is not the same as an act that moved nothing (an empty list). */
+            changes?: components["schemas"]["MagicFieldChange"][];
             /**
              * @description The way back, on a receipt for work that was APPLIED rather than approved.
              *     A receipt for an approval the system decided carries none: that decision is revisitable through the record it named. A change made without asking — the close-date sweep's corrections — has this receipt as its only telling, so the way back travels with it.
@@ -70909,7 +70937,10 @@ export interface operations {
     };
     getHandledForYou: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The `next_cursor` of the page before. It pins that page's window and instant, so a receipt landing between two reads does not shift the list under the reader. A token this server did not mint is refused with 422. */
+                cursor?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -70927,6 +70958,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getTeamExceptions: {

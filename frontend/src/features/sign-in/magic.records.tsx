@@ -13,6 +13,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { ChangeList } from "../../components/changelist";
 import { ReceiptReview } from "../../components/receiptreview";
 import { Button } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
@@ -20,12 +21,10 @@ import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { ENTITY, isEntityKind } from "../../lib/entity";
 import { type Receipt, useHandledForYou } from "../../lib/handled";
-import { historyFieldLabel } from "../../lib/historyfieldlabels";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
 import { type MagicLine, magicKey } from "./magic.queries";
@@ -33,7 +32,6 @@ import { MagicUndoButton } from "./magic.undo";
 import "../brief/brief.css";
 
 type MagicLineRecord = components["schemas"]["MagicLineRecord"];
-type MagicFieldChange = components["schemas"]["MagicFieldChange"];
 
 function useLineRecords(lineId: string, since: string, open: boolean) {
   return useInfiniteQuery({
@@ -188,49 +186,4 @@ function useReviewedReceipt(id: string | undefined): Receipt | undefined {
   return handled.data.receipts?.find(
     (receipt) => receipt.id === id && receipt.review !== undefined,
   );
-}
-
-/** Every field the change moved, old value to new. */
-export function ChangeList({
-  changes,
-}: Readonly<{ changes: readonly MagicFieldChange[] }>) {
-  const t = useT();
-  if (changes.length === 0) {
-    return null;
-  }
-  return (
-    <dl className="magic-changes">
-      {changes.map((change) => (
-        <div key={change.field}>
-          <dt className="t-caption">{historyFieldLabel(change.field, t)}</dt>
-          <dd>
-            {t("magic.records.fromTo", {
-              from: valueText(change.field, change.before, t),
-              to: valueText(change.field, change.after, t),
-            })}
-          </dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-// A stored value as text a reader recognises. Absent and empty read as "empty",
-// a list as its items, anything structured as its JSON. Never cut: two long
-// values that differ only at the end must still read as different.
-function valueText(
-  field: string,
-  value: unknown,
-  t: ReturnType<typeof useT>,
-): string {
-  if (value === null || value === undefined || value === "") {
-    return t("magic.records.empty_value");
-  }
-  if (field === INDUSTRY_FIELD && typeof value === "string") {
-    return industryWords(t, value);
-  }
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item)).join(", ");
-  }
-  return typeof value === "object" ? JSON.stringify(value) : String(value);
 }
