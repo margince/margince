@@ -276,10 +276,9 @@ func TestComposedWorkListsMembersSorted(t *testing.T) {
 	if goVersion != "1.26.5" {
 		t.Fatalf("go version = %q", goVersion)
 	}
-	want := "use (\n\t../../backend\n\t../../backend/tools\n\t../../extensions/zeta\n\t./backend\n)\n" +
-		"\nreplace github.com/margince/margince/backend => ../../backend\n"
+	want := "use (\n\t../../backend\n\t../../backend/tools\n\t../../extensions/zeta\n\t./backend\n)\n"
 	if !strings.HasSuffix(string(work), want) {
-		t.Fatalf("go.work = %q, want the use block and the backend replace %q", work, want)
+		t.Fatalf("go.work = %q, want use block %q", work, want)
 	}
 }
 

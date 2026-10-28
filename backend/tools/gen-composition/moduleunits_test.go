@@ -76,7 +76,7 @@ func TestAClientInstanceComposesExactlyWhatItsGoModRequires(t *testing.T) {
 	proxy, root, instance := t.TempDir(), t.TempDir(), t.TempDir()
 	offlineGo(t, proxy)
 	publish(t, proxy, "example.test/acme/crm/v2", "v2.1.0", map[string]string{
-		"go.mod": "module example.test/acme/crm/v2\n\ngo 1.21\n",
+		"go.mod": "module example.test/acme/crm/v2\n\ngo 1.21\n\nreplace github.com/margince/margince/backend => ../../backend\n",
 		"crm.go": "package crm\n",
 	})
 	writeTree(t, filepath.Join(root, "extensions", "unrequired"), map[string]string{"go.mod": "module example.test/unrequired\n", "u.go": "package u\n"})
@@ -121,6 +121,13 @@ replace github.com/margince/margince/composition => ./not-composed-yet
 	}
 	if len(got) != len(want) || got["crm"] != want["crm"] || got["notes"] != want["notes"] {
 		t.Fatalf("units = %v, want %v: not the indirect library, not core, not the unrequired folder", got, want)
+	}
+	copied, err := os.ReadFile(filepath.Join(got["crm"], "go.mod"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(copied), "replace") {
+		t.Errorf("the copy kept its replace, which Go never applies to a dependency:\n%s", copied)
 	}
 	if err := os.WriteFile(filepath.Join(got["crm"], "crm.go"), []byte("package crm\n"), 0o644); err != nil {
 		t.Errorf("the copy must be writable, unlike the module cache: %v", err)
