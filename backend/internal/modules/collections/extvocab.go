@@ -32,7 +32,7 @@ func (s *Store) SegmentEngine(ctx context.Context, resource string) (storekit.Qu
 func extensionVocabulary(engine storekit.Query) []VocabularyField {
 	fields := make([]VocabularyField, 0, len(engine.Fields))
 	for name, field := range engine.Fields {
-		fields = append(fields, VocabularyField{Name: name, Type: string(field.Type), Operators: storekit.OperatorsFor(field)})
+		fields = append(fields, VocabularyField{Name: name, Type: string(field.Type), Operators: storekit.OperatorsFor(field), Options: field.Options})
 	}
 	sort.Slice(fields, func(i, j int) bool { return fields[i].Name < fields[j].Name })
 	return fields
@@ -40,7 +40,7 @@ func extensionVocabulary(engine storekit.Query) []VocabularyField {
 
 // extensionEngine is the predicate engine of a kind an extension declared. It is
 // built from the declaration on each call, because the registry is filled at
-// boot. Every declared field is a text column the unit owns.
+// boot. Every declared field is a text column the unit owns, and a pick from its options when it declares any.
 //
 // Its rows carry no owner, so the kind's read right (Object) is the whole row
 // scope. A kind the caller may not read answers as no kind at all.
@@ -51,7 +51,11 @@ func extensionEngine(ctx context.Context, kind string) (storekit.Query, bool) {
 	}
 	fields := make(map[string]storekit.Field, len(declared.Fields))
 	for _, field := range declared.Fields {
-		fields[field.Name] = storekit.Field{Expr: "t." + pgx.Identifier{field.Name}.Sanitize(), Type: storekit.FieldText}
+		engineField := storekit.Field{Expr: "t." + pgx.Identifier{field.Name}.Sanitize(), Type: storekit.FieldText}
+		if len(field.Options) > 0 {
+			engineField.Type, engineField.Options = storekit.FieldPicklist, field.Options
+		}
+		fields[field.Name] = engineField
 	}
 	withholdFromCaller(ctx, kind, fields)
 	return storekit.Query{

@@ -711,7 +711,7 @@ RecordKinds: []extension.RecordKindDeclaration{{
 | `Kind` | The short name: a lower-case letter, then lower-case letters, digits or `_`, up to 32 characters. The stored name is `ext:<unit>:<kind>`. |
 | `DisplayName` | What a screen calls one record. Required, in English. |
 | `Table` | Your own table, `ext_<unit>_<name>`. It needs an `id uuid` primary key and an `archived_at timestamptz` column. Give `margince_app` the same four rights as on any unit table (see the table rules above), because core reads it with that role. |
-| `Fields` | The columns that make up a record, each with a label. Every one must exist in the table. |
+| `Fields` | The columns that make up a record, each with a label. Every one must exist in the table. A field may list `Options`, a short list of allowed values. A filter then offers them as a choice and refuses any other value, and the boot and `make gen` refuse a blank or repeated option. |
 | `NaturalKey` | The fields that name one record. The table must hold a unique index over these columns and no others, and the index must cover every row. |
 | `Defaults` | Starting rights per system role. Leave it out and every role is refused until an admin ticks the kind's object. |
 | `DeletePolicy` | `extension.DeleteArchiveOnly` (the default) or `extension.DeleteErasable`. |

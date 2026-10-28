@@ -41,6 +41,10 @@ type RecordKindField struct {
 	Name string
 	// Label is what a screen shows, in English.
 	Label string
+	// Options are the values the field may hold, when it is a pick from a short
+	// list. A filter then offers them as a choice instead of a text box, and
+	// refuses a value outside them. Empty means free text.
+	Options []string
 }
 
 // RecordKindDeclaration is one kind of record a unit adds beside core's own. It
@@ -197,6 +201,22 @@ func (k RecordKindDeclaration) Validate(unit Name) error {
 	return nil
 }
 
+// validateOptions refuses a blank or repeated option, which a filter would show
+// as an empty or doubled choice.
+func validateOptions(kind string, f RecordKindField) error {
+	seen := map[string]bool{}
+	for _, o := range f.Options {
+		if strings.TrimSpace(o) == "" {
+			return fmt.Errorf("record kind %q field %q has a blank option", kind, f.Name)
+		}
+		if seen[o] {
+			return fmt.Errorf("record kind %q field %q lists option %q twice", kind, f.Name, o)
+		}
+		seen[o] = true
+	}
+	return nil
+}
+
 func (k RecordKindDeclaration) validateFields() error {
 	if len(k.Fields) == 0 {
 		return fmt.Errorf("record kind %q declares no fields", k.Kind)
@@ -208,6 +228,9 @@ func (k RecordKindDeclaration) validateFields() error {
 		}
 		if strings.TrimSpace(f.Label) == "" {
 			return fmt.Errorf("record kind %q field %q has no label", k.Kind, f.Name)
+		}
+		if err := validateOptions(k.Kind, f); err != nil {
+			return err
 		}
 		if declared[f.Name] {
 			return fmt.Errorf("record kind %q declares field %q twice", k.Kind, f.Name)
