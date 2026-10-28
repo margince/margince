@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import {
-  CircleCheck,
-  CircleX,
-  Info,
-  Lightbulb,
-  type LucideIcon,
-  Sparkles,
-  TriangleAlert,
-  X,
-} from "lucide-react";
+import { Sparkles, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { IconAction } from "./iconaction";
+import {
+  CheckCircleFilled,
+  ErrorFilled,
+  type Glyph,
+  InfoFilled,
+  Lightbulb2Filled,
+  WarningFilled,
+} from "./materialsymbols";
 import "./callout.css";
 
 // Callout: something the surface says ABOUT itself, rather than content.
@@ -28,10 +27,9 @@ import "./callout.css";
 // `info` is the default and carries no urgency at all; `discovery` says the
 // notice is about something NEW to this reader — a capability they have not
 // met, a step of onboarding — which is the one claim that is not a verdict on
-// the account; `accent` is `info` said emphatically; `ai` says a MACHINE
-// produced what the notice is about, the same claim `Panel tone="ai"` makes for
-// a card. There is no eighth: a surface reaching for one is reaching for
-// emphasis, which is what the words are for.
+// the account; `ai` says a MACHINE produced what the notice is about, the same
+// claim `Panel tone="ai"` makes for a card. There is no seventh: a surface
+// reaching for one is reaching for emphasis, which is what the words are for.
 //
 // The vocabulary is a VALUE the type is read from, so the story that draws
 // every tone, the gate that checks every tone has a glyph and a rule, and the
@@ -39,7 +37,6 @@ import "./callout.css";
 // stale is always the one nobody renders.
 export const CALLOUT_TONES = [
   "info",
-  "accent",
   "success",
   "warning",
   "danger",
@@ -63,27 +60,19 @@ export type CalloutTone = (typeof CALLOUT_TONES)[number];
 export type CalloutKind = "outcome" | "standing" | "event";
 
 /**
- * The tone's glyph, so the claim reaches a reader who does not read colour.
- *
- * `CircleX` rather than `OctagonX` for danger: an octagon's eight short edges
- * alias into a circle at 16px, and the circular pair reads as one family beside
- * `CircleCheck` — the same outline, the opposite news.
- *
- * `accent` takes `Info` as well, because it is the same CLAIM as `info` said
- * emphatically: a second glyph there would tell a reader the two notices were
- * about different kinds of thing, when the only difference is how much of their
- * attention the surface is asking for.
+ * The tone's glyph, so the claim reaches a reader who does not read colour. A
+ * filled Material mark, because a tone mark stands alone rather than in a
+ * control.
  */
-const TONE_ICONS: Readonly<Record<CalloutTone, LucideIcon>> = {
-  info: Info,
-  accent: Info,
-  warning: TriangleAlert,
-  danger: CircleX,
-  success: CircleCheck,
+const TONE_ICONS: Readonly<Record<CalloutTone, Glyph>> = {
+  info: InfoFilled,
+  warning: WarningFilled,
+  danger: ErrorFilled,
+  success: CheckCircleFilled,
   // Something the reader has not met yet. Deliberately NOT a Sparkle: that
   // family is the AI mark, and a notice about a new capability drawn in it
   // would claim a machine wrote the notice.
-  discovery: Lightbulb,
+  discovery: Lightbulb2Filled,
   // The product's one mark for "a machine did this", the same glyph the
   // provenance tags and the AI badge wear.
   ai: Sparkles,
@@ -102,10 +91,9 @@ function announcementFor(
 }
 
 /**
- * A bordered notice on the pane's ground: the tone's icon, the heading in the
- * tone's ink, the words in ordinary ink, then whatever the reader can do about
- * it. Never a filled coloured box — colour on a page means one thing at a time,
- * and a tinted plate shouts over the record it sits in.
+ * A card washed in the tone's hue: the tone's icon in the tone's ink, the
+ * heading and the words in ordinary ink, then whatever the reader can do about
+ * it.
  *
  * One anatomy, and the heading is part of it rather than a choice. Icon,
  * heading over an optional body, `actions` at the end, then the dismiss. In a
@@ -115,14 +103,6 @@ function announcementFor(
  * cost a notice whose first words were sometimes a heading and sometimes not.
  * So no two of them scanned alike down a page, and the tone reached the ink of
  * one and not the other.
- *
- * `accent` is the emphasised information notice, in the brand accent: the same
- * role `Panel tone="accent"` plays — a lead, an ask, the one notice on a screen
- * that wants a MOVE rather than reporting state. Two of them on one screen is
- * no emphasis at all. It is deliberately NOT indigo: `--ai` is a claim about
- * provenance, that an agent authored what you are reading, so an emphatic
- * notice a contact wrote wearing indigo would tell every reader of that screen
- * something false about who decided.
  *
  * `live` decides how a screen reader learns about it; `kind` is the same
  * question asked in the caller's own terms. Passing neither is silent, exactly
@@ -167,7 +147,7 @@ export function Callout({
    * Replaces the tone's glyph, where the notice is about a nameable thing
    * rather than about how bad the news is.
    */
-  icon?: LucideIcon;
+  icon?: Glyph;
   /** The notice's first words, and the one part of it that is not optional. */
   title: ReactNode;
   /** Buttons or links, laid out after the body. */
@@ -193,7 +173,7 @@ export function Callout({
       role={live ?? announcementFor(kind, tone)}
     >
       <span className="callout-icon" aria-hidden="true">
-        <Icon size={16} strokeWidth={2} />
+        <Icon size={16} />
       </span>
       <div className="callout-body">
         <div className="callout-copy">

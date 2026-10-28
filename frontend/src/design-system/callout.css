@@ -1,11 +1,9 @@
 /* Callout — what the surface says about itself.
  *
- * A bordered card on the pane's ground carrying the tone's ICON before its
- * first words, never a filled coloured box: colour on this page means one thing
- * at a time, and a tinted plate shouts over the record it sits in. The words
- * carry the meaning; the icon's SHAPE doubles it for a reader who does not read
- * colour, which the dot this replaced could not — dots differing only in hue
- * are one signal wearing several coats.
+ * A card with a faint wash of the tone's hue, carrying the tone's ICON before
+ * its first words. The words stay in body ink; the icon's SHAPE doubles the
+ * tone for a reader who does not read colour, which a dot differing only in hue
+ * could not.
  *
  * ONE anatomy, at one density: icon | heading over an optional body | the verbs
  * at the END | the dismiss after them. There is no second face. The two this
@@ -18,12 +16,12 @@
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  /* The tone's own edge. `--callout-ink` is set by the tone class below, so one
-   * declaration gives every tone its border and an untoned callout keeps the
-   * pane's: a second rule per tone would be seven copies of one idea. */
-  border: 1px solid var(--callout-ink, var(--paneEdge));
   border-radius: var(--r-md);
-  background: var(--pane);
+  /* Mixed into the opaque `--bgElevated`: `--pane` is translucent, so the wash
+   * would shift with whatever sits behind the card. */
+  background: color-mix(in oklab, var(--callout-hue) 12%, var(--bgElevated));
+  /* Hairlines inside the card (fact rows, tables) darken with the wash. */
+  --borderSubtle: color-mix(in oklab, var(--callout-hue) 30%, var(--bgElevated));
 }
 
 .callout-icon {
@@ -67,8 +65,8 @@
 .callout-title {
   margin: 0;
   /* It is the notice's heading without being a heading element: the weight is
-   * what separates it from the prose under it, in the tone's own ink. */
-  font-weight: var(--fontWeightMedium);
+   * what separates it from the prose under it. */
+  font-weight: var(--fontWeightBold);
 }
 
 /* A callout's body is prose the caller supplies, so the paragraph reset lives
@@ -120,51 +118,45 @@
   flex: none;
 }
 
-/* Tone reaches the glyph, the heading and the card's own edge, in ONE ink: they
- * are one claim read three times — a shape for the reader who does not read
- * colour, a colour for the one who is scanning, and an edge that says how far
- * the claim reaches. A single custom property, so the three cannot be given
- * different values by rules that later move apart. */
-.callout-icon,
-.callout-title {
+/* Tone reaches the glyph's ink (`--callout-ink`) and the card's wash
+ * (`--callout-hue`); the words stay in body ink. */
+.callout-icon {
   color: var(--callout-ink);
 }
 
-/* `info` is the neutral report, and it takes the info family's own ink rather
- * than the page's. Body ink here made the one tone actually NAMED info the only
- * one a reader could not tell from untoned prose — the glyph and the heading
- * said "notice" in the same colour as the sentence under them. */
+/* `info` takes the info family's own ink: body ink would make the one tone
+ * NAMED info indistinguishable from untoned prose. */
 .callout-info {
-  --callout-ink: var(--infoText);
-}
-
-/* `accent` is `info` said emphatically — the ask, the lead — in the brand
- * accent and never in `--ai`, which claims a machine wrote what follows. */
-.callout-accent {
-  --callout-ink: var(--accentText);
+  --callout-ink: var(--info);
+  --callout-hue: var(--info);
 }
 
 .callout-warning {
-  --callout-ink: var(--warningText);
+  --callout-ink: var(--warning);
+  --callout-hue: var(--warning);
 }
 
 .callout-danger {
   --callout-ink: var(--dangerText);
+  --callout-hue: var(--danger);
 }
 
 .callout-success {
   --callout-ink: var(--successText);
+  --callout-hue: var(--success);
 }
 
 /* `discovery` is the notice about something NEW to this reader — a capability
  * they have not met, a step of onboarding. The one tone here that reports no
  * verdict on the account. */
 .callout-discovery {
-  --callout-ink: var(--discoveryText);
+  --callout-ink: var(--discovery);
+  --callout-hue: var(--discovery);
 }
 
 /* `ai` is the claim that a machine produced what the notice is about: the
  * indigo the product spends on nothing else. */
 .callout-ai {
-  --callout-ink: var(--aiText);
+  --callout-ink: var(--ai);
+  --callout-hue: var(--ai);
 }

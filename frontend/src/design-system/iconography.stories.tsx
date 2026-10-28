@@ -47,6 +47,13 @@ import {
 import type { CSSProperties } from "react";
 import { identifierNumber } from "../format/format";
 import {
+  CheckCircleFilled,
+  ErrorFilled,
+  InfoFilled,
+  Lightbulb2Filled,
+  WarningFilled,
+} from "./materialsymbols";
+import {
   specimenColumn,
   specimenIntro,
   specimenNote,
@@ -54,10 +61,11 @@ import {
 } from "./tokenspecimen";
 
 /**
- * Icons are `lucide-react` and nothing else: `check-icon-glyph.sh` refuses an
- * emoji or a pictographic character in rendered code. A glyph is a line drawing
- * on `currentColor`, so it takes the ink of whatever it sits in and follows
- * the theme without an asset of its own.
+ * Two sources. Material Symbols Rounded (filled, weight 500) for a status or
+ * tone mark that stands alone; lucide for the line icons in controls and verbs.
+ * `check-icon-glyph.sh` refuses an emoji or a pictographic character in
+ * rendered code. Both draw on `currentColor`, so a glyph takes the ink of
+ * whatever it sits in and follows the theme without an asset of its own.
  */
 const meta = {
   title: "Foundations/Iconography",
@@ -279,10 +287,11 @@ export const Library: Story = {
   render: () => (
     <div className={specimenColumn} style={column}>
       <p className={specimenIntro}>
-        Icons are lucide-react and nothing else. The library is large and any of
-        it is available, so search it before drawing anything new, and pick one
-        glyph per verb. These are the most imported in the product, shown at
-        24px, the library's default. A control draws its own at --controlIcon.
+        Line icons in controls and verbs are lucide-react. The library is large
+        and any of it is available, so search it before drawing anything new,
+        and pick one glyph per verb. These are the most imported in the product,
+        shown at 24px, the library's default. A control draws its own at
+        --controlIcon.
       </p>
       <div
         style={{
@@ -310,6 +319,49 @@ export const Library: Story = {
   ),
 };
 
+const STATUS_MARKS = {
+  InfoFilled,
+  WarningFilled,
+  ErrorFilled,
+  CheckCircleFilled,
+  Lightbulb2Filled,
+};
+
+/**
+ * The filled marks a status or a tone stands on, from Material Symbols Rounded
+ * at weight 500. `materialsymbols.tsx` is the one module that imports them, so
+ * a mark the product needs is added there.
+ */
+export const StatusMarks: Story = {
+  name: "Status marks",
+  render: () => (
+    <div className={specimenColumn} style={column}>
+      <p className={specimenIntro}>
+        A status or tone mark that stands alone is a filled Material symbol:
+        Rounded, weight 500. Each takes size the way a lucide glyph does, so one
+        can stand in for the other. Shown at 24px.
+      </p>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(112px, 1fr))",
+          gap: "var(--space-2)",
+          maxWidth: "960px",
+        }}
+      >
+        {Object.entries(STATUS_MARKS).map(([name, Mark]) => (
+          <div key={name} style={tile}>
+            <Mark size={24} />
+            <span style={tileName} title={name}>
+              {name}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  ),
+};
+
 /**
  * The rules, each with the thing that holds it.
  */
@@ -326,8 +378,10 @@ export const UsageRules: Story = {
         style={{ ...column, paddingInlineStart: "var(--space-4)" }}
       >
         <li>
-          Lucide only. No emoji, no pictographic character, no image standing in
-          for a glyph.
+          A status or tone mark that stands alone is a filled Material symbol,
+          from <code>materialsymbols.tsx</code>. A line icon in a control or a
+          verb is lucide. No emoji, no pictographic character, no image standing
+          in for a glyph.
         </li>
         <li>
           Mark a decorative glyph <code>aria-hidden</code>. The accessible name
@@ -344,8 +398,8 @@ export const UsageRules: Story = {
         </li>
         <li>Items in an overflow menu are words with no glyph.</li>
         <li>
-          Sparkles marks an agent. Indigo glyphs mean a machine did it, and
-          nothing a human wrote wears one.
+          Sparkles marks an agent, and it is always drawn solid. Indigo glyphs
+          mean a machine did it, and nothing a human wrote wears one.
         </li>
         <li>
           Colour a glyph with a text token and let the words say the meaning.

@@ -280,11 +280,11 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
     expect(violations, violations.join("\n")).toEqual([]);
   });
 
-  // B-EP09.20 (Lucide-only glyphs) + B-EP09.8 (offline honesty): UI glyphs
-  // come from lucide-react — the sanctioned 🟢/🟡 autonomy semantics render
-  // through the .dot token component, so NO emoji may appear in any source
-  // string or JSX text. The service worker never caches or fabricates /v1.
-  it("uses no emoji glyphs in source strings — Lucide only (§2b)", () => {
+  // B-EP09.20 (icon glyphs) + B-EP09.8 (offline honesty): UI glyphs come from
+  // lucide-react or materialsymbols.tsx — the sanctioned 🟢/🟡 autonomy
+  // semantics render through the .dot token component, so NO emoji may appear
+  // in any source string or JSX text. The service worker never caches or fabricates /v1.
+  it("uses no emoji glyphs in source strings (§2b)", () => {
     const emoji = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
     const violations: string[] = [];
     for (const file of files) {

@@ -126,7 +126,7 @@ measures the real default.
 3. Literal colours live only in `tokens.css`.
 4. No copy typed into code. JSX text and attributes a user sees come from the `i18n` catalogs
    (checked by a walk of the TS AST).
-5. No emoji in source strings: Lucide only. The 🟢/🟡 autonomy meanings render through the `.dot`
+5. No emoji in source strings: a glyph is a lucide or Material icon. The 🟢/🟡 autonomy meanings render through the `.dot`
    token component.
 6. One service worker ships, and only `src/lib/pwa.ts` registers it. From Cache Storage it answers only
    two things. One is the offline page, for a page load the network could not make. The other is that

@@ -17,19 +17,14 @@ import { FactList } from "./factlist";
 
 afterEach(cleanup);
 
-/**
- * The tone's glyph, named by the class lucide draws it under. `accent` shares
- * `info`'s on purpose — it is the same claim said emphatically — which is why
- * the pairing gets a test of its own below rather than resting on this table.
- */
+/** The tone's glyph, as the selector its icon source names it by. */
 const TONE_GLYPHS: ReadonlyArray<readonly [CalloutTone, string]> = [
-  ["info", "lucide-info"],
-  ["accent", "lucide-info"],
-  ["warning", "lucide-triangle-alert"],
-  ["danger", "lucide-circle-x"],
-  ["success", "lucide-circle-check"],
-  ["discovery", "lucide-lightbulb"],
-  ["ai", "lucide-sparkles"],
+  ["info", '[data-symbol="info"]'],
+  ["warning", '[data-symbol="warning"]'],
+  ["danger", '[data-symbol="error"]'],
+  ["success", '[data-symbol="check-circle"]'],
+  ["discovery", '[data-symbol="lightbulb-2"]'],
+  ["ai", ".lucide-sparkles"],
 ];
 
 /** Every kind a caller can pass, passing none included. */
@@ -65,28 +60,24 @@ const DERIVATIONS: ReadonlyArray<
   readonly [CalloutKind | undefined, CalloutTone, string | null]
 > = [
   ["outcome", "info", "status"],
-  ["outcome", "accent", "status"],
   ["outcome", "warning", "status"],
   ["outcome", "danger", "alert"],
   ["outcome", "success", "status"],
   ["outcome", "discovery", "status"],
   ["outcome", "ai", "status"],
   ["event", "info", "status"],
-  ["event", "accent", "status"],
   ["event", "warning", "status"],
   ["event", "danger", "status"],
   ["event", "success", "status"],
   ["event", "discovery", "status"],
   ["event", "ai", "status"],
   ["standing", "info", null],
-  ["standing", "accent", null],
   ["standing", "warning", null],
   ["standing", "danger", null],
   ["standing", "success", null],
   ["standing", "discovery", null],
   ["standing", "ai", null],
   [undefined, "info", null],
-  [undefined, "accent", null],
   [undefined, "warning", null],
   [undefined, "danger", null],
   [undefined, "success", null],
@@ -165,25 +156,7 @@ describe("Callout", () => {
     // Dots differing only in hue are one signal wearing several coats. A shape
     // per tone is what reaches a reader who does not read colour.
     const { container } = render(<Callout tone={tone} title="Something" />);
-    expect(container.querySelector(`.callout-icon .${glyph}`)).toBeTruthy();
-  });
-
-  it("gives the accent tone info's glyph rather than a second one", () => {
-    // `accent` is `info` asking for more attention, not a different kind of
-    // claim, so the shape must not say the two are about different things — and
-    // the glyph is READ off `info`'s own render rather than named again here.
-    const informational = render(<Callout title="An account is waiting" />);
-    const glyph = informational.container
-      .querySelector(".callout-icon svg")
-      ?.getAttribute("class");
-    cleanup();
-
-    const emphatic = render(
-      <Callout tone="accent" title="An account is waiting" />,
-    );
-    expect(
-      emphatic.container.querySelector(".callout-icon svg"),
-    ).toHaveAttribute("class", glyph);
+    expect(container.querySelector(`.callout-icon ${glyph}`)).toBeTruthy();
   });
 
   it("takes the caller's glyph instead where the notice names a thing", () => {
@@ -193,7 +166,7 @@ describe("Callout", () => {
     expect(
       container.querySelector(".callout-icon .lucide-mail-x"),
     ).toBeTruthy();
-    expect(container.querySelector(".lucide-triangle-alert")).toBeNull();
+    expect(container.querySelector('[data-symbol="warning"]')).toBeNull();
   });
 
   it("states the announcement for every kind against every tone", () => {
