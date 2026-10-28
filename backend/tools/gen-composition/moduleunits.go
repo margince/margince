@@ -128,11 +128,40 @@ func fetchUnits(root string) error {
 		return err
 	}
 	for _, m := range downloaded {
-		if err := os.CopyFS(filepath.Join(outDir, unitNameFromModulePath(m.Path)), os.DirFS(m.Dir)); err != nil {
+		dst := filepath.Join(outDir, unitNameFromModulePath(m.Path))
+		if err := os.CopyFS(dst, os.DirFS(m.Dir)); err != nil {
+			return fmt.Errorf("%s: %w", m.Path, err)
+		}
+		if err := dropReplaces(filepath.Join(dst, "go.mod")); err != nil {
 			return fmt.Errorf("%s: %w", m.Path, err)
 		}
 	}
 	return nil
+}
+
+// dropReplaces removes a downloaded unit's replace lines from its copy. Go
+// never applies a dependency's replace, and the composed workspace would: a
+// path like ../../backend points nowhere from the copy and conflicts with the
+// workspace's own backend.
+func dropReplaces(goModPath string) error {
+	raw, err := os.ReadFile(goModPath) // #nosec G304 -- the go.mod of a copy this run made
+	if err != nil {
+		return err
+	}
+	mod, err := modfile.Parse(goModPath, raw, nil)
+	if err != nil {
+		return err
+	}
+	for _, r := range append([]*modfile.Replace(nil), mod.Replace...) {
+		if err := mod.DropReplace(r.Old.Path, r.Old.Version); err != nil {
+			return err
+		}
+	}
+	out, err := mod.Format()
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(goModPath, out, 0o644) // #nosec G306 -- build output
 }
 
 func goModules(dir string, args []string) ([]listedModule, error) {
