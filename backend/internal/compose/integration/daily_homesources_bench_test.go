@@ -6,18 +6,22 @@
 package integration
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -128,5 +132,25 @@ func makeDailyBriefs(t *testing.T, e *apptest.AppEnv, seats Seats) {
 		}
 		mustCall(t, seat.env(e), "POST", "/v1/brief", nil, http.StatusCreated, &run)
 		t.Logf("brief: %s holds %d items", seat.Name, len(run.Items))
+	}
+}
+
+// worklistStagesSoFar is the timings logWorklistStages later subtracts.
+func worklistStagesSoFar() map[string]httpserver.Histogram { return attention.StageTimings() }
+
+// logWorklistStages prints each worklist stage's mean over the latency step,
+// slowest first, so a slow worklist row names the lane it spent its time in.
+// The timings are process-wide, so the reads before the step are subtracted.
+func logWorklistStages(t *testing.T, before map[string]httpserver.Histogram) {
+	t.Helper()
+	stages := attention.StageTimings()
+	count := func(stage string) uint64 { return stages[stage].Count() - before[stage].Count() }
+	mean := func(stage string) float64 {
+		return (stages[stage].Sum() - before[stage].Sum()) / float64(max(1, count(stage)))
+	}
+	names := slices.Collect(maps.Keys(stages))
+	slices.SortFunc(names, func(a, b string) int { return cmp.Compare(mean(b), mean(a)) })
+	for _, stage := range names {
+		t.Logf("worklist stage %-28s mean %8.1f ms over %d", stage, mean(stage)*1000, count(stage))
 	}
 }

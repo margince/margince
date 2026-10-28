@@ -16,6 +16,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"time"
 
@@ -91,7 +92,7 @@ func (d attentionDecay) Lapsed(
 		QuietBefore:  now.AddDate(0, 0, -(relstrength.QuietDays - 1)),
 		TouchedAfter: quietCeilingFrom(now),
 		AsOf:         now,
-		Limit:        decayCandidateCap,
+		Limit:        decayCandidateCap * decayCandidatePages,
 		// Contacts this reader set aside, and senders capture judged
 		// personal, an advisor or noise, are removed before the cap. Each
 		// module renders the rule over its own table, and search takes it as
@@ -120,17 +121,22 @@ func (d attentionDecay) Lapsed(
 	var lapsed []attention.QuietRelationship
 	exhausted := false
 	err := database.WithWorkspaceTx(ctx, d.pool, func(tx pgx.Tx) error {
-		for page := 0; page < decayCandidatePages && len(lapsed) < decayLaneCap; page++ {
-			read.Offset = page * decayCandidateCap
-			found, err := d.quietPage(ctx, tx, read, now)
+		// Every page's candidates in one read; only the derivation goes page by page.
+		quiet, err := search.QuietContacts(ctx, tx, read)
+		if err != nil {
+			return err
+		}
+		exhausted = len(quiet) < read.Limit
+		for page := range slices.Chunk(quiet, decayCandidateCap) {
+			if len(lapsed) >= decayLaneCap {
+				exhausted = false
+				break
+			}
+			found, err := d.quietPage(ctx, tx, page, now)
 			if err != nil {
 				return err
 			}
-			lapsed = append(lapsed, found.lapsed...)
-			if found.read < decayCandidateCap {
-				exhausted = true
-				break
-			}
+			lapsed = append(lapsed, found...)
 		}
 		return nil
 	})
@@ -145,28 +151,17 @@ func (d attentionDecay) Lapsed(
 // derivation rejects would otherwise hide a valid contact behind them.
 const decayCandidatePages = 3
 
-// quietPageResult is one candidate page: how many candidates it read, and the
-// ones the derivation calls quiet.
-type quietPageResult struct {
-	read   int
-	lapsed []attention.QuietRelationship
-}
-
-// quietPage reads one page of candidates and keeps the derived silences.
+// quietPage derives one page of candidates and keeps the derived silences.
 func (d attentionDecay) quietPage(
-	ctx context.Context, tx pgx.Tx, read search.QuietRead, now time.Time,
-) (quietPageResult, error) {
-	quiet, err := search.QuietContacts(ctx, tx, read)
-	if err != nil {
-		return quietPageResult{}, err
-	}
+	ctx context.Context, tx pgx.Tx, quiet []search.QuietContact, now time.Time,
+) ([]attention.QuietRelationship, error) {
 	candidates := make([]ids.ContactID, 0, len(quiet))
 	for _, found := range quiet {
 		candidates = append(candidates, ids.From[ids.ContactKind](found.Edge.ContactID))
 	}
 	touched, err := contact360.LastTouchFor(ctx, tx, candidates, contact360.AssembleOptions{AsOf: now})
 	if err != nil {
-		return quietPageResult{}, err
+		return nil, err
 	}
 	touches := make(map[ids.ContactID]relstrength.Touches, len(touched))
 	for id, touch := range touched {
@@ -174,19 +169,19 @@ func (d attentionDecay) quietPage(
 	}
 	zone, err := identity.ZoneAppliedTx(ctx, tx)
 	if err != nil {
-		return quietPageResult{}, err
+		return nil, err
 	}
 	changed, err := d.store.RelationshipChangesForContacts(ctx, tx, candidates, now, touches, zone)
 	if err != nil {
-		return quietPageResult{}, err
+		return nil, err
 	}
 	// Which of them still carries money, read in the same transaction. A
 	// reader without the deal grant loses this one fact and keeps the row.
 	funded, err := deals.OpenDealContacts(ctx, tx, candidates)
 	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
-		return quietPageResult{}, err
+		return nil, err
 	}
-	return quietPageResult{read: len(quiet), lapsed: quietSurvivors(quiet, changed, funded, now)}, nil
+	return quietSurvivors(quiet, changed, funded, now), nil
 }
 
 // quietRelationships keeps only the contacts the derivation calls quiet, and

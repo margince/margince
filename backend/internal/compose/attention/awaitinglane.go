@@ -89,6 +89,7 @@ func (s *Service) WithAwaiting(a Awaiting) *Service {
 // that include it, never a colleague's queue or the unassigned one.
 // The two reads fail apart, so one stumbling keeps the other's rows.
 func (s *Service) readingAwaiting(ctx context.Context, asOf time.Time, loc *time.Location) (*Service, []*crmcontracts.WorklistSourceUnavailable) {
+	defer timeStage("awaiting")()
 	scoped := *s
 	if s.awaiting == nil || s.taskScope == TasksOwnedBy || s.taskScope == TasksUnassigned {
 		return &scoped, nil

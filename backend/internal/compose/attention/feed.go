@@ -404,6 +404,7 @@ func (s *Service) decisionsDepth() int {
 // decisionsToDepth is the same read at a depth the caller chooses: the lane feed
 // takes a page, and the ranked queue takes a census so its batch rows can count.
 func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontracts.AttentionItem, laneCount, error) {
+	defer timeStage("needs_you")()
 	pairs, openPairs, err := s.duplicateCandidates(ctx, depth)
 	if err != nil {
 		return nil, laneCount{}, err
@@ -455,6 +456,7 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 // done is the receipt lane: what ran without asking, so a rep can see it and
 // challenge it.
 func (s *Service) done(ctx context.Context, asOf time.Time) ([]crmcontracts.AttentionItem, error) {
+	defer timeStage("done_for_you")()
 	since := asOf.Add(-24 * time.Hour)
 	recent, err := s.receipts.Recent(ctx, since, doneCap)
 	if err != nil {
