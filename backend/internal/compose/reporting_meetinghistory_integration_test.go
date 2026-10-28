@@ -38,9 +38,6 @@ func TestReportingMixedMeetingHistoryPreservesRecordedCredit(t *testing.T) {
 		{name: "legacy future", legacy: true, linked: true, future: true},
 	} {
 		start, held := at.Add(-time.Hour), "held"
-		if tc.future {
-			start = at.Add(time.Hour)
-		}
 		input := activities.LogActivityInput{Kind: "meeting", Subject: &tc.name, OccurredAt: &start, MeetingStatus: &held, Source: "manual"}
 		if tc.linked {
 			input.Links = []activities.ActivityLinkInput{{EntityType: "contact", EntityID: ids.UUID(customer.Id)}}
@@ -56,7 +53,12 @@ func TestReportingMixedMeetingHistoryPreservesRecordedCredit(t *testing.T) {
 		}
 		// Imported legacy state may differ from a captured transition's host and links.
 		var b reportingBindings
-		if _, err := e.owner.Exec(human, "UPDATE activity SET host_user_id="+b.add(e.Rep3)+" WHERE id="+b.add(meeting.Id), b.values...); err != nil {
+		set := "host_user_id=" + b.add(e.Rep3)
+		if tc.future {
+			// Writers refuse held before the start; older rows can carry it.
+			set += ", occurred_at=" + b.add(at.Add(time.Hour))
+		}
+		if _, err := e.owner.Exec(human, "UPDATE activity SET "+set+" WHERE id="+b.add(meeting.Id), b.values...); err != nil {
 			t.Fatal(err)
 		}
 		if tc.legacy {

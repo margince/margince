@@ -15,6 +15,7 @@ package activities
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -97,9 +98,9 @@ func activityArchivedFilter(held bool) storekit.ArchivedFilter {
 // when held is true — the same dispatch activityArchivedFilter makes for the
 // archived filter, kept as its own function so a call site never has to
 // choose between readActivity and readHeldActivity by hand.
-func readActivityForWrite(ctx context.Context, tx pgx.Tx, id ids.ActivityID, held bool) (crmcontracts.Activity, error) {
+func readActivityForWrite(ctx context.Context, tx pgx.Tx, id ids.ActivityID, held bool, asOf time.Time) (crmcontracts.Activity, error) {
 	if held {
-		return readHeldActivity(ctx, tx, id, storekit.IncludeArchived)
+		return readHeldActivity(ctx, tx, id, storekit.IncludeArchived, asOf)
 	}
-	return readActivity(ctx, tx, id, storekit.LiveOnly)
+	return readActivityAt(ctx, tx, id, storekit.LiveOnly, asOf)
 }

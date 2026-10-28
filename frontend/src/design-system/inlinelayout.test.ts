@@ -12,6 +12,7 @@ import {
   parseSource,
   sourceFileAt,
 } from "../../scripts/lib/source-tree";
+import { declarationOf } from "../testing/classnames";
 
 // LAYOUT IS A CLASS, NOT A STYLE ATTRIBUTE, IN EVERY FILE.
 //
@@ -138,45 +139,18 @@ function propertyName(name: ts.PropertyName): string | undefined {
 }
 
 /**
- * Every value each name is given in one module. EVERY value, not the last: this
- * reader has no scope information, and dropping an ambiguous name would be the
- * census choosing the one direction it must not fail in.
- */
-function initializers(source: ts.SourceFile): Map<string, ts.Expression[]> {
-  const byName = new Map<string, ts.Expression[]>();
-  const visit = (node: ts.Node) => {
-    if (
-      ts.isVariableDeclaration(node) &&
-      ts.isIdentifier(node.name) &&
-      node.initializer !== undefined
-    ) {
-      const known = byName.get(node.name.text);
-      if (known) known.push(node.initializer);
-      else byName.set(node.name.text, [node.initializer]);
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(source);
-  return byName;
-}
-
-/**
  * Every object literal an expression can hand to an element, however it is
- * wrapped: a ternary's two arms, a guard's right-hand side, a nullish default,
- * an `Object.assign`, a spread, a cast, and a name declared elsewhere in the
- * same module.
+ * wrapped. That covers a ternary's arms, a guard, a nullish default,
+ * `Object.assign`, a spread, a cast, and a name the expression's scope binds.
  *
  * It reaches THROUGH a call rather than stopping at one, so
  * `style={merge({ marginTop: "4px" })}` is read: the literal is a layout rule a
  * class could hold whatever the function does with it, and a walk that stopped
  * would hand every author a one-word way around this gate.
  */
-function styleObjectsUnder(
-  root: ts.Expression,
-  named: Map<string, ts.Expression[]>,
-): ts.ObjectLiteralExpression[] {
+function styleObjectsUnder(root: ts.Expression): ts.ObjectLiteralExpression[] {
   const found: ts.ObjectLiteralExpression[] = [];
-  const resolved = new Set<string>();
+  const resolved = new Set<ts.Node>();
   const visit = (node: ts.Node): void => {
     // A property's NAME is an identifier too, so an object is walked by hand:
     // handing the whole node on would resolve `{ marginTop: x }` against a
@@ -194,9 +168,12 @@ function styleObjectsUnder(
       return;
     }
     if (ts.isIdentifier(node)) {
-      if (resolved.has(node.text)) return;
-      resolved.add(node.text);
-      for (const initializer of named.get(node.text) ?? []) visit(initializer);
+      const declared = declarationOf(node);
+      if (!declared || resolved.has(declared)) return;
+      resolved.add(declared);
+      if (ts.isVariableDeclaration(declared) && declared.initializer) {
+        visit(declared.initializer);
+      }
       return;
     }
     ts.forEachChild(node, visit);
@@ -209,11 +186,8 @@ function styleObjectsUnder(
 const RENDER_CALL = /(^|\.)(createElement|jsx|jsxs|jsxDEV)$/;
 
 /** The `style` a props object carries, however that object is written. */
-function styleOfProps(
-  props: ts.Expression,
-  named: Map<string, ts.Expression[]>,
-): ts.Expression[] {
-  return styleObjectsUnder(props, named).flatMap((object) =>
+function styleOfProps(props: ts.Expression): ts.Expression[] {
+  return styleObjectsUnder(props).flatMap((object) =>
     object.properties.flatMap((property) =>
       ts.isPropertyAssignment(property) &&
       propertyName(property.name) === "style"
@@ -229,24 +203,20 @@ function styleOfProps(
  * both of those compile to. An element cannot tell them apart and neither may
  * the census — a spread is otherwise one keystroke around this gate.
  */
-function styleValues(
-  node: ts.Node,
-  named: Map<string, ts.Expression[]>,
-): ts.Expression[] {
+function styleValues(node: ts.Node): ts.Expression[] {
   if (ts.isJsxAttribute(node)) {
     if (!ts.isIdentifier(node.name) || node.name.text !== "style") return [];
     const value = node.initializer;
     if (value === undefined || !ts.isJsxExpression(value)) return [];
     return value.expression === undefined ? [] : [value.expression];
   }
-  if (ts.isJsxSpreadAttribute(node))
-    return styleOfProps(node.expression, named);
+  if (ts.isJsxSpreadAttribute(node)) return styleOfProps(node.expression);
   if (
     ts.isCallExpression(node) &&
     RENDER_CALL.test(node.expression.getText())
   ) {
     const props = node.arguments[1];
-    return props === undefined ? [] : styleOfProps(props, named);
+    return props === undefined ? [] : styleOfProps(props);
   }
   return [];
 }
@@ -256,10 +226,7 @@ function styleValues(
  * Declared to BE a style, so it is one wherever it is used — including in a
  * `.ts` module with no JSX in it at all.
  */
-function annotatedStyles(
-  source: ts.SourceFile,
-  named: Map<string, ts.Expression[]>,
-): ts.ObjectLiteralExpression[] {
+function annotatedStyles(source: ts.SourceFile): ts.ObjectLiteralExpression[] {
   const found: ts.ObjectLiteralExpression[] = [];
   const visit = (node: ts.Node) => {
     if (
@@ -268,7 +235,7 @@ function annotatedStyles(
       node.initializer !== undefined &&
       STYLE_ANNOTATION.test(node.type.getText())
     ) {
-      found.push(...styleObjectsUnder(node.initializer, named));
+      found.push(...styleObjectsUnder(node.initializer));
     }
     ts.forEachChild(node, visit);
   };
@@ -280,18 +247,17 @@ type InlineLayout = { where: string; line: number; property: string };
 
 /** Every static layout rule written inline in one parsed module, by line. */
 function inlineLayoutIn(where: string, source: ts.SourceFile): InlineLayout[] {
-  const named = initializers(source);
   // A set, because one literal is reachable both from the element that wears it
   // and from its own annotated declaration, and it is one rule either way.
   const objects = new Set<ts.ObjectLiteralExpression>();
   const visit = (node: ts.Node) => {
-    for (const style of styleValues(node, named)) {
-      for (const object of styleObjectsUnder(style, named)) objects.add(object);
+    for (const style of styleValues(node)) {
+      for (const object of styleObjectsUnder(style)) objects.add(object);
     }
     ts.forEachChild(node, visit);
   };
   visit(source);
-  for (const object of annotatedStyles(source, named)) objects.add(object);
+  for (const object of annotatedStyles(source)) objects.add(object);
 
   const found: InlineLayout[] = [];
   for (const object of objects) {
@@ -421,6 +387,20 @@ describe("layout is a class, not a style attribute", () => {
           'const sheet = { row: { gap: "4px" } };\n<div style={sheet.row} />',
         ),
       ).toHaveLength(1);
+    });
+
+    it("reads a name in its own scope, not a same-named one beside it", () => {
+      const twoRows = (styled: string, unstyled: string) =>
+        [
+          `function A() { const row = ${styled}; return <div style={row} />; }`,
+          `function B() { const row = ${unstyled}; return <i data-row={row} />; }`,
+        ].join("\n");
+      expect(
+        read(twoRows('{ marginTop: "4px" }', '{ color: "red" }')),
+      ).toHaveLength(1);
+      expect(read(twoRows('{ color: "red" }', '{ marginTop: "4px" }'))).toEqual(
+        [],
+      );
     });
 
     it("reads a declared style with no element in sight", () => {

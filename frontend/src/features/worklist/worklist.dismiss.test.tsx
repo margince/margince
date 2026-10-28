@@ -132,6 +132,135 @@ describe("a contact the reader is not chasing", () => {
   });
 });
 
+describe("a relationship the reader has decided is over", () => {
+  it("is stopped with no end date, and the undo resumes it", async () => {
+    stub(DAY_WITH_THE_CONTACT);
+    const user = userEvent.setup();
+    renderUnderAToastRegion();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["worklist.verb.stopFollowing"],
+      }),
+    );
+    await waitFor(async () => {
+      expect(await dismissal()).toEqual({
+        method: "PUT",
+        body: { permanent: true },
+      });
+    });
+    expect(await screen.findByText(en["worklist.verb.stopped"])).toBeTruthy();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["worklist.verb.dismissUndo"],
+      }),
+    );
+    await waitFor(async () => {
+      expect((await dismissal())?.method).toBe("DELETE");
+    });
+  });
+});
+
+describe("dismissing every optional reconnection shown", () => {
+  it("sets aside exactly the listed contacts in one request", async () => {
+    stub(QUIET_DAY);
+    const user = userEvent.setup();
+    renderUnderAToastRegion();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["worklist.verb.dismissAll"],
+      }),
+    );
+    // The row the server offers no dismiss on, and the pinned row in the
+    // queue above, stay out of the request.
+    await waitFor(async () => {
+      expect(await dismissal()).toEqual({
+        method: "PUT",
+        body: { contact_ids: [QUIET_ONE, QUIET_TWO], days: 30 },
+      });
+    });
+    expect(
+      await screen.findByText(en["worklist.verb.dismissedAll"]),
+    ).toBeTruthy();
+  });
+
+  it("says so when the server refuses the request", async () => {
+    stubRefusedDismissAll();
+    const user = userEvent.setup();
+    renderUnderAToastRegion();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["worklist.verb.dismissAll"],
+      }),
+    );
+    expect(
+      await screen.findByText(en["worklist.verb.dismissAllFailed"]),
+    ).toBeTruthy();
+  });
+
+  it("is not offered for a single row, which has its own Not now", async () => {
+    stub(
+      day({
+        optional_relationships: [quiet(QUIET_ONE, "Quiet one", true)],
+      }),
+    );
+    renderUnderAToastRegion();
+
+    expect(await screen.findByText("Quiet one")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: en["worklist.verb.dismissAll"] }),
+    ).toBeNull();
+  });
+});
+
+const QUIET_ONE = "0199f5c0-0000-7000-8000-000000000d11";
+const QUIET_TWO = "0199f5c0-0000-7000-8000-000000000d12";
+const PINNED = "0199f5c0-0000-7000-8000-000000000d14";
+
+function quiet(id: string, title: string, dismissible: boolean) {
+  return row({
+    id,
+    source: "relationship_decay",
+    category: "relationships",
+    title,
+    actions: dismissible ? ["open", "dismiss"] : ["open"],
+  });
+}
+
+const QUIET_DAY = day({
+  queue: [quiet(PINNED, "Pinned one", true)],
+  optional_relationships: [
+    quiet(QUIET_ONE, "Quiet one", true),
+    quiet(QUIET_TWO, "Quiet two", true),
+    quiet("0199f5c0-0000-7000-8000-000000000d13", "Quiet three", false),
+  ],
+  summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+});
+
+// The bulk write answers 404 for the whole request, as the server does when
+// one listed contact is out of the reader's reach.
+function stubRefusedDismissAll() {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.includes("nudge-dismissals")) {
+        return new Response(
+          JSON.stringify({ title: "Not Found", status: 404 }),
+          { status: 404, headers: { "content-type": "application/json" } },
+        );
+      }
+      if (url.split("?")[0].endsWith("/worklist")) {
+        return jsonResponse(QUIET_DAY);
+      }
+      return jsonResponse({ data: [] });
+    }),
+  );
+}
+
 // stubVanishingContact answers the way the server does around a dismissal: the
 // contact is on the lane until they are set aside and gone afterwards, and the
 // undo is refused.

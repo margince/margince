@@ -13,11 +13,11 @@ input and output schema in folds below it. What a tool may do and whether a huma
 
 | | |
 |---|---:|
-| Tools | 37 |
+| Tools | 38 |
 | Resources | 9 |
-| Tool catalog | 130.3 KB |
+| Tool catalog | 133.1 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 34230 |
+| Approx. wire tokens | 34965 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 27.6 KB | 21% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 32.7 KB | 25% | Yes, every step |
-| Input schemas | 61.2 KB | 47% | Yes, every step |
-| _Names, annotations, punctuation_ | 8.7 KB | 6% | Partly |
-| **Description + input schema** | **94.0 KB** | **72%** | **the recurring cost** |
+| Output schemas | 27.6 KB | 20% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 33.3 KB | 24% | Yes, every step |
+| Input schemas | 63.4 KB | 47% | Yes, every step |
+| _Names, annotations, punctuation_ | 8.9 KB | 6% | Partly |
+| **Description + input schema** | **96.6 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -55,7 +55,7 @@ descriptions and input schemas are what each step pays for.
 - [`ui://margince/approval.html`](#approval_view): Waiting for a decision
 - [`ui://margince/update.html`](#update_view): What changed
 
-### Tools (37)
+### Tools (38)
 
 | Tool | What it is for | Read-only | View | Prompt tokens |
 |---|---|:-:|---|---:|
@@ -65,6 +65,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1381 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
+| [`change_reports`](#change_reports) | Prepare saved reports |  |  | 643 |
 | [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1228 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 553 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 337 |
@@ -1792,6 +1793,213 @@ record's own fields, and create_record with record_type offer to make an offer w
     "trace_id",
     "trust",
     "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### change_reports
+
+**Prepare saved reports**
+
+```text
+Change saved reports for a human to review. draft saves a report's next charts as a draft of a
+report they edit, or with no report_id creates a new report only they see. A draft waits for a human
+to publish it in Analytics, and is refused on a report that already has one. Publishing, discarding,
+sharing, scheduling and archiving a report stay a human's. Use read_reports to read reports and
+their metric catalog. Keep the report id and draft_revision to preview the draft with read_reports.
+(Runs immediately; requires passport scope "write".)
+```
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "properties": {
+    "action": {
+      "description": "draft: save a report's next charts as a draft for a human to publish, or create a new report only they see",
+      "enum": [
+        "draft"
+      ],
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "report_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "selection": {
+      "description": "The report's metrics, charts and sections; a pipeline_id comes from the workspace's pipeline list",
+      "properties": {
+        "blocks": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "close_window": {
+          "type": "string"
+        },
+        "interval": {
+          "properties": {
+            "end_at": {
+              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
+              "format": "date-time",
+              "type": "string"
+            },
+            "start_at": {
+              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          "required": [
+            "end_at",
+            "start_at"
+          ],
+          "type": "object"
+        },
+        "layout": {
+          "items": {
+            "properties": {
+              "cards": {
+                "items": {
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "metric": {
+                      "type": "string"
+                    },
+                    "question": {
+                      "properties": {
+                        "entity": {
+                          "type": "string"
+                        },
+                        "group_by": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "measures": {
+                          "items": {
+                            "properties": {
+                              "as": {
+                                "type": "string"
+                              },
+                              "field": {
+                                "type": "string"
+                              },
+                              "fn": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "fn"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "entity",
+                        "measures"
+                      ],
+                      "type": "object"
+                    },
+                    "width": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "width"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "title": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "cards"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "metrics": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "period": {
+          "type": "string"
+        },
+        "pipeline_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "scope": {
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        "target_basis": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "blocks",
+        "close_window",
+        "metrics",
+        "period",
+        "scope",
+        "target_basis"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "action",
+    "selection"
   ],
   "type": "object"
 }

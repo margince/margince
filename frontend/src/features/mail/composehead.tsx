@@ -15,11 +15,14 @@ import { Callout } from "../../design-system/callout";
 import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
 import {
+  type TokenCard,
   TokenInput,
   type TokenSuggestion,
 } from "../../design-system/tokeninput";
 import { useT } from "../../i18n";
 import type { Transport } from "../../lib/contacttransports";
+import { ENTITY } from "../../lib/entity";
+import { routeHash } from "../../lib/router";
 import "./composehead.css";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -66,20 +69,38 @@ export function recipientSuggestions(
 ): readonly TokenSuggestion[] {
   const seen = new Set<string>();
   const out: TokenSuggestion[] = [];
-  const offer = (value: string | null | undefined, label: string) => {
+  const offer = (
+    value: string | null | undefined,
+    label: string,
+    card?: TokenCard,
+  ) => {
     const address = value?.trim();
     if (!address || seen.has(address)) {
       return;
     }
     seen.add(address);
-    out.push({ value: address, label, hint: address });
+    out.push({ value: address, label, hint: address, card });
   };
+  const account = company?.company?.display_name;
+  const contactCard = (id: string, title: string | null | undefined) => ({
+    identity: id,
+    href: routeHash(ENTITY.contact.route(id)),
+    about: [title, account].filter(Boolean).join(" · ") || undefined,
+  });
   const subject = contact?.contact;
   for (const address of subject?.emails ?? []) {
-    offer(address.email, subject?.full_name ?? address.email);
+    offer(
+      address.email,
+      subject?.full_name ?? address.email,
+      subject && contactCard(subject.id, subject.title),
+    );
   }
   for (const contact of company?.contacts?.data ?? []) {
-    offer(contact.primary_email, contact.full_name);
+    offer(
+      contact.primary_email,
+      contact.full_name,
+      contactCard(contact.contact_id, contact.title),
+    );
   }
   for (const member of colleagues) {
     // Members come last: a message goes to the record's contacts first.
@@ -92,7 +113,7 @@ export function recipientSuggestions(
     ) {
       continue;
     }
-    offer(member.email, member.display_name);
+    offer(member.email, member.display_name, { identity: member.id });
   }
   return out;
 }

@@ -58,7 +58,7 @@ func (m attentionMeetings) openIn(
 	kind := string(crmcontracts.ActivityKindMeeting)
 	in := activities.ListActivitiesInput{
 		Kind: &kind, OccurredAfter: &window.From, OccurredBefore: &window.Until, DayDates: dayDatesOf(window), Limit: &limit,
-		AwaitingOutcome: true, Sort: &soonestFirst, ReadableOnly: true,
+		OpenStatusOnly: true, Sort: &soonestFirst, ReadableOnly: true,
 	}
 	if !applyMeetingScope(ctx, &in, scope, owner) {
 		return nil, nil
@@ -229,7 +229,7 @@ func (m attentionMeetingsAwaitingOutcome) Since(
 	kind := string(crmcontracts.ActivityKindMeeting)
 	in := activities.ListActivitiesInput{
 		Kind: &kind, OccurredAfter: &window.From, OccurredBefore: &window.Until, DayDates: dayDatesOf(window),
-		AwaitingOutcome: true, CustomerMeetingsOnly: true, Limit: &limit, Sort: &soonestFirst, ReadableOnly: true,
+		AwaitingOutcomeAsOf: &window.Until, Limit: &limit, Sort: &soonestFirst, ReadableOnly: true,
 	}
 	if !applyMeetingScope(ctx, &in, scope, owner) {
 		return nil, nil
@@ -245,7 +245,8 @@ func (m attentionMeetingsAwaitingOutcome) Since(
 		}
 		over = append(over, attention.MeetingAwaitingOutcome{
 			ID: ids.UUID(row.Id), Subject: subjectOfMeeting(row), StartedAt: row.OccurredAt, Precision: row.OccurredPrecision,
-			Version: row.Version, HostUserID: hostOfMeeting(row),
+			Version: row.Version, HostUserID: hostOfMeeting(row), CalendarManaged: row.CalendarManaged != nil && *row.CalendarManaged,
+			ReadOnly: row.Writable == nil || !*row.Writable,
 		})
 	}
 	with, err := m.store.MeetingCounterparties(ctx, meetingIDs(over, func(meeting attention.MeetingAwaitingOutcome) ids.UUID { return meeting.ID }))

@@ -6,6 +6,8 @@ package storekit
 import (
 	"context"
 	"errors"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -27,7 +29,7 @@ func TestWithinRadiusCompilesToBoundValuesOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("compile: %v", err)
 	}
-	for _, want := range []string{"t.geocode_status = $", "t.geocode_lat IS NOT NULL", "t.geocode_lat BETWEEN"} {
+	for _, want := range []string{"located_point.company_id = t.id", "located_point.status = $", "located_point.lat IS NOT NULL", "located_point.lat BETWEEN"} {
 		if !strings.Contains(sql, want) {
 			t.Errorf("SQL is missing %q:\n%s", want, sql)
 		}
@@ -37,6 +39,13 @@ func TestWithinRadiusCompilesToBoundValuesOnly(t *testing.T) {
 	}
 	if len(args) == 0 {
 		t.Error("no value was bound")
+	}
+	// A bound value the SQL never names is one Postgres cannot type, and it
+	// refuses the whole statement.
+	for n := 1; n <= len(args); n++ {
+		if !regexp.MustCompile(`\$` + strconv.Itoa(n) + `\b`).MatchString(sql) {
+			t.Errorf("$%d is bound but the SQL never reads it:\n%s", n, sql)
+		}
 	}
 }
 

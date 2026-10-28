@@ -1665,6 +1665,7 @@
       "warnings"
     ]
   },
+  "change_reports": null,
   "change_state": null,
   "change_tags": null,
   "check_availability": {
@@ -4624,6 +4625,316 @@
     ]
   },
   "draft_outbound": null,
+  "draft_report": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "archived_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "audience": {
+            "type": "string"
+          },
+          "audience_team_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cadence": {
+            "type": "string"
+          },
+          "can_manage": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": {
+            "type": "string"
+          },
+          "draft_revision": {
+            "type": "integer"
+          },
+          "edition_count": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "last_status": {
+            "type": "string"
+          },
+          "latest_captured_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "next_due_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "owner_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "paused_schedule_count": {
+            "type": "integer"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "selection": {
+            "type": "object",
+            "properties": {
+              "blocks": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "close_window": {
+                "type": "string"
+              },
+              "interval": {
+                "type": "object",
+                "properties": {
+                  "end_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "start_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "end_at",
+                  "start_at"
+                ]
+              },
+              "layout": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "cards": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "metric": {
+                            "type": "string"
+                          },
+                          "question": {
+                            "type": "object",
+                            "properties": {
+                              "entity": {
+                                "type": "string"
+                              },
+                              "group_by": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "limit": {
+                                "type": "integer"
+                              },
+                              "measures": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "as": {
+                                      "type": "string"
+                                    },
+                                    "field": {
+                                      "type": "string"
+                                    },
+                                    "fn": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "fn"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "entity",
+                              "measures"
+                            ]
+                          },
+                          "width": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "width"
+                        ]
+                      }
+                    },
+                    "title": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "cards"
+                  ]
+                }
+              },
+              "metrics": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "period": {
+                "type": "string"
+              },
+              "pipeline_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "scope": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "target_basis": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "blocks",
+              "close_window",
+              "metrics",
+              "period",
+              "scope",
+              "target_basis"
+            ]
+          },
+          "version": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "audience",
+          "created_at",
+          "id",
+          "name",
+          "owner_id",
+          "revision",
+          "selection",
+          "version"
+        ]
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "captured_by": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "record_type": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "record_id",
+            "record_type"
+          ]
+        }
+      },
+      "freshness": {
+        "type": "object",
+        "properties": {
+          "authoritative": {
+            "type": "boolean"
+          },
+          "last_synced_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "authoritative"
+        ]
+      },
+      "schema_version": {
+        "type": "string"
+      },
+      "trace_id": {
+        "type": "string"
+      },
+      "trust": {
+        "type": "string"
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        }
+      }
+    },
+    "required": [
+      "data",
+      "evidence",
+      "freshness",
+      "schema_version",
+      "trace_id",
+      "trust",
+      "warnings"
+    ]
+  },
   "enrich": {
     "type": "object",
     "properties": {

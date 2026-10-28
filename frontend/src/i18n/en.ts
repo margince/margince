@@ -1645,6 +1645,8 @@ export const en = {
   "worklist.bandCount_other": "{count} items",
   "brief.focus.context": "View details",
   "brief.queue.back": "Back to Worklist",
+  "brief.queue.next": "Next task",
+  "brief.queue.nextNone": "No more records",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Show Worklist",
   "brief.queue.hide": "Hide Worklist",
@@ -3610,6 +3612,20 @@ export const en = {
   "co.next.title": "Tasks",
   "co.next.empty": "No open tasks for this company.",
   "co.next.overdue": "Overdue",
+  "deal.commitments.title": "Customer commitments",
+  "deal.commitments.empty":
+    "The customer has no open commitments on this deal.",
+  "deal.commitments.denied":
+    "You cannot read the customer’s commitments: they quote contacts and messages you have no access to.",
+  "deal.commitments.incomplete":
+    "Some commitments are left out because you cannot read their contact or message.",
+  "deal.commitments.more":
+    "Showing the 25 most urgent commitments; more are open.",
+  "deal.commitments.source": "Open message",
+  "deal.commitments.overdue": "Overdue: did it happen?",
+  "deal.commitments.done": "Done",
+  "deal.commitments.noLongerTrue": "No longer true",
+  "deal.commitments.differs": "Differs from the deal value ({amount})",
   "co.next.due": "Due {when}",
   "co.next.undated": "No due date",
   "co.next.col.task": "Task",
@@ -8344,6 +8360,8 @@ export const en = {
     "“{value}” is not a meeting status. The statuses are: {allowed}.",
   "import.reason.meeting_status_not_valid_for_kind":
     "Only a meeting has a meeting status. Remove it from this row.",
+  "import.reason.meeting_not_taken_place":
+    "By the date or time on this row, the meeting has not started yet, so it cannot be held or no_show. Leave the status empty, or use booked or canceled. If it started today, add the time it started.",
   "import.reason.direction_unknown":
     "“{value}” is not a direction. The directions are: {allowed}.",
   "import.reason.activity_unlinked":
@@ -9365,9 +9383,6 @@ export const en = {
   "ob.s1.fieldRequired": "Required",
   "ob.s1.requiredMissing": "Complete these fields to continue: {fields}",
   "ob.s1.saving": "Saving…",
-  "ob.s1.saveFailed": "Company not saved",
-  "ob.s1.savedNote":
-    "Saved to the company. Changes here are saved again when you continue.",
   "ob.readFromSite": "read from site",
 
   "ob.manualChapterLegal": "Legal company",
@@ -10988,8 +11003,8 @@ export const en = {
   "threads.readOnly": "Your access is read-only.",
   "deal360.blocker": "Blockers",
   "deal360.buyer": "What the buyer wants",
-  "deal360.verdict.live": "Live",
-  "deal360.verdict.drifting": "Drifting",
+  "deal360.verdict.live": "On track",
+  "deal360.verdict.drifting": "Slipping",
   "deal360.verdict.blocked": "Blocked",
   "deal360.verdict.cold": "Cold",
   "recordmail.title": "Email",
@@ -14115,14 +14130,16 @@ export const en = {
   "webForms.field.nameHint":
     "Shown on each lead’s note, for example Contact page.",
   "webForms.field.sender": "Where is your form?",
+  "webForms.senderGroup.noDeveloper": "No developer needed",
+  "webForms.senderGroup.developer": "For developers",
   "webForms.field.senderFixed":
     "Fixed once the form exists. Create a new form to change it.",
   "webForms.senderHint.browser":
-    "A form on your own pages, or in WordPress, Webflow or another site builder that lets you set where a form sends to. No developer needed.",
+    "A form on your own pages, or in WordPress, Webflow or another site builder that lets you set where a form sends to.",
   "webForms.senderHint.server":
-    "For developers: your website’s server forwards each enquiry, signed with a secret.",
+    "Your website’s server forwards each enquiry, signed with a secret.",
   "webForms.senderHint.webflow":
-    "For developers: a webhook made with Webflow’s API. For a Webflow form, choose Your website.",
+    "A webhook made with Webflow’s API. For a Webflow form, choose Your website.",
   "webForms.senderHint.typeform":
     "Each Typeform response comes in through a webhook. Margince makes the secret for you.",
   "webForms.senderHint.tally":
@@ -15280,6 +15297,8 @@ export const en = {
   "contact.memory.channelTask": "Task",
   "contact.memory.replied": "Replied",
   "contact.memory.unanswered": "Unanswered",
+  "contact.memory.view": "View",
+  "contact.memory.viewEntry": "View {title}",
 
   "contact.mayBeDone.notYet": "Not yet",
   "contact.rail.blocked": "Blocked",
@@ -16559,6 +16578,11 @@ export const en = {
   "worklist.scope.unassigned": "Unassigned",
   "worklist.scope.team": "Team",
   "worklist.scope.all": "All",
+  "worklist.scope.unassignedHint":
+    "Open work you can see that nobody is responsible for.",
+  "worklist.take.action": "Take it",
+  "worklist.take.done": "Assigned to you",
+  "worklist.take.failed": "Task was not assigned to you. Retry.",
   "worklist.owner.shared": "Shared responsibility: {names}",
   "worklist.owner.left": "{name} left. This needs a new owner.",
   "worklist.owner.sharedCount_one": "{count} responsible recipient",
@@ -16903,6 +16927,12 @@ export const en = {
   "worklist.verb.meetingOutcomeFailed": "Outcome was not recorded. Retry.",
   "worklist.verb.meetingDayMissing":
     "That date does not exist in the company’s time zone. Pick another date.",
+  "worklist.verb.meetingUpdateFor": "Update {subject}",
+  "worklist.verb.meetingCanceledFor": "Mark as canceled: {subject}",
+  "worklist.verb.meetingCancelInCalendar":
+    "The calendar invitation keeps this meeting. Cancel it through the invitation.",
+  "worklist.verb.meetingCalendarManaged":
+    "The calendar invitation keeps the subject, notes and date. Only the outcome is saved here.",
   "worklist.verb.retry": "Run again",
   "worklist.verb.retryStarted": "Rerunning rule…",
   "worklist.verb.retryFailed": "Rule was not rerun. Retry.",
@@ -16969,6 +16999,15 @@ export const en = {
   "worklist.verb.dismissUndo": "Undo",
   "worklist.verb.dismissFailed": "Contact was not set aside. Retry.",
   "worklist.verb.dismissUndoFailed": "Contact was not restored. Retry.",
+  "worklist.verb.stopFollowing": "Stop following",
+  "worklist.verb.stopped": "Stopped following this contact",
+  "worklist.verb.dismissAll": "Dismiss all shown",
+  "worklist.verb.dismissedAll": "Contacts set aside for a month",
+  "worklist.verb.dismissAllFailed": "Contacts were not set aside. Retry.",
+  // The reader's own choice, so "you": a colleague's choice never shows here.
+  "contact.follow.stopped": "You stopped following this contact.",
+  "contact.follow.setAside": "You set this contact aside until {date}.",
+  "contact.follow.resume": "Resume following",
   "worklist.verb.completeUndo": "Undo",
   "worklist.verb.completeUndoFailed": "Task was not reopened. Retry.",
   // The frame states the fact and the source follows it, rather than the
@@ -18262,6 +18301,56 @@ export const en = {
   "connectors.syncTimeUnknown": "Successful sync time unavailable",
   "brief.coverage.source.deal_advice": "Suggested deal steps",
   "tasks.origin.accepted_recommendation": "Accepted from a suggested step.",
+  "deal.verdict.yourMove": "Your move",
+  "deal.verdict.yourMoveToday":
+    "The buyer wrote today and is waiting for a reply.",
+  "deal.verdict.yourMoveDays_one":
+    "The buyer wrote {count} day ago and is waiting for a reply.",
+  "deal.verdict.yourMoveDays_other":
+    "The buyer wrote {count} days ago and is waiting for a reply.",
+  "deal.verdict.goneQuiet": "Gone quiet",
+  "deal.verdict.goneQuietSince":
+    "Nothing has happened since {date}, so the deal counts as stalled.",
+  "deal.verdict.nothingFiled": "Nothing has been filed on this deal yet.",
+  "deal.verdict.onHold": "On hold",
+  "deal.verdict.onHoldUntil":
+    "The deal is paused until {date}, as agreed with the buyer.",
+  "deal.verdict.overdueToClose": "Overdue to close",
+  "deal.verdict.closePassed": "The expected close date, {date}, has passed.",
+  "deal.verdict.notStarted": "Not started",
+  "co.verdict.noContact": "No contact yet",
+  "co.verdict.addedOn":
+    "The account was added {date}. No exchange is recorded yet.",
+  "co.verdict.active": "Active",
+  "co.verdict.lastExchange": "The last exchange with this account was {date}.",
+  "co.verdict.goingQuiet": "Going quiet",
+  "co.verdict.quietSince": "Nobody here has had an exchange since {date}.",
+  "co.verdict.dormant": "Dormant",
+  "co.verdict.dormantSince":
+    "Nothing is open, and there has been no exchange since {date}.",
+  "project.verdict.startsOn": "The project starts {date}.",
+  "project.verdict.overrunning": "Overrunning",
+  "project.verdict.endPassed": "The target end, {date}, has passed.",
+  "project.verdict.behind": "Behind",
+  "project.verdict.overdueFirst_one": "{count} task is overdue: {subject}.",
+  "project.verdict.overdueFirst_other":
+    "{count} tasks are overdue. The first is {subject}.",
+  "project.verdict.overdue_one": "{count} task is overdue.",
+  "project.verdict.overdue_other": "{count} tasks are overdue.",
+  "project.verdict.overdueFloor_one": "At least {count} task is overdue.",
+  "project.verdict.overdueFloor_other": "At least {count} tasks are overdue.",
+  "project.verdict.wrappingUp": "Wrapping up",
+  "project.verdict.daysLeft_one":
+    "{count} day is left, and no task is overdue.",
+  "project.verdict.daysLeft_other":
+    "{count} days are left, and no task is overdue.",
+  "project.verdict.lastDay": "Today is the last day, and no task is overdue.",
+  "project.verdict.onSchedule": "On schedule",
+  "project.verdict.dayOf":
+    "The project is on day {day} of {total}, and no task is overdue.",
+  "contact.verdict.nothingOwed": "Nothing is owed on either side.",
+  "contact.verdict.noExchange":
+    "No exchange with this contact is recorded yet.",
 } as const;
 
 export type MessageKey = keyof typeof en;

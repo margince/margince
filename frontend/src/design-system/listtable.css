@@ -236,6 +236,7 @@
    * min-width that fights an inline-flex pill — reset all four before the
    * row's own look applies. */
   min-width: 0;
+  max-inline-size: 100%;
   margin: 0;
   padding: 0;
   display: inline-flex;
@@ -295,8 +296,16 @@
   color: var(--textPrimary);
 }
 
+/* A row is never wider than the toolbar it stands in. The value is the segment
+ * that gives way, onto a second line: on a phone a long value beside its
+ * attribute is wider than the screen. */
 .lt-frow-value {
   color: var(--textPrimary);
+  white-space: normal;
+  text-align: start;
+}
+.lt-frow > .lt-menu-wrap:has(> .lt-frow-value) {
+  min-inline-size: 0;
 }
 
 .lt-frow-more {
@@ -854,9 +863,8 @@
  *
  * This is the ONE avatar size a prop cannot carry — the row height is the
  * table's decision and the chip arrives already built from a caller's cell
- * renderer, which knows nothing about it. It is also the only place a chip is
- * drawn below `Avatar`'s smallest rung: the scale starts at `sm`, so this 20
- * belongs to the table and to nothing else. */
+ * renderer, which knows nothing about it. The scale starts at `sm`; the only
+ * other 20px chip is a recipient's token in `TokenInput`, inside its pill. */
 .lt-table.dense .avatar,
 .lt-table td:not(.lt-identity) .avatar {
   width: 20px;
@@ -1158,9 +1166,17 @@
 
   /* A field with no value has nothing to label: on a desktop row the empty cell
    * holds the grid together, but in a card it would read as a missing answer to
-   * a question nobody asked. */
-  .lt-table td:empty {
+   * a question nobody asked. A cell renderer may wrap nothing in an element, so
+   * a cell counts as empty when nothing in it holds text or draws itself. */
+  .lt-table td:not(:has(:not(:empty), img, svg, input)) {
     display: none;
+  }
+
+  /* The value beside a label shrinks to the card and breaks a long run, such as
+   * an e-mail address, rather than running past the card's edge. */
+  .lt-table td > * {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   /* The field name, taken from the column header the card no longer shows. */
@@ -1220,6 +1236,14 @@
   /* Cards are already tight; the density control governs the desktop grid. */
   .lt-table.dense td {
     padding: var(--space-1) 0;
+  }
+
+  /* Cards are read by scrolling down past the toolbar, so the page scrolls and
+     the body takes its full height. Kept a scroller, it got only what the
+     toolbar left of the screen, and under a tall toolbar that is nothing. */
+  .lt-scroll {
+    flex: none;
+    overflow: visible;
   }
 
   /* Cards are as wide as the screen and stack, so the columns' combined floor

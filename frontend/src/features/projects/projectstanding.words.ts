@@ -5,7 +5,10 @@ import type {
   TimelineGap,
 } from "../../design-system/standingtimeline";
 import { formatMoney } from "../../format/format";
-import { formatDayMonth } from "../../format/format.dates";
+import {
+  formatDayMonth,
+  formatDayMonthNearYear,
+} from "../../format/format.dates";
 import type { Translator, Words } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { ProjectHealthState } from "./projecthealth.queries";
@@ -35,6 +38,16 @@ const STATE_WORD: Readonly<Record<ProjectHealthState, MessageKey>> = {
 
 function day(iso: string, ctx: Ctx): string {
   return formatDayMonth(iso, ctx.locale, ctx.zone);
+}
+
+// A verdict's reason may name a day in another year, so it says the year then.
+function dayNearYear(iso: string, view: Project360, ctx: Ctx): string {
+  return formatDayMonthNearYear(
+    iso,
+    ctx.locale,
+    ctx.zone,
+    new Date(view.as_of),
+  );
 }
 
 export function phaseName(phase: string, t: Translator): string {
@@ -67,12 +80,92 @@ export function projectVerdict(view: Project360, ctx: Ctx): StandingVerdict {
     case "withheld":
       return { word: ctx.t("state.withheld"), tone: "neutral" };
     default:
-      return {
-        word: ctx.t("standing.notAssessed"),
-        sentence: ctx.t("project.standing.unassessed"),
-        tone: "neutral",
-      };
+      return (
+        deliveryVerdict(view, ctx) ?? {
+          word: ctx.t("standing.notAssessed"),
+          sentence: ctx.t("project.standing.unassessed"),
+          tone: "neutral",
+        }
+      );
   }
+}
+
+// A count cut at the page is the least it could be, and says so.
+function overdueSentence(
+  tasks: NonNullable<ReturnType<typeof commitmentsReading>>,
+  ctx: Ctx,
+): string {
+  const count = String(tasks.overdue);
+  if (tasks.overdueIsFloor) {
+    return ctx.plural("project.verdict.overdueFloor", tasks.overdue, { count });
+  }
+  return tasks.firstOverdue
+    ? ctx.plural("project.verdict.overdueFirst", tasks.overdue, {
+        count,
+        subject: tasks.firstOverdue,
+      })
+    : ctx.plural("project.verdict.overdue", tasks.overdue, { count });
+}
+
+/**
+ * The call nobody wrote, read off the dates and the open tasks. A project
+ * with no dates, or whose tasks this reader may not see, gets none: being on
+ * schedule is a claim about both.
+ */
+function deliveryVerdict(
+  view: Project360,
+  ctx: Ctx,
+): StandingVerdict | undefined {
+  const used = timeUsed(view, ctx.zone);
+  if (used.kind === "notStarted") {
+    return {
+      word: ctx.t("project.standing.notStarted"),
+      sentence: ctx.t("project.verdict.startsOn", {
+        date: dayNearYear(used.startsOn, view, ctx),
+      }),
+      tone: "neutral",
+    };
+  }
+  const tasks = commitmentsReading(view);
+  if (used.kind !== "running" || !tasks || view.project.phase === "closed") {
+    return undefined;
+  }
+  if (used.day > used.total) {
+    return {
+      word: ctx.t("project.verdict.overrunning"),
+      sentence: ctx.t("project.verdict.endPassed", {
+        date: dayNearYear(used.endsOn, view, ctx),
+      }),
+      tone: "danger",
+    };
+  }
+  if (tasks.overdue > 0) {
+    return {
+      word: ctx.t("project.verdict.behind"),
+      sentence: overdueSentence(tasks, ctx),
+      tone: "warning",
+    };
+  }
+  const left = used.total - used.day;
+  return used.tone === "warning"
+    ? {
+        word: ctx.t("project.verdict.wrappingUp"),
+        sentence:
+          left === 0
+            ? ctx.t("project.verdict.lastDay")
+            : ctx.plural("project.verdict.daysLeft", left, {
+                count: String(left),
+              }),
+        tone: "success",
+      }
+    : {
+        word: ctx.t("project.verdict.onSchedule"),
+        sentence: ctx.t("project.verdict.dayOf", {
+          day: String(used.day),
+          total: String(used.total),
+        }),
+        tone: "success",
+      };
 }
 
 function commitmentsDim(view: Project360, ctx: Ctx): StandingDim {

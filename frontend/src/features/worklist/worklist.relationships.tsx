@@ -3,6 +3,7 @@
 
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
+import { QuietDismissAll } from "./worklist.dismissall";
 import type { Worklist } from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
 import { rowIdentity } from "./worklist.rowidentity";
@@ -24,7 +25,10 @@ export function OptionalRelationships({
   )
     return null;
   return (
-    <Panel title={t("worklist.relationships.optional")}>
+    <Panel
+      title={t("worklist.relationships.optional")}
+      titleAction={<QuietDismissAll rows={day.optional_relationships ?? []} />}
+    >
       <PanelBody>
         <p className="t-caption">
           {t("worklist.relationships.optionalDetail")}
