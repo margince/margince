@@ -17,12 +17,10 @@ import { useCan } from "../lib/capability";
 // them automatically. The settings card (features/settings/embedreindex.tsx) shows
 // the pending detail meanwhile. Keying off reindex_needed here would show an
 // admin a banner about drift the system is already fixing. The identities read
-// this banner needs is itself RBAC-gated (embedding_reindex:read, granted to
-// admin and ops alone), so the gate below is not a UX preference layered over
-// an open endpoint — it is the same grant the server checks, asked before
-// issuing a query that could only 403. The installation's embed binding is
-// asked the same way: with no model bound the read could only 501, and a /me
-// not yet answered, or one predating the field, asks nothing.
+// is RBAC-gated (embedding_reindex:read, held by admin and ops alone). The gate
+// below asks the same grant the server checks, before a query that could only
+// 403. The embed binding is asked the same way. With no model bound the read
+// could only 501, and a /me not yet answered, or older than the field, asks nothing.
 export function EmbedReindexBanner() {
   const t = useT();
   const canRead = useCan("embedding_reindex", "read");

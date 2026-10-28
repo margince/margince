@@ -163,9 +163,9 @@ export function useBriefItemMark() {
 /**
  * The rep's weekly retrospective — the most recent, or a named week.
  *
- * `404` is not a failure: a rep whose first Monday has not come round yet has
- * no review, and that is a page saying so rather than an error. `enabled` is
- * false where nothing on screen reads the review, as on the Today view.
+ * `404` is not a failure. A rep whose first Monday has not come round yet has
+ * no review, and the page says so rather than showing an error.
+ * `enabled` is false where nothing on screen reads the review, as on Today.
  */
 export function useWeeklyReview(
   week?: string,

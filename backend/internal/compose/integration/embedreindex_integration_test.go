@@ -5,22 +5,15 @@
 
 package integration
 
-// The embed-reindex transport end to end (Task 15, ADR-0068 design
-// §5.6-swap): the four /embeddings/reindex* HTTP ops over a real
-// migrated Postgres, the claim+enqueue-in-one-tx confirm, and the REAL
-// River workers (compose.NewJobRunner, exactly as cmd/worker wires it —
-// no hand-called store pass standing in for the worker role).
-// Completion/cancellation is observed on River's own subscription
-// channels (SubscribeCompleted/SubscribeCancelled, subscribed before
-// Start), never a sleep or a poll — the same idiom
-// no_activity_reminder_workqueue_integration_test.go established for
-// this package's other real-worker suites (applyRiverSchema/
-// AwaitKindCompleted are that file's helpers, reused here unchanged).
+// The embed-reindex transport end to end (Task 15, ADR-0068). It drives the
+// four /embeddings/reindex* ops over a real migrated Postgres. The confirm
+// claims and enqueues in one transaction. The real River workers run, wired
+// by compose.NewJobRunner as cmd/worker wires them.
 //
-// The 409-vs-202 split rides the marker's own claim, proven here through
-// the real handler, not asserted against the store directly —
-// search.Store's own CAS/rollup behaviour is already covered by
-// binding_integration_test.go.
+// Completion and cancellation are read from River's own subscription
+// channels, subscribed before Start, never from a sleep or a poll.
+// The 409-vs-202 split is proven through the real handler; search.Store's own
+// claim and rollup are covered by binding_integration_test.go.
 
 import (
 	"context"

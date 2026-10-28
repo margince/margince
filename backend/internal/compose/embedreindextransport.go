@@ -3,15 +3,14 @@
 
 package compose
 
-// The embed-reindex transport (ADR-0068 design §5.6-swap, Task 15): the
-// four /embeddings/reindex* ops discharge the rbacgate_test.go waiver
-// on search.Store's binding-marker READS and its claim — every one of
-// them is reached ONLY through a handler below that gates first
-// (auth.Require(ctx, "embedding_reindex", <action>)), which is the whole
-// premise those store methods were allowed to skip their own object
-// RBAC check. The rest of the marker's lifecycle belongs to the run the
-// claim starts (jobs_embedreindex.go), where there is no human principal
-// to admit and the claim is the authority.
+// The embed-reindex transport (ADR-0068, Task 15). Its four
+// /embeddings/reindex* ops discharge the rbacgate_test.go waiver on
+// search.Store's binding-marker reads and its claim. Each is reached only
+// through a handler below that gates first with
+// auth.Require(ctx, "embedding_reindex", <action>). That is why those store
+// methods may skip their own object RBAC check. The rest of the marker's
+// lifecycle belongs to the run the claim starts (jobs_embedreindex.go). There
+// is no human principal there, and the claim is the authority.
 //
 // Confirm is the CAS+enqueue-in-one-tx shape (mirrors
 // deepreadtransport.go's start): search.Store.ClaimAndEnqueueReembedding
