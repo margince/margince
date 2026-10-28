@@ -315,6 +315,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `company_fact_pkey`: `unique, btree (id)`
+- `idx_company_fact_dedupe_scan`: `btree (updated_at, id)`
 - `idx_company_fact_lookup`: `btree (category, field, value_key)`
 - `uq_company_fact`: `unique, btree (company_id, category, field, value_key)`
 
@@ -1096,11 +1097,11 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 |---|---|---|---|
 | `scanned_through_at` | `timestamp with time zone` | yes |  |
 | `scanned_through_id` | `uuid` | yes |  |
-| `stream` | `text` | yes | One of `company`, `company_domain`, `contact`, `contact_email`, `contact_phone`. |
+| `stream` | `text` | yes | One of `company`, `company_domain`, `contact`, `contact_email`, `contact_phone`, `company_fact` and 1 more. |
 
 **Rules**
 
-- `dedupe_scan_state_stream_check`: `CHECK ((stream = ANY (ARRAY['company', 'company_domain', 'contact', 'contact_email', 'contact_phone'])))`
+- `dedupe_scan_state_stream_check`: `CHECK ((stream = ANY (ARRAY['company', 'company_domain', 'contact', 'contact_email', 'contact_phone', 'company_fact', 'relationship'])))`
 
 **Indexes**
 
@@ -1826,6 +1827,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_rel_history_deal`: `btree (deal_id)`
 - `idx_rel_history_project`: `btree (project_id)`
 - `idx_relationship_counterparty_contact`: `btree (counterparty_contact_id)`
+- `idx_relationship_dedupe_scan`: `btree (updated_at, id) WHERE ((kind = 'employment') AND (company_id IS NOT NULL))`
 - `relationship_pkey`: `unique, btree (id)`
 - `uq_rel_billing_contact`: `unique, btree (company_id, contact_id, role) WHERE ((kind = 'billing_contact') AND (archived_at IS NULL))`
 - `uq_rel_current_primary_employer`: `unique, btree (contact_id) WHERE ((kind = 'employment') AND is_current_primary AND (archived_at IS NULL))`
