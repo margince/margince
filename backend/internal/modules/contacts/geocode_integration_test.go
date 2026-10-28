@@ -174,6 +174,36 @@ func TestTheSweepFindsCompaniesNoWriteWillEverReach(t *testing.T) {
 	}
 }
 
+// A point still waiting for the copy task lives only on the company row. That
+// company was asked, so the sweep leaves it to the copy rather than spending a
+// lookup on it again.
+func TestTheSweepLeavesAPointTheCopyHasNotMovedYet(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "Vorher GmbH", Source: "manual",
+		Address: &crmcontracts.Address{City: new("Stuttgart"), Country: new("DE")},
+	})
+	if err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
+	// The columns a point lived in before the side row held it. No writer
+	// reaches them any more, so the test writes them as such a row reads.
+	if _, err := e.store.db.Pool().Exec(context.Background(),
+		`UPDATE company SET geocode_status = 'ok', geocode_lat = 48.7, geocode_lon = 9.1 WHERE id = $1`,
+		companyID); err != nil {
+		t.Fatal(err)
+	}
+	due, err := e.store.ListGeocodeOrphans(ctx, GeocodeBackfillBatch)
+	if err != nil {
+		t.Fatalf("ListGeocodeOrphans: %v", err)
+	}
+	if slices.Contains(due, companyID) {
+		t.Error("a company whose point the copy has not moved yet is swept, so it is looked up a second time")
+	}
+}
+
 // A lookup's answer lands beside the company and leaves its version alone, so
 // an edit form opened before the answer still saves. An address edit still
 // marks the point stale in its own transaction.

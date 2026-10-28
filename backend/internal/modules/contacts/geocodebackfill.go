@@ -79,7 +79,9 @@ func (s *Store) ListGeocodeOrphans(ctx context.Context, limit int) ([]ids.Compan
 			   -- shape: configure one later and these are the rows it needs.
 			   --
 			   -- 'ok' and 'no_match' are answers and are never swept.
-			   AND (g.status IS NULL
+			   -- A point the copy task has not moved yet is still on the
+			   -- company row. Such a company was asked, so it is not swept.
+			   AND ((g.status IS NULL AND o.geocode_status IS NULL)
 			     OR g.status IN ('`+GeocodeStale+`', '`+GeocodeFailed+`'))
 			   -- A failure still inside its backoff is left alone: the ledger
 			   -- asked for that wait, and re-nominating every pass is how a

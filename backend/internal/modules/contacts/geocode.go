@@ -225,13 +225,18 @@ func addressHash(query string) string {
 // lookup; this one asks "is this still the address I looked up", after it. One
 // query serving both would have to answer the second with data read for the
 // first, which is the staleness this whole file is about.
+//
+// FOR SHARE holds an address edit until the answer commits. The edit's trigger
+// then marks the point stale. Without the lock an edit committing between this
+// read and the write would leave an answer for the previous address at 'ok'.
 func addressHashInTx(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (string, error) {
 	var line1, line2, city, region, postal, country *string
 	if err := tx.QueryRow(ctx, `
 		SELECT address_line1, address_line2, address_city, address_region,
 		       address_postal_code, address_country
 		  FROM company
-		 WHERE id = $1 AND archived_at IS NULL`, companyID).
+		 WHERE id = $1 AND archived_at IS NULL
+		   FOR SHARE`, companyID).
 		Scan(&line1, &line2, &city, &region, &postal, &country); err != nil {
 		return "", fmt.Errorf("re-reading the address before recording its point: %w", err)
 	}

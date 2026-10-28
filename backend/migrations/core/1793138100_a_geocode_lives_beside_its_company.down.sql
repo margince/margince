@@ -29,6 +29,13 @@ CREATE TRIGGER trg_company_geocode_stale
     EXECUTE FUNCTION company_geocode_goes_stale();
 DROP TRIGGER IF EXISTS trg_company_geocode_state_stale ON company;
 DROP FUNCTION IF EXISTS company_geocode_state_goes_stale();
+-- The points answered since the upgrade go back onto the company row, which
+-- the restored readers read.
+UPDATE company c
+   SET geocode_lat = g.lat, geocode_lon = g.lon, geocode_status = g.status,
+       geocode_provider = g.provider, geocode_input_hash = g.input_hash, geocoded_at = g.geocoded_at
+  FROM company_geocode_state g
+ WHERE g.company_id = c.id AND g.status IS NOT NULL;
 ALTER TABLE company_geocode_state
     DROP CONSTRAINT IF EXISTS company_geocode_state_status_check,
     DROP COLUMN IF EXISTS geocoded_at,
