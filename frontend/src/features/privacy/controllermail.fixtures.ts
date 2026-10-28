@@ -72,8 +72,10 @@ export const NO_ADDRESS_PROBLEM = {
 
 /** What the route answers on an installation that cannot send its own mail. */
 export const NO_MAIL_LANE_PROBLEM = {
+  type: "https://errors.gradion.com/conflict",
   title: "Conflict",
-  detail:
-    "this installation cannot send its own mail, so the mail cannot be sent",
   status: 409,
+  code: "conflict",
+  detail:
+    "conflict: this installation cannot send its own mail yet; configure the relay, public URL and key vault",
 };

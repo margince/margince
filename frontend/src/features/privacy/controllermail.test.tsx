@@ -288,7 +288,9 @@ describe("the preview of a mail the installation sends for a rep", () => {
 
     const dialog = await screen.findByRole("dialog");
     expect(
-      await within(dialog).findByText(/cannot send its own mail/),
+      await within(dialog).findByText(
+        /cannot send its own mail yet; configure the relay, public URL and key vault/,
+      ),
     ).toBeVisible();
     expect(
       within(dialog).getByRole("button", { name: en["notice.sendConfirm"] }),
