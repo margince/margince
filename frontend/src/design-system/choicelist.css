@@ -80,6 +80,9 @@
 }
 .choicelist-cards .choicelist-choice {
   align-items: start;
+  /* A plate stretches to its row's tallest; its words stay at the top rather
+     than drifting down beside a neighbour with a longer description. */
+  align-content: start;
   gap: var(--space-3);
   height: 100%;
   padding: var(--space-4);
@@ -99,6 +102,15 @@
   border-color: var(--accent);
   box-shadow: inset 0 0 0 1px var(--accent);
 }
+/* On a plate the name is the thing chosen, so it carries the weight over its
+   description. A glyph mark takes the accent once chosen; a vendor's mark
+   draws its own fills and keeps them. */
+.choicelist-cards .choicelist-label {
+  font-weight: var(--fontWeightMedium);
+}
+.choicelist-cards .choicelist-choice:has(input:checked) .choicelist-mark {
+  color: var(--accent);
+}
 .choicelist-cards .choicelist-choice:has(input:focus-visible) {
   box-shadow: var(--focus-glow);
 }
@@ -114,4 +126,40 @@
 .choicelist-mark svg {
   width: 22px;
   height: 22px;
+}
+
+/*
+ * Groups: a label over each run of answers of one kind. In `cards` every group
+ * is its own grid, so a group of two shares the width rather than leaving a
+ * third column empty under a group of three.
+ */
+.choicelist-group {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.choicelist-legend + .choicelist-group {
+  margin-top: var(--space-1);
+}
+.choicelist-group + .choicelist-group {
+  margin-top: var(--space-3);
+}
+.choicelist-group-label {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  color: var(--textSecondary);
+}
+.choicelist-cards > .choicelist-group {
+  grid-column: 1 / -1;
+}
+.choicelist-group-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.choicelist-cards .choicelist-group-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(13rem, 100%), 1fr));
+  gap: var(--space-3);
 }

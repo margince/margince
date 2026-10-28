@@ -13767,14 +13767,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.field.nameHint":
     "Hiện trên ghi chú của mỗi lead, ví dụ Trang liên hệ.",
   "webForms.field.sender": "Biểu mẫu của bạn nằm ở đâu?",
+  "webForms.senderGroup.noDeveloper": "Không cần lập trình viên",
+  "webForms.senderGroup.developer": "Dành cho lập trình viên",
   "webForms.field.senderFixed":
     "Cố định khi biểu mẫu đã tồn tại. Tạo biểu mẫu mới để đổi.",
   "webForms.senderHint.browser":
-    "Biểu mẫu trên trang của bạn, hoặc trong WordPress, Webflow hay công cụ dựng trang khác cho phép đặt nơi biểu mẫu gửi tới. Không cần lập trình viên.",
+    "Biểu mẫu trên trang của bạn, hoặc trong WordPress, Webflow hay công cụ dựng trang khác cho phép đặt nơi biểu mẫu gửi tới.",
   "webForms.senderHint.server":
-    "Dành cho lập trình viên: máy chủ trang web chuyển tiếp mỗi yêu cầu, có chữ ký.",
+    "Máy chủ trang web chuyển tiếp mỗi yêu cầu, có chữ ký.",
   "webForms.senderHint.webflow":
-    "Dành cho lập trình viên: webhook tạo bằng API của Webflow. Với biểu mẫu Webflow, hãy chọn Trang web của bạn.",
+    "Webhook tạo bằng API của Webflow. Với biểu mẫu Webflow, hãy chọn Trang web của bạn.",
   "webForms.senderHint.typeform":
     "Mỗi câu trả lời Typeform đến qua một webhook. Margince tạo khóa ký cho bạn.",
   "webForms.senderHint.tally":

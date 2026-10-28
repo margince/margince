@@ -230,6 +230,37 @@ function Services({
   );
 }
 
+describe("ChoiceList groups", () => {
+  const GROUPED = [
+    { value: "site" as const, label: "Your website", group: "No developer" },
+    { value: "server" as const, label: "Website server", group: "Developers" },
+    { value: "hook" as const, label: "Webhook", group: "Developers" },
+  ];
+
+  it("names each run of one group and keeps every radio in the one question", () => {
+    render(
+      <ChoiceList
+        legend="Where is your form?"
+        layout="cards"
+        value="site"
+        choices={GROUPED}
+        onChange={() => {}}
+      />,
+    );
+
+    const question = screen.getByRole("group", { name: "Where is your form?" });
+    const developers = screen.getByRole("group", { name: "Developers" });
+    expect(
+      screen.getAllByRole("radio").every((r) => question.contains(r)),
+    ).toBe(true);
+    expect(developers.querySelectorAll("input[type=radio]")).toHaveLength(2);
+    const names = new Set(
+      screen.getAllByRole("radio").map((r) => r.getAttribute("name")),
+    );
+    expect(names.size).toBe(1);
+  });
+});
+
 describe("ChoiceList multiple", () => {
   it("draws checkboxes in one group named by the legend", () => {
     render(<Services initial={["mail"]} onChange={() => {}} />);

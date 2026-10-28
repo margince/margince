@@ -52,3 +52,14 @@
   margin-top: var(--space-2);
   min-width: 0;
 }
+
+/* The new-form drawer reads as three parts under the choice of sender: what
+ * the form is, what a visitor agrees to, and what they see after sending. A
+ * hairline parts them, so the fields need no card around each group. */
+.drawer-body.webform-parts {
+  gap: var(--space-5);
+}
+.webform-part {
+  border-top: 1px solid var(--borderSubtle);
+  padding-top: var(--space-5);
+}
