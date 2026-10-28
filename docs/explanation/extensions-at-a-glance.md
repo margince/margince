@@ -9,6 +9,68 @@ off by taking the folder away.
 This page is the short version: what an extension can bring, and where to go to build each part. The
 reasons behind the design are in [extensibility.md](extensibility.md).
 
+## How it works
+
+```text
+ extensions/<name>/            you write one Go value: what the unit brings
+   New() Extension                   (jobs, ingress, panels, secrets, ...)
+        |
+        |  make composition          reads every folder under extensions/
+        v
+ build/composition/             generated wiring, plus manifest.generated.json
+        |
+        |  api and worker start
+        v
+ +-----------------------------------------------+
+ |  1. check the whole set    bad unit: no boot  |
+ |  2. apply it to the core   only if all pass   |
+ +-----------------------------------------------+
+        |
+        v
+ the core runs the unit's parts      jobs tick, events reach it,
+                                     panels draw on record pages
+```
+
+Nothing in the declaration reaches the core by itself. The core reads the list, checks it, and only then
+applies it.
+
+## Add one in four steps
+
+```text
+ 1. make the folder      extensions/<name>/   its own Go module, name = folder name
+        |
+ 2. declare              New() returns Extension{ Name, Version, Description, ...fields }
+        |
+ 3. generate and check   make composition     writes the manifest; a stale one fails a gate
+        |
+ 4. run                  make dev             the unit is on; remove the folder to turn it off
+```
+
+[add-an-extension.md](../how-to/add-an-extension.md) walks through each step with code.
+
+## Where a service member fits
+
+A feed that runs on a timer needs someone to land its records as. A colleague is a bad choice, because the
+feed stops when they leave. A service member is the account made for this. No human signs in as it.
+
+```text
+ admin                          unit                               core
+   |  declare member for "relay"  |                                  |
+   |----------------------------------------------------------------->|  member made, no login,
+   |                              |                                  |  role service_ingest
+   |  file the feed secret under the member                          |
+   |----------------------------->|                                  |
+   |                              |  timer tick: rt.Ingest(member)   |
+   |                              |--------------------------------->|  secret on file, and member
+   |                              |                                  |  declared for this unit?
+   |                              |        record lands, audited     |  yes: lands with the member's
+   |                              |<---------------------------------|  rights. no: refused.
+   |  archive the member  -------------------------------------------->  the feed stops here, only
+```
+
+The member is not counted against the seat limit and is never deleted, only archived. The steps and the
+call are in [declare-a-service-member.md](../how-to/declare-a-service-member.md).
+
 ## The tool bag
 
 An extension is one Go value. Each thing it can bring is one field of that value
