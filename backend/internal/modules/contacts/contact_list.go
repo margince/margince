@@ -127,10 +127,13 @@ func orderByCurrentEmployer(ctx context.Context, arg func(any) int) (string, err
 	if !visible {
 		// A caller who may see no employer is ordered by no employer: every row
 		// sits in the tail and the page falls back to its tie-breaker.
-		return "NULL::text", nil
+		return noEmployer, nil
 	}
 	return "(SELECT company.display_name" + from + ")", nil
 }
+
+// noEmployer is the employer column of a reader who may see none.
+const noEmployer = "NULL::text"
 
 // contactTagClause narrows the page to the contacts carrying the named tags.
 //

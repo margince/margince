@@ -133,6 +133,7 @@ func walkContactCase(ctx context.Context, tx pgx.Tx, start ids.UUID) (contactCas
 	if err != nil {
 		return contactCase{}, err
 	}
+	bound := arg(contactCaseMaxMembers + 1)
 	// UNION, not UNION ALL, so a cycle of pairs ends; the outer LIMIT stops the
 	// walk one past the bound, which is how a case says it is too large.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
@@ -144,7 +145,7 @@ func walkContactCase(ctx context.Context, tx pgx.Tx, start ids.UUID) (contactCas
 		    FROM walked JOIN dedupe_candidate
 		      ON walked.id IN (dedupe_candidate.left_contact_id, dedupe_candidate.right_contact_id)
 		   WHERE %s)
-		SELECT id FROM walked LIMIT $%d`, startPos, pairs, arg(contactCaseMaxMembers+1)), args...)
+		SELECT id FROM walked LIMIT $%d`, startPos, pairs, bound), args...)
 	if err != nil {
 		return contactCase{}, fmt.Errorf("contacts: walking the duplicate case: %w", err)
 	}
@@ -185,10 +186,17 @@ func readCaseMembers(ctx context.Context, tx pgx.Tx, memberIDs []ids.UUID) ([]ca
 	if err != nil {
 		return nil, err
 	}
+	asked := len(args)
 	employer, err := orderByCurrentEmployer(ctx, arg)
 	if err != nil {
 		return nil, err
 	}
+	if employer == noEmployer {
+		// A reader refused the employer reads none, and an argument bound for a
+		// clause that was dropped has no type Postgres can infer.
+		args = args[:asked]
+	}
+	members := arg(memberIDs)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT contact.id, contact.full_name, %s, contact.title, %s,
 		       contact.owner_id, CASE WHEN u.archived_at IS NULL THEN u.display_name END,
@@ -196,7 +204,7 @@ func readCaseMembers(ctx context.Context, tx pgx.Tx, memberIDs []ids.UUID) ([]ca
 		       contact.version, contact.created_at
 		  FROM contact LEFT JOIN app_user u ON u.id = contact.owner_id
 		 WHERE contact.id = ANY($%d) AND contact.archived_at IS NULL
-		 ORDER BY contact.id`, email, employer, liveCaseOwnerSQL("u"), arg(memberIDs)), args...)
+		 ORDER BY contact.id`, email, employer, liveCaseOwnerSQL("u"), members), args...)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading the case members: %w", err)
 	}

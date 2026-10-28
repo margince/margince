@@ -254,21 +254,22 @@ func createRecordGrantInTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) 
 // upsertGrant writes one grant by its natural key, the one writer of a
 // record_grant row's terms. The caller holds the write-identity lock.
 func upsertGrant(ctx context.Context, tx pgx.Tx, in CreateGrantInput, grantedBy ids.UUID) (grantRow, error) {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	out, err := scanGrant(tx.QueryRow(ctx, fmt.Sprintf(`
+	values := []any{in.RecordType, in.RecordID, in.SubjectType, in.SubjectID, in.Access, grantedBy, in.Reason, in.ExpiresAt}
+	placeholders := make([]string, len(values))
+	for i := range values {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+	}
+	out, err := scanGrant(tx.QueryRow(ctx, `
 		INSERT INTO record_grant (record_type, record_id, subject_type, subject_id,
 		                          access, granted_by, reason, expires_at)
-		VALUES ($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)
+		VALUES (`+strings.Join(placeholders, ", ")+`)
 		ON CONFLICT (record_type, record_id, subject_type, subject_id) DO UPDATE
 		SET access     = EXCLUDED.access,
 		    expires_at = EXCLUDED.expires_at,
 		    reason     = EXCLUDED.reason,
 		    granted_by = EXCLUDED.granted_by,
 		    version    = record_grant.version + 1
-		RETURNING `+grantColumns,
-		arg(in.RecordType), arg(in.RecordID), arg(in.SubjectType), arg(in.SubjectID),
-		arg(in.Access), arg(grantedBy), arg(in.Reason), arg(in.ExpiresAt)), args...))
+		RETURNING `+grantColumns, values...))
 	if err != nil {
 		return grantRow{}, fmt.Errorf("upsert record_grant: %w", err)
 	}
