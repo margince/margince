@@ -16,9 +16,6 @@ import { formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { sourceUnavailableText } from "../worklist/worklist.copy";
-import { MagicLaneSection } from "./magic.lines";
-import { spansDays } from "./magic.marks";
 import {
   fillsPage,
   type MagicLane,
@@ -26,7 +23,10 @@ import {
   type MagicNotShown,
   type MagicReceipt,
   useMagic,
-} from "./magic.queries";
+} from "../../lib/magic.queries";
+import { sourceUnavailableText } from "../worklist/worklist.copy";
+import { MagicLaneSection } from "./magic.lines";
+import { spansDays } from "./magic.marks";
 import "../brief/brief.css";
 
 // The reading order: what waits on you, what broke, what needs restoring, and

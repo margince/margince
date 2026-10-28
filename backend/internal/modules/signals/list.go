@@ -45,14 +45,15 @@ func (s *Store) ListSignals(ctx context.Context, in ListSignalsInput) ([]crmcont
 	var page storekit.Page
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		records, page, err = ListSignalsTx(ctx, tx, in)
+		records, page, err = ListSignalsTx(ctx, tx, in, s.words)
 		return err
 	})
 	return records, page, err
 }
 
 // ListSignalsTx shares the visible signal reader with transactional callers.
-func ListSignalsTx(ctx context.Context, tx pgx.Tx, in ListSignalsInput) ([]crmcontracts.Signal, storekit.Page, error) {
+// Nil words keep the stored summaries.
+func ListSignalsTx(ctx context.Context, tx pgx.Tx, in ListSignalsInput, words SummaryWords) ([]crmcontracts.Signal, storekit.Page, error) {
 	if err := auth.Require(ctx, "signal", principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
@@ -74,11 +75,11 @@ func ListSignalsTx(ctx context.Context, tx pgx.Tx, in ListSignalsInput) ([]crmco
 	}
 	defer rows.Close()
 	for rows.Next() {
-		sig, err := scanSignal(rows)
+		sig, params, err := scanSignal(rows)
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}
-		signals = append(signals, sig)
+		signals = append(signals, words.reword(ctx, sig, params))
 	}
 	if err := rows.Err(); err != nil {
 		return nil, storekit.Page{}, err

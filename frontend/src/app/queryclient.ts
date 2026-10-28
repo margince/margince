@@ -45,6 +45,35 @@ export function liveOnReturn(query: { queryKey: QueryKey }): "always" | false {
   return isLiveRead(query.queryKey) && "always";
 }
 
+// A live work read is read again on every mount, so a screen never opens on an
+// answer fetched before it. The one exception is the answer the shell prefetched
+// for the screen being opened (app/homeprefetch.ts). While it is under a second
+// old, that screen's mount uses it instead of fetching it a second time.
+export const LIVE_ANSWER_CURRENT_MS = 1_000;
+
+const prefetchedAnswers = new Map<string, number>();
+
+/** Records the answer a prefetch fetched, by query hash and its stamp. */
+export function notePrefetched(queryHash: string, answeredAt: number): void {
+  prefetchedAnswers.set(queryHash, answeredAt);
+}
+
+export function liveOnMount(
+  query: {
+    queryKey: QueryKey;
+    queryHash: string;
+    state: { dataUpdatedAt: number };
+  },
+  now = Date.now(),
+): "always" | true {
+  if (!isLiveWorkRead(query.queryKey)) return true;
+  const answeredAt = query.state.dataUpdatedAt;
+  const prefetched = prefetchedAnswers.get(query.queryHash) === answeredAt;
+  return prefetched && now - answeredAt < LIVE_ANSWER_CURRENT_MS
+    ? true
+    : "always";
+}
+
 // Decisions and receipt controls can change in another tab or a worker.
 // Their current state must refresh just like the records they act on.
 function isLiveRead(key: QueryKey): boolean {
@@ -217,8 +246,7 @@ export function createQueryClient(): QueryClient {
         // coming back to one is exactly when the cached answer is wrong, and
         // exactly when the reader acts on it.
         refetchOnWindowFocus: liveOnReturn,
-        refetchOnMount: (query) =>
-          isLiveWorkRead(query.queryKey) ? "always" : true,
+        refetchOnMount: liveOnMount,
       },
       // Reads wait out an outage and rerun when it clears. A write never
       // waits: a paused one would run on reconnect, after the reader moved on.

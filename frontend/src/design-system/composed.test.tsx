@@ -739,6 +739,52 @@ describe("TimelineText on a mail row", () => {
     expect(screen.getByText("Können wir Dienstag sprechen?")).toBeTruthy();
   });
 
+  // A chat message carries the server's move as an email does, so the row says
+  // whose move it is. A withheld one says nothing.
+  it("draws whose move a chat message is, and none when it is withheld", () => {
+    const message = (withheld: boolean) => ({
+      id: `a-chat-${withheld}`,
+      kind: "message" as const,
+      title: "Can we move to Thursday?",
+      atIso: "2026-07-01T09:12:00Z",
+      atPrecision: "instant" as const,
+      provenance: { kind: "human" as const, self: true },
+      direction: "inbound" as const,
+      messageMove: "needs_reply" as const,
+      withheld,
+    });
+    const { unmount } = render(
+      <RecordView
+        identity="r-1"
+        name="Acme"
+        zone="UTC"
+        timeline={[message(false)]}
+        timelineGroups={[
+          {
+            id: "g",
+            kind: "single",
+            entries: [message(false)],
+            partial: false,
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByText("Needs reply")).toBeTruthy();
+    unmount();
+    render(
+      <RecordView
+        identity="r-1"
+        name="Acme"
+        zone="UTC"
+        timeline={[message(true)]}
+        timelineGroups={[
+          { id: "g", kind: "single", entries: [message(true)], partial: false },
+        ]}
+      />,
+    );
+    expect(screen.queryByText("Needs reply")).toBeNull();
+  });
+
   // A withheld email whose server has not caught up carries no summary and
   // falls to the generic row. That row masked the title and went on printing
   // the counterparty above it — "Received from Anna" beside a message whose

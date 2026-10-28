@@ -29345,7 +29345,7 @@ export interface components {
                 kind: string;
                 /** @enum {string} */
                 severity: "info" | "warn" | "urgent";
-                /** @description The signal's one sentence, in the words its producer wrote — the strip does not rephrase what a conversation said. */
+                /** @description The signal's one sentence, in the language `Signal.summary` reads in. The strip does not rephrase what a conversation said. */
                 summary: string;
             } | null;
         };
@@ -35446,6 +35446,14 @@ export interface components {
             readonly email_summary?: components["schemas"]["EmailSummary"] | null;
             /** @description Present only on a mail sent through the installation's own relay. Absent on every other row. */
             readonly controller_send?: components["schemas"]["ControllerSend"] | null;
+            /**
+             * @description Present exactly when `kind=message` and the reader may read it. Whose move the chat
+             *     message is, by the rules `email_summary.move` follows for mail: `needs_reply` on one
+             *     still owed our answer, `waiting_for_them` on one a seat sent that is still the last
+             *     word with them, `none` otherwise.
+             * @enum {string}
+             */
+            readonly message_move?: "needs_reply" | "waiting_for_them" | "none";
             /** @description The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none. */
             readonly thread_key?: string | null;
             /**
@@ -36348,8 +36356,9 @@ export interface components {
             basis_id?: string | null;
         };
         SendEmailRequest: {
+            /** @description The subject line. Blank or only white space is refused with 422 `required`. */
             subject: string;
-            /** @description The (possibly edited) final body that is sent. */
+            /** @description The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`. */
             body: string;
             /**
              * @description The same message as markup, or omitted for a plain-text send. It never
@@ -36870,8 +36879,9 @@ export interface components {
          *     otherwise have supplied — the records this new conversation belongs to.
          */
         SendCompanyEmailRequest: {
+            /** @description The subject line. Blank or only white space is refused with 422 `required`. */
             subject: string;
-            /** @description The (possibly edited) final body that is sent. */
+            /** @description The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`. */
             body: string;
             /**
              * @description The same message as markup, or omitted for a plain-text send. It never
@@ -38128,6 +38138,12 @@ export interface components {
              * @enum {string}
              */
             severity: "info" | "warn" | "urgent";
+            /**
+             * @description The signal's one sentence. A sentence the server words itself (`technical_change`,
+             *     `ghosted_thread`, `project_gone_quiet`) is in the reader's chosen display language, else
+             *     the installation's base language. Every other summary, and a summary stored without its
+             *     parts, reads as it was written.
+             */
             summary: string;
             /** @description Per-claim evidence; a claim without evidence is omitted. */
             evidence: components["schemas"]["SignalEvidence"][];

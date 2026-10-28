@@ -163,6 +163,7 @@ export function activityTimeline(
       // exactly when kind=email, so the row branches on the field and every
       // other kind keeps the reading it had.
       emailSummary: activity.email_summary ?? undefined,
+      messageMove: activity.message_move ?? undefined,
       audience: activity.audience,
       withheld: activity.content_state === "withheld",
       threadKey: activity.thread_key,

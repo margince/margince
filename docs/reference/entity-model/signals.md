@@ -6,7 +6,7 @@ The 2 tables owned by `signals`, as the migrations build them. [Back to the enti
 
 ## signal
 
-29 columns · primary key `(id)` · referenced by 3 foreign keys
+30 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -31,7 +31,8 @@ The 2 tables owned by `signals`, as the migrations build them. [Back to the enti
 | `severity` | `text`, default `'info'::text` | yes | One of `info`, `warn`, `urgent`. |
 | `source_channel` | `text`, default `'derived'::text` | yes | Where the raw signal came from. |
 | `status` | `text`, default `'open'::text` | yes | One of `open`, `acknowledged`, `resolved`, `dismissed`. |
-| `summary` | `text` | yes |  |
+| `summary` | `text` | yes | The signal's one sentence. |
+| `summary_params` | `jsonb` |  |  |
 | `visibility` | `text`, default `'workspace'::text` | yes | One of `workspace`, `owner`. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
