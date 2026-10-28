@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx -->
+<!-- describes: frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx backend/internal/modules/identity/ownercarry.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/contactcasedecide.go frontend/src/features/settings/sharedmergereviews.tsx -->
 # Seats, roles and who can see what
 
 What you can do in Margince is decided by three things, and one cannot stand in for another:
@@ -329,7 +329,23 @@ Rules worth knowing:
 - An agent cannot share at all, and cannot ask a colleague to approve a share
   for it.
 
-There are no levels of shares, no sharing by rules, and no way to give someone else the right to share. Only plain shares, each one made by hand. Every share and every end of a share goes into the audit log.
+There are no levels of shares, no sharing by rules, and no way to give someone else the right to share. A share is made by hand, with one exception: a contact merge makes a share for the owner of a merged-away contact. Every share and every end of a share goes into the audit log.
+
+## What a merge keeps and who may merge
+
+When two contacts merge, the owner of the merged-away contact keeps access to the contact that remains. Margince gives them a share on it:
+
+- **Write** for a full seat, **Read** for a read seat.
+- A share they already held keeps its end date. It only goes from read to write.
+- A colleague who has left gets nothing, and the owner of the remaining contact needs no share.
+
+This holds for every contact merge: **Merge contact** on the record, a group of possible duplicates, or a merge an agent makes. Shares the merged-away contact had move to the remaining contact; of two shares, the higher access stays.
+
+**Who may merge a group.** You may merge a group of possible duplicate contacts when you can edit every contact you tick. A group often holds contacts that different colleagues own. An owner who may edit only their own contacts then cannot merge the group.
+
+**Shared merge reviews** changes that. An admin turns it on in **Settings → Roles and permissions**; it is off at the start. When it is on, an owner of one ticked contact with a full seat may merge the other ticked contacts too. That opens only those contacts, and only for that merge. It opens no mail, no files and no other record. The owners of the other contacts keep access through the share above.
+
+Turning **Shared merge reviews** off again stops new merges of that kind. Merges already done stay, and so do the shares they made. How to merge a group: [Contacts, companies, leads, deals and projects](records.md#how-do-i-merge-duplicate-contacts).
 
 ## Inviting and removing colleagues: the rules
 
