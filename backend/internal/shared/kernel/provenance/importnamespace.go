@@ -27,6 +27,9 @@ const ReservedSourceSystemPrefix = "mirror:"
 // Their source identity links task state to the original email obligation.
 const EmailRequestSource = "email_request"
 
+// AcceptedRecommendationSource keys a human-accepted observation for idempotent replay.
+const AcceptedRecommendationSource = "accepted_recommendation"
+
 // NoActivityReminderSource and CheckInCadenceSource name the quiet-account
 // reminders the automation engine mints, and they are reserved for the same
 // reason EmailRequestSource is: the activity store keys its idempotent replay
@@ -84,15 +87,16 @@ const WebFormSource = "web_form"
 // into rows, and renaming them to fit a namespace would strand every row that
 // carries the old spelling.
 var internalSourceSystems = map[string]bool{
-	EmailRequestSource:       true,
-	NoActivityReminderSource: true,
-	CheckInCadenceSource:     true,
-	CommitmentTaskSource:     true,
-	WebsiteLeadSource:        true,
-	WhichDealSource:          true,
-	LeadRepliedSource:        true,
-	LeadForContactSource:     true,
-	WebFormSource:            true,
+	EmailRequestSource:           true,
+	AcceptedRecommendationSource: true,
+	NoActivityReminderSource:     true,
+	CheckInCadenceSource:         true,
+	CommitmentTaskSource:         true,
+	WebsiteLeadSource:            true,
+	WhichDealSource:              true,
+	LeadRepliedSource:            true,
+	LeadForContactSource:         true,
+	WebFormSource:                true,
 }
 
 // ReservedSourceSystem reports whether a client-supplied source system

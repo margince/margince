@@ -8,6 +8,7 @@ package deals
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -84,6 +85,7 @@ func readDealForCaller(ctx context.Context, tx pgx.Tx, id ids.DealID, archived s
 const dealTaggableType = "deal"
 
 type ListDealsInput struct {
+	IDs []ids.UUID
 	// TagIDs narrows to the deals carrying these tags, combined by TagMode.
 	// The predicate is storekit's, shared with the contact and account lists.
 	TagIDs     []ids.UUID
@@ -309,6 +311,9 @@ func scanDealPage(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.
 // stalled predicate — into WHERE clauses (the cf_ filters and the keyset
 // cursor, which depends on the validated sort, stay in ListDeals).
 func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, arg func(any) int) ([]string, error) {
+	if len(in.IDs) > 0 {
+		where = append(where, fmt.Sprintf("id = ANY($%d)", arg(in.IDs)))
+	}
 	if !in.IncludeArchived {
 		where = append(where, "archived_at IS NULL")
 	}
@@ -355,24 +360,9 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 		}
 		where = append(where, clause)
 	}
-	if in.PartnerSourced != nil {
-		// Whether a partner is named at all is a reading of partner_company_id,
-		// and the page's membership is the answer the mask declined to give.
-		if err := auth.RefuseMaskedFilter(ctx, maskObject, filterPartnerSourced, filterPartnerCompanyID); err != nil {
-			return nil, err
-		}
-		if *in.PartnerSourced {
-			where = append(where, PartnerSourcedSQL(""))
-		} else {
-			where = append(where, "NOT "+PartnerSourcedSQL(""))
-		}
-	}
-	if in.PartnerAttribution != nil {
-		clause, err := partnerAttributionFilterClause(ctx, *in.PartnerAttribution, arg)
-		if err != nil {
-			return nil, err
-		}
-		where = append(where, clause)
+	where, err = appendPartnerFilters(ctx, where, in, arg)
+	if err != nil {
+		return nil, err
 	}
 	if in.Status != nil {
 		where = append(where, storekit.SQLf("status = $%d", arg(*in.Status)))
@@ -483,4 +473,27 @@ func partnerAttributionFilterClause(ctx context.Context, attribution string, arg
 	}
 	return clause + storekit.SQLf(
 		" AND EXISTS (SELECT 1 FROM company pref WHERE pref.id = partner_company_id AND %s)", scope), nil
+}
+
+func appendPartnerFilters(ctx context.Context, where []string, in ListDealsInput, arg func(any) int) ([]string, error) {
+	if in.PartnerSourced != nil {
+		// Whether a partner is named at all is a reading of partner_company_id,
+		// and the page's membership is the answer the mask declined to give.
+		if err := auth.RefuseMaskedFilter(ctx, maskObject, filterPartnerSourced, filterPartnerCompanyID); err != nil {
+			return nil, err
+		}
+		if *in.PartnerSourced {
+			where = append(where, PartnerSourcedSQL(""))
+		} else {
+			where = append(where, "NOT "+PartnerSourcedSQL(""))
+		}
+	}
+	if in.PartnerAttribution != nil {
+		clause, err := partnerAttributionFilterClause(ctx, *in.PartnerAttribution, arg)
+		if err != nil {
+			return nil, err
+		}
+		where = append(where, clause)
+	}
+	return where, nil
 }

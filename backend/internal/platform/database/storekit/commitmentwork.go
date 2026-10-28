@@ -69,8 +69,7 @@ const (
 	currentByLeadEngagement
 )
 
-// taskSourceFamilies is every source_system a native writer stamps on a task
-// it creates with no human behind it, with how that task stays current.
+// Native task provenance shares its current-work and date policy here.
 //
 // Held by: TestEveryAutomaticTaskWriterAndOpenTaskReaderIsDeclared (backend/gates/automatictaskwriters_test.go)
 type taskSourcePolicy struct {
@@ -80,21 +79,22 @@ type taskSourcePolicy struct {
 }
 
 var taskSourceFamilies = map[string]taskSourcePolicy{
-	provenance.CommitmentTaskSource:     {currency: currentByCommitment, undated: true},
-	provenance.EmailRequestSource:       {currency: currentByRequest, undated: true},
-	provenance.NoActivityReminderSource: {currency: currentByItsWriter},
-	provenance.CheckInCadenceSource:     {currency: currentByItsWriter},
-	provenance.LeadSLATaskSource:        {currency: currentByItsWriter},
-	provenance.LeadQualifyTaskSource:    {currency: currentByItsWriter},
-	provenance.AssuranceTaskSource:      {currency: currentByItsWriter},
-	provenance.OvernightReconcileSource: {currency: currentByItsWriter},
-	provenance.LeadRepliedSource:        {currency: currentByLeadEngagement, undated: true, generatedDate: true},
+	provenance.AcceptedRecommendationSource: {currency: currentByItsWriter},
+	provenance.CommitmentTaskSource:         {currency: currentByCommitment, undated: true},
+	provenance.EmailRequestSource:           {currency: currentByRequest, undated: true},
+	provenance.NoActivityReminderSource:     {currency: currentByItsWriter},
+	provenance.CheckInCadenceSource:         {currency: currentByItsWriter},
+	provenance.LeadSLATaskSource:            {currency: currentByItsWriter},
+	provenance.LeadQualifyTaskSource:        {currency: currentByItsWriter},
+	provenance.AssuranceTaskSource:          {currency: currentByItsWriter},
+	provenance.OvernightReconcileSource:     {currency: currentByItsWriter},
+	provenance.LeadRepliedSource:            {currency: currentByLeadEngagement, undated: true, generatedDate: true},
 	// A refused submission has no activity source; the owner decides its lifecycle.
 	provenance.LeadForContactSource: {currency: currentByItsWriter, undated: true, generatedDate: true},
 	provenance.WhichDealSource:      {currency: currentBySourceMail},
 }
 
-// TaskSourceFamilies lists the automatic task sources, for the census gate.
+// TaskSourceFamilies lists native task sources for the census gate.
 func TaskSourceFamilies() []string { return automaticTaskSources() }
 
 func automaticTaskSources() []string {

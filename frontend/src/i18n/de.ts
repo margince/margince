@@ -16907,7 +16907,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verdict.drifting": "Stagnierend",
   "worklist.verdict.blocked": "Blockiert",
   "worklist.verdict.cold": "Kalt",
-  "worklist.verdict.believes": "Bewertung",
+  "worklist.verdict.believes": "Frühere Bewertung",
   "worklist.verdict.asOf": "Stand {when}",
   "worklist.untitled.approval": "Freigabe ausstehend",
   "worklist.untitled.dedupe_candidate": "Mögliche doppelte Datensätze",
@@ -18369,4 +18369,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "mailCoverage.connections": "Verbindungen prüfen",
   "connectors.syncTimeUnknown":
     "Zeitpunkt der letzten erfolgreichen Synchronisierung unbekannt",
+  "brief.coverage.source.deal_advice": "Vorgeschlagene nächste Schritte",
+  "tasks.origin.accepted_recommendation":
+    "Aus einem vorgeschlagenen Schritt übernommen.",
 };

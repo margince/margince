@@ -87,14 +87,8 @@ func (said statusCopy) openTasksLine(n int, more bool) string {
 	return fmt.Sprintf(said.Say(statusWords.OpenTasks), n)
 }
 
-// blockerLines name what is holding the deal up, and say nothing when nothing
-// is.
-//
-// The floor reads the health factors rather than guessing, and it uses the
-// formula's OWN sentences — deals.HealthReasons — because a deterministic card
-// restates records rather than interpreting them, and those sentences were
-// written beside the numbers they explain. The model lane is handed the bare
-// measurements instead, for the reason FactorIn gives.
+// blockerLines keeps numeric health explanations on the deterministic card.
+// Model prose uses the source records whose access can be checked on later reads.
 func blockerLines(f facts) []sentence {
 	if f.health == nil || !f.health.AtRisk {
 		return nil

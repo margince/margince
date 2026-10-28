@@ -287,8 +287,9 @@ Each item shows its record, the current facts that call for action, and the acti
 A request can name who is waiting and when they asked. A task shows its due date.
 A deal can show days since the last recorded activity, a missing next step or a close date that needs review.
 
-A deal suggestion needs current facts before it enters this list. A score or a label such as
-“stalled” cannot put it here alone. **Review deal suggestions** opens the saved brief, including suggestions without those facts.
+Suggested deal steps are checked against current records before the list is cut. **Earlier assessment** shows saved words and their date. It does not change the order of work. A changed suggestion asks you to refresh before you can accept its task or open its prepared action. Tasks you create yourself keep their normal controls.
+
+A deal suggestion needs current facts before it enters this list. A score or a label such as “stalled” cannot put it here alone. **Review deal suggestions** opens the saved brief, including suggestions without those facts.
 
 The order comes from the same checks for Home and the Worklist. Pins, deadlines and customer work
 keep their order without a sentence comparing each item with the one below it.

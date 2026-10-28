@@ -29521,7 +29521,7 @@ paths:
         it had nothing to add.
 
         Written by the model from the deal's own facts — its stage and value, its
-        timeline, its open tasks, its health factors and what the buyer said in the
+        timeline, its open tasks and what the buyer said in the
         Deal Room — and assembled under the CALLER's row scope, so a record they
         cannot see never reaches a sentence.
 
@@ -29543,11 +29543,21 @@ paths:
         deterministically and `generated_by` says which wrote it. There is no blank
         AI card and no spinner that never resolves.
       parameters:
+        - name: if_recommendation
+          in: query
+          required: false
+          schema: { type: string, pattern: '^[0-9a-f]{64}$' }
+          description: Check this recommendation basis before opening its action. Requires if_rule and facts_only; a changed step returns version_skew.
+        - name: if_rule
+          in: query
+          required: false
+          schema: { type: string }
+          description: The recommendation rule being checked with if_recommendation.
         - name: facts_only
           in: query
           required: false
           schema: { type: boolean }
-          description: Refresh the card and shared action cache from current facts without model calls. Takes precedence over refresh.
+          description: Refresh the card and its current suggested step without model calls. Takes precedence over refresh.
         - name: refresh
           in: query
           required: false
@@ -29559,9 +29569,15 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DealStatusCard' }
+        '400':
+          description: The conditional recommendation parameters are invalid or facts_only is missing.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /deals/{id}/move/dismiss:
     parameters:
@@ -44554,6 +44570,7 @@ components:
         to send; absent for `none`.
       required: [action, reason, evidence]
       properties:
+        recommendation: { $ref: '#/components/schemas/RecommendationReceipt' }
         mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         action: { type: string }
         reason: { type: string, description: "One sentence saying why this move and not another." }
@@ -44576,6 +44593,21 @@ components:
             the set-aside lifts when the card names a different move. Absent on a move with
             nothing to do (`none`).
       additionalProperties: false
+
+    RecommendationReceipt:
+      type: object
+      additionalProperties: false
+      description: >-
+        The rule and current facts behind a suggested action. The server checks
+        these facts again when accepting the suggestion; the receipt grants no authority.
+        Replaying the same accepted observation returns its original task.
+      required: [deal_id, rule, policy_version, basis_fingerprint, checked_at]
+      properties:
+        deal_id: { type: string, format: uuid }
+        rule: { type: string }
+        policy_version: { type: string }
+        basis_fingerprint: { type: string, pattern: '^[0-9a-f]{64}$' }
+        checked_at: { type: string, format: date-time, description: Evaluation instant identifying this observation. }
 
     MailCaptureCoverage:
       type: object
@@ -49130,6 +49162,7 @@ components:
       description: What a task needs. Stored as an activity of kind `task`.
       required: [subject, source]
       properties:
+        recommendation: { $ref: '#/components/schemas/RecommendationReceipt' }
         source_activity_id:
           type: string
           format: uuid
@@ -49168,6 +49201,7 @@ components:
       type: object
       required: [kind, source]
       properties:
+        recommendation: { $ref: '#/components/schemas/RecommendationReceipt' }
         source_activity_id:
           type: string
           format: uuid
@@ -67328,20 +67362,10 @@ components:
     WorklistDealVerdict:
       type: object
       description: |
-        How the deal behind a row is STANDING, beside the move that acts on it.
-
-        The move says what to do; this says what the reader is walking into. A row
-        that names a step without saying whether the deal is alive asks the reader to
-        open the deal page to find out, which is the hand-off the queue exists to
-        remove.
-
-        NOTHING IS DECIDED HERE. compose/dealstatus already wrote a standing per deal
-        and cached it per reader; this carries that answer onto the row. A deal with
-        no cached card carries no verdict, and its row says what it said before.
-
-        `source` is what the reader is being shown, and a client's copy turns on it:
-        a deterministic rule stated as a belief is a lie about where the sentence came
-        from.
+        An earlier assessment of the deal, with the date it was written.
+        Current facts and actions are checked separately. These saved words never
+        establish that a task or reply is still owed and never change ranking.
+        Missing or inaccessible saved assessments are omitted.
       required: [line, source]
       properties:
         standing:
@@ -67356,7 +67380,7 @@ components:
             `live` — moving, with a next step both sides expect.
             `drifting` — nothing wrong, nothing happening; it dies of neglect.
             `blocked` — something specific is in the way.
-            `cold` — long silence after real engagement.
+            `cold` — recorded evidence that engagement ended, as assessed on `as_of`.
 
             The same four the deal page's own verdict carries, because they ARE that
             verdict. Held by backend/gates/worklistverdictstandings_test.go, which
@@ -67397,8 +67421,8 @@ components:
           type: string
           format: date-time
           description: |
-            When the reading behind this line was taken, so a stale one can be told from
-            a fresh one.
+            When the earlier assessment was written. Clients must display this date
+            and must not present the saved sentence as a current eligibility check.
 
     WorklistReason:
       type: object
@@ -67496,6 +67520,7 @@ components:
         for it.
       required: [action]
       properties:
+        recommendation: { $ref: '#/components/schemas/RecommendationReceipt' }
         mail_coverage: { $ref: '#/components/schemas/MailCaptureCoverage' }
         basis:
           allOf: [{ $ref: '#/components/schemas/WorkEvidenceBasis' }]
@@ -67749,8 +67774,8 @@ components:
         contributes_rows:
           type: boolean
           description: |
-            False for a side read that puts no row on the queue — `calendar` and
-            `next_meeting` — so its failure cannot hide a row, and a figure counted over
+            False for a side read that puts no row on the queue — `calendar`,
+            `next_meeting` and `deal_advice` — so its failure cannot hide a row, and a figure counted over
             the queue stays exact. True for a lane whose rows may be missing. Absent from
             an older server and from a surface that names only lanes, and a client reads
             absent as true.

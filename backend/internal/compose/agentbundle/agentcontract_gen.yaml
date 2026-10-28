@@ -7793,11 +7793,21 @@ paths:
 
         May hold the request open while an AI model answers, when no stored answer exists yet.
       parameters:
+        - name: if_recommendation
+          in: query
+          required: false
+          schema: {type: string, pattern: '^[0-9a-f]{64}$'}
+          description: Check this recommendation basis before opening its action. Requires if_rule and facts_only; a changed step returns version_skew.
+        - name: if_rule
+          in: query
+          required: false
+          schema: {type: string}
+          description: The recommendation rule being checked with if_recommendation.
         - name: facts_only
           in: query
           required: false
           schema: {type: boolean}
-          description: Refresh the card and shared action cache from current facts without model calls. Takes precedence over refresh.
+          description: Refresh the card and its current suggested step without model calls. Takes precedence over refresh.
         - name: refresh
           in: query
           required: false
@@ -7809,9 +7819,15 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/DealStatusCard'}
+        '400':
+          description: The conditional recommendation parameters are invalid or facts_only is missing.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /deals/{id}/coverage:
     get:
@@ -12632,6 +12648,7 @@ components:
         to send; absent for `none`.
       required: [action, reason, evidence]
       properties:
+        recommendation: {$ref: '#/components/schemas/RecommendationReceipt'}
         mail_coverage: {$ref: '#/components/schemas/MailCaptureCoverage'}
         action: {type: string}
         reason: {type: string, description: "One sentence saying why this move and not another."}
@@ -12654,6 +12671,18 @@ components:
             the set-aside lifts when the card names a different move. Absent on a move with
             nothing to do (`none`).
       additionalProperties: false
+    RecommendationReceipt:
+      type: object
+      additionalProperties: false
+      description: >-
+        The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
+      required: [deal_id, rule, policy_version, basis_fingerprint, checked_at]
+      properties:
+        deal_id: {type: string, format: uuid}
+        rule: {type: string}
+        policy_version: {type: string}
+        basis_fingerprint: {type: string, pattern: '^[0-9a-f]{64}$'}
+        checked_at: {type: string, format: date-time, description: Evaluation instant identifying this observation.}
     MailCaptureCoverage:
       type: object
       additionalProperties: false
@@ -15649,6 +15678,7 @@ components:
       description: What a task needs. Stored as an activity of kind `task`.
       required: [subject, source]
       properties:
+        recommendation: {$ref: '#/components/schemas/RecommendationReceipt'}
         source_activity_id:
           type: string
           format: uuid
@@ -15678,6 +15708,7 @@ components:
       type: object
       required: [kind, source]
       properties:
+        recommendation: {$ref: '#/components/schemas/RecommendationReceipt'}
         source_activity_id:
           type: string
           format: uuid

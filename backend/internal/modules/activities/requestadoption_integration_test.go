@@ -88,7 +88,7 @@ func TestRequestReplayCannotAdoptWithdrawnOrReassignedWork(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = store.tx(e.asSeat(e.rep), func(tx pgx.Tx) error {
-		_, _, err := restoreRequestTask(e.asSeat(e.rep), tx, stale, true, e.rep)
+		_, _, err := store.restoreRequestTask(e.asSeat(e.rep), tx, stale, true, e.rep, LogActivityInput{})
 		return err
 	})
 	if !errors.Is(err, apperrors.ErrConflict) && !errors.Is(err, apperrors.ErrNotFound) {
