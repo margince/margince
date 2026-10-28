@@ -74,7 +74,7 @@ The first open after a restart is slower, because nothing is warmed up yet:
 
 | Moment | Rep | Manager | In plain words |
 |---|---|---|---|
-| The analytics screen | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
+| The analytics screen | 🔴 Under a quarter of a second | 🔴 Under a quarter of a second | Too slow: some tries failed. |
 
 ## What happens when the whole team starts at 9:00?
 

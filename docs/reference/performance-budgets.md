@@ -32,7 +32,7 @@ records, so a row changes only when a maintainer merges it.
 | `PERF-6` | Cold start (single binary) | < 2 s |  | **not measured** |  |
 | `PERF-7` | Context-graph assembly | < 300 ms at mid-market | 528 ms | **OVER BUDGET** | 2026-10-28 |
 | `PERF-8` | Worklist and Home, as the screen calls them | < 1 s | 7331 ms | over budget (#4912) | 2026-10-28 |
-| `PERF-9` | Analytics screen | < 300 ms | 3.5 ms | within budget | 2026-10-28 |
+| `PERF-9` | Analytics screen | < 300 ms | 2.1 ms | **FAILED**: 30 refused (422) | 2026-10-28 |
 | `PERF-10` | Search as the screen calls it | < 1 s | 465 ms | within budget | 2026-10-28 |
 | `LOAD-1` | A cheap request while the team starts at once | < 150 ms | 73.1 ms | within budget | 2026-10-28 |
 | `CAP-PARAM-1` | Capture to timeline | 60 s p95 | 39.2 ms | within budget | 2026-08-15 |
@@ -108,7 +108,7 @@ A row with no data had nothing to time, and its note says why; a row not gated i
 | `analytics_metrics` | rep | 1.9 ms | 2.0 ms | 300 ms | 30 | within budget |  |
 | `analytics_framework` | rep | 1.9 ms | 2.0 ms | 300 ms | 30 | within budget |  |
 | `analytics_pipelines` | rep | 2.4 ms | 2.5 ms | 300 ms | 30 | within budget |  |
-| `analytics_evaluate` | rep | 1.9 ms | 2.1 ms | 300 ms | 30 | within budget | empty on the seeded corpus; 30 refused as too broad (422) |
+| `analytics_evaluate` | rep | 1.9 ms | 2.1 ms | 300 ms | 30 | **FAILED**: 30 refused (422) | empty on the seeded corpus; 30 refused as too broad (422) |
 | `app_shell_capabilities` | manager | 0.1 ms | 0.1 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
 | `app_shell_me` | manager | 2.2 ms | 2.4 ms | 150 ms | 30 | within budget |  |
 | `app_shell_company_context` | manager | 1.3 ms | 1.5 ms | 150 ms | 30 | within budget |  |
@@ -165,7 +165,7 @@ A row with no data had nothing to time, and its note says why; a row not gated i
 | `analytics_metrics` | manager | 1.9 ms | 2.0 ms | 300 ms | 30 | within budget |  |
 | `analytics_framework` | manager | 1.9 ms | 2.0 ms | 300 ms | 30 | within budget |  |
 | `analytics_pipelines` | manager | 2.4 ms | 2.4 ms | 300 ms | 30 | within budget |  |
-| `analytics_evaluate` | manager | 1.9 ms | 1.9 ms | 300 ms | 30 | within budget | empty on the seeded corpus; 30 refused as too broad (422) |
+| `analytics_evaluate` | manager | 1.9 ms | 1.9 ms | 300 ms | 30 | **FAILED**: 30 refused (422) | empty on the seeded corpus; 30 refused as too broad (422) |
 | `admin_rail_company` | admin | 2.3 ms | 2.5 ms | 150 ms | 30 | within budget |  |
 | `admin_rail_installation_license` | admin |  |  | 150 ms | 0 | no data | answers 501: this composition serves no license entitlement |
 | `admin_rail_ai_calls` | admin | 5.8 ms | 6.5 ms | 150 ms | 30 | within budget |  |

@@ -139,3 +139,18 @@ func TestAnAllowedServerErrorOnAListedRowRendersAgainstItsIssue(t *testing.T) {
 		t.Errorf("verdict %q; a 5xx no entry allows must still read as a failure", got)
 	}
 }
+
+func TestARefusedRowRendersAsAFailureUnlessItsIssueAllowsIt(t *testing.T) {
+	refused := measurement{
+		Name: "analytics_evaluate", Flow: "analytics_evaluate", Seat: "rep", P95Ms: 6, BudgetMs: 1000, Samples: 30,
+		Verdict: storedWithin, Status422: 30,
+	}
+	if got := verdict(refused); got != "**FAILED**: 30 refused (422)" {
+		t.Errorf("verdict %q; a row every request of which was refused must not read as within budget", got)
+	}
+	allowed := refused
+	allowed.Verdict, allowed.KnownIssue, allowed.Allowed422 = storedOverKnown, 7037, true
+	if got := verdict(allowed); got != "over budget (#7037)" {
+		t.Errorf("verdict %q; a refusal the listed issue allows renders against that issue", got)
+	}
+}
