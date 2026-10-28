@@ -18380,6 +18380,88 @@ export const en = {
   "contact.verdict.nothingOwed": "Nothing is owed on either side.",
   "contact.verdict.noExchange":
     "No exchange with this contact is recorded yet.",
+  "contactCase.title": "Possible duplicates",
+  "contactCase.intro":
+    "Tick the contacts that are the same person. Then choose which record to keep and who owns it.",
+  "contactCase.loading": "Loading possible duplicates…",
+  "contactCase.none": "This contact has no open duplicates.",
+  "contactCase.withheld": "These duplicates are not visible to you.",
+  "contactCase.stale":
+    "The duplicates changed while you reviewed them. Check the selection again.",
+  "contactCase.refused":
+    "You cannot merge these contacts. Ask the owners of the contacts or an administrator.",
+  "contactCase.merged": "Contacts merged",
+  "contactCase.resolved": "Contact already merged",
+  "contactCase.resolvedBy": "Merged by {name}",
+  "contactCase.resolvedInto": "Remaining contact:",
+  "contactCase.tooFew": "Tick at least two contacts.",
+  "contactCase.notConnected":
+    "Some ticked contacts are not linked to the others as possible duplicates. Tick the contacts between them, or untick them.",
+  "contactCase.noOwner": "Choose who owns the remaining contact.",
+  "contactCase.ownerLabel": "Owner",
+  "contactCase.ownerHint":
+    "Only an owner of a ticked contact can own the remaining contact.",
+  "contactCase.ownerPlaceholder": "Choose owner",
+  "contactCase.previewVerb": "Preview merge",
+  "contactCase.merge_one": "Merge {count} contact",
+  "contactCase.merge_other": "Merge {count} contacts",
+  "contactCase.member.owner": "Owner: {name}",
+  "contactCase.member.unowned": "No owner",
+  "contactCase.member.keep": "Keep this record’s details",
+  "contactCase.member.keepNamed": "Keep details of {name}",
+  "contactCase.member.dismissedWith":
+    "Marked as a different person from {names}.",
+  "contactCase.notAllowed.tooLarge":
+    "This group is too large to merge at once. Decide its pairs one at a time in the Worklist.",
+  "contactCase.notAllowed.ownersOnly":
+    "Only an owner of one of these contacts, or someone who can edit all of them, can merge them.",
+  "contactCase.notAllowed.noAuthority":
+    "Merging needs edit access to every contact here. A colleague who owns the others can merge them, or an administrator can turn on shared merge reviews.",
+  "contactCase.field.name": "Name",
+  "contactCase.field.legalName": "Legal name",
+  "contactCase.field.email": "Email",
+  "contactCase.field.phone": "Phone",
+  "contactCase.field.matchedOn": "Matched on",
+  "contactCase.field.chatAccount": "Chat account",
+  "contactCase.field.other": "Detail",
+  "contactCase.evidence.title": "Why they look alike",
+  "contactCase.evidence.pair": "{left} and {right}",
+  "contactCase.evidence.match": "{percent} match",
+  "contactCase.evidence.different": "Different people",
+  "contactCase.preview.title": "What the merge does",
+  "contactCase.preview.keeps": "{name} remains, owned by {owner}.",
+  "contactCase.preview.mergedTitle": "Merged into it",
+  "contactCase.preview.sharesTitle": "Keeps access",
+  "contactCase.preview.noShares": "No other owner.",
+  "contactCase.preview.shareWrite": "{name}, can edit",
+  "contactCase.preview.shareRead": "{name}, can view",
+  "contactCase.preview.skippedTitle": "No new access",
+  "contactCase.preview.skipped.inactive": "{name}: account is inactive",
+  "contactCase.preview.skipped.alreadyOwner":
+    "{name}: owns the remaining contact",
+  "contactCase.preview.skipped.alreadyGranted": "{name}: already has access",
+  "contactCase.preview.final": "A merge cannot be undone.",
+  "contactCase.entry_one": "Possible duplicate ({count})",
+  "contactCase.entry_other": "Possible duplicates ({count})",
+  "worklist.contactCase.review": "Review",
+  "worklist.contactCase.owners": "Owned by {names}.",
+  "worklist.contactCase.ownersAny":
+    "Owned by {names}. Any of them can merge these.",
+  "worklist.contactCase.unowned": "No owner.",
+  "worklist.contactCase.notYours":
+    "You cannot merge these. The review says who can.",
+  "worklist.ask.contact_case":
+    "These contacts look like the same person. Review them and merge the ones that are.",
+  "worklist.untitled.contact_case": "Possible duplicate contacts",
+  "brief.coverage.source.contact_case": "Duplicate contacts",
+  "list.viewSharedWithMe": "Shared with me",
+  "list.emptyShared": "No {unit} shared with you.",
+  "sharedMergeReviews.title": "Shared merge reviews",
+  "sharedMergeReviews.hint":
+    "An owner of one duplicate contact may also merge colleagues’ copies of that person, and the colleagues keep access to the remaining contact. Nothing else opens: no mail, no files.",
+  "sharedMergeReviews.switch": "Owners merge duplicates",
+  "sharedMergeReviews.readOnly": "An admin changes this setting.",
+  "sharedMergeReviews.notSaved": "Setting was not saved.",
 } as const;
 
 export type MessageKey = keyof typeof en;
