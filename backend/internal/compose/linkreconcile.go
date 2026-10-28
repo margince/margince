@@ -267,12 +267,13 @@ func (w *linkReconcileWorker) liftFiledMeetingHolds(ctx context.Context, lifted 
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		where := filedMeetingHeldClause("a", arg)
-		rows, err := tx.Query(ctx, `
+		query := `
 			SELECT a.id
 			  FROM activity a
-			 WHERE `+where+`
+			 WHERE ` + where + `
 			 ORDER BY a.occurred_at DESC, a.id
-			 LIMIT `+fmt.Sprintf("$%d", arg(liftFiledMeetingHoldsPerTick)), args...)
+			 LIMIT ` + fmt.Sprintf("$%d", arg(liftFiledMeetingHoldsPerTick))
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("selecting the filed meetings still held: %w", err)
 		}

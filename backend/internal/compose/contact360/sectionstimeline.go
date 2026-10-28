@@ -260,14 +260,15 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	}
 	// The SELECT list and its scan are the activities module's, so there is no
 	// list here to fall behind that one.
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT %s
 		FROM activity a
 		WHERE a.archived_at IS NULL AND %s AND (%s)%s %s
 		ORDER BY %s
 		LIMIT %d`,
 		activities.ActivityProjection(contentArm), fmt.Sprintf(contactReachesActivity, bind(contactPos)),
-		scope, projectScope(opts, arg), extra, order, sectionCap+1), args...)
+		scope, projectScope(opts, arg), extra, order, sectionCap+1)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, false, err
 	}
@@ -429,11 +430,12 @@ func (s *Service) sinceLastVisitSection(ctx context.Context, tx pgx.Tx, contactI
 	if err != nil {
 		return err
 	}
-	if err := tx.QueryRow(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT count(*)
 		FROM activity a
 		WHERE a.archived_at IS NULL AND a.created_at > $%d AND %s AND (%s)%s`,
-		sincePos, fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg)), args...).
+		sincePos, fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg))
+	if err := tx.QueryRow(ctx, query, args...).
 		Scan(&view.NewActivities); err != nil {
 		return fmt.Errorf("count new activities: %w", err)
 	}

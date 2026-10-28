@@ -206,11 +206,11 @@ func (s *Store) UpsertException(ctx context.Context, tx pgx.Tx, f Finding, owner
 	}
 	var args []any
 	arg := func(value any) string { args = append(args, value); return fmt.Sprintf("$%d", len(args)) }
-	if _, err := tx.Exec(ctx, `
+	query := `
 		INSERT INTO assurance_exception
 		    (logical_key, type, subject_kind, subject_id, claim, observed,
 		     severity, affected_minor, currency, owner_id, captured_by)
-		VALUES (`+arg(LogicalKey(f))+`, `+arg(f.Type)+`, `+arg(kind)+`, `+arg(subjectID)+`, `+arg(claim)+`, `+arg(observed)+`, `+arg(f.Severity)+`, `+arg(f.AffectedMinor)+`, `+arg(nullIfEmpty(f.Currency))+`, `+arg(nullableID(owner))+`, `+arg(capturedBy)+`)
+		VALUES (` + arg(LogicalKey(f)) + `, ` + arg(f.Type) + `, ` + arg(kind) + `, ` + arg(subjectID) + `, ` + arg(claim) + `, ` + arg(observed) + `, ` + arg(f.Severity) + `, ` + arg(f.AffectedMinor) + `, ` + arg(nullIfEmpty(f.Currency)) + `, ` + arg(nullableID(owner)) + `, ` + arg(capturedBy) + `)
 		ON CONFLICT (logical_key) DO UPDATE
 		SET last_seen_at = now(),
 		    updated_at = now(),
@@ -221,16 +221,16 @@ func (s *Store) UpsertException(ctx context.Context, tx pgx.Tx, f Finding, owner
 		    -- old finding is the same finding and not a second one. A resolved
 		    -- row does not reopen — somebody answered that one, and
 		    -- re-detection must not un-ask them.
-		    status = CASE WHEN assurance_exception.status IN (`+reopenableStatuses+`)
+		    status = CASE WHEN assurance_exception.status IN (` + reopenableStatuses + `)
 		                  THEN 'open' ELSE assurance_exception.status END,
 		    -- Only while it is still somebody's problem. A resolved row keeps
 		    -- the value it was resolved against, which is what lets a later
 		    -- scan tell "still true" from "changed since you answered".
-		    observed = CASE WHEN assurance_exception.status IN ('open', `+reopenableStatuses+`)
+		    observed = CASE WHEN assurance_exception.status IN ('open', ` + reopenableStatuses + `)
 		                    THEN EXCLUDED.observed ELSE assurance_exception.observed END,
-		    severity = CASE WHEN assurance_exception.status IN ('open', `+reopenableStatuses+`)
-		                    THEN EXCLUDED.severity ELSE assurance_exception.severity END`,
-		args...); err != nil {
+		    severity = CASE WHEN assurance_exception.status IN ('open', ` + reopenableStatuses + `)
+		                    THEN EXCLUDED.severity ELSE assurance_exception.severity END`
+	if _, err := tx.Exec(ctx, query, args...); err != nil {
 		return fmt.Errorf("assurance: recording the finding: %w", err)
 	}
 	return nil

@@ -82,7 +82,8 @@ func (s *Service) PublishFramework(ctx context.Context, version int64, in crmcon
 			return err
 		}
 		b = bindings{}
-		if _, err := tx.Exec(ctx, "UPDATE reporting_framework SET revision="+b.add(out.Revision)+",version="+b.add(out.Version), b.values...); err != nil {
+		query := "UPDATE reporting_framework SET revision=" + b.add(out.Revision) + ",version=" + b.add(out.Version)
+		if _, err := tx.Exec(ctx, query, b.values...); err != nil {
 			return err
 		}
 		return recordChange(ctx, tx, "reporting_framework", frameworkID, "update", &before, out)

@@ -50,7 +50,8 @@ func populateEditionSummary(ctx context.Context, tx pgx.Tx, reports []crmcontrac
 		return err
 	}
 	source := "(SELECT report_id,owner_id,publication_audience AS audience,publication_team_id AS audience_team_id,captured_at FROM report_edition) d"
-	rows, err := tx.Query(ctx, "SELECT report_id,count(*),max(captured_at) FROM "+source+" WHERE report_id=ANY("+b.add(reportSummaryIDs(reports))+") AND "+audience+" GROUP BY report_id", b.values...)
+	query := "SELECT report_id,count(*),max(captured_at) FROM " + source + " WHERE report_id=ANY(" + b.add(reportSummaryIDs(reports)) + ") AND " + audience + " GROUP BY report_id"
+	rows, err := tx.Query(ctx, query, b.values...)
 	if err != nil {
 		return err
 	}
@@ -78,7 +79,8 @@ func populateEditionSummary(ctx context.Context, tx pgx.Tx, reports []crmcontrac
 
 func populateScheduleSummary(ctx context.Context, tx pgx.Tx, reports []crmcontracts.ReportingReport, index map[ids.UUID]int) error {
 	var b bindings
-	rows, err := tx.Query(ctx, "SELECT report_id,definition->>'frequency',enabled,next_due_at,last_status FROM report_schedule s WHERE report_id=ANY("+b.add(reportSummaryIDs(reports))+") ORDER BY (SELECT max(intended_due_at) FROM report_execution e WHERE e.schedule_id=s.id) DESC NULLS LAST,id DESC", b.values...)
+	query := "SELECT report_id,definition->>'frequency',enabled,next_due_at,last_status FROM report_schedule s WHERE report_id=ANY(" + b.add(reportSummaryIDs(reports)) + ") ORDER BY (SELECT max(intended_due_at) FROM report_execution e WHERE e.schedule_id=s.id) DESC NULLS LAST,id DESC"
+	rows, err := tx.Query(ctx, query, b.values...)
 	if err != nil {
 		return err
 	}

@@ -208,9 +208,9 @@ func (s *Store) CountMembers(ctx context.Context, listID ids.ListID) (int, error
 		if err != nil {
 			return err
 		}
-		return tx.QueryRow(ctx, fmt.Sprintf(
-			"SELECT count(*) FROM list_member lm WHERE lm.list_id = $%d AND %s", arg(listID), visible),
-			args...).Scan(&n)
+		query := fmt.Sprintf(
+			"SELECT count(*) FROM list_member lm WHERE lm.list_id = $%d AND %s", arg(listID), visible)
+		return tx.QueryRow(ctx, query, args...).Scan(&n)
 	})
 	return n, err
 }

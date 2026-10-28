@@ -73,12 +73,13 @@ func commitmentDerivatives(ctx context.Context, tx pgx.Tx, sources []ids.UUID, l
 	if locking {
 		lock = " FOR UPDATE OF d"
 	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT d.source_activity_id, d.locator, a.id
+	query := fmt.Sprintf(`SELECT d.source_activity_id, d.locator, a.id
  FROM activity_commitment_admission d
  LEFT JOIN activity a ON a.source_activity_id = d.source_activity_id
  AND a.source_id = d.locator AND a.source_system = $%[1]d
  WHERE d.source_activity_id = ANY($%[2]d::uuid[]) OR d.renewed_by = ANY($%[2]d::uuid[])
- ORDER BY a.id, d.source_activity_id, d.locator%[3]s`, arg(provenance.CommitmentTaskSource), arg(sources), lock), args...)
+ ORDER BY a.id, d.source_activity_id, d.locator%[3]s`, arg(provenance.CommitmentTaskSource), arg(sources), lock)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("privacy: finding work derived from erased evidence: %w", err)
 	}
@@ -131,7 +132,8 @@ func (e *Eraser) eraseCommitmentTask(ctx context.Context, tx pgx.Tx, task ids.UU
 	var args []any
 	arg := func(value any) int { args = append(args, value); return len(args) }
 	var held, alreadyWithheld bool
-	if err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT a.restricted_at IS NOT NULL OR %s, NOT (%s) FROM activity a WHERE a.id = $%d`, retentionscope.HeldThroughAnyLink("a.id"), auth.CommitmentContentRetainedClause("a"), arg(task)), args...).Scan(&held, &alreadyWithheld); err != nil {
+	query := fmt.Sprintf(`SELECT a.restricted_at IS NOT NULL OR %s, NOT (%s) FROM activity a WHERE a.id = $%d`, retentionscope.HeldThroughAnyLink("a.id"), auth.CommitmentContentRetainedClause("a"), arg(task))
+	if err := tx.QueryRow(ctx, query, args...).Scan(&held, &alreadyWithheld); err != nil {
 		return false, err
 	}
 	if held {
@@ -167,8 +169,9 @@ func (e *Eraser) eraseCommitmentTask(ctx context.Context, tx pgx.Tx, task ids.UU
 func eraseCommitmentClaims(ctx context.Context, tx pgx.Tx, item commitmentErasure) error {
 	var args []any
 	arg := func(value any) int { args = append(args, value); return len(args) }
-	rows, err := tx.Query(ctx, fmt.Sprintf(`DELETE FROM conversation_claim WHERE source_activity_id = $%d
- AND evidence_fingerprint = $%d RETURNING id, contact_id`, arg(item.source), arg(item.locator)), args...)
+	query := fmt.Sprintf(`DELETE FROM conversation_claim WHERE source_activity_id = $%d
+ AND evidence_fingerprint = $%d RETURNING id, contact_id`, arg(item.source), arg(item.locator))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -199,8 +202,9 @@ func eraseCommitmentClaims(ctx context.Context, tx pgx.Tx, item commitmentErasur
 func eraseCommitmentDecision(ctx context.Context, tx pgx.Tx, item commitmentErasure) error {
 	var args []any
 	arg := func(value any) int { args = append(args, value); return len(args) }
-	tag, err := tx.Exec(ctx, fmt.Sprintf(`DELETE FROM activity_commitment_admission
- WHERE source_activity_id = $%d AND locator = $%d`, arg(item.source), arg(item.locator)), args...)
+	query := fmt.Sprintf(`DELETE FROM activity_commitment_admission
+ WHERE source_activity_id = $%d AND locator = $%d`, arg(item.source), arg(item.locator))
+	tag, err := tx.Exec(ctx, query, args...)
 	if err != nil {
 		return err
 	}
