@@ -32883,7 +32883,7 @@ components:
         effective_date:
           type: string
           format: date
-          description: Defaults to today. A past date is accepted only when the currency has no rate yet or the date is earlier than every rate stored for it.
+          description: A calendar day in the installation's time zone. Defaults to today there. A past date is accepted only when the currency has no rate yet or the date is earlier than every rate stored for it.
     AiModelRate:
       type: object
       description: One effective-dated model price. The four buckets are USD per 1M tokens as decimal strings (the server stores µUSD integers). Transparency-only — never gates routing.
@@ -33001,7 +33001,7 @@ components:
         effective_date:
           type: string
           format: date
-          description: Defaults to today; must not be in the past (append-forward).
+          description: A UTC calendar day. Defaults to today's UTC date and must not be before it (append-forward).
 
     # ---- outbound webhooks (E10/S-E10.6, A51; BYO-DDL-3/4) ----
     WebFormSender:

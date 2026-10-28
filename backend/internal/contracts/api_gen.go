@@ -51405,7 +51405,7 @@ type SetAiModelRateRequest struct {
 	// CacheWritePerMtok USD per 1M cache-write tokens.
 	CacheWritePerMtok string `json:"cache_write_per_mtok"`
 
-	// EffectiveDate Defaults to today; must not be in the past (append-forward).
+	// EffectiveDate A UTC calendar day. Defaults to today's UTC date and must not be before it (append-forward).
 	EffectiveDate *openapi_types.Date `json:"effective_date,omitempty"`
 
 	// InputPerMtok USD per 1M input tokens. Plain non-negative decimal, up to 12 integer and 6 fractional digits (keeps the stored µUSD within int64).
@@ -51464,7 +51464,7 @@ type SetDealRoomExpiryRequest struct {
 
 // SetFxRateRequest defines model for SetFxRateRequest.
 type SetFxRateRequest struct {
-	// EffectiveDate Defaults to today. A past date is accepted only when the currency has no rate yet or the date is earlier than every rate stored for it.
+	// EffectiveDate A calendar day in the installation's time zone. Defaults to today there. A past date is accepted only when the currency has no rate yet or the date is earlier than every rate stored for it.
 	EffectiveDate *openapi_types.Date `json:"effective_date,omitempty"`
 
 	// FromCurrency 3-letter ISO; must not equal the base currency.
