@@ -12284,6 +12284,10 @@ components:
             What the receipt is evidence OF. The graph counts attendees and organizers as well
             as correspondents, so a meeting is as much a receipt here as a mail — and a citation
             that drew every one of them as an email would tell a reader a meeting was one.
+        controller_send:
+          allOf: [{$ref: '#/components/schemas/ControllerSend'}]
+          nullable: true
+          description: Present only on a mail the installation's relay sent for a member, as on `Activity`.
     ContactGraphRoute:
       type: object
       description: |-
@@ -15563,6 +15567,11 @@ components:
           nullable: true
           description: >-
             Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word.
+        controller_send:
+          allOf: [{$ref: '#/components/schemas/ControllerSend'}]
+          readOnly: true
+          nullable: true
+          description: Present only on a mail the installation's relay sent for a member. Absent on every other row.
         thread_key:
           type: [string, 'null']
           readOnly: true
@@ -20043,6 +20052,16 @@ components:
             the button while a lookup is already in flight JOINS it — and the insert does
             not report which of the two happened. A `running` this endpoint could not tell
             apart from `queued` would be a promise the handler cannot keep.
+    ControllerSend:
+      type: object
+      description: |-
+        Present on a mail the installation sent through its own relay on a member's behalf,
+        rather than through that member's mailbox. Its presence is the lane.
+      required: [from_address]
+      properties:
+        from_address:
+          type: [string, 'null']
+          description: The From address the mail was staged with. Null on a mail staged before it was recorded.
     CompanyVatCheck:
       type: object
       description: |-

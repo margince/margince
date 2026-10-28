@@ -1498,7 +1498,10 @@ type Activity struct {
 
 	// ContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
 	ContentState *ActivityContentState `json:"content_state,omitempty"`
-	CreatedAt    time.Time             `json:"created_at"`
+
+	// ControllerSend Present only on a mail the installation's relay sent for a member. Absent on every other row.
+	ControllerSend *ControllerSend `json:"controller_send,omitempty"`
+	CreatedAt      time.Time       `json:"created_at"`
 
 	// Direction inbound/outbound for email/call; null for note/task.
 	Direction *ActivityDirection `json:"direction,omitempty"`
@@ -1941,6 +1944,13 @@ type ComputedField struct {
 
 // ComputedFieldKind defines model for ComputedField.Kind.
 type ComputedFieldKind string
+
+// ControllerSend Present on a mail the installation sent through its own relay on a member's behalf,
+// rather than through that member's mailbox. Its presence is the lane.
+type ControllerSend struct {
+	// FromAddress The From address the mail was staged with. Null on a mail staged before it was recorded.
+	FromAddress *string `json:"from_address"`
+}
 
 // CreateActivityRequest The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`.
 type CreateActivityRequest struct {
@@ -2853,6 +2863,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "content_state")
 	}
 
+	if raw, found := object["controller_send"]; found {
+		err = json.Unmarshal(raw, &a.ControllerSend)
+		if err != nil {
+			return fmt.Errorf("error reading 'controller_send': %w", err)
+		}
+		delete(object, "controller_send")
+	}
+
 	if raw, found := object["created_at"]; found {
 		err = json.Unmarshal(raw, &a.CreatedAt)
 		if err != nil {
@@ -3249,6 +3267,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["content_state"], err = json.Marshal(a.ContentState)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'content_state': %w", err)
+		}
+	}
+
+	if a.ControllerSend != nil {
+		object["controller_send"], err = json.Marshal(a.ControllerSend)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'controller_send': %w", err)
 		}
 	}
 

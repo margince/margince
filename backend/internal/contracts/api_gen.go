@@ -8020,6 +8020,24 @@ func (e ContractValueBasis) Valid() bool {
 	}
 }
 
+// Defines values for ControllerMailPreviewKind.
+const (
+	ControllerMailPreviewKindPrivacyNotice      ControllerMailPreviewKind = "privacy_notice"
+	ControllerMailPreviewKindRecordConfirmation ControllerMailPreviewKind = "record_confirmation"
+)
+
+// Valid indicates whether the value is a known member of the ControllerMailPreviewKind enum.
+func (e ControllerMailPreviewKind) Valid() bool {
+	switch e {
+	case ControllerMailPreviewKindPrivacyNotice:
+		return true
+	case ControllerMailPreviewKindRecordConfirmation:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ConversationClaimStatus.
 const (
 	ConversationClaimStatusDismissed ConversationClaimStatus = "dismissed"
@@ -13633,6 +13651,27 @@ func (e MailDraftAnchorType) Valid() bool {
 	case MailDraftAnchorTypeLead:
 		return true
 	case MailDraftAnchorTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MailLanguage.
+const (
+	MailLanguageDe MailLanguage = "de"
+	MailLanguageEn MailLanguage = "en"
+	MailLanguageVi MailLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the MailLanguage enum.
+func (e MailLanguage) Valid() bool {
+	switch e {
+	case MailLanguageDe:
+		return true
+	case MailLanguageEn:
+		return true
+	case MailLanguageVi:
 		return true
 	default:
 		return false
@@ -23806,6 +23845,24 @@ func (e AllowContactJSONBodyCategory) Valid() bool {
 	}
 }
 
+// Defines values for PreviewControllerMailParamsKind.
+const (
+	PreviewControllerMailParamsKindPrivacyNotice      PreviewControllerMailParamsKind = "privacy_notice"
+	PreviewControllerMailParamsKindRecordConfirmation PreviewControllerMailParamsKind = "record_confirmation"
+)
+
+// Valid indicates whether the value is a known member of the PreviewControllerMailParamsKind enum.
+func (e PreviewControllerMailParamsKind) Valid() bool {
+	switch e {
+	case PreviewControllerMailParamsKindPrivacyNotice:
+		return true
+	case PreviewControllerMailParamsKindRecordConfirmation:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SuppressContactJSONBodyKind.
 const (
 	SuppressContactJSONBodyKindMarketingObjection SuppressContactJSONBodyKind = "marketing_objection"
@@ -25640,7 +25697,10 @@ type Activity struct {
 
 	// ContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
 	ContentState *ActivityContentState `json:"content_state,omitempty"`
-	CreatedAt    time.Time             `json:"created_at"`
+
+	// ControllerSend Present only on a mail the installation's relay sent for a member. Absent on every other row.
+	ControllerSend *ControllerSend `json:"controller_send,omitempty"`
+	CreatedAt      time.Time       `json:"created_at"`
 
 	// Direction inbound/outbound for email/call; null for note/task.
 	Direction *ActivityDirection `json:"direction,omitempty"`
@@ -36028,6 +36088,9 @@ type ContactGraphNodeType string
 type ContactGraphReceipt struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
 
+	// ControllerSend Present only on a mail the installation's relay sent for a member, as on `Activity`.
+	ControllerSend *ControllerSend `json:"controller_send,omitempty"`
+
 	// Kind What the receipt is evidence OF. The graph counts attendees and organizers as well
 	// as correspondents, so a meeting is as much a receipt here as a mail — and a citation
 	// that drew every one of them as an email would tell a reader a meeting was one.
@@ -36762,6 +36825,40 @@ type ContractListResponse struct {
 	Page PageInfo   `json:"page"`
 }
 
+// ControllerMailPreview The exact mail a controller send would stage now, with a marker where the link goes.
+type ControllerMailPreview struct {
+	// DefaultLanguage The installation's mail language, which a send with no language uses.
+	DefaultLanguage MailLanguage `json:"default_language"`
+
+	// FromAddress The address the relay sends from. Null when the installation names none.
+	FromAddress *string                   `json:"from_address"`
+	Kind        ControllerMailPreviewKind `json:"kind"`
+
+	// Language A language this build writes the installation's own mail in.
+	Language MailLanguage `json:"language"`
+
+	// Languages Every language this build can send the mail in, in a stable order.
+	Languages []MailLanguage `json:"languages"`
+	Subject   string         `json:"subject"`
+
+	// Text The plain-text body as sent. Where the send puts the link, it carries a marker in the
+	// mail's language instead of a URL.
+	Text string `json:"text"`
+
+	// ToAddress The contact's own live primary email, the only address the send mails.
+	ToAddress string `json:"to_address"`
+}
+
+// ControllerMailPreviewKind defines model for ControllerMailPreview.Kind.
+type ControllerMailPreviewKind string
+
+// ControllerMailSend How to send a mail the installation writes as controller. An absent body sends in the installation's mail language.
+type ControllerMailSend struct {
+	// Language The language of the mail and of the page its link opens. Absent means the
+	// installation's mail language.
+	Language *MailLanguage `json:"language,omitempty"`
+}
+
 // ControllerParticulars What this installation must be able to say about itself when it writes to somebody.
 //
 // Every field is optional and every field is free text. A jurisdiction pack declares WHICH
@@ -36790,6 +36887,13 @@ type ControllerParticulars struct {
 
 	// PrivacyContact How to reach whoever answers about the data. Art. 13(1)(b), which asks for the data protection officer where one exists.
 	PrivacyContact *string `json:"privacy_contact,omitempty"`
+}
+
+// ControllerSend Present on a mail the installation sent through its own relay on a member's behalf,
+// rather than through that member's mailbox. Its presence is the lane.
+type ControllerSend struct {
+	// FromAddress The From address the mail was staged with. Null on a mail staged before it was recorded.
+	FromAddress *string `json:"from_address"`
 }
 
 // ConversationClaim One thing said in a captured conversation, with the evidence it was read from.
@@ -45067,6 +45171,9 @@ type MailHistoryBaseline struct {
 	// Timezone The IANA zone the date is read in, such as Europe/Berlin.
 	Timezone string `json:"timezone"`
 }
+
+// MailLanguage A language this build writes the installation's own mail in.
+type MailLanguage string
 
 // MeResponse defines model for MeResponse.
 type MeResponse struct {
@@ -60370,6 +60477,18 @@ type IssueDoubleOptInJSONBody struct {
 	PurposeId openapi_types.UUID `json:"purpose_id"`
 }
 
+// PreviewControllerMailParams defines parameters for PreviewControllerMail.
+type PreviewControllerMailParams struct {
+	// Kind `record_confirmation` previews `confirm-request`; `privacy_notice` previews `privacy-notice`.
+	Kind PreviewControllerMailParamsKind `form:"kind" json:"kind"`
+
+	// Language The language to render in. Absent means the installation's mail language.
+	Language *MailLanguage `form:"language,omitempty" json:"language,omitempty"`
+}
+
+// PreviewControllerMailParamsKind defines parameters for PreviewControllerMail.
+type PreviewControllerMailParamsKind string
+
 // SuppressContactJSONBody defines parameters for SuppressContact.
 type SuppressContactJSONBody struct {
 	// Kind Which stop this is. `subject_request` is "stop contacting me" and reaches every
@@ -65432,8 +65551,14 @@ type AllowContactJSONRequestBody AllowContactJSONBody
 // RevokeOverrideJSONRequestBody defines body for RevokeOverride for application/json ContentType.
 type RevokeOverrideJSONRequestBody RevokeOverrideJSONBody
 
+// RequestDetailsConfirmationJSONRequestBody defines body for RequestDetailsConfirmation for application/json ContentType.
+type RequestDetailsConfirmationJSONRequestBody = ControllerMailSend
+
 // IssueDoubleOptInJSONRequestBody defines body for IssueDoubleOptIn for application/json ContentType.
 type IssueDoubleOptInJSONRequestBody IssueDoubleOptInJSONBody
+
+// SendPrivacyNoticeJSONRequestBody defines body for SendPrivacyNotice for application/json ContentType.
+type SendPrivacyNoticeJSONRequestBody = ControllerMailSend
 
 // RecordQualifyingEventJSONRequestBody defines body for RecordQualifyingEvent for application/json ContentType.
 type RecordQualifyingEventJSONRequestBody = RecordQualifyingEventRequest
@@ -66315,6 +66440,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "content_state")
 	}
 
+	if raw, found := object["controller_send"]; found {
+		err = json.Unmarshal(raw, &a.ControllerSend)
+		if err != nil {
+			return fmt.Errorf("error reading 'controller_send': %w", err)
+		}
+		delete(object, "controller_send")
+	}
+
 	if raw, found := object["created_at"]; found {
 		err = json.Unmarshal(raw, &a.CreatedAt)
 		if err != nil {
@@ -66711,6 +66844,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["content_state"], err = json.Marshal(a.ContentState)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'content_state': %w", err)
+		}
+	}
+
+	if a.ControllerSend != nil {
+		object["controller_send"], err = json.Marshal(a.ControllerSend)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'controller_send': %w", err)
 		}
 	}
 
@@ -78200,6 +78340,9 @@ type ServerInterface interface {
 	// May we write to this contact right now — per purpose and channel, with the reason.
 	// (GET /contacts/{id}/consent/guard)
 	GetContactConsentGuard(w http.ResponseWriter, r *http.Request, id Id)
+	// Show the exact mail `confirm-request` or `privacy-notice` would send, without sending it.
+	// (GET /contacts/{id}/consent/mail-preview)
+	PreviewControllerMail(w http.ResponseWriter, r *http.Request, id Id, params PreviewControllerMailParams)
 	// Mail this contact the Art. 14 disclosure, which asks them for nothing.
 	// (POST /contacts/{id}/consent/privacy-notice)
 	SendPrivacyNotice(w http.ResponseWriter, r *http.Request, id Id)
@@ -82016,6 +82159,12 @@ func (_ Unimplemented) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, 
 // May we write to this contact right now — per purpose and channel, with the reason.
 // (GET /contacts/{id}/consent/guard)
 func (_ Unimplemented) GetContactConsentGuard(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Show the exact mail `confirm-request` or `privacy-notice` would send, without sending it.
+// (GET /contacts/{id}/consent/mail-preview)
+func (_ Unimplemented) PreviewControllerMail(w http.ResponseWriter, r *http.Request, id Id, params PreviewControllerMailParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -100054,6 +100203,67 @@ func (siw *ServerInterfaceWrapper) GetContactConsentGuard(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetContactConsentGuard(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewControllerMail operation middleware
+func (siw *ServerInterfaceWrapper) PreviewControllerMail(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PreviewControllerMailParams
+
+	// ------------- Required query parameter "kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "kind", r.URL.Query(), &params.Kind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "language" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "language", r.URL.Query(), &params.Language, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "language"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "language", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewControllerMail(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -125769,6 +125979,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/contacts/{id}/consent/guard", wrapper.GetContactConsentGuard)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/contacts/{id}/consent/mail-preview", wrapper.PreviewControllerMail)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/consent/privacy-notice", wrapper.SendPrivacyNotice)

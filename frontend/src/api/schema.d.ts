@@ -15860,6 +15860,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/contacts/{id}/consent/mail-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Show the exact mail `confirm-request` or `privacy-notice` would send, without sending it.
+         * @description Renders the mail the matching send would stage now: its From and To addresses, subject and
+         *     text. The link is not minted, so the text carries a labelled marker where the send puts
+         *     the link. Nothing is written and nothing is sent.
+         *
+         *     It admits the same callers and contacts as the send, so it never shows a mail the send
+         *     would refuse.
+         */
+        get: operations["previewControllerMail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/contacts/{id}/consent/privacy-notice": {
         parameters: {
             query?: never;
@@ -30895,6 +30923,8 @@ export interface components {
              * @enum {string}
              */
             kind: "email" | "call" | "meeting" | "note" | "task" | "message";
+            /** @description Present only on a mail the installation's relay sent for a member, as on `Activity`. */
+            controller_send?: components["schemas"]["ControllerSend"] | null;
         };
         /**
          * @description The warmest way in, chosen deterministically rather than scored by a model: the
@@ -35412,6 +35442,8 @@ export interface components {
             direction?: null | "inbound" | "outbound";
             /** @description Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word. */
             readonly email_summary?: components["schemas"]["EmailSummary"] | null;
+            /** @description Present only on a mail the installation's relay sent for a member. Absent on every other row. */
+            readonly controller_send?: components["schemas"]["ControllerSend"] | null;
             /** @description The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none. */
             readonly thread_key?: string | null;
             /**
@@ -43384,6 +43416,47 @@ export interface components {
              *     nobody can pass on. Read `confirm_requests_sendable` on `/me` to know before asking.
              */
             sendable: boolean;
+        };
+        /**
+         * @description A language this build writes the installation's own mail in.
+         * @enum {string}
+         */
+        MailLanguage: "de" | "en" | "vi";
+        /** @description How to send a mail the installation writes as controller. An absent body sends in the installation's mail language. */
+        ControllerMailSend: {
+            /**
+             * @description The language of the mail and of the page its link opens. Absent means the
+             *     installation's mail language.
+             */
+            language?: components["schemas"]["MailLanguage"];
+        };
+        /** @description The exact mail a controller send would stage now, with a marker where the link goes. */
+        ControllerMailPreview: {
+            /** @enum {string} */
+            kind: "record_confirmation" | "privacy_notice";
+            language: components["schemas"]["MailLanguage"];
+            /** @description The installation's mail language, which a send with no language uses. */
+            default_language: components["schemas"]["MailLanguage"];
+            /** @description Every language this build can send the mail in, in a stable order. */
+            languages: components["schemas"]["MailLanguage"][];
+            /** @description The address the relay sends from. Null when the installation names none. */
+            from_address: string | null;
+            /** @description The contact's own live primary email, the only address the send mails. */
+            to_address: string;
+            subject: string;
+            /**
+             * @description The plain-text body as sent. Where the send puts the link, it carries a marker in the
+             *     mail's language instead of a URL.
+             */
+            text: string;
+        };
+        /**
+         * @description Present on a mail the installation sent through its own relay on a member's behalf,
+         *     rather than through that member's mailbox. Its presence is the lane.
+         */
+        ControllerSend: {
+            /** @description The From address the mail was staged with. Null on a mail staged before it was recorded. */
+            from_address: string | null;
         };
         /**
          * @description One company's current VAT standing, and the evidence for it. The row keeps only the
@@ -75494,6 +75567,49 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    previewControllerMail: {
+        parameters: {
+            query: {
+                /** @description `record_confirmation` previews `confirm-request`; `privacy_notice` previews `privacy-notice`. */
+                kind: "record_confirmation" | "privacy_notice";
+                /** @description The language to render in. Absent means the installation's mail language. */
+                language?: components["schemas"]["MailLanguage"];
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The mail as the send would stage it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ControllerMailPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /**
+             * @description The contact carries no live email address, the installation's controller particulars
+             *     are incomplete, or the language is not one this build sends in.
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     sendPrivacyNotice: {
         parameters: {
             query?: never;
@@ -75504,7 +75620,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ControllerMailSend"];
+            };
+        };
         responses: {
             /** @description Notice issued, and what became of the delivery. */
             201: {
@@ -75531,7 +75651,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ControllerMailSend"];
+            };
+        };
         responses: {
             /** @description Link issued, and what became of the delivery. */
             201: {
@@ -75545,7 +75669,10 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description The contact carries no live email address, so there is no mailbox a link could reach. */
+            /**
+             * @description The contact carries no live email address, so there is no mailbox a link could reach,
+             *     or the language is not one this build sends in.
+             */
             422: {
                 headers: {
                     [name: string]: unknown;

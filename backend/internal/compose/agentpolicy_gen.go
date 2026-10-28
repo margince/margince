@@ -343,6 +343,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/contacts/{id}/brief":                                           {Op: "getContactBrief", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/contacts/{id}/consent":                                         {Op: "getContactConsent", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/contacts/{id}/consent/guard":                                   {Op: "getContactConsentGuard", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/contacts/{id}/consent/mail-preview":                            {Op: "previewControllerMail", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/contacts/{id}/employment-import":                               {Op: "previewContactEmploymentImport", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/contacts/{id}/enrichment-runs/{run_id}":                        {Op: "getContactEnrichmentRun", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/contacts/{id}/graph":                                           {Op: "getContactGraph", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
