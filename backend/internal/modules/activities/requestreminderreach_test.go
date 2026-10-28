@@ -9,9 +9,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // A reminder reaches where its mail reaches, which is the whole rule the
@@ -128,5 +131,34 @@ func TestOnlyTheSystemMovesAReminder(t *testing.T) {
 	// system is denied; an unbound one has no standing at all.
 	if !errors.Is(err, apperrors.ErrPermissionDenied) && !strings.Contains(err.Error(), "actor") {
 		t.Errorf("the refusal reads %v, want it about the caller's standing", err)
+	}
+}
+
+// sharedMailTx answers the mail read as a workspace mail and fails every
+// other statement.
+type sharedMailTx struct{ unreachableTx }
+
+func (sharedMailTx) QueryRow(context.Context, string, ...any) pgx.Row { return sharedRow{} }
+
+type sharedRow struct{}
+
+func (sharedRow) Scan(dest ...any) error {
+	if shared, ok := dest[0].(*bool); ok {
+		*shared = true
+	}
+	return nil
+}
+
+// A database that cannot answer stops the recompute and says what it was
+// reading: first the mail's reach, then the reminders of the mail.
+func TestARecomputeTheDatabaseCannotAnswerStops(t *testing.T) {
+	ctx := principal.SystemActing(context.Background(), "system:reminder_reach_test")
+	down := errors.New("connection refused")
+	if err := RecomputeRequestReminderReachTx(ctx, unreachableTx{err: down}, ids.ActivityID{}); !errors.Is(err, down) {
+		t.Errorf("an unreadable mail = %v, want the database's error", err)
+	}
+	err := RecomputeRequestReminderReachTx(ctx, sharedMailTx{unreachableTx{err: down}}, ids.ActivityID{})
+	if !errors.Is(err, down) || !strings.Contains(err.Error(), "reading the reminders of") {
+		t.Errorf("unreadable reminders = %v, want the database's error, named as the reminder read", err)
 	}
 }
