@@ -21,9 +21,9 @@ import (
 )
 
 const (
-	// defaultInstanceDir is core's own thin instance, the go.mod a checkout
-	// composes. A client instance is the same file with real versions.
-	defaultInstanceDir = "instance"
+	// instanceDirName holds the instance: core's own thin instance in a
+	// checkout, a client's instance in the core tree that client put together.
+	instanceDirName = "instance"
 	// fetchedUnitsDir holds the versioned extensions copied out of the module
 	// cache. The cache is read-only, and the frontend install writes beside a
 	// unit's frontend/.
@@ -52,12 +52,10 @@ type listedModule struct {
 	Error string
 }
 
+// instanceGoMod is the go.mod that decides what a tree composes. A client's
+// core tree links instance/ to the client's own folder.
 func instanceGoMod(root string) string {
-	dir := *instanceDir
-	if dir == "" {
-		dir = filepath.Join(root, defaultInstanceDir)
-	}
-	return filepath.Join(dir, "go.mod")
+	return filepath.Join(root, instanceDirName, "go.mod")
 }
 
 // instanceUnits lists the extensions to compose: every module the instance's

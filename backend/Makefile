@@ -169,8 +169,8 @@ check-static: composition ## The static half of check (STATIC_LEGS), which CI ru
 # gen-composition runs pinned to the ROOT workspace: the tool lives in
 # the separate backend/tools module, so a caller-exported GOWORK (off, or
 # an unrelated workspace) would break resolution before anything builds.
-composition: ## Materialize build/composition/ from the extensions instance/go.mod requires [MARGINCE_INSTANCE=<dir> composes a client instance's go.mod instead] (every build lane depends on this)
-	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition $(if $(MARGINCE_INSTANCE),-instance $(abspath $(MARGINCE_INSTANCE)))
+composition: ## Materialize build/composition/ from the extensions instance/go.mod requires (every build lane depends on this)
+	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition
 
 check-composition: composition ## Reproducibility gate: a clean regeneration must reproduce composition.json byte-for-byte
 	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition -verify

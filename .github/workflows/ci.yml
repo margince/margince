@@ -590,11 +590,11 @@ jobs:
       - name: Vanilla lane (an instance that requires no extension)
         working-directory: .
         run: |
-          vanilla="$RUNNER_TEMP/vanilla-instance"
-          mkdir -p "$vanilla"
-          printf 'module vanilla.local/instance\n\ngo 1.27.3\n' > "$vanilla/go.mod"
-          make -C backend composition build MARGINCE_INSTANCE="$vanilla"
+          cp instance/go.mod "$RUNNER_TEMP/instance.go.mod"
+          printf 'module vanilla.local/instance\n\ngo 1.27.3\n' > instance/go.mod
+          make -C backend composition build
           cmp build/composition/backend/extensions_gen.go composition/extensions_gen.go
+          cp "$RUNNER_TEMP/instance.go.mod" instance/go.mod
       # Requiring a unit in instance/go.mod is what turns it on; the copy keeps
       # it where the tree's gates read units.
       - name: Enable the reference extension

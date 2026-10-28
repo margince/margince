@@ -63,24 +63,23 @@ func offlineGo(t *testing.T, proxy string) {
 	t.Setenv("GOTOOLCHAIN", "local")
 }
 
-// useInstance points the composer at an instance outside the root, as a
-// client's make does with MARGINCE_INSTANCE.
-func useInstance(t *testing.T, dir string) {
+// linkInstance makes the client's folder the tree's instance/, as a client's
+// make does in the core tree it puts together.
+func linkInstance(t *testing.T, root, client string) {
 	t.Helper()
-	before := *instanceDir
-	*instanceDir = dir
-	t.Cleanup(func() { *instanceDir = before })
+	if err := os.Symlink(client, filepath.Join(root, instanceDirName)); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestAClientInstanceComposesExactlyWhatItsGoModRequires(t *testing.T) {
 	proxy, root, instance := t.TempDir(), t.TempDir(), t.TempDir()
 	offlineGo(t, proxy)
-	useInstance(t, instance)
 	publish(t, proxy, "example.test/acme/crm/v2", "v2.1.0", map[string]string{
 		"go.mod": "module example.test/acme/crm/v2\n\ngo 1.21\n",
 		"crm.go": "package crm\n",
 	})
-	writeUnit(t, root, "unrequired", map[string]string{"go.mod": "module example.test/unrequired\n", "u.go": "package u\n"})
+	writeTree(t, filepath.Join(root, "extensions", "unrequired"), map[string]string{"go.mod": "module example.test/unrequired\n", "u.go": "package u\n"})
 	writeTree(t, instance, map[string]string{
 		"notes/go.mod":   "module example.test/acme/notes\n\ngo 1.21\n",
 		"notes/notes.go": "package notes\n",
@@ -104,6 +103,7 @@ replace github.com/margince/margince/composition => ./not-composed-yet
 `,
 	})
 
+	linkInstance(t, root, instance)
 	if err := fetchUnits(root); err != nil {
 		t.Fatalf("fetch: %v", err)
 	}
@@ -117,7 +117,7 @@ replace github.com/margince/margince/composition => ./not-composed-yet
 	}
 	want := map[string]string{
 		"crm":   filepath.Join(root, "build", "extensions", "crm"),
-		"notes": filepath.Join(instance, "notes"),
+		"notes": filepath.Join(root, instanceDirName, "notes"),
 	}
 	if len(got) != len(want) || got["crm"] != want["crm"] || got["notes"] != want["notes"] {
 		t.Fatalf("units = %v, want %v: not the indirect library, not core, not the unrequired folder", got, want)

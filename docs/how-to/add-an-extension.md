@@ -12,9 +12,9 @@ retention floors; the example below builds one.
 An extension is its own Go module. It reaches the core only through the `backend/pkg/**` surface that carries
 the allow mark.
 
-**A `require` in `instance/go.mod` turns it on**, with a `replace` onto its folder; nothing else does. A folder
-under `extensions/` that `instance/go.mod` does not require stays off. `extensions/openchannel`
-is the **reference unit**. It owns data and serves routes. It works with an outside provider through capture, a merge
+**A `require` in `instance/go.mod` turns it on**, with a `replace` to its folder. Nothing else does.
+
+`extensions/openchannel` is the **reference unit**. It owns data and serves routes. It works with an outside provider through capture, a merge
 key declaration and a transport that replies leave on, and it ships a screen. Copy it first. `extensions/de`
 (a country pack) and `fixtures/extensions/crm-hello` (the smallest unit that runs) are the smaller shapes.
 
