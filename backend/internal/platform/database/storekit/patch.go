@@ -255,6 +255,9 @@ func (p *Patch) ApplyWithVersion(ctx context.Context, tx pgx.Tx, table string, i
 func (p *Patch) applyWithVersionIn(
 	ctx context.Context, tx pgx.Tx, table string, id ids.UUID, version int64, archived ArchivedFilter,
 ) error {
+	if err := p.stampFoldedDomain(table); err != nil {
+		return err
+	}
 	live := liveClause(archived)
 	// The guard's binds are appended to a COPY: p.args must keep holding exactly
 	// the assignments, one per entry, or the slot index above stops naming the
@@ -411,6 +414,9 @@ func LockPair(ctx context.Context, tx pgx.Tx, table string, a, b ids.UUID) (la, 
 func (p *Patch) ApplyLocked(ctx context.Context, tx pgx.Tx, lock RowLock) error {
 	if lock.table == "" {
 		return errors.New("storekit: ApplyLocked requires a lock minted by LockRow or LockPair")
+	}
+	if err := p.stampFoldedDomain(lock.table); err != nil {
+		return err
 	}
 	// A copy, for the same reason ApplyWithVersion clones: the assignments and
 	// their bind values stay index-aligned.

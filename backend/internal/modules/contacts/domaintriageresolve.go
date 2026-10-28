@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -352,7 +353,7 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, compan
 			WHERE r.contact_id = p.id AND `+employment.CurrentPrimarySlotSQL("r")+`)
 		ON CONFLICT DO NOTHING
 		RETURNING id, contact_id`,
-		companyID, domainTriageSource(domain), by, candidates, domain, mailClockSkewAllowance)
+		companyID, domainTriageSource(domain), by, candidates, owndomain.Fold(domain), mailClockSkewAllowance)
 	if err != nil {
 		return 0, fmt.Errorf("contacts: planting the employment edges for %s: %w", domain, err)
 	}
@@ -415,11 +416,9 @@ func domainEmploymentCandidates(ctx context.Context, tx pgx.Tx, domain string) (
 			  -- new employer: a former colleague would be re-hired by a domain
 			  -- they left.
 			  AND pe.archived_at IS NULL
-			  AND (split_part(pe.email, '@', 2) = $1
-			       -- A literal suffix compare, never LIKE — see OnDomain.
-			       OR right(split_part(pe.email, '@', 2), length($1) + 1) = '.' || $1))
+			  AND `+owndomain.CoversSQL("pe.email_domain_folded", "$1")+`)
 		ORDER BY p.id
-		FOR UPDATE OF p`, domain)
+		FOR UPDATE OF p`, owndomain.Fold(domain))
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading the contacts on %s: %w", domain, err)
 	}

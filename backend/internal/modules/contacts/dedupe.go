@@ -6,11 +6,13 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -247,7 +249,7 @@ func fuzzyContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactRe
 		       -- the employer term depend on the plan Postgres chose. Archived
 		       -- addresses are excluded — an address somebody stopped using is
 		       -- not evidence of where they work now.
-		       (SELECT array_agg(DISTINCT split_part(pe.email, '@', 2))
+		       (SELECT array_agg(pe.email)
 		          FROM contact_email pe
 		         WHERE pe.contact_id = p.id AND pe.archived_at IS NULL)
 		  FROM contact p
@@ -276,9 +278,11 @@ func fuzzyContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactRe
 	scored := map[ids.ContactID]ReviewMatch{}
 	for rows.Next() {
 		var row contactCandidateRow
-		if err := rows.Scan(&row.id, &row.fullName, &row.companyID, &row.companyDomain, &row.mailDomains); err != nil {
+		var addresses []string
+		if err := rows.Scan(&row.id, &row.fullName, &row.companyID, &row.companyDomain, &addresses); err != nil {
 			return ContactResolution{}, fmt.Errorf("scan contact candidate: %w", err)
 		}
+		row.mailDomains = mailDomainsOf(addresses)
 		match := ReviewMatch{ContactID: row.id, Confidence: contactConfidence(c, row)}
 		switch {
 		case match.Confidence >= dedupeReviewThreshold:
@@ -392,10 +396,16 @@ func normalizeDomain(d string) string { return strings.ToLower(strings.TrimSpace
 
 // emailDomain returns the lowercased host of an address, or "" when the
 // input carries no host to compare.
-func emailDomain(e string) string {
-	at := strings.LastIndex(normalizeEmail(e), "@")
-	if at < 0 {
-		return ""
+func emailDomain(e string) string { return owndomain.OfAddress(normalizeEmail(e)) }
+
+// mailDomainsOf is the distinct folded domains of a contact's addresses, in
+// the order they were read.
+func mailDomainsOf(addresses []string) []string {
+	var domains []string
+	for _, address := range addresses {
+		if domain := emailDomain(address); domain != "" && !slices.Contains(domains, domain) {
+			domains = append(domains, domain)
+		}
 	}
-	return normalizeEmail(e)[at+1:]
+	return domains
 }
