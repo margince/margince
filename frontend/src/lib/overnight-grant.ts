@@ -87,20 +87,12 @@ export function useSetAgentGrant() {
   });
 }
 
-/** The rep's one answer as the overnight agents stand on it. It reads as granted
- * only when every agent has the grant, so a rep who answered before the sweep
- * was offered sees the question open and can answer it for both. */
-export function overnightStanding(grants: readonly MyAgentGrant[]) {
-  const own = OVERNIGHT_AGENTS.map((spec) =>
+/** The grant of each overnight agent, in the order the agents are written, or
+ * undefined for an agent the list does not hold. */
+export function overnightGrants(
+  grants: readonly MyAgentGrant[],
+): (MyAgentGrant | undefined)[] {
+  return OVERNIGHT_AGENTS.map((spec) =>
     grants.find((grant) => grant.spec === spec),
   );
-  const granted = own.every((grant) => grant?.state === "granted");
-  return {
-    granted,
-    lapsed: granted && own.some((grant) => !grant?.credential_usable),
-    outgrown:
-      granted &&
-      own.every((grant) => grant?.credential_usable === true) &&
-      own.some((grant) => !grant?.credential_funds_agent),
-  };
 }

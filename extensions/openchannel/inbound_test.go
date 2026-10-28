@@ -362,7 +362,7 @@ func TestASignatureWithoutItsAlgorithmPrefixDoesNotVerify(t *testing.T) {
 	t.Parallel()
 	req := signedRequest(senderSecret, "n-1", "{}")
 	req.Signature = strings.TrimPrefix(req.Signature, signaturePrefix)
-	if verified([]byte(senderSecret), req) {
+	if req.SignatureHolds([]byte(senderSecret)) {
 		t.Fatal("a bare digest verified, so the header's declared shape is not what is checked")
 	}
 }

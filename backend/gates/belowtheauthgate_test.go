@@ -29,7 +29,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/token"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -158,7 +157,7 @@ func routesBelowTheGate(t *testing.T) []string {
 		files = append(files, file)
 		names = append(names, filepath.Base(path))
 	}
-	constants := muxPatternConstants(files)
+	constants := gatekit.PackageStringConstants(t, dir)
 	var below []string
 	for i, file := range files {
 		for _, decl := range file.Decls {
@@ -174,7 +173,7 @@ func routesBelowTheGate(t *testing.T) []string {
 				if reachesSessionMiddleware(call.Args[1]) {
 					return true
 				}
-				if pattern, readable := muxPatternText(call.Args[0], constants); readable {
+				if pattern, readable := gatekit.StringExpr(call.Args[0], constants, gatekit.FoldStrict); readable {
 					below = append(below, pattern)
 				} else if !dynamicRegistrations.Waived(t, names[i]+":"+fn.Name.Name) {
 					t.Errorf("%s:%s registers a route below the auth gate whose pattern this walk cannot read, "+
@@ -187,52 +186,6 @@ func routesBelowTheGate(t *testing.T) []string {
 	}
 	sort.Strings(below)
 	return below
-}
-
-// muxPatternConstants maps each package-level string constant of the files to its
-// value, for the patterns written as a method plus a named path.
-func muxPatternConstants(files []*ast.File) map[string]string {
-	values := map[string]string{}
-	for _, file := range files {
-		for _, decl := range file.Decls {
-			gen, ok := decl.(*ast.GenDecl)
-			if !ok || gen.Tok != token.CONST {
-				continue
-			}
-			for _, spec := range gen.Specs {
-				value, ok := spec.(*ast.ValueSpec)
-				if !ok || len(value.Names) != len(value.Values) {
-					continue
-				}
-				for i, name := range value.Names {
-					if text, readable := muxPatternText(value.Values[i], values); readable {
-						values[name.Name] = text
-					}
-				}
-			}
-		}
-	}
-	return values
-}
-
-// muxPatternText reads a pattern made of string literals, package constants and
-// their concatenation.
-func muxPatternText(expr ast.Expr, constants map[string]string) (string, bool) {
-	switch typed := expr.(type) {
-	case *ast.BasicLit:
-		return gatekit.LiteralText(typed)
-	case *ast.Ident:
-		text, ok := constants[typed.Name]
-		return text, ok
-	case *ast.BinaryExpr:
-		if typed.Op != token.ADD {
-			return "", false
-		}
-		left, leftOK := muxPatternText(typed.X, constants)
-		right, rightOK := muxPatternText(typed.Y, constants)
-		return left + right, leftOK && rightOK
-	}
-	return "", false
 }
 
 // isMuxRegistration reports whether a call registers a route on the mux.
