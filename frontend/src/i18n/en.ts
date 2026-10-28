@@ -16982,6 +16982,15 @@ export const en = {
   "worklist.verb.dismissUndo": "Undo",
   "worklist.verb.dismissFailed": "Contact was not set aside. Retry.",
   "worklist.verb.dismissUndoFailed": "Contact was not restored. Retry.",
+  "worklist.verb.stopFollowing": "Stop following",
+  "worklist.verb.stopped": "Stopped following this contact",
+  "worklist.verb.dismissAll": "Dismiss all shown",
+  "worklist.verb.dismissedAll": "Contacts set aside for a month",
+  "worklist.verb.dismissAllFailed": "Contacts were not set aside. Retry.",
+  // The reader's own choice, so "you": a colleague's choice never shows here.
+  "contact.follow.stopped": "You stopped following this contact.",
+  "contact.follow.setAside": "You set this contact aside until {date}.",
+  "contact.follow.resume": "Resume following",
   "worklist.verb.completeUndo": "Undo",
   "worklist.verb.completeUndoFailed": "Task was not reopened. Retry.",
   // The frame states the fact and the source follows it, rather than the

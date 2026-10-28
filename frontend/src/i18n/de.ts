@@ -17082,6 +17082,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Kontakt konnte nicht zurückgestellt werden. Bitte versuche es erneut.",
   "worklist.verb.dismissUndoFailed":
     "Der Kontakt konnte nicht wiederhergestellt werden. Bitte versuche es erneut.",
+  "worklist.verb.stopFollowing": "Nicht mehr verfolgen",
+  "worklist.verb.stopped": "Kontakt wird nicht mehr verfolgt",
+  "worklist.verb.dismissAll": "Alle angezeigten zurückstellen",
+  "worklist.verb.dismissedAll": "Kontakte für einen Monat zurückgestellt",
+  "worklist.verb.dismissAllFailed":
+    "Die Kontakte konnten nicht zurückgestellt werden. Bitte versuche es erneut.",
+  "contact.follow.stopped": "Du verfolgst diesen Kontakt nicht mehr.",
+  "contact.follow.setAside":
+    "Du hast diesen Kontakt bis {date} zurückgestellt.",
+  "contact.follow.resume": "Wieder verfolgen",
   "worklist.verb.completeUndo": "Rückgängig",
   "worklist.verb.completeUndoFailed":
     "Die Aufgabe konnte nicht wieder geöffnet werden. Bitte versuche es erneut.",
