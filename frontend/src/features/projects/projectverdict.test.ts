@@ -68,7 +68,7 @@ describe("an unassessed project's verdict", () => {
       projectVerdict(unassessed({ target_end_date: "2026-08-20" }), ctx),
     ).toEqual({
       word: t("project.verdict.wrappingUp"),
-      sentence: "7 days left, and no task is overdue.",
+      sentence: "7 days are left, and no task is overdue.",
       tone: "success",
     });
   });

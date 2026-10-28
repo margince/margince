@@ -4,7 +4,7 @@
 import type { components } from "../../api/schema";
 import { omitted } from "../../design-system/surfacestate";
 import { activityDay, activityDaysAway } from "../../format/activitywhen";
-import { formatDayMonth } from "../../format/format.dates";
+import { formatDayMonthNearYear } from "../../format/format.dates";
 import type { Locale, Translator } from "../../i18n";
 import type { CompanyVerdict } from "./companystanding";
 
@@ -31,23 +31,20 @@ export function companyActivityVerdict(
   if (omitted(view, "last_touch")) {
     return undefined;
   }
+  const asOf = new Date(view.as_of);
+  const day = (at: string, l: Locale, z: string) =>
+    formatDayMonthNearYear(at, l, z, asOf);
   const last = view.last_contact;
   if (!last) {
     return {
       word: "co.verdict.noContact",
       sentence: t("co.verdict.addedOn", {
-        date: formatDayMonth(view.company.created_at, locale, zone),
+        date: day(view.company.created_at, locale, zone),
       }),
       tone: "neutral",
     };
   }
-  const date = activityDay(
-    last.at,
-    last.occurred_precision,
-    locale,
-    zone,
-    formatDayMonth,
-  );
+  const date = activityDay(last.at, last.occurred_precision, locale, zone, day);
   const days = -activityDaysAway(
     last.at,
     last.occurred_precision,

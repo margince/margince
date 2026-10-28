@@ -69,15 +69,20 @@ export function DealHowItStands({
   const { deal, stages, ladder } = inputs;
   const subs = useStageSubs(inputs);
   const closed = deal.status !== "open";
-  const verdict =
-    closedVerdict(deal, { t, locale, zone }) ??
-    openDealVerdict(head.verdict, head.standing, inputs, { t, locale, zone });
-  // A closed deal's head is read off the record now, not off the last read.
-  const readAt = closed ? inputs.asOf : (head.readAt ?? inputs.asOf);
+  const open = openDealVerdict(head.verdict, head.standing, inputs, {
+    t,
+    locale,
+    zone,
+  });
+  const verdict = closedVerdict(deal, { t, locale, zone }) ?? open;
+  // A closed deal, or a fact that replaced the card's call, is read off the
+  // record now, not off the card's last read.
+  const fromRecords = closed || open !== head.verdict;
+  const readAt = fromRecords ? inputs.asOf : (head.readAt ?? inputs.asOf);
   return (
     <HowItStands
       date={formatDayMonth(readAt, locale, zone)}
-      sources={closed ? { by: "records" } : head.sources}
+      sources={fromRecords ? { by: "records" } : head.sources}
       verdict={verdict}
       heroLayout="below"
       hero={

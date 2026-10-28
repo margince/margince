@@ -10647,7 +10647,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal360.blocker": "Trở ngại",
   "deal360.buyer": "Điều người mua muốn",
   "deal360.verdict.live": "Đúng tiến độ",
-  "deal360.verdict.drifting": "Đang chậm lại",
+  "deal360.verdict.drifting": "Đang chững lại",
   "deal360.verdict.blocked": "Bị chặn",
   "deal360.verdict.cold": "Nguội",
   "recordmail.title": "Email",
@@ -17934,8 +17934,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Khách hàng đã viết {count} ngày trước và đang chờ phản hồi.",
   "deal.verdict.goneQuiet": "Im lặng",
   "deal.verdict.goneQuietSince":
-    "Không có hoạt động kể từ {date}, nên giao dịch được coi là đình trệ.",
-  "deal.verdict.nothingFiled": "Chưa có gì được ghi nhận cho giao dịch này.",
+    "Không có hoạt động kể từ {date}, nên deal được coi là đình trệ.",
+  "deal.verdict.nothingFiled": "Chưa có gì được ghi nhận cho deal này.",
   "deal.verdict.onHold": "Tạm dừng",
   "deal.verdict.onHoldUntil":
     "Tạm dừng đến {date} theo thỏa thuận với khách hàng.",
@@ -17950,25 +17950,31 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.verdict.quietSince": "Không có trao đổi với ai ở đây kể từ {date}.",
   "co.verdict.dormant": "Không hoạt động",
   "co.verdict.dormantSince":
-    "Không có giao dịch đang mở và không có trao đổi kể từ {date}.",
+    "Không có deal đang mở và không có trao đổi kể từ {date}.",
   "project.verdict.startsOn": "Bắt đầu vào {date}.",
   "project.verdict.overrunning": "Quá hạn",
   "project.verdict.endPassed": "Ngày kết thúc dự kiến ({date}) đã qua.",
   "project.verdict.behind": "Chậm tiến độ",
   "project.verdict.overdueFirst_one":
-    "{count} nhiệm vụ đã quá hạn, đầu tiên: {subject}.",
+    "{count} việc cần làm đã quá hạn, đầu tiên: {subject}.",
   "project.verdict.overdueFirst_other":
-    "{count} nhiệm vụ đã quá hạn, đầu tiên: {subject}.",
-  "project.verdict.overdue_one": "{count} nhiệm vụ đã quá hạn.",
-  "project.verdict.overdue_other": "{count} nhiệm vụ đã quá hạn.",
+    "{count} việc cần làm đã quá hạn, đầu tiên: {subject}.",
+  "project.verdict.overdue_one": "{count} việc cần làm đã quá hạn.",
+  "project.verdict.overdue_other": "{count} việc cần làm đã quá hạn.",
+  "project.verdict.overdueFloor_one":
+    "Ít nhất {count} việc cần làm đã quá hạn.",
+  "project.verdict.overdueFloor_other":
+    "Ít nhất {count} việc cần làm đã quá hạn.",
   "project.verdict.wrappingUp": "Sắp hoàn thành",
   "project.verdict.daysLeft_one":
-    "Còn {count} ngày, không có nhiệm vụ quá hạn.",
+    "Còn {count} ngày, không có việc cần làm nào quá hạn.",
   "project.verdict.daysLeft_other":
-    "Còn {count} ngày, không có nhiệm vụ quá hạn.",
-  "project.verdict.lastDay": "Hôm nay là ngày cuối, không có nhiệm vụ quá hạn.",
+    "Còn {count} ngày, không có việc cần làm nào quá hạn.",
+  "project.verdict.lastDay":
+    "Hôm nay là ngày cuối, không có việc cần làm nào quá hạn.",
   "project.verdict.onSchedule": "Đúng tiến độ",
-  "project.verdict.dayOf": "Ngày {day}/{total}, không có nhiệm vụ quá hạn.",
+  "project.verdict.dayOf":
+    "Ngày {day}/{total}, không có việc cần làm nào quá hạn.",
   "contact.verdict.nothingOwed": "Không bên nào còn việc cần làm.",
   "contact.verdict.noExchange": "Chưa ghi nhận trao đổi nào với liên hệ này.",
 };

@@ -5,7 +5,10 @@ import type {
   TimelineGap,
 } from "../../design-system/standingtimeline";
 import { formatMoney } from "../../format/format";
-import { formatDayMonth } from "../../format/format.dates";
+import {
+  formatDayMonth,
+  formatDayMonthNearYear,
+} from "../../format/format.dates";
 import type { Translator, Words } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { ProjectHealthState } from "./projecthealth.queries";
@@ -35,6 +38,16 @@ const STATE_WORD: Readonly<Record<ProjectHealthState, MessageKey>> = {
 
 function day(iso: string, ctx: Ctx): string {
   return formatDayMonth(iso, ctx.locale, ctx.zone);
+}
+
+// A verdict's reason may name a day in another year, so it says the year then.
+function dayNearYear(iso: string, view: Project360, ctx: Ctx): string {
+  return formatDayMonthNearYear(
+    iso,
+    ctx.locale,
+    ctx.zone,
+    new Date(view.as_of),
+  );
 }
 
 export function phaseName(phase: string, t: Translator): string {
@@ -77,6 +90,23 @@ export function projectVerdict(view: Project360, ctx: Ctx): StandingVerdict {
   }
 }
 
+// A count cut at the page is the least it could be, and says so.
+function overdueSentence(
+  tasks: NonNullable<ReturnType<typeof commitmentsReading>>,
+  ctx: Ctx,
+): string {
+  const count = String(tasks.overdue);
+  if (tasks.overdueIsFloor) {
+    return ctx.plural("project.verdict.overdueFloor", tasks.overdue, { count });
+  }
+  return tasks.firstOverdue
+    ? ctx.plural("project.verdict.overdueFirst", tasks.overdue, {
+        count,
+        subject: tasks.firstOverdue,
+      })
+    : ctx.plural("project.verdict.overdue", tasks.overdue, { count });
+}
+
 /**
  * The call nobody wrote, read off the dates and the open tasks. A project
  * with no dates, or whose tasks this reader may not see, gets none: being on
@@ -91,7 +121,7 @@ function deliveryVerdict(
     return {
       word: ctx.t("project.standing.notStarted"),
       sentence: ctx.t("project.verdict.startsOn", {
-        date: day(used.startsOn, ctx),
+        date: dayNearYear(used.startsOn, view, ctx),
       }),
       tone: "neutral",
     };
@@ -104,21 +134,15 @@ function deliveryVerdict(
     return {
       word: ctx.t("project.verdict.overrunning"),
       sentence: ctx.t("project.verdict.endPassed", {
-        date: day(used.endsOn, ctx),
+        date: dayNearYear(used.endsOn, view, ctx),
       }),
       tone: "danger",
     };
   }
   if (tasks.overdue > 0) {
-    const count = String(tasks.overdue);
     return {
       word: ctx.t("project.verdict.behind"),
-      sentence: tasks.firstOverdue
-        ? ctx.plural("project.verdict.overdueFirst", tasks.overdue, {
-            count,
-            subject: tasks.firstOverdue,
-          })
-        : ctx.plural("project.verdict.overdue", tasks.overdue, { count }),
+      sentence: overdueSentence(tasks, ctx),
       tone: "warning",
     };
   }

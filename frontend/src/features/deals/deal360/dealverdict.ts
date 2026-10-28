@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { StandingVerdict } from "../../../design-system/howitstands";
-import { formatDayMonth, formatNumber } from "../../../format/format";
+import { formatNumber } from "../../../format/format";
+import { formatDayMonthNearYear } from "../../../format/format.dates";
 import { type Locale, type Translator, translatePlural } from "../../../i18n";
 import { closeWords } from "./dealheaderfacts";
 import { closeTone, type DealStandingInputs } from "./dealstanding";
@@ -46,7 +47,8 @@ function recordedVerdict(
       tone: "warning",
     };
   }
-  const day = (iso: string) => formatDayMonth(iso, locale, zone);
+  const day = (iso: string) =>
+    formatDayMonthNearYear(iso, locale, zone, new Date(asOf));
   if (deal.stalled) {
     return {
       word: t("deal.verdict.goneQuiet"),
