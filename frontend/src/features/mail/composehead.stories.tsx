@@ -10,13 +10,30 @@ import { AddressBlock } from "./composehead";
 // asked for, and — under the addresses, because it is about the ones standing
 // there — the notice that one of them is bouncing.
 
-// A named address draws as its name, with the address and account on its card.
+// A named address draws as its name and avatar; its card holds the address,
+// the title and the account.
 const CONTACTS = [
   {
     value: "ada@brandt.example",
     label: "Ada Brandt-Sachsinger",
     hint: "ada@brandt.example",
-    detail: "Brandt Logistik",
+    person: {
+      identity: "c-ada",
+      href: "#/contacts/c-ada",
+      about: "Head of Logistics · Brandt Logistik",
+    },
+  },
+  {
+    value: "lars@brandt.example",
+    label: "Lars Strojny",
+    hint: "lars@brandt.example",
+    person: { identity: "c-lars", about: "Brandt Logistik" },
+  },
+  {
+    value: "luitpold@brandt.example",
+    label: "Luitpold Alexander Zollorsch",
+    hint: "luitpold@brandt.example",
+    person: { identity: "c-luitpold", about: "CFO · Brandt Logistik" },
   },
 ];
 
@@ -26,13 +43,15 @@ const CONTACTS = [
  * component a static frame cannot show.
  */
 function Head({
+  start = ["ada@brandt.example"],
   deadRecipients = [],
   invalidTo = false,
 }: Readonly<{
+  start?: string[];
   deadRecipients?: readonly string[];
   invalidTo?: boolean;
 }>) {
-  const [to, setTo] = useState<string[]>(["ada@brandt.example"]);
+  const [to, setTo] = useState<string[]>(start);
   const [cc, setCc] = useState<string[]>([]);
   const [bcc, setBcc] = useState<string[]>([]);
   const [copiesOpen, setCopiesOpen] = useState(false);
@@ -68,6 +87,20 @@ type Story = StoryObj<typeof AddressBlock>;
 
 /** The ordinary head: one recipient, no Cc, Bcc still a button. */
 export const Default: Story = { render: () => <Head /> };
+
+/** Three recipients: the first row stays on the label's line, the rest wrap. */
+export const ManyRecipients: Story = {
+  render: () => (
+    <Head
+      start={[
+        "luitpold@brandt.example",
+        "lars@brandt.example",
+        "ada@brandt.example",
+        "someone@else.example",
+      ]}
+    />
+  ),
+};
 
 /** The To line a send would refuse, with the need beside the field. */
 export const RecipientMissing: Story = {

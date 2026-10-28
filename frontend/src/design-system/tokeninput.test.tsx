@@ -232,7 +232,11 @@ const CONTACTS = [
     value: "dana@nordwand.example",
     label: "Dana Ellwanger",
     hint: "Nordwand",
-    detail: "Nordwand GmbH",
+    person: {
+      identity: "c-dana",
+      href: "#/contacts/c-dana",
+      about: "Buyer · Nordwand GmbH",
+    },
   },
   { value: "milo@nordwand.example", label: "Milo Fenn", hint: "Nordwand" },
 ] as const;
@@ -336,13 +340,18 @@ describe("a named token", () => {
     expect(screen.queryByText("dana@nordwand.example")).toBeNull();
   });
 
-  it("opens a card with the address and company when keyboard focus lands", async () => {
+  it("opens a contact card when keyboard focus lands", async () => {
     const user = userEvent.setup();
     render(<Offering start={["dana@nordwand.example"]} />);
     await user.tab();
     const card = await screen.findByRole("region", { name: "Dana Ellwanger" });
     expect(within(card).getByText("dana@nordwand.example")).toBeTruthy();
-    expect(within(card).getByText("Nordwand GmbH")).toBeTruthy();
+    expect(within(card).getByText("Buyer · Nordwand GmbH")).toBeTruthy();
+    expect(
+      within(card)
+        .getByRole("link", { name: "Dana Ellwanger" })
+        .getAttribute("href"),
+    ).toBe("#/contacts/c-dana");
   });
 
   it("draws an address no offer names as itself, with no card", async () => {
