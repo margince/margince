@@ -29678,7 +29678,7 @@ type AttentionConnectionFacts struct {
 // AttentionConnectionFactsMedium Whether the connection carries mail or a calendar, so a broken calendar is never called a mailbox.
 type AttentionConnectionFactsMedium string
 
-// AttentionContactCase A group of contacts that may be the same person, as a `contact_case` row shows it. Sent
+// AttentionContactCase A group of contacts that may be duplicates of one another, as a `contact_case` row shows it. Sent
 // only for `source: contact_case`. The row's id is the case's `anchor_id`; the full case,
 // with evidence, is `GET /dedupe/contact-cases/{anchor_id}`.
 type AttentionContactCase struct {
@@ -29907,7 +29907,7 @@ type AttentionItem struct {
 	// neither ever carries a provider id.
 	Connection *AttentionConnectionFacts `json:"connection,omitempty"`
 
-	// ContactCase A group of contacts that may be the same person, as a `contact_case` row shows it. Sent
+	// ContactCase A group of contacts that may be duplicates of one another, as a `contact_case` row shows it. Sent
 	// only for `source: contact_case`. The row's id is the case's `anchor_id`; the full case,
 	// with evidence, is `GET /dedupe/contact-cases/{anchor_id}`.
 	ContactCase *AttentionContactCase `json:"contact_case,omitempty"`
@@ -36407,7 +36407,7 @@ type ContactCaptureGap struct {
 	UserId                openapi_types.UUID `json:"user_id"`
 }
 
-// ContactCase One group of contacts that may be the same person: every live contact reachable from the
+// ContactCase One group of contacts that may be duplicates of one another: every live contact reachable from the
 // addressed contact over open duplicate pairs the caller can see. A case is read off the
 // pairs and is never stored, so dismissing, re-opening or merging a pair re-shapes it at once.
 // `anchor_id` is the lowest member id; every member id addresses the same case.
@@ -36458,7 +36458,7 @@ type ContactCaseStatus string
 
 // ContactCaseDecisionRequest defines model for ContactCaseDecisionRequest.
 type ContactCaseDecisionRequest struct {
-	// MemberIds The members the reviewer says are one person. They must be connected by open pairs, and no two of them may carry a `not_a_duplicate` pair.
+	// MemberIds The members the reviewer says are duplicates of one another. They must be connected by open pairs, and no two of them may carry a `not_a_duplicate` pair.
 	MemberIds []openapi_types.UUID `json:"member_ids"`
 
 	// OwnerId Who owns the remaining contact: the live owner of one of the selected members.
@@ -36473,17 +36473,21 @@ type ContactCaseDecisionRequest struct {
 
 // ContactCaseEdge One duplicate pair between two members, with the evidence it was filed on.
 type ContactCaseEdge struct {
+	// CanDismiss Whether this caller may mark an open pair `not_a_duplicate`, or undo that mark,
+	// through the pair's own decision route. True with write access to both ends, and,
+	// when the case's `policy_enabled` is on, for a full-seat owner of either end.
+	CanDismiss bool               `json:"can_dismiss"`
 	Confidence float32            `json:"confidence"`
 	Evidence   []DedupeEvidence   `json:"evidence"`
 	LeftId     openapi_types.UUID `json:"left_id"`
 	PairId     openapi_types.UUID `json:"pair_id"`
 	RightId    openapi_types.UUID `json:"right_id"`
 
-	// Status `not_a_duplicate` pairs are shown so a reviewer sees that someone said these two are different people; selecting both refuses the merge.
+	// Status `not_a_duplicate` pairs are shown so a reviewer sees that someone said these two are not duplicates; selecting both refuses the merge.
 	Status ContactCaseEdgeStatus `json:"status"`
 }
 
-// ContactCaseEdgeStatus `not_a_duplicate` pairs are shown so a reviewer sees that someone said these two are different people; selecting both refuses the merge.
+// ContactCaseEdgeStatus `not_a_duplicate` pairs are shown so a reviewer sees that someone said these two are not duplicates; selecting both refuses the merge.
 type ContactCaseEdgeStatus string
 
 // ContactCaseListResponse defines model for ContactCaseListResponse.
@@ -36516,7 +36520,7 @@ type ContactCaseOutcome struct {
 	Mode      ContactCaseOutcomeMode `json:"mode"`
 	OwnerId   openapi_types.UUID     `json:"owner_id"`
 
-	// Shares The people who keep access to the remaining contact, and at which level. A read seat keeps read access.
+	// Shares The colleagues who keep access to the remaining contact, and at which level. A read seat keeps read access.
 	Shares []ContactCaseShare `json:"shares"`
 
 	// Skipped Owners who get no new grant, and why.
@@ -40063,6 +40067,10 @@ type DedupeCandidate struct {
 	// who can see a duplicate is the contact best placed to notice it; this
 	// says whether the buttons will work, which the client should gate on
 	// rather than discovering through a 403 after the POST.
+	//
+	// With `contacts.shared_merge_reviews` on, an owner of one end of a
+	// contact pair may dismiss it and undo that, though not merge it. That
+	// answer is the pair's `can_dismiss` in its contact case.
 	CanDecide bool `json:"can_decide"`
 
 	// Confidence The PO-F-1/PO-F-2 fuzzy score at detection.

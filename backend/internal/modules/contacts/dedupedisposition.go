@@ -185,7 +185,7 @@ func (s *Store) executeDedupeMergeTx(
 }
 
 // writePairDecision commits a human's verdict on a pair under the authority
-// that verdict needs: ensurePairWritable and the write share ONE transaction,
+// that verdict needs: admitPairDecision and the write share ONE transaction,
 // so a grant revoked between them cannot leave the write standing on authority
 // that is already gone.
 //
@@ -198,10 +198,11 @@ func (s *Store) writePairDecision(ctx context.Context, row DedupeCandidateRow,
 	write func(context.Context, pgx.Tx) error,
 ) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := ensurePairWritable(ctx, tx, row.EntityType, row.LeftID, row.RightID); err != nil {
+		admitted, err := s.admitPairDecision(ctx, tx, row)
+		if err != nil {
 			return err
 		}
-		return write(ctx, tx)
+		return write(admitted, tx)
 	})
 }
 

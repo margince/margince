@@ -251,8 +251,8 @@ func createRecordGrantInTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) 
 	return out, nil
 }
 
-// upsertGrant writes one grant by its natural key, the one writer of a
-// record_grant row's terms. The caller holds the write-identity lock.
+// upsertGrant writes one grant by its natural key. A share and a merge's owner
+// carry both write through it. The caller holds the write-identity lock.
 func upsertGrant(ctx context.Context, tx pgx.Tx, in CreateGrantInput, grantedBy ids.UUID) (grantRow, error) {
 	values := []any{in.RecordType, in.RecordID, in.SubjectType, in.SubjectID, in.Access, grantedBy, in.Reason, in.ExpiresAt}
 	placeholders := make([]string, len(values))

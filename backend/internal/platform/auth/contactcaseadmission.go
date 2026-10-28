@@ -21,6 +21,8 @@ type (
 // contacts and hand the survivor to one of their owners. It widens
 // no other table, no other contact, no read, and no other assignee. The
 // caller has already decided the workspace policy and the actor's ownership.
+//
+// Held by: TestACaseAdmissionWritesOnlyTheSelectedContacts (backend/internal/platform/auth/contactcaseadmission_test.go)
 func WithContactCaseAdmission(ctx context.Context, members, grantees []ids.UUID) (context.Context, error) {
 	if len(members) < 2 || len(grantees) == 0 {
 		return ctx, errors.New("auth: a case admission names at least two contacts and one owner")

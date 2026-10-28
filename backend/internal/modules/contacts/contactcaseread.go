@@ -52,10 +52,11 @@ func (s *Store) contactCaseView(ctx context.Context, tx pgx.Tx, c contactCase) (
 	if err != nil {
 		return crmcontracts.ContactCase{}, err
 	}
-	mode, err := caseMergeMode(ctx, tx, c, policy)
+	authority, err := readCaseAuthority(ctx, tx, c, policy)
 	if err != nil {
 		return crmcontracts.ContactCase{}, err
 	}
+	mode := authority.mergeMode()
 	out := crmcontracts.ContactCase{
 		AnchorId: openapi_types.UUID(c.anchor()), Revision: c.revision(policy),
 		Status: crmcontracts.ContactCaseStatusOpen, Confidence: float32(c.confidence()),
@@ -74,7 +75,7 @@ func (s *Store) contactCaseView(ctx context.Context, tx pgx.Tx, c contactCase) (
 		edge := crmcontracts.ContactCaseEdge{
 			PairId: openapi_types.UUID(e.ID), LeftId: openapi_types.UUID(e.Left), RightId: openapi_types.UUID(e.Right),
 			Confidence: float32(e.Confidence), Status: crmcontracts.ContactCaseEdgeStatus(e.Disposition),
-			Evidence: []crmcontracts.DedupeEvidence{},
+			Evidence: []crmcontracts.DedupeEvidence{}, CanDismiss: authority.mayDismiss(e),
 		}
 		if len(e.Evidence) > 0 {
 			if err := json.Unmarshal(e.Evidence, &edge.Evidence); err != nil {
@@ -97,29 +98,58 @@ func (s *Store) contactCaseView(ctx context.Context, tx pgx.Tx, c contactCase) (
 	return out, nil
 }
 
-// caseMergeMode answers how this reader could merge the whole case. That is
-// by write authority over every member, by the policy as the owner of one, or
-// not at all. The decision asks again under its locks.
-func caseMergeMode(ctx context.Context, tx pgx.Tx, c contactCase, policy bool) (crmcontracts.ContactCaseMergeMode, error) {
-	if auth.Require(ctx, contactEntity, principal.ActionUpdate) != nil {
-		return crmcontracts.ContactCaseMergeModeNone, nil
+// caseAuthority is what this reader could decide in a case: which members
+// they may change, and whether the policy lets them act as an owner of one.
+// The decision asks again under its locks.
+type caseAuthority struct {
+	c        contactCase
+	mayAct   bool
+	writable map[ids.UUID]bool
+	// delegator is the actor when the policy is on; the zero principal owns
+	// no member.
+	delegator principal.Principal
+}
+
+func readCaseAuthority(ctx context.Context, tx pgx.Tx, c contactCase, policy bool) (caseAuthority, error) {
+	a := caseAuthority{c: c, writable: map[ids.UUID]bool{}}
+	if a.mayAct = auth.Allows(ctx, contactEntity, principal.ActionUpdate); !a.mayAct {
+		return a, nil
 	}
-	ordinary := true
 	for _, m := range c.Members {
 		writable, err := auth.WritableBy(ctx, tx, contactEntity, m.ID)
 		if err != nil {
-			return "", err
+			return a, err
 		}
-		ordinary = ordinary && writable
+		a.writable[m.ID] = writable
 	}
-	actor, ok := principal.Actor(ctx)
+	if actor, ok := principal.Actor(ctx); ok && policy {
+		a.delegator = actor
+	}
+	return a, nil
+}
+
+func (a caseAuthority) delegate(memberIDs []ids.UUID) bool {
+	return !a.delegator.UserID.IsZero() && a.c.actorOwnsAMember(a.delegator, memberIDs)
+}
+
+// mergeMode answers how this reader could merge the whole case: by write
+// authority over every member, by the policy as the owner of one, or not at all.
+func (a caseAuthority) mergeMode() crmcontracts.ContactCaseMergeMode {
+	members := memberIDsOf(a.c)
 	switch {
-	case ordinary:
-		return crmcontracts.ContactCaseMergeModeOrdinary, nil
-	case policy && ok && c.actorOwnsAMember(actor, memberIDsOf(c)):
-		return crmcontracts.ContactCaseMergeModeDelegated, nil
+	case !a.mayAct:
+		return crmcontracts.ContactCaseMergeModeNone
+	case !slices.ContainsFunc(members, func(id ids.UUID) bool { return !a.writable[id] }):
+		return crmcontracts.ContactCaseMergeModeOrdinary
+	case a.delegate(members):
+		return crmcontracts.ContactCaseMergeModeDelegated
 	}
-	return crmcontracts.ContactCaseMergeModeNone, nil
+	return crmcontracts.ContactCaseMergeModeNone
+}
+
+// mayDismiss mirrors admitPairDecision for one pair of the case.
+func (a caseAuthority) mayDismiss(e caseEdge) bool {
+	return a.mayAct && ((a.writable[e.Left] && a.writable[e.Right]) || a.delegate([]ids.UUID{e.Left, e.Right}))
 }
 
 func memberIDsOf(c contactCase) []ids.UUID {
@@ -153,6 +183,9 @@ func caseOwners(c contactCase) []crmcontracts.ContactCaseOwner {
 // resolvedContactCase answers for a contact in no open case. It is resolved
 // when a merge took it into another contact, and not found otherwise.
 func resolvedContactCase(ctx context.Context, tx pgx.Tx, contactID ids.UUID) (crmcontracts.ContactCase, error) {
+	if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
+		return crmcontracts.ContactCase{}, err
+	}
 	if err := auth.EnsureVisible(ctx, tx, contactEntity, contactID); err != nil {
 		return crmcontracts.ContactCase{}, err
 	}
@@ -171,7 +204,7 @@ func resolvedContactCase(ctx context.Context, tx pgx.Tx, contactID ids.UUID) (cr
 	var byName *string
 	var at *time.Time
 	err = tx.QueryRow(ctx, `
-		SELECT p.disposed_by, CASE WHEN u.archived_at IS NULL THEN u.display_name END, p.disposed_at
+		SELECT p.disposed_by, u.display_name, p.disposed_at
 		  FROM dedupe_candidate p LEFT JOIN app_user u ON u.id = p.disposed_by
 		 WHERE p.entity_type = 'contact' AND p.disposition = 'merged'
 		   AND @id IN (p.left_contact_id, p.right_contact_id)

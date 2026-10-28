@@ -168,7 +168,8 @@ func (s *Store) decideContactCaseTx(ctx context.Context, tx pgx.Tx, contactID id
 }
 
 // lockCaseMembers takes every selected member's stop lock in one call, then
-// their rows in id order: the order every contact merge keeps.
+// holds each live member in id order: the order every contact merge keeps. A
+// member already gone is left to the walk, which no longer finds it.
 func (s *Store) lockCaseMembers(ctx context.Context, tx pgx.Tx, selected []ids.UUID) error {
 	subjects := make([]commsauthz.StopSubject, 0, len(selected))
 	for _, id := range selected {
@@ -177,13 +178,12 @@ func (s *Store) lockCaseMembers(ctx context.Context, tx pgx.Tx, selected []ids.U
 	if err := lockStopsOrSkip(ctx, tx, s.stopCarrier, subjects...); err != nil {
 		return err
 	}
-	rows, err := tx.Query(ctx, `SELECT id FROM contact WHERE id = ANY(@members) ORDER BY id FOR UPDATE`,
-		pgx.NamedArgs{"members": selected})
-	if err != nil {
-		return fmt.Errorf("contacts: locking the case members: %w", err)
+	for _, id := range selected {
+		if err := auth.LockSubjectLive(ctx, tx, contactEntity, id); err != nil && !errors.Is(err, apperrors.ErrNotFound) {
+			return fmt.Errorf("contacts: locking the case members: %w", err)
+		}
 	}
-	rows.Close()
-	return rows.Err()
+	return nil
 }
 
 // caseGone answers for a contact the reviewer saw in a case that is in none

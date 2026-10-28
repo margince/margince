@@ -25,13 +25,14 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-// writtenState is every table a case merge writes, as one comparable string.
+// writtenState renders what a case merge writes as one comparable string.
 func writtenState(t *testing.T, e *integration.Env) string {
 	t.Helper()
 	return e.WsScalar(t, `SELECT concat_ws(' | ',
@@ -164,7 +165,7 @@ func TestAMergeThatFailsHalfwayLeavesNothing(t *testing.T) {
 		t.Fatalf("recording the stop: %v", err)
 	}
 	halfWired := contacts.NewStore(c.e.DB()).
-		WithSatelliteCarriers(consentStore, introductions.NewStore(c.e.DB(), time.Now)).
+		WithSatelliteCarriers(consentStore, introductions.NewStore(c.e.DB(), func() time.Time { return clocktest.Now(t) })).
 		WithGrantCarrier(identity.NewServiceFor(c.e.DB())).
 		WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx).
 		WithSettings(configtest.StoredOver(t, c.e.Pool, contacts.ConfigSettings()))
@@ -209,7 +210,7 @@ func TestACarriedOwnerKeepsTheTermOfAGrantTheyHold(t *testing.T) {
 	c := setupCases(t)
 	admin := c.e.Admin()
 	grants := identity.NewServiceFor(c.e.DB())
-	expires := time.Now().Add(72 * time.Hour).UTC().Truncate(time.Second)
+	expires := clocktest.Now(t).Add(72 * time.Hour).UTC().Truncate(time.Second)
 	for _, held := range []string{"read", "write"} {
 		members := c.seedCase(t, c.e.Rep1, c.e.Rep2)
 		if _, err := grants.CreateRecordGrant(admin, identity.CreateGrantInput{

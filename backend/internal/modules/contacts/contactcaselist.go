@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -158,9 +159,11 @@ func readCaseOwnership(ctx context.Context, tx pgx.Tx, memberIDs []ids.UUID) (ma
 	if len(memberIDs) == 0 {
 		return out, nil
 	}
+	if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, `
-		SELECT contact.id, contact.owner_id,
-		       `+liveCaseOwnerSQL("u")+`
+		SELECT contact.id, contact.owner_id, `+liveCaseOwnerSQL+`
 		  FROM contact LEFT JOIN app_user u ON u.id = contact.owner_id
 		 WHERE contact.id = ANY(@members)`, pgx.NamedArgs{"members": memberIDs})
 	if err != nil {

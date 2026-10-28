@@ -25889,6 +25889,10 @@ export interface components {
              *     who can see a duplicate is the contact best placed to notice it; this
              *     says whether the buttons will work, which the client should gate on
              *     rather than discovering through a 403 after the POST.
+             *
+             *     With `contacts.shared_merge_reviews` on, an owner of one end of a
+             *     contact pair may dismiss it and undo that, though not merge it. That
+             *     answer is the pair's `can_dismiss` in its contact case.
              */
             can_decide: boolean;
             /** Format: uuid */
@@ -25923,7 +25927,7 @@ export interface components {
             score?: number | null;
         };
         /**
-         * @description One group of contacts that may be the same person: every live contact reachable from the
+         * @description One group of contacts that may be duplicates of one another: every live contact reachable from the
          *     addressed contact over open duplicate pairs the caller can see. A case is read off the
          *     pairs and is never stored, so dismissing, re-opening or merging a pair re-shapes it at once.
          *     `anchor_id` is the lowest member id; every member id addresses the same case.
@@ -25990,11 +25994,17 @@ export interface components {
             right_id: string;
             confidence: number;
             /**
-             * @description `not_a_duplicate` pairs are shown so a reviewer sees that someone said these two are different people; selecting both refuses the merge.
+             * @description `not_a_duplicate` pairs are shown so a reviewer sees that someone said these two are not duplicates; selecting both refuses the merge.
              * @enum {string}
              */
             status: "open" | "not_a_duplicate";
             evidence: components["schemas"]["DedupeEvidence"][];
+            /**
+             * @description Whether this caller may mark an open pair `not_a_duplicate`, or undo that mark,
+             *     through the pair's own decision route. True with write access to both ends, and,
+             *     when the case's `policy_enabled` is on, for a full-seat owner of either end.
+             */
+            can_dismiss: boolean;
         };
         ContactCaseOwner: {
             /** Format: uuid */
@@ -26020,7 +26030,7 @@ export interface components {
         ContactCaseDecisionRequest: {
             /** @description The case revision the reviewer looked at. */
             revision: string;
-            /** @description The members the reviewer says are one person. They must be connected by open pairs, and no two of them may carry a `not_a_duplicate` pair. */
+            /** @description The members the reviewer says are duplicates of one another. They must be connected by open pairs, and no two of them may carry a `not_a_duplicate` pair. */
             member_ids: string[];
             /**
              * Format: uuid
@@ -26044,7 +26054,7 @@ export interface components {
             owner_id: string;
             /** @enum {string} */
             mode: "ordinary" | "delegated";
-            /** @description The people who keep access to the remaining contact, and at which level. A read seat keeps read access. */
+            /** @description The colleagues who keep access to the remaining contact, and at which level. A read seat keeps read access. */
             shares: components["schemas"]["ContactCaseShare"][];
             /** @description Owners who get no new grant, and why. */
             skipped: components["schemas"]["ContactCaseSkippedOwner"][];
@@ -48978,7 +48988,7 @@ export interface components {
             signal: "collide" | "one_sided" | "exact_conflict" | "lane_split";
         };
         /**
-         * @description A group of contacts that may be the same person, as a `contact_case` row shows it. Sent
+         * @description A group of contacts that may be duplicates of one another, as a `contact_case` row shows it. Sent
          *     only for `source: contact_case`. The row's id is the case's `anchor_id`; the full case,
          *     with evidence, is `GET /dedupe/contact-cases/{anchor_id}`.
          */

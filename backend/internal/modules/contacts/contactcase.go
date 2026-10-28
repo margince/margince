@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
@@ -169,16 +170,17 @@ func walkContactCase(ctx context.Context, tx pgx.Tx, start ids.UUID) (contactCas
 	return c, nil
 }
 
-// liveCaseOwnerSQL is whether the joined owner seat still counts as an owner
-// of a case: a live human seat, not an agent.
-func liveCaseOwnerSQL(alias string) string {
-	return fmt.Sprintf("coalesce(%[1]s.removed_at IS NULL AND NOT %[1]s.is_agent AND %[2]s, false)",
-		alias, workforce.LiveMemberSQL(alias))
-}
+// liveCaseOwnerSQL is whether the joined owner seat u still counts as an owner
+// of a case. It asks what identity asks before carrying a former owner's
+// access, so the owners a case names are the ones a merge can carry.
+var liveCaseOwnerSQL = "coalesce(u.removed_at IS NULL AND " + workforce.LiveMemberSQL("u") + ", false)"
 
 // readCaseMembers reads what a reviewer compares, in id order. The employer is
 // the list's own, so a company hidden from the reader stays hidden here.
 func readCaseMembers(ctx context.Context, tx pgx.Tx, memberIDs []ids.UUID) ([]caseMember, error) {
+	if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
+		return nil, err
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	email, err := orderByReachableEmail(ctx, arg)
@@ -192,12 +194,12 @@ func readCaseMembers(ctx context.Context, tx pgx.Tx, memberIDs []ids.UUID) ([]ca
 	members := arg(memberIDs)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT contact.id, contact.full_name, %s, contact.title, %s,
-		       contact.owner_id, CASE WHEN u.archived_at IS NULL THEN u.display_name END,
+		       contact.owner_id, u.display_name,
 		       %s, coalesce(u.seat_type, ''),
 		       contact.version, contact.created_at
 		  FROM contact LEFT JOIN app_user u ON u.id = contact.owner_id
 		 WHERE contact.id = ANY($%d) AND contact.archived_at IS NULL
-		 ORDER BY contact.id`, email, employer, liveCaseOwnerSQL("u"), members), args...)
+		 ORDER BY contact.id`, email, employer, liveCaseOwnerSQL, members), args...)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading the case members: %w", err)
 	}
@@ -211,18 +213,23 @@ func readCaseMembers(ctx context.Context, tx pgx.Tx, memberIDs []ids.UUID) ([]ca
 
 // readCaseEdges reads the pairs between members that a reviewer weighs: open
 // ones, and dismissed ones so nobody merges what a colleague called different
-// people. Both ends are members, so both are already visible.
+// contacts. The walk's visibility clause bounds both ends again.
 func readCaseEdges(ctx context.Context, tx pgx.Tx, memberIDs []ids.UUID) ([]caseEdge, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	members := arg(memberIDs)
+	visible, err := dedupeVisibilityClause(ctx, arg, true)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT id, left_contact_id, right_contact_id, confidence, evidence, disposition
 		  FROM dedupe_candidate
 		 WHERE entity_type = 'contact' AND archived_at IS NULL
 		   AND disposition IN ('open', 'not_a_duplicate')
 		   AND left_contact_id = ANY($%[1]d) AND right_contact_id = ANY($%[1]d)
-		 ORDER BY id`, members), args...)
+		   AND %[2]s
+		 ORDER BY id`, members, visible), args...)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading the case pairs: %w", err)
 	}

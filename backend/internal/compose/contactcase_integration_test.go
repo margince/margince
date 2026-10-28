@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -55,7 +56,7 @@ func setupCases(t *testing.T) *caseEnv {
 	consentStore := consent.NewStore(e.DB())
 	return &caseEnv{e: e, phone: 1000, store: contacts.NewStore(e.DB()).
 		WithStopCarrier(consentStore).
-		WithSatelliteCarriers(consentStore, introductions.NewStore(e.DB(), time.Now)).
+		WithSatelliteCarriers(consentStore, introductions.NewStore(e.DB(), func() time.Time { return clocktest.Now(t) })).
 		WithGrantCarrier(identity.NewServiceFor(e.DB())).
 		WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx).
 		WithSettings(configtest.StoredOver(t, e.Pool, contacts.ConfigSettings()))}

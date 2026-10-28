@@ -15,9 +15,9 @@ import (
 	"errors"
 	"fmt"
 	"testing"
-	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -130,9 +130,9 @@ func (e *promoteConsentEnv) requirePromoted(t *testing.T, lead ids.LeadID) {
 // that survivor would destroy merged history, so the demotion is refused.
 func TestDemoteOfAMergeSurvivorIsRefused(t *testing.T) {
 	e := setupPromoteConsent(t)
-	// Owned by the rep who also owns the duplicate, so the merge keeps no
-	// former owner's access: that needs identity's grant writer, unwired here.
-	lead := e.seedLeadCreatedAt(t, "created@example.test", time.Now())
+	// Owned by the rep who also owns the duplicate, so the merge carries no
+	// former owner's access.
+	lead := e.seedLeadCreatedAt(t, "created@example.test", clocktest.Now(t))
 	created, merged, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "human_qualify"})
 	if err != nil || merged {
 		t.Fatalf("promote: err=%v merged=%t, want a created contact", err, merged)

@@ -12,6 +12,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -23,6 +24,13 @@ import (
 // new owner gets no grant.
 func (s *Store) executeCaseMerge(ctx context.Context, tx pgx.Tx, plan caseMergePlan, active []fieldcatalog.Column) (crmcontracts.ContactCaseOutcome, error) {
 	actor, _ := principal.Actor(ctx)
+	// The decision already holds these; asking again here keeps every write
+	// below visibly behind its subject's lock.
+	for _, id := range plan.selected {
+		if err := auth.LockSubjectLive(ctx, tx, contactEntity, id); err != nil {
+			return crmcontracts.ContactCaseOutcome{}, err
+		}
+	}
 	for _, e := range plan.c.Edges {
 		if e.Disposition == dispositionOpen && slices.Contains(plan.selected, e.Left) && slices.Contains(plan.selected, e.Right) {
 			if err := setDedupeDispositionTx(ctx, tx, e.ID, dispositionMerged, actor.UserID); err != nil {
@@ -56,11 +64,13 @@ func (s *Store) executeCaseMerge(ctx context.Context, tx pgx.Tx, plan caseMergeP
 		merged = append(merged, openapi_types.UUID(id))
 	}
 	out := plan.outcome(carried, merged)
-	if _, err := storekit.AuditEventWithEvidence(ctx, tx, "merge", contactEntity, plan.survivor.ID,
+	// Evidence, not an image: the decision changes no field of the survivor
+	// beyond what each member's own merge row records.
+	if _, err := storekit.AuditEventWithEvidence(ctx, tx, "merge", contactEntity, plan.survivor.ID, nil,
 		map[string]any{"merge_case": map[string]any{
 			"members": plan.selected, "survivor": plan.survivor.ID, "owner": plan.owner,
 			"shares": out.Shares, "mode": plan.mode, "policy": plan.policy,
-		}}, nil); err != nil {
+		}}); err != nil {
 		return crmcontracts.ContactCaseOutcome{}, fmt.Errorf("contacts: recording the case merge: %w", err)
 	}
 	survivor, err := readContact(ctx, tx, plan.survivorID(), storekit.LiveOnly, active)
