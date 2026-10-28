@@ -93,15 +93,9 @@ export function TodayPanel({
   return (
     <Panel
       tone="ai"
-      // `co-lead` is the company lead's two-column move: the claim on the
-      // left, the verbs opposite it. Without it a contact's verbs fell UNDER
-      // the claim, right-aligned, and the whole width beside them was empty.
+      // `co-lead` sets the claim left and the verbs opposite it.
       className="co-lead"
       title={t("today.title")}
-      // One control, handed in bare: `Button`'s link variant is the text
-      // affordance the head wants, and panel.css already holds everything
-      // after the title at its natural width, so there is nothing left for a
-      // strip around it to lay out.
       titleAction={
         onOpenTasks ? (
           <Button variant="link" onClick={onOpenTasks}>

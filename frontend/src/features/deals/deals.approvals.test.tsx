@@ -42,6 +42,9 @@ function stubBackend(approvals: unknown[], onDecide?: (url: string) => void) {
         page: { next_cursor: null, has_more: false },
       });
     }
+    if (url.includes("/commitments")) {
+      return jsonResponse({ complete: true, has_more: false, data: [] });
+    }
     if (url.includes("/deals/d1") && !url.includes("/offers")) {
       return jsonResponse(deal({}));
     }

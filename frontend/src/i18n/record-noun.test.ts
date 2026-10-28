@@ -638,6 +638,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "approval.field.owner",
     "lead.bulkOwner",
     "lead.ownerLabel",
+    "webForms.field.owner",
     "recordRoles.intro",
     "bulk.owner",
     "whoCanSee.group.owner",
@@ -678,6 +679,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.card.committee_other",
     "contact.aside.ownerGone",
     "lead.signal.setBy",
+    "worklist.scope.unassignedHint",
   ],
 };
 

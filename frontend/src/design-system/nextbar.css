@@ -36,6 +36,14 @@
   font: var(--fontHeadingSmall);
   color: var(--textPrimary);
 }
+/* The task's own words, cut at one line; the title attribute keeps the rest. */
+.next-bar-detail {
+  font: var(--fontBody);
+  color: var(--textPrimary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .next-bar-sub,
 .next-bar-none {
   font: var(--fontBody);

@@ -3,15 +3,14 @@
 
 package compose
 
-// The embed-reindex transport (ADR-0068 design §5.6-swap, Task 15): the
-// three /embeddings/reindex* ops discharge the rbacgate_test.go waiver
-// on search.Store's binding-marker READS and its claim — every one of
-// them is reached ONLY through a handler below that gates first
-// (auth.Require(ctx, "embedding_reindex", <action>)), which is the whole
-// premise those store methods were allowed to skip their own object
-// RBAC check. The rest of the marker's lifecycle belongs to the run the
-// claim starts (jobs_embedreindex.go), where there is no human principal
-// to admit and the claim is the authority.
+// The embed-reindex transport (ADR-0068, Task 15). Its four
+// /embeddings/reindex* ops discharge the rbacgate_test.go waiver on
+// search.Store's binding-marker reads and its claim. Each is reached only
+// through a handler below that gates first with
+// auth.Require(ctx, "embedding_reindex", <action>). That is why those store
+// methods may skip their own object RBAC check. The rest of the marker's
+// lifecycle belongs to the run the claim starts (jobs_embedreindex.go). There
+// is no human principal there, and the claim is the authority.
 //
 // Confirm is the CAS+enqueue-in-one-tx shape (mirrors
 // deepreadtransport.go's start): search.Store.ClaimAndEnqueueReembedding
@@ -147,7 +146,7 @@ type embedReindexEstimator interface {
 	EstimateEmbedReindex(ctx context.Context, currentIdentity string) ([]costestimate.Row, costestimate.Row, error)
 }
 
-// embedReindexEngine backs the three handlers over the search module's
+// embedReindexEngine backs the four handlers over the search module's
 // binding-marker store, the resolved embed lane, the priced preview, and
 // the insert-only job enqueuer.
 type embedReindexEngine struct {
@@ -179,6 +178,25 @@ func (e *embedReindexEngine) status(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, resp)
+}
+
+// identities answers the two identities the status body reports, without its
+// backlog scan; the app shell's banner compares only these.
+func (e *embedReindexEngine) identities(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if err := auth.Require(ctx, "embedding_reindex", principal.ActionRead); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	populated, _, _, err := e.store.PopulatedIdentity(ctx)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.EmbedReindexIdentities{
+		ConfiguredIdentity: e.currentIdentity(),
+		PopulatedIdentity:  populated,
+	})
 }
 
 // preview answers the scope-before-the-spend estimate (ADR-0020): the
@@ -396,6 +414,14 @@ func (h embedReindexHandlers) EmbedReindexStatus(w http.ResponseWriter, r *http.
 		return
 	}
 	h.engine.status(w, r)
+}
+
+func (h embedReindexHandlers) EmbedReindexIdentities(w http.ResponseWriter, r *http.Request) {
+	if !h.serving() {
+		httperr.NotImplemented(w, r, "EmbedReindexIdentities")
+		return
+	}
+	h.engine.identities(w, r)
 }
 
 func (h embedReindexHandlers) EmbedReindexPreview(w http.ResponseWriter, r *http.Request) {

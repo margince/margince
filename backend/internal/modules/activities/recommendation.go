@@ -79,7 +79,7 @@ func (s *Store) replayedTaskRecommendation(ctx context.Context, tx pgx.Tx, in Lo
 		return crmcontracts.Activity{}, false, err
 	}
 	source := provenance.AcceptedRecommendationSource
-	replay, err := replayedSourceActivity(ctx, tx, source, key)
+	replay, err := replayedSourceActivity(ctx, tx, source, key, s.now())
 	if replay == nil {
 		return crmcontracts.Activity{}, false, err
 	}

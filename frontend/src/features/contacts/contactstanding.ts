@@ -64,11 +64,19 @@ export function contactVerdict(
   const strength = view.strength;
   if (!strength) {
     return moment
-      ? { word: t("contact.moment.rule.nothing_needed"), tone: "neutral" }
+      ? {
+          word: t("contact.moment.rule.nothing_needed"),
+          sentence: t("contact.verdict.nothingOwed"),
+          tone: "neutral",
+        }
       : null;
   }
   if (strength.bucket === "none") {
-    return { word: bucketLabel(strength.bucket, t), tone: "neutral" };
+    return {
+      word: bucketLabel(strength.bucket, t),
+      sentence: t("contact.verdict.noExchange"),
+      tone: "neutral",
+    };
   }
   return {
     word: bucketLabel(strength.bucket, t),

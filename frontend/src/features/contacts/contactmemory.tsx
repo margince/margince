@@ -8,6 +8,7 @@ import {
   OverviewRow,
 } from "../../design-system/overviewcard";
 import { useLocale, useT } from "../../i18n";
+import { useSourceOpener } from "../../lib/opensource";
 import { useRecordZone } from "../../lib/recordzone";
 import { omitted } from "./contact360";
 import { CardLink, rowPill } from "./contactcards";
@@ -40,6 +41,7 @@ export function ContactMemory({
   // the record's zone and two colleagues name the same day.
   const recordZone = useRecordZone();
   const interactionLabel = useInteractionLabel();
+  const openerFor = useSourceOpener(onOpenEmail);
   const withheld =
     omitted(view, "activities") && omitted(view, "conversation_memory");
   const rows = withheld
@@ -61,17 +63,48 @@ export function ContactMemory({
       {rows.length > 0 && (
         <OverviewList>
           {rows.map((row) => {
-            const emailId = row.emailId;
+            const open = row.source ? openerFor(row.source) : undefined;
+            // A message opens from its title, as every email row does. Any
+            // other entry gets a View beside it, named for the row it opens.
+            const email = row.kind === "email";
             const number = callBackNumber(row.kind, view.contact);
+            const pill = rowPill(row);
+            const verbs = [
+              open && !email && (
+                <Button
+                  key="view"
+                  variant="link"
+                  aria-haspopup="dialog"
+                  aria-label={t("contact.memory.viewEntry", {
+                    title: row.title,
+                  })}
+                  onClick={open}
+                >
+                  {t("contact.memory.view")}
+                </Button>
+              ),
+              number && (
+                <CallAction
+                  key="call"
+                  appearance="button"
+                  label={t("record.verb.call")}
+                  number={number}
+                  record={{
+                    entityType: "contact",
+                    entityId: view.contact.id,
+                  }}
+                />
+              ),
+            ].filter(Boolean);
             return (
               <OverviewRow
                 key={row.key}
                 title={
-                  emailId ? (
+                  open && email ? (
                     <Button
                       variant="link"
                       className="pe-card-open"
-                      onClick={() => onOpenEmail(emailId)}
+                      onClick={open}
                     >
                       {row.title}
                     </Button>
@@ -81,21 +114,13 @@ export function ContactMemory({
                 }
                 sub={row.sub}
                 right={
-                  number ? (
+                  verbs.length > 0 ? (
                     <>
-                      {rowPill(row)}
-                      <CallAction
-                        appearance="button"
-                        label={t("record.verb.call")}
-                        number={number}
-                        record={{
-                          entityType: "contact",
-                          entityId: view.contact.id,
-                        }}
-                      />
+                      {pill}
+                      {verbs}
                     </>
                   ) : (
-                    rowPill(row)
+                    pill
                   )
                 }
               />

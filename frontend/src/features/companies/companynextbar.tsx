@@ -1,10 +1,12 @@
 import type { components } from "../../api/schema";
+import { NextTaskSlot } from "../../components/nexttaskslot";
 import { NextBar } from "../../design-system/nextbar";
 import { formatNumber } from "../../format/format";
 import { calendarDaysBetween, formatDayMonth } from "../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { tasksPeek } from "../../lib/standingpeeks";
+import { taskDetail } from "../../lib/taskdetail";
 import { useCompanySetAside } from "./companysetaside";
 import {
   MayBeDoneVerb,
@@ -149,6 +151,7 @@ export function CompanyNextBar({
         // server's sentence about it, kept for a moment that cites none.
         title={task?.subject ?? moment.headline}
         late={lateTag}
+        detail={task && taskDetail(task)}
         sub={moment.why_now}
         insight={momentBasis(moment)}
         action={
@@ -160,6 +163,7 @@ export function CompanyNextBar({
         }
         snooze={defer && { onSnooze: defer.onDefer, pending: defer.pending }}
         more={more}
+        onward={<NextTaskSlot />}
       />
     );
   }
@@ -167,6 +171,7 @@ export function CompanyNextBar({
     <NextBar
       title={task?.subject}
       late={lateTag}
+      detail={task && taskDetail(task)}
       sub={
         task?.due_at
           ? t("co.next.due", {
@@ -176,6 +181,7 @@ export function CompanyNextBar({
       }
       action={task ? fallback : undefined}
       more={more}
+      onward={<NextTaskSlot />}
     />
   );
 }

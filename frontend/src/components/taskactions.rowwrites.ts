@@ -7,7 +7,7 @@ import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import { useT } from "../i18n";
 import { CLAIM_SETTLED_KEYS } from "../lib/activitykeys";
-import { unwrap } from "../lib/problem";
+import { isVersionSkewOf, unwrap } from "../lib/problem";
 
 // useNoticeRead settles one notice, which is all the acknowledge verb means.
 // It is apart from useTaskUpdate because the two have different owners. A
@@ -71,6 +71,14 @@ export function useAutomationRetry(invalidateKeys: readonly QueryKey[]) {
 export function useMeetingOutcome(invalidateKeys: readonly QueryKey[]) {
   const t = useT();
   const queryClient = useQueryClient();
+  const reread = (id: string) => {
+    for (const queryKey of invalidateKeys) {
+      queryClient.invalidateQueries({ queryKey });
+    }
+    // The meeting's own detail read too: a drawer open on it would otherwise
+    // keep showing the row as unanswered after it has been answered.
+    queryClient.invalidateQueries({ queryKey: ["activity", id] });
+  };
   return useMutation({
     mutationFn: async (input: {
       id: string;
@@ -91,13 +99,10 @@ export function useMeetingOutcome(invalidateKeys: readonly QueryKey[]) {
         t,
       );
     },
-    onSuccess: (_data, input) => {
-      for (const queryKey of invalidateKeys) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-      // The meeting's own detail read too: a drawer open on it would otherwise
-      // keep showing the row as unanswered after it has been answered.
-      queryClient.invalidateQueries({ queryKey: ["activity", input.id] });
+    onSuccess: (_data, input) => reread(input.id),
+    // A retry must carry the version the meeting holds now, not the one refused.
+    onError: (error, input) => {
+      if (isVersionSkewOf(error)) reread(input.id);
     },
   });
 }

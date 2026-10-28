@@ -163,10 +163,19 @@ func (a reportingAuthority) MembersFor(ctx context.Context, tx pgx.Tx, scope crm
 
 func reportingWriteReach(ctx context.Context, tx pgx.Tx, scope ResolvedScope) error {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || !actor.SeatType.CanMutate() {
+	if !ok || !actor.SeatType.CanMutate() {
 		return apperrors.ErrPermissionDenied
 	}
-	if scope.Kind == ScopeKindOwner && scope.ID != nil && *scope.ID == actor.UserID {
+	// An agent reaches what the human it acts for reaches. Which writes admit
+	// an agent at all is the reporting service's to decide.
+	user := actor.UserID
+	switch {
+	case actor.Type == principal.PrincipalAgent && !actor.OnBehalfOf.IsZero():
+		user = actor.OnBehalfOf
+	case actor.Type != principal.PrincipalHuman:
+		return apperrors.ErrPermissionDenied
+	}
+	if scope.Kind == ScopeKindOwner && scope.ID != nil && *scope.ID == user {
 		return nil
 	}
 	reach := auth.TeamWeekReachOf(ctx)

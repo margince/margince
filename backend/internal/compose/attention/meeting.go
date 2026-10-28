@@ -199,10 +199,9 @@ func hostOf(item crmcontracts.AttentionItem) ids.UUID {
 //
 // It offers `decide`, the same verb an approval carries and for the same
 // reason: the answer is given ON the row rather than somewhere else. What the
-// row asks is how the meeting went, and the three answers — held, no-show,
-// cancelled — are the meeting_status vocabulary the activity has always
-// contracted. PATCH /activities/{id} has accepted them since the field existed;
-// what was missing was anywhere to say so at the one moment a human knows.
+// row asks is how the meeting went: held or no-show through `decide`, and
+// `cancel` only where no live calendar invitation holds the meeting.
+// PATCH /activities/{id} refuses that cancel, so the row does not offer it.
 //
 // Not `open`: this row's subject is the ACTIVITY, a timeline entry with no page
 // of its own, so a verb promising to open it would advertise a destination that
@@ -216,10 +215,8 @@ func meetingAwaitingOutcomeItem(meeting MeetingAwaitingOutcome) crmcontracts.Att
 		Title:      &subject,
 		OccurredAt: &started,
 		Subject:    subjectOf("activity", meeting.ID),
-		Actions: []crmcontracts.AttentionItemActions{
-			crmcontracts.AttentionItemActionsDecide,
-		},
-		Version: meeting.Version,
+		Actions:    meetingOutcomeActions(meeting),
+		Version:    meeting.Version,
 		// Read with the time it describes: a day meeting has no start hour.
 		OccurredPrecision: dayOnly(meeting.Precision),
 	}
@@ -236,6 +233,19 @@ func meetingAwaitingOutcomeItem(meeting MeetingAwaitingOutcome) crmcontracts.Att
 		item.WithContact = &with
 	}
 	return item
+}
+
+// meetingOutcomeActions is what an outcome row offers. Both verbs PATCH the
+// meeting, so a reader who may not change it is offered neither.
+func meetingOutcomeActions(meeting MeetingAwaitingOutcome) []crmcontracts.AttentionItemActions {
+	if meeting.ReadOnly {
+		return []crmcontracts.AttentionItemActions{}
+	}
+	actions := []crmcontracts.AttentionItemActions{crmcontracts.AttentionItemActionsDecide}
+	if !meeting.CalendarManaged {
+		actions = append(actions, crmcontracts.AttentionItemActionsCancel)
+	}
+	return actions
 }
 
 // classifyUnansweredMeeting places a meeting that happened and owes an answer.
@@ -255,6 +265,7 @@ func classifyUnansweredMeeting(item crmcontracts.AttentionItem, asOf time.Time) 
 	// the consequence says what it costs.
 	row := base(item, levelAgreed, "meetings", "data_drifts")
 	row.Because = []crmcontracts.WorklistReason{reason("outcome_unrecorded", nil)}
+	row.Because = appendReadOnly(row, crmcontracts.WorklistItemActionsDecide)
 	row.Host = hostOnTheWire(item)
 	return ranked{
 		item:       row,

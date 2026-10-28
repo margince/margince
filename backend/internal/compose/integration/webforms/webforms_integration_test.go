@@ -375,3 +375,54 @@ func TestAFormNeverAnswersItsSecretOnARead(t *testing.T) {
 		t.Fatalf("secret_configured = %v, want true", raw["secret_configured"])
 	}
 }
+
+func adminID(t *testing.T, e *apptest.AppEnv) string {
+	t.Helper()
+	var id string
+	if err := e.Owner.QueryRow(context.Background(), `SELECT id::text FROM app_user WHERE email = 'ada@example.com'`).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+func leadOwnerOf(t *testing.T, e *apptest.AppEnv, email string) *string {
+	t.Helper()
+	var owner *string
+	if err := e.Owner.QueryRow(context.Background(), `SELECT owner_id::text FROM lead WHERE email = $1`, email).Scan(&owner); err != nil {
+		t.Fatal(err)
+	}
+	return owner
+}
+
+func TestALeadFromAFormGoesToTheFormsOwner(t *testing.T) {
+	e := setupFormsApp(t)
+	owner := adminID(t, e)
+	form := createForm(t, e, integration.AnyMap{
+		"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}, "owner_id": owner,
+	})
+	answer := browserPost(t, e, form.FormKey, url.Values{"email": {"owned@visitor.example"}}, siteOrigin)
+	if answer.Status != http.StatusAccepted {
+		t.Fatalf("browser post → %d %s", answer.Status, answer.Body)
+	}
+	if got := leadOwnerOf(t, e, "owned@visitor.example"); got == nil || *got != owner {
+		t.Fatalf("lead owner = %v, want the form's owner %s", got, owner)
+	}
+}
+
+func TestALeadFromAFormWhoseOwnerLeftLandsUnassigned(t *testing.T) {
+	e := setupFormsApp(t)
+	owner := adminID(t, e)
+	form := createForm(t, e, integration.AnyMap{
+		"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}, "owner_id": owner,
+	})
+	if _, err := e.Owner.Exec(context.Background(), `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, owner); err != nil {
+		t.Fatal(err)
+	}
+	answer := browserPost(t, e, form.FormKey, url.Values{"email": {"orphan@visitor.example"}}, siteOrigin)
+	if answer.Status != http.StatusAccepted {
+		t.Fatalf("browser post → %d %s; a departed owner must not cost the visitor their enquiry", answer.Status, answer.Body)
+	}
+	if got := leadOwnerOf(t, e, "orphan@visitor.example"); got != nil {
+		t.Fatalf("lead owner = %s, want unassigned once the form's owner left", *got)
+	}
+}

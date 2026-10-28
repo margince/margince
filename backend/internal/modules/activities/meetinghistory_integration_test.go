@@ -110,7 +110,7 @@ func moveTo(t *testing.T, e *sendEnv, id ids.ActivityID, status crmcontracts.Act
 // other. This is the case the whole table exists for.
 func TestABookingAndAHoldingAreTwoEvents(t *testing.T) {
 	e := setupSend(t)
-	start := time.Now().Add(72 * time.Hour)
+	start := time.Now().Add(-72 * time.Hour)
 	id := bookMeeting(t, e, "Northgate kickoff", start)
 	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusHeld)
 
@@ -154,7 +154,7 @@ func TestATransitionRecordsTheAuthenticatedActor(t *testing.T) {
 // built on the count would drift upward with every re-save.
 func TestResendingTheSameStatusIsNotATransition(t *testing.T) {
 	e := setupSend(t)
-	id := bookMeeting(t, e, "Repeat save", time.Now().Add(48*time.Hour))
+	id := bookMeeting(t, e, "Repeat save", time.Now().Add(-48*time.Hour))
 	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusHeld)
 	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusHeld)
 	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusHeld)
@@ -169,7 +169,7 @@ func TestResendingTheSameStatusIsNotATransition(t *testing.T) {
 // outcome. The correction is part of the record, not a replacement of it.
 func TestACorrectedOutcomeKeepsBothEventsAndOneTerminalStatus(t *testing.T) {
 	e := setupSend(t)
-	id := bookMeeting(t, e, "They did turn up", time.Now().Add(24*time.Hour))
+	id := bookMeeting(t, e, "They did turn up", time.Now().Add(-24*time.Hour))
 	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusNoShow)
 	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusHeld)
 
