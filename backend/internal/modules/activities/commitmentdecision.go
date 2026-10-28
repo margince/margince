@@ -71,7 +71,7 @@ func RecordCommitmentAdmissionTx(ctx context.Context, tx pgx.Tx, source ids.Acti
 	auditID, err := storekit.Audit(ctx, tx, "update", "activity", source.UUID, before, map[string]any{"commitment_admission": map[string]any{
 		"locator": decision.Locator, "outcome": decision.Outcome, "current_work": decision.CurrentWork,
 		"meaning_state": meaningState, "deadline_precision": deadlinePrecision,
-		"rule_version": decision.RuleVersion, "evidence_ids": decision.EvidenceIds, "evaluated_at": decision.EvaluatedAt, "renewed_by": decision.RenewedBy, "renewed_at": decision.RenewedAt,
+		ruleVersionEvidenceKey: decision.RuleVersion, "evidence_ids": decision.EvidenceIds, "evaluated_at": decision.EvaluatedAt, "renewed_by": decision.RenewedBy, "renewed_at": decision.RenewedAt,
 	}})
 	if err != nil {
 		return err

@@ -76,7 +76,7 @@ must_mention:
   # AND THE LADDER'S ENUM IS NOT THE WALK-THROUGH. Both words above are handed
   # over by advance_project_phase's own argument list, so a run that never
   # opened the project could write them from the schema alone — the same false
-  # green case 8 answers with "Werkzeugbau".
+  # green a staged item answers by being opened.
   #
   # The reasons recorded on the two transitions are the only thing that carries
   # any of the words below: the offer released after the site visit in Wismar,

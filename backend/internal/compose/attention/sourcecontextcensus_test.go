@@ -29,6 +29,7 @@ var contextSurfaceBySource = map[crmcontracts.WorklistItemSource]string{
 func TestProducedWorklistSourcesKeepTheirContext(t *testing.T) {
 	day := aDayWithEveryLaneCarryingARow(t)
 	rows := classifyDay(day, day.AsOf, dayMoney{})
+	rows = append(rows, relationshipCandidates(day)...)
 	contact, activity := ids.NewV7(), ids.NewV7()
 	rows = append(rows, classifyWaiting(WaitingCustomer{ActivityID: activity, ContactID: contact, Since: day.AsOf}, day.AsOf))
 	awaited := AwaitedReply{ActivityID: activity, ContactID: contact, SentAt: day.AsOf}

@@ -27,7 +27,7 @@ describe("a contact the reader is not chasing", () => {
   it("is set aside for a month, and can be put back", async () => {
     stub(
       day({
-        queue: [
+        optional_relationships: [
           row({
             id: "01a05500-0000-7000-8000-0000000000p1",
             source: "relationship_decay",
@@ -35,7 +35,7 @@ describe("a contact the reader is not chasing", () => {
             actions: ["open", "dismiss"],
           }),
         ],
-        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
       }),
     );
     const user = userEvent.setup();

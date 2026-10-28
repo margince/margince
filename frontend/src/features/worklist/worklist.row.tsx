@@ -162,7 +162,6 @@ export function WorklistRow({
   // hour a rep is racing, and "due today" underneath it is that clock said
   // again in a coarser register.
   const reasons = phrasedReasons(item, when !== null)
-    .filter((reason) => allowPin || reason.kind !== "pinned")
     .map((reason) => reasonText(reason, t, locale, zone))
     .filter((phrase): phrase is string => phrase !== null);
   const said = [...new Set(reasons)].filter(

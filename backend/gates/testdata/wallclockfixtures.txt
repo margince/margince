@@ -80,6 +80,7 @@ internal/compose/graphedge_integration_test.go 8
 internal/compose/graphedgebatch_integration_test.go 2
 internal/compose/graphedgelockorder_integration_test.go 1
 internal/compose/graphedgetargets_integration_test.go 3
+internal/compose/handledreceiptdetail_integration_test.go 2
 internal/compose/handoffseam_integration_test.go 1
 internal/compose/hiddenbacklogrows_integration_test.go 4
 internal/compose/integration/activity_audience_integration_test.go 1

@@ -63,23 +63,35 @@ func briefActivityClause(ctx context.Context, alias string, arg func(any) int) (
 //     a readable activity on that deal still occurred at it. The column keeps
 //     the moment and not the activity, so this is the question it can answer:
 //     is the date still one this reader could have read off the deal.
-func servedActivityRefsSQL(ctx context.Context, arg func(any) int) (evidence, returnedWith string, err error) {
+//
+// The activity clause is rendered once, in the `served_activity` CTE that with
+// names, and the caller puts with ahead of its SELECT. Spelled per column it was
+// planned three times, and a connection keeps the planner's memory.
+func servedActivityRefsSQL(ctx context.Context, arg func(any) int, items string) (with, evidence, returnedWith string, err error) {
 	readable, err := briefActivityClause(ctx, "ev_a", arg)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
-	evidence = fmt.Sprintf(`ARRAY(
+	with = fmt.Sprintf(`WITH served_activity AS MATERIALIZED (
+		SELECT ev_a.id FROM activity ev_a
+		 WHERE ev_a.archived_at IS NULL AND ev_a.id IN (
+		        SELECT ref.id FROM brief_item ri, unnest(ri.evidence_ids) AS ref(id) WHERE %[1]s
+		        UNION
+		        SELECT rl.activity_id FROM brief_item ri
+		          JOIN activity_link rl ON rl.deal_id = ri.deal_id
+		          JOIN activity ra ON ra.id = rl.activity_id AND ra.occurred_at = ri.returned_with_activity_at
+		         WHERE %[1]s)
+		   AND %[2]s)`, items, readable)
+	evidence = `ARRAY(
 		SELECT ev.id FROM unnest(bi.evidence_ids) WITH ORDINALITY AS ev(id, n)
-		 WHERE ev.id = bi.deal_id
-		    OR EXISTS (SELECT 1 FROM activity ev_a
-		                WHERE ev_a.id = ev.id AND ev_a.archived_at IS NULL AND %s)
-		 ORDER BY ev.n)`, readable)
-	returnedWith = fmt.Sprintf(`(CASE WHEN EXISTS (
+		 WHERE ev.id = bi.deal_id OR ev.id IN (SELECT id FROM served_activity)
+		 ORDER BY ev.n)`
+	returnedWith = `(CASE WHEN EXISTS (
 		SELECT 1 FROM activity ev_a
 		JOIN activity_link ev_l ON ev_l.activity_id = ev_a.id AND ev_l.deal_id = bi.deal_id
-		 WHERE ev_a.occurred_at = bi.returned_with_activity_at AND ev_a.archived_at IS NULL AND %s)
-		THEN bi.returned_with_activity_at END)`, readable)
-	return evidence, returnedWith, nil
+		 WHERE ev_a.occurred_at = bi.returned_with_activity_at AND ev_a.id IN (SELECT id FROM served_activity))
+		THEN bi.returned_with_activity_at END)`
+	return with, evidence, returnedWith, nil
 }
 
 // A cached finding depends on its original evidence. A reader who lost any

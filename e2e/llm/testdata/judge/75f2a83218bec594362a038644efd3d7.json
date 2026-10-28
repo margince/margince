@@ -1,7 +1,0 @@
-{
-  "verdict": "yes",
-  "reason": "The answer clearly states both required numbers in German: '6 Termine haben stattgefunden' (6 meetings held) and '8 sind bisher nur gebucht' (8 only booked).",
-  "model": "claude-haiku-4-5-20251001",
-  "criterion": "Criterion 1. The answer says that 6 meetings have taken place (held) and 8 are only booked so far. Both numbers must be there, in any language: 'sechs haben stattgefunden, acht sind gebucht' is exactly as good as '6 held against 8 booked'. Answer no if either number is missing or different, if the answer gives only a single total, or if it reports the report's grouping and filter names instead of the counts. Whether the answer also mentions cancelled meetings or no-shows, or hedges about precision, is not yours to judge.",
-  "answer": "Kurz: 6 Termine haben stattgefunden, 8 sind bisher nur gebucht.\n\nIch habe dafür die Aktivitäten auf Termine gefiltert und nach meeting_status gruppiert — den Feldnamen habe ich nicht geraten, sondern vorher im Vokabular nachgesehen.\n\nEin Termin ist als \"Vertragsunterzeichnung\" erfasst; an der Zählung ändert das nichts."
-}

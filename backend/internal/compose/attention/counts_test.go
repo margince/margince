@@ -254,6 +254,8 @@ func TestEverySourceTheContractDeclaresHasALane(t *testing.T) {
 // than skipped silently, so a source added to this set is a decision somebody
 // wrote down.
 var notADayLane = map[crmcontracts.WorklistItemSource]bool{
+	// Optional choices enter the work projection only through an explicit pin.
+	crmcontracts.WorklistItemSourceRelationshipDecay: true,
 	// A GROUP of rows rather than a producer: foldRoutineDecisions makes one
 	// from rows that already have their own lanes, and its category is its
 	// members'.
@@ -370,9 +372,6 @@ func everyLane() []struct {
 		}}},
 		{"notice", crmcontracts.Attention{AsOf: rankInstant, Notices: lane(item("x", "notice"))}},
 		{"bounce", crmcontracts.Attention{AsOf: rankInstant, Bounces: lane(item("x", "bounce"))}},
-		{"relationship_decay", crmcontracts.Attention{AsOf: rankInstant, RelationshipDecay: lane(
-			item("x", "relationship_decay"),
-		)}},
 		{"conversation_claim", crmcontracts.Attention{AsOf: rankInstant, Commitments: lane(
 			item("x", "conversation_claim", withDue(rankInstant)),
 		)}},

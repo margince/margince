@@ -17,12 +17,15 @@ import (
 )
 
 var rawTaskDateReads = gatekit.Waive(map[string]string{
-	"internal/modules/activities/homerepair.go:readHomeRepairTasksTx":  "reviewed repair snapshots the stored value so it can prove a proposed correction and detect changes",
-	"internal/modules/activities/requestsettlement.go:RepliedRequests": "settlement checks whether its own generated request reminder is pristine; it does not interpret that timestamp as a deadline",
+	"internal/modules/activities/automatictaskrepair.go:automaticTaskRepairBasis": "compares the stored value with TaskDueSQL to prove a generated-date correction; it never admits a raw deadline",
+	"internal/modules/activities/homerepair.go:readHomeRepairTasksTx":             "reviewed repair snapshots the stored value so it can prove a proposed correction and detect changes",
+	"internal/modules/activities/requestsettlement.go:RepliedRequests":            "settlement checks whether its own generated request reminder is pristine; it does not interpret that timestamp as a deadline",
 })
 
-var activityDeadlineAlias = regexp.MustCompile(`(?i)\b(?:FROM|JOIN)\s+activity\s+(?:AS\s+)?("?[a-z_][a-z0-9_]*"?)`)
-var unqualifiedDeadline = regexp.MustCompile(`(?i)(?:\bSELECT\s+|\bWHERE\s+|\bAND\s+|\bOR\s+|\bORDER\s+BY\s+)due_at\b`)
+var (
+	activityDeadlineAlias = regexp.MustCompile(`(?i)\b(?:FROM|JOIN)\s+activity\s+(?:AS\s+)?("?[a-z_][a-z0-9_]*"?)`)
+	unqualifiedDeadline   = regexp.MustCompile(`(?i)(?:\bSELECT\s+|\bWHERE\s+|\bAND\s+|\bOR\s+|\bORDER\s+BY\s+)due_at\b`)
+)
 
 func rawActivityDeadlines(sql string) bool {
 	aliases := activityDeadlineAlias.FindAllStringSubmatch(sql, -1)
