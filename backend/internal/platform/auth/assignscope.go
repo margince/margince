@@ -140,8 +140,8 @@ func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	destPos := arg(dest)
 
-	// An owner a case admission names already holds a merged contact, so the
-	// caller's scope is not asked of them; the seat half of the rule still is.
+	// An owner a case admission names already holds a merged contact. So the
+	// caller's scope is not asked of them, and the seat half still is.
 	if admittedCaseGrantee(ctx, dest) {
 		p.Permissions.RowScope = principal.RowScopeAll
 		eligible = AssigneeEligibleSQL

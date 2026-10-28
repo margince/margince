@@ -98,8 +98,8 @@ func (s *Store) contactCaseView(ctx context.Context, tx pgx.Tx, c contactCase) (
 	return out, nil
 }
 
-// caseAuthority is what this reader could decide in a case: which members
-// they may change, and whether the policy lets them act as an owner of one.
+// caseAuthority is what this reader could decide in a case. It names the
+// members they may change and whether the policy lets them act as an owner.
 // The decision asks again under its locks.
 type caseAuthority struct {
 	c        contactCase
@@ -132,8 +132,8 @@ func (a caseAuthority) delegate(memberIDs []ids.UUID) bool {
 	return !a.delegator.UserID.IsZero() && a.c.actorOwnsAMember(a.delegator, memberIDs)
 }
 
-// mergeMode answers how this reader could merge the whole case: by write
-// authority over every member, by the policy as the owner of one, or not at all.
+// mergeMode answers how this reader could merge the whole case. That is by
+// write authority over every member, by the policy as an owner, or not at all.
 func (a caseAuthority) mergeMode() crmcontracts.ContactCaseMergeMode {
 	members := memberIDsOf(a.c)
 	switch {

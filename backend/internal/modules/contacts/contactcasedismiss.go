@@ -17,9 +17,8 @@ import (
 
 // admitPairDecision answers the context a dismissal or its undo writes under.
 // Ordinary: write authority over both ends. Under shared merge reviews, a live
-// full-seat owner of one end of a contact pair may decide it too; the context
-// then admits the two ends through the case merge's own admission, and nothing
-// else.
+// full-seat owner of one end of a contact pair may decide it too. The context
+// then admits the two ends through the case merge's own admission.
 func (s *Store) admitPairDecision(ctx context.Context, tx pgx.Tx, row DedupeCandidateRow) (context.Context, error) {
 	refused := ensurePairWritable(ctx, tx, row.EntityType, row.LeftID, row.RightID)
 	if refused == nil || row.EntityType != entityContact || !errors.Is(refused, apperrors.ErrPermissionDenied) {

@@ -185,9 +185,8 @@ func (s *Store) executeDedupeMergeTx(
 }
 
 // writePairDecision commits a human's verdict on a pair under the authority
-// that verdict needs: admitPairDecision and the write share ONE transaction,
-// so a grant revoked between them cannot leave the write standing on authority
-// that is already gone.
+// that verdict needs. admitPairDecision and the write share one transaction.
+// So a grant revoked between them cannot leave the write standing.
 //
 // The WRITE is the parameter and the probe is not, which is the direction that
 // matters. A caller cannot reach this and skip the guard; it can only choose
