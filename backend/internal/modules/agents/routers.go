@@ -14,6 +14,7 @@ func RegisterRouters(r *Registry) {
 	registerWhereServed(r, readContext{})
 	registerWhereServed(r, readAttention{})
 	registerWhereServed(r, readReports{})
+	registerWhereServed(r, changeReports{})
 	registerWhereServed(r, readAnalytics{})
 	registerWhereServed(r, changeActivities{})
 	registerWhereServed(r, scheduleMeeting{})

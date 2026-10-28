@@ -233,6 +233,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /analytics/evidence` | getReportingEvidence | Get reporting evidence | Read records | at once |
 | `GET /analytics/reports` | listReportingReports | List reporting reports | Read records | at once |
 | `GET /analytics/reports/{id}` | getReportingReport | Get reporting report | Read records | at once |
+| `PUT /analytics/reports/{id}/draft` | saveReportingReportDraft | Save a reporting report draft | Change records | at once |
 | `GET /analytics/reports/{id}/evaluation` | evaluateReportingReport | Evaluate reporting report | Read records | at once |
 | `GET /analytics/targets` | listReportingTargets | List reporting targets | Read records | at once |
 | `GET /analytics/targets/{id}` | getReportingTarget | Get reporting target | Read records | at once |

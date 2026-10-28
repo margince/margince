@@ -4910,6 +4910,50 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
       description: Get reporting report
+  /analytics/reports/{id}/draft:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags:
+        - Reports
+      operationId: saveReportingReportDraft
+      summary: Save a reporting report draft
+      description: |-
+        Saves the next revision as a draft that only the report's editors see. Readers keep the published revision. A second save replaces the draft.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingReport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+        - name: If-Match
+          in: header
+          required: true
+          schema: {type: string}
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportingReportDraftInput'
   /analytics/reports/{id}/evaluation:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -18312,6 +18356,13 @@ components:
           description: |-
             The unpublished draft revision, shown only to an editor of the report. Absent when there
             is no draft. Evaluate it with `revision` to preview it.
+    ReportingReportDraftInput:
+      type: object
+      additionalProperties: false
+      required: [selection]
+      properties:
+        selection:
+          $ref: '#/components/schemas/ReportingSelection'
     ReportingTargetInput:
       type: object
       additionalProperties: false
