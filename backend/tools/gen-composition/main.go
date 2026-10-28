@@ -37,6 +37,7 @@ var (
 	rootPath     = flag.String("root", "..", "repository root (the directory holding extensions/ and build/)")
 	verify       = flag.Bool("verify", false, "regenerate in memory and compare against composition.json and the files on disk; write nothing")
 	verifyInputs = flag.Bool("verify-inputs", false, "recompute input digests only and compare against composition.json; write nothing")
+	instanceDir  = flag.String("instance", "", "an installation's Go module folder: every extension its root package imports with `import _` is composed beside extensions/")
 )
 
 // genMode is the tool's three mutually exclusive operations; when both
@@ -137,6 +138,9 @@ func generate(root string) error {
 	if err := stubMatchesVanilla(root); err != nil {
 		return err
 	}
+	if err := resolveModuleUnits(root, *instanceDir); err != nil {
+		return err
+	}
 	// The manifests are derived from the merged contracts, so composedFiles
 	// produces both: the composition has to exist before a manifest can be
 	// written. This is the same ordering `make gen` applies one level up.
@@ -175,14 +179,23 @@ func generate(root string) error {
 	// directory that does not exist is a claim pnpm currently tolerates by
 	// ignoring it, which is not a property to depend on — and `de` ships no
 	// frontend/ at all.
-	unitNames := make([]string, 0, len(composed.Manifests))
+	var screens []extensionUnit
+	var screenDirs []string
 	for _, m := range composed.Manifests {
 		if m.Unit.Frontend == nil {
 			continue
 		}
-		unitNames = append(unitNames, m.Unit.Name)
+		rel, err := filepath.Rel(root, m.Unit.Dir)
+		if err != nil {
+			return err
+		}
+		screens = append(screens, m.Unit)
+		screenDirs = append(screenDirs, filepath.ToSlash(rel))
 	}
-	if err := emitComposedFrontendWorkspace(filepath.Join(root, filepath.FromSlash(composedFrontendWorkspaceDir)), unitNames); err != nil {
+	if err := emitComposedFrontendWorkspace(filepath.Join(root, filepath.FromSlash(composedFrontendWorkspaceDir)), screenDirs); err != nil {
+		return err
+	}
+	if err := linkUnitScreens(root, screens); err != nil {
 		return err
 	}
 	m, err := currentManifest(root, composed.Files)
@@ -223,18 +236,11 @@ func currentManifest(root string, files map[string][]byte) (manifest, error) {
 // build pipelines, and a writable PATH entry must not choose which go
 // resolves the composed graph.
 func materializeWorkSum(root, outRoot string) error {
-	// The deprecation notice points at `go env GOROOT`, which cannot be used
-	// here: reading it means already having found a go binary on PATH, and
-	// refusing to trust PATH is the whole point of the paragraph above. The
-	// notice's own caveat — that the build-time root is meaningless if the
-	// binary is copied elsewhere — does not apply to a generator the build lanes
-	// invoke through `go run` from inside this repo.
-	//nolint:staticcheck // SA1019: the replacement resolves through PATH, which this deliberately refuses to trust
-	goRoot := runtime.GOROOT()
-	if goRoot == "" {
-		return errors.New("cannot locate the go toolchain (empty GOROOT)")
+	goBin, err := goBinary()
+	if err != nil {
+		return err
 	}
-	cmd := exec.Command(filepath.Join(goRoot, "bin", "go"), "list", "-m", "all") // #nosec G204 -- GOROOT/bin/go with literal args; refusing PATH is the point
+	cmd := exec.Command(goBin, "list", "-m", "all") // #nosec G204 -- GOROOT/bin/go with literal args; refusing PATH is the point
 	cmd.Dir = root
 	cmd.Env = append(os.Environ(), "GOWORK="+filepath.Join(outRoot, goWorkFile))
 	if out, err := cmd.CombinedOutput(); err != nil {

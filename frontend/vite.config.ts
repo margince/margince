@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, realpathSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
@@ -18,6 +18,12 @@ import { TEST_TIMEOUT_MS } from "./vitest.budget.ts";
 // invoked. Composed: MARGINCE_COMPOSITION_FRONTEND names the generated
 // directory, exactly as GOWORK names the generated workspace for the Go lane.
 const frontendRoot = fileURLToPath(new URL(".", import.meta.url));
+// One link per enabled unit's screen, written by gen-composition, wherever the
+// unit lives: extensions/, or a module an installation imports.
+const unitScreensDir = join(frontendRoot, "..", "build", "composition-frontend", "units");
+const unitScreenDirs = existsSync(unitScreensDir)
+  ? readdirSync(unitScreensDir).map((unit) => realpathSync(join(unitScreensDir, unit)))
+  : [];
 const composedComposition = process.env.MARGINCE_COMPOSITION_FRONTEND;
 const compositionDir = composedComposition
   ? resolve(composedComposition)
@@ -153,11 +159,11 @@ export default defineConfig({
       // links a member into its DEPENDENTS' node_modules, so installing it
       // would mean frontend/package.json listing every enabled unit — an
       // upstream-owned file that adding a unit would then have to edit.
-      // Presence under extensions/ is the enablement here exactly as it is on
-      // the Go side.
+      // gen-composition links each enabled unit's screen into unitScreensDir,
+      // so the set here is the one the Go side composed.
       {
         find: /^@margince-ext\/(.+)$/,
-        replacement: join(frontendRoot, "..", "extensions", "$1", "frontend"),
+        replacement: join(unitScreensDir, "$1"),
       },
     ],
     // ONE copy of every package that keeps state the HOST owns: React's hook
@@ -199,6 +205,9 @@ export default defineConfig({
         // without this `pnpm dev` serves the registry and then 403s the very
         // module it imports.
         join(frontendRoot, "..", "extensions"),
+        // A unit an installation imports sits in build/ or in the
+        // installation's own folder, and the link above resolves to there.
+        ...unitScreenDirs,
       ],
     },
     // Everything the api owns is reachable through this origin, so
