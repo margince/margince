@@ -5,6 +5,28 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
+  "homeRepair.reason.taskChanged":
+    "Die Aufgabe wurde während der Vorschau geändert. Erstelle die Vorschau erneut.",
+  "homeRepair.normalize": "Quelle oder erzeugtes Datum berichtigen",
+  "homeRepair.normalizeSummary_one":
+    "Bei {count} automatischen Aufgabe wird die Quelle oder das Datum berichtigt.",
+  "homeRepair.normalizeSummary_other":
+    "Bei {count} automatischen Aufgaben werden Quelle oder Datum berichtigt.",
+  "homeRepair.taskCorrectionPermission":
+    "Du kannst diese Aufgaben prüfen, aber deine Rolle kann nicht alle aufgeführten Korrekturen anwenden.",
+  "homeRepair.reason.noLongerCurrent":
+    "Die Quelle begründet keine aktuelle Aufgabe mehr.",
+  "homeRepair.reason.restoreSource":
+    "Den gespeicherten Quellenverweis wiederherstellen.",
+  "homeRepair.reason.generatedDate":
+    "Das erzeugte Benachrichtigungsdatum entfernen.",
+  "homeRepair.reason.restoreSourceAndDate":
+    "Den Quellenverweis wiederherstellen und das erzeugte Benachrichtigungsdatum entfernen.",
+  "worklist.relationships.optional": "Optionale Kontaktpflege",
+  "worklist.relationships.optionalDetail":
+    "Stille allein ist keine Aufgabe. Hefte einen Kontakt für deinen Tag an oder erstelle eine Aufgabe im Datensatz.",
+  "worklist.relationships.more":
+    "Weitere optionale Kontakte liegen außerhalb dieser Ansicht.",
   "webhooks.event.signal.updated.label": "Hinweis neu zugeordnet",
   "webhooks.event.signal.updated.when":
     "Wenn ein Hinweis beim Zusammenführen eines Duplikats zum verbleibenden Mitglied wechselt.",
@@ -197,7 +219,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "homeRepair.inspect": "Prüfen",
   "dataTasks.blocked.review_required":
     "Prüfe die vorgeschlagenen Änderungen vor dem Start.",
-  "homeRepair.archive": "Automatische Erinnerung archivieren",
+  "homeRepair.archive": "Automatische Aufgabe archivieren",
   "homeRepair.keepReview": "Zur persönlichen Prüfung behalten",
   "homeRepair.keepCurrent": "Aktuelle Aufgabe behalten",
   "homeRepair.reason.adopted":
@@ -205,7 +227,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "homeRepair.reason.unverified":
     "Die verfügbaren Belege rechtfertigen keine automatische Änderung.",
   "homeRepair.reason.unavailable":
-    "Die Quelle kann mit deinem aktuellen Zugriff nicht geprüft werden.",
+    "Die Quelle fehlt oder kann mit deinem aktuellen Zugriff nicht geprüft werden.",
   "homeRepair.reason.historical": "Historische Quelle ohne aktuelle Frist.",
   "homeRepair.reason.lateProposed":
     "Von einem Teammitglied nach Ablauf der 30 Tage erfasst; der Vorschlag bleibt beim Zusagenden.",
@@ -231,11 +253,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die aktuellen Regeln lassen diese Aufgabe weiterhin zu.",
   "homeRepair.unnamed": "Details nicht verfügbar",
   "homeRepair.explain":
-    "Es wird nur Arbeit angezeigt, die du derzeit einsehen kannst. Prüfe bis zu 25 Einträge gleichzeitig. Veraltete automatische Erinnerungen können archiviert und doppelte oder veraltete Vorschläge zurückgezogen werden. Menschlich bearbeitete Aufgaben bleiben erhalten; nichts wird als erledigt markiert.",
+    "Es wird nur Arbeit angezeigt, die du derzeit einsehen kannst. Prüfe bis zu 25 Einträge gleichzeitig. Veraltete automatische Aufgaben können archiviert und doppelte oder veraltete Vorschläge zurückgezogen werden. Menschlich bearbeitete Aufgaben bleiben erhalten; nichts wird als erledigt markiert.",
   "homeRepair.preview": "Einträge prüfen",
   "homeRepair.next": "Nächste Seite prüfen",
   "homeRepair.summary":
-    "Zu ändernde Ergebnisse: {reclassify}. Erinnerungen zum Archivieren: {archive}. Zurückzuziehende Vorschläge: {withdraw}. Zurückzuziehende Deal-Vorschläge: {supersede}. Zur Prüfung behalten: {review}; als aktuelle Arbeit behalten: {keep}.",
+    "Zu ändernde Ergebnisse: {reclassify}. Aufgaben zum Archivieren: {archive}. Zurückzuziehende Vorschläge: {withdraw}. Zurückzuziehende Deal-Vorschläge: {supersede}. Zur Prüfung behalten: {review}; als aktuelle Arbeit behalten: {keep}.",
   "homeRepair.apply_one": "{count} geprüfte Änderung anwenden",
   "homeRepair.apply_other": "{count} geprüfte Änderungen anwenden",
   "homeRepair.settlements": "Beantwortete Anfragen",

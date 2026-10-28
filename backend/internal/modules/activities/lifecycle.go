@@ -476,7 +476,7 @@ func archiveActivityInTx(
 	}
 	var evidence map[string]any
 	if o.reason != "" {
-		evidence = map[string]any{archiveReasonKey: o.reason, "rule_version": o.ruleVersion}
+		evidence = map[string]any{archiveReasonKey: o.reason, ruleVersionEvidenceKey: o.ruleVersion}
 	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", "activity", id.UUID, p.Before(), p.After(), evidence)
 	if err != nil {

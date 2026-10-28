@@ -1,0 +1,31 @@
+# CASE 61 — What have I promised.
+#
+# A routing case. read_attention fronts three reads (slipping, at_risk and
+# commitments), and the copy has to let a model pick the one whose words match
+# the question. "Promised and still open" is the commitments view. A model that
+# reads it as risk reaches for whats_slipping_this_week or at_risk_relationships
+# and answers a different question.
+#
+# The prompt names no tool and no view. Nothing here grades the answer's
+# wording, so the case costs one short run: the call is the whole assertion.
+name: case61_what_have_i_promised
+criteria: [1]
+writes: false
+
+prompt: |
+  Before my one-to-one with the sales lead: what have I promised customers
+  that I still owe them?
+
+must_call:
+  - review_commitments
+
+may_call:
+  - whats_slipping_this_week
+  - at_risk_relationships
+  - list_records
+  - search_records
+  - read_record
+  - whoami
+
+runs: 3
+pass_at: 2

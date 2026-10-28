@@ -466,10 +466,8 @@ done
 # --- The seat and the helpers the fixtures below share -----------------------
 #
 # The admin's OWN seat, resolved once. Case 40's lead queue is the CALLER's
-# queue and case 8's ownership proposal hands an account to the caller: leads
-# owned by the colleague would make case 40 quietly about somebody else's work,
-# and a proposal moving an account between two other contacts is a change the
-# contact deciding it has no stake in.
+# queue: leads owned by the colleague would make case 40 quietly about somebody
+# else's work.
 me="$(api GET '/users?q=admin@demo.test' | python3 -c 'import json,sys
 rows = json.load(sys.stdin).get("data", [])
 print(rows[0]["id"] if rows else "")')"
@@ -477,7 +475,7 @@ print(rows[0]["id"] if rows else "")')"
 
 # tag_id_by_name finds a word, live or retired, or prints nothing.
 #
-# include_archived, because case 31 applies a word and then retires it: a re-run
+# include_archived, because a case can apply a word and then retire it: a re-run
 # that could not see the retired one would try to coin it again and die on 409
 # name_taken.
 tag_id_by_name() {
@@ -529,93 +527,6 @@ days_ahead() {
   date -u -v+"$1"d '+%Y-%m-%d' 2>/dev/null || date -u -d "$1 days" '+%Y-%m-%d'
 }
 
-# --- CASE 8: two proposals waiting for a human decision ---------------------
-#
-# Staged by a SECOND passport, because a credential does not approve its own
-# proposal (approvals.agentMayDecide) — and by the SAME human, because it does
-# not approve one staged for somebody else either. Both passports are minted by
-# admin@demo.test, so the assistant's may decide these two.
-#
-# What makes a patch stage rather than apply is the AUDIT TRAIL: a field counts
-# as the human's when the record was created by a human and the field currently
-# holds a value. So description and owner_id are set here, through the admin's
-# own session, before the agent proposes a change to them. Patch a field nobody
-# filled and the agent's write lands silently, staging nothing.
-herzog="$(company_id_by_name "Herzog Fertigung GmbH")"
-if [[ -z "$herzog" ]]; then
-  body="$(printf '{"display_name":"Herzog Fertigung GmbH","owner_id":"%s","industry":"Fertigung","description":"Fertigungsbetrieb im Bergischen Land."}' "$colleague")"
-  herzog="$(create_or_die "/companies" "$body" "Herzog Fertigung GmbH")"
-fi
-
-# NO ADDRESS, here and on every company below: case 4's answer is averaged from
-# the located companies filed under Köln, and a fourth row there moves the
-# centre that case rests on.
-#
-# The name carries no packaging word on purpose. Case 1 forbids a claim that
-# something was promised about Verpackung, and this company is pending in case
-# 1's world too — an ownership proposal on an "Ostsee Verpackungen" would put
-# that word in front of an assistant answering a different question entirely.
-taunus="$(company_id_by_name "Taunus Gerätebau GmbH")"
-if [[ -z "$taunus" ]]; then
-  body="$(printf '{"display_name":"Taunus Gerätebau GmbH","owner_id":"%s","industry":"Gerätebau"}' "$colleague")"
-  taunus="$(create_or_die "/companies" "$body" "Taunus Gerätebau GmbH")"
-fi
-
-# The proposing credential. read+write and nothing else: staging spends write.
-#
-# Minted rather than looked up, on every run: the listing answers a passport's
-# label and never its token, so there is no reading of an existing one. A second
-# row is the price of a re-run and costs nothing — nothing counts passports.
-nightly="$(api POST /passports '{"label":"overnight-cleanup","scopes":["read","write"]}' \
-  | python3 -c 'import json,sys
-try: print(json.load(sys.stdin).get("token",""))
-except Exception: print("")')"
-[[ -n "$nightly" ]] || { echo "could not mint the overnight-cleanup passport" >&2; exit 1; }
-
-# pending_on counts what is already waiting against one company.
-pending_on() {
-  api GET "/approvals?status=pending&target_entity_type=company&target_entity_id=$1&limit=50" \
-    | python3 -c 'import json,sys
-print(len(json.load(sys.stdin).get("data", [])))'
-}
-
-# A REFUSAL IS WHAT A SUCCESSFUL STAGING LOOKS LIKE: 403 approval_required,
-# naming the id it staged. Anything else means nothing was staged.
-#
-# Skipped when the company already carries a waiting item, because staging is
-# the one write here with no natural key: a re-run would queue a second copy of
-# each proposal and leave case 8 with four items and two instructions.
-stage_as_nightly() {
-  local path="$1" body="$2" what="$3" target="$4" code
-  if [[ "$(pending_on "$target")" != "0" ]]; then
-    echo "  $what is already waiting"
-    return 0
-  fi
-  code="$(curl -sS -o /dev/null -w '%{http_code}' -X PATCH \
-    -H "Authorization: Bearer $nightly" -H 'Content-Type: application/json' \
-    -d "$body" "$API_BASE/v1$path")"
-  [[ "$code" = "403" ]] || {
-    echo "staging $what answered HTTP $code, not the 403 that means it staged" >&2; exit 1; }
-}
-
-# THE 48-BYTE CUT. The inbox line renders a staged value truncated at 48 bytes
-# (compose/agentsummary.go), so "Werkzeugbau" — which starts at byte 72 — is
-# reachable only through read_approval, and case 8's sharpest assertion rests on
-# that. If this sentence is ever reworded, keep a distinctive word past the 48th
-# BYTE (ü is two of them) or the case stops testing that the item was opened.
-staged_description='{"description":"Fertigungsdienstleister mit eigenem Prüflabor in Solingen; Schwerpunkt Werkzeugbau."}'
-stage_as_nightly "/companies/$herzog" "$staged_description" "the description rewrite" "$herzog"
-
-owner_move="$(printf '{"owner_id":"%s"}' "$me")"
-stage_as_nightly "/companies/$taunus" "$owner_move" "the ownership move" "$taunus"
-
-# A CENSUS THAT CAN FAIL SHORT HAS ALREADY FAILED. Two staged rows are the whole
-# fixture, and a seed that produced one would leave case 8 failing as though the
-# assistant had done something wrong.
-pending="$(api GET '/approvals?status=pending&limit=50' | python3 -c 'import json,sys
-print(len(json.load(sys.stdin).get("data", [])))')"
-[[ "$pending" = "2" ]] || { echo "expected 2 pending approvals for case 8, found $pending" >&2; exit 1; }
-
 # --- CASE 9: four activities filed on the wrong record ----------------------
 #
 # One mail on Rheinufer AG that is Dom Digital's, and three mails on Vorort
@@ -666,11 +577,8 @@ fi
 
 # --- CASE 2: the contact the card names is already here, once -----------------
 #
-# Case 2 asserts that the assistant REPORTS the duplicate its create filed —
-# "a queue nobody is told about is a queue nobody reads". Nothing seeded the
-# other half, so there was no duplicate to file: three runs scored on the word
-# "already" borrowed from case 8's approval queue, and the one honest answer
-# ("neither she nor Terralogic existed, so I created both") scored FAIL.
+# Cases 56 and 63 need a Lucy Vo to find: the duplicate a create files, and the
+# contact an "is she already here" question resolves.
 #
 # A NAME COLLISION is the lane that files a review row on a manual create.
 # manualDedupeContact passes QueueNameCollisions, so a second "Lucy Vo" is
@@ -737,7 +645,7 @@ else:
     "$name" "$pipeline" "$stage" "$colleague")"
   # THE UNPRICED ONE carries a null amount and no currency. It is real pipeline
   # contributing zero money — counted as eligible, absent from every money total
-  # — which is the whole of case 21's fourth criterion, and the commonest state
+  # — which is the unpriced-deal case, and the commonest state
   # of a deal created in a hurry.
   if [[ "$amount" = "null" ]]; then
     body="$body$(printf '"amount_minor":null,')"
@@ -749,12 +657,12 @@ else:
 }
 # THE CLOSE DATES ARE DERIVED, and a fixed offset is what made that necessary.
 #
-# Case 21 reads the CURRENT fiscal quarter, and forecast eligibility is
+# The forecast cases read the CURRENT fiscal quarter, and forecast eligibility is
 # `expected_close_date BETWEEN` that quarter's bounds, so all seven have to land
 # inside it. The offsets this replaced were +9…+27 days, which fall into the
 # NEXT quarter for every run in the last four weeks of one — and the first two
 # to fall out are a priced deal and the UNPRICED one, so the reading answers
-# five eligible and five priced and case 21's criterion (six of the seven
+# five eligible and five priced and the unpriced-deal criterion (six of the seven
 # priced, one not) cannot be met by any correct answer. Three runs lost to the
 # calendar, with nothing in the transcript saying so.
 #
@@ -805,7 +713,7 @@ print(" ".join(str(low + datetime.timedelta(days=span * i // 6)) for i in range(
   printf '  %s\n' "$installation" >&2
   exit 1
 }
-echo "  case 21 pipeline closes ${close_dates[0]} … ${close_dates[6]}"
+echo "  forecast pipeline closes ${close_dates[0]} … ${close_dates[6]}"
 
 # NOT "Rheinufer Wartungsvertrag". Case 9's premise is that the Wartungsvertrag
 # mail on Rheinufer has nothing to do with Rheinufer, and search_context sweeps
@@ -902,7 +810,7 @@ seed_won_deal "Lahntal Praezision Erstauftrag" 1150000 "${close_dates[4]}"
 # sweep takes the oldest first and is time-boxed, so it reached exactly three —
 # had their dates moved from inside the quarter to 2026-11-04, outside it. The
 # forecast then answered nine eligible deals and EUR 87,500 open where the
-# fixture had written twelve and EUR 179,000. Case 21 asserts on that reading and
+# fixture had written twelve and EUR 179,000. The forecast cases assert on that reading and
 # case 20 quotes it, and nothing anywhere said the world had changed underneath
 # them. Three models were scored against it.
 #
@@ -1013,12 +921,12 @@ book_block "Kundentermin Nordholz"    "$((monday + 1))" 10
 # the coinage half of the errand would go untested.
 seed_tag "K5 Conference 2026" teal >/dev/null
 
-# --- CASE 31: what a record's own row does not show -------------------------
+# --- CASE 31 (tag removal): what a record's own row does not show -------------------------
 #
 # A retired word STAYS on the record carrying it and is omitted from that
 # record's row, so read_record and every listing report this account as not
 # carrying it. get_record_tags is the only read where it still shows, and that
-# disagreement is the case. The word case 31 TAKES OFF is seeded in the case 32
+# disagreement is the case. The word the tag-removal case TAKES OFF is seeded in the case 32
 # block below, for the reason stated there.
 k5_2025="$(seed_tag "K5 Conference 2025" slate)"
 tag_record "$k5_2025" company "$vorort"
@@ -1026,7 +934,7 @@ tag_record "$k5_2025" company "$vorort"
 # does not un-tag what already carries it.
 if [[ -z "$(api GET "/tags/$k5_2025" | python3 -c 'import json,sys
 print(json.load(sys.stdin).get("archived_at") or "")')" ]]; then
-  # The retirement IS case 31 — the word only disagrees with the record row
+  # The retirement IS the tag-removal case — the word only disagrees with the record row
   # once it is archived — so this is the last write in the file that may be
   # allowed to fail quietly. The guard above means there is no expected
   # refusal left: an already-retired word never reaches here.
@@ -1045,10 +953,10 @@ fi
 # the survivor is case 32's third criterion.
 #
 # VORORT CARRIES THE DUPLICATE, and that is the load-bearing part. The scenarios
-# run in filename order, so case 31 takes a word off Vorort before case 32
+# run in filename order, so the tag-removal case takes a word off Vorort before case 32
 # counts what each spelling is on; if Vorort held the survivor, the count case
 # 32 rests on would be three in a fresh database and two in the run that follows
-# case 31 — the same case asserting different numbers depending on which run it
+# the tag-removal case — the same case asserting different numbers depending on which run it
 # was. With the duplicate on Vorort, the survivor's three is the same in both.
 strategic="$(seed_tag "Strategic Account" amber)"
 strategic_short="$(seed_tag "Strategic Accts" amber)"
@@ -1254,15 +1162,12 @@ fi
 # --- CASE 43: four fair leads, one of whose stage a human already chose -----
 #
 # All four are created by the admin's own session and none is sent a lifecycle,
-# so each starts at the column default 'unknown' — a value nobody typed, which an
-# agent may move without asking. The fourth then gets 'target' through a PATCH
-# from the same session: that writes the audit row naming a human as the last
-# writer of lifecycle, and it is that row, not the value, that makes the agent's
-# change to it stage for sign-off. Setting it in the create body would hold it
-# too, through the unaudited-field rule, and would not be the case's subject.
+# so each starts at the column default 'unknown'. The fourth then gets 'target'
+# through a PATCH from the same session, so a human is the last writer of that
+# lifecycle. The agent's change over it applies at once and its answer names the
+# value it replaced, which is what case 43 asks the assistant to report.
 #
-# Owned by the caller, because these are the caller's own leads and the held
-# proposal has to be one the caller's credential may release.
+# Owned by the caller, because these are the caller's own leads.
 seed_fair_lead() {
   local name="$1" industry="$2" id body
   id="$(company_id_by_name "$name")"
@@ -1283,8 +1188,8 @@ code="$(status_of PATCH "/companies/$emsland" '{"lifecycle":"target"}')"
 #
 # ONE WORLD STILL. Nothing below adds a deal or a lead to anybody's queue: the
 # deal-shaped fixtures are AGED ACTIVITY on two deals the pipeline already holds
-# (case 21's seven open ones), because a deal is "slipping" or "going cold" by
-# what its timeline does not say, and a new deal would move case 21's counts.
+# (the seven open ones of the forecast cases), because a deal is "slipping" or "going cold" by
+# what its timeline does not say, and a new deal would move the forecast cases' counts.
 #
 # The two the pipeline holds are named in case 44 and case 49's prompts, and the
 # other cases never name them.
@@ -1490,23 +1395,23 @@ if [[ "$(lane_psql "SELECT count(*) FROM forecast_snapshot WHERE trigger = 'dail
   vorort_deal="$(deal_id_by_name "Vorort Systeme Ausbau")"
   valantic_deal="$(deal_id_by_name "valantic Migrationsprojekt")"
   [[ -n "$vorort_deal" && -n "$valantic_deal" ]] || { echo "case 50 needs the Vorort and valantic deals" >&2; exit 1; }
-  code="$(status_of PATCH "/deals/$vorort_deal" '{"amount_minor":2600000,"currency":"EUR","version":1}')"
-  [[ "$code" = "200" ]] || { echo "repricing the Vorort deal answered HTTP $code" >&2; exit 1; }
+  reply="$(api PATCH "/deals/$vorort_deal" '{"amount_minor":2600000,"currency":"EUR"}')"
+  [[ "$reply" == *'"amount_minor":2600000'* ]] || { echo "repricing the Vorort deal answered: $reply" >&2; exit 1; }
   # 150 days out is past the end of any quarter, so the deal leaves it whatever day
   # the lane runs, and the date is never one the product refuses as already past.
-  slipped="$(printf '{"expected_close_date":"%s","version":1}' "$(days_ahead 150)")"
-  code="$(status_of PATCH "/deals/$valantic_deal" "$slipped")"
-  [[ "$code" = "200" ]] || { echo "slipping the valantic deal answered HTTP $code" >&2; exit 1; }
+  slipped="$(printf '{"expected_close_date":"%s"}' "$(days_ahead 150)")"
+  reply="$(api PATCH "/deals/$valantic_deal" "$slipped")"
+  [[ "$reply" == *'"expected_close_date":"'* ]] || { echo "slipping the valantic deal answered: $reply" >&2; exit 1; }
   freeze_forecast
 fi
 
-# --- CASE 7: meetings in two standings, above the privacy floor --------------
+# --- Meetings in two standings, above the privacy floor --------------
 #
 # run_analytics_query withholds a group of fewer than five records, and then one
 # more group so the total cannot give the first one away. So each standing needs
 # five or more, and so do the tasks, which group as "no standing". With case 23's
 # two bookings and case 59's signing, the seed holds 6 held and 8 booked
-# meetings; case 7's judge checks those two numbers. Filed on Henning Voss:
+# meetings; the held and booked counts rest on those two numbers. Filed on Henning Voss:
 # without a host they leave case 23's calendar as it is. The tasks are done
 # weeks ago, so no list of open or late work shows them.
 if [[ "$(lane_psql "SELECT count(*) FROM activity WHERE subject LIKE 'Abstimmung Nordholz %'")" -eq 0 ]]; then

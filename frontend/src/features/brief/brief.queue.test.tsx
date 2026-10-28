@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
@@ -340,3 +341,34 @@ it.each(["failed", "bounded", "scope"])(
     expect(toggle.querySelector(".optioncount")).toBeNull();
   },
 );
+
+it("keeps optional reconnections reachable in the real Home queue drawer", async () => {
+  window.location.hash = "#/home?queue=1";
+  stubApi({
+    "GET /worklist": () =>
+      jsonResponse({
+        ...readingsDay({}, []),
+        optional_relationships: [
+          {
+            ...taskRow(
+              "01930000-0000-7000-8000-000000000031",
+              "Demo reconnection",
+            ),
+            source: "relationship_decay",
+            category: "relationships",
+            level: 6,
+            actions: ["open", "dismiss"],
+            because: [],
+          },
+        ],
+      }),
+  });
+  render(<BriefQueue />);
+  const drawer = await screen.findByRole("dialog", {
+    name: en["brief.queue.title"],
+  });
+  expect(
+    await within(drawer).findByText(en["worklist.relationships.optional"]),
+  ).toBeVisible();
+  expect(within(drawer).getByText("Demo reconnection")).toBeVisible();
+});

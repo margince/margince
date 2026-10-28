@@ -12,6 +12,7 @@ func HumanWroteActivityClause(alias string) string {
  WHERE worked.entity_type = 'activity' AND worked.entity_id = ` + alias + `.id
  AND worked.actor_type = 'human'
  AND (worked.action = 'create' OR worked.after ?| ARRAY['subject','body','due_at','remind_at','assignee_id','is_done'] OR worked.evidence->>'accepted_request'='true')
+ AND NOT ` + AutomaticTaskRepairAuditClause("worked") + `
  AND ` + AuditNotFromAnImport("worked") + `)`
 }
 

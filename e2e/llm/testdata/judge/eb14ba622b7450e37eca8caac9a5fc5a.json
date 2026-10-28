@@ -1,7 +1,0 @@
-{
-  "verdict": "no",
-  "reason": "The answer reports 3 meetings held and 4 booked, not the required 6 held and 8 booked.",
-  "model": "claude-haiku-4-5-20251001",
-  "criterion": "Criterion 1. The answer says that 6 meetings have taken place (held) and 8 are only booked so far. Both numbers must be there, in any language: 'sechs haben stattgefunden, acht sind gebucht' is exactly as good as '6 held against 8 booked'. Answer no if either number is missing or different, if the answer gives only a single total, or if it reports the report's grouping and filter names instead of the counts. Whether the answer also mentions cancelled meetings or no-shows, or hedges about precision, is not yours to judge.",
-  "answer": "3 meetings have taken place and 4 are only booked so far.\n\nThat comes from the activities-by-kind report grouped by meeting_status."
-}

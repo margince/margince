@@ -41376,6 +41376,8 @@ export interface components {
             next_after?: string;
         };
         HomeRepairReview: {
+            /** @description The client must acknowledge the actions it displayed when activating this page. */
+            requires_action_review?: boolean;
             tasks: components["schemas"]["HomeRepairTask"][];
             counts: components["schemas"]["HomeRepairCounts"];
             /** @description Reader-bound classification review token; expires after fifteen minutes and is consumed on activation. */
@@ -41399,7 +41401,7 @@ export interface components {
             /** Format: int64 */
             version: number;
             /** @enum {string} */
-            action: "archive_automatic_reminder" | "withdraw_proposal" | "supersede_suggestion" | "reclassify_message" | "human_review" | "leave_current" | "revalidate_settlement";
+            action: "archive_automatic_reminder" | "normalize_automatic_task" | "withdraw_proposal" | "supersede_suggestion" | "reclassify_message" | "human_review" | "leave_current" | "revalidate_settlement";
             reason: string;
         };
         HomeRepairCounts: {
@@ -41411,6 +41413,8 @@ export interface components {
             keep: number;
             /** @description Older settled request verdicts the email-request settlement pass judges again. */
             revalidate?: number;
+            /** @description Pristine automatic tasks with a proved source reference or generated notification date to correct. */
+            normalize?: number;
         };
         DataTaskControl: {
             task_id: string;
@@ -48617,7 +48621,8 @@ export interface components {
         /**
          * @description Up to six actionable priorities from the scoped day, selected before filtering
          *     or pagination and ordered by the queue's server ranking. Routine maintenance
-         *     and future tasks do not fill spare places. Pins remain explicit choices.
+         *     and future tasks do not fill spare places. Ordinary pins only order the queue;
+         *     pinning an optional reconnection explicitly chooses it for Focus.
          *     Source coverage and failures are reported on the enclosing worklist; these
          *     counts describe the candidates actually read, not an exhaustive installation.
          */
@@ -48708,6 +48713,14 @@ export interface components {
             summary: components["schemas"]["WorklistSummary"];
             /** @description Everything actionable, best-first. The order is the product of this endpoint. */
             queue: components["schemas"]["WorklistItem"][];
+            /**
+             * @description Optional reconnections, outside the work queue, counts and Focus. An open
+             *     deal or relationship score does not establish an obligation. A reader may
+             *     pin a suggestion into their personal queue or create an explicit task.
+             */
+            optional_relationships?: components["schemas"]["WorklistItem"][];
+            /** @description More optional contacts exist beyond the existing relationship read bound. */
+            optional_relationships_more_available?: boolean;
             focus?: components["schemas"]["WorklistFocus"];
             /** @description Sources that could not be included, and why. Empty is the honest common case. */
             sources_unavailable: components["schemas"]["WorklistSourceUnavailable"][];
@@ -51808,6 +51821,8 @@ export interface operations {
                     /** Format: int64 */
                     version: number;
                     review: components["schemas"]["HomeRepairReview"];
+                    /** @description Supported action names in the displayed review's row order, required when requires_action_review is true. */
+                    reviewed_actions?: string[];
                 };
             };
         };
