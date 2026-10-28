@@ -379,8 +379,7 @@ What this feature does not do yet:
   that wants to propose on arrival needs the unattended landing of feature 12, because a bus delivery cannot write
   through core today.
 - Core's retired guess for projects (the table `project_link_candidate`) is not brought back. This queue is separate.
-- `Core` has no search door yet, so a unit cannot pass `exclude_ids` from inside a handler. Core drops the author on
-  the proposal for that reason.
+- `Core` has no search door yet, so a unit cannot pass `exclude_ids` from a handler. Core drops the author on the proposal.
 - One piece the plan named as a dependency is not in the tree, and nothing here builds it. The seam uses what exists.
 - The queue shows at most 50 suggestions and has no paging.
 

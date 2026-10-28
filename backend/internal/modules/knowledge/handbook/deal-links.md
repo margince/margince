@@ -2,8 +2,8 @@
 <!-- describes: frontend/src/features/deals/deal360/deallinkscard.tsx frontend/src/lib/recordlinks.queries.ts backend/internal/modules/recordlinks/write.go backend/internal/modules/recordlinks/read.go -->
 # Links between records
 
-A link says how two records belong together: a deal that follows up another deal, a renewal of an earlier sale, a
-company tied to a deal. This page is for the user who links records and reads the links. A link joins any two of deal,
+A link says how two records belong together. It can tie a deal that follows up another deal, a renewal of an
+earlier sale, or a company to a deal. This page is for the user who links records and reads the links. A link joins any two of deal,
 company and contact.
 
 ## Where do I find the links?
@@ -16,7 +16,7 @@ says which way the link points: **From this deal** or **To this deal**.
 | Step | What you do |
 |---|---|
 | 1 | Choose **Add link**. |
-| 2 | Pick a **Link type**. Core has *Follow-up of*, *Renews* and *Related to*. An extension your admin turned on can add more. |
+| 2 | Pick a **Link type** from the list. An extension your admin turned on can add more. |
 | 3 | Search for the record to link and pick it. |
 
 **Remove** deletes the link. The two records stay as they are.

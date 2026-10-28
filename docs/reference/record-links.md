@@ -2,7 +2,7 @@
 <!-- describes: backend/internal/modules/recordlinks backend/internal/shared/ports/recordkinds/linktypes.go backend/pkg/extension/linktype.go backend/internal/platform/database/storekit/deallinks.go -->
 # Typed links between records
 
-A typed link joins two core records and names how they relate. This page is for those who build or run Margince. It
+A typed link joins two core records and names how they are tied. This page is for those who build or run Margince. It
 lists the link types, the rights, the routes and what happens to a link when a record is archived or erased. The
 steps to declare a type in an extension are in [Declare a link type](../how-to/add-an-extension.md#declare-a-link-type).
 What a user sees is in [Links between records](../handbook/deal-links.md).
@@ -66,10 +66,10 @@ and its type, and never the other end.
 flowchart LR
     A[Archive an end] --> H[The read hides the link]
     U[Restore the end] --> S[The link shows again]
-    E[Erase or anonymize a contact] --> D[Every link naming the contact is deleted]
+    E[Erase a contact, or clear it by retention] --> D[Every link naming the contact is deleted]
 ```
 
-Archiving writes nothing to `record_link`. Erasing a contact and the retention anonymize both call one function that
+Archiving writes nothing to `record_link`. Erasing a contact and the retention clearing both call one function that
 deletes the links of that contact in their own transaction.
 
 ## Filter and breakdown
@@ -77,12 +77,12 @@ deletes the links of that contact in their own transaction.
 | Where | What it does |
 |---|---|
 | `GET /v1/deals?link_type=` | Keeps the deals that hold a link of that type to another live deal, from either end. |
-| Report dimension `link_type` | Groups deals by the sorted combination of link types they hold with other live deals, or `none`. An extension breakdown may split a deal population by it. |
+| Report split `link_type` | Groups deals by the sorted set of link types they hold with other live deals, or `none`. An extension breakdown may split its deals by it. |
 
 Both read links between deals only, so the deal read right covers both ends. Links to a company or a contact show on the
 deal page and are not read by the filter or the breakdown.
 
 ## What is not done
 
-A merge of two records does not move the links of the record that is merged away. The links stay on it and are hidden
+A merge of two records does not move the links of the record that is merged into the other. The links stay on it and are hidden
 while it is archived.
