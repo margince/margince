@@ -110,7 +110,7 @@ The contact you merged away is archived, not deleted. A lead has no **Merge** of
 
 Anyone the merged-away contact was shared with can open the contact you kept. Of their two shares, the higher access stays. The owner of the merged-away contact, when another colleague, keeps access too: edit access with a full seat, read with a read seat. A share they already held keeps its end date.
 
-Margince also groups contacts that may be duplicates of each other, so you can merge more than two at once. Every owner of a contact in the group finds it under **To review** in their Worklist.
+Margince also groups contacts that may be duplicates of each other, so you can merge more than two at once. Every owner of a contact in the group finds it under **To review** in their Worklist. A contact a colleague keeps private is not in your group, and only they can merge it.
 1. Open the group: **Possible duplicates (N)** under the contact's name, or **Review** on its Worklist card.
 2. Tick the contacts that are true duplicates, and choose **Keep this record’s details** on one.
 3. Choose the **Owner** (an owner of a ticked contact), press **Preview merge**, then **Merge {count} contacts**.
