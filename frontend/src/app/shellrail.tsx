@@ -15,6 +15,7 @@ import { NavLevelView, useNavLevel } from "./navlevel";
 import { useNavTip } from "./navtip";
 import { usePopoverDismiss } from "./popover";
 import type { ShellCounts } from "./shell";
+import { useSquareMark } from "./squaremark";
 
 // The head is one lockup at every width: a square mark, the name beside it, and
 // the line saying what it runs on under the name. A square is the one shape
@@ -36,6 +37,10 @@ function BrandBlock() {
   // company profile is an admin's read. A disabled observer: the auth gate
   // already fetched /me, and this re-renders when a company save refreshes it.
   const installation = useMe(false).data?.installation_brand;
+  const mark = useSquareMark(
+    installation?.logo_icon_url,
+    installation?.logo_url,
+  );
   // With no profile (the shell mounted before onboarding described anybody),
   // the block falls back to the product's own mark and name. A company name is
   // never invented to fill the line.
@@ -57,15 +62,14 @@ function BrandBlock() {
   }
   return (
     <>
-      {/* The square icon the company uploaded or its site declared. Avatar
-          draws the deterministic monogram underneath, so a company with no
-          icon has a face, not a gap. The wide wordmark is not drawn here. */}
+      {/* The company's square mark. Avatar draws the deterministic monogram
+          underneath, so a company with no square mark has a face, not a gap. */}
       <span className="ws-chip ws-chip-company" aria-hidden="true">
         {/* The brand read carries no company id, so the name keys the chip. */}
         <Avatar
           identity={installation.display_name}
           name={installation.display_name}
-          src={installation.logo_icon_url}
+          src={mark}
         />
       </span>
       <a

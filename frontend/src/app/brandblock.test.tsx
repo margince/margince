@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import {
   MARKER,
@@ -17,6 +17,7 @@ import { WorkspaceRail } from "./shell";
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
 });
 
 describe("The rail's brand block", () => {
@@ -153,21 +154,50 @@ describe("The rail's brand block", () => {
     );
   });
 
-  // A wide wordmark squeezed into the square is a row of illegible strokes, so
-  // a company with only a wordmark wears its monogram here.
-  it("draws the monogram rather than a wide mark squeezed into the square", () => {
-    const client = newClient();
-    client.setQueryData(
-      ["me"],
-      repSeeing({ ...TWO_MARKS, logo_icon_url: undefined }),
-    );
-    const { container } = renderWith(
-      client,
-      <WorkspaceRail route={{ screen: "home" }} />,
-    );
-    expect(
-      container.querySelector(`img[src="${TWO_MARKS.logo_url}"]`),
-    ).toBeNull();
-    expect(container.querySelector(".ws-chip .avatar")?.textContent).toBe("DG");
-  });
+  // The site read stores a square lockup in the wide slot alone, so the head
+  // measures what the wide slot holds: a square there is the company's mark,
+  // and a wordmark squeezed into the square would be illegible strokes.
+  it.each([
+    ["a square lockup", 200, 200, TWO_MARKS.logo_url],
+    ["a wordmark", 700, 200, undefined],
+  ])(
+    "draws %s from the wide slot only when it is square",
+    async (_name, width, height, drawn) => {
+      vi.stubGlobal("Image", imageOfSize(width, height));
+      const client = newClient();
+      client.setQueryData(
+        ["me"],
+        repSeeing({ ...TWO_MARKS, logo_icon_url: undefined }),
+      );
+      const { container } = renderWith(
+        client,
+        <WorkspaceRail route={{ screen: "home" }} />,
+      );
+      await waitFor(() =>
+        expect(
+          container.querySelector(".ws-chip img")?.getAttribute("src") ??
+            undefined,
+        ).toBe(drawn),
+      );
+      if (!drawn) {
+        expect(container.querySelector(".ws-chip .avatar")?.textContent).toBe(
+          "DG",
+        );
+      }
+    },
+  );
 });
+
+// An Image whose every load succeeds at one size, so the probe's answer is the
+// case's and not the test environment's network.
+function imageOfSize(width: number, height: number) {
+  return class {
+    naturalWidth = width;
+    naturalHeight = height;
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    set src(_value: string) {
+      queueMicrotask(() => this.onload?.());
+    }
+  };
+}
