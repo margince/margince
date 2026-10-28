@@ -38337,6 +38337,9 @@ type DealCommitment struct {
 	ContactId   openapi_types.UUID `json:"contact_id"`
 	ContactName string             `json:"contact_name"`
 
+	// DiffersFromDeal The one total the quoted words state in the deal's currency, present only when it is not the deal's value. A deposit, an instalment, a price per period or unit, a sum in another currency or more than one sum is never a total. Absent when the deal has no value the reader may see.
+	DiffersFromDeal *StatedAmount `json:"differs_from_deal,omitempty"`
+
 	// DueAt Absent when the conversation named no day.
 	DueAt *time.Time `json:"due_at,omitempty"`
 
@@ -38348,6 +38351,9 @@ type DealCommitment struct {
 
 	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
+	// Overdue True once the whole due day is over in the installation's timezone. A promise due today, or with no due day, is not overdue.
+	Overdue bool `json:"overdue"`
 
 	// SourceActivityId The captured activity it was read from.
 	SourceActivityId openapi_types.UUID `json:"source_activity_id"`
@@ -52443,6 +52449,12 @@ type StartBackfillRequestWindow string
 type StartCompanySiteReadRequest struct {
 	// Url Public company website to read.
 	Url string `json:"url"`
+}
+
+// StatedAmount A sum of money a customer's words state, in minor units of `currency`.
+type StatedAmount struct {
+	AmountMinor int64  `json:"amount_minor"`
+	Currency    string `json:"currency"`
 }
 
 // SubscriptionConfirmationPage The answer for a consent link: one named subscription and the contact's current answer to it.
