@@ -110,10 +110,10 @@ func TestOnlyMailIdentitySpellsTheCorrespondenceLockKey(t *testing.T) {
 // foldsADomainInSQL matches a statement that normalizes a domain with SQL
 // lower() instead of the shared fold.
 //
-// Two halves, because the mistake has two spellings: lower() wrapped around a
-// domain column, which also costs the index on it, and a domain column compared
-// to a lower() of the caller's value. Neither matches domain_folded, which is
-// written by the fold and needs no runtime case work.
+// Two halves, because the mistake has two spellings. lower() wrapped around a
+// domain column, which also costs the index on it. And a domain column compared
+// to a lower() of the caller's value. Neither matches domain_folded, which its
+// writers fold.
 var foldsADomainInSQL = regexp.MustCompile(`(?is)lower\(\s*[a-z_]*\.?domain|\bdomain\s*=\s*lower\(`)
 
 // sqlFoldsAdmitted are the statements that may still lower() a domain, by name
@@ -125,10 +125,9 @@ var sqlFoldsAdmitted = gatekit.Waive(map[string]string{
 // TestNoSQLStatementFoldsADomainWithLower censuses the SQL that compares a
 // domain, which TestOnlyTheSharedFoldReadsIDNA cannot see.
 //
-// That gate reads imports, so a statement folding a domain with lower() passes
-// it while answering a Unicode and a punycode spelling of one domain as two.
-// The shared fold is owndomain.Fold, and owndomain.Spellings is how a
-// comparison against stored spellings reaches both.
+// That gate reads imports. So a statement folding a domain with lower() passes
+// it, while reading a Unicode and a punycode spelling of one domain as two.
+// owndomain.Spellings is how a comparison reaches both stored spellings.
 func TestNoSQLStatementFoldsADomainWithLower(t *testing.T) {
 	t.Parallel()
 	defer sqlFoldsAdmitted.AssertAllMatched(t)

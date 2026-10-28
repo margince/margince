@@ -352,10 +352,6 @@ func TestDedupeCompanyExactTierFindsAClaimedDomain(t *testing.T) {
 	}
 }
 
-// Capture's employer inference arrives with whatever the mail header spelled,
-// and a company is filed under whatever its site was read as. The two spellings
-// of one internationalized domain are one domain, so the exact tier must route
-// to the company already holding the other one.
 // A bought employer's domain resolves to the company holding its other
 // spelling. A provider claim carries whatever the vendor spelled, and the
 // company was filed under whatever its own site was read as.
@@ -384,6 +380,10 @@ func TestABoughtEmployersDomainResolvesAcrossSpellings(t *testing.T) {
 	}
 }
 
+// Capture's employer inference arrives with whatever the mail header spelled,
+// and a company is filed under whatever its site was read as. The two spellings
+// of one internationalized domain are one domain, so the exact tier must route
+// to the company already holding the other one.
 func TestDedupeCompanyExactTierFindsTheOtherSpellingOfADomain(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
