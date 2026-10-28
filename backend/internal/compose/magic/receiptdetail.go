@@ -34,10 +34,10 @@ const (
 	byColleague = "magic.by.colleague"
 )
 
-// ActorLabel names who acted. This page reports only the machinery, so only a
+// NameWhoActed names who acted. This page reports only the machinery, so only a
 // surface that also reports members' acts names a member. A seat the reader
 // cannot name is a colleague, never an id.
-func ActorLabel(actorType, actorID, memberName string) crmcontracts.MagicSentence {
+func NameWhoActed(actorType, actorID, memberName string) crmcontracts.MagicSentence {
 	if actorType != string(principal.PrincipalHuman) {
 		return actorLabel(entry{ActorType: actorType, ActorID: actorID})
 	}

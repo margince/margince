@@ -28,7 +28,7 @@ import (
 
 // appliedUnderPolicy decides a staged proposal the way the auto-apply sweep
 // does: as an agent carrying the owner's own grants.
-func appliedUnderPolicy(t *testing.T, ctx context.Context, svc *approvals.Service, id ids.ApprovalID, owner ids.UUID) {
+func appliedUnderPolicy(ctx context.Context, t *testing.T, svc *approvals.Service, id ids.ApprovalID, owner ids.UUID) {
 	t.Helper()
 	actor, ok := principal.Actor(ctx)
 	if !ok {
@@ -42,7 +42,7 @@ func appliedUnderPolicy(t *testing.T, ctx context.Context, svc *approvals.Servic
 }
 
 // stageDateCard stages a close-date card citing `message`, as the caller.
-func (e *closeDateEnv) stageDateCard(t *testing.T, ctx context.Context, deal, message ids.UUID, date time.Time) ids.ApprovalID {
+func (e *closeDateEnv) stageDateCard(ctx context.Context, t *testing.T, deal, message ids.UUID, date time.Time) ids.ApprovalID {
 	t.Helper()
 	raw, err := json.Marshal(deals.CloseDateCorrection{
 		DealID: ids.From[ids.DealKind](deal), ExpectedCloseDate: date.Format(time.DateOnly), Asking: deals.AskingIsThisDateRight,
@@ -101,16 +101,16 @@ func TestAReceiptNamesWhoDidItAndWhatItMoved(t *testing.T) {
 		t.Fatal(err)
 	}
 	moved := today().AddDate(0, 0, 45)
-	card := e.stageDateCard(t, reader, carded, ids.UUID(message.Id), moved)
-	appliedUnderPolicy(t, reader, e.svc, card, e.Rep1)
+	card := e.stageDateCard(reader, t, carded, ids.UUID(message.Id), moved)
+	appliedUnderPolicy(reader, t, e.svc, card, e.Rep1)
 	agentDeal := e.seedSweepDeal(t, "Moved by an agent", e.late, new("commit"), new(30), 1)
 	agent := principal.WithActor(reader, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", UserID: e.Rep1, OnBehalfOf: e.Rep1,
 		PassportID: e.SeedPassport(t, e.owner, "receipt agent"), SeatType: principal.SeatFull,
 		Scopes: principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite), Permissions: integration.AdminPerms,
 	})
-	agentCard := e.stageDateCard(t, agent, agentDeal, ids.UUID(message.Id), moved)
-	appliedUnderPolicy(t, reader, e.svc, agentCard, e.Rep1)
+	agentCard := e.stageDateCard(agent, t, agentDeal, ids.UUID(message.Id), moved)
+	appliedUnderPolicy(reader, t, e.svc, agentCard, e.Rep1)
 
 	handled, err := newAttentionService(e.Pool, e.svc, time.Now).HandledForYou(reader, nil)
 	if err != nil {
@@ -162,8 +162,8 @@ func TestASourceTheReaderMayNotOpenIsWithheld(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	card := e.stageDateCard(t, reader, deal, ids.UUID(message.Id), today().AddDate(0, 0, 40))
-	appliedUnderPolicy(t, reader, e.svc, card, e.Rep1)
+	card := e.stageDateCard(reader, t, deal, ids.UUID(message.Id), today().AddDate(0, 0, 40))
+	appliedUnderPolicy(reader, t, e.svc, card, e.Rep1)
 	feed := newAttentionService(e.Pool, e.svc, time.Now)
 
 	before, err := feed.HandledForYou(reader, nil)

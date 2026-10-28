@@ -77,7 +77,7 @@ func labelledActor(actor attention.ReceiptActor, members map[ids.UUID]string) *c
 	out := &crmcontracts.ReceiptActor{
 		Type:  crmcontracts.ReceiptActorType(actor.Type),
 		Id:    actor.ID,
-		Label: magic.ActorLabel(actor.Type, actor.ID, members[seat]),
+		Label: magic.NameWhoActed(actor.Type, actor.ID, members[seat]),
 	}
 	if actor.OnBehalfOf != nil {
 		on := openapi_types.UUID(*actor.OnBehalfOf)

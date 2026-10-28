@@ -16,7 +16,7 @@ func TestAnActorIsNamedByTheOwnerThisPageNamesItWith(t *testing.T) {
 		{"a member the reader cannot name", "human", "human:x", "", byColleague},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			label := ActorLabel(test.actorType, test.actorID, test.member)
+			label := NameWhoActed(test.actorType, test.actorID, test.member)
 			if label.Key != test.key {
 				t.Fatalf("labelled %q, want %q", label.Key, test.key)
 			}
