@@ -177,8 +177,8 @@ export function standardViews(
  * cause that is not the cause, and its Show all would leave the search standing.
  *
  * "Show all" drops the view's own filter and nothing else. That is why it is
- * worth having beside the table's own "clear filters": one undoes the tab, the
- * other undoes every dial the reader has turned.
+ * worth having beside the table's own "clear filters". One undoes the tab, and
+ * the other undoes every dial the reader has turned.
  */
 export function mineEmptyNote<Row>({
   t,

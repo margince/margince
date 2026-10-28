@@ -203,7 +203,7 @@ export function CaseForm({
           )}
         </Field>
         {!locked && problem && <p className="t-caption">{t(problem)}</p>}
-        <CaseEvidence contactCase={contactCase} />
+        <CaseEvidence contactCase={contactCase} onStale={onStale} />
         {previewed && preview.data && (
           <CasePreview contactCase={contactCase} outcome={preview.data} />
         )}

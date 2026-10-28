@@ -18412,7 +18412,13 @@ export const en = {
   "contactCase.member.dismissedWith":
     "Marked as a different person from {names}.",
   "contactCase.notAllowed.tooLarge":
-    "This group is too large to merge at once. Decide its pairs one at a time in the Worklist.",
+    "This group is too large to merge at once. Decide its pairs one at a time below.",
+  "contactCase.pair.notSame": "Not the same person",
+  "contactCase.pair.mergeTwo": "Merge these two",
+  "contactCase.pair.keep": "Keep {name}",
+  "contactCase.pair.refused":
+    "You cannot decide this pair. Ask an owner of these contacts or an administrator.",
+  "contactCase.pair.failed": "The pair was not saved. Retry.",
   "contactCase.notAllowed.ownersOnly":
     "Only an owner of one of these contacts, or someone who can edit all of them, can merge them.",
   "contactCase.notAllowed.noAuthority":

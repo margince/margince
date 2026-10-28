@@ -11,7 +11,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { unwrap } from "../lib/problem";
 import { invalidateRecord } from "../lib/recordwritekeys";
-import { worklistKey } from "../lib/workkeys";
+import { contactCasesKey, worklistKey } from "../lib/workkeys";
 
 export type ContactCase = components["schemas"]["ContactCase"];
 export type ContactCaseMember = components["schemas"]["ContactCaseMember"];
@@ -20,7 +20,7 @@ export type ContactCaseDecision =
   components["schemas"]["ContactCaseDecisionRequest"];
 
 export function contactCaseKey(contactId: string) {
-  return ["contact-case", contactId] as const;
+  return [...contactCasesKey, contactId] as const;
 }
 
 /**
@@ -82,7 +82,7 @@ function invalidateAfterMerge(
   return Promise.all([
     client.invalidateQueries({ queryKey: worklistKey }),
     client.invalidateQueries({ queryKey: ["contacts"] }),
-    client.invalidateQueries({ queryKey: ["contact-case"] }),
+    client.invalidateQueries({ queryKey: contactCasesKey }),
     ...[...touched].map((id) => invalidateRecord(client, "contact", id)),
   ]);
 }

@@ -16,7 +16,7 @@ export default meta;
 
 type Story = StoryObj;
 
-/** Three other contacts may be this person. */
+/** Three other contacts may be duplicates of this one. */
 export const OpenCase: Story = {
   render: () => {
     stubWithSession(

@@ -91,9 +91,20 @@ export const ThreeMembers: Story = {
   render: () => review(() => jsonResponse(threeMembers())),
 };
 
-/** A fourth member marked as a different person from Ana stays unticked. */
+/**
+ * A fourth member marked as a different person from Ana stays unticked. Its
+ * pair offers Undo, and every open pair offers "Not the same person".
+ */
 export const DismissedPair: Story = {
   render: () => review(() => jsonResponse(contactCase())),
+  play: async () => {
+    const body = within(document.body);
+    await expect(
+      await body.findByRole("button", {
+        name: "Undo: Mira Kovac and Mira Kovacs",
+      }),
+    ).toBeVisible();
+  },
 };
 
 /** The shared merge reviews setting lets an owner of one member merge the colleagues' copies. */
@@ -113,19 +124,33 @@ export const NotAllowed: Story = {
     ),
 };
 
+const tooLarge = () =>
+  jsonResponse(
+    contactCase({
+      can_merge: false,
+      merge_mode: "none",
+      too_large: true,
+      reason: "too_large",
+    }),
+  );
+
 /** More members than one review may merge: the pairs decide one by one. */
-export const TooLarge: Story = {
-  render: () =>
-    review(() =>
-      jsonResponse(
-        contactCase({
-          can_merge: false,
-          merge_mode: "none",
-          too_large: true,
-          reason: "too_large",
-        }),
-      ),
-    ),
+export const TooLarge: Story = { render: () => review(tooLarge) };
+
+/** One pair of a too-large case, asking which of the two contacts stays. */
+export const TooLargePairMerge: Story = {
+  render: () => review(tooLarge),
+  play: async () => {
+    const body = within(document.body);
+    await userEvent.click(
+      await body.findByRole("button", {
+        name: "Merge these two: Mira Kovac and Mira Kovač",
+      }),
+    );
+    await expect(
+      body.getByRole("button", { name: "Keep Mira Kovač" }),
+    ).toBeVisible();
+  },
 };
 
 /** Someone merged this contact before the reader got to it. */
