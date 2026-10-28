@@ -80,6 +80,15 @@ describe("a mail the installation's relay sent for a rep", () => {
     expect(screen.getByText("Did not reach Lena Hoffmann")).toBeVisible();
   });
 
+  it("says it once, even when the server marks the mail as the product's", () => {
+    renderRow({
+      ...relayedNotice({ from_address: "privacy@kps.test" }),
+      automatic_kind: "product",
+    });
+
+    expect(screen.getAllByText(/^Sent by Margince/)).toHaveLength(1);
+  });
+
   it("names no address the relay did not record", () => {
     renderRow(relayedNotice({ from_address: null }, { state: "sent" }));
 

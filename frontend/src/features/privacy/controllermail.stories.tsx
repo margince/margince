@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import {
   installFetchStub,
@@ -63,9 +63,7 @@ export const PrivacyNotice: Story = {
     await body.findByText(
       "Informationen zur Verarbeitung Ihrer personenbezogenen Daten",
     );
-    await expect(
-      body.getByText("The installation’s mail language is Deutsch."),
-    ).toBeVisible();
+    await body.findByText("The installation’s mail language is Deutsch.");
   },
 };
 
@@ -143,6 +141,16 @@ export const NoAddressPhone: Story = {
 export const NoMailLane: Story = {
   render: dialog("privacy_notice", () =>
     jsonResponse(NO_MAIL_LANE_PROBLEM, 409),
+  ),
+};
+
+/** A server fault: the failure, with a retry a refusal does not offer. */
+export const ServerFault: Story = {
+  render: dialog("privacy_notice", () =>
+    jsonResponse(
+      { title: "Internal Server Error", status: 500, code: "internal" },
+      500,
+    ),
   ),
 };
 

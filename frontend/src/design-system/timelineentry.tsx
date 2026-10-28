@@ -391,6 +391,10 @@ export function automaticLabel(entry: TimelineEntry): MessageKey | undefined {
 // the contact writing.
 export function AutomaticFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
   const t = useT();
+  // A relay send's own tag already says Margince sent it, and for whom.
+  if (entry.provenance.kind === "system" && entry.provenance.relay) {
+    return null;
+  }
   const label = automaticLabel(entry);
   return label ? <Badge>{t(label)}</Badge> : null;
 }

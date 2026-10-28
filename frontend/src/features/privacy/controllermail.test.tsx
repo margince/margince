@@ -279,6 +279,9 @@ describe("the preview of a mail the installation sends for a rep", () => {
     expect(
       within(dialog).getByText(en["controllerMail.noPreview"]),
     ).toBeVisible();
+    expect(
+      within(dialog).queryByRole("button", { name: en["common.retry"] }),
+    ).toBeNull();
     expect(posts(requests)).toEqual([]);
   });
 
@@ -295,6 +298,31 @@ describe("the preview of a mail the installation sends for a rep", () => {
     expect(
       within(dialog).getByRole("button", { name: en["notice.sendConfirm"] }),
     ).toBeDisabled();
+    expect(posts(requests)).toEqual([]);
+  });
+
+  it("offers a retry after a server fault, and none after a refusal", async () => {
+    let calls = 0;
+    const requests = stubServer(() => {
+      calls += 1;
+      return calls === 1
+        ? jsonResponse(
+            { title: "Internal Server Error", status: 500, code: "internal" },
+            500,
+          )
+        : jsonResponse(mailPreview("record_confirmation"));
+    });
+    renderDialog("record_confirmation");
+    const user = userEvent.setup();
+
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      await within(dialog).findByRole("button", { name: en["common.retry"] }),
+    );
+
+    expect(
+      await within(dialog).findByText("Ihre Kontaktdaten prüfen"),
+    ).toBeVisible();
     expect(posts(requests)).toEqual([]);
   });
 });

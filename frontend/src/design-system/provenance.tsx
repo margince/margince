@@ -102,8 +102,10 @@ export function ProvenanceTag({
   // rule nobody inferred: drawn in the AI tone, either would tell a reader a
   // model decided something. Every other arm is the neutral badge, told apart
   // by its words.
+  const relay = provenance.kind === "system" && Boolean(provenance.relay);
   const tag = (
-    <Badge tone={provenance.kind === "agent" ? "ai" : "default"}>
+    // A relay tag's last words say whom it was for, so it wraps, never cuts.
+    <Badge tone={provenance.kind === "agent" ? "ai" : "default"} wrap={relay}>
       {provenanceLabel(provenance, t, renderUser)}
     </Badge>
   );
@@ -113,8 +115,8 @@ export function ProvenanceTag({
     return tag;
   }
   return (
-    <span>
-      {tag}{" "}
+    <span className="provenance-relay">
+      {tag}
       <span className="t-caption">
         {t("trust.relayFrom", { address: from })}
       </span>

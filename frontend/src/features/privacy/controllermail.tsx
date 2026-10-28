@@ -5,7 +5,7 @@ import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Field } from "../../design-system/atoms";
+import { Button, Field } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { EmailText } from "../../design-system/emailtext";
@@ -13,7 +13,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { FactList } from "../../design-system/factlist";
 import { Select } from "../../design-system/select";
 import { localeNameKey, type Translator, useT } from "../../i18n";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { problemMessageOf, problemStatus, unwrap } from "../../lib/problem";
 
 type MailPreview = components["schemas"]["ControllerMailPreview"];
 type MailLanguage = components["schemas"]["MailLanguage"];
@@ -108,7 +108,16 @@ export function ControllerMailDialog({
     >
       <Callout title={t("controllerMail.relay")} />
       {preview.isError ? (
-        <ErrorLine error={preview.error} />
+        <ErrorLine
+          error={preview.error}
+          actions={
+            refusal(preview.error) ? undefined : (
+              <Button variant="link" onClick={() => void preview.refetch()}>
+                {t("common.retry")}
+              </Button>
+            )
+          }
+        />
       ) : preview.data ? (
         <MailPreviewBody
           preview={preview.data}
@@ -121,6 +130,12 @@ export function ControllerMailDialog({
       )}
     </ConfirmModal>
   );
+}
+
+// A 4xx is the server's settled answer; asking again changes nothing.
+function refusal(error: unknown): boolean {
+  const status = problemStatus(error);
+  return status >= 400 && status < 500;
 }
 
 function MailPreviewBody({
