@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -161,13 +162,13 @@ func linkableContactClause(ctx context.Context, arg func(any) int) (string, erro
 	if err != nil {
 		return "", err
 	}
-	clause := scopeAllRows
+	arms := []string{scopeAllRows}
 	for _, arm := range []string{readable, writable} {
 		if arm != "" {
-			clause += " AND " + arm
+			arms = append(arms, arm)
 		}
 	}
-	return "(" + clause + ")", nil
+	return "(" + strings.Join(arms, " AND ") + ")", nil
 }
 
 // companyMatchDomainsTx is the company's live folded domains a contact address
