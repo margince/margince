@@ -63,21 +63,27 @@ func offlineGo(t *testing.T, proxy string) {
 	t.Setenv("GOTOOLCHAIN", "local")
 }
 
-func TestAnInstallationTurnsOnTheExtensionsItsGoModRequires(t *testing.T) {
+// useInstance points the composer at an instance outside the root, as a
+// client's make does with MARGINCE_INSTANCE.
+func useInstance(t *testing.T, dir string) {
+	t.Helper()
+	before := *instanceDir
+	*instanceDir = dir
+	t.Cleanup(func() { *instanceDir = before })
+}
+
+func TestAClientInstanceComposesExactlyWhatItsGoModRequires(t *testing.T) {
 	proxy, root, instance := t.TempDir(), t.TempDir(), t.TempDir()
 	offlineGo(t, proxy)
+	useInstance(t, instance)
 	publish(t, proxy, "example.test/acme/crm/v2", "v2.1.0", map[string]string{
 		"go.mod": "module example.test/acme/crm/v2\n\ngo 1.21\n",
 		"crm.go": "package crm\n",
 	})
-	publish(t, proxy, "example.test/acme/lib", "v1.0.0", map[string]string{
-		"go.mod": "module example.test/acme/lib\n\ngo 1.21\n",
-		"lib.go": "package lib\n\nvar X int\n",
-	})
+	writeUnit(t, root, "unrequired", map[string]string{"go.mod": "module example.test/unrequired\n", "u.go": "package u\n"})
 	writeTree(t, instance, map[string]string{
 		"notes/go.mod":   "module example.test/acme/notes\n\ngo 1.21\n",
 		"notes/notes.go": "package notes\n",
-		"notes/frontend/node_modules/react/index.js": "module.exports = {}\n",
 		"go.mod": `module example.test/acme/instance
 
 go 1.21
@@ -98,54 +104,44 @@ replace github.com/margince/margince/composition => ./not-composed-yet
 `,
 	})
 
-	if err := resolveModuleUnits(root, instance); err != nil {
-		t.Fatalf("resolve: %v", err)
+	if err := fetchUnits(root); err != nil {
+		t.Fatalf("fetch: %v", err)
 	}
 	units, err := scanExtensions(root)
 	if err != nil {
 		t.Fatalf("scan: %v", err)
 	}
-	got := map[string]extensionUnit{}
+	got := map[string]string{}
 	for _, u := range units {
-		got[u.Name] = u
+		got[u.Name] = u.Dir
 	}
-	if len(got) != 2 {
-		t.Fatalf("units = %v, want crm and notes, and neither the indirect library nor core", got)
+	want := map[string]string{
+		"crm":   filepath.Join(root, "build", "extensions", "crm"),
+		"notes": filepath.Join(instance, "notes"),
 	}
-	if err := os.WriteFile(filepath.Join(got["crm"].Dir, "crm.go"), []byte("package crm\n"), 0o644); err != nil {
+	if len(got) != len(want) || got["crm"] != want["crm"] || got["notes"] != want["notes"] {
+		t.Fatalf("units = %v, want %v: not the indirect library, not core, not the unrequired folder", got, want)
+	}
+	if err := os.WriteFile(filepath.Join(got["crm"], "crm.go"), []byte("package crm\n"), 0o644); err != nil {
 		t.Errorf("the copy must be writable, unlike the module cache: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(got["notes"].Dir, "node_modules")); !os.IsNotExist(err) {
-		t.Errorf("a local unit's installed node_modules was copied (stat err = %v)", err)
-	}
 }
 
-func TestTheNextRunRemovesOnlyTheUnitsItCopied(t *testing.T) {
+func TestNoInstanceGoModComposesNothing(t *testing.T) {
 	root := t.TempDir()
-	writeUnit(t, root, "de", map[string]string{"go.mod": "module example.test/de\n\ngo 1.21\n", "de.go": "package de\n"})
-	writeUnit(t, root, "crm", map[string]string{"go.mod": "module example.test/crm\n\ngo 1.21\n", "crm.go": "package crm\n"})
-	writeTree(t, root, map[string]string{"build/extensions.list": "crm\n"})
-	if err := resolveModuleUnits(root, ""); err != nil {
-		t.Fatal(err)
-	}
+	unit := filepath.Join(root, "extensions", "de")
+	writeTree(t, unit, map[string]string{"go.mod": "module example.test/de\n", "de.go": "package de\n"})
 	units, err := scanExtensions(root)
-	if err != nil || len(units) != 1 || units[0].Name != "de" {
-		t.Fatalf("units = %v, err = %v; want only the tree's own de once no installation is named", units, err)
+	if err != nil || len(units) != 0 {
+		t.Fatalf("units = %v, err = %v; want none, since only go.mod turns a unit on", units, err)
 	}
 }
 
-func TestAnImportNamedLikeAUnitOfTheTreeIsRefused(t *testing.T) {
-	root, instance := t.TempDir(), t.TempDir()
-	writeUnit(t, root, "notes", map[string]string{"go.mod": "module example.test/notes\n\ngo 1.21\n", "notes.go": "package notes\n"})
-	writeTree(t, instance, map[string]string{
-		"notes/go.mod":   "module example.test/acme/notes\n\ngo 1.21\n",
-		"notes/notes.go": "package notes\n",
-		"go.mod":         "module example.test/acme/instance\n\ngo 1.21\n\nrequire example.test/acme/notes v0.0.0\n\nreplace example.test/acme/notes => ./notes\n",
-	})
-	t.Setenv("GOTOOLCHAIN", "local")
-	err := resolveModuleUnits(root, instance)
-	if err == nil || !strings.Contains(err.Error(), "extensions/notes already exists") {
-		t.Fatalf("err = %v, want the second notes refused", err)
+func TestTwoRequirementsWithOneUnitNameAreRefused(t *testing.T) {
+	root := t.TempDir()
+	writeTree(t, root, map[string]string{"instance/go.mod": "module i\n\nrequire (\n\ta.test/crm v1.0.0\n\tb.test/crm v1.0.0\n)\n"})
+	if _, err := scanExtensions(root); err == nil || !strings.Contains(err.Error(), `both the unit "crm"`) {
+		t.Fatalf("err = %v, want the two crm units refused", err)
 	}
 }
 

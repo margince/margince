@@ -250,8 +250,8 @@ const (
 	objJobHealth = "job_health"
 	objDataTask  = "data_task"
 	// Which extension units this installation composed. Read-only because
-	// presence under `extensions/` IS the enablement — there is no runtime
-	// toggle for a grant to gate.
+	// the instance's go.mod is the enablement: there is no runtime toggle for
+	// a grant to gate.
 	objExtensionAccess = "extension_access"
 	// Erasing the installation's data. Admin only, and never Ops: the reset is
 	// the one action no operator performs on someone else's behalf.
