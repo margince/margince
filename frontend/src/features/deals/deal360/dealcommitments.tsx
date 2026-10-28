@@ -14,8 +14,13 @@ import {
   OverviewRow,
   OverviewText,
 } from "../../../design-system/overviewcard";
-import { formatDate, formatMoneyWhole } from "../../../format/format";
-import { useLocale, useT } from "../../../i18n";
+import { foldForMatch } from "../../../format/collate";
+import {
+  formatDate,
+  formatMoneyWhole,
+  INTL_LOCALE,
+} from "../../../format/format";
+import { type Locale, useLocale, useT } from "../../../i18n";
 import { DEAL_COMMITMENTS_KEY } from "../../../lib/activitykeys";
 import { useCanWrite } from "../../../lib/capability";
 import { problemStatus, unwrap } from "../../../lib/problem";
@@ -94,16 +99,19 @@ export function DealCommitmentsCard({
  * names the speaker on their own, and the model often starts the sentence
  * with the same name.
  */
-function withoutSpeaker(body: string, speaker: string): string {
+function withoutSpeaker(body: string, speaker: string, locale: Locale): string {
   const name = speaker.trim();
-  if (name === "" || !body.toLowerCase().startsWith(name.toLowerCase())) {
+  if (
+    name === "" ||
+    foldForMatch(body.slice(0, name.length)) !== foldForMatch(name)
+  ) {
     return body;
   }
   const rest = body.slice(name.length).replace(/^[\s:,–-]+/u, "");
   if (rest === "") {
     return body;
   }
-  return rest.charAt(0).toLocaleUpperCase() + rest.slice(1);
+  return rest.charAt(0).toLocaleUpperCase(INTL_LOCALE[locale]) + rest.slice(1);
 }
 
 function CommitmentRow({
@@ -122,7 +130,7 @@ function CommitmentRow({
       title={
         <>
           <strong>{row.contact_name}</strong>{" "}
-          {withoutSpeaker(row.body, row.contact_name)}
+          {withoutSpeaker(row.body, row.contact_name, locale)}
         </>
       }
       sub={
