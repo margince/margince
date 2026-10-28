@@ -3,8 +3,8 @@
 
 // Command sql-census ranks the statements an integration run sent by what they
 // cost Postgres to plan. A pooled backend keeps that memory until its
-// connection closes, so a statement that plans large costs memory long after
-// it returns, and a result test on small data cannot see it.
+// connection closes. So a statement that plans large costs memory long after it
+// returns, and a result test on small data cannot see it.
 //
 // It reads the JSONL files a run writes when MARGINCE_SQL_CENSUS_DIR is set,
 // and plans each statement once on a fresh connection to a migrated database:

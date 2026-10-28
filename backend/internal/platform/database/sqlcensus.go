@@ -23,9 +23,9 @@ import (
 // records each distinct statement it sends, with the Go call chain that sent it.
 const SQLCensusDirEnv = "MARGINCE_SQL_CENSUS_DIR"
 
-// censusMinBytes skips the statements too small to plan expensively. Measured
-// over the integration lane, every statement whose planning grew a backend by
-// 64 MB or more was over 20 KB, and the median statement is under 200 bytes.
+// censusMinBytes skips the statements too small to plan expensively. Over the
+// integration lane, every statement that grew a backend by 64 MB was over 18 KB.
+// The median statement is under 200 bytes.
 const censusMinBytes = 8 << 10
 
 type censusRecord struct {
@@ -98,8 +98,8 @@ func (c *sqlCensus) record(sql string) {
 	}
 	var pcs [64]uintptr
 	n := runtime.Callers(3, pcs[:])
-	// Raw program counters and an in-memory hash key the pair; resolving frames
-	// and a stable hash cost far more, so only a pair not yet seen pays for them.
+	// Raw program counters and an in-memory hash key the pair. Resolving frames
+	// and a stable hash cost far more, so only a new pair pays for them.
 	key := censusKey{sql: maphash.String(c.seed, sql)}
 	copy(key.pcs[:], pcs[:n])
 	c.mu.Lock()
