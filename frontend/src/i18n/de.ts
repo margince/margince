@@ -9324,9 +9324,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ob.s1.fieldRequired": "Pflichtfeld",
   "ob.s1.requiredMissing": "Fülle diese Felder aus, um fortzufahren: {fields}",
   "ob.s1.saving": "Wird gespeichert…",
-  "ob.s1.saveFailed": "Unternehmen nicht gespeichert",
-  "ob.s1.savedNote":
-    "Im Unternehmen gespeichert. Änderungen hier werden beim Fortfahren erneut gespeichert.",
   "ob.readFromSite": "aus der Website-Analyse",
 
   "ob.manualChapterLegal": "Rechtsträger",

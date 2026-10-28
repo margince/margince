@@ -9365,9 +9365,6 @@ export const en = {
   "ob.s1.fieldRequired": "Required",
   "ob.s1.requiredMissing": "Complete these fields to continue: {fields}",
   "ob.s1.saving": "Saving…",
-  "ob.s1.saveFailed": "Company not saved",
-  "ob.s1.savedNote":
-    "Saved to the company. Changes here are saved again when you continue.",
   "ob.readFromSite": "read from site",
 
   "ob.manualChapterLegal": "Legal company",
