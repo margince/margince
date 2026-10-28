@@ -9083,9 +9083,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.s1.fieldRequired": "Bắt buộc",
   "ob.s1.requiredMissing": "Điền các trường này để tiếp tục: {fields}",
   "ob.s1.saving": "Đang lưu…",
-  "ob.s1.saveFailed": "Không thể lưu công ty",
-  "ob.s1.savedNote":
-    "Đã lưu vào hồ sơ công ty. Các thay đổi ở đây sẽ được lưu lại khi tiếp tục.",
   "ob.readFromSite": "đọc từ trang web",
 
   "ob.manualChapterLegal": "Pháp nhân",
