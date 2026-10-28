@@ -243,6 +243,12 @@ export function addressPatch(
   };
 }
 
+// The company's main number and general address, in the create and edit forms.
+const COMPANY_REACH_FIELDS: CreateField[] = [
+  { key: "phone", label: "create.phone" },
+  { key: "email", label: "create.email", type: "email" },
+];
+
 export function companyCreateFields(
   t: Translator,
   locale: Locale,
@@ -265,8 +271,7 @@ export function companyCreateFields(
         label: formatSizeBand(t, band),
       })),
     },
-    { key: "phone", label: "create.phone" },
-    { key: "email", label: "create.email", type: "email" },
+    ...COMPANY_REACH_FIELDS,
     {
       key: "domains",
       label: "company.domains",
@@ -326,8 +331,7 @@ export function companyEditFields(
         label: formatSizeBand(t, band),
       })),
     },
-    { key: "phone", label: "create.phone" },
-    { key: "email", label: "create.email", type: "email" },
+    ...COMPANY_REACH_FIELDS,
     // Who is accountable for this account. It defaults to whoever created the
     // record and stays there until someone changes it — which, until now,
     // nothing on this page let them do.
