@@ -655,6 +655,43 @@ export const RowMenuOnPhone: Story = {
   tags: ["uat-phone"],
 };
 
+const cardColumns: ListColumn<Company>[] = [
+  ...columns.slice(0, 2),
+  {
+    key: "email",
+    header: "E-mail",
+    cell: (row: Company) => (
+      <a href={`mailto:${row.id}`}>
+        {`procurement.department.${row.id}@a-very-long-company-domain.example`}
+      </a>
+    ),
+  },
+  // A renderer that wraps nothing in an element, as the Last activity cell does.
+  { key: "seen", header: "Last activity", cell: () => <span /> },
+];
+
+// On a phone a card keeps a long value inside its edge, and a field with
+// nothing in it shows no label.
+export const CardsOnPhone: Story = {
+  render: () => <Surface rows={companies(3)} columns={cardColumns} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const value = await canvas.findByText(/^procurement\.department\.c1@/);
+    const card = value.closest("tr");
+    await expect(value.getBoundingClientRect().right).toBeLessThanOrEqual(
+      card?.getBoundingClientRect().right ?? 0,
+    );
+    for (const cell of canvasElement.querySelectorAll(
+      'td[data-label="Last activity"]',
+    )) {
+      await expect(cell).not.toBeVisible();
+    }
+  },
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
 const longHeaderColumns: ListColumn<Company>[] = [
   ...columns.slice(0, 4),
   {

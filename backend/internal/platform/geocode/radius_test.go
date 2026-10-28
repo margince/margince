@@ -126,7 +126,10 @@ func TestWithinOnlyReadsLocatedRowsInsideTheBoxAndCircle(t *testing.T) {
 	arg, args := counter()
 	distance, where := Within("t", cols, Point{Lat: 48.7758, Lon: 9.1829}, 50, arg)
 	joined := strings.Join(where, " AND ")
-	for _, want := range []string{"t.geocode_status = $", "t.geocode_lat IS NOT NULL", "t.geocode_lon BETWEEN", distance + " <= $"} {
+	if !strings.Contains(distance, "located_point.company_id = t.id") {
+		t.Errorf("the distance does not read the company's own point row:\n%s", distance)
+	}
+	for _, want := range []string{"located_point.company_id = t.id", "located_point.status = $", "located_point.lat IS NOT NULL", "located_point.lon BETWEEN", " <= $"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("Within is missing %q:\n%s", want, joined)
 		}
@@ -140,7 +143,9 @@ func TestLocatedSQLNamesTheStatusAndBothCoordinates(t *testing.T) {
 	cols, _ := ColumnsFor("company")
 	arg, args := counter()
 	got := strings.Join(LocatedSQL("c", cols, arg), " AND ")
-	if got != "c.geocode_status = $1 AND c.geocode_lat IS NOT NULL AND c.geocode_lon IS NOT NULL" {
+	want := "EXISTS (SELECT 1 FROM company_geocode_state located_point WHERE located_point.company_id = c.id" +
+		" AND located_point.status = $1 AND located_point.lat IS NOT NULL AND located_point.lon IS NOT NULL)"
+	if got != want {
 		t.Errorf("LocatedSQL = %q", got)
 	}
 	if len(*args) != 1 || (*args)[0] != ResolvedStatus {

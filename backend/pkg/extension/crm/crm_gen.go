@@ -1465,13 +1465,19 @@ type Activity struct {
 
 	// AutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
 	AutomaticKind *ActivityAutomaticKind `json:"automatic_kind,omitempty"`
-	Body          *string                `json:"body,omitempty"`
+
+	// AwaitingOutcome Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false.
+	AwaitingOutcome *bool   `json:"awaiting_outcome,omitempty"`
+	Body            *string `json:"body,omitempty"`
 
 	// BodyCompleteness How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased.
 	BodyCompleteness *BodyCompleteness `json:"body_completeness,omitempty"`
 
 	// BulkMailAttested This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply.
 	BulkMailAttested *bool `json:"bulk_mail_attested,omitempty"`
+
+	// CalendarManaged Whether a live calendar invitation holds this meeting. Then a write through this activity that sets `subject`, `body`, `occurred_at`, `occurred_precision` or a `meeting_status` other than `held` or `no_show` is refused with `calendar_managed`; that change goes through the invitation (`PATCH /scheduling/invitations/{id}`). Archiving or restoring the activity is refused with `calendar_managed` too, and the undo of its creation is refused. Every read that carries `writable` carries this. Absent means false.
+	CalendarManaged *bool `json:"calendar_managed,omitempty"`
 
 	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 	CaptureLabel *ActivityCaptureLabel `json:"capture_label,omitempty"`
@@ -2759,6 +2765,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "automatic_kind")
 	}
 
+	if raw, found := object["awaiting_outcome"]; found {
+		err = json.Unmarshal(raw, &a.AwaitingOutcome)
+		if err != nil {
+			return fmt.Errorf("error reading 'awaiting_outcome': %w", err)
+		}
+		delete(object, "awaiting_outcome")
+	}
+
 	if raw, found := object["body"]; found {
 		err = json.Unmarshal(raw, &a.Body)
 		if err != nil {
@@ -2781,6 +2795,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'bulk_mail_attested': %w", err)
 		}
 		delete(object, "bulk_mail_attested")
+	}
+
+	if raw, found := object["calendar_managed"]; found {
+		err = json.Unmarshal(raw, &a.CalendarManaged)
+		if err != nil {
+			return fmt.Errorf("error reading 'calendar_managed': %w", err)
+		}
+		delete(object, "calendar_managed")
 	}
 
 	if raw, found := object["capture_label"]; found {
@@ -3155,6 +3177,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.AwaitingOutcome != nil {
+		object["awaiting_outcome"], err = json.Marshal(a.AwaitingOutcome)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'awaiting_outcome': %w", err)
+		}
+	}
+
 	if a.Body != nil {
 		object["body"], err = json.Marshal(a.Body)
 		if err != nil {
@@ -3173,6 +3202,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["bulk_mail_attested"], err = json.Marshal(a.BulkMailAttested)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'bulk_mail_attested': %w", err)
+		}
+	}
+
+	if a.CalendarManaged != nil {
+		object["calendar_managed"], err = json.Marshal(a.CalendarManaged)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'calendar_managed': %w", err)
 		}
 	}
 

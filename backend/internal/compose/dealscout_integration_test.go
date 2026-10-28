@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -286,7 +287,7 @@ func TestADealClosedAfterTheEvidenceKeepsItFromBeingSuggested(t *testing.T) {
 	}
 	later := e.employee(t, "Lee Buyer", acme)
 	e.now = e.now.Add(time.Hour)
-	e.meeting(e.Admin(), t, "Phase two", &later, e.now.Add(-time.Minute))
+	e.meeting(e.Admin(), t, "Phase two", &later, clocktest.Now(t))
 	e.buyerPair(t, acme, e.now.Add(-time.Minute))
 	e.pass(t)
 	if n := e.stored(t, acme, deals.SuggestionOpen); n != 1 {

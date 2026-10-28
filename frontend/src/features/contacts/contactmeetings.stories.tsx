@@ -29,14 +29,17 @@ const view: components["schemas"]["Contact360"] = {
 // The tab's reads, with the proposals and the host's profile the story names.
 // A factory where a route answers differently on its second call, so every
 // render of the story starts again from the first page.
-function withRoutes(routes: RouteMap | (() => RouteMap)): Decorator {
+function withRoutes(
+  routes: RouteMap | (() => RouteMap),
+  locale: "en" | "de" = "en",
+): Decorator {
   return (Story) => {
     installFetchStub({
       "GET /me": meRoute({ activity: ["create"] }, { seat: "full" }),
       ...(typeof routes === "function" ? routes() : routes),
     });
     return (
-      <StoryProviders>
+      <StoryProviders locale={locale}>
         <Story />
       </StoryProviders>
     );
@@ -267,4 +270,52 @@ export const WaitingFailed: StoryObj = {
     }),
   ],
   render: () => <WaitingUnreadable />,
+};
+
+// Held meetings that still owe an outcome, in German at a phone's width. Each
+// row's three verbs wrap inside the row instead of running past its edge.
+const owedMeetings: Activity[] = [
+  meeting(
+    "0198f011-bbbb-7000-8000-000000000011",
+    "2026-09-29T08:00:00Z",
+    "Abstimmung zum Rollout",
+    "booked",
+    { awaiting_outcome: true, writable: true, version: 2 },
+  ),
+  meeting(
+    "0198f011-bbbb-7000-8000-000000000012",
+    "2026-09-22T08:00:00Z",
+    "Erstgespräch Terminplanung",
+    "booked",
+    { awaiting_outcome: true, writable: true, version: 1 },
+  ),
+  meeting(
+    "0198f011-bbbb-7000-8000-000000000013",
+    "2026-09-15T07:00:00Z",
+    "Vorstellung der Preisstaffel",
+    "held",
+    { host_user_id: "u-host" },
+  ),
+];
+export const OutcomesOwedGermanPhone: Story = {
+  decorators: [
+    withRoutes(
+      {
+        "GET /me": meRoute(
+          { activity: ["create", "update"] },
+          { seat: "full" },
+        ),
+        "GET /scheduling/proposals": () => jsonResponse({ data: [] }),
+        "GET /activities": () =>
+          jsonResponse({ data: owedMeetings, page: { has_more: false } }),
+        "GET /users/names": () =>
+          jsonResponse({
+            data: [{ id: "u-host", display_name: "Lena Fischer" }],
+          }),
+      },
+      "de",
+    ),
+  ],
+  tags: ["uat-phone"],
+  args: { view, onBriefMeeting: () => undefined },
 };

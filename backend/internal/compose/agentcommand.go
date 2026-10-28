@@ -216,6 +216,9 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"renderAnalyticsReport":  composeReportCommand,
 	"uploadAttachment":       uploadAttachmentCommand,
 
+	// A draft waits for a human to publish it, so it stages nothing today.
+	"saveReportingReportDraft": draftReportCommand,
+
 	// The two decisions, over four routes. They are the only entries here whose
 	// command names no target record, and the resolver says why: the row a
 	// decision acts on is an approval, which is the authority object itself.

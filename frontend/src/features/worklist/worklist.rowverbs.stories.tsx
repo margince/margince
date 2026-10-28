@@ -147,7 +147,7 @@ function meetingOutcomeRow(): WorklistItem {
     title: "Quarterly review with Turbinenbau",
     occurred_at: "2026-09-02T09:00:00Z",
     because: [],
-    actions: ["decide"],
+    actions: ["decide", "cancel"],
     version: 4,
   };
 }
@@ -182,6 +182,14 @@ export const ATasksMenu: Story = {
         name: en["worklist.rowMenu"].replace("{title}", taskRow().title ?? ""),
       }),
     );
+  },
+};
+
+/** A task nobody holds that the reader may change: Take it stands before Done. */
+export const AnUnheldTask: Story = {
+  args: {
+    ...ATaskAnsweredLast.args,
+    item: { ...taskRow(), actions: ["complete", "snooze", "take"] },
   },
 };
 

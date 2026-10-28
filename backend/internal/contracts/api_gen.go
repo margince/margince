@@ -2450,6 +2450,7 @@ func (e AttentionConnectionFactsMedium) Valid() bool {
 const (
 	AttentionItemActionsAcknowledge  AttentionItemActions = "acknowledge"
 	AttentionItemActionsAct          AttentionItemActions = "act"
+	AttentionItemActionsCancel       AttentionItemActions = "cancel"
 	AttentionItemActionsComplete     AttentionItemActions = "complete"
 	AttentionItemActionsDecide       AttentionItemActions = "decide"
 	AttentionItemActionsDiscard      AttentionItemActions = "discard"
@@ -2463,6 +2464,7 @@ const (
 	AttentionItemActionsRetry        AttentionItemActions = "retry"
 	AttentionItemActionsSetAside     AttentionItemActions = "set_aside"
 	AttentionItemActionsSnooze       AttentionItemActions = "snooze"
+	AttentionItemActionsTake         AttentionItemActions = "take"
 	AttentionItemActionsUndo         AttentionItemActions = "undo"
 )
 
@@ -2472,6 +2474,8 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsAcknowledge:
 		return true
 	case AttentionItemActionsAct:
+		return true
+	case AttentionItemActionsCancel:
 		return true
 	case AttentionItemActionsComplete:
 		return true
@@ -2498,6 +2502,8 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsSetAside:
 		return true
 	case AttentionItemActionsSnooze:
+		return true
+	case AttentionItemActionsTake:
 		return true
 	case AttentionItemActionsUndo:
 		return true
@@ -11765,6 +11771,7 @@ const (
 	ImportReasonCodeLinkTypeUnknown              ImportReasonCode = "link_type_unknown"
 	ImportReasonCodeLinkedinHeld                 ImportReasonCode = "linkedin_held"
 	ImportReasonCodeLostReasonMissing            ImportReasonCode = "lost_reason_missing"
+	ImportReasonCodeMeetingNotTakenPlace         ImportReasonCode = "meeting_not_taken_place"
 	ImportReasonCodeMeetingStatusNotValidForKind ImportReasonCode = "meeting_status_not_valid_for_kind"
 	ImportReasonCodeMeetingStatusUnknown         ImportReasonCode = "meeting_status_unknown"
 	ImportReasonCodeMessageNotImportable         ImportReasonCode = "message_not_importable"
@@ -11961,6 +11968,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeLinkedinHeld:
 		return true
 	case ImportReasonCodeLostReasonMissing:
+		return true
+	case ImportReasonCodeMeetingNotTakenPlace:
 		return true
 	case ImportReasonCodeMeetingStatusNotValidForKind:
 		return true
@@ -21572,6 +21581,7 @@ func (e WorklistDealVerdictStanding) Valid() bool {
 const (
 	WorklistItemActionsAcknowledge  WorklistItemActions = "acknowledge"
 	WorklistItemActionsAct          WorklistItemActions = "act"
+	WorklistItemActionsCancel       WorklistItemActions = "cancel"
 	WorklistItemActionsComplete     WorklistItemActions = "complete"
 	WorklistItemActionsDecide       WorklistItemActions = "decide"
 	WorklistItemActionsDiscard      WorklistItemActions = "discard"
@@ -21585,6 +21595,7 @@ const (
 	WorklistItemActionsRetry        WorklistItemActions = "retry"
 	WorklistItemActionsSetAside     WorklistItemActions = "set_aside"
 	WorklistItemActionsSnooze       WorklistItemActions = "snooze"
+	WorklistItemActionsTake         WorklistItemActions = "take"
 	WorklistItemActionsUndo         WorklistItemActions = "undo"
 )
 
@@ -21594,6 +21605,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsAcknowledge:
 		return true
 	case WorklistItemActionsAct:
+		return true
+	case WorklistItemActionsCancel:
 		return true
 	case WorklistItemActionsComplete:
 		return true
@@ -21620,6 +21633,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsSetAside:
 		return true
 	case WorklistItemActionsSnooze:
+		return true
+	case WorklistItemActionsTake:
 		return true
 	case WorklistItemActionsUndo:
 		return true
@@ -25592,13 +25607,19 @@ type Activity struct {
 
 	// AutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
 	AutomaticKind *ActivityAutomaticKind `json:"automatic_kind,omitempty"`
-	Body          *string                `json:"body,omitempty"`
+
+	// AwaitingOutcome Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false.
+	AwaitingOutcome *bool   `json:"awaiting_outcome,omitempty"`
+	Body            *string `json:"body,omitempty"`
 
 	// BodyCompleteness How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased.
 	BodyCompleteness *BodyCompleteness `json:"body_completeness,omitempty"`
 
 	// BulkMailAttested This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply.
 	BulkMailAttested *bool `json:"bulk_mail_attested,omitempty"`
+
+	// CalendarManaged Whether a live calendar invitation holds this meeting. Then a write through this activity that sets `subject`, `body`, `occurred_at`, `occurred_precision` or a `meeting_status` other than `held` or `no_show` is refused with `calendar_managed`; that change goes through the invitation (`PATCH /scheduling/invitations/{id}`). Archiving or restoring the activity is refused with `calendar_managed` too, and the undo of its creation is refused. Every read that carries `writable` carries this. Absent means false.
+	CalendarManaged *bool `json:"calendar_managed,omitempty"`
 
 	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 	CaptureLabel *ActivityCaptureLabel `json:"capture_label,omitempty"`
@@ -29203,6 +29224,13 @@ type AttentionItem struct {
 	// contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
 	// the read-only fallback for a receipt.
 	//
+	// `take` is offered on a task nobody holds that the caller may change. It sets
+	// `assignee_id` to the caller through `PATCH /activities/{id}`, pinned with `If-Match`.
+	//
+	// `cancel` is offered on a meeting owed an outcome that no live calendar invitation
+	// holds. It sets `meeting_status` to `canceled` through `PATCH /activities/{id}`, pinned
+	// with `If-Match`. A meeting an invitation holds is canceled through the invitation.
+	//
 	// Domain questions offer `keep`, `discard`, and `reopen` where allowed. Keeping creates a
 	// company or matches the supplied `company_id`; forwarded identity requires an
 	// explicit match. A vendor question offers `keep_as_vendor` instead of `reopen`, which
@@ -32797,7 +32825,12 @@ type Company360NextStep struct {
 	// AssigneeName The assignee's name while they are a live workspace member. Null when the task has no
 	// assignee or the name cannot be given, so a reader says nothing about who holds it
 	// instead of printing an id.
-	AssigneeName    *string             `json:"assignee_name,omitempty"`
+	AssigneeName *string `json:"assignee_name,omitempty"`
+
+	// Body The task's own words, as written. Only a task whose content this reader may read is
+	// listed here, so a task read out of a message the reader may not open never reaches
+	// this field.
+	Body            *string             `json:"body,omitempty"`
 	DueAt           *time.Time          `json:"due_at,omitempty"`
 	LinkedContactId *openapi_types.UUID `json:"linked_contact_id,omitempty"`
 	LinkedDealId    *openapi_types.UUID `json:"linked_deal_id,omitempty"`
@@ -33317,7 +33350,10 @@ type CompanyContact struct {
 
 	// Engagement Where one contact stands with us, over the same 90-day window the relationship
 	// score uses. What decides between the two conversational states is who wrote
-	// LAST, not whether both directions have traffic.
+	// LAST, not whether both directions have traffic. When their latest message is a
+	// mail the reader may read, its History badge decides instead: `waiting` needs a
+	// mail still owed a reply, and a mail owed none (a calendar copy, a mail that
+	// informs us) counts only once we wrote after it.
 	//
 	// `waiting` — their latest message has no reply from us. They are waiting on us,
 	// and answering is the obvious next move.
@@ -33471,7 +33507,10 @@ type CompanyCoverageRoute struct {
 
 	// Engagement Where one contact stands with us, over the same 90-day window the relationship
 	// score uses. What decides between the two conversational states is who wrote
-	// LAST, not whether both directions have traffic.
+	// LAST, not whether both directions have traffic. When their latest message is a
+	// mail the reader may read, its History badge decides instead: `waiting` needs a
+	// mail still owed a reply, and a mail owed none (a calendar copy, a mail that
+	// informs us) counts only once we wrote after it.
 	//
 	// `waiting` — their latest message has no reply from us. They are waiting on us,
 	// and answering is the obvious next move.
@@ -33518,7 +33557,10 @@ type CompanyCoverageSeat struct {
 
 	// Engagement Where one contact stands with us, over the same 90-day window the relationship
 	// score uses. What decides between the two conversational states is who wrote
-	// LAST, not whether both directions have traffic.
+	// LAST, not whether both directions have traffic. When their latest message is a
+	// mail the reader may read, its History badge decides instead: `waiting` needs a
+	// mail still owed a reply, and a mail owed none (a calendar copy, a mail that
+	// informs us) counts only once we wrote after it.
 	//
 	// `waiting` — their latest message has no reply from us. They are waiting on us,
 	// and answering is the obvious next move.
@@ -35872,7 +35914,10 @@ type ContactEmployer struct {
 
 // ContactEngagement Where one contact stands with us, over the same 90-day window the relationship
 // score uses. What decides between the two conversational states is who wrote
-// LAST, not whether both directions have traffic.
+// LAST, not whether both directions have traffic. When their latest message is a
+// mail the reader may read, its History badge decides instead: `waiting` needs a
+// mail still owed a reply, and a mail owed none (a calendar copy, a mail that
+// informs us) counts only once we wrote after it.
 //
 // `waiting` — their latest message has no reply from us. They are waiting on us,
 // and answering is the obvious next move.
@@ -38337,6 +38382,9 @@ type DealCommitment struct {
 	ContactId   openapi_types.UUID `json:"contact_id"`
 	ContactName string             `json:"contact_name"`
 
+	// DiffersFromDeal The one total the quoted words state in the deal's currency, present only when it is not the deal's value. A deposit, an instalment, a price per period or unit, a sum in another currency or more than one sum is never a total. Absent when the deal has no value the reader may see.
+	DiffersFromDeal *StatedAmount `json:"differs_from_deal,omitempty"`
+
 	// DueAt Absent when the conversation named no day.
 	DueAt *time.Time `json:"due_at,omitempty"`
 
@@ -38348,6 +38396,9 @@ type DealCommitment struct {
 
 	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
+	// Overdue True once the whole due day is over in the installation's timezone. A promise due today, or with no due day, is not overdue.
+	Overdue bool `json:"overdue"`
 
 	// SourceActivityId The captured activity it was read from.
 	SourceActivityId openapi_types.UUID `json:"source_activity_id"`
@@ -52445,6 +52496,12 @@ type StartCompanySiteReadRequest struct {
 	Url string `json:"url"`
 }
 
+// StatedAmount A sum of money a customer's words state, in minor units of `currency`.
+type StatedAmount struct {
+	AmountMinor int64  `json:"amount_minor"`
+	Currency    string `json:"currency"`
+}
+
 // SubscriptionConfirmationPage The answer for a consent link: one named subscription and the contact's current answer to it.
 //
 // Deliberately carries NOTHING about the record. The mail said "confirm this subscription", and
@@ -66161,6 +66218,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "automatic_kind")
 	}
 
+	if raw, found := object["awaiting_outcome"]; found {
+		err = json.Unmarshal(raw, &a.AwaitingOutcome)
+		if err != nil {
+			return fmt.Errorf("error reading 'awaiting_outcome': %w", err)
+		}
+		delete(object, "awaiting_outcome")
+	}
+
 	if raw, found := object["body"]; found {
 		err = json.Unmarshal(raw, &a.Body)
 		if err != nil {
@@ -66183,6 +66248,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'bulk_mail_attested': %w", err)
 		}
 		delete(object, "bulk_mail_attested")
+	}
+
+	if raw, found := object["calendar_managed"]; found {
+		err = json.Unmarshal(raw, &a.CalendarManaged)
+		if err != nil {
+			return fmt.Errorf("error reading 'calendar_managed': %w", err)
+		}
+		delete(object, "calendar_managed")
 	}
 
 	if raw, found := object["capture_label"]; found {
@@ -66557,6 +66630,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.AwaitingOutcome != nil {
+		object["awaiting_outcome"], err = json.Marshal(a.AwaitingOutcome)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'awaiting_outcome': %w", err)
+		}
+	}
+
 	if a.Body != nil {
 		object["body"], err = json.Marshal(a.Body)
 		if err != nil {
@@ -66575,6 +66655,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["bulk_mail_attested"], err = json.Marshal(a.BulkMailAttested)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'bulk_mail_attested': %w", err)
+		}
+	}
+
+	if a.CalendarManaged != nil {
+		object["calendar_managed"], err = json.Marshal(a.CalendarManaged)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'calendar_managed': %w", err)
 		}
 	}
 
@@ -89993,6 +90080,8 @@ func (siw *ServerInterfaceWrapper) SaveReportingReportDraft(w http.ResponseWrite
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 

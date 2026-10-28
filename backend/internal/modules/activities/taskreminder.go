@@ -68,7 +68,7 @@ func asReminderQueue(ctx context.Context, in *ListActivitiesInput) {
 		return
 	}
 	if in.WorklistAsOf == nil {
-		in.WorklistAsOf = in.TaskAsOf
+		in.WorklistAsOf = in.AsOf
 	}
 	if in.OwnQueueOf == nil {
 		reader := ids.From[ids.UserKind](ReminderReader(ctx))
@@ -82,8 +82,8 @@ func reminderClockOf(in ListActivitiesInput) time.Time {
 	switch {
 	case in.WorklistAsOf != nil:
 		return *in.WorklistAsOf
-	case in.TaskAsOf != nil:
-		return *in.TaskAsOf
+	case in.AsOf != nil:
+		return *in.AsOf
 	}
 	return time.Time{}
 }

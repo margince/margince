@@ -93,7 +93,7 @@ func TestTheMeetingLaneCarriesOnlyWhatIsStillAheadToday(t *testing.T) {
 // lane must not ask for work that cannot be done.
 func TestAFinishedOrCancelledMeetingLeavesTheLane(t *testing.T) {
 	e := integration.Setup(t)
-	now := todayAt(9 * time.Hour)
+	now := todayAt(9*time.Hour).AddDate(0, 0, -1)
 	bookMeeting(t, e, "Still booked", now.Add(2*time.Hour), "booked")
 	bookMeeting(t, e, "Already held", now.Add(3*time.Hour), "held")
 	bookMeeting(t, e, "Called off", now.Add(4*time.Hour), "canceled")

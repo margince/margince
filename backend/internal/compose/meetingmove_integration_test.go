@@ -97,6 +97,31 @@ func TestAMoveReachesOnlyAMeetingCapturedEarlier(t *testing.T) {
 	}
 }
 
+// A slot redelivered with nanoseconds past the stored microsecond is the
+// stored start: no write, no audit row, no event, no history row.
+func TestASlotOnlyNanosecondsPastTheStoredStartIsNoMove(t *testing.T) {
+	e := integration.Setup(t)
+	id := captureMeeting(t, e, e.AdminUser)
+	trail := func() int {
+		return e.WsCount(t, `SELECT (SELECT count(*) FROM audit_log WHERE entity_id = $1 AND action = 'update')
+			+ (SELECT count(*) FROM event_outbox WHERE envelope->'entity'->>'id' = $1::text)
+			+ (SELECT count(*) FROM activity_meeting_history WHERE activity_id = $1)`, id)
+	}
+	before := trail()
+
+	if err := movingCalendarSink(e).MoveMeeting(calendarOwnerCtx(e, e.AdminUser), meetingKey,
+		connector.MeetingSlot{Start: meetingStart.Add(500 * time.Nanosecond)}); err != nil {
+		t.Fatalf("moving: %v", err)
+	}
+
+	if after := trail(); after != before {
+		t.Errorf("a redelivered slot left %d audit, event and history row(s), want %d", after, before)
+	}
+	if got := readMeetingStart(t, e, id); !got.Equal(meetingStart) {
+		t.Errorf("the meeting starts %s, want the stored %s", got, meetingStart)
+	}
+}
+
 // Another provider's connector may not move a calendar's meeting.
 func TestAnotherConnectorCannotMoveACalendarMeeting(t *testing.T) {
 	e := integration.Setup(t)
@@ -190,5 +215,53 @@ func TestAMeetingTooLongToStoreIsCapturedWithNoDuration(t *testing.T) {
 	}
 	if !durationless {
 		t.Error("the meeting stored a duration, want none for one past the column's range")
+	}
+}
+
+// A held meeting the calendar moves stays held only where its new start has
+// taken place. Moved ahead, it is booked again, and the history and the event say so.
+func TestACalendarMoveKeepsAnOutcomeOnlyWhereTheMeetingTookPlace(t *testing.T) {
+	for name, tc := range map[string]struct {
+		start     time.Time
+		want      string
+		announced string
+	}{
+		"moved within the past": {meetingStart.Add(time.Hour), "held", ""},
+		"moved ahead":           {time.Date(2100, 1, 4, 9, 0, 0, 0, time.UTC), "booked", "booked"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := integration.Setup(t)
+			id := captureMeeting(t, e, e.AdminUser)
+			held := "held"
+			if _, err := e.Activities.UpdateActivity(e.Admin(), ids.From[ids.ActivityKind](id), activities.UpdateActivityInput{MeetingStatus: &held}); err != nil {
+				t.Fatalf("recording the meeting as held: %v", err)
+			}
+
+			if err := movingCalendarSink(e).MoveMeeting(calendarOwnerCtx(e, e.AdminUser), meetingKey, connector.MeetingSlot{Start: tc.start}); err != nil {
+				t.Fatalf("moving: %v", err)
+			}
+
+			var status string
+			var booked int
+			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+				return tx.QueryRow(context.Background(), `
+					SELECT a.meeting_status, (SELECT count(*) FROM activity_meeting_history h
+					        WHERE h.activity_id = a.id AND h.status = 'booked' AND h.scheduled_start = $2)
+					  FROM activity a WHERE a.id = $1`, id, tc.start).Scan(&status, &booked)
+			}); err != nil {
+				t.Fatalf("reading the moved meeting: %v", err)
+			}
+			if status != tc.want {
+				t.Errorf("the moved meeting reads %q, want %q", status, tc.want)
+			}
+			if wantBooked := map[bool]int{true: 1}[tc.want == "booked"]; booked != wantBooked {
+				t.Errorf("history holds %d booked transition(s) at the new start, want %d", booked, wantBooked)
+			}
+			if n := e.WsCount(t, `SELECT count(*) FROM event_outbox
+				WHERE envelope->'entity'->>'id' = $1::text AND envelope->'payload'->'changed_fields' ? 'occurred_at'
+				  AND coalesce(envelope->'payload'->'changed_fields'->>'meeting_status', '') = $2`, id, tc.announced); n != 1 {
+				t.Errorf("%d move event(s) announce meeting_status %q, want 1", n, tc.announced)
+			}
+		})
 	}
 }

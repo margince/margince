@@ -80,6 +80,9 @@ function stubDealBackend(
     if (url.includes("/activities")) {
       return jsonResponse({ data: [], page: { next_cursor: null } });
     }
+    if (url.includes("/commitments")) {
+      return jsonResponse({ complete: true, has_more: false, data: [] });
+    }
     if (url.includes("/deals/")) {
       return jsonResponse(onRecord);
     }

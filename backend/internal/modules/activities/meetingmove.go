@@ -52,7 +52,8 @@ const (
 // (SeatStanding) is what does, decided under the row's own lock.
 //
 // An unchanged start and length write nothing, so a resynced calendar costs no
-// audit row and no event. A whole-day move lands on its date's anchor.
+// audit row and no event. A whole-day move lands on its date's anchor. An
+// outcome the new start has not reached goes back to booked.
 func MoveCapturedMeetingFor(holds SeatStanding) func(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, slot connector.MeetingSlot,
 ) (bool, error) {
@@ -72,10 +73,10 @@ func moveCapturedMeetingTx(
 	var stored meetingPlace
 	var holdsSlot bool
 	err := tx.QueryRow(ctx, `
-		SELECT a.occurred_at, a.duration_seconds, a.occurred_precision, `+occupiesHostSlotSQL+` FROM activity a
+		SELECT a.occurred_at, a.duration_seconds, a.occurred_precision, a.meeting_status, `+occupiesHostSlotSQL+` FROM activity a
 		 WHERE a.id = $1
 		   AND a.kind = 'meeting' AND a.restricted_at IS NULL AND a.archived_at IS NULL
-		 FOR UPDATE`, id).Scan(&stored.start, &stored.duration, &stored.precision, &holdsSlot)
+		 FOR UPDATE`, id).Scan(&stored.start, &stored.duration, &stored.precision, &stored.status, &holdsSlot)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
@@ -90,19 +91,23 @@ func moveCapturedMeetingTx(
 	if !mine || (slot.AllDay && holdsSlot) {
 		return false, nil
 	}
-	moved := meetingPlace{start: slot.Start.UTC(), duration: slot.Duration, precision: PrecisionInstant}
+	// The column keeps microseconds, so the move judges, audits and announces the start it will store.
+	moved := meetingPlace{start: slot.Start.UTC().Truncate(time.Microsecond), duration: slot.Duration, precision: PrecisionInstant}
 	if slot.AllDay {
 		moved.start, moved.precision = occurredday.Anchor(slot.Start), PrecisionDay
 	}
 	if stored.start.Equal(moved.start) && sameDuration(stored.duration, moved.duration) && stored.precision == moved.precision {
 		return false, nil
 	}
+	if moved.status, err = statusAfterMove(ctx, tx, stored.status, moved.start, moved.precision, nil); err != nil {
+		return false, err
+	}
 	if _, err := tx.Exec(ctx, `
-		UPDATE activity SET occurred_at = $2, duration_seconds = $3, occurred_precision = $4
-		 WHERE id = $1`, id, moved.start, moved.duration, moved.precision); err != nil {
+		UPDATE activity SET occurred_at = $2, duration_seconds = $3, occurred_precision = $4, meeting_status = $5
+		 WHERE id = $1`, id, moved.start, moved.duration, moved.precision, moved.status); err != nil {
 		return false, fmt.Errorf("activities: moving the captured meeting %s: %w", id, err)
 	}
-	auditID, err := storekit.Audit(ctx, tx, "update", "activity", id.UUID, stored.image(), moved.image())
+	auditID, err := storekit.Audit(ctx, tx, "update", "activity", id.UUID, stored.image(moved), moved.image(stored))
 	if err != nil {
 		return false, err
 	}
@@ -115,20 +120,29 @@ func moveCapturedMeetingTx(
 			return false, err
 		}
 	}
-	return true, nil
+	return true, recordMeetingTransition(ctx, tx, meetingTransition{
+		ActivityID: id, Status: changedStatus(deref(stored.status), deref(moved.status)), ScheduledStart: &moved.start,
+	})
 }
 
-// meetingPlace is the three columns a calendar move writes.
+// meetingPlace is the columns a calendar move writes. The status moves only
+// when an outcome no longer holds on the new start.
 type meetingPlace struct {
 	start     time.Time
 	duration  *int
 	precision string
+	status    *string
 }
 
-func (p meetingPlace) image() map[string]any {
-	return map[string]any{
+// image is p's audit image; it names the status only where other differs.
+func (p meetingPlace) image(other meetingPlace) map[string]any {
+	image := map[string]any{
 		auditFieldOccurredAt: p.start, auditFieldDuration: derefOrNil(p.duration), fieldOccurredPrecision: p.precision,
 	}
+	if deref(other.status) != deref(p.status) {
+		image[auditFieldMeetingStatus] = deref(p.status)
+	}
+	return image
 }
 
 // changedFields is the event delta from before to p, false when the move
@@ -142,7 +156,10 @@ func (p meetingPlace) changedFields(before meetingPlace) (crmcontracts.PublicEve
 		precision := crmcontracts.PublicEventActivityChangedFieldsOccurredPrecision(p.precision)
 		fields.OccurredPrecision = &precision
 	}
-	return fields, fields.OccurredAt != nil || fields.OccurredPrecision != nil
+	if status := changedStatus(deref(before.status), deref(p.status)); status != "" {
+		fields.MeetingStatus = new(crmcontracts.PublicEventActivityChangedFieldsMeetingStatus(status))
+	}
+	return fields, fields.OccurredAt != nil || fields.OccurredPrecision != nil || fields.MeetingStatus != nil
 }
 
 func sameDuration(a, b *int) bool {

@@ -115,19 +115,38 @@ var dailyFlows = []dailyFlow{
 	{Name: "analytics", ID: "PERF-9", Budget: Perf9Budget, PerCall: true, Calls: analyticsCalls},
 }
 
-// appShellCalls are the reads App.tsx, the shell and its agent rail send on load
-// for a rep or a manager; reads the shell gates on an admin-only grant are left out.
+// appShellCalls are the reads a rep's or a manager's browser sends on load.
+// They come from App.tsx, the shell, its top bar and its agent rail. The
+// admin-only reads are adminRailCalls.
 func appShellCalls(dailyInput) []dailyCall {
 	return []dailyCall{
 		{Name: "capabilities", Path: "/v1/auth/capabilities"},
 		{Name: "me", Path: "/v1/me"},
 		{Name: "company_context", Path: "/v1/company/context/capabilities"},
 		{Name: "installation_settings", Path: "/v1/installation/settings"},
+		{Name: "onboarding_state", Path: "/v1/onboarding/state", Optional: true},
 		{Name: "connectors", Path: "/v1/connectors"},
 		{Name: "approvals", Path: "/v1/approvals?status=pending&limit=50"},
 		{Name: "assistant_profile", Path: "/v1/assistant/profile"},
 		{Name: "ai_activity", Path: dailyAIActivityPath()},
+		{Name: "voice_profiles", Path: "/v1/voice-profiles"},
+		{Name: "scheduling_profile", Path: "/v1/scheduling/profile"},
+		{Name: "scheduled_sends", Path: "/v1/scheduled-sends"},
 		{Name: "notices", Path: "/v1/notices"},
+	}
+}
+
+// adminRailCalls are the shell reads only an admin's session sends. They feed
+// the installation card, the license strip, the rail's model line and spend,
+// the economy banner and the reindex banner.
+func adminRailCalls(dailyInput) []dailyCall {
+	return []dailyCall{
+		{Name: "company", Path: "/v1/company"},
+		{Name: "installation_license", Path: "/v1/installation/license"},
+		{Name: "ai_calls", Path: "/v1/ai/calls?limit=10"},
+		{Name: "ai_usage", Path: "/v1/ai/usage"},
+		{Name: "ai_budget", Path: "/v1/ai/budget"},
+		{Name: "embed_reindex_status", Path: "/v1/embeddings/reindex/status"},
 	}
 }
 
@@ -150,17 +169,17 @@ func worklistCalls(in dailyInput) []dailyCall {
 	return []dailyCall{{Path: "/v1/worklist?scope=" + scope + "&filter=all"}, {Name: "handled", Path: "/v1/worklist/handled"}}
 }
 
-func homeCalls(in dailyInput) []dailyCall {
-	calls := []dailyCall{
-		{Name: "brief", Path: "/v1/brief", Optional: true},
+// homeCalls are what the Today view sends once the shell's gates clear. Every
+// seat has a brief, made in the brief step, so its 404 fails the run.
+func homeCalls(dailyInput) []dailyCall {
+	return []dailyCall{
+		{Name: "brief", Path: "/v1/brief"},
 		{Name: "worklist", Path: "/v1/worklist?scope=mine&filter=all"},
+		{Name: "handled", Path: "/v1/worklist/handled"},
+		{Name: "magic", Path: "/v1/magic?limit=100"},
+		{Name: "weekly_review_latest", Path: "/v1/weekly-reviews/latest", Optional: true},
 		{Name: "digest", Path: "/v1/digest", Optional: true},
-		{Name: "weekly_reviews", Path: "/v1/weekly-reviews", Optional: true},
 	}
-	if in.Seat.Role == "manager" {
-		calls = append(calls, dailyCall{Name: "weekly_reviews_team", Path: "/v1/weekly-reviews/team?team=" + in.Team, Optional: true})
-	}
-	return calls
 }
 
 // paletteCall is the command palette's request: three hits per type, colleagues included.
@@ -307,18 +326,28 @@ func fetchRound(s Seat, base string, calls []dailyCall, parallel bool) ([]dailyR
 	return out, nil
 }
 
-// dailyUnwiredNote names a no-data row whose operation this composition does
-// not serve: the harness configures no mail connector, and these routes are
-// wired only with one. Any other 501 is a server fault and fails the run.
-const dailyUnwiredNote = "answers 501 until a mail connector is configured"
+// dailyUnwiredRoutes are the routes this composition does not serve, each with
+// the note its no-data row carries. The harness configures no mail connector,
+// binds no embedding model and serves no license. Any other 501 is a server
+// fault and fails the run.
+//
+// gatekit:fixture the unwired routes and the note each prints on its no-data row
+var dailyUnwiredRoutes = map[string]string{
+	"/v1/digest":                    "answers 501 until a mail connector is configured",
+	"/v1/connectors":                "answers 501 until a mail connector is configured",
+	"/v1/embeddings/reindex/status": "answers 501 until an embedding model is bound",
+	"/v1/installation/license":      "answers 501: this composition serves no license entitlement",
+}
 
-var dailyUnwiredRoutes = []string{"/v1/digest", "/v1/connectors"}
+// dailyAdminFlow is the admin's own shell, measured for the admin seat alone.
+var dailyAdminFlow = dailyFlow{Name: "admin_rail", ID: "PERF-2", Budget: Perf2Budget, PerCall: true, Calls: adminRailCalls}
 
 // unwiredAnswer is the generated 501 of a route on dailyUnwiredRoutes: the
 // composition's posture, not a server fault, and nothing to time.
 func unwiredAnswer(path string, status int, body []byte) bool {
 	route, _, _ := strings.Cut(path, "?")
-	return status == http.StatusNotImplemented && slices.Contains(dailyUnwiredRoutes, route) &&
+	_, unwired := dailyUnwiredRoutes[route]
+	return status == http.StatusNotImplemented && unwired &&
 		bytes.Contains(body, []byte(`"code":"not_implemented"`))
 }
 
@@ -586,7 +615,8 @@ func dailyAbsentRows(log func(...any), f dailyFlow, id, name string, s Seat, bud
 		m.Seat, m.Flow, m.Verdict = s.Role, f.Name, string(DailyNoData)
 		m.Note = "answers 404: nothing of this kind on the seeded corpus"
 		if a.status == http.StatusNotImplemented {
-			m.Note = dailyUnwiredNote
+			route, _, _ := strings.Cut(a.call.Path, "?")
+			m.Note = dailyUnwiredRoutes[route]
 		}
 		log(fmt.Sprintf("perfbench [daily]: %s %s GET %s answered %d samples=0 %s", rowName, s.Role, a.call.Path, a.status, DailyNoData))
 		rows = append(rows, dailyRow{
