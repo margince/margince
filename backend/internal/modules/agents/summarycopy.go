@@ -26,7 +26,7 @@ type summaryCopy struct {
 	// Record writes. A record type reads as the language's noun (recordnouns.go);
 	// labels, field names and ids pass through.
 	archive, createHead, updateHead, logHead, settingFields, moreFields, merge,
-	enrich, ownDomain string
+	mergeCase, previewCase, enrich, ownDomain string
 
 	// Writes nested under a parent record, named by id.
 	onDeal, applyTag, addLineItem, updateLineItem, removeLineItem,
@@ -73,6 +73,8 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		settingFields:       ", setting %s",
 		moreFields:          "+%d more",
 		merge:               "Merge %s %s into %s",
+		mergeCase:           "Merge %d contacts into %s",
+		previewCase:         "Preview merging %d contacts into %s",
 		enrich:              "Read %s from %s and propose enrichment of %s",
 		ownDomain:           "its own domain",
 		onDeal:              "%s on deal %s",
@@ -149,6 +151,8 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		settingFields:       ", Felder: %s",
 		moreFields:          "+%d weitere",
 		merge:               "%s zusammenführen: %s in %s",
+		mergeCase:           "%d Kontakte in %s zusammenführen",
+		previewCase:         "Zusammenführung von %d Kontakten in %s prüfen",
 		enrich:              "%s von %s lesen und eine Anreicherung für %s vorschlagen",
 		ownDomain:           "seiner eigenen Domain",
 		onDeal:              "%s (Deal %s)",
@@ -225,6 +229,8 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		settingFields:       ", các trường: %s",
 		moreFields:          "+%d trường khác",
 		merge:               "Hợp nhất %s: %s vào %s",
+		mergeCase:           "Hợp nhất %d liên hệ vào %s",
+		previewCase:         "Xem trước việc hợp nhất %d liên hệ vào %s",
 		enrich:              "Đọc %s từ %s và đề xuất làm giàu dữ liệu cho %s",
 		ownDomain:           "tên miền của chính công ty",
 		onDeal:              "%s (deal %s)",

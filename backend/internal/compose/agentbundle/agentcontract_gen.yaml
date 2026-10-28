@@ -6144,6 +6144,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /dedupe/contact-cases/{contact_id}/preview:
     parameters:
       - {name: contact_id, in: path, required: true, schema: {type: string, format: uuid}}
@@ -6154,9 +6155,10 @@ paths:
       summary: What merging these members would do, without writing anything.
       description: |-
         Runs the merge itself in a transaction that is rolled back, so the answer is the one the
-        merge would give. Refuses exactly as the merge refuses.
+        merge would give. Refuses exactly as the merge refuses. An agent asks it through
+        `merge_records` with `preview: true`, so the merge's tier holds for the preview too.
 
-        Needs the passport permission Read records.
+        Needs the passport permission Change records.
 
         Runs at once.
       requestBody:

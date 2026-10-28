@@ -10,16 +10,16 @@
   "totals": {
     "tools": 38,
     "resources": 9,
-    "tool_catalog_bytes": 136319,
+    "tool_catalog_bytes": 137267,
     "resource_catalog_bytes": 3541,
-    "approx_wire_tokens_total": 34965,
+    "approx_wire_tokens_total": 35202,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
-      "description_bytes": 34070,
-      "input_schema_bytes": 64881,
+      "description_bytes": 34271,
+      "input_schema_bytes": 65628,
       "output_schema_bytes": 28225,
-      "description_plus_input_schema_bytes": 98951
+      "description_plus_input_schema_bytes": 99899
     }
   },
   "tools": {
@@ -3119,6 +3119,9 @@
                   "type": "string"
                 },
                 "reminder_due": {
+                  "type": "string"
+                },
+                "shared_with_me": {
                   "type": "string"
                 },
                 "size_band": {
@@ -6427,6 +6430,8 @@
                 "company_vat_check",
                 "consent_purposes",
                 "contact_360",
+                "contact_case",
+                "contact_cases",
                 "contact_graph",
                 "contact_strength",
                 "custom_field_live_lists",
@@ -6669,7 +6674,7 @@
           "readOnlyHint": false,
           "title": "Merge two records or dismiss a flagged pair"
         },
-        "description": "Settle two records that may be one. With candidate_id and decision: a pair create_record flagged in duplicate_candidates — not_the_same says they are two, so the pair is not flagged again, and reopen takes that back; neither record changes. With record_type, source_id and target_id: merge two contacts or two companies into one, moving the source's activities, deals and links onto the survivor. A merge archives the source and redirects it to the target; it cannot be reversed by merging the other way round, and by default nothing holds it. A merged pair cannot be reopened. Use archive_record when the extra record has nothing worth keeping. target_id is the record that survives and source_id the one merged away — read both records before choosing. (Runs immediately; requires passport scope \"write\".)",
+        "description": "Settle two records that may be one. With candidate_id and decision: a pair create_record flagged in duplicate_candidates — not_the_same says they are two, so the pair is not flagged again, and reopen takes that back; neither record changes. With record_type, source_id and target_id: merge two contacts or two companies into one, moving the source's activities, deals and links onto the survivor. With record_type contact, contact_id, member_ids, survivor_id, owner_id and revision: merge a contact case read through read_view in one step; preview true answers who keeps access and writes nothing. A merge archives the source and redirects it to the target; it cannot be reversed by merging the other way round, and by default nothing holds it. A merged pair cannot be reopened. Use archive_record when the extra record has nothing worth keeping. target_id is the record that survives and source_id the one merged away — read both records before choosing. (Runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "approval_id": {
@@ -6679,6 +6684,11 @@
             },
             "candidate_id": {
               "description": "A flagged pair's candidate_id, to dismiss or reopen it; leave out when merging",
+              "format": "uuid",
+              "type": "string"
+            },
+            "contact_id": {
+              "description": "Any member of a contact case, to merge the case instead of a pair",
               "format": "uuid",
               "type": "string"
             },
@@ -6695,6 +6705,23 @@
               "maxLength": 255,
               "type": "string"
             },
+            "member_ids": {
+              "description": "The contacts of one case that are one person; leave out with candidate_id",
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "owner_id": {
+              "description": "Who owns the remaining contact: the owner of one selected member",
+              "format": "uuid",
+              "type": "string"
+            },
+            "preview": {
+              "description": "Answer what the case merge would do and write nothing",
+              "type": "boolean"
+            },
             "record_type": {
               "enum": [
                 "contact",
@@ -6702,8 +6729,17 @@
               ],
               "type": "string"
             },
+            "revision": {
+              "description": "The case revision you read",
+              "type": "string"
+            },
             "source_id": {
               "description": "The record merged away (archived, redirected to the survivor); leave out with candidate_id",
+              "format": "uuid",
+              "type": "string"
+            },
+            "survivor_id": {
+              "description": "The case member that remains",
               "format": "uuid",
               "type": "string"
             },

@@ -87,6 +87,9 @@ var contractBodies = map[string]string{
 	// and nothing out of the body, which is exactly the claim a real plan
 	// travelling through it makes checkable.
 	"runReport": `{"filters":{"period":"last_quarter"},"group_by":["source"]}`,
+	// A case decision names its members, the survivor among them, and the owner.
+	"mergeContactCase":        contactCaseBody,
+	"previewContactCaseMerge": contactCaseBody,
 	// The four decision routes, for the same reason: each declares an optional
 	// body carrying the reason a human wrote, and each decoder reads its
 	// verdict off the OPERATION rather than out of it — a claim worth making
@@ -135,6 +138,10 @@ var contractBodies = map[string]string{
 // requires a call back. Derived from agentPolicies rather than from a list of
 // operationIds someone remembered, so a route added upstream for any of these
 // verbs is decoded here too.
+const contactCaseBody = `{"revision":"r1","member_ids":["019ff000-0000-7000-8000-000000000051",` +
+	`"019ff000-0000-7000-8000-000000000052"],"survivor_id":"019ff000-0000-7000-8000-000000000051",` +
+	`"owner_id":"019ff000-0000-7000-8000-000000000061"}`
+
 func TestEverySinglePurposeToolRouteDecodesTheBodyItsContractDeclares(t *testing.T) {
 	verbs := make(map[string]bool, len(singlePurposeTools))
 	for _, tool := range singlePurposeTools {

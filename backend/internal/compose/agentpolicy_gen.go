@@ -820,7 +820,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/dedupe/candidates/{id}/disposition":                           {Op: "disposeDedupeCandidate", Access: "tool", Tool: "decide_duplicate", RecordType: "contact", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/dedupe/candidates/{id}/undo":                                  {Op: "undoDedupeDisposition", Access: "tool", Tool: "decide_duplicate", RecordType: "contact", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/dedupe/contact-cases/{contact_id}/merge":                      {Op: "mergeContactCase", Access: "tool", Tool: "merge_records", RecordType: "contact", Tier: "auto_execute", Scope: "write"},
-	"POST /v1/dedupe/contact-cases/{contact_id}/preview":                    {Op: "previewContactCaseMerge", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
+	"POST /v1/dedupe/contact-cases/{contact_id}/preview":                    {Op: "previewContactCaseMerge", Access: "tool", Tool: "merge_records", RecordType: "contact", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/emails":                                                       {Op: "sendCompanyEmail", Access: "tool", Tool: "send_company_email", RecordType: "activity", Tier: "auto_execute", Scope: "send"},
 	"POST /v1/emails:preview":                                               {Op: "previewAccountSendAuthorization", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/emails:sign-off":                                              {Op: "previewEmailSignOff", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -1120,5 +1120,4 @@ var readViewQueries = map[string][]viewQuery{
 	"GET /v1/stages/{id}/exit-criteria":                     {{Name: "include_archived", Type: "boolean"}},
 	"GET /v1/teams":                                         {{Name: "cursor", Type: "string"}, {Name: "limit", Type: "integer"}, {Name: "q", Type: "string"}},
 	"GET /v1/users/names":                                   {{Name: "id", Type: "array"}},
-	"POST /v1/dedupe/contact-cases/{contact_id}/preview":    {},
 }

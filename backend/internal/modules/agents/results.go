@@ -42,6 +42,7 @@ import (
 	"encoding/json"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -237,6 +238,9 @@ type MergeRecordsResult struct {
 	// SurvivorID is the target, never the source: the source is archived and
 	// redirected, so an id a caller keeps has to be the one that still resolves.
 	SurvivorID ids.UUID `json:"survivor_id"`
+	// Case is a contact case decision's outcome: who keeps access, who was
+	// skipped, and whether it was only a preview.
+	Case *crmcontracts.ContactCaseOutcome `json:"case,omitempty"`
 }
 
 // DraftEmailResult is what draft_email answers: a message nobody has sent.

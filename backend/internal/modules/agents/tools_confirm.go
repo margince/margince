@@ -26,6 +26,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"sort"
@@ -316,6 +317,46 @@ func mergeableTypeNames() []string {
 type mergeRecords struct {
 	p        datasource.SystemOfRecordProvider
 	language baselanguage.Resolver
+	cases    ContactCaseMerger
+}
+
+// caseArgs are the arguments of a contact case decision. A call naming
+// member_ids decides the case the review screen shows, through its engine.
+type caseArgs struct {
+	ContactID  ids.UUID   `json:"contact_id"`
+	Revision   string     `json:"revision"`
+	MemberIDs  []ids.UUID `json:"member_ids"`
+	SurvivorID ids.UUID   `json:"survivor_id"`
+	OwnerID    ids.UUID   `json:"owner_id"`
+	Preview    bool       `json:"preview"`
+}
+
+type mergeCallArgs struct {
+	mergeArgs
+	caseArgs
+}
+
+var errMergeNamesOneWay = &BadArgsError{Cause: errors.New(
+	"name source_id and target_id to merge two records, or contact_id, member_ids, survivor_id, owner_id " +
+		"and revision to merge a contact case, not both")}
+
+// decodeMerge reads one call as a pair merge or a case decision, never both.
+func decodeMerge(in json.RawMessage) (mergeArgs, *ContactCaseCommand, error) {
+	var args mergeCallArgs
+	if err := decodeArgs(in, &args); err != nil {
+		return mergeArgs{}, nil, err
+	}
+	if len(args.MemberIDs) == 0 && args.ContactID.IsZero() {
+		return args.mergeArgs, nil, nil
+	}
+	if !args.SourceID.IsZero() || !args.TargetID.IsZero() {
+		return mergeArgs{}, nil, errMergeNamesOneWay
+	}
+	if args.RecordType != importObjectContact {
+		return mergeArgs{}, nil, &BadArgsError{Cause: errors.New("a case merge is record_type contact")}
+	}
+	cmd := ContactCaseCommand(args.caseArgs)
+	return args.mergeArgs, &cmd, nil
 }
 
 func (t mergeRecords) Spec() mcp.ToolSpec {
@@ -324,11 +365,17 @@ func (t mergeRecords) Spec() mcp.ToolSpec {
 		Description:   mergeRecordsCopy.render(),
 		Instead:       mergeRecordsCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
-		OpenAPIOp: "mergeContact/mergeCompany",
-		InputSchema: schema(`{"type":"object","required":["record_type","source_id","target_id"],"properties":{
+		OpenAPIOp: "mergeContact/mergeCompany/mergeContactCase/previewContactCaseMerge",
+		InputSchema: schema(`{"type":"object","required":["record_type"],"properties":{
 			"record_type":{"type":"string","enum":["contact","company"]},
 			"source_id":{"type":"string","format":"uuid","description":"The record merged away (archived, redirected to the survivor)"},
 			"target_id":{"type":"string","format":"uuid","description":"The surviving record everything relinks to"},
+			"contact_id":{"type":"string","format":"uuid","description":"Any member of a contact case, to merge the case instead of a pair"},
+			"member_ids":{"type":"array","items":{"type":"string","format":"uuid"},"description":"The case members that are one person, survivor included"},
+			"survivor_id":{"type":"string","format":"uuid","description":"The case member that remains"},
+			"owner_id":{"type":"string","format":"uuid","description":"Who owns the remaining contact: the owner of one selected member"},
+			"revision":{"type":"string","description":"The case revision you read"},
+			"preview":{"type":"boolean","description":"Answer what the case merge would do and write nothing"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[MergeRecordsResult](),
@@ -339,23 +386,24 @@ func (t mergeRecords) Spec() mcp.ToolSpec {
 // delegates: the refusals and the staged subject live in the resolver
 // (commandrecord.go), where the REST door reaches the same ones for the same
 // operation.
-//
-// This door's wire shape IS the command's field set — the arguments differ
-// only in carrying JSON tags — so it converts rather than restating the
-// fields, and a command that grows one fails to compile here instead of
-// quietly leaving it unset.
 func (t mergeRecords) StageInfo(ctx context.Context, in json.RawMessage) (StageInfo, error) {
-	var args mergeArgs
-	if err := decodeArgs(in, &args); err != nil {
+	args, decided, err := decodeMerge(in)
+	if err != nil {
 		return StageInfo{}, err
+	}
+	if decided != nil {
+		return StageSubject(ctx, NewContactCaseCall(t.p, t.language, *decided))
 	}
 	return StageSubject(ctx, NewMergeCall(t.p, t.language, MergeCommand(args)))
 }
 
 func (t mergeRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
-	var args mergeArgs
-	if err := decodeArgs(in, &args); err != nil {
+	args, decided, err := decodeMerge(in)
+	if err != nil {
 		return nil, err
+	}
+	if decided != nil {
+		return t.decideCase(ctx, *decided)
 	}
 	// The resolver's own refusal (commandrecord.go), predicate and sentence
 	// both: the approved retry re-enters here without passing Guards, so a type
@@ -376,6 +424,32 @@ func (t mergeRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	noteEvidence(ctx, ref.Type, ref.ID)
 	noteEvidence(ctx, datasource.EntityType(args.RecordType), args.SourceID)
 	return json.Marshal(MergeRecordsResult{Merged: true, RecordType: ref.Type, SurvivorID: ref.ID})
+}
+
+// decideCase runs the case decision the review screen runs.
+func (t mergeRecords) decideCase(ctx context.Context, cmd ContactCaseCommand) (json.RawMessage, error) {
+	if err := requireCaseSelection(cmd); err != nil {
+		return nil, err
+	}
+	if t.cases == nil {
+		return nil, &BadArgsError{Cause: errors.New("contact cases are not served here")}
+	}
+	decide := t.cases.MergeContactCase
+	if cmd.Preview {
+		decide = t.cases.PreviewContactCaseMerge
+	}
+	outcome, err := decide(ctx, cmd)
+	if err != nil {
+		return nil, err
+	}
+	noteEvidence(ctx, datasource.EntityContact, ids.UUID(outcome.SurvivorId))
+	for _, merged := range outcome.MergedIds {
+		noteEvidence(ctx, datasource.EntityContact, ids.UUID(merged))
+	}
+	return json.Marshal(MergeRecordsResult{
+		Merged: outcome.Committed, RecordType: datasource.EntityContact,
+		SurvivorID: ids.UUID(outcome.SurvivorId), Case: &outcome,
+	})
 }
 
 // recordLabel pulls a human-readable name out of a record's fields for

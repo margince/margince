@@ -14255,7 +14255,8 @@ export interface paths {
         /**
          * What merging these members would do, without writing anything.
          * @description Runs the merge itself in a transaction that is rolled back, so the answer is the one the
-         *     merge would give. Refuses exactly as the merge refuses.
+         *     merge would give. Refuses exactly as the merge refuses. An agent asks it through
+         *     `merge_records` with `preview: true`, so the merge's tier holds for the preview too.
          */
         post: operations["previewContactCaseMerge"];
         delete?: never;
@@ -73573,6 +73574,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     previewContactCaseMerge: {

@@ -97,6 +97,9 @@ type Registry struct {
 	// changeWords describes what a write changed (changewords.go). Nil
 	// answers no changes.
 	changeWords ChangeWords
+	// contactCases is the case decision merge_records reaches; nil leaves
+	// the verb to pairs.
+	contactCases ContactCaseMerger
 	// importWait is how long preview_import waits for its test's report.
 	importWait importWait
 }
