@@ -59,6 +59,8 @@ type lastMessage struct {
 	// on the fact of the silence while the citation carries no words.
 	Subject string
 	Excerpt string
+	// Move is the History badge's move when the message is a mail.
+	Move *crmcontracts.EmailSummaryMove
 }
 
 // excerptRunes bounds what a citation quotes of a message body. A quote is
@@ -265,6 +267,11 @@ func gatherSuggestionInputs(
 		if err != nil {
 			return suggestionInputs{}, err
 		}
+		if found {
+			if newest, err = withMailMove(ctx, tx, newest); err != nil {
+				return suggestionInputs{}, err
+			}
+		}
 		in.newest, in.hasNewest = newest, found
 		scheduled, err := hasOpenTask(ctx, tx, companyID, now, opts)
 		if err != nil {
@@ -335,9 +342,9 @@ func engagementState(in suggestionInputs, now time.Time) crmcontracts.Company360
 	switch {
 	case age > engagementDormantDays*24*time.Hour:
 		return "dormant"
-	case in.newest.Direction == "outbound" && age >= noReplyDays*24*time.Hour:
+	case in.newest.awaitsThem() && age >= noReplyDays*24*time.Hour:
 		return "waiting_on_them"
-	case in.newest.Direction == "inbound" && age >= noReplyDays*24*time.Hour:
+	case in.newest.owedByUs() && age >= noReplyDays*24*time.Hour:
 		return "waiting_on_us"
 	}
 	return "active"

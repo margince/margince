@@ -16,7 +16,11 @@ package contacts
 // writing to could then sit on a page nobody renders. Here the whole account
 // is in hand.
 
-import "sort"
+import (
+	"sort"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+)
 
 // Engagement is one contact's state, in the five values a rep acts on.
 type Engagement string
@@ -46,26 +50,21 @@ const (
 	EngagementUntried Engagement = "untried"
 )
 
-// EngagementOf reads the state off the §4 fold: the direction counts say
-// whether each side has written inside the 90-day window, and the two last-touch
-// dates say who wrote LAST — which is what separates answered from waiting.
+// EngagementOf reads the state off the strength fold. The direction counts say who
+// wrote inside the 90-day window. Answered needs our mail after their latest,
+// because an unprompted mail nobody answered is the account's most urgent row.
 //
-// Answered requires an outbound AFTER their latest inbound, not merely both
-// directions having traffic: a contact whose only mail arrived unprompted has
-// inbound and no reply from us, and reporting that as answered dresses the
-// account's most urgent row up as a success. The window is the fold's, so a
-// conversation older than it reads as untried — deliberately, because a
-// year-old exchange is not a way in.
-//
-// The account-level state strip answers the sibling question ("whose move is
-// the ACCOUNT") with its own age thresholds; this is per contact and has none,
-// because a mail from yesterday is already theirs to be answered.
+// When their latest message is a mail, its History badge says whether we owe
+// a reply. A mail it owes nothing on, such as a calendar copy, reads answered
+// only when we wrote after it.
 func EngagementOf(rs RelationshipStrength) Engagement {
+	replied := rs.LastInbound != nil && rs.LastOutbound != nil && rs.LastOutbound.After(*rs.LastInbound)
 	switch {
-	case rs.Inbound90d > 0:
-		if rs.LastInbound != nil && rs.LastOutbound != nil && rs.LastOutbound.After(*rs.LastInbound) {
-			return EngagementAnswered
-		}
+	case rs.Inbound90d > 0 && rs.LastInboundMove != nil && *rs.LastInboundMove == crmcontracts.EmailSummaryMoveNeedsReply:
+		return EngagementWaiting
+	case rs.Inbound90d > 0 && replied:
+		return EngagementAnswered
+	case rs.Inbound90d > 0 && rs.LastInboundMove == nil:
 		return EngagementWaiting
 	case rs.Outbound90d > 0:
 		return EngagementNoReply

@@ -43,6 +43,24 @@ func TestTheNoReplyCitationCarriesTheMessagesOwnWords(t *testing.T) {
 	}
 }
 
+// The rule reads a mail's History badge. A colleague's mail nobody answered
+// does not tell the reader to chase a reply they never asked for.
+func TestTheNoReplyRuleSkipsAMailTheReaderDidNotSend(t *testing.T) {
+	newest := sentAgo(10, crmcontracts.ActivityDirectionOutbound)
+	newest.Kind = string(crmcontracts.ActivityKindEmail)
+	none := crmcontracts.EmailSummaryMoveNone
+	newest.Move = &none
+
+	if got := englishSuggestions.staleThread(testCompanyID(t), suggestNow, time.UTC, newest); got != nil {
+		t.Fatalf("the rule fired on a colleague's mail: %+v", got)
+	}
+	waiting := crmcontracts.EmailSummaryMoveWaitingForThem
+	newest.Move = &waiting
+	if englishSuggestions.staleThread(testCompanyID(t), suggestNow, time.UTC, newest) == nil {
+		t.Fatal("the rule went silent on the reader's own unanswered mail")
+	}
+}
+
 // A limited audience withholds the words and not the fact: the reader is
 // still told they are waiting on a reply, and the chip carries no quote it
 // would have to invent.

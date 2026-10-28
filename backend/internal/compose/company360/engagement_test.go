@@ -8,8 +8,11 @@ import (
 	"testing"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+func mailMove(m crmcontracts.EmailSummaryMove) *crmcontracts.EmailSummaryMove { return new(m) }
 
 // PO-F-4's five states, in the order that keeps them mutually exclusive. The
 // order is the point: a silent account must read as dormant rather than as
@@ -58,6 +61,20 @@ func TestEngagementStateAnswersWhoseMoveItIs(t *testing.T) {
 		{"newest message has no direction", suggestionInputs{
 			hasNewest: true, newest: lastMessage{Direction: "", At: ago(day)},
 		}, "active"},
+		// A mail's own badge decides, so a colleague's mail or a calendar copy
+		// leaves the move with nobody, as it does on the account's History.
+		{"a colleague's mail a fortnight ago", suggestionInputs{
+			hasNewest: true, newest: lastMessage{Direction: "outbound", At: ago(14 * day), Move: mailMove(crmcontracts.EmailSummaryMoveNone)},
+		}, "active"},
+		{"a calendar copy a fortnight ago", suggestionInputs{
+			hasNewest: true, newest: lastMessage{Direction: "inbound", At: ago(14 * day), Move: mailMove(crmcontracts.EmailSummaryMoveNone)},
+		}, "active"},
+		{"the reader's mail a fortnight ago", suggestionInputs{
+			hasNewest: true, newest: lastMessage{Direction: "outbound", At: ago(14 * day), Move: mailMove(crmcontracts.EmailSummaryMoveWaitingForThem)},
+		}, "waiting_on_them"},
+		{"their mail owed a reply a fortnight ago", suggestionInputs{
+			hasNewest: true, newest: lastMessage{Direction: "inbound", At: ago(14 * day), Move: mailMove(crmcontracts.EmailSummaryMoveNeedsReply)},
+		}, "waiting_on_us"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
