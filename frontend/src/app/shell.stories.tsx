@@ -202,9 +202,9 @@ export const SettingsHeadWithActionPhone: Story = {
   render: () => <SettingsHeadWithVerb />,
 };
 
-/** A company's wide logo owns the expanded head, with Margince credited on the
- * line beneath it. This is deliberately not an Avatar story: squeezing this
- * asset into the navigation rows' square is the failure this state catches. */
+/** A company with only a wide wordmark wears its monogram in the head. A
+ * wordmark contained into the head's square renders as a smear, not as a
+ * missing image, and that smear is the failure this state catches. */
 export const CompanyWordmark: Story = {
   render: () => {
     stubSession();
@@ -300,16 +300,12 @@ export const SidebarStates: Story = {
 };
 
 /**
- * The two marks in the two panels that ask for them, side by side.
- *
- * This is the frame the second slot exists for: the same company, wordmark
- * across the open head and badge alone in the 56px rail. Reading them together
- * is the only way to see that the swap happens at all, and the only way to
- * catch the failure it replaced — a wordmark contained into a 32px square,
- * which renders as a smear rather than as a missing image.
+ * The company's square icon in both panels, side by side: the open head's
+ * card beside the 56px rail. The wide wordmark is seeded too, and appears in
+ * neither, because the head draws one square mark at every width.
  */
 export const CompanyMarksAtBothWidths: Story = {
-  name: "sidebar — wordmark expanded, badge collapsed",
+  name: "sidebar — the company's square icon at both widths",
   render: () => {
     stubSession();
     return (
