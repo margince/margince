@@ -98,8 +98,8 @@ func assuranceSignalExceptions(ctx context.Context, tx pgx.Tx, owners []ids.UUID
   SELECT 1 FROM deal_suggestion s WHERE s.id::text = e.observed->>'suggestion_id'
   AND s.state = 'open' AND `+suggestionScope+`) THEN e.observed ELSE e.observed - 'suggestion_id' END`, 1)
 	// The content gate runs once, over every activity an open finding's signal
-	// or its suggestion's evidence cites. Spelled once per use, it was planned
-	// twice, and the planner's memory stays with the pooled connection.
+	// or its suggestion's evidence cites. Each copy is planned separately, and
+	// the planner's memory stays with the pooled connection.
 	open := `SELECT %[1]s FROM assurance_exception oe WHERE oe.subject_kind = 'signal' AND oe.status = 'open'`
 	rows, err := tx.Query(ctx, `WITH readable_activity AS MATERIALIZED (
   SELECT ra.id FROM activity ra WHERE ra.archived_at IS NULL AND ra.id IN (
