@@ -782,6 +782,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_contact_email_contact`: `btree (contact_id)`
 - `idx_contact_email_correspondence`: `btree (email) WHERE (from_correspondence AND (archived_at IS NULL))`
 - `idx_contact_email_dedupe_scan`: `btree (updated_at, id)`
+- `idx_contact_email_domain_folded`: `btree (email_domain_folded) WHERE (archived_at IS NULL)`
 - `idx_contact_email_trgm`: `gin (f_fold_apostrophes(lower(email)) gin_trgm_ops) WHERE (archived_at IS NULL)`
 - `uq_contact_email_dedupe`: `unique, btree (email) WHERE (archived_at IS NULL)`
 - `uq_contact_email_primary`: `unique, btree (contact_id, email_type) WHERE (is_primary AND (archived_at IS NULL))`

@@ -170,6 +170,10 @@ var replayableOperations = map[string]replayTarget{
 	// Row-scoped records: both gates apply, and the object and the table are
 	// the same word by construction (policy.coreObjects mirrors the table).
 	"POST /v1/contacts": {object: tableContact, table: tableContact, idPath: "id"},
+	"POST /v1/contacts/{id}/employer": {
+		object: tableContact, table: tableContact, idPath: "contact.id",
+		companions: []companionRef{{table: tableCompany, idPath: companionCompanyField}},
+	},
 	"POST /v1/contacts/quick-capture": {
 		object: tableContact, table: tableContact, idPath: "contact.id",
 		companions: []companionRef{{table: tableCompany, idPath: companionCompanyField}},
@@ -186,6 +190,8 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/companies":            {object: tableCompany, table: tableCompany, idPath: "id"},
 	"PATCH /v1/companies/{id}":      {object: tableCompany, table: tableCompany, idPath: "id"},
 	"POST /v1/companies/{id}/merge": {object: tableCompany, table: tableCompany, idPath: "id"},
+	// The edges are the path company's roster, so its scope governs them.
+	"POST /v1/companies/{id}/link-contacts": {object: tableCompany, table: tableCompany, pathParam: "id"},
 	// The rejection answers the archived company alongside the domain decision
 	// it recorded, so the replayed record is the company and the gate
 	// resolves against its own row — the admission carries no authority of its

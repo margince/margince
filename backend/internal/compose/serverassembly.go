@@ -89,7 +89,8 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithGrantCarrier(identity.NewServiceFor(InstallationDB(pool))).
 		WithShareRequests(contactShareRequests(pool)).
 		WithLeadArrivals(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
-		WithInstallationRenamer(installationRenamer(pool))
+		WithInstallationRenamer(installationRenamer(pool)).
+		WithConsumerMail(capture.MatcherTx)
 }
 
 // newActivitiesHandlers builds the timeline transport over the sibling

@@ -92,6 +92,8 @@ type CreateContactInput struct {
 	// ConvertLeadIDs are the live leads holding this contact's address or
 	// profile, which the user chose to convert into the new contact.
 	ConvertLeadIDs []ids.LeadID
+	// Employer is written with the contact, in its transaction.
+	Employer EmployerChoice
 }
 
 // CreateContact inserts the contact + child rows + audit + event atomically.
@@ -162,6 +164,9 @@ func (s *Store) readyContactCreate(ctx context.Context, in *CreateContactInput) 
 func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateContactInput, by string,
 	active []fieldcatalog.Column,
 ) (crmcontracts.Contact, error) {
+	if err := refuseAgentEmployer(ctx, in.Employer); err != nil {
+		return crmcontracts.Contact{}, err
+	}
 	owner, err := storekit.NewRecordOwner(ctx, tx, in.OwnerID)
 	if err != nil {
 		return crmcontracts.Contact{}, err
@@ -224,6 +229,11 @@ func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateConta
 	}
 	if err := s.convertLeadsIntoTx(ctx, tx, id, converting, by); err != nil {
 		return crmcontracts.Contact{}, err
+	}
+	if in.Employer.named() {
+		if _, err := s.attachEmployerTx(ctx, tx, id, in.Employer); err != nil {
+			return crmcontracts.Contact{}, err
+		}
 	}
 
 	out, err := readContact(ctx, tx, id, storekit.LiveOnly, active)

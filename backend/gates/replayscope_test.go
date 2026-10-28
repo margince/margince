@@ -85,6 +85,9 @@ var rowScopedResponses = map[string]expectedTarget{
 	// back, so it is probed exactly as PromoteLeadResponse above is — the
 	// company id beside it is a reference, not a second body.
 	"QuickCaptureContactResult": {table: "contact", idPath: "contact.id"},
+	"LinkContactEmployerResult": {table: "contact", idPath: "contact.id"},
+	// The edges name no owner of their own: they are the path company's roster.
+	"LinkCompanyContactsResult": {table: "company", pathParam: "id"},
 	// A scheduled message is readable only by the rep who scheduled it, which
 	// the store enforces with its own scheduled_by predicate rather than an
 	// owner column the generic probe could read. It still carries an id and

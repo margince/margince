@@ -34206,6 +34206,27 @@ type CompanyHierarchyRollup struct {
 // CompanyHierarchyRollupScope defines model for CompanyHierarchyRollup.Scope.
 type CompanyHierarchyRollupScope string
 
+// CompanyLinkCandidate A contact on one of the company's domains who does not work there yet.
+type CompanyLinkCandidate struct {
+	ContactId openapi_types.UUID `json:"contact_id"`
+
+	// Email The address that matched, the contact's primary one first.
+	Email string `json:"email"`
+
+	// Employer Where the contact works today. Absent when they work nowhere or the caller may not see that employer.
+	Employer *ContactEmployer `json:"employer,omitempty"`
+	FullName string           `json:"full_name"`
+	Title    *string          `json:"title,omitempty"`
+}
+
+// CompanyLinkCandidateList defines model for CompanyLinkCandidateList.
+type CompanyLinkCandidateList struct {
+	Data []CompanyLinkCandidate `json:"data"`
+
+	// Truncated True when more candidates exist than `data` carries.
+	Truncated bool `json:"truncated"`
+}
+
 // CompanyLinkedInReachColleague defines model for CompanyLinkedInReachColleague.
 type CompanyLinkedInReachColleague struct {
 	// Connections How many of their connections work at this account. At least one, because a
@@ -37126,6 +37147,12 @@ type CreateContactEnrichmentRunRequest struct {
 type CreateContactRequest struct {
 	// Address Structured postal address.
 	Address *Address `json:"address,omitempty"`
+
+	// CompanyId An existing company this contact works at now. Not with `company_name`. Refused from an agent.
+	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
+
+	// CompanyName A new company to create as this contact's employer. Not with `company_id`; blank means no employer. Refused from an agent.
+	CompanyName *string `json:"company_name,omitempty"`
 
 	// ConvertLeadIds The live leads to convert into this contact, sent after a 409 `lead_holds_email`
 	// named them. The set must equal the leads that hold an email or the LinkedIn profile when the
@@ -44224,6 +44251,47 @@ type LifecyclePreviewEvidence struct {
 
 // LifecyclePreviewEvidenceScope defines model for LifecyclePreviewEvidence.Scope.
 type LifecyclePreviewEvidenceScope string
+
+// LinkCompanyContactsRequest defines model for LinkCompanyContactsRequest.
+type LinkCompanyContactsRequest struct {
+	// ContactIds The candidates to link. An empty list answers 422 `required`, more than 50 `too_many`, and a repeated id `duplicate`.
+	ContactIds []openapi_types.UUID `json:"contact_ids"`
+}
+
+// LinkCompanyContactsResult defines model for LinkCompanyContactsResult.
+type LinkCompanyContactsResult struct {
+	Data []Relationship `json:"data"`
+}
+
+// LinkContactEmployerRequest The employer to attach. Exactly one of `company_id` and `company_name`.
+type LinkContactEmployerRequest struct {
+	// CompanyId An existing company to link.
+	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
+
+	// CompanyName A company to create and link. Must not be blank when sent.
+	CompanyName *string `json:"company_name,omitempty"`
+
+	// Title Their job title at this company, stored as the employment's `role`.
+	Title *string `json:"title,omitempty"`
+}
+
+// LinkContactEmployerResult The contact with its employer, and what this call wrote.
+type LinkContactEmployerResult struct {
+	// CompanyCreated True when this call created the company.
+	CompanyCreated bool `json:"company_created"`
+
+	// CompanyDomain The domain a created company was given. Null when it was given none, and when the company already existed.
+	CompanyDomain *string `json:"company_domain,omitempty"`
+
+	// CompanyId The employer now linked.
+	CompanyId openapi_types.UUID `json:"company_id"`
+
+	// Contact A contact. Mirrors the `contact` table.
+	Contact Contact `json:"contact"`
+
+	// RelationshipId The employment edge written.
+	RelationshipId openapi_types.UUID `json:"relationship_id"`
+}
 
 // LinkFinanceSourceCustomerRequest defines model for LinkFinanceSourceCustomerRequest.
 type LinkFinanceSourceCustomerRequest struct {
@@ -59712,6 +59780,30 @@ type DraftIntroRequestJSONBody struct {
 	ViaUserId openapi_types.UUID `json:"via_user_id"`
 }
 
+// LinkCompanyContactsParams defines parameters for LinkCompanyContacts.
+type LinkCompanyContactsParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // MergeCompanyJSONBody defines parameters for MergeCompany.
 type MergeCompanyJSONBody struct {
 	// TargetId The surviving company (B). This row (A) is archived.
@@ -60391,6 +60483,30 @@ type DraftContactEmailJSONBody struct {
 	// Sent by the client because the server stores no draft to resolve: this endpoint writes no record, so there is nothing on file to name. It is UNTRUSTED like every other input but `intent` — it may hold text a contact wrote, pasted in — and is fenced the same way.
 	// Absent or empty is a first draft.
 	RewriteOf *string `json:"rewrite_of,omitempty"`
+}
+
+// LinkContactEmployerParams defines parameters for LinkContactEmployer.
+type LinkContactEmployerParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
 // CreateContactEnrichmentRunParams defines parameters for CreateContactEnrichmentRun.
@@ -65315,6 +65431,9 @@ type UpdateCompanyFactJSONRequestBody = UpdateCompanyFactRequest
 // DraftIntroRequestJSONRequestBody defines body for DraftIntroRequest for application/json ContentType.
 type DraftIntroRequestJSONRequestBody DraftIntroRequestJSONBody
 
+// LinkCompanyContactsJSONRequestBody defines body for LinkCompanyContacts for application/json ContentType.
+type LinkCompanyContactsJSONRequestBody = LinkCompanyContactsRequest
+
 // MergeCompanyJSONRequestBody defines body for MergeCompany for application/json ContentType.
 type MergeCompanyJSONRequestBody MergeCompanyJSONBody
 
@@ -65425,6 +65544,9 @@ type LiftSuppressionJSONRequestBody LiftSuppressionJSONBody
 
 // DraftContactEmailJSONRequestBody defines body for DraftContactEmail for application/json ContentType.
 type DraftContactEmailJSONRequestBody DraftContactEmailJSONBody
+
+// LinkContactEmployerJSONRequestBody defines body for LinkContactEmployer for application/json ContentType.
+type LinkContactEmployerJSONRequestBody = LinkContactEmployerRequest
 
 // ApplyContactEmploymentImportJSONRequestBody defines body for ApplyContactEmploymentImport for application/json ContentType.
 type ApplyContactEmploymentImportJSONRequestBody = EmploymentImportRequest
@@ -69504,6 +69626,22 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "address")
 	}
 
+	if raw, found := object["company_id"]; found {
+		err = json.Unmarshal(raw, &a.CompanyId)
+		if err != nil {
+			return fmt.Errorf("error reading 'company_id': %w", err)
+		}
+		delete(object, "company_id")
+	}
+
+	if raw, found := object["company_name"]; found {
+		err = json.Unmarshal(raw, &a.CompanyName)
+		if err != nil {
+			return fmt.Errorf("error reading 'company_name': %w", err)
+		}
+		delete(object, "company_name")
+	}
+
 	if raw, found := object["convert_lead_ids"]; found {
 		err = json.Unmarshal(raw, &a.ConvertLeadIds)
 		if err != nil {
@@ -69639,6 +69777,20 @@ func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 		object["address"], err = json.Marshal(a.Address)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'address': %w", err)
+		}
+	}
+
+	if a.CompanyId != nil {
+		object["company_id"], err = json.Marshal(a.CompanyId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'company_id': %w", err)
+		}
+	}
+
+	if a.CompanyName != nil {
+		object["company_name"], err = json.Marshal(a.CompanyName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'company_name': %w", err)
 		}
 	}
 
@@ -77954,6 +78106,12 @@ type ServerInterface interface {
 	// Draft the message asking a colleague to introduce you.
 	// (POST /companies/{id}/intro-request-draft)
 	DraftIntroRequest(w http.ResponseWriter, r *http.Request, id Id)
+	// Live contacts on this company's domains who do not work here yet.
+	// (GET /companies/{id}/link-candidates)
+	ListCompanyLinkCandidates(w http.ResponseWriter, r *http.Request, id Id)
+	// Link the chosen link candidates to this company as current employees.
+	// (POST /companies/{id}/link-contacts)
+	LinkCompanyContacts(w http.ResponseWriter, r *http.Request, id Id, params LinkCompanyContactsParams)
 	// Which colleagues can get you in at this company.
 	// (GET /companies/{id}/linkedin-reach)
 	GetCompanyLinkedInReach(w http.ResponseWriter, r *http.Request, id Id)
@@ -78194,6 +78352,9 @@ type ServerInterface interface {
 	// Draft an email to this contact, grounded in their record.
 	// (POST /contacts/{id}/draft-email)
 	DraftContactEmail(w http.ResponseWriter, r *http.Request, id Id)
+	// Attach an employer to an existing contact, creating the company when it is new.
+	// (POST /contacts/{id}/employer)
+	LinkContactEmployer(w http.ResponseWriter, r *http.Request, id Id, params LinkContactEmployerParams)
 	// Read retained provider roles and their company-link outcomes without buying another lookup.
 	// (GET /contacts/{id}/employment-import)
 	PreviewContactEmploymentImport(w http.ResponseWriter, r *http.Request, id Id)
@@ -81545,6 +81706,18 @@ func (_ Unimplemented) DraftIntroRequest(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Live contacts on this company's domains who do not work here yet.
+// (GET /companies/{id}/link-candidates)
+func (_ Unimplemented) ListCompanyLinkCandidates(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Link the chosen link candidates to this company as current employees.
+// (POST /companies/{id}/link-contacts)
+func (_ Unimplemented) LinkCompanyContacts(w http.ResponseWriter, r *http.Request, id Id, params LinkCompanyContactsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Which colleagues can get you in at this company.
 // (GET /companies/{id}/linkedin-reach)
 func (_ Unimplemented) GetCompanyLinkedInReach(w http.ResponseWriter, r *http.Request, id Id) {
@@ -82022,6 +82195,12 @@ func (_ Unimplemented) LiftSuppression(w http.ResponseWriter, r *http.Request, i
 // Draft an email to this contact, grounded in their record.
 // (POST /contacts/{id}/draft-email)
 func (_ Unimplemented) DraftContactEmail(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Attach an employer to an existing contact, creating the company when it is new.
+// (POST /contacts/{id}/employer)
+func (_ Unimplemented) LinkContactEmployer(w http.ResponseWriter, r *http.Request, id Id, params LinkContactEmployerParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -96920,6 +97099,94 @@ func (siw *ServerInterfaceWrapper) DraftIntroRequest(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// ListCompanyLinkCandidates operation middleware
+func (siw *ServerInterfaceWrapper) ListCompanyLinkCandidates(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCompanyLinkCandidates(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LinkCompanyContacts operation middleware
+func (siw *ServerInterfaceWrapper) LinkCompanyContacts(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params LinkCompanyContactsParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LinkCompanyContacts(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetCompanyLinkedInReach operation middleware
 func (siw *ServerInterfaceWrapper) GetCompanyLinkedInReach(w http.ResponseWriter, r *http.Request) {
 
@@ -100193,6 +100460,62 @@ func (siw *ServerInterfaceWrapper) DraftContactEmail(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DraftContactEmail(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LinkContactEmployer operation middleware
+func (siw *ServerInterfaceWrapper) LinkContactEmployer(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params LinkContactEmployerParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LinkContactEmployer(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -125496,6 +125819,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/companies/{id}/intro-request-draft", wrapper.DraftIntroRequest)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/companies/{id}/link-candidates", wrapper.ListCompanyLinkCandidates)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/companies/{id}/link-contacts", wrapper.LinkCompanyContacts)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies/{id}/linkedin-reach", wrapper.GetCompanyLinkedInReach)
 	})
 	r.Group(func(r chi.Router) {
@@ -125734,6 +126063,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/draft-email", wrapper.DraftContactEmail)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/contacts/{id}/employer", wrapper.LinkContactEmployer)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/contacts/{id}/employment-import", wrapper.PreviewContactEmploymentImport)

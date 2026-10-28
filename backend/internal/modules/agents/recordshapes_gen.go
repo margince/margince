@@ -43,6 +43,12 @@ var createParentFields = map[string][]string{
 	"deal_room_comment": {"deal_room_id", "thread_id"},
 }
 
+// createWithheldFields are body fields create_record refuses although the
+// REST route takes them.
+var createWithheldFields = map[string][]string{
+	"contact": {"company_id", "company_name"},
+}
+
 // The contract's own closed vocabularies, as JSON arrays a tool's InputSchema
 // splices in place of a hand-written enum literal.
 

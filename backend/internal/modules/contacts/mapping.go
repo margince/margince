@@ -122,7 +122,8 @@ func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer
 	in.Address = req.Address
 	in.Emails = contactEmailInputs(req.Emails)
 	in.Phones = contactPhoneInputs(req.Phones)
-	return in, nil
+	in.Employer, err = employerChoiceFromRequest(idArg[ids.CompanyKind](req.CompanyId), req.CompanyName, req.Source)
+	return in, err
 }
 
 // contactEmailInputs maps the contract's addresses onto the store's, for both

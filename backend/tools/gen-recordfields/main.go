@@ -153,6 +153,12 @@ func render(all schemas, shared map[string]*parameter, paths map[string]map[stri
 			if !ok {
 				return nil, fmt.Errorf("crm.yaml declares no %s (the %s body for %s)", name, table.which, entry.recordType)
 			}
+			if table.which == "create" {
+				var err error
+				if schema, err = withoutWithheld(schema, all, entry.recordType); err != nil {
+					return nil, err
+				}
+			}
 			shape, err := objectShape(schema, all)
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", name, err)
@@ -178,6 +184,7 @@ func render(all schemas, shared map[string]*parameter, paths map[string]map[stri
 		b.WriteString("},\n")
 	}
 	b.WriteString("}\n")
+	renderWithheld(&b)
 	if err := renderEnums(&b, all); err != nil {
 		return nil, err
 	}
