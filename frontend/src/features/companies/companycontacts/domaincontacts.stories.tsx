@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../../api/schema";
 import type { GrantSpec } from "../../../testing/mefixture";
 import {
@@ -224,6 +224,7 @@ export const CalloutOpensDialog: Story = {
         name: "Review contacts",
       }),
     );
-    await expect(await screen.findByRole("dialog")).toBeVisible();
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() => expect(dialog).toBeVisible());
   },
 };

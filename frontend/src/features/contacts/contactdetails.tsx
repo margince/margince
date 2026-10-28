@@ -210,12 +210,6 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
   ];
 }
 
-/**
- * Where they work now, as the catalog's record card. The company's mark and
- * name are the way in, "Current" sits at its end, and what the account is to
- * us goes under it. The facts are the company's own, so a company this reader may
- * not open shows its name alone.
- */
 function employerValue(
   view: Contact360,
   employer: Employment | undefined,
@@ -227,6 +221,12 @@ function employerValue(
   return notSet;
 }
 
+/**
+ * Where they work now, as the catalog's record card. The company's mark and
+ * name are the way in, "Current" sits at its end, and what the account is to
+ * us goes under it. The facts are the company's own, so a company this reader may
+ * not open shows its name alone.
+ */
 function EmployerCard({ employment }: Readonly<{ employment: Employment }>) {
   const t = useT();
   const company = useEmployerSummary(employment.company_id).data;
