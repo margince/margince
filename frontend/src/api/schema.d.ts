@@ -22076,7 +22076,7 @@ export interface components {
             rate: string;
             /**
              * Format: date
-             * @description Defaults to today. A past date is accepted only when the currency has no rate yet or the date is earlier than every rate stored for it.
+             * @description A calendar day in the installation's time zone. Defaults to today there. A past date is accepted only when the currency has no rate yet or the date is earlier than every rate stored for it.
              */
             effective_date?: string;
         };
@@ -22182,7 +22182,7 @@ export interface components {
             cache_write_per_mtok: string;
             /**
              * Format: date
-             * @description Defaults to today; must not be in the past (append-forward).
+             * @description A UTC calendar day. Defaults to today's UTC date and must not be before it (append-forward).
              */
             effective_date?: string;
         };
