@@ -18,10 +18,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// partOfThePrice marks a sum that is not a total: a deposit, an instalment, a
-// price per period or unit, a change against another price, or a fee or tax.
-// Comparing such a sum with the deal would flag every subscription and every
-// discount. Go's \b is ASCII-only, so a Vietnamese word is bounded by spaces.
+// partOfThePrice marks a sum that is not a total. It may be a deposit, an
+// instalment or a price per period or unit. It may also be a change against
+// another price, a fee or a tax. Comparing such a sum with the deal would flag
+// every subscription and every discount. Go's \b is ASCII-only, so a
+// Vietnamese word is bounded by spaces.
 var partOfThePrice = regexp.MustCompile(`(?i)deposit|down payment|upfront|instal+ments?|` +
 	`per[\s-](?:month|year|seat|user|licen[cs]e)|monthly|yearly|annual|\beach\b|/\s?(?:mo|month|yr|year)\b|` +
 	`\b(?:more|less|cheaper|higher|lower|extra|off|fees?|tax|vat)\b|additional|discount|rebate|surcharge|` +
