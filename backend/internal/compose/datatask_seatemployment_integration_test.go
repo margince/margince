@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -176,5 +177,66 @@ func replayChangesNothing(ctx context.Context, t *testing.T, e *integration.Env,
 			return
 		}
 		in.Cursor = out.Cursor
+	}
+}
+
+// A seat login's contact stays when anybody but capture worked on it: a note a
+// colleague wrote about it, a lead made from it, or a tag an agent gave it.
+// The plain seat contact beside them is archived, so the step ran.
+func TestTheSeatContactStepKeepsAContactSomebodyWorkedOn(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	if _, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{
+		DisplayName: "Outside GmbH", Source: "manual", Domains: []contacts.CompanyDomainInput{{Domain: "outside.test", IsPrimary: true}},
+	}); err != nil {
+		t.Fatalf("creating the company: %v", err)
+	}
+	plain, _ := capturedEmployee(t, e, "plain@outside.test")
+	noted, _ := capturedEmployee(t, e, "noted@outside.test")
+	leadmade, _ := capturedEmployee(t, e, "leadmade@outside.test")
+	agenttagged, _ := capturedEmployee(t, e, "agenttag@outside.test")
+
+	note := "Met at the trade fair"
+	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "note", Subject: &note, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: noted.UUID}},
+	}); err != nil {
+		t.Fatalf("writing a note about the contact: %v", err)
+	}
+	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{FullName: new("Lead Made"), Source: "manual"})
+	if err != nil {
+		t.Fatalf("creating the lead: %v", err)
+	}
+	e.WsExec(t, `UPDATE lead SET from_contact_id = $1 WHERE id = $2`, leadmade, ids.UUID(lead.Id))
+	tags := collections.NewStore(e.DB())
+	tag, err := tags.CreateTag(e.Admin(), "Agent pick", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tags.ApplyTag(e.Admin(), tag.ID, "contact", agenttagged.UUID); err != nil {
+		t.Fatalf("tagging the contact: %v", err)
+	}
+	// The tag is an agent's, which ColleagueWorkedOnSince does not count.
+	e.WsExec(t, `UPDATE taggable SET assigned_by_kind = 'agent' WHERE entity_id = $1`, agenttagged.UUID)
+
+	for user, address := range map[ids.UUID]string{
+		e.Rep1: "plain@outside.test", e.Rep2: "noted@outside.test",
+		e.Rep3: "leadmade@outside.test", e.AdminUser: "agenttag@outside.test",
+	} {
+		e.WsExec(t, `UPDATE app_user SET email = $2 WHERE id = $1`, user, address)
+	}
+	runMachineAddressTask(ctx, t, e, seatEmploymentDataTask())
+
+	if contactLive(t, e, plain) {
+		t.Fatal("the plain seat contact is still live, so the step did not run and this proves nothing")
+	}
+	for name, contact := range map[string]ids.ContactID{
+		"the contact a colleague wrote a note about": noted,
+		"the contact a lead was made from":           leadmade,
+		"the contact an agent tagged":                agenttagged,
+	} {
+		if !contactLive(t, e, contact) {
+			t.Errorf("%s was archived", name)
+		}
 	}
 }

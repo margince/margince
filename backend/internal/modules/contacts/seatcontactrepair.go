@@ -78,24 +78,36 @@ func ArchiveSeatContactsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit
 	return page, nil
 }
 
-// untouchedByAnyoneSQL is the rule both reads below ask of one contact. No
-// audit row on the contact or its employment edges is by any actor but the
-// system or a connector.
-func untouchedByAnyoneSQL(contact string) string {
+// untouchedByAnyoneSQL is the rule both reads below ask of contact p. No audit
+// row on it or on an edge it is either end of is by any actor but the system or
+// a connector. No human or agent tagged it or listed it. No lead names it, and
+// nobody but capture wrote an activity about it.
+func untouchedByAnyoneSQL() string {
+	quoted := func(s string) string { return "'" + s + "'" }
 	return `NOT EXISTS (SELECT 1 FROM audit_log a
-		                WHERE a.entity_type = '` + contactEntity + `' AND a.entity_id = ` + contact + `
+		                WHERE a.entity_type = '` + contactEntity + `' AND a.entity_id = p.id
 		                  AND a.actor_type NOT IN ('system', 'connector'))
 		       AND NOT EXISTS (SELECT 1 FROM relationship r
 		                JOIN audit_log a ON a.entity_type = '` + tableRelationship + `' AND a.entity_id = r.id
-		                WHERE r.contact_id = ` + contact + ` AND a.actor_type NOT IN ('system', 'connector'))`
+		                WHERE p.id IN (r.contact_id, r.counterparty_contact_id)
+		                  AND a.actor_type NOT IN ('system', 'connector'))
+		       AND NOT EXISTS (SELECT 1 FROM taggable g
+		                WHERE g.entity_type = '` + contactEntity + `' AND g.entity_id = p.id
+		                  AND g.assigned_by_kind IN ('human', 'agent'))
+		       AND NOT EXISTS (SELECT 1 FROM list_member m
+		                WHERE m.entity_type = '` + contactEntity + `' AND m.entity_id = p.id
+		                  AND (m.added_by LIKE 'human:%' OR m.added_by LIKE 'agent:%'))
+		       AND NOT ` + linkedFromALeadSQL + `
+		       AND NOT ` + writtenAboutByAnybodySQL(quoted(CaptureVerdictActor), quoted(CaptureAcceptActor), quoted(DisplayNameRepairActor))
 }
 
 // workedOnUnderLock asks again, under the contact's employment lock, whether
-// anyone acted on it since the page was read. That is a human or an agent on
-// the contact or its edges, or a colleague's tag, list or link.
+// anyone acted on it since the page was read. It locks the contact row, so a
+// tag or a list entry racing the archive either shows here or waits for it.
 func workedOnUnderLock(ctx context.Context, tx pgx.Tx, contact ids.ContactID) (bool, error) {
 	var untouched bool
-	if err := tx.QueryRow(ctx, `SELECT `+untouchedByAnyoneSQL("$1"), contact).Scan(&untouched); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT `+untouchedByAnyoneSQL()+` FROM contact p WHERE p.id = $1 FOR UPDATE OF p`,
+		contact).Scan(&untouched); err != nil {
 		return false, fmt.Errorf("contacts: re-reading whether anyone acted on a seat's contact: %w", err)
 	}
 	if !untouched {
@@ -110,7 +122,7 @@ func mintedContactPage(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int
 	rows, err := tx.Query(ctx, `
 		SELECT p.id, p.version,
 		       p.captured_by LIKE 'connector:%'
-		       AND `+untouchedByAnyoneSQL("p.id")+`
+		       AND `+untouchedByAnyoneSQL()+`
 		  FROM contact p
 		 WHERE p.archived_at IS NULL AND p.merged_into_id IS NULL AND p.id > $1
 		 ORDER BY p.id
