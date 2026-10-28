@@ -143,7 +143,7 @@ func TestMailboxAuthoritySendCapableBranches(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			authority := mailboxAuthority{
 				grants:            tc.grants,
-				mailAppConfigured: func(string) bool { return !tc.appMissing },
+				mailAppConfigured: func(context.Context, string) (bool, error) { return !tc.appMissing, nil },
 			}
 
 			got, err := authority.SendCapable(tc.ctx, tc.provider)
@@ -229,7 +229,7 @@ func TestSendCapableAsksTheUnitRatherThanTheWorkspaceBotTable(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			declaresTransport(t, "mine", tc.channel)
 			grants := &stubGrants{channelBound: true}
-			authority := mailboxAuthority{grants: grants, mailAppConfigured: func(string) bool { return false }}
+			authority := mailboxAuthority{grants: grants, mailAppConfigured: func(context.Context, string) (bool, error) { return false, nil }}
 
 			got, err := authority.SendCapable(human, "mine_chat")
 
@@ -290,7 +290,7 @@ func TestSendableMailProviderNamesAMailboxTheSenderCanActuallySendFrom(t *testin
 		t.Run(name, func(t *testing.T) {
 			authority := mailboxAuthority{
 				grants:            &stubGrants{grantedFor: tc.grantedFor},
-				mailAppConfigured: func(string) bool { return true },
+				mailAppConfigured: func(context.Context, string) (bool, error) { return true, nil },
 			}
 			got, err := authority.SendableMailProvider(human)
 			if err != nil {
@@ -313,7 +313,7 @@ func TestSendableMailProviderReportsALookupFaultRatherThanNoMailbox(t *testing.T
 	wantErr := errors.New("the grant table is unreachable")
 	authority := mailboxAuthority{
 		grants:            &stubGrants{err: wantErr},
-		mailAppConfigured: func(string) bool { return true },
+		mailAppConfigured: func(context.Context, string) (bool, error) { return true, nil },
 	}
 	got, err := authority.SendableMailProvider(human)
 	if !errors.Is(err, wantErr) {
@@ -321,5 +321,63 @@ func TestSendableMailProviderReportsALookupFaultRatherThanNoMailbox(t *testing.T
 	}
 	if got != "" {
 		t.Errorf("SendableMailProvider = %q on a fault, want none", got)
+	}
+}
+
+// The connect flow and the worker both resolve an app set in Settings. A
+// pre-flight that read the environment alone would refuse every send from a
+// mailbox holding the send scope.
+func TestMailAppConfiguredAsksTheStoredAppToo(t *testing.T) {
+	stored := appResolver(func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{ClientID: "stored-id", ClientSecretRef: "stored-secret"}, true, nil
+	})
+	unreadable := errors.New("the stored app's secret will not unseal")
+	broken := appResolver(func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{}, false, unreadable
+	})
+
+	for name, tc := range map[string]struct {
+		server   Server
+		provider string
+		want     bool
+		wantErr  error
+	}{
+		"a stored Google app":             {Server{googleAppResolver: stored}, providerGmail, true, nil},
+		"a stored Microsoft app":          {Server{microsoftAppResolver: stored}, providerGraph, true, nil},
+		"the environment's app":           {Server{gmailAppConfigured: true, googleAppResolver: broken}, providerGmail, true, nil},
+		"no app from either source":       {Server{}, providerGmail, false, nil},
+		"the other vendor's app":          {Server{microsoftAppResolver: stored}, providerGmail, false, nil},
+		"a stored app that is unreadable": {Server{googleAppResolver: broken}, providerGmail, false, unreadable},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, err := tc.server.mailAppConfigured(context.Background(), tc.provider)
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("mailAppConfigured error = %v, want %v", err, tc.wantErr)
+			}
+			if got != tc.want {
+				t.Errorf("mailAppConfigured = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// Through the authority the api installs: a mailbox holding the send scope on a
+// stored-app installation is told it can send, not to reconnect.
+func TestAStoredAppInstallationPassesTheSendPreflight(t *testing.T) {
+	human := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:x", UserID: ids.NewV7(),
+	})
+	scope, _ := comms.SendScopeFor(providerGmail)
+	s := Server{googleAppResolver: func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{ClientID: "stored-id", ClientSecretRef: "stored-secret"}, true, nil
+	}}
+	authority := mailboxAuthority{grants: &stubGrants{granted: []string{scope}}, mailAppConfigured: s.mailAppConfigured}
+
+	got, err := authority.SendableMailProvider(human)
+	if err != nil {
+		t.Fatalf("SendableMailProvider: %v", err)
+	}
+	if got != providerGmail {
+		t.Errorf("SendableMailProvider = %q, want %q", got, providerGmail)
 	}
 }
