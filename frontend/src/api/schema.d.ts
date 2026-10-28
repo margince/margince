@@ -25964,7 +25964,10 @@ export interface components {
              * @enum {string|null}
              */
             reason?: "no_write_authority" | "too_large" | "resolved" | null;
-            /** @description Present when `status` is `resolved`. */
+            /**
+             * @description Present when `status` is `resolved` and the caller can see the surviving contact.
+             *     A caller who cannot see it reads `resolved` with no `resolution`.
+             */
             resolution?: components["schemas"]["ContactCaseResolution"];
         };
         ContactCaseMember: {
@@ -26005,6 +26008,12 @@ export interface components {
              *     when the case's `policy_enabled` is on, for a full-seat owner of either end.
              */
             can_dismiss: boolean;
+            /**
+             * @description Whether this caller may merge this one open pair through the pair's own decision
+             *     route. True only with write access to both ends. `policy_enabled` does not widen it:
+             *     the policy admits a merge of the whole case, never of a single pair.
+             */
+            can_merge: boolean;
         };
         ContactCaseOwner: {
             /** Format: uuid */

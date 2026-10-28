@@ -37559,7 +37559,9 @@ components:
           description: Why `can_merge` is false.
         resolution:
           allOf: [ { $ref: '#/components/schemas/ContactCaseResolution' } ]
-          description: Present when `status` is `resolved`.
+          description: |
+            Present when `status` is `resolved` and the caller can see the surviving contact.
+            A caller who cannot see it reads `resolved` with no `resolution`.
     ContactCaseMember:
       type: object
       required: [id, name, version, owner_id, owner_name, created_at]
@@ -37576,7 +37578,7 @@ components:
     ContactCaseEdge:
       type: object
       description: One duplicate pair between two members, with the evidence it was filed on.
-      required: [pair_id, left_id, right_id, confidence, status, evidence, can_dismiss]
+      required: [pair_id, left_id, right_id, confidence, status, evidence, can_dismiss, can_merge]
       properties:
         pair_id: { type: string, format: uuid }
         left_id: { type: string, format: uuid }
@@ -37590,6 +37592,12 @@ components:
             Whether this caller may mark an open pair `not_a_duplicate`, or undo that mark,
             through the pair's own decision route. True with write access to both ends, and,
             when the case's `policy_enabled` is on, for a full-seat owner of either end.
+        can_merge:
+          type: boolean
+          description: |
+            Whether this caller may merge this one open pair through the pair's own decision
+            route. True only with write access to both ends. `policy_enabled` does not widen it:
+            the policy admits a merge of the whole case, never of a single pair.
     ContactCaseOwner:
       type: object
       required: [user_id, name, seat, member_ids]

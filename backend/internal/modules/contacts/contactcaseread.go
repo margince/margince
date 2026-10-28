@@ -75,7 +75,7 @@ func (s *Store) contactCaseView(ctx context.Context, tx pgx.Tx, c contactCase) (
 		edge := crmcontracts.ContactCaseEdge{
 			PairId: openapi_types.UUID(e.ID), LeftId: openapi_types.UUID(e.Left), RightId: openapi_types.UUID(e.Right),
 			Confidence: float32(e.Confidence), Status: crmcontracts.ContactCaseEdgeStatus(e.Disposition),
-			Evidence: []crmcontracts.DedupeEvidence{}, CanDismiss: authority.mayDismiss(e),
+			Evidence: []crmcontracts.DedupeEvidence{}, CanDismiss: authority.mayDismiss(e), CanMerge: authority.mayMergePair(e),
 		}
 		if len(e.Evidence) > 0 {
 			if err := json.Unmarshal(e.Evidence, &edge.Evidence); err != nil {
@@ -152,6 +152,12 @@ func (a caseAuthority) mayDismiss(e caseEdge) bool {
 	return a.mayAct && ((a.writable[e.Left] && a.writable[e.Right]) || a.delegate([]ids.UUID{e.Left, e.Right}))
 }
 
+// mayMergePair mirrors the pair route's merge, which asks write authority
+// over both ends and is never admitted by the policy.
+func (a caseAuthority) mayMergePair(e caseEdge) bool {
+	return a.mayAct && e.Disposition == dispositionOpen && a.writable[e.Left] && a.writable[e.Right]
+}
+
 func memberIDsOf(c contactCase) []ids.UUID {
 	out := make([]ids.UUID, 0, len(c.Members))
 	for _, m := range c.Members {
@@ -199,6 +205,20 @@ func resolvedContactCase(ctx context.Context, tx pgx.Tx, contactID ids.UUID) (cr
 	if err != nil {
 		return crmcontracts.ContactCase{}, fmt.Errorf("contacts: reading where the contact went: %w", err)
 	}
+	reason := crmcontracts.ContactCaseReasonResolved
+	out := crmcontracts.ContactCase{
+		AnchorId: openapi_types.UUID(contactID), Status: crmcontracts.ContactCaseStatusResolved,
+		Members: []crmcontracts.ContactCaseMember{}, Edges: []crmcontracts.ContactCaseEdge{},
+		Owners: []crmcontracts.ContactCaseOwner{}, MergeMode: crmcontracts.ContactCaseMergeModeNone,
+		Reason: &reason,
+	}
+	// Where it went is the survivor's to tell: a reader who cannot see it
+	// learns only that the case is settled.
+	if err := auth.EnsureVisible(ctx, tx, contactEntity, *survivor); errors.Is(err, apperrors.ErrNotFound) {
+		return out, nil
+	} else if err != nil {
+		return crmcontracts.ContactCase{}, err
+	}
 	resolution := crmcontracts.ContactCaseResolution{SurvivorId: openapi_types.UUID(*survivor), ResolvedAt: *archivedAt}
 	var by *ids.UUID
 	var byName *string
@@ -219,13 +239,8 @@ func resolvedContactCase(ctx context.Context, tx pgx.Tx, contactID ids.UUID) (cr
 			resolution.ResolvedAt = *at
 		}
 	}
-	reason := crmcontracts.ContactCaseReasonResolved
-	return crmcontracts.ContactCase{
-		AnchorId: openapi_types.UUID(contactID), Status: crmcontracts.ContactCaseStatusResolved,
-		Members: []crmcontracts.ContactCaseMember{}, Edges: []crmcontracts.ContactCaseEdge{},
-		Owners: []crmcontracts.ContactCaseOwner{}, MergeMode: crmcontracts.ContactCaseMergeModeNone,
-		Reason: &reason, Resolution: &resolution,
-	}, nil
+	out.Resolution = &resolution
+	return out, nil
 }
 
 // contactCaseCursor is the list's keyset: strongest first, anchor as the tie.

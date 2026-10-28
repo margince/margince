@@ -36434,7 +36434,8 @@ type ContactCase struct {
 	// Reason Why `can_merge` is false.
 	Reason *ContactCaseReason `json:"reason,omitempty"`
 
-	// Resolution Present when `status` is `resolved`.
+	// Resolution Present when `status` is `resolved` and the caller can see the surviving contact.
+	// A caller who cannot see it reads `resolved` with no `resolution`.
 	Resolution *ContactCaseResolution `json:"resolution,omitempty"`
 
 	// Revision Changes whenever a member, an owner, a version or a pair changes. Preview and merge refuse a stale one with 409 case_changed.
@@ -36476,7 +36477,12 @@ type ContactCaseEdge struct {
 	// CanDismiss Whether this caller may mark an open pair `not_a_duplicate`, or undo that mark,
 	// through the pair's own decision route. True with write access to both ends, and,
 	// when the case's `policy_enabled` is on, for a full-seat owner of either end.
-	CanDismiss bool               `json:"can_dismiss"`
+	CanDismiss bool `json:"can_dismiss"`
+
+	// CanMerge Whether this caller may merge this one open pair through the pair's own decision
+	// route. True only with write access to both ends. `policy_enabled` does not widen it:
+	// the policy admits a merge of the whole case, never of a single pair.
+	CanMerge   bool               `json:"can_merge"`
 	Confidence float32            `json:"confidence"`
 	Evidence   []DedupeEvidence   `json:"evidence"`
 	LeftId     openapi_types.UUID `json:"left_id"`
