@@ -191,10 +191,7 @@ The work counts come from the current Worklist read. The greeting's email count 
 **Since your last brief** says when some activity could not be counted. Its count then says how much it could count, and an empty list does not mean nothing happened. A change that covers several records lists each record with its time and its full values, before and after. Each record keeps the review its change allows: **Keep date**, **Accept** or **Undo**.
 
 ### Check applied changes
-**Check applied changes**, on **Today**, lists deal changes you can still keep or undo. Each names the deal, what changed and when. Date estimates show their sales history when available. An undone or accepted change leaves this list.
-
-Press **Details** on a change to see who made it, when, the email or meeting it came from, and each
-value before and after. Press the email or meeting to open it. A source you cannot open is not named.
+**Check applied changes**, on **Today**, lists deal changes you can still keep or undo. Each names the deal, what changed and when. Date estimates show their sales history when available. An undone or accepted change leaves this list. Press **Details** on a change to see who made it, when, the email or meeting it came from, and each value before and after. Press the email or meeting to open it. A source you cannot open is not named.
 
 **Keep date** keeps a date estimate; **Accept** keeps a stage change. Neither runs the change again or makes an estimate a customer promise. **Undo** puts the deal back. Past changes remain under **Change history** on the Worklist.
 
@@ -352,10 +349,7 @@ The Worklist footer and **To review** panel count items, not cards: 8 possible d
 
 ### Change history
 
-**Change history**, on the Worklist, keeps the changes from the last 24 hours. Press
-**Show recent changes** to read the action, record, time and status. **Details** on a change works
-as it does under **Check applied changes**. A long list ends in **Show more**, which loads the next
-changes.
+**Change history**, on the Worklist, keeps the changes from the last 24 hours. Press **Show recent changes** to read the action, record, time and status. **Details** on a change works as it does under **Check applied changes**. A long list ends in **Show more**, which loads the next changes.
 
 When there is nothing: "No actions taken on your behalf today."
 
