@@ -61,6 +61,8 @@ describe("an open deal's verdict", () => {
         source_activity_id: "a1",
         source_at: "2026-05-27T08:00:00Z",
         source_precision: "instant",
+        source_version: 1,
+        evaluated_at: AS_OF,
         policy_version: "test",
       },
     };
