@@ -99,3 +99,19 @@ export function defaultOwner(
     ? owner
     : "";
 }
+
+/**
+ * How a member is named where the reviewer must tell members apart. Duplicates
+ * often share a name, since that is why they look alike, so a shared name
+ * carries the email too.
+ */
+export function memberLabel(contactCase: ContactCase, id: string): string {
+  const member = contactCase.members.find((one) => one.id === id);
+  if (!member) return "";
+  const shared = contactCase.members.some(
+    (one) => one.id !== id && one.name === member.name,
+  );
+  return shared && member.email
+    ? `${member.name} (${member.email})`
+    : member.name;
+}

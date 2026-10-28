@@ -10,6 +10,7 @@ import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { mayDecidePair, PairActions } from "./contactcase.pair";
 import type { ContactCase, ContactCaseOutcome } from "./contactcase.queries";
+import { memberLabel } from "./contactcase.selection";
 
 type Evidence = components["schemas"]["DedupeEvidence"];
 
@@ -24,10 +25,6 @@ const FIELD_LABELS: Readonly<Record<string, MessageKey>> = {
   matched_lane: "contactCase.field.matchedOn",
   channel_identity: "contactCase.field.chatAccount",
 };
-
-function nameOf(contactCase: ContactCase, id: string): string {
-  return contactCase.members.find((member) => member.id === id)?.name ?? "";
-}
 
 function EvidenceLine({ evidence }: Readonly<{ evidence: Evidence }>) {
   const t = useT();
@@ -60,8 +57,8 @@ export function CaseEvidence({
           <li key={edge.pair_id} className="contactcase-edge">
             <span>
               {t("contactCase.evidence.pair", {
-                left: nameOf(contactCase, edge.left_id),
-                right: nameOf(contactCase, edge.right_id),
+                left: memberLabel(contactCase, edge.left_id),
+                right: memberLabel(contactCase, edge.right_id),
               })}{" "}
               {edge.status === "not_a_duplicate" ? (
                 <Badge tone="warning">
@@ -123,13 +120,13 @@ export function CasePreview({
       <Eyebrow as="h3">{t("contactCase.preview.title")}</Eyebrow>
       <p>
         {t("contactCase.preview.keeps", {
-          name: nameOf(contactCase, outcome.survivor_id),
+          name: memberLabel(contactCase, outcome.survivor_id),
           owner: ownerName,
         })}
       </p>
       <PreviewList
         title={t("contactCase.preview.mergedTitle")}
-        lines={outcome.merged_ids.map((id) => nameOf(contactCase, id))}
+        lines={outcome.merged_ids.map((id) => memberLabel(contactCase, id))}
       />
       <PreviewList
         title={t("contactCase.preview.sharesTitle")}

@@ -135,6 +135,49 @@ describe("who may own the remaining contact", () => {
       .map((option) => option.textContent);
     expect(left).toEqual(["Ana Owner", "Ben Seller"]);
   });
+
+  it("follows the kept record until the reviewer picks an owner", async () => {
+    stubWithSession(
+      { [`GET ${CASE_PATH}`]: () => jsonResponse(contactCase()) },
+      {},
+    );
+    const user = userEvent.setup();
+    mount();
+    const owner = await screen.findByRole("combobox", { name: /Owner/ });
+    await user.click(screen.getByRole("radio", { name: /Mira Kovač/ }));
+    expect(owner).toHaveTextContent("Ben Seller");
+
+    await user.click(owner);
+    await user.click(
+      within(await screen.findByRole("listbox")).getByRole("option", {
+        name: "Cleo Reader",
+      }),
+    );
+    await user.click(screen.getByRole("radio", { name: /Mira Kovac$/ }));
+    expect(owner).toHaveTextContent("Cleo Reader");
+  });
+});
+
+describe("members that share a name", () => {
+  it("are told apart by their email", async () => {
+    const twins = contactCase();
+    const members = twins.members.map((one) => ({
+      ...one,
+      name: "Alex Example",
+    }));
+    stubWithSession(
+      {
+        [`GET ${CASE_PATH}`]: () => jsonResponse({ ...twins, members }),
+      },
+      {},
+    );
+    mount();
+    expect(
+      await screen.findByRole("radio", {
+        name: /Alex Example \(m\.kovac@northwind\.de\)/,
+      }),
+    ).toBeInTheDocument();
+  });
 });
 
 describe("the preview", () => {

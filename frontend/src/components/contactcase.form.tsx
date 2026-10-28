@@ -26,6 +26,7 @@ import {
   defaultSelection,
   dismissedWith,
   isConnected,
+  memberLabel,
   ownerChoices,
 } from "./contactcase.selection";
 
@@ -104,6 +105,8 @@ export function CaseForm({
   const [owner, setOwner] = useState(() =>
     defaultOwner(contactCase, selected, survivor),
   );
+  // Until the reviewer picks an owner, the owner follows the kept record.
+  const [ownerPicked, setOwnerPicked] = useState(false);
   const preview = useContactCasePreview();
   const merge = useContactCaseMerge();
   const locked = !contactCase.can_merge;
@@ -124,7 +127,10 @@ export function CaseForm({
     const kept = next.includes(keep) ? keep : (next[0] ?? "");
     setSelected(next);
     setSurvivor(kept);
-    if (!ownerChoices(contactCase, next).some((one) => one.user_id === owner)) {
+    const stillEligible = ownerChoices(contactCase, next).some(
+      (one) => one.user_id === owner,
+    );
+    if (!ownerPicked || !stillEligible) {
       setOwner(defaultOwner(contactCase, next, kept));
     }
   };
@@ -171,7 +177,7 @@ export function CaseForm({
                   name={radioName}
                   label={t("contactCase.member.keep")}
                   aria-label={t("contactCase.member.keepNamed", {
-                    name: member.name,
+                    name: memberLabel(contactCase, member.id),
                   })}
                   checked={survivor === member.id}
                   disabled={locked || !ticked}
@@ -201,7 +207,10 @@ export function CaseForm({
               value={owner}
               placeholder={t("contactCase.ownerPlaceholder")}
               disabled={locked}
-              onChange={setOwner}
+              onChange={(next) => {
+                setOwnerPicked(true);
+                setOwner(next);
+              }}
             />
           )}
         </Field>
