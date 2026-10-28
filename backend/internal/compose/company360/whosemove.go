@@ -16,9 +16,8 @@ import (
 )
 
 // companyContactStrengths reads every visible contact's strength with the
-// History badge's move on the mail each last sent us. Every engagement this
-// package reports reads through here, so a contact row and the badge on that
-// contact's mail agree on whose move it is.
+// History badge's move on the mail each last sent us. A contact row and the
+// badge on that contact's mail then agree on whose move it is.
 func companyContactStrengths(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, projectID *ids.ProjectID,
 ) ([]contacts.ContactStrength, error) {
@@ -44,19 +43,6 @@ func companyContactStrengths(
 		}
 	}
 	return all, nil
-}
-
-// withMailMove adds the History badge's move to the account's newest
-// message, when that is a mail the reader may discover.
-func withMailMove(ctx context.Context, tx pgx.Tx, newest lastMessage) (lastMessage, error) {
-	moves, err := activities.MailMovesFor(ctx, tx, []ids.UUID{newest.ID})
-	if err != nil {
-		return lastMessage{}, err
-	}
-	if move, ok := moves[newest.ID]; ok {
-		newest.Move = &move
-	}
-	return newest, nil
 }
 
 // awaitsThem is whether the newest message leaves the move with the other

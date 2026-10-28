@@ -56,19 +56,32 @@ const (
 //
 // When their latest message is a mail, its History badge says whether we owe
 // a reply. A mail it owes nothing on, such as a calendar copy, reads answered
-// only when we wrote after it.
+// when we wrote after it. Otherwise it reads as though it had not arrived.
 func EngagementOf(rs RelationshipStrength) Engagement {
 	replied := rs.LastInbound != nil && rs.LastOutbound != nil && rs.LastOutbound.After(*rs.LastInbound)
+	owesNothing := rs.LastInboundMove != nil && *rs.LastInboundMove != crmcontracts.EmailSummaryMoveNeedsReply
 	switch {
-	case rs.Inbound90d > 0 && rs.LastInboundMove != nil && *rs.LastInboundMove == crmcontracts.EmailSummaryMoveNeedsReply:
+	case rs.Inbound90d > 0 && owesNothing && !replied:
+		return engagementFromOurSide(rs)
+	case rs.Inbound90d > 0 && !replied:
 		return EngagementWaiting
-	case rs.Inbound90d > 0 && replied:
+	case rs.Inbound90d > 0:
+		if owed := rs.LastInboundMove != nil && !owesNothing; owed {
+			return EngagementWaiting
+		}
 		return EngagementAnswered
-	case rs.Inbound90d > 0 && rs.LastInboundMove == nil:
-		return EngagementWaiting
+	default:
+		return engagementFromOurSide(rs)
+	}
+}
+
+// engagementFromOurSide is the state when nothing they sent counts: our own
+// mail inside the window, then any traffic before it.
+func engagementFromOurSide(rs RelationshipStrength) Engagement {
+	switch {
 	case rs.Outbound90d > 0:
 		return EngagementNoReply
-	case rs.LastInbound != nil || rs.LastOutbound != nil:
+	case rs.LastOutbound != nil || (rs.LastInbound != nil && rs.Inbound90d == 0):
 		// Traffic, but all of it older than the window. Reported as untried this
 		// was a plain falsehood beside the contact's own last-touch date.
 		return EngagementLapsed

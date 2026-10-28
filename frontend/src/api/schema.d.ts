@@ -32808,7 +32808,10 @@ export interface components {
         /**
          * @description Where one contact stands with us, over the same 90-day window the relationship
          *     score uses. What decides between the two conversational states is who wrote
-         *     LAST, not whether both directions have traffic.
+         *     LAST, not whether both directions have traffic. When their latest message is a
+         *     mail the reader may read, its History badge decides instead: `waiting` needs a
+         *     mail still owed a reply, and a mail owed none (a calendar copy, a mail that
+         *     informs us) counts only once we wrote after it.
          *
          *     `waiting` — their latest message has no reply from us. They are waiting on us,
          *     and answering is the obvious next move.

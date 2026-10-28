@@ -11,8 +11,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func move(m crmcontracts.EmailSummaryMove) *crmcontracts.EmailSummaryMove { return new(m) }
-
 // Answered is earned by replying, not by receiving: a contact whose latest
 // message has no outbound after it reads as waiting however much traffic the
 // window holds, because one unprompted mail nobody answered is not a success.
@@ -77,22 +75,22 @@ func TestEngagementOfReadsTheStatesOffWhoWroteLast(t *testing.T) {
 		},
 		{
 			"their latest mail is owed a reply by its badge",
-			RelationshipStrength{Inbound90d: 1, Outbound90d: 1, LastInbound: at(0), LastOutbound: at(1), LastInboundMove: move(crmcontracts.EmailSummaryMoveNeedsReply)},
+			RelationshipStrength{Inbound90d: 1, Outbound90d: 1, LastInbound: at(0), LastOutbound: at(1), LastInboundMove: new(crmcontracts.EmailSummaryMoveNeedsReply)},
 			EngagementWaiting,
 		},
 		{
-			"their latest mail is a calendar copy its badge owes nothing",
-			RelationshipStrength{Inbound90d: 1, LastInbound: at(0), LastInboundMove: move(crmcontracts.EmailSummaryMoveNone)},
-			EngagementLapsed,
+			"their only mail is a calendar copy its badge owes nothing",
+			RelationshipStrength{Inbound90d: 1, LastInbound: at(0), LastInboundMove: new(crmcontracts.EmailSummaryMoveNone)},
+			EngagementUntried,
 		},
 		{
 			"their latest mail owes nothing and we chased them since",
-			RelationshipStrength{Inbound90d: 1, Outbound90d: 1, LastInbound: at(-1), LastOutbound: at(-3), LastInboundMove: move(crmcontracts.EmailSummaryMoveNone)},
+			RelationshipStrength{Inbound90d: 1, Outbound90d: 1, LastInbound: at(-1), LastOutbound: at(-3), LastInboundMove: new(crmcontracts.EmailSummaryMoveNone)},
 			EngagementNoReply,
 		},
 		{
 			"their latest mail was answered, so its badge owes nothing",
-			RelationshipStrength{Inbound90d: 1, Outbound90d: 1, LastInbound: at(0), LastOutbound: at(1), LastInboundMove: move(crmcontracts.EmailSummaryMoveNone)},
+			RelationshipStrength{Inbound90d: 1, Outbound90d: 1, LastInbound: at(0), LastOutbound: at(1), LastInboundMove: new(crmcontracts.EmailSummaryMoveNone)},
 			EngagementAnswered,
 		},
 	} {

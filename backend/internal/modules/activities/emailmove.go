@@ -33,10 +33,7 @@ func EmailStatesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) (map
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	wanted := arg(activityIDs)
-	// Only the seat stamp: the reader's hand-typed addresses live with capture,
-	// which this page read cannot reach, so such a mail reads none, never theirs.
-	sentByReader := sentByReaderSQL(fmt.Sprintf("$%d", arg(readerOrNobody(ctx))), fmt.Sprintf("$%d", arg([]string{})))
-	laterContent, err := auth.ActivityContentClause(ctx, "later", arg)
+	sentByReader, laterContent, err := moveInputs(ctx, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -72,9 +69,36 @@ func moveSQL(sentByReader, laterContent string) string {
    ELSE '` + string(crmcontracts.EmailSummaryMoveNone) + `' END`
 }
 
-// MailMovesFor reads the History badge's move for each mail the reader may
-// discover among activityIDs. Another kind, or a mail hidden from the reader,
-// is absent, so its caller decides whose move it is by its own rule.
+// moveInputs binds what moveSQL reads about the reader. Only the seat stamp
+// counts as the reader's. Their hand-typed addresses live with capture, which a
+// page read cannot reach. Such a mail reads none, never theirs.
+func moveInputs(ctx context.Context, arg func(any) int) (sentByReader, laterContent string, err error) {
+	laterContent, err = auth.ActivityContentClause(ctx, "later", arg)
+	if err != nil {
+		return "", "", err
+	}
+	return sentByReaderSQL(fmt.Sprintf("$%d", arg(readerOrNobody(ctx))), fmt.Sprintf("$%d", arg([]string{}))), laterContent, nil
+}
+
+// MailMoveColumnSQL is the History badge's move on the activity under alias a
+// as a column. It is NULL when the row is not a mail the reader may read, since
+// the move is judged from the mail's content.
+func MailMoveColumnSQL(ctx context.Context, arg func(any) int) (string, error) {
+	content, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return "", err
+	}
+	sentByReader, laterContent, err := moveInputs(ctx, arg)
+	if err != nil {
+		return "", err
+	}
+	return `CASE WHEN a.kind = 'email' AND a.restricted_at IS NULL AND ` + content + ` THEN ` +
+		moveSQL(sentByReader, laterContent) + ` END`, nil
+}
+
+// MailMovesFor reads the History badge's move for each mail among activityIDs.
+// A mail the reader may not read, or another kind, is absent, so its caller
+// decides whose move it is by its own rule.
 func MailMovesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) (map[ids.UUID]crmcontracts.EmailSummaryMove, error) {
 	out := make(map[ids.UUID]crmcontracts.EmailSummaryMove, len(activityIDs))
 	if len(activityIDs) == 0 {
@@ -83,18 +107,13 @@ func MailMovesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) (map[i
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	wanted := arg(activityIDs)
-	discover, err := auth.ActivityDiscoverClause(ctx, "a", arg)
+	move, err := MailMoveColumnSQL(ctx, arg)
 	if err != nil {
 		return nil, err
 	}
-	laterContent, err := auth.ActivityContentClause(ctx, "later", arg)
-	if err != nil {
-		return nil, err
-	}
-	sentByReader := sentByReaderSQL(fmt.Sprintf("$%d", arg(readerOrNobody(ctx))), fmt.Sprintf("$%d", arg([]string{})))
-	rows, err := tx.Query(ctx, `SELECT a.id, `+moveSQL(sentByReader, laterContent)+`
- FROM activity a
- WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`) AND a.kind = 'email' AND a.restricted_at IS NULL AND `+discover, args...)
+	rows, err := tx.Query(ctx, `SELECT a.id, move FROM (SELECT a.id, `+move+` AS move
+ FROM activity a WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`)) a
+ WHERE move IS NOT NULL`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading whose move each mail is: %w", err)
 	}

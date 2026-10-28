@@ -12,8 +12,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func mailMove(m crmcontracts.EmailSummaryMove) *crmcontracts.EmailSummaryMove { return new(m) }
-
 // PO-F-4's five states, in the order that keeps them mutually exclusive. The
 // order is the point: a silent account must read as dormant rather than as
 // whichever side happened to write last a year ago.
@@ -64,16 +62,16 @@ func TestEngagementStateAnswersWhoseMoveItIs(t *testing.T) {
 		// A mail's own badge decides, so a colleague's mail or a calendar copy
 		// leaves the move with nobody, as it does on the account's History.
 		{"a colleague's mail a fortnight ago", suggestionInputs{
-			hasNewest: true, newest: lastMessage{Direction: "outbound", At: ago(14 * day), Move: mailMove(crmcontracts.EmailSummaryMoveNone)},
+			hasNewest: true, newest: lastMessage{Direction: "outbound", At: ago(14 * day), Move: new(crmcontracts.EmailSummaryMoveNone)},
 		}, "active"},
 		{"a calendar copy a fortnight ago", suggestionInputs{
-			hasNewest: true, newest: lastMessage{Direction: "inbound", At: ago(14 * day), Move: mailMove(crmcontracts.EmailSummaryMoveNone)},
+			hasNewest: true, newest: lastMessage{Direction: "inbound", At: ago(14 * day), Move: new(crmcontracts.EmailSummaryMoveNone)},
 		}, "active"},
 		{"the reader's mail a fortnight ago", suggestionInputs{
-			hasNewest: true, newest: lastMessage{Direction: "outbound", At: ago(14 * day), Move: mailMove(crmcontracts.EmailSummaryMoveWaitingForThem)},
+			hasNewest: true, newest: lastMessage{Direction: "outbound", At: ago(14 * day), Move: new(crmcontracts.EmailSummaryMoveWaitingForThem)},
 		}, "waiting_on_them"},
 		{"their mail owed a reply a fortnight ago", suggestionInputs{
-			hasNewest: true, newest: lastMessage{Direction: "inbound", At: ago(14 * day), Move: mailMove(crmcontracts.EmailSummaryMoveNeedsReply)},
+			hasNewest: true, newest: lastMessage{Direction: "inbound", At: ago(14 * day), Move: new(crmcontracts.EmailSummaryMoveNeedsReply)},
 		}, "waiting_on_us"},
 	}
 	for _, tc := range cases {

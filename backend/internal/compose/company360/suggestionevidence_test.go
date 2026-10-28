@@ -48,14 +48,12 @@ func TestTheNoReplyCitationCarriesTheMessagesOwnWords(t *testing.T) {
 func TestTheNoReplyRuleSkipsAMailTheReaderDidNotSend(t *testing.T) {
 	newest := sentAgo(10, crmcontracts.ActivityDirectionOutbound)
 	newest.Kind = string(crmcontracts.ActivityKindEmail)
-	none := crmcontracts.EmailSummaryMoveNone
-	newest.Move = &none
+	newest.Move = new(crmcontracts.EmailSummaryMoveNone)
 
 	if got := englishSuggestions.staleThread(testCompanyID(t), suggestNow, time.UTC, newest); got != nil {
 		t.Fatalf("the rule fired on a colleague's mail: %+v", got)
 	}
-	waiting := crmcontracts.EmailSummaryMoveWaitingForThem
-	newest.Move = &waiting
+	newest.Move = new(crmcontracts.EmailSummaryMoveWaitingForThem)
 	if englishSuggestions.staleThread(testCompanyID(t), suggestNow, time.UTC, newest) == nil {
 		t.Fatal("the rule went silent on the reader's own unanswered mail")
 	}

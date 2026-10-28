@@ -19,10 +19,12 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/company360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // accountOf creates a company employing a contact who writes from address.
@@ -100,14 +102,16 @@ func TestCompany360ReadsWhoseMoveByTheBadgesRules(t *testing.T) {
 	o.judgeAsRequest(t, o.customerWrites(t, "pat@theirs.example", "Can we talk pricing?", fortnight))
 
 	for _, c := range []struct {
-		name       string
-		company    ids.CompanyID
-		state      string
-		advised    bool
+		name    string
+		company ids.CompanyID
+		state   string
+		advised bool
+		// engagement is the contact's state. Empty asks only that the mail moved
+		// it to neither waiting nor answered.
 		engagement crmcontracts.ContactEngagement
 	}{
-		{"a colleague's mail", colleagues, "active", false, crmcontracts.ContactEngagementNoReply},
-		{"an unchecked old invitation", unchecked, "active", false, crmcontracts.ContactEngagementLapsed},
+		{"a colleague's mail", colleagues, "active", false, ""},
+		{"an unchecked old invitation", unchecked, "active", false, crmcontracts.ContactEngagementUntried},
 		{"the reader's plain mail", ours, "waiting_on_them", true, crmcontracts.ContactEngagementNoReply},
 		{"their plain request", theirs, "waiting_on_us", false, crmcontracts.ContactEngagementWaiting},
 	} {
@@ -118,8 +122,37 @@ func TestCompany360ReadsWhoseMoveByTheBadgesRules(t *testing.T) {
 		if advised != c.advised {
 			t.Errorf("%s: no-reply advice fired = %v, want %v", c.name, advised, c.advised)
 		}
-		if engagement != c.engagement {
+		switch {
+		case c.engagement == "" && (engagement == crmcontracts.ContactEngagementWaiting ||
+			engagement == crmcontracts.ContactEngagementAnswered):
+			t.Errorf("%s: the contact reads %q, want neither waiting nor answered", c.name, engagement)
+		case c.engagement != "" && engagement != c.engagement:
 			t.Errorf("%s: the contact reads %q, want %q", c.name, engagement, c.engagement)
 		}
+	}
+}
+
+// The badge is judged from a mail's content, so a mail the reader may not read
+// has no move for them. A colleague's private mail the classifier read as
+// informing us still reads by its direction: the reader learns nothing of the
+// verdict.
+func TestCompany360DoesNotReadTheMoveOfAMailTheReaderMayNotRead(t *testing.T) {
+	o := setupOwed(t)
+	colleague := seatAddress(t, o.e, o.e.Rep2)
+	company := o.accountOf(t, "Private Thread GmbH", "pat@private.example")
+	private := o.captureFor(t, o.e.Rep2, colleague, owedMail{
+		from: "pat@private.example", to: colleague, subject: "For your information",
+		at:        o.now.Add(-14 * 24 * time.Hour),
+		messageID: "private-" + ids.NewV7().String() + "@private.example",
+	})
+	judge := principal.WithActor(o.e.Admin(), o.classifier())
+	if _, err := o.e.Activities.SetOwedVerdict(judge, private, activities.OwedVerdictInformsUs, "prompts-test", o.now); err != nil {
+		t.Fatalf("judging the private mail: %v", err)
+	}
+
+	state, advised, engagement := o.whoseMove(t, company)
+	if state != "waiting_on_us" || engagement != crmcontracts.ContactEngagementWaiting || advised {
+		t.Errorf("the reader saw strip %q, contact %q, advice %v; want the direction's waiting_on_us and "+
+			"waiting, as for any mail whose words they may not read", state, engagement, advised)
 	}
 }

@@ -106,19 +106,26 @@ func newestMessage(
 	if err != nil {
 		return lastMessage{}, false, err
 	}
+	// A mail's own History badge says whose move it is, so the strip and the
+	// no-reply advice read the same rule as the message's row.
+	move, err := activities.MailMoveColumnSQL(ctx, arg)
+	if err != nil {
+		return lastMessage{}, false, err
+	}
 	var found lastMessage
 	var direction, subject, excerpt *string
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT a.id, a.direction, a.occurred_at, a.occurred_precision = 'day', a.kind,
 		       CASE WHEN %[3]s THEN a.subject END,
-		       CASE WHEN %[3]s THEN left(a.body, %[4]d) END
+		       CASE WHEN %[3]s THEN left(a.body, %[4]d) END,
+		       %[6]s
 		FROM activity a
 		WHERE %[5]s AND a.archived_at IS NULL AND %[1]s
 		  AND %[2]s`+opts.projectScope(arg)+`
 		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT 1`, activityScope, activities.CompanyLinkedActivityExists(companyPos), audience, excerptRunes,
-		relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d::timestamptz", nowPos))), args...).
-		Scan(&found.ID, &direction, &found.At, &found.DateOnly, &found.Kind, &subject, &excerpt)
+		relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d::timestamptz", nowPos)), move), args...).
+		Scan(&found.ID, &direction, &found.At, &found.DateOnly, &found.Kind, &subject, &excerpt, &found.Move)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return lastMessage{}, false, nil
 	}
@@ -266,11 +273,6 @@ func gatherSuggestionInputs(
 		newest, found, err := newestMessage(ctx, tx, companyID, now, opts)
 		if err != nil {
 			return suggestionInputs{}, err
-		}
-		if found {
-			if newest, err = withMailMove(ctx, tx, newest); err != nil {
-				return suggestionInputs{}, err
-			}
 		}
 		in.newest, in.hasNewest = newest, found
 		scheduled, err := hasOpenTask(ctx, tx, companyID, now, opts)
