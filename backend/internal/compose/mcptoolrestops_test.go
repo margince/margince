@@ -13,8 +13,8 @@ import (
 const e2eLLMRestOpsFile = "../../../e2e/llm/rest_ops.json"
 
 // The REST door of the use-case lane grades a call by the verb its operation
-// declares, so the table is the contract's own: every route an agent may call
-// as a tool, keyed as the router registers it.
+// declares. So the table is the contract's own. It holds every route an agent
+// may call as a tool, keyed as the router registers it.
 func TestTheLanesRestOperationTableIsPublished(t *testing.T) {
 	operations := map[string]string{}
 	for route, policy := range agentPolicies {
