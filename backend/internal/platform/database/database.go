@@ -50,8 +50,13 @@ func PoolConfig(dsn string) (*pgxpool.Config, error) {
 	if !strings.Contains(dsn, "pool_min_conns") {
 		cfg.MinConns = 2
 	}
-	if !strings.Contains(dsn, "pool_max_conn_lifetime") {
-		cfg.MaxConnLifetime = 30 * time.Minute
+	// A backend keeps its plan memory until the connection closes. Jitter
+	// spreads the closes; its name contains the lifetime's, so it is cut first.
+	if !strings.Contains(strings.ReplaceAll(dsn, "pool_max_conn_lifetime_jitter", ""), "pool_max_conn_lifetime") {
+		cfg.MaxConnLifetime = 10 * time.Minute
+	}
+	if !strings.Contains(dsn, "pool_max_conn_lifetime_jitter") {
+		cfg.MaxConnLifetimeJitter = 2 * time.Minute
 	}
 	if !strings.Contains(dsn, "pool_max_conn_idle_time") {
 		cfg.MaxConnIdleTime = 5 * time.Minute
