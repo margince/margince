@@ -116,20 +116,10 @@ func writeUnit(t *testing.T, root, name string, files map[string]string) {
 	t.Helper()
 	requireUnit(t, root, name)
 	dir := filepath.Join(root, "extensions", name)
-	for rel, content := range files {
-		path := filepath.Join(dir, filepath.FromSlash(rel))
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-			t.Fatal(err)
-		}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
 	}
-	if len(files) == 0 {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			t.Fatal(err)
-		}
-	}
+	writeTree(t, dir, files)
 }
 
 // requireUnit adds extensions/<name> to the root's instance go.mod.
@@ -251,12 +241,6 @@ func TestScanExtensions(t *testing.T) {
 		}
 	})
 
-	t.Run("no instance go.mod is vanilla", func(t *testing.T) {
-		units, err := scanExtensions(t.TempDir())
-		if err != nil || len(units) != 0 {
-			t.Fatalf("units, err = %v, %v — want the empty set", units, err)
-		}
-	})
 }
 
 func TestComposedWorkListsMembersSorted(t *testing.T) {

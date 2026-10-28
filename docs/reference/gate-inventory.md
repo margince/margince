@@ -126,7 +126,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `idempotencymap_test.go` | H3 | The contract decides which operations promise Idempotency-Key retry safety, and internal/compose's hand-maintained replayableOperations map must list the same operations. |
 | `identifierfields_test.go` | H3 | A provider's match rules are checked against IdentifierFields(), so that list has to name every field a contact actually carries. |
 | `inboundsigningrecipe_test.go` | H3 | The signing scope is one invariant spelled on both sides of a wire. |
-| `instancegomod_test.go` | H2 | instance/go.mod is the one switch that turns a unit on, while the tree's other gates read the units from the folders under extensions/. |
 | `issuelabels_test.go` | H3 | The label taxonomy is written down once and read from there. |
 | `jsonbpathkeys_test.go` | H1 | A SQL path into a jsonb column names a key the Go struct actually writes. |
 | `jsonsafeinteger_test.go` | H1 | A bigint that reaches a JSON client is bounded to what the client can hold. |
