@@ -44,6 +44,9 @@ export type RecordViewProps = Readonly<{
   badges?: ReactNode;
   // The record's state as pills: warmth, last touch, owner.
   pulse?: ReactNode;
+  // The newest unanswered thing they sent, as one line under the pills, on
+  // the tabs whose feed does not lead with it.
+  latest?: ReactNode;
   // The record's verbs, in the head under the pills.
   actions?: ReactNode;
   // The record's own id, which keys its mark. Every list row and card drawing
@@ -151,6 +154,7 @@ function RecordHead({
   nameBadge,
   subtitle,
   pulse,
+  latest,
   badges,
   actions,
   identity,
@@ -161,6 +165,7 @@ function RecordHead({
   | "nameBadge"
   | "subtitle"
   | "pulse"
+  | "latest"
   | "badges"
   | "actions"
   | "identity"
@@ -181,6 +186,7 @@ function RecordHead({
       {nameBadge && <div className="record-split-lines">{nameBadge}</div>}
       {subtitle && <div className="record-split-lines">{subtitle}</div>}
       {pulse && <div className="record-split-pills">{pulse}</div>}
+      {latest}
       {actions && <div className="record-split-verbs">{actions}</div>}
       {badges}
     </header>

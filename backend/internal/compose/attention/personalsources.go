@@ -72,8 +72,8 @@ var sourceAnswersForTheActorOnly = map[crmcontracts.WorklistItemSource]bool{
 	"batch": false,
 }
 
-// Push responsibility before the inbox page bound; narrowToScope still covers other
-// producers and folded rows. Team membership mirrors rowsForRoster, including unassigned work.
+// Requested decisions follow live membership. Departed owners' deals stay in
+// team recovery, while their personal decisions leave the team inbox.
 func (s *Service) approvalQuery(depth int) ApprovalQuery {
 	query := ApprovalQuery{Status: "pending", Limit: depth}
 	switch s.taskScope {

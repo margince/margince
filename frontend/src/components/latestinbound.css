@@ -1,0 +1,122 @@
+/* "Just in": the newest unanswered thing they sent. On a record's Overview it
+   is one row shaped like the Next bar under it, in the accent tint; the line
+   is the same item in the record's head, for the other tabs. */
+
+.latest-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-5);
+  background: var(--accentLight);
+}
+.latest-label {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  gap: var(--space-1);
+}
+.latest-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--fontHeadingXSmall);
+  color: var(--accentText);
+  white-space: nowrap;
+}
+.latest-kind svg {
+  inline-size: 14px;
+  block-size: 14px;
+}
+.latest-when {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+.latest-rule {
+  align-self: stretch;
+  inline-size: 1px;
+  background: var(--accentMed);
+}
+.latest-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1 1 280px;
+  min-inline-size: 0;
+}
+.latest-subject {
+  font: var(--fontHeadingSmall);
+  color: var(--textPrimary);
+  overflow-wrap: anywhere;
+}
+.latest-excerpt {
+  font: var(--fontBody);
+  color: var(--textSecondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.latest-sender {
+  color: var(--textPrimary);
+}
+.latest-verbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+  max-width: 100%;
+}
+
+.latest-line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  inline-size: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--accentMed);
+  border-radius: var(--r-sm);
+  background: var(--accentLight);
+  color: var(--textPrimary);
+  font: var(--fontBody);
+  text-align: start;
+  cursor: pointer;
+}
+.latest-line:hover {
+  border-color: var(--accentText);
+}
+.latest-line:focus-visible {
+  outline: var(--focus-ring);
+}
+.latest-line-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 24px;
+  block-size: 24px;
+  border-radius: 50%;
+  corner-shape: round;
+  background: var(--pane);
+  color: var(--accentText);
+}
+.latest-line-mark svg {
+  inline-size: 14px;
+  block-size: 14px;
+}
+.latest-line-text {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+.latest-line-kind {
+  font: var(--fontBodySmall);
+  color: var(--accentText);
+}
+.latest-line-kind .latest-when {
+  color: inherit;
+}
+.latest-line-subject {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

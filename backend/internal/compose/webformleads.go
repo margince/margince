@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -15,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/webforms"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
@@ -154,8 +156,9 @@ func originDetail(e webforms.Enquiry) string {
 // maxOriginDetail is the lead.origin_detail bound (lead_origin_detail_bounded).
 const maxOriginDetail = 500
 
-// webFormNote is the timeline note. It holds what the visitor wrote, every
-// field the lead has no column for, and the consent in the form's own words.
+// webFormNote is the timeline note: the consent the form recorded, then what
+// the visitor sent as a quote. Every line the visitor wrote is quoted, so no
+// field of theirs can pass for a line Margince wrote, such as the consent.
 func webFormNote(landing webforms.Landing) string {
 	e := landing.Enquiry
 	var b strings.Builder
@@ -180,12 +183,48 @@ func webFormNote(landing webforms.Landing) string {
 	for _, u := range e.UTM {
 		line(u.Name, u.Value)
 	}
-	if e.Consent && landing.ConsentWording != nil {
-		consent := "ticked: " + *landing.ConsentWording
-		if landing.ConsentPolicyVersion != nil {
-			consent += " (policy " + *landing.ConsentPolicyVersion + ")"
-		}
-		line("Consent", consent)
+	sent := quoted(strings.TrimSpace(b.String()))
+	consent := webFormConsent(landing)
+	if consent == "" || sent == "" {
+		return consent + sent
 	}
-	return strings.TrimSpace(b.String())
+	return consent + "\n\n" + sent
+}
+
+// webFormConsent is the form's own record of its consent box. The admin's
+// wording is kept to one line, so the record is the one line it reads as.
+func webFormConsent(landing webforms.Landing) string {
+	switch {
+	case landing.ConsentWording == nil:
+		return ""
+	case !landing.Enquiry.Consent:
+		return "Consent: not ticked"
+	}
+	consent := "Consent: ticked: " + mailcopy.OneLine(*landing.ConsentWording)
+	if landing.ConsentPolicyVersion != nil {
+		consent += " (policy " + mailcopy.OneLine(*landing.ConsentPolicyVersion) + ")"
+	}
+	return consent
+}
+
+// quoted marks every line of text as a Markdown quote. It splits on each break
+// a reader may draw, so no line of the text is shown unmarked.
+func quoted(text string) string {
+	if text == "" {
+		return ""
+	}
+	text = strings.ReplaceAll(text, "\r\n", "\n")
+	var lines []string
+	start := 0
+	for i, r := range text {
+		if mailcopy.LineBreak(r) {
+			lines = append(lines, text[start:i])
+			start = i + utf8.RuneLen(r)
+		}
+	}
+	lines = append(lines, text[start:])
+	for i, l := range lines {
+		lines[i] = strings.TrimRight("> "+l, " ")
+	}
+	return strings.Join(lines, "\n")
 }

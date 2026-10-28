@@ -16,6 +16,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"time"
 
@@ -26,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/contact360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -34,83 +34,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
-	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
-
-// attentionAtRisk reads the pipeline's own risk candidates at the morning
-// queue's shorter idle window.
-//
-// It calls quietDealLister, the SAME engine whats_slipping_this_week reads, so
-// there is one at-risk rule in the product and the two surfaces cannot come to
-// disagree about which deals are in trouble. Only the patience differs, and it
-// is named here rather than buried: a queue exists to warn, and the stalled
-// threshold is a status rather than a warning.
-// The depth-reporting scanner, not the plain SlippingLister: the team board
-// needs to know whether the sweep was cut, and that cannot be recovered from the
-// rows it returns.
-//
-// The lane reads the SERVICE's clock, the same one the day is judged and
-// priced at, so one read — the hourly verdict pass included — takes its
-// at-risk set, its prices and its day from a single instant.
-type attentionAtRisk struct {
-	lister func(context.Context) ([]agents.SlippingDeal, bool, error)
-	pool   *pgxpool.Pool
-	now    attention.Clock
-}
-
-func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, bool, error) {
-	candidates, cut, err := a.lister(ctx)
-	if err != nil {
-		return nil, false, err
-	}
-	now := a.now().UTC()
-	cover, err := a.championCover(ctx, candidates, now)
-	if err != nil {
-		return nil, false, err
-	}
-	var zone *time.Location
-	if err := database.WithWorkspaceTx(ctx, a.pool, func(tx pgx.Tx) error {
-		var zoneErr error
-		zone, zoneErr = identity.ZoneAppliedTx(ctx, tx)
-		return zoneErr
-	}); err != nil {
-		return nil, false, err
-	}
-	risky := make([]attention.RiskyDeal, 0, len(candidates))
-	for _, deal := range candidates {
-		risky = append(risky, attention.RiskyDeal{
-			DealID:               deal.DealID,
-			Name:                 deal.Name,
-			StageID:              deal.StageID,
-			OwnerID:              deal.OwnerID,
-			AmountMinor:          deal.AmountMinor,
-			Currency:             deal.Currency,
-			QuietDays:            idleDaysOf(deal, now, zone),
-			LastTouchedAt:        idlebase.Since(deal.CreatedAt, deal.LastActivityAt),
-			CloseOverdue:         deal.CloseOverdue,
-			ExpectedCloseDate:    deal.ExpectedCloseDate,
-			CloseDateProvisional: deal.CloseDateProvisional,
-			ForecastCategory:     deal.ForecastCategory,
-			NoChampion:           cover.noChampion(deal.DealID),
-			ChampionUnknown:      cover.championUnknown(deal.DealID),
-			NoNextStep:           deal.NoOpenNextStep,
-		})
-	}
-	return risky, cut, nil
-}
-
-// idleDaysOf is how long the deal has been quiet, counted from the base the
-// idle RULE measures from — through idlebase.Since rather than by repeating its
-// fallback here. A card that computed the base itself would agree with the
-// stalled rule by inspection and then drift the first time either moved, which
-// is what the one-spelling gate exists to stop.
-func idleDaysOf(deal agents.SlippingDeal, now time.Time, zone *time.Location) int {
-	return max(elapsed.Days(idlebase.Since(deal.CreatedAt, deal.LastActivityAt), now, zone), 0)
-}
 
 // decayCandidateCap bounds the candidate set the decay lane derives.
 //
@@ -165,7 +92,7 @@ func (d attentionDecay) Lapsed(
 		QuietBefore:  now.AddDate(0, 0, -(relstrength.QuietDays - 1)),
 		TouchedAfter: quietCeilingFrom(now),
 		AsOf:         now,
-		Limit:        decayCandidateCap,
+		Limit:        decayCandidateCap * decayCandidatePages,
 		// Contacts this reader set aside, and senders capture judged
 		// personal, an advisor or noise, are removed before the cap. Each
 		// module renders the rule over its own table, and search takes it as
@@ -194,17 +121,22 @@ func (d attentionDecay) Lapsed(
 	var lapsed []attention.QuietRelationship
 	exhausted := false
 	err := database.WithWorkspaceTx(ctx, d.pool, func(tx pgx.Tx) error {
-		for page := 0; page < decayCandidatePages && len(lapsed) < decayLaneCap; page++ {
-			read.Offset = page * decayCandidateCap
-			found, err := d.quietPage(ctx, tx, read, now)
+		// Every page's candidates in one read; only the derivation goes page by page.
+		quiet, err := search.QuietContacts(ctx, tx, read)
+		if err != nil {
+			return err
+		}
+		exhausted = len(quiet) < read.Limit
+		for page := range slices.Chunk(quiet, decayCandidateCap) {
+			if len(lapsed) >= decayLaneCap {
+				exhausted = false
+				break
+			}
+			found, err := d.quietPage(ctx, tx, page, now)
 			if err != nil {
 				return err
 			}
-			lapsed = append(lapsed, found.lapsed...)
-			if found.read < decayCandidateCap {
-				exhausted = true
-				break
-			}
+			lapsed = append(lapsed, found...)
 		}
 		return nil
 	})
@@ -219,28 +151,17 @@ func (d attentionDecay) Lapsed(
 // derivation rejects would otherwise hide a valid contact behind them.
 const decayCandidatePages = 3
 
-// quietPageResult is one candidate page: how many candidates it read, and the
-// ones the derivation calls quiet.
-type quietPageResult struct {
-	read   int
-	lapsed []attention.QuietRelationship
-}
-
-// quietPage reads one page of candidates and keeps the derived silences.
+// quietPage derives one page of candidates and keeps the derived silences.
 func (d attentionDecay) quietPage(
-	ctx context.Context, tx pgx.Tx, read search.QuietRead, now time.Time,
-) (quietPageResult, error) {
-	quiet, err := search.QuietContacts(ctx, tx, read)
-	if err != nil {
-		return quietPageResult{}, err
-	}
+	ctx context.Context, tx pgx.Tx, quiet []search.QuietContact, now time.Time,
+) ([]attention.QuietRelationship, error) {
 	candidates := make([]ids.ContactID, 0, len(quiet))
 	for _, found := range quiet {
 		candidates = append(candidates, ids.From[ids.ContactKind](found.Edge.ContactID))
 	}
 	touched, err := contact360.LastTouchFor(ctx, tx, candidates, contact360.AssembleOptions{AsOf: now})
 	if err != nil {
-		return quietPageResult{}, err
+		return nil, err
 	}
 	touches := make(map[ids.ContactID]relstrength.Touches, len(touched))
 	for id, touch := range touched {
@@ -248,19 +169,19 @@ func (d attentionDecay) quietPage(
 	}
 	zone, err := identity.ZoneAppliedTx(ctx, tx)
 	if err != nil {
-		return quietPageResult{}, err
+		return nil, err
 	}
 	changed, err := d.store.RelationshipChangesForContacts(ctx, tx, candidates, now, touches, zone)
 	if err != nil {
-		return quietPageResult{}, err
+		return nil, err
 	}
 	// Which of them still carries money, read in the same transaction. A
 	// reader without the deal grant loses this one fact and keeps the row.
 	funded, err := deals.OpenDealContacts(ctx, tx, candidates)
 	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
-		return quietPageResult{}, err
+		return nil, err
 	}
-	return quietPageResult{read: len(quiet), lapsed: quietSurvivors(quiet, changed, funded, now)}, nil
+	return quietSurvivors(quiet, changed, funded, now), nil
 }
 
 // quietRelationships keeps only the contacts the derivation calls quiet, and

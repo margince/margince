@@ -44,7 +44,7 @@ func OwnershipClause(owner *ids.UserID, team *ids.TeamID, unassigned *bool, arg 
 	}
 	switch {
 	case owner != nil:
-		return SQLf("owner_id = $%d", arg(*owner)), nil
+		return OwnerSetClause(ownerIDColumn, &OwnerSet{IDs: []ids.UUID{owner.UUID}}, arg), nil
 	case team != nil:
 		// An archived team keeps its memberships and stops resolving scope,
 		// so it names nobody here either.
@@ -52,7 +52,7 @@ func OwnershipClause(owner *ids.UserID, team *ids.TeamID, unassigned *bool, arg 
 			" JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL WHERE tm.team_id = $%d)",
 			arg(*team)), nil
 	case onlyUnowned:
-		return "owner_id IS NULL", nil
+		return OwnerSetClause(ownerIDColumn, &OwnerSet{Unassigned: true}, arg), nil
 	}
 	return "", nil
 }

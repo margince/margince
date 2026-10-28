@@ -57,7 +57,7 @@ func (s *Service) suggestionLanes(ctx context.Context, depth int, count *laneCou
 func (s *Service) openSuggestionItems(
 	ctx context.Context, depth int,
 ) ([]crmcontracts.AttentionItem, *int, *crmcontracts.WorklistSourceUnavailable) {
-	if s.suggestions == nil {
+	if s.suggestions == nil || !s.unassignedDecisions() {
 		return nil, nil, nil
 	}
 	return readSuggestionLane(ctx, s, sourceDealSuggestion,

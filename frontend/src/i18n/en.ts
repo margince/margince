@@ -739,6 +739,7 @@ export const en = {
   "approval.preview.promotionContactPhone": "Contact phone to add",
   "approval.preview.promotionExistingContact": "Existing contact to update",
   "approval.preview.promotionSetOrigin": "Link contact back to this lead",
+  "approval.preview.promotionCompanyIndustry": "Company industry",
   "approval.preview.promotionDuplicateCandidate":
     "Possible duplicate to review",
   "approval.preview.promotionMoveActivity": "Activity to move to contact",
@@ -762,6 +763,8 @@ export const en = {
     "Adds the displayed missing details to the existing contact. Keeps its existing name, title and primary phone.",
   "approval.preview.promotionDeal":
     "Opens the displayed deal and adds the contact as a stakeholder. The lead links to this deal.",
+  "approval.preview.promotionFillIndustry":
+    "Sets the displayed industry on the linked company, which has none yet.",
   "approval.preview.promotionReview":
     "Creates a separate contact and queues the possible duplicate for review.",
   "approval.preview.promotionAllMarketing": "All marketing",
@@ -3282,6 +3285,11 @@ export const en = {
   "stageLadder.earlier": "Show earlier stages",
   "stageLadder.later": "Show later stages",
   "standing.timeline.empty": "Nothing dated here yet.",
+  "latest.kind.email": "New email",
+  "latest.kind.message": "New message",
+  "latest.kind.webForm": "New website form",
+  "latest.line.open": "{kind}: open in Overview",
+  "latest.noticed": "Noticed",
   "standing.next.label": "Next",
   "standing.next.none": "Nothing is due next.",
   "standing.next.snooze": "Snooze",
@@ -4872,6 +4880,7 @@ export const en = {
   "lead.segregationDismiss": "Dismiss this notice",
   "list.emptyMine": "No {unit} owned by you.",
   "list.showAll": "Show all",
+  "list.filterRefusedRemove": "Remove {dial}",
   "lead.assignedAway": "{names} assigned to {owner}. No longer in Mine.",
   "lead.viewNew": "New",
   "lead.viewNewUnassigned": "New and unassigned",
@@ -5286,8 +5295,7 @@ export const en = {
   "deals.filterCurrencyAll": "Any currency",
   "deals.filterCountry": "Country",
   "deals.filterCountryAll": "Any country",
-  "deals.filterRefused":
-    "Your role cannot narrow deals by {dial}. Remove that filter to see the list.",
+  "deals.filterRefused": "Your role cannot narrow deals by {dial}.",
   "deals.rangeFrom": "From {value}",
   "deals.rangeTo": "Up to {value}",
   "deals.valueAtLeast": "At least ({currency})",
@@ -12468,7 +12476,7 @@ export const en = {
   "users.handover.action": "Hand over work",
   "users.handover.title": "Hand over the work of {name}",
   "users.handover.body":
-    "Every lead, contact, company, deal and project {name} owns moves to the colleague you choose. Their tasks, automations and Deal Rooms stay where they are.",
+    "Every lead, contact, company, deal and project {name} owns moves to the colleague you choose. Their open tasks move too. Automations and Deal Rooms stay where they are.",
   "users.handover.receiver": "Give it to",
   "users.handover.choose": "Choose a colleague",
   "users.handover.confirm": "Hand over",
@@ -17394,6 +17402,19 @@ export const en = {
   "lead.company.linkOpens": "The company name on this lead then opens {name}.",
   "lead.company.linkOnQualify":
     "No contact is created now. When you qualify this lead, it becomes a contact at {name}.",
+  "lead.company.matchedByDomain": "Same website domain",
+  "lead.company.matchedByName": "Same company name",
+  "lead.company.linkWhyDomain": "{name} uses the website domain on this lead.",
+  "lead.company.linkWhyName": "{name} has the company name on this lead.",
+  "lead.details.fromCompany": "From {name}",
+  "lead.details.fromCompanyRecord": "From the company record",
+  "lead.details.companyDecides":
+    "These come from the company record. Change them on the company.",
+  "lead.details.companyCountry": "Country",
+  "lead.companySize": "Company size",
+  "lead.filterCompanySizeAll": "Any company size",
+  "lead.filterIndustryAll": "Any industry",
+  "lead.filterRefused": "Your role cannot narrow leads by {dial}.",
   "lead.timeline.received": "{at} · received",
   "lead.timeline.weReplied": "You replied",
   "lead.timeline.repliedIn": "{at} · in {span}",

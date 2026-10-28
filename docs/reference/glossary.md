@@ -56,6 +56,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | locale | The date or time format of the reader's language, as a setting value. |
 | macOS | Apple's desktop operating system. |
 | Margince | The CRM this repository builds. |
+| Material | Google's Material Symbols icon set, the source of the web app's filled status marks. |
 | MCP | Model Context Protocol: how an AI agent connects to Margince's tools. |
 | mdy | The date order month, day, year, as a setting value. |
 | Microsoft | The company behind Microsoft 365 mail and calendars. |

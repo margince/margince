@@ -110,11 +110,16 @@ function promotionApproval(): Approval {
           field: "promotion_deal_amount",
           value: { kind: "money", text: "250000", currency: "USD" },
         },
+        {
+          field: "promotion_company_industry",
+          value: { kind: "text", text: "logistics_transport" },
+        },
       ],
       effects: [
         "promote_lead_archive_source",
         "promote_create_contact",
         "promote_open_deal_seat_contact",
+        "promote_fill_company_industry",
       ],
     },
   });

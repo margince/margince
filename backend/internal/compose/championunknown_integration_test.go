@@ -98,7 +98,7 @@ func atRiskByDeal(t *testing.T, e *integration.Env) map[ids.UUID]attention.Risky
 		pool:   e.Pool,
 		now:    clockNow,
 	}
-	rows, _, err := lane.Quiet(e.Admin())
+	rows, _, err := lane.Quiet(e.Admin(), nil)
 	if err != nil {
 		t.Fatalf("reading the at-risk lane: %v", err)
 	}

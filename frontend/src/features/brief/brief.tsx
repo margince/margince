@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useState } from "react";
 import { PageAsideToggle } from "../../components/pageaside";
 import { useTaskUpdate } from "../../components/taskactions";
 import { Modal } from "../../design-system/atoms";
@@ -12,6 +12,7 @@ import { PageZones } from "../../design-system/pagezones";
 import { greetingNameOf } from "../../format/greetingname";
 import { useNow } from "../../format/now";
 import { useT } from "../../i18n";
+import { markJourney } from "../../lib/journeymarks";
 import { isReviewableReceipt } from "../../lib/receiptreview";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
@@ -20,6 +21,7 @@ import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { pillCount } from "../../lib/worklistcounts";
 import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
 import { MagicPanel } from "../sign-in/magic";
+import { useMagic } from "../sign-in/magic.queries";
 import {
   MeetingDetailModal,
   TaskDetailModal,
@@ -202,6 +204,17 @@ function PersonalMorning({
     : query.isError && !day
       ? "failed"
       : "ready";
+  // Useful: the day's work is on screen, rows or a confirmed empty day.
+  // Complete: the brief, the handled receipts and the overnight receipt beside
+  // it have answered too. A section that failed leaves the page incomplete.
+  const magic = useMagic();
+  const settled = brief.isSuccess && handled.isSuccess && magic.isSuccess;
+  useEffect(() => {
+    if (state === "failed") markJourney("home:failed");
+    if (state !== "ready" || !day) return;
+    markJourney("home:useful");
+    if (settled) markJourney("home:complete");
+  }, [state, day, settled]);
   return (
     <>
       {/* The brief and the work it names in one column; beside it, the

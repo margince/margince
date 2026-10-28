@@ -213,7 +213,7 @@ func enumStrings(t *testing.T, node map[string]any, subject string) []string {
 	return values
 }
 
-func descendContract(t *testing.T, doc map[string]any, path ...string) map[string]any {
+func descendContract(t testing.TB, doc map[string]any, path ...string) map[string]any {
 	t.Helper()
 	node := doc
 	for _, key := range path {

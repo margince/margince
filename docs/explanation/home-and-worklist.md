@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx frontend/src/features/worklist/worklist.next.ts frontend/src/features/worklist/worklist.nexttask.tsx -->
+<!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx frontend/src/features/worklist/worklist.next.ts frontend/src/features/worklist/worklist.nexttask.tsx backend/internal/compose/slipping.go backend/internal/compose/attentionriskseam.go backend/internal/modules/deals/deal_read.go -->
 # Home and the Worklist: how the day is ranked
 
 Home has one ranking engine behind three views: the Worklist, the **First** section on Morning, and the
@@ -73,6 +73,20 @@ A changed basis returns a version conflict. Only one task can commit from the sa
 The other prepared actions check that basis before opening. Tasks you create keep their existing write path.
 
 Stored findings follow the current audience of their cited activities on both run reads and item read-backs.
+
+## Ownership comes before scan limits
+
+`backend/internal/compose/attention/recordowners.go` resolves the queue's owners before the deal risk read.
+The deal store applies these owners and the caller's visibility rules before limiting either the quiet or overdue scan.
+An empty set reads no owners. No set means the visible workspace view.
+Team reads keep work from former team members and work with no owner.
+
+Duplicate pairs and deal and tag suggestions have no requested decider.
+**Mine** and chosen member views skip those sources before building the decision page and counts.
+**Unassigned** and wider views keep them. Approvals keep their requested-decider query.
+
+The final scope cut still checks the owner. It cannot add candidates a source has already left out.
+Home, Focus, source reach and summary counts use the same scoped day.
 
 ## Personal work needs its own owner
 

@@ -4156,7 +4156,7 @@ public.dedupe_candidate.version bigint NOT NULL gen=- def=1
 public.dedupe_candidate_pkey CREATE UNIQUE INDEX dedupe_candidate_pkey ON public.dedupe_candidate USING btree (id)
 public.dedupe_scan_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.dedupe_scan_state.dedupe_scan_state_pkey PRIMARY KEY (stream)
-public.dedupe_scan_state.dedupe_scan_state_stream_check CHECK ((stream = ANY (ARRAY['company'::text, 'company_domain'::text, 'contact'::text, 'contact_email'::text, 'contact_phone'::text])))
+public.dedupe_scan_state.dedupe_scan_state_stream_check CHECK ((stream = ANY (ARRAY['company'::text, 'company_domain'::text, 'contact'::text, 'contact_email'::text, 'contact_phone'::text, 'company_fact'::text, 'relationship'::text])))
 public.dedupe_scan_state.scanned_through_at timestamp with time zone NOT NULL gen=- def=-
 public.dedupe_scan_state.scanned_through_id uuid NOT NULL gen=- def=-
 public.dedupe_scan_state.stream text NOT NULL gen=- def=-
@@ -4746,6 +4746,7 @@ public.idx_company_domain_disposition_due CREATE INDEX idx_company_domain_dispos
 public.idx_company_domain_trgm CREATE INDEX idx_company_domain_trgm ON public.company_domain USING gin (f_fold_apostrophes(lower(domain)) gin_trgm_ops) WHERE (archived_at IS NULL)
 public.idx_company_exact_legal_name_key CREATE INDEX idx_company_exact_legal_name_key ON public.company USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(legal_name)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
 public.idx_company_exact_name_key CREATE INDEX idx_company_exact_name_key ON public.company USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(display_name)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
+public.idx_company_fact_dedupe_scan CREATE INDEX idx_company_fact_dedupe_scan ON public.company_fact USING btree (updated_at, id)
 public.idx_company_fact_lookup CREATE INDEX idx_company_fact_lookup ON public.company_fact USING btree (category, field, value_key)
 public.idx_company_geocode_state_point CREATE INDEX idx_company_geocode_state_point ON public.company_geocode_state USING btree (lat, lon) WHERE (status = 'ok'::text)
 public.idx_company_import_display_name CREATE INDEX idx_company_import_display_name ON public.company USING btree (f_fold_import_name(display_name)) WHERE ((archived_at IS NULL) AND (merged_into_id IS NULL))
@@ -4936,6 +4937,7 @@ public.idx_rel_history_counterparty CREATE INDEX idx_rel_history_counterparty ON
 public.idx_rel_history_deal CREATE INDEX idx_rel_history_deal ON public.relationship USING btree (deal_id)
 public.idx_rel_history_project CREATE INDEX idx_rel_history_project ON public.relationship USING btree (project_id)
 public.idx_relationship_counterparty_contact CREATE INDEX idx_relationship_counterparty_contact ON public.relationship USING btree (counterparty_contact_id)
+public.idx_relationship_dedupe_scan CREATE INDEX idx_relationship_dedupe_scan ON public.relationship USING btree (updated_at, id) WHERE ((kind = 'employment'::text) AND (company_id IS NOT NULL))
 public.idx_report_run_asker CREATE INDEX idx_report_run_asker ON public.report_run USING btree (asked_by, created_at DESC, id DESC)
 public.idx_restore_drill_recent CREATE INDEX idx_restore_drill_recent ON public.restore_drill USING btree (started_at DESC)
 public.idx_role_assignment_team CREATE INDEX idx_role_assignment_team ON public.role_assignment USING btree (team_id)
@@ -5309,6 +5311,7 @@ public.lead.first_response_at timestamp with time zone gen=- def=-
 public.lead.from_contact_id uuid gen=- def=-
 public.lead.full_name text gen=- def=-
 public.lead.id uuid NOT NULL gen=- def=uuidv7()
+public.lead.industry text gen=- def=-
 public.lead.lead_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL
 public.lead.lead_disqualify_reason_id_fkey FOREIGN KEY (disqualify_reason_id) REFERENCES lead_disqualify_reason(id) ON DELETE RESTRICT
 public.lead.lead_email_norm CHECK (((email IS NULL) OR (email = lower(email))))

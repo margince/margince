@@ -26,6 +26,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -224,9 +225,13 @@ func (s *Service) addOverdue(
 }
 
 func (s *Service) addAtRisk(
-	ctx context.Context, load *teamCounts, _ []TeamMember, _ time.Time,
+	ctx context.Context, load *teamCounts, roster []TeamMember, _ time.Time,
 ) error {
-	risky, cut, err := s.atRisk.Quiet(ctx)
+	owners := &storekit.OwnerSet{Unassigned: true}
+	for _, member := range roster {
+		owners.IDs = append(owners.IDs, member.UserID)
+	}
+	risky, cut, err := s.atRisk.Quiet(ctx, owners)
 	if err != nil {
 		return err
 	}

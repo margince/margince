@@ -3,6 +3,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { chipInks } from "../../scripts/lib/chip-inks";
+import { declaredValues, rulesOf } from "../../scripts/lib/css-rules";
+import { CALLOUT_TONES } from "./callout";
 import {
   composite,
   contrastOf,
@@ -91,6 +93,27 @@ const canonical: Record<string, string> = {
   "--discoverySurface": "#eed7fc",
   "--discoveryBg": "color-mix(in srgb, var(--discovery) 12%, transparent)",
   "--discoveryBorder": "#d8a0f7",
+  "--bgNoticeInfo": "color-mix(in oklab, var(--info) 12%, var(--bgElevated))",
+  "--borderNoticeInfo":
+    "color-mix(in oklab, var(--info) 30%, var(--bgElevated))",
+  "--bgNoticeSuccess":
+    "color-mix(in oklab, var(--success) 12%, var(--bgElevated))",
+  "--borderNoticeSuccess":
+    "color-mix(in oklab, var(--success) 30%, var(--bgElevated))",
+  "--bgNoticeWarning":
+    "color-mix(in oklab, var(--warning) 12%, var(--bgElevated))",
+  "--borderNoticeWarning":
+    "color-mix(in oklab, var(--warning) 30%, var(--bgElevated))",
+  "--bgNoticeDanger":
+    "color-mix(in oklab, var(--danger) 12%, var(--bgElevated))",
+  "--borderNoticeDanger":
+    "color-mix(in oklab, var(--danger) 30%, var(--bgElevated))",
+  "--bgNoticeDiscovery":
+    "color-mix(in oklab, var(--discovery) 12%, var(--bgElevated))",
+  "--borderNoticeDiscovery":
+    "color-mix(in oklab, var(--discovery) 30%, var(--bgElevated))",
+  "--bgNoticeAi": "color-mix(in oklab, var(--ai) 12%, var(--bgElevated))",
+  "--borderNoticeAi": "color-mix(in oklab, var(--ai) 30%, var(--bgElevated))",
   "--r-xs": "4px",
   "--r-sm": "8px",
   "--r-control": "12px",
@@ -219,6 +242,18 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       });
     }
 
+    // The grounds a callout's words sit on, read from the sheet that paints them.
+    const calloutWashes = rulesOf([join(here, "callout.css")])
+      .flatMap((rule) => declaredValues(rule.body, "--callout-wash"))
+      .map((value) => /^var\((--[\w-]+)\)$/.exec(value)?.[1] ?? value);
+
+    it("reads one declared wash per callout tone", () => {
+      expect(new Set(calloutWashes).size).toBe(CALLOUT_TONES.length);
+      for (const ground of calloutWashes) {
+        expect(themes.light[ground], `${ground} is not a token`).toBeDefined();
+      }
+    });
+
     // The lesson that produced this whole block, as a gate. Darkening the
     // grounds by a few percent dropped SEVENTEEN text/ground pairs under
     // 4.5:1 — and the tokens themselves all still looked reasonable in
@@ -261,6 +296,9 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
             [`--${state}Text`, ["--textOnStatusControl"]],
             [`--${state}Surface`, [`--${state}Text`]],
           ]),
+        ),
+        ...Object.fromEntries(
+          calloutWashes.map((ground) => [ground, ["--textPrimary"]]),
         ),
         "--accent": ["--textOnAccentControl"],
         "--ai": ["--textOnAccent"],

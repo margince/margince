@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -62,28 +63,18 @@ func quietDealLister(pool *pgxpool.Pool, quietForDays int) func(context.Context)
 	}
 }
 
-// quietDealScan is quietDealLister with its SCAN DEPTH reported.
-//
-// The bool says a sweep stopped at its bound, and it travels with the rows
-// because it cannot be recovered from them: this reader filters after it scans,
-// keeping only what is quiet or overdue out of two bounded sweeps, so ten
-// survivors can be all that is left of a full fifty. A caller comparing the
-// returned count against the bound would read a truncated scan with few
-// survivors as a complete one — under-reporting, which is the one direction a
-// figure about somebody's workload must never fail in.
-//
-// One function with two callers rather than two predicates: quietDealLister
-// above is this, with the depth dropped, because agents.SlippingLister is a
-// shared type this cannot widen.
+// The scan-depth flag cannot be inferred from survivors of the bounded sweeps.
+// Tool callers keep the unrestricted selection used by their existing contract.
 func quietDealScan(
 	pool *pgxpool.Pool, quietForDays int,
 ) func(context.Context) ([]agents.SlippingDeal, bool, error) {
-	return quietDealScanWithClock(pool, quietForDays, clockNow)
+	scan := quietDealScanWithClock(pool, quietForDays, clockNow)
+	return func(ctx context.Context) ([]agents.SlippingDeal, bool, error) { return scan(ctx, nil) }
 }
 
-func quietDealScanWithClock(pool *pgxpool.Pool, quietForDays int, clock func() time.Time) func(context.Context) ([]agents.SlippingDeal, bool, error) {
+func quietDealScanWithClock(pool *pgxpool.Pool, quietForDays int, clock func() time.Time) func(context.Context, *storekit.OwnerSet) ([]agents.SlippingDeal, bool, error) {
 	store := deals.NewStore(InstallationDB(pool), DealsInstallation())
-	return func(ctx context.Context) ([]agents.SlippingDeal, bool, error) {
+	return func(ctx context.Context, owners *storekit.OwnerSet) ([]agents.SlippingDeal, bool, error) {
 		zone, err := installationZone(ctx, pool)
 		if err != nil {
 			return nil, false, err
@@ -91,19 +82,15 @@ func quietDealScanWithClock(pool *pgxpool.Pool, quietForDays int, clock func() t
 		now := clock().UTC()
 		limit := slippingScanLimit
 		quiet, _, err := store.ListDeals(ctx, deals.ListDealsInput{
-			QuietForDays: &quietForDays, Limit: &limit,
+			QuietForDays: &quietForDays, Limit: &limit, ScopeOwners: owners,
 		})
 		if err != nil {
 			return nil, false, err
 		}
 		openStatus := "open"
-		date := now.In(zone).Format(time.DateOnly)
-		today, err := time.Parse(time.DateOnly, date)
-		if err != nil {
-			return nil, false, err
-		}
+		today := storekit.WorkspaceDay(now, zone)
 		sort := acceptFieldExpectedClose
-		open, _, err := store.ListDeals(ctx, deals.ListDealsInput{Status: &openStatus, CloseBefore: &today, Sort: &sort, Limit: &limit})
+		open, _, err := store.ListDeals(ctx, deals.ListDealsInput{Status: &openStatus, CloseBefore: &today, Sort: &sort, Limit: &limit, ScopeOwners: owners})
 		if err != nil {
 			return nil, false, err
 		}
