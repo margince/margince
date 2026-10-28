@@ -81,9 +81,20 @@ The deal store applies these owners and the caller's visibility rules before lim
 An empty set reads no owners. No set means the visible workspace view.
 Team reads keep work from former team members and work with no owner.
 
-Duplicate pairs and deal and tag suggestions have no requested decider.
+Company and lead duplicate pairs and deal and tag suggestions have no requested decider.
 **Mine** and chosen member views skip those sources before building the decision page and counts.
 **Unassigned** and wider views keep them. Approvals keep their requested-decider query.
+
+Contact pairs reach the queue as contact cases (source `contact_case`, `attention/contactcaselane.go`), never one pair at a time.
+A case is a group of contacts joined by open pairs, and its row id is the lowest member id.
+The case read binds the page's owner before it ranks.
+So **Mine** and a chosen member view show every case with a member that owner owns.
+The row names that owner as its requested decider, so each owner of a member sees the case on their own page.
+
+**Unassigned** shows the cases where no member has a live owner.
+A wider view names the reader if they own a member, then an owner in the team the page shows, then the first owner.
+**Done** hides a case for that owner alone, and the other owners keep it.
+Cases count into the open duplicates total, and they come first in each round of the decision lane.
 
 The final scope cut still checks the owner. It cannot add candidates a source has already left out.
 Home, Focus, source reach and summary counts use the same scoped day.
